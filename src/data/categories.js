@@ -19,9 +19,25 @@ const DEFAULT_CATEGORIES = [
 export let categories = DEFAULT_CATEGORIES;
 export let categoryBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]));
 
+function isValidSlug(s) {
+  return typeof s === 'string' && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(s);
+}
+function slugify(s) {
+  return String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
 export function applyCategories(list) {
   if (!Array.isArray(list) || list.length === 0) return false;
-  categories = list;
+  categories = list.map((c) => {
+    if (isValidSlug(c.slug)) return c;
+    // A malformed stored slug (e.g. stray spaces/slashes from a data-entry
+    // accident) would otherwise 404 every link to this category, including
+    // the hardcoded nav links. Derive a clean slug from the category's own
+    // name so pages still resolve correctly — the underlying Supabase row
+    // is left untouched.
+    const repaired = slugify(c.name);
+    return repaired ? { ...c, slug: repaired } : c;
+  });
   categoryBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]));
   return true;
 }
