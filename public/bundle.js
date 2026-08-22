@@ -9346,6 +9346,88 @@
 	  });
 	}
 
+	// ============================================================
+	// Client-side payment helpers.
+	//
+	// This file never sees a secret. It sends cart identifiers + quantities to
+	// the server, which recalculates the amount and creates the Razorpay
+	// order; and it forwards Razorpay's callback to the server for signature
+	// verification. The browser is never the authority on price or on whether
+	// a payment succeeded.
+	// ============================================================
+
+	const RAZORPAY_SCRIPT = 'https://checkout.razorpay.com/v1/checkout.js';
+	let scriptPromise = null;
+
+	/** Load Razorpay Checkout once; resolves true when window.Razorpay exists. */
+	function loadRazorpayScript() {
+	  if (typeof window === 'undefined') return Promise.resolve(false);
+	  if (window.Razorpay) return Promise.resolve(true);
+	  if (scriptPromise) return scriptPromise;
+	  scriptPromise = new Promise(resolve => {
+	    const el = document.createElement('script');
+	    el.src = RAZORPAY_SCRIPT;
+	    el.async = true;
+	    el.onload = () => resolve(Boolean(window.Razorpay));
+	    el.onerror = () => {
+	      scriptPromise = null;
+	      resolve(false);
+	    };
+	    document.body.appendChild(el);
+	  });
+	  return scriptPromise;
+	}
+	async function postJson(url, payload) {
+	  const res = await fetch(url, {
+	    method: 'POST',
+	    headers: {
+	      'Content-Type': 'application/json'
+	    },
+	    body: JSON.stringify(payload)
+	  });
+	  let data = null;
+	  try {
+	    data = await res.json();
+	  } catch {/* non-JSON error page */}
+	  if (!res.ok) {
+	    const err = new Error(data?.error || 'Something went wrong. Please try again.');
+	    err.status = res.status;
+	    throw err;
+	  }
+	  return data;
+	}
+
+	/**
+	 * Ask the server to price the cart and open a payable order.
+	 * Only ids + quantities are sent — never prices or totals.
+	 */
+	function createPaymentOrder({
+	  items,
+	  delivery,
+	  customer,
+	  paymentMethod
+	}) {
+	  return postJson('/api/razorpay/create-order', {
+	    items: items.map(l => ({
+	      id: l.id,
+	      qty: l.qty,
+	      variant: l.variant || null
+	    })),
+	    delivery,
+	    customer,
+	    paymentMethod
+	  });
+	}
+
+	/** Hand Razorpay's callback to the server, which alone decides if it's genuine. */
+	function verifyPayment(response) {
+	  return postJson('/api/razorpay/verify', {
+	    razorpay_order_id: response.razorpay_order_id,
+	    razorpay_payment_id: response.razorpay_payment_id,
+	    razorpay_signature: response.razorpay_signature
+	  });
+	}
+
 	const STEPS = ['Contact', 'Shipping', 'Delivery', 'Payment'];
 	const DELIVERY = [{
 	  id: 'std',
@@ -9364,8 +9446,20 @@
 	  eta: 'Pick a date at doorstep',
 	  price: 49
 	}];
+	const EMPTY_FORM = {
+	  email: '',
+	  phone: '',
+	  firstName: '',
+	  lastName: '',
+	  address: '',
+	  apartment: '',
+	  city: '',
+	  state: '',
+	  pin: ''
+	};
 	function Checkout() {
 	  const {
+	    cart,
 	    cartDetailed,
 	    subtotal,
 	    savings,
@@ -9373,7 +9467,24 @@
 	  } = useStore();
 	  const [step, setStep] = reactExports.useState(0);
 	  const [delivery, setDelivery] = reactExports.useState('std');
-	  const [pay, setPay] = reactExports.useState('upi');
+	  const [pay, setPay] = reactExports.useState('online');
+	  // Controlled so the entered details survive moving between steps and a
+	  // cancelled payment (each step unmounts, so uncontrolled inputs would
+	  // lose their values), and so they can be sent with the order.
+	  const [form, setForm] = reactExports.useState(EMPTY_FORM);
+	  const setField = k => e => setForm(f => ({
+	    ...f,
+	    [k]: e.target.value
+	  }));
+	  // Payment UX state
+	  const [processing, setProcessing] = reactExports.useState(false);
+	  const [payError, setPayError] = reactExports.useState('');
+	  const [payNotice, setPayNotice] = reactExports.useState('');
+	  // Synchronous in-flight lock. `processing` state (and the button's
+	  // disabled attribute) only take effect after a re-render, so several
+	  // clicks fired in the same tick would all slip past a state-based guard
+	  // and create duplicate orders. A ref flips immediately.
+	  const inFlight = reactExports.useRef(false);
 	  const [placed, setPlaced] = reactExports.useState(false);
 	  // Generated once when the order is placed. It used to be computed inline
 	  // during render, which meant any re-render (including the celebration's
@@ -9419,7 +9530,7 @@
 	            '--d': '550ms'
 	          },
 	          children: ["A confirmation has been sent to your email. Order ", /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
-	            children: ["#SORA-", orderNo]
+	            children: ["#", orderNo]
 	          }), "."]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "confirm__card confirm__reveal",
@@ -9493,13 +9604,95 @@
 	    });
 	  }
 	  const next = () => setStep(s => Math.min(STEPS.length - 1, s + 1));
-	  const placeOrder = () => {
-	    setOrderNo(Math.floor(100000 + Math.random() * 900000));
+	  // Reached ONLY after the server has confirmed the order is genuinely
+	  // paid (or is a recorded COD order). This is the single place the cart is
+	  // cleared and the confirmation/celebration is shown.
+	  const completeOrder = orderNumber => {
+	    inFlight.current = false;
+	    setOrderNo(orderNumber);
 	    dispatch({
 	      type: 'CLEAR_CART'
 	    });
 	    setPlaced(true);
 	    window.scrollTo(0, 0);
+	  };
+	  const placeOrder = async () => {
+	    if (inFlight.current) return; // double-click / duplicate-submit guard
+	    inFlight.current = true;
+	    setProcessing(true);
+	    setPayError('');
+	    setPayNotice('');
+	    try {
+	      // The server prices the cart itself; we only send ids + quantities.
+	      const created = await createPaymentOrder({
+	        items: cart,
+	        delivery,
+	        customer: form,
+	        paymentMethod: pay === 'cod' ? 'cod' : 'online'
+	      });
+	      if (created.paymentMethod === 'cod') {
+	        completeOrder(created.orderNumber);
+	        return;
+	      }
+	      const ready = await loadRazorpayScript();
+	      if (!ready || !window.Razorpay) {
+	        throw new Error('We could not load the payment window. Check your connection and try again.');
+	      }
+	      const rzp = new window.Razorpay({
+	        key: created.keyId,
+	        // public key id, safe in the browser
+	        order_id: created.razorpayOrderId,
+	        amount: created.amountPaise,
+	        // server-computed, in paise
+	        currency: created.currency,
+	        name: 'Sora Life',
+	        description: `Order ${created.orderNumber}`,
+	        theme: {
+	          color: '#1E3A2F'
+	        },
+	        prefill: {
+	          name: `${form.firstName} ${form.lastName}`.trim(),
+	          email: form.email,
+	          contact: form.phone
+	        },
+	        // Razorpay says the payment succeeded — but only our server decides.
+	        handler: async response => {
+	          try {
+	            const result = await verifyPayment(response);
+	            if (result?.verified) {
+	              completeOrder(result.orderNumber);
+	            } else {
+	              inFlight.current = false;
+	              setProcessing(false);
+	              setPayError('We could not verify this payment. Your order has not been placed.');
+	            }
+	          } catch (err) {
+	            inFlight.current = false;
+	            setProcessing(false);
+	            setPayError(err.message || 'We could not confirm your payment. Please contact support before paying again.');
+	          }
+	        },
+	        modal: {
+	          // User closed the Razorpay window: nothing is charged, nothing is
+	          // placed, and their cart and details are kept exactly as they were.
+	          ondismiss: () => {
+	            inFlight.current = false;
+	            setProcessing(false);
+	            setPayNotice('Payment cancelled. Your cart and details have been kept.');
+	          }
+	        }
+	      });
+	      rzp.on('payment.failed', resp => {
+	        inFlight.current = false;
+	        setProcessing(false);
+	        setPayError(resp?.error?.description ? `Payment wasn't completed: ${resp.error.description}` : "Payment wasn't completed. Your order has not been placed.");
+	      });
+	      rzp.open();
+	    } catch (err) {
+	      inFlight.current = false;
+	      setProcessing(false);
+	      setPayError(err.message || 'We could not start your payment. Please try again.');
+	    }
 	  };
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	    className: "checkout",
@@ -9554,7 +9747,9 @@
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	              className: "input",
 	              type: "email",
-	              placeholder: "you@email.com"
+	              placeholder: "you@email.com",
+	              value: form.email,
+	              onChange: setField('email')
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "field",
@@ -9564,7 +9759,9 @@
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	              className: "input",
 	              type: "tel",
-	              placeholder: "+91 98765 43210"
+	              placeholder: "+91 98765 43210",
+	              value: form.phone,
+	              onChange: setField('phone')
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
 	            className: "check",
@@ -9602,7 +9799,9 @@
 	                children: "First name"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	                className: "input",
-	                placeholder: "First name"
+	                placeholder: "First name",
+	                value: form.firstName,
+	                onChange: setField('firstName')
 	              })]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	              className: "field",
@@ -9611,7 +9810,9 @@
 	                children: "Last name"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	                className: "input",
-	                placeholder: "Last name"
+	                placeholder: "Last name",
+	                value: form.lastName,
+	                onChange: setField('lastName')
 	              })]
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -9621,7 +9822,9 @@
 	              children: "Address"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	              className: "input",
-	              placeholder: "House no, street, area"
+	              placeholder: "House no, street, area",
+	              value: form.address,
+	              onChange: setField('address')
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "field",
@@ -9630,7 +9833,9 @@
 	              children: "Apartment, landmark (optional)"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	              className: "input",
-	              placeholder: "Apartment, landmark"
+	              placeholder: "Apartment, landmark",
+	              value: form.apartment,
+	              onChange: setField('apartment')
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "grid3",
@@ -9641,7 +9846,9 @@
 	                children: "City"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	                className: "input",
-	                placeholder: "City"
+	                placeholder: "City",
+	                value: form.city,
+	                onChange: setField('city')
 	              })]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	              className: "field",
@@ -9650,7 +9857,9 @@
 	                children: "State"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	                className: "input",
-	                placeholder: "State"
+	                placeholder: "State",
+	                value: form.state,
+	                onChange: setField('state')
 	              })]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	              className: "field",
@@ -9659,7 +9868,9 @@
 	                children: "PIN code"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	                className: "input",
-	                placeholder: "560001"
+	                placeholder: "560001",
+	                value: form.pin,
+	                onChange: setField('pin')
 	              })]
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -9736,16 +9947,17 @@
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	              name: "lock",
 	              size: 14
-	            }), " This is a design prototype \u2014 no real payment is processed."]
+	            }), " Payments are processed securely by Razorpay. Sora Life never sees or stores your card details."]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	            className: "optlist",
-	            children: [['upi', 'UPI', 'Pay by any UPI app'], ['card', 'Card', 'Credit or debit card'], ['cod', 'Cash on delivery', 'Pay when it arrives']].map(([id, label, note]) => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	            children: [['online', 'Pay online', 'UPI, cards, net banking & wallets', 'card'], ['cod', 'Cash on delivery', 'Pay when it arrives', 'truck']].map(([id, label, note, icon]) => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
 	              className: `opt ${pay === id ? 'active' : ''}`,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	                type: "radio",
 	                name: "pay",
 	                checked: pay === id,
-	                onChange: () => setPay(id)
+	                onChange: () => setPay(id),
+	                disabled: processing
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	                className: "opt__radio"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
@@ -9756,73 +9968,68 @@
 	                  children: note
 	                })]
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: id === 'cod' ? 'truck' : id === 'card' ? 'card' : 'phone',
+	                name: icon,
 	                size: 20
 	              })]
 	            }, id))
-	          }), pay === 'card' && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "paycard",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "field",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	                className: "label",
-	                children: "Card number"
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	                className: "input",
-	                placeholder: "\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022",
-	                inputMode: "numeric"
-	              })]
+	          }), payError && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "paystate paystate--error",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	              children: "Payment wasn't completed"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              children: payError
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              className: "muted",
+	              children: "Your order has not been placed and your cart has been kept."
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "grid2",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                className: "field",
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	                  className: "label",
-	                  children: "Expiry"
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	                  className: "input",
-	                  placeholder: "MM / YY"
-	                })]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                className: "field",
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	                  className: "label",
-	                  children: "CVV"
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	                  className: "input",
-	                  placeholder: "\u2022\u2022\u2022",
-	                  inputMode: "numeric"
-	                })]
+	              className: "paystate__actions",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                className: "btn btn-sm",
+	                onClick: placeOrder,
+	                disabled: processing,
+	                children: "Try again"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	                to: "/cart",
+	                className: "btn btn-sm btn-outline",
+	                children: "Back to cart"
 	              })]
 	            })]
-	          }), pay === 'upi' && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	            className: "paycard",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "field",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	                className: "label",
-	                children: "UPI ID"
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	                className: "input",
-	                placeholder: "yourname@upi"
-	              })]
-	            })
+	          }), payNotice && !payError && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "paystate paystate--notice",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	              children: "Payment cancelled"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              children: payNotice
+	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "cform__nav",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
 	              className: "btn btn-ghost",
 	              onClick: () => setStep(2),
+	              disabled: processing,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                name: "chevronLeft",
 	                size: 18
 	              }), " Back"]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	              className: "btn btn-accent btn-lg",
 	              onClick: placeOrder,
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "lock",
-	                size: 17
-	              }), " Place order \xB7 ", money(total)]
+	              disabled: processing,
+	              children: processing ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  className: "spinner"
+	                }), " Processing\u2026"]
+	              }) : pay === 'cod' ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                  name: "lock",
+	                  size: 17
+	                }), " Place order \xB7 ", money(total)]
+	              }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                  name: "lock",
+	                  size: 17
+	                }), " Pay ", money(total)]
+	              })
 	            })]
 	          })]
 	        })]
@@ -10012,7 +10219,7 @@
 	          })]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "acct__panel",
-	          children: [tab === 'orders' && /*#__PURE__*/jsxRuntimeExports.jsx(Orders, {}), tab === 'wishlist' && /*#__PURE__*/jsxRuntimeExports.jsx(WishTab, {
+	          children: [tab === 'orders' && /*#__PURE__*/jsxRuntimeExports.jsx(Orders$1, {}), tab === 'wishlist' && /*#__PURE__*/jsxRuntimeExports.jsx(WishTab, {
 	            wishlist: wishlist
 	          }), tab === 'addresses' && /*#__PURE__*/jsxRuntimeExports.jsx(Addresses, {}), tab === 'profile' && /*#__PURE__*/jsxRuntimeExports.jsx(Profile, {}), tab === 'settings' && /*#__PURE__*/jsxRuntimeExports.jsx(Settings$1, {})]
 	        })]
@@ -10158,7 +10365,7 @@
 	    })]
 	  });
 	}
-	function Orders() {
+	function Orders$1() {
 	  const [track, setTrack] = reactExports.useState(null);
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
@@ -33132,6 +33339,9 @@
 	  to: '/admin/products',
 	  label: 'Products'
 	}, {
+	  to: '/admin/orders',
+	  label: 'Orders'
+	}, {
 	  to: '/admin/pricing',
 	  label: 'Pricing'
 	}, {
@@ -33468,6 +33678,22 @@
 	    if (onProgress) onProgress(done, rows.length);
 	  }
 	  return rows.length;
+	}
+
+	// ---------------------------------------------------------------
+	// ADMIN: orders (read-only)
+	// Orders are written only by the server-side payment API. RLS grants
+	// admins SELECT, so this read runs under the logged-in admin's session.
+	// ---------------------------------------------------------------
+	async function adminListOrders(limit = 100) {
+	  const {
+	    data,
+	    error
+	  } = await supabase.from('orders').select('*').order('created_at', {
+	    ascending: false
+	  }).limit(limit);
+	  if (error) throw error;
+	  return data || [];
 	}
 
 	// ---------------------------------------------------------------
@@ -34081,6 +34307,108 @@
 	              })
 	            })]
 	          }, p.dbId))
+	        })]
+	      })
+	    })]
+	  });
+	}
+
+	const STATUS_BADGE = {
+	  paid: 'badge-best',
+	  pending: 'badge-soft',
+	  failed: 'badge-sale',
+	  cancelled: 'badge-out'
+	};
+	function Orders() {
+	  const [orders, setOrders] = reactExports.useState([]);
+	  const [loading, setLoading] = reactExports.useState(true);
+	  const [err, setErr] = reactExports.useState('');
+	  reactExports.useEffect(() => {
+	    adminListOrders().then(setOrders).catch(e => setErr(e.message || String(e))).finally(() => setLoading(false));
+	  }, []);
+	  const paidCount = orders.filter(o => o.payment_status === 'paid').length;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm__head",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          children: "Orders"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          children: loading ? 'Loading…' : `${orders.length} orders · ${paidCount} paid`
+	        })]
+	      })
+	    }), err && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-banner err",
+	      children: [err, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        style: {
+	          marginTop: 8,
+	          fontSize: 12
+	        },
+	        children: ["If the orders table does not exist yet, run", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+	          children: " supabase/migrations/0003_orders.sql "
+	        }), " in the Supabase SQL editor."]
+	      })]
+	    }), loading ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "muted",
+	      children: "Loading orders\u2026"
+	    }) : orders.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm-empty",
+	      children: "No orders yet. Orders appear here once a customer completes checkout."
+	    }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm-table-wrap",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+	        className: "adm-table",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+	          children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+	              children: "Order"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+	              children: "Placed"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+	              children: "Customer"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+	              children: "Amount"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+	              children: "Method"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+	              children: "Payment"
+	            })]
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+	          children: orders.map(o => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                children: o.order_number
+	              }), o.razorpay_payment_id && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "hint",
+	                style: {
+	                  display: 'block'
+	                },
+	                children: o.razorpay_payment_id
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	              children: new Date(o.created_at).toLocaleString('en-IN')
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+	              children: [[o.customer?.firstName, o.customer?.lastName].filter(Boolean).join(' ') || '—', o.customer?.email && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "hint",
+	                style: {
+	                  display: 'block'
+	                },
+	                children: o.customer.email
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                children: money((o.amount_paise || 0) / 100)
+	              })
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	              children: o.payment_method === 'cod' ? 'Cash on delivery' : 'Razorpay'
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: `badge ${STATUS_BADGE[o.payment_status] || 'badge-soft'}`,
+	                children: o.payment_status
+	              })
+	            })]
+	          }, o.id))
 	        })]
 	      })
 	    })]
@@ -36093,6 +36421,9 @@
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	        path: "products/:dbId/edit",
 	        element: /*#__PURE__*/jsxRuntimeExports.jsx(ProductForm, {})
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	        path: "orders",
+	        element: /*#__PURE__*/jsxRuntimeExports.jsx(Orders, {})
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	        path: "pricing",
 	        element: /*#__PURE__*/jsxRuntimeExports.jsx(Pricing, {})

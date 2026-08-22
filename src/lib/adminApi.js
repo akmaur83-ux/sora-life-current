@@ -240,6 +240,21 @@ export async function adminImportBiosashCatalog(onProgress) {
 }
 
 // ---------------------------------------------------------------
+// ADMIN: orders (read-only)
+// Orders are written only by the server-side payment API. RLS grants
+// admins SELECT, so this read runs under the logged-in admin's session.
+// ---------------------------------------------------------------
+export async function adminListOrders(limit = 100) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
+// ---------------------------------------------------------------
 // ADMIN: categories
 // ---------------------------------------------------------------
 export async function adminListCategories() {

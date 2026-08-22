@@ -353,6 +353,18 @@
 .opt svg { color: var(--forest-600); }
 .paycard { margin-top: 6px; padding: var(--sp-5); background: var(--forest-50); border-radius: var(--r-md); display: flex; flex-direction: column; gap: var(--sp-4); }
 
+/* Payment failure / cancellation states — calm and premium, never alarming */
+.paystate { margin-top: var(--sp-4); padding: var(--sp-5); border-radius: var(--r-md); border: 1px solid var(--line); background: var(--paper); }
+.paystate strong { display: block; font-family: var(--font-display); font-size: var(--text-md); margin-bottom: 6px; }
+.paystate p { font-size: var(--text-sm); margin-bottom: 4px; }
+.paystate--error { border-color: var(--clay-500); background: var(--clay-100); }
+.paystate--error strong { color: var(--clay-600); }
+.paystate--notice { border-color: var(--honey-300); background: var(--honey-100); }
+.paystate--notice strong { color: var(--honey-700); }
+.paystate__actions { display: flex; gap: 10px; margin-top: var(--sp-4); flex-wrap: wrap; }
+/* Inline spinner inside the Pay button */
+.btn .spinner { width: 16px; height: 16px; border-width: 2px; border-color: rgba(255,255,255,0.35); border-top-color: currentColor; }
+
 .checkout__aside .summary { top: var(--sp-6); }
 .checkout__items { display: flex; flex-direction: column; gap: 14px; margin-bottom: var(--sp-4); max-height: 320px; overflow-y: auto; }
 .checkout__item { display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; align-items: center; }

@@ -17,6 +17,7 @@ import { branding } from './lib/settings.js';
 import AdminLayout from './admin/AdminLayout.jsx';
 import Dashboard from './admin/pages/Dashboard.jsx';
 import Products from './admin/pages/Products.jsx';
+import Orders from './admin/pages/Orders.jsx';
 import ProductForm from './admin/pages/ProductForm.jsx';
 import Pricing from './admin/pages/Pricing.jsx';
 import Categories from './admin/pages/Categories.jsx';
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="products" element={<Products />} />
         <Route path="products/new" element={<ProductForm />} />
         <Route path="products/:dbId/edit" element={<ProductForm />} />
+        <Route path="orders" element={<Orders />} />
         <Route path="pricing" element={<Pricing />} />
         <Route path="categories" element={<Categories />} />
         <Route path="hero-slides" element={<HeroSlides />} />
