@@ -40,25 +40,44 @@ if (!supabaseUrl || !supabasePublishableKey) {
   ].filter(Boolean);
   // Names only — never values.
   const seenViteVars = Object.keys(process.env).filter((k) => k.startsWith('VITE_'));
+  const existingBundle = 'public/bundle.js';
+  const hasCommittedBundle = fs.existsSync(existingBundle);
+
   console.warn(
     '\n' +
     '  ============================================================\n' +
-    '   WARNING: building WITHOUT Supabase configuration\n' +
+    '   WARNING: Supabase configuration is NOT visible to this build\n' +
     '  ============================================================\n' +
     `   Missing: ${missing.join(', ')}\n` +
     `   VITE_* vars visible to this build: ${seenViteVars.length ? seenViteVars.join(', ') : '(none)'}\n` +
     `   Running on Vercel: ${process.env.VERCEL ? 'yes' : 'no'}` +
     (process.env.VERCEL_ENV ? ` (env: ${process.env.VERCEL_ENV})` : '') + '\n' +
     '\n' +
-    '   The public storefront will still build and run using its\n' +
-    '   built-in data. Supabase-backed features (admin dashboard,\n' +
-    '   live catalog/hero/branding) will be inactive until these\n' +
-    '   variables are readable by the BUILD step.\n' +
-    '\n' +
     '   On Vercel, build-time variables must NOT be marked\n' +
     '   "Sensitive" — sensitive values are withheld from the build\n' +
-    '   environment and are only decrypted at runtime.\n' +
+    '   environment and only decrypted at runtime. Check that first.\n' +
     '  ============================================================\n'
+  );
+
+  if (hasCommittedBundle) {
+    // A previously built, correctly-configured bundle is committed to the
+    // repo. Rebuilding now would silently overwrite it with a bundle that
+    // has no Supabase config, downgrading production to built-in data only
+    // (exactly what happened on deployment 6830ad1). Preserve the good
+    // artifact and exit successfully so the deploy still ships.
+    //
+    // This is self-healing: as soon as the variables are readable by the
+    // build, the normal build path below runs and emits a fresh bundle.
+    console.warn(
+      '   Keeping the existing committed public/bundle.js rather than\n' +
+      '   overwriting it with an unconfigured build. Deploy continues.\n'
+    );
+    process.exit(0);
+  }
+
+  console.warn(
+    '   No existing bundle to preserve — building without Supabase.\n' +
+    '   The storefront will run on its built-in data.\n'
   );
 }
 
