@@ -25,7 +25,11 @@ export default function ProductForm() {
   useEffect(() => {
     if (!isEdit) return;
     adminListProducts().then((list) => {
-      const p = list.find((x) => x.dbId === dbId);
+      // products.id is a numeric Supabase column, so dbId on each product
+      // is a JS number — but useParams() always returns route params as
+      // strings, regardless of the underlying column type. Compare as
+      // strings so this works whether dbId is numeric, text, or a UUID.
+      const p = list.find((x) => String(x.dbId) === String(dbId));
       if (!p) { setErr('Product not found.'); setLoading(false); return; }
       setValues({
         name: p.name, slug: p.slug, description: p.description, category: p.category,
