@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductImage from '../components/ProductImage.jsx';
 import Logo from '../components/Logo.jsx';
+import OrderCelebration from '../components/OrderCelebration.jsx';
 import { useStore } from '../lib/store.jsx';
 import { money } from '../lib/format.js';
 
@@ -19,7 +20,22 @@ export default function Checkout() {
   const [delivery, setDelivery] = useState('std');
   const [pay, setPay] = useState('upi');
   const [placed, setPlaced] = useState(false);
+  // Generated once when the order is placed. It used to be computed inline
+  // during render, which meant any re-render (including the celebration's
+  // own particle cleanup) silently produced a different order number.
+  const [orderNo, setOrderNo] = useState(null);
+  // Drives the one-time celebration. Added a frame after the confirmation
+  // mounts and removed once the sequence is over, so the confirmation always
+  // settles back to its plain, fully-visible, interactive base state.
+  const [celebrate, setCelebrate] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!placed) return;
+    const raf = requestAnimationFrame(() => setCelebrate(true));
+    const done = setTimeout(() => setCelebrate(false), 2400);
+    return () => { cancelAnimationFrame(raf); clearTimeout(done); };
+  }, [placed]);
 
   const deliveryFee = DELIVERY.find((d) => d.id === delivery)?.price || 0;
   const shipBase = subtotal >= 699 ? 0 : deliveryFee;
@@ -28,19 +44,19 @@ export default function Checkout() {
   if (placed) {
     return (
       <div className="container section">
-        <div className="confirm">
-          <div className="confirm__tick"><Icon name="check" size={40} /></div>
-          <span className="eyebrow">Order confirmed</span>
-          <h1 className="serif">Thank you — your ritual is on its way.</h1>
-          <p className="muted">A confirmation has been sent to your email. Order <strong>#SORA-{Math.floor(100000 + Math.random() * 900000)}</strong>.</p>
-          <div className="confirm__card">
+        <div className={`confirm confirm__enter ${celebrate ? 'confirm--celebrate' : ''}`}>
+          <OrderCelebration />
+          <span className="eyebrow confirm__reveal" style={{ '--d': '400ms' }}>Order confirmed</span>
+          <h1 className="serif confirm__reveal" style={{ '--d': '480ms' }}>Thank you — your ritual is on its way.</h1>
+          <p className="muted confirm__reveal" style={{ '--d': '550ms' }}>A confirmation has been sent to your email. Order <strong>#SORA-{orderNo}</strong>.</p>
+          <div className="confirm__card confirm__reveal" style={{ '--d': '620ms' }}>
             <div className="confirm__row"><span>Estimated delivery</span><strong>{DELIVERY.find((d) => d.id === delivery)?.eta}</strong></div>
             <div className="confirm__row"><span>Total paid</span><strong>{money(total)}</strong></div>
             <div className="confirm__row"><span>Payment</span><strong>{pay === 'cod' ? 'Cash on delivery' : pay.toUpperCase()}</strong></div>
           </div>
           <div className="confirm__actions">
-            <Link to="/account/orders" className="btn">Track my order</Link>
-            <Link to="/shop" className="btn btn-outline">Continue shopping</Link>
+            <Link to="/account/orders" className="btn confirm__reveal confirm__reveal--btn" style={{ '--d': '700ms' }}>Track my order</Link>
+            <Link to="/shop" className="btn btn-outline confirm__reveal confirm__reveal--btn" style={{ '--d': '780ms' }}>Continue shopping</Link>
           </div>
         </div>
       </div>
@@ -61,7 +77,12 @@ export default function Checkout() {
   }
 
   const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1));
-  const placeOrder = () => { dispatch({ type: 'CLEAR_CART' }); setPlaced(true); window.scrollTo(0, 0); };
+  const placeOrder = () => {
+    setOrderNo(Math.floor(100000 + Math.random() * 900000));
+    dispatch({ type: 'CLEAR_CART' });
+    setPlaced(true);
+    window.scrollTo(0, 0);
+  };
 
   return (
     <div className="checkout">

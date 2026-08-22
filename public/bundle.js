@@ -9157,6 +9157,195 @@
 	  });
 	}
 
+	const PARTICLES = [{
+	  angle: -90,
+	  dist: 78,
+	  size: 7,
+	  delay: 0,
+	  kind: 'dot',
+	  tone: 'gold'
+	}, {
+	  angle: -50,
+	  dist: 66,
+	  size: 5,
+	  delay: 60,
+	  kind: 'spark',
+	  tone: 'gold-soft'
+	}, {
+	  angle: -18,
+	  dist: 84,
+	  size: 8,
+	  delay: 20,
+	  kind: 'leaf',
+	  tone: 'green'
+	}, {
+	  angle: 16,
+	  dist: 62,
+	  size: 5,
+	  delay: 90,
+	  kind: 'dot',
+	  tone: 'cream'
+	}, {
+	  angle: 48,
+	  dist: 80,
+	  size: 7,
+	  delay: 40,
+	  kind: 'leaf',
+	  tone: 'gold'
+	}, {
+	  angle: 88,
+	  dist: 70,
+	  size: 6,
+	  delay: 110,
+	  kind: 'dot',
+	  tone: 'green-soft'
+	}, {
+	  angle: 126,
+	  dist: 76,
+	  size: 5,
+	  delay: 30,
+	  kind: 'spark',
+	  tone: 'gold'
+	}, {
+	  angle: 160,
+	  dist: 64,
+	  size: 7,
+	  delay: 100,
+	  kind: 'dot',
+	  tone: 'cream'
+	}, {
+	  angle: -140,
+	  dist: 82,
+	  size: 6,
+	  delay: 50,
+	  kind: 'leaf',
+	  tone: 'green'
+	}, {
+	  angle: -112,
+	  dist: 60,
+	  size: 5,
+	  delay: 130,
+	  kind: 'dot',
+	  tone: 'gold-soft'
+	}, {
+	  angle: 4,
+	  dist: 96,
+	  size: 4,
+	  delay: 150,
+	  kind: 'spark',
+	  tone: 'gold'
+	}, {
+	  angle: 178,
+	  dist: 90,
+	  size: 4,
+	  delay: 70,
+	  kind: 'dot',
+	  tone: 'green-soft'
+	}];
+
+	// A few extremely subtle particles that drift upward after the burst,
+	// then stop — the celebration always finishes, never loops.
+	const DRIFT = [{
+	  x: -54,
+	  size: 5,
+	  delay: 520,
+	  kind: 'leaf',
+	  tone: 'green-soft'
+	}, {
+	  x: 40,
+	  size: 4,
+	  delay: 700,
+	  kind: 'dot',
+	  tone: 'gold-soft'
+	}, {
+	  x: -14,
+	  size: 4,
+	  delay: 900,
+	  kind: 'spark',
+	  tone: 'gold'
+	}, {
+	  x: 62,
+	  size: 5,
+	  delay: 1080,
+	  kind: 'leaf',
+	  tone: 'green'
+	}];
+	const BURST_LIFETIME = 2000; // ms — after this the particle DOM is removed
+
+	function OrderCelebration() {
+	  const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+	  const isNarrow = typeof window !== 'undefined' && window.innerWidth < 640;
+
+	  // Reduced motion: no particles at all — just the static success state.
+	  // Mobile: fewer particles, shorter travel (scaled below).
+	  const [showParticles, setShowParticles] = reactExports.useState(!reduced);
+	  const {
+	    burst,
+	    drift,
+	    scale
+	  } = reactExports.useMemo(() => ({
+	    burst: reduced ? [] : isNarrow ? PARTICLES.filter((_, i) => i % 2 === 0) : PARTICLES,
+	    drift: reduced ? [] : isNarrow ? DRIFT.slice(0, 2) : DRIFT,
+	    scale: isNarrow ? 0.62 : 1 // shorter travel distance on small screens
+	  }), [reduced, isNarrow]);
+	  reactExports.useEffect(() => {
+	    if (!showParticles) return;
+	    const t = setTimeout(() => setShowParticles(false), BURST_LIFETIME);
+	    return () => clearTimeout(t);
+	  }, [showParticles]);
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "confirm__celebrate",
+	    children: [!reduced && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "confirm__glow",
+	      "aria-hidden": "true"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "confirm__ring",
+	      "aria-hidden": "true"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "confirm__tick",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("svg", {
+	        viewBox: "0 0 52 52",
+	        width: "44",
+	        height: "44",
+	        "aria-hidden": "true",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	          className: "confirm__check-path",
+	          d: "M14 27.5 L22.5 36 L38 18",
+	          fill: "none",
+	          stroke: "currentColor",
+	          strokeWidth: "4.2",
+	          strokeLinecap: "round",
+	          strokeLinejoin: "round"
+	        })
+	      })
+	    }), showParticles && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "confirm__particles",
+	      "aria-hidden": "true",
+	      children: [burst.map((p, i) => {
+	        const rad = p.angle * Math.PI / 180;
+	        const tx = Math.cos(rad) * p.dist * scale;
+	        const ty = Math.sin(rad) * p.dist * scale;
+	        return /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: `confirm__p confirm__p--${p.kind} tone-${p.tone}`,
+	          style: {
+	            '--tx': `${tx.toFixed(1)}px`,
+	            '--ty': `${ty.toFixed(1)}px`,
+	            '--sz': `${p.size}px`,
+	            animationDelay: `${300 + p.delay}ms`
+	          }
+	        }, `b${i}`);
+	      }), drift.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: `confirm__p confirm__p--${p.kind} confirm__p--drift tone-${p.tone}`,
+	        style: {
+	          '--tx': `${(p.x * scale).toFixed(1)}px`,
+	          '--sz': `${p.size}px`,
+	          animationDelay: `${p.delay}ms`
+	        }
+	      }, `d${i}`))]
+	    })]
+	  });
+	}
+
 	const STEPS = ['Contact', 'Shipping', 'Delivery', 'Payment'];
 	const DELIVERY = [{
 	  id: 'std',
@@ -9186,7 +9375,24 @@
 	  const [delivery, setDelivery] = reactExports.useState('std');
 	  const [pay, setPay] = reactExports.useState('upi');
 	  const [placed, setPlaced] = reactExports.useState(false);
+	  // Generated once when the order is placed. It used to be computed inline
+	  // during render, which meant any re-render (including the celebration's
+	  // own particle cleanup) silently produced a different order number.
+	  const [orderNo, setOrderNo] = reactExports.useState(null);
+	  // Drives the one-time celebration. Added a frame after the confirmation
+	  // mounts and removed once the sequence is over, so the confirmation always
+	  // settles back to its plain, fully-visible, interactive base state.
+	  const [celebrate, setCelebrate] = reactExports.useState(false);
 	  useNavigate();
+	  reactExports.useEffect(() => {
+	    if (!placed) return;
+	    const raf = requestAnimationFrame(() => setCelebrate(true));
+	    const done = setTimeout(() => setCelebrate(false), 2400);
+	    return () => {
+	      cancelAnimationFrame(raf);
+	      clearTimeout(done);
+	    };
+	  }, [placed]);
 	  const deliveryFee = DELIVERY.find(d => d.id === delivery)?.price || 0;
 	  const shipBase = subtotal >= 699 ? 0 : deliveryFee;
 	  const total = Math.max(0, subtotal + shipBase);
@@ -9194,26 +9400,32 @@
 	    return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	      className: "container section",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "confirm",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "confirm__tick",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "check",
-	            size: 40
-	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "eyebrow",
+	        className: `confirm confirm__enter ${celebrate ? 'confirm--celebrate' : ''}`,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(OrderCelebration, {}), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "eyebrow confirm__reveal",
+	          style: {
+	            '--d': '400ms'
+	          },
 	          children: "Order confirmed"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-	          className: "serif",
+	          className: "serif confirm__reveal",
+	          style: {
+	            '--d': '480ms'
+	          },
 	          children: "Thank you \u2014 your ritual is on its way."
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	          className: "muted",
+	          className: "muted confirm__reveal",
+	          style: {
+	            '--d': '550ms'
+	          },
 	          children: ["A confirmation has been sent to your email. Order ", /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
-	            children: ["#SORA-", Math.floor(100000 + Math.random() * 900000)]
+	            children: ["#SORA-", orderNo]
 	          }), "."]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "confirm__card",
+	          className: "confirm__card confirm__reveal",
+	          style: {
+	            '--d': '620ms'
+	          },
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "confirm__row",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -9240,11 +9452,17 @@
 	          className: "confirm__actions",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: "/account/orders",
-	            className: "btn",
+	            className: "btn confirm__reveal confirm__reveal--btn",
+	            style: {
+	              '--d': '700ms'
+	            },
 	            children: "Track my order"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: "/shop",
-	            className: "btn btn-outline",
+	            className: "btn btn-outline confirm__reveal confirm__reveal--btn",
+	            style: {
+	              '--d': '780ms'
+	            },
 	            children: "Continue shopping"
 	          })]
 	        })]
@@ -9276,6 +9494,7 @@
 	  }
 	  const next = () => setStep(s => Math.min(STEPS.length - 1, s + 1));
 	  const placeOrder = () => {
+	    setOrderNo(Math.floor(100000 + Math.random() * 900000));
 	    dispatch({
 	      type: 'CLEAR_CART'
 	    });

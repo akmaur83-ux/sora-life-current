@@ -366,7 +366,123 @@
 
 /* Order confirmation */
 .confirm { max-width: 560px; margin: 0 auto; text-align: center; padding-block: var(--sp-10); }
-.confirm__tick { width: 84px; height: 84px; margin: 0 auto var(--sp-5); border-radius: 999px; background: var(--color-success); color: #fff; display: grid; place-items: center; animation: pop 0.5s var(--ease); }
+
+/* ---- Order-confirmed celebration ----------------------------------
+   Timeline (all CSS, transform/opacity only):
+     0ms   container settles in
+     100ms success icon scales up
+     ~250ms checkmark finishes drawing
+     300ms glow + particle burst
+     400ms "Order confirmed"
+     550ms headline / supporting copy
+     700ms action buttons
+     ~1.9s celebration finishes and particle DOM unmounts
+   The container's own entrance is defined on .confirm__enter below. */
+/* SAFETY: the confirmation content — including the CTAs — is fully
+   visible and interactive by DEFAULT. The entrance animations only apply
+   while the parent carries .confirm--celebrate, which is added on mount
+   and removed once the sequence finishes. So if animations are disabled,
+   stalled or unsupported for any reason, the user still sees a complete,
+   clickable confirmation instead of a blank screen. Order confirmation is
+   too important to gate behind an animation completing. */
+.confirm--celebrate.confirm__enter { animation: confirmIn 760ms var(--ease-luxury) both; }
+@keyframes confirmIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Staggered reveal for the confirmation content; each element sets --d */
+.confirm--celebrate .confirm__reveal { animation: confirmReveal 700ms var(--ease-luxury) both; animation-delay: var(--d, 0ms); }
+@keyframes confirmReveal {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+.confirm--celebrate .confirm__reveal--btn { animation-name: confirmRevealBtn; }
+@keyframes confirmRevealBtn {
+  from { opacity: 0; transform: translateY(15px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+.confirm__celebrate { position: relative; width: 84px; height: 84px; margin: 0 auto var(--sp-5); }
+
+.confirm__tick {
+  position: relative; z-index: 2;
+  width: 84px; height: 84px; border-radius: 999px;
+  background: var(--color-success); color: #fff;
+  display: grid; place-items: center;
+}
+.confirm--celebrate .confirm__tick { animation: tickIn 620ms var(--ease-luxury) 100ms both; }
+/* 0.5 -> 1.08 -> 1: a soft settle, never an excessive bounce */
+@keyframes tickIn {
+  0%   { opacity: 0; transform: scale(0.5); }
+  55%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Checkmark draws itself (default state: already drawn) */
+.confirm__check-path { stroke-dasharray: 44; stroke-dashoffset: 0; }
+.confirm--celebrate .confirm__check-path { animation: checkDraw 420ms var(--ease-luxury) 180ms both; }
+@keyframes checkDraw { from { stroke-dashoffset: 44; } to { stroke-dashoffset: 0; } }
+
+/* Ring expands and settles around the icon (default: settled) */
+.confirm__ring {
+  position: absolute; inset: -6px; z-index: 1; border-radius: 999px;
+  border: 2px solid var(--forest-300); opacity: 0.45;
+}
+.confirm--celebrate .confirm__ring { animation: ringIn 760ms var(--ease-luxury) 140ms both; }
+@keyframes ringIn {
+  0%   { opacity: 0; transform: scale(0.8); }
+  60%  { opacity: 0.85; transform: scale(1.05); }
+  100% { opacity: 0.45; transform: scale(1); }
+}
+
+/* Warm radial glow — subtle, expands then fades away entirely */
+.confirm__glow {
+  position: absolute; inset: -46px; z-index: 0; border-radius: 999px; pointer-events: none;
+  background: radial-gradient(circle, rgba(232,176,75,0.42) 0%, rgba(232,176,75,0.16) 42%, rgba(232,176,75,0) 70%);
+  opacity: 0; /* purely decorative: ends invisible, so default is invisible */
+}
+.confirm--celebrate .confirm__glow { animation: glowPulse 1500ms var(--ease-luxury) 300ms both; }
+@keyframes glowPulse {
+  0%   { opacity: 0; transform: scale(0.7); }
+  35%  { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+
+/* ---- Particles ---- */
+.confirm__particles { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.confirm__p {
+  position: absolute; top: 50%; left: 50%; width: var(--sz); height: var(--sz);
+  margin: calc(var(--sz) / -2) 0 0 calc(var(--sz) / -2);
+  opacity: 0; will-change: transform, opacity;
+  animation: particleBurst 1200ms var(--ease-luxury) both;
+}
+.confirm__p--dot { border-radius: 999px; }
+.confirm__p--leaf { border-radius: 60% 0 60% 0; }
+.confirm__p--spark { border-radius: 1px; transform: rotate(45deg); }
+.confirm__p.tone-gold { background: var(--honey-500); }
+.confirm__p.tone-gold-soft { background: var(--honey-300); }
+.confirm__p.tone-green { background: var(--forest-400); }
+.confirm__p.tone-green-soft { background: var(--forest-300); }
+.confirm__p.tone-cream { background: var(--cream); }
+
+@keyframes particleBurst {
+  0%   { opacity: 0; transform: translate(0, 0) scale(0); }
+  22%  { opacity: 1; transform: translate(calc(var(--tx) * 0.5), calc(var(--ty) * 0.5)) scale(1); }
+  100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.6); }
+}
+
+/* Ambient upward drift, finishes and stops (no infinite loop) */
+.confirm__p--drift { animation: particleDrift 1500ms var(--ease-luxury) both; }
+@keyframes particleDrift {
+  0%   { opacity: 0; transform: translate(var(--tx), 10px) scale(0.6); }
+  30%  { opacity: 0.9; transform: translate(var(--tx), -18px) scale(1); }
+  100% { opacity: 0; transform: translate(var(--tx), -64px) scale(0.7); }
+}
+
+@media (max-width: 640px) {
+  .confirm__glow { inset: -30px; }
+}
 @keyframes pop { 0% { transform: scale(0); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
 .confirm h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 10px 0; }
 .confirm__card { text-align: left; background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: var(--sp-5); margin: var(--sp-6) 0; }
