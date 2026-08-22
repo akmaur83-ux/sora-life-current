@@ -1,0 +1,107 @@
+/* ============================================================
+   SORA LIFE — DESIGN TOKENS
+   Botanical evergreen + warm ivory + honey accent.
+   Premium, natural, modern, warm. Not generic-organic.
+   ============================================================ */
+:root {
+  /* ---- Brand color scales ---- */
+  --forest-900: #14261C;
+  --forest-800: #1A3226;
+  --forest-700: #1E3A2F; /* primary brand ink-green */
+  --forest-600: #2C5341;
+  --forest-500: #3B6E56;
+  --forest-400: #578D72;
+  --forest-300: #85B49F;
+  --forest-200: #BEDACD;
+  --forest-100: #E1EEE7;
+  --forest-50:  #F0F6F2;
+
+  --honey-700: #B4761F;
+  --honey-600: #D08E2C;
+  --honey-500: #E8B04B; /* accent / highlights */
+  --honey-400: #F0C169;
+  --honey-300: #F6D79A;
+  --honey-200: #FBE9C8;
+  --honey-100: #FDF4E4;
+
+  --clay-600: #B4552E;
+  --clay-500: #C56A45; /* warm secondary / sale */
+  --clay-100: #F7E7DF;
+
+  /* ---- Neutrals (warm-tinted) ---- */
+  --ivory:     #FBF8F1; /* page background */
+  --cream:     #F4EEE1;
+  --sand:      #EDE6D6;
+  --paper:     #FFFFFF; /* cards */
+  --ink-900:   #16211B;
+  --ink-700:   #2C3A32;
+  --ink-500:   #55655B; /* muted text */
+  --ink-400:   #7A897F;
+  --line:      #E7DFD0; /* borders */
+  --line-soft: #F0EADD;
+
+  /* ---- Semantic ---- */
+  --color-bg: var(--ivory);
+  --color-surface: var(--paper);
+  --color-surface-2: var(--cream);
+  --color-primary: var(--forest-700);
+  --color-primary-hover: var(--forest-800);
+  --color-accent: var(--honey-500);
+  --color-accent-strong: var(--honey-700);
+  --color-sale: var(--clay-500);
+  --color-text: var(--ink-900);
+  --color-text-muted: var(--ink-500);
+  --color-on-primary: #FBF8F1;
+  --color-border: var(--line);
+  --color-ring: var(--forest-400);
+  --color-success: #2F855A;
+  --color-danger: #C0392B;
+  --color-star: #E8B04B;
+
+  /* ---- Typography ---- */
+  --font-display: 'Fraunces', 'Georgia', 'Times New Roman', serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 3rem;
+  --text-5xl: 3.75rem;
+
+  /* ---- Spacing scale (8pt-based, warm-density) ---- */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+  --sp-12: 48px; --sp-16: 64px; --sp-20: 80px; --sp-24: 96px;
+
+  /* ---- Radius ---- */
+  --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-xl: 28px; --r-pill: 999px;
+
+  /* ---- Shadows (Soft UI Evolution: soft, layered, low-contrast) ---- */
+  --shadow-xs: 0 1px 2px rgba(20, 38, 28, 0.06);
+  --shadow-sm: 0 2px 8px rgba(20, 38, 28, 0.06);
+  --shadow-md: 0 8px 24px rgba(20, 38, 28, 0.08);
+  --shadow-lg: 0 18px 48px rgba(20, 38, 28, 0.12);
+  --shadow-focus: 0 0 0 3px rgba(87, 141, 114, 0.35);
+
+  /* ---- Motion ---- */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 140ms;
+  --t: 240ms;
+  --t-slow: 420ms;
+
+  /* ---- Layout ---- */
+  --container: 1240px;
+  --container-wide: 1440px;
+  --header-h: 116px;
+  --header-h-scrolled: 72px;
+}
+
+@media (max-width: 900px) {
+  :root { --header-h: 60px; --header-h-scrolled: 60px; }
+}
