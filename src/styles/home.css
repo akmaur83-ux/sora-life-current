@@ -27,8 +27,10 @@
 .hdr__link { font-size: 0.82rem; font-weight: 600; letter-spacing: 0.06em; padding: 9px 11px; }
 .hdr__right { display: flex; align-items: center; gap: var(--sp-4); }
 .hdr__search { position: relative; width: 260px; }
-.hdr__search .searchbox .input { padding: 11px 44px 11px 16px; border: 1px solid var(--line); background: var(--paper); border-radius: var(--r-pill); font-size: var(--text-sm); }
-.hdr__search .searchbox .input:focus { border-color: var(--forest-300); }
+.hdr__search .searchbox { transition: transform var(--t-slow) var(--ease-luxury); transform-origin: left center; }
+.hdr__search:focus-within .searchbox { transform: scale(1.035); }
+.hdr__search .searchbox .input { padding: 11px 44px 11px 16px; border: 1px solid var(--line); background: var(--paper); border-radius: var(--r-pill); font-size: var(--text-sm); transition: border-color var(--t) var(--ease-soft), box-shadow var(--t) var(--ease-soft); }
+.hdr__search .searchbox .input:focus { border-color: var(--forest-300); box-shadow: 0 0 0 4px rgba(87, 141, 114, 0.12); }
 .hdr__search-btn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; display: grid; place-items: center; border-radius: 999px; color: var(--forest-700); }
 .hdr__search-btn:hover { background: var(--forest-50); }
 .hdr__suggest { position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-lg); overflow: hidden; z-index: 30; }
@@ -72,11 +74,13 @@
 .bh-cats { border-bottom: 1px solid var(--line-soft); background: var(--paper); }
 .bh-cats__row { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--sp-3); padding-block: var(--sp-8); }
 .bh-cat { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
-.bh-cat__circle { width: 92px; height: 92px; border-radius: 999px; overflow: hidden; background: var(--tone-tint, var(--cream)); display: grid; place-items: center; transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease); }
+.bh-cat__circle { width: 92px; height: 92px; border-radius: 999px; overflow: hidden; background: var(--tone-tint, var(--cream)); display: grid; place-items: center; transition: transform var(--t-slow) var(--ease-luxury), box-shadow var(--t-slow) var(--ease-luxury); }
 .bh-cat__circle .pimg { width: 100%; height: 100%; aspect-ratio: 1; border-radius: 999px; }
-.bh-cat__circle .pimg img { padding: 10px; background: transparent; mix-blend-mode: multiply; }
+.bh-cat__circle .pimg img { padding: 10px; background: transparent; mix-blend-mode: multiply; transition: transform var(--t-slower) var(--ease-luxury); }
 .bh-cat:hover .bh-cat__circle { transform: translateY(-4px); box-shadow: var(--shadow-md); }
-.bh-cat__name { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-900); }
+.bh-cat:hover .bh-cat__circle .pimg img { transform: scale(1.08); }
+.bh-cat__name { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-900); transition: color var(--t) var(--ease-soft); }
+.bh-cat:hover .bh-cat__name { color: var(--forest-700); }
 .bh-cat__view { font-size: var(--text-xs); color: var(--color-text-muted); }
 @media (max-width: 1040px) { .bh-cats__row { grid-template-columns: repeat(4, 1fr); gap: var(--sp-5) var(--sp-3); } }
 @media (max-width: 560px) {
@@ -110,14 +114,15 @@
 /* ============ EDITORIAL CARDS ============ */
 .bh-edit-wrap { padding-block: var(--sp-10) var(--sp-16); background: var(--cream); }
 .bh-edit { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-5); }
-.bh-editcard { position: relative; display: flex; align-items: stretch; min-height: 210px; border-radius: var(--r-lg); overflow: hidden; background: linear-gradient(120deg, var(--tone-tint, var(--forest-50)), var(--paper)); border: 1px solid var(--line-soft); transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease); }
-.bh-editcard:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.bh-editcard { position: relative; display: flex; align-items: stretch; min-height: 210px; border-radius: var(--r-lg); overflow: hidden; background: linear-gradient(120deg, var(--tone-tint, var(--forest-50)), var(--paper)); border: 1px solid var(--line-soft); transition: transform var(--t-slow) var(--ease-luxury), box-shadow var(--t-slow) var(--ease-luxury); }
+.bh-editcard:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
 .bh-editcard__body { padding: var(--sp-6); display: flex; flex-direction: column; justify-content: center; max-width: 62%; z-index: 1; }
 .bh-editcard__body h3 { font-size: var(--text-xl); margin-bottom: 8px; }
 .bh-editcard__body p { color: var(--ink-700); font-size: var(--text-sm); margin-bottom: 16px; }
-.bh-editcard__cta { display: inline-flex; align-items: center; gap: 7px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; color: var(--forest-700); }
+.bh-editcard__cta { display: inline-flex; align-items: center; gap: 7px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; color: var(--forest-700); transition: gap var(--t) var(--ease-luxury); }
 .bh-editcard:hover .bh-editcard__cta { gap: 11px; }
-.bh-editcard__img { position: absolute; right: -6px; bottom: -6px; width: 46%; max-width: 190px; }
+.bh-editcard__img { position: absolute; right: -6px; bottom: -6px; width: 46%; max-width: 190px; transition: transform var(--t-slower) var(--ease-luxury); }
+.bh-editcard:hover .bh-editcard__img { transform: scale(1.05) translateY(-3px); }
 .bh-editcard__img .pimg { aspect-ratio: 1; background: transparent; }
 .bh-editcard__img .pimg img { object-fit: contain !important; mix-blend-mode: multiply; }
 @media (max-width: 900px) { .bh-edit { grid-template-columns: 1fr; } .bh-editcard { min-height: 170px; } }
@@ -138,10 +143,46 @@
 
 /* ============ HERO CAROUSEL ============ */
 .bh-hero--carousel { position: relative; }
-.bh-slide { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity 900ms var(--ease); }
+.bh-slide { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity 1200ms var(--ease-luxury); }
 .bh-slide.is-active { opacity: 1; visibility: visible; z-index: 1; }
-.bh-slide .bh-hero__copy { opacity: 0; transform: translateY(14px); transition: opacity 700ms var(--ease) 180ms, transform 700ms var(--ease) 180ms; }
-.bh-slide.is-active .bh-hero__copy { opacity: 1; transform: none; }
+
+/* Cinematic slow scale ("Ken Burns") on the active slide's media only —
+   subtle, continuous, never restarts mid-view so it never feels like a
+   slideshow effect. Purely transform, GPU-composited. */
+/* Oversized wrapper so the JS scroll-parallax translate (±40px) never
+   reveals an edge; the Ken-Burns scale lives on .bh-hero__media inside it,
+   so the two transforms apply to different elements and never conflict. */
+.bh-hero__parallax { position: absolute; inset: -48px 0; will-change: transform; }
+.bh-hero__media { transform: scale(1); transition: transform var(--t) var(--ease); }
+.bh-slide.is-active .bh-hero__media { animation: heroKenBurns 14s var(--ease-luxury) forwards; }
+@keyframes heroKenBurns { from { transform: scale(1.0); } to { transform: scale(1.045); } }
+
+/* Text stagger: each line reveals slightly after the previous, all subtle
+   fade-up — never a single-block reveal, never a large travel distance. */
+.bh-slide .bh-hero__kicker,
+.bh-slide .bh-hero__title,
+.bh-slide .bh-hero__sub,
+.bh-slide .bh-hero__lede,
+.bh-slide .bh-hero__cta,
+.bh-slide .bh-hero__benefits {
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 900ms var(--ease-luxury), transform 900ms var(--ease-luxury);
+}
+.bh-slide.is-active .bh-hero__kicker { transition-delay: 120ms; }
+.bh-slide.is-active .bh-hero__title { transition-delay: 220ms; }
+.bh-slide.is-active .bh-hero__sub { transition-delay: 340ms; }
+.bh-slide.is-active .bh-hero__lede { transition-delay: 420ms; }
+.bh-slide.is-active .bh-hero__cta { transition-delay: 500ms; }
+.bh-slide.is-active .bh-hero__benefits { transition-delay: 580ms; }
+.bh-slide.is-active .bh-hero__kicker,
+.bh-slide.is-active .bh-hero__title,
+.bh-slide.is-active .bh-hero__sub,
+.bh-slide.is-active .bh-hero__lede,
+.bh-slide.is-active .bh-hero__cta,
+.bh-slide.is-active .bh-hero__benefits { opacity: 1; transform: none; }
+
+.bh-hero__cta svg { transition: transform var(--t) var(--ease-soft); }
+.bh-hero__cta:hover svg { transform: translateX(3px); }
 
 .bh-hero__arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; width: 46px; height: 46px; border-radius: 999px; background: rgba(251,248,241,0.82); backdrop-filter: blur(3px); color: var(--forest-800); display: grid; place-items: center; box-shadow: var(--shadow-sm); transition: background var(--t) var(--ease), transform var(--t) var(--ease); }
 .bh-hero__arrow:hover { background: #fff; transform: translateY(-50%) scale(1.06); }

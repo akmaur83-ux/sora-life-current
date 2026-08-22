@@ -13,12 +13,12 @@
   background: var(--btn-bg); color: var(--btn-fg);
   border: 1px solid transparent;
   cursor: pointer; white-space: nowrap;
-  transition: transform var(--t-fast) var(--ease), background var(--t) var(--ease), box-shadow var(--t) var(--ease), color var(--t) var(--ease);
+  transition: transform var(--t) var(--ease-luxury), background var(--t) var(--ease), box-shadow var(--t) var(--ease-luxury), color var(--t) var(--ease);
   will-change: transform;
 }
 .btn:hover { background: var(--color-primary-hover); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.btn:active { transform: translateY(0); }
-.btn svg { width: 18px; height: 18px; }
+.btn:active { transform: translateY(0) scale(0.98); transition-duration: var(--t-fast); }
+.btn svg { width: 18px; height: 18px; transition: transform var(--t) var(--ease-soft); }
 
 .btn-accent { --btn-bg: var(--color-accent); --btn-fg: var(--forest-900); }
 .btn-accent:hover { background: var(--color-accent-strong); color: #fff; }
@@ -42,11 +42,12 @@
   display: inline-flex; align-items: center; justify-content: center;
   width: 44px; height: 44px; border-radius: var(--r-pill);
   color: var(--color-text); background: transparent; position: relative;
-  transition: background var(--t) var(--ease), color var(--t) var(--ease), transform var(--t-fast) var(--ease);
+  transition: background var(--t) var(--ease), color var(--t) var(--ease), transform var(--t-fast) var(--ease-soft);
 }
 .iconbtn:hover { background: var(--forest-50); }
-.iconbtn:active { transform: scale(0.92); }
-.iconbtn svg { width: 22px; height: 22px; }
+.iconbtn:active { transform: scale(0.9); }
+.iconbtn svg { width: 22px; height: 22px; transition: transform var(--t) var(--ease-soft); }
+.iconbtn:hover svg { transform: scale(1.06); }
 .iconbtn .count {
   position: absolute; top: 3px; right: 2px;
   min-width: 18px; height: 18px; padding: 0 5px;
@@ -54,7 +55,9 @@
   font-size: 11px; font-weight: 700; font-family: var(--font-sans);
   border-radius: 999px; display: grid; place-items: center; line-height: 1;
   border: 2px solid var(--color-bg);
+  animation: countpop 0.45s var(--ease-soft);
 }
+@keyframes countpop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
 
 /* ---------- Badges ---------- */
 .badge {
@@ -93,12 +96,12 @@
   position: relative; display: flex; flex-direction: column;
   background: var(--paper); border: 1px solid var(--line-soft);
   border-radius: var(--r-lg); overflow: hidden;
-  transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease), border-color var(--t) var(--ease);
+  transition: transform var(--t-slow) var(--ease-luxury), box-shadow var(--t-slow) var(--ease-luxury), border-color var(--t) var(--ease);
 }
 .pcard:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); border-color: var(--line); }
 .pcard__media { position: relative; overflow: hidden; }
-.pcard__media .pimg svg { transition: transform var(--t-slow) var(--ease); }
-.pcard:hover .pcard__media .pimg svg { transform: scale(1.06); }
+.pcard__media .pimg svg, .pcard__media .pimg img { transition: transform 1100ms var(--ease-luxury); }
+.pcard:hover .pcard__media .pimg svg, .pcard:hover .pcard__media .pimg img { transform: scale(1.06); }
 .pcard__badges { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 2; }
 .pcard__wish {
   position: absolute; top: 10px; right: 10px; z-index: 3;
@@ -108,17 +111,18 @@
   box-shadow: var(--shadow-xs);
   transition: transform var(--t-fast) var(--ease), color var(--t) var(--ease), background var(--t) var(--ease);
 }
-.pcard__wish svg { width: 20px; height: 20px; }
+.pcard__wish svg { width: 20px; height: 20px; transition: transform var(--t) var(--ease-soft); }
 .pcard__wish:hover { color: var(--color-sale); }
+.pcard__wish:hover svg { transform: scale(1.1); }
 .pcard__wish.active { color: var(--color-sale); }
-.pcard__wish.active svg { fill: currentColor; animation: heartpop 0.4s var(--ease); }
-@keyframes heartpop { 0%{transform:scale(1)} 40%{transform:scale(1.35)} 100%{transform:scale(1)} }
+.pcard__wish.active svg { fill: currentColor; animation: heartpop 0.55s var(--ease-soft); }
+@keyframes heartpop { 0% { transform: scale(1); } 45% { transform: scale(1.16); } 100% { transform: scale(1); } }
 
 .pcard__quick {
   position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 2;
   display: flex; gap: 8px;
   transform: translateY(14px); opacity: 0;
-  transition: transform var(--t) var(--ease), opacity var(--t) var(--ease);
+  transition: transform var(--t-slow) var(--ease-luxury), opacity var(--t-slow) var(--ease-luxury);
 }
 .pcard:hover .pcard__quick { transform: none; opacity: 1; }
 @media (hover: none) { .pcard__quick { transform: none; opacity: 1; position: static; margin: 12px; } }
@@ -158,10 +162,11 @@
 
 /* Quantity stepper */
 .qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--paper); overflow: hidden; }
-.qty button { width: 42px; height: 44px; display: grid; place-items: center; color: var(--color-text); transition: background var(--t) var(--ease); }
+.qty button { width: 42px; height: 44px; display: grid; place-items: center; color: var(--color-text); transition: background var(--t) var(--ease), transform var(--t-fast) var(--ease-soft); }
 .qty button:hover { background: var(--forest-50); }
+.qty button:active { transform: scale(0.88); }
 .qty button:disabled { color: var(--line); cursor: not-allowed; }
-.qty span { min-width: 40px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.qty span { min-width: 40px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; transition: opacity var(--t-fast) var(--ease-soft); }
 
 /* Chips / pills */
 .chip {
@@ -169,9 +174,11 @@
   padding: 9px 15px; border-radius: var(--r-pill);
   border: 1px solid var(--line); background: var(--paper);
   font-size: var(--text-sm); font-weight: 500; color: var(--ink-700);
-  transition: all var(--t) var(--ease); white-space: nowrap;
+  transition: background var(--t) var(--ease-soft), border-color var(--t) var(--ease-soft), color var(--t) var(--ease-soft), transform var(--t-fast) var(--ease-soft);
+  white-space: nowrap;
 }
-.chip:hover { border-color: var(--forest-300); background: var(--forest-50); }
+.chip:hover { border-color: var(--forest-300); background: var(--forest-50); transform: translateY(-1px); }
+.chip:active { transform: translateY(0) scale(0.97); }
 .chip.active { background: var(--color-primary); color: var(--color-on-primary); border-color: var(--color-primary); }
 
 /* ---------- Section header ---------- */

@@ -150,6 +150,8 @@
 .pdp__gallery { position: sticky; top: calc(76px + var(--sp-4)); display: grid; grid-template-columns: 84px 1fr; gap: 14px; }
 .pdp__main { position: relative; order: 2; border-radius: var(--r-xl); overflow: hidden; background: var(--cream); box-shadow: var(--shadow-sm); }
 .pdp__main .pimg { aspect-ratio: 1; }
+.pdp__frame-fade { animation: pdpFrameIn 550ms var(--ease-luxury); }
+@keyframes pdpFrameIn { from { opacity: 0; transform: scale(1.015); } to { opacity: 1; transform: none; } }
 .pdp__wish { top: 16px; right: 16px; width: 46px; height: 46px; }
 .pdp__thumbs { order: 1; display: flex; flex-direction: column; gap: 10px; }
 .pdp__thumb { border: 2px solid var(--line-soft); border-radius: var(--r-md); overflow: hidden; transition: border-color var(--t) var(--ease); }
@@ -164,6 +166,8 @@
 .pdp__block { margin-bottom: var(--sp-5); }
 .pdp__stock { margin-bottom: var(--sp-4); }
 .pdp__buy { display: flex; gap: 12px; margin-bottom: 10px; }
+.pdp__addbtn { transition: transform var(--t) var(--ease-luxury), background var(--t-slow) var(--ease-soft), box-shadow var(--t) var(--ease-luxury); }
+.pdp__addbtn.is-added { background: var(--color-success); }
 .pdp__buynow { margin-bottom: var(--sp-6); }
 .pdp__assure { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: var(--sp-4); background: var(--forest-50); border-radius: var(--r-md); margin-bottom: var(--sp-5); }
 .pdp__assure-item { display: flex; align-items: center; gap: 10px; }

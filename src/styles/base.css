@@ -61,9 +61,30 @@ h3 { font-size: var(--text-xl); }
 .muted { color: var(--color-text-muted); }
 .center { text-align: center; }
 
-/* Reveal-on-scroll */
-.reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out); }
+/* ---- Reveal-on-scroll system ----
+   One shared vocabulary of entrance motion, all subtle: opacity + a small
+   translate/scale, never large distances, never bounce. `.reveal` alone
+   is the default (fade-up); add a variant class to change the motion. */
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.8s var(--ease-luxury), transform 0.8s var(--ease-luxury), filter 0.8s var(--ease-luxury); }
 .reveal.is-in { opacity: 1; transform: none; }
+
+.reveal-fade { transform: none; }
+.reveal-scale { transform: scale(0.97) translateY(10px); }
+.reveal-scale.is-in { transform: none; }
+.reveal-left { transform: translateX(-24px); }
+.reveal-left.is-in { transform: none; }
+.reveal-right { transform: translateX(24px); }
+.reveal-right.is-in { transform: none; }
+.reveal-soft { transform: translateY(10px); filter: blur(4px); }
+.reveal-soft.is-in { transform: none; filter: blur(0); }
+
+/* Mobile: shorter travel distances, same subtle character */
+@media (max-width: 640px) {
+  .reveal { transform: translateY(12px); }
+  .reveal-scale { transform: scale(0.985) translateY(6px); }
+  .reveal-left { transform: translateX(-14px); }
+  .reveal-right { transform: translateX(14px); }
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 12px; height: 12px; }

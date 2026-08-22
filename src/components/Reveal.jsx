@@ -2,7 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 
 // Lightweight scroll-reveal via IntersectionObserver.
 // Honors prefers-reduced-motion (starts visible).
-export default function Reveal({ children, as: Tag = 'div', delay = 0, className = '', ...rest }) {
+// variant: 'up' (default) | 'fade' | 'scale' | 'left' | 'right' | 'soft'
+const VARIANT_CLASS = {
+  up: '',
+  fade: 'reveal-fade',
+  scale: 'reveal-scale',
+  left: 'reveal-left',
+  right: 'reveal-right',
+  soft: 'reveal-soft',
+};
+
+export default function Reveal({ children, as: Tag = 'div', delay = 0, variant = 'up', className = '', ...rest }) {
   const ref = useRef(null);
   const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const [shown, setShown] = useState(!!reduced);
@@ -19,8 +29,9 @@ export default function Reveal({ children, as: Tag = 'div', delay = 0, className
     return () => io.disconnect();
   }, [reduced, shown]);
 
+  const variantClass = VARIANT_CLASS[variant] || '';
   return (
-    <Tag ref={ref} className={`reveal ${shown ? 'is-in' : ''} ${className}`} style={{ transitionDelay: `${delay}ms` }} {...rest}>
+    <Tag ref={ref} className={`reveal ${variantClass} ${shown ? 'is-in' : ''} ${className}`} style={{ transitionDelay: `${delay}ms` }} {...rest}>
       {children}
     </Tag>
   );

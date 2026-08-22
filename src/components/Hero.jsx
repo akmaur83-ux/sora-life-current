@@ -17,6 +17,8 @@ export default function Hero() {
   const [paused, setPaused] = useState(false);
   const [videoFailed, setVideoFailed] = useState({}); // { [slideId]: true } — fall back to poster on load error
   const timer = useRef(null);
+  const sectionRef = useRef(null);
+  const parallaxRefs = useRef([]);
   const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   const go = useCallback((i) => setActive((i + SLIDES.length) % SLIDES.length), [SLIDES.length]);
@@ -28,8 +30,37 @@ export default function Hero() {
     return () => clearTimeout(timer.current);
   }, [active, paused, reduced, next, SLIDES.length]);
 
+  // Very slow, depth-only scroll parallax on the background media — never on
+  // the text. Disabled entirely for reduced-motion and on narrow/mobile
+  // viewports (per the "reduce parallax on mobile" requirement). Applied via
+  // a rAF-throttled scroll listener to a wrapper element that sits outside
+  // the Ken-Burns-scaled media, so the two transforms never fight.
+  useEffect(() => {
+    if (reduced) return;
+    const isMobile = () => window.innerWidth < 768;
+    if (isMobile()) return;
+    let raf = null;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        const el = sectionRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > window.innerHeight) return; // out of view, skip
+        const offset = Math.max(-40, Math.min(40, rect.top * -0.06));
+        parallaxRefs.current.forEach((node) => {
+          if (node) node.style.transform = `translate3d(0, ${offset}px, 0)`;
+        });
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, [reduced]);
+
   return (
     <section
+      ref={sectionRef}
       className="bh-hero bh-hero--carousel"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
@@ -42,25 +73,27 @@ export default function Hero() {
           className={`bh-slide ${i === active ? 'is-active' : ''}`}
           aria-hidden={i !== active}
         >
-          {s.kind === 'video' && !videoFailed[s.id] && s.src ? (
-            <video
-              className="bh-hero__media"
-              autoPlay muted loop playsInline preload="metadata"
-              poster={s.poster}
-              style={{ objectPosition: s.position }}
-              onError={() => setVideoFailed((v) => ({ ...v, [s.id]: true }))}
-            >
-              <source src={s.src} type="video/mp4" />
-            </video>
-          ) : s.kind === 'video' ? (
-            // Video missing/failed to load — never show a blank hero, use the poster instead.
-            s.poster
-              ? <img className="bh-hero__media" src={s.poster} alt={s.title} style={{ objectPosition: s.position }} />
-              : <div className="bh-hero__media" style={{ background: 'var(--forest-700)' }} />
-          ) : (
-            <img className="bh-hero__media" src={s.src} alt={s.title} loading={i === 0 ? 'eager' : 'lazy'}
-              style={{ objectPosition: s.position }} />
-          )}
+          <div className="bh-hero__parallax" ref={(el) => { parallaxRefs.current[i] = el; }}>
+            {s.kind === 'video' && !videoFailed[s.id] && s.src ? (
+              <video
+                className="bh-hero__media"
+                autoPlay muted loop playsInline preload="metadata"
+                poster={s.poster}
+                style={{ objectPosition: s.position }}
+                onError={() => setVideoFailed((v) => ({ ...v, [s.id]: true }))}
+              >
+                <source src={s.src} type="video/mp4" />
+              </video>
+            ) : s.kind === 'video' ? (
+              // Video missing/failed to load — never show a blank hero, use the poster instead.
+              s.poster
+                ? <img className="bh-hero__media" src={s.poster} alt={s.title} style={{ objectPosition: s.position }} />
+                : <div className="bh-hero__media" style={{ background: 'var(--forest-700)' }} />
+            ) : (
+              <img className="bh-hero__media" src={s.src} alt={s.title} loading={i === 0 ? 'eager' : 'lazy'}
+                style={{ objectPosition: s.position }} />
+            )}
+          </div>
           <div className="bh-hero__scrim" />
           <div className="container bh-hero__inner">
             <div className="bh-hero__copy">

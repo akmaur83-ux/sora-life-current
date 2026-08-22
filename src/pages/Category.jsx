@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductBrowser from '../components/ProductBrowser.jsx';
+import Reveal from '../components/Reveal.jsx';
 import NotFound from './NotFound.jsx';
 import { categoryBySlug, categories } from '../data/categories.js';
 import { getByCategory } from '../data/products.js';
@@ -15,18 +16,18 @@ export default function Category() {
     <>
       <section className={`cathero tone-${cat.tone}`}>
         <div className="container cathero__in">
-          <div>
+          <Reveal variant="soft">
             <nav className="crumbs"><Link to="/">Home</Link><Icon name="chevronRight" size={14} /><Link to="/shop">Shop</Link><Icon name="chevronRight" size={14} /><span>{cat.name}</span></nav>
             <span className="eyebrow">{cat.tagline}</span>
             <h1 className="serif cathero__title">{cat.name}</h1>
             <p className="cathero__blurb">{cat.blurb}</p>
             <span className="cathero__count">{items.length} products</span>
-          </div>
-          <div className="cathero__chips">
+          </Reveal>
+          <Reveal className="cathero__chips" delay={140}>
             {categories.filter((c) => c.slug !== slug).slice(0, 6).map((c) => (
               <Link key={c.slug} to={`/category/${c.slug}`} className="chip">{c.name}</Link>
             ))}
-          </div>
+          </Reveal>
         </div>
       </section>
       <div className="section-sm" style={{ paddingTop: 'var(--sp-8)' }}>

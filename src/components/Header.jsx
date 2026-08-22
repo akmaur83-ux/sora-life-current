@@ -16,9 +16,21 @@ export default function Header() {
   const [drawer, setDrawer] = useState(false);
   const [q, setQ] = useState('');
   const [focused, setFocused] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const boxRef = useRef(null);
+
+  useEffect(() => {
+    let raf = null;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = null; setScrolled(window.scrollY > 8); });
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, []);
 
   useEffect(() => { setDrawer(false); setFocused(false); }, [location.pathname]);
   useEffect(() => { document.body.style.overflow = drawer ? 'hidden' : ''; return () => { document.body.style.overflow = ''; }; }, [drawer]);
@@ -58,7 +70,7 @@ export default function Header() {
       </div>
 
       {/* Main header */}
-      <header className="hdr">
+      <header className={`hdr ${scrolled ? 'is-scrolled' : ''}`}>
         <div className="container hdr__in">
           <div className="hdr__left">
             <button className="iconbtn only-mobile" onClick={() => setDrawer(true)} aria-label="Open menu"><Icon name="menu" /></button>
@@ -112,10 +124,10 @@ export default function Header() {
               <button className="iconbtn only-mobile" onClick={() => navigate('/shop')} aria-label="Search"><Icon name="search" /></button>
               <Link to="/account" className="iconbtn hide-mobile" aria-label="Account"><Icon name="user" /></Link>
               <Link to="/wishlist" className="iconbtn hide-mobile" aria-label="Wishlist">
-                <Icon name="heart" />{wishCount > 0 && <span className="count">{wishCount}</span>}
+                <Icon name="heart" />{wishCount > 0 && <span className="count" key={wishCount}>{wishCount}</span>}
               </Link>
               <Link to="/cart" className="iconbtn" aria-label="Cart">
-                <Icon name="bag" />{cartCount > 0 && <span className="count">{cartCount}</span>}
+                <Icon name="bag" />{cartCount > 0 && <span className="count" key={cartCount}>{cartCount}</span>}
               </Link>
             </div>
           </div>

@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import ProductCard from './ProductCard.jsx';
+import Reveal from './Reveal.jsx';
 import { categories } from '../data/categories.js';
 import { priceRange, searchProducts } from '../data/products.js';
 import { money } from '../lib/format.js';
@@ -147,7 +148,11 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
         </div>
 
         {filtered.length ? (
-          <div className="pgrid">{filtered.map((p) => <ProductCard key={p.id} product={p} />)}</div>
+          <div className="pgrid">
+            {filtered.map((p, i) => (
+              <Reveal key={p.id} variant="scale" delay={(i % 4) * 55}><ProductCard product={p} /></Reveal>
+            ))}
+          </div>
         ) : (
           <div className="state">
             <span className="state-ic"><Icon name="search" size={32} /></span>

@@ -6221,9 +6221,28 @@
 	  const [drawer, setDrawer] = reactExports.useState(false);
 	  const [q, setQ] = reactExports.useState('');
 	  const [focused, setFocused] = reactExports.useState(false);
+	  const [scrolled, setScrolled] = reactExports.useState(false);
 	  const navigate = useNavigate();
 	  const location = useLocation();
 	  const boxRef = reactExports.useRef(null);
+	  reactExports.useEffect(() => {
+	    let raf = null;
+	    const onScroll = () => {
+	      if (raf) return;
+	      raf = requestAnimationFrame(() => {
+	        raf = null;
+	        setScrolled(window.scrollY > 8);
+	      });
+	    };
+	    onScroll();
+	    window.addEventListener('scroll', onScroll, {
+	      passive: true
+	    });
+	    return () => {
+	      window.removeEventListener('scroll', onScroll);
+	      if (raf) cancelAnimationFrame(raf);
+	    };
+	  }, []);
 	  reactExports.useEffect(() => {
 	    setDrawer(false);
 	    setFocused(false);
@@ -6292,7 +6311,7 @@
 	        })]
 	      })
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx("header", {
-	      className: "hdr",
+	      className: `hdr ${scrolled ? 'is-scrolled' : ''}`,
 	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "container hdr__in",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -6445,7 +6464,7 @@
 	              }), wishCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	                className: "count",
 	                children: wishCount
-	              })]
+	              }, wishCount)]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
 	              to: "/cart",
 	              className: "iconbtn",
@@ -6455,7 +6474,7 @@
 	              }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	                className: "count",
 	                children: cartCount
-	              })]
+	              }, cartCount)]
 	            })]
 	          })]
 	        })]
@@ -6721,7 +6740,7 @@
 	          size: 22
 	        }), wishCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("i", {
 	          className: "tabbar__dot"
-	        })]
+	        }, wishCount)]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	        children: "Saved"
 	      })]
@@ -6736,7 +6755,7 @@
 	        }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("i", {
 	          className: "tabbar__badge",
 	          children: cartCount
-	        })]
+	        }, cartCount)]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	        children: "Cart"
 	      })]
@@ -6812,10 +6831,19 @@
 	  });
 	}
 
+	const VARIANT_CLASS = {
+	  up: '',
+	  fade: 'reveal-fade',
+	  scale: 'reveal-scale',
+	  left: 'reveal-left',
+	  right: 'reveal-right',
+	  soft: 'reveal-soft'
+	};
 	function Reveal({
 	  children,
 	  as: Tag = 'div',
 	  delay = 0,
+	  variant = 'up',
 	  className = '',
 	  ...rest
 	}) {
@@ -6838,9 +6866,10 @@
 	    io.observe(el);
 	    return () => io.disconnect();
 	  }, [reduced, shown]);
+	  const variantClass = VARIANT_CLASS[variant] || '';
 	  return /*#__PURE__*/jsxRuntimeExports.jsx(Tag, {
 	    ref: ref,
-	    className: `reveal ${shown ? 'is-in' : ''} ${className}`,
+	    className: `reveal ${variantClass} ${shown ? 'is-in' : ''} ${className}`,
 	    style: {
 	      transitionDelay: `${delay}ms`
 	    },
@@ -6869,6 +6898,8 @@
 	  const [paused, setPaused] = reactExports.useState(false);
 	  const [videoFailed, setVideoFailed] = reactExports.useState({}); // { [slideId]: true } — fall back to poster on load error
 	  const timer = reactExports.useRef(null);
+	  const sectionRef = reactExports.useRef(null);
+	  const parallaxRefs = reactExports.useRef([]);
 	  const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 	  const go = reactExports.useCallback(i => setActive((i + SLIDES.length) % SLIDES.length), [SLIDES.length]);
 	  const next = reactExports.useCallback(() => setActive(a => (a + 1) % SLIDES.length), [SLIDES.length]);
@@ -6877,7 +6908,41 @@
 	    timer.current = setTimeout(next, INTERVAL);
 	    return () => clearTimeout(timer.current);
 	  }, [active, paused, reduced, next, SLIDES.length]);
+
+	  // Very slow, depth-only scroll parallax on the background media — never on
+	  // the text. Disabled entirely for reduced-motion and on narrow/mobile
+	  // viewports (per the "reduce parallax on mobile" requirement). Applied via
+	  // a rAF-throttled scroll listener to a wrapper element that sits outside
+	  // the Ken-Burns-scaled media, so the two transforms never fight.
+	  reactExports.useEffect(() => {
+	    if (reduced) return;
+	    const isMobile = () => window.innerWidth < 768;
+	    if (isMobile()) return;
+	    let raf = null;
+	    const onScroll = () => {
+	      if (raf) return;
+	      raf = requestAnimationFrame(() => {
+	        raf = null;
+	        const el = sectionRef.current;
+	        if (!el) return;
+	        const rect = el.getBoundingClientRect();
+	        if (rect.bottom < 0 || rect.top > window.innerHeight) return; // out of view, skip
+	        const offset = Math.max(-40, Math.min(40, rect.top * -0.06));
+	        parallaxRefs.current.forEach(node => {
+	          if (node) node.style.transform = `translate3d(0, ${offset}px, 0)`;
+	        });
+	      });
+	    };
+	    window.addEventListener('scroll', onScroll, {
+	      passive: true
+	    });
+	    return () => {
+	      window.removeEventListener('scroll', onScroll);
+	      if (raf) cancelAnimationFrame(raf);
+	    };
+	  }, [reduced]);
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    ref: sectionRef,
 	    className: "bh-hero bh-hero--carousel",
 	    onMouseEnter: () => setPaused(true),
 	    onMouseLeave: () => setPaused(false),
@@ -6886,47 +6951,53 @@
 	    children: [SLIDES.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: `bh-slide ${i === active ? 'is-active' : ''}`,
 	      "aria-hidden": i !== active,
-	      children: [s.kind === 'video' && !videoFailed[s.id] && s.src ? /*#__PURE__*/jsxRuntimeExports.jsx("video", {
-	        className: "bh-hero__media",
-	        autoPlay: true,
-	        muted: true,
-	        loop: true,
-	        playsInline: true,
-	        preload: "metadata",
-	        poster: s.poster,
-	        style: {
-	          objectPosition: s.position
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "bh-hero__parallax",
+	        ref: el => {
+	          parallaxRefs.current[i] = el;
 	        },
-	        onError: () => setVideoFailed(v => ({
-	          ...v,
-	          [s.id]: true
-	        })),
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx("source", {
+	        children: s.kind === 'video' && !videoFailed[s.id] && s.src ? /*#__PURE__*/jsxRuntimeExports.jsx("video", {
+	          className: "bh-hero__media",
+	          autoPlay: true,
+	          muted: true,
+	          loop: true,
+	          playsInline: true,
+	          preload: "metadata",
+	          poster: s.poster,
+	          style: {
+	            objectPosition: s.position
+	          },
+	          onError: () => setVideoFailed(v => ({
+	            ...v,
+	            [s.id]: true
+	          })),
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx("source", {
+	            src: s.src,
+	            type: "video/mp4"
+	          })
+	        }) : s.kind === 'video' ?
+	        // Video missing/failed to load — never show a blank hero, use the poster instead.
+	        s.poster ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	          className: "bh-hero__media",
+	          src: s.poster,
+	          alt: s.title,
+	          style: {
+	            objectPosition: s.position
+	          }
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "bh-hero__media",
+	          style: {
+	            background: 'var(--forest-700)'
+	          }
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	          className: "bh-hero__media",
 	          src: s.src,
-	          type: "video/mp4"
+	          alt: s.title,
+	          loading: i === 0 ? 'eager' : 'lazy',
+	          style: {
+	            objectPosition: s.position
+	          }
 	        })
-	      }) : s.kind === 'video' ?
-	      // Video missing/failed to load — never show a blank hero, use the poster instead.
-	      s.poster ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	        className: "bh-hero__media",
-	        src: s.poster,
-	        alt: s.title,
-	        style: {
-	          objectPosition: s.position
-	        }
-	      }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "bh-hero__media",
-	        style: {
-	          background: 'var(--forest-700)'
-	        }
-	      }) : /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	        className: "bh-hero__media",
-	        src: s.src,
-	        alt: s.title,
-	        loading: i === 0 ? 'eager' : 'lazy',
-	        style: {
-	          objectPosition: s.position
-	        }
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: "bh-hero__scrim"
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -7479,9 +7550,12 @@
 	        className: "container",
 	        children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	          className: "bh-cats__row",
-	          children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          children: categories.map((c, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(Reveal, {
+	            as: Link,
 	            to: `/category/${c.slug}`,
 	            className: "bh-cat",
+	            variant: "scale",
+	            delay: i * 55,
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	              className: `bh-cat__circle tone-${c.tone}`,
 	              children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
@@ -7524,8 +7598,12 @@
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	            className: "bh-grid",
 	            ref: railRef,
-	            children: bestsellers.map(p => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
-	              product: p
+	            children: bestsellers.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(Reveal, {
+	              variant: "scale",
+	              delay: i % 6 * 60,
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
+	                product: p
+	              })
 	            }, p.id))
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	            className: "bh-best__arrow",
@@ -7890,8 +7968,12 @@
 	        })]
 	      }), filtered.length ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: "pgrid",
-	        children: filtered.map(p => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
-	          product: p
+	        children: filtered.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(Reveal, {
+	          variant: "scale",
+	          delay: i % 4 * 55,
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
+	            product: p
+	          })
 	        }, p.id))
 	      }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "state",
@@ -8042,7 +8124,8 @@
 	      className: `cathero tone-${cat.tone}`,
 	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "container cathero__in",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Reveal, {
+	          variant: "soft",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
 	            className: "crumbs",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
@@ -8073,8 +8156,9 @@
 	            className: "cathero__count",
 	            children: [items.length, " products"]
 	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Reveal, {
 	          className: "cathero__chips",
+	          delay: 140,
 	          children: categories.filter(c => c.slug !== slug).slice(0, 6).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: `/category/${c.slug}`,
 	            className: "chip",
@@ -8231,6 +8315,12 @@
 	  const [frame, setFrame] = reactExports.useState(0);
 	  const [qty, setQty] = reactExports.useState(1);
 	  const [variant, setVariant] = reactExports.useState(product?.variants?.[0]?.label || null);
+	  const [justAdded, setJustAdded] = reactExports.useState(false);
+	  reactExports.useEffect(() => {
+	    if (!justAdded) return;
+	    const t = setTimeout(() => setJustAdded(false), 1600);
+	    return () => clearTimeout(t);
+	  }, [justAdded]);
 	  if (!product) return /*#__PURE__*/jsxRuntimeExports.jsx(NotFound, {});
 	  const cat = categoryBySlug[product.category];
 	  const related = getRelated(product);
@@ -8273,10 +8363,13 @@
 	        className: "pdp__gallery",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "pdp__main",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(GalleryFrame, {
-	            product: product,
-	            index: frame
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	            className: "pdp__frame-fade",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(GalleryFrame, {
+	              product: product,
+	              index: frame
+	            })
+	          }, frame), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	            className: `pcard__wish pdp__wish ${wished ? 'active' : ''}`,
 	            onClick: () => toggleWish(product),
 	            "aria-label": "Wishlist",
@@ -8399,14 +8492,24 @@
 	                size: 16
 	              })
 	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	            className: "btn btn-block",
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: `btn btn-block pdp__addbtn ${justAdded ? 'is-added' : ''}`,
 	            disabled: out,
-	            onClick: () => addToCart(product, qty, variant),
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "bag",
-	              size: 18
-	            }), " Add to cart"]
+	            onClick: () => {
+	              addToCart(product, qty, variant);
+	              setJustAdded(true);
+	            },
+	            children: justAdded ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "check",
+	                size: 18
+	              }), " Added to cart"]
+	            }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "bag",
+	                size: 18
+	              }), " Add to cart"]
+	            })
 	          })]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	          className: "btn btn-accent btn-lg btn-block pdp__buynow",

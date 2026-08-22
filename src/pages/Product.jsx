@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductImage from '../components/ProductImage.jsx';
@@ -52,6 +52,13 @@ export default function Product() {
   const [frame, setFrame] = useState(0);
   const [qty, setQty] = useState(1);
   const [variant, setVariant] = useState(product?.variants?.[0]?.label || null);
+  const [justAdded, setJustAdded] = useState(false);
+
+  useEffect(() => {
+    if (!justAdded) return;
+    const t = setTimeout(() => setJustAdded(false), 1600);
+    return () => clearTimeout(t);
+  }, [justAdded]);
 
   if (!product) return <NotFound />;
   const cat = categoryBySlug[product.category];
@@ -79,7 +86,7 @@ export default function Product() {
         {/* Gallery */}
         <div className="pdp__gallery">
           <div className="pdp__main">
-            <GalleryFrame product={product} index={frame} />
+            <div className="pdp__frame-fade" key={frame}><GalleryFrame product={product} index={frame} /></div>
             <button className={`pcard__wish pdp__wish ${wished ? 'active' : ''}`} onClick={() => toggleWish(product)} aria-label="Wishlist">
               <Icon name="heart" size={22} fill={wished ? 'currentColor' : 'none'} />
             </button>
@@ -139,7 +146,10 @@ export default function Product() {
               <span>{qty}</span>
               <button onClick={() => setQty((q) => q + 1)} aria-label="Increase" disabled={out}><Icon name="plus" size={16} /></button>
             </div>
-            <button className="btn btn-block" disabled={out} onClick={() => addToCart(product, qty, variant)}><Icon name="bag" size={18} /> Add to cart</button>
+            <button className={`btn btn-block pdp__addbtn ${justAdded ? 'is-added' : ''}`} disabled={out}
+              onClick={() => { addToCart(product, qty, variant); setJustAdded(true); }}>
+              {justAdded ? <><Icon name="check" size={18} /> Added to cart</> : <><Icon name="bag" size={18} /> Add to cart</>}
+            </button>
           </div>
           <button className="btn btn-accent btn-lg btn-block pdp__buynow" disabled={out} onClick={buyNow}>Buy it now</button>
 

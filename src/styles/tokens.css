@@ -88,12 +88,20 @@
   --shadow-lg: 0 18px 48px rgba(20, 38, 28, 0.12);
   --shadow-focus: 0 0 0 3px rgba(87, 141, 114, 0.35);
 
-  /* ---- Motion ---- */
+  /* ---- Motion ----
+     Premium/luxury motion language: slow, calm deceleration curves and
+     generous durations for anything the eye lingers on (hero, reveals,
+     galleries); quick, quiet feedback for anything the hand touches
+     (buttons, toggles, badges). Never bounce, never spin. */
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-luxury: cubic-bezier(0.19, 1, 0.22, 1);   /* long, elegant deceleration */
+  --ease-soft: cubic-bezier(0.33, 1, 0.68, 1);      /* gentle, for micro-interactions */
   --t-fast: 140ms;
   --t: 240ms;
   --t-slow: 420ms;
+  --t-slower: 700ms;
+  --t-cinematic: 9000ms;
 
   /* ---- Layout ---- */
   --container: 1240px;

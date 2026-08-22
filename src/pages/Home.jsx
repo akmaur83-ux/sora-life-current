@@ -37,14 +37,14 @@ export default function Home() {
       <section className="bh-cats">
         <div className="container">
           <div className="bh-cats__row">
-            {categories.map((c) => (
-              <Link key={c.slug} to={`/category/${c.slug}`} className="bh-cat">
+            {categories.map((c, i) => (
+              <Reveal key={c.slug} as={Link} to={`/category/${c.slug}`} className="bh-cat" variant="scale" delay={i * 55}>
                 <span className={`bh-cat__circle tone-${c.tone}`}>
                   <ProductImage product={getByCategory(c.slug)[0]} />
                 </span>
                 <span className="bh-cat__name">{c.name}</span>
                 <span className="bh-cat__view">View all</span>
-              </Link>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -62,7 +62,9 @@ export default function Home() {
           </div>
           <div className="bh-best__wrap">
             <div className="bh-grid" ref={railRef}>
-              {bestsellers.map((p) => <ProductCard key={p.id} product={p} />)}
+              {bestsellers.map((p, i) => (
+                <Reveal key={p.id} variant="scale" delay={(i % 6) * 60}><ProductCard product={p} /></Reveal>
+              ))}
             </div>
             <button className="bh-best__arrow" onClick={() => scrollRail(1)} aria-label="Scroll products"><Icon name="chevronRight" size={20} /></button>
           </div>

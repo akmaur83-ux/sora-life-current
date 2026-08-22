@@ -1,7 +1,7 @@
 /* ============================================================
    LAYOUT — header, nav, hero, footer, drawers, tabbar
    ============================================================ */
-.page-main { min-height: 60vh; animation: pagein 0.45s var(--ease); }
+.page-main { min-height: 60vh; animation: pagein 0.5s var(--ease-luxury); }
 @keyframes pagein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (max-width: 900px) { .page-main { padding-bottom: 76px; } } /* room for tabbar */
 
@@ -16,16 +16,22 @@
 @media (max-width: 760px) { .annbar__nav, .annbar__links { display: none; } .annbar__in { justify-content: center; } }
 
 /* ---------- Header ---------- */
-.hdr { position: sticky; top: 0; z-index: 90; background: rgba(251,248,241,0.86); backdrop-filter: blur(12px); border-bottom: 1px solid transparent; transition: box-shadow var(--t) var(--ease), border-color var(--t) var(--ease), background var(--t) var(--ease); }
-.hdr.is-scrolled { box-shadow: var(--shadow-sm); border-color: var(--line-soft); background: rgba(251,248,241,0.94); }
+.hdr { position: sticky; top: 0; z-index: 90; background: rgba(251,248,241,0.86); backdrop-filter: blur(12px); border-bottom: 1px solid transparent; transition: box-shadow var(--t-slow) var(--ease-luxury), border-color var(--t-slow) var(--ease-luxury), background var(--t-slow) var(--ease-luxury); }
+.hdr.is-scrolled { box-shadow: var(--shadow-sm); border-color: var(--line-soft); background: rgba(251,248,241,0.96); }
 .hdr__in { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-6); height: 76px; transition: height var(--t) var(--ease); }
 .hdr__left { display: flex; align-items: center; gap: 8px; }
 .hdr__actions { display: flex; align-items: center; gap: 2px; }
 @media (max-width: 900px) { .hdr__in { height: 60px; } }
 
 .hdr__nav { display: flex; align-items: center; gap: 4px; }
-.hdr__link { display: inline-flex; align-items: center; gap: 4px; padding: 10px 14px; border-radius: var(--r-pill); font-weight: 500; color: var(--ink-700); transition: color var(--t) var(--ease), background var(--t) var(--ease); }
+.hdr__link { position: relative; display: inline-flex; align-items: center; gap: 4px; padding: 10px 14px; border-radius: var(--r-pill); font-weight: 500; color: var(--ink-700); transition: color var(--t) var(--ease-soft), background var(--t) var(--ease-soft); }
 .hdr__link:hover, .hdr__link.active { color: var(--color-primary); background: var(--forest-50); }
+.hdr__link::after {
+  content: ''; position: absolute; left: 14px; right: 14px; bottom: 4px; height: 1.5px;
+  background: currentColor; transform: scaleX(0); transform-origin: left;
+  transition: transform var(--t) var(--ease-luxury); opacity: 0.55;
+}
+.hdr__link:hover::after, .hdr__link.active::after { transform: scaleX(1); }
 .hdr__navitem { position: relative; }
 
 /* Mega menu */
@@ -77,8 +83,8 @@
 .tabbar__item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 0 8px; color: var(--ink-400); font-size: 10.5px; font-weight: 600; transition: color var(--t) var(--ease); }
 .tabbar__item.active { color: var(--color-primary); }
 .tabbar__ic { position: relative; }
-.tabbar__badge { position: absolute; top: -6px; right: -10px; min-width: 17px; height: 17px; padding: 0 4px; background: var(--color-accent); color: var(--forest-900); border-radius: 999px; font-size: 10px; display: grid; place-items: center; border: 2px solid var(--color-bg); }
-.tabbar__dot { position: absolute; top: -2px; right: -3px; width: 8px; height: 8px; background: var(--color-sale); border-radius: 999px; border: 2px solid var(--color-bg); }
+.tabbar__badge { position: absolute; top: -6px; right: -10px; min-width: 17px; height: 17px; padding: 0 4px; background: var(--color-accent); color: var(--forest-900); border-radius: 999px; font-size: 10px; display: grid; place-items: center; border: 2px solid var(--color-bg); animation: countpop 0.45s var(--ease-soft); }
+.tabbar__dot { position: absolute; top: -2px; right: -3px; width: 8px; height: 8px; background: var(--color-sale); border-radius: 999px; border: 2px solid var(--color-bg); animation: countpop 0.45s var(--ease-soft); }
 
 /* ---------- HERO ---------- */
 .hero { position: relative; overflow: hidden; background:
