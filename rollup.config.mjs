@@ -20,20 +20,45 @@ if (fs.existsSync('.env.local')) {
   dotenv.config({ path: '.env.local' });
 }
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabasePublishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const supabasePublishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 
+// These two values are inlined into the bundle at build time (see the
+// `replace` plugin below) — nothing reads them at runtime. Historically a
+// missing value threw here, which meant one piece of environment config
+// could fail the entire deployment and take the whole storefront offline.
+//
+// The storefront does not actually need Supabase to render: the catalog,
+// categories, hero slides and branding all have complete built-in defaults,
+// and every Supabase call is already failure-tolerant. So a missing value is
+// now a loud warning rather than a hard build failure — the site still ships,
+// and the Supabase-backed features light up as soon as the config is present.
 if (!supabaseUrl || !supabasePublishableKey) {
   const missing = [
     !supabaseUrl && 'VITE_SUPABASE_URL',
     !supabasePublishableKey && 'VITE_SUPABASE_PUBLISHABLE_KEY',
   ].filter(Boolean);
+  // Names only — never values.
   const seenViteVars = Object.keys(process.env).filter((k) => k.startsWith('VITE_'));
-  throw new Error(
-    `Missing Supabase environment variable(s): ${missing.join(', ')}. ` +
-    `Set them in your environment (locally: .env.local; on Vercel: Project Settings → ` +
-    `Environment Variables, for the environment being built). ` +
-    `VITE_-prefixed vars currently visible to this build: ${seenViteVars.length ? seenViteVars.join(', ') : '(none)'}.`
+  console.warn(
+    '\n' +
+    '  ============================================================\n' +
+    '   WARNING: building WITHOUT Supabase configuration\n' +
+    '  ============================================================\n' +
+    `   Missing: ${missing.join(', ')}\n` +
+    `   VITE_* vars visible to this build: ${seenViteVars.length ? seenViteVars.join(', ') : '(none)'}\n` +
+    `   Running on Vercel: ${process.env.VERCEL ? 'yes' : 'no'}` +
+    (process.env.VERCEL_ENV ? ` (env: ${process.env.VERCEL_ENV})` : '') + '\n' +
+    '\n' +
+    '   The public storefront will still build and run using its\n' +
+    '   built-in data. Supabase-backed features (admin dashboard,\n' +
+    '   live catalog/hero/branding) will be inactive until these\n' +
+    '   variables are readable by the BUILD step.\n' +
+    '\n' +
+    '   On Vercel, build-time variables must NOT be marked\n' +
+    '   "Sensitive" — sensitive values are withheld from the build\n' +
+    '   environment and are only decrypted at runtime.\n' +
+    '  ============================================================\n'
   );
 }
 

@@ -32531,9 +32531,26 @@
 	}
 	if (shouldShowDeprecationWarning()) console.warn("⚠️  Node.js 20 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 22 or later. For more information, visit: https://github.com/orgs/supabase/discussions/45715");
 
+	// These are replaced with literal strings at build time by
+	// @rollup/plugin-replace (see rollup.config.mjs) — nothing is read from the
+	// environment at runtime.
 	const supabaseUrl = "https://gbcnvrymoarcqrvdnnvb.supabase.co";
 	const supabasePublishableKey = "sb_publishable_K9yRQPcwih-asuOIkLUExQ_3jFMB8x7";
-	const supabase = createClient(supabaseUrl, supabasePublishableKey);
+	const isSupabaseConfigured = Boolean(supabasePublishableKey);
+	if (!isSupabaseConfigured) {
+	  // Previously this threw, which crashed the very first module import and
+	  // rendered the entire site as a blank page. A missing build-time config
+	  // must degrade gracefully instead: the storefront runs on its built-in
+	  // data, and Supabase-backed calls simply fail and are caught by their
+	  // existing handlers.
+	  console.warn("Supabase is not configured for this build — running with built-in data only. " + "Admin and live-content features are unavailable until VITE_SUPABASE_URL and " + "VITE_SUPABASE_PUBLISHABLE_KEY are available to the build step.");
+	}
+
+	// Always export a real client object so every existing import and call site
+	// keeps working unchanged. When unconfigured it points at an unreachable
+	// placeholder, so calls reject and are handled by the existing catch paths
+	// rather than throwing at import time.
+	const supabase = createClient(supabaseUrl , supabasePublishableKey );
 
 	const AdminAuthContext = /*#__PURE__*/reactExports.createContext(null);
 	function AdminAuthProvider({
