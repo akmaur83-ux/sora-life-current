@@ -9,6 +9,8 @@
     "serve": "python server.py"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "dotenv": "^17.4.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2"

@@ -7,12 +7,9 @@ import { useStore } from '../lib/store.jsx';
 import { categories } from '../data/categories.js';
 import { searchProducts } from '../data/products.js';
 import { money } from '../lib/format.js';
+import { announcement } from '../lib/settings.js';
 
-const NOTICES = [
-  'FREE SHIPPING on orders above ₹699',
-  'COD Available',
-  '100% Authentic Biosash Products',
-];
+const NOTICE_ICONS = ['truck', 'card', 'shield'];
 
 export default function Header() {
   const { cartCount, wishCount } = useStore();
@@ -41,11 +38,11 @@ export default function Header() {
         <div className="container annbar__in">
           <span className="annbar__side" aria-hidden="true" />
           <div className="annbar__notices">
-            {NOTICES.map((n, i) => (
+            {announcement.notices.map((n, i) => (
               <Fragment key={n}>
                 {i > 0 && <span className="annbar__sep" aria-hidden="true" />}
                 <span className="annbar__notice">
-                  <Icon name={i === 0 ? 'truck' : i === 1 ? 'card' : 'shield'} size={14} /> {n}
+                  <Icon name={NOTICE_ICONS[i % NOTICE_ICONS.length]} size={14} /> {n}
                 </span>
               </Fragment>
             ))}

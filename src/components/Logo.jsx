@@ -1,9 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-
-// Official logo asset (drop the uploaded PNG here — see assets/README).
-// Served from the project web root at /assets/sora-life-logo.png.
-const LOGO_SRC = '/assets/sora-life-logo.png';
+import { branding } from '../lib/settings.js';
 
 // Fallback vector sparrow + berry (shown until the raster logo is present,
 // and in light/dark contexts like the footer where the dark logo art would
@@ -28,24 +25,24 @@ export default function Logo({ compact = false, light = false, tagline = true })
   const sub = light ? 'rgba(251,248,241,0.72)' : 'var(--ink-500)';
 
   // Use the official raster logo in the header (non-light contexts).
-  if (!light && imgOk) {
+  if (!light && imgOk && branding.logoUrl) {
     return (
-      <Link to="/" className={`logo logo--img ${compact ? 'logo--compact' : ''}`} aria-label="Sora Life — Health and Wellness">
-        <img src={LOGO_SRC} alt="Sora Life — Health and Wellness" className="logo__img" onError={() => setImgOk(false)} />
+      <Link to="/" className={`logo logo--img ${compact ? 'logo--compact' : ''}`} aria-label={`${branding.siteName} — ${branding.tagline}`}>
+        <img src={branding.logoUrl} alt={`${branding.siteName} — ${branding.tagline}`} className="logo__img" onError={() => setImgOk(false)} />
       </Link>
     );
   }
 
-  // Vector fallback (footer / dark surfaces / until the asset is added).
+  // Vector fallback (footer / dark surfaces / until the asset is present).
   return (
-    <Link to="/" className="logo" aria-label="Sora Life home" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+    <Link to="/" className="logo" aria-label={`${branding.siteName} home`} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
       <span style={{ marginBottom: 4, display: 'inline-flex' }}><SparrowMark size={compact ? 24 : 30} light={light} /></span>
       <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: compact ? '1.15rem' : '1.4rem', letterSpacing: '0.12em', color: fg }}>
-        SORA LIFE
+        {branding.siteName}
       </span>
       {tagline && !compact && (
         <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.5rem', letterSpacing: '0.34em', color: sub, marginTop: 4, fontWeight: 600 }}>
-          HEALTH &amp; WELLNESS
+          {branding.tagline}
         </span>
       )}
     </Link>

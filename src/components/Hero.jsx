@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
+import { heroSlides } from '../lib/settings.js';
 
 const BENEFITS = [
   { icon: 'award', a: 'Himalayan', b: 'Superfood' },
@@ -8,50 +9,24 @@ const BENEFITS = [
   { icon: 'shield', a: 'Boosts Immunity', b: '& Wellness' },
 ];
 
-// Slide 1 keeps the existing sea-buckthorn hero (video + poster).
-// Slide 2 uses the approved artwork at /media/hero-slide2.jpg.
-const SLIDES = [
-  {
-    id: 'buckthorn',
-    kind: 'video',
-    src: '/media/hero.mp4',
-    poster: '/media/hero-poster.jpg',
-    kicker: 'The Power of',
-    title: 'Sea Buckthorn',
-    sub: 'Harvested from the Himalayas. Made for your wellness.',
-    lede: 'Pure nutrition. Natural radiance. Everyday wellness.',
-    cta: { label: 'EXPLORE COLLECTION', to: '/category/wellness' },
-    position: 'center',
-  },
-  {
-    id: 'harvest',
-    kind: 'image',
-    src: '/media/hero-slide2.jpg',
-    kicker: 'From the Himalayas',
-    title: "Nature's Orange Gold",
-    sub: 'Sun-ripened sea buckthorn, gently cold-pressed.',
-    lede: 'Nutrient-dense wellness, straight from the mountains.',
-    cta: { label: 'SHOP JUICES & DRINKS', to: '/category/juices-drinks' },
-    position: 'center',
-  },
-];
-
 const INTERVAL = 6000;
 
 export default function Hero() {
+  const SLIDES = heroSlides;
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [videoFailed, setVideoFailed] = useState({}); // { [slideId]: true } — fall back to poster on load error
   const timer = useRef(null);
   const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-  const go = useCallback((i) => setActive((i + SLIDES.length) % SLIDES.length), []);
-  const next = useCallback(() => setActive((a) => (a + 1) % SLIDES.length), []);
+  const go = useCallback((i) => setActive((i + SLIDES.length) % SLIDES.length), [SLIDES.length]);
+  const next = useCallback(() => setActive((a) => (a + 1) % SLIDES.length), [SLIDES.length]);
 
   useEffect(() => {
     if (paused || reduced || SLIDES.length < 2) return;
     timer.current = setTimeout(next, INTERVAL);
     return () => clearTimeout(timer.current);
-  }, [active, paused, reduced, next]);
+  }, [active, paused, reduced, next, SLIDES.length]);
 
   return (
     <section
@@ -67,11 +42,21 @@ export default function Hero() {
           className={`bh-slide ${i === active ? 'is-active' : ''}`}
           aria-hidden={i !== active}
         >
-          {s.kind === 'video' ? (
-            <video className="bh-hero__media" autoPlay muted loop playsInline poster={s.poster}
-              style={{ objectPosition: s.position }}>
+          {s.kind === 'video' && !videoFailed[s.id] && s.src ? (
+            <video
+              className="bh-hero__media"
+              autoPlay muted loop playsInline preload="metadata"
+              poster={s.poster}
+              style={{ objectPosition: s.position }}
+              onError={() => setVideoFailed((v) => ({ ...v, [s.id]: true }))}
+            >
               <source src={s.src} type="video/mp4" />
             </video>
+          ) : s.kind === 'video' ? (
+            // Video missing/failed to load — never show a blank hero, use the poster instead.
+            s.poster
+              ? <img className="bh-hero__media" src={s.poster} alt={s.title} style={{ objectPosition: s.position }} />
+              : <div className="bh-hero__media" style={{ background: 'var(--forest-700)' }} />
           ) : (
             <img className="bh-hero__media" src={s.src} alt={s.title} loading={i === 0 ? 'eager' : 'lazy'}
               style={{ objectPosition: s.position }} />

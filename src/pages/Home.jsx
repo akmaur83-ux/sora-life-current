@@ -8,6 +8,7 @@ import ProductImage from '../components/ProductImage.jsx';
 import Newsletter from '../components/Newsletter.jsx';
 import { categories } from '../data/categories.js';
 import { getBestsellers, getNewArrivals, getByCategory, categoryCount } from '../data/products.js';
+import { homepage } from '../lib/settings.js';
 
 const EDITORIALS = [
   { title: 'Pure Himalayan Wellness', copy: 'Nourish your body with the purity of nature.', cta: 'SHOP WELLNESS', to: '/category/wellness', tone: 'forest' },
@@ -54,8 +55,8 @@ export default function Home() {
         <div className="container">
           <div className="bh-best__head">
             <div>
-              <h2 className="serif bh-best__title">Bestsellers</h2>
-              <p className="muted">Our most loved products by our customers</p>
+              <h2 className="serif bh-best__title">{homepage.bestsellerTitle}</h2>
+              <p className="muted">{homepage.bestsellerSubtitle}</p>
             </div>
             <Link to="/shop?sort=bestselling" className="bh-best__all">VIEW ALL BESTSELLERS <Icon name="arrowRight" size={16} /></Link>
           </div>

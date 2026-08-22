@@ -16,9 +16,18 @@
     <link rel="stylesheet" href="/src/styles/layout.css" />
     <link rel="stylesheet" href="/src/styles/pages.css" />
     <link rel="stylesheet" href="/src/styles/home.css" />
+    <link rel="stylesheet" href="/src/admin/admin.css" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height:100vh;display:grid;place-items:center;background:#FBF8F1;font-family:'Fraunces',Georgia,serif;color:#1E3A2F;">
+        <div style="text-align:center;">
+          <div style="width:34px;height:34px;margin:0 auto 14px;border:2.5px solid #E1EEE7;border-top-color:#1E3A2F;border-radius:999px;animation:sl-spin 0.8s linear infinite;"></div>
+          <span style="font-size:0.95rem;letter-spacing:0.04em;">SORA LIFE</span>
+        </div>
+      </div>
+    </div>
+    <style>@keyframes sl-spin{to{transform:rotate(360deg)}}</style>
     <script src="/public/bundle.js"></script>
   </body>
 </html>

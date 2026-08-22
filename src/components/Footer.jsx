@@ -57,6 +57,7 @@ export default function Footer() {
           <p>© {new Date().getFullYear()} Sora Life. A demo storefront — placeholder products for design preview.</p>
           <div className="ftr__legal">
             <a href="#">Privacy</a><a href="#">Terms</a><a href="#">Cookies</a>
+            <Link to="/admin/login" className="ftr__admin-link">Admin Login</Link>
           </div>
         </div>
       </div>

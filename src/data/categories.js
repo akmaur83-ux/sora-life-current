@@ -3,7 +3,7 @@
 // Mapped from the real Biosash catalog (see biosash.js). Order
 // matches the homepage category strip.
 // ============================================================
-export const categories = [
+const DEFAULT_CATEGORIES = [
   { slug: 'wellness',      name: 'Wellness',        tagline: 'Everyday Himalayan wellness',   tone: 'forest', blurb: 'Sea-buckthorn health essentials for daily balance and vitality.', icon: 'heart' },
   { slug: 'juices-drinks', name: 'Juices & Drinks', tagline: 'Cold-pressed nutrition',        tone: 'lime',   blurb: 'Nutritional juices and drinks powered by Himalayan sea buckthorn.', icon: 'bottle' },
   { slug: 'supplements',   name: 'Supplements',     tagline: 'Herbal & Ayurvedic support',    tone: 'clay',   blurb: 'Ayurvedic and herbal supplements for targeted daily support.', icon: 'capsule' },
@@ -14,7 +14,17 @@ export const categories = [
   { slug: 'personal-care', name: 'Personal Care',   tagline: 'Hygiene & daily care',          tone: 'sky',    blurb: 'Everyday hygiene and personal-care essentials.', icon: 'sparkle' },
 ];
 
-export const categoryBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]));
+// Live-bound (let) so applyCategories() from the Supabase `categories`
+// table can replace this at bootstrap. Default = exactly today's 8 circles.
+export let categories = DEFAULT_CATEGORIES;
+export let categoryBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]));
+
+export function applyCategories(list) {
+  if (!Array.isArray(list) || list.length === 0) return false;
+  categories = list;
+  categoryBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]));
+  return true;
+}
 
 // Tone → gradient/accent used by fallback tiles and category theming.
 export const tones = {
