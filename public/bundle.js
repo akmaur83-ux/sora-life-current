@@ -3035,12 +3035,7 @@
 	        alt: product.name,
 	        loading: "lazy",
 	        decoding: "async",
-	        onError: () => setFailed(true),
-	        style: {
-	          width: '100%',
-	          height: '100%',
-	          objectFit: 'cover'
-	        }
+	        onError: () => setFailed(true)
 	      })
 	    });
 	  }
@@ -6222,9 +6217,14 @@
 	  const [q, setQ] = reactExports.useState('');
 	  const [focused, setFocused] = reactExports.useState(false);
 	  const [scrolled, setScrolled] = reactExports.useState(false);
+	  // Mobile search overlay. The desktop search field is hidden on small
+	  // screens, so mobile previously had no way to search at all — the icon
+	  // just navigated to /shop with no query.
+	  const [mobileSearch, setMobileSearch] = reactExports.useState(false);
 	  const navigate = useNavigate();
 	  const location = useLocation();
 	  const boxRef = reactExports.useRef(null);
+	  const mobileInputRef = reactExports.useRef(null);
 	  reactExports.useEffect(() => {
 	    let raf = null;
 	    const onScroll = () => {
@@ -6246,7 +6246,25 @@
 	  reactExports.useEffect(() => {
 	    setDrawer(false);
 	    setFocused(false);
+	    setMobileSearch(false);
 	  }, [location.pathname]);
+
+	  // Focus the field when the overlay opens (so the keyboard appears), lock
+	  // body scroll behind it, and allow Escape to close.
+	  reactExports.useEffect(() => {
+	    if (!mobileSearch) return;
+	    const t = setTimeout(() => mobileInputRef.current?.focus(), 60);
+	    const onKey = e => {
+	      if (e.key === 'Escape') setMobileSearch(false);
+	    };
+	    document.addEventListener('keydown', onKey);
+	    document.body.style.overflow = 'hidden';
+	    return () => {
+	      clearTimeout(t);
+	      document.removeEventListener('keydown', onKey);
+	      document.body.style.overflow = '';
+	    };
+	  }, [mobileSearch]);
 	  reactExports.useEffect(() => {
 	    document.body.style.overflow = drawer ? 'hidden' : '';
 	    return () => {
@@ -6266,6 +6284,7 @@
 	    if (q.trim()) {
 	      navigate(`/shop?q=${encodeURIComponent(q.trim())}`);
 	      setFocused(false);
+	      setMobileSearch(false);
 	    }
 	  };
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
@@ -6443,8 +6462,9 @@
 	            className: "hdr__actions",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	              className: "iconbtn only-mobile",
-	              onClick: () => navigate('/shop'),
+	              onClick: () => setMobileSearch(true),
 	              "aria-label": "Search",
+	              "aria-expanded": mobileSearch,
 	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                name: "search"
 	              })
@@ -6477,6 +6497,84 @@
 	              }, cartCount)]
 	            })]
 	          })]
+	        })]
+	      })
+	    }), mobileSearch && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "search-overlay",
+	      onClick: () => setMobileSearch(false),
+	      role: "dialog",
+	      "aria-modal": "true",
+	      "aria-label": "Search products",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "search-panel",
+	        onClick: e => e.stopPropagation(),
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	          className: "searchbox search-panel__box",
+	          onSubmit: submit,
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "search"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            ref: mobileInputRef,
+	            className: "input",
+	            type: "search",
+	            enterKeyHint: "search",
+	            autoComplete: "off",
+	            placeholder: "Search for products...",
+	            "aria-label": "Search for products",
+	            value: q,
+	            onChange: e => setQ(e.target.value)
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            type: "button",
+	            className: "iconbtn",
+	            onClick: () => setMobileSearch(false),
+	            "aria-label": "Close search",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "x"
+	            })
+	          })]
+	        }), q.trim() ? results.length ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "search-results",
+	          children: [results.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: `/product/${p.slug}`,
+	            className: "search-result",
+	            onClick: () => setMobileSearch(false),
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "search-thumb",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	                product: p
+	              })
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "search-meta",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "search-name",
+	                children: p.name
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "hint",
+	                children: money(p.price)
+	              })]
+	            })]
+	          }, p.id)), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	            className: "btn btn-ghost btn-block",
+	            onClick: submit,
+	            children: ["See all results for \u201C", q, "\u201D"]
+	          })]
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "muted",
+	          style: {
+	            padding: '18px 4px'
+	          },
+	          children: ["No matches for \u201C", q, "\u201D. Try \u201Cjuice\u201D, \u201Csoap\u201D or \u201Chair\u201D."]
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "search-suggest",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "hint",
+	            children: "Popular:"
+	          }), ['Juice', 'Shampoo', 'Soap', 'Face wash'].map(s => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            type: "button",
+	            className: "chip",
+	            onClick: () => setQ(s),
+	            children: s
+	          }, s))]
 	        })]
 	      })
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {

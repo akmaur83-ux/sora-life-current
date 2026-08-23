@@ -16,9 +16,13 @@ export default function ProductImage({ product, className = '', index = 0 }) {
   if (src && !failed) {
     return (
       <div className={`pimg ${className}`}>
+        {/* Sizing/fit is controlled entirely by CSS (.pimg img) so product
+            photos are never cropped and every context can present them
+            consistently. Previously this hardcoded object-fit: cover inline,
+            which cropped product images everywhere and forced `!important`
+            overrides to undo it on the product grid. */}
         <img src={src} alt={product.name} loading="lazy" decoding="async"
-          onError={() => setFailed(true)}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          onError={() => setFailed(true)} />
       </div>
     );
   }

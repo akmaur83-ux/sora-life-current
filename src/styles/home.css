@@ -97,19 +97,21 @@
 .bh-best__all { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; color: var(--forest-700); white-space: nowrap; }
 .bh-best__all:hover { gap: 10px; }
 .bh-best__wrap { position: relative; }
-.bh-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--sp-4); }
+.bh-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--sp-4); }
 .bh-best__arrow { position: absolute; right: -18px; top: 38%; width: 40px; height: 40px; border-radius: 999px; background: var(--paper); box-shadow: var(--shadow-md); display: grid; place-items: center; color: var(--forest-700); z-index: 3; }
 .bh-best__arrow:hover { background: var(--forest-700); color: #fff; }
-@media (max-width: 1200px) { .bh-grid { grid-template-columns: repeat(4, 1fr); } .bh-best__arrow { display: none; } }
+@media (max-width: 1200px) { .bh-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .bh-best__arrow { display: none; } }
 @media (max-width: 900px) {
   .bh-grid { grid-auto-flow: column; grid-auto-columns: 46%; grid-template-columns: none; overflow-x: auto; scroll-snap-type: x mandatory; gap: var(--sp-3); margin-inline: calc(-1 * var(--sp-4)); padding-inline: var(--sp-4); padding-bottom: 8px; }
   .bh-grid > * { scroll-snap-align: start; }
 }
 @media (max-width: 560px) { .bh-grid { grid-auto-columns: 62%; } }
 
-/* Card image sits in a soft frame with contain (product cutouts) */
+/* Card image sits in a soft frame. object-fit: contain is now the global
+   default on .pimg img (see components.css), so the previous `!important`
+   override is gone — only the breathing room is set here. */
 .bh-best .pcard__media .pimg, .bh-edit .pimg, .bh-cat .pimg { background: var(--paper); }
-.pcard__media .pimg img { object-fit: contain !important; padding: 8px; }
+.pcard__media .pimg img { padding: 10px; }
 
 /* ============ EDITORIAL CARDS ============ */
 .bh-edit-wrap { padding-block: var(--sp-10) var(--sp-16); background: var(--cream); }
@@ -124,7 +126,7 @@
 .bh-editcard__img { position: absolute; right: -6px; bottom: -6px; width: 46%; max-width: 190px; transition: transform var(--t-slower) var(--ease-luxury); }
 .bh-editcard:hover .bh-editcard__img { transform: scale(1.05) translateY(-3px); }
 .bh-editcard__img .pimg { aspect-ratio: 1; background: transparent; }
-.bh-editcard__img .pimg img { object-fit: contain !important; mix-blend-mode: multiply; }
+.bh-editcard__img .pimg img { mix-blend-mode: multiply; }
 @media (max-width: 900px) { .bh-edit { grid-template-columns: 1fr; } .bh-editcard { min-height: 170px; } }
 
 /* ============ WELLNESS PROMISE STRIP ============ */
@@ -211,4 +213,16 @@
 .chatbtn { position: fixed; right: 22px; bottom: 22px; z-index: 94; display: inline-flex; align-items: center; gap: 9px; padding: 13px 20px; border-radius: var(--r-pill); background: var(--forest-700); color: var(--forest-50); font-weight: 600; font-size: var(--text-sm); box-shadow: var(--shadow-lg); transition: transform var(--t) var(--ease), background var(--t) var(--ease); }
 .chatbtn:hover { background: var(--forest-800); transform: translateY(-2px); }
 .chatbtn svg { color: var(--honey-400); }
-@media (max-width: 900px) { .chatbtn { bottom: calc(72px + env(safe-area-inset-bottom)); right: 14px; padding: 12px; } .chatbtn span { display: none; } }
+/* Mobile & tablet: move the chat button to the LEFT so it can never sit on
+   top of the right-hand controls (cart/checkout CTAs, the sticky Buy bar's
+   actions) and clears the bottom tab bar / sticky buy bar entirely.
+   Safe-area insets are respected on both axes for notched devices. */
+@media (max-width: 900px) {
+  .chatbtn {
+    right: auto;
+    left: calc(14px + env(safe-area-inset-left));
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    padding: 12px;
+  }
+  .chatbtn span { display: none; }
+}

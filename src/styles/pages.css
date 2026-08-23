@@ -267,6 +267,12 @@
 .cartrow__actions { display: flex; align-items: center; gap: var(--sp-4); margin-top: var(--sp-4); flex-wrap: wrap; }
 .qty--sm button { width: 34px; height: 36px; }
 .qty--sm span { min-width: 32px; }
+/* Touch devices: keep the compact stepper visually small but give it a
+   comfortable ~44px tap target. */
+@media (hover: none), (max-width: 640px) {
+  .qty--sm button { width: 44px; height: 44px; }
+  .qty--sm span { min-width: 36px; }
+}
 .linkbtn { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-sm); font-weight: 500; color: var(--color-text-muted); transition: color var(--t) var(--ease); }
 .linkbtn:hover { color: var(--color-primary); }
 .linkbtn--danger:hover { color: var(--color-sale); }

@@ -17,9 +17,14 @@ export default function Header() {
   const [q, setQ] = useState('');
   const [focused, setFocused] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  // Mobile search overlay. The desktop search field is hidden on small
+  // screens, so mobile previously had no way to search at all — the icon
+  // just navigated to /shop with no query.
+  const [mobileSearch, setMobileSearch] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const boxRef = useRef(null);
+  const mobileInputRef = useRef(null);
 
   useEffect(() => {
     let raf = null;
@@ -32,7 +37,22 @@ export default function Header() {
     return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
   }, []);
 
-  useEffect(() => { setDrawer(false); setFocused(false); }, [location.pathname]);
+  useEffect(() => { setDrawer(false); setFocused(false); setMobileSearch(false); }, [location.pathname]);
+
+  // Focus the field when the overlay opens (so the keyboard appears), lock
+  // body scroll behind it, and allow Escape to close.
+  useEffect(() => {
+    if (!mobileSearch) return;
+    const t = setTimeout(() => mobileInputRef.current?.focus(), 60);
+    const onKey = (e) => { if (e.key === 'Escape') setMobileSearch(false); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [mobileSearch]);
   useEffect(() => { document.body.style.overflow = drawer ? 'hidden' : ''; return () => { document.body.style.overflow = ''; }; }, [drawer]);
   useEffect(() => {
     const onDoc = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setFocused(false); };
@@ -41,7 +61,7 @@ export default function Header() {
   }, []);
 
   const results = q.trim() ? searchProducts(q).slice(0, 6) : [];
-  const submit = (e) => { e.preventDefault(); if (q.trim()) { navigate(`/shop?q=${encodeURIComponent(q.trim())}`); setFocused(false); } };
+  const submit = (e) => { e.preventDefault(); if (q.trim()) { navigate(`/shop?q=${encodeURIComponent(q.trim())}`); setFocused(false); setMobileSearch(false); } };
 
   return (
     <>
@@ -121,7 +141,7 @@ export default function Header() {
               )}
             </div>
             <div className="hdr__actions">
-              <button className="iconbtn only-mobile" onClick={() => navigate('/shop')} aria-label="Search"><Icon name="search" /></button>
+              <button className="iconbtn only-mobile" onClick={() => setMobileSearch(true)} aria-label="Search" aria-expanded={mobileSearch}><Icon name="search" /></button>
               <Link to="/account" className="iconbtn hide-mobile" aria-label="Account"><Icon name="user" /></Link>
               <Link to="/wishlist" className="iconbtn hide-mobile" aria-label="Wishlist">
                 <Icon name="heart" />{wishCount > 0 && <span className="count" key={wishCount}>{wishCount}</span>}
@@ -133,6 +153,57 @@ export default function Header() {
           </div>
         </div>
       </header>
+
+      {/* Mobile search overlay — full-width, focus-managed, closes on
+          backdrop tap / Escape / result tap. Reuses the existing
+          .search-overlay styles. */}
+      {mobileSearch && (
+        <div className="search-overlay" onClick={() => setMobileSearch(false)} role="dialog" aria-modal="true" aria-label="Search products">
+          <div className="search-panel" onClick={(e) => e.stopPropagation()}>
+            <form className="searchbox search-panel__box" onSubmit={submit}>
+              <Icon name="search" />
+              <input
+                ref={mobileInputRef}
+                className="input"
+                type="search"
+                enterKeyHint="search"
+                autoComplete="off"
+                placeholder="Search for products..."
+                aria-label="Search for products"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+              <button type="button" className="iconbtn" onClick={() => setMobileSearch(false)} aria-label="Close search"><Icon name="x" /></button>
+            </form>
+
+            {q.trim() ? (
+              results.length ? (
+                <div className="search-results">
+                  {results.map((p) => (
+                    <Link key={p.id} to={`/product/${p.slug}`} className="search-result" onClick={() => setMobileSearch(false)}>
+                      <span className="search-thumb"><ProductImage product={p} /></span>
+                      <span className="search-meta">
+                        <span className="search-name">{p.name}</span>
+                        <span className="hint">{money(p.price)}</span>
+                      </span>
+                    </Link>
+                  ))}
+                  <button className="btn btn-ghost btn-block" onClick={submit}>See all results for “{q}”</button>
+                </div>
+              ) : (
+                <p className="muted" style={{ padding: '18px 4px' }}>No matches for “{q}”. Try “juice”, “soap” or “hair”.</p>
+              )
+            ) : (
+              <div className="search-suggest">
+                <span className="hint">Popular:</span>
+                {['Juice', 'Shampoo', 'Soap', 'Face wash'].map((s) => (
+                  <button key={s} type="button" className="chip" onClick={() => setQ(s)}>{s}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Mobile drawer */}
       <div className={`drawer ${drawer ? 'open' : ''}`} aria-hidden={!drawer}>
