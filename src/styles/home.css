@@ -66,7 +66,7 @@
    so it can also neutralise the Ken-Burns / parallax transforms. */
 
 /* ============ CATEGORY CIRCLES ============ */
-.bh-cats { border-bottom: 1px solid var(--line-soft); background: var(--paper); }
+.bh-cats { border-bottom: 1px solid var(--line-soft); background: #F4EBDD; }
 .bh-cats__row { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--sp-3); padding-block: var(--sp-8); }
 .bh-cat { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
 .bh-cat__circle { width: 92px; height: 92px; border-radius: 999px; overflow: hidden; background: var(--tone-tint, var(--cream)); display: grid; place-items: center; transition: transform var(--t-slow) var(--ease-luxury), box-shadow var(--t-slow) var(--ease-luxury); }

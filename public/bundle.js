@@ -7443,7 +7443,7 @@
 	      }), !out && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "pcard__quick",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	          className: "btn btn-sm btn-block",
+	          className: "btn btn-sm btn-block pcard__quickadd",
 	          onClick: () => addToCart(product),
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	            name: "bag",

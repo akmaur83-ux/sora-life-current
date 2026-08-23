@@ -45,7 +45,7 @@ export default function ProductCard({ product }) {
 
         {!out && (
           <div className="pcard__quick">
-            <button className="btn btn-sm btn-block" onClick={() => addToCart(product)}>
+            <button className="btn btn-sm btn-block pcard__quickadd" onClick={() => addToCart(product)}>
               <Icon name="bag" size={16} /> Quick add
             </button>
             <button className="btn btn-sm btn-light" onClick={() => setQv(true)} aria-label="Quick view" title="Quick view" style={{ paddingInline: 12 }}>
