@@ -163,5 +163,20 @@
   .ftr__top { grid-template-columns: 1fr 1fr; gap: var(--sp-8); }
   .ftr__brand { grid-column: 1 / -1; }
   .ftr__bottom { flex-direction: column; align-items: flex-start; gap: 10px; }
+
+  /* The mobile tab bar is fixed at the bottom, so the last ~60px of the page
+     sat underneath it — which is exactly where the footer's legal row and the
+     Admin Login link live, making Admin unreachable on mobile. Reserve that
+     height (plus the safe-area inset) at the end of the footer. */
+  .ftr { padding-bottom: calc(60px + env(safe-area-inset-bottom) + var(--sp-4)); }
+
+  /* Give Admin a clear, comfortably tappable presence on mobile instead of a
+     tiny inline separator link. Desktop styling is untouched. */
+  .ftr__legal { flex-wrap: wrap; gap: var(--sp-3) var(--sp-4); }
+  .ftr__admin-link {
+    margin-left: 0; padding: 9px 16px;
+    border: 1px solid rgba(251,248,241,0.32); border-radius: var(--r-pill);
+    font-size: var(--text-xs); display: inline-flex; align-items: center; min-height: 38px;
+  }
 }
 @media (max-width: 480px) { .ftr__top { grid-template-columns: 1fr; } }

@@ -209,20 +209,3 @@
 /* Premium discount badge — refined, not a marketplace sticker */
 .badge-sale { background: var(--forest-700); color: var(--honey-300); letter-spacing: 0.08em; box-shadow: var(--shadow-xs); font-weight: 700; }
 
-/* ============ CHAT BUTTON ============ */
-.chatbtn { position: fixed; right: 22px; bottom: 22px; z-index: 94; display: inline-flex; align-items: center; gap: 9px; padding: 13px 20px; border-radius: var(--r-pill); background: var(--forest-700); color: var(--forest-50); font-weight: 600; font-size: var(--text-sm); box-shadow: var(--shadow-lg); transition: transform var(--t) var(--ease), background var(--t) var(--ease); }
-.chatbtn:hover { background: var(--forest-800); transform: translateY(-2px); }
-.chatbtn svg { color: var(--honey-400); }
-/* Mobile & tablet: move the chat button to the LEFT so it can never sit on
-   top of the right-hand controls (cart/checkout CTAs, the sticky Buy bar's
-   actions) and clears the bottom tab bar / sticky buy bar entirely.
-   Safe-area insets are respected on both axes for notched devices. */
-@media (max-width: 900px) {
-  .chatbtn {
-    right: auto;
-    left: calc(14px + env(safe-area-inset-left));
-    bottom: calc(76px + env(safe-area-inset-bottom));
-    padding: 12px;
-  }
-  .chatbtn span { display: none; }
-}

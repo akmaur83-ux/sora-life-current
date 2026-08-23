@@ -6916,16 +6916,7 @@
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(ScrollToTop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Header, {}), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
 	      className: "page-main",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Outlet, {})
-	    }, pathname), /*#__PURE__*/jsxRuntimeExports.jsx(Footer, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MobileTabBar, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	      className: "chatbtn",
-	      "aria-label": "Chat with us",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "chat",
-	        size: 20
-	      }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        children: "Chat with us"
-	      })]
-	    })]
+	    }, pathname), /*#__PURE__*/jsxRuntimeExports.jsx(Footer, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MobileTabBar, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
 	  });
 	}
 
