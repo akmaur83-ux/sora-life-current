@@ -131,6 +131,7 @@ function Orders() {
               <div className="ordercard__actions">
                 <button className="btn btn-sm btn-light" onClick={() => setTrack(track === o.id ? null : o.id)}>{track === o.id ? 'Hide tracking' : 'Track order'}</button>
                 <button className="btn btn-sm btn-ghost">Reorder</button>
+                <Link to={`/passport/${o.id}`} className="btn btn-sm btn-ghost">View Passport</Link>
               </div>
             </div>
             {track === o.id && (

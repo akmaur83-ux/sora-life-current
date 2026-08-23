@@ -47,6 +47,13 @@ const P = {
   return: '<path d="M3 7v6h6"/><path d="M3.5 13a9 9 0 1 0 2.4-9.5L3 7"/>',
   flask: '<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/><path d="M7 15h10"/>',
   heartHand: '<path d="M11 14 8.5 11.5a2 2 0 1 1 2.8-2.8l.7.7.7-.7a2 2 0 1 1 2.8 2.8L13 14a1.4 1.4 0 0 1-2 0Z"/><path d="M4 15v5a1 1 0 0 0 1 1h2v-8H5a1 1 0 0 0-1 1Z"/>',
+  download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  qrCode: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14v2M19 19h2v2M14 19h2v2"/>',
+  externalLink: '<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M8 6H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3"/>',
+  crown: '<path d="m3 8 4 3 5-6 5 6 4-3-2 11H5Z"/><path d="M5 21h14"/>',
+  circleAlert: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>',
 };
 
 export default function Icon({ name, size = 22, stroke = 1.6, fill = 'none', className, style }) {

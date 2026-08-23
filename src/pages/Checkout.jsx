@@ -34,6 +34,18 @@ export default function Checkout() {
     setForm((f) => ({ ...f, [k]: e.target.value }));
     setErrors((prev) => (prev[k] ? { ...prev, [k]: undefined } : prev));
   };
+  // Switching payment method must drop any error/notice left over from a
+  // previous attempt with the OTHER method — e.g. a Razorpay "payment
+  // failed"/"unavailable" error must not keep showing once the customer
+  // has switched to Cash on Delivery, which doesn't involve Razorpay at
+  // all. Without this, payError/payNotice (set by the online-payment flow
+  // in placeOrder) just sit in state forever since nothing else clears
+  // them on a method switch.
+  const selectPay = (id) => {
+    setPay(id);
+    setPayError('');
+    setPayNotice('');
+  };
 
   // A physical-product store must have complete delivery details. These are
   // validated before the customer can leave each step, and again defensively
@@ -70,6 +82,12 @@ export default function Checkout() {
   // during render, which meant any re-render (including the celebration's
   // own particle cleanup) silently produced a different order number.
   const [orderNo, setOrderNo] = useState(null);
+  // Frozen at the moment the order is confirmed, from the server's own
+  // authoritative amount (create-order's `amount` for COD, verify's
+  // `amount` for Razorpay) — NOT re-derived from the live cart total,
+  // which becomes 0 right after CLEAR_CART fires below and would make
+  // the confirmation screen show "Total paid ₹0".
+  const [orderTotal, setOrderTotal] = useState(null);
   // Drives the one-time celebration. Added a frame after the confirmation
   // mounts and removed once the sequence is over, so the confirmation always
   // settles back to its plain, fully-visible, interactive base state.
@@ -97,7 +115,7 @@ export default function Checkout() {
           <p className="muted confirm__reveal" style={{ '--d': '550ms' }}>A confirmation has been sent to your email. Order <strong>#{orderNo}</strong>.</p>
           <div className="confirm__card confirm__reveal" style={{ '--d': '620ms' }}>
             <div className="confirm__row"><span>Estimated delivery</span><strong>{DELIVERY.find((d) => d.id === delivery)?.eta}</strong></div>
-            <div className="confirm__row"><span>Total paid</span><strong>{money(total)}</strong></div>
+            <div className="confirm__row"><span>Total paid</span><strong>{money(orderTotal)}</strong></div>
             <div className="confirm__row"><span>Payment</span><strong>{pay === 'cod' ? 'Cash on delivery' : pay.toUpperCase()}</strong></div>
           </div>
           <div className="confirm__actions">
@@ -126,9 +144,10 @@ export default function Checkout() {
   // Reached ONLY after the server has confirmed the order is genuinely
   // paid (or is a recorded COD order). This is the single place the cart is
   // cleared and the confirmation/celebration is shown.
-  const completeOrder = (orderNumber) => {
+  const completeOrder = (orderNumber, amount) => {
     inFlight.current = false;
     setOrderNo(orderNumber);
+    setOrderTotal(amount);
     dispatch({ type: 'CLEAR_CART' });
     setPlaced(true);
     window.scrollTo(0, 0);
@@ -154,7 +173,7 @@ export default function Checkout() {
       });
 
       if (created.paymentMethod === 'cod') {
-        completeOrder(created.orderNumber);
+        completeOrder(created.orderNumber, created.amount);
         return;
       }
 
@@ -181,7 +200,7 @@ export default function Checkout() {
           try {
             const result = await verifyPayment(response);
             if (result?.verified) {
-              completeOrder(result.orderNumber);
+              completeOrder(result.orderNumber, result.amount);
             } else {
               inFlight.current = false; setProcessing(false);
               setPayError('We could not verify this payment. Your order has not been placed.');
@@ -302,7 +321,7 @@ export default function Checkout() {
                   ['cod', 'Cash on delivery', 'Pay when it arrives', 'truck'],
                 ].map(([id, label, note, icon]) => (
                   <label key={id} className={`opt ${pay === id ? 'active' : ''}`}>
-                    <input type="radio" name="pay" checked={pay === id} onChange={() => setPay(id)} disabled={processing} />
+                    <input type="radio" name="pay" checked={pay === id} onChange={() => selectPay(id)} disabled={processing} />
                     <span className="opt__radio" />
                     <span className="opt__body"><strong>{label}</strong><em>{note}</em></span>
                     <Icon name={icon} size={20} />

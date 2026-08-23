@@ -9,6 +9,7 @@ import Cart from './pages/Cart.jsx';
 import Checkout from './pages/Checkout.jsx';
 import Account from './pages/Account.jsx';
 import Wishlist from './pages/Wishlist.jsx';
+import Passport from './pages/Passport.jsx';
 import NotFound from './pages/NotFound.jsx';
 import AdminLogin from './pages/AdminLogin.jsx';
 import { useAdminAuth } from './lib/adminAuth.jsx';
@@ -69,6 +70,8 @@ export default function App() {
         <Route path="branding" element={<Branding />} />
         <Route path="settings" element={<Settings />} />
       </Route>
+
+      <Route path="/passport/:passportId?" element={<Passport />} />
 
       <Route element={<Layout />}>
         <Route index element={<Home />} />

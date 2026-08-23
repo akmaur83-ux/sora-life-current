@@ -2632,7 +2632,14 @@
 	  chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/>',
 	  return: '<path d="M3 7v6h6"/><path d="M3.5 13a9 9 0 1 0 2.4-9.5L3 7"/>',
 	  flask: '<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/><path d="M7 15h10"/>',
-	  heartHand: '<path d="M11 14 8.5 11.5a2 2 0 1 1 2.8-2.8l.7.7.7-.7a2 2 0 1 1 2.8 2.8L13 14a1.4 1.4 0 0 1-2 0Z"/><path d="M4 15v5a1 1 0 0 0 1 1h2v-8H5a1 1 0 0 0-1 1Z"/>'
+	  heartHand: '<path d="M11 14 8.5 11.5a2 2 0 1 1 2.8-2.8l.7.7.7-.7a2 2 0 1 1 2.8 2.8L13 14a1.4 1.4 0 0 1-2 0Z"/><path d="M4 15v5a1 1 0 0 0 1 1h2v-8H5a1 1 0 0 0-1 1Z"/>',
+	  download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+	  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+	  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+	  qrCode: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14v2M19 19h2v2M14 19h2v2"/>',
+	  externalLink: '<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M8 6H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3"/>',
+	  crown: '<path d="m3 8 4 3 5-6 5 6 4-3-2 11H5Z"/><path d="M5 21h14"/>',
+	  circleAlert: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>'
 	};
 	function Icon({
 	  name,
@@ -9582,6 +9589,18 @@
 	      [k]: undefined
 	    } : prev);
 	  };
+	  // Switching payment method must drop any error/notice left over from a
+	  // previous attempt with the OTHER method — e.g. a Razorpay "payment
+	  // failed"/"unavailable" error must not keep showing once the customer
+	  // has switched to Cash on Delivery, which doesn't involve Razorpay at
+	  // all. Without this, payError/payNotice (set by the online-payment flow
+	  // in placeOrder) just sit in state forever since nothing else clears
+	  // them on a method switch.
+	  const selectPay = id => {
+	    setPay(id);
+	    setPayError('');
+	    setPayNotice('');
+	  };
 
 	  // A physical-product store must have complete delivery details. These are
 	  // validated before the customer can leave each step, and again defensively
@@ -9618,6 +9637,12 @@
 	  // during render, which meant any re-render (including the celebration's
 	  // own particle cleanup) silently produced a different order number.
 	  const [orderNo, setOrderNo] = reactExports.useState(null);
+	  // Frozen at the moment the order is confirmed, from the server's own
+	  // authoritative amount (create-order's `amount` for COD, verify's
+	  // `amount` for Razorpay) — NOT re-derived from the live cart total,
+	  // which becomes 0 right after CLEAR_CART fires below and would make
+	  // the confirmation screen show "Total paid ₹0".
+	  const [orderTotal, setOrderTotal] = reactExports.useState(null);
 	  // Drives the one-time celebration. Added a frame after the confirmation
 	  // mounts and removed once the sequence is over, so the confirmation always
 	  // settles back to its plain, fully-visible, interactive base state.
@@ -9677,7 +9702,7 @@
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	              children: "Total paid"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	              children: money(total)
+	              children: money(orderTotal)
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "confirm__row",
@@ -9735,9 +9760,10 @@
 	  // Reached ONLY after the server has confirmed the order is genuinely
 	  // paid (or is a recorded COD order). This is the single place the cart is
 	  // cleared and the confirmation/celebration is shown.
-	  const completeOrder = orderNumber => {
+	  const completeOrder = (orderNumber, amount) => {
 	    inFlight.current = false;
 	    setOrderNo(orderNumber);
+	    setOrderTotal(amount);
 	    dispatch({
 	      type: 'CLEAR_CART'
 	    });
@@ -9765,7 +9791,7 @@
 	        paymentMethod: pay === 'cod' ? 'cod' : 'online'
 	      });
 	      if (created.paymentMethod === 'cod') {
-	        completeOrder(created.orderNumber);
+	        completeOrder(created.orderNumber, created.amount);
 	        return;
 	      }
 	      const ready = await loadRazorpayScript();
@@ -9794,7 +9820,7 @@
 	          try {
 	            const result = await verifyPayment(response);
 	            if (result?.verified) {
-	              completeOrder(result.orderNumber);
+	              completeOrder(result.orderNumber, result.amount);
 	            } else {
 	              inFlight.current = false;
 	              setProcessing(false);
@@ -10129,7 +10155,7 @@
 	                type: "radio",
 	                name: "pay",
 	                checked: pay === id,
-	                onChange: () => setPay(id),
+	                onChange: () => selectPay(id),
 	                disabled: processing
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	                className: "opt__radio"
@@ -10588,6 +10614,10 @@
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	              className: "btn btn-sm btn-ghost",
 	              children: "Reorder"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: `/passport/${o.id}`,
+	              className: "btn btn-sm btn-ghost",
+	              children: "View Passport"
 	            })]
 	          })]
 	        }), track === o.id && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -10928,6 +10958,1522 @@
 	      title: "You might also like",
 	      products: getBestsellers(),
 	      link: "/shop"
+	    })]
+	  });
+	}
+
+	// ============================================================
+	// PURCHASE PASSPORT — real order data adapter.
+	//
+	// There is no customer login in this app (Account.jsx's "auth" is a
+	// local-state mock, not wired to anything). Ownership of an order is
+	// proven instead by knowing BOTH the order number and the email used
+	// at checkout — verified server-side in api/orders/lookup.js, which
+	// is the ONLY thing that can read the `orders` table for a customer
+	// (existing RLS still grants admins-only SELECT; nothing here weakens
+	// that). This module never talks to Supabase directly and never sees
+	// a service-role key — it only calls that one API route.
+	//
+	// Anything the `orders` schema genuinely has no column for (batch
+	// number, expiry date, courier/tracking, delivery ETA, fulfillment
+	// steps beyond "ordered") is surfaced as NOT_AVAILABLE rather than
+	// invented. See the Phase 2 report for exactly what's missing.
+	// ============================================================
+	const NOT_AVAILABLE = 'Not available yet';
+	const PAYMENT_METHOD_LABELS = {
+	  razorpay: 'Razorpay',
+	  cod: 'Cash on Delivery'
+	};
+	function formatDate(iso) {
+	  if (!iso) return null;
+	  const d = new Date(iso);
+	  if (Number.isNaN(d.getTime())) return null;
+	  return new Intl.DateTimeFormat('en-IN', {
+	    day: 'numeric',
+	    month: 'short',
+	    year: 'numeric'
+	  }).format(d);
+	}
+	function formatDateTime(iso) {
+	  if (!iso) return null;
+	  const d = new Date(iso);
+	  if (Number.isNaN(d.getTime())) return null;
+	  const date = formatDate(iso);
+	  const time = new Intl.DateTimeFormat('en-IN', {
+	    hour: 'numeric',
+	    minute: '2-digit',
+	    hour12: true
+	  }).format(d);
+	  return `${date}, ${time}`;
+	}
+	function daysAgo(iso) {
+	  if (!iso) return null;
+	  const d = new Date(iso).getTime();
+	  if (Number.isNaN(d)) return null;
+	  return Math.max(0, Math.floor((Date.now() - d) / 86400000));
+	}
+
+	// Same field order/skip-if-blank convention as the admin Orders page
+	// (src/admin/pages/Orders.jsx formatAddress) — kept as one line here
+	// since the Passport field is a single-line value, not a postal block.
+	function formatAddress$1(c = {}) {
+	  const cityLine = [c.city, c.state].filter(Boolean).join(', ');
+	  const cityPin = [cityLine, c.pin].filter(Boolean).join(' - ');
+	  return [c.address, c.apartment, cityPin].filter(Boolean).join(', ') || NOT_AVAILABLE;
+	}
+	function computeStatusLabel({
+	  status,
+	  paymentStatus,
+	  paymentMethod
+	}) {
+	  if (status === 'cancelled') return 'Cancelled';
+	  if (paymentStatus === 'failed') return 'Payment Failed';
+	  if (paymentStatus === 'paid') return 'Payment Confirmed';
+	  if (paymentMethod === 'cod') return 'Order Placed (Cash on Delivery)';
+	  return 'Awaiting Payment';
+	}
+
+	/** Merge a real order line with the live catalog entry it points at
+	 * (for image + description) — never invents a product that isn't in
+	 * either the order or the catalog. */
+	function resolveProduct(item) {
+	  const catalogId = item?.biosash_id || item?.product_id;
+	  const catalogProduct = catalogId != null ? productById[catalogId] : null;
+	  return {
+	    id: catalogId ?? item?.name,
+	    name: item?.name || catalogProduct?.name || 'Product',
+	    image: catalogProduct?.image || null,
+	    gallery: catalogProduct?.gallery || [],
+	    category: catalogProduct?.category || null,
+	    shortDescription: catalogProduct?.shortDescription || catalogProduct?.description || '',
+	    usage: catalogProduct?.usage || ''
+	  };
+	}
+
+	/**
+	 * Map the sanitized order returned by /api/orders/lookup into exactly
+	 * the shape Passport.jsx renders. Every field below is either real
+	 * (traceable to a column on `orders`) or explicitly NOT_AVAILABLE —
+	 * nothing here is a placeholder invented for display purposes.
+	 */
+	function mapOrderToPassport(order) {
+	  const items = Array.isArray(order.items) ? order.items : [];
+	  const first = items[0] || {};
+	  const product = resolveProduct(first);
+	  const extraCount = items.length - 1;
+	  const totalQty = items.reduce((n, l) => n + (Number(l.qty) || 0), 0);
+	  const memberName = [order.customer?.firstName, order.customer?.lastName].filter(Boolean).join(' ').trim() || 'Guest';
+
+	  // The schema has no delivery/fulfillment tracking of any kind yet —
+	  // only "an order exists" is provable. See report: DeliveryTimeline
+	  // beyond "Ordered", ETA, and "Delivered on" all require new columns.
+	  const timeline = [{
+	    key: 'ordered',
+	    label: 'Ordered',
+	    short: 'Ordered',
+	    date: formatDate(order.createdAt),
+	    time: formatDateTime(order.createdAt),
+	    done: true,
+	    current: true
+	  }, {
+	    key: 'packed',
+	    label: 'Packed',
+	    short: 'Packed',
+	    date: null,
+	    time: null,
+	    done: false,
+	    current: false
+	  }, {
+	    key: 'shipped',
+	    label: 'Shipped',
+	    short: 'Shipped',
+	    date: null,
+	    time: null,
+	    done: false,
+	    current: false
+	  }, {
+	    key: 'out_for_delivery',
+	    label: 'Out for Delivery',
+	    short: 'Out for Delivery',
+	    date: null,
+	    time: null,
+	    done: false,
+	    current: false
+	  }, {
+	    key: 'delivered',
+	    label: 'Delivered',
+	    short: 'Delivered',
+	    date: null,
+	    time: null,
+	    done: false,
+	    current: false
+	  }];
+	  return {
+	    passportId: order.orderNumber,
+	    member: {
+	      name: memberName,
+	      tier: 'Order Verified'
+	    },
+	    status: computeStatusLabel(order),
+	    eta: {
+	      available: false,
+	      display: NOT_AVAILABLE
+	    },
+	    deliveredOn: null,
+	    product: {
+	      ...product,
+	      qty: first.qty || totalQty || 1,
+	      extraItemsCount: extraCount > 0 ? extraCount : 0
+	    },
+	    order: {
+	      date: formatDate(order.createdAt) || NOT_AVAILABLE,
+	      amount: order.amount,
+	      paymentMethod: PAYMENT_METHOD_LABELS[order.paymentMethod] || order.paymentMethod || NOT_AVAILABLE,
+	      address: formatAddress$1(order.customer)
+	    },
+	    timeline,
+	    care: [{
+	      icon: 'clock',
+	      title: 'Before You Use',
+	      desc: 'Consult your physician if you are pregnant, nursing, or on medication.'
+	    }, {
+	      icon: 'droplet',
+	      title: 'How to Use',
+	      desc: product.usage || 'Use as directed on the product label, or as directed by your practitioner.'
+	    }, {
+	      icon: 'home',
+	      title: 'Storage',
+	      desc: 'Store in a cool, dry place away from direct sunlight. Keep tightly sealed.'
+	    }, {
+	      icon: 'circleAlert',
+	      title: 'Important',
+	      desc: 'Discontinue use and consult a doctor if any adverse reaction occurs.'
+	    }],
+	    returns: {
+	      windowDate: null,
+	      actions: [{
+	        icon: 'return',
+	        title: 'Return this product',
+	        sub: 'Initiate a return request'
+	      }, {
+	        icon: 'circleAlert',
+	        title: 'Report an issue',
+	        sub: 'Tell us what went wrong'
+	      }, {
+	        icon: 'chat',
+	        title: 'Chat with our team',
+	        sub: 'We usually reply in minutes'
+	      }]
+	    },
+	    identity: {
+	      brand: 'SORA LIFE',
+	      batch: null,
+	      mfgDate: null,
+	      expiryDate: null
+	    },
+	    experience: {
+	      faces: [{
+	        key: 'loved',
+	        label: 'Loved it'
+	      }, {
+	        key: 'good',
+	        label: 'Good'
+	      }, {
+	        key: 'unsure',
+	        label: 'Not sure yet'
+	      }, {
+	        key: 'not_for_me',
+	        label: 'Not for me'
+	      }, {
+	        key: 'bad',
+	        label: 'Very bad'
+	      }],
+	      chips: ['Quality', 'Ingredients', 'Results', 'Packaging', 'Delivery', 'Value for Money', 'Other']
+	    },
+	    reminder: {
+	      purchasedDaysAgo: daysAgo(order.createdAt),
+	      options: [{
+	        value: 7,
+	        label: 'Remind me in 7 days'
+	      }, {
+	        value: 14,
+	        label: 'Remind me in 14 days'
+	      }, {
+	        value: 30,
+	        label: 'Remind me in 30 days'
+	      }, {
+	        value: 'none',
+	        label: 'No reminder'
+	      }],
+	      selected: 14
+	    }
+	  };
+	}
+
+	/**
+	 * Look up one order by number + the email used at checkout, and map
+	 * it to Passport shape. Throws a user-facing Error on any failure —
+	 * the API route intentionally returns the same generic message for
+	 * "no such order" and "wrong email" so this can't be used to probe
+	 * whether an order number exists.
+	 */
+	async function lookupPassport({
+	  orderNumber,
+	  email
+	}) {
+	  const res = await fetch('/api/orders/lookup', {
+	    method: 'POST',
+	    headers: {
+	      'Content-Type': 'application/json'
+	    },
+	    body: JSON.stringify({
+	      orderNumber,
+	      email
+	    })
+	  });
+	  let data = null;
+	  try {
+	    data = await res.json();
+	  } catch {/* non-JSON error page */}
+	  if (!res.ok || !data?.order) {
+	    throw new Error(data?.error || 'We could not look up that order. Please try again.');
+	  }
+	  return mapOrderToPassport(data.order);
+	}
+
+	const sessionKey = orderNumber => `sora_passport:${orderNumber}`;
+	const SIDE_NAV = [{
+	  id: 'dashboard',
+	  label: 'Dashboard',
+	  icon: 'home',
+	  to: '/account'
+	}, {
+	  id: 'orders',
+	  label: 'Orders',
+	  icon: 'bag',
+	  to: '/account/orders'
+	}, {
+	  id: 'passports',
+	  label: 'Purchase Passports',
+	  icon: 'package',
+	  to: '/passport',
+	  active: true
+	}, {
+	  id: 'wishlist',
+	  label: 'Wishlist',
+	  icon: 'heart',
+	  to: '/wishlist'
+	}, {
+	  id: 'addresses',
+	  label: 'Addresses',
+	  icon: 'mapPin',
+	  to: '/account/addresses'
+	}, {
+	  id: 'care',
+	  label: 'Sora Life Care',
+	  icon: 'leaf',
+	  to: '#'
+	}, {
+	  id: 'rewards',
+	  label: 'Rewards',
+	  icon: 'award',
+	  to: '#'
+	}, {
+	  id: 'reviews',
+	  label: 'My Reviews',
+	  icon: 'star',
+	  to: '#'
+	}, {
+	  id: 'settings',
+	  label: 'Account Settings',
+	  icon: 'settings',
+	  to: '/account/settings'
+	}, {
+	  id: 'support',
+	  label: 'Support',
+	  icon: 'chat',
+	  to: '#'
+	}];
+	const TABS = [{
+	  id: 'overview',
+	  label: 'Overview',
+	  icon: 'grid'
+	}, {
+	  id: 'delivery',
+	  label: 'Delivery',
+	  icon: 'truck'
+	}, {
+	  id: 'care',
+	  label: 'Product Care',
+	  icon: 'droplet'
+	}, {
+	  id: 'returns',
+	  label: 'Returns & Support',
+	  icon: 'return'
+	}, {
+	  id: 'identity',
+	  label: 'Product Identity',
+	  icon: 'shield'
+	}, {
+	  id: 'experience',
+	  label: 'My Experience',
+	  icon: 'heartHand'
+	}];
+	function Passport() {
+	  const {
+	    passportId
+	  } = useParams();
+	  const navigate = useNavigate();
+	  const {
+	    toast
+	  } = useStore();
+
+	  // 'gate' -> asking for order number + email, 'loading' -> verifying,
+	  // 'ready' -> ordinal Passport view, 'error' -> lookup failed.
+	  const [phase, setPhase] = reactExports.useState('gate');
+	  const [passport, setPassport] = reactExports.useState(null);
+	  const [lookupError, setLookupError] = reactExports.useState('');
+	  const [sidebarOpen, setSidebarOpen] = reactExports.useState(false);
+	  const [activeTab, setActiveTab] = reactExports.useState('overview');
+	  const [copied, setCopied] = reactExports.useState(false);
+	  const [face, setFace] = reactExports.useState(null);
+	  const [chips, setChips] = reactExports.useState([]);
+	  const [reminder, setReminder] = reactExports.useState(14);
+	  const runLookup = async ({
+	    orderNumber,
+	    email
+	  }, {
+	    silent = false
+	  } = {}) => {
+	    setPhase('loading');
+	    if (!silent) setLookupError('');
+	    try {
+	      const data = await lookupPassport({
+	        orderNumber,
+	        email
+	      });
+	      try {
+	        sessionStorage.setItem(sessionKey(data.passportId), email);
+	      } catch {/* storage unavailable */}
+	      setPassport(data);
+	      setReminder(data.reminder.selected);
+	      setPhase('ready');
+	      if (!passportId || passportId !== data.passportId) {
+	        navigate(`/passport/${data.passportId}`, {
+	          replace: true
+	        });
+	      }
+	    } catch (err) {
+	      // A silent (session-remembered) retry that fails just falls back
+	      // to the gate quietly — no scary error for something the user
+	      // didn't just do.
+	      try {
+	        sessionStorage.removeItem(sessionKey(orderNumber));
+	      } catch {/* storage unavailable */}
+	      if (!silent) setLookupError(err.message || 'We could not find that order.');
+	      setPhase('gate');
+	    }
+	  };
+
+	  // On landing with an order number already in the URL, try the email
+	  // remembered for this session (sessionStorage only — never the URL,
+	  // never persisted beyond this tab) before asking again.
+	  reactExports.useEffect(() => {
+	    if (!passportId) return;
+	    let storedEmail = null;
+	    try {
+	      storedEmail = sessionStorage.getItem(sessionKey(passportId.toUpperCase()));
+	    } catch {/* storage unavailable */}
+	    if (storedEmail) runLookup({
+	      orderNumber: passportId,
+	      email: storedEmail
+	    }, {
+	      silent: true
+	    });
+	    // eslint-disable-next-line react-hooks/exhaustive-deps
+	  }, [passportId]);
+	  const copyId = async () => {
+	    try {
+	      await navigator.clipboard.writeText(passport.passportId);
+	    } catch {/* clipboard unavailable */}
+	    setCopied(true);
+	    setTimeout(() => setCopied(false), 1500);
+	  };
+	  const download = () => {
+	    toast('PDF export is coming soon');
+	  };
+	  const toggleChip = c => setChips(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+	  const shareExperience = () => {
+	    if (!face) return;
+	    toast('Thanks for sharing your experience');
+	  };
+	  const setReminderChoice = v => {
+	    setReminder(v);
+	    toast(v === 'none' ? 'Reminder turned off' : `Reminder set for ${v} days`);
+	  };
+	  if (phase !== 'ready' || !passport) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Sidebar, {
+	        open: sidebarOpen,
+	        onClose: () => setSidebarOpen(false),
+	        member: {
+	          name: 'Guest',
+	          tier: 'Not Verified',
+	          tierIcon: 'lock'
+	        }
+	      }), sidebarOpen && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "psp__side-scrim open",
+	        onClick: () => setSidebarOpen(false)
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "psp__topbar",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          className: "iconbtn",
+	          onClick: () => setSidebarOpen(true),
+	          "aria-label": "Open menu",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "menu"
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: "SORA LIFE"
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(LookupGate, {
+	        passportId: passportId,
+	        loading: phase === 'loading',
+	        error: lookupError,
+	        onSubmit: vals => runLookup(vals)
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
+	    });
+	  }
+	  const cards = {
+	    delivery: /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryDetailsCard, {
+	      passport: passport
+	    }),
+	    care: /*#__PURE__*/jsxRuntimeExports.jsx(ProductCareCard, {
+	      care: passport.care
+	    }),
+	    returns: /*#__PURE__*/jsxRuntimeExports.jsx(ReturnsSupportCard, {
+	      returns: passport.returns
+	    }),
+	    identity: /*#__PURE__*/jsxRuntimeExports.jsx(ProductIdentityCard, {
+	      identity: passport.identity
+	    }),
+	    experience: /*#__PURE__*/jsxRuntimeExports.jsx(MyExperienceCard, {
+	      experience: passport.experience,
+	      face: face,
+	      setFace: setFace,
+	      chips: chips,
+	      toggleChip: toggleChip,
+	      onSubmit: shareExperience
+	    })
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "psp",
+	    children: [sidebarOpen && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "psp__side-scrim open",
+	      onClick: () => setSidebarOpen(false)
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(Sidebar, {
+	      open: sidebarOpen,
+	      onClose: () => setSidebarOpen(false),
+	      member: passport.member
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp__topbar",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        className: "iconbtn",
+	        onClick: () => setSidebarOpen(true),
+	        "aria-label": "Open menu",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "menu"
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	        children: "SORA LIFE"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
+	      className: "psp__main",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "psp__inner",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+	          className: "psp__head",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h1", {
+	              className: "serif psp__title",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "shield",
+	                size: 26
+	              }), " Your Purchase Passport"]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              children: "Every detail. Every step. Always with you."
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "psp__head-right",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "psp__idblock",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "lbl",
+	                children: "Passport ID"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	                className: "psp__idrow",
+	                children: [passport.passportId, /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	                  style: {
+	                    position: 'relative'
+	                  },
+	                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                    className: "psp__copybtn",
+	                    onClick: copyId,
+	                    "aria-label": "Copy passport ID",
+	                    children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                      name: "copy"
+	                    })
+	                  }), copied && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                    className: "psp__copied",
+	                    children: "Copied"
+	                  })]
+	                })]
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	              className: "btn btn-light",
+	              onClick: download,
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "download",
+	                size: 17
+	              }), " Download Passport"]
+	            })]
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "psp__herowrap",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductHero, {
+	            product: passport.product,
+	            order: passport.order,
+	            eta: passport.eta
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(StatusCard, {
+	            status: passport.status,
+	            eta: passport.eta,
+	            delivered: !!passport.deliveredOn,
+	            deliveredOn: passport.deliveredOn
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryTimeline, {
+	          timeline: passport.timeline
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+	          className: "psp__tabs",
+	          role: "tablist",
+	          "aria-label": "Purchase Passport sections",
+	          children: TABS.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	            role: "tab",
+	            "aria-selected": activeTab === t.id,
+	            className: `psp__tab ${activeTab === t.id ? 'active' : ''}`,
+	            onClick: () => setActiveTab(t.id),
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: t.icon,
+	              size: 16
+	            }), " ", t.label]
+	          }, t.id))
+	        }), activeTab === 'overview' ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "psp__grid",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeliveryDetailsCard, {
+	              passport: passport
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductCareCard, {
+	              care: passport.care
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(ReturnsSupportCard, {
+	              returns: passport.returns
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductIdentityCard, {
+	              identity: passport.identity
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(MyExperienceCard, {
+	              experience: passport.experience,
+	              face: face,
+	              setFace: setFace,
+	              chips: chips,
+	              toggleChip: toggleChip,
+	              onSubmit: shareExperience
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(ReorderRemindersCard, {
+	              reminder: passport.reminder,
+	              selected: reminder,
+	              onSelect: setReminderChoice
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(PromoCardWide, {})]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(PromoBand, {})]
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "psp__grid psp__grid--single",
+	          children: cards[activeTab]
+	        })]
+	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
+	  });
+	}
+	function LookupGate({
+	  passportId,
+	  loading,
+	  error,
+	  onSubmit
+	}) {
+	  const [orderNumber, setOrderNumber] = reactExports.useState(passportId || '');
+	  const [email, setEmail] = reactExports.useState('');
+	  const submit = e => {
+	    e.preventDefault();
+	    if (loading) return;
+	    onSubmit({
+	      orderNumber,
+	      email
+	    });
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("main", {
+	    className: "psp__main",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp__inner",
+	      style: {
+	        maxWidth: 440
+	      },
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+	        className: "psp__head",
+	        style: {
+	          marginBottom: 'var(--sp-8)'
+	        },
+	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h1", {
+	            className: "serif psp__title",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "shield",
+	              size: 26
+	            }), " Your Purchase Passport"]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: passportId ? `Confirm it's you — enter the email used at checkout for order ${passportId}.` : 'Enter your order number and the email used at checkout to view your Passport.'
+	          })]
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	        className: "surface pad-lg",
+	        onSubmit: submit,
+	        children: [!passportId && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          style: {
+	            marginBottom: 16
+	          },
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Order number"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            value: orderNumber,
+	            onChange: e => setOrderNumber(e.target.value),
+	            placeholder: "SORA-XXXXXXXXX",
+	            required: true,
+	            autoFocus: true
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: `field ${error ? 'field-error' : ''}`,
+	          style: {
+	            marginBottom: 16
+	          },
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Email used at checkout"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            type: "email",
+	            value: email,
+	            onChange: e => setEmail(e.target.value),
+	            placeholder: "you@email.com",
+	            required: true,
+	            autoFocus: Boolean(passportId)
+	          }), error && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "error-text",
+	            children: error
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          className: "btn btn-block",
+	          type: "submit",
+	          disabled: loading,
+	          children: loading ? 'Looking up…' : 'View Passport'
+	        })]
+	      })]
+	    })
+	  });
+	}
+	function Sidebar({
+	  open,
+	  onClose,
+	  member
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("aside", {
+	    className: `psp__side ${open ? 'open' : ''}`,
+	    "aria-label": "Primary",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp__side-brand",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "psp__mark",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "leaf",
+	          size: 19
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	        className: "serif",
+	        children: "SORA LIFE"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        children: "Health & Wellness"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp__profile",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "psp__avatar",
+	        children: member.name.split(' ').map(s => s[0]).slice(0, 2).join('')
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	        children: member.name
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "psp__tier",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: member.tierIcon || 'checkCircle',
+	          size: 12
+	        }), " ", member.tier]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+	      className: "psp__nav",
+	      children: SIDE_NAV.map(n => n.to === '#' ? /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	        href: "#",
+	        className: `psp__navitem ${n.active ? 'active' : ''}`,
+	        onClick: e => {
+	          e.preventDefault();
+	          onClose();
+	        },
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: n.icon,
+	          size: 19
+	        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "psp__navlabel",
+	          children: n.label
+	        })]
+	      }, n.id) : /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	        to: n.to,
+	        className: `psp__navitem ${n.active ? 'active' : ''}`,
+	        onClick: onClose,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: n.icon,
+	          size: 19
+	        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "psp__navlabel",
+	          children: n.label
+	        })]
+	      }, n.id))
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp__side-promo",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "psp__promocard",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          className: "serif",
+	          children: "Sora Life Care"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "check",
+	              size: 13
+	            }), " Priority support"]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "check",
+	              size: 13
+	            }), " Smart reminders"]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "check",
+	              size: 13
+	            }), " Member rewards"]
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	          href: "#",
+	          className: "btn btn-gold btn-outline btn-sm btn-block",
+	          onClick: e => e.preventDefault(),
+	          children: "Explore Care \u2192"
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "psp__promocard",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          className: "serif",
+	          children: "Need Help?"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          children: "We're here for you"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	          href: "#",
+	          className: "btn btn-gold btn-outline btn-sm btn-block",
+	          onClick: e => e.preventDefault(),
+	          children: "Contact Us"
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp__side-foot",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "lock",
+	        size: 13
+	      }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        children: "Secure \xB7 Reliable \xB7 Transparent"
+	      })]
+	    })]
+	  });
+	}
+	function ProductHero({
+	  product,
+	  order,
+	  eta
+	}) {
+	  const fields = [{
+	    icon: 'clock',
+	    label: 'Order Date',
+	    value: order.date
+	  }, {
+	    icon: 'package',
+	    label: 'Quantity',
+	    value: String(product.qty)
+	  }, {
+	    icon: 'card',
+	    label: 'Amount Paid',
+	    value: money(order.amount)
+	  }, {
+	    icon: 'lock',
+	    label: 'Payment Method',
+	    value: order.paymentMethod
+	  }, {
+	    icon: 'mapPin',
+	    label: 'Delivery Address',
+	    value: order.address
+	  }, {
+	    icon: 'truck',
+	    label: 'Estimated Delivery',
+	    value: eta.display
+	  }];
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "psp__hero",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp__hero-media",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	        product: product
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "psp__hero-verify",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "leaf",
+	          size: 18
+	        })
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp__hero-body",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        className: "serif psp__hero-title",
+	        children: product.name
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "psp__hero-underline"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	        className: "psp__hero-sub",
+	        children: [product.shortDescription || 'Your order, verified and ready to track.', product.extraItemsCount > 0 && ` · +${product.extraItemsCount} more item${product.extraItemsCount > 1 ? 's' : ''} in this order`]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "psp__fields",
+	        children: fields.map(f => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "psp__field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: f.icon,
+	            size: 19
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "lbl",
+	              children: f.label
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "val",
+	              children: f.value
+	            })]
+	          })]
+	        }, f.label))
+	      })]
+	    })]
+	  });
+	}
+	function StatusCard({
+	  status,
+	  eta,
+	  delivered,
+	  deliveredOn
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "psp__status",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "ic",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "truck",
+	        size: 19
+	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "lbl",
+	      children: "Passport Status"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "stat serif",
+	      children: status
+	    }), delivered ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "eta-lbl",
+	        children: "Delivered on"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "eta-val",
+	        children: deliveredOn
+	      })]
+	    }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "eta-lbl",
+	        children: "Estimated Delivery"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "eta-val",
+	        children: eta.display
+	      })]
+	    })]
+	  });
+	}
+	function DeliveryTimeline({
+	  timeline
+	}) {
+	  const icons = {
+	    ordered: 'check',
+	    packed: 'check',
+	    shipped: 'truck',
+	    out_for_delivery: 'package',
+	    delivered: 'mail'
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "psp__timeline",
+	    "aria-label": "Delivery timeline",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+	      className: "psp__tl-track",
+	      children: timeline.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        className: `psp__tl-node ${s.done ? 'is-done' : ''} ${s.current ? 'is-current' : ''}`,
+	        "aria-current": s.current ? 'step' : undefined,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "psp__tl-connector",
+	          "aria-hidden": "true"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "psp__tl-dot",
+	          children: s.done ? /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "check",
+	            size: s.current ? 18 : 15
+	          }) : /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: icons[s.key] || 'package',
+	            size: 15
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "psp__tl-step",
+	          children: s.short
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "psp__tl-date",
+	          children: s.date || 'Pending'
+	        })]
+	      }, s.key))
+	    })
+	  });
+	}
+	function CardShell({
+	  icon,
+	  title,
+	  subtitle,
+	  seal,
+	  footer,
+	  children,
+	  singleCol
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "psp-card",
+	    children: [seal && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "psp-card__seal",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "award",
+	        size: 26
+	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp-card__head",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
+	        className: "serif",
+	        children: [icon && /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: icon,
+	          size: 18
+	        }), " ", title]
+	      }), subtitle && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        children: subtitle
+	      })]
+	    }), children, footer && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "psp-card__foot",
+	      children: footer
+	    })]
+	  });
+	}
+	function DeliveryDetailsCard({
+	  passport
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(CardShell, {
+	    icon: "truck",
+	    title: "Delivery Details",
+	    subtitle: "Track where your order is right now",
+	    footer: /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	      href: "#",
+	      className: "btn btn-outline btn-sm btn-block",
+	      onClick: e => e.preventDefault(),
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "externalLink",
+	        size: 15
+	      }), " Track on Courier Website"]
+	    }),
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp-highlight",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "truck",
+	        size: 20
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "lbl",
+	          children: "Estimated delivery"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "val",
+	          children: passport.eta.display
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "psp-vt",
+	      children: passport.timeline.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: `psp-vt__row ${s.done ? 'done' : ''}`,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "psp-vt__rail",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "psp-vt__dot",
+	            children: s.done && /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "check",
+	              size: 11
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "psp-vt__line"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "psp-vt__body",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "psp-vt__title",
+	            children: s.label
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "psp-vt__time",
+	            children: s.time || NOT_AVAILABLE
+	          })]
+	        })]
+	      }, s.key))
+	    })]
+	  });
+	}
+	function ProductCareCard({
+	  care
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsx(CardShell, {
+	    icon: "droplet",
+	    title: "Product Care Guide",
+	    subtitle: "Get the most from your product",
+	    footer: /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	      href: "#",
+	      className: "btn btn-outline btn-sm btn-block",
+	      onClick: e => e.preventDefault(),
+	      children: ["View Detailed Guide ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "arrowRight",
+	        size: 15
+	      })]
+	    }),
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "psp-guidelist",
+	      children: care.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "psp-guide",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "psp-guide__ic",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: c.icon,
+	            size: 17
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "psp-guide__title",
+	            children: c.title
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "psp-guide__desc",
+	            children: c.desc
+	          })]
+	        })]
+	      }, c.title))
+	    })
+	  });
+	}
+	function ReturnsSupportCard({
+	  returns
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(CardShell, {
+	    icon: "return",
+	    title: "Returns & Support",
+	    subtitle: "We're here to help",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp-highlight",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "clock",
+	        size: 20
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "lbl",
+	          children: returns.windowDate ? 'Return window valid till' : 'Return window'
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "val",
+	          children: returns.windowDate || NOT_AVAILABLE
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      children: returns.actions.map(a => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	        className: "psp-actionrow",
+	        onClick: () => {},
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "psp-actionrow__ic",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: a.icon,
+	            size: 16
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "psp-actionrow__title",
+	            style: {
+	              display: 'block'
+	            },
+	            children: a.title
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "psp-actionrow__sub",
+	            children: a.sub
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "psp-actionrow__chev",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "chevronRight",
+	            size: 16
+	          })
+	        })]
+	      }, a.title))
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp-genuine",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "shield",
+	        size: 22
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: "100% Genuine Products"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          children: "Sourced directly. Quality assured."
+	        })]
+	      })]
+	    })]
+	  });
+	}
+	function ProductIdentityCard({
+	  identity
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(CardShell, {
+	    icon: "shield",
+	    title: "Product Identity",
+	    subtitle: "Authenticity you can trust",
+	    seal: true,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+	      className: "psp-kv",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "psp-kv__row",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	          children: "Brand"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	          children: identity.brand
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "psp-kv__row",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	          children: "Batch No."
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	          children: identity.batch || NOT_AVAILABLE
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "psp-kv__row",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	          children: "Mfg. Date"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	          children: identity.mfgDate || NOT_AVAILABLE
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "psp-kv__row",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	          children: "Expiry Date"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	          children: identity.expiryDate || NOT_AVAILABLE
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp-qr",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "psp-qr__box",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "qrCode",
+	          size: 30
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: "Scan to verify authenticity"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          children: "Use the QR code to view product details"
+	        })]
+	      })]
+	    })]
+	  });
+	}
+	const FACE_PATH = {
+	  loved: '<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M8.5 9h.01M15.5 9h.01"/>',
+	  good: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5s1.2 1 3.5 1 3.5-1 3.5-1"/><path d="M8.5 9h.01M15.5 9h.01"/>',
+	  unsure: '<circle cx="12" cy="12" r="9"/><path d="M8.5 15h7"/><path d="M8.5 9h.01M15.5 9h.01"/>',
+	  not_for_me: '<circle cx="12" cy="12" r="9"/><path d="M8.5 15.5s1.2-1 3.5-1 3.5 1 3.5 1"/><path d="M8.5 9h.01M15.5 9h.01"/>',
+	  bad: '<circle cx="12" cy="12" r="9"/><path d="M8 16s1.5-2 4-2 4 2 4 2"/><path d="M8.5 9h.01M15.5 9h.01"/>'
+	};
+	function MyExperienceCard({
+	  experience,
+	  face,
+	  setFace,
+	  chips,
+	  toggleChip,
+	  onSubmit
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(CardShell, {
+	    icon: "heartHand",
+	    title: "My Experience",
+	    subtitle: "Your experience helps us serve you better",
+	    footer: /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	      className: "btn btn-block",
+	      disabled: !face,
+	      onClick: onSubmit,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "gift",
+	        size: 17
+	      }), " Share Experience"]
+	    }),
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+	      style: {
+	        border: 0,
+	        padding: 0
+	      },
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+	        className: "hint",
+	        style: {
+	          marginBottom: 10
+	        },
+	        children: "How was your experience with this product?"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "psp-faces",
+	        role: "radiogroup",
+	        "aria-label": "Rate your experience",
+	        children: experience.faces.map(f => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	          type: "button",
+	          role: "radio",
+	          "aria-checked": face === f.key,
+	          className: `psp-face ${face === f.key ? 'active' : ''}`,
+	          onClick: () => setFace(f.key),
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "psp-face__ring",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx("svg", {
+	              width: "20",
+	              height: "20",
+	              viewBox: "0 0 24 24",
+	              fill: "none",
+	              stroke: "currentColor",
+	              strokeWidth: "1.6",
+	              strokeLinecap: "round",
+	              strokeLinejoin: "round",
+	              dangerouslySetInnerHTML: {
+	                __html: FACE_PATH[f.key]
+	              }
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            children: f.label
+	          })]
+	        }, f.key))
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "hint",
+	        style: {
+	          marginBottom: 8
+	        },
+	        children: "What did you like?"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "psp-chiprow",
+	        children: experience.chips.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: `chip ${chips.includes(c) ? 'active' : ''}`,
+	          "aria-pressed": chips.includes(c),
+	          onClick: () => toggleChip(c),
+	          children: c
+	        }, c))
+	      })]
+	    })]
+	  });
+	}
+	function ReorderRemindersCard({
+	  reminder,
+	  selected,
+	  onSelect
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(CardShell, {
+	    icon: "refresh",
+	    title: "Reorder & Reminders",
+	    subtitle: "Never run out of what you love",
+	    footer: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	      className: "btn btn-block",
+	      onClick: () => onSelect(selected),
+	      children: "Set Reminder"
+	    }),
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp-highlight",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "tag",
+	        size: 20
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "lbl",
+	          children: "You purchased this"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "val",
+	          children: reminder.purchasedDaysAgo != null ? `${reminder.purchasedDaysAgo} day${reminder.purchasedDaysAgo === 1 ? '' : 's'} ago` : NOT_AVAILABLE
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+	      style: {
+	        border: 0,
+	        padding: 0
+	      },
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+	        className: "hint",
+	        style: {
+	          marginBottom: 4
+	        },
+	        children: "Set a reminder"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "psp-reminder",
+	        role: "radiogroup",
+	        "aria-label": "Set a reminder",
+	        children: reminder.options.map(o => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	          className: `psp-reminder__row ${selected === o.value ? 'checked' : ''}`,
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "bell",
+	            size: 16,
+	            className: "bell"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "psp-reminder__label",
+	            children: o.label
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            type: "radio",
+	            name: "reminder",
+	            className: "sr-only",
+	            checked: selected === o.value,
+	            onChange: () => onSelect(o.value)
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "psp-radio",
+	            "aria-hidden": "true"
+	          })]
+	        }, o.value))
+	      })]
+	    })]
+	  });
+	}
+	function PromoBand() {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "psp-promoband",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      style: {
+	        maxWidth: 340
+	      },
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	        className: "serif psp-promoband__title",
+	        children: "Exclusively for You"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        children: "Because you love wellness"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	        href: "#",
+	        className: "btn btn-gold btn-outline btn-sm",
+	        onClick: e => e.preventDefault(),
+	        children: "Explore Recommendations \u2192"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "psp-promoband__feats",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "psp-promofeat",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "sparkle",
+	            size: 15
+	          }), " Early Access"]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "psp-promofeat",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "heartHand",
+	            size: 15
+	          }), " Premium Support"]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "psp-promofeat",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "award",
+	            size: 15
+	          }), " Member Rewards"]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "psp-promofeat",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "tag",
+	            size: 15
+	          }), " Special Offers"]
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp-promoband__card",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	        children: "SORA LIFE CLUB"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        children: "You're a valued part of our wellness family."
+	      })]
+	    })]
+	  });
+	}
+	function PromoCardWide() {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "psp-promocard-wide",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	      className: "serif",
+	      children: "More Than a Purchase. It's a Relationship."
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      children: "Sora Life Care is with you at every step of your wellness journey."
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "psp-promocard-wide__feats",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "psp-promofeat",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "users",
+	          size: 15
+	        }), " Personalized Guidance"]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "psp-promofeat",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "bell",
+	          size: 15
+	        }), " Smart Reminders"]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "psp-promofeat",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chat",
+	          size: 15
+	        }), " Priority Support"]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "psp-promofeat",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "sparkle",
+	          size: 15
+	        }), " Exclusive Benefits"]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "psp-promofeat",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "award",
+	          size: 15
+	        }), " Member Rewards"]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	      href: "#",
+	      className: "btn btn-gold btn-outline",
+	      style: {
+	        alignSelf: 'flex-start'
+	      },
+	      onClick: e => e.preventDefault(),
+	      children: "Explore Sora Life Care \u2192"
 	    })]
 	  });
 	}
@@ -36791,6 +38337,9 @@
 	        path: "settings",
 	        element: /*#__PURE__*/jsxRuntimeExports.jsx(Settings, {})
 	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	      path: "/passport/:passportId?",
+	      element: /*#__PURE__*/jsxRuntimeExports.jsx(Passport, {})
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs(Route, {
 	      element: /*#__PURE__*/jsxRuntimeExports.jsx(Layout, {}),
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Route, {

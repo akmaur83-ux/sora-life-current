@@ -28,10 +28,8 @@ export default async function handler(req, res) {
 
   const rz = getRazorpayCredentials();
   const sb = getSupabaseConfig();
-  if (!rz.configured) {
-    console.error('[create-order] Razorpay env vars missing (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET).');
-    return fail(res, 503, 'Online payment is not available right now. Please try again later.');
-  }
+  // Supabase is required for BOTH payment methods (every order, COD
+  // included, is written to the orders table), so this gate stays here.
   if (!sb.configured) {
     console.error('[create-order] Supabase server env missing (VITE_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).');
     return fail(res, 503, 'We could not start your order. Please try again later.');
@@ -50,6 +48,16 @@ export default async function handler(req, res) {
     if (!totals.ok) return fail(res, 400, totals.error);
 
     const method = paymentMethod === 'cod' ? 'cod' : 'razorpay';
+
+    // Razorpay is only required for the online-payment branch below — COD
+    // must work independently of whether Razorpay is configured. Checking
+    // this unconditionally at the top of the handler (the previous
+    // behavior) blocked COD orders too whenever Razorpay env vars were
+    // missing, which is never correct: COD never talks to Razorpay.
+    if (method !== 'cod' && !rz.configured) {
+      console.error('[create-order] Razorpay env vars missing (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET).');
+      return fail(res, 503, 'Online payment is not available right now. Please try again later.');
+    }
     const orderNumber = generateOrderNumber();
 
     // Only keep the customer/shipping fields we actually need, length-capped.

@@ -84,6 +84,17 @@ export async function findOrderByRazorpayOrderId(razorpayOrderId, cfg) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
+/** Used by the guest order-lookup route (Purchase Passport). Returns the
+ * full row — callers must check ownership (email match) before returning
+ * anything to the browser, and must sanitize before sending it. */
+export async function findOrderByNumber(orderNumber, cfg) {
+  const rows = await rest(
+    `orders?select=*&order_number=eq.${encodeURIComponent(orderNumber)}&limit=1`,
+    cfg
+  );
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
+}
+
 export async function updateOrderById(id, patch, cfg) {
   const rows = await rest(`orders?id=eq.${encodeURIComponent(id)}`, {
     ...cfg,
