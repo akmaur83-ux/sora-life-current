@@ -17,7 +17,7 @@ const DELIVERY = [
 
 const EMPTY_FORM = {
   email: '', phone: '', firstName: '', lastName: '',
-  address: '', apartment: '', city: '', state: '', pin: '',
+  address: '', apartment: '', landmark: '', city: '', state: '', pin: '',
 };
 
 export default function Checkout() {
@@ -29,7 +29,33 @@ export default function Checkout() {
   // cancelled payment (each step unmounts, so uncontrolled inputs would
   // lose their values), and so they can be sent with the order.
   const [form, setForm] = useState(EMPTY_FORM);
-  const setField = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const [errors, setErrors] = useState({});
+  const setField = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+    setErrors((prev) => (prev[k] ? { ...prev, [k]: undefined } : prev));
+  };
+
+  // A physical-product store must have complete delivery details. These are
+  // validated before the customer can leave each step, and again defensively
+  // before payment. apartment + landmark stay optional.
+  function validateContact() {
+    const e = {};
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim())) e.email = 'Enter a valid email address.';
+    if (form.phone.replace(/\D/g, '').length < 10) e.phone = 'Enter a valid phone number.';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+  function validateShipping() {
+    const e = {};
+    if (!form.firstName.trim()) e.firstName = 'Required';
+    if (!form.lastName.trim()) e.lastName = 'Required';
+    if (!form.address.trim()) e.address = 'Enter your street address.';
+    if (!form.city.trim()) e.city = 'Required';
+    if (!form.state.trim()) e.state = 'Required';
+    if (!/^\d{6}$/.test(form.pin.trim())) e.pin = 'Enter a 6-digit PIN code.';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
   // Payment UX state
   const [processing, setProcessing] = useState(false);
   const [payError, setPayError] = useState('');
@@ -110,6 +136,9 @@ export default function Checkout() {
 
   const placeOrder = async () => {
     if (inFlight.current) return; // double-click / duplicate-submit guard
+    // Defensive: never start a payment without complete delivery details,
+    // even if the user somehow reached this step. Send them back to fix it.
+    if (!validateShipping()) { setStep(1); return; }
     inFlight.current = true;
     setProcessing(true);
     setPayError('');
@@ -213,30 +242,32 @@ export default function Checkout() {
             <section className="cform">
               <h2 className="serif">Contact information</h2>
               <p className="muted">We'll use this to send order updates. <Link to="/account" className="inline-link">Log in</Link> for faster checkout.</p>
-              <div className="field"><label className="label">Email address</label><input className="input" type="email" placeholder="you@email.com" value={form.email} onChange={setField('email')} /></div>
-              <div className="field"><label className="label">Phone number</label><input className="input" type="tel" placeholder="+91 98765 43210" value={form.phone} onChange={setField('phone')} /></div>
+              <div className={`field ${errors.email ? 'field-error' : ''}`}><label className="label">Email address</label><input className="input" type="email" placeholder="you@email.com" value={form.email} onChange={setField('email')} />{errors.email && <span className="error-text">{errors.email}</span>}</div>
+              <div className={`field ${errors.phone ? 'field-error' : ''}`}><label className="label">Phone number</label><input className="input" type="tel" placeholder="+91 98765 43210" value={form.phone} onChange={setField('phone')} />{errors.phone && <span className="error-text">{errors.phone}</span>}</div>
               <label className="check"><input type="checkbox" defaultChecked /><span className="check__box"><Icon name="check" size={13} /></span><span>Email me with news and offers</span></label>
-              <button className="btn btn-lg" onClick={next}>Continue to shipping <Icon name="arrowRight" size={18} /></button>
+              <button className="btn btn-lg" onClick={() => validateContact() && next()}>Continue to shipping <Icon name="arrowRight" size={18} /></button>
             </section>
           )}
 
           {step === 1 && (
             <section className="cform">
               <h2 className="serif">Shipping address</h2>
+              <p className="muted">We deliver physical products, so a complete address is required.</p>
               <div className="grid2">
-                <div className="field"><label className="label">First name</label><input className="input" placeholder="First name" value={form.firstName} onChange={setField('firstName')} /></div>
-                <div className="field"><label className="label">Last name</label><input className="input" placeholder="Last name" value={form.lastName} onChange={setField('lastName')} /></div>
+                <div className={`field ${errors.firstName ? 'field-error' : ''}`}><label className="label">First name</label><input className="input" placeholder="First name" value={form.firstName} onChange={setField('firstName')} />{errors.firstName && <span className="error-text">{errors.firstName}</span>}</div>
+                <div className={`field ${errors.lastName ? 'field-error' : ''}`}><label className="label">Last name</label><input className="input" placeholder="Last name" value={form.lastName} onChange={setField('lastName')} />{errors.lastName && <span className="error-text">{errors.lastName}</span>}</div>
               </div>
-              <div className="field"><label className="label">Address</label><input className="input" placeholder="House no, street, area" value={form.address} onChange={setField('address')} /></div>
-              <div className="field"><label className="label">Apartment, landmark (optional)</label><input className="input" placeholder="Apartment, landmark" value={form.apartment} onChange={setField('apartment')} /></div>
+              <div className={`field ${errors.address ? 'field-error' : ''}`}><label className="label">Address</label><input className="input" placeholder="House no, street, area" value={form.address} onChange={setField('address')} />{errors.address && <span className="error-text">{errors.address}</span>}</div>
+              <div className="field"><label className="label">Apartment, suite, etc. (optional)</label><input className="input" placeholder="Apartment, floor, unit" value={form.apartment} onChange={setField('apartment')} /></div>
+              <div className="field"><label className="label">Landmark (optional)</label><input className="input" placeholder="Nearby landmark for the delivery agent" value={form.landmark} onChange={setField('landmark')} /></div>
               <div className="grid3">
-                <div className="field"><label className="label">City</label><input className="input" placeholder="City" value={form.city} onChange={setField('city')} /></div>
-                <div className="field"><label className="label">State</label><input className="input" placeholder="State" value={form.state} onChange={setField('state')} /></div>
-                <div className="field"><label className="label">PIN code</label><input className="input" placeholder="560001" value={form.pin} onChange={setField('pin')} /></div>
+                <div className={`field ${errors.city ? 'field-error' : ''}`}><label className="label">City</label><input className="input" placeholder="City" value={form.city} onChange={setField('city')} />{errors.city && <span className="error-text">{errors.city}</span>}</div>
+                <div className={`field ${errors.state ? 'field-error' : ''}`}><label className="label">State</label><input className="input" placeholder="State" value={form.state} onChange={setField('state')} />{errors.state && <span className="error-text">{errors.state}</span>}</div>
+                <div className={`field ${errors.pin ? 'field-error' : ''}`}><label className="label">PIN code</label><input className="input" placeholder="560001" inputMode="numeric" value={form.pin} onChange={setField('pin')} />{errors.pin && <span className="error-text">{errors.pin}</span>}</div>
               </div>
               <div className="cform__nav">
                 <button className="btn btn-ghost" onClick={() => setStep(0)}><Icon name="chevronLeft" size={18} /> Back</button>
-                <button className="btn btn-lg" onClick={next}>Continue to delivery <Icon name="arrowRight" size={18} /></button>
+                <button className="btn btn-lg" onClick={() => validateShipping() && next()}>Continue to delivery <Icon name="arrowRight" size={18} /></button>
               </div>
             </section>
           )}

@@ -52,13 +52,18 @@ export default async function handler(req, res) {
     const method = paymentMethod === 'cod' ? 'cod' : 'razorpay';
     const orderNumber = generateOrderNumber();
 
-    // Only keep the customer fields we actually need, length-capped.
+    // Only keep the customer/shipping fields we actually need, length-capped.
+    // Stored in the orders.customer jsonb column, so adding fields here needs
+    // no schema migration. `apartment` (address line 2) and `landmark` were
+    // previously dropped here and are now persisted for delivery.
     const safeCustomer = {
       email: str(customer?.email, 200),
       phone: str(customer?.phone, 40),
       firstName: str(customer?.firstName, 80),
       lastName: str(customer?.lastName, 80),
       address: str(customer?.address, 300),
+      apartment: str(customer?.apartment, 300),
+      landmark: str(customer?.landmark, 200),
       city: str(customer?.city, 120),
       state: str(customer?.state, 120),
       pin: str(customer?.pin, 20),

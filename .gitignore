@@ -5,3 +5,5 @@ dist
 .vite
 
 .claude/
+.vercel
+.env*

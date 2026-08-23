@@ -9453,6 +9453,7 @@
 	  lastName: '',
 	  address: '',
 	  apartment: '',
+	  landmark: '',
 	  city: '',
 	  state: '',
 	  pin: ''
@@ -9472,10 +9473,39 @@
 	  // cancelled payment (each step unmounts, so uncontrolled inputs would
 	  // lose their values), and so they can be sent with the order.
 	  const [form, setForm] = reactExports.useState(EMPTY_FORM);
-	  const setField = k => e => setForm(f => ({
-	    ...f,
-	    [k]: e.target.value
-	  }));
+	  const [errors, setErrors] = reactExports.useState({});
+	  const setField = k => e => {
+	    setForm(f => ({
+	      ...f,
+	      [k]: e.target.value
+	    }));
+	    setErrors(prev => prev[k] ? {
+	      ...prev,
+	      [k]: undefined
+	    } : prev);
+	  };
+
+	  // A physical-product store must have complete delivery details. These are
+	  // validated before the customer can leave each step, and again defensively
+	  // before payment. apartment + landmark stay optional.
+	  function validateContact() {
+	    const e = {};
+	    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim())) e.email = 'Enter a valid email address.';
+	    if (form.phone.replace(/\D/g, '').length < 10) e.phone = 'Enter a valid phone number.';
+	    setErrors(e);
+	    return Object.keys(e).length === 0;
+	  }
+	  function validateShipping() {
+	    const e = {};
+	    if (!form.firstName.trim()) e.firstName = 'Required';
+	    if (!form.lastName.trim()) e.lastName = 'Required';
+	    if (!form.address.trim()) e.address = 'Enter your street address.';
+	    if (!form.city.trim()) e.city = 'Required';
+	    if (!form.state.trim()) e.state = 'Required';
+	    if (!/^\d{6}$/.test(form.pin.trim())) e.pin = 'Enter a 6-digit PIN code.';
+	    setErrors(e);
+	    return Object.keys(e).length === 0;
+	  }
 	  // Payment UX state
 	  const [processing, setProcessing] = reactExports.useState(false);
 	  const [payError, setPayError] = reactExports.useState('');
@@ -9618,6 +9648,12 @@
 	  };
 	  const placeOrder = async () => {
 	    if (inFlight.current) return; // double-click / duplicate-submit guard
+	    // Defensive: never start a payment without complete delivery details,
+	    // even if the user somehow reached this step. Send them back to fix it.
+	    if (!validateShipping()) {
+	      setStep(1);
+	      return;
+	    }
 	    inFlight.current = true;
 	    setProcessing(true);
 	    setPayError('');
@@ -9740,7 +9776,7 @@
 	              children: "Log in"
 	            }), " for faster checkout."]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "field",
+	            className: `field ${errors.email ? 'field-error' : ''}`,
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
 	              children: "Email address"
@@ -9750,9 +9786,12 @@
 	              placeholder: "you@email.com",
 	              value: form.email,
 	              onChange: setField('email')
+	            }), errors.email && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "error-text",
+	              children: errors.email
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "field",
+	            className: `field ${errors.phone ? 'field-error' : ''}`,
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
 	              children: "Phone number"
@@ -9762,6 +9801,9 @@
 	              placeholder: "+91 98765 43210",
 	              value: form.phone,
 	              onChange: setField('phone')
+	            }), errors.phone && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "error-text",
+	              children: errors.phone
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
 	            className: "check",
@@ -9779,7 +9821,7 @@
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
 	            className: "btn btn-lg",
-	            onClick: next,
+	            onClick: () => validateContact() && next(),
 	            children: ["Continue to shipping ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	              name: "arrowRight",
 	              size: 18
@@ -9790,10 +9832,13 @@
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
 	            className: "serif",
 	            children: "Shipping address"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "muted",
+	            children: "We deliver physical products, so a complete address is required."
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "grid2",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "field",
+	              className: `field ${errors.firstName ? 'field-error' : ''}`,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	                className: "label",
 	                children: "First name"
@@ -9802,9 +9847,12 @@
 	                placeholder: "First name",
 	                value: form.firstName,
 	                onChange: setField('firstName')
+	              }), errors.firstName && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "error-text",
+	                children: errors.firstName
 	              })]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "field",
+	              className: `field ${errors.lastName ? 'field-error' : ''}`,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	                className: "label",
 	                children: "Last name"
@@ -9813,10 +9861,13 @@
 	                placeholder: "Last name",
 	                value: form.lastName,
 	                onChange: setField('lastName')
+	              }), errors.lastName && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "error-text",
+	                children: errors.lastName
 	              })]
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "field",
+	            className: `field ${errors.address ? 'field-error' : ''}`,
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
 	              children: "Address"
@@ -9825,22 +9876,36 @@
 	              placeholder: "House no, street, area",
 	              value: form.address,
 	              onChange: setField('address')
+	            }), errors.address && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "error-text",
+	              children: errors.address
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "field",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
-	              children: "Apartment, landmark (optional)"
+	              children: "Apartment, suite, etc. (optional)"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	              className: "input",
-	              placeholder: "Apartment, landmark",
+	              placeholder: "Apartment, floor, unit",
 	              value: form.apartment,
 	              onChange: setField('apartment')
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "field",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	              className: "label",
+	              children: "Landmark (optional)"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              className: "input",
+	              placeholder: "Nearby landmark for the delivery agent",
+	              value: form.landmark,
+	              onChange: setField('landmark')
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "grid3",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "field",
+	              className: `field ${errors.city ? 'field-error' : ''}`,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	                className: "label",
 	                children: "City"
@@ -9849,9 +9914,12 @@
 	                placeholder: "City",
 	                value: form.city,
 	                onChange: setField('city')
+	              }), errors.city && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "error-text",
+	                children: errors.city
 	              })]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "field",
+	              className: `field ${errors.state ? 'field-error' : ''}`,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	                className: "label",
 	                children: "State"
@@ -9860,17 +9928,24 @@
 	                placeholder: "State",
 	                value: form.state,
 	                onChange: setField('state')
+	              }), errors.state && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "error-text",
+	                children: errors.state
 	              })]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "field",
+	              className: `field ${errors.pin ? 'field-error' : ''}`,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	                className: "label",
 	                children: "PIN code"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	                className: "input",
 	                placeholder: "560001",
+	                inputMode: "numeric",
 	                value: form.pin,
 	                onChange: setField('pin')
+	              }), errors.pin && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "error-text",
+	                children: errors.pin
 	              })]
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -9884,7 +9959,7 @@
 	              }), " Back"]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
 	              className: "btn btn-lg",
-	              onClick: next,
+	              onClick: () => validateShipping() && next(),
 	              children: ["Continue to delivery ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                name: "arrowRight",
 	                size: 18
@@ -34319,14 +34394,47 @@
 	  failed: 'badge-sale',
 	  cancelled: 'badge-out'
 	};
+
+	// Build a clean, multi-line postal address from whatever fields an order
+	// actually has. Works for old orders created before some fields existed —
+	// missing pieces are simply skipped.
+	function formatAddress(c = {}) {
+	  const name = [c.firstName, c.lastName].filter(Boolean).join(' ').trim();
+	  const cityLine = [c.city, c.state].filter(Boolean).join(', ');
+	  const cityPin = [cityLine, c.pin].filter(Boolean).join(' - ');
+	  return [name, c.address, c.apartment, c.landmark && `Landmark: ${c.landmark}`, cityPin, c.phone && `Phone: ${c.phone}`].filter(Boolean).join('\n');
+	}
+	function hasAddress(c = {}) {
+	  return Boolean(c.address || c.city || c.pin);
+	}
 	function Orders() {
 	  const [orders, setOrders] = reactExports.useState([]);
 	  const [loading, setLoading] = reactExports.useState(true);
 	  const [err, setErr] = reactExports.useState('');
+	  const [expandedId, setExpandedId] = reactExports.useState(null);
+	  const [copiedId, setCopiedId] = reactExports.useState(null);
 	  reactExports.useEffect(() => {
 	    adminListOrders().then(setOrders).catch(e => setErr(e.message || String(e))).finally(() => setLoading(false));
 	  }, []);
 	  const paidCount = orders.filter(o => o.payment_status === 'paid').length;
+	  async function copyAddress(order) {
+	    const text = formatAddress(order.customer);
+	    try {
+	      await navigator.clipboard.writeText(text);
+	    } catch {
+	      // Clipboard API can be unavailable (insecure context) — fall back.
+	      const ta = document.createElement('textarea');
+	      ta.value = text;
+	      document.body.appendChild(ta);
+	      ta.select();
+	      try {
+	        document.execCommand('copy');
+	      } catch {/* ignore */}
+	      document.body.removeChild(ta);
+	    }
+	    setCopiedId(order.id);
+	    setTimeout(() => setCopiedId(c => c === order.id ? null : c), 1600);
+	  }
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	      className: "adm__head",
@@ -34372,43 +34480,185 @@
 	              children: "Method"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
 	              children: "Payment"
-	            })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {})]
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
-	          children: orders.map(o => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("td", {
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	                children: o.order_number
-	              }), o.razorpay_payment_id && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "hint",
-	                style: {
-	                  display: 'block'
-	                },
-	                children: o.razorpay_payment_id
+	          children: orders.map(o => {
+	            const c = o.customer || {};
+	            const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || '—';
+	            const open = expandedId === o.id;
+	            return /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+	                className: open ? 'adm-order-row--open' : '',
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+	                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                    children: o.order_number
+	                  }), o.razorpay_payment_id && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                    className: "hint",
+	                    style: {
+	                      display: 'block'
+	                    },
+	                    children: o.razorpay_payment_id
+	                  })]
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	                  children: new Date(o.created_at).toLocaleString('en-IN')
+	                }), /*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+	                  children: [name, c.email && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                    className: "hint",
+	                    style: {
+	                      display: 'block'
+	                    },
+	                    children: c.email
+	                  })]
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	                  children: /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                    children: money((o.amount_paise || 0) / 100)
+	                  })
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	                  children: o.payment_method === 'cod' ? 'Cash on delivery' : 'Razorpay'
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	                  children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                    className: `badge ${STATUS_BADGE[o.payment_status] || 'badge-soft'}`,
+	                    children: o.payment_status
+	                  })
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	                  children: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                    className: "btn btn-sm btn-light",
+	                    onClick: () => setExpandedId(open ? null : o.id),
+	                    children: open ? 'Hide' : 'View details'
+	                  })
+	                })]
+	              }), open && /*#__PURE__*/jsxRuntimeExports.jsx("tr", {
+	                className: "adm-order-detail",
+	                children: /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	                  colSpan: 7,
+	                  children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                    className: "adm-order-detail__grid",
+	                    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	                      className: "adm-order-block",
+	                      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                        className: "adm-order-block__head",
+	                        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	                          children: "Delivery address"
+	                        }), hasAddress(c) && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                          className: "btn btn-sm btn-light",
+	                          onClick: () => copyAddress(o),
+	                          children: copiedId === o.id ? 'Copied ✓' : 'Copy address'
+	                        })]
+	                      }), hasAddress(c) ? /*#__PURE__*/jsxRuntimeExports.jsx("address", {
+	                        className: "adm-address",
+	                        children: formatAddress(c)
+	                      }) : /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	                        className: "muted",
+	                        children: "No delivery address was recorded for this order."
+	                      })]
+	                    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	                      className: "adm-order-block",
+	                      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	                        children: "Contact"
+	                      }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+	                        className: "adm-kv",
+	                        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	                            children: "Name"
+	                          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	                            children: name
+	                          })]
+	                        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	                            children: "Phone"
+	                          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	                            children: c.phone || '—'
+	                          })]
+	                        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	                            children: "Email"
+	                          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	                            children: c.email || '—'
+	                          })]
+	                        })]
+	                      })]
+	                    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	                      className: "adm-order-block",
+	                      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	                        children: "Order"
+	                      }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+	                        className: "adm-kv",
+	                        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	                            children: "Order ID"
+	                          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	                            children: o.order_number
+	                          })]
+	                        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	                            children: "Placed"
+	                          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	                            children: new Date(o.created_at).toLocaleString('en-IN')
+	                          })]
+	                        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	                            children: "Method"
+	                          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	                            children: o.payment_method === 'cod' ? 'Cash on delivery' : 'Razorpay'
+	                          })]
+	                        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	                            children: "Payment"
+	                          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	                            children: o.payment_status
+	                          })]
+	                        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	                            children: "Delivery"
+	                          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	                            children: o.delivery_method || '—'
+	                          })]
+	                        }), o.razorpay_payment_id && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	                            children: "Razorpay payment"
+	                          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	                            children: o.razorpay_payment_id
+	                          })]
+	                        })]
+	                      })]
+	                    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	                      className: "adm-order-block adm-order-block--wide",
+	                      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	                        children: "Items"
+	                      }), Array.isArray(o.items) && o.items.length ? /*#__PURE__*/jsxRuntimeExports.jsx("table", {
+	                        className: "adm-items",
+	                        children: /*#__PURE__*/jsxRuntimeExports.jsxs("tbody", {
+	                          children: [o.items.map((it, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+	                            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+	                              children: [it.name || it.product_id, it.variant ? ` · ${it.variant}` : '']
+	                            }), /*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+	                              className: "adm-items__qty",
+	                              children: ["\xD7 ", it.qty]
+	                            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	                              className: "adm-items__amt",
+	                              children: money(Number(it.line_total ?? it.unit_price * it.qty) || 0)
+	                            })]
+	                          }, i)), /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+	                            className: "adm-items__total",
+	                            children: [/*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	                              children: "Total"
+	                            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {}), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	                              className: "adm-items__amt",
+	                              children: money((o.amount_paise || 0) / 100)
+	                            })]
+	                          })]
+	                        })
+	                      }) : /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	                        className: "muted",
+	                        children: "No item detail stored for this order."
+	                      })]
+	                    })]
+	                  })
+	                })
 	              })]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-	              children: new Date(o.created_at).toLocaleString('en-IN')
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("td", {
-	              children: [[o.customer?.firstName, o.customer?.lastName].filter(Boolean).join(' ') || '—', o.customer?.email && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "hint",
-	                style: {
-	                  display: 'block'
-	                },
-	                children: o.customer.email
-	              })]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	                children: money((o.amount_paise || 0) / 100)
-	              })
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-	              children: o.payment_method === 'cod' ? 'Cash on delivery' : 'Razorpay'
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: `badge ${STATUS_BADGE[o.payment_status] || 'badge-soft'}`,
-	                children: o.payment_status
-	              })
-	            })]
-	          }, o.id))
+	            }, o.id);
+	          })
 	        })]
 	      })
 	    })]
