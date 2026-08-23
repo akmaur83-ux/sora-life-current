@@ -7009,6 +7009,15 @@
 	    if (isMobile()) return;
 	    let raf = null;
 	    const onScroll = () => {
+	      // Below 768px the media sits in normal flow (see the mobile hero block in
+	      // home.css), so an inline translate would shift it out of place. Clear it
+	      // and bail if the viewport was resized down after mount.
+	      if (isMobile()) {
+	        parallaxRefs.current.forEach(n => {
+	          if (n) n.style.transform = '';
+	        });
+	        return;
+	      }
 	      if (raf) return;
 	      raf = requestAnimationFrame(() => {
 	        raf = null;

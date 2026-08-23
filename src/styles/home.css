@@ -62,13 +62,8 @@
 .bh-hero__dots { position: absolute; bottom: 22px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; z-index: 2; }
 .bh-hero__dots span { width: 8px; height: 8px; border-radius: 999px; background: rgba(30,58,47,0.3); transition: all var(--t) var(--ease); }
 .bh-hero__dots span.active { width: 22px; background: var(--forest-700); }
-@media (max-width: 760px) {
-  .bh-hero { height: auto; min-height: 520px; }
-  .bh-hero__scrim { background: linear-gradient(180deg, rgba(244,238,225,0.92) 0%, rgba(244,238,225,0.78) 40%, rgba(244,238,225,0.35) 100%); }
-  .bh-hero__inner { padding-block: var(--sp-10) var(--sp-16); align-items: flex-start; }
-  .bh-hero__benefits { flex-wrap: wrap; gap: 14px 26px; }
-  .bh-hero__bdiv { display: none; }
-}
+/* Mobile hero layout lives in the MOBILE HERO block below the carousel rules,
+   so it can also neutralise the Ken-Burns / parallax transforms. */
 
 /* ============ CATEGORY CIRCLES ============ */
 .bh-cats { border-bottom: 1px solid var(--line-soft); background: var(--paper); }
@@ -196,6 +191,61 @@
 .bh-hero__dots button:hover { background: rgba(30,58,47,0.55); }
 .bh-hero__dots button.active { width: 26px; background: var(--forest-700); }
 @media (max-width: 760px) { .bh-hero__arrow { display: none; } }
+
+/* ============ MOBILE HERO — FULL-IMAGE STAGE ============
+   Desktop keeps the fixed-height cinematic stage above (object-fit: cover),
+   which is the right composition for a wide viewport. On a phone that same
+   stage is portrait (~390x520), so covering it with a landscape hero throws
+   away 58-77% of the artwork horizontally. Below 760px the hero therefore
+   becomes a stacked stage: the media sits in normal flow at its own intrinsic
+   aspect ratio (width:100% / height:auto — never cropped, never stretched,
+   and it adapts by itself to whatever ratio a future hero image has), and the
+   copy sits directly beneath it on the same cream the desktop scrim washes
+   over the image. Slides stay stacked in a single grid cell, so the crossfade,
+   the dots and the autoplay behave exactly as before.
+   These rules deliberately sit after the carousel block so they also win over
+   the Ken-Burns scale and the parallax wrapper, which would re-crop the edges. */
+@media (max-width: 760px) {
+  .bh-hero {
+    height: auto;
+    min-height: 0;
+    display: grid;                /* all slides share one cell */
+    background: var(--cream);     /* same tone the desktop scrim resolves to */
+  }
+  .bh-slide {
+    position: relative;
+    inset: auto;
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;       /* media band, then copy */
+  }
+
+  /* Media in normal flow at its natural ratio — this is what removes the crop. */
+  .bh-hero__parallax { position: relative; inset: auto; transform: none; will-change: auto; }
+  .bh-hero__media,
+  .bh-slide.is-active .bh-hero__media {
+    position: relative;
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    transform: none;              /* a Ken-Burns scale would crop it again */
+    animation: none;
+  }
+
+  /* The scrim only existed to keep text legible on top of the image. */
+  .bh-hero__scrim { display: none; }
+
+  .bh-hero__inner {
+    flex: 1;
+    height: auto;
+    align-items: center;
+    padding-block: var(--sp-8) calc(var(--sp-10) + 22px);  /* clears the dots */
+  }
+  .bh-hero__copy { max-width: none; }
+  .bh-hero__benefits { flex-wrap: wrap; gap: 14px 26px; margin-top: var(--sp-8); }
+  .bh-hero__bdiv { display: none; }
+}
 
 /* ============ PREMIUM PRICING ============ */
 .price { display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
