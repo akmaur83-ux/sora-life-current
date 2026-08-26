@@ -7,3 +7,6 @@ image_manifest.txt
 vite.config.js
 supabase
 scripts
+*.bak
+media/*.bak
+__audit.js

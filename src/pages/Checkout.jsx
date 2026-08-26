@@ -2,13 +2,20 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductImage from '../components/ProductImage.jsx';
+import PriceSummary from '../components/PriceSummary.jsx';
 import Logo from '../components/Logo.jsx';
 import OrderCelebration from '../components/OrderCelebration.jsx';
 import { useStore } from '../lib/store.jsx';
+import { useCustomerAuth } from '../lib/customerAuth.jsx';
+import { getProfile, listAddresses, createAddress, updateAddress, setDefaultAddress } from '../lib/customerData.js';
 import { money } from '../lib/format.js';
 import { loadRazorpayScript, createPaymentOrder, verifyPayment } from '../lib/payments.js';
 
-const STEPS = ['Contact', 'Shipping', 'Delivery', 'Payment'];
+// Fields that come from a saved address. Editing any of these by hand clears
+// the "selected saved address" highlight so the form reads as custom.
+const ADDRESS_FIELDS = ['firstName', 'lastName', 'phone', 'address', 'apartment', 'landmark', 'city', 'state', 'pin'];
+
+const STEPS = ['Shipping', 'Delivery', 'Payment'];
 const DELIVERY = [
   { id: 'std', label: 'Standard', eta: '3–5 business days', price: 0, note: 'Free' },
   { id: 'exp', label: 'Express', eta: '1–2 business days', price: 79 },
@@ -21,7 +28,7 @@ const EMPTY_FORM = {
 };
 
 export default function Checkout() {
-  const { cart, cartDetailed, subtotal, savings, dispatch } = useStore();
+  const { cart, cartDetailed, subtotal, mrpTotal, savings, dispatch } = useStore();
   const [step, setStep] = useState(0);
   const [delivery, setDelivery] = useState('std');
   const [pay, setPay] = useState('online');
@@ -33,6 +40,119 @@ export default function Checkout() {
   const setField = (k) => (e) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
     setErrors((prev) => (prev[k] ? { ...prev, [k]: undefined } : prev));
+    // Manual edit of an address field ⇒ the form no longer matches the picked
+    // saved address, so drop the highlight (but never re-fill the fields).
+    if (ADDRESS_FIELDS.includes(k)) setSelectedAddrId(null);
+  };
+
+  // ---- Saved profile + addresses (authenticated customers only) ----
+  const { session, user, loading: authLoading } = useCustomerAuth();
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddrId, setSelectedAddrId] = useState(null);
+  const [showSaved, setShowSaved] = useState(false); // whether saved-address UI is shown
+  const [saveAsDefault, setSaveAsDefault] = useState(false);
+  const [savingAddr, setSavingAddr] = useState(false);
+  const [addrMsg, setAddrMsg] = useState('');
+  const prefilled = useRef(false); // guarantees the one-time initial autofill
+
+  // Fill the form from the best available source. Only ever called from the
+  // one-time mount prefill and from an explicit saved-address selection —
+  // never on every render — so manual edits are never clobbered.
+  const applyPrefill = ({ email, profile, address }) => {
+    setForm((f) => ({
+      ...f,
+      email: email || f.email,
+      firstName: address?.first_name || profile?.first_name || f.firstName,
+      lastName: address?.last_name || profile?.last_name || f.lastName,
+      phone: address?.phone || profile?.phone || f.phone,
+      address: address?.address ?? f.address,
+      apartment: address?.apartment ?? f.apartment,
+      landmark: address?.landmark ?? f.landmark,
+      city: address?.city ?? f.city,
+      state: address?.state ?? f.state,
+      pin: address?.pin ?? f.pin,
+    }));
+  };
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!session) { setShowSaved(false); return; } // guest: no profile/address loads, no saved UI
+    let cancelled = false;
+    (async () => {
+      const [profile, addrs] = await Promise.all([
+        getProfile().catch(() => null),
+        listAddresses().catch(() => []),
+      ]);
+      if (cancelled) return;
+      setAddresses(addrs);
+      setShowSaved(true);
+      if (!prefilled.current) {
+        const def = addrs.find((a) => a.is_default) || addrs[0] || null;
+        applyPrefill({ email: user?.email, profile, address: def });
+        setSelectedAddrId(def?.id ?? null);
+        prefilled.current = true;
+      }
+    })();
+    return () => { cancelled = true; };
+    // user is stable within a session; re-run only when auth state settles.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, authLoading]);
+
+  // Explicit user action: load a saved address into the (still editable) form.
+  const selectAddress = (a) => {
+    setSelectedAddrId(a.id);
+    setErrors({});
+    setAddrMsg('');
+    setForm((f) => ({
+      ...f,
+      firstName: a.first_name || '',
+      lastName: a.last_name || '',
+      phone: a.phone || f.phone,
+      address: a.address || '',
+      apartment: a.apartment || '',
+      landmark: a.landmark || '',
+      city: a.city || '',
+      state: a.state || '',
+      pin: a.pin || '',
+    }));
+  };
+
+  // "+ Add new address": clear the address fields for a fresh entry (keep email).
+  const startNewAddress = () => {
+    setSelectedAddrId(null);
+    setAddrMsg('');
+    setForm((f) => ({ ...f, firstName: '', lastName: '', phone: '', address: '', apartment: '', landmark: '', city: '', state: '', pin: '' }));
+  };
+
+  // Persist the address currently in the form to the customer's account.
+  // Updates the selected saved address, or creates a new one. Never touches
+  // the order payload or payment logic.
+  const saveAddressToAccount = async () => {
+    if (savingAddr) return;
+    if (!validateShipping()) { setAddrMsg('Complete the address fields first.'); return; }
+    setSavingAddr(true); setAddrMsg('');
+    const fields = {
+      firstName: form.firstName, lastName: form.lastName, phone: form.phone,
+      address: form.address, apartment: form.apartment, landmark: form.landmark,
+      city: form.city, state: form.state, pin: form.pin,
+    };
+    try {
+      let saved;
+      if (selectedAddrId) {
+        saved = await updateAddress(selectedAddrId, fields);
+        if (saveAsDefault) await setDefaultAddress(selectedAddrId);
+      } else {
+        saved = await createAddress({ ...fields, isDefault: saveAsDefault });
+      }
+      const fresh = await listAddresses().catch(() => addresses);
+      setAddresses(fresh);
+      setSelectedAddrId(saved?.id ?? selectedAddrId);
+      setAddrMsg('Saved to your account.');
+    } catch (err) {
+      setAddrMsg(err?.code === 'AUTH_REQUIRED' ? 'Please sign in again to save addresses.' : 'Could not save this address. Please try again.');
+    } finally {
+      setSavingAddr(false);
+    }
   };
   // Switching payment method must drop any error/notice left over from a
   // previous attempt with the OTHER method — e.g. a Razorpay "payment
@@ -50,15 +170,13 @@ export default function Checkout() {
   // A physical-product store must have complete delivery details. These are
   // validated before the customer can leave each step, and again defensively
   // before payment. apartment + landmark stay optional.
-  function validateContact() {
+  // Contact (email/phone) and the shipping address are now collected on the
+  // single first step, so their checks are combined into one validator. Still
+  // used defensively before payment (see placeOrder).
+  function validateShipping() {
     const e = {};
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim())) e.email = 'Enter a valid email address.';
     if (form.phone.replace(/\D/g, '').length < 10) e.phone = 'Enter a valid phone number.';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-  function validateShipping() {
-    const e = {};
     if (!form.firstName.trim()) e.firstName = 'Required';
     if (!form.lastName.trim()) e.lastName = 'Required';
     if (!form.address.trim()) e.address = 'Enter your street address.';
@@ -88,6 +206,10 @@ export default function Checkout() {
   // which becomes 0 right after CLEAR_CART fires below and would make
   // the confirmation screen show "Total paid ₹0".
   const [orderTotal, setOrderTotal] = useState(null);
+  // The authoritative itemised breakdown returned by create-order. Until the
+  // order is priced server-side the summary falls back to a local estimate;
+  // tax and fees are never guessed in the browser.
+  const [serverBreakdown, setServerBreakdown] = useState(null);
   // Drives the one-time celebration. Added a frame after the confirmation
   // mounts and removed once the sequence is over, so the confirmation always
   // settles back to its plain, fully-visible, interactive base state.
@@ -157,7 +279,7 @@ export default function Checkout() {
     if (inFlight.current) return; // double-click / duplicate-submit guard
     // Defensive: never start a payment without complete delivery details,
     // even if the user somehow reached this step. Send them back to fix it.
-    if (!validateShipping()) { setStep(1); return; }
+    if (!validateShipping()) { setStep(0); return; }
     inFlight.current = true;
     setProcessing(true);
     setPayError('');
@@ -171,6 +293,8 @@ export default function Checkout() {
         customer: form,
         paymentMethod: pay === 'cod' ? 'cod' : 'online',
       });
+
+      if (created.breakdown) setServerBreakdown(created.breakdown);
 
       if (created.paymentMethod === 'cod') {
         completeOrder(created.orderNumber, created.amount);
@@ -259,19 +383,43 @@ export default function Checkout() {
           {/* Step content */}
           {step === 0 && (
             <section className="cform">
-              <h2 className="serif">Contact information</h2>
-              <p className="muted">We'll use this to send order updates. <Link to="/account" className="inline-link">Log in</Link> for faster checkout.</p>
+              <h2 className="serif">Shipping details</h2>
+              {showSaved ? (
+                <p className="muted">Signed in — your saved details are filled in below. Review or edit anything before continuing.</p>
+              ) : (
+                <p className="muted">We deliver physical products, so we need your contact details and a complete address. <Link to="/account" className="inline-link">Log in</Link> for faster checkout.</p>
+              )}
+
+              {/* Saved-address selector — authenticated customers only. Selecting a
+                  card fills the (still fully editable) form below; the order still
+                  sends whatever the form finally holds (customer: form). */}
+              {showSaved && (
+                <div style={{ marginBottom: 'var(--sp-5)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-3)' }}>
+                    <span className="label" style={{ margin: 0 }}>Deliver to</span>
+                    <button type="button" className="linkbtn" onClick={startNewAddress}><Icon name="plus" size={14} /> Add new address</button>
+                  </div>
+                  {addresses.length > 0 ? (
+                    <div className="optlist">
+                      {addresses.map((a) => (
+                        <button type="button" key={a.id} className={`opt ${selectedAddrId === a.id ? 'active' : ''}`} onClick={() => selectAddress(a)}>
+                          <span className="opt__radio" />
+                          <span className="opt__body">
+                            <strong>{(a.label || `${a.first_name || ''} ${a.last_name || ''}`.trim() || 'Address')}{a.is_default ? ' · Default' : ''}</strong>
+                            <em>{[a.address, a.city, a.pin].filter(Boolean).join(', ')}</em>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="hint">No saved addresses yet — fill in the form and tap "Save this address" to reuse it next time.</p>
+                  )}
+                </div>
+              )}
+
               <div className={`field ${errors.email ? 'field-error' : ''}`}><label className="label">Email address</label><input className="input" type="email" placeholder="you@email.com" value={form.email} onChange={setField('email')} />{errors.email && <span className="error-text">{errors.email}</span>}</div>
               <div className={`field ${errors.phone ? 'field-error' : ''}`}><label className="label">Phone number</label><input className="input" type="tel" placeholder="+91 98765 43210" value={form.phone} onChange={setField('phone')} />{errors.phone && <span className="error-text">{errors.phone}</span>}</div>
               <label className="check"><input type="checkbox" defaultChecked /><span className="check__box"><Icon name="check" size={13} /></span><span>Email me with news and offers</span></label>
-              <button className="btn btn-lg" onClick={() => validateContact() && next()}>Continue to shipping <Icon name="arrowRight" size={18} /></button>
-            </section>
-          )}
-
-          {step === 1 && (
-            <section className="cform">
-              <h2 className="serif">Shipping address</h2>
-              <p className="muted">We deliver physical products, so a complete address is required.</p>
               <div className="grid2">
                 <div className={`field ${errors.firstName ? 'field-error' : ''}`}><label className="label">First name</label><input className="input" placeholder="First name" value={form.firstName} onChange={setField('firstName')} />{errors.firstName && <span className="error-text">{errors.firstName}</span>}</div>
                 <div className={`field ${errors.lastName ? 'field-error' : ''}`}><label className="label">Last name</label><input className="input" placeholder="Last name" value={form.lastName} onChange={setField('lastName')} />{errors.lastName && <span className="error-text">{errors.lastName}</span>}</div>
@@ -284,14 +432,22 @@ export default function Checkout() {
                 <div className={`field ${errors.state ? 'field-error' : ''}`}><label className="label">State</label><input className="input" placeholder="State" value={form.state} onChange={setField('state')} />{errors.state && <span className="error-text">{errors.state}</span>}</div>
                 <div className={`field ${errors.pin ? 'field-error' : ''}`}><label className="label">PIN code</label><input className="input" placeholder="560001" inputMode="numeric" value={form.pin} onChange={setField('pin')} />{errors.pin && <span className="error-text">{errors.pin}</span>}</div>
               </div>
-              <div className="cform__nav">
-                <button className="btn btn-ghost" onClick={() => setStep(0)}><Icon name="chevronLeft" size={18} /> Back</button>
-                <button className="btn btn-lg" onClick={() => validateShipping() && next()}>Continue to delivery <Icon name="arrowRight" size={18} /></button>
-              </div>
+              {showSaved && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--sp-3)', margin: 'var(--sp-2) 0 var(--sp-5)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input type="checkbox" checked={saveAsDefault} onChange={(e) => setSaveAsDefault(e.target.checked)} /> Set as default
+                  </label>
+                  <button type="button" className="btn btn-sm btn-light" onClick={saveAddressToAccount} disabled={savingAddr}>
+                    {savingAddr ? 'Saving…' : (selectedAddrId ? 'Update saved address' : 'Save this address to my account')}
+                  </button>
+                  {addrMsg && <span className="hint">{addrMsg}</span>}
+                </div>
+              )}
+              <button className="btn btn-lg" onClick={() => validateShipping() && next()}>Continue to delivery <Icon name="arrowRight" size={18} /></button>
             </section>
           )}
 
-          {step === 2 && (
+          {step === 1 && (
             <section className="cform">
               <h2 className="serif">Delivery method</h2>
               <div className="optlist">
@@ -305,13 +461,13 @@ export default function Checkout() {
                 ))}
               </div>
               <div className="cform__nav">
-                <button className="btn btn-ghost" onClick={() => setStep(1)}><Icon name="chevronLeft" size={18} /> Back</button>
+                <button className="btn btn-ghost" onClick={() => setStep(0)}><Icon name="chevronLeft" size={18} /> Back</button>
                 <button className="btn btn-lg" onClick={next}>Continue to payment <Icon name="arrowRight" size={18} /></button>
               </div>
             </section>
           )}
 
-          {step === 3 && (
+          {step === 2 && (
             <section className="cform">
               <h2 className="serif">Payment</h2>
               <p className="muted"><Icon name="lock" size={14} /> Payments are processed securely by Razorpay. Sora Life never sees or stores your card details.</p>
@@ -348,7 +504,7 @@ export default function Checkout() {
               )}
 
               <div className="cform__nav">
-                <button className="btn btn-ghost" onClick={() => setStep(2)} disabled={processing}><Icon name="chevronLeft" size={18} /> Back</button>
+                <button className="btn btn-ghost" onClick={() => setStep(1)} disabled={processing}><Icon name="chevronLeft" size={18} /> Back</button>
                 <button className="btn btn-accent btn-lg" onClick={placeOrder} disabled={processing}>
                   {processing
                     ? <><span className="spinner" /> Processing…</>
@@ -369,17 +525,21 @@ export default function Checkout() {
               {cartDetailed.map((l) => (
                 <div key={l.key} className="checkout__item">
                   <span className="checkout__thumb"><ProductImage product={l.product} /><i className="checkout__qty">{l.qty}</i></span>
-                  <span className="checkout__meta"><strong>{l.product.name}</strong>{l.variant && <em>{l.variant}</em>}</span>
-                  <span className="checkout__lp">{money(l.product.price * l.qty)}</span>
+                  <span className="checkout__meta">
+                    <strong>{l.product.name}</strong>
+                    {(l.variantLabel || l.product.form) && <em>{l.variantLabel || l.product.form}</em>}
+                    <em className="checkout__unit">{money(l.unitPrice)} x {l.qty}</em>
+                  </span>
+                  <span className="checkout__lp">{money(l.lineTotal)}</span>
                 </div>
               ))}
             </div>
-            <dl className="summary__lines">
-              <div><dt>Subtotal</dt><dd>{money(subtotal)}</dd></div>
-              {savings > 0 && <div className="is-save"><dt>Savings</dt><dd>−{money(savings)}</dd></div>}
-              <div><dt>Shipping</dt><dd>{shipBase === 0 ? <span className="free">Free</span> : money(shipBase)}</dd></div>
-            </dl>
-            <div className="summary__total"><span>Total</span><span className="serif">{money(total)}</span></div>
+            {/* Server breakdown once the order has been priced; the local
+                estimate only until then. The client never invents tax. */}
+            <PriceSummary
+              breakdown={serverBreakdown}
+              fallback={{ itemTotal: subtotal, mrpTotal, shipping: shipBase }}
+            />
             <Link to="/cart" className="summary__continue">Edit cart</Link>
           </div>
         </aside>

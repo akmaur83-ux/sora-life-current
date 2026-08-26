@@ -11,8 +11,67 @@ const BENEFITS = [
 
 const INTERVAL = 6000;
 
+// Brand hero still (Himalayan sea buckthorn). Last-resort visual so a slide
+// can never render as an empty colour block — see posterFor() below.
+const FALLBACK_POSTER = '/media/hero-poster.jpg';
+
+// Admin-uploaded hero art lives in Supabase Storage and is served at full size
+// (the current slides are a 1.8 MB PNG and a 1.6 MB JPEG). Supabase can render
+// resized, format-negotiated variants from the same object, so we ask for a
+// width-appropriate rendition instead of the original. Non-Supabase paths
+// (our local /media stills) are returned untouched.
+const SB_OBJECT = '/storage/v1/object/public/';
+const SB_RENDER = '/storage/v1/render/image/public/';
+const HERO_WIDTHS = [640, 1024, 1600, 1920];
+
+function isSupabaseObject(src) {
+  return typeof src === 'string' && src.includes(SB_OBJECT) && /supabase\.co/.test(src);
+}
+function heroSrc(src, width) {
+  if (!isSupabaseObject(src)) return src;
+  return `${src.replace(SB_OBJECT, SB_RENDER)}?width=${width}&quality=72`;
+}
+// Locally-shipped hero stills that have pre-built WebP renditions alongside
+// them (see media/hero-poster-<w>.webp). Keyed by the original path.
+// 640w is deliberately absent: the hero is full-bleed, so on a DPR-2 phone
+// (390 CSS px -> ~780 device px) the browser would pick 640w, then upgrade to
+// 1024w and pay for both. Starting at 1024w costs one request, 60 KB, and is
+// still smaller than the 82 KB JPEG it replaces.
+const LOCAL_HERO_VARIANTS = {
+  '/media/hero-poster.jpg': [1024, 1600],
+};
+
+function heroSrcSet(src) {
+  const local = LOCAL_HERO_VARIANTS[src];
+  if (local) {
+    const base = src.replace(/\.[a-z]+$/i, '');
+    return local.map((w) => `${base}-${w}.webp ${w}w`).join(', ');
+  }
+  if (!isSupabaseObject(src)) return undefined;
+  return HERO_WIDTHS.map((w) => `${heroSrc(src, w)} ${w}w`).join(', ');
+}
+
+// The still we can show for a slide, if any. A video slide whose poster is
+// missing used to fall through to a bare coloured <div> — that is how the
+// duplicate "Mom's Trust" slide (poster_url null, video_url returns 400)
+// rendered as a large empty block on every device.
+function stillFor(slide) {
+  // Image slides carry their URL in `src` (adminApi maps image_url -> src);
+  // video slides carry a separate poster. Check the right field for each, or
+  // an image slide gets treated as having no still and is wrongly dropped.
+  if (slide.kind === 'image') return slide.src || slide.poster || null;
+  return slide.poster || slide.image || null;
+}
+
+// A slide is only worth rendering if it can actually show something: either a
+// video we are going to play, or a still. Anything else would paint an empty
+// block, so it is dropped from the carousel rather than shown broken.
+function isRenderable(slide, canUseVideo, failed) {
+  if (slide.kind === 'video' && canUseVideo && slide.src && !failed[slide.id]) return true;
+  return Boolean(stillFor(slide));
+}
+
 export default function Hero() {
-  const SLIDES = heroSlides;
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [videoFailed, setVideoFailed] = useState({}); // { [slideId]: true } — fall back to poster on load error
@@ -20,6 +79,33 @@ export default function Hero() {
   const sectionRef = useRef(null);
   const parallaxRefs = useRef([]);
   const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+  // The hero video is a ~6 MB MP4 — fine on desktop broadband, but it was
+  // the single largest cost on mobile (it dominated the phone payload for a
+  // decorative background). Phones, data-saver users and reduced-motion users
+  // get the poster still instead, which is already authored for every video
+  // slide and is ~70x smaller. Desktop behaviour is unchanged.
+  const [useVideo, setUseVideo] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(min-width: 768px)');
+    const saveData = navigator.connection?.saveData === true;
+    const evaluate = () => setUseVideo(mq.matches && !reduced && !saveData);
+    evaluate();
+    mq.addEventListener?.('change', evaluate);
+    return () => mq.removeEventListener?.('change', evaluate);
+  }, [reduced]);
+
+  // Only carry slides that can actually paint something. If a deck were ever
+  // configured with nothing renderable at all, keep the original list so the
+  // hero still has structure rather than collapsing to nothing.
+  const renderable = heroSlides.filter((s) => isRenderable(s, useVideo, videoFailed));
+  const SLIDES = renderable.length ? renderable : heroSlides;
+
+  // A dropped slide shortens the deck; keep the index inside it.
+  useEffect(() => {
+    if (active >= SLIDES.length) setActive(0);
+  }, [SLIDES.length, active]);
 
   const go = useCallback((i) => setActive((i + SLIDES.length) % SLIDES.length), [SLIDES.length]);
   const next = useCallback(() => setActive((a) => (a + 1) % SLIDES.length), [SLIDES.length]);
@@ -78,7 +164,7 @@ export default function Hero() {
           aria-hidden={i !== active}
         >
           <div className="bh-hero__parallax" ref={(el) => { parallaxRefs.current[i] = el; }}>
-            {s.kind === 'video' && !videoFailed[s.id] && s.src ? (
+            {s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src ? (
               <video
                 className="bh-hero__media"
                 autoPlay muted loop playsInline preload="metadata"
@@ -89,13 +175,19 @@ export default function Hero() {
                 <source src={s.src} type="video/mp4" />
               </video>
             ) : s.kind === 'video' ? (
-              // Video missing/failed to load — never show a blank hero, use the poster instead.
-              s.poster
-                ? <img className="bh-hero__media" src={s.poster} alt={s.title} style={{ objectPosition: s.position }} />
-                : <div className="bh-hero__media" style={{ background: 'var(--forest-700)' }} />
+              // Video skipped on mobile, missing, or failed to load — always resolve
+              // to a real still (never an empty colour block).
+              <img className="bh-hero__media" src={heroSrc(stillFor(s) || FALLBACK_POSTER, 1600)}
+                srcSet={heroSrcSet(stillFor(s) || FALLBACK_POSTER)} sizes="100vw"
+                alt={s.title} style={{ objectPosition: s.position }}
+                loading={i === active ? 'eager' : 'lazy'}
+                fetchpriority={i === active ? 'high' : undefined} decoding="async" />
             ) : (
-              <img className="bh-hero__media" src={s.src} alt={s.title} loading={i === 0 ? 'eager' : 'lazy'}
-                style={{ objectPosition: s.position }} />
+              <img className="bh-hero__media" src={heroSrc(s.src, 1600)}
+                srcSet={heroSrcSet(s.src)} sizes="100vw"
+                alt={s.title} style={{ objectPosition: s.position }}
+                loading={i === active ? 'eager' : 'lazy'}
+                fetchpriority={i === active ? 'high' : undefined} decoding="async" />
             )}
           </div>
           <div className="bh-hero__scrim" />

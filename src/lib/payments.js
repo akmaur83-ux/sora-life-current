@@ -8,8 +8,28 @@
 // a payment succeeded.
 // ============================================================
 
+import { supabase } from './supabase.js';
+import { getVisitorId } from './creatorAttribution.js';
+
 const RAZORPAY_SCRIPT = 'https://checkout.razorpay.com/v1/checkout.js';
 let scriptPromise = null;
+
+/**
+ * If a customer is signed in, return their Supabase access token as an
+ * Authorization header so the server can link the new order to their
+ * account. Guests (no session) send nothing and check out exactly as
+ * before. This header carries only the user's own short-lived JWT — never
+ * a secret, and never a client-chosen user id.
+ */
+async function customerAuthHeader() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
 
 /** Load Razorpay Checkout once; resolves true when window.Razorpay exists. */
 export function loadRazorpayScript() {
@@ -28,10 +48,10 @@ export function loadRazorpayScript() {
   return scriptPromise;
 }
 
-async function postJson(url, payload) {
+async function postJson(url, payload, extraHeaders = {}) {
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
     body: JSON.stringify(payload),
   });
 
@@ -50,13 +70,24 @@ async function postJson(url, payload) {
  * Ask the server to price the cart and open a payable order.
  * Only ids + quantities are sent — never prices or totals.
  */
-export function createPaymentOrder({ items, delivery, customer, paymentMethod }) {
+export async function createPaymentOrder({ items, delivery, customer, paymentMethod }) {
+  const authHeaders = await customerAuthHeader();
   return postJson('/api/razorpay/create-order', {
-    items: items.map((l) => ({ id: l.id, qty: l.qty, variant: l.variant || null })),
+    // Identifiers and quantities only. No price is sent: the server looks up
+    // the variant's price and recomputes the total (api/_lib/pricing.js).
+    items: items.map((l) => ({
+      id: l.id,
+      qty: l.qty,
+      variantId: l.variantId || null,
+      variant: l.variant || null,
+    })),
     delivery,
     customer,
     paymentMethod,
-  });
+    // Opaque, self-assigned browser id used ONLY to resolve creator attribution
+    // server-side. Carries no internal creator/campaign/link id and no PII.
+    visitorId: getVisitorId(),
+  }, authHeaders);
 }
 
 /** Hand Razorpay's callback to the server, which alone decides if it's genuine. */

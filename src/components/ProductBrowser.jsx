@@ -106,7 +106,9 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
 
       <div className="filters__group">
         <span className="filters__title">Max price</span>
-        <input type="range" className="range" min={priceRange.min} max={priceRange.max} step={50} value={priceMax} onChange={(e) => setPriceMax(Number(e.target.value))} />
+        <input type="range" className="range" min={priceRange.min} max={priceRange.max} step={50} value={priceMax}
+          aria-label="Maximum price" aria-valuetext={money(priceMax)}
+          onChange={(e) => setPriceMax(Number(e.target.value))} />
         <div className="filters__range-lbl"><span>{money(priceRange.min)}</span><strong>Up to {money(priceMax)}</strong></div>
       </div>
 

@@ -80,7 +80,7 @@
 /* ---------- Mobile bottom tab bar ---------- */
 .tabbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 95; display: none; grid-template-columns: repeat(5, 1fr); background: rgba(251,248,241,0.95); backdrop-filter: blur(12px); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
 @media (max-width: 900px) { .tabbar { display: grid; } }
-.tabbar__item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 0 8px; color: var(--ink-400); font-size: 10.5px; font-weight: 600; transition: color var(--t) var(--ease); }
+.tabbar__item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 0 8px; color: var(--ink-500); font-size: 10.5px; font-weight: 600; transition: color var(--t) var(--ease); }
 .tabbar__item.active { color: var(--color-primary); }
 .tabbar__ic { position: relative; }
 .tabbar__badge { position: absolute; top: -6px; right: -10px; min-width: 17px; height: 17px; padding: 0 4px; background: var(--color-accent); color: var(--forest-900); border-radius: 999px; font-size: 10px; display: grid; place-items: center; border: 2px solid var(--color-bg); animation: countpop 0.45s var(--ease-soft); }
@@ -180,3 +180,30 @@
   }
 }
 @media (max-width: 480px) { .ftr__top { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   MOBILE PRODUCTION POLISH
+   Focus containment for the closed drawer, and comfortable tap
+   targets for the small text links that phones have to hit.
+   ============================================================ */
+
+/* The closed drawer was aria-hidden but still keyboard-focusable, so tabbing
+   through a page walked into an invisible menu. Containment is handled by the
+   `inert` attribute in Header.jsx (deterministic, and hides it from assistive
+   tech too) — a visibility transition proved unreliable here. */
+.drawer[inert] { pointer-events: none; }
+.drawer__scrim { transition: opacity var(--t) var(--ease); }
+
+@media (max-width: 900px) {
+  /* Footer + inline text links: keep the type size, grow the tap area. */
+  .ftr__col a { padding: 11px 0; }
+  .ftr__legal a { padding: 8px 0; display: inline-block; }
+  .ftr__admin-link { min-height: 44px; display: inline-flex; align-items: center; }
+
+  /* Header logo is a primary target back to home. */
+  .logo--img { min-height: 44px; display: inline-flex; align-items: center; }
+
+  /* Small buttons stay visually small but remain comfortably tappable. */
+  .btn-sm { min-height: 44px; }
+  .sec-link, .bh-best__all { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+}

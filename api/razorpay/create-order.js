@@ -12,9 +12,33 @@
 // order id, the server-computed amount, and the PUBLIC key id. The key
 // secret never leaves the server.
 // ============================================================
-import { validateCartPayload, computeOrderTotal, generateOrderNumber } from '../_lib/pricing.js';
+import { validateCartPayload, computeOrderTotal, generateOrderNumber, generateInvoiceNumber } from '../_lib/pricing.js';
+import { getTaxConfig } from '../_lib/tax.js';
 import { getRazorpayCredentials, createRazorpayOrder } from '../_lib/razorpay.js';
-import { getSupabaseConfig, fetchProductsForCart, insertOrder } from '../_lib/supabaseAdmin.js';
+import {
+  getSupabaseConfig, fetchProductsForCart, insertOrder, getUserIdFromToken,
+  fetchVariantsForCart, fetchCouponByCode, recordConversion,
+} from '../_lib/supabaseAdmin.js';
+import { enforceRateLimit } from '../_lib/rateLimit.js';
+import { computeConversionBase, readVisitorId } from '../_lib/attribution.js';
+
+// Record creator-attribution for a just-created order. Best-effort and fully
+// isolated: attribution must never break or delay a legitimate order, so any
+// failure is swallowed. Amounts come from the SERVER's own totals.
+async function attributeOrder(order, totals, body, userId, sb) {
+  try {
+    if (!order?.id) return;
+    const { totals: convTotals, items } = computeConversionBase(totals.lines, totals.breakdown);
+    await recordConversion({
+      orderId: order.id,
+      orderNumber: order.order_number,
+      visitorId: readVisitorId(body),
+      userId: userId ?? null,
+      totals: convTotals,
+      items,
+    }, sb);
+  } catch { /* attribution is non-fatal */ }
+}
 
 function fail(res, status, message) {
   return res.status(status).json({ error: message });
@@ -28,6 +52,11 @@ export default async function handler(req, res) {
 
   const rz = getRazorpayCredentials();
   const sb = getSupabaseConfig();
+
+  // Rate limit BEFORE any work: this is the unauthenticated write endpoint,
+  // and each call would otherwise create a pending order row. Generous enough
+  // that a real customer placing an order never trips it. Fails open.
+  if (!(await enforceRateLimit(req, res, { name: 'create-order', limit: 12, windowSeconds: 60 }, sb))) return;
   // Supabase is required for BOTH payment methods (every order, COD
   // included, is written to the orders table), so this gate stays here.
   if (!sb.configured) {
@@ -37,17 +66,38 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-    const { items: rawItems, delivery, customer, paymentMethod } = body;
+    const { items: rawItems, delivery, customer, paymentMethod, couponCode } = body;
 
     const parsed = validateCartPayload(rawItems);
     if (!parsed.ok) return fail(res, 400, parsed.error);
 
-    // Trusted product data straight from the database.
+    // Trusted product + variant data straight from the database. The browser
+    // sent only ids and quantities; every price below is looked up here.
     const products = await fetchProductsForCart(parsed.items.map((i) => i.id), sb);
-    const totals = computeOrderTotal(parsed.items, products, delivery);
+    const variantRows = await fetchVariantsForCart(parsed.items.map((i) => i.variantId), sb);
+
+    // A coupon CODE is accepted from the browser; the discount it grants is
+    // resolved server-side and re-validated (active/window/limit/min-value).
+    const coupon = couponCode ? await fetchCouponByCode(couponCode, sb) : null;
+
+    const totals = computeOrderTotal(parsed.items, products, delivery, {
+      variantRows,
+      coupon,
+      taxConfig: getTaxConfig(),
+      buyerState: typeof customer?.state === 'string' ? customer.state : null,
+    });
     if (!totals.ok) return fail(res, 400, totals.error);
+    const bd = totals.breakdown;
 
     const method = paymentMethod === 'cod' ? 'cod' : 'razorpay';
+
+    // Link this order to a signed-in customer, if any. The id is derived
+    // server-side from the validated access token in the Authorization
+    // header — a client-supplied user_id is never read or trusted. No
+    // token / guest / invalid token => null => a guest order, exactly as
+    // before. `userId` is only ever attached to the insert when non-null,
+    // so guest inserts are byte-for-byte unchanged.
+    const userId = await getUserIdFromToken(req.headers?.authorization, sb);
 
     // Razorpay is only required for the online-payment branch below — COD
     // must work independently of whether Razorpay is configured. Checking
@@ -77,6 +127,31 @@ export default async function handler(req, res) {
       pin: str(customer?.pin, 20),
     };
 
+    // Denormalised billing columns + the full breakdown. Every value here is
+    // server-computed; none of it came from the browser. Columns added by
+    // migration 0006 — if that migration has not been run yet the insert
+    // would fail on unknown columns, so they are attached only when the
+    // breakdown is present and stripped on a PGRST204 retry below.
+    const billingCols = {
+      billing: bd,
+      mrp_total: bd.mrpTotal,
+      item_total: bd.itemTotal,
+      product_discount: bd.productDiscount,
+      coupon_code: bd.coupon?.code ?? null,
+      coupon_discount: bd.couponDiscount,
+      shipping_fee: bd.shipping,
+      platform_fee: bd.platformFee,
+      packaging_fee: bd.packagingFee,
+      taxable_amount: bd.tax?.taxableAmount ?? null,
+      tax_total: bd.tax?.totalTax ?? null,
+      tax_mode: bd.tax?.mode ?? null,
+      billing_address: safeCustomer,
+    };
+
+    // COD is unpaid at creation, so it gets its invoice number when it is
+    // marked paid on delivery. An online order is invoiced on verification.
+    const invoiceCols = { invoice_number: generateInvoiceNumber() };
+
     // ---- Cash on delivery: no Razorpay involved. Recorded as a pending,
     // unpaid order so it still gets a server-computed, auditable amount.
     if (method === 'cod') {
@@ -90,7 +165,12 @@ export default async function handler(req, res) {
         items: totals.lines,
         customer: safeCustomer,
         delivery_method: totals.deliveryMethod,
+        ...billingCols,
+        ...(userId ? { user_id: userId } : {}),
       }, sb);
+
+      // Attribution snapshot (pending until the order qualifies). Non-fatal.
+      await attributeOrder(order, totals, body, userId, sb);
 
       return res.status(200).json({
         paymentMethod: 'cod',
@@ -98,6 +178,7 @@ export default async function handler(req, res) {
         amount: totals.total,
         subtotal: totals.subtotal,
         shipping: totals.shipping,
+        breakdown: bd,
       });
     }
 
@@ -111,7 +192,7 @@ export default async function handler(req, res) {
       keySecret: rz.keySecret,
     });
 
-    await insertOrder({
+    const rzOrderRow = await insertOrder({
       order_number: orderNumber,
       status: 'pending',
       payment_status: 'pending',
@@ -122,7 +203,13 @@ export default async function handler(req, res) {
       items: totals.lines,
       customer: safeCustomer,
       delivery_method: totals.deliveryMethod,
+      ...billingCols,
+      ...invoiceCols,
+      ...(userId ? { user_id: userId } : {}),
     }, sb);
+
+    // Attribution snapshot (pending; flips to eligible when payment verifies).
+    await attributeOrder(rzOrderRow, totals, body, userId, sb);
 
     return res.status(200).json({
       paymentMethod: 'razorpay',
@@ -133,6 +220,7 @@ export default async function handler(req, res) {
       amount: totals.total,
       subtotal: totals.subtotal,
       shipping: totals.shipping,
+      breakdown: bd,
       currency: 'INR',
       orderNumber,
     });

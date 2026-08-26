@@ -10,6 +10,9 @@ import Checkout from './pages/Checkout.jsx';
 import Account from './pages/Account.jsx';
 import Wishlist from './pages/Wishlist.jsx';
 import Passport from './pages/Passport.jsx';
+import Invoice from './pages/Invoice.jsx';
+import CreatorPortal from './pages/CreatorPortal.jsx';
+import CreatorAttribution from './components/CreatorAttribution.jsx';
 import NotFound from './pages/NotFound.jsx';
 import AdminLogin from './pages/AdminLogin.jsx';
 import { useAdminAuth } from './lib/adminAuth.jsx';
@@ -21,6 +24,12 @@ import Products from './admin/pages/Products.jsx';
 import Orders from './admin/pages/Orders.jsx';
 import ProductForm from './admin/pages/ProductForm.jsx';
 import Pricing from './admin/pages/Pricing.jsx';
+import Variants from './admin/pages/Variants.jsx';
+import Creators from './admin/pages/Creators.jsx';
+import CreatorDetail from './admin/pages/CreatorDetail.jsx';
+import Attribution from './admin/pages/Attribution.jsx';
+import Kyc from './admin/pages/Kyc.jsx';
+import Payouts from './admin/pages/Payouts.jsx';
 import Categories from './admin/pages/Categories.jsx';
 import HeroSlides from './admin/pages/HeroSlides.jsx';
 import HomepageSettings from './admin/pages/Homepage.jsx';
@@ -55,7 +64,10 @@ function useBrandingEffects() {
 export default function App() {
   useBrandingEffects();
   return (
-    <Routes>
+    <>
+      {/* Records ?ref= / &trk= landings for the Creator Program. Renders nothing. */}
+      <CreatorAttribution />
+      <Routes>
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
         <Route index element={<Dashboard />} />
@@ -64,6 +76,12 @@ export default function App() {
         <Route path="products/:dbId/edit" element={<ProductForm />} />
         <Route path="orders" element={<Orders />} />
         <Route path="pricing" element={<Pricing />} />
+        <Route path="variants" element={<Variants />} />
+        <Route path="creators" element={<Creators />} />
+        <Route path="creators/:id" element={<CreatorDetail />} />
+        <Route path="attribution" element={<Attribution />} />
+        <Route path="kyc" element={<Kyc />} />
+        <Route path="payouts" element={<Payouts />} />
         <Route path="categories" element={<Categories />} />
         <Route path="hero-slides" element={<HeroSlides />} />
         <Route path="homepage" element={<HomepageSettings />} />
@@ -72,6 +90,10 @@ export default function App() {
       </Route>
 
       <Route path="/passport/:passportId?" element={<Passport />} />
+      {/* Customer invoice. Standalone (outside Layout) so it prints cleanly. */}
+      <Route path="/invoice/:orderNumber" element={<Invoice />} />
+      {/* Creator Program portal. Standalone shell, own chrome. */}
+      <Route path="/creator/:tab?" element={<CreatorPortal />} />
 
       <Route element={<Layout />}>
         <Route index element={<Home />} />
@@ -85,6 +107,7 @@ export default function App() {
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="*" element={<NotFound />} />
       </Route>
-    </Routes>
+      </Routes>
+    </>
   );
 }

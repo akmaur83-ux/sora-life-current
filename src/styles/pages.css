@@ -325,7 +325,7 @@
 .checkout__main { max-width: 640px; }
 
 .stepper { display: flex; align-items: center; gap: 8px; margin-bottom: var(--sp-8); }
-.stepper__item { display: flex; align-items: center; gap: 8px; color: var(--ink-400); font-size: var(--text-sm); font-weight: 600; }
+.stepper__item { display: flex; align-items: center; gap: 8px; color: var(--ink-500); font-size: var(--text-sm); font-weight: 600; }
 .stepper__item:not(:last-child)::after { content: ''; width: 24px; height: 1.5px; background: var(--line); margin-left: 4px; }
 .stepper__num { width: 26px; height: 26px; border-radius: 999px; background: var(--sand); display: grid; place-items: center; font-size: var(--text-xs); }
 .stepper__item.active { color: var(--color-primary); }
@@ -596,3 +596,202 @@
 .switch.on i { transform: translateX(20px); }
 
 .wishhead { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; }
+
+/* Auth helper links were 18-21px tall on phones — comfortable tap bands,
+   same type and alignment. */
+@media (max-width: 900px) {
+  .auth__forgot { min-height: 44px; display: inline-flex; align-items: center; margin-top: -14px; }
+  .auth__guest a { display: inline-flex; align-items: center; min-height: 44px; padding-inline: 8px; }
+}
+
+/* The price slider's hit area was the height of its 5px track, which is
+   effectively undraggable on a touch screen. Padding (with the background
+   clipped to the content box) keeps the thin track look while giving the
+   control a full-height touch band. */
+.range {
+  box-sizing: content-box;
+  padding-block: 19px;
+  background-clip: content-box;
+}
+@media (max-width: 900px) {
+  .ftr__legal a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 2px; }
+}
+
+/* Remaining critical-flow polish (cart / checkout).
+   - Struck-through MRP in the cart line was ink-400 (3.68:1); ink-500 clears AA.
+   - "Save for later" / "Remove" / "Continue shopping" were 21-23px tall on
+     phones — comfortable tap bands without changing the type or alignment. */
+.cartrow__price s { color: var(--ink-500); }
+@media (max-width: 900px) {
+  .linkbtn { min-height: 44px; }
+  .summary__continue { min-height: 44px; display: flex; align-items: center; justify-content: center; }
+}
+
+/* ============================================================
+   VARIANT (PACK SIZE) SELECTOR
+   A size is a purchase decision, not a tag: each option shows what that
+   pack actually costs so the customer compares price per size directly.
+   ============================================================ */
+.variantlist { display: flex; flex-wrap: wrap; gap: 10px; }
+.variantchip {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  min-width: 104px; padding: 10px 14px;
+  border: 1.5px solid var(--line); border-radius: var(--r-md);
+  background: var(--paper); cursor: pointer; text-align: left;
+  transition: border-color var(--t) var(--ease), background var(--t) var(--ease),
+              transform var(--t-fast) var(--ease-soft), box-shadow var(--t) var(--ease);
+}
+.variantchip:hover:not(:disabled) { border-color: var(--forest-300); transform: translateY(-1px); }
+.variantchip:active:not(:disabled) { transform: translateY(0) scale(0.985); }
+.variantchip.active {
+  border-color: var(--color-primary);
+  background: var(--forest-50);
+  box-shadow: 0 0 0 1px var(--color-primary) inset;
+}
+.variantchip__label { font-weight: 600; font-size: var(--text-sm); color: var(--color-text); }
+.variantchip__price {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  font-size: var(--text-sm); font-weight: 700; color: var(--price-now-strong);
+}
+.variantchip__price s { font-weight: 500; font-size: 0.85em; color: var(--price-mrp); opacity: 0.85; }
+.variantchip.is-out { opacity: 0.5; cursor: not-allowed; }
+.variantchip__out { font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; color: var(--price-mrp); text-transform: uppercase; }
+@media (max-width: 900px) {
+  .variantchip { min-height: 56px; flex: 1 1 calc(50% - 5px); }
+}
+
+/* ============================================================
+   DETAILED PRICE SUMMARY
+   Financial transparency without visual noise: quiet label/value rows,
+   savings in the price-green, one strong total. Tabular figures so the
+   rupee columns align down the right edge.
+   ============================================================ */
+.psum { display: flex; flex-direction: column; gap: 9px; }
+.psum--compact { gap: 7px; }
+.psum__row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; font-size: var(--text-sm); }
+.psum__label { color: var(--color-text-muted); }
+.psum__note { color: var(--ink-400); font-weight: 500; }
+.psum__value { font-variant-numeric: tabular-nums; color: var(--color-text); font-weight: 500; white-space: nowrap; }
+.psum__row--save .psum__label,
+.psum__row--save .psum__value { color: var(--price-save); font-weight: 600; }
+.psum__row.is-strong { font-size: var(--text-md); padding-top: 2px; }
+.psum__row.is-strong .psum__label { color: var(--color-text); font-family: var(--font-display); font-weight: 600; }
+.psum__row.is-strong .psum__value { font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; color: var(--color-text); }
+.psum__rule { height: 1px; background: var(--line); margin: 4px 0 2px; }
+.psum__hint { font-size: var(--text-xs); color: var(--ink-500); margin-top: 2px; }
+.psum__save {
+  margin-top: 6px; padding: 8px 12px; border-radius: var(--r-sm);
+  background: rgba(95, 138, 99, 0.10); color: var(--price-save);
+  font-size: var(--text-sm); font-weight: 600;
+}
+@media (max-width: 900px) {
+  .psum__row { font-size: var(--text-base); }
+  .psum__row.is-strong .psum__value { font-size: 1.35rem; }
+}
+.cartrow__unit { display: block; font-size: var(--text-xs); margin-top: 2px; }
+.cartrow__unit s { color: var(--price-mrp); margin-left: 6px; opacity: 0.8; }
+.cartrow__price s { color: var(--price-mrp); }
+.checkout__unit { display: block; font-size: var(--text-xs); color: var(--ink-500); font-style: normal; margin-top: 1px; }
+
+/* Line prices use the same money language as everywhere else: the amount
+   charged in price-green, the struck MRP in the muted red. */
+.cartrow__price { color: var(--price-now-strong); }
+.checkout__lp { color: var(--price-now-strong); }
+
+/* ============================================================
+   CUSTOMER INVOICE / RECEIPT
+   Reads as a real tax invoice: quiet paper surface, one strong total,
+   money in the same green/red language as the rest of the store.
+   ============================================================ */
+.inv-page { background: var(--ivory); min-height: 100vh; padding-bottom: var(--sp-12); }
+
+.inv__toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); padding-block: var(--sp-5); flex-wrap: wrap; }
+.inv__back { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--color-text-muted); }
+.inv__back:hover { color: var(--color-primary); }
+.inv__toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.inv {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--sp-8);
+  max-width: 860px;
+}
+.inv__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-6); flex-wrap: wrap; padding-bottom: var(--sp-6); border-bottom: 1px solid var(--line-soft); }
+.inv__logo { height: 46px; width: auto; display: block; }
+.inv__brand-sub { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--color-text-muted); margin-top: 6px; }
+.inv__ident { text-align: right; }
+.inv__title { font-size: var(--text-2xl); margin-bottom: 8px; }
+.inv__idlist { display: flex; flex-direction: column; gap: 3px; }
+.inv__idlist > div { display: flex; gap: 10px; justify-content: flex-end; font-size: var(--text-sm); }
+.inv__idlist dt { color: var(--color-text-muted); }
+.inv__idlist dd { font-weight: 600; font-variant-numeric: tabular-nums; }
+.inv__idlist--wide > div { justify-content: flex-start; gap: 14px; }
+.inv__idlist--wide dt { min-width: 132px; }
+.inv__mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; word-break: break-all; }
+
+.inv__parties { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-6); padding-block: var(--sp-6); border-bottom: 1px solid var(--line-soft); }
+.inv__party-h { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; margin-bottom: 8px; }
+.inv__party p { font-size: var(--text-sm); line-height: 1.55; }
+.inv__contact { color: var(--color-text-muted); }
+
+.inv__items { padding-block: var(--sp-6); }
+.inv__table { width: 100%; border-collapse: collapse; }
+.inv__table th { font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text-muted); text-align: left; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-weight: 700; }
+.inv__table th.num, .inv__table td.num { text-align: right; }
+.inv__table td { padding-block: 12px; border-bottom: 1px solid var(--line-soft); font-size: var(--text-sm); vertical-align: top; font-variant-numeric: tabular-nums; }
+.inv__item-name { display: block; font-weight: 600; }
+.inv__item-variant { display: inline-block; margin-top: 3px; margin-right: 8px; font-size: var(--text-xs); font-weight: 600; color: var(--color-primary); background: var(--forest-50); border-radius: var(--r-xs); padding: 2px 8px; }
+.inv__item-sku { display: inline-block; margin-top: 3px; margin-right: 8px; font-size: 11px; color: var(--ink-500); }
+.inv__table s { color: var(--price-mrp); }
+.inv__price { color: var(--price-now-strong); font-weight: 600; }
+.inv__amount { font-weight: 700; }
+
+.inv__totals { display: flex; justify-content: flex-end; padding-block: var(--sp-5); }
+.inv__totals-inner { width: min(360px, 100%); display: flex; flex-direction: column; gap: 8px; }
+.inv__row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; font-size: var(--text-sm); }
+.inv__row-label { color: var(--color-text-muted); }
+.inv__row-label em { font-style: normal; color: var(--ink-400); }
+.inv__row-value { font-variant-numeric: tabular-nums; font-weight: 500; }
+.inv__row--save .inv__row-label, .inv__row--save .inv__row-value { color: var(--price-save); font-weight: 600; }
+.inv__row.is-strong .inv__row-label { font-family: var(--font-display); font-weight: 600; color: var(--color-text); font-size: var(--text-md); }
+.inv__row.is-strong .inv__row-value { font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; }
+.inv__rule { height: 1px; background: var(--line); margin: 4px 0 2px; }
+.inv__note { font-size: var(--text-xs); color: var(--ink-500); }
+.inv__save { margin-top: 6px; padding: 8px 12px; border-radius: var(--r-sm); background: rgba(95,138,99,0.10); color: var(--price-save); font-size: var(--text-sm); font-weight: 600; text-align: center; }
+
+.inv__payment { padding-block: var(--sp-6); border-top: 1px solid var(--line-soft); }
+.inv__paid { color: var(--price-save); font-weight: 700; }
+.inv__due { color: var(--clay-600); font-weight: 700; }
+.inv__foot { padding-top: var(--sp-6); border-top: 1px solid var(--line-soft); text-align: center; font-size: var(--text-sm); }
+.inv__empty-h { font-size: var(--text-xl); margin-bottom: 8px; }
+
+@media (max-width: 760px) {
+  .inv { padding: var(--sp-5); border-radius: var(--r-md); }
+  .inv__head { flex-direction: column; }
+  .inv__ident { text-align: left; }
+  .inv__idlist > div { justify-content: flex-start; }
+  .inv__parties { grid-template-columns: 1fr; gap: var(--sp-5); }
+  .inv__totals-inner { width: 100%; }
+  /* The MRP column is the first thing to sacrifice on a narrow screen —
+     the struck price still appears under the item name context. */
+  .inv__table th:nth-child(2), .inv__table td:nth-child(2) { display: none; }
+  .inv__toolbar-actions { width: 100%; }
+  .inv__toolbar-actions .btn { flex: 1; min-height: 44px; }
+}
+
+/* Printed / saved-as-PDF invoice: drop the app chrome, keep the document. */
+@media print {
+  .no-print, .hdr, .annbar, .ftr, .tabbar, .drawer { display: none !important; }
+  .inv-page { background: #fff; padding: 0; }
+  .inv { border: none; box-shadow: none; max-width: none; padding: 0; }
+  .inv__item-variant { background: none; padding: 0; color: var(--color-text); }
+  a[href]::after { content: none !important; }
+}
+/* Order card actions wrap to two comfortable buttons on a phone. */
+.ordercard__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .ordercard__actions { width: 100%; }
+  .ordercard__actions .btn { flex: 1 1 calc(50% - 4px); min-height: 44px; justify-content: center; }
+}

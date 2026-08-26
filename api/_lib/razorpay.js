@@ -72,3 +72,32 @@ export async function createRazorpayOrder({ amountPaise, currency, receipt, note
   }
   return body;
 }
+
+/**
+ * Verify a Razorpay WEBHOOK signature.
+ *
+ * Different scheme from the checkout callback: the HMAC is computed over the
+ * RAW request body (not `order|payment`) using the webhook secret, which is a
+ * separate credential from the API key secret.
+ *
+ * `rawBody` must be the exact bytes Razorpay sent. Re-serialising the parsed
+ * JSON changes key order/whitespace and would fail verification, so the route
+ * reads the raw stream.
+ */
+export function verifyWebhookSignature({ rawBody, signature, webhookSecret }) {
+  if (!rawBody || !signature || !webhookSecret) return false;
+  const expected = crypto
+    .createHmac('sha256', webhookSecret)
+    .update(rawBody, 'utf8')
+    .digest('hex');
+  const a = Buffer.from(expected, 'utf8');
+  const b = Buffer.from(String(signature), 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+/** Webhook secret is a distinct credential from the API key secret. */
+export function getWebhookSecret() {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET || '';
+  return { secret, configured: Boolean(secret) };
+}

@@ -20,6 +20,7 @@
 // ============================================================
 import { getSupabaseConfig, findOrderByNumber } from '../_lib/supabaseAdmin.js';
 import { normalizeOrderNumber, customerEmailMatches, sanitizeOrderForCustomer } from '../_lib/orderLookup.js';
+import { enforceRateLimit } from '../_lib/rateLimit.js';
 
 const NOT_FOUND_MESSAGE = "We couldn't find an order matching that order number and email.";
 
@@ -34,6 +35,9 @@ export default async function handler(req, res) {
   }
 
   const sb = getSupabaseConfig();
+
+  // Throttle brute-forcing of the (order number + email) pair.
+  if (!(await enforceRateLimit(req, res, { name: 'orders-lookup', limit: 15, windowSeconds: 60 }, sb))) return;
   if (!sb.configured) {
     console.error('[orders/lookup] Supabase server env missing (VITE_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).');
     return fail(res, 503, 'Order lookup is not available right now. Please try again later.');

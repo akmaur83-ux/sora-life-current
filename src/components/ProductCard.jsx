@@ -64,7 +64,7 @@ export default function ProductCard({ product }) {
           {out ? (
             <span className="hint">Notify me</span>
           ) : (
-            <button className="iconbtn" style={{ width: 40, height: 40, background: 'var(--forest-50)' }} onClick={() => addToCart(product)} aria-label="Add to cart">
+            <button className="iconbtn pcard__add" onClick={() => addToCart(product)} aria-label="Add to cart">
               <Icon name="plus" size={18} />
             </button>
           )}

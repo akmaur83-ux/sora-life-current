@@ -4,13 +4,14 @@ import Icon from '../components/Icon.jsx';
 import ProductImage from '../components/ProductImage.jsx';
 import ProductRail from '../components/ProductRail.jsx';
 import { useStore } from '../lib/store.jsx';
+import PriceSummary from '../components/PriceSummary.jsx';
 import { money } from '../lib/format.js';
 import { getBestsellers } from '../data/products.js';
 
 const COUPONS = { SORA10: 0.1, WELCOME: 0.15 };
 
 export default function Cart() {
-  const { cartDetailed, savedDetailed, dispatch, subtotal, savings, toast } = useStore();
+  const { cartDetailed, savedDetailed, dispatch, subtotal, mrpTotal, savings, toast } = useStore();
   const [coupon, setCoupon] = useState('');
   const [applied, setApplied] = useState(null);
   const [couponErr, setCouponErr] = useState('');
@@ -59,11 +60,23 @@ export default function Cart() {
                     <div className="cartrow__top">
                       <div>
                         <Link to={`/product/${l.product.slug}`} className="cartrow__name serif">{l.product.name}</Link>
-                        {l.variant && <span className="cartrow__variant">{l.variant}</span>}
-                        <span className="cartrow__form muted">{l.product.form}</span>
+                        {/* Pack size is the variant; quantity is how many of
+                            that pack. They are shown separately so "750 ml x 2"
+                            can never be misread as "2 units of the base size". */}
+                        {(l.variantLabel || l.product.form) && (
+                          <span className="cartrow__variant">{l.variantLabel || l.product.form}</span>
+                        )}
+                        {/* The amount stays in price-green and the word "each"
+                            stays muted, so the per-pack price reads as money
+                            rather than as supporting caption text. */}
+                        <span className="cartrow__unit">
+                          <span className="cartrow__unitprice">{money(l.unitPrice)}</span>
+                          <span className="muted"> each</span>
+                          {l.unitMrp > l.unitPrice && <s>{money(l.unitMrp)}</s>}
+                        </span>
                       </div>
-                      <div className="cartrow__price">{money(l.product.price * l.qty)}
-                        {l.product.mrp > l.product.price && <s>{money(l.product.mrp * l.qty)}</s>}
+                      <div className="cartrow__price">{money(l.lineTotal)}
+                        {l.unitMrp > l.unitPrice && <s>{money(l.unitMrp * l.qty)}</s>}
                       </div>
                     </div>
                     <div className="cartrow__actions">
@@ -97,14 +110,12 @@ export default function Cart() {
               {couponErr && <p className="error-text">{couponErr}</p>}
               {applied && <p className="summary__applied"><Icon name="checkCircle" size={15} /> {applied.code} — {applied.rate * 100}% off</p>}
 
-              <dl className="summary__lines">
-                <div><dt>Subtotal</dt><dd>{money(subtotal)}</dd></div>
-                {savings > 0 && <div className="is-save"><dt>Product savings</dt><dd>−{money(savings)}</dd></div>}
-                {discount > 0 && <div className="is-save"><dt>Coupon ({applied.code})</dt><dd>−{money(discount)}</dd></div>}
-                <div><dt>Shipping</dt><dd>{shipping === 0 ? <span className="free">Free</span> : money(shipping)}</dd></div>
-              </dl>
+              {/* Cart shows the client-side estimate; checkout replaces it with
+                  the server-computed breakdown (taxes/fees included). */}
+              <PriceSummary
+                fallback={{ itemTotal: subtotal - discount, mrpTotal, shipping }}
+              />
               {shipping > 0 && <p className="summary__ship-hint"><Icon name="truck" size={15} /> Add {money(699 - (subtotal - discount))} more for free delivery</p>}
-              <div className="summary__total"><span>Total</span><span className="serif">{money(total)}</span></div>
               <Link to="/checkout" className="btn btn-lg btn-block">Checkout <Icon name="arrowRight" size={18} /></Link>
               <Link to="/shop" className="summary__continue">or continue shopping</Link>
               <div className="summary__badges">

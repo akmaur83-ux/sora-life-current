@@ -1,9 +1,23 @@
 import { useState } from 'react';
 import { categoryBySlug, tones } from '../data/categories.js';
+import { OPTIMIZED_IMAGES, OPTIMIZED_WIDTHS } from '../data/optimizedImages.js';
 
-// Renders the real official product photo. Falls back to a branded tile
-// if the image is missing or fails to load.
-export default function ProductImage({ product, className = '', index = 0 }) {
+// Default sizes hint tuned for the product grid (2-up on phones, up to ~240px
+// tiles on desktop). Detail/hero contexts pass a larger `sizes`.
+const GRID_SIZES = '(max-width: 640px) 46vw, (max-width: 1024px) 30vw, 240px';
+
+// If the source is a local /img/<name>.<png|jpg> that the optimizer has covered,
+// return its basename so we can serve responsive WebP; otherwise null.
+function optimizedBase(src) {
+  if (typeof src !== 'string') return null;
+  const m = src.match(/^\/img\/([^/]+)\.(?:png|jpe?g)$/i);
+  return m && OPTIMIZED_IMAGES.has(m[1]) ? m[1] : null;
+}
+
+// Renders the real official product photo. Serves right-sized WebP variants via
+// <picture> when available (originals stay as the <img> fallback), and falls
+// back to a branded tile if the image is missing or fails to load.
+export default function ProductImage({ product, className = '', index = 0, sizes = GRID_SIZES }) {
   const [failed, setFailed] = useState(false);
   if (!product) return <div className={`pimg ${className}`} style={{ background: 'var(--cream)' }} />;
   const cat = categoryBySlug[product.category];
@@ -14,17 +28,26 @@ export default function ProductImage({ product, className = '', index = 0 }) {
     : (product.gallery && product.gallery[index]) || product.image;
 
   if (src && !failed) {
-    return (
-      <div className={`pimg ${className}`}>
-        {/* Sizing/fit is controlled entirely by CSS (.pimg img) so product
-            photos are never cropped and every context can present them
-            consistently. Previously this hardcoded object-fit: cover inline,
-            which cropped product images everywhere and forced `!important`
-            overrides to undo it on the product grid. */}
-        <img src={src} alt={product.name} loading="lazy" decoding="async"
-          onError={() => setFailed(true)} />
-      </div>
+    const base = optimizedBase(src);
+    // Sizing/fit is controlled entirely by CSS (.pimg img) so product photos
+    // are never cropped and every context presents them consistently.
+    const img = (
+      <img src={src} alt={product.name} loading="lazy" decoding="async"
+        sizes={base ? sizes : undefined}
+        onError={() => setFailed(true)} />
     );
+    if (base) {
+      const srcSet = OPTIMIZED_WIDTHS.map((w) => `/img/${base}-${w}.webp ${w}w`).join(', ');
+      return (
+        <div className={`pimg ${className}`}>
+          <picture>
+            <source type="image/webp" srcSet={srcSet} sizes={sizes} />
+            {img}
+          </picture>
+        </div>
+      );
+    }
+    return <div className={`pimg ${className}`}>{img}</div>;
   }
 
   // Fallback branded tile

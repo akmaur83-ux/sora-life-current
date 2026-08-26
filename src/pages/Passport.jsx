@@ -4,7 +4,8 @@ import Icon from '../components/Icon.jsx';
 import ProductImage from '../components/ProductImage.jsx';
 import Toasts from '../components/Toasts.jsx';
 import { useStore } from '../lib/store.jsx';
-import { lookupPassport, NOT_AVAILABLE } from '../data/passport.js';
+import { useCustomerAuth } from '../lib/customerAuth.jsx';
+import { lookupPassport, lookupPassportForUser, NOT_AVAILABLE } from '../data/passport.js';
 import { money } from '../lib/format.js';
 
 const sessionKey = (orderNumber) => `sora_passport:${orderNumber}`;
@@ -24,20 +25,23 @@ const SIDE_NAV = [
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: 'grid' },
-  { id: 'delivery', label: 'Delivery', icon: 'truck' },
-  { id: 'care', label: 'Product Care', icon: 'droplet' },
+  { id: 'delivery', label: 'Delivery Details', icon: 'truck' },
+  { id: 'care', label: 'Product Care Guide', icon: 'droplet' },
   { id: 'returns', label: 'Returns & Support', icon: 'return' },
   { id: 'identity', label: 'Product Identity', icon: 'shield' },
   { id: 'experience', label: 'My Experience', icon: 'heartHand' },
+  { id: 'reorder', label: 'Reorder & Reminders', icon: 'refresh' },
 ];
 
 export default function Passport() {
   const { passportId } = useParams();
   const navigate = useNavigate();
   const { toast } = useStore();
+  const { session, loading: authLoading } = useCustomerAuth();
 
-  // 'gate' -> asking for order number + email, 'loading' -> verifying,
-  // 'ready' -> ordinal Passport view, 'error' -> lookup failed.
+  // 'gate' -> asking for order number + email (guests only), 'loading' ->
+  // verifying, 'ready' -> Passport view, 'denied' -> authenticated user does
+  // not own this order.
   const [phase, setPhase] = useState('gate');
   const [passport, setPassport] = useState(null);
   const [lookupError, setLookupError] = useState('');
@@ -71,16 +75,37 @@ export default function Passport() {
     }
   };
 
-  // On landing with an order number already in the URL, try the email
-  // remembered for this session (sessionStorage only — never the URL,
-  // never persisted beyond this tab) before asking again.
+  // Authenticated owner path: fetch the customer's OWN order directly via
+  // RLS (no email gate). A non-owned/absent order number resolves to a safe
+  // "denied" state — never a fallback to email verification.
+  const runAuthedLookup = async (orderNumber) => {
+    setPhase('loading');
+    try {
+      const data = await lookupPassportForUser(orderNumber);
+      setPassport(data);
+      setReminder(data.reminder.selected);
+      setPhase('ready');
+    } catch {
+      setPhase('denied');
+    }
+  };
+
+  // Decide how to open the Passport once the session state is known:
+  //   authenticated -> open the user's own order directly (ownership via RLS)
+  //   guest         -> try the email remembered for this tab, else the gate
+  // (sessionStorage only — never from the URL, never persisted beyond this tab)
   useEffect(() => {
     if (!passportId) return;
+    if (authLoading) return; // wait until we know whether there's a session
+    if (session) {
+      runAuthedLookup(passportId);
+      return;
+    }
     let storedEmail = null;
     try { storedEmail = sessionStorage.getItem(sessionKey(passportId.toUpperCase())); } catch { /* storage unavailable */ }
     if (storedEmail) runLookup({ orderNumber: passportId, email: storedEmail }, { silent: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [passportId]);
+  }, [passportId, session, authLoading]);
 
   const copyId = async () => {
     try { await navigator.clipboard.writeText(passport.passportId); } catch { /* clipboard unavailable */ }
@@ -105,6 +130,59 @@ export default function Passport() {
   };
 
   if (phase !== 'ready' || !passport) {
+    // Session not resolved yet — neutral loading, never the email gate.
+    if (authLoading) {
+      return (
+        <div className="psp">
+          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} member={{ name: 'SORA LIFE', tier: 'Loading…', tierIcon: 'checkCircle' }} />
+          {sidebarOpen && <div className="psp__side-scrim open" onClick={() => setSidebarOpen(false)} />}
+          <div className="psp__topbar">
+            <button className="iconbtn" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
+            <strong>SORA LIFE</strong>
+          </div>
+          <main className="psp__main"><div className="psp__inner"><p className="muted">Loading…</p></div></main>
+          <Toasts />
+        </div>
+      );
+    }
+
+    // Authenticated: open the user's OWN order directly (ownership via RLS).
+    // Never the email gate, never "Guest / Not Verified".
+    if (session) {
+      const authedName = session.user?.user_metadata?.full_name?.trim() || session.user?.email?.split('@')[0] || 'Your account';
+      return (
+        <div className="psp">
+          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} member={{ name: authedName, tier: phase === 'denied' ? 'No access' : 'Verifying…', tierIcon: phase === 'denied' ? 'lock' : 'checkCircle' }} />
+          {sidebarOpen && <div className="psp__side-scrim open" onClick={() => setSidebarOpen(false)} />}
+          <div className="psp__topbar">
+            <button className="iconbtn" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
+            <strong>SORA LIFE</strong>
+          </div>
+          <main className="psp__main">
+            <div className="psp__inner" style={{ maxWidth: 480 }}>
+              {!passportId ? (
+                <div className="surface pad-lg" style={{ textAlign: 'center' }}>
+                  <h2 className="serif" style={{ fontSize: 'var(--text-xl)' }}>Purchase Passports</h2>
+                  <p className="muted" style={{ marginTop: 8 }}>Open a Passport from any order in your order history.</p>
+                  <Link to="/account/orders" className="btn" style={{ marginTop: 16 }}>Go to my orders</Link>
+                </div>
+              ) : phase === 'denied' ? (
+                <div className="surface pad-lg" style={{ textAlign: 'center' }}>
+                  <h2 className="serif" style={{ fontSize: 'var(--text-xl)' }}><Icon name="lock" size={20} /> Order not found</h2>
+                  <p className="muted" style={{ marginTop: 8 }}>We couldn't find this order on your account, or you don't have access to it.</p>
+                  <Link to="/account/orders" className="btn" style={{ marginTop: 16 }}>Back to my orders</Link>
+                </div>
+              ) : (
+                <p className="muted">Opening your Purchase Passport…</p>
+              )}
+            </div>
+          </main>
+          <Toasts />
+        </div>
+      );
+    }
+
+    // Guest: existing order-number + checkout-email verification gate — unchanged.
     return (
       <div className="psp">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} member={{ name: 'Guest', tier: 'Not Verified', tierIcon: 'lock' }} />
@@ -137,6 +215,7 @@ export default function Passport() {
         onSubmit={shareExperience}
       />
     ),
+    reorder: <ReorderRemindersCard reminder={passport.reminder} selected={reminder} onSelect={setReminderChoice} />,
   };
 
   return (
@@ -152,10 +231,18 @@ export default function Passport() {
       <main className="psp__main">
         <div className="psp__inner">
           <header className="psp__head">
-            <div>
-              <h1 className="serif psp__title"><Icon name="shield" size={26} /> Your Purchase Passport</h1>
+            <div className="psp__headline">
+              <h1 className="serif psp__title psp-metal">Your Purchase Passport</h1>
               <p>Every detail. Every step. Always with you.</p>
             </div>
+
+            <span className="psp__head-rule" aria-hidden="true" />
+
+            {/* Official SORA LIFE brand lockup (real asset), foil-lit. */}
+            <div className="psp__brandlock" role="img" aria-label="SORA LIFE — Health and Wellness">
+              <img src="/assets/sora-life-logo.png" alt="" />
+            </div>
+
             <div className="psp__head-right">
               <div className="psp__idblock">
                 <span className="lbl">Passport ID</span>
@@ -167,15 +254,16 @@ export default function Passport() {
                   </span>
                 </span>
               </div>
-              <button className="btn btn-light" onClick={download}>
-                <Icon name="download" size={17} /> Download Passport
+              <button className="btn psp__download" onClick={download}>
+                <Icon name="download" size={16} /> Download Passport
               </button>
             </div>
           </header>
 
           <div className="psp__herowrap">
+            {/* Status card removed — the delivery timeline below is the single
+                source of truth for order status. The hero now breathes. */}
             <ProductHero product={passport.product} order={passport.order} eta={passport.eta} />
-            <StatusCard status={passport.status} eta={passport.eta} delivered={!!passport.deliveredOn} deliveredOn={passport.deliveredOn} />
           </div>
 
           <DeliveryTimeline timeline={passport.timeline} />
@@ -195,23 +283,39 @@ export default function Passport() {
           </nav>
 
           {activeTab === 'overview' ? (
-            <>
-              <div className="psp__grid">
-                <DeliveryDetailsCard passport={passport} />
-                <ProductCareCard care={passport.care} />
-                <ReturnsSupportCard returns={passport.returns} />
-                <ProductIdentityCard identity={passport.identity} />
-                <MyExperienceCard
-                  experience={passport.experience}
-                  face={face} setFace={setFace}
-                  chips={chips} toggleChip={toggleChip}
-                  onSubmit={shareExperience}
-                />
-                <ReorderRemindersCard reminder={passport.reminder} selected={reminder} onSelect={setReminderChoice} />
-                <PromoCardWide />
-              </div>
-              <PromoBand />
-            </>
+            <div className="psp__summary">
+              <SummaryCard icon="truck" title="Delivery Details" cta="View Tracking" onCta={() => setActiveTab('delivery')}>
+                <SummaryRow label="Shipping via" value={passport.shipping?.carrier} />
+                <SummaryRow label="Tracking ID" value={passport.shipping?.trackingId} />
+              </SummaryCard>
+
+              <SummaryCard icon="droplet" title="Product Care Guide" cta="View Guide" onCta={() => setActiveTab('care')}>
+                {passport.care.slice(0, 3).map((c) => <span className="psp-sum__line" key={c.title}>{c.title}</span>)}
+              </SummaryCard>
+
+              <SummaryCard icon="return" title="Returns & Support" cta="View Policy" onCta={() => setActiveTab('returns')}>
+                <span className="psp-sum__line">Easy returns</span>
+                <span className="psp-sum__line">{passport.returns.windowDate ? `Valid till ${passport.returns.windowDate}` : '7-day return policy'}</span>
+                <span className="psp-sum__line">Dedicated support</span>
+              </SummaryCard>
+
+              <SummaryCard icon="shield" title="Product Identity" cta="View Certificate" onCta={() => setActiveTab('identity')}>
+                <SummaryRow label="Batch No." value={passport.identity.batch} />
+                <SummaryRow label="Mfg. Date" value={passport.identity.mfgDate} />
+              </SummaryCard>
+
+              <SummaryCard icon="star" title="My Experience" cta="Write a Review" onCta={() => setActiveTab('experience')}>
+                <span className="psp-sum__line">Rate your experience</span>
+                <span className="psp-sum__stars" aria-hidden="true">
+                  {[0, 1, 2, 3, 4].map((i) => <Icon key={i} name="star" size={19} />)}
+                </span>
+              </SummaryCard>
+
+              <SummaryCard icon="refresh" title="Reorder & Reminders" cta="Set Reminder" onCta={() => setActiveTab('reorder')}>
+                <span className="psp-sum__line">Reorder this item</span>
+                <span className="psp-sum__line">Never run out</span>
+              </SummaryCard>
+            </div>
           ) : (
             <div className="psp__grid psp__grid--single">{cards[activeTab]}</div>
           )}
@@ -270,47 +374,38 @@ function Sidebar({ open, onClose, member }) {
   return (
     <aside className={`psp__side ${open ? 'open' : ''}`} aria-label="Primary">
       <div className="psp__side-brand">
-        <span className="psp__mark"><Icon name="leaf" size={19} /></span>
-        <strong className="serif">SORA LIFE</strong>
-        <span>Health &amp; Wellness</span>
+        <img className="psp__side-logo" src="/assets/sora-life-logo.png" alt="SORA LIFE — Health and Wellness" />
       </div>
 
       <div className="psp__profile">
         <span className="psp__avatar">{member.name.split(' ').map((s) => s[0]).slice(0, 2).join('')}</span>
         <strong>{member.name}</strong>
-        <span className="psp__tier"><Icon name={member.tierIcon || 'checkCircle'} size={12} /> {member.tier}</span>
+        <span className="psp__tier"><Icon name={member.tierIcon || 'award'} size={12} /> {member.tier}</span>
       </div>
 
       <nav className="psp__nav">
-        {SIDE_NAV.map((n) => (
-          n.to === '#'
-            ? <a key={n.id} href="#" className={`psp__navitem ${n.active ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); onClose(); }}>
-                <Icon name={n.icon} size={19} /> <span className="psp__navlabel">{n.label}</span>
-              </a>
-            : <Link key={n.id} to={n.to} className={`psp__navitem ${n.active ? 'active' : ''}`} onClick={onClose}>
-                <Icon name={n.icon} size={19} /> <span className="psp__navlabel">{n.label}</span>
-              </Link>
-        ))}
+        {SIDE_NAV.map((n) => {
+          const inner = (
+            <>
+              <Icon name={n.icon} size={18} /> <span className="psp__navlabel">{n.label}</span>
+              {n.active && <Icon name="chevronRight" size={15} className="psp__navchev" />}
+            </>
+          );
+          return n.to === '#'
+            ? <a key={n.id} href="#" className={`psp__navitem ${n.active ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); onClose(); }}>{inner}</a>
+            : <Link key={n.id} to={n.to} className={`psp__navitem ${n.active ? 'active' : ''}`} onClick={onClose}>{inner}</Link>;
+        })}
       </nav>
 
       <div className="psp__side-promo">
-        <div className="psp__promocard">
-          <strong className="serif">Sora Life Care</strong>
-          <ul>
-            <li><Icon name="check" size={13} /> Priority support</li>
-            <li><Icon name="check" size={13} /> Smart reminders</li>
-            <li><Icon name="check" size={13} /> Member rewards</li>
-          </ul>
-          <a href="#" className="btn btn-gold btn-outline btn-sm btn-block" onClick={(e) => e.preventDefault()}>Explore Care →</a>
-        </div>
-        <div className="psp__promocard">
-          <strong className="serif">Need Help?</strong>
-          <p>We're here for you</p>
-          <a href="#" className="btn btn-gold btn-outline btn-sm btn-block" onClick={(e) => e.preventDefault()}>Contact Us</a>
+        <div className="psp__promocard psp__helpcard">
+          <span className="psp__helpic"><Icon name="chat" size={19} /></span>
+          <span>
+            <strong className="serif">Need Help?</strong>
+            <p>We're here for you</p>
+          </span>
         </div>
       </div>
-
-      <div className="psp__side-foot"><Icon name="lock" size={13} /> <span>Secure · Reliable · Transparent</span></div>
     </aside>
   );
 }
@@ -325,12 +420,16 @@ function ProductHero({ product, order, eta }) {
     { icon: 'truck', label: 'Estimated Delivery', value: eta.display },
   ];
   return (
-    <div className="psp__hero">
+    <div className="psp__hero" data-cat={product.category || 'wellness'}>
       <div className="psp__hero-media">
-        <ProductImage product={product} />
-        <span className="psp__hero-verify"><Icon name="leaf" size={18} /></span>
+        {/* Premium product stage: soft spotlight, pedestal shadow and rim
+            light around the untouched product artwork. */}
+        <span className="psp__stage-glow" aria-hidden="true" />
+        <div className="psp__stage"><ProductImage product={product} /></div>
+        <span className="psp__stage-plinth" aria-hidden="true" />
       </div>
       <div className="psp__hero-body">
+        <span className="psp__hero-eyebrow">Certified purchase</span>
         <h2 className="serif psp__hero-title">{product.name}</h2>
         <span className="psp__hero-underline" />
         <p className="psp__hero-sub">
@@ -340,7 +439,7 @@ function ProductHero({ product, order, eta }) {
         <div className="psp__fields">
           {fields.map((f) => (
             <div className="psp__field" key={f.label}>
-              <Icon name={f.icon} size={19} />
+              <Icon name={f.icon} size={17} />
               <span>
                 <span className="lbl">{f.label}</span>
                 <span className="val">{f.value}</span>
@@ -391,6 +490,28 @@ function DeliveryTimeline({ timeline }) {
         ))}
       </ol>
     </section>
+  );
+}
+
+/* Compact overview summary card (the row of six under the tabs). */
+function SummaryCard({ icon, title, cta, onCta, children }) {
+  return (
+    <div className="psp-sum">
+      <h3 className="serif psp-sum__title"><Icon name={icon} size={17} /> {title}</h3>
+      <div className="psp-sum__body">{children}</div>
+      <button type="button" className="psp-sum__cta" onClick={onCta}>{cta} <Icon name="arrowRight" size={14} /></button>
+    </div>
+  );
+}
+
+/* label + value pair; falls back to the honest "not available" copy when the
+   order schema genuinely has no value for it (never invents data). */
+function SummaryRow({ label, value }) {
+  return (
+    <span className="psp-sum__row">
+      <span className="psp-sum__lbl">{label}</span>
+      <span className="psp-sum__val">{value || NOT_AVAILABLE}</span>
+    </span>
   );
 }
 

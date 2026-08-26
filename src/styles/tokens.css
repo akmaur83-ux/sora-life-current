@@ -48,6 +48,19 @@
   --color-primary-hover: var(--forest-800);
   --color-accent: var(--honey-500);
   --color-accent-strong: var(--honey-700);
+  /* Gold that is legible as TEXT on light surfaces (>=4.5:1 on ivory).
+     --color-accent-strong is tuned for accents/borders, not body copy. */
+  --color-accent-text: #866419;
+
+  /* ---- Commerce price system ----
+     Selling price reads as a calm, trustworthy green rather than a
+     discount-store red/orange; MRP is a refined muted red, never louder
+     than the price the customer actually pays. Gold stays reserved for
+     brand accents and is deliberately NOT used for prices. */
+  --price-now: #5F8A63;      /* selling price - AA on cream/white */
+  --price-now-strong: #4E7452;
+  --price-mrp: #A94F4F;      /* struck-through MRP - AA on cream at 12px */
+  --price-save: #4E7452;     /* "you save" messaging */
   --color-sale: var(--clay-500);
   --color-text: var(--ink-900);
   --color-text-muted: var(--ink-500);

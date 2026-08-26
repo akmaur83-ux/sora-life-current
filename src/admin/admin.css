@@ -111,3 +111,109 @@
 @media (max-width: 900px) {
   .adm-order-detail__grid { grid-template-columns: 1fr; }
 }
+
+/* ---- Order detail: timeline, money breakdown, item pricing ---- */
+.adm-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-all; }
+.adm-price { color: var(--price-now-strong); font-weight: 600; }
+.adm-items s { color: var(--price-mrp); }
+.adm-items thead th {
+  font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--color-text-muted); font-weight: 700; text-align: left;
+  padding-bottom: 6px; border-bottom: 1px solid var(--line);
+}
+
+.adm-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.adm-timeline li { position: relative; padding-left: 18px; }
+.adm-timeline li::before {
+  content: ''; position: absolute; left: 0; top: 6px;
+  width: 8px; height: 8px; border-radius: 50%; background: var(--price-save);
+}
+/* Connector between consecutive steps — omitted after the final step. */
+.adm-timeline li:not(:last-child)::after {
+  content: ''; position: absolute; left: 3.5px; top: 16px; bottom: -10px;
+  width: 1px; background: var(--line);
+}
+.adm-timeline__label { display: block; font-weight: 600; font-size: 13px; }
+.adm-timeline__at { display: block; font-size: 12px; color: var(--color-text-muted); }
+
+.adm-bill { display: flex; flex-direction: column; gap: 7px; max-width: 420px; }
+.adm-bill__row { display: flex; justify-content: space-between; gap: 16px; font-size: 13px; }
+.adm-bill__row > span:first-child { color: var(--color-text-muted); }
+.adm-bill__row > span:last-child { font-variant-numeric: tabular-nums; font-weight: 500; }
+.adm-bill__row.is-save > span { color: var(--price-save); font-weight: 600; }
+.adm-bill__row.is-strong {
+  margin-top: 6px; padding-top: 9px; border-top: 1px solid var(--line); font-size: 15px;
+}
+.adm-bill__row.is-strong > span { color: var(--color-text); font-weight: 700; }
+
+/* ---- Variants table row actions ---- */
+.adm-rowacts { display: flex; gap: 6px; flex-wrap: wrap; }
+.adm-table tr.is-muted td { opacity: 0.55; }
+.adm-banner.ok { background: rgba(95,138,99,0.12); border-color: rgba(95,138,99,0.35); color: var(--price-save); }
+
+/* ---- Creator Program (admin) ---- */
+.adm-link { color: inherit; }
+.adm-link:hover { color: var(--color-primary); }
+.adm-back { display: inline-block; font-size: 12px; color: var(--color-text-muted); margin-bottom: 6px; }
+.adm-back:hover { color: var(--color-primary); }
+.adm-inline { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+.adm-inline .input { flex: 1 1 200px; }
+.adm-chip {
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+  background: var(--forest-50, rgba(78,116,82,0.10)); color: var(--color-primary);
+}
+.adm-preview-url {
+  display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px; background: var(--surface-2, #F5F2EB); color: var(--color-text);
+  padding: 8px 10px; border-radius: 8px; word-break: break-all; line-height: 1.5;
+}
+
+.adm-linklist { display: flex; flex-direction: column; gap: 10px; }
+.adm-linkrow {
+  display: flex; gap: 12px; align-items: flex-start; justify-content: space-between;
+  border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; flex-wrap: wrap;
+}
+.adm-linkrow.is-muted { opacity: 0.6; }
+.adm-linkrow__main { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.adm-linkrow__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+@media (max-width: 640px) {
+  .adm-linkrow { flex-direction: column; }
+  .adm-linkrow .adm-rowacts { width: 100%; }
+  .adm-linkrow .adm-rowacts .btn { flex: 1; justify-content: center; min-height: 40px; }
+}
+
+/* ============================================================
+   Creator Program — KYC & Payouts (Part 3)
+   ============================================================ */
+.adm-chipbar { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 18px; }
+.adm-chipbar .adm-chip {
+  cursor: pointer; border: 1px solid var(--line); background: var(--paper, #fff);
+  color: var(--color-text-muted); font-size: 12.5px; font-weight: 600; padding: 6px 13px; border-radius: 999px;
+}
+.adm-chipbar .adm-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.adm-chipbar .adm-chip.active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+
+/* ---- KYC cards ---- */
+.adm-kyc-grid, .adm-payout-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.adm-kyc-card, .adm-payout-card { padding: 16px 18px; }
+.adm-kyc-card__head, .adm-payout-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.adm-kyc-card__head h3, .adm-payout-card__head h3 { margin: 0 0 2px; font-size: 15px; }
+.adm-kyc-card__kv { margin: 14px 0; }
+.adm-kyc-card__priv { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 0 0 12px; }
+.adm-kyc-card__acts, .adm-payout-card__acts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---- payout cards ---- */
+.adm-payout-card__amt { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.adm-payout-card__amt .adm-price { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; }
+.adm-payout-card__quick { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--color-text-muted); margin: 12px 0; padding: 10px 0; border-block: 1px solid var(--line-soft, #efe9dd); }
+.adm-payout-card.is-open { box-shadow: var(--shadow-md); }
+.adm-payout-detail { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.adm-payout-kyc { margin: 0 0 10px; }
+.adm-payout-detail__sum { font-size: 13px; color: var(--color-text-muted); margin: 10px 0 0; }
+
+@media (min-width: 760px) {
+  .adm-kyc-grid { grid-template-columns: 1fr 1fr; }
+  .adm-payout-detail { grid-template-columns: 1fr 1fr; }
+  .adm-payout-detail .adm-order-block--wide { grid-column: 1 / -1; }
+}

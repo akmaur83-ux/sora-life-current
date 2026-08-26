@@ -14,7 +14,8 @@
 // orders or a double charge.
 // ============================================================
 import { getRazorpayCredentials, verifyPaymentSignature } from '../_lib/razorpay.js';
-import { getSupabaseConfig, findOrderByRazorpayOrderId, updateOrderById } from '../_lib/supabaseAdmin.js';
+import { getSupabaseConfig, findOrderByRazorpayOrderId, updateOrderById, consumeCouponForOrder, setConversionStatus } from '../_lib/supabaseAdmin.js';
+import { enforceRateLimit } from '../_lib/rateLimit.js';
 
 function fail(res, status, message) {
   return res.status(status).json({ verified: false, error: message });
@@ -28,6 +29,9 @@ export default async function handler(req, res) {
 
   const rz = getRazorpayCredentials();
   const sb = getSupabaseConfig();
+
+  // Rate limit access to the endpoint (does NOT touch signature logic below).
+  if (!(await enforceRateLimit(req, res, { name: 'verify', limit: 30, windowSeconds: 60 }, sb))) return;
   if (!rz.configured || !sb.configured) {
     console.error('[verify] server env not configured.');
     return fail(res, 503, 'We could not confirm your payment right now. Please contact support.');
@@ -86,6 +90,14 @@ export default async function handler(req, res) {
       razorpay_payment_id: paymentId,
       paid_at: new Date().toISOString(),
     }, sb);
+
+    // Order is now definitively paid -> consume its coupon (if any). Atomic
+    // and idempotent per order in the DB, and non-fatal here: a coupon-ledger
+    // issue must never fail a payment that already succeeded.
+    await consumeCouponForOrder(order, sb).catch(() => {});
+    // Creator attribution: a paid order qualifies its conversion. Idempotent
+    // and non-fatal (a retried verify just no-ops).
+    await setConversionStatus(order.id, 'eligible', 'payment_verified', sb).catch(() => {});
 
     return res.status(200).json({
       verified: true,

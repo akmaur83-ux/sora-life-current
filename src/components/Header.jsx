@@ -8,6 +8,7 @@ import { categories } from '../data/categories.js';
 import { searchProducts } from '../data/products.js';
 import { money } from '../lib/format.js';
 import { announcement } from '../lib/settings.js';
+import { lockScroll, unlockScroll } from '../lib/scrollLock.js';
 
 const NOTICE_ICONS = ['truck', 'card', 'shield'];
 
@@ -46,14 +47,24 @@ export default function Header() {
     const t = setTimeout(() => mobileInputRef.current?.focus(), 60);
     const onKey = (e) => { if (e.key === 'Escape') setMobileSearch(false); };
     document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
+    lockScroll();
     return () => {
       clearTimeout(t);
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      unlockScroll();
     };
   }, [mobileSearch]);
-  useEffect(() => { document.body.style.overflow = drawer ? 'hidden' : ''; return () => { document.body.style.overflow = ''; }; }, [drawer]);
+  // Reference-counted so the drawer and the search overlay can't unlock each
+  // other (see lib/scrollLock.js).
+  useEffect(() => {
+    if (!drawer) return undefined;
+    lockScroll();
+    // Only close the drawer if the search overlay (which sits above it) isn't
+    // the topmost layer — Escape should dismiss one layer at a time.
+    const onKey = (e) => { if (e.key === 'Escape' && !mobileSearch) setDrawer(false); };
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('keydown', onKey); unlockScroll(); };
+  }, [drawer, mobileSearch]);
   useEffect(() => {
     const onDoc = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setFocused(false); };
     document.addEventListener('mousedown', onDoc);
@@ -93,7 +104,7 @@ export default function Header() {
       <header className={`hdr ${scrolled ? 'is-scrolled' : ''}`}>
         <div className="container hdr__in">
           <div className="hdr__left">
-            <button className="iconbtn only-mobile" onClick={() => setDrawer(true)} aria-label="Open menu"><Icon name="menu" /></button>
+            <button className="iconbtn only-mobile" onClick={() => setDrawer(true)} aria-label="Open menu" aria-expanded={drawer} aria-controls="mobile-drawer"><Icon name="menu" /></button>
             <Logo />
           </div>
 
@@ -206,7 +217,7 @@ export default function Header() {
       )}
 
       {/* Mobile drawer */}
-      <div className={`drawer ${drawer ? 'open' : ''}`} aria-hidden={!drawer}>
+      <div id="mobile-drawer" className={`drawer ${drawer ? 'open' : ''}`} aria-hidden={!drawer} role="dialog" aria-modal="true" aria-label="Menu" {...(drawer ? {} : { inert: '' })}>
         <div className="drawer__scrim" onClick={() => setDrawer(false)} />
         <div className="drawer__panel">
           <div className="drawer__top">

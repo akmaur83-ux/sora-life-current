@@ -404,3 +404,127 @@ function cryptoRandomId() {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
+
+/**
+ * Public read of active product variants (pack sizes) for the storefront.
+ *
+ * Returns [] when the table does not exist yet (migration 0006 pending), so
+ * the catalogue keeps rendering with base prices instead of failing.
+ */
+export async function fetchPublicVariants() {
+  const { data, error } = await supabase
+    .from('product_variants')
+    .select('id,product_id,label,size,unit,sku,mrp,sale_price,stock,image_url,sort_order')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+  if (error) {
+    // 42P01 / PGRST205 = relation not found -> treat as "no variants yet".
+    if (error.code === '42P01' || error.code === 'PGRST205') return [];
+    throw error;
+  }
+  return (data || []).map((v) => ({
+    id: String(v.id),
+    productId: v.product_id,
+    label: v.label,
+    size: v.size != null ? Number(v.size) : null,
+    unit: v.unit || null,
+    sku: v.sku || null,
+    mrp: v.mrp != null ? Number(v.mrp) : null,
+    price: v.sale_price != null ? Number(v.sale_price) : (v.mrp != null ? Number(v.mrp) : null),
+    stock: v.stock != null ? Number(v.stock) : null,
+    image: v.image_url || null,
+    sortOrder: v.sort_order ?? 0,
+  }));
+}
+
+// ---------------------------------------------------------------
+// ADMIN: product variants (pack sizes)
+//
+// These sit ALONGSIDE the base product pricing, never replacing it. A product
+// with no variant rows keeps selling at products.sale_price exactly as before;
+// variants only add optional per-size pricing on top.
+//
+// Writes are guarded by the "product_variants admin write" RLS policy, so a
+// non-admin session is refused by the database regardless of the UI.
+// ---------------------------------------------------------------
+
+/** Every variant of one product, including inactive ones (admin view). */
+export async function adminListVariants(productId) {
+  const { data, error } = await supabase
+    .from('product_variants')
+    .select('*')
+    .eq('product_id', productId)
+    .order('sort_order', { ascending: true });
+  if (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') {
+      throw new Error('The product_variants table does not exist yet. Run supabase/migrations/0006_variants_billing_invoices.sql first.');
+    }
+    throw error;
+  }
+  return data || [];
+}
+
+/**
+ * Map the form's values onto real columns.
+ *
+ * Blank optional fields become NULL rather than 0 or '' — a variant with no
+ * SKU must not claim the empty-string SKU, and a variant with no explicit GST
+ * rate must fall through to the configured default rather than assert 0%.
+ */
+function variantRow(v, productId) {
+  const num = (x) => (x === '' || x == null ? null : Number(x));
+  const txt = (x) => {
+    const t = String(x ?? '').trim();
+    return t === '' ? null : t;
+  };
+  return {
+    product_id: productId,
+    label: txt(v.label),
+    size: num(v.size),
+    unit: txt(v.unit),
+    sku: txt(v.sku),
+    mrp: num(v.mrp),
+    sale_price: num(v.sale_price),
+    gst_rate: num(v.gst_rate),
+    stock: num(v.stock),
+    volume_ml: v.unit === 'ml' ? num(v.size) : null,
+    weight_grams: v.unit === 'g' ? num(v.size) : null,
+    is_active: v.is_active !== false,
+    sort_order: num(v.sort_order) ?? 0,
+  };
+}
+
+export async function adminCreateVariant(productId, v) {
+  const { data, error } = await supabase
+    .from('product_variants')
+    .insert(variantRow(v, productId))
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function adminUpdateVariant(id, productId, v) {
+  const { data, error } = await supabase
+    .from('product_variants')
+    .update(variantRow(v, productId))
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Activate / deactivate without losing the row or its price history. */
+export async function adminSetVariantActive(id, isActive) {
+  const { error } = await supabase
+    .from('product_variants')
+    .update({ is_active: isActive })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function adminDeleteVariant(id) {
+  const { error } = await supabase.from('product_variants').delete().eq('id', id);
+  if (error) throw error;
+}

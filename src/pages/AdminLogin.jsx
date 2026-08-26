@@ -64,11 +64,12 @@ export default function AdminLogin() {
           Authorized access only.
         </p>
 
-        <label style={{ display: "block", marginBottom: 8 }}>
+        <label htmlFor="admin-email" style={{ display: "block", marginBottom: 8 }}>
           Email
         </label>
 
         <input
+          id="admin-email"
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -84,11 +85,12 @@ export default function AdminLogin() {
           }}
         />
 
-        <label style={{ display: "block", marginBottom: 8 }}>
+        <label htmlFor="admin-password" style={{ display: "block", marginBottom: 8 }}>
           Password
         </label>
 
         <input
+          id="admin-password"
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}

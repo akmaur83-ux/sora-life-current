@@ -7,12 +7,12 @@ import PriceTag from '../components/PriceTag.jsx';
 import ProductRail from '../components/ProductRail.jsx';
 import NotFound from './NotFound.jsx';
 import { useStore } from '../lib/store.jsx';
-import { productBySlug, getRelated, productById } from '../data/products.js';
+import { productBySlug, getRelated, productById, isCatalogHydrated, productRouteState } from '../data/products.js';
 import { categoryBySlug, tones } from '../data/categories.js';
 import { money } from '../lib/format.js';
 
 function GalleryFrame({ product, index }) {
-  if (index === 0) return <ProductImage product={product} />;
+  if (index === 0) return <ProductImage product={product} sizes="(max-width: 900px) 92vw, 460px" />;
   const t = tones[categoryBySlug[product.category]?.tone] || tones.forest;
   const labels = ['Texture', 'Ingredients', 'In use'];
   const icons = ['droplet', 'leaf', 'sparkle'];
@@ -44,6 +44,27 @@ function Accordion({ items }) {
   );
 }
 
+// Shown while the Supabase catalogue is still hydrating, so a direct load of a
+// live-only product never flashes the 404 page. Display-only; no data/logic.
+function ProductLoading() {
+  const bar = (w) => ({ height: 14, width: w, borderRadius: 6, background: 'var(--color-border, #e8e2d6)', margin: '12px 0' });
+  return (
+    <div className="container" role="status" aria-live="polite" aria-busy="true"
+      style={{ padding: 'var(--sp-8, 40px) 0', maxWidth: 1100 }}>
+      <div style={{ display: 'grid', gap: 'var(--sp-6, 28px)' }}>
+        <div style={{ aspectRatio: '4 / 3', maxWidth: 520, borderRadius: 16, background: 'var(--color-surface-2, #f5f2eb)' }} />
+        <div>
+          <div style={bar('55%')} />
+          <div style={bar('35%')} />
+          <div style={bar('80%')} />
+          <div style={bar('30%')} />
+        </div>
+      </div>
+      <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Loading product…</span>
+    </div>
+  );
+}
+
 export default function Product() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -51,8 +72,35 @@ export default function Product() {
   const product = productBySlug[slug];
   const [frame, setFrame] = useState(0);
   const [qty, setQty] = useState(1);
-  const [variant, setVariant] = useState(product?.variants?.[0]?.label || null);
+  // The selected VARIANT OBJECT (not just its label): price, MRP, SKU, stock
+  // and image all follow from it, and the cart needs its id so the server can
+  // price the exact pack the customer chose.
+  // A size is only selectable when it has its own price. Unpriced catalogue
+  // labels are ignored so the selector can never promise a choice that does
+  // not change the price (the "750 ml still shows Rs.640" bug).
+  const pricedVariants = (product?.variants || []).filter((v) => v && v.price != null && v.price > 0);
+  const [variant, setVariant] = useState(null);
   const [justAdded, setJustAdded] = useState(false);
+
+  // Variants arrive from Supabase AFTER the first render, so the initial
+  // useState value is always empty and cannot be relied on to pick a default.
+  // This keeps the selection valid for whatever the product currently offers:
+  // it selects the first size once they load, re-selects when the customer
+  // navigates to another product, and drops a selection that no longer exists.
+  // Without it no chip reads as selected and the page falls back to the base
+  // price — which silently looks correct only when the smallest pack happens
+  // to cost the same as the base product.
+  const variantKeys = pricedVariants.map((v) => v.id ?? v.label).join('|');
+  useEffect(() => {
+    setVariant((current) => {
+      if (!pricedVariants.length) return null;
+      const stillThere = current && pricedVariants.some((v) => (v.id ?? v.label) === (current.id ?? current.label));
+      return stillThere ? current : pricedVariants[0];
+    });
+    // variantKeys collapses the list to a stable string so this runs when the
+    // set of sizes actually changes, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id, variantKeys]);
 
   useEffect(() => {
     if (!justAdded) return;
@@ -60,7 +108,21 @@ export default function Product() {
     return () => clearTimeout(t);
   }, [justAdded]);
 
-  if (!product) return <NotFound />;
+  // The catalogue hydrates from Supabase AFTER first paint, so a slug that only
+  // exists in the live catalogue is briefly "not found" on a direct load/refresh.
+  // Show a loading state until the catalogue is hydrated; a safety timeout (a
+  // little beyond main.jsx's 4s fetch window) makes sure a failed/slow load can
+  // never hang a genuinely-missing slug forever — it falls through to NotFound.
+  const [catalogTimedOut, setCatalogTimedOut] = useState(false);
+  useEffect(() => {
+    if (isCatalogHydrated()) return;
+    const t = setTimeout(() => setCatalogTimedOut(true), 5000);
+    return () => clearTimeout(t);
+  }, [slug]);
+
+  const view = productRouteState(!!product, isCatalogHydrated() || catalogTimedOut);
+  if (view === 'loading') return <ProductLoading />;
+  if (view === 'notfound') return <NotFound />;
   const cat = categoryBySlug[product.category];
   const related = getRelated(product);
   const wished = isWished(product.id);
@@ -119,17 +181,38 @@ export default function Product() {
           <p className="pdp__lead">{product.shortDescription}</p>
 
           <div className="pdp__price">
-            <PriceTag product={product} size="lg" />
+            <PriceTag product={product} size="lg" variant={variant} />
             <span className="muted" style={{ fontSize: 'var(--text-sm)' }}>Inclusive of all taxes</span>
           </div>
 
-          {product.variants && (
+          {pricedVariants.length > 0 && (
             <div className="pdp__block">
-              <span className="label">Choose variant</span>
-              <div className="taglist" style={{ marginTop: 8 }}>
-                {product.variants.map((v) => (
-                  <button key={v.id} className={`chip ${variant === v.label ? 'active' : ''}`} onClick={() => setVariant(v.label)}>{v.label}</button>
-                ))}
+              <span className="label">Choose size</span>
+              <div className="variantlist" style={{ marginTop: 8 }} role="radiogroup" aria-label="Choose size">
+                {pricedVariants.map((v) => {
+                  const selected = (variant?.id ?? variant?.label) === (v.id ?? v.label);
+                  const soldOut = v.stock === 0;
+                  return (
+                    <button
+                      key={v.id ?? v.label}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      disabled={soldOut}
+                      className={`variantchip ${selected ? 'active' : ''} ${soldOut ? 'is-out' : ''}`}
+                      onClick={() => setVariant(v)}
+                    >
+                      <span className="variantchip__label">{v.label}</span>
+                      {v.price != null && (
+                        <span className="variantchip__price">
+                          {money(v.price, product.currency)}
+                          {v.mrp > v.price && <s>{money(v.mrp, product.currency)}</s>}
+                        </span>
+                      )}
+                      {soldOut && <span className="variantchip__out">Sold out</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

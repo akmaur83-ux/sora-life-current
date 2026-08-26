@@ -21,7 +21,10 @@
 .btn svg { width: 18px; height: 18px; transition: transform var(--t) var(--ease-soft); }
 
 .btn-accent { --btn-bg: var(--color-accent); --btn-fg: var(--forest-900); }
-.btn-accent:hover { background: var(--color-accent-strong); color: #fff; }
+/* Aligned to the Add-to-Cart interaction (honey-600 hover / honey-700 active,
+   forest-900 text) so Pay online / Place order use the exact same gold. */
+.btn-accent:hover, .btn-accent:focus-visible { background: var(--honey-600); color: var(--forest-900); }
+.btn-accent:active { background: var(--honey-700); color: var(--forest-900); }
 
 .btn-outline { --btn-bg: transparent; --btn-fg: var(--color-primary); border-color: var(--color-primary); }
 .btn-outline:hover { background: var(--color-primary); color: var(--color-on-primary); }
@@ -32,6 +35,32 @@
 .btn-light { --btn-bg: var(--paper); --btn-fg: var(--color-primary); border-color: var(--line); }
 .btn-light:hover { background: #fff; border-color: var(--forest-300); }
 
+/* ---- Primary (dark-green) buttons: adopt the Add-to-Cart gold on interaction.
+   Reuses the same honey tokens as .pcard__quickadd (the single source of truth)
+   — no new colour. Scoped to primary only: outline/ghost/light/accent keep
+   their own states. The lift/box-shadow from `.btn:hover` still applies, so
+   only colour changes (no layout shift). The global :focus-visible ring
+   (base.css) is preserved for keyboard users. ---- */
+.btn:not(.btn-outline):not(.btn-ghost):not(.btn-light):not(.btn-accent):hover,
+.btn:not(.btn-outline):not(.btn-ghost):not(.btn-light):not(.btn-accent):focus-visible {
+  background: var(--honey-600);
+  color: var(--forest-900);
+}
+.btn:not(.btn-outline):not(.btn-ghost):not(.btn-light):not(.btn-accent):active {
+  background: var(--honey-700);
+  color: var(--forest-900);
+}
+
+/* Opt-in gold interaction for a light/link button that should behave like a
+   primary CTA on hover (e.g. Purchase Passport "View Passport", which is a
+   <Link> styled as .btn-light). Same honey tokens — not a parallel colour. */
+.btn-goldhover:hover, .btn-goldhover:focus-visible {
+  background: var(--honey-600); color: var(--forest-900); border-color: var(--honey-600);
+}
+.btn-goldhover:active {
+  background: var(--honey-700); color: var(--forest-900); border-color: var(--honey-700);
+}
+
 .btn-block { width: 100%; }
 .btn-lg { padding: 17px 30px; font-size: var(--text-md); }
 .btn-sm { padding: 10px 16px; font-size: var(--text-sm); }
@@ -40,7 +69,7 @@
 /* Icon button */
 .iconbtn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 44px; height: 44px; border-radius: var(--r-pill);
+  width: 44px; height: 44px; flex-shrink: 0; border-radius: var(--r-pill);
   color: var(--color-text); background: transparent; position: relative;
   transition: background var(--t) var(--ease), color var(--t) var(--ease), transform var(--t-fast) var(--ease-soft);
 }
@@ -83,8 +112,8 @@
 /* ---------- Price ---------- */
 .price { display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .price .now { font-family: var(--font-display); font-weight: 600; font-size: var(--text-lg); color: var(--color-text); }
-.price .was { font-size: var(--text-sm); color: var(--ink-400); text-decoration: line-through; }
-.price .off { font-size: var(--text-xs); font-weight: 700; color: var(--color-sale); }
+.price .was { font-size: var(--text-sm); color: var(--price-mrp); text-decoration: line-through; }
+.price .off { font-size: var(--text-xs); font-weight: 700; color: var(--clay-600); }
 
 /* ---------- Product image (branded SVG placeholder) ---------- */
 /* Product image "stage".
@@ -209,7 +238,7 @@
 
 /* Quantity stepper */
 .qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--paper); overflow: hidden; }
-.qty button { width: 42px; height: 44px; display: grid; place-items: center; color: var(--color-text); transition: background var(--t) var(--ease), transform var(--t-fast) var(--ease-soft); }
+.qty button { width: 42px; height: 44px; flex-shrink: 0; display: grid; place-items: center; color: var(--color-text); transition: background var(--t) var(--ease), transform var(--t-fast) var(--ease-soft); }
 .qty button:hover { background: var(--forest-50); }
 .qty button:active { transform: scale(0.88); }
 .qty button:disabled { color: var(--line); cursor: not-allowed; }
@@ -305,3 +334,58 @@
 
 /* ---------- Tag list ---------- */
 .taglist { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ============================================================
+   MOBILE TOUCH TARGETS
+   Sizes below are hit-area only — nothing changes visually on
+   desktop, and the type/iconography stays exactly as designed.
+   ============================================================ */
+@media (max-width: 900px) {
+  /* Wishlist toggle and the quick-add row sat 1-17px under the 44px
+     minimum; the compact icon button beside "Quick add" was worst at 27px. */
+  .pcard__wish { width: 46px; height: 46px; }
+  .pcard__quick .btn-sm { min-height: 44px; }
+  .pcard__quick .btn-light { min-width: 46px; }
+  .pcard__foot .iconbtn { width: 44px; height: 44px; }
+
+  /* Product name is the primary target in a grid card — give the link a
+     comfortable band without changing the type. */
+  .pcard__name a { display: block; padding-block: 6px; }
+
+  /* Filters pill and breadcrumb links. */
+  .browser__tools .chip { min-height: 44px; }
+  .crumbs { gap: 4px; }
+  .crumbs a { display: inline-flex; align-items: center; min-height: 40px; padding-inline: 2px; }
+}
+
+/* Add-to-cart button on a product card. This was an inline style
+   (width/height 40) on the element, which no stylesheet could override —
+   so it stayed at 40px on touch devices. As a class it can respond. */
+.pcard__add { width: 40px; height: 40px; background: var(--forest-50); }
+@media (hover: none), (max-width: 900px) {
+  .pcard__add { width: 44px; height: 44px; }
+}
+
+/* Safety net for very long product names in narrow grid cards. */
+.pcard__name, .pcard__name a { overflow-wrap: anywhere; }
+
+/* ============================================================
+   COMMERCE PRICE HIERARCHY
+   The price the customer pays leads; the struck MRP supports it and must
+   never out-shout it. Colours come from tokens so cart, PDP, checkout and
+   invoice all render the same money the same way.
+   ============================================================ */
+.price .now { color: var(--price-now-strong); font-weight: 600; }
+.price .was { color: var(--price-mrp); opacity: 0.9; }
+.price .was-lbl { color: var(--price-mrp); opacity: 0.75; font-weight: 600; }
+.price .off {
+  color: var(--price-save);
+  background: rgba(95, 138, 99, 0.10);
+  border-radius: var(--r-xs);
+  padding: 2px 7px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+/* On the deep-green product hero the same tokens would sink into the
+   background, so the sale price lifts to the light end of the scale. */
+.pdp__buybox .price .now { color: var(--price-now); }

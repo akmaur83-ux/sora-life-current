@@ -192,70 +192,151 @@
 .bh-hero__dots button.active { width: 26px; background: var(--forest-700); }
 @media (max-width: 760px) { .bh-hero__arrow { display: none; } }
 
-/* ============ MOBILE HERO — FULL-IMAGE STAGE ============
-   Desktop keeps the fixed-height cinematic stage above (object-fit: cover),
-   which is the right composition for a wide viewport. On a phone that same
-   stage is portrait (~390x520), so covering it with a landscape hero throws
-   away 58-77% of the artwork horizontally. Below 760px the hero therefore
-   becomes a stacked stage: the media sits in normal flow at its own intrinsic
-   aspect ratio (width:100% / height:auto — never cropped, never stretched,
-   and it adapts by itself to whatever ratio a future hero image has), and the
-   copy sits directly beneath it on the same cream the desktop scrim washes
-   over the image. Slides stay stacked in a single grid cell, so the crossfade,
-   the dots and the autoplay behave exactly as before.
-   These rules deliberately sit after the carousel block so they also win over
-   the Ken-Burns scale and the parallax wrapper, which would re-crop the edges. */
+/* ============ MOBILE HERO — CINEMATIC OVERLAY ============
+   Previous approach stacked the media (object-fit: contain, in normal flow)
+   above the copy in a separate cream band below it, with every slide sharing
+   one CSS grid cell via `grid-area: 1/1` for the crossfade. Because inactive
+   slides were `position: relative` (in normal flow) rather than absolute,
+   ALL of them — not just the active one — contributed to that shared cell's
+   height: the row sized itself to the TALLEST slide (the portrait-cropped
+   "Nature's Orange Gold" image needed far more height than the short,
+   landscape Sea Buckthorn poster). The active slide's copy then sat
+   vertically centered in that oversized shared box, floating well below its
+   own much-shorter image with a large blank cream gap in between — the
+   "image, then empty space, then text" bug.
+
+   The fix is to stop treating mobile as a different layout family. Inherit
+   the desktop overlay system as-is (absolute-positioned crossfade,
+   object-fit: cover, Ken Burns, the oversized parallax wrapper) so image and
+   text are one composited visual again, and only retune what a narrow/tall
+   viewport actually needs: a compact bounded height, a bottom-weighted
+   vertical scrim instead of desktop's left-weighted horizontal one, and a
+   bottom-anchored copy block instead of a vertically centered one. */
 @media (max-width: 760px) {
-  .bh-hero {
-    height: auto;
-    min-height: 0;
-    display: grid;                /* all slides share one cell */
-    background: var(--cream);     /* same tone the desktop scrim resolves to */
-  }
-  .bh-slide {
-    position: relative;
-    inset: auto;
-    grid-area: 1 / 1;
-    display: flex;
-    flex-direction: column;       /* media band, then copy */
-  }
+  /* Compact and bounded — a gentle multiple of the viewport width rather
+     than a tall vh-based box, so a cover-cropped landscape/portrait photo
+     isn't zoomed in so far that its subject gets cropped away. Floors at
+     500px on typical phones, scales up to a 600px ceiling on larger ones. */
+  .bh-hero { height: clamp(500px, 122vw, 600px); }
 
-  /* Media in normal flow at its natural ratio — this is what removes the crop. */
-  .bh-hero__parallax { position: relative; inset: auto; transform: none; will-change: auto; }
-  .bh-hero__media,
-  .bh-slide.is-active .bh-hero__media {
-    position: relative;
-    width: 100%;
-    height: auto;
-    display: block;
-    object-fit: contain;
-    transform: none;              /* a Ken-Burns scale would crop it again */
-    animation: none;
+  /* Bottom-anchored, photographic wash: fully transparent over the top ~1/3
+     of the frame (where the subject — berries, or her face — reads clearly),
+     graduating to a soft cream wash exactly where the copy sits. Same cream
+     family as the desktop scrim (rgba(244,238,225,*)) reoriented vertically
+     — no new colour introduced, no hard-edged rectangle. */
+  .bh-hero__scrim {
+    background: linear-gradient(
+      to bottom,
+      rgba(244,238,225,0) 0%,
+      rgba(244,238,225,0) 30%,
+      rgba(244,238,225,0.36) 46%,
+      rgba(244,238,225,0.74) 60%,
+      rgba(244,238,225,0.92) 75%,
+      rgba(244,238,225,0.97) 100%
+    );
   }
-
-  /* The scrim only existed to keep text legible on top of the image. */
-  .bh-hero__scrim { display: none; }
 
   .bh-hero__inner {
-    flex: 1;
-    height: auto;
-    align-items: center;
-    padding-block: var(--sp-8) calc(var(--sp-10) + 22px);  /* clears the dots */
+    align-items: flex-end;
+    /* Clears the dots row (bottom: 22px + ~26px active-dot width) plus the
+       device safe area, so content never sits under a notch/home-indicator
+       and never collides with the fixed bottom tab bar below the hero. */
+    padding-bottom: calc(var(--sp-8) + 26px + env(safe-area-inset-bottom));
   }
   .bh-hero__copy { max-width: none; }
-  .bh-hero__benefits { flex-wrap: wrap; gap: 14px 26px; margin-top: var(--sp-8); }
+
+  /* Every hero photo places its subject (berries, her face, the fruit) in
+     the upper 2/3 of the frame and something unremarkable — sky, a table
+     edge — at the very bottom. On a compact box that subject sits close
+     to where bottom-anchored text needs to start, so the copy block is
+     tightened here (gaps only, not font sizes — type scale is untouched)
+     to clear it with room to spare. The full lede line is desktop-only:
+     it mostly restates the kicker/sub, and dropping it on mobile is what
+     buys the vertical room, not the gap-tightening alone. */
+  .bh-hero__title { margin-bottom: 10px; }
+  .bh-hero__sub { margin-bottom: var(--sp-4); }
+  .bh-hero__lede { display: none; }
+  .bh-hero__benefits { flex-wrap: wrap; gap: 12px 24px; margin-top: var(--sp-4); }
   .bh-hero__bdiv { display: none; }
 }
 
 /* ============ PREMIUM PRICING ============ */
 .price { display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.price .now { font-family: var(--font-display); font-weight: 600; color: var(--color-text); }
-.price .was { font-size: var(--text-sm); color: var(--ink-400); text-decoration: line-through; text-decoration-thickness: 1px; }
-.price .was-lbl { text-decoration: none; display: inline-block; font-size: 0.72em; letter-spacing: 0.03em; color: var(--ink-400); margin-right: 1px; }
-.price .off { font-size: var(--text-xs); font-weight: 700; color: var(--color-sale); }
+.price .now { font-family: var(--font-display); font-weight: 600; color: var(--price-now-strong); }
+.price .was { font-size: var(--text-sm); color: var(--price-mrp); text-decoration: line-through; text-decoration-thickness: 1px; }
+.price .was-lbl { text-decoration: none; display: inline-block; font-size: 0.72em; letter-spacing: 0.03em; color: var(--price-mrp); opacity: 0.85; margin-right: 1px; }
+.price .off { font-size: var(--text-xs); font-weight: 700; color: var(--clay-600); }
 .price--lg .now { font-size: 1.9rem; }
 .price-tbd { font-weight: 600; font-size: var(--text-sm); }
 
 /* Premium discount badge — refined, not a marketplace sticker */
 .badge-sale { background: var(--forest-700); color: var(--honey-300); letter-spacing: 0.08em; box-shadow: var(--shadow-xs); font-weight: 700; }
 
+
+/* Hero pagination dots were 9x9 — visually right, far too small to tap.
+   The dot keeps its size; an invisible 44px hit area is centred on it. */
+.bh-hero__dots button { position: relative; }
+.bh-hero__dots button::after {
+  content: ""; position: absolute; top: 50%; left: 50%;
+  width: 44px; height: 44px; transform: translate(-50%, -50%);
+}
+
+/* At 320px the bestsellers header could not fit "Bestsellers" plus the
+   nowrap "View all" link on one row, pushing the page into horizontal
+   scroll. Let the header wrap on narrow phones. */
+@media (max-width: 380px) {
+  .bh-best__head { flex-wrap: wrap; gap: var(--sp-3); }
+  .bh-best__all { margin-left: auto; }
+}
+
+/* The header search was a fixed 260px. Combined with non-shrinking 44px icon
+   buttons (needed for tap targets) the header row could not fit at ~1280px —
+   a very common laptop width — and pushed the page into horizontal scroll.
+   The search now absorbs the squeeze instead of the buttons. */
+.hdr__right { min-width: 0; }
+.hdr__search { width: 260px; flex: 0 1 260px; min-width: 0; }
+.hdr__search .searchbox, .hdr__search .input { min-width: 0; width: 100%; }
+@media (max-width: 1400px) { .hdr__search { flex-basis: 200px; } }
+@media (max-width: 1180px) { .hdr__search { flex-basis: 150px; } }
+
+/* ============================================================
+   PRICE HIERARCHY — final authority.
+   home.css is the last storefront sheet index.html loads (tokens, base,
+   components, layout, pages, then here), so these declarations settle the
+   money language for every surface: the price the customer pays leads in
+   green, the MRP supports it in a muted red with a strikethrough — never
+   grey, and never louder than the selling price.
+   ============================================================ */
+.price .now,
+.pdp__price .now,
+.cartrow__price,
+.cartrow__unitprice,
+.checkout__lp,
+.inv__price { color: var(--price-now-strong); font-weight: 600; }
+
+.price .was,
+.pdp__price .was,
+.cartrow__price s,
+.cartrow__unit s,
+.variantchip__price s,
+.inv__table s { color: var(--price-mrp); text-decoration: line-through; }
+
+.price .was-lbl { color: var(--price-mrp); }
+
+/* Selling price must stay visually dominant over the MRP. */
+.pdp__price .now { font-weight: 700; }
+.pdp__price .was { font-weight: 500; }
+
+/* components.css scopes `.pdp__buybox .price .now` at a higher specificity,
+   which would otherwise reintroduce a second green. Match it here so the
+   buybox uses the same strong green as every other surface. */
+.pdp__buybox .price .now { color: var(--price-now-strong); }
+
+/* Order summary money follows the same two-colour language: the MRP line is
+   the struck red, the amount actually charged is the green. Neutral rows in
+   between stay ink so the two ends of the story stand out. */
+.psum__row--mrp .psum__value { color: var(--price-mrp); text-decoration: line-through; }
+.psum__row.is-strong .psum__value { color: var(--price-now-strong); }
+.inv__row--mrp .inv__row-value { color: var(--price-mrp); text-decoration: line-through; }
+.inv__row.is-strong .inv__row-value { color: var(--price-now-strong); }
+.adm-bill__row.is-mrp > span:last-child { color: var(--price-mrp); text-decoration: line-through; }

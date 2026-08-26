@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useState, useCallback } from 'react';
-import { productById } from '../data/products.js';
+import { productById, getCatalogVersion } from '../data/products.js';
 
 // ============================================================
 // Global store — cart, wishlist, saved-for-later, toasts.
@@ -21,12 +21,15 @@ function load() {
 function reducer(state, action) {
   switch (action.type) {
     case 'ADD': {
-      const { id, qty = 1, variant = null } = action;
-      const key = id + (variant ? '::' + variant : '');
+      const { id, qty = 1, variant = null, variantId = null } = action;
+      // Two different pack sizes of the same product are two cart lines, so
+      // the key includes the variant. variantId is what the server prices
+      // against; `variant` is only the human label shown in the UI.
+      const key = id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
       const existing = state.cart.find((l) => l.key === key);
       const cart = existing
         ? state.cart.map((l) => (l.key === key ? { ...l, qty: l.qty + qty } : l))
-        : [...state.cart, { key, id, variant, qty }];
+        : [...state.cart, { key, id, variant, variantId, qty }];
       return { ...state, cart };
     }
     case 'SET_QTY': {
@@ -75,8 +78,17 @@ export function StoreProvider({ children }) {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), opts.duration || 2600);
   }, []);
 
+  // `variant` accepts either a variant object ({ id, label, ... }) or a plain
+  // label string, so existing call sites that pass a label keep working.
   const addToCart = useCallback((product, qty = 1, variant = null) => {
-    dispatch({ type: 'ADD', id: product.id, qty, variant });
+    const isObj = variant && typeof variant === 'object';
+    const label = isObj ? (variant.label ?? null) : variant;
+    // A variantId is only meaningful when it identifies a priced row in
+    // product_variants. Catalogue variants that carry a label but no price
+    // are display-only, and sending their local id would make the server
+    // reject the line ("selected size is no longer available").
+    const variantId = isObj && variant.price != null ? (variant.id ?? null) : null;
+    dispatch({ type: 'ADD', id: product.id, qty, variant: label, variantId });
     toast(`Added to cart`, { product: product.id, kind: 'cart' });
   }, [toast]);
 
@@ -86,16 +98,40 @@ export function StoreProvider({ children }) {
     toast(wasIn ? 'Removed from wishlist' : 'Saved to wishlist', { kind: 'wish' });
   }, [state.wishlist, toast]);
 
-  const cartDetailed = useMemo(() =>
-    state.cart.map((l) => ({ ...l, product: productById[l.id] })).filter((l) => l.product),
-    [state.cart]);
-  const savedDetailed = useMemo(() =>
-    state.saved.map((l) => ({ ...l, product: productById[l.id] })).filter((l) => l.product),
-    [state.saved]);
+  // Resolve the chosen pack size so a line is priced at ITS price, not the
+  // product's base price. These figures are for display only — the payable
+  // amount is always recomputed server-side (api/_lib/pricing.js).
+  const hydrate = (l) => {
+    const product = productById[l.id];
+    if (!product) return null;
+    const variantObj = l.variantId
+      ? (product.variants || []).find((v) => String(v.id) === String(l.variantId)) || null
+      : null;
+    const unitPrice = variantObj?.price ?? product.price;
+    const unitMrp = variantObj?.mrp ?? product.mrp ?? unitPrice;
+    return {
+      ...l,
+      product,
+      variantObj,
+      variantLabel: variantObj?.label ?? l.variant ?? null,
+      unitPrice,
+      unitMrp: Math.max(unitMrp, unitPrice),
+      lineTotal: unitPrice * l.qty,
+    };
+  };
+
+  // Variants arrive from Supabase AFTER first render. Memoising on state.cart
+  // alone meant a line added with a 750 ml variantId kept the pre-variant
+  // base price (250 ml) forever, because the cart array never changed. Read
+  // the catalogue version during render so the async load invalidates these.
+  const catalogVersion = getCatalogVersion();
+  const cartDetailed = useMemo(() => state.cart.map(hydrate).filter(Boolean), [state.cart, catalogVersion]);
+  const savedDetailed = useMemo(() => state.saved.map(hydrate).filter(Boolean), [state.saved, catalogVersion]);
 
   const cartCount = useMemo(() => state.cart.reduce((s, l) => s + l.qty, 0), [state.cart]);
-  const subtotal = useMemo(() => cartDetailed.reduce((s, l) => s + l.product.price * l.qty, 0), [cartDetailed]);
-  const savings = useMemo(() => cartDetailed.reduce((s, l) => s + Math.max(0, (l.product.mrp || l.product.price) - l.product.price) * l.qty, 0), [cartDetailed]);
+  const subtotal = useMemo(() => cartDetailed.reduce((s, l) => s + l.lineTotal, 0), [cartDetailed]);
+  const mrpTotal = useMemo(() => cartDetailed.reduce((s, l) => s + l.unitMrp * l.qty, 0), [cartDetailed]);
+  const savings = useMemo(() => cartDetailed.reduce((s, l) => s + Math.max(0, l.unitMrp - l.unitPrice) * l.qty, 0), [cartDetailed]);
 
   const value = {
     ...state,
@@ -110,6 +146,7 @@ export function StoreProvider({ children }) {
     cartCount,
     wishCount: state.wishlist.length,
     subtotal,
+    mrpTotal,
     savings,
   };
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;

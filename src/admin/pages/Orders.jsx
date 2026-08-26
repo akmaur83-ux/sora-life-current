@@ -1,4 +1,5 @@
 import { useEffect, useState, Fragment } from 'react';
+import { Link } from 'react-router-dom';
 import { adminListOrders } from '../../lib/adminApi.js';
 import { money } from '../../lib/format.js';
 
@@ -28,6 +29,32 @@ function formatAddress(c = {}) {
 
 function hasAddress(c = {}) {
   return Boolean(c.address || c.city || c.pin);
+}
+
+const dt = (iso) => (iso ? new Date(iso).toLocaleString('en-IN') : null);
+
+// The audit trail an order can prove from its own columns. Steps with no
+// timestamp are not shown — nothing here is inferred or back-dated.
+function timeline(o) {
+  const steps = [
+    ['Order placed', o.created_at],
+    ['Payment received', o.paid_at],
+    ['Invoice generated', o.invoiced_at],
+    ['Shipped', o.shipped_at],
+    ['Delivered', o.delivered_at],
+    ['Cancelled', o.cancelled_at],
+  ];
+  return steps.filter(([, at]) => Boolean(at)).map(([label, at]) => [label, dt(at)]);
+}
+
+// One row of the money breakdown. Rendered only when the order genuinely
+// carries the figure, so a zero is never mistaken for a real charge.
+function Money({ label, value, tone, strong }) {
+  return (
+    <div className={`adm-bill__row${tone ? ` is-${tone}` : ''}${strong ? ' is-strong' : ''}`}>
+      <span>{label}</span><span>{value}</span>
+    </div>
+  );
 }
 
 export default function Orders() {
@@ -97,6 +124,8 @@ export default function Orders() {
                 const c = o.customer || {};
                 const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || '—';
                 const open = expandedId === o.id;
+                const b = o.billing && typeof o.billing === 'object' ? o.billing : null;
+                const tax = b?.tax || null;
                 return (
                   <Fragment key={o.id}>
                     <tr className={open ? 'adm-order-row--open' : ''}>
@@ -154,41 +183,135 @@ export default function Orders() {
                               </dl>
                             </section>
 
-                            {/* Order meta */}
+                            {/* Order + payment meta */}
                             <section className="adm-order-block">
-                              <h3>Order</h3>
+                              <h3>Order &amp; payment</h3>
                               <dl className="adm-kv">
                                 <div><dt>Order ID</dt><dd>{o.order_number}</dd></div>
-                                <div><dt>Placed</dt><dd>{new Date(o.created_at).toLocaleString('en-IN')}</dd></div>
+                                {o.invoice_number && <div><dt>Invoice no.</dt><dd>{o.invoice_number}</dd></div>}
+                                <div><dt>Placed</dt><dd>{dt(o.created_at)}</dd></div>
                                 <div><dt>Method</dt><dd>{o.payment_method === 'cod' ? 'Cash on delivery' : 'Razorpay'}</dd></div>
-                                <div><dt>Payment</dt><dd>{o.payment_status}</dd></div>
+                                <div>
+                                  <dt>Payment</dt>
+                                  <dd><span className={`badge ${STATUS_BADGE[o.payment_status] || 'badge-soft'}`}>{o.payment_status}</span></dd>
+                                </div>
                                 <div><dt>Delivery</dt><dd>{o.delivery_method || '—'}</dd></div>
-                                {o.razorpay_payment_id && <div><dt>Razorpay payment</dt><dd>{o.razorpay_payment_id}</dd></div>}
+                                {/* Transaction ids exist only for a real gateway payment. COD
+                                    and unpaid orders show nothing rather than a stand-in. */}
+                                {o.razorpay_payment_id && (
+                                  <div><dt>Transaction ID</dt><dd className="adm-mono">{o.razorpay_payment_id}</dd></div>
+                                )}
+                                {o.razorpay_order_id && (
+                                  <div><dt>Gateway order</dt><dd className="adm-mono">{o.razorpay_order_id}</dd></div>
+                                )}
+                                {o.failure_reason && <div><dt>Failure</dt><dd>{o.failure_reason}</dd></div>}
                               </dl>
+                              <Link to={`/invoice/${o.order_number}`} className="btn btn-sm" style={{ marginTop: 10 }}>
+                                Open invoice
+                              </Link>
                             </section>
+
+                            {/* Timeline */}
+                            {timeline(o).length > 0 && (
+                              <section className="adm-order-block">
+                                <h3>Timeline</h3>
+                                <ol className="adm-timeline">
+                                  {timeline(o).map(([label, when]) => (
+                                    <li key={label}>
+                                      <span className="adm-timeline__label">{label}</span>
+                                      <span className="adm-timeline__at">{when}</span>
+                                    </li>
+                                  ))}
+                                </ol>
+                              </section>
+                            )}
 
                             {/* Items */}
                             <section className="adm-order-block adm-order-block--wide">
                               <h3>Items</h3>
                               {Array.isArray(o.items) && o.items.length ? (
                                 <table className="adm-items">
-                                  <tbody>
-                                    {o.items.map((it, i) => (
-                                      <tr key={i}>
-                                        <td>{it.name || it.product_id}{it.variant ? ` · ${it.variant}` : ''}</td>
-                                        <td className="adm-items__qty">× {it.qty}</td>
-                                        <td className="adm-items__amt">{money(Number(it.line_total ?? (it.unit_price * it.qty)) || 0)}</td>
-                                      </tr>
-                                    ))}
-                                    <tr className="adm-items__total">
-                                      <td>Total</td><td></td>
-                                      <td className="adm-items__amt">{money((o.amount_paise || 0) / 100)}</td>
+                                  <thead>
+                                    <tr>
+                                      <th>Product</th><th>Variant</th>
+                                      <th className="adm-items__amt">MRP</th>
+                                      <th className="adm-items__amt">Price</th>
+                                      <th className="adm-items__qty">Qty</th>
+                                      <th className="adm-items__amt">Amount</th>
                                     </tr>
+                                  </thead>
+                                  <tbody>
+                                    {o.items.map((it, i) => {
+                                      const unit = Number(it.unit_price) || 0;
+                                      const mrp = Number(it.unit_mrp) || 0;
+                                      return (
+                                        <tr key={i}>
+                                          <td>
+                                            {it.name || it.product_id}
+                                            {it.sku && <span className="hint" style={{ display: 'block' }}>{it.sku}</span>}
+                                          </td>
+                                          <td>{it.variant || '—'}</td>
+                                          <td className="adm-items__amt">{mrp > unit ? <s>{money(mrp)}</s> : '—'}</td>
+                                          <td className="adm-items__amt adm-price">{money(unit)}</td>
+                                          <td className="adm-items__qty">× {it.qty}</td>
+                                          <td className="adm-items__amt">{money(Number(it.line_total ?? unit * it.qty) || 0)}</td>
+                                        </tr>
+                                      );
+                                    })}
                                   </tbody>
                                 </table>
                               ) : (
                                 <p className="muted">No item detail stored for this order.</p>
                               )}
+                            </section>
+
+                            {/* Money breakdown — straight from the server-computed billing
+                                snapshot stored at checkout. Nothing is recalculated here. */}
+                            <section className="adm-order-block adm-order-block--wide">
+                              <h3>Billing breakdown</h3>
+                              <div className="adm-bill">
+                                {b ? (
+                                  <>
+                                    {b.mrpTotal > b.itemTotal && <Money label="MRP total" value={money(b.mrpTotal)} tone="mrp" />}
+                                    <Money label="Item total" value={money(b.itemTotal)} />
+                                    {b.productDiscount > 0 && (
+                                      <Money label="Product discount" value={`-${money(b.productDiscount)}`} tone="save" />
+                                    )}
+                                    {b.couponDiscount > 0 && (
+                                      <Money
+                                        label={`Coupon discount${b.coupon?.code ? ` (${b.coupon.code})` : ''}`}
+                                        value={`-${money(b.couponDiscount)}`}
+                                        tone="save"
+                                      />
+                                    )}
+                                    <Money label="Subtotal" value={money(b.subtotal)} />
+                                    <Money label="Shipping" value={b.shipping > 0 ? money(b.shipping) : 'FREE'} />
+                                    {b.platformFee > 0 && <Money label="Platform fee" value={money(b.platformFee)} />}
+                                    {b.packagingFee > 0 && <Money label="Packaging fee" value={money(b.packagingFee)} />}
+                                    {tax && (
+                                      <>
+                                        <Money label="Taxable amount" value={money(tax.taxableAmount)} />
+                                        {tax.kind === 'cgst_sgst' ? (
+                                          <>
+                                            <Money label="CGST" value={money(tax.cgst)} />
+                                            <Money label="SGST" value={money(tax.sgst)} />
+                                          </>
+                                        ) : tax.kind === 'igst' ? (
+                                          <Money label="IGST" value={money(tax.igst)} />
+                                        ) : (
+                                          <Money label="GST" value={money(tax.totalTax)} />
+                                        )}
+                                      </>
+                                    )}
+                                  </>
+                                ) : (
+                                  <p className="muted">
+                                    This order predates the stored billing breakdown. Only the charged total is on record.
+                                  </p>
+                                )}
+                                <Money label="Grand total" value={money((o.amount_paise || 0) / 100)} strong />
+                                {tax?.mode === 'inclusive' && <p className="hint">Inclusive of all taxes.</p>}
+                              </div>
                             </section>
                           </div>
                         </td>

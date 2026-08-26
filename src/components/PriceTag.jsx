@@ -2,8 +2,15 @@ import { money } from '../lib/format.js';
 
 // Prominent sale price + struck MRP + optional % off.
 // Reads the single pricing source on the product (price = sale, mrp = original).
-export default function PriceTag({ product, showOff = true, size }) {
-  const { price, mrp, discountPct, currency, priceVerified } = product;
+export default function PriceTag({ product, showOff = true, size, variant = null }) {
+  const { currency, priceVerified } = product;
+  // When a pack size is selected its own price is what the customer pays,
+  // so the whole tag (price, MRP and % off) comes from the variant.
+  const price = variant?.price ?? product.price;
+  const mrp = variant?.mrp ?? product.mrp;
+  const discountPct = variant
+    ? (variant.discountPct ?? (mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0))
+    : product.discountPct;
 
   if (priceVerified === false) {
     return <span className="price"><span className="price-tbd muted">Price coming soon</span></span>;

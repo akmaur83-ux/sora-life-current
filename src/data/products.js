@@ -33,6 +33,10 @@ function normalizeProduct(p) {
 
   return {
     id: p.id,
+    // Database surrogate id (products.id). Needed to join priced variants,
+    // whose product_id references it — the catalogue `id` is the biosash
+    // code ('b82'), which would never match.
+    dbId: p.dbId ?? null,
     slug: p.slug,
     name: p.name,
     category: p.category,
@@ -127,14 +131,53 @@ export let catalogSource = 'static'; // 'static' | 'supabase'
  * successful Supabase fetch). `rawList` items use the same "resolved"
  * shape as normalizeProduct() expects.
  */
+// Bumped whenever the catalogue or its variants are replaced. Consumers that
+// memoise data derived from products (e.g. priced cart lines) include this in
+// their dependencies so they recompute once the async Supabase data lands.
+let catalogVersion = 0;
+export function getCatalogVersion() { return catalogVersion; }
+
+// True once the authoritative Supabase catalogue has replaced the bundled seed.
+// Lets product routes tell "still hydrating" apart from a genuine 404.
+export function isCatalogHydrated() { return catalogSource === 'supabase'; }
+
+// Pure view decision for a product route, kept out of the component so it is
+// unit-testable without a DOM. `found` = the slug resolved to a product;
+// `settled` = the catalogue has hydrated OR a safety timeout has elapsed.
+//   found            -> 'product'
+//   !found & settled  -> 'notfound'   (catalogue is in; slug really is unknown)
+//   !found & !settled -> 'loading'    (catalogue still landing; don't flash 404)
+export function productRouteState(found, settled) {
+  if (found) return 'product';
+  return settled ? 'notfound' : 'loading';
+}
+
 export function applyCatalog(rawList, source = 'supabase') {
   if (!Array.isArray(rawList) || rawList.length === 0) return false;
-  const built = buildCatalog(rawList);
+
+  // The products table has no variants column, so a Supabase row carries
+  // `variants: undefined` and would wipe the pack sizes the bundled catalogue
+  // knows about. Carry those labels across by slug. They stay display-only
+  // (no price) until real priced rows arrive via applyVariants().
+  const staticVariantsBySlug = new Map();
+  for (const p of BIOSASH_PRODUCTS) {
+    if (p.slug && Array.isArray(p.variants) && p.variants.length) {
+      staticVariantsBySlug.set(p.slug, p.variants);
+    }
+  }
+  const merged = rawList.map((row) => (
+    (!row.variants || !row.variants.length) && staticVariantsBySlug.has(row.slug)
+      ? { ...row, variants: staticVariantsBySlug.get(row.slug) }
+      : row
+  ));
+
+  const built = buildCatalog(merged);
   products = built.products;
   productBySlug = built.productBySlug;
   productById = built.productById;
   catalogSource = source;
   priceRange = getPriceRange();
+  catalogVersion += 1;
   return true;
 }
 
@@ -193,3 +236,47 @@ export function getPriceRange() {
 }
 // Back-compat live-binding export (ProductBrowser reads this directly).
 export let priceRange = getPriceRange();
+
+/**
+ * Attach priced variants (pack sizes) to the in-memory catalogue.
+ *
+ * Variants are keyed by the products table's numeric id, which the catalogue
+ * carries as `dbId`. Products without variants are left exactly as they are,
+ * so this is a no-op until variants are configured in admin.
+ *
+ * Returns true when something changed, so main.jsx can trigger one re-render.
+ */
+export function applyVariants(variantList) {
+  if (!Array.isArray(variantList) || variantList.length === 0) return false;
+  const byProduct = new Map();
+  for (const v of variantList) {
+    if (v.price == null || !(v.price > 0)) continue; // unpriced variant is not selectable
+    const key = String(v.productId);
+    if (!byProduct.has(key)) byProduct.set(key, []);
+    byProduct.get(key).push(v);
+  }
+  if (byProduct.size === 0) return false;
+
+  let changed = false;
+  for (const p of products) {
+    const list = byProduct.get(String(p.dbId ?? p.id));
+    if (!list || !list.length) continue;
+    const sorted = [...list].sort((a, b) => (a.sortOrder - b.sortOrder) || (a.price - b.price));
+    p.variants = sorted.map((v) => ({
+      id: v.id,
+      label: v.label,
+      price: v.price,
+      mrp: v.mrp != null && v.mrp > v.price ? v.mrp : v.price,
+      sku: v.sku,
+      stock: v.stock,
+      image: v.image,
+      // Percentage off for this specific pack size.
+      discountPct: v.mrp != null && v.mrp > v.price
+        ? Math.round(((v.mrp - v.price) / v.mrp) * 100)
+        : 0,
+    }));
+    changed = true;
+  }
+  if (changed) catalogVersion += 1;
+  return changed;
+}

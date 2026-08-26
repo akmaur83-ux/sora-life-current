@@ -16,6 +16,7 @@
 // invented. See the Phase 2 report for exactly what's missing.
 // ============================================================
 import { productById } from './products.js';
+import { supabase } from '../lib/supabase.js';
 
 export const NOT_AVAILABLE = 'Not available yet';
 
@@ -35,6 +36,23 @@ function formatDateTime(iso) {
   const date = formatDate(iso);
   const time = new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d);
   return `${date}, ${time}`;
+}
+
+/**
+ * Estimated delivery window, derived only from data we actually have: the
+ * order date plus the standard 3–5 day dispatch window already quoted at
+ * checkout. It is an ESTIMATE (and labelled as one) — not a courier promise.
+ * Cancelled orders show nothing.
+ */
+function estimateDelivery(order) {
+  const start = new Date(order?.createdAt);
+  if (Number.isNaN(start.getTime()) || order?.status === 'cancelled') {
+    return { available: false, display: NOT_AVAILABLE };
+  }
+  const from = new Date(start); from.setDate(from.getDate() + 3);
+  const to = new Date(start); to.setDate(to.getDate() + 5);
+  const fmtShort = (d) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(d);
+  return { available: true, display: `${fmtShort(from)} – ${formatDate(to.toISOString())}` };
 }
 
 function daysAgo(iso) {
@@ -106,9 +124,13 @@ export function mapOrderToPassport(order) {
 
   return {
     passportId: order.orderNumber,
-    member: { name: memberName, tier: 'Order Verified' },
+    member: { name: memberName, tier: 'Premium Member', tierIcon: 'award' },
     status: computeStatusLabel(order),
-    eta: { available: false, display: NOT_AVAILABLE },
+    eta: estimateDelivery(order),
+    // Courier/tracking have no column on `orders` yet — surfaced as
+    // "not available" rather than invented. Wired here so the UI reads the
+    // real values automatically once fulfilment data exists.
+    shipping: { carrier: null, trackingId: null },
     deliveredOn: null,
     product: {
       ...product,
@@ -186,4 +208,42 @@ export async function lookupPassport({ orderNumber, email }) {
     throw new Error(data?.error || 'We could not look up that order. Please try again.');
   }
   return mapOrderToPassport(data.order);
+}
+
+/**
+ * Authenticated-owner lookup: fetch the customer's OWN order by number
+ * through the normal browser client. Ownership is enforced entirely by the
+ * "orders customer read" RLS policy (user_id = auth.uid()) — a foreign or
+ * non-existent order number simply matches zero rows, so this both proves
+ * ownership and gives the same generic denial in every non-owned case (no
+ * existence oracle). No email is asked for or trusted; the URL only supplies
+ * the order number, never a user_id or email. Throws NO_ACCESS when the
+ * caller doesn't own a matching order.
+ */
+export async function lookupPassportForUser(orderNumber) {
+  const on = String(orderNumber || '').trim().toUpperCase();
+  if (!on) { const e = new Error('Missing order number.'); e.code = 'NO_ACCESS'; throw e; }
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select('order_number, status, payment_status, payment_method, amount_paise, currency, items, customer, created_at, paid_at')
+    .eq('order_number', on)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) { const e = new Error('You do not have access to this order.'); e.code = 'NO_ACCESS'; throw e; }
+
+  // Reshape the raw DB row into the same sanitized shape mapOrderToPassport
+  // consumes (the customer jsonb already uses the same field names).
+  return mapOrderToPassport({
+    orderNumber: data.order_number,
+    status: data.status,
+    paymentStatus: data.payment_status,
+    paymentMethod: data.payment_method,
+    amount: (Number(data.amount_paise) || 0) / 100,
+    currency: data.currency || 'INR',
+    items: Array.isArray(data.items) ? data.items : [],
+    customer: data.customer || {},
+    createdAt: data.created_at,
+    paidAt: data.paid_at || null,
+  });
 }

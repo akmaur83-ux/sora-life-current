@@ -332,3 +332,2437 @@
   .psp-promocard-wide { grid-column: span 1; }
   .psp__tabs { gap: var(--sp-4); }
 }
+
+/* ============================================================
+   LUXURY DARK THEME  — visual layer only (no structural/logic change)
+   Deep forest/near-black ground, emerald surfaces, champagne-gold
+   accents, warm-ivory type, thin gold borders, controlled glow and
+   restrained premium motion (all reduced-motion aware). Layered over
+   the existing .psp* rules by re-scoping the shared surface/text tokens
+   inside .psp, plus a few targeted accent overrides. Buttons keep the
+   existing dark-green -> honey interaction language (components.css).
+   ============================================================ */
+.psp {
+  /* Dark surface/accent tokens — deep near-black forest to match the
+     reference's cards (cooler/darker than a bright emerald). */
+  --psp-surface: #11201A;      /* deep forest-black card surface */
+  --psp-surface-2: #17281F;    /* subtle lift for insets/media */
+  --psp-inset: rgba(240, 246, 242, 0.05); /* refined glass inset */
+  --psp-border: rgba(232, 176, 75, 0.22);  /* thin gold border */
+  --psp-border-soft: rgba(240, 246, 242, 0.10);
+  --psp-glow: rgba(232, 176, 75, 0.20);
+
+  /* Re-point the shared tokens the passport already consumes so every
+     var() inside resolves to the dark palette. --forest-50 and --honey-*
+     are intentionally NOT re-pointed (ivory text + gold accents). */
+  --color-text: var(--psp-on-dark);
+  --color-text-muted: var(--psp-on-dark-muted);
+  --ink-900: var(--psp-on-dark);
+  --ink-700: var(--psp-on-dark);
+  --ink-500: var(--psp-on-dark-muted);
+  --ink-400: var(--psp-on-dark-muted);
+  --paper: var(--psp-surface);
+  --cream: var(--psp-inset);
+  --line: var(--psp-border);
+  --line-soft: var(--psp-border-soft);
+
+  color: var(--psp-on-dark);
+  background:
+    radial-gradient(46% 34% at 90% 1%, rgba(232,176,75,0.16), transparent 55%),
+    radial-gradient(120% 80% at 100% -10%, rgba(232,176,75,0.07), transparent 55%),
+    radial-gradient(90% 70% at -10% 110%, rgba(44,83,65,0.28), transparent 60%),
+    linear-gradient(160deg, #0A160F 0%, #0B1A12 55%, #07110B 100%);
+}
+
+/* Ambient drift + faint botanical motif behind everything (never blocks
+   interaction). Real content is lifted above via z-index below. */
+.psp::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(40% 32% at 18% 12%, rgba(232,176,75,0.07), transparent 60%),
+    radial-gradient(36% 30% at 88% 82%, rgba(59,110,86,0.16), transparent 60%);
+}
+.psp::after {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23E8B04B' stroke-width='1'%3E%3Cpath d='M100 34 C72 70 72 130 100 166 C128 130 128 70 100 34 Z'/%3E%3Cpath d='M100 44 L100 156'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 220px; background-repeat: repeat;
+}
+.psp__main, .psp__topbar { position: relative; z-index: 1; }
+
+/* ---- Surfaces: thin gold borders, deep near-black fill, faint gold
+   top-edge glow + hairline highlight (matches the reference cards). ---- */
+.psp__hero, .psp-card, .psp__timeline {
+  border: 1px solid var(--psp-border);
+  background:
+    linear-gradient(180deg, rgba(232,176,75,0.05), transparent 26%),
+    linear-gradient(165deg, #142620, #0C1811);
+  box-shadow: inset 0 1px 0 rgba(232,176,75,0.10), 0 12px 34px rgba(0,0,0,0.34);
+}
+.psp__hero-media { background: linear-gradient(160deg, var(--psp-surface-2), #0C1811); }
+.psp__status, .psp-promoband, .psp-promocard-wide {
+  border: 1px solid var(--psp-border);
+  background:
+    linear-gradient(180deg, rgba(232,176,75,0.06), transparent 30%),
+    linear-gradient(165deg, #142620, #0C1811);
+}
+.psp__status { box-shadow: inset 0 1px 0 rgba(232,176,75,0.12), 0 18px 48px rgba(0,0,0,0.44), 0 0 34px var(--psp-glow); }
+
+/* ---- Accent fixes: dark-gold text -> bright gold; light icon chips -> inset ---- */
+.psp__tab.active { color: var(--honey-400); border-color: var(--honey-500); }
+.psp__tab:hover { color: var(--psp-on-dark); }
+.psp-highlight .val, .psp-chiprow button.chip.active { color: var(--honey-400); }
+.psp__copybtn:hover { background: var(--psp-inset); color: var(--honey-400); }
+.psp-guide__ic, .psp-actionrow__ic { background: var(--psp-inset); color: var(--honey-400); }
+.psp-genuine svg { color: var(--honey-400); }
+.psp-qr__box { background: var(--psp-inset); border-color: var(--psp-border-soft); color: var(--honey-400); }
+.psp-face:hover { background: var(--psp-inset); }
+.psp-face__ring { border-color: var(--psp-border-soft); color: var(--psp-on-dark-muted); }
+.psp-face.active .psp-face__ring { background: rgba(232,176,75,0.16); color: var(--honey-400); border-color: var(--honey-500); }
+.psp-vt__dot { border-color: var(--psp-border-soft); }
+.psp-vt__line { background: var(--psp-border-soft); }
+.psp-radio { border-color: var(--psp-border-soft); }
+.psp .chip { background: var(--psp-inset); color: var(--psp-on-dark); border-color: var(--psp-border-soft); }
+.psp .btn-gold { --btn-fg: var(--honey-400); border-color: rgba(232,176,75,0.45); }
+.psp .btn-gold:hover { color: var(--honey-300); }
+
+/* ---- Hover lift + controlled gold glow on cards ---- */
+.psp-card { transition: transform var(--t) var(--ease-luxury), border-color var(--t) var(--ease), box-shadow var(--t) var(--ease-luxury); }
+.psp-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(232,176,75,0.48);
+  box-shadow: 0 16px 42px rgba(0,0,0,0.4), 0 0 26px var(--psp-glow);
+}
+
+/* ============================================================
+   Premium motion — only when the user hasn't asked to reduce it.
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+  /* Gentle card reveal on load (staggered across the grid). */
+  .psp__herowrap, .psp__timeline, .psp__tabs, .psp__grid > * {
+    animation: psp-rise 720ms var(--ease-luxury) both;
+  }
+  .psp__timeline { animation-delay: 80ms; }
+  .psp__tabs { animation-delay: 140ms; }
+  .psp__grid > *:nth-child(1) { animation-delay: 60ms; }
+  .psp__grid > *:nth-child(2) { animation-delay: 120ms; }
+  .psp__grid > *:nth-child(3) { animation-delay: 180ms; }
+  .psp__grid > *:nth-child(4) { animation-delay: 240ms; }
+  .psp__grid > *:nth-child(n+5) { animation-delay: 300ms; }
+
+  /* Soft ambient background drift. */
+  .psp::before { animation: psp-ambient 26s ease-in-out infinite alternate; }
+
+  /* Controlled glow breathing around the status card. */
+  .psp__status { animation: psp-statusglow 5s ease-in-out infinite; }
+
+  /* Animated (flowing) delivery progress line on completed segments. */
+  .psp__tl-node.is-done .psp__tl-connector {
+    background: linear-gradient(90deg, var(--honey-600), var(--honey-400), var(--honey-600));
+    background-size: 200% 100%;
+    animation: psp-flow 3.2s linear infinite;
+  }
+
+  /* Slow cinematic drift on the product image. */
+  .psp__hero-media .pimg img { animation: psp-kenburns 26s ease-in-out infinite alternate; transform-origin: center; }
+}
+
+@keyframes psp-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes psp-ambient { from { transform: translate3d(-1.5%, -1%, 0) scale(1.02); } to { transform: translate3d(2%, 1.5%, 0) scale(1.06); } }
+@keyframes psp-statusglow {
+  0%, 100% { box-shadow: 0 18px 48px rgba(0,0,0,0.42), 0 0 24px var(--psp-glow); }
+  50% { box-shadow: 0 18px 48px rgba(0,0,0,0.42), 0 0 46px var(--psp-glow); }
+}
+@keyframes psp-flow { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes psp-kenburns { from { transform: scale(1); } to { transform: scale(1.06); } }
+
+/* ============================================================
+   METALLIC MATERIAL LANGUAGE  — polished champagne-gold foil.
+   One coherent gradient (built only from the existing honey-* tokens:
+   honey-700 antique -> honey-500 -> honey-200 champagne highlight ->
+   honey-400 -> honey-600 -> honey-300) used for the logo, the Passport
+   title, the Passport ID, section headings and select premium values.
+   Body text stays ivory. All motion is reduced-motion aware.
+   ============================================================ */
+
+/* The single metallic gradient, reused everywhere via a custom property. */
+.psp {
+  --psp-metal: linear-gradient(
+    100deg,
+    #B4761F 0%, #E8B04B 20%, #FBE9C8 38%, #F0C169 52%,
+    #D08E2C 68%, #F6D79A 84%, #B4761F 100%);
+}
+
+/* Gold-foil text. Falls back to a solid champagne tone where background-clip
+   text is unsupported. */
+.psp-metal,
+.psp__title,
+.psp__idrow,
+.psp-card__head h3,
+.psp__side-brand strong,
+.psp-promoband__title,
+.psp-promocard-wide h3,
+.psp-highlight .val {
+  color: var(--honey-300);
+  background: var(--psp-metal);
+  background-size: 220% auto;
+  background-position: 0% center;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.28); /* subtle emboss/specular depth */
+}
+/* Icons inside gold headings keep their own solid gold (clip:text is text-only). */
+.psp__title svg { color: var(--honey-400); -webkit-text-fill-color: currentColor; }
+
+/* Official logo as polished gold foil: real brand asset used as an alpha mask,
+   filled with the metallic gradient, with a soft emboss + warm reflection. */
+.psp__brandmark {
+  display: inline-block; flex-shrink: 0;
+  height: 46px; width: 150px;
+  -webkit-mask: url("/assets/sora-life-logo.png") left center / contain no-repeat;
+  mask: url("/assets/sora-life-logo.png") left center / contain no-repeat;
+  background: var(--psp-metal);
+  background-size: 220% auto;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.5)) drop-shadow(0 0 8px rgba(232,176,75,0.22));
+}
+.psp__headline { display: flex; align-items: center; gap: var(--sp-4); }
+
+/* ---- Hero rebalanced now that the status card is gone: the product image
+   carries more weight and the order info gets more breathing room. ---- */
+.psp__herowrap { margin-bottom: var(--sp-10); }
+.psp__hero { grid-template-columns: 340px 1fr; }
+.psp__hero-body { padding: var(--sp-7) var(--sp-9); }
+.psp__fields { gap: var(--sp-6) var(--sp-7); }
+.psp__hero-media { min-height: 300px; }
+.psp__hero-media::after { /* inner vignette so the product reads as a certificate plate */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(232,176,75,0.10);
+}
+@media (min-width: 1440px) { .psp__hero { grid-template-columns: 420px 1fr; } }
+@media (max-width: 1023px) { .psp__hero { grid-template-columns: 1fr; } .psp__hero-media { min-height: 0; } }
+@media (max-width: 767px)  { .psp__headline { gap: var(--sp-3); } .psp__brandmark { height: 32px; width: 104px; } }
+
+/* ---- Stronger gold glow on the active (current) delivery stage. ---- */
+.psp__tl-node.is-current .psp__tl-dot {
+  box-shadow: 0 0 0 4px rgba(232,176,75,0.16), 0 0 18px rgba(232,176,75,0.5);
+}
+
+/* ---- Elegant hover reflection on premium buttons within the passport. ---- */
+.psp .btn { position: relative; overflow: hidden; }
+.psp .btn::after {
+  content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.22), transparent);
+  transform: skewX(-18deg); opacity: 0; pointer-events: none;
+}
+
+/* ============================================================
+   Metallic micro-motion — only when motion is welcome.
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+  /* Very slow specular sweep across the logo + Passport title. */
+  .psp__brandmark, .psp__title { animation: psp-sheen 7s ease-in-out infinite; }
+  .psp__idrow { animation: psp-sheen 7s ease-in-out infinite 0.6s; }
+  /* Elegant reflection wipe on hover of premium buttons. */
+  .psp .btn:hover::after { animation: psp-wipe 900ms ease-out; }
+}
+@keyframes psp-sheen {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+}
+@keyframes psp-wipe {
+  from { left: -60%; opacity: 0; }
+  40% { opacity: 1; }
+  to { left: 130%; opacity: 0; }
+}
+
+/* ============================================================
+   LUXURY CERTIFICATE REFINEMENT
+   Smaller product on a lit stage, intentional use of the former dead
+   space (atmosphere, grain, vignette, botanical line art, gold dust),
+   a genuinely metallic foil title, and the official SORA LIFE sparrow
+   struck as a certificate seal. Visual only - no IA/logic change.
+   ============================================================ */
+
+/* ---------- Header lockup: seal -> title -> subtitle ---------- */
+.psp__headline { display: flex; align-items: center; gap: var(--sp-5); }
+.psp__eyebrow {
+  display: block; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--honey-400); opacity: 0.75; margin-bottom: 7px;
+}
+
+/* Official sparrow brandmark struck as a foil seal. */
+.psp__seal {
+  position: relative; flex-shrink: 0;
+  width: 68px; height: 68px; border-radius: 999px;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(232,176,75,0.20), rgba(12,24,17,0.85) 72%);
+  border: 1px solid rgba(232,176,75,0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255,246,224,0.22),
+    inset 0 0 18px rgba(232,176,75,0.10),
+    0 0 26px rgba(232,176,75,0.14);
+  overflow: hidden;
+}
+.psp__seal::before {
+  content: ""; position: absolute; inset: 5px; border-radius: 999px;
+  border: 1px solid rgba(232,176,75,0.24);
+}
+.psp__seal svg { filter: drop-shadow(0 1px 0 rgba(0,0,0,0.55)); }
+
+/* ---------- Genuinely metallic foil title ---------- */
+.psp__title {
+  font-size: clamp(2rem, 3.4vw, 3.1rem);
+  line-height: 1.08; letter-spacing: -0.012em;
+  background: linear-gradient(
+    172deg,
+    #6E440F 0%, #C9902F 13%, #F7E3AE 31%, #FFFDF2 44%,
+    #EFC069 55%, #B4761F 71%, #EBC98A 87%, #6E440F 100%);
+  background-size: 100% 220%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter:
+    drop-shadow(0 1px 0 rgba(0,0,0,0.55))
+    drop-shadow(0 1px 6px rgba(0,0,0,0.35))
+    drop-shadow(0 0 14px rgba(232,176,75,0.16));
+}
+.psp__head p { max-width: 46ch; }
+
+/* ---------- Hero: certificate composition ---------- */
+.psp__herowrap { margin-bottom: var(--sp-8); }
+.psp__hero {
+  position: relative;
+  grid-template-columns: 260px 1fr;
+  align-items: stretch;
+}
+.psp__hero::before {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+}
+.psp__hero::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  box-shadow: inset 0 0 90px rgba(0,0,0,0.42);
+  background-image:
+    radial-gradient(1.5px 1.5px at 62% 24%, rgba(246,215,154,0.30), transparent 60%),
+    radial-gradient(1.2px 1.2px at 78% 62%, rgba(246,215,154,0.22), transparent 60%),
+    radial-gradient(1.6px 1.6px at 88% 34%, rgba(246,215,154,0.18), transparent 60%),
+    radial-gradient(1.1px 1.1px at 70% 82%, rgba(246,215,154,0.16), transparent 60%);
+}
+.psp__hero > * { position: relative; z-index: 2; }
+
+/* ---------- Product stage: smaller product, lit and seated ---------- */
+.psp__hero-media {
+  min-height: 0;
+  padding: var(--sp-7) var(--sp-5) var(--sp-8);
+  display: grid; place-items: center;
+  overflow: hidden;
+  border-right: 1px solid rgba(232,176,75,0.14);
+  background:
+    radial-gradient(58% 42% at 50% 34%, rgba(232,176,75,0.12), transparent 68%),
+    linear-gradient(180deg, #16281F, #0B1611);
+}
+.psp__hero-media::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.10;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170' viewBox='0 0 170 170'%3E%3Cg fill='none' stroke='%23E8B04B' stroke-width='0.9'%3E%3Cpath d='M85 18 C58 52 58 118 85 152 C112 118 112 52 85 18 Z'/%3E%3Cpath d='M85 26 L85 144'/%3E%3Cpath d='M85 60 C70 66 62 78 60 92'/%3E%3Cpath d='M85 60 C100 66 108 78 110 92'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 190px; background-position: center;
+  background-repeat: no-repeat;
+}
+.psp__stage-glow {
+  position: absolute; left: 50%; top: 14%; transform: translateX(-50%);
+  width: 78%; height: 62%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255,246,224,0.16), rgba(232,176,75,0.06) 55%, transparent 75%);
+  filter: blur(2px);
+}
+.psp__stage { position: relative; z-index: 2; width: 100%; max-width: 186px; }
+.psp__hero-media .pimg { height: auto; aspect-ratio: 1; background: transparent; }
+.psp__hero-media .pimg img { object-fit: contain; filter: drop-shadow(0 16px 22px rgba(0,0,0,0.55)); }
+.psp__stage-plinth {
+  position: absolute; left: 50%; bottom: 15%; transform: translateX(-50%);
+  width: 60%; height: 16px; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(0,0,0,0.55), transparent 72%);
+  border-radius: 50%;
+}
+.psp__hero-verify {
+  background: rgba(12,24,17,0.82);
+  border: 1px solid rgba(232,176,75,0.42);
+  box-shadow: 0 0 16px rgba(232,176,75,0.18);
+  z-index: 3;
+}
+
+/* Per-category atmosphere - the dark SORA LIFE base stays constant. */
+.psp__hero[data-cat="skin-care"] .psp__hero-media,
+.psp__hero[data-cat="personal-care"] .psp__hero-media {
+  background: radial-gradient(58% 42% at 50% 32%, rgba(251,233,200,0.16), transparent 68%), linear-gradient(180deg, #1A2A22, #0B1611);
+}
+.psp__hero[data-cat="hair-care"] .psp__hero-media {
+  background: radial-gradient(58% 42% at 50% 32%, rgba(208,142,44,0.16), transparent 68%), linear-gradient(180deg, #1B2A18, #0A1410);
+}
+.psp__hero[data-cat="bath-body"] .psp__hero-media {
+  background: radial-gradient(58% 42% at 50% 32%, rgba(46,125,116,0.20), transparent 68%), linear-gradient(180deg, #0F2622, #08130F);
+}
+.psp__hero[data-cat="mens-care"] .psp__hero-media {
+  background: radial-gradient(58% 42% at 50% 32%, rgba(133,180,159,0.14), transparent 68%), linear-gradient(180deg, #142420, #08120E);
+}
+
+/* ---------- Order information: structured spec sheet ---------- */
+.psp__hero-body { padding: var(--sp-7) var(--sp-8) var(--sp-7); display: flex; flex-direction: column; }
+.psp__hero-eyebrow {
+  display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--honey-400); opacity: 0.7; margin-bottom: 8px;
+}
+.psp__hero-title { font-size: var(--text-2xl); line-height: 1.15; }
+.psp__hero-underline { width: 54px; height: 2px; background: linear-gradient(90deg, var(--honey-500), rgba(232,176,75,0)); margin-bottom: 12px; }
+.psp__hero-sub { margin-bottom: var(--sp-5); }
+.psp__fields {
+  margin-top: auto;
+  padding-top: var(--sp-5);
+  border-top: 1px solid rgba(232,176,75,0.16);
+  gap: var(--sp-4) var(--sp-7);
+}
+.psp__field { padding-bottom: var(--sp-3); border-bottom: 1px solid rgba(240,246,242,0.055); }
+.psp__field svg { color: var(--honey-500); opacity: 0.85; }
+.psp__field .lbl { letter-spacing: 0.11em; font-size: 10px; opacity: 0.72; }
+.psp__field .val { font-size: var(--text-sm); line-height: 1.45; }
+
+/* ---------- Timeline: part of the certificate ---------- */
+.psp__timeline { padding: var(--sp-6) var(--sp-8); }
+.psp__tl-connector { height: 1px; background: rgba(232,176,75,0.20); top: 16px; }
+.psp__tl-dot { width: 32px; height: 32px; border-width: 1px; }
+.psp__tl-node.is-current .psp__tl-dot { width: 36px; height: 36px; }
+.psp__tl-step { font-size: 12.5px; letter-spacing: 0.01em; }
+.psp__tl-date { font-size: 10.5px; opacity: 0.8; }
+
+/* ---------- Responsive: mobile is composed, not squeezed ---------- */
+@media (min-width: 1440px) {
+  .psp__hero { grid-template-columns: 300px 1fr; }
+  .psp__stage { max-width: 210px; }
+}
+@media (max-width: 1023px) {
+  .psp__hero { grid-template-columns: 1fr; }
+  .psp__hero-media { border-right: none; border-bottom: 1px solid rgba(232,176,75,0.14); padding: var(--sp-6) var(--sp-5) var(--sp-7); }
+  .psp__stage { max-width: 168px; }
+}
+@media (max-width: 767px) {
+  .psp__headline { gap: var(--sp-4); }
+  .psp__seal { width: 52px; height: 52px; }
+  .psp__seal svg { width: 30px; height: 22px; }
+  .psp__title { font-size: 1.72rem; }
+  .psp__hero-media { padding: var(--sp-5) var(--sp-4) var(--sp-6); }
+  .psp__stage { max-width: 140px; }
+  .psp__hero-body { padding: var(--sp-5) var(--sp-5) var(--sp-6); }
+  .psp__fields { grid-template-columns: 1fr; gap: var(--sp-3); }
+  .psp__field:last-child { border-bottom: none; }
+  .psp__hero::after { box-shadow: inset 0 0 60px rgba(0,0,0,0.4); }
+}
+
+/* ---------- Restrained motion ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .psp__title { animation: psp-foil 9s ease-in-out infinite; }
+  .psp__seal::before { animation: psp-sealring 6s ease-in-out infinite; }
+  .psp__stage-glow { animation: psp-stagelight 11s ease-in-out infinite alternate; }
+  .psp__hero::after { animation: psp-dust 24s ease-in-out infinite alternate; }
+}
+@keyframes psp-foil {
+  0%, 100% { background-position: 50% 0%; }
+  50% { background-position: 50% 100%; }
+}
+@keyframes psp-sealring {
+  0%, 100% { box-shadow: 0 0 0 rgba(232,176,75,0); }
+  50% { box-shadow: 0 0 14px rgba(232,176,75,0.22); }
+}
+@keyframes psp-stagelight {
+  from { opacity: 0.85; transform: translateX(-50%) translateY(-2px) scale(1); }
+  to   { opacity: 1;    transform: translateX(-50%) translateY(3px) scale(1.05); }
+}
+@keyframes psp-dust {
+  from { background-position: 0 0, 0 0, 0 0, 0 0; }
+  to   { background-position: 0 -14px, 0 10px, 0 -8px, 0 12px; }
+}
+
+/* ============================================================
+   EXACT SPEC LAYER - matches the approved Purchase Passport design.
+   Header lockup, sidebar, certificate hero, timeline, tabs and the
+   six compact overview cards. Visual only.
+   ============================================================ */
+
+.psp { grid-template-columns: 250px 1fr; }
+
+/* ---------------- Sidebar ---------------- */
+.psp__side {
+  background: linear-gradient(180deg, #0B1712 0%, #091310 100%);
+  border-right: 1px solid rgba(232,176,75,0.16);
+  padding: var(--sp-6) var(--sp-4) var(--sp-5);
+}
+.psp__side-brand { padding: 0 0 var(--sp-5); text-align: left; }
+.psp__side-logo {
+  display: block; width: 100%; max-width: 186px; height: auto;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+}
+.psp__profile {
+  gap: 9px; padding-bottom: var(--sp-5); margin-bottom: var(--sp-4);
+  border-bottom: 1px solid rgba(232,176,75,0.14);
+}
+.psp__avatar {
+  width: 58px; height: 58px;
+  background: radial-gradient(circle at 34% 28%, #1D3327, #0E1D16);
+  border: 1.5px solid var(--honey-500);
+  color: var(--honey-300); font-size: 1.15rem; letter-spacing: 0.04em;
+  box-shadow: 0 0 18px rgba(232,176,75,0.16);
+}
+.psp__profile strong { font-size: 0.95rem; font-weight: 600; letter-spacing: 0.01em; }
+.psp__tier {
+  padding: 5px 13px; gap: 6px;
+  border: 1px solid rgba(232,176,75,0.55);
+  color: var(--honey-300); font-size: 9.5px; letter-spacing: 0.13em;
+  background: rgba(232,176,75,0.07);
+}
+.psp__tier svg { color: var(--honey-400); }
+
+.psp__nav { gap: 3px; }
+.psp__navitem {
+  padding: 10px 12px; border-radius: var(--r-sm);
+  font-size: 0.875rem; color: rgba(240,246,242,0.66);
+  border: 1px solid transparent; gap: 13px;
+}
+.psp__navitem svg { color: rgba(240,246,242,0.55); transition: color var(--t) var(--ease); }
+.psp__navitem:hover { background: rgba(232,176,75,0.06); color: var(--psp-on-dark); }
+.psp__navitem:hover svg { color: var(--honey-400); }
+.psp__navitem.active {
+  background: linear-gradient(90deg, rgba(232,176,75,0.16), rgba(232,176,75,0.04));
+  border-color: rgba(232,176,75,0.40);
+  color: var(--honey-300); font-weight: 600;
+}
+.psp__navitem.active svg { color: var(--honey-400); }
+.psp__navchev { margin-left: auto; opacity: 0.8; }
+
+.psp__side-promo { margin-top: auto; padding-top: var(--sp-5); }
+.psp__helpcard {
+  display: flex; align-items: center; gap: 12px;
+  background: linear-gradient(150deg, rgba(232,176,75,0.09), rgba(12,24,17,0.6));
+  border: 1px solid rgba(232,176,75,0.30);
+  padding: var(--sp-4);
+}
+.psp__helpic {
+  width: 36px; height: 36px; border-radius: 999px; flex-shrink: 0;
+  display: grid; place-items: center;
+  background: rgba(232,176,75,0.14); color: var(--honey-400);
+}
+.psp__helpcard strong { display: block; font-size: 0.9rem; margin-bottom: 2px; color: var(--psp-on-dark); }
+.psp__helpcard p { font-size: 11.5px; color: var(--psp-on-dark-muted); margin: 0; }
+
+/* ---------------- Header ---------------- */
+.psp__main { padding: var(--sp-7) var(--sp-7) var(--sp-9); }
+.psp__head {
+  display: flex; align-items: center; gap: var(--sp-6);
+  flex-wrap: nowrap; margin-bottom: var(--sp-7);
+}
+.psp__headline { display: block; flex: 0 1 auto; }
+.psp__title { margin-bottom: 6px; }
+.psp__head p { margin-top: 0; font-size: 0.95rem; color: rgba(240,246,242,0.66); }
+
+.psp__head-rule {
+  width: 1px; align-self: stretch; min-height: 74px; flex-shrink: 0;
+  background: linear-gradient(180deg, transparent, rgba(232,176,75,0.35), transparent);
+}
+.psp__brandlock { flex: 0 0 auto; display: grid; place-items: center; }
+.psp__brandlock img {
+  display: block; height: 74px; width: auto;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(232,176,75,0.20));
+}
+.psp__head-right { margin-left: auto; flex-direction: column; align-items: flex-end; gap: var(--sp-3); flex-shrink: 0; }
+.psp__idblock .lbl { color: var(--honey-400); opacity: 0.85; font-size: 10px; letter-spacing: 0.16em; }
+.psp__idrow { font-size: 1.02rem; letter-spacing: 0.01em; font-weight: 600; }
+.psp__download {
+  --btn-bg: transparent; --btn-fg: var(--honey-300);
+  border: 1px solid rgba(232,176,75,0.55);
+  padding: 11px 20px; font-size: 0.85rem; border-radius: var(--r-pill);
+  background: linear-gradient(150deg, rgba(232,176,75,0.12), rgba(232,176,75,0.03));
+  box-shadow: inset 0 1px 0 rgba(255,246,224,0.14);
+}
+.psp__download:hover { background: var(--honey-600); color: var(--forest-900); border-color: var(--honey-600); }
+.psp__download:active { background: var(--honey-700); color: var(--forest-900); }
+
+/* ---------------- Certificate hero ---------------- */
+.psp__herowrap { margin-bottom: var(--sp-5); }
+.psp__hero {
+  grid-template-columns: 38% 1fr;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(232,176,75,0.28);
+  overflow: visible;
+}
+.psp__hero-media { border-radius: var(--r-lg) 0 0 var(--r-lg); overflow: hidden; }
+/* faint landscape depth behind the order information */
+.psp__hero-body {
+  position: relative;
+  background:
+    radial-gradient(70% 120% at 88% 8%, rgba(232,176,75,0.07), transparent 62%),
+    linear-gradient(120deg, rgba(20,38,28,0) 40%, rgba(46,74,58,0.20) 100%);
+  border-radius: 0 var(--r-lg) var(--r-lg) 0;
+}
+.psp__stage { max-width: 200px; }
+
+/* Authenticity seal straddling the media / details boundary */
+.psp__hero-verify {
+  right: -34px; bottom: 50%; transform: translateY(50%);
+  width: 92px; height: 92px; border-radius: 999px;
+  background: radial-gradient(circle at 34% 28%, #22371f, #0C1811 74%);
+  border: 1px solid rgba(232,176,75,0.55);
+  box-shadow: 0 0 26px rgba(232,176,75,0.22), inset 0 1px 0 rgba(255,246,224,0.2);
+  display: grid; place-items: center; gap: 0;
+}
+.psp__hero-verify::after {
+  content: "AUTHENTIC WELLNESS PROMISE";
+  position: absolute; bottom: 14px; left: 0; right: 0;
+  font-size: 5.6px; letter-spacing: 0.14em; line-height: 1.35;
+  text-align: center; color: var(--honey-300); padding: 0 14px; font-weight: 700;
+}
+.psp__hero-verify::before {
+  content: "SORA LIFE";
+  position: absolute; top: 15px; left: 0; right: 0;
+  font-size: 6px; letter-spacing: 0.18em; text-align: center;
+  color: var(--honey-300); font-weight: 700;
+}
+.psp__hero-verify svg { margin-top: 2px; }
+
+/* Order information: 4 columns, then two wide ones */
+.psp__hero-body { padding: var(--sp-7) var(--sp-8) var(--sp-7) var(--sp-9); }
+.psp__hero-eyebrow { color: var(--honey-400); opacity: 0.9; letter-spacing: 0.19em; font-size: 10px; }
+.psp__hero-title { font-size: clamp(1.6rem, 2.3vw, 2.15rem); margin-bottom: 4px; }
+.psp__hero-underline { display: none; }
+.psp__hero-sub { font-size: 0.92rem; margin-bottom: var(--sp-6); color: rgba(240,246,242,0.62); }
+.psp__fields {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-6) var(--sp-5);
+  margin-top: 0; padding-top: 0; border-top: none;
+}
+.psp__field { padding-bottom: 0; border-bottom: none; align-items: flex-start; gap: 11px; }
+.psp__field:nth-child(5), .psp__field:nth-child(6) { grid-column: span 2; }
+.psp__field svg { color: var(--honey-500); opacity: 0.9; margin-top: 1px; }
+.psp__field .lbl { font-size: 9.5px; letter-spacing: 0.15em; color: var(--honey-400); opacity: 0.85; margin-bottom: 5px; }
+.psp__field .val { font-size: 0.95rem; font-weight: 600; color: var(--psp-on-dark); line-height: 1.45; }
+
+/* ---------------- Timeline ---------------- */
+.psp__timeline { padding: var(--sp-6) var(--sp-8); margin-bottom: var(--sp-5); border-radius: var(--r-lg); }
+.psp__tl-dot {
+  width: 34px; height: 34px;
+  background: rgba(12,24,17,0.9); border: 1px solid rgba(232,176,75,0.35);
+  color: var(--honey-400);
+}
+.psp__tl-node.is-done .psp__tl-dot,
+.psp__tl-node.is-current .psp__tl-dot {
+  background: linear-gradient(160deg, #F0C169, #D08E2C);
+  border-color: var(--honey-400); color: #14261C;
+  box-shadow: 0 0 16px rgba(232,176,75,0.42);
+}
+.psp__tl-node.is-current .psp__tl-dot { width: 34px; height: 34px; }
+.psp__tl-connector { top: 17px; height: 1px; background: rgba(232,176,75,0.22); }
+.psp__tl-step { font-size: 0.9rem; font-weight: 600; color: var(--psp-on-dark); margin-top: 2px; }
+.psp__tl-date { font-size: 11.5px; color: rgba(240,246,242,0.5); }
+
+/* ---------------- Tabs ---------------- */
+.psp__tabs {
+  gap: var(--sp-6); border-bottom: 1px solid rgba(232,176,75,0.16);
+  margin-bottom: var(--sp-5); padding-bottom: 0;
+}
+.psp__tab { padding: 13px 2px; font-size: 0.88rem; color: rgba(240,246,242,0.6); gap: 9px; }
+.psp__tab svg { color: rgba(240,246,242,0.5); }
+.psp__tab:hover { color: var(--psp-on-dark); }
+.psp__tab:hover svg { color: var(--honey-400); }
+.psp__tab.active { color: var(--honey-300); border-color: var(--honey-500); font-weight: 600; }
+.psp__tab.active svg { color: var(--honey-400); }
+
+/* ---------------- Overview: six compact cards ---------------- */
+.psp__summary {
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--sp-4); align-items: stretch;
+}
+.psp-sum {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: var(--sp-5) var(--sp-4);
+  border-radius: var(--r-md);
+  border: 1px solid rgba(232,176,75,0.22);
+  background:
+    linear-gradient(180deg, rgba(232,176,75,0.05), transparent 30%),
+    linear-gradient(165deg, #142620, #0C1811);
+  box-shadow: inset 0 1px 0 rgba(232,176,75,0.10);
+  transition: transform var(--t) var(--ease-luxury), border-color var(--t) var(--ease), box-shadow var(--t) var(--ease-luxury);
+}
+.psp-sum:hover {
+  transform: translateY(-3px);
+  border-color: rgba(232,176,75,0.5);
+  box-shadow: inset 0 1px 0 rgba(232,176,75,0.14), 0 14px 32px rgba(0,0,0,0.4), 0 0 22px rgba(232,176,75,0.14);
+}
+.psp-sum__title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.95rem; color: var(--honey-300); margin-bottom: 2px;
+}
+.psp-sum__title svg { color: var(--honey-400); flex-shrink: 0; }
+.psp-sum__body { display: flex; flex-direction: column; gap: 7px; flex: 1; }
+.psp-sum__line { font-size: 12.5px; color: rgba(240,246,242,0.62); line-height: 1.5; }
+.psp-sum__row { display: block; }
+.psp-sum__lbl { display: block; font-size: 11.5px; color: rgba(240,246,242,0.5); }
+.psp-sum__val { display: block; font-size: 12.5px; font-weight: 600; color: var(--psp-on-dark); word-break: break-word; }
+.psp-sum__stars { display: flex; gap: 3px; color: var(--honey-400); }
+.psp-sum__stars svg { fill: currentColor; }
+.psp-sum__cta {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: auto;
+  font-size: 12.5px; font-weight: 600; color: var(--honey-300);
+  transition: gap var(--t) var(--ease), color var(--t) var(--ease);
+}
+.psp-sum__cta:hover { gap: 10px; color: var(--honey-200); }
+
+/* ---------------- Responsive ---------------- */
+@media (min-width: 1440px) {
+  .psp { grid-template-columns: 268px 1fr; }
+  .psp__hero { grid-template-columns: 38% 1fr; }
+  .psp__stage { max-width: 220px; }
+}
+@media (max-width: 1279px) {
+  .psp__summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .psp__brandlock img { height: 58px; }
+}
+@media (max-width: 1023px) {
+  .psp__head { flex-wrap: wrap; }
+  .psp__head-rule { display: none; }
+  .psp__brandlock { order: -1; }
+  .psp__brandlock img { height: 48px; }
+  .psp__head-right { margin-left: 0; width: 100%; flex-direction: row; align-items: center; justify-content: space-between; }
+  .psp__hero { grid-template-columns: 1fr; }
+  .psp__hero-media { border-radius: var(--r-lg) var(--r-lg) 0 0; }
+  .psp__hero-body { border-radius: 0 0 var(--r-lg) var(--r-lg); padding: var(--sp-6); }
+  .psp__hero-verify { right: 18px; bottom: 18px; top: auto; transform: none; width: 78px; height: 78px; }
+  .psp__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .psp__field:nth-child(5), .psp__field:nth-child(6) { grid-column: span 1; }
+  .psp__side-logo { max-width: 100%; }
+}
+@media (max-width: 767px) {
+  .psp__main { padding: var(--sp-5) var(--sp-4) var(--sp-8); }
+  .psp__title { font-size: 1.72rem; }
+  .psp__summary { grid-template-columns: 1fr; }
+  .psp__fields { grid-template-columns: 1fr; gap: var(--sp-4); }
+  .psp__hero-verify { width: 66px; height: 66px; right: 14px; bottom: 14px; }
+  .psp__hero-verify::before { top: 10px; font-size: 5px; }
+  .psp__hero-verify::after { bottom: 10px; font-size: 4.6px; }
+  .psp__tabs { gap: var(--sp-4); }
+  .psp__head-right { flex-wrap: wrap; gap: var(--sp-3); }
+}
+
+/* ============================================================
+   FINAL PASS - clean hero + richer cinematic material layer.
+   1) The circular authenticity seal is removed from the markup; this
+      rule guarantees it can never reappear from any earlier layer.
+   2) Textures (grain, brushed metal, botanical emboss, gold dust,
+      haze, vignette, bloom) are lifted to a clearly visible but still
+      restrained level - luxury certificate, not noise.
+   ============================================================ */
+
+/* ---- 1. Hero seal fully removed ---- */
+.psp__hero-verify { display: none !important; }
+
+/* ---- 2. Page ground: deeper atmosphere + stronger botanical emboss ---- */
+.psp::before {
+  background:
+    radial-gradient(42% 34% at 16% 10%, rgba(232,176,75,0.13), transparent 62%),
+    radial-gradient(38% 32% at 90% 84%, rgba(59,110,86,0.26), transparent 62%),
+    radial-gradient(60% 50% at 50% 120%, rgba(0,0,0,0.55), transparent 70%);
+}
+.psp::after {
+  opacity: 0.085;
+  background-size: 300px;
+}
+
+/* Full-page fine grain + cinematic vignette above the botanicals. */
+.psp__main::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)' opacity='0.14'/%3E%3C/svg%3E");
+}
+.psp__main::after {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  box-shadow: inset 0 0 200px rgba(0,0,0,0.62), inset 0 0 70px rgba(0,0,0,0.4);
+}
+.psp__inner { position: relative; z-index: 1; }
+
+/* ---- Certificate plate: brushed metal + heavier grain + bloom ---- */
+.psp__hero::before {
+  opacity: 0.85;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.13'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(96deg, rgba(255,246,224,0.030) 0px, rgba(255,246,224,0.030) 1px, transparent 1px, transparent 4px);
+}
+.psp__hero::after {
+  box-shadow: inset 0 0 130px rgba(0,0,0,0.55), inset 0 1px 0 rgba(232,176,75,0.14);
+  background-image:
+    radial-gradient(2px 2px at 62% 22%, rgba(246,215,154,0.50), transparent 62%),
+    radial-gradient(1.6px 1.6px at 78% 60%, rgba(246,215,154,0.40), transparent 62%),
+    radial-gradient(2.1px 2.1px at 88% 33%, rgba(246,215,154,0.34), transparent 62%),
+    radial-gradient(1.5px 1.5px at 70% 80%, rgba(246,215,154,0.30), transparent 62%),
+    radial-gradient(1.7px 1.7px at 52% 66%, rgba(246,215,154,0.26), transparent 62%),
+    radial-gradient(1.3px 1.3px at 41% 30%, rgba(246,215,154,0.22), transparent 62%),
+    radial-gradient(50% 40% at 76% 12%, rgba(232,176,75,0.10), transparent 70%);
+}
+
+/* ---- Product stage: stronger emboss, haze, bloom and floor shadow ---- */
+.psp__hero-media::before { opacity: 0.20; background-size: 235px; }
+.psp__hero-media::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(62% 44% at 50% 26%, rgba(255,246,224,0.10), transparent 70%),
+    linear-gradient(180deg, transparent 52%, rgba(0,0,0,0.42) 100%);
+  box-shadow: inset 0 0 90px rgba(0,0,0,0.5);
+}
+.psp__stage-glow {
+  width: 86%; height: 68%;
+  background: radial-gradient(closest-side, rgba(255,246,224,0.26), rgba(232,176,75,0.10) 52%, transparent 76%);
+  filter: blur(3px);
+}
+.psp__stage { z-index: 3; }
+.psp__stage-plinth {
+  width: 68%; height: 22px;
+  background:
+    radial-gradient(closest-side, rgba(0,0,0,0.7), transparent 74%),
+    radial-gradient(closest-side, rgba(232,176,75,0.12), transparent 66%);
+  z-index: 2;
+}
+.psp__hero-media .pimg img {
+  filter: drop-shadow(0 18px 26px rgba(0,0,0,0.62)) drop-shadow(0 0 26px rgba(232,176,75,0.10));
+}
+
+/* ---- Surfaces: gold foil highlight + fine grain on every card ---- */
+.psp-card, .psp-sum, .psp__timeline, .psp__hero-body {
+  position: relative;
+}
+.psp-sum::before, .psp__timeline::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  pointer-events: none; opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='150' height='150' filter='url(%23s)' opacity='0.10'/%3E%3C/svg%3E");
+}
+.psp-sum > *, .psp__timeline > * { position: relative; z-index: 1; }
+
+/* Faint botanical shadow behind the order information. */
+.psp__hero-body::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.075;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='none' stroke='%23E8B04B' stroke-width='1'%3E%3Cpath d='M40 232 C86 196 118 148 132 88'/%3E%3Cpath d='M132 88 C104 96 78 118 64 148'/%3E%3Cpath d='M132 88 C150 112 158 146 154 178'/%3E%3Cpath d='M196 236 C214 196 220 150 214 106'/%3E%3C/g%3E%3C/svg%3E");
+  background-position: right -40px bottom -30px; background-repeat: no-repeat; background-size: 300px;
+}
+.psp__hero-body > * { position: relative; z-index: 1; }
+
+/* Gold foil top highlight, a touch stronger across premium surfaces. */
+.psp__hero, .psp-card, .psp__timeline, .psp-sum {
+  box-shadow: inset 0 1px 0 rgba(232,176,75,0.16), 0 14px 38px rgba(0,0,0,0.38);
+}
+
+/* ---- Motion stays restrained ---- */
+@media (prefers-reduced-motion: no-preference) {
+  .psp__main::before { animation: psp-grainshift 8s steps(3) infinite; }
+}
+@keyframes psp-grainshift {
+  0%, 100% { background-position: 0 0; }
+  33% { background-position: -12px 8px; }
+  66% { background-position: 9px -11px; }
+}
+
+/* ============================================================
+   WHITE + METALLIC GOLD  — final visual layer (visual only).
+   Replaces the previous dark forest/black ground with a clean
+   premium white page carrying very subtle metallic-gold textures:
+   flowing brush waves, fine gold particles, faint botanical line
+   art and soft gold corner washes. Structure, markup, copy,
+   routing and behaviour are untouched — this layer only re-points
+   the colour tokens the passport already consumes and overrides
+   the handful of hard-coded dark surfaces.
+
+   Palette
+     gold            #D4AF37
+     metallic gold   #8F6B1F -> #D4AF37 -> #F7E7A8 -> #B8860B
+     light gold      #F7E7B5
+     background      #FFFFFF
+     main text       #1A1A1A
+     secondary text  #666666
+   ============================================================ */
+
+.psp {
+  /* ---- Gold system ---- */
+  --gold:         #D4AF37;
+  --gold-light:   #F7E7B5;
+  --gold-deep:    #8F6B1F;
+  --gold-mid:     #B8860B;
+  --gold-tint:    #FBF6E8;
+  --gold-line:    rgba(212, 175, 55, 0.30);
+  --gold-line-sf: rgba(212, 175, 55, 0.16);
+
+  /* Metallic foil gradient for large display type (embossed, reflective). */
+  --psp-metal: linear-gradient(
+    176deg,
+    #8F6B1F 0%, #B8860B 12%, #D4AF37 26%, #F7E7A8 41%,
+    #FFFCF0 48%, #EFD07B 56%, #D4AF37 68%, #B8860B 82%, #8F6B1F 100%);
+
+  /* Readable metallic foil for smaller headings / IDs on white. */
+  --psp-metal-sm: linear-gradient(
+    100deg,
+    #8F6B1F 0%, #B8860B 18%, #D4AF37 38%, #E8CD7E 50%,
+    #C79A28 64%, #B8860B 82%, #8F6B1F 100%);
+
+  /* ---- Re-point the passport's own surface tokens to white/gold ---- */
+  --psp-on-dark:        #1A1A1A;   /* main text  */
+  --psp-on-dark-muted:  #666666;   /* secondary  */
+  --psp-surface:        #FFFFFF;
+  --psp-surface-2:      #FFFFFF;
+  --psp-inset:          #FBF6E8;
+  --psp-border:         rgba(212, 175, 55, 0.30);
+  --psp-border-soft:    rgba(212, 175, 55, 0.16);
+  --psp-glow:           rgba(212, 175, 55, 0.18);
+
+  /* ---- Re-point the shared brand scales inside the passport only.
+     Every existing var(--honey-*) / var(--forest-*) reference in the
+     rules above now resolves to a readable gold-on-white value. ---- */
+  --honey-100: #FDF8EA;
+  --honey-200: #F7E7B5;
+  --honey-300: #A8801F;
+  --honey-400: #C79A28;
+  --honey-500: #D4AF37;
+  --honey-600: #B8860B;
+  --honey-700: #8F6B1F;
+
+  --forest-50:  #FDF8EA;
+  --forest-100: #FAF2DF;
+  --forest-200: #F0E3BC;
+  --forest-300: #D9C179;
+  --forest-400: #D4AF37;
+  --forest-500: #C79A28;
+  --forest-600: #B8860B;
+  --forest-700: #8F6B1F;
+  --forest-800: #6E5216;
+  --forest-900: #2A2010;   /* dark warm ink used on gold fills */
+
+  --ivory: #FFFFFF;
+
+  /* Warm, neutral shadows (no green cast) */
+  --shadow-xs: 0 1px 2px rgba(60, 48, 20, 0.05);
+  --shadow-sm: 0 2px 10px rgba(60, 48, 20, 0.06);
+  --shadow-md: 0 10px 28px rgba(60, 48, 20, 0.08);
+  --shadow-lg: 0 20px 52px rgba(60, 48, 20, 0.10);
+  --shadow-focus: 0 0 0 3px rgba(212, 175, 55, 0.32);
+
+  color: #1A1A1A;
+  background:
+    radial-gradient(52% 38% at 100% 0%,   rgba(212,175,55,0.085), transparent 62%),
+    radial-gradient(38% 30% at 0% 100%,   rgba(212,175,55,0.055), transparent 65%),
+    radial-gradient(42% 34% at 100% 100%, rgba(184,134,11,0.045), transparent 66%),
+    #FFFFFF;
+}
+
+/* ---------- Layer 1: soft gold corner washes + heading glow ---------- */
+.psp::before {
+  background:
+    radial-gradient(30% 22% at 22% 6%,  rgba(212,175,55,0.075), transparent 68%),
+    radial-gradient(34% 26% at 96% 10%, rgba(212,175,55,0.10),  transparent 66%),
+    radial-gradient(30% 26% at 4% 92%,  rgba(212,175,55,0.06),  transparent 68%),
+    radial-gradient(34% 24% at 92% 96%, rgba(184,134,11,0.055), transparent 68%);
+}
+
+/* ---------- Layer 2: flowing metallic brush / wave textures ---------- */
+.psp::after {
+  opacity: 0.5;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 1600 900' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-linecap='round'%3E%3Cpath d='M-60 168 C 260 48 520 292 830 176 C 1090 78 1360 232 1680 138' stroke-width='1.5' opacity='.30'/%3E%3Cpath d='M-60 222 C 250 108 545 336 845 224 C 1105 126 1380 280 1680 190' stroke-width='1' opacity='.22'/%3E%3Cpath d='M-60 278 C 240 166 570 378 860 272 C 1130 178 1400 324 1680 244' stroke-width='.7' opacity='.16'/%3E%3Cpath d='M-60 690 C 300 598 560 806 900 712 C 1180 634 1400 772 1680 688' stroke-width='1.3' opacity='.22'/%3E%3Cpath d='M-60 744 C 300 652 575 852 912 760 C 1192 686 1412 818 1680 740' stroke-width='.85' opacity='.16'/%3E%3Cpath d='M-60 796 C 305 708 588 894 924 806 C 1204 736 1420 862 1680 790' stroke-width='.6' opacity='.12'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ---------- Layer 3: botanical corner motifs ---------- */
+.psp__main::before {
+  opacity: 1;
+  animation: none;
+  background-repeat: no-repeat, no-repeat;
+  background-size: 420px, 340px;
+  background-position: right -70px top -60px, left -80px bottom -70px;
+  background-image:
+    /* botanical leaf motif — top right */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='1' stroke-linecap='round' opacity='.5'%3E%3Cpath d='M150 34 C108 90 108 204 150 262 C192 204 192 90 150 34 Z'/%3E%3Cpath d='M150 50 L150 248'/%3E%3Cpath d='M150 94 C127 105 112 128 108 154'/%3E%3Cpath d='M150 94 C173 105 188 128 192 154'/%3E%3Cpath d='M150 152 C131 161 121 178 118 197'/%3E%3Cpath d='M150 152 C169 161 179 178 182 197'/%3E%3C/g%3E%3C/svg%3E"),
+    /* botanical sprig — bottom left */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='1' stroke-linecap='round' opacity='.45'%3E%3Cpath d='M36 234 C86 196 118 146 132 84'/%3E%3Cpath d='M132 84 C102 94 76 116 62 148'/%3E%3Cpath d='M132 84 C152 110 160 146 155 180'/%3E%3Cpath d='M196 238 C216 198 222 150 216 104'/%3E%3Cpath d='M216 104 C196 118 184 140 180 164'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Fine gold particle field (tiled) — kept faint so the page stays white. */
+.psp__main::after {
+  box-shadow: none;
+  opacity: 1;
+  background-repeat: repeat;
+  background-size: 620px 620px;
+  background-image:
+    radial-gradient(1.6px 1.6px at 14% 20%, rgba(212,175,55,0.30), transparent 60%),
+    radial-gradient(1.1px 1.1px at 63% 9%,  rgba(184,134,11,0.26), transparent 60%),
+    radial-gradient(1.9px 1.9px at 84% 31%, rgba(212,175,55,0.22), transparent 60%),
+    radial-gradient(1.2px 1.2px at 33% 48%, rgba(212,175,55,0.20), transparent 60%),
+    radial-gradient(1.5px 1.5px at 72% 63%, rgba(184,134,11,0.20), transparent 60%),
+    radial-gradient(1px 1px at 22% 77%,     rgba(212,175,55,0.24), transparent 60%),
+    radial-gradient(1.7px 1.7px at 91% 86%, rgba(212,175,55,0.18), transparent 60%),
+    radial-gradient(1.1px 1.1px at 47% 92%, rgba(184,134,11,0.18), transparent 60%);
+}
+
+/* ============================================================
+   Sidebar — white, gold dividers, gold icons, gold active state
+   ============================================================ */
+.psp__side {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFFDF7 100%);
+  border-right: 1px solid var(--gold-line-sf);
+  color: #1A1A1A;
+  box-shadow: 1px 0 0 rgba(212,175,55,0.06);
+}
+.psp__side-logo { filter: none; }
+.psp__profile { border-bottom: 1px solid var(--gold-line-sf); }
+.psp__avatar {
+  background:
+    linear-gradient(#FFFDF6, #FFF8E7) padding-box,
+    var(--psp-metal-sm) border-box;
+  border: 1.5px solid transparent;
+  color: var(--gold-deep);
+  box-shadow: 0 2px 10px rgba(212,175,55,0.18);
+}
+.psp__profile strong { color: #1A1A1A; }
+.psp__tier {
+  background: linear-gradient(120deg, #FFFDF5, #FBF1D8);
+  border: 1px solid rgba(212,175,55,0.55);
+  color: var(--gold-deep);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+}
+.psp__tier svg { color: var(--gold-mid); }
+
+.psp__navitem { color: #4A4A4A; border: 1px solid transparent; }
+.psp__navitem svg { color: var(--gold); }
+.psp__navitem:hover { background: rgba(212,175,55,0.07); color: #1A1A1A; }
+.psp__navitem:hover svg { color: var(--gold-mid); }
+.psp__navitem.active {
+  background: linear-gradient(90deg, rgba(212,175,55,0.16), rgba(247,231,181,0.20) 55%, #FFFFFF);
+  border-color: rgba(212,175,55,0.55);
+  color: var(--gold-deep);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 6px rgba(212,175,55,0.14);
+}
+.psp__navitem.active svg { color: var(--gold-mid); }
+.psp__navchev { color: var(--gold-mid); }
+
+.psp__helpcard {
+  background: linear-gradient(150deg, #FFFDF6, #FBF3DE);
+  border: 1px solid rgba(212,175,55,0.34);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+}
+.psp__helpic { background: rgba(212,175,55,0.16); color: var(--gold-deep); }
+.psp__helpcard strong { color: #1A1A1A; }
+.psp__helpcard p { color: #666666; }
+
+.psp__side-scrim { background: rgba(26, 26, 26, 0.34); }
+.psp__topbar {
+  background: rgba(255,255,255,0.94);
+  border-bottom: 1px solid var(--gold-line-sf);
+}
+.psp__topbar strong { color: #1A1A1A; }
+
+/* ============================================================
+   Header — metallic gold title, grey subtitle, gold ID, gold CTA
+   ============================================================ */
+.psp-metal,
+.psp__title,
+.psp__idrow,
+.psp-card__head h3,
+.psp__side-brand strong,
+.psp-promoband__title,
+.psp-promocard-wide h3,
+.psp-highlight .val {
+  color: var(--gold-deep);
+  background: var(--psp-metal-sm);
+  background-size: 220% auto;
+  background-position: 0% center;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+}
+
+/* Shiny, embossed, metallic gold display title. */
+.psp__title {
+  background: var(--psp-metal);
+  background-size: 100% 260%;
+  background-position: 50% 18%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  letter-spacing: -0.012em;
+  filter:
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
+    drop-shadow(0 2px 3px rgba(143, 107, 31, 0.26))
+    drop-shadow(0 6px 16px rgba(212, 175, 55, 0.18));
+}
+.psp__title svg { color: var(--gold); -webkit-text-fill-color: currentColor; }
+
+.psp__head p { color: #666666; }
+.psp__head-rule { background: linear-gradient(180deg, transparent, rgba(212,175,55,0.5), transparent); }
+.psp__brandlock img { filter: none; }
+
+.psp__idblock .lbl { color: var(--gold-deep); opacity: 1; }
+.psp__copybtn { color: #666666; }
+.psp__copybtn:hover { background: rgba(212,175,55,0.12); color: var(--gold-deep); }
+.psp__copied {
+  background: linear-gradient(135deg, #B8860B, #D4AF37 46%, #8F6B1F);
+  color: #FFFDF3;
+  box-shadow: 0 4px 12px rgba(143,107,31,0.28);
+}
+
+/* Premium metallic gold Download Passport button. */
+.psp .psp__download {
+  --btn-bg: transparent;
+  --btn-fg: #2A2010;
+  color: #2A2010;
+  border: 1px solid rgba(143, 107, 31, 0.55);
+  background:
+    linear-gradient(120deg, #B8860B 0%, #D4AF37 26%, #F7E7A8 48%, #D4AF37 68%, #8F6B1F 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 253, 240, 0.75),
+    inset 0 -1px 0 rgba(110, 82, 22, 0.28),
+    0 6px 18px rgba(184, 134, 11, 0.26);
+}
+.psp .psp__download svg { color: #2A2010; }
+.psp .psp__download:hover,
+.psp .psp__download:focus-visible {
+  color: #241B08;
+  border-color: rgba(143, 107, 31, 0.7);
+  background:
+    linear-gradient(120deg, #A87A0C 0%, #D8B540 24%, #FFF3CB 48%, #D8B540 70%, #7E5D18 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 253, 240, 0.85),
+    inset 0 -1px 0 rgba(110, 82, 22, 0.3),
+    0 10px 26px rgba(184, 134, 11, 0.34);
+}
+.psp .psp__download:active {
+  background: linear-gradient(120deg, #8F6B1F 0%, #C79A28 40%, #E8CD7E 60%, #8F6B1F 100%);
+  box-shadow: inset 0 2px 5px rgba(110, 82, 22, 0.32);
+}
+
+/* ============================================================
+   Buttons / inputs / chips inside the passport (gold, never green)
+   ============================================================ */
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light) {
+  --btn-bg: transparent;
+  --btn-fg: #2A2010;
+  color: #2A2010;
+  border-color: rgba(143, 107, 31, 0.5);
+  background: linear-gradient(120deg, #B8860B 0%, #D4AF37 28%, #F2DE9C 50%, #D4AF37 70%, #8F6B1F 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 253, 240, 0.7), 0 6px 16px rgba(184, 134, 11, 0.20);
+}
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light):hover,
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light):focus-visible {
+  color: #241B08;
+  background: linear-gradient(120deg, #A87A0C 0%, #D8B540 26%, #FFF3CB 50%, #D8B540 72%, #7E5D18 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 253, 240, 0.85), 0 10px 24px rgba(184, 134, 11, 0.30);
+}
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light):active {
+  color: #241B08;
+  background: linear-gradient(120deg, #8F6B1F 0%, #C79A28 42%, #E8CD7E 60%, #8F6B1F 100%);
+}
+.psp .btn-outline {
+  --btn-bg: transparent; --btn-fg: var(--gold-deep);
+  color: var(--gold-deep);
+  border-color: rgba(212, 175, 55, 0.6);
+  background: #FFFFFF;
+  box-shadow: none;
+}
+.psp .btn-outline:hover {
+  background: rgba(212, 175, 55, 0.10);
+  color: var(--gold-deep);
+  border-color: var(--gold);
+}
+.psp .btn-gold { --btn-fg: var(--gold-deep); color: var(--gold-deep); border-color: rgba(212,175,55,0.6); background: #fff; }
+.psp .btn-gold:hover { background: rgba(212,175,55,0.10); color: var(--gold-deep); }
+
+.psp .input, .psp .select, .psp .textarea { background: #FFFFFF; border-color: rgba(212,175,55,0.34); color: #1A1A1A; }
+.psp .input:focus, .psp .select:focus, .psp .textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,175,55,0.28); }
+.psp .label { color: #1A1A1A; }
+.psp .hint, .psp .muted { color: #666666; }
+.psp .surface { background: #FFFFFF; border: 1px solid var(--gold-line-sf); box-shadow: var(--shadow-sm); }
+
+.psp .chip { background: #FFFFFF; color: #4A4A4A; border-color: rgba(212,175,55,0.30); }
+.psp .chip:hover { background: rgba(212,175,55,0.08); border-color: rgba(212,175,55,0.55); }
+.psp-chiprow button.chip.active {
+  background: linear-gradient(120deg, rgba(212,175,55,0.18), rgba(247,231,181,0.42));
+  color: var(--gold-deep);
+  border-color: rgba(212,175,55,0.6);
+  font-weight: 600;
+}
+
+/* ============================================================
+   Main purchase card (certificate hero) — white + soft gold
+   ============================================================ */
+.psp__hero,
+.psp-card,
+.psp__timeline,
+.psp__status,
+.psp-promoband,
+.psp-promocard-wide {
+  background: #FFFFFF;
+  border: 1px solid var(--gold-line);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 1px 2px rgba(60, 48, 20, 0.04),
+    0 14px 38px rgba(60, 48, 20, 0.07);
+}
+.psp__hero { border-color: rgba(212, 175, 55, 0.34); }
+
+/* Certificate plate texture: faint gold corner wash instead of dark grain. */
+.psp__hero::before {
+  opacity: 1;
+  background-image:
+    radial-gradient(60% 46% at 100% 0%, rgba(212,175,55,0.07), transparent 66%),
+    radial-gradient(46% 40% at 0% 100%, rgba(212,175,55,0.045), transparent 68%);
+}
+/* Fine gold dust across the plate — no vignette, page stays white. */
+.psp__hero::after {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,1);
+  background-image:
+    radial-gradient(2px 2px at 62% 20%, rgba(212,175,55,0.30), transparent 62%),
+    radial-gradient(1.5px 1.5px at 78% 58%, rgba(184,134,11,0.24), transparent 62%),
+    radial-gradient(2.1px 2.1px at 89% 31%, rgba(212,175,55,0.22), transparent 62%),
+    radial-gradient(1.4px 1.4px at 70% 80%, rgba(212,175,55,0.18), transparent 62%),
+    radial-gradient(1.6px 1.6px at 52% 66%, rgba(184,134,11,0.16), transparent 62%),
+    radial-gradient(1.2px 1.2px at 41% 30%, rgba(212,175,55,0.14), transparent 62%);
+}
+
+/* Product stage: clean white, faint golden botanical line art behind. */
+.psp__hero-media,
+.psp__hero[data-cat] .psp__hero-media {
+  background:
+    radial-gradient(58% 44% at 50% 34%, rgba(247, 231, 181, 0.28), transparent 70%),
+    linear-gradient(180deg, #FFFFFF 0%, #FFFDF6 100%);
+  border-right: 1px solid rgba(212, 175, 55, 0.18);
+}
+.psp__hero-media::before {
+  opacity: 0.16;
+  background-size: 235px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170' viewBox='0 0 170 170'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.9'%3E%3Cpath d='M85 18 C58 52 58 118 85 152 C112 118 112 52 85 18 Z'/%3E%3Cpath d='M85 26 L85 144'/%3E%3Cpath d='M85 60 C70 66 62 78 60 92'/%3E%3Cpath d='M85 60 C100 66 108 78 110 92'/%3E%3C/g%3E%3C/svg%3E");
+}
+.psp__hero-media::after {
+  background:
+    radial-gradient(62% 46% at 50% 26%, rgba(255, 252, 240, 0.9), transparent 72%),
+    linear-gradient(180deg, transparent 62%, rgba(212, 175, 55, 0.05) 100%);
+  box-shadow: none;
+}
+.psp__stage-glow {
+  background: radial-gradient(closest-side, rgba(255, 250, 232, 0.95), rgba(247, 231, 181, 0.34) 54%, transparent 78%);
+  filter: blur(4px);
+}
+.psp__stage-plinth {
+  background:
+    radial-gradient(closest-side, rgba(60, 48, 20, 0.16), transparent 74%),
+    radial-gradient(closest-side, rgba(212, 175, 55, 0.10), transparent 68%);
+}
+.psp__hero-media .pimg img {
+  filter: drop-shadow(0 14px 20px rgba(60, 48, 20, 0.16)) drop-shadow(0 2px 4px rgba(60, 48, 20, 0.08));
+}
+
+/* Order information panel — white with a very faint botanical shadow. */
+.psp__hero-body {
+  background:
+    radial-gradient(70% 120% at 96% 4%, rgba(212, 175, 55, 0.06), transparent 62%),
+    #FFFFFF;
+}
+.psp__hero-body::before {
+  opacity: 0.10;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='1'%3E%3Cpath d='M40 232 C86 196 118 148 132 88'/%3E%3Cpath d='M132 88 C104 96 78 118 64 148'/%3E%3Cpath d='M132 88 C150 112 158 146 154 178'/%3E%3Cpath d='M196 236 C214 196 220 150 214 106'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Product title stays dark charcoal; only the eyebrow/labels are gold. */
+.psp__hero-title { color: #1A1A1A; -webkit-text-fill-color: currentColor; background: none; }
+.psp__hero-eyebrow { color: var(--gold-deep); opacity: 1; }
+.psp__hero-sub { color: #666666; }
+.psp__fields { border-top-color: rgba(212, 175, 55, 0.20); }
+.psp__field { border-bottom-color: transparent; }
+.psp__field svg { color: var(--gold); opacity: 1; }
+.psp__field .lbl { color: var(--gold-deep); opacity: 1; }
+.psp__field .val { color: #1A1A1A; }
+
+/* ============================================================
+   Order status timeline — white card, gold rail, metallic active
+   ============================================================ */
+.psp__tl-connector { background: rgba(212, 175, 55, 0.28); }
+.psp__tl-node.is-done .psp__tl-connector {
+  background: linear-gradient(90deg, #B8860B, #D4AF37, #B8860B);
+}
+.psp__tl-dot {
+  background: #FFFFFF;
+  border: 1.5px solid rgba(212, 175, 55, 0.55);
+  color: var(--gold-mid);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,1);
+}
+.psp__tl-node.is-done .psp__tl-dot,
+.psp__tl-node.is-current .psp__tl-dot {
+  background: linear-gradient(150deg, #B8860B 0%, #D4AF37 30%, #F7E7A8 52%, #D4AF37 72%, #8F6B1F 100%);
+  border-color: rgba(143, 107, 31, 0.6);
+  color: #2A2010;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 253, 240, 0.8),
+    0 4px 12px rgba(184, 134, 11, 0.32);
+}
+.psp__tl-node.is-current .psp__tl-dot {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 253, 240, 0.9),
+    0 0 0 4px rgba(212, 175, 55, 0.14),
+    0 6px 18px rgba(184, 134, 11, 0.36);
+}
+.psp__tl-step { color: #1A1A1A; }
+.psp__tl-date { color: #666666; }
+@keyframes psp-pulse {
+  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,253,240,0.9), 0 0 0 0 rgba(212,175,55,0.45); }
+  50%      { box-shadow: inset 0 1px 0 rgba(255,253,240,0.9), 0 0 0 9px rgba(212,175,55,0); }
+}
+
+/* Faint gold corner wash on cards instead of the old dark grain. */
+.psp-sum::before, .psp__timeline::before {
+  opacity: 1;
+  background-image: radial-gradient(120% 95% at 100% 0%, rgba(212, 175, 55, 0.055), transparent 64%);
+}
+
+/* ============================================================
+   Tabs — gold active text + underline, dark grey inactive
+   ============================================================ */
+.psp__tabs { border-bottom: 1px solid var(--gold-line-sf); }
+.psp__tab { color: #666666; }
+.psp__tab svg { color: var(--gold); opacity: 0.75; }
+.psp__tab:hover { color: #1A1A1A; }
+.psp__tab:hover svg { color: var(--gold-mid); opacity: 1; }
+.psp__tab.active { color: var(--gold-deep); border-color: var(--gold); }
+.psp__tab.active svg { color: var(--gold-mid); opacity: 1; }
+
+/* ============================================================
+   Bottom information cards — white, gold border, gold icons
+   ============================================================ */
+.psp-sum {
+  background: #FFFFFF;
+  border: 1px solid var(--gold-line);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 1px 2px rgba(60, 48, 20, 0.04),
+    0 10px 26px rgba(60, 48, 20, 0.06);
+}
+.psp-sum:hover {
+  border-color: rgba(212, 175, 55, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 16px 34px rgba(60, 48, 20, 0.10),
+    0 0 0 3px rgba(212, 175, 55, 0.07);
+}
+.psp-sum__title {
+  color: var(--gold-deep);
+  background: var(--psp-metal-sm);
+  background-size: 220% auto;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.psp-sum__title svg { color: var(--gold-mid); -webkit-text-fill-color: currentColor; }
+.psp-sum__line { color: #666666; }
+.psp-sum__lbl { color: #666666; }
+.psp-sum__val { color: #1A1A1A; }
+.psp-sum__stars { color: var(--gold); }
+.psp-sum__cta { color: var(--gold-deep); }
+.psp-sum__cta:hover { color: var(--gold-mid); }
+
+.psp-card:hover {
+  border-color: rgba(212, 175, 55, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 18px 40px rgba(60, 48, 20, 0.10),
+    0 0 0 3px rgba(212, 175, 55, 0.07);
+}
+.psp-card__head h3 svg { color: var(--gold-mid); -webkit-text-fill-color: currentColor; }
+.psp-card__head p { color: #666666; }
+.psp-card__seal { color: var(--gold); }
+
+.psp-highlight {
+  background: linear-gradient(120deg, #FFFDF6, #FBF3DE);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+}
+.psp-highlight svg { color: var(--gold-mid); }
+.psp-highlight .lbl { color: #666666; }
+
+.psp-vt__dot { border-color: rgba(212, 175, 55, 0.45); background: #FFFFFF; }
+.psp-vt__row.done .psp-vt__dot {
+  background: linear-gradient(150deg, #D4AF37, #B8860B);
+  border-color: rgba(143, 107, 31, 0.55);
+  color: #2A2010;
+}
+.psp-vt__line { background: rgba(212, 175, 55, 0.20); }
+.psp-vt__row.done .psp-vt__line { background: rgba(212, 175, 55, 0.50); }
+.psp-vt__title { color: #1A1A1A; }
+.psp-vt__row:not(.done) .psp-vt__title { color: #666666; }
+.psp-vt__time { color: #666666; }
+
+.psp-guide__ic, .psp-actionrow__ic {
+  background: linear-gradient(140deg, #FFFDF6, #F7ECD2);
+  border: 1px solid rgba(212, 175, 55, 0.24);
+  color: var(--gold-deep);
+}
+.psp-guide__title { color: #1A1A1A; }
+.psp-guide__desc { color: #666666; }
+.psp-actionrow:hover { background: rgba(212, 175, 55, 0.07); }
+.psp-actionrow__title { color: #1A1A1A; }
+.psp-actionrow__sub { color: #666666; }
+.psp-actionrow__chev { color: var(--gold-mid); }
+
+.psp-genuine {
+  background: linear-gradient(120deg, #FFFDF6, #FBF3DE);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+}
+.psp-genuine svg { color: var(--gold-mid); }
+.psp-genuine strong { color: #1A1A1A; }
+.psp-genuine span { color: #666666; }
+
+.psp-kv__row { border-bottom-color: rgba(212, 175, 55, 0.16); }
+.psp-kv__row dt { color: #666666; }
+.psp-kv__row dd { color: #1A1A1A; }
+.psp-qr {
+  background: linear-gradient(120deg, #FFFDF6, #FBF3DE);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+}
+.psp-qr__box { background: #FFFFFF; border: 1px solid rgba(212, 175, 55, 0.34); color: var(--gold-deep); }
+.psp-qr strong { color: #1A1A1A; }
+.psp-qr span { color: #666666; }
+
+.psp-face:hover { background: rgba(212, 175, 55, 0.07); }
+.psp-face__ring { background: #FFFFFF; border-color: rgba(212, 175, 55, 0.34); color: #666666; }
+.psp-face.active .psp-face__ring {
+  background: linear-gradient(140deg, #FFFDF6, #F7E7B5);
+  border-color: var(--gold);
+  color: var(--gold-deep);
+}
+.psp-face span { color: #666666; }
+.psp-face.active span { color: #1A1A1A; }
+
+.psp-reminder__row svg.bell { color: var(--gold); }
+.psp-reminder__label { color: #1A1A1A; }
+.psp-radio { border-color: rgba(212, 175, 55, 0.45); }
+.psp-reminder__row.checked .psp-radio { border-color: var(--gold); }
+.psp-reminder__row.checked .psp-radio::after { background: linear-gradient(140deg, #D4AF37, #B8860B); }
+
+/* Promo surfaces (not rendered today — kept coherent if re-enabled). */
+.psp-promoband__title + p, .psp-promocard-wide p, .psp-promofeat { color: #666666; }
+.psp-promofeat svg { color: var(--gold-mid); }
+.psp-promoband__card { background: linear-gradient(120deg, #FFFDF6, #FBF3DE); border: 1px solid rgba(212,175,55,0.28); }
+.psp-promoband__card strong { color: var(--gold-deep); }
+.psp-promoband__card p { color: #666666; }
+
+/* ============================================================
+   Motion — keeps the metallic sheen, drops the dark-theme glows
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+  .psp__main::before { animation: none; }
+  .psp__status { animation: none; }
+  .psp::before { animation: psp-goldwash 32s ease-in-out infinite alternate; }
+}
+@keyframes psp-goldwash {
+  from { transform: translate3d(-1%, -0.6%, 0) scale(1.02); }
+  to   { transform: translate3d(1.4%, 1%, 0) scale(1.05); }
+}
+@keyframes psp-foil {
+  0%, 100% { background-position: 50% 12%; }
+  50%      { background-position: 50% 88%; }
+}
+
+/* ============================================================
+   Responsive polish (layout unchanged — texture density only)
+   ============================================================ */
+@media (max-width: 1023px) {
+  .psp__hero-media,
+  .psp__hero[data-cat] .psp__hero-media {
+    border-right: none;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.18);
+  }
+  .psp__main::before { background-size: 300px, 240px; }
+}
+@media (max-width: 767px) {
+  .psp__side { border-right: 1px solid var(--gold-line-sf); box-shadow: 0 0 40px rgba(60, 48, 20, 0.14); }
+  .psp::after { opacity: 0.34; }
+  .psp__main::before { background-size: 230px, 190px; }
+  .psp__main::after { background-size: 460px 460px; }
+  .psp__title { filter: drop-shadow(0 1px 0 rgba(255,255,255,0.95)) drop-shadow(0 1px 2px rgba(143,107,31,0.26)); }
+}
+
+/* High-contrast safety: never let a texture eat the text. */
+@media (forced-colors: active) {
+  .psp::before, .psp::after, .psp__main::before, .psp__main::after { display: none; }
+  .psp__title, .psp-metal, .psp-sum__title, .psp-card__head h3, .psp__idrow {
+    background: none; -webkit-text-fill-color: currentColor; color: CanvasText;
+  }
+}
+
+/* ------------------------------------------------------------
+   Download Passport — the luxury metallic treatment must outrank
+   the generic .psp .btn:not(...) gold above (higher specificity),
+   so it keeps its brighter specular highlight and pressed shading.
+   ------------------------------------------------------------ */
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost) {
+  --btn-bg: transparent;
+  --btn-fg: #2A2010;
+  color: #2A2010;
+  border: 1px solid rgba(143, 107, 31, 0.55);
+  background:
+    linear-gradient(120deg, #B8860B 0%, #D4AF37 26%, #F7E7A8 48%, #D4AF37 68%, #8F6B1F 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 253, 240, 0.8),
+    inset 0 -1px 0 rgba(110, 82, 22, 0.28),
+    0 6px 18px rgba(184, 134, 11, 0.26);
+}
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost):hover,
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost):focus-visible {
+  color: #241B08;
+  border-color: rgba(143, 107, 31, 0.7);
+  background:
+    linear-gradient(120deg, #A87A0C 0%, #D8B540 24%, #FFF3CB 48%, #D8B540 70%, #7E5D18 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 253, 240, 0.9),
+    inset 0 -1px 0 rgba(110, 82, 22, 0.3),
+    0 10px 26px rgba(184, 134, 11, 0.34);
+}
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost):active {
+  background: linear-gradient(120deg, #8F6B1F 0%, #C79A28 40%, #E8CD7E 60%, #8F6B1F 100%);
+  box-shadow: inset 0 2px 5px rgba(110, 82, 22, 0.32);
+}
+
+/* ------------------------------------------------------------
+   Responsive restoration (no structural change).
+
+   The "EXACT SPEC LAYER" above declares an unmediated
+   `.psp { grid-template-columns: 250px 1fr }`, which sits AFTER the
+   tablet/mobile media queries and therefore beats them. The result:
+   below 1024px the sidebar keeps a 250px track even though the
+   tablet rules have already hidden its labels, and below 768px the
+   track is still reserved even though .psp__side is position:fixed
+   and off-canvas — squeezing the main column to ~128px on a phone
+   and pushing the page into horizontal scroll.
+
+   These two declarations simply let the breakpoints this file
+   already authored take effect. Same markup, same components, same
+   behaviour — only the column track is corrected.
+   ------------------------------------------------------------ */
+@media (max-width: 1023px) {
+  .psp { grid-template-columns: 72px 1fr; }
+  /* keep an expanded tab card single-column, as .psp__grid--single intends */
+  .psp__grid.psp__grid--single { grid-template-columns: 1fr; }
+}
+@media (max-width: 767px) {
+  .psp { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   LUXURY POLISH PASS  — visual only.
+   Warms the pure white to an ivory paper tone, refines the gold
+   from "shiny" to "brushed metal", enlarges the product so it
+   reads as the hero of the certificate, layers in botanical /
+   foil / paper textures at very low opacity, and rebalances the
+   header so the title leads.
+
+   Nothing structural: no markup, copy, routing, state or handler
+   is touched — only paint, scale and spacing.
+
+   Gold system
+     #9C7418  deepest (text-safe on ivory)
+     #B8860B  mid
+     #D4AF37  primary
+     #E8C766  soft
+     #F4E2A1  pale highlight
+   ============================================================ */
+
+.psp {
+  /* ---- Refined gold ---- */
+  --gold:        #D4AF37;
+  --gold-mid:    #B8860B;
+  --gold-deep:   #8F6B1F;   /* small-text gold — AA on ivory */
+  --gold-dark:   #9C7418;   /* gradient anchor */
+  --gold-soft:   #E8C766;
+  --gold-pale:   #F4E2A1;
+  --gold-line:    rgba(184, 134, 11, 0.26);
+  --gold-line-sf: rgba(184, 134, 11, 0.14);
+
+  /* ---- Ivory paper ground: still reads white, just warmer ---- */
+  --psp-paper:   #FFFEFA;
+  --psp-card:    #FFFFFF;
+  --psp-card-2:  #FFFDF7;
+  --psp-inset:   #FFFBF0;
+
+  /* ---- Brushed metallic foil (restrained: pale highlight, no blowout) ---- */
+  --psp-metal: linear-gradient(
+    174deg,
+    #8A6416 0%, #9C7418 10%, #B8860B 24%, #D4AF37 38%,
+    #F4E2A1 48%, #E8C766 57%, #C39526 72%, #9C7418 88%, #8A6416 100%);
+
+  --psp-metal-sm: linear-gradient(
+    100deg,
+    #8A6416 0%, #9C7418 16%, #B8860B 34%, #D4AF37 50%,
+    #B8860B 66%, #9C7418 84%, #8A6416 100%);
+
+  /* ---- Warm, airy shadows — never black ---- */
+  --psp-sh-1: 0 1px 2px rgba(124, 100, 52, 0.05);
+  --psp-sh-2: 0 1px 2px rgba(124, 100, 52, 0.05), 0 6px 16px rgba(124, 100, 52, 0.055);
+  --psp-sh-3: 0 1px 2px rgba(124, 100, 52, 0.05), 0 10px 26px rgba(124, 100, 52, 0.06), 0 28px 60px rgba(124, 100, 52, 0.05);
+
+  --shadow-xs: var(--psp-sh-1);
+  --shadow-sm: var(--psp-sh-2);
+  --shadow-md: var(--psp-sh-2);
+  --shadow-lg: var(--psp-sh-3);
+
+  --psp-border:      rgba(184, 134, 11, 0.26);
+  --psp-border-soft: rgba(184, 134, 11, 0.14);
+
+  background:
+    radial-gradient(50% 36% at 100% 0%,   rgba(212,175,55,0.070), transparent 64%),
+    radial-gradient(36% 30% at 0% 100%,   rgba(212,175,55,0.045), transparent 66%),
+    radial-gradient(40% 32% at 100% 100%, rgba(184,134,11,0.038), transparent 68%),
+    #FFFEFA;
+}
+
+/* ---------- Ground layer 1: warm corner glows ---------- */
+.psp::before {
+  background:
+    radial-gradient(26% 20% at 24% 4%,  rgba(212,175,55,0.055), transparent 70%),
+    radial-gradient(32% 26% at 97% 8%,  rgba(212,175,55,0.085), transparent 68%),
+    radial-gradient(28% 24% at 3% 94%,  rgba(212,175,55,0.045), transparent 70%),
+    radial-gradient(32% 22% at 94% 97%, rgba(184,134,11,0.042), transparent 70%);
+}
+
+/* ---------- Ground layer 2: flowing gold foil curves ---------- */
+.psp::after {
+  opacity: 0.42;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 1600 900' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%23B8860B' stroke-linecap='round'%3E%3Cpath d='M-60 150 C 250 34 520 280 830 162 C 1090 62 1360 218 1680 122' stroke-width='1.3' opacity='.26'/%3E%3Cpath d='M-60 200 C 245 92 545 322 848 210 C 1108 110 1382 266 1680 174' stroke-width='.9' opacity='.19'/%3E%3Cpath d='M-60 252 C 238 150 572 364 864 258 C 1134 162 1404 310 1680 228' stroke-width='.6' opacity='.14'/%3E%3Cpath d='M-60 300 C 232 206 596 402 878 302 C 1152 212 1420 350 1680 276' stroke-width='.45' opacity='.10'/%3E%3Cpath d='M-60 676 C 300 584 560 794 900 700 C 1180 620 1400 760 1680 674' stroke-width='1.15' opacity='.19'/%3E%3Cpath d='M-60 730 C 300 638 575 840 912 748 C 1192 672 1412 806 1680 726' stroke-width='.8' opacity='.14'/%3E%3Cpath d='M-60 782 C 305 694 588 882 924 794 C 1204 722 1420 850 1680 776' stroke-width='.55' opacity='.10'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ---------- Ground layer 3: botanical corner motifs (finer, calmer) ---------- */
+.psp__main::before {
+  opacity: 0.85;
+  background-size: 440px, 360px;
+  background-position: right -78px top -66px, left -86px bottom -76px;
+}
+
+/* ---------- Ground layer 4: gold dust + fine paper grain ---------- */
+.psp__main::after {
+  background-image:
+    radial-gradient(1.5px 1.5px at 14% 20%, rgba(212,175,55,0.24), transparent 60%),
+    radial-gradient(1px 1px   at 63% 9%,   rgba(184,134,11,0.20), transparent 60%),
+    radial-gradient(1.7px 1.7px at 84% 31%, rgba(212,175,55,0.17), transparent 60%),
+    radial-gradient(1.1px 1.1px at 33% 48%, rgba(212,175,55,0.15), transparent 60%),
+    radial-gradient(1.3px 1.3px at 72% 63%, rgba(184,134,11,0.15), transparent 60%),
+    radial-gradient(1px 1px   at 22% 77%,   rgba(212,175,55,0.18), transparent 60%),
+    radial-gradient(1.5px 1.5px at 91% 86%, rgba(212,175,55,0.14), transparent 60%),
+    radial-gradient(1px 1px   at 47% 92%,   rgba(184,134,11,0.14), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='pp'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23pp)' opacity='0.038'/%3E%3C/svg%3E");
+  background-repeat: repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat;
+  background-size: 640px 640px, 640px 640px, 640px 640px, 640px 640px, 640px 640px, 640px 640px, 640px 640px, 640px 640px, 200px 200px;
+}
+
+/* ============================================================
+   Header — the title leads; the brand mark supports
+   ============================================================ */
+.psp__head { align-items: center; gap: var(--sp-6); margin-bottom: var(--sp-8); }
+.psp__headline { position: relative; }
+
+/* soft warm glow + thin gold leaf outline behind the heading */
+.psp__headline::before {
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  left: -34px; right: -46px; top: -34px; bottom: -26px;
+  background:
+    radial-gradient(58% 78% at 22% 40%, rgba(212,175,55,0.075), transparent 72%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='190' height='190' viewBox='0 0 190 190'%3E%3Cg fill='none' stroke='%23B8860B' stroke-width='0.9' stroke-linecap='round' opacity='.42'%3E%3Cpath d='M95 22 C64 62 64 128 95 168 C126 128 126 62 95 22 Z'/%3E%3Cpath d='M95 34 L95 156'/%3E%3Cpath d='M95 66 C79 74 68 90 65 108'/%3E%3Cpath d='M95 66 C111 74 122 90 125 108'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat;
+  background-position: left center, right -22px top -16px;
+  background-size: auto, 150px;
+  opacity: 0.9;
+}
+
+/* Restrained brushed-metal title — smaller, so the product can lead. */
+.psp__title {
+  font-size: clamp(1.7rem, 2.5vw, 2.45rem);
+  line-height: 1.12;
+  letter-spacing: -0.014em;
+  margin-bottom: 8px;
+  background:
+    repeating-linear-gradient(177deg, rgba(255,255,255,0.11) 0 1px, rgba(0,0,0,0.035) 1px 2.5px),
+    var(--psp-metal);
+  background-size: 100% 12px, 100% 240%;
+  background-position: 0 0, 50% 22%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter:
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9))
+    drop-shadow(0 1px 2px rgba(124, 100, 52, 0.28))
+    drop-shadow(0 4px 10px rgba(184, 134, 11, 0.12));
+}
+.psp__head p { color: #5E5E5E; font-size: 0.94rem; letter-spacing: 0.005em; }
+
+/* Brand mark: supporting certificate stamp, not a second lockup. */
+.psp__brandlock img { height: 46px; opacity: 0.88; filter: none; }
+.psp__head-rule {
+  min-height: 56px;
+  background: linear-gradient(180deg, transparent, rgba(184,134,11,0.38), transparent);
+}
+
+.psp__idblock .lbl { color: var(--gold-deep); letter-spacing: 0.15em; }
+.psp__idrow { background-image: var(--psp-metal-sm); background-size: 220% auto; }
+
+/* ============================================================
+   Surfaces — warm-white certificate stock, thin gold edge
+   ============================================================ */
+.psp__hero,
+.psp-card,
+.psp__timeline,
+.psp-sum,
+.psp__status,
+.psp-promoband,
+.psp-promocard-wide {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFFDF7 100%);
+  border: 1px solid var(--gold-line-sf);
+  box-shadow: var(--psp-sh-2);
+}
+.psp__hero {
+  border-color: rgba(184, 134, 11, 0.24);
+  box-shadow: var(--psp-sh-3);
+  border-radius: var(--r-lg);
+}
+.psp__timeline { box-shadow: var(--psp-sh-2); }
+
+/* Soft warm halo behind the main purchase card. */
+.psp__herowrap::before {
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  left: -6%; right: -6%; top: -8%; bottom: -14%;
+  background:
+    radial-gradient(46% 60% at 22% 40%, rgba(212,175,55,0.075), transparent 72%),
+    radial-gradient(44% 56% at 92% 12%, rgba(212,175,55,0.055), transparent 74%);
+}
+
+/* Certificate plate: warm corner wash, no grain. */
+.psp__hero::before {
+  background-image:
+    radial-gradient(56% 44% at 100% 0%, rgba(212,175,55,0.055), transparent 68%),
+    radial-gradient(44% 38% at 0% 100%, rgba(212,175,55,0.035), transparent 70%);
+}
+.psp__hero::after {
+  background-image:
+    radial-gradient(1.8px 1.8px at 62% 20%, rgba(212,175,55,0.24), transparent 62%),
+    radial-gradient(1.3px 1.3px at 78% 58%, rgba(184,134,11,0.18), transparent 62%),
+    radial-gradient(1.9px 1.9px at 89% 31%, rgba(212,175,55,0.17), transparent 62%),
+    radial-gradient(1.2px 1.2px at 70% 80%, rgba(212,175,55,0.14), transparent 62%),
+    radial-gradient(1.4px 1.4px at 52% 66%, rgba(184,134,11,0.12), transparent 62%);
+}
+
+/* ============================================================
+   Product stage — the hero of the certificate (+25% scale)
+   ============================================================ */
+.psp__stage { max-width: 250px; }
+
+/* cream-to-white ground + faint gold halo ring behind the product */
+.psp__hero-media,
+.psp__hero[data-cat] .psp__hero-media {
+  background:
+    radial-gradient(56% 42% at 50% 33%, rgba(244, 226, 161, 0.26), transparent 72%),
+    linear-gradient(178deg, #FFFFFF 0%, #FFFCF3 100%);
+  border-right: 1px solid rgba(184, 134, 11, 0.14);
+  padding: var(--sp-8) var(--sp-5) var(--sp-8);
+}
+.psp__hero-media::before { opacity: 0.14; background-size: 250px; }
+.psp__hero-media::after {
+  background:
+    radial-gradient(58% 44% at 50% 26%, rgba(255, 253, 245, 0.85), transparent 74%),
+    linear-gradient(180deg, transparent 66%, rgba(184, 134, 11, 0.035) 100%);
+  box-shadow: none;
+}
+
+/* thin organic gold halo, sitting behind the product artwork */
+.psp__stage::before {
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  left: -13%; right: -13%; top: -9%; bottom: -9%;
+  border-radius: 50%;
+  border: 1px solid rgba(184, 134, 11, 0.16);
+  background: radial-gradient(closest-side, rgba(244,226,161,0.20), rgba(255,255,255,0) 78%);
+}
+.psp__stage-glow {
+  width: 92%; height: 74%;
+  background: radial-gradient(closest-side, rgba(255, 252, 240, 0.95), rgba(244, 226, 161, 0.30) 52%, transparent 80%);
+  filter: blur(6px);
+}
+.psp__stage-plinth {
+  width: 62%; height: 20px; bottom: 12%;
+  background:
+    radial-gradient(closest-side, rgba(124, 100, 52, 0.20), transparent 74%),
+    radial-gradient(closest-side, rgba(184, 134, 11, 0.09), transparent 70%);
+}
+.psp__hero-media .pimg img {
+  filter: drop-shadow(0 16px 24px rgba(124, 100, 52, 0.18)) drop-shadow(0 2px 5px rgba(124, 100, 52, 0.08));
+}
+
+/* ============================================================
+   Order information — charcoal primary, grey secondary, gold accents
+   ============================================================ */
+.psp__hero-body {
+  background:
+    radial-gradient(64% 110% at 97% 3%, rgba(212, 175, 55, 0.045), transparent 64%),
+    linear-gradient(180deg, #FFFFFF 0%, #FFFDF7 100%);
+  padding: var(--sp-8) var(--sp-8) var(--sp-8) var(--sp-9);
+}
+.psp__hero-body::before { opacity: 0.085; }
+.psp__hero-eyebrow { color: var(--gold-deep); letter-spacing: 0.2em; opacity: 1; }
+.psp__hero-title { color: #1A1A1A; letter-spacing: -0.008em; }
+.psp__hero-sub { color: #5E5E5E; }
+.psp__fields { gap: var(--sp-6) var(--sp-6); border-top-color: rgba(184, 134, 11, 0.16); }
+.psp__field svg { color: var(--gold-mid); opacity: 0.9; }
+.psp__field .lbl { color: #8A7434; letter-spacing: 0.14em; font-size: 9.5px; }
+.psp__field .val { color: #1A1A1A; font-weight: 600; }
+
+/* ============================================================
+   Timeline — airier, thinner rail, elegant circles
+   ============================================================ */
+.psp__timeline { padding: var(--sp-8) var(--sp-8); margin-bottom: var(--sp-6); }
+.psp__tl-connector { height: 1px; background: rgba(184, 134, 11, 0.24); top: 18px; }
+.psp__tl-node.is-done .psp__tl-connector {
+  background: linear-gradient(90deg, rgba(184,134,11,0.85), rgba(212,175,55,0.95), rgba(184,134,11,0.85));
+}
+.psp__tl-dot {
+  width: 36px; height: 36px; border-width: 1px;
+  border-color: rgba(184, 134, 11, 0.42);
+  background: linear-gradient(180deg, #FFFFFF, #FFFCF4);
+  color: var(--gold-mid);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 1px 2px rgba(124,100,52,0.05);
+  margin-bottom: 12px;
+}
+.psp__tl-node.is-done .psp__tl-dot,
+.psp__tl-node.is-current .psp__tl-dot {
+  width: 36px; height: 36px;
+  background: linear-gradient(152deg, #B8860B 0%, #D4AF37 32%, #F4E2A1 52%, #D4AF37 70%, #9C7418 100%);
+  border-color: rgba(156, 116, 24, 0.5);
+  color: #FFFDF3;
+  box-shadow: inset 0 1px 0 rgba(255, 253, 240, 0.55), 0 3px 10px rgba(184, 134, 11, 0.26);
+}
+.psp__tl-node.is-current .psp__tl-dot {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 253, 240, 0.6),
+    0 0 0 5px rgba(212, 175, 55, 0.10),
+    0 4px 14px rgba(184, 134, 11, 0.28);
+}
+.psp__tl-step { font-size: 0.875rem; font-weight: 600; color: #1A1A1A; letter-spacing: 0.005em; }
+.psp__tl-date { font-size: 11.5px; color: #6B6B6B; margin-top: 3px; }
+@keyframes psp-pulse {
+  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,253,240,0.6), 0 0 0 0 rgba(212,175,55,0.32), 0 4px 14px rgba(184,134,11,0.28); }
+  50%      { box-shadow: inset 0 1px 0 rgba(255,253,240,0.6), 0 0 0 10px rgba(212,175,55,0), 0 4px 14px rgba(184,134,11,0.28); }
+}
+.psp-sum::before, .psp__timeline::before {
+  background-image: radial-gradient(110% 90% at 100% 0%, rgba(212, 175, 55, 0.042), transparent 66%);
+}
+
+/* ============================================================
+   Tabs — charcoal inactive, gold active, more room to breathe
+   ============================================================ */
+.psp__tabs {
+  gap: 30px; margin-bottom: var(--sp-6);
+  border-bottom: 1px solid rgba(184, 134, 11, 0.16);
+  scrollbar-width: thin; scrollbar-color: rgba(184,134,11,0.32) transparent;
+}
+.psp__tabs::-webkit-scrollbar { height: 3px; }
+.psp__tabs::-webkit-scrollbar-thumb { background: rgba(184,134,11,0.3); border-radius: 999px; }
+.psp__tabs::-webkit-scrollbar-track { background: transparent; }
+.psp__tab { padding: 14px 2px; font-size: 0.875rem; color: #3A3A3A; gap: 9px; border-bottom-width: 2px; }
+.psp__tab svg { color: var(--gold-mid); opacity: 0.72; }
+.psp__tab:hover { color: #1A1A1A; }
+.psp__tab:hover svg { opacity: 1; }
+.psp__tab.active { color: var(--gold-deep); font-weight: 600; border-color: var(--gold); }
+.psp__tab.active svg { color: var(--gold-mid); opacity: 1; }
+
+/* ============================================================
+   Cards — layered elevation, thin gold edge, calm gold usage
+   ============================================================ */
+.psp__summary { gap: var(--sp-4); }
+.psp-sum { padding: var(--sp-5) var(--sp-5); border-radius: var(--r-md); }
+.psp-sum:hover {
+  transform: translateY(-3px);
+  border-color: rgba(184, 134, 11, 0.42);
+  box-shadow: var(--psp-sh-3);
+}
+.psp-sum__title { font-size: 0.94rem; letter-spacing: 0.002em; background-image: var(--psp-metal-sm); background-size: 220% auto; }
+.psp-sum__title svg { color: var(--gold-mid); }
+.psp-sum__line { color: #5E5E5E; }
+.psp-sum__lbl { color: #6B6B6B; }
+.psp-sum__val { color: #1A1A1A; }
+.psp-sum__stars { color: var(--gold); opacity: 0.9; }
+.psp-sum__cta { color: var(--gold-deep); }
+
+.psp-card { padding: var(--sp-6); border-radius: var(--r-lg); }
+.psp-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(184, 134, 11, 0.42);
+  box-shadow: var(--psp-sh-3);
+}
+.psp-card__head h3 { background-image: var(--psp-metal-sm); background-size: 220% auto; }
+.psp-card__head p { color: #5E5E5E; }
+.psp-card__seal { color: var(--gold); opacity: 0.8; }
+
+.psp-highlight {
+  background: linear-gradient(120deg, #FFFDF6 0%, #FFF8E8 100%);
+  border: 1px solid rgba(184, 134, 11, 0.16);
+}
+.psp-highlight .lbl { color: #5E5E5E; }
+.psp-guide__ic, .psp-actionrow__ic {
+  background: linear-gradient(140deg, #FFFDF6, #FDF3DD);
+  border: 1px solid rgba(184, 134, 11, 0.16);
+  color: var(--gold-deep);
+}
+.psp-guide__desc, .psp-actionrow__sub, .psp-genuine span, .psp-qr span,
+.psp-kv__row dt, .psp-vt__row:not(.done) .psp-vt__title, .psp-face span { color: #5E5E5E; }
+.psp-vt__time { color: #6B6B6B; }
+.psp-genuine, .psp-qr {
+  background: linear-gradient(120deg, #FFFDF6 0%, #FFF8E8 100%);
+  border: 1px solid rgba(184, 134, 11, 0.16);
+}
+.psp-kv__row { border-bottom-color: rgba(184, 134, 11, 0.12); }
+.psp-vt__dot { border-color: rgba(184, 134, 11, 0.38); }
+.psp-vt__line { background: rgba(184, 134, 11, 0.16); }
+.psp-vt__row.done .psp-vt__line { background: rgba(184, 134, 11, 0.42); }
+.psp-vt__row.done .psp-vt__dot {
+  background: linear-gradient(150deg, #D4AF37, #B8860B);
+  border-color: rgba(156, 116, 24, 0.5); color: #FFFDF3;
+}
+.psp-radio, .psp-face__ring { border-color: rgba(184, 134, 11, 0.34); }
+.psp-face.active .psp-face__ring { background: linear-gradient(140deg, #FFFDF6, #F4E2A1); border-color: var(--gold); }
+.psp-reminder__row svg.bell { color: var(--gold-mid); opacity: 0.8; }
+
+/* ============================================================
+   Sidebar — ivory, calmer gold, refined active state
+   ============================================================ */
+.psp__side {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFFDF6 100%);
+  border-right: 1px solid rgba(184, 134, 11, 0.13);
+  box-shadow: 1px 0 0 rgba(184,134,11,0.04);
+}
+.psp__profile { border-bottom: 1px solid rgba(184, 134, 11, 0.13); }
+.psp__avatar { box-shadow: 0 2px 10px rgba(184, 134, 11, 0.14); }
+.psp__tier { background: linear-gradient(120deg, #FFFDF5, #FDF2DA); border-color: rgba(184,134,11,0.42); }
+.psp__navitem { color: #3F3F3F; }
+.psp__navitem svg { color: var(--gold-mid); opacity: 0.72; }
+.psp__navitem:hover { background: rgba(212,175,55,0.06); }
+.psp__navitem:hover svg { opacity: 1; }
+.psp__navitem.active {
+  background: linear-gradient(90deg, rgba(212,175,55,0.14), rgba(244,226,161,0.16) 55%, rgba(255,255,255,0));
+  border-color: rgba(184,134,11,0.42);
+  color: var(--gold-deep);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+}
+.psp__navitem.active svg { color: var(--gold-mid); opacity: 1; }
+.psp__helpcard {
+  background: linear-gradient(150deg, #FFFDF6, #FDF3DE);
+  border: 1px solid rgba(184, 134, 11, 0.26);
+}
+.psp__helpcard p { color: #5E5E5E; }
+.psp__topbar { background: rgba(255, 254, 250, 0.95); border-bottom: 1px solid rgba(184,134,11,0.14); }
+
+/* ============================================================
+   Controls — softer, warmer metal
+   ============================================================ */
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost),
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light) {
+  color: #FFFDF3;
+  border-color: rgba(156, 116, 24, 0.45);
+  background: linear-gradient(122deg, #9C7418 0%, #B8860B 26%, #D4AF37 50%, #B8860B 74%, #8A6416 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 253, 240, 0.32), 0 4px 14px rgba(184, 134, 11, 0.22);
+}
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost) svg { color: #FFFDF3; }
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost):hover,
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost):focus-visible,
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light):hover,
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light):focus-visible {
+  color: #FFFEF8;
+  border-color: rgba(156, 116, 24, 0.6);
+  background: linear-gradient(122deg, #8A6416 0%, #B8860B 22%, #E8C766 50%, #B8860B 76%, #7C5A13 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 253, 240, 0.4), 0 8px 22px rgba(184, 134, 11, 0.28);
+}
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost):active,
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light):active {
+  color: #FFFDF3;
+  background: linear-gradient(122deg, #7C5A13 0%, #9C7418 45%, #C39526 100%);
+  box-shadow: inset 0 2px 5px rgba(90, 66, 14, 0.3);
+}
+.psp .btn-outline { border-color: rgba(184, 134, 11, 0.5); background: #FFFFFF; }
+.psp .btn-outline:hover { background: rgba(212, 175, 55, 0.08); border-color: var(--gold-mid); }
+.psp .chip { border-color: rgba(184, 134, 11, 0.26); color: #3F3F3F; }
+.psp-chiprow button.chip.active {
+  background: linear-gradient(120deg, rgba(212,175,55,0.16), rgba(244,226,161,0.36));
+  border-color: rgba(184,134,11,0.5);
+}
+.psp .input, .psp .select, .psp .textarea { border-color: rgba(184,134,11,0.28); }
+.psp .surface {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFFDF7 100%);
+  border: 1px solid rgba(184,134,11,0.16);
+  box-shadow: var(--psp-sh-2);
+}
+.psp__copied { background: linear-gradient(135deg, #9C7418, #D4AF37 48%, #8A6416); }
+
+/* ============================================================
+   Responsive — premium on small screens, never cramped
+   ============================================================ */
+@media (min-width: 1440px) {
+  .psp__stage { max-width: 275px; }
+  .psp__brandlock img { height: 52px; }
+}
+@media (max-width: 1279px) {
+  .psp__brandlock img { height: 42px; }
+}
+@media (max-width: 1023px) {
+  .psp__brandlock img { height: 40px; }
+  .psp__hero-media,
+  .psp__hero[data-cat] .psp__hero-media {
+    border-right: none;
+    border-bottom: 1px solid rgba(184, 134, 11, 0.14);
+    padding: var(--sp-8) var(--sp-5) var(--sp-8);
+  }
+  .psp__hero-body { padding: var(--sp-7) var(--sp-6); }
+  .psp__tabs { gap: 26px; }
+}
+@media (max-width: 767px) {
+  .psp__main { padding: var(--sp-6) var(--sp-4) var(--sp-10); }
+  .psp__head { gap: var(--sp-4); margin-bottom: var(--sp-6); }
+  .psp__title { font-size: clamp(1.5rem, 6.6vw, 1.85rem); margin-bottom: 6px; }
+  .psp__head p { font-size: 0.9rem; }
+  .psp__headline::before { left: -18px; right: -18px; top: -20px; bottom: -16px; background-size: auto, 108px; }
+  .psp__brandlock img { height: 34px; }
+
+  /* product stays the hero, still fully contained */
+  .psp__stage { max-width: 240px; }
+  .psp__hero-media,
+  .psp__hero[data-cat] .psp__hero-media { padding: var(--sp-6) var(--sp-5) var(--sp-6); }
+  .psp__hero-body { padding: var(--sp-6) var(--sp-5) var(--sp-6); }
+  .psp__fields { gap: var(--sp-5); }
+
+  .psp__timeline { padding: var(--sp-6) var(--sp-5); }
+  .psp__tl-node { gap: 14px; }
+  .psp__tl-dot { margin-bottom: 0; }
+
+  /* comfortable touch targets */
+  .psp__tabs { gap: 22px; }
+  .psp__tab { padding: 15px 2px; }
+  .psp__navitem { padding: 13px 12px; }
+  .psp .btn { padding: 14px 22px; }
+  .psp__download { width: 100%; justify-content: center; }
+  .psp__head-right { gap: var(--sp-4); }
+  .psp__copybtn { width: 34px; height: 34px; }
+
+  .psp::after { opacity: 0.3; }
+  .psp__main::before { background-size: 240px, 200px; }
+  .psp__title { filter: drop-shadow(0 1px 0 rgba(255,255,255,0.9)) drop-shadow(0 1px 2px rgba(124,100,52,0.28)); }
+}
+@media (max-width: 400px) {
+  .psp__stage { max-width: 215px; }
+}
+
+/* ------------------------------------------------------------
+   Polish corrections
+   1. The warm halo behind the purchase card bled 6% past the
+      container on each side, which widened the scroll box and
+      introduced horizontal scrolling from 600px up. It is now
+      constrained horizontally (the radial already fades out, so
+      nothing is lost visually), with an overflow-x guard on the
+      main column so no future decorative bleed can scroll the page.
+   2. Between 1024 and 1279px the 38% media column left the larger
+      product only ~2px of breathing room. The column takes a
+      slightly larger share in that band, and the stage carries a
+      percentage cap so it can never crowd its frame.
+   ------------------------------------------------------------ */
+.psp__main { overflow-x: clip; }
+
+.psp__herowrap::before {
+  left: 0; right: 0; top: -6%; bottom: -10%;
+}
+.psp__headline::before { right: -8px; }
+
+.psp__stage { max-width: min(250px, 90%); }
+@media (min-width: 1440px) { .psp__stage { max-width: min(275px, 90%); } }
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .psp__hero { grid-template-columns: 42% 1fr; }
+}
+@media (max-width: 767px) { .psp__stage { max-width: min(240px, 92%); } }
+@media (max-width: 400px)  { .psp__stage { max-width: min(215px, 92%); } }
+
+/* ------------------------------------------------------------
+   Readability corrections for the polish pass.
+
+   A metallic gradient sweeps through light tones, so gradient-filled
+   text can fall to ~2:1 against ivory at its bright midpoint even
+   though its declared fallback colour passes. Two changes:
+
+   1. Small gold headings (card titles, summary titles, passport ID)
+      keep a soft metallic sheen but stay entirely inside the
+      AA-passing band. The full light-to-dark sweep is reserved for
+      the H1, where the bright stops are narrowed to a thin specular
+      streak rather than the body of the letterform.
+   2. Gold buttons return to dark foil ink. Cream text on a mid-gold
+      fill measured ~2:1; foil-stamped dark ink on gold is both the
+      more authentic luxury treatment and comfortably readable.
+   ------------------------------------------------------------ */
+
+.psp {
+  /* soft sheen, fully AA on ivory */
+  --psp-metal-sm: linear-gradient(
+    100deg,
+    #6E4F10 0%, #85621B 22%, #8F6B1F 44%, #8A6416 62%, #7A5712 82%, #6E4F10 100%);
+
+  /* brushed metal: broad readable body, thin specular highlight */
+  --psp-metal: linear-gradient(
+    174deg,
+    #6E4F10 0%, #85621B 13%, #9C7418 29%, #C9A233 44%,
+    #E8C766 48.5%, #B8860B 55%, #8F6B1F 71%, #7A5712 88%, #6E4F10 100%);
+}
+
+/* small gold label sat exactly on the 4.5 threshold — deepen slightly */
+.psp__field .lbl { color: #8A6416; }
+
+/* ---- Gold buttons: dark foil ink on refined gold ---- */
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost),
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light) {
+  color: #2E2409;
+  border-color: rgba(156, 116, 24, 0.5);
+  background: linear-gradient(122deg, #B8860B 0%, #D4AF37 26%, #F4E2A1 50%, #D4AF37 74%, #B8860B 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 253, 240, 0.7),
+    inset 0 -1px 0 rgba(124, 90, 19, 0.22),
+    0 4px 14px rgba(184, 134, 11, 0.22);
+}
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost) svg,
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light) svg { color: #2E2409; }
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost):hover,
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost):focus-visible,
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light):hover,
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light):focus-visible {
+  color: #241C06;
+  border-color: rgba(156, 116, 24, 0.62);
+  background: linear-gradient(122deg, #C08F1E 0%, #E0BC4B 26%, #FBEFC0 50%, #E0BC4B 74%, #C08F1E 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 253, 240, 0.8),
+    inset 0 -1px 0 rgba(124, 90, 19, 0.24),
+    0 8px 22px rgba(184, 134, 11, 0.28);
+}
+.psp .btn.psp__download:not(.btn-outline):not(.btn-ghost):active,
+.psp .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light):active {
+  color: #241C06;
+  background: linear-gradient(122deg, #B8860B 0%, #C9A233 45%, #E8C766 100%);
+  box-shadow: inset 0 2px 5px rgba(110, 79, 16, 0.28);
+}
+
+/* ------------------------------------------------------------
+   Final readability pass.
+
+   - Premium Member badge sat at 4.40:1 on its cream fill; the ink
+     is deepened to clear AA.
+   - The H1's specular highlight is narrowed to a thin streak and
+     the glyph is given a tight dark edge, so the letterform stays
+     crisply defined on ivory even where the metal catches light.
+     (A metallic sweep necessarily passes through light tones; the
+     highlight is a reflection on the letter, not its body colour.)
+   ------------------------------------------------------------ */
+
+.psp__tier { color: #7E5A14; }
+
+.psp {
+  --psp-metal: linear-gradient(
+    174deg,
+    #6E4F10 0%, #85621B 14%, #9C7418 30%, #B8860B 42%,
+    #D9BC63 47.5%, #EFD794 49.5%, #C49B2C 52%, #A87F1B 60%,
+    #8F6B1F 74%, #7A5712 89%, #6E4F10 100%);
+}
+
+.psp__title {
+  filter:
+    drop-shadow(0 0 0.6px rgba(94, 68, 14, 0.55))
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.85))
+    drop-shadow(0 1px 2px rgba(110, 79, 16, 0.34))
+    drop-shadow(0 4px 10px rgba(184, 134, 11, 0.12));
+}
+@media (max-width: 767px) {
+  .psp__title {
+    filter:
+      drop-shadow(0 0 0.6px rgba(94, 68, 14, 0.55))
+      drop-shadow(0 1px 0 rgba(255, 255, 255, 0.85))
+      drop-shadow(0 1px 2px rgba(110, 79, 16, 0.34));
+  }
+}
+
+/* ------------------------------------------------------------
+   Final quality pass.
+
+   1. CLIPPED PRODUCT (pre-existing, worsened by the larger image).
+      The tablet block pins `.psp__hero-media { aspect-ratio: 16/9 }`,
+      and the media box also has `overflow: hidden`. Below 1024px that
+      forced a 194px-tall frame around a 215px product, so the artwork
+      was cut off. The media now sizes to its content on every screen.
+   2. Touch targets: chips, reminder rows, the copy button and the
+      card CTAs were 22-39px tall on phones; all now clear 44px.
+   3. Hierarchy: the H1 and the product name had almost identical
+      sizes. The product name steps down so the heading leads and the
+      enlarged image carries the product's weight.
+   4. On the tablet icon rail the sidebar wordmark rendered ~39px wide
+      and illegible; branding there is carried by the header mark.
+   ------------------------------------------------------------ */
+
+/* ---- 1. Product frame sizes to its content ---- */
+.psp__hero-media,
+.psp__hero[data-cat] .psp__hero-media { aspect-ratio: auto; }
+
+/* ---- 3. Type hierarchy: heading leads, product name supports ---- */
+.psp__hero-title { font-size: clamp(1.4rem, 1.95vw, 1.85rem); }
+
+/* ---- 4. Tablet icon rail: no illegible wordmark ---- */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .psp__side-brand { display: none; }
+  .psp__navitem { padding: 13px 12px; }
+}
+
+/* ---- 2. Comfortable touch targets ---- */
+@media (max-width: 767px) {
+  .psp .chip { padding: 12px 16px; min-height: 44px; }
+  .psp-reminder__row { padding: 12px 4px; min-height: 46px; }
+  .psp-sum__cta { min-height: 44px; align-items: center; }
+  .psp-actionrow { min-height: 52px; }
+  .psp__copybtn { width: 44px; height: 44px; }
+  .psp__copybtn svg { width: 17px; height: 17px; }
+  .psp-face { padding: 10px 2px; min-height: 76px; }
+  .psp__navitem { padding: 14px 12px; min-height: 48px; }
+  .psp .btn-sm { padding: 13px 18px; min-height: 44px; }
+  .psp__tab { min-height: 46px; }
+  .psp-vt__row { min-height: 44px; }
+}
+
+/* Small screens: keep a clear step between the metallic H1 and the
+   product name so the hierarchy still reads at 320-400px. */
+@media (max-width: 767px) {
+  .psp__title { font-size: clamp(1.62rem, 6.6vw, 1.85rem); }
+  .psp__hero-title { font-size: clamp(1.28rem, 5vw, 1.45rem); }
+}
+
+/* ============================================================
+   FINAL POLISH PASS — bug fixes + botanical product stage.
+
+   Fixes
+     - Duplicate SORA LIFE lockup removed from the header (the
+       sidebar keeps the brand); its divider goes with it.
+     - The gold bars over the card headings are fixed at source:
+       three rules used the `background` SHORTHAND, which resets
+       background-clip to border-box while -webkit-text-fill-color
+       stayed transparent — painting a solid gold rectangle with
+       invisible text. They now use `background-image`, and the
+       guard below re-asserts the clip so a future shorthand can
+       never silently reintroduce it.
+   Additions
+     - Larger product on a lit cream podium, framed by golden
+       botanical sprigs and a thin gold halo.
+   ============================================================ */
+
+/* ---- 1. Duplicate header lockup removed ---- */
+.psp__brandlock,
+.psp__head-rule { display: none !important; }
+
+/* ---- 2. Gradient-clipped text: clip can never be lost again ---- */
+.psp-metal,
+.psp__title,
+.psp__idrow,
+.psp-card__head h3,
+.psp-sum__title,
+.psp-highlight .val,
+.psp__side-brand strong,
+.psp-promoband__title,
+.psp-promocard-wide h3 {
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+/* icons inside gold headings keep their own solid fill */
+.psp-card__head h3 svg,
+.psp-sum__title svg,
+.psp__title svg,
+.psp-highlight svg { -webkit-text-fill-color: currentColor; }
+
+/* ---- 3. Product stage: bigger hero, botanical frame, cream podium ---- */
+.psp__hero { grid-template-columns: 40% 1fr; }
+.psp__stage { max-width: min(320px, 88%); }
+.psp__stage::before { display: none; }   /* halo now lives on .psp__stage-glow */
+
+.psp__hero-media,
+.psp__hero[data-cat] .psp__hero-media {
+  padding: var(--sp-8) var(--sp-5) var(--sp-10);
+  background:
+    radial-gradient(58% 46% at 50% 34%, rgba(247, 235, 205, 0.34), transparent 72%),
+    linear-gradient(178deg, #FFFFFF 0%, #FFFCF2 100%);
+}
+
+/* golden botanical sprigs flanking the product */
+.psp__hero-media::before {
+  opacity: 0.55;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='440' viewBox='0 0 260 440'%3E%3Cg fill='none' stroke='%23B8860B' stroke-width='1.05' stroke-linecap='round' stroke-linejoin='round' opacity='.62'%3E%3Cpath d='M34 436 C86 344 112 236 104 20'/%3E%3Cpath d='M54.3 396.2 Q88.3 397.8 117.5 364.5 Q73.3 367.9 54.3 396.2 Z'/%3E%3Cpath d='M54.3 396.2 L111.1 367.6'/%3E%3Cpath d='M68.8 360.3 Q74.5 328.9 47 297.8 Q44.8 339.2 68.8 360.3 Z'/%3E%3Cpath d='M68.8 360.3 L49.2 304'/%3E%3Cpath d='M81 321.1 Q110.6 317.7 131 284.8 Q93.4 294.1 81 321.1 Z'/%3E%3Cpath d='M81 321.1 L126 288.5'/%3E%3Cpath d='M90.9 277.9 Q91.4 250.2 63.7 227.4 Q67.5 263.1 90.9 277.9 Z'/%3E%3Cpath d='M90.9 277.9 L66.4 232.4'/%3E%3Cpath d='M98.2 229.5 Q122.9 223 136.1 192.6 Q105.4 205.1 98.2 229.5 Z'/%3E%3Cpath d='M98.2 229.5 L132.3 196.3'/%3E%3Cpath d='M103.1 175.3 Q100.6 152 75 135.8 Q81.9 165.3 103.1 175.3 Z'/%3E%3Cpath d='M103.1 175.3 L77.8 139.8'/%3E%3Cpath d='M105.3 114.2 Q125.1 106.6 133.4 80.4 Q109.1 93.3 105.3 114.2 Z'/%3E%3Cpath d='M105.3 114.2 L130.6 83.8'/%3E%3Cpath d='M104.8 45.4 Q101.2 26.7 79.2 15.3 Q86.9 38.8 104.8 45.4 Z'/%3E%3Cpath d='M104.8 45.4 L81.7 18.3'/%3E%3C/g%3E%3Cg fill='%23D4AF37' opacity='.4'%3E%3Ccircle cx='80.6' cy='336.4' r='2.6'/%3E%3Ccircle cx='98.5' cy='264.5' r='2.2'/%3E%3Ccircle cx='109.2' cy='177.7' r='1.8'/%3E%3C/g%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='400' viewBox='0 0 240 400'%3E%3Cg fill='none' stroke='%23B8860B' stroke-width='1' stroke-linecap='round' stroke-linejoin='round' opacity='.62'%3E%3Cpath d='M206 396 C158 312 132 214 142 16'/%3E%3Cpath d='M187.2 359.7 Q170.4 334.3 131.1 330.7 Q156.8 360.7 187.2 359.7 Z'/%3E%3Cpath d='M187.2 359.7 L136.7 333.6'/%3E%3Cpath d='M171.5 321.2 Q192.2 302.3 189.8 266 Q166.2 293.7 171.5 321.2 Z'/%3E%3Cpath d='M171.5 321.2 L188 271.5'/%3E%3Cpath d='M158.7 278.6 Q148.9 254.9 116.8 245.6 Q133.4 274.6 158.7 278.6 Z'/%3E%3Cpath d='M158.7 278.6 L121 248.9'/%3E%3Cpath d='M149.1 230.4 Q169 218.1 172.6 187.9 Q149 207 149.1 230.4 Z'/%3E%3Cpath d='M149.1 230.4 L170.2 192.1'/%3E%3Cpath d='M142.8 175.3 Q138 154.8 113.4 143 Q122.8 168.6 142.8 175.3 Z'/%3E%3Cpath d='M142.8 175.3 L116.3 146.2'/%3E%3Cpath d='M140 112.1 Q157.1 104.5 163.4 81 Q142.5 93.5 140 112.1 Z'/%3E%3Cpath d='M140 112.1 L161.1 84.1'/%3E%3Cpath d='M141 39.3 Q139.1 23 121.1 11.6 Q126.1 32.3 141 39.3 Z'/%3E%3Cpath d='M141 39.3 L123.1 14.4'/%3E%3C/g%3E%3Cg fill='%23D4AF37' opacity='.4'%3E%3Ccircle cx='162.1' cy='304.3' r='2.6'/%3E%3Ccircle cx='145.3' cy='238.8' r='2.2'/%3E%3Ccircle cx='135.3' cy='159.5' r='1.8'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat;
+  background-position: left -46px bottom -34px, right -40px top -30px;
+  background-size: 238px auto, 216px auto;
+}
+
+/* soft cream halo + thin gold ring, behind podium and product */
+.psp__stage-glow {
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(370px, 92%); height: auto; aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid rgba(184, 134, 11, 0.16);
+  background: radial-gradient(closest-side,
+    rgba(255, 253, 246, 0.95) 0%,
+    rgba(250, 240, 214, 0.46) 56%,
+    rgba(255, 255, 255, 0) 84%);
+  filter: none;
+}
+
+/* lit cream podium the product is seated on */
+.psp__stage-plinth {
+  left: 50%; bottom: 9%;
+  width: 68%; height: 46px;
+  transform: translate(-50%, 42%);
+  border-radius: 50%;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FCF4E2 52%, #F2E4C4 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 7px rgba(184, 134, 11, 0.10),
+    0 12px 26px rgba(124, 100, 52, 0.14);
+  z-index: 2;
+}
+
+/* keep the top-light wash gentle so the botanicals stay readable */
+.psp__hero-media::after {
+  background:
+    radial-gradient(56% 42% at 50% 24%, rgba(255, 253, 246, 0.55), transparent 74%),
+    linear-gradient(180deg, transparent 70%, rgba(184, 134, 11, 0.03) 100%);
+  box-shadow: none;
+}
+.psp__hero-media .pimg img {
+  filter: drop-shadow(0 18px 26px rgba(124, 100, 52, 0.20)) drop-shadow(0 3px 6px rgba(124, 100, 52, 0.10));
+}
+
+/* ---- 4. Page corners: richer botanical presence, still very faint ---- */
+.psp__main::before {
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300' viewBox='0 0 200 300'%3E%3Cg fill='none' stroke='%23B8860B' stroke-width='0.95' stroke-linecap='round' stroke-linejoin='round' opacity='.62'%3E%3Cpath d='M28 294 C70 226 96 150 92 14'/%3E%3Cpath d='M44.7 264.8 Q68.8 268 91.1 245.8 Q59.6 245.6 44.7 264.8 Z'/%3E%3Cpath d='M44.7 264.8 L86.5 247.7'/%3E%3Cpath d='M61.5 228.3 Q65.9 206.6 47 184.8 Q45 213.5 61.5 228.3 Z'/%3E%3Cpath d='M61.5 228.3 L48.5 189.2'/%3E%3Cpath d='M75 187.9 Q95 186.3 109.1 164.5 Q83.7 169.9 75 187.9 Z'/%3E%3Cpath d='M75 187.9 L105.7 166.9'/%3E%3Cpath d='M84.9 142.4 Q84.6 124.5 66 110.6 Q69.3 133.6 84.9 142.4 Z'/%3E%3Cpath d='M84.9 142.4 L67.9 113.8'/%3E%3Cpath d='M90.8 90.2 Q105.9 85.8 113.4 66.8 Q94.7 74.9 90.8 90.2 Z'/%3E%3Cpath d='M90.8 90.2 L111.1 69.1'/%3E%3Cpath d='M92.3 30 Q89.7 16.7 74 8.8 Q79.5 25.5 92.3 30 Z'/%3E%3Cpath d='M92.3 30 L75.8 10.9'/%3E%3C/g%3E%3Cg fill='%23D4AF37' opacity='.4'%3E%3Ccircle cx='68.1' cy='219.2' r='2.6'/%3E%3Ccircle cx='84.3' cy='169.5' r='2.2'/%3E%3Ccircle cx='94.9' cy='111.6' r='1.8'/%3E%3C/g%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300' viewBox='0 0 200 300'%3E%3Cg fill='none' stroke='%23B8860B' stroke-width='0.95' stroke-linecap='round' stroke-linejoin='round' opacity='.62'%3E%3Cpath d='M28 294 C70 226 96 150 92 14'/%3E%3Cpath d='M44.7 264.8 Q68.8 268 91.1 245.8 Q59.6 245.6 44.7 264.8 Z'/%3E%3Cpath d='M44.7 264.8 L86.5 247.7'/%3E%3Cpath d='M61.5 228.3 Q65.9 206.6 47 184.8 Q45 213.5 61.5 228.3 Z'/%3E%3Cpath d='M61.5 228.3 L48.5 189.2'/%3E%3Cpath d='M75 187.9 Q95 186.3 109.1 164.5 Q83.7 169.9 75 187.9 Z'/%3E%3Cpath d='M75 187.9 L105.7 166.9'/%3E%3Cpath d='M84.9 142.4 Q84.6 124.5 66 110.6 Q69.3 133.6 84.9 142.4 Z'/%3E%3Cpath d='M84.9 142.4 L67.9 113.8'/%3E%3Cpath d='M90.8 90.2 Q105.9 85.8 113.4 66.8 Q94.7 74.9 90.8 90.2 Z'/%3E%3Cpath d='M90.8 90.2 L111.1 69.1'/%3E%3Cpath d='M92.3 30 Q89.7 16.7 74 8.8 Q79.5 25.5 92.3 30 Z'/%3E%3Cpath d='M92.3 30 L75.8 10.9'/%3E%3C/g%3E%3Cg fill='%23D4AF37' opacity='.4'%3E%3Ccircle cx='68.1' cy='219.2' r='2.6'/%3E%3Ccircle cx='84.3' cy='169.5' r='2.2'/%3E%3Ccircle cx='94.9' cy='111.6' r='1.8'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat;
+  background-position: right -70px top -50px, left -80px bottom -60px;
+  background-size: 380px auto, 300px auto;
+}
+
+/* ---- 5. Responsive ---- */
+@media (min-width: 1440px) {
+  .psp__stage { max-width: min(340px, 88%); }
+  .psp__hero-media::before { background-size: 258px auto, 232px auto; }
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .psp__hero { grid-template-columns: 44% 1fr; }
+  .psp__hero-media,
+  .psp__hero[data-cat] .psp__hero-media { padding: var(--sp-7) var(--sp-3) var(--sp-8); }
+  .psp__hero-media::before { background-size: 200px auto, 182px auto; background-position: left -54px bottom -34px, right -48px top -30px; }
+}
+@media (max-width: 1023px) {
+  /* the hero stacks below 1024px — must be re-declared here because the
+     unmediated 40% rule above would otherwise win and squeeze the product */
+  .psp__hero { grid-template-columns: 1fr; }
+  .psp__hero-media,
+  .psp__hero[data-cat] .psp__hero-media { padding: var(--sp-8) var(--sp-5) var(--sp-10); }
+  .psp__stage { max-width: min(320px, 88%); }
+  .psp__hero-media::before { background-size: 224px auto, 204px auto; }
+}
+@media (max-width: 767px) {
+  .psp__stage { max-width: min(300px, 88%); }
+  .psp__hero-media,
+  .psp__hero[data-cat] .psp__hero-media { padding: var(--sp-7) var(--sp-4) var(--sp-9); }
+  .psp__hero-media::before {
+    background-size: 176px auto, 158px auto;
+    background-position: left -50px bottom -28px, right -44px top -24px;
+    opacity: 0.46;
+  }
+  .psp__stage-glow { width: min(300px, 94%); }
+  .psp__stage-plinth { width: 72%; height: 38px; }
+  .psp__main::before { background-size: 230px auto, 190px auto; }
+}
+@media (max-width: 430px) { .psp__stage { max-width: min(285px, 88%); } }
+@media (max-width: 360px) { .psp__stage { max-width: min(258px, 90%); } }
+
+/* ============================================================
+   GOLD RESTRAINT PASS (design-taste: gold as accent, not content)
+   The estimated-delivery / return-window / "purchased N days ago"
+   VALUES were rendered as metallic gold gradient text. Values are
+   primary content and read best as dark charcoal — gold stays on the
+   small label above them and on the icon. This removes three of the
+   page's gold-gradient texts and sharpens the label→value hierarchy,
+   without touching the requested gold card headings or the single
+   metallic H1. Highest-specificity so it wins the cascade.
+   ============================================================ */
+.psp .psp-highlight .val {
+  color: #1A1A1A;
+  background: none;
+  -webkit-text-fill-color: #1A1A1A;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+}
+
+/* ============================================================
+   OPEN-SMOOTHLY PASS — removes the stutter/pop-in on mount.
+
+   Diagnosis (measured, not guessed):
+   - Four full-viewport `position: fixed` decorative layers (.psp::before,
+     .psp::after, .psp__main::before, .psp__main::after) each carry SVG
+     data-URI textures plus radial gradients. One of them also runs an
+     infinite transform (psp-ambient). A transformed, full-screen, textured
+     layer that is not GPU-promoted repaints on every frame — the stutter.
+   - The mount reveal staggered opacity/transform across the hero, timeline,
+     tabs and every card with delays up to 580ms, which reads as delayed
+     content pop-in rather than a considered entrance.
+
+   Fixes: promote and isolate the decorative layers so they composite instead
+   of repaint, and tighten the entrance into one quick coordinated fade.
+   Animation stays transform/opacity only — nothing here animates layout.
+   ============================================================ */
+
+/* 1. Composite the decorative layers instead of repainting them. */
+.psp::before,
+.psp::after,
+.psp__main::before,
+.psp__main::after {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: paint;
+}
+
+/* 2. Faster, unified entrance. Same motion language, less waiting:
+      720ms -> 420ms and the stagger is compressed so the last card is in
+      by ~260ms instead of ~1s. */
+@media (prefers-reduced-motion: no-preference) {
+  .psp__herowrap,
+  .psp__timeline,
+  .psp__tabs,
+  .psp__grid > *,
+  .psp__summary > * {
+    animation: psp-rise 420ms var(--ease-luxury) both;
+  }
+  .psp__timeline { animation-delay: 50ms; }
+  .psp__tabs { animation-delay: 90ms; }
+  .psp__grid > *:nth-child(1), .psp__summary > *:nth-child(1) { animation-delay: 40ms; }
+  .psp__grid > *:nth-child(2), .psp__summary > *:nth-child(2) { animation-delay: 80ms; }
+  .psp__grid > *:nth-child(3), .psp__summary > *:nth-child(3) { animation-delay: 120ms; }
+  .psp__grid > *:nth-child(4), .psp__summary > *:nth-child(4) { animation-delay: 160ms; }
+  .psp__grid > *:nth-child(n+5), .psp__summary > *:nth-child(n+5) { animation-delay: 200ms; }
+
+  /* Release the promotion hint once the entrance is done. */
+  .psp__herowrap, .psp__timeline, .psp__tabs { will-change: opacity, transform; }
+}
+
+/* 3. Shorter travel = less perceived jump. */
+@keyframes psp-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* 4. The product still ran an infinite 26s Ken Burns scale. Continuously
+      compositing a large image costs frames and battery on a phone for an
+      effect nobody notices at that size — desktop keeps it. */
+@media (max-width: 900px) {
+  .psp__hero-media .pimg img { animation: none !important; }
+}
