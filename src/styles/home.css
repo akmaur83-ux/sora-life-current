@@ -66,7 +66,9 @@
    so it can also neutralise the Ken-Burns / parallax transforms. */
 
 /* ============ CATEGORY CIRCLES ============ */
-.bh-cats { border-bottom: 1px solid var(--line-soft); background: #F4EBDD; }
+/* Forest-green brand strip, matching the top utility/announcement bar (.annbar
+   uses --forest-800 / --forest-50). Circles stay light so images read clearly. */
+.bh-cats { border-bottom: 1px solid var(--forest-900); background: var(--forest-800); }
 .bh-cats__row { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--sp-3); padding-block: var(--sp-8); }
 .bh-cat { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
 .bh-cat__circle { width: 92px; height: 92px; border-radius: 999px; overflow: hidden; background: var(--tone-tint, var(--cream)); display: grid; place-items: center; transition: transform var(--t-slow) var(--ease-luxury), box-shadow var(--t-slow) var(--ease-luxury); }
@@ -74,9 +76,12 @@
 .bh-cat__circle .pimg img { padding: 10px; background: transparent; mix-blend-mode: multiply; transition: transform var(--t-slower) var(--ease-luxury); }
 .bh-cat:hover .bh-cat__circle { transform: translateY(-4px); box-shadow: var(--shadow-md); }
 .bh-cat:hover .bh-cat__circle .pimg img { transform: scale(1.08); }
-.bh-cat__name { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-900); transition: color var(--t) var(--ease-soft); }
-.bh-cat:hover .bh-cat__name { color: var(--forest-700); }
-.bh-cat__view { font-size: var(--text-xs); color: var(--color-text-muted); }
+.bh-cat__name { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--forest-50); transition: color var(--t) var(--ease-soft); }
+.bh-cat:hover .bh-cat__name { color: var(--honey-300); }
+.bh-cat__view { font-size: var(--text-xs); color: var(--forest-200); }
+/* Readable focus ring on the green strip (global ring is a green glow that would
+   blend into --forest-800). */
+.bh-cat:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(240, 246, 242, 0.55); border-radius: var(--r-md); }
 @media (max-width: 1040px) { .bh-cats__row { grid-template-columns: repeat(4, 1fr); gap: var(--sp-5) var(--sp-3); } }
 @media (max-width: 560px) {
   .bh-cats__row { grid-auto-flow: column; grid-auto-columns: 33%; grid-template-columns: none; overflow-x: auto; gap: var(--sp-3); scroll-snap-type: x mandatory; margin-inline: calc(-1 * var(--sp-4)); padding-inline: var(--sp-4); }
@@ -269,8 +274,10 @@
 .price--lg .now { font-size: 1.9rem; }
 .price-tbd { font-weight: 600; font-size: var(--text-sm); }
 
-/* Premium discount badge — refined, not a marketplace sticker */
-.badge-sale { background: var(--forest-700); color: var(--honey-300); letter-spacing: 0.08em; box-shadow: var(--shadow-xs); font-weight: 700; }
+/* Premium discount badge — SORA honey accent (--honey-500 = --color-accent),
+   dark text for high contrast (~7.7:1). Only the % OFF (.badge-sale) changes;
+   the NEW badge (.badge-new) is a separate class and is untouched. */
+.badge-sale { background: var(--honey-500); color: var(--forest-900); letter-spacing: 0.08em; box-shadow: var(--shadow-xs); font-weight: 700; }
 
 
 /* Hero pagination dots were 9x9 — visually right, far too small to tap.
