@@ -97,3 +97,5 @@ h3 { font-size: var(--text-xl); }
 .hide-mobile { }
 .only-mobile { display: none; }
 @media (max-width: 900px) { .hide-mobile { display: none !important; } .only-mobile { display: revert; } }
+/* Phones: tighten the tall desktop section rhythm so products surface sooner. */
+@media (max-width: 640px) { .section { padding-block: var(--sp-10); } .section-sm { padding-block: var(--sp-8); } }

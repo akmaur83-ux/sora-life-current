@@ -56,7 +56,7 @@ export default function ProductCard({ product }) {
       </div>
 
       <div className="pcard__body">
-        <span className="pcard__cat">{cat?.name}{product.form ? ` · ${product.form}` : ''}</span>
+        <span className="pcard__cat">{cat?.name}{product.form ? <span className="pcard__cat-form"> · {product.form}</span> : ''}</span>
         <h3 className="pcard__name"><Link to={`/product/${product.slug}`}>{product.name}</Link></h3>
         {product.reviewCount > 0 && <StarRating value={product.rating} count={product.reviewCount} size={14} />}
         <div className="pcard__foot">

@@ -806,3 +806,17 @@
   .ordercard__actions { width: 100%; }
   .ordercard__actions .btn { flex: 1 1 calc(50% - 4px); min-height: 44px; justify-content: center; }
 }
+
+/* ============================================================
+   MOBILE-FIRST PAGE POLISH  (Shop / Cart / Checkout) — reconciled
+   ============================================================ */
+@media (max-width: 900px) {
+  .cartrow__media { align-self: start; }   /* square thumbnail, no stretched blank space */
+  .browser__bar { margin-bottom: var(--sp-4); gap: 8px 12px; }
+  .browser__count { font-size: var(--text-sm); }
+  .browser__tools { gap: 8px; }
+}
+@media (max-width: 640px) {
+  .input, .select, .textarea { font-size: 16px; }   /* stop iOS focus auto-zoom */
+  .summary__total span:last-child { font-size: var(--text-xl); }
+}

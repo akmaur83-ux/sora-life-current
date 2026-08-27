@@ -208,3 +208,9 @@
   .btn-sm { min-height: 44px; }
   .sec-link, .bh-best__all { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
 }
+
+/* PDP shows a fixed ~82px buy bar (and hides the tab bar). Reserve that height
+   at the end of the footer so its last row never sits under the buy bar. */
+@media (max-width: 900px) {
+  body:has(.buybar) .ftr { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+}

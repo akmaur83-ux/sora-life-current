@@ -15786,7 +15786,10 @@
 	      className: "pcard__body",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	        className: "pcard__cat",
-	        children: [cat?.name, product.form ? ` · ${product.form}` : '']
+	        children: [cat?.name, product.form ? /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "pcard__cat-form",
+	          children: [" \xB7 ", product.form]
+	        }) : '']
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
 	        className: "pcard__name",
 	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {

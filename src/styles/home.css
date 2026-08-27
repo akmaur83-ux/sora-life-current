@@ -368,3 +368,19 @@
 .inv__row--mrp .inv__row-value { color: var(--price-mrp); text-decoration: line-through; }
 .inv__row.is-strong .inv__row-value { color: var(--price-now-strong); }
 .adm-bill__row.is-mrp > span:last-child { color: var(--price-mrp); text-decoration: line-through; }
+
+/* ============================================================
+   MOBILE-FIRST HOMEPAGE POLISH  (<= 768px / <= 560px)
+   Trim the blank space around card product images and the tall section
+   rhythm so a phone user reaches products quickly. Ticker untouched.
+   ============================================================ */
+@media (max-width: 768px) {
+  .pcard__media .pimg img { padding: 6px; }   /* less letterbox on mobile cards */
+  .bh-cats__row { padding-block: var(--sp-5); }
+  .bh-best__head { margin-bottom: var(--sp-4); }
+}
+@media (max-width: 560px) {
+  .bh-cat__circle { width: 72px; height: 72px; }
+  .bh-cat__name { font-size: 0.68rem; }
+  .bh-edit-wrap { padding-block: var(--sp-8) var(--sp-10); }
+}

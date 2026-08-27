@@ -402,3 +402,43 @@
 /* On the deep-green product hero the same tokens would sink into the
    background, so the sale price lifts to the light end of the scale. */
 .pdp__buybox .price .now { color: var(--price-now); }
+
+/* ============================================================
+   MOBILE-FIRST PRODUCT CARDS  (<= 768px)  [reconciled onto ec8d78a]
+   ec8d78a compacted desktop cards (>=901px square stage) and set the
+   sharp 2px card radius; phones kept the tall 4:5 image + full body
+   (~461px). This block adds the mobile compaction: the redundant hover
+   quick-add pill + quick-view eye are dropped (tap the card for the PDP;
+   the foot carries a compact filled add button), the size suffix and
+   star row are trimmed so every card shares one structure, and the price
+   sits right under the title. The card radius is left at ec8d78a's 2px.
+   Desktop (>=901px) and the announcement ticker are untouched.
+   ============================================================ */
+@media (max-width: 768px) {
+  /* Drop the hover quick-add row (pill + eye) — redundant on touch. */
+  .pcard__quick { display: none; }
+  /* Wishlist: smaller visible circle, ~46px invisible tap area. */
+  .pcard__wish { width: 32px; height: 32px; top: 8px; right: 8px; }
+  .pcard__wish svg { width: 16px; height: 16px; }
+  .pcard__wish::before { content: ''; position: absolute; inset: -7px; border-radius: inherit; }
+  /* Badges: compact, corner-tucked; theme-driven colours preserved. */
+  .pcard__badges { top: 8px; left: 8px; gap: 5px; }
+  .pcard .badge { font-size: 10px; padding: 3px 8px; letter-spacing: 0.04em; }
+  /* Body: tight rhythm, single-line meta, 2-line title, price pulled up. */
+  .pcard__body { padding: 9px 10px 11px; gap: 3px; }
+  .pcard__cat { font-size: 10.5px; letter-spacing: 0.02em; }
+  .pcard__cat-form { display: none; }             /* drop the size suffix — no ugly truncation */
+  .pcard__name { font-size: 0.875rem; line-height: 1.2; min-height: calc(2 * 1.2em); }
+  .pcard__name a { padding-block: 2px; }
+  .pcard__body .rating-row { display: none; }      /* uniform heights; rating lives on the PDP */
+  .pcard__foot { margin-top: 6px; padding-top: 0; gap: 8px; }
+  .pcard__foot .price { row-gap: 0; column-gap: 6px; line-height: 1.15; }
+  .pcard__foot .price .now { line-height: 1.1; }
+  .pcard__foot .price .was { line-height: 1.05; }
+  /* The foot add button is the mobile quick-add: compact, filled, obvious. */
+  .pcard__add { width: 40px; height: 40px; background: var(--color-primary); color: var(--color-on-primary); box-shadow: var(--shadow-xs); }
+  .pcard__add:hover { background: var(--color-primary-hover); color: var(--color-on-primary); }
+  .pcard__add svg { width: 18px; height: 18px; }
+  /* Tighter grid gap so the 2-up scans quickly without feeling cramped. */
+  .pgrid { gap: 10px; }
+}
