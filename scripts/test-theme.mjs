@@ -6,7 +6,7 @@
 // OFFLINE  — the pure theme.js core (defaults, validation, injection rejection,
 //            the --st-* mapping, presets, independence guarantees).
 // STATIC   — the 0015 migration's security shape.
-// LIVE     — anon read/write posture (NOTEs if 0015 isn't applied yet).
+// LIVE     — opt-in only via --live (real read/write probes; requires approval).
 // ============================================================
 import { readFileSync } from 'node:fs';
 import {
@@ -97,7 +97,8 @@ t(/not in \('none','subtle','medium','strong'\)/.test(SQL) && /not in \('compact
 t(/v_out := coalesce\(v_defaults/.test(SQL), 'RPC rebuilds from defaults → unknown keys never stored (whitelist)', 'STATIC');
 t(/on conflict \(key\) do nothing/.test(SQL), 'seed will not clobber an existing saved theme', 'STATIC');
 
-console.log('\n— Live posture (anon) —');
+if (process.argv.includes('--live')) {
+console.log('\n— Live posture (anon; explicitly opted in) —');
 try {
   const bundle = readFileSync('public/bundle.js', 'utf8');
   const URL = (bundle.match(/https:\/\/[a-z0-9]{15,}\.supabase\.co/) || [])[0];
@@ -113,6 +114,7 @@ try {
   if (Array.isArray(rows) && rows.length) ok('anon can READ storefront_theme (public presentation key)', 'LIVE');
   else inf('storefront_theme not yet public-readable — apply migration 0015');
 } catch (e) { inf(`live probe skipped: ${e.message}`); }
+} else { inf('Live probes disabled; offline/static tests only.'); }
 
 console.log(`\n${pass} passed, ${fail} failed, ${note} notes\n`);
 process.exit(fail ? 1 : 0);

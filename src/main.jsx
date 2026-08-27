@@ -5,12 +5,12 @@ import App from './App.jsx';
 import { StoreProvider } from './lib/store.jsx';
 import { AdminAuthProvider } from './lib/adminAuth.jsx';
 import { CustomerAuthProvider } from './lib/customerAuth.jsx';
-import { applyCatalog, applyVariants } from './data/products.js';
+import { applyCatalog, applyVariants, applyProductMedia } from './data/products.js';
 import { applyCategories } from './data/categories.js';
 import { applyBranding, applyAnnouncement, applyHomepage, applyContact, applyHeroSlides, applyStorefrontTheme } from './lib/settings.js';
 import {
   fetchPublicCatalog, fetchPublicCategories, fetchPublicHeroSlides, fetchPublicSettings,
-  fetchPublicVariants,
+  fetchPublicVariants, fetchPublicProductMedia,
 } from './lib/adminApi.js';
 
 class ErrorBoundary extends React.Component {
@@ -43,20 +43,22 @@ function Root() {
     let cancelled = false;
     (async () => {
       try {
-        const [catalog, categories, heroSlides, settings, variants] = await Promise.all([
+        const [catalog, categories, heroSlides, settings, variants, media] = await Promise.all([
           withTimeout(fetchPublicCatalog().catch(() => null), 4000),
           withTimeout(fetchPublicCategories().catch(() => null), 4000),
           withTimeout(fetchPublicHeroSlides().catch(() => null), 4000),
           withTimeout(fetchPublicSettings().catch(() => null), 4000),
           withTimeout(fetchPublicVariants().catch(() => null), 4000),
+          withTimeout(fetchPublicProductMedia().catch(() => null), 4000),
         ]);
         if (cancelled) return;
 
         let changed = false;
         if (catalog && applyCatalog(catalog, 'supabase')) changed = true;
-        // Variants must be applied AFTER the catalogue, because applyCatalog
-        // rebuilds the product objects they attach to.
+        // Variants and media must be applied AFTER the catalogue, because
+        // applyCatalog rebuilds the product objects they attach to.
         if (variants && applyVariants(variants)) changed = true;
+        if (media && applyProductMedia(media)) changed = true;
         if (categories && applyCategories(categories)) changed = true;
         if (heroSlides && applyHeroSlides(heroSlides)) changed = true;
         if (settings) {

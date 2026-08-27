@@ -17,22 +17,23 @@ function optimizedBase(src) {
 // Renders the real official product photo. Serves right-sized WebP variants via
 // <picture> when available (originals stay as the <img> fallback), and falls
 // back to a branded tile if the image is missing or fails to load.
-export default function ProductImage({ product, className = '', index = 0, sizes = GRID_SIZES }) {
+export default function ProductImage({ product, className = '', index = 0, sizes = GRID_SIZES, src: mediaSrc = null, alt: altOverride = null }) {
   const [failed, setFailed] = useState(false);
   if (!product) return <div className={`pimg ${className}`} style={{ background: 'var(--cream)' }} />;
   const cat = categoryBySlug[product.category];
   const t = tones[cat?.tone] || tones.forest;
 
-  const src = index === 0
+  const src = mediaSrc || (index === 0
     ? product.image
-    : (product.gallery && product.gallery[index]) || product.image;
+    : (product.gallery && product.gallery[index]) || product.image);
+  const alt = altOverride || product.name;
 
   if (src && !failed) {
     const base = optimizedBase(src);
     // Sizing/fit is controlled entirely by CSS (.pimg img) so product photos
     // are never cropped and every context presents them consistently.
     const img = (
-      <img src={src} alt={product.name} loading="lazy" decoding="async"
+      <img src={src} alt={alt} loading="lazy" decoding="async"
         sizes={base ? sizes : undefined}
         onError={() => setFailed(true)} />
     );

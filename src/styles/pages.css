@@ -148,6 +148,8 @@
    ============================================================ */
 .pdp { display: grid; grid-template-columns: 1.05fr 1fr; gap: var(--sp-12); padding-block: var(--sp-6) var(--sp-10); align-items: start; }
 .pdp__gallery { position: sticky; top: calc(76px + var(--sp-4)); display: grid; grid-template-columns: 84px 1fr; gap: 14px; }
+.pdp__gallery--single { grid-template-columns: minmax(0, 1fr); }
+.pdp__gallery--single .pdp__main { order: 1; }
 .pdp__main { position: relative; order: 2; border-radius: var(--r-xl); overflow: hidden; background: var(--cream); box-shadow: var(--shadow-sm); }
 .pdp__main .pimg { aspect-ratio: 1; }
 .pdp__frame-fade { animation: pdpFrameIn 550ms var(--ease-luxury); }
@@ -157,6 +159,15 @@
 .pdp__thumb { border: 2px solid var(--line-soft); border-radius: var(--r-md); overflow: hidden; transition: border-color var(--t) var(--ease); }
 .pdp__thumb .pimg { aspect-ratio: 1; }
 .pdp__thumb.active { border-color: var(--color-primary); }
+/* Mobile swipe: keep vertical scrolling, capture horizontal drags for the gallery. */
+.pdp__main { touch-action: pan-y; }
+/* Swipe dot indicators — shown on mobile only (desktop uses the thumb rail). */
+.pdp__dots { display: none; }
+@media (max-width: 900px) {
+  .pdp__dots { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; gap: 7px; z-index: 2; }
+  .pdp__dot { width: 7px; height: 7px; border-radius: 999px; background: rgba(20, 38, 28, 0.28); border: none; padding: 0; cursor: pointer; transition: background var(--t) var(--ease), transform var(--t) var(--ease); }
+  .pdp__dot.active { background: var(--color-primary); transform: scale(1.25); }
+}
 
 .pdp__title { font-size: clamp(1.8rem, 3.6vw, 2.6rem); margin: 8px 0 12px; }
 .pdp__rate { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: var(--sp-4); }

@@ -53,6 +53,10 @@ function normalizeProduct(p) {
     onSale: discountPercent > 0,
     image: p.image,
     gallery: p.gallery && p.gallery.length ? p.gallery : [],
+    // Structured multi-image gallery (product_media rows). Attached later by
+    // applyProductMedia(); empty here so a product with no media rows falls
+    // back to its single primary image via productGallery().
+    media: Array.isArray(p.media) ? p.media : [],
     permalink: p.permalink || null,
     rating: p.reviewCount > 0 ? p.rating : 0,
     reviewCount: p.reviewCount || 0,
@@ -246,6 +250,54 @@ export let priceRange = getPriceRange();
  *
  * Returns true when something changed, so main.jsx can trigger one re-render.
  */
+/**
+ * Attach structured product media (product_media rows, migration 0016) to the
+ * in-memory catalogue, keyed by the products table's numeric id (carried as
+ * dbId). Primary-first, then by sort_order. Products with no media rows are
+ * left untouched and fall back to their single primary image.
+ */
+export function applyProductMedia(mediaList) {
+  if (!Array.isArray(mediaList) || mediaList.length === 0) return false;
+  const byProduct = new Map();
+  for (const m of mediaList) {
+    if (!m || !m.url) continue;
+    const key = String(m.productId);
+    if (!byProduct.has(key)) byProduct.set(key, []);
+    byProduct.get(key).push(m);
+  }
+  if (byProduct.size === 0) return false;
+
+  let changed = false;
+  for (const p of products) {
+    const list = byProduct.get(String(p.dbId ?? p.id));
+    if (!list || !list.length) continue;
+    const sorted = [...list].sort((a, b) =>
+      (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0) || (a.sortOrder - b.sortOrder));
+    p.media = sorted.map((m) => ({
+      id: m.id, url: m.url, alt: m.alt || p.name, isPrimary: !!m.isPrimary, sortOrder: m.sortOrder,
+    }));
+    // Keep the single primary image in sync so the grid/cart/wishlist (which
+    // read product.image) match the gallery's primary.
+    const primary = sorted.find((m) => m.isPrimary) || sorted[0];
+    if (primary && primary.url) p.image = primary.url;
+    changed = true;
+  }
+  if (changed) catalogVersion += 1;
+  return changed;
+}
+
+/**
+ * The ordered gallery for a product: its media rows when present, otherwise a
+ * one-item fallback built from the single primary image. Never fabricates
+ * placeholder tiles. Returns [{ url, alt, isPrimary, sortOrder }].
+ */
+export function productGallery(product) {
+  if (!product) return [];
+  if (Array.isArray(product.media) && product.media.length) return product.media;
+  if (product.image) return [{ url: product.image, alt: product.name, isPrimary: true, sortOrder: 0 }];
+  return [];
+}
+
 export function applyVariants(variantList) {
   if (!Array.isArray(variantList) || variantList.length === 0) return false;
   const byProduct = new Map();

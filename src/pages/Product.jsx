@@ -2,31 +2,15 @@ import { useState, useEffect, Fragment } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductImage from '../components/ProductImage.jsx';
+import ProductGallery from '../components/ProductGallery.jsx';
 import StarRating from '../components/StarRating.jsx';
 import PriceTag from '../components/PriceTag.jsx';
 import ProductRail from '../components/ProductRail.jsx';
 import NotFound from './NotFound.jsx';
 import { useStore } from '../lib/store.jsx';
 import { productBySlug, getRelated, productById, isCatalogHydrated, productRouteState } from '../data/products.js';
-import { categoryBySlug, tones } from '../data/categories.js';
+import { categoryBySlug } from '../data/categories.js';
 import { money } from '../lib/format.js';
-
-function GalleryFrame({ product, index }) {
-  if (index === 0) return <ProductImage product={product} sizes="(max-width: 900px) 92vw, 460px" />;
-  const t = tones[categoryBySlug[product.category]?.tone] || tones.forest;
-  const labels = ['Texture', 'Ingredients', 'In use'];
-  const icons = ['droplet', 'leaf', 'sparkle'];
-  return (
-    <div className="pimg" style={{ background: `linear-gradient(150deg, ${t.tint}, #fff)` }}>
-      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: t.b }}>
-        <div style={{ textAlign: 'center' }}>
-          <Icon name={icons[index - 1]} size={40} />
-          <div style={{ marginTop: 10, fontFamily: 'var(--font-display)', fontWeight: 600 }}>{labels[index - 1]}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function Accordion({ items }) {
   const [open, setOpen] = useState(0);
@@ -70,7 +54,6 @@ export default function Product() {
   const navigate = useNavigate();
   const { addToCart, toggleWish, isWished } = useStore();
   const product = productBySlug[slug];
-  const [frame, setFrame] = useState(0);
   const [qty, setQty] = useState(1);
   // The selected VARIANT OBJECT (not just its label): price, MRP, SKU, stock
   // and image all follow from it, and the cart needs its id so the server can
@@ -145,22 +128,13 @@ export default function Product() {
       </div>
 
       <section className="pdp container">
-        {/* Gallery */}
-        <div className="pdp__gallery">
-          <div className="pdp__main">
-            <div className="pdp__frame-fade" key={frame}><GalleryFrame product={product} index={frame} /></div>
-            <button className={`pcard__wish pdp__wish ${wished ? 'active' : ''}`} onClick={() => toggleWish(product)} aria-label="Wishlist">
-              <Icon name="heart" size={22} fill={wished ? 'currentColor' : 'none'} />
-            </button>
-          </div>
-          <div className="pdp__thumbs">
-            {[0, 1, 2, 3].map((i) => (
-              <button key={i} className={`pdp__thumb ${frame === i ? 'active' : ''}`} onClick={() => setFrame(i)} aria-label={`View ${i + 1}`}>
-                <GalleryFrame product={product} index={i} />
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Gallery — real multi-image gallery from product_media (0016), with a
+            single-primary fallback for products that have no media rows yet. */}
+        <ProductGallery product={product}>
+          <button className={`pcard__wish pdp__wish ${wished ? 'active' : ''}`} onClick={() => toggleWish(product)} aria-label="Wishlist">
+            <Icon name="heart" size={22} fill={wished ? 'currentColor' : 'none'} />
+          </button>
+        </ProductGallery>
 
         {/* Info */}
         <div className="pdp__info">

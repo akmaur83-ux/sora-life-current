@@ -286,3 +286,76 @@
 @media (min-width: 1000px) {
   .ap-layout { grid-template-columns: 1fr 320px; align-items: start; }
 }
+
+/* ============================================================
+   Product Media Gallery manager (admin ProductForm)
+   ============================================================ */
+.ap-media__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ap-media__head h2 { margin: 0; }
+.ap-media__drop {
+  margin-top: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 26px 16px; text-align: center; cursor: pointer;
+  border: 2px dashed var(--line, #E7DFD0); border-radius: 14px; background: var(--forest-50, #F0F6F2);
+  transition: border-color .18s ease, background .18s ease;
+}
+.ap-media__drop:hover, .ap-media__drop.is-over { border-color: var(--color-primary, #1E3A2F); background: #EAF3EE; }
+.ap-media__drop strong { font-size: 0.95rem; }
+
+.ap-media__grid {
+  margin-top: 16px; display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.ap-media__tile {
+  margin: 0; display: flex; flex-direction: column; gap: 8px;
+  border: 1px solid var(--line-soft, #F0EADD); border-radius: 12px; padding: 8px; background: var(--paper, #fff);
+  transition: border-color .18s ease, box-shadow .18s ease; cursor: grab;
+}
+.ap-media__tile:active { cursor: grabbing; }
+.ap-media__tile.is-primary { border-color: var(--color-primary, #1E3A2F); box-shadow: 0 0 0 2px rgba(30,58,47,0.12); }
+.ap-media__tile.is-error { border-color: var(--color-danger, #C0392B); }
+.ap-media__thumb { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--cream, #F4EEE1); }
+.ap-media__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ap-media__badge {
+  position: absolute; top: 6px; left: 6px; font-size: 11px; font-weight: 700; letter-spacing: .02em;
+  background: var(--color-primary, #1E3A2F); color: #fff; padding: 2px 8px; border-radius: 999px;
+}
+.ap-media__order {
+  position: absolute; bottom: 6px; right: 6px; font-size: 11px; font-weight: 700;
+  background: rgba(20,38,28,0.72); color: #fff; width: 20px; height: 20px; border-radius: 999px;
+  display: grid; place-items: center;
+}
+.ap-media__status {
+  position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 6px;
+  background: rgba(251,248,241,0.82); font-size: 12px; font-weight: 600; color: var(--ink-700, #2C3A32);
+}
+.ap-media__status.err { background: rgba(192,57,43,0.12); color: var(--color-danger, #C0392B); }
+.ap-media__alt { font-size: 12px; padding: 6px 8px; }
+.ap-media__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.ap-media__actions .btn { flex: 1 1 auto; }
+.ap-media__del { color: var(--color-danger, #C0392B); }
+
+/* Media importer panel */
+.ap-media__import { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line, #E7DFD0); }
+.ap-media__importbox { display: flex; flex-direction: column; gap: 8px; }
+.ap-media__importhead { display: flex; align-items: center; justify-content: space-between; }
+.ap-media__importrow { display: flex; gap: 8px; align-items: center; }
+.ap-media__importrow .input { flex: 1; }
+.ap-media__candidates {
+  display: grid; gap: 8px; margin-top: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); max-height: 320px; overflow-y: auto;
+  padding: 4px; background: var(--forest-50, #F0F6F2); border-radius: 10px;
+}
+.ap-media__cand { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 2px solid transparent; background: var(--cream, #F4EEE1); cursor: pointer; }
+.ap-media__cand img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ap-media__cand.is-sel { border-color: var(--color-primary, #1E3A2F); }
+.ap-media__cand-check {
+  position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 999px;
+  background: var(--color-primary, #1E3A2F); color: #fff; font-size: 12px; display: grid; place-items: center;
+}
+
+/* Import candidate groups */
+.ap-media__group { margin-top: 10px; }
+.ap-media__grouphead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 4px; font-size: 12px; font-weight: 600; color: var(--ink-700, #2C3A32); }
+/* The collapsed import toggle carries a long label (incl. legacy count); let it
+   wrap instead of forcing horizontal overflow on narrow/admin-mobile widths. */
+.ap-media__import > button { white-space: normal; height: auto; min-height: 32px; max-width: 100%; text-align: left; line-height: 1.35; }

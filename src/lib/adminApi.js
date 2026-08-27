@@ -8,6 +8,7 @@
 // ============================================================
 import { supabase } from './supabase.js';
 import { BIOSASH_PRODUCTS } from '../data/biosash.js';
+import { MediaOperationError, persistUploadedMedia, removeMediaObject, settlePrimaryMedia, commitStagedMedia } from './productMediaOperations.js';
 
 const DISCOUNT_TIERS = [10, 15, 18, 20];
 
@@ -543,4 +544,268 @@ export async function adminSetVariantActive(id, isActive) {
 export async function adminDeleteVariant(id) {
   const { error } = await supabase.from('product_variants').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ---------------------------------------------------------------
+// PRODUCT MEDIA (multi-image gallery) — migration 0016.
+//
+// Reads are public (RLS: select using true). Writes are admin-only and also
+// enforced server-side by RLS (is_sora_admin) + the single-primary trigger.
+// The storefront never writes here; only the admin editor and the server
+// importer do. Storage paths are always generated (cryptoRandomId), never
+// taken from client input, so no arbitrary path can be written.
+// ---------------------------------------------------------------
+export const MEDIA_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+export const MEDIA_MAX_BYTES = 8 * 1024 * 1024; // 8MB per product image
+
+export function validateMediaFile(file) {
+  if (!file) throw new Error('No file selected.');
+  if (!file.type?.startsWith('image/') || !MEDIA_ALLOWED_TYPES.includes(file.type)) {
+    throw new Error(`Unsupported image type${file.type ? ` (${file.type})` : ''}. Use JPEG, PNG, WebP, GIF or AVIF.`);
+  }
+  if (file.size > MEDIA_MAX_BYTES) {
+    throw new Error(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Keep each image under 8MB.`);
+  }
+  return true;
+}
+
+function dbMediaToApp(row) {
+  return {
+    id: row.id,
+    productId: row.product_id,
+    storagePath: row.storage_path || null,
+    url: row.public_url,
+    alt: row.alt_text || '',
+    sortOrder: Number(row.sort_order) || 0,
+    isPrimary: !!row.is_primary,
+  };
+}
+
+// Upload one image into the product-images bucket and return BOTH the generated
+// storage path (kept on the media row so the object can be deleted later) and
+// its public URL. The path is server-side-random — never client-controlled.
+export async function uploadProductMediaFile(file) {
+  validateMediaFile(file);
+  const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+  const path = `products/${cryptoRandomId()}.${ext}`;
+  try {
+    const { error } = await supabase.storage.from('product-images').upload(path, file, {
+      cacheControl: '3600', upsert: false, contentType: file.type || undefined,
+    });
+    if (error) throw error;
+  } catch (error) {
+    // Upload can have committed even if its response was lost.
+    await removeMediaObject(path, removeProductMediaObject);
+    throw error;
+  }
+  const { data } = supabase.storage.from('product-images').getPublicUrl(path);
+  return { storagePath: path, publicUrl: data.publicUrl };
+}
+
+// Public: every product's media (storefront bootstrap), primary-first.
+export async function fetchPublicProductMedia() {
+  const { data, error } = await supabase
+    .from('product_media')
+    .select('id,product_id,public_url,alt_text,sort_order,is_primary')
+    .order('product_id', { ascending: true })
+    .order('is_primary', { ascending: false })
+    .order('sort_order', { ascending: true });
+  if (error) return [];
+  return (data || []).map(dbMediaToApp);
+}
+
+// Admin: media for one product (uses the public-read policy; ordered for editing).
+export async function adminListProductMedia(productId) {
+  const { data, error } = await supabase
+    .from('product_media')
+    .select('*')
+    .eq('product_id', productId)
+    .order('is_primary', { ascending: false })
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(dbMediaToApp);
+}
+
+export async function adminAddProductMedia({ productId, storagePath = null, publicUrl, altText = '', sortOrder = 0, isPrimary = false }) {
+  if (!productId) throw new Error('A product id is required to attach media.');
+  if (!publicUrl) throw new Error('An image URL is required.');
+  const row = {
+    product_id: productId,
+    storage_path: storagePath,
+    public_url: publicUrl,
+    alt_text: altText || '',
+    sort_order: sortOrder,
+    is_primary: isPrimary,
+  };
+  const { data, error } = await supabase.from('product_media').insert(row).select().single();
+  if (error) throw error;
+  return dbMediaToApp(data);
+}
+
+// Every mutation is scoped by BOTH id AND product_id, so an id belonging to a
+// different product can never be reordered/updated/deleted/replaced by mistake
+// (a mismatched pair matches zero rows). Defence-in-depth on top of admin RLS.
+export async function adminUpdateProductMedia(productId, id, patch) {
+  const row = {};
+  if (patch.altText !== undefined) row.alt_text = patch.altText;
+  if (patch.sortOrder !== undefined) row.sort_order = patch.sortOrder;
+  const { data, error } = await supabase.from('product_media').update(row)
+    .eq('id', id).eq('product_id', productId).select().single();
+  if (error) throw error;
+  return dbMediaToApp(data);
+}
+
+// Low-level selection used only by the checked synchronization operation.
+// The DB trigger atomically demotes the other rows for this product.
+async function selectPrimaryMediaRow(productId, id) {
+  const { data, error } = await supabase.from('product_media').update({ is_primary: true })
+    .eq('id', id).eq('product_id', productId).select().single();
+  if (error) throw error;
+  if (!data?.is_primary) throw new Error('Primary selection was not confirmed.');
+  return dbMediaToApp(data);
+}
+
+async function removeProductMediaObject(path) {
+  const bucket = supabase.storage.from('product-images');
+  const { data, error } = await bucket.remove([path]);
+  if (error) throw error;
+  if (Array.isArray(data) && data.some((object) => object.name === path)) return;
+  const { error: infoError } = await bucket.info(path);
+  if (Number(infoError?.status) === 404 || (Number(infoError?.status) === 400 && infoError?.code === 'NoSuchKey')) return;
+  throw new Error('Storage deletion was not confirmed.');
+}
+
+async function findProductMediaByPath(productId, path) {
+  const { data, error } = await supabase.from('product_media').select('*')
+    .eq('product_id', productId).eq('storage_path', path).maybeSingle();
+  if (error) throw error;
+  return data ? dbMediaToApp(data) : null;
+}
+
+function productMediaOperations(productId) {
+  return {
+    list: () => adminListProductMedia(productId),
+    select: (id) => selectPrimaryMediaRow(productId, id),
+    sync: (url) => adminSyncPrimaryToProduct(productId, url),
+    upload: uploadProductMediaFile,
+    add: (row) => adminAddProductMedia({ ...row, productId }),
+    find: (path) => findProductMediaByPath(productId, path),
+    remove: removeProductMediaObject,
+  };
+}
+
+export async function adminEnsurePrimaryMedia(productId, preferredId = null) {
+  const state = await settlePrimaryMedia(productMediaOperations(productId), preferredId);
+  if (!state.ok) throw new MediaOperationError(state.primaryError ? 'primary' : 'sync',
+    [state.primaryError, state.syncError].filter(Boolean).join(' '), state);
+  return state;
+}
+
+export async function adminSetPrimaryMedia(productId, id) {
+  return (await adminEnsurePrimaryMedia(productId, id)).primary;
+}
+
+// Used by both new-product staging and live multi-upload. Per-file failures
+// are retained; primary/sync failures are reported separately, never swallowed.
+export async function adminCommitStagedProductMedia(productId, items) {
+  return commitStagedMedia(items, productMediaOperations(productId));
+}
+
+export async function adminReorderProductMedia(productId, idsInOrder) {
+  const results = await Promise.all(idsInOrder.map((id, i) =>
+    supabase.from('product_media').update({ sort_order: i }).eq('id', id).eq('product_id', productId)
+  ));
+  const failed = results.find((result) => result.error);
+  if (failed) throw failed.error;
+}
+
+// Delete a media row and, if we host the object, remove it from storage too.
+// Existing products' seeded primary rows have storage_path=null (bundled /img
+// or a pre-existing URL) so nothing is ever deleted from storage for those.
+export async function adminDeleteProductMedia(productId, id) {
+  const { data: existing, error: readError } = await supabase.from('product_media')
+    .select('storage_path').eq('id', id).eq('product_id', productId).maybeSingle();
+  if (readError) throw readError;
+  if (!existing) return false; // id does not belong to this product — no-op
+  const { error } = await supabase.from('product_media').delete().eq('id', id).eq('product_id', productId);
+  if (error) throw error;
+  const path = existing?.storage_path;
+  // Still synchronize the auto-promoted primary if object cleanup fails.
+  let cleanupError;
+  if (path) { try { await removeMediaObject(path, removeProductMediaObject); } catch (e) { cleanupError = e; } }
+  try { await adminEnsurePrimaryMedia(productId); }
+  catch (error) {
+    if (cleanupError) { error.cleanupPending = cleanupError.cleanupPending; error.message += ' ' + cleanupError.message; }
+    throw error;
+  }
+  if (cleanupError) throw cleanupError;
+  return true;
+}
+
+// Replace the image on an existing row: upload the new file, point the row at
+// it, then remove the old hosted object and synchronize the actual primary.
+export async function adminReplaceProductMedia(productId, id, file) {
+  const { data: existing, error: readError } = await supabase.from('product_media')
+    .select('storage_path').eq('id', id).eq('product_id', productId).maybeSingle();
+  if (readError) throw readError;
+  if (!existing) throw new Error('That image no longer belongs to this product.');
+  const { storagePath, publicUrl } = await uploadProductMediaFile(file);
+  const row = await persistUploadedMedia({ storagePath }, async () => {
+    const { data, error } = await supabase.from('product_media')
+      .update({ storage_path: storagePath, public_url: publicUrl })
+      .eq('id', id).eq('product_id', productId).select().single();
+    if (error) throw error;
+    return dbMediaToApp(data);
+  }, (path) => findProductMediaByPath(productId, path), removeProductMediaObject);
+  const old = existing?.storage_path;
+  let cleanupError;
+  if (old && old !== storagePath) { try { await removeMediaObject(old, removeProductMediaObject); } catch (e) { cleanupError = e; } }
+  try { await adminEnsurePrimaryMedia(productId); }
+  catch (error) {
+    if (cleanupError) { error.cleanupPending = cleanupError.cleanupPending; error.message += ' ' + cleanupError.message; }
+    throw error;
+  }
+  if (cleanupError) throw cleanupError;
+  return row;
+}
+
+// Keep products.image_url in sync with the current primary so the grid,
+// search, cart, wishlist and passport (which read product.image) stay correct.
+export async function adminSyncPrimaryToProduct(dbId, primaryUrl) {
+  if (!dbId) throw new Error('A product id is required to synchronize media.');
+  const url = primaryUrl || null;
+  const { data, error } = await supabase.from('products')
+    .update({ image_url: url, updated_at: new Date().toISOString() }).eq('id', dbId).select('id,image_url').single();
+  if (error) throw new Error('Product image synchronization failed: ' + error.message);
+  if (!data || data.image_url !== url) throw new Error('Product image synchronization was not confirmed.');
+}
+
+// ---- Media importer (server endpoint /api/admin/import-media, admin only) ----
+// The admin's Supabase access token proves admin identity to the server, which
+// does the SSRF-safe fetch + copy into our storage. Discover never copies;
+// import copies only the explicitly selected URLs.
+async function adminAuthHeader() {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function adminDiscoverMedia(url) {
+  const headers = { 'Content-Type': 'application/json', ...(await adminAuthHeader()) };
+  const res = await fetch('/api/admin/import-media', { method: 'POST', headers, body: JSON.stringify({ action: 'discover', url }) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) throw new Error(data.error || `Discover failed (${res.status}).`);
+  return data; // { source, images: [{url, host}] }
+}
+
+export async function adminImportMedia(productId, urls) {
+  const headers = { 'Content-Type': 'application/json', ...(await adminAuthHeader()) };
+  const res = await fetch('/api/admin/import-media', { method: 'POST', headers, body: JSON.stringify({ action: 'import', productId, urls }) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    const error = new Error(data.error || `Import failed (${res.status}).`);
+    error.details = data; // retain partial results; never blindly re-import them
+    throw error;
+  }
+  return data; // { imported: [...], skipped: [...] }
 }

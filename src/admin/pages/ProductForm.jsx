@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
-import { adminListProducts, adminCreateProduct, adminUpdateProduct, uploadImage } from '../../lib/adminApi.js';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
+import { adminListProducts, adminCreateProduct, adminUpdateProduct } from '../../lib/adminApi.js';
+import MediaGallery from '../components/MediaGallery.jsx';
 import { categories as staticCategories } from '../../data/categories.js';
 import { money } from '../../lib/format.js';
+import { mediaFailureMessage } from '../../lib/productMediaOperations.js';
 
 const DISCOUNT_TIERS = [0, 10, 15, 18, 20];
 const empty = {
@@ -14,13 +16,28 @@ const empty = {
 export default function ProductForm() {
   const { dbId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const isEdit = !!dbId;
   const [values, setValues] = useState(empty);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
-  const [uploading, setUploading] = useState(false);
   const [customDiscount, setCustomDiscount] = useState(false);
+  const mediaRef = useRef(null);
+
+  // Surface a partial-upload warning carried over after creating a product.
+  useEffect(() => { if (location.state?.mediaWarning) setErr(location.state.mediaWarning); }, [location.state]);
+
+  // The Media Gallery owns the images; it reports the current primary URL so the
+  // product row's image_url (used by the grid, cart, wishlist, passport) stays
+  // in sync. Blob previews from the New-Product staging flow are ignored — the
+  // real URL is written by commitStaged() after the product row exists.
+  // MUST be stable (useCallback): the gallery's load effect depends on this
+  // identity; an inline function re-created every render caused an infinite
+  // load→setState→render→load loop.
+  const onPrimaryChange = useCallback((url) => {
+    if (typeof url === 'string' && !url.startsWith('blob:')) setValues((s) => (s.image === url ? s : { ...s, image: url }));
+  }, []);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -50,22 +67,9 @@ export default function ProductForm() {
   const discount = Number(values.discountPercent) || 0;
   const salePrice = original > 0 ? Math.round(original * (1 - discount / 100)) : 0;
 
-  async function onFile(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setErr('');
-    try {
-      const url = await uploadImage(file, 'products');
-      set('image', url);
-    } catch (ex) {
-      setErr('Image upload failed: ' + (ex.message || String(ex)));
-    }
-    setUploading(false);
-  }
-
   async function onSubmit(e) {
     e.preventDefault();
+    if (mediaRef.current?.isBusy?.()) { setErr('Wait for the current media operation to finish before saving.'); return; }
     setSaving(true);
     setErr('');
     try {
@@ -74,7 +78,9 @@ export default function ProductForm() {
         slug: values.slug.trim() || slugify(values.name),
         description: values.description,
         category: values.category,
-        image: values.image,
+        // Never persist a transient blob: preview as the image URL — the real
+        // primary is written by the gallery (live) or commitStaged (new).
+        image: values.image && !values.image.startsWith('blob:') ? values.image : '',
         gallery: values.gallery,
         originalPrice: original,
         discountPercent: discount,
@@ -85,8 +91,26 @@ export default function ProductForm() {
         rating: Number(values.rating) || 0, reviewCount: Number(values.reviewCount) || 0,
         isActive: values.isActive,
       };
-      if (isEdit) await adminUpdateProduct(dbId, payload);
-      else await adminCreateProduct(payload);
+      if (isEdit) {
+        await adminUpdateProduct(dbId, payload);
+      } else {
+        const created = await adminCreateProduct(payload);
+        // Commit any images staged during creation against the new product id.
+        // Partial upload failures don't roll back the product — the admin lands
+        // on the live editor to retry just the failed images.
+        if (mediaRef.current?.hasStaged?.()) {
+          let result;
+          try { result = await mediaRef.current.commitStaged(created.dbId); }
+          catch (error) { result = { ok: false, primaryError: error.message || 'Could not finish media uploads.' }; }
+          if (!result?.ok) {
+            navigate(`/admin/products/${created.dbId}/edit`, {
+              state: { mediaWarning: `Product created; media needs attention. ${result?.created?.length || 0} image(s) saved. ${mediaFailureMessage(result || {})}`, mediaCleanupPending: result?.cleanupPending || [] },
+            });
+            setSaving(false);
+            return;
+          }
+        }
+      }
       navigate('/admin/products');
     } catch (ex) {
       setErr(ex.message || String(ex));
@@ -137,23 +161,15 @@ export default function ProductForm() {
           </div>
         </div>
 
-        <div className="surface">
-          <h2>Image</h2>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-            <div className="adm-thumb-lg">{values.image && <img src={values.image} alt="" />}</div>
-            <div style={{ flex: 1 }}>
-              <div className="field">
-                <label className="label">Upload new image</label>
-                <input type="file" accept="image/*" onChange={onFile} disabled={uploading} />
-                {uploading && <span className="hint">Uploading…</span>}
-              </div>
-              <div className="field">
-                <label className="label">Or paste image URL</label>
-                <input className="input" value={values.image} onChange={(e) => set('image', e.target.value)} placeholder="/img/example.png or https://…" />
-              </div>
-            </div>
-          </div>
-        </div>
+        <MediaGallery
+          key={dbId || 'new'}
+          ref={mediaRef}
+          productId={isEdit ? Number(dbId) : null}
+          productName={values.name}
+          legacyGalleryUrls={values.gallery}
+          initialCleanupPending={location.state?.mediaCleanupPending || []}
+          onPrimaryChange={onPrimaryChange}
+        />
 
         <div className="surface">
           <h2>Pricing</h2>
