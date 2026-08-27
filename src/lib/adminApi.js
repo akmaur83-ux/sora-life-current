@@ -145,6 +145,22 @@ export async function fetchPublicSettings() {
   return out;
 }
 
+// ---- Storefront theme (admin) ----
+// Read is admin-scoped here (admins can read every key via the admin for-all
+// policy); the storefront reads the same key via the public-read allowlist.
+export async function adminGetTheme() {
+  const { data, error } = await supabase.from('site_settings').select('value').eq('key', 'storefront_theme').maybeSingle();
+  if (error) return null;
+  return data?.value || null;
+}
+
+// Writes ONLY through the validating, admin-gated RPC — never a raw table write.
+export async function adminSetTheme(theme) {
+  const { data, error } = await supabase.rpc('admin_set_storefront_theme', { p_theme: theme });
+  if (error) return { ok: false, reason: error.message };
+  return data;
+}
+
 // ---------------------------------------------------------------
 // ADMIN: products
 // ---------------------------------------------------------------

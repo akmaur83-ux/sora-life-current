@@ -57,6 +57,19 @@ const DEFAULT_HERO_SLIDES = [
 ];
 export let heroSlides = DEFAULT_HERO_SLIDES;
 
+// ---- Storefront theme (admin-customizable appearance) ----
+// Lives in site_settings.storefront_theme; consumed via CSS custom properties.
+// applyStorefrontTheme sanitises then writes the --st-* vars to :root. With the
+// default (SORA Classic) theme this sets NOTHING, so the storefront is identical.
+import { DEFAULT_THEME, sanitizeTheme, applyTheme as applyThemeVars } from './theme.js';
+export let theme = { ...DEFAULT_THEME };
+export function applyStorefrontTheme(v) {
+  if (!v || typeof v !== 'object') return false;
+  theme = sanitizeTheme(v);
+  applyThemeVars(theme);
+  return true;
+}
+
 export function applyBranding(v) { if (v && typeof v === 'object') branding = { ...branding, ...v }; }
 export function applyAnnouncement(v) { if (v && typeof v === 'object') announcement = { ...announcement, ...v }; }
 export function applyHomepage(v) { if (v && typeof v === 'object') homepage = { ...homepage, ...v }; }

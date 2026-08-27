@@ -126,3 +126,10 @@
 @media (max-width: 900px) {
   :root { --header-h: 60px; --header-h-scrolled: 60px; }
 }
+
+/* ---- Storefront theme: controlled typography scales (admin customizer) ----
+   Default 'normal' has NO rule, so the tokens above apply unchanged. */
+:root[data-heading-scale="compact"] { --text-xl: 1.2rem;  --text-2xl: 1.5rem; --text-3xl: 1.95rem; --text-4xl: 2.5rem; --text-5xl: 3.1rem; }
+:root[data-heading-scale="large"]   { --text-xl: 1.55rem; --text-2xl: 2rem;   --text-3xl: 2.6rem;  --text-4xl: 3.5rem; --text-5xl: 4.3rem; }
+:root[data-body-scale="compact"]    { --text-sm: 0.78rem; --text-base: 0.88rem; --text-md: 0.94rem; --text-lg: 1.05rem; }
+:root[data-body-scale="large"]      { --text-sm: 0.86rem; --text-base: 1rem;    --text-md: 1.08rem; --text-lg: 1.22rem; }

@@ -6,7 +6,7 @@
 .annbar__in { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 16px; min-height: 40px; }
 .annbar__notices { grid-column: 2; display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; }
 .annbar__notice { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; white-space: nowrap; }
-.annbar__notice svg { color: var(--honey-400); flex-shrink: 0; }
+.annbar__notice svg { color: var(--st-annbar-accent, var(--honey-400)); flex-shrink: 0; }
 .annbar__sep { flex-shrink: 0; width: 1px; height: 13px; background: currentColor; opacity: 0.3; margin: 0 18px; }
 .annbar__links { grid-column: 3; justify-self: end; display: flex; align-items: center; white-space: nowrap; opacity: 0.92; }
 .annbar__links a:hover { color: var(--honey-300); }
@@ -47,6 +47,7 @@
 .bh-hero { position: relative; height: clamp(460px, 52vw, 620px); overflow: hidden; background: var(--forest-800); }
 .bh-hero__media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .bh-hero__scrim { position: absolute; inset: 0; background:
+  var(--st-hero-overlay, transparent),
   linear-gradient(100deg, rgba(244,238,225,0.94) 0%, rgba(244,238,225,0.72) 26%, rgba(244,238,225,0.25) 46%, rgba(244,238,225,0) 62%); }
 .bh-hero__inner { position: relative; height: 100%; display: flex; align-items: center; }
 .bh-hero__copy { max-width: 620px; }
@@ -68,17 +69,17 @@
 /* ============ CATEGORY CIRCLES ============ */
 /* Forest-green brand strip, matching the top utility/announcement bar (.annbar
    uses --forest-800 / --forest-50). Circles stay light so images read clearly. */
-.bh-cats { border-bottom: 1px solid var(--forest-900); background: var(--forest-800); }
+.bh-cats { border-bottom: 1px solid var(--forest-900); background: var(--st-category-bg, var(--forest-800)); }
 .bh-cats__row { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--sp-3); padding-block: var(--sp-8); }
 .bh-cat { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
-.bh-cat__circle { width: 92px; height: 92px; border-radius: 999px; overflow: hidden; background: var(--tone-tint, var(--cream)); display: grid; place-items: center; transition: transform var(--t-slow) var(--ease-luxury), box-shadow var(--t-slow) var(--ease-luxury); }
+.bh-cat__circle { width: 92px; height: 92px; border-radius: 999px; overflow: hidden; background: var(--st-category-circle, var(--tone-tint, var(--cream))); display: grid; place-items: center; transition: transform var(--t-slow) var(--ease-luxury), box-shadow var(--t-slow) var(--ease-luxury); }
 .bh-cat__circle .pimg { width: 100%; height: 100%; aspect-ratio: 1; border-radius: 999px; }
 .bh-cat__circle .pimg img { padding: 10px; background: transparent; mix-blend-mode: multiply; transition: transform var(--t-slower) var(--ease-luxury); }
 .bh-cat:hover .bh-cat__circle { transform: translateY(-4px); box-shadow: var(--shadow-md); }
 .bh-cat:hover .bh-cat__circle .pimg img { transform: scale(1.08); }
-.bh-cat__name { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--forest-50); transition: color var(--t) var(--ease-soft); }
-.bh-cat:hover .bh-cat__name { color: var(--honey-300); }
-.bh-cat__view { font-size: var(--text-xs); color: var(--forest-200); }
+.bh-cat__name { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--st-category-title, var(--forest-50)); transition: color var(--t) var(--ease-soft); }
+.bh-cat:hover .bh-cat__name { color: var(--st-category-hover, var(--honey-300)); }
+.bh-cat__view { font-size: var(--text-xs); color: var(--st-category-subtitle, var(--forest-200)); }
 /* Readable focus ring on the green strip (global ring is a green glow that would
    blend into --forest-800). */
 .bh-cat:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(240, 246, 242, 0.55); border-radius: var(--r-md); }
@@ -277,7 +278,7 @@
 /* Premium discount badge — SORA honey accent (--honey-500 = --color-accent),
    dark text for high contrast (~7.7:1). Only the % OFF (.badge-sale) changes;
    the NEW badge (.badge-new) is a separate class and is untouched. */
-.badge-sale { background: var(--honey-500); color: var(--forest-900); letter-spacing: 0.08em; box-shadow: var(--shadow-xs); font-weight: 700; }
+.badge-sale { background: var(--st-discount-bg, var(--honey-500)); color: var(--st-discount-text, var(--forest-900)); letter-spacing: 0.08em; box-shadow: var(--shadow-xs); font-weight: 700; }
 
 
 /* Hero pagination dots were 9x9 — visually right, far too small to tap.

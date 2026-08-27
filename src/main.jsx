@@ -7,7 +7,7 @@ import { AdminAuthProvider } from './lib/adminAuth.jsx';
 import { CustomerAuthProvider } from './lib/customerAuth.jsx';
 import { applyCatalog, applyVariants } from './data/products.js';
 import { applyCategories } from './data/categories.js';
-import { applyBranding, applyAnnouncement, applyHomepage, applyContact, applyHeroSlides } from './lib/settings.js';
+import { applyBranding, applyAnnouncement, applyHomepage, applyContact, applyHeroSlides, applyStorefrontTheme } from './lib/settings.js';
 import {
   fetchPublicCatalog, fetchPublicCategories, fetchPublicHeroSlides, fetchPublicSettings,
   fetchPublicVariants,
@@ -60,6 +60,7 @@ function Root() {
         if (categories && applyCategories(categories)) changed = true;
         if (heroSlides && applyHeroSlides(heroSlides)) changed = true;
         if (settings) {
+          if (settings.storefront_theme) { applyStorefrontTheme(settings.storefront_theme); changed = true; }
           if (settings.branding) { applyBranding(settings.branding); changed = true; }
           if (settings.announcement) { applyAnnouncement(settings.announcement); changed = true; }
           if (settings.homepage) { applyHomepage(settings.homepage); changed = true; }

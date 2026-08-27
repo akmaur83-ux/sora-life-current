@@ -30,6 +30,7 @@ import CreatorDetail from './admin/pages/CreatorDetail.jsx';
 import Attribution from './admin/pages/Attribution.jsx';
 import Kyc from './admin/pages/Kyc.jsx';
 import Payouts from './admin/pages/Payouts.jsx';
+import Appearance from './admin/pages/Appearance.jsx';
 import Categories from './admin/pages/Categories.jsx';
 import HeroSlides from './admin/pages/HeroSlides.jsx';
 import HomepageSettings from './admin/pages/Homepage.jsx';
@@ -86,6 +87,7 @@ export default function App() {
         <Route path="hero-slides" element={<HeroSlides />} />
         <Route path="homepage" element={<HomepageSettings />} />
         <Route path="branding" element={<Branding />} />
+        <Route path="appearance" element={<Appearance />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 
