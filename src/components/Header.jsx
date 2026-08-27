@@ -78,24 +78,38 @@ export default function Header() {
     <>
       {/* Announcement bar */}
       <div className="annbar">
-        <div className="container annbar__in">
-          <span className="annbar__side" aria-hidden="true" />
-          <div className="annbar__notices">
-            {announcement.notices.map((n, i) => (
-              <Fragment key={n}>
-                {i > 0 && <span className="annbar__sep" aria-hidden="true" />}
-                <span className="annbar__notice">
-                  <Icon name={NOTICE_ICONS[i % NOTICE_ICONS.length]} size={14} /> {n}
-                </span>
-              </Fragment>
+        <input className="annbar__pause" id="announcement-pause" type="checkbox" aria-label="Pause announcement ticker" />
+        <label className="annbar__control" htmlFor="announcement-pause" title="Pause or resume announcements">
+          <span className="annbar__control-icon" aria-hidden="true" />
+        </label>
+        <div className="annbar__viewport" tabIndex={0} role="region" aria-label="Store announcements" aria-describedby="announcement-help">
+          <span className="sr-only" id="announcement-help">Focus to stop the ticker. Scroll horizontally to read all announcements and links.</span>
+          <div className="annbar__track">
+            {/* Equal-width copies make the CSS loop seamless. Only the first
+                is exposed to assistive technology or keyboard navigation. */}
+            {[false, true].map((duplicate) => (
+              <div className="annbar__group" key={String(duplicate)} aria-hidden={duplicate || undefined}>
+                <div className="annbar__notices">
+                  {announcement.notices.map((n, i) => (
+                    <Fragment key={`${i}-${n}`}>
+                      {i > 0 && <span className="annbar__sep" aria-hidden="true" />}
+                      <span className="annbar__notice">
+                        <Icon name={NOTICE_ICONS[i % NOTICE_ICONS.length]} size={14} /> {n}
+                      </span>
+                    </Fragment>
+                  ))}
+                </div>
+                <span className="annbar__sep" aria-hidden="true" />
+                <div className="annbar__links">
+                  <Link to="/account/orders" tabIndex={duplicate ? -1 : undefined}>Track Order</Link>
+                  <span className="annbar__sep" aria-hidden="true" />
+                  <a href="#" tabIndex={duplicate ? -1 : undefined}>Store Locator</a>
+                  <span className="annbar__sep" aria-hidden="true" />
+                  <Link to="/account" tabIndex={duplicate ? -1 : undefined}>Help &amp; Support</Link>
+                </div>
+                <span className="annbar__sep" aria-hidden="true" />
+              </div>
             ))}
-          </div>
-          <div className="annbar__links">
-            <Link to="/account/orders">Track Order</Link>
-            <span className="annbar__sep" aria-hidden="true" />
-            <a href="#">Store Locator</a>
-            <span className="annbar__sep" aria-hidden="true" />
-            <Link to="/account">Help &amp; Support</Link>
           </div>
         </div>
       </div>

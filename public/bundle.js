@@ -14471,47 +14471,81 @@
 	    }
 	  };
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "annbar",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "container annbar__in",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "annbar__side",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	        className: "annbar__pause",
+	        id: "announcement-pause",
+	        type: "checkbox",
+	        "aria-label": "Pause announcement ticker"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	        className: "annbar__control",
+	        htmlFor: "announcement-pause",
+	        title: "Pause or resume announcements",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "annbar__control-icon",
 	          "aria-hidden": "true"
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "annbar__viewport",
+	        tabIndex: 0,
+	        role: "region",
+	        "aria-label": "Store announcements",
+	        "aria-describedby": "announcement-help",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "sr-only",
+	          id: "announcement-help",
+	          children: "Focus to stop the ticker. Scroll horizontally to read all announcements and links."
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "annbar__notices",
-	          children: announcement.notices.map((n, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
-	            children: [i > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "annbar__track",
+	          children: [false, true].map(duplicate => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "annbar__group",
+	            "aria-hidden": duplicate || undefined,
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	              className: "annbar__notices",
+	              children: announcement.notices.map((n, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
+	                children: [i > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  className: "annbar__sep",
+	                  "aria-hidden": "true"
+	                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	                  className: "annbar__notice",
+	                  children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                    name: NOTICE_ICONS[i % NOTICE_ICONS.length],
+	                    size: 14
+	                  }), " ", n]
+	                })]
+	              }, `${i}-${n}`))
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	              className: "annbar__sep",
 	              "aria-hidden": "true"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	              className: "annbar__notice",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: NOTICE_ICONS[i % NOTICE_ICONS.length],
-	                size: 14
-	              }), " ", n]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "annbar__links",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	                to: "/account/orders",
+	                tabIndex: duplicate ? -1 : undefined,
+	                children: "Track Order"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "annbar__sep",
+	                "aria-hidden": "true"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	                href: "#",
+	                tabIndex: duplicate ? -1 : undefined,
+	                children: "Store Locator"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "annbar__sep",
+	                "aria-hidden": "true"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	                to: "/account",
+	                tabIndex: duplicate ? -1 : undefined,
+	                children: "Help & Support"
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "annbar__sep",
+	              "aria-hidden": "true"
 	            })]
-	          }, n))
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "annbar__links",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/account/orders",
-	            children: "Track Order"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "annbar__sep",
-	            "aria-hidden": "true"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: "#",
-	            children: "Store Locator"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "annbar__sep",
-	            "aria-hidden": "true"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/account",
-	            children: "Help & Support"
-	          })]
+	          }, String(duplicate)))
 	        })]
-	      })
+	      })]
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx("header", {
 	      className: `hdr ${scrolled ? 'is-scrolled' : ''}`,
 	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {

@@ -144,15 +144,19 @@
 
 .pcard {
   position: relative; display: flex; flex-direction: column; height: 100%;
-  background: var(--st-card-bg, var(--paper)); border: 1px solid var(--st-card-border, var(--line-soft));
-  border-radius: var(--r-lg); overflow: hidden;
+  background: var(--st-card-bg, var(--paper)); border: 1px solid var(--line-soft);
+  /* Retain the theme's border hue without a harsh outline on light cards. */
+  border-color: color-mix(in srgb, var(--st-card-border, var(--line-soft)) 15%, var(--line-soft));
+  border-radius: 2px; overflow: hidden;
   transition: transform var(--t-slow) var(--ease-luxury), box-shadow var(--t-slow) var(--ease-luxury), border-color var(--t) var(--ease);
 }
 .pcard:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); border-color: var(--line); }
-.pcard__media { position: relative; overflow: hidden; }
-.pcard__media .pimg svg, .pcard__media .pimg img { transition: transform 1100ms var(--ease-luxury); }
-.pcard:hover .pcard__media .pimg svg, .pcard:hover .pcard__media .pimg img { transform: scale(1.06); }
+.pcard__media { position: relative; overflow: hidden; border-radius: 0; }
+.pcard__media .pimg { border-radius: 0; }
+/* Keep every edge of the packaging visible, including on hover. */
+.pcard__media .pimg img { object-fit: contain; }
 .pcard__badges { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 2; }
+.pcard__badges .badge { border-radius: 4px; }
 .pcard__wish {
   position: absolute; top: 10px; right: 10px; z-index: 3;
   width: 40px; height: 40px; border-radius: 999px;
@@ -201,13 +205,22 @@
    Longer names clamp to two lines instead of pushing the card taller. */
 .pcard__name {
   font-family: var(--font-display); font-size: var(--text-md); font-weight: 600;
-  line-height: 1.25; color: var(--color-text);
-  min-height: calc(2 * 1.25em);
+  line-height: 1.35; color: var(--color-text);
+  min-height: calc(2 * 1.35em);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .pcard__name a:hover { color: var(--color-primary); }
-.pcard__foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 4px; }
+.pcard__foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 4px; }
+.pcard__foot .price { column-gap: 6px; row-gap: 4px; }
+
+/* Compact desktop cards without changing any grid/rail widths or controls.
+   The square stage contains the complete image; PDP imagery is unaffected. */
+@media (min-width: 901px) {
+  .pcard__media .pimg { aspect-ratio: 1 / 1; }
+  .pcard__body { padding: 11px 14px 12px; gap: 7px; }
+  .pcard__foot { padding-top: 0; }
+}
 
 /* ---------- Cards / surfaces ---------- */
 .surface { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--r-lg); }

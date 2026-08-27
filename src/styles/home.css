@@ -2,23 +2,43 @@
    HOMEPAGE (screenshot-matched) + header refinements
    ============================================================ */
 
-/* ---------- Announcement bar (centered notices, balanced separators) ---------- */
-.annbar__in { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 16px; min-height: 40px; }
-.annbar__notices { grid-column: 2; display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; }
+/* ---------- Announcement ticker (CSS-only, fixed-height, full content) ---------- */
+.annbar { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 44px; height: 40px; }
+.annbar__viewport { grid-area: 1 / 1; min-width: 0; height: 40px; overflow: clip; }
+.annbar__track { display: flex; width: max-content; animation: announcement-ticker 52s linear infinite; }
+.annbar__group { display: flex; flex: none; align-items: center; justify-content: space-around; min-width: calc(100vw - 44px); height: 40px; padding-left: 24px; }
+.annbar__notices { display: flex; flex: none; align-items: center; flex-wrap: nowrap; }
 .annbar__notice { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; white-space: nowrap; }
 .annbar__notice svg { color: var(--st-annbar-accent, var(--honey-400)); flex-shrink: 0; }
 .annbar__sep { flex-shrink: 0; width: 1px; height: 13px; background: currentColor; opacity: 0.3; margin: 0 18px; }
-.annbar__links { grid-column: 3; justify-self: end; display: flex; align-items: center; white-space: nowrap; opacity: 0.92; }
-.annbar__links a:hover { color: var(--honey-300); }
+.annbar__links { display: flex; flex: none; align-items: center; gap: 0; white-space: nowrap; opacity: 0.92; }
+.annbar__links a { display: inline-flex; align-items: center; min-height: 40px; }
+.annbar__links a:hover { color: var(--st-annbar-accent, var(--honey-300)); }
 .annbar__links .annbar__sep { margin: 0 12px; }
-@media (max-width: 1040px) {
-  .annbar__in { grid-template-columns: 1fr; }
-  .annbar__side, .annbar__links { display: none; }
-  .annbar__notices { grid-column: 1; }
+.annbar__pause { position: absolute; top: 0; right: 0; width: 44px; height: 40px; margin: 0; opacity: 0; z-index: 2; cursor: pointer; }
+.annbar__control { grid-area: 1 / 2; display: grid; place-items: center; height: 40px; border-left: 1px solid currentColor; color: var(--st-annbar-text, var(--forest-50)); }
+.annbar__control-icon { width: 11px; height: 12px; border-inline: 3px solid currentColor; }
+.annbar__pause:checked + .annbar__control .annbar__control-icon { width: 0; height: 0; border: 6px solid transparent; border-right: 0; border-left: 9px solid currentColor; }
+.annbar__pause:focus-visible + .annbar__control { outline: 2px solid currentColor; outline-offset: -4px; }
+.annbar__pause:checked ~ .annbar__viewport .annbar__track { animation-play-state: paused; }
+@keyframes announcement-ticker { to { transform: translateX(-50%); } }
+@media (hover: hover) {
+  .annbar:hover .annbar__track { animation-play-state: paused; }
 }
-@media (max-width: 600px) {
-  /* Prevent overflow: show only the primary notice, centered */
-  .annbar__notices > *:nth-child(n+2) { display: none; }
+/* Focusing the region resets it for keyboard reading; subsequent link focus
+   pauses in place so pointer clicks never move their target before activation. */
+.annbar__viewport:focus-within { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; outline: 2px solid currentColor; outline-offset: -3px; }
+.annbar__viewport::-webkit-scrollbar { display: none; }
+.annbar__viewport:focus-within .annbar__track { animation-play-state: paused; }
+.annbar__viewport:focus .annbar__track { animation: none; transform: none; }
+.annbar__viewport:focus .annbar__group[aria-hidden="true"] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .annbar { grid-template-columns: minmax(0, 1fr); }
+  .annbar__pause, .annbar__control { display: none; }
+  .annbar__viewport { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  .annbar__track { animation: none; transform: none; }
+  .annbar__group { min-width: 100vw; }
+  .annbar__group[aria-hidden="true"] { display: none; }
 }
 
 /* ---------- Header layout with inline search ---------- */
