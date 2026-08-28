@@ -1,0 +1,388 @@
+/* ============================================================
+   SORA LIFE — PROMOTIONS (campaign posters & offer cards)
+   Loaded after home.css. Presentation only.
+
+   Design language: editorial wellness campaign creative.
+   Modest radii, hairline rules, tonal layering, one dominant offer figure,
+   restrained botanical decoration. Palette stays inside the SORA family
+   (forest / ivory-cream / honey-orange / clay). No pink, no cheesy
+   gradients, no oversized bubble cards, no heavy shadows.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. THEME PRESETS — each produces a genuinely different campaign look.
+   Every custom property is consumed by both the poster and the offer card.
+   ------------------------------------------------------------ */
+
+/* FOREST — deep green ground, cream type, honey accent, botanical feel */
+.promo-poster--forest, .promo-offer--forest {
+  --pp-solid: #1A3226;
+  --pp-bg:
+    radial-gradient(105% 130% at 86% 8%, rgba(232, 176, 75, 0.17) 0%, transparent 58%),
+    linear-gradient(152deg, #1E3A2F 0%, #14261C 100%);
+  --pp-fg: #FBF8F1;
+  --pp-dim: rgba(225, 238, 231, 0.80);
+  --pp-accent: #F0C169;
+  --pp-line: rgba(240, 193, 105, 0.20);
+  --pp-deco: rgba(240, 193, 105, 0.26);
+  --pp-badge-bg: #E8B04B;
+  --pp-badge-fg: #14261C;
+  --pp-cta-bg: #E8B04B;
+  --pp-cta-fg: #14261C;
+  --pp-cta-border: transparent;
+  --pp-tile: rgba(251, 248, 241, 0.12);
+}
+
+/* WARM CREAM — ivory ground, forest type, warm orange accent, elegant */
+.promo-poster--cream, .promo-offer--cream {
+  --pp-solid: #F4EEE1;
+  --pp-bg:
+    radial-gradient(100% 125% at 90% 6%, rgba(232, 176, 75, 0.26) 0%, transparent 60%),
+    linear-gradient(150deg, #FBF8F1 0%, #EDE6D6 100%);
+  --pp-fg: #1A3226;
+  --pp-dim: #55655B;
+  --pp-accent: #B4761F;
+  --pp-line: #E7DFD0;
+  --pp-deco: rgba(30, 58, 47, 0.11);
+  --pp-badge-bg: #1E3A2F;
+  --pp-badge-fg: #F0F6F2;
+  --pp-cta-bg: #1E3A2F;
+  --pp-cta-fg: #FBF8F1;
+  --pp-cta-border: transparent;
+  --pp-tile: rgba(30, 58, 47, 0.08);
+}
+
+/* ORANGE ACCENT — burnt honey ground, forest type, energetic sale campaign */
+.promo-poster--orange, .promo-offer--orange {
+  --pp-solid: #E3A63F;
+  --pp-bg:
+    radial-gradient(110% 130% at 8% 92%, rgba(197, 106, 69, 0.42) 0%, transparent 62%),
+    linear-gradient(146deg, #F0C169 0%, #D08E2C 100%);
+  --pp-fg: #14261C;
+  --pp-dim: rgba(20, 38, 28, 0.74);
+  --pp-accent: #14261C;
+  --pp-line: rgba(20, 38, 28, 0.16);
+  --pp-deco: rgba(20, 38, 28, 0.16);
+  --pp-badge-bg: #14261C;
+  --pp-badge-fg: #F6D79A;
+  --pp-cta-bg: #14261C;
+  --pp-cta-fg: #F6D79A;
+  --pp-cta-border: transparent;
+  --pp-tile: rgba(20, 38, 28, 0.12);
+}
+
+/* DARK LUXE — near-black forest, hairline gold, premium minimal */
+.promo-poster--dark, .promo-offer--dark {
+  --pp-solid: #16211B;
+  --pp-bg:
+    radial-gradient(100% 120% at 78% 12%, rgba(240, 193, 105, 0.13) 0%, transparent 56%),
+    linear-gradient(155deg, #1B2A22 0%, #121C16 100%);
+  --pp-fg: #FBF8F1;
+  --pp-dim: rgba(190, 218, 205, 0.72);
+  --pp-accent: #F0C169;
+  --pp-line: rgba(240, 193, 105, 0.28);
+  --pp-deco: rgba(240, 193, 105, 0.18);
+  --pp-badge-bg: transparent;
+  --pp-badge-fg: #F0C169;
+  --pp-badge-border: rgba(240, 193, 105, 0.55);
+  --pp-cta-bg: transparent;
+  --pp-cta-fg: #F0C169;
+  --pp-cta-border: rgba(240, 193, 105, 0.55);
+  --pp-tile: rgba(240, 193, 105, 0.12);
+}
+
+/* MINIMAL — paper, thin rule, editorial type, product-first */
+.promo-poster--minimal, .promo-offer--minimal {
+  --pp-solid: #FFFFFF;
+  --pp-bg: #FFFFFF;
+  --pp-fg: #16211B;
+  --pp-dim: #55655B;
+  --pp-accent: #B4761F;
+  --pp-line: #E7DFD0;
+  --pp-deco: rgba(30, 58, 47, 0.07);
+  --pp-badge-bg: #F0F6F2;
+  --pp-badge-fg: #1E3A2F;
+  --pp-cta-bg: transparent;
+  --pp-cta-fg: #1E3A2F;
+  --pp-cta-border: #1E3A2F;
+  --pp-tile: #F0F6F2;
+}
+
+/* ------------------------------------------------------------
+   2. SECTION WRAPPER
+   ------------------------------------------------------------ */
+.promo-section { padding-block: var(--sp-8); }
+.promo-section__head { margin-bottom: var(--sp-4); }
+.promo-section__head .eyebrow { display: block; }
+.promo-section__title { font-size: var(--text-xl); line-height: 1.12; margin-top: 5px; }
+.promo-section__grid { display: grid; gap: 12px; }
+
+/* ------------------------------------------------------------
+   3. POSTER
+   ------------------------------------------------------------ */
+.promo-poster {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 248px;                    /* ~1.44:1 at a 358px content width */
+  display: flex;
+  border-radius: var(--r-md);
+  border: 1px solid var(--pp-line);
+  background: var(--pp-bg);
+  color: var(--pp-fg);
+}
+.promo-poster--minimal { box-shadow: var(--shadow-xs); }
+
+/* --- art layer: image, or the CSS botanical composition --- */
+.promo-poster__art { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.promo-poster__img { width: 100%; height: 100%; object-fit: cover; object-position: center 38%; display: block; }
+.promo-poster__scrim { position: absolute; inset: 0; }
+.promo-poster.has-image .promo-poster__scrim {
+  background: linear-gradient(
+    176deg,
+    color-mix(in srgb, var(--pp-solid) 28%, transparent) 0%,
+    color-mix(in srgb, var(--pp-solid) 78%, transparent) 48%,
+    color-mix(in srgb, var(--pp-solid) 95%, transparent) 100%);
+}
+
+/* Botanical decoration — two fine arcs + one leaf silhouette. */
+.promo-poster__deco { position: absolute; inset: 0; }
+.promo-poster__deco::before,
+.promo-poster__deco::after {
+  content: ""; position: absolute; border-radius: 50%;
+  border: 1px solid var(--pp-deco);
+}
+.promo-poster__deco::before { width: 78%; aspect-ratio: 1; right: -20%; top: -34%; }
+.promo-poster__deco::after  { width: 46%; aspect-ratio: 1; right: 2%;   top: 14%; opacity: 0.75; }
+.promo-poster__leaf {
+  position: absolute; right: 6%; bottom: -14%;
+  width: 46%; aspect-ratio: 1 / 1.18;
+  border-radius: 62% 0 62% 0;
+  background: linear-gradient(150deg, var(--pp-deco), transparent 72%);
+  transform: rotate(-16deg);
+}
+
+/* --- text column --- */
+.promo-poster__body {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 7px;
+  padding: 18px 16px;
+  width: 100%;
+}
+.promo-poster.is-center .promo-poster__body { align-items: center; text-align: center; }
+
+.promo-poster__badge {
+  display: inline-flex; align-items: center;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: var(--r-xs);
+  background: var(--pp-badge-bg); color: var(--pp-badge-fg);
+  border: 1px solid var(--pp-badge-border, transparent);
+}
+.promo-poster__title {
+  font-size: clamp(1.32rem, 5.6vw, 1.75rem);
+  line-height: 1.1; letter-spacing: -0.015em;
+  color: var(--pp-fg); max-width: 18ch;
+}
+.promo-poster.is-center .promo-poster__title { max-width: 22ch; }
+.promo-poster__sub {
+  font-size: var(--text-sm); line-height: 1.5; color: var(--pp-dim); max-width: 34ch;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* --- the dominant offer figure --- */
+.promo-poster__callout { display: flex; flex-direction: column; gap: 5px; margin-top: 1px; }
+.promo-poster.is-center .promo-poster__callout { align-items: center; }
+.promo-poster__callout-rule { width: 26px; height: 2px; border-radius: 2px; background: var(--pp-accent); }
+.promo-poster__callout-val {
+  font-family: var(--font-sans);
+  font-size: clamp(1.6rem, 7.4vw, 2.1rem);
+  font-weight: 800; letter-spacing: -0.025em; line-height: 0.98;
+  color: var(--pp-accent);
+}
+
+/* --- actions --- */
+.promo-poster__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.promo-poster.is-center .promo-poster__actions { justify-content: center; }
+.promo-poster__cta {
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  min-height: 44px; padding: 11px 13px;
+  border-radius: var(--r-pill); font-weight: 700; font-size: 12.5px;
+  background: var(--pp-cta-bg); color: var(--pp-cta-fg);
+  border: 1px solid var(--pp-cta-border);
+  transition: transform var(--t) var(--ease-luxury), box-shadow var(--t) var(--ease);
+}
+.promo-poster__cta:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.promo-poster__cta:active { transform: translateY(0) scale(0.985); }
+
+/* ------------------------------------------------------------
+   4. COUPON TICKET
+   ------------------------------------------------------------ */
+.promo-code { display: inline-flex; flex-direction: column; gap: 4px; }
+.promo-code__label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--pp-dim, var(--color-text-muted));
+}
+.promo-code__row {
+  position: relative;
+  display: inline-flex; align-items: stretch; gap: 2px;
+  min-height: 44px; padding: 3px 3px 3px 10px;
+  border: 1px dashed color-mix(in srgb, currentColor 42%, transparent);
+  border-radius: var(--r-xs);
+  background: color-mix(in srgb, currentColor 9%, transparent);
+}
+/* perforation notches */
+.promo-code__row::before,
+.promo-code__row::after {
+  content: ""; position: absolute; top: 50%; width: 8px; height: 8px;
+  margin-top: -4px; border-radius: 50%;
+  background: var(--pp-solid, var(--color-bg));
+  border: 1px dashed color-mix(in srgb, currentColor 42%, transparent);
+}
+.promo-code__row::before { left: -5px; }
+.promo-code__row::after  { right: -5px; }
+.promo-code__value {
+  display: inline-flex; align-items: center;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-weight: 700; font-size: 12px; letter-spacing: 0.04em;
+  color: inherit; white-space: nowrap;
+}
+.promo-code__btn {
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  padding: 0 9px; margin-left: 6px; border-radius: 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.03em;
+  background: color-mix(in srgb, currentColor 17%, transparent); color: inherit;
+  transition: background var(--t) var(--ease);
+}
+.promo-code__btn:hover { background: color-mix(in srgb, currentColor 28%, transparent); }
+.promo-code.is-copied .promo-code__row { border-style: solid; }
+
+/* ------------------------------------------------------------
+   5. COMPACT OFFER CARD
+   ------------------------------------------------------------ */
+.promo-offers-rail { display: flex; gap: 10px; }
+.promo-offers-rail > li { display: flex; }
+
+.promo-offer {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: 8px;
+  width: 100%; padding: 14px;
+  border: 1px solid var(--pp-line);
+  border-radius: var(--r-md);
+  background: var(--pp-bg);
+  color: var(--pp-fg);
+}
+.promo-offer--minimal, .promo-offer--cream { box-shadow: var(--shadow-xs); }
+/* one restrained corner arc so a card still reads as creative, not an alert */
+.promo-offer::after {
+  content: ""; position: absolute; right: -34px; top: -34px;
+  width: 96px; aspect-ratio: 1; border-radius: 50%;
+  border: 1px solid var(--pp-deco); pointer-events: none;
+}
+.promo-offer__top { display: flex; align-items: center; gap: 9px; }
+.promo-offer__ic {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 34px; height: 34px; border-radius: var(--r-xs);
+  background: var(--pp-tile); color: var(--pp-fg); overflow: hidden;
+}
+.promo-offer__ic img { width: 100%; height: 100%; object-fit: cover; }
+.promo-offer__badge {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase;
+  color: var(--pp-accent);
+}
+.promo-offer__body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.promo-offer__title { font-size: var(--text-base); font-weight: 700; line-height: 1.22; color: var(--pp-fg); }
+.promo-offer__sub { font-size: var(--text-xs); line-height: 1.45; color: var(--pp-dim); }
+.promo-offer__foot {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: auto; padding-top: 10px;
+  border-top: 1px solid var(--pp-line);
+}
+.promo-offer__foot .promo-code__row { min-height: 36px; padding: 2px 2px 2px 10px; }
+.promo-offer__cta {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 32px;
+  font-size: var(--text-xs); font-weight: 700; color: var(--pp-accent);
+}
+
+/* Mobile: swipe rail under the hero poster. */
+@media (max-width: 900px) {
+  .promo-offers-rail {
+    overflow-x: auto; scroll-snap-type: x mandatory;
+    margin-inline: calc(-1 * var(--sp-4)); padding: 2px var(--sp-4) 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .promo-offers-rail > li { flex: 0 0 78%; scroll-snap-align: start; }
+}
+
+/* ------------------------------------------------------------
+   6. CART — compact "available offers"
+   ------------------------------------------------------------ */
+.promo-compact {
+  margin-top: var(--sp-4); padding: 12px;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--forest-50);
+}
+.promo-compact__lbl {
+  display: block; margin-bottom: 9px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase;
+  color: var(--forest-700);
+}
+.promo-compact__list { display: flex; flex-direction: column; gap: 8px; }
+.promo-compact__note { margin-top: 9px; font-size: 11px; line-height: 1.45; color: var(--color-text-muted); }
+
+/* ------------------------------------------------------------
+   7. PDP "Offers & payment benefits" drawer — compact, not a poster
+   ------------------------------------------------------------ */
+.pdp-offers__row--promo { align-items: flex-start; }
+.pdp-offers__row--promo strong { display: block; }
+.pdp-offers__code { margin-top: 7px; color: var(--color-primary); }
+.pdp-offers__code .promo-code__row {
+  min-height: 36px; padding: 2px 2px 2px 10px;
+  border-color: var(--honey-300);
+  background: var(--paper);
+}
+.pdp-offers__code .promo-code__row::before,
+.pdp-offers__code .promo-code__row::after { background: var(--honey-100); border-color: var(--honey-300); }
+.pdp-offers__code .promo-code__btn { background: var(--forest-50); color: var(--color-primary); }
+.pdp-offers__code .promo-code__btn:hover { background: var(--forest-100); }
+
+/* ------------------------------------------------------------
+   8. DESKTOP COMPOSITION
+   ------------------------------------------------------------ */
+@media (min-width: 901px) {
+  .promo-section { padding-block: var(--sp-10); }
+  .promo-section__title { font-size: var(--text-2xl); }
+  /* hero ~65% + a stacked offers column */
+  .promo-section__grid.has-poster { grid-template-columns: 1.85fr 1fr; gap: 14px; align-items: stretch; }
+
+  .promo-poster { min-height: 300px; }
+  .promo-poster__body { padding: 30px 34px; gap: 11px; justify-content: center; max-width: 560px; }
+  .promo-poster__title { font-size: var(--text-2xl); max-width: 16ch; }
+  .promo-poster__sub { -webkit-line-clamp: 3; max-width: 38ch; }
+  .promo-poster__callout-val { font-size: 2.35rem; }
+
+  /* image-right: the art becomes a real column of the composition */
+  .promo-poster.has-image { display: grid; grid-template-columns: minmax(0, 1fr) 40%; }
+  .promo-poster.has-image .promo-poster__art { position: relative; inset: auto; grid-column: 2; }
+  .promo-poster.has-image .promo-poster__body { grid-column: 1; grid-row: 1; }
+  .promo-poster.has-image .promo-poster__scrim {
+    background: linear-gradient(90deg, var(--pp-solid) 0%, color-mix(in srgb, var(--pp-solid) 40%, transparent) 46%, transparent 82%);
+  }
+  .promo-poster.has-image .promo-poster__img { object-position: center 32%; }
+
+  /* offers fill the poster height evenly, so there is no dead column */
+  .promo-offers-rail { flex-direction: column; }
+  .promo-offers-rail > li { flex: 1 1 0; }
+  .promo-offer { justify-content: center; }
+}
+
+/* ------------------------------------------------------------
+   9. ADMIN live preview
+   ------------------------------------------------------------ */
+.adm-promo-preview { max-width: 560px; }
+.adm-promo-preview .promo-offers-rail { flex-direction: column; }
+.adm-promo-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.adm-promo-chip {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: var(--r-pill);
+  background: var(--forest-100); color: var(--forest-700);
+}

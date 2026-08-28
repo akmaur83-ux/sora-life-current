@@ -1,0 +1,105 @@
+// ============================================================
+// PROMOTIONS — local SAMPLE fallback (design preview only)
+//
+// These rows seed the storefront ONLY when it is running on localhost (see
+// isLocalPreviewHost() in src/lib/promotions.js), so the promo UI can be
+// designed and reviewed before migration 0017 exists anywhere. On any
+// deployed host the starting list is EMPTY, and a successful fetch from the
+// `promotions` table replaces the list in every environment.
+//
+// Every `coupon_code` here is DISPLAY / COPY ONLY. Nothing in this file or
+// the promotion components touches pricing, cart totals or checkout.
+// ============================================================
+
+export const PROMOTIONS_FALLBACK = [
+  {
+    id: 'sample-welcome',
+    type: 'poster',
+    title: 'Wellness Week is here',
+    subtitle: 'Sample campaign. Demo code only — no checkout discount.',
+    coupon_code: 'DEMO-ONLY',
+    cta_text: 'Explore all',
+    cta_url: '/shop',
+    badge_text: 'Preview offer',
+    image_url: null,
+    theme_variant: 'forest',
+    text_align: 'left',
+    placements: ['home', 'pdp'],
+    is_active: true,
+    starts_at: null,
+    ends_at: null,
+    sort_order: 0,
+  },
+  {
+    id: 'sample-freeship',
+    type: 'offer',
+    title: 'Discover SORA LIFE essentials',
+    subtitle: 'Sample campaign for your everyday favourites. Preview only.',
+    coupon_code: null,
+    cta_text: '',
+    cta_url: null,
+    badge_text: 'Sample campaign',
+    image_url: null,
+    theme_variant: 'cream',
+    text_align: 'left',
+    placements: ['home', 'pdp', 'cart'],
+    is_active: true,
+    starts_at: null,
+    ends_at: null,
+    sort_order: 1,
+  },
+  {
+    id: 'sample-bundle',
+    type: 'offer',
+    title: 'A little inspiration for your next order',
+    subtitle: 'Demo code only — checkout totals stay unchanged.',
+    coupon_code: 'DEMO-OFFER',
+    cta_text: '',
+    cta_url: null,
+    badge_text: 'Demo code',
+    image_url: null,
+    theme_variant: 'minimal',
+    text_align: 'left',
+    placements: ['home', 'cart'],
+    is_active: true,
+    starts_at: null,
+    ends_at: null,
+    sort_order: 2,
+  },
+  {
+    id: 'sample-prepaid',
+    type: 'offer',
+    title: 'Explore more SORA LIFE favourites',
+    subtitle: 'Display-only sample. Payment fees stay unchanged.',
+    coupon_code: 'DEMO-PREVIEW',
+    cta_text: '',
+    cta_url: null,
+    badge_text: 'Preview offer',
+    image_url: null,
+    theme_variant: 'orange',
+    text_align: 'left',
+    placements: ['pdp', 'cart'],
+    is_active: true,
+    starts_at: null,
+    ends_at: null,
+    sort_order: 3,
+  },
+  {
+    id: 'sample-honeygold',
+    type: 'poster',
+    title: 'The SORA LIFE edit',
+    subtitle: 'Explore the SORA LIFE collection. Local preview only.',
+    coupon_code: null,
+    cta_text: 'Explore the edit',
+    cta_url: '/shop',
+    badge_text: 'Sample campaign',
+    image_url: null,
+    theme_variant: 'dark',
+    text_align: 'left',
+    placements: ['home'],
+    is_active: true,
+    starts_at: null,
+    ends_at: null,
+    sort_order: 4,
+  },
+];

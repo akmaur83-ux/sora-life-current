@@ -14,6 +14,7 @@ const NAV = [
   { to: '/admin/payouts', label: 'Creator Payouts' },
   { to: '/admin/categories', label: 'Categories' },
   { to: '/admin/hero-slides', label: 'Hero Slides' },
+  { to: '/admin/promotions', label: 'Promotions' },
   { to: '/admin/homepage', label: 'Homepage' },
   { to: '/admin/branding', label: 'Branding' },
   { to: '/admin/appearance', label: 'Storefront Appearance' },

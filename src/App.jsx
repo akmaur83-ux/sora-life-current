@@ -33,6 +33,7 @@ import Payouts from './admin/pages/Payouts.jsx';
 import Appearance from './admin/pages/Appearance.jsx';
 import Categories from './admin/pages/Categories.jsx';
 import HeroSlides from './admin/pages/HeroSlides.jsx';
+import Promotions from './admin/pages/Promotions.jsx';
 import HomepageSettings from './admin/pages/Homepage.jsx';
 import Branding from './admin/pages/Branding.jsx';
 import Settings from './admin/pages/Settings.jsx';
@@ -85,6 +86,7 @@ export default function App() {
         <Route path="payouts" element={<Payouts />} />
         <Route path="categories" element={<Categories />} />
         <Route path="hero-slides" element={<HeroSlides />} />
+        <Route path="promotions" element={<Promotions />} />
         <Route path="homepage" element={<HomepageSettings />} />
         <Route path="branding" element={<Branding />} />
         <Route path="appearance" element={<Appearance />} />

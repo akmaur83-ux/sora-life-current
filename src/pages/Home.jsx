@@ -6,6 +6,7 @@ import Hero from '../components/Hero.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import ProductImage from '../components/ProductImage.jsx';
 import Newsletter from '../components/Newsletter.jsx';
+import PromoRail from '../components/promo/PromoRail.jsx';
 import { categories } from '../data/categories.js';
 import { getBestsellers, getNewArrivals, getByCategory, categoryCount } from '../data/products.js';
 import { homepage } from '../lib/settings.js';
@@ -70,6 +71,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ============ PROMOTIONS (home placement; renders nothing when empty) ============ */}
+      <PromoRail place="home" eyebrow="Offers & rewards" title="This week at SORA LIFE" />
 
       {/* ============ EDITORIAL CARDS ============ */}
       <section className="bh-edit-wrap">

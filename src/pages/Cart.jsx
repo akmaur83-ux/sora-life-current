@@ -5,6 +5,7 @@ import ProductImage from '../components/ProductImage.jsx';
 import ProductRail from '../components/ProductRail.jsx';
 import { useStore } from '../lib/store.jsx';
 import PriceSummary from '../components/PriceSummary.jsx';
+import PromoRail from '../components/promo/PromoRail.jsx';
 import { money } from '../lib/format.js';
 import { getBestsellers } from '../data/products.js';
 
@@ -109,6 +110,10 @@ export default function Cart() {
               </form>
               {couponErr && <p className="error-text">{couponErr}</p>}
               {applied && <p className="summary__applied"><Icon name="checkCircle" size={15} /> {applied.code} — {applied.rate * 100}% off</p>}
+
+              {/* Informational only — separate from the estimate above and from
+                  checkout pricing. Codes are copyable; nothing auto-applies. */}
+              <PromoRail place="cart" variant="compact" />
 
               {/* Cart shows the client-side estimate; checkout replaces it with
                   the server-computed breakdown (taxes/fees included). */}

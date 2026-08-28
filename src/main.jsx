@@ -8,9 +8,10 @@ import { CustomerAuthProvider } from './lib/customerAuth.jsx';
 import { applyCatalog, applyVariants, applyProductMedia } from './data/products.js';
 import { applyCategories } from './data/categories.js';
 import { applyBranding, applyAnnouncement, applyHomepage, applyContact, applyHeroSlides, applyStorefrontTheme } from './lib/settings.js';
+import { applyPromotions } from './lib/promotions.js';
 import {
   fetchPublicCatalog, fetchPublicCategories, fetchPublicHeroSlides, fetchPublicSettings,
-  fetchPublicVariants, fetchPublicProductMedia,
+  fetchPublicVariants, fetchPublicProductMedia, fetchPublicPromotions,
 } from './lib/adminApi.js';
 
 class ErrorBoundary extends React.Component {
@@ -43,13 +44,14 @@ function Root() {
     let cancelled = false;
     (async () => {
       try {
-        const [catalog, categories, heroSlides, settings, variants, media] = await Promise.all([
+        const [catalog, categories, heroSlides, settings, variants, media, promotions] = await Promise.all([
           withTimeout(fetchPublicCatalog().catch(() => null), 4000),
           withTimeout(fetchPublicCategories().catch(() => null), 4000),
           withTimeout(fetchPublicHeroSlides().catch(() => null), 4000),
           withTimeout(fetchPublicSettings().catch(() => null), 4000),
           withTimeout(fetchPublicVariants().catch(() => null), 4000),
           withTimeout(fetchPublicProductMedia().catch(() => null), 4000),
+          withTimeout(fetchPublicPromotions().catch(() => null), 4000),
         ]);
         if (cancelled) return;
 
@@ -61,6 +63,9 @@ function Root() {
         if (media && applyProductMedia(media)) changed = true;
         if (categories && applyCategories(categories)) changed = true;
         if (heroSlides && applyHeroSlides(heroSlides)) changed = true;
+        // A successful promotions fetch (even []) replaces the local sample
+        // fallback — an empty table then correctly shows no promo sections.
+        if (promotions && applyPromotions(promotions)) changed = true;
         if (settings) {
           if (settings.storefront_theme) { applyStorefrontTheme(settings.storefront_theme); changed = true; }
           if (settings.branding) { applyBranding(settings.branding); changed = true; }

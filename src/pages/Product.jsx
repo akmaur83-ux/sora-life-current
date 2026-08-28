@@ -20,6 +20,7 @@ import ProductInfoAccordion from '../components/pdp/ProductInfoAccordion.jsx';
 import ProductTrustList from '../components/pdp/ProductTrustList.jsx';
 import ProductReviewsTeaser from '../components/pdp/ProductReviewsTeaser.jsx';
 import ProductRecommendations from '../components/pdp/ProductRecommendations.jsx';
+import PromoRail from '../components/promo/PromoRail.jsx';
 import { overviewFor, suitableForList, faqFor } from '../data/pdpContent.js';
 
 // Shown while the Supabase catalogue is still hydrating, so a direct load of a
@@ -313,6 +314,10 @@ export default function Product() {
 
         <ProductTrustList />
       </div>
+
+      {/* Promotions (pdp placement; renders nothing when there are none).
+          Presentation only — no pricing / cart interaction. */}
+      <PromoRail place="pdp" eyebrow="Save more" title="Offers on your order" maxOffers={2} />
 
       {/* Frequently bought together — existing real feature, unchanged */}
       {related.length >= 2 && (
