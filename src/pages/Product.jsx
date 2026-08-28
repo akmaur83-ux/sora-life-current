@@ -3,30 +3,24 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductImage from '../components/ProductImage.jsx';
 import ProductGallery from '../components/ProductGallery.jsx';
-import StarRating from '../components/StarRating.jsx';
 import PriceTag from '../components/PriceTag.jsx';
-import ProductRail from '../components/ProductRail.jsx';
 import NotFound from './NotFound.jsx';
 import { useStore } from '../lib/store.jsx';
-import { productBySlug, getRelated, productById, isCatalogHydrated, productRouteState } from '../data/products.js';
+import { productBySlug, isCatalogHydrated, productRouteState, getRelated } from '../data/products.js';
 import { categoryBySlug } from '../data/categories.js';
 import { money } from '../lib/format.js';
 
-function Accordion({ items }) {
-  const [open, setOpen] = useState(0);
-  return (
-    <div className="accordion">
-      {items.map((it, i) => (
-        <div key={it.title} className={`accordion__item ${open === i ? 'open' : ''}`}>
-          <button className="accordion__head" onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i}>
-            <span>{it.title}</span><Icon name={open === i ? 'chevronUp' : 'chevronDown'} size={18} />
-          </button>
-          <div className="accordion__body"><div className="accordion__inner">{it.content}</div></div>
-        </div>
-      ))}
-    </div>
-  );
-}
+import ProductRatingTeaser from '../components/pdp/ProductRatingTeaser.jsx';
+import ProductOfferTeaser from '../components/pdp/ProductOfferTeaser.jsx';
+import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+import ProductBenefits from '../components/pdp/ProductBenefits.jsx';
+import ProductIngredients from '../components/pdp/ProductIngredients.jsx';
+import ProductHowToUse from '../components/pdp/ProductHowToUse.jsx';
+import ProductInfoAccordion from '../components/pdp/ProductInfoAccordion.jsx';
+import ProductTrustList from '../components/pdp/ProductTrustList.jsx';
+import ProductReviewsTeaser from '../components/pdp/ProductReviewsTeaser.jsx';
+import ProductRecommendations from '../components/pdp/ProductRecommendations.jsx';
+import { overviewFor, suitableForList, faqFor } from '../data/pdpContent.js';
 
 // Shown while the Supabase catalogue is still hydrating, so a direct load of a
 // live-only product never flashes the 404 page. Display-only; no data/logic.
@@ -52,7 +46,7 @@ function ProductLoading() {
 export default function Product() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { addToCart, toggleWish, isWished } = useStore();
+  const { addToCart, toggleWish, isWished, toast } = useStore();
   const product = productBySlug[slug];
   const [qty, setQty] = useState(1);
   // The selected VARIANT OBJECT (not just its label): price, MRP, SKU, stock
@@ -106,6 +100,7 @@ export default function Product() {
   const view = productRouteState(!!product, isCatalogHydrated() || catalogTimedOut);
   if (view === 'loading') return <ProductLoading />;
   if (view === 'notfound') return <NotFound />;
+
   const cat = categoryBySlug[product.category];
   const related = getRelated(product);
   const wished = isWished(product.id);
@@ -116,53 +111,145 @@ export default function Product() {
   const fbtTotal = fbt.reduce((s, p) => s + p.price, 0);
 
   const buyNow = () => { addToCart(product, qty, variant); navigate('/checkout'); };
+  const addNow = () => { addToCart(product, qty, variant); setJustAdded(true); };
+
+  const share = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product.name, url });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        toast('Link copied');
+      }
+    } catch { /* user dismissed the share sheet — nothing to do */ }
+  };
+
+  // ---- Product-information accordion. Only rows backed by real, product-
+  // specific data. Overview keeps a neutral name/size/category fallback (the
+  // one always-present anchor); every other row is omitted unless the
+  // catalogue actually carries that field. Store-wide promises live only in
+  // the SORA LIFE Promise section.
+  const overview = overviewFor(product);
+  const suitable = suitableForList(product);
+  const faq = faqFor(product);
+  const accordionSections = [
+    {
+      title: 'Product overview', icon: 'leaf', defaultOpen: true,
+      content: <p className="pdp-acc__p">{overview.text}</p>,
+    },
+    ...(product.ingredients?.length ? [{
+      title: 'Full ingredient list', icon: 'flask',
+      content: (
+        <div className="pdp-acc__tags">
+          {product.ingredients.map((ig) => <span key={ig} className="badge badge-soft">{ig}</span>)}
+        </div>
+      ),
+    }] : []),
+    ...(product.benefits?.length ? [{
+      title: 'All benefits', icon: 'sparkle',
+      content: (
+        <ul className="ticklist">
+          {product.benefits.map((b) => <li key={b}><Icon name="check" size={16} /> {b}</li>)}
+        </ul>
+      ),
+    }] : []),
+    ...(product.usage ? [{
+      title: 'Usage details', icon: 'droplet',
+      content: <p className="pdp-acc__p muted">{product.usage}</p>,
+    }] : []),
+    ...(suitable.length ? [{
+      title: 'Suitable for', icon: 'users',
+      content: (
+        <div className="pdp-acc__tags">
+          {suitable.map((s) => <span key={s} className="badge badge-soft">{s}</span>)}
+        </div>
+      ),
+    }] : []),
+    {
+      title: 'Product details', icon: 'package',
+      content: (
+        <ul className="ticklist">
+          <li><Icon name="check" size={16} /> Category: {cat.name}</li>
+          {product.form && <li><Icon name="check" size={16} /> Pack size: {product.form}</li>}
+          <li><Icon name="check" size={16} /> Authentic product, sourced from the Himalayas</li>
+          <li><Icon name="check" size={16} /> Fulfilled by SORA LIFE · genuine, sealed packaging</li>
+        </ul>
+      ),
+    },
+    {
+      title: 'FAQ', icon: 'chat',
+      content: (
+        <dl className="pdp-faq">
+          {faq.map((f) => (
+            <Fragment key={f.q}>
+              <dt>{f.q}</dt>
+              <dd>{f.a}</dd>
+            </Fragment>
+          ))}
+        </dl>
+      ),
+    },
+  ];
 
   return (
     <>
-      <div className="container" style={{ paddingTop: 'var(--sp-6)' }}>
-        <nav className="crumbs">
+      <div className="container pdp-top">
+        <nav className="crumbs" aria-label="Breadcrumb">
           <Link to="/">Home</Link><Icon name="chevronRight" size={14} />
           <Link to={`/category/${cat.slug}`}>{cat.name}</Link><Icon name="chevronRight" size={14} />
           <span>{product.name}</span>
         </nav>
+        <button type="button" className="pdp-back" onClick={() => navigate(-1)}>
+          <Icon name="chevronLeft" size={16} /> Back
+        </button>
       </div>
 
       <section className="pdp container">
         {/* Gallery — real multi-image gallery from product_media (0016), with a
-            single-primary fallback for products that have no media rows yet. */}
+            single-primary fallback for products that have no media rows yet.
+            Architecture unchanged; only the overlay controls are new. */}
         <ProductGallery product={product}>
-          <button className={`pcard__wish pdp__wish ${wished ? 'active' : ''}`} onClick={() => toggleWish(product)} aria-label="Wishlist">
-            <Icon name="heart" size={22} fill={wished ? 'currentColor' : 'none'} />
-          </button>
+          <div className="pdp__galactions">
+            <button
+              type="button"
+              className={`pdp__galbtn ${wished ? 'is-active' : ''}`}
+              onClick={() => toggleWish(product)}
+              aria-pressed={wished}
+              aria-label={wished ? 'Remove from wishlist' : 'Save to wishlist'}
+            >
+              <Icon name="heart" size={20} fill={wished ? 'currentColor' : 'none'} />
+            </button>
+            <button type="button" className="pdp__galbtn" onClick={share} aria-label="Share this product">
+              <Icon name="externalLink" size={19} />
+            </button>
+          </div>
         </ProductGallery>
 
-        {/* Info */}
+        {/* Buying section — mobile hierarchy: meta → title → size → rating →
+            price → offers → variants → stock → qty → add → delivery */}
         <div className="pdp__info">
-          <span className="pcard__cat">{cat.name}</span>
+          <span className="pcard__cat pdp__meta">
+            {cat.name}{product.form ? <span className="pdp__meta-sep"> · {product.form}</span> : ''}
+          </span>
           <h1 className="pdp__title serif">{product.name}</h1>
-          <div className="pdp__rate">
-            {product.reviewCount > 0 ? (
-              <>
-                <StarRating value={product.rating} showValue />
-                <a href="#reviews" className="pdp__reviewlink">{product.reviewCount} reviews</a>
-              </>
-            ) : (
-              <span className="badge badge-soft"><Icon name="leaf" size={13} /> Sea buckthorn</span>
-            )}
-            {product.form && <span className="pdp__sku muted">· {product.form}</span>}
-          </div>
+          {/* Only a real, authored description earns a lead paragraph — the
+              category/size fallback would just repeat the meta line above. */}
+          {product.description && <p className="pdp__lead">{product.description}</p>}
 
-          <p className="pdp__lead">{product.shortDescription}</p>
+          <ProductRatingTeaser product={product} />
 
           <div className="pdp__price">
             <PriceTag product={product} size="lg" variant={variant} />
-            <span className="muted" style={{ fontSize: 'var(--text-sm)' }}>Inclusive of all taxes</span>
+            <span className="pdp__tax muted">Inclusive of all taxes</span>
           </div>
+
+          <ProductOfferTeaser product={product} />
 
           {pricedVariants.length > 0 && (
             <div className="pdp__block">
-              <span className="label">Choose size</span>
-              <div className="variantlist" style={{ marginTop: 8 }} role="radiogroup" aria-label="Choose size">
+              <span className="label">Choose pack size</span>
+              <div className="variantlist" style={{ marginTop: 8 }} role="radiogroup" aria-label="Choose pack size">
                 {pricedVariants.map((v) => {
                   const selected = (variant?.id ?? variant?.label) === (v.id ?? v.label);
                   const soldOut = v.stock === 0;
@@ -199,56 +286,39 @@ export default function Product() {
 
           <div className="pdp__buy">
             <div className="qty">
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease" disabled={out}><Icon name="minus" size={16} /></button>
-              <span>{qty}</span>
-              <button onClick={() => setQty((q) => q + 1)} aria-label="Increase" disabled={out}><Icon name="plus" size={16} /></button>
+              <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease quantity" disabled={out}><Icon name="minus" size={16} /></button>
+              <span aria-live="polite">{qty}</span>
+              <button onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity" disabled={out}><Icon name="plus" size={16} /></button>
             </div>
-            <button className={`btn btn-block pdp__addbtn ${justAdded ? 'is-added' : ''}`} disabled={out}
-              onClick={() => { addToCart(product, qty, variant); setJustAdded(true); }}>
+            <button className={`btn btn-block pdp__addbtn ${justAdded ? 'is-added' : ''}`} disabled={out} onClick={addNow}>
               {justAdded ? <><Icon name="check" size={18} /> Added to cart</> : <><Icon name="bag" size={18} /> Add to cart</>}
             </button>
           </div>
           <button className="btn btn-accent btn-lg btn-block pdp__buynow" disabled={out} onClick={buyNow}>Buy it now</button>
 
-          <div className="pdp__assure">
-            {[['truck', 'Free delivery', 'On orders over ₹699'],
-              ['return', '15-day returns', 'Easy & free'],
-              ['lock', 'Secure checkout', '100% protected']].map(([ic, t, s]) => (
-              <div key={t} className="pdp__assure-item"><Icon name={ic} size={20} /><span><strong>{t}</strong><em>{s}</em></span></div>
-            ))}
-          </div>
-
-          <div className="pdp__deliver">
-            <Icon name="mapPin" size={18} />
-            <span>Deliver to <strong>India</strong> — estimated <strong>2–4 business days</strong>. Enter your PIN at checkout for exact dates.</span>
-          </div>
-
-          <Accordion items={[
-            { title: 'Product details', content: (
-              <ul className="ticklist">
-                <li><Icon name="check" size={16} /> Category: {cat.name}</li>
-                {product.form && <li><Icon name="check" size={16} /> Size: {product.form}</li>}
-                <li><Icon name="check" size={16} /> Authentic Biosash product, sourced from the Himalayas</li>
-                <li><Icon name="check" size={16} /> Fulfilled by Sora Life · genuine, sealed packaging</li>
-              </ul>
-            ) },
-            ...(product.description ? [{ title: 'Description', content: <p className="muted">{product.description}</p> }] : []),
-            ...(product.benefits?.length ? [{ title: 'Key benefits', content: (
-              <ul className="ticklist">{product.benefits.map((b) => <li key={b}><Icon name="check" size={16} /> {b}</li>)}</ul>
-            ) }] : []),
-            ...(product.ingredients?.length ? [{ title: 'Ingredients', content: (
-              <div className="taglist">{product.ingredients.map((ig) => <span key={ig} className="badge badge-soft">{ig}</span>)}</div>
-            ) }] : []),
-            ...(product.usage ? [{ title: 'How to use', content: <p className="muted">{product.usage}</p> }] : []),
-          ]} />
+          <ProductDeliveryInfo product={product} />
         </div>
       </section>
 
-      {/* Frequently bought together */}
+      {/* Richer scroll: benefits → ingredients → usage → product information → trust */}
+      <div className="container pdp-flow">
+        <ProductBenefits product={product} />
+        <ProductIngredients product={product} />
+        <ProductHowToUse product={product} />
+
+        <section className="pdp-sec" aria-labelledby="pdp-info-h">
+          <h2 id="pdp-info-h" className="pdp-sec__title serif">Product information</h2>
+          <ProductInfoAccordion sections={accordionSections} />
+        </section>
+
+        <ProductTrustList />
+      </div>
+
+      {/* Frequently bought together — existing real feature, unchanged */}
       {related.length >= 2 && (
         <section className="section-sm">
           <div className="container">
-            <h2 className="serif" style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--sp-6)' }}>Frequently bought together</h2>
+            <h2 className="serif" style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--sp-6)' }}>Goes well with</h2>
             <div className="fbt">
               <div className="fbt__items">
                 {fbt.map((p, i) => (
@@ -272,53 +342,21 @@ export default function Product() {
         </section>
       )}
 
-      {/* Reviews */}
-      <section className="section" id="reviews">
-        <div className="container">
-          <h2 className="serif" style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--sp-5)' }}>Reviews</h2>
-          {product.reviewCount > 0 && product.reviews.length ? (
-            <div className="reviews-block">
-              <div className="reviews-block__summary">
-                <div className="reviews-block__score serif">{product.rating.toFixed(1)}</div>
-                <StarRating value={product.rating} size={18} />
-                <p className="muted">{product.reviewCount} verified reviews</p>
-                <button className="btn btn-outline btn-block" style={{ marginTop: 16 }}>Write a review</button>
-              </div>
-              <div className="reviews-block__list">
-                {product.reviews.map((r, i) => (
-                  <figure key={i} className="rev">
-                    <div className="rev__top">
-                      <span className="review__avatar">{r.name.charAt(0)}</span>
-                      <div><strong>{r.name}</strong>{r.verified && <span className="rev__verified"><Icon name="checkCircle" size={13} /> Verified buyer</span>}</div>
-                      <span className="muted rev__date">{r.date}</span>
-                    </div>
-                    <StarRating value={r.rating} size={14} />
-                    <h4 className="rev__title">{r.title}</h4>
-                    <p className="muted">{r.body}</p>
-                  </figure>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="surface pad-lg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--sp-5)', flexWrap: 'wrap' }}>
-              <div>
-                <h3 style={{ fontSize: 'var(--text-lg)' }}>No reviews yet</h3>
-                <p className="muted">Be the first to share your experience with this product.</p>
-              </div>
-              <button className="btn btn-outline">Write a review</button>
-            </div>
-          )}
-        </div>
-      </section>
+      {/* Ratings & reviews — lightweight Part 1 teaser; Part 3 fills this in */}
+      <ProductReviewsTeaser product={product} />
 
       {/* Related */}
-      <ProductRail eyebrow="Complete the ritual" title="You may also like" products={related} />
+      <ProductRecommendations product={product} />
 
       {/* Sticky mobile buy bar */}
-      <div className="buybar only-mobile">
-        <div className="buybar__price"><PriceTag product={product} showOff={false} /></div>
-        <button className="btn" disabled={out} onClick={() => addToCart(product, qty, variant)}><Icon name="bag" size={18} /> Add</button>
-        <button className="btn btn-accent" disabled={out} onClick={buyNow}>Buy now</button>
+      <div className="buybar only-mobile" role="region" aria-label="Purchase">
+        <div className="buybar__price">
+          <PriceTag product={product} showOff={false} variant={variant} />
+        </div>
+        <button className="btn buybar__add" disabled={out} onClick={addNow} aria-label="Add to cart">
+          <Icon name="bag" size={17} /> Add
+        </button>
+        <button className="btn btn-accent buybar__buy" disabled={out} onClick={buyNow}>Buy now</button>
       </div>
     </>
   );

@@ -1,0 +1,167 @@
+/* ============================================================
+   PRODUCT DETAIL PAGE — premium mobile-first upgrade (Part 1)
+   Loaded AFTER pages.css so it can refine the existing .pdp* rules.
+   Presentation only — no new tokens. SORA LIFE cream / forest / honey,
+   subtle borders, restrained shadows, soft-square geometry.
+   ============================================================ */
+
+/* ---------- Top bar: breadcrumb + back ---------- */
+.pdp-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); padding-top: var(--sp-4); }
+.pdp-top .crumbs { margin-bottom: 0; min-width: 0; }
+.pdp-back { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); padding: 6px 2px; }
+.pdp-back svg { flex-shrink: 0; }
+@media (min-width: 901px) { .pdp-back { display: none; } }
+
+/* ---------- Buying section refinements ---------- */
+.pdp__meta { display: inline-flex; align-items: center; gap: 4px; }
+.pdp__meta-sep { color: var(--ink-400); font-weight: 500; }
+/* Tighten the lead paragraph on mobile — it should orient, not dominate. */
+.pdp .pdp__lead { font-size: var(--text-base); line-height: 1.55; color: var(--ink-700); margin: 8px 0 14px; max-width: 46ch; }
+.pdp__price { margin-bottom: var(--sp-4); }
+.pdp__tax { font-size: var(--text-xs); }
+
+/* Rating teaser chip */
+.pdp-rating { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 12px; margin-bottom: var(--sp-4); border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--paper); font-size: var(--text-sm); color: var(--color-text-muted); transition: border-color var(--t) var(--ease), background var(--t) var(--ease); }
+.pdp-rating:hover { border-color: var(--forest-300); background: var(--forest-50); }
+.pdp-rating__score { color: var(--color-text); font-size: var(--text-base); font-weight: 700; }
+.pdp-rating__stars { display: inline-flex; align-items: center; gap: 1px; }
+.pdp-rating__stars .s-full { color: var(--color-star); }
+.pdp-rating__stars .s-empty { color: var(--line); }
+.pdp-rating__count { position: relative; padding-left: 9px; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--line); }
+.pdp-rating__count::before { content: ""; position: absolute; left: 0; top: 50%; width: 3px; height: 3px; margin-top: -1px; border-radius: 999px; background: var(--ink-400); }
+
+/* Offers teaser */
+.pdp-offers { margin-bottom: var(--sp-5); border: 1px solid var(--honey-300); border-radius: var(--r-md); background: linear-gradient(180deg, var(--honey-100), var(--paper)); overflow: hidden; }
+.pdp-offers__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); width: 100%; min-height: 54px; padding: 11px 14px; text-align: left; }
+.pdp-offers__lead { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pdp-offers__lead > svg { color: var(--honey-700); flex-shrink: 0; }
+.pdp-offers__lead strong { display: block; font-size: var(--text-sm); color: var(--color-text); }
+.pdp-offers__lead em { display: block; font-style: normal; font-size: var(--text-xs); color: var(--color-text-muted); }
+.pdp-offers__toggle { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; font-size: var(--text-sm); font-weight: 600; color: var(--color-accent-text); }
+.pdp-offers__panel { padding: 2px 14px 12px; }
+.pdp-offers__list { display: flex; flex-direction: column; }
+.pdp-offers__row { display: flex; align-items: flex-start; gap: 10px; padding: 11px 0; font-size: var(--text-sm); border-top: 1px dashed var(--honey-300); }
+.pdp-offers__row > svg { color: var(--honey-700); flex-shrink: 0; margin-top: 2px; }
+.pdp-offers__row strong { display: block; font-weight: 600; color: var(--color-text); }
+.pdp-offers__row em { display: block; font-style: normal; font-size: var(--text-xs); color: var(--color-text-muted); }
+.pdp-offers__soon { flex-shrink: 0; align-self: center; margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 7px; border-radius: var(--r-pill); background: var(--paper); color: var(--color-accent-text); border: 1px solid var(--honey-300); }
+
+/* Delivery / service */
+.pdp-deliver { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; margin-bottom: var(--sp-6); border: 1px solid var(--forest-100); border-radius: var(--r-md); background: var(--forest-50); }
+.pdp-deliver__row { display: flex; align-items: flex-start; gap: 10px; font-size: var(--text-sm); color: var(--ink-700); }
+.pdp-deliver__row > svg { color: var(--color-primary); flex-shrink: 0; margin-top: 2px; }
+.pdp-deliver__row strong { font-weight: 600; color: var(--color-text); }
+.pdp-deliver__row em { display: block; font-style: normal; font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 1px; }
+
+/* ---------- Scroll flow: section rhythm (compact on mobile) ---------- */
+.pdp-flow { max-width: 960px; }
+.pdp-sec { padding-block: var(--sp-6); border-top: 1px solid var(--line-soft); }
+.pdp-flow > .pdp-sec:first-child { border-top: none; padding-top: var(--sp-4); }
+.pdp-sec__head { display: flex; align-items: center; gap: 10px; margin-bottom: var(--sp-3); }
+.pdp-sec__head .pdp-sec__title { margin-bottom: 0; }
+.pdp-sec__title { font-size: var(--text-xl); line-height: 1.15; margin-bottom: var(--sp-3); }
+
+/* Placeholder tag ("Coming soon" on the reviews seat) */
+.pdp-preview-tag { display: inline-flex; align-items: center; font-size: 10px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; padding: 3px 8px; border-radius: var(--r-pill); background: var(--honey-100); color: var(--honey-700); border: 1px solid var(--honey-300); }
+
+/* ---------- Benefits: "Why you'll love it" (tight, editorial) ---------- */
+.pdp-benefits__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.pdp-benefits__card { display: flex; flex-direction: column; gap: 3px; padding: 12px; border: 1px solid var(--forest-100); border-radius: var(--r-md); background: var(--forest-50); }
+.pdp-benefits__ic { display: grid; place-items: center; width: 30px; height: 30px; margin-bottom: 3px; border-radius: var(--r-sm); background: var(--paper); color: var(--forest-600); }
+.pdp-benefits__card strong { font-size: var(--text-sm); color: var(--color-text); line-height: 1.2; }
+.pdp-benefits__card span { font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.35; }
+
+/* ---------- Key ingredients (real data only) ---------- */
+.pdp-ingredients__list { display: grid; gap: 10px; }
+.pdp-ingredients__list.is-single { max-width: 520px; }
+.pdp-ingredients__card { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--paper); }
+.pdp-ingredients__ic { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: var(--r-pill); background: var(--forest-50); color: var(--forest-600); }
+.pdp-ingredients__body strong { display: block; font-size: var(--text-base); color: var(--color-text); }
+.pdp-ingredients__body p { margin-top: 3px; font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.55; }
+
+/* ---------- How to use (real product.usage only; capped width) ---------- */
+.pdp-howto__body { display: flex; gap: 12px; padding: 14px 16px; max-width: 620px; border: 1px solid var(--forest-100); border-radius: var(--r-md); background: var(--forest-50); }
+.pdp-howto__ic { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: var(--r-pill); background: var(--paper); color: var(--color-primary); }
+.pdp-howto__text { font-size: var(--text-sm); color: var(--ink-700); line-height: 1.6; white-space: pre-line; }
+
+/* ---------- Product information accordion ---------- */
+.pdp-acc { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--paper); overflow: hidden; }
+.pdp-acc__item + .pdp-acc__item { border-top: 1px solid var(--line); }
+.pdp-acc__h { margin: 0; font: inherit; letter-spacing: 0; }
+.pdp-acc__btn { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 54px; padding: 15px 14px; text-align: left; font-family: var(--font-display); font-weight: 600; font-size: var(--text-base); color: var(--color-text); }
+.pdp-acc__title { display: inline-flex; align-items: center; gap: 10px; }
+.pdp-acc__title svg { color: var(--color-primary); flex-shrink: 0; }
+.pdp-acc__sign { display: grid; place-items: center; width: 26px; height: 26px; flex-shrink: 0; border: 1px solid var(--line); border-radius: var(--r-pill); color: var(--color-primary); transition: background var(--t) var(--ease), color var(--t) var(--ease), border-color var(--t) var(--ease); }
+.pdp-acc__item.is-open .pdp-acc__sign { background: var(--color-primary); color: var(--color-on-primary); border-color: var(--color-primary); }
+.pdp-acc__panel { padding: 0 14px 16px; }
+.pdp-acc__inner { animation: pdpAccIn var(--t) var(--ease-soft); }
+@keyframes pdpAccIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.pdp-acc__p { font-size: var(--text-sm); color: var(--ink-700); line-height: 1.65; }
+.pdp-acc__tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.pdp-acc .ticklist { gap: 9px; }
+.pdp-acc .ticklist li { font-size: var(--text-sm); }
+.pdp-faq dt { font-weight: 600; font-size: var(--text-sm); color: var(--color-text); margin-bottom: 4px; }
+.pdp-faq dd { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.6; margin-bottom: 14px; }
+.pdp-faq dd:last-child { margin-bottom: 0; }
+
+/* ---------- Trust / assurance (compact 2-up grid, no dividers) ---------- */
+.pdp-trust__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+.pdp-trust__item { display: flex; align-items: flex-start; gap: 10px; padding: 0; border: 0; }
+.pdp-trust__ic { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--r-pill); background: var(--forest-50); color: var(--forest-600); }
+.pdp-trust__ic svg { width: 17px; height: 17px; }
+.pdp-trust__txt strong { display: block; font-size: var(--text-sm); color: var(--color-text); line-height: 1.2; }
+.pdp-trust__txt em { display: block; font-style: normal; font-size: 11px; color: var(--color-text-muted); line-height: 1.35; margin-top: 1px; }
+
+/* ---------- Ratings & reviews ---------- */
+.pdp-reviews-soon { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--color-surface-2); }
+.pdp-reviews-soon__ic { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: var(--r-pill); background: var(--paper); color: var(--color-primary); }
+.pdp-reviews-soon p { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.6; }
+.pdp-reviews { display: grid; gap: var(--sp-5); }
+.pdp-reviews__summary { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: var(--sp-5); border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--paper); text-align: center; }
+.pdp-reviews__score { font-size: 2.6rem; line-height: 1; color: var(--color-primary); }
+.pdp-reviews__stars { display: inline-flex; gap: 2px; }
+.pdp-reviews__stars .s-full { color: var(--color-star); }
+.pdp-reviews__stars .s-empty { color: var(--line); }
+.pdp-reviews__cta { margin-top: 8px; }
+.pdp-reviews__list { display: flex; flex-direction: column; gap: var(--sp-4); }
+.pdp-reviewcard { border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: var(--sp-5); background: var(--paper); }
+.pdp-reviewcard__top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.pdp-reviewcard__avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: var(--r-pill); background: var(--forest-100); color: var(--forest-700); font-weight: 700; font-size: var(--text-sm); }
+.pdp-reviewcard__top strong { font-size: var(--text-sm); }
+.pdp-reviewcard__verified { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-xs); color: var(--color-success); margin-left: 8px; }
+.pdp-reviewcard__title { font-size: var(--text-md); margin: 8px 0 6px; }
+.pdp-reviews__all { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--text-sm); color: var(--color-primary); }
+
+/* ---------- Gallery overlay controls ---------- */
+.pdp__galactions { position: absolute; top: 14px; right: 14px; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
+.pdp__galbtn { display: grid; place-items: center; width: 42px; height: 42px; border-radius: var(--r-pill); background: rgba(255, 255, 255, 0.92); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); border: 1px solid var(--line); color: var(--ink-700); box-shadow: var(--shadow-xs); transition: transform var(--t-fast) var(--ease-soft), color var(--t) var(--ease); }
+.pdp__galbtn:hover { transform: translateY(-1px); }
+.pdp__galbtn:active { transform: scale(0.92); }
+.pdp__galbtn.is-active { color: var(--color-sale); }
+
+/* ---------- Sticky mobile buy bar refinements ---------- */
+.buybar { gap: 8px; }
+.buybar .btn { min-height: 44px; }
+.buybar__price { flex: 1 1 auto; min-width: 0; }
+.buybar__price .price--lg, .buybar__price .price { flex-wrap: wrap; row-gap: 0; }
+.buybar__add { flex: 0 0 auto; padding: 12px 16px; background: var(--paper); color: var(--color-primary); border: 1px solid var(--color-primary); }
+.buybar__add:hover { background: var(--forest-50); color: var(--color-primary); }
+.buybar__buy { flex: 0 0 auto; padding: 12px 18px; }
+/* Keep the last section clear of the fixed bar (the bar replaces the tab bar). */
+@media (max-width: 900px) { body:has(.buybar) .page-main { padding-bottom: calc(74px + env(safe-area-inset-bottom)); } }
+@media (max-width: 360px) {
+  .buybar { gap: 6px; padding-inline: 10px; }
+  .buybar__add { padding: 11px 12px; }
+  .buybar__buy { padding: 11px 14px; }
+}
+
+/* ---------- Desktop: keep the redesign, don't blow it up ---------- */
+@media (min-width: 901px) {
+  .pdp-sec { padding-block: var(--sp-8); }
+  .pdp-sec__title { font-size: var(--text-2xl); }
+  .pdp-benefits__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .pdp-ingredients__list:not(.is-single) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pdp-trust__list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-5) var(--sp-8); }
+  .pdp-reviews { grid-template-columns: 260px 1fr; gap: var(--sp-8); align-items: start; }
+  .pdp-reviews__summary { position: sticky; top: 96px; }
+}
