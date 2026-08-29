@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductImage from '../components/ProductImage.jsx';
 import PriceSummary from '../components/PriceSummary.jsx';
-import Logo from '../components/Logo.jsx';
 import OrderCelebration from '../components/OrderCelebration.jsx';
 import { useStore } from '../lib/store.jsx';
 import { useCustomerAuth } from '../lib/customerAuth.jsx';
@@ -229,7 +228,8 @@ export default function Checkout() {
 
   if (placed) {
     return (
-      <div className="container section">
+      <div className="v2-checkout-root v2-checkout-confirm-root">
+      <div className="v2-wrap section">
         <div className={`confirm confirm__enter ${celebrate ? 'confirm--celebrate' : ''}`}>
           <OrderCelebration />
           <span className="eyebrow confirm__reveal" style={{ '--d': '400ms' }}>Order confirmed</span>
@@ -246,18 +246,21 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+      </div>
     );
   }
 
   if (!cartDetailed.length) {
     return (
-      <div className="container section">
+      <div className="v2-checkout-root">
+      <div className="v2-wrap section">
         <div className="state">
           <span className="state-ic"><Icon name="bag" size={32} /></span>
           <h3>Your cart is empty</h3>
           <p>Add a few essentials before checking out.</p>
           <Link to="/shop" className="btn">Browse products</Link>
         </div>
+      </div>
       </div>
     );
   }
@@ -361,15 +364,14 @@ export default function Checkout() {
   };
 
   return (
-    <div className="checkout">
+    <div className="checkout v2-checkout-root">
       <div className="checkout__bar">
-        <div className="container checkout__bar-in">
-          <Logo />
+        <div className="v2-wrap checkout__bar-in">
           <span className="checkout__secure"><Icon name="lock" size={15} /> Secure checkout</span>
         </div>
       </div>
 
-      <div className="container checkout__grid">
+      <div className="v2-wrap checkout__grid">
         <div className="checkout__main">
           <ol className="stepper">
             {STEPS.map((s, i) => (
@@ -419,7 +421,7 @@ export default function Checkout() {
 
               <div className={`field ${errors.email ? 'field-error' : ''}`}><label className="label">Email address</label><input className="input" type="email" placeholder="you@email.com" value={form.email} onChange={setField('email')} />{errors.email && <span className="error-text">{errors.email}</span>}</div>
               <div className={`field ${errors.phone ? 'field-error' : ''}`}><label className="label">Phone number</label><input className="input" type="tel" placeholder="+91 98765 43210" value={form.phone} onChange={setField('phone')} />{errors.phone && <span className="error-text">{errors.phone}</span>}</div>
-              <label className="check"><input type="checkbox" defaultChecked /><span className="check__box"><Icon name="check" size={13} /></span><span>Email me with news and offers</span></label>
+              <label className="check"><input type="checkbox" /><span className="check__box"><Icon name="check" size={13} /></span><span>Email me with news and offers</span></label>
               <div className="grid2">
                 <div className={`field ${errors.firstName ? 'field-error' : ''}`}><label className="label">First name</label><input className="input" placeholder="First name" value={form.firstName} onChange={setField('firstName')} />{errors.firstName && <span className="error-text">{errors.firstName}</span>}</div>
                 <div className={`field ${errors.lastName ? 'field-error' : ''}`}><label className="label">Last name</label><input className="input" placeholder="Last name" value={form.lastName} onChange={setField('lastName')} />{errors.lastName && <span className="error-text">{errors.lastName}</span>}</div>
@@ -443,7 +445,7 @@ export default function Checkout() {
                   {addrMsg && <span className="hint">{addrMsg}</span>}
                 </div>
               )}
-              <button className="btn btn-lg" onClick={() => validateShipping() && next()}>Continue to delivery <Icon name="arrowRight" size={18} /></button>
+              <button className="btn btn-lg v2-btn" onClick={() => validateShipping() && next()}>Continue to delivery <Icon name="arrowRight" size={18} /></button>
             </section>
           )}
 
@@ -461,8 +463,8 @@ export default function Checkout() {
                 ))}
               </div>
               <div className="cform__nav">
-                <button className="btn btn-ghost" onClick={() => setStep(0)}><Icon name="chevronLeft" size={18} /> Back</button>
-                <button className="btn btn-lg" onClick={next}>Continue to payment <Icon name="arrowRight" size={18} /></button>
+                <button className="btn btn-ghost v2-btn--ghost" onClick={() => setStep(0)}><Icon name="chevronLeft" size={18} /> Back</button>
+                <button className="btn btn-lg v2-btn" onClick={next}>Continue to payment <Icon name="arrowRight" size={18} /></button>
               </div>
             </section>
           )}
@@ -491,8 +493,8 @@ export default function Checkout() {
                   <p>{payError}</p>
                   <p className="muted">Your order has not been placed and your cart has been kept.</p>
                   <div className="paystate__actions">
-                    <button className="btn btn-sm" onClick={placeOrder} disabled={processing}>Try again</button>
-                    <Link to="/cart" className="btn btn-sm btn-outline">Back to cart</Link>
+                    <button className="btn btn-sm v2-btn--sm" onClick={placeOrder} disabled={processing}>Try again</button>
+                    <Link to="/cart" className="btn btn-sm btn-outline v2-btn--out">Back to cart</Link>
                   </div>
                 </div>
               )}
@@ -504,8 +506,8 @@ export default function Checkout() {
               )}
 
               <div className="cform__nav">
-                <button className="btn btn-ghost" onClick={() => setStep(1)} disabled={processing}><Icon name="chevronLeft" size={18} /> Back</button>
-                <button className="btn btn-accent btn-lg" onClick={placeOrder} disabled={processing}>
+                <button className="btn btn-ghost v2-btn--ghost" onClick={() => setStep(1)} disabled={processing}><Icon name="chevronLeft" size={18} /> Back</button>
+                <button className="btn btn-accent btn-lg v2-btn" onClick={placeOrder} disabled={processing}>
                   {processing
                     ? <><span className="spinner" /> Processing…</>
                     : pay === 'cod'
@@ -519,12 +521,12 @@ export default function Checkout() {
 
         {/* Summary */}
         <aside className="checkout__aside">
-          <div className="summary">
+          <div className="summary v2-summary">
             <h3>Order summary</h3>
             <div className="checkout__items">
               {cartDetailed.map((l) => (
                 <div key={l.key} className="checkout__item">
-                  <span className="checkout__thumb"><ProductImage product={l.product} /><i className="checkout__qty">{l.qty}</i></span>
+                  <span className="checkout__thumb"><ProductImage product={l.product} frame="v2" /><i className="checkout__qty">{l.qty}</i></span>
                   <span className="checkout__meta">
                     <strong>{l.product.name}</strong>
                     {(l.variantLabel || l.product.form) && <em>{l.variantLabel || l.product.form}</em>}

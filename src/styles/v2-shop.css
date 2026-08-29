@@ -1,0 +1,272 @@
+/* ============================================================================
+   SORA LIFE V2 — SHOP / PRODUCT LISTING (Phase 2)
+   Same namespace rules as Phase 1: --slv2-* tokens, v2-* classes, no existing
+   selector edited, no !important. Geometry is the locked 0 / 2 / 4.
+
+   Header, ProductCard, price hierarchy and the media contract are frozen and
+   reused as-is — this sheet only styles the listing chrome around them.
+   ========================================================================= */
+
+.v2-shop { background:var(--slv2-ivory); padding-bottom:40px; }
+
+/* ------------------------------------------------------------- page head
+   Deliberately compact: on a phone the job is to get products above the fold,
+   so the head carries a breadcrumb, the title and nothing else. */
+.v2-shop__head { padding-top:14px; }
+.v2-crumbs {
+  display:flex; align-items:center; gap:6px;
+  font-family:var(--slv2-sans); font-size:11px; letter-spacing:.03em;
+  color:var(--slv2-ink-4); margin:0 0 6px;
+}
+.v2-crumbs a { color:var(--slv2-ink-4); text-decoration:none; }
+.v2-crumbs a:hover { color:var(--slv2-accent-primary-hover); }
+.v2-crumbs svg { opacity:.6; }
+.v2-crumbs strong { color:var(--slv2-ink-2); font-weight:600; }
+.v2-shop__title {
+  font-family:var(--slv2-disp); font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+  font-size:26px; font-weight:500; letter-spacing:-.018em; line-height:1.12;
+  margin:0; color:var(--slv2-ink);
+}
+.v2-shop__lede { display:none; }
+.v2-shop__eyebrow { margin-bottom:3px; }
+
+@media (min-width: 768px) {
+  .v2-shop__head { padding-top:22px; }
+  .v2-shop__title { font-size:34px; }
+  .v2-shop__lede {
+    display:block; font-family:var(--slv2-sans);
+    font-size:14.5px; line-height:1.6; color:var(--slv2-ink-3);
+    margin:10px 0 0; max-width:62ch;
+  }
+}
+
+/* ---------------------------------------------------------------- search
+   Expanded field on phone/tablet only — from 901px the V2 header carries the
+   270px search, so a second field would be duplication. */
+.v2-shop__search { margin-top:12px; }
+.v2-searchbox {
+  display:flex; align-items:center; gap:9px;
+  height:44px; padding:0 12px;
+  background:var(--slv2-cream); border:1px solid var(--slv2-line);
+  border-radius:var(--slv2-r-ui);
+}
+.v2-searchbox:focus-within { border-color:var(--slv2-f500); }
+.v2-searchbox svg { color:var(--slv2-ink-3); flex:0 0 auto; }
+.v2-searchbox input {
+  flex:1; min-width:0; border:0; background:none; outline:none;
+  font-family:var(--slv2-sans); font-size:13px; color:var(--slv2-ink);
+}
+.v2-searchbox input::placeholder { color:var(--slv2-ink-4); }
+.v2-searchbox__clear {
+  flex:0 0 auto; display:grid; place-items:center; width:24px; height:24px;
+  border:0; background:none; padding:0; cursor:pointer; color:var(--slv2-ink-4);
+  border-radius:var(--slv2-r-ui);
+}
+.v2-searchbox__clear:hover { color:var(--slv2-ink-2); }
+.v2-searchbox__clear:focus-visible,
+.v2-searchbox input:focus-visible { outline:2px solid var(--slv2-f500); outline-offset:2px; }
+@media (min-width: 901px) { .v2-shop__search { display:none; } }
+
+/* -------------------------------------------------- category navigation
+   Rectangular tabs on a scroll rail. No pills, no bubbles. */
+.v2-shop__cats { margin-top:12px; }
+.v2-shop__cats .v2-chip { text-decoration:none; }
+.v2-shop__cats .v2-chip:focus-visible { outline:2px solid var(--slv2-f500); outline-offset:2px; }
+
+/* -------------------------------------------------- filter | count | sort
+   Sticky under the frozen V2 header. Edge-attached, so radius 0. */
+.v2-flt {
+  position:sticky; top:56px; z-index:40;
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;
+  height:44px; border-radius:0;
+  background:var(--slv2-ivory);
+  border-top:1px solid var(--slv2-line-2);
+  border-bottom:1px solid var(--slv2-line-2);
+  margin-top:14px;
+}
+.v2-flt__btn {
+  display:inline-flex; align-items:center; gap:6px;
+  background:none; border:0; padding:0; cursor:pointer;
+  font-family:var(--slv2-sans); font-size:12px; font-weight:600; letter-spacing:.02em;
+  color:var(--slv2-ink-2); border-radius:var(--slv2-r-ui);
+}
+.v2-flt__btn svg { color:var(--slv2-ink-3); }
+.v2-flt__btn:hover { color:var(--slv2-accent-primary-hover); }
+.v2-flt__btn:focus-visible { outline:2px solid var(--slv2-f500); outline-offset:3px; }
+.v2-flt__n {
+  display:inline-grid; place-items:center; min-width:16px; height:16px; padding:0 4px;
+  background:var(--slv2-accent-primary); color:var(--slv2-ivory);
+  border-radius:var(--slv2-r-ui);
+  font-size:9px; font-weight:700; font-variant-numeric:tabular-nums;
+}
+.v2-flt__count {
+  text-align:center; font-family:var(--slv2-sans); font-size:11.5px;
+  color:var(--slv2-ink-4); letter-spacing:.02em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  font-variant-numeric:tabular-nums;
+}
+.v2-flt__count strong { color:var(--slv2-ink-2); font-weight:700; }
+.v2-flt__sort { position:relative; display:inline-flex; align-items:center; gap:6px; justify-self:end; }
+.v2-flt__sort select {
+  appearance:none; -webkit-appearance:none;
+  border:0; background:none; padding:0 18px 0 0; margin:0; cursor:pointer;
+  font-family:var(--slv2-sans); font-size:12px; font-weight:600; color:var(--slv2-ink-2);
+  border-radius:var(--slv2-r-ui);
+}
+.v2-flt__sort svg { position:absolute; right:0; pointer-events:none; color:var(--slv2-ink-3); }
+.v2-flt__sort select:focus-visible { outline:2px solid var(--slv2-f500); outline-offset:3px; }
+
+/* ------------------------------------------------------------ promo slot
+   The promotions runtime is untouched. This renders only when the engine
+   returns a real, active, in-window promotion for this surface — and nothing
+   at all otherwise. */
+.v2-shop__promo:empty { display:none; }
+.v2-shop__promo { margin-top:16px; }
+.v2-shop__promo .promo-section { padding:0; }
+.v2-shop__promo .promo-section .container { padding-inline:0; max-width:none; }
+.v2-shop__promo .promo-poster { border-radius:var(--slv2-r-art); }
+.v2-shop__promo .promo-offer { border-radius:var(--slv2-r-ui); }
+.v2-shop__promo .promo-poster__badge,
+.v2-shop__promo .promo-poster__cta,
+.v2-shop__promo .promo-offer__ic,
+.v2-shop__promo .promo-code__row,
+.v2-shop__promo .promo-code__copy,
+.v2-shop__promo .promo-offer__cta { border-radius:var(--slv2-r-ui); }
+
+/* ------------------------------------------------------------------ grid */
+.v2-shop__grid { display:grid; grid-template-columns:1fr 1fr; gap:16px 12px; margin-top:16px; }
+.v2-shop__grid > * { display:flex; flex-direction:column; }
+@media (max-width: 359px) { .v2-shop__grid { gap:14px 10px; } }
+
+/* ------------------------------------------------------------ empty state */
+.v2-shop__empty {
+  margin-top:24px; padding:36px 20px; text-align:center;
+  background:var(--slv2-cream); border:1px solid var(--slv2-line);
+  border-radius:var(--slv2-r-ui);
+}
+.v2-shop__empty svg { color:var(--slv2-f500); opacity:.7; }
+.v2-shop__empty h3 {
+  font-family:var(--slv2-disp); font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+  font-size:20px; font-weight:500; margin:12px 0 6px; color:var(--slv2-ink);
+}
+.v2-shop__empty p { font-family:var(--slv2-sans); font-size:13px; color:var(--slv2-ink-3); margin:0 0 18px; }
+
+/* ==========================================================================
+   DESKTOP — persistent filter rail + wider grid
+   ========================================================================= */
+.v2-shop__body { display:block; }
+
+@media (min-width: 901px) {
+  .v2-flt { top:119px; }                       /* clears the 74px bar + nav row */
+  /* the persistent rail IS the filter UI on desktop, so the drawer trigger
+     would be a second control for the same job */
+  .v2-flt { grid-template-columns:1fr auto; }
+  .v2-flt__btn { display:none; }
+  .v2-flt__count { text-align:left; }
+  .v2-shop__body {
+    display:grid; grid-template-columns:264px 1fr; gap:36px;
+    align-items:start; margin-top:20px;
+  }
+  .v2-shop__rail { position:sticky; top:179px; }
+  .v2-shop__grid { grid-template-columns:repeat(3, 1fr); gap:24px 20px; margin-top:0; }
+  .v2-flt { margin-top:12px; }
+}
+@media (min-width: 1200px) {
+  .v2-shop__grid { grid-template-columns:repeat(4, 1fr); gap:24px; }
+}
+@media (min-width: 768px) and (max-width: 900px) {
+  .v2-shop__grid { grid-template-columns:repeat(3, 1fr); gap:24px 20px; }
+}
+
+/* --------------------------------------------------------- filter panel */
+.v2-fp { border:1px solid var(--slv2-line); border-radius:var(--slv2-r-ui); background:var(--slv2-paper); overflow:hidden; }
+.v2-fp__head {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:13px 16px; border-bottom:1px solid var(--slv2-line-2);
+}
+.v2-fp__head h3 {
+  font-family:var(--slv2-sans); font-size:11.5px; font-weight:700;
+  letter-spacing:.14em; text-transform:uppercase; margin:0; color:var(--slv2-ink);
+}
+.v2-fp__clear {
+  background:none; border:0; padding:0; cursor:pointer;
+  font-family:var(--slv2-sans); font-size:11px; font-weight:600;
+  color:var(--slv2-f600); text-decoration:underline; text-underline-offset:2px;
+  border-radius:var(--slv2-r-ui);
+}
+.v2-fp__clear:focus-visible { outline:2px solid var(--slv2-f500); outline-offset:2px; }
+.v2-fp__g { padding:15px 16px; border-bottom:1px solid var(--slv2-line-2); }
+.v2-fp__g:last-child { border-bottom:0; }
+.v2-fp__t {
+  display:block; font-family:var(--slv2-sans); font-size:12px; font-weight:700;
+  color:var(--slv2-ink); margin-bottom:11px;
+}
+.v2-check {
+  display:flex; align-items:center; gap:10px; cursor:pointer;
+  font-family:var(--slv2-sans); font-size:13px; color:var(--slv2-ink-2); margin-bottom:9px;
+}
+.v2-check:last-child { margin-bottom:0; }
+.v2-check input { position:absolute; opacity:0; width:0; height:0; }
+.v2-check__box {
+  width:15px; height:15px; flex:0 0 auto; display:grid; place-items:center;
+  border:1px solid var(--slv2-line); background:var(--slv2-ivory);
+  border-radius:var(--slv2-r-ui); color:transparent;
+}
+.v2-check input:checked + .v2-check__box {
+  background:var(--slv2-accent-primary); border-color:var(--slv2-accent-primary); color:var(--slv2-ivory);
+}
+.v2-check input:focus-visible + .v2-check__box { outline:2px solid var(--slv2-f500); outline-offset:2px; }
+.v2-fp__range { width:100%; margin:4px 0 8px; accent-color:var(--slv2-accent-primary); }
+.v2-fp__rangelbl {
+  display:flex; justify-content:space-between;
+  font-family:var(--slv2-sans); font-size:11.5px; color:var(--slv2-ink-4);
+  font-variant-numeric:tabular-nums;
+}
+.v2-fp__rangelbl strong { color:var(--slv2-ink-2); font-weight:700; }
+.v2-fp__tags { display:flex; gap:7px; flex-wrap:wrap; }
+.v2-fp__tags .v2-chip { height:29px; padding:0 11px; font-size:11.5px; }
+.v2-fp__tags .v2-chip:not(.is-on) { background:var(--slv2-ivory); }
+
+/* ------------------------------------------------------- filter drawer */
+.v2-fd {
+  position:fixed; inset:0; z-index:80; visibility:hidden;
+  /* The closed panel is translated one full panel-width beyond the right
+     edge. Clip that intentional off-canvas state so it cannot enlarge the
+     document scrollport; the inner filter rail remains independently scrollable. */
+  overflow:hidden;
+}
+.v2-fd.is-open { visibility:visible; }
+.v2-fd__scrim {
+  position:absolute; inset:0; background:rgba(22,33,27,.44);
+  opacity:0; transition:opacity .22s ease;
+}
+.v2-fd.is-open .v2-fd__scrim { opacity:1; }
+.v2-fd__panel {
+  position:absolute; inset:0 0 0 auto; width:min(360px, 88vw);
+  display:flex; flex-direction:column;
+  background:var(--slv2-ivory); border-left:1px solid var(--slv2-line);
+  border-radius:0;                                  /* edge-attached */
+  transform:translateX(100%); transition:transform .26s ease;
+}
+.v2-fd.is-open .v2-fd__panel { transform:none; }
+.v2-fd__top {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; border-bottom:1px solid var(--slv2-line-2); flex:0 0 auto;
+}
+.v2-fd__top h3 {
+  font-family:var(--slv2-sans); font-size:12px; font-weight:700;
+  letter-spacing:.14em; text-transform:uppercase; margin:0;
+}
+.v2-fd__scroll { flex:1; overflow-y:auto; padding:14px 16px; overscroll-behavior:contain; }
+.v2-fd__scroll .v2-fp { border:0; }
+.v2-fd__scroll .v2-fp__head { display:none; }
+.v2-fd__scroll .v2-fp__g { padding-inline:0; }
+.v2-fd__foot {
+  flex:0 0 auto; display:grid; grid-template-columns:auto 1fr; gap:10px;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--slv2-line); background:var(--slv2-ivory);
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-fd__scrim, .v2-fd__panel { transition:none; }
+}
+@media (min-width: 901px) { .v2-fd { display:none; } }

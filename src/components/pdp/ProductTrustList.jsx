@@ -9,7 +9,7 @@ import { TRUST_ITEMS } from '../../data/pdpContent.js';
 export default function ProductTrustList() {
   return (
     <section className="pdp-sec pdp-trust" aria-labelledby="pdp-trust-h">
-      <h2 id="pdp-trust-h" className="pdp-sec__title serif">The SORA LIFE promise</h2>
+      <h2 id="pdp-trust-h" className="pdp-sec__title serif">Shopping with SORA LIFE</h2>
       <ul className="pdp-trust__list">
         {TRUST_ITEMS.map(([icon, title, desc]) => (
           <li key={title} className="pdp-trust__item">

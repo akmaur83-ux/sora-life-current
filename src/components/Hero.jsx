@@ -1,13 +1,45 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
-import { heroSlides } from '../lib/settings.js';
+import ProductImage from './ProductImage.jsx';
+import { heroSlides, heroSlidesConfigured } from '../lib/settings.js';
+import { productBySlug, products } from '../data/products.js';
+import { categoryBySlug } from '../data/categories.js';
 
-const BENEFITS = [
-  { icon: 'award', a: 'Himalayan', b: 'Superfood' },
-  { icon: 'leaf', a: 'Rich in 190+', b: 'Nutrients' },
-  { icon: 'shield', a: 'Boosts Immunity', b: '& Wellness' },
-];
+// ---------------------------------------------------------------------------
+// V2 PRODUCT-LED HERO
+//
+// The approved V2 direction is product-led: a real product, dominant, grounded
+// on a stone plinth in a warm ivory environment, with the copy held clear on
+// the left. The environment (ground, plinth, botanical depth, contact shadow)
+// is drawn in CSS; the product is the REAL catalogue image, unmodified — no
+// packaging is redrawn, no label altered, no text baked into artwork.
+//
+// Copy safety: the built-in DEFAULT_HERO_SLIDES in settings.js carry
+// unverified provenance and product claims ("Harvested from the Himalayas",
+// "Sun-ripened … gently cold-pressed", "Nutrient-dense wellness"). Those are
+// hardcoded marketing defaults, not approved configured content, so V2 does
+// not render them. In product-led mode every string comes from the product
+// record itself: category name, product name, pack size. Nothing else.
+//
+// When an admin HAS configured hero_slides (heroSlidesConfigured === true),
+// that copy is approved content and the original slide rendering is used.
+// ---------------------------------------------------------------------------
+const HERO_PRODUCT_SLUG = 'biosash-sea-buckthorn-juice';
+
+function resolveHeroProduct() {
+  const exact = productBySlug?.[HERO_PRODUCT_SLUG];
+  if (exact?.image) return exact;
+  // Defensive: if the catalogue is swapped by applyCatalog() and that slug is
+  // gone, fall back to the first in-stock product that has a real image.
+  return (products || []).find((p) => p?.image && p.stock !== 0) || null;
+}
+
+// V2 note: the previous hardcoded BENEFITS strip ("Rich in 190+ Nutrients",
+// "Boosts Immunity & Wellness") was authored marketing copy baked into this
+// component, not data the storefront can substantiate. V2 does not render
+// product claims that are not bound to verified data, so it has been removed
+// rather than restyled.
 
 const INTERVAL = 6000;
 
@@ -72,6 +104,60 @@ function isRenderable(slide, canUseVideo, failed) {
 }
 
 export default function Hero() {
+  // Product-led hero is the V2 default. Admin-configured slides opt back into
+  // the original slide rendering because that copy is approved content.
+  if (!heroSlidesConfigured) return <ProductHero />;
+  return <ConfiguredHero />;
+}
+
+// ---------------------------------------------------------------- product-led
+function ProductHero() {
+  const product = resolveHeroProduct();
+  if (!product) return null;
+
+  const cat = categoryBySlug[product.category];
+
+  return (
+    <section className="v2-hero v2-hero--product" aria-label="Featured product">
+      <div className="v2-hero__stage">
+        {/* Editorial environment — CSS only. Warm ivory ground, travertine
+            plinth, restrained botanical depth. No fabricated photography. */}
+        <span className="v2-hero__ground" aria-hidden="true" />
+        <span className="v2-hero__leaf v2-hero__leaf--a" aria-hidden="true" />
+        <span className="v2-hero__leaf v2-hero__leaf--b" aria-hidden="true" />
+        <span className="v2-hero__plinth" aria-hidden="true" />
+        <span className="v2-hero__contact" aria-hidden="true" />
+
+        {/* Real product image, unmodified. mix-blend-mode:multiply drops the
+            asset's white studio background into the cream ground without
+            editing the file or touching the packaging. */}
+        <div className="v2-hero__productwrap">
+          <ProductImage
+            product={product}
+            frame="hero"
+            sizes="(max-width: 767px) 62vw, 46vw"
+            alt={product.name}
+          />
+        </div>
+
+        {/* Copy is live DOM, held in the left zone, never baked into artwork. */}
+        <div className="v2-hero__ui">
+          {cat?.name && <p className="v2-hero__kicker">{cat.name}</p>}
+          <h1 className="v2-hero__title">{product.name}</h1>
+          {product.form && <p className="v2-hero__meta">{product.form}</p>}
+          <div>
+            <Link to={`/product/${product.slug}`} className="v2-btn v2-btn--sm">
+              View product
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ------------------------------------------------- admin-configured slides
+function ConfiguredHero() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [videoFailed, setVideoFailed] = useState({}); // { [slideId]: true } — fall back to poster on load error
@@ -151,7 +237,7 @@ export default function Hero() {
   return (
     <section
       ref={sectionRef}
-      className="bh-hero bh-hero--carousel"
+      className="v2-hero"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       aria-roledescription="carousel"
@@ -160,69 +246,70 @@ export default function Hero() {
       {SLIDES.map((s, i) => (
         <div
           key={s.id}
-          className={`bh-slide ${i === active ? 'is-active' : ''}`}
+          className={`v2-hero__slide ${i === active ? 'is-active' : ''}`}
           aria-hidden={i !== active}
         >
-          <div className="bh-hero__parallax" ref={(el) => { parallaxRefs.current[i] = el; }}>
-            {s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src ? (
-              <video
-                className="bh-hero__media"
-                autoPlay muted loop playsInline preload="metadata"
-                poster={s.poster}
-                style={{ objectPosition: s.position }}
-                onError={() => setVideoFailed((v) => ({ ...v, [s.id]: true }))}
-              >
-                <source src={s.src} type="video/mp4" />
-              </video>
-            ) : s.kind === 'video' ? (
-              // Video skipped on mobile, missing, or failed to load — always resolve
-              // to a real still (never an empty colour block).
-              <img className="bh-hero__media" src={heroSrc(stillFor(s) || FALLBACK_POSTER, 1600)}
-                srcSet={heroSrcSet(stillFor(s) || FALLBACK_POSTER)} sizes="100vw"
-                alt={s.title} style={{ objectPosition: s.position }}
-                loading={i === active ? 'eager' : 'lazy'}
-                fetchpriority={i === active ? 'high' : undefined} decoding="async" />
-            ) : (
-              <img className="bh-hero__media" src={heroSrc(s.src, 1600)}
-                srcSet={heroSrcSet(s.src)} sizes="100vw"
-                alt={s.title} style={{ objectPosition: s.position }}
-                loading={i === active ? 'eager' : 'lazy'}
-                fetchpriority={i === active ? 'high' : undefined} decoding="async" />
-            )}
-          </div>
-          <div className="bh-hero__scrim" />
-          <div className="container bh-hero__inner">
-            <div className="bh-hero__copy">
-              <p className="bh-hero__kicker">{s.kicker}</p>
-              <h1 className="bh-hero__title">{s.title}</h1>
-              <p className="bh-hero__sub">{s.sub}</p>
-              <p className="bh-hero__lede">{s.lede}</p>
-              <Link to={s.cta.to} className="btn btn-lg bh-hero__cta">{s.cta.label} <Icon name="arrowRight" size={18} /></Link>
-              <div className="bh-hero__benefits">
-                {BENEFITS.map((b, bi) => (
-                  <div key={b.b} className="bh-hero__benefit">
-                    <Icon name={b.icon} size={22} />
-                    <span>{b.a}<br />{b.b}</span>
-                    {bi < BENEFITS.length - 1 && <i className="bh-hero__bdiv" />}
-                  </div>
-                ))}
-              </div>
+          <div className="v2-hero__media">
+            {/* Parallax wrapper is inset inside the frame so its transform can
+                never push the artwork past the frame's own edge. */}
+            <div className="v2-hero__par" ref={(el) => { parallaxRefs.current[i] = el; }}>
+              {s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src ? (
+                <video
+                  className="v2-hero__img"
+                  autoPlay muted loop playsInline preload="metadata"
+                  poster={s.poster}
+                  style={{ objectPosition: s.position }}
+                  onError={() => setVideoFailed((v) => ({ ...v, [s.id]: true }))}
+                >
+                  <source src={s.src} type="video/mp4" />
+                </video>
+              ) : s.kind === 'video' ? (
+                // Video skipped on mobile, missing, or failed to load — always resolve
+                // to a real still (never an empty colour block).
+                <img className="v2-hero__img" src={heroSrc(stillFor(s) || FALLBACK_POSTER, 1600)}
+                  srcSet={heroSrcSet(stillFor(s) || FALLBACK_POSTER)} sizes="100vw"
+                  alt={s.title} style={{ objectPosition: s.position }}
+                  loading={i === active ? 'eager' : 'lazy'}
+                  fetchpriority={i === active ? 'high' : undefined} decoding="async" />
+              ) : (
+                <img className="v2-hero__img" src={heroSrc(s.src, 1600)}
+                  srcSet={heroSrcSet(s.src)} sizes="100vw"
+                  alt={s.title} style={{ objectPosition: s.position }}
+                  loading={i === active ? 'eager' : 'lazy'}
+                  fetchpriority={i === active ? 'high' : undefined} decoding="async" />
+              )}
             </div>
+          </div>
+
+          {/* Copy is live DOM over a scrim, never baked into the artwork, so a
+              swapped image can never break the headline. */}
+          <span className="v2-hero__scrim" aria-hidden="true" />
+          <div className="v2-hero__ui">
+            {s.kicker && <p className="v2-hero__kicker">{s.kicker}</p>}
+            <h1 className="v2-hero__title">{s.title}</h1>
+            {(s.sub || s.lede) && <p className="v2-hero__sub">{s.sub || s.lede}</p>}
+            {s.cta?.to && (
+              <div>
+                <Link to={s.cta.to} className="v2-btn v2-btn--sm">{s.cta.label}</Link>
+              </div>
+            )}
           </div>
         </div>
       ))}
 
-      {/* Arrows */}
-      <button className="bh-hero__arrow bh-hero__arrow--prev" onClick={() => go(active - 1)} aria-label="Previous slide"><Icon name="chevronLeft" size={22} /></button>
-      <button className="bh-hero__arrow bh-hero__arrow--next" onClick={() => go(active + 1)} aria-label="Next slide"><Icon name="chevronRight" size={22} /></button>
+      {SLIDES.length > 1 && (
+        <>
+          <button className="v2-hero__arrow v2-hero__arrow--prev" onClick={() => go(active - 1)} aria-label="Previous slide"><Icon name="chevronLeft" size={18} stroke={1.6} /></button>
+          <button className="v2-hero__arrow v2-hero__arrow--next" onClick={() => go(active + 1)} aria-label="Next slide"><Icon name="chevronRight" size={18} stroke={1.6} /></button>
 
-      {/* Dots */}
-      <div className="bh-hero__dots">
-        {SLIDES.map((s, i) => (
-          <button key={s.id} className={i === active ? 'active' : ''} onClick={() => go(i)}
-            aria-label={`Go to slide ${i + 1}`} aria-current={i === active} />
-        ))}
-      </div>
+          <div className="v2-hero__dots">
+            {SLIDES.map((s, i) => (
+              <button key={s.id} className={i === active ? 'is-on' : ''} onClick={() => go(i)}
+                aria-label={`Go to slide ${i + 1}`} aria-current={i === active} />
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }

@@ -19,6 +19,13 @@ const DEFAULT_CATEGORIES = [
 export let categories = DEFAULT_CATEGORIES;
 export let categoryBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]));
 
+// Category copy is safe to present as approved only after it has come from the
+// public categories table managed by Admin. The built-in list is a navigation
+// fallback; its historical taglines/blurbs are not proof of configured copy.
+export function hasConfiguredCategoryCopy(category) {
+  return category?._copyConfigured === true;
+}
+
 function isValidSlug(s) {
   return typeof s === 'string' && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(s);
 }
@@ -29,14 +36,14 @@ function slugify(s) {
 export function applyCategories(list) {
   if (!Array.isArray(list) || list.length === 0) return false;
   categories = list.map((c) => {
-    if (isValidSlug(c.slug)) return c;
+    if (isValidSlug(c.slug)) return { ...c, _copyConfigured: true };
     // A malformed stored slug (e.g. stray spaces/slashes from a data-entry
     // accident) would otherwise 404 every link to this category, including
     // the hardcoded nav links. Derive a clean slug from the category's own
     // name so pages still resolve correctly — the underlying Supabase row
     // is left untouched.
     const repaired = slugify(c.name);
-    return repaired ? { ...c, slug: repaired } : c;
+    return repaired ? { ...c, slug: repaired, _copyConfigured: true } : { ...c, _copyConfigured: true };
   });
   categoryBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]));
   return true;

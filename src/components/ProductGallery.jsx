@@ -56,6 +56,7 @@ export default function ProductGallery({ product, children }) {
             src={current?.url}
             alt={current?.alt || product.name}
             sizes="(max-width: 900px) 92vw, 460px"
+            frame="v2"
           />
         </div>
         {children}
@@ -87,7 +88,7 @@ export default function ProductGallery({ product, children }) {
               aria-label={`View image ${i + 1}${f.isPrimary ? ' (primary)' : ''}`}
               aria-pressed={i === idx}
             >
-              <ProductImage product={product} src={f.url} alt={f.alt || product.name} sizes="84px" />
+              <ProductImage product={product} src={f.url} alt={f.alt || product.name} sizes="84px" frame="v2" />
             </button>
           ))}
         </div>

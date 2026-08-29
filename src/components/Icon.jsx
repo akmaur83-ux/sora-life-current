@@ -54,6 +54,13 @@ const P = {
   externalLink: '<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M8 6H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3"/>',
   crown: '<path d="m3 8 4 3 5-6 5 6 4-3-2 11H5Z"/><path d="M5 21h14"/>',
   circleAlert: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>',
+  // ---- V2 additions (additive only; Admin also consumes this component, so
+  // no existing glyph above is changed or removed). These three close a real
+  // gap: categories.js already references `bottle`, `capsule` and `drop`, and
+  // Icon returned null for all three.
+  bottle: '<path d="M10 3h4v3l2.2 3.2V21H7.8V9.2L10 6V3Z"/><path d="M7.8 13h8.4"/>',
+  capsule: '<rect x="3.4" y="8.6" width="17.2" height="6.8" rx="3.4" transform="rotate(-45 12 12)"/><path d="M9.6 14.4 14.4 9.6"/>',
+  drop: '<path d="M12 3.4S5.8 10 5.8 14a6.2 6.2 0 0 0 12.4 0c0-4-6.2-10.6-6.2-10.6Z"/>',
 };
 
 export default function Icon({ name, size = 22, stroke = 1.6, fill = 'none', className, style }) {

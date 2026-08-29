@@ -8,6 +8,7 @@ import PriceSummary from '../components/PriceSummary.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
 import { money } from '../lib/format.js';
 import { getBestsellers } from '../data/products.js';
+import { promotionsSource } from '../lib/promotions.js';
 
 const COUPONS = { SORA10: 0.1, WELCOME: 0.15 };
 
@@ -25,12 +26,14 @@ export default function Cart() {
   };
 
   const discount = applied ? Math.round(subtotal * applied.rate) : 0;
-  const shipping = subtotal === 0 ? 0 : subtotal - discount >= 699 ? 0 : 49;
-  const total = Math.max(0, subtotal - discount + shipping);
+  // Cart has no delivery-method selector; its estimate mirrors the default
+  // Standard option used by Checkout and the server (free shipping).
+  const shipping = 0;
 
   if (!cartDetailed.length) {
     return (
-      <div className="container section">
+      <div className="v2-cart-root">
+        <div className="v2-wrap v2-cart-empty">
         <div className="state">
           <span className="state-ic"><Icon name="bag" size={32} /></span>
           <h3>Your cart is empty</h3>
@@ -38,25 +41,26 @@ export default function Cart() {
           <Link to="/shop" className="btn">Start shopping <Icon name="arrowRight" size={18} /></Link>
         </div>
         {savedDetailed.length > 0 && <SavedList saved={savedDetailed} dispatch={dispatch} />}
+        </div>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="pagehead"><div className="container">
-        <nav className="crumbs"><Link to="/">Home</Link><Icon name="chevronRight" size={14} /><span>Cart</span></nav>
+    <div className="v2-cart-root">
+      <div className="pagehead v2-cart-head"><div className="v2-wrap">
+        <nav className="crumbs v2-crumbs"><Link to="/">Home</Link><Icon name="chevronRight" size={14} /><span>Cart</span></nav>
         <h1 className="serif">Your cart</h1>
-        <p className="muted">{cartDetailed.length} {cartDetailed.length === 1 ? 'item' : 'items'} ready for a healthier routine.</p>
+        <p className="muted">{cartDetailed.length} {cartDetailed.length === 1 ? 'item' : 'items'} in your cart.</p>
       </div></div>
 
-      <div className="container section-sm" style={{ paddingTop: 'var(--sp-8)' }}>
+      <div className="v2-wrap section-sm v2-cart-body">
         <div className="cartlayout">
           <div className="cartlayout__main">
             <div className="cartlist">
               {cartDetailed.map((l) => (
                 <div key={l.key} className="cartrow">
-                  <Link to={`/product/${l.product.slug}`} className="cartrow__media"><ProductImage product={l.product} /></Link>
+                  <Link to={`/product/${l.product.slug}`} className="cartrow__media v2-cartrow__media"><ProductImage product={l.product} frame="v2" /></Link>
                   <div className="cartrow__info">
                     <div className="cartrow__top">
                       <div>
@@ -99,34 +103,33 @@ export default function Cart() {
 
           {/* Summary */}
           <aside className="cartlayout__aside">
-            <div className="summary">
+            <div className="summary v2-summary">
               <h3>Order summary</h3>
               <form className="summary__coupon" onSubmit={applyCoupon}>
-                <div className="searchbox" style={{ flex: 1 }}>
+                <div className="searchbox v2-coupon" style={{ flex: 1 }}>
                   <Icon name="tag" />
-                  <input className="input" placeholder="Coupon code (try SORA10)" value={coupon} onChange={(e) => setCoupon(e.target.value)} />
+                  <input className="input" placeholder="Coupon code" value={coupon} onChange={(e) => setCoupon(e.target.value)} />
                 </div>
-                <button className="btn btn-light" type="submit">Apply</button>
+                <button className="btn btn-light v2-btn--out" type="submit">Apply</button>
               </form>
               {couponErr && <p className="error-text">{couponErr}</p>}
               {applied && <p className="summary__applied"><Icon name="checkCircle" size={15} /> {applied.code} — {applied.rate * 100}% off</p>}
 
               {/* Informational only — separate from the estimate above and from
                   checkout pricing. Codes are copyable; nothing auto-applies. */}
-              <PromoRail place="cart" variant="compact" />
+              {promotionsSource === 'supabase' && <PromoRail place="cart" variant="compact" />}
 
               {/* Cart shows the client-side estimate; checkout replaces it with
                   the server-computed breakdown (taxes/fees included). */}
               <PriceSummary
                 fallback={{ itemTotal: subtotal - discount, mrpTotal, shipping }}
               />
-              {shipping > 0 && <p className="summary__ship-hint"><Icon name="truck" size={15} /> Add {money(699 - (subtotal - discount))} more for free delivery</p>}
               <Link to="/checkout" className="btn btn-lg btn-block">Checkout <Icon name="arrowRight" size={18} /></Link>
               <Link to="/shop" className="summary__continue">or continue shopping</Link>
               <div className="summary__badges">
-                <span><Icon name="lock" size={14} /> Secure</span>
-                <span><Icon name="return" size={14} /> Easy returns</span>
-                <span><Icon name="truck" size={14} /> Fast delivery</span>
+                <span><Icon name="lock" size={14} /> Secure checkout</span>
+                <span><Icon name="truck" size={14} /> Free standard shipping</span>
+                <span><Icon name="truck" size={14} /> Delivery options at checkout</span>
               </div>
             </div>
           </aside>
@@ -134,7 +137,7 @@ export default function Cart() {
       </div>
 
       <ProductRail eyebrow="Add a little extra" title="Recommended for you" products={getBestsellers()} link="/shop" />
-    </>
+    </div>
   );
 }
 
@@ -145,7 +148,7 @@ function SavedList({ saved, dispatch, inline }) {
       <div className="savedlist__grid">
         {saved.map((l) => (
           <div key={l.key} className="savedcard">
-            <Link to={`/product/${l.product.slug}`} className="savedcard__media"><ProductImage product={l.product} /></Link>
+            <Link to={`/product/${l.product.slug}`} className="savedcard__media"><ProductImage product={l.product} frame="v2" /></Link>
             <div className="savedcard__body">
               <Link to={`/product/${l.product.slug}`} className="savedcard__name">{l.product.name}</Link>
               <span className="price"><span className="now" style={{ fontSize: 'var(--text-md)' }}>{money(l.product.price)}</span></span>

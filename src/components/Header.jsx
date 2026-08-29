@@ -1,17 +1,29 @@
-import { useEffect, useRef, useState, Fragment } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import Logo from './Logo.jsx';
 import ProductImage from './ProductImage.jsx';
+import AnnouncementBar from './AnnouncementBar.jsx';
 import { useStore } from '../lib/store.jsx';
-import { categories } from '../data/categories.js';
+import { categories, hasConfiguredCategoryCopy } from '../data/categories.js';
 import { searchProducts } from '../data/products.js';
 import { money } from '../lib/format.js';
-import { announcement } from '../lib/settings.js';
 import { lockScroll, unlockScroll } from '../lib/scrollLock.js';
 
-const NOTICE_ICONS = ['truck', 'card', 'shield'];
-
+// ============================================================================
+// SORA LIFE V2 — HEADER
+//
+// Chrome only. Every interaction below is carried over unchanged from V1: the
+// scroll listener, the drawer, the mobile search overlay, the reference-counted
+// scroll lock, Escape layering and the outside-click handler. The drawer and
+// the search overlay keep their existing markup and classes deliberately —
+// they are outside Phase 1 scope and rewriting working focus/scroll-lock
+// behaviour for a restyle would be a poor trade.
+//
+// Mobile bar: hamburger / centred wordmark / search + bag.
+// Wishlist intentionally moves off the mobile header — three right-hand icons
+// crowd a 390px bar, and MobileTabBar already carries "Saved".
+// ============================================================================
 export default function Header() {
   const { cartCount, wishCount } = useStore();
   const [drawer, setDrawer] = useState(false);
@@ -76,112 +88,97 @@ export default function Header() {
 
   return (
     <>
-      {/* Announcement bar */}
-      <div className="annbar">
-        <input className="annbar__pause" id="announcement-pause" type="checkbox" aria-label="Pause announcement ticker" />
-        <label className="annbar__control" htmlFor="announcement-pause" title="Pause or resume announcements">
-          <span className="annbar__control-icon" aria-hidden="true" />
-        </label>
-        <div className="annbar__viewport" tabIndex={0} role="region" aria-label="Store announcements" aria-describedby="announcement-help">
-          <span className="sr-only" id="announcement-help">Focus to stop the ticker. Scroll horizontally to read all announcements and links.</span>
-          <div className="annbar__track">
-            {/* Equal-width copies make the CSS loop seamless. Only the first
-                is exposed to assistive technology or keyboard navigation. */}
-            {[false, true].map((duplicate) => (
-              <div className="annbar__group" key={String(duplicate)} aria-hidden={duplicate || undefined}>
-                <div className="annbar__notices">
-                  {announcement.notices.map((n, i) => (
-                    <Fragment key={`${i}-${n}`}>
-                      {i > 0 && <span className="annbar__sep" aria-hidden="true" />}
-                      <span className="annbar__notice">
-                        <Icon name={NOTICE_ICONS[i % NOTICE_ICONS.length]} size={14} /> {n}
-                      </span>
-                    </Fragment>
-                  ))}
-                </div>
-                <span className="annbar__sep" aria-hidden="true" />
-                <div className="annbar__links">
-                  <Link to="/account/orders" tabIndex={duplicate ? -1 : undefined}>Track Order</Link>
-                  <span className="annbar__sep" aria-hidden="true" />
-                  <a href="#" tabIndex={duplicate ? -1 : undefined}>Store Locator</a>
-                  <span className="annbar__sep" aria-hidden="true" />
-                  <Link to="/account" tabIndex={duplicate ? -1 : undefined}>Help &amp; Support</Link>
-                </div>
-                <span className="annbar__sep" aria-hidden="true" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <AnnouncementBar />
 
-      {/* Main header */}
-      <header className={`hdr ${scrolled ? 'is-scrolled' : ''}`}>
-        <div className="container hdr__in">
-          <div className="hdr__left">
-            <button className="iconbtn only-mobile" onClick={() => setDrawer(true)} aria-label="Open menu" aria-expanded={drawer} aria-controls="mobile-drawer"><Icon name="menu" /></button>
-            <Logo />
-          </div>
+      <header className={`v2-hdr ${scrolled ? 'is-scrolled' : ''}`}>
+        <div className="v2-hdr__bar">
+          <div className="v2-hdr__left">
+            <button
+              className="v2-hdr__act"
+              onClick={() => setDrawer(true)}
+              aria-label="Open menu"
+              aria-expanded={drawer}
+              aria-controls="mobile-drawer"
+            >
+              <Icon name="menu" size={19} stroke={1.5} />
+            </button>
 
-          <nav className="hdr__nav hide-mobile" aria-label="Primary">
-            <div className="hdr__navitem has-mega">
-              <NavLink to="/shop" className="hdr__link">SHOP <Icon name="chevronDown" size={14} /></NavLink>
-              <div className="mega">
-                <div className="mega__grid">
-                  {categories.map((c) => (
-                    <Link key={c.slug} to={`/category/${c.slug}`} className="mega__cell">
-                      <span className="mega__name">{c.name}</span>
-                      <span className="mega__tag">{c.tagline}</span>
-                    </Link>
-                  ))}
-                </div>
-                <Link to="/shop" className="mega__all">Shop all products <Icon name="arrowRight" size={16} /></Link>
-              </div>
-            </div>
-            <NavLink to="/category/wellness" className="hdr__link">WELLNESS</NavLink>
-            <NavLink to="/category/skin-care" className="hdr__link">SKIN CARE</NavLink>
-            <NavLink to="/category/hair-care" className="hdr__link">HAIR CARE</NavLink>
-            <NavLink to="/category/bath-body" className="hdr__link">BATH &amp; BODY</NavLink>
-            <NavLink to="/category/mens-care" className="hdr__link">MEN'S CARE</NavLink>
-            <NavLink to="/shop?sort=bestselling" className="hdr__link">BESTSELLERS</NavLink>
-            <NavLink to="/shop?filter=new" className="hdr__link">NEW IN</NavLink>
-          </nav>
-
-          <div className="hdr__right">
-            <div className="hdr__search hide-mobile" ref={boxRef}>
-              <form className="searchbox" onSubmit={submit}>
-                <input className="input" placeholder="Search for products..." value={q}
-                  onChange={(e) => setQ(e.target.value)} onFocus={() => setFocused(true)} aria-label="Search for products" />
-                <button type="submit" className="hdr__search-btn" aria-label="Search"><Icon name="search" size={18} /></button>
+            <div className="v2-hdr__search" ref={boxRef}>
+              <form className="v2-hdr__searchbox" onSubmit={submit} role="search">
+                <Icon name="search" size={17} stroke={1.5} />
+                <input
+                  placeholder="Search wellness essentials"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  onFocus={() => setFocused(true)}
+                  aria-label="Search for products"
+                />
+                <button type="submit" aria-label="Search"><Icon name="arrowRight" size={16} stroke={1.6} /></button>
               </form>
               {focused && q.trim() && (
-                <div className="hdr__suggest">
+                <div className="v2-hdr__suggest">
                   {results.length ? results.map((p) => (
-                    <Link key={p.id} to={`/product/${p.slug}`} className="hdr__suggest-item" onClick={() => setFocused(false)}>
-                      <span className="hdr__suggest-thumb"><ProductImage product={p} /></span>
-                      <span className="hdr__suggest-name">{p.name}</span>
-                      <span className="hdr__suggest-price">{money(p.price)}</span>
+                    <Link key={p.id} to={`/product/${p.slug}`} className="v2-hdr__suggest-item" onClick={() => setFocused(false)}>
+                      <span className="v2-hdr__suggest-thumb"><ProductImage product={p} frame="v2" sizes="40px" /></span>
+                      <span className="v2-hdr__suggest-name">{p.name}</span>
+                      <span className="v2-hdr__suggest-price">{money(p.price)}</span>
                     </Link>
-                  )) : <p className="muted" style={{ padding: 14 }}>No matches for “{q}”.</p>}
+                  )) : <p className="v2-hdr__suggest-empty">No matches for “{q}”.</p>}
                 </div>
               )}
             </div>
-            <div className="hdr__actions">
-              <button className="iconbtn only-mobile" onClick={() => setMobileSearch(true)} aria-label="Search" aria-expanded={mobileSearch}><Icon name="search" /></button>
-              <Link to="/account" className="iconbtn hide-mobile" aria-label="Account"><Icon name="user" /></Link>
-              <Link to="/wishlist" className="iconbtn hide-mobile" aria-label="Wishlist">
-                <Icon name="heart" />{wishCount > 0 && <span className="count" key={wishCount}>{wishCount}</span>}
-              </Link>
-              <Link to="/cart" className="iconbtn" aria-label="Cart">
-                <Icon name="bag" />{cartCount > 0 && <span className="count" key={cartCount}>{cartCount}</span>}
-              </Link>
-            </div>
+          </div>
+
+          <div className="v2-hdr__brand">
+            <Logo />
+          </div>
+
+          <div className="v2-hdr__right">
+            <button className="v2-hdr__act v2-only-mobile" onClick={() => setMobileSearch(true)} aria-label="Search" aria-expanded={mobileSearch}>
+              <Icon name="search" size={19} stroke={1.5} />
+            </button>
+            <Link to="/account" className="v2-hdr__act v2-hide-mobile" aria-label="Account"><Icon name="user" size={19} stroke={1.5} /></Link>
+            <Link to="/wishlist" className="v2-hdr__act v2-hide-mobile" aria-label={`Wishlist${wishCount > 0 ? `, ${wishCount} items` : ''}`}>
+              <Icon name="heart" size={19} stroke={1.5} />
+              {wishCount > 0 && <span className="v2-hdr__count">{wishCount}</span>}
+            </Link>
+            <Link to="/cart" className="v2-hdr__act" aria-label={`Cart${cartCount > 0 ? `, ${cartCount} items` : ''}`}>
+              <Icon name="bag" size={19} stroke={1.5} />
+              {cartCount > 0 && <span className="v2-hdr__count">{cartCount}</span>}
+            </Link>
           </div>
         </div>
+
+        <nav className="v2-hdr__nav" aria-label="Primary">
+          <div className="v2-hdr__navitem">
+            <NavLink to="/shop" className={({ isActive }) => `v2-hdr__link ${isActive ? 'active' : ''}`}>
+              Shop <Icon name="chevronDown" size={13} stroke={1.6} />
+            </NavLink>
+            <div className="v2-hdr__mega">
+              <div className="v2-hdr__mega-grid">
+                {categories.map((c) => (
+                  <Link key={c.slug} to={`/category/${c.slug}`} className="v2-hdr__mega-cell">
+                    <span className="v2-hdr__mega-name">{c.name}</span>
+                    <span className="v2-hdr__mega-tag" aria-hidden={!hasConfiguredCategoryCopy(c) || !c.tagline}>
+                      {hasConfiguredCategoryCopy(c) && c.tagline ? c.tagline : '\u00A0'}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+              <Link to="/shop" className="v2-hdr__mega-all">Shop all products <Icon name="arrowRight" size={14} stroke={1.8} /></Link>
+            </div>
+          </div>
+          {categories.slice(0, 5).map((c) => (
+            <NavLink key={c.slug} to={`/category/${c.slug}`} className={({ isActive }) => `v2-hdr__link ${isActive ? 'active' : ''}`}>
+              {c.name}
+            </NavLink>
+          ))}
+          <NavLink to="/shop?sort=bestselling" className="v2-hdr__link">Bestsellers</NavLink>
+        </nav>
       </header>
 
-      {/* Mobile search overlay — full-width, focus-managed, closes on
-          backdrop tap / Escape / result tap. Reuses the existing
-          .search-overlay styles. */}
+      {/* Mobile search overlay — unchanged from V1 (focus management, backdrop
+          tap, Escape, result tap). Restyling it is a later phase. */}
       {mobileSearch && (
         <div className="search-overlay" onClick={() => setMobileSearch(false)} role="dialog" aria-modal="true" aria-label="Search products">
           <div className="search-panel" onClick={(e) => e.stopPropagation()}>
@@ -230,7 +227,7 @@ export default function Header() {
         </div>
       )}
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer — unchanged from V1. Outside Phase 1 scope. */}
       <div id="mobile-drawer" className={`drawer ${drawer ? 'open' : ''}`} aria-hidden={!drawer} role="dialog" aria-modal="true" aria-label="Menu" {...(drawer ? {} : { inert: '' })}>
         <div className="drawer__scrim" onClick={() => setDrawer(false)} />
         <div className="drawer__panel">

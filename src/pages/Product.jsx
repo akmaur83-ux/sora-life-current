@@ -22,16 +22,16 @@ import ProductReviewsTeaser from '../components/pdp/ProductReviewsTeaser.jsx';
 import ProductRecommendations from '../components/pdp/ProductRecommendations.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
 import { overviewFor, suitableForList, faqFor } from '../data/pdpContent.js';
+import { promotionsSource } from '../lib/promotions.js';
 
 // Shown while the Supabase catalogue is still hydrating, so a direct load of a
 // live-only product never flashes the 404 page. Display-only; no data/logic.
 function ProductLoading() {
-  const bar = (w) => ({ height: 14, width: w, borderRadius: 6, background: 'var(--color-border, #e8e2d6)', margin: '12px 0' });
+  const bar = (w) => ({ height: 12, width: w, borderRadius: 2, background: 'var(--slv2-line, #E5DCCB)', margin: '12px 0' });
   return (
-    <div className="container" role="status" aria-live="polite" aria-busy="true"
-      style={{ padding: 'var(--sp-8, 40px) 0', maxWidth: 1100 }}>
+    <div className="v2-wrap v2-pdp-loading" role="status" aria-live="polite" aria-busy="true">
       <div style={{ display: 'grid', gap: 'var(--sp-6, 28px)' }}>
-        <div style={{ aspectRatio: '4 / 3', maxWidth: 520, borderRadius: 16, background: 'var(--color-surface-2, #f5f2eb)' }} />
+        <div style={{ aspectRatio: '1', maxWidth: 620, borderRadius: 2, background: 'var(--slv2-cream, #F4EEE1)' }} />
         <div>
           <div style={bar('55%')} />
           <div style={bar('35%')} />
@@ -143,7 +143,7 @@ export default function Product() {
       title: 'Full ingredient list', icon: 'flask',
       content: (
         <div className="pdp-acc__tags">
-          {product.ingredients.map((ig) => <span key={ig} className="badge badge-soft">{ig}</span>)}
+          {product.ingredients.map((ig) => <span key={ig} className="v2-chip">{ig}</span>)}
         </div>
       ),
     }] : []),
@@ -163,7 +163,7 @@ export default function Product() {
       title: 'Suitable for', icon: 'users',
       content: (
         <div className="pdp-acc__tags">
-          {suitable.map((s) => <span key={s} className="badge badge-soft">{s}</span>)}
+          {suitable.map((s) => <span key={s} className="v2-chip">{s}</span>)}
         </div>
       ),
     }] : []),
@@ -173,12 +173,10 @@ export default function Product() {
         <ul className="ticklist">
           <li><Icon name="check" size={16} /> Category: {cat.name}</li>
           {product.form && <li><Icon name="check" size={16} /> Pack size: {product.form}</li>}
-          <li><Icon name="check" size={16} /> Authentic product, sourced from the Himalayas</li>
-          <li><Icon name="check" size={16} /> Fulfilled by SORA LIFE · genuine, sealed packaging</li>
         </ul>
       ),
     },
-    {
+    ...(faq.length ? [{
       title: 'FAQ', icon: 'chat',
       content: (
         <dl className="pdp-faq">
@@ -190,13 +188,13 @@ export default function Product() {
           ))}
         </dl>
       ),
-    },
+    }] : []),
   ];
 
   return (
-    <>
-      <div className="container pdp-top">
-        <nav className="crumbs" aria-label="Breadcrumb">
+    <div className="v2-pdp-root">
+      <div className="v2-wrap pdp-top">
+        <nav className="v2-crumbs" aria-label="Breadcrumb">
           <Link to="/">Home</Link><Icon name="chevronRight" size={14} />
           <Link to={`/category/${cat.slug}`}>{cat.name}</Link><Icon name="chevronRight" size={14} />
           <span>{product.name}</span>
@@ -206,7 +204,7 @@ export default function Product() {
         </button>
       </div>
 
-      <section className="pdp container">
+      <section className="pdp v2-wrap">
         {/* Gallery — real multi-image gallery from product_media (0016), with a
             single-primary fallback for products that have no media rows yet.
             Architecture unchanged; only the overlay controls are new. */}
@@ -214,14 +212,14 @@ export default function Product() {
           <div className="pdp__galactions">
             <button
               type="button"
-              className={`pdp__galbtn ${wished ? 'is-active' : ''}`}
+              className={`v2-iconbtn pdp__galbtn ${wished ? 'is-active' : ''}`}
               onClick={() => toggleWish(product)}
               aria-pressed={wished}
               aria-label={wished ? 'Remove from wishlist' : 'Save to wishlist'}
             >
               <Icon name="heart" size={20} fill={wished ? 'currentColor' : 'none'} />
             </button>
-            <button type="button" className="pdp__galbtn" onClick={share} aria-label="Share this product">
+            <button type="button" className="v2-iconbtn pdp__galbtn" onClick={share} aria-label="Share this product">
               <Icon name="externalLink" size={19} />
             </button>
           </div>
@@ -241,7 +239,7 @@ export default function Product() {
           <ProductRatingTeaser product={product} />
 
           <div className="pdp__price">
-            <PriceTag product={product} size="lg" variant={variant} />
+            <PriceTag product={product} size="lg" variant={variant} v2 />
             <span className="pdp__tax muted">Inclusive of all taxes</span>
           </div>
 
@@ -280,9 +278,9 @@ export default function Product() {
           )}
 
           <div className="pdp__stock">
-            {out ? <span className="badge badge-out">Out of stock</span>
-              : lowStock ? <span className="badge badge-sale"><Icon name="clock" size={13} /> Only {product.stock} left</span>
-              : <span className="badge"><Icon name="check" size={13} /> In stock</span>}
+            {out ? <span className="v2-badge v2-badge--out">Out of stock</span>
+              : lowStock ? <span className="v2-badge"><Icon name="clock" size={13} /> Only {product.stock} left</span>
+              : <span className="v2-badge v2-badge--soft"><Icon name="check" size={13} /> In stock</span>}
           </div>
 
           <div className="pdp__buy">
@@ -291,18 +289,18 @@ export default function Product() {
               <span aria-live="polite">{qty}</span>
               <button onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity" disabled={out}><Icon name="plus" size={16} /></button>
             </div>
-            <button className={`btn btn-block pdp__addbtn ${justAdded ? 'is-added' : ''}`} disabled={out} onClick={addNow}>
+            <button className={`v2-btn v2-btn--block pdp__addbtn ${justAdded ? 'is-added' : ''}`} disabled={out} onClick={addNow}>
               {justAdded ? <><Icon name="check" size={18} /> Added to cart</> : <><Icon name="bag" size={18} /> Add to cart</>}
             </button>
           </div>
-          <button className="btn btn-accent btn-lg btn-block pdp__buynow" disabled={out} onClick={buyNow}>Buy it now</button>
+          <button className="v2-btn v2-btn--ghost v2-btn--block pdp__buynow" disabled={out} onClick={buyNow}>Buy it now</button>
 
           <ProductDeliveryInfo product={product} />
         </div>
       </section>
 
       {/* Richer scroll: benefits → ingredients → usage → product information → trust */}
-      <div className="container pdp-flow">
+      <div className="v2-wrap pdp-flow">
         <ProductBenefits product={product} />
         <ProductIngredients product={product} />
         <ProductHowToUse product={product} />
@@ -317,19 +315,24 @@ export default function Product() {
 
       {/* Promotions (pdp placement; renders nothing when there are none).
           Presentation only — no pricing / cart interaction. */}
-      <PromoRail place="pdp" eyebrow="Save more" title="Offers on your order" maxOffers={2} />
+      {promotionsSource === 'supabase' && (
+        <div className="v2-pdp__promos">
+          <PromoRail place="pdp" eyebrow="Available offers" title="Offers on your order" maxOffers={2} />
+        </div>
+      )}
 
       {/* Frequently bought together — existing real feature, unchanged */}
       {related.length >= 2 && (
-        <section className="section-sm">
-          <div className="container">
-            <h2 className="serif" style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--sp-6)' }}>Goes well with</h2>
+        <section className="v2-pdp__fbt-section">
+          <div className="v2-wrap">
+            <p className="v2-eyebrow">Complete the selection</p>
+            <h2 className="v2-h2">Goes well with</h2>
             <div className="fbt">
               <div className="fbt__items">
                 {fbt.map((p, i) => (
                   <Fragment key={p.id}>
                     <Link to={`/product/${p.slug}`} className="fbt__item">
-                      <ProductImage product={p} />
+                      <ProductImage product={p} frame="v2" />
                       <span className="fbt__name">{p.name}</span>
                       <span className="fbt__price">{money(p.price)}</span>
                     </Link>
@@ -338,9 +341,9 @@ export default function Product() {
                 ))}
               </div>
               <div className="fbt__buy">
-                <span className="muted">Total for {fbt.length} items</span>
-                <span className="fbt__total serif">{money(fbtTotal)}</span>
-                <button className="btn btn-block" onClick={() => { fbt.forEach((p) => addToCart(p, 1)); }}>Add all to cart</button>
+                <span className="fbt__label">Total for {fbt.length} items</span>
+                <span className="fbt__total v2-disp">{money(fbtTotal)}</span>
+                <button className="v2-btn v2-btn--block" onClick={() => { fbt.forEach((p) => addToCart(p, 1)); }}>Add all to cart</button>
               </div>
             </div>
           </div>
@@ -356,13 +359,13 @@ export default function Product() {
       {/* Sticky mobile buy bar */}
       <div className="buybar only-mobile" role="region" aria-label="Purchase">
         <div className="buybar__price">
-          <PriceTag product={product} showOff={false} variant={variant} />
+          <PriceTag product={product} showOff={false} variant={variant} v2 />
         </div>
-        <button className="btn buybar__add" disabled={out} onClick={addNow} aria-label="Add to cart">
+        <button className="v2-btn buybar__add" disabled={out} onClick={addNow} aria-label="Add to cart">
           <Icon name="bag" size={17} /> Add
         </button>
-        <button className="btn btn-accent buybar__buy" disabled={out} onClick={buyNow}>Buy now</button>
+        <button className="v2-btn v2-btn--ghost buybar__buy" disabled={out} onClick={buyNow}>Buy now</button>
       </div>
-    </>
+    </div>
   );
 }

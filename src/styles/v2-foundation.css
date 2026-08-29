@@ -1,0 +1,237 @@
+/* ============================================================================
+   SORA LIFE V2 — FOUNDATION
+   Phase 1. Storefront-scoped by NAMESPACE, not by DOM subtree.
+
+   Two rules make this file incapable of restyling anything outside the
+   storefront:
+     1. Every custom property is prefixed --slv2-. The namespace has no other
+        consumer in src/, so declaring it on :root cannot restyle anything —
+        restyling requires a consumer. Declaring on :root (rather than a
+        wrapper element) also means React portals — drawer, search overlay,
+        toasts — inherit correctly with no extra work.
+     2. Every class is prefixed v2-. No existing selector in tokens.css,
+        components.css, pages.css, home.css, layout.css or base.css is edited.
+        V2 components stop using the old classes; the old rules stop matching.
+
+   tokens.css is deliberately NOT modified: --r-* has 39 references outside the
+   storefront (passport.css, admin.css) and --price-* has 26 (creator.css,
+   admin.css, admin/pages/Variants.jsx). Aliasing them would resquare Passport
+   and Admin and repaint creator earnings.
+   ========================================================================= */
+:root {
+  /* ---- forest: CTA, active state, trust anchor. Never a price. ---- */
+  --slv2-f900:#14261C; --slv2-f800:#1A3226; --slv2-f700:#1E3A2F; --slv2-f600:#2C5341;
+  --slv2-f500:#3B6E56; --slv2-f400:#578D72; --slv2-f300:#85B49F;
+  --slv2-f100:#E1EEE7; --slv2-f50:#F0F6F2;
+
+  /* ---- botanical support ---- */
+  --slv2-olive:#4A5A3C; --slv2-olive-2:#7C8C68; --slv2-olive-50:#EDF0E4;
+
+  /* ---- honey: spent two or three times per screen, never more ---- */
+  --slv2-gold:#C79A45; --slv2-gold-2:#E4C482; --slv2-gold-ink:#866419;
+  --slv2-gold-100:#F4E9D2; --slv2-gold-50:#FBF5E8;
+
+  /* ---- warm neutrals ---- */
+  --slv2-ivory:#FBF8F1; --slv2-cream:#F4EEE1; --slv2-sand:#EFE7D8; --slv2-paper:#FFFDF8;
+  --slv2-stone:#E7DCC7; --slv2-stone-2:#D9CBB0;
+
+  /* ---- ink ---- */
+  --slv2-ink:#16211B; --slv2-ink-2:#3B4A41; --slv2-ink-3:#5F6D64; --slv2-ink-4:#8A958C;
+
+  /* ---- commerce price system — LOCKED ----
+     Price is ink, MRP is a muted warm grey, discount is restrained gold.
+     MRP is deliberately darker than ink-4 (3.0:1, would fail AA at 11.5px). */
+  --slv2-price:#16211B;      /* 15.6:1 on ivory */
+  --slv2-price-mrp:#6F675C;  /* 5.25:1 ivory · 4.8:1 cream */
+  --slv2-price-off:#866419;  /* 5.1:1 on gold-100 */
+  --slv2-save:#2C5341;       /* 7.4:1 on forest-50 */
+  --slv2-alert:#9A3F33;
+
+  /* ---- structure ---- */
+  --slv2-line:#E5DCCB; --slv2-line-2:#F0E9DB; --slv2-star:#D9A441;
+
+  /* ---- GEOMETRY — sharp editorial. Three values, no exceptions. ----
+     r-ui   every structural surface and control
+     r-art  image-led campaign and editorial surfaces ONLY
+     0      anything meeting an edge
+     2px is anti-aliasing, not softening: at a 1px hairline a true 0 corner
+     stair-steps on non-integer device pixel ratios. */
+  --slv2-r-ui:2px;
+  --slv2-r-art:4px;
+
+  /* ---- shadows: pulled back, not up. The hairline plus paper-on-ivory
+     does the separating a radius used to do. ---- */
+  --slv2-sh-card:none;
+  --slv2-sh-hover:0 2px 6px -4px rgba(20,38,28,.16);
+  --slv2-sh-up:0 -1px 0 rgba(20,38,28,.06), 0 -8px 20px -18px rgba(20,38,28,.24);
+
+  /* ---- rhythm ---- */
+  --slv2-gutter:16px;
+  --slv2-sec-gap:32px;
+  --slv2-container:1240px;
+
+  --slv2-sans:'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --slv2-disp:'Fraunces', Georgia, 'Times New Roman', serif;
+
+  /* ---- existing Admin Appearance bridge ----
+     These V2-only aliases consume the established --st-* theme variables.
+     Their fallbacks are the frozen V2 colours, so an absent/default theme is
+     pixel-identical and no legacy/Admin/Creator/Passport token is redefined. */
+  --slv2-accent-primary:var(--st-brand-primary, var(--slv2-f700));
+  --slv2-accent-primary-hover:var(--st-brand-secondary, var(--slv2-f700));
+  --slv2-accent-gold:var(--st-brand-accent, var(--slv2-gold));
+  --slv2-accent-gold-hover:var(--st-brand-highlight, #BB8D3A);
+  --slv2-cta-primary-bg:var(--st-btn-primary-bg, var(--slv2-f700));
+  --slv2-cta-primary-text:var(--st-btn-primary-text, #FBF8F1);
+  --slv2-cta-primary-hover:var(--st-btn-hover, var(--slv2-f800));
+  --slv2-cta-secondary-bg:var(--st-btn-secondary-bg, var(--slv2-cream));
+  --slv2-cta-secondary-text:var(--st-btn-secondary-text, var(--slv2-ink));
+  --slv2-discount-bg:var(--st-discount-bg, var(--slv2-gold-100));
+  --slv2-discount-text:var(--st-discount-text, var(--slv2-gold-ink));
+}
+
+@media (max-width: 359px) { :root { --slv2-gutter:12px; } }
+@media (min-width: 360px) and (max-width: 389px) { :root { --slv2-gutter:14px; } }
+@media (min-width: 768px) { :root { --slv2-gutter:24px; --slv2-sec-gap:48px; } }
+@media (min-width: 1024px) { :root { --slv2-sec-gap:56px; } }
+
+/* ---------------------------------------------------------------- layout */
+.v2-wrap { width:100%; max-width:var(--slv2-container); margin-inline:auto; padding-inline:var(--slv2-gutter); }
+.v2-sec { margin-top:var(--slv2-sec-gap); }
+.v2-sec--tight { margin-top:24px; }
+.v2-bleed { margin-inline:calc(-1 * var(--slv2-gutter)); }
+
+/* ------------------------------------------------------------ typography */
+.v2-disp {
+  font-family:var(--slv2-disp);
+  font-optical-sizing:auto;
+  font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+}
+.v2-num { font-variant-numeric:tabular-nums; }
+
+.v2-eyebrow {
+  font-family:var(--slv2-sans);
+  font-size:9.5px; font-weight:600; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--slv2-gold-ink); margin:0 0 5px; line-height:1.3;
+}
+.v2-h2 {
+  font-family:var(--slv2-disp); font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+  font-size:19px; font-weight:500; letter-spacing:-.008em; line-height:1.15;
+  margin:0; color:var(--slv2-ink); text-wrap:balance;
+}
+.v2-sechead { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.v2-sechead > div { min-width:0; }
+.v2-more {
+  font-family:var(--slv2-sans);
+  font-size:10.5px; font-weight:600; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--slv2-ink-3); display:inline-flex; align-items:center; gap:4px;
+  white-space:nowrap; text-decoration:none; padding-bottom:2px;
+}
+.v2-more:hover { color:var(--slv2-accent-primary-hover); }
+
+@media (min-width: 768px) {
+  .v2-eyebrow { font-size:11px; }
+  .v2-h2 { font-size:24px; }
+  .v2-sechead { margin-bottom:18px; }
+  .v2-more { font-size:12px; }
+}
+@media (min-width: 1024px) {
+  .v2-h2 { font-size:30px; }
+  .v2-sechead { margin-bottom:22px; }
+}
+
+/* ---------------------------------------------------------------- rails */
+.v2-rail {
+  display:flex; gap:12px; overflow-x:auto; padding-bottom:2px;
+  scroll-snap-type:x mandatory;
+  scrollbar-width:none; -ms-overflow-style:none;
+  margin-inline:calc(-1 * var(--slv2-gutter));
+  padding-inline:var(--slv2-gutter);
+}
+.v2-rail::-webkit-scrollbar { display:none; }
+.v2-rail > * { scroll-snap-align:start; flex:0 0 auto; }
+
+/* -------------------------------------------------------------- buttons */
+.v2-btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  height:44px; padding:0 22px; border-radius:var(--slv2-r-ui);
+  font-family:var(--slv2-sans); font-size:13px; font-weight:600; letter-spacing:.005em;
+  background:var(--slv2-cta-primary-bg); color:var(--slv2-cta-primary-text); border:1px solid var(--slv2-cta-primary-bg);
+  text-decoration:none; cursor:pointer; transition:background .18s ease, border-color .18s ease;
+}
+.v2-btn:hover { background:var(--slv2-cta-primary-hover); border-color:var(--slv2-cta-primary-hover); }
+.v2-btn:active { transform:scale(.985); }
+.v2-btn--gold { background:var(--slv2-accent-gold); border-color:var(--slv2-accent-gold); color:var(--slv2-f900); }
+.v2-btn--gold:hover { background:var(--slv2-accent-gold-hover); border-color:var(--slv2-accent-gold-hover); }
+.v2-btn--out { background:transparent; color:var(--slv2-accent-primary); border-color:var(--slv2-accent-primary); }
+.v2-btn--out:hover { background:var(--slv2-f50); }
+.v2-btn--ghost { background:var(--slv2-cta-secondary-bg); color:var(--slv2-cta-secondary-text); border-color:var(--slv2-line); }
+.v2-btn--sm { height:36px; padding:0 16px; font-size:12px; }
+.v2-btn--xs { height:30px; padding:0 12px; font-size:11px; }
+.v2-btn--block { display:flex; width:100%; }
+.v2-btn[disabled], .v2-btn[aria-disabled="true"] { opacity:.5; cursor:not-allowed; }
+@media (min-width: 1024px) { .v2-btn { height:52px; padding:0 32px; font-size:14px; } .v2-btn--sm { height:44px; font-size:13px; } }
+
+/* Icon control: a compact square, never a bubble. The visible box is 28px;
+   the touch target is extended to 44px with a transparent inset. */
+.v2-iconbtn {
+  position:relative; width:28px; height:28px; border-radius:var(--slv2-r-ui);
+  display:inline-grid; place-items:center; cursor:pointer;
+  background:rgba(251,248,241,.88); border:1px solid var(--slv2-line);
+  color:var(--slv2-ink-2); padding:0;
+}
+.v2-iconbtn::after { content:""; position:absolute; top:50%; left:50%; width:44px; height:44px; transform:translate(-50%,-50%); }
+.v2-iconbtn.is-on { color:#A8443D; border-color:#E6CFC9; background:#FCF2F0; }
+/* over open artwork or in the header, where a container would be noise */
+.v2-iconbtn--bare { background:transparent; border-color:transparent; color:var(--slv2-ink-2); }
+.v2-iconbtn--bare:hover { color:var(--slv2-accent-primary-hover); }
+
+/* --------------------------------------------------- labels & tab chips */
+.v2-badge {
+  display:inline-flex; align-items:center; height:18px; padding:0 6px;
+  border-radius:var(--slv2-r-ui);
+  font-family:var(--slv2-sans);
+  font-size:9.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  background:var(--slv2-discount-bg); color:var(--slv2-discount-text); white-space:nowrap;
+}
+.v2-badge--forest { background:var(--slv2-f700); color:#F1EADB; }
+.v2-badge--soft   { background:var(--slv2-f100); color:var(--slv2-f600); }
+.v2-badge--out    { background:rgba(22,33,27,.72); color:#F4EFE4; }
+
+.v2-chip {
+  display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 13px;
+  border-radius:var(--slv2-r-ui);
+  font-family:var(--slv2-sans); font-size:12px; font-weight:500;
+  background:var(--slv2-cream); border:1px solid var(--slv2-line);
+  color:var(--slv2-ink-2); white-space:nowrap; text-decoration:none; cursor:pointer;
+}
+.v2-chip.is-on { background:var(--slv2-accent-primary); border-color:var(--slv2-accent-primary); color:#FBF8F1; }
+
+/* ---------------------------------------------------------------- price */
+.v2-price { display:inline-flex; align-items:baseline; gap:6px; flex-wrap:wrap; font-variant-numeric:tabular-nums; }
+.v2-price .v2-price__now { font-size:15px; font-weight:700; letter-spacing:-.015em; color:var(--slv2-price); }
+.v2-price .v2-price__mrp { font-size:11.5px; font-weight:500; color:var(--slv2-price-mrp); text-decoration:line-through; }
+.v2-price .v2-price__mrp-lbl { text-decoration:none; display:inline-block; margin-right:2px; }
+.v2-price .v2-price__off { font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--slv2-price-off); }
+.v2-price .v2-price__tbd { font-size:12px; font-weight:600; color:var(--slv2-ink-3); }
+.v2-price--lg .v2-price__now { font-size:26px; letter-spacing:-.026em; }
+.v2-price--lg .v2-price__mrp { font-size:13px; }
+@media (min-width: 1024px) {
+  .v2-price .v2-price__now { font-size:20px; }
+  .v2-price .v2-price__mrp { font-size:14px; }
+  .v2-price .v2-price__off { font-size:12px; }
+}
+
+/* --------------------------------------------------------- focus & motion */
+.v2-btn:focus-visible,
+.v2-iconbtn:focus-visible,
+.v2-chip:focus-visible,
+.v2-more:focus-visible,
+.v2-rail a:focus-visible {
+  outline:2px solid var(--slv2-f500); outline-offset:2px; border-radius:var(--slv2-r-ui);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-btn, .v2-iconbtn { transition:none; }
+  .v2-btn:active { transform:none; }
+}

@@ -8,7 +8,7 @@
     <meta name="description" content="Sora Life — premium health, wellness, beauty and personal-care essentials for modern living." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..700,0..100,0..1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231E3A2F'/%3E%3Cpath d='M16 6c5 4 5 12 0 20-5-8-5-16 0-20z' fill='%23E8B04B'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/src/styles/tokens.css" />
     <link rel="stylesheet" href="/src/styles/base.css" />
@@ -21,6 +21,16 @@
     <link rel="stylesheet" href="/src/admin/admin.css" />
     <link rel="stylesheet" href="/src/styles/passport.css" />
     <link rel="stylesheet" href="/src/styles/creator.css" />
+    <!-- SORA LIFE V2 (Phase 1). Loaded last so V2 rules win on equal
+         specificity without !important. Namespaced --slv2-* / v2-* so nothing
+         outside the storefront can be affected. -->
+    <link rel="stylesheet" href="/src/styles/v2-foundation.css" />
+    <link rel="stylesheet" href="/src/styles/v2-header.css" />
+    <link rel="stylesheet" href="/src/styles/v2-card.css" />
+    <link rel="stylesheet" href="/src/styles/v2-home.css" />
+    <link rel="stylesheet" href="/src/styles/v2-shop.css" />
+    <link rel="stylesheet" href="/src/styles/v2-pdp.css" />
+    <link rel="stylesheet" href="/src/styles/v2-cart-checkout.css" />
   </head>
   <body>
     <div id="root">

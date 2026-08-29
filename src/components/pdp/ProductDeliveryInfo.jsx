@@ -5,15 +5,12 @@ import { deliveryEstimate } from '../../data/pdpContent.js';
 // ============================================================
 // Compact delivery / service panel for the buying section.
 //
-//   Get it by <date range>
+//   Delivery timing confirmed at checkout
 //   FREE delivery on orders above ₹699
-//   Delivering to India · Change
+//   Available delivery methods shown at checkout
 //
-// Presentation-safe: the date window is derived client-side from "today"
-// (deliveryEstimate). No carrier API, no real-time promise, no PIN logic —
-// "Change" points at checkout where the real estimate is confirmed, exactly
-// as the previous copy said. If real PIN/SLA logic is added later, only
-// deliveryEstimate() and the "Change" target need to change.
+// Presentation-safe: no carrier date or geographic scope is guessed. If real
+// PIN/SLA logic is added later, deliveryEstimate() is the single display seam.
 // ============================================================
 export default function ProductDeliveryInfo({ product }) {
   const est = deliveryEstimate();
@@ -22,22 +19,22 @@ export default function ProductDeliveryInfo({ product }) {
       <div className="pdp-deliver__row">
         <Icon name="truck" size={18} />
         <span>
-          Get it by <strong>{est.range}</strong>
-          <em>Typically {est.days} after dispatch</em>
+          <strong>Delivery timing</strong>
+          <em>{est.range} · {est.days}</em>
         </span>
       </div>
       <div className="pdp-deliver__row">
         <Icon name="gift" size={18} />
         <span>
-          <strong>FREE delivery</strong> on orders above {money(est.freeThreshold, product?.currency)}
-          <em>Standard shipping, all across {est.place}</em>
+          <strong>Free shipping</strong> on orders above {money(est.freeThreshold, product?.currency)}
+          <em>Applied automatically when the order qualifies</em>
         </span>
       </div>
       <div className="pdp-deliver__row">
-        <Icon name="mapPin" size={18} />
+        <Icon name="package" size={18} />
         <span>
-          Delivering to <strong>{est.place}</strong>
-          <em>Enter your PIN code at checkout for an exact date</em>
+          <strong>Delivery methods</strong>
+          <em>Available options are shown at checkout</em>
         </span>
       </div>
     </div>

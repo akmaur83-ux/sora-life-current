@@ -17,11 +17,42 @@ function optimizedBase(src) {
 // Renders the real official product photo. Serves right-sized WebP variants via
 // <picture> when available (originals stay as the <img> fallback), and falls
 // back to a branded tile if the image is missing or fails to load.
-export default function ProductImage({ product, className = '', index = 0, sizes = GRID_SIZES, src: mediaSrc = null, alt: altOverride = null }) {
+//
+// V2 (Phase 1) changes FRAMING ONLY. Source resolution, the optimized-WebP
+// path, srcSet widths and the media data contract are all untouched. Pass
+// `frame="v2"` to get the square, sharp, warm-ground presentation the V2 cards
+// require; every existing call site keeps the legacy 4:5 `.pimg` frame.
+export default function ProductImage({
+  product,
+  className = '',
+  index = 0,
+  sizes = GRID_SIZES,
+  src: mediaSrc = null,
+  alt: altOverride = null,
+  frame = 'legacy',
+  fit = 'contain',
+}) {
   const [failed, setFailed] = useState(false);
-  if (!product) return <div className={`pimg ${className}`} style={{ background: 'var(--cream)' }} />;
+
+  const v2 = frame === 'v2';
+  const hero = frame === 'hero';
+  // V2 media frames are square and sharp. `contain` is deliberate for today's
+  // largely plain-background catalogue — `cover` would crop real labels. Once a
+  // product receives upgraded editorial photography (stone plinth, warm cream
+  // environment, botanical context) pass fit="cover" for that instance.
+  // `hero` is the product-led hero layer: no frame, no ground of its own —
+  // the product sits directly on the hero's editorial environment.
+  const wrapClass = hero
+    ? `v2-hero__product ${className}`.trim()
+    : v2
+      ? `v2-pimg ${fit === 'cover' ? 'v2-pimg--cover' : ''} ${className}`.trim()
+      : `pimg ${className}`.trim();
+
+  if (!product) {
+    return <div className={wrapClass} style={(v2 || hero) ? undefined : { background: 'var(--cream)' }} />;
+  }
+
   const cat = categoryBySlug[product.category];
-  const t = tones[cat?.tone] || tones.forest;
 
   const src = mediaSrc || (index === 0
     ? product.image
@@ -30,8 +61,6 @@ export default function ProductImage({ product, className = '', index = 0, sizes
 
   if (src && !failed) {
     const base = optimizedBase(src);
-    // Sizing/fit is controlled entirely by CSS (.pimg img) so product photos
-    // are never cropped and every context presents them consistently.
     const img = (
       <img src={src} alt={alt} loading="lazy" decoding="async"
         sizes={base ? sizes : undefined}
@@ -40,7 +69,7 @@ export default function ProductImage({ product, className = '', index = 0, sizes
     if (base) {
       const srcSet = OPTIMIZED_WIDTHS.map((w) => `/img/${base}-${w}.webp ${w}w`).join(', ');
       return (
-        <div className={`pimg ${className}`}>
+        <div className={wrapClass}>
           <picture>
             <source type="image/webp" srcSet={srcSet} sizes={sizes} />
             {img}
@@ -48,12 +77,30 @@ export default function ProductImage({ product, className = '', index = 0, sizes
         </div>
       );
     }
-    return <div className={`pimg ${className}`}>{img}</div>;
+    return <div className={wrapClass}>{img}</div>;
   }
 
-  // Fallback branded tile
+  // Fallback: warm neutral ground plus the brand and category wordmark. Never a
+  // grey box, never a broken-image glyph, and never invented packaging.
+  if (hero) return null;   // hero degrades to environment-only; no placeholder product
+  if (v2) {
+    return (
+      <div className={wrapClass}>
+        <div className="v2-pimg__fallback">
+          <div>
+            <b>Sora Life</b>
+            {cat?.name && <span>{cat.name}</span>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Legacy fallback tile — unchanged from V1 so Shop, PDP, Cart and every other
+  // surface that has not been migrated yet looks exactly as it does today.
+  const t = tones[cat?.tone] || tones.forest;
   return (
-    <div className={`pimg ${className}`} style={{ background: `linear-gradient(150deg, ${t.tint}, #fff)` }}>
+    <div className={wrapClass} style={{ background: `linear-gradient(150deg, ${t.tint}, #fff)` }}>
       <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: t.b, textAlign: 'center', padding: 16 }}>
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, letterSpacing: 1 }}>SORA LIFE</div>

@@ -10024,7 +10024,14 @@
 	  qrCode: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14v2M19 19h2v2M14 19h2v2"/>',
 	  externalLink: '<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M8 6H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3"/>',
 	  crown: '<path d="m3 8 4 3 5-6 5 6 4-3-2 11H5Z"/><path d="M5 21h14"/>',
-	  circleAlert: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>'
+	  circleAlert: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>',
+	  // ---- V2 additions (additive only; Admin also consumes this component, so
+	  // no existing glyph above is changed or removed). These three close a real
+	  // gap: categories.js already references `bottle`, `capsule` and `drop`, and
+	  // Icon returned null for all three.
+	  bottle: '<path d="M10 3h4v3l2.2 3.2V21H7.8V9.2L10 6V3Z"/><path d="M7.8 13h8.4"/>',
+	  capsule: '<rect x="3.4" y="8.6" width="17.2" height="6.8" rx="3.4" transform="rotate(-45 12 12)"/><path d="M9.6 14.4 14.4 9.6"/>',
+	  drop: '<path d="M12 3.4S5.8 10 5.8 14a6.2 6.2 0 0 0 12.4 0c0-4-6.2-10.6-6.2-10.6Z"/>'
 	};
 	function Icon({
 	  name,
@@ -10532,7 +10539,7 @@
 	  faviconUrl: null
 	};
 	let announcement = {
-	  notices: ['FREE SHIPPING on orders above ₹699', 'COD Available', '100% Authentic Biosash Products'],
+	  notices: ['FREE STANDARD SHIPPING', 'COD Available', '100% Authentic Biosash Products'],
 	  freeShippingThreshold: 699
 	};
 	let homepage = {
@@ -10573,6 +10580,11 @@
 	  position: 'center'
 	}];
 	let heroSlides = DEFAULT_HERO_SLIDES;
+	// True only once applyHeroSlides() has replaced the built-in defaults with
+	// admin-managed rows. The V2 hero uses this to decide whether slide copy is
+	// approved configured content (render it) or the hardcoded marketing defaults
+	// above (do not carry unverified provenance/claims into V2).
+	let heroSlidesConfigured = false;
 	let theme = {
 	  ...DEFAULT_THEME
 	};
@@ -10609,6 +10621,7 @@
 	function applyHeroSlides(list) {
 	  if (!Array.isArray(list) || !list.length) return false;
 	  heroSlides = list;
+	  heroSlidesConfigured = true;
 	  return true;
 	}
 
@@ -10820,6 +10833,13 @@
 	// table can replace this at bootstrap. Default = exactly today's 8 circles.
 	let categories = DEFAULT_CATEGORIES;
 	let categoryBySlug = Object.fromEntries(categories.map(c => [c.slug, c]));
+
+	// Category copy is safe to present as approved only after it has come from the
+	// public categories table managed by Admin. The built-in list is a navigation
+	// fallback; its historical taglines/blurbs are not proof of configured copy.
+	function hasConfiguredCategoryCopy(category) {
+	  return category?._copyConfigured === true;
+	}
 	function isValidSlug(s) {
 	  return typeof s === 'string' && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(s);
 	}
@@ -10829,7 +10849,10 @@
 	function applyCategories(list) {
 	  if (!Array.isArray(list) || list.length === 0) return false;
 	  categories = list.map(c => {
-	    if (isValidSlug(c.slug)) return c;
+	    if (isValidSlug(c.slug)) return {
+	      ...c,
+	      _copyConfigured: true
+	    };
 	    // A malformed stored slug (e.g. stray spaces/slashes from a data-entry
 	    // accident) would otherwise 404 every link to this category, including
 	    // the hardcoded nav links. Derive a clean slug from the category's own
@@ -10838,8 +10861,12 @@
 	    const repaired = slugify$1(c.name);
 	    return repaired ? {
 	      ...c,
-	      slug: repaired
-	    } : c;
+	      slug: repaired,
+	      _copyConfigured: true
+	    } : {
+	      ...c,
+	      _copyConfigured: true
+	    };
 	  });
 	  categoryBySlug = Object.fromEntries(categories.map(c => [c.slug, c]));
 	  return true;
@@ -10927,29 +10954,44 @@
 	// Renders the real official product photo. Serves right-sized WebP variants via
 	// <picture> when available (originals stay as the <img> fallback), and falls
 	// back to a branded tile if the image is missing or fails to load.
+	//
+	// V2 (Phase 1) changes FRAMING ONLY. Source resolution, the optimized-WebP
+	// path, srcSet widths and the media data contract are all untouched. Pass
+	// `frame="v2"` to get the square, sharp, warm-ground presentation the V2 cards
+	// require; every existing call site keeps the legacy 4:5 `.pimg` frame.
 	function ProductImage({
 	  product,
 	  className = '',
 	  index = 0,
 	  sizes = GRID_SIZES,
 	  src: mediaSrc = null,
-	  alt: altOverride = null
+	  alt: altOverride = null,
+	  frame = 'legacy',
+	  fit = 'contain'
 	}) {
 	  const [failed, setFailed] = reactExports.useState(false);
-	  if (!product) return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	    className: `pimg ${className}`,
-	    style: {
-	      background: 'var(--cream)'
-	    }
-	  });
+	  const v2 = frame === 'v2';
+	  const hero = frame === 'hero';
+	  // V2 media frames are square and sharp. `contain` is deliberate for today's
+	  // largely plain-background catalogue — `cover` would crop real labels. Once a
+	  // product receives upgraded editorial photography (stone plinth, warm cream
+	  // environment, botanical context) pass fit="cover" for that instance.
+	  // `hero` is the product-led hero layer: no frame, no ground of its own —
+	  // the product sits directly on the hero's editorial environment.
+	  const wrapClass = hero ? `v2-hero__product ${className}`.trim() : v2 ? `v2-pimg ${fit === 'cover' ? 'v2-pimg--cover' : ''} ${className}`.trim() : `pimg ${className}`.trim();
+	  if (!product) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: wrapClass,
+	      style: v2 || hero ? undefined : {
+	        background: 'var(--cream)'
+	      }
+	    });
+	  }
 	  const cat = categoryBySlug[product.category];
-	  const t = tones[cat?.tone] || tones.forest;
 	  const src = mediaSrc || (index === 0 ? product.image : product.gallery && product.gallery[index] || product.image);
 	  const alt = altOverride || product.name;
 	  if (src && !failed) {
 	    const base = optimizedBase(src);
-	    // Sizing/fit is controlled entirely by CSS (.pimg img) so product photos
-	    // are never cropped and every context presents them consistently.
 	    const img = /*#__PURE__*/jsxRuntimeExports.jsx("img", {
 	      src: src,
 	      alt: alt,
@@ -10961,7 +11003,7 @@
 	    if (base) {
 	      const srcSet = OPTIMIZED_WIDTHS.map(w => `/img/${base}-${w}.webp ${w}w`).join(', ');
 	      return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: `pimg ${className}`,
+	        className: wrapClass,
 	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("source", {
 	            type: "image/webp",
@@ -10972,14 +11014,35 @@
 	      });
 	    }
 	    return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: `pimg ${className}`,
+	      className: wrapClass,
 	      children: img
 	    });
 	  }
 
-	  // Fallback branded tile
+	  // Fallback: warm neutral ground plus the brand and category wordmark. Never a
+	  // grey box, never a broken-image glyph, and never invented packaging.
+	  if (hero) return null; // hero degrades to environment-only; no placeholder product
+	  if (v2) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: wrapClass,
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-pimg__fallback",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+	            children: "Sora Life"
+	          }), cat?.name && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            children: cat.name
+	          })]
+	        })
+	      })
+	    });
+	  }
+
+	  // Legacy fallback tile — unchanged from V1 so Shop, PDP, Cart and every other
+	  // surface that has not been migrated yet looks exactly as it does today.
+	  const t = tones[cat?.tone] || tones.forest;
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	    className: `pimg ${className}`,
+	    className: wrapClass,
 	    style: {
 	      background: `linear-gradient(150deg, ${t.tint}, #fff)`
 	    },
@@ -11012,6 +11075,53 @@
 	          children: cat?.name
 	        })]
 	      })
+	    })
+	  });
+	}
+
+	const NOTICE_ICONS = ['truck', 'card', 'shield'];
+	const INTERVAL$1 = 5000;
+
+	// V2 announcement bar — extracted from Header so it is its own concern.
+	// Content comes entirely from the admin-editable `announcement` setting; no
+	// copy is authored here. Renders nothing when there are no notices.
+	function AnnouncementBar() {
+	  const notices = Array.isArray(announcement.notices) ? announcement.notices.filter(n => typeof n === 'string' && n.trim()) : [];
+	  const [i, setI] = reactExports.useState(0);
+	  const [reduced, setReduced] = reactExports.useState(false);
+	  reactExports.useEffect(() => {
+	    const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+	    if (!mq) return undefined;
+	    const on = () => setReduced(mq.matches);
+	    on();
+	    mq.addEventListener?.('change', on);
+	    return () => mq.removeEventListener?.('change', on);
+	  }, []);
+
+	  // Auto-rotation is moving content, so it is disabled entirely for
+	  // reduced-motion users — who instead get every notice at once (below), so
+	  // no information is lost.
+	  reactExports.useEffect(() => {
+	    if (reduced || notices.length < 2) return undefined;
+	    const t = setTimeout(() => setI(n => (n + 1) % notices.length), INTERVAL$1);
+	    return () => clearTimeout(t);
+	  }, [i, reduced, notices.length]);
+	  if (!notices.length) return null;
+	  const shown = reduced ? notices : [notices[i % notices.length]];
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    className: "v2-ann",
+	    role: "region",
+	    "aria-label": "Store announcements",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-ann__viewport",
+	      children: shown.map((n, idx) => /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "v2-ann__item",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: NOTICE_ICONS[(reduced ? idx : i) % NOTICE_ICONS.length],
+	          size: 13,
+	          stroke: 1.5
+	        }), n]
+	      }, `${idx}-${n}`))
 	    })
 	  });
 	}
@@ -14380,7 +14490,6 @@
 	  document.body.style.paddingRight = previousPaddingRight;
 	}
 
-	const NOTICE_ICONS = ['truck', 'card', 'shield'];
 	function Header() {
 	  const {
 	    cartCount,
@@ -14471,253 +14580,178 @@
 	    }
 	  };
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "annbar",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	        className: "annbar__pause",
-	        id: "announcement-pause",
-	        type: "checkbox",
-	        "aria-label": "Pause announcement ticker"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	        className: "annbar__control",
-	        htmlFor: "announcement-pause",
-	        title: "Pause or resume announcements",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "annbar__control-icon",
-	          "aria-hidden": "true"
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "annbar__viewport",
-	        tabIndex: 0,
-	        role: "region",
-	        "aria-label": "Store announcements",
-	        "aria-describedby": "announcement-help",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "sr-only",
-	          id: "announcement-help",
-	          children: "Focus to stop the ticker. Scroll horizontally to read all announcements and links."
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "annbar__track",
-	          children: [false, true].map(duplicate => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "annbar__group",
-	            "aria-hidden": duplicate || undefined,
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	              className: "annbar__notices",
-	              children: announcement.notices.map((n, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
-	                children: [i > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                  className: "annbar__sep",
-	                  "aria-hidden": "true"
-	                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	                  className: "annbar__notice",
-	                  children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                    name: NOTICE_ICONS[i % NOTICE_ICONS.length],
-	                    size: 14
-	                  }), " ", n]
-	                })]
-	              }, `${i}-${n}`))
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "annbar__sep",
-	              "aria-hidden": "true"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "annbar__links",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	                to: "/account/orders",
-	                tabIndex: duplicate ? -1 : undefined,
-	                children: "Track Order"
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "annbar__sep",
-	                "aria-hidden": "true"
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	                href: "#",
-	                tabIndex: duplicate ? -1 : undefined,
-	                children: "Store Locator"
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "annbar__sep",
-	                "aria-hidden": "true"
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	                to: "/account",
-	                tabIndex: duplicate ? -1 : undefined,
-	                children: "Help & Support"
-	              })]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "annbar__sep",
-	              "aria-hidden": "true"
-	            })]
-	          }, String(duplicate)))
-	        })]
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("header", {
-	      className: `hdr ${scrolled ? 'is-scrolled' : ''}`,
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "container hdr__in",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(AnnouncementBar, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+	      className: `v2-hdr ${scrolled ? 'is-scrolled' : ''}`,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-hdr__bar",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "hdr__left",
+	          className: "v2-hdr__left",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            className: "iconbtn only-mobile",
+	            className: "v2-hdr__act",
 	            onClick: () => setDrawer(true),
 	            "aria-label": "Open menu",
 	            "aria-expanded": drawer,
 	            "aria-controls": "mobile-drawer",
 	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "menu"
+	              name: "menu",
+	              size: 19,
+	              stroke: 1.5
 	            })
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Logo, {})]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
-	          className: "hdr__nav hide-mobile",
-	          "aria-label": "Primary",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "hdr__navitem has-mega",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
-	              to: "/shop",
-	              className: "hdr__link",
-	              children: ["SHOP ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "chevronDown",
-	                size: 14
-	              })]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "mega",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	                className: "mega__grid",
-	                children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	                  to: `/category/${c.slug}`,
-	                  className: "mega__cell",
-	                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                    className: "mega__name",
-	                    children: c.name
-	                  }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                    className: "mega__tag",
-	                    children: c.tagline
-	                  })]
-	                }, c.slug))
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	                to: "/shop",
-	                className: "mega__all",
-	                children: ["Shop all products ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                  name: "arrowRight",
-	                  size: 16
-	                })]
-	              })]
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
-	            to: "/category/wellness",
-	            className: "hdr__link",
-	            children: "WELLNESS"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
-	            to: "/category/skin-care",
-	            className: "hdr__link",
-	            children: "SKIN CARE"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
-	            to: "/category/hair-care",
-	            className: "hdr__link",
-	            children: "HAIR CARE"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
-	            to: "/category/bath-body",
-	            className: "hdr__link",
-	            children: "BATH & BODY"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
-	            to: "/category/mens-care",
-	            className: "hdr__link",
-	            children: "MEN'S CARE"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
-	            to: "/shop?sort=bestselling",
-	            className: "hdr__link",
-	            children: "BESTSELLERS"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
-	            to: "/shop?filter=new",
-	            className: "hdr__link",
-	            children: "NEW IN"
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "hdr__right",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "hdr__search hide-mobile",
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "v2-hdr__search",
 	            ref: boxRef,
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("form", {
-	              className: "searchbox",
+	              className: "v2-hdr__searchbox",
 	              onSubmit: submit,
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	                className: "input",
-	                placeholder: "Search for products...",
+	              role: "search",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "search",
+	                size: 17,
+	                stroke: 1.5
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                placeholder: "Search wellness essentials",
 	                value: q,
 	                onChange: e => setQ(e.target.value),
 	                onFocus: () => setFocused(true),
 	                "aria-label": "Search for products"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	                type: "submit",
-	                className: "hdr__search-btn",
 	                "aria-label": "Search",
 	                children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                  name: "search",
-	                  size: 18
+	                  name: "arrowRight",
+	                  size: 16,
+	                  stroke: 1.6
 	                })
 	              })]
 	            }), focused && q.trim() && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	              className: "hdr__suggest",
+	              className: "v2-hdr__suggest",
 	              children: results.length ? results.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
 	                to: `/product/${p.slug}`,
-	                className: "hdr__suggest-item",
+	                className: "v2-hdr__suggest-item",
 	                onClick: () => setFocused(false),
 	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                  className: "hdr__suggest-thumb",
+	                  className: "v2-hdr__suggest-thumb",
 	                  children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	                    product: p
+	                    product: p,
+	                    frame: "v2",
+	                    sizes: "40px"
 	                  })
 	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                  className: "hdr__suggest-name",
+	                  className: "v2-hdr__suggest-name",
 	                  children: p.name
 	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                  className: "hdr__suggest-price",
+	                  className: "v2-hdr__suggest-price",
 	                  children: money(p.price)
 	                })]
 	              }, p.id)) : /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	                className: "muted",
-	                style: {
-	                  padding: 14
-	                },
+	                className: "v2-hdr__suggest-empty",
 	                children: ["No matches for \u201C", q, "\u201D."]
 	              })
 	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "hdr__actions",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	              className: "iconbtn only-mobile",
-	              onClick: () => setMobileSearch(true),
-	              "aria-label": "Search",
-	              "aria-expanded": mobileSearch,
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "search"
-	              })
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	              to: "/account",
-	              className: "iconbtn hide-mobile",
-	              "aria-label": "Account",
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "user"
-	              })
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	              to: "/wishlist",
-	              className: "iconbtn hide-mobile",
-	              "aria-label": "Wishlist",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "heart"
-	              }), wishCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "count",
-	                children: wishCount
-	              }, wishCount)]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	              to: "/cart",
-	              className: "iconbtn",
-	              "aria-label": "Cart",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "bag"
-	              }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "count",
-	                children: cartCount
-	              }, cartCount)]
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "v2-hdr__brand",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Logo, {})
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "v2-hdr__right",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: "v2-hdr__act v2-only-mobile",
+	            onClick: () => setMobileSearch(true),
+	            "aria-label": "Search",
+	            "aria-expanded": mobileSearch,
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "search",
+	              size: 19,
+	              stroke: 1.5
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/account",
+	            className: "v2-hdr__act v2-hide-mobile",
+	            "aria-label": "Account",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "user",
+	              size: 19,
+	              stroke: 1.5
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: "/wishlist",
+	            className: "v2-hdr__act v2-hide-mobile",
+	            "aria-label": `Wishlist${wishCount > 0 ? `, ${wishCount} items` : ''}`,
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "heart",
+	              size: 19,
+	              stroke: 1.5
+	            }), wishCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "v2-hdr__count",
+	              children: wishCount
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: "/cart",
+	            className: "v2-hdr__act",
+	            "aria-label": `Cart${cartCount > 0 ? `, ${cartCount} items` : ''}`,
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "bag",
+	              size: 19,
+	              stroke: 1.5
+	            }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "v2-hdr__count",
+	              children: cartCount
 	            })]
 	          })]
 	        })]
-	      })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	        className: "v2-hdr__nav",
+	        "aria-label": "Primary",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "v2-hdr__navitem",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
+	            to: "/shop",
+	            className: ({
+	              isActive
+	            }) => `v2-hdr__link ${isActive ? 'active' : ''}`,
+	            children: ["Shop ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "chevronDown",
+	              size: 13,
+	              stroke: 1.6
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "v2-hdr__mega",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	              className: "v2-hdr__mega-grid",
+	              children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	                to: `/category/${c.slug}`,
+	                className: "v2-hdr__mega-cell",
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  className: "v2-hdr__mega-name",
+	                  children: c.name
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  className: "v2-hdr__mega-tag",
+	                  "aria-hidden": !hasConfiguredCategoryCopy(c) || !c.tagline,
+	                  children: hasConfiguredCategoryCopy(c) && c.tagline ? c.tagline : '\u00A0'
+	                })]
+	              }, c.slug))
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	              to: "/shop",
+	              className: "v2-hdr__mega-all",
+	              children: ["Shop all products ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "arrowRight",
+	                size: 14,
+	                stroke: 1.8
+	              })]
+	            })]
+	          })]
+	        }), categories.slice(0, 5).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
+	          to: `/category/${c.slug}`,
+	          className: ({
+	            isActive
+	          }) => `v2-hdr__link ${isActive ? 'active' : ''}`,
+	          children: c.name
+	        }, c.slug)), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
+	          to: "/shop?sort=bestselling",
+	          className: "v2-hdr__link",
+	          children: "Bestsellers"
+	        })]
+	      })]
 	    }), mobileSearch && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	      className: "search-overlay",
 	      onClick: () => setMobileSearch(false),
@@ -15146,66 +15180,21 @@
 	  });
 	}
 
-	const VARIANT_CLASS = {
-	  up: '',
-	  fade: 'reveal-fade',
-	  scale: 'reveal-scale',
-	  left: 'reveal-left',
-	  right: 'reveal-right',
-	  soft: 'reveal-soft'
-	};
-	function Reveal({
-	  children,
-	  as: Tag = 'div',
-	  delay = 0,
-	  variant = 'up',
-	  className = '',
-	  ...rest
-	}) {
-	  const ref = reactExports.useRef(null);
-	  const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-	  const [shown, setShown] = reactExports.useState(!!reduced);
-	  reactExports.useEffect(() => {
-	    if (reduced || shown) return;
-	    const el = ref.current;
-	    if (!el) return;
-	    const io = new IntersectionObserver(entries => entries.forEach(e => {
-	      if (e.isIntersecting) {
-	        setShown(true);
-	        io.disconnect();
-	      }
-	    }), {
-	      threshold: 0.12,
-	      rootMargin: '0px 0px -40px 0px'
-	    });
-	    io.observe(el);
-	    return () => io.disconnect();
-	  }, [reduced, shown]);
-	  const variantClass = VARIANT_CLASS[variant] || '';
-	  return /*#__PURE__*/jsxRuntimeExports.jsx(Tag, {
-	    ref: ref,
-	    className: `reveal ${variantClass} ${shown ? 'is-in' : ''} ${className}`,
-	    style: {
-	      transitionDelay: `${delay}ms`
-	    },
-	    ...rest,
-	    children: children
-	  });
+	const HERO_PRODUCT_SLUG = 'biosash-sea-buckthorn-juice';
+	function resolveHeroProduct() {
+	  const exact = productBySlug?.[HERO_PRODUCT_SLUG];
+	  if (exact?.image) return exact;
+	  // Defensive: if the catalogue is swapped by applyCatalog() and that slug is
+	  // gone, fall back to the first in-stock product that has a real image.
+	  return (products || []).find(p => p?.image && p.stock !== 0) || null;
 	}
 
-	const BENEFITS = [{
-	  icon: 'award',
-	  a: 'Himalayan',
-	  b: 'Superfood'
-	}, {
-	  icon: 'leaf',
-	  a: 'Rich in 190+',
-	  b: 'Nutrients'
-	}, {
-	  icon: 'shield',
-	  a: 'Boosts Immunity',
-	  b: '& Wellness'
-	}];
+	// V2 note: the previous hardcoded BENEFITS strip ("Rich in 190+ Nutrients",
+	// "Boosts Immunity & Wellness") was authored marketing copy baked into this
+	// component, not data the storefront can substantiate. V2 does not render
+	// product claims that are not bound to verified data, so it has been removed
+	// rather than restyled.
+
 	const INTERVAL = 6000;
 
 	// Brand hero still (Himalayan sea buckthorn). Last-resort visual so a slide
@@ -15266,6 +15255,70 @@
 	  return Boolean(stillFor(slide));
 	}
 	function Hero() {
+	  // Product-led hero is the V2 default. Admin-configured slides opt back into
+	  // the original slide rendering because that copy is approved content.
+	  if (!heroSlidesConfigured) return /*#__PURE__*/jsxRuntimeExports.jsx(ProductHero$1, {});
+	  return /*#__PURE__*/jsxRuntimeExports.jsx(ConfiguredHero, {});
+	}
+
+	// ---------------------------------------------------------------- product-led
+	function ProductHero$1() {
+	  const product = resolveHeroProduct();
+	  if (!product) return null;
+	  const cat = categoryBySlug[product.category];
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "v2-hero v2-hero--product",
+	    "aria-label": "Featured product",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-hero__stage",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-hero__ground",
+	        "aria-hidden": "true"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-hero__leaf v2-hero__leaf--a",
+	        "aria-hidden": "true"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-hero__leaf v2-hero__leaf--b",
+	        "aria-hidden": "true"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-hero__plinth",
+	        "aria-hidden": "true"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-hero__contact",
+	        "aria-hidden": "true"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-hero__productwrap",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	          product: product,
+	          frame: "hero",
+	          sizes: "(max-width: 767px) 62vw, 46vw",
+	          alt: product.name
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-hero__ui",
+	        children: [cat?.name && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "v2-hero__kicker",
+	          children: cat.name
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          className: "v2-hero__title",
+	          children: product.name
+	        }), product.form && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "v2-hero__meta",
+	          children: product.form
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: `/product/${product.slug}`,
+	            className: "v2-btn v2-btn--sm",
+	            children: "View product"
+	          })
+	        })]
+	      })]
+	    })
+	  });
+	}
+
+	// ------------------------------------------------- admin-configured slides
+	function ConfiguredHero() {
 	  const [active, setActive] = reactExports.useState(0);
 	  const [paused, setPaused] = reactExports.useState(false);
 	  const [videoFailed, setVideoFailed] = reactExports.useState({}); // { [slideId]: true } — fall back to poster on load error
@@ -15351,164 +15404,146 @@
 	  }, [reduced]);
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
 	    ref: sectionRef,
-	    className: "bh-hero bh-hero--carousel",
+	    className: "v2-hero",
 	    onMouseEnter: () => setPaused(true),
 	    onMouseLeave: () => setPaused(false),
 	    "aria-roledescription": "carousel",
 	    "aria-label": "Sora Life featured",
 	    children: [SLIDES.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: `bh-slide ${i === active ? 'is-active' : ''}`,
+	      className: `v2-hero__slide ${i === active ? 'is-active' : ''}`,
 	      "aria-hidden": i !== active,
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "bh-hero__parallax",
-	        ref: el => {
-	          parallaxRefs.current[i] = el;
-	        },
-	        children: s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src ? /*#__PURE__*/jsxRuntimeExports.jsx("video", {
-	          className: "bh-hero__media",
-	          autoPlay: true,
-	          muted: true,
-	          loop: true,
-	          playsInline: true,
-	          preload: "metadata",
-	          poster: s.poster,
-	          style: {
-	            objectPosition: s.position
+	        className: "v2-hero__media",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "v2-hero__par",
+	          ref: el => {
+	            parallaxRefs.current[i] = el;
 	          },
-	          onError: () => setVideoFailed(v => ({
-	            ...v,
-	            [s.id]: true
-	          })),
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx("source", {
-	            src: s.src,
-	            type: "video/mp4"
+	          children: s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src ? /*#__PURE__*/jsxRuntimeExports.jsx("video", {
+	            className: "v2-hero__img",
+	            autoPlay: true,
+	            muted: true,
+	            loop: true,
+	            playsInline: true,
+	            preload: "metadata",
+	            poster: s.poster,
+	            style: {
+	              objectPosition: s.position
+	            },
+	            onError: () => setVideoFailed(v => ({
+	              ...v,
+	              [s.id]: true
+	            })),
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx("source", {
+	              src: s.src,
+	              type: "video/mp4"
+	            })
+	          }) : s.kind === 'video' ?
+	          /*#__PURE__*/
+	          // Video skipped on mobile, missing, or failed to load — always resolve
+	          // to a real still (never an empty colour block).
+	          jsxRuntimeExports.jsx("img", {
+	            className: "v2-hero__img",
+	            src: heroSrc(stillFor(s) || FALLBACK_POSTER, 1600),
+	            srcSet: heroSrcSet(stillFor(s) || FALLBACK_POSTER),
+	            sizes: "100vw",
+	            alt: s.title,
+	            style: {
+	              objectPosition: s.position
+	            },
+	            loading: i === active ? 'eager' : 'lazy',
+	            fetchpriority: i === active ? 'high' : undefined,
+	            decoding: "async"
+	          }) : /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	            className: "v2-hero__img",
+	            src: heroSrc(s.src, 1600),
+	            srcSet: heroSrcSet(s.src),
+	            sizes: "100vw",
+	            alt: s.title,
+	            style: {
+	              objectPosition: s.position
+	            },
+	            loading: i === active ? 'eager' : 'lazy',
+	            fetchpriority: i === active ? 'high' : undefined,
+	            decoding: "async"
 	          })
-	        }) : s.kind === 'video' ?
-	        /*#__PURE__*/
-	        // Video skipped on mobile, missing, or failed to load — always resolve
-	        // to a real still (never an empty colour block).
-	        jsxRuntimeExports.jsx("img", {
-	          className: "bh-hero__media",
-	          src: heroSrc(stillFor(s) || FALLBACK_POSTER, 1600),
-	          srcSet: heroSrcSet(stillFor(s) || FALLBACK_POSTER),
-	          sizes: "100vw",
-	          alt: s.title,
-	          style: {
-	            objectPosition: s.position
-	          },
-	          loading: i === active ? 'eager' : 'lazy',
-	          fetchpriority: i === active ? 'high' : undefined,
-	          decoding: "async"
-	        }) : /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	          className: "bh-hero__media",
-	          src: heroSrc(s.src, 1600),
-	          srcSet: heroSrcSet(s.src),
-	          sizes: "100vw",
-	          alt: s.title,
-	          style: {
-	            objectPosition: s.position
-	          },
-	          loading: i === active ? 'eager' : 'lazy',
-	          fetchpriority: i === active ? 'high' : undefined,
-	          decoding: "async"
 	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "bh-hero__scrim"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "container bh-hero__inner",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "bh-hero__copy",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "bh-hero__kicker",
-	            children: s.kicker
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-	            className: "bh-hero__title",
-	            children: s.title
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "bh-hero__sub",
-	            children: s.sub
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "bh-hero__lede",
-	            children: s.lede
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-hero__scrim",
+	        "aria-hidden": "true"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-hero__ui",
+	        children: [s.kicker && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "v2-hero__kicker",
+	          children: s.kicker
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          className: "v2-hero__title",
+	          children: s.title
+	        }), (s.sub || s.lede) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "v2-hero__sub",
+	          children: s.sub || s.lede
+	        }), s.cta?.to && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: s.cta.to,
-	            className: "btn btn-lg bh-hero__cta",
-	            children: [s.cta.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "arrowRight",
-	              size: 18
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	            className: "bh-hero__benefits",
-	            children: BENEFITS.map((b, bi) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "bh-hero__benefit",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: b.icon,
-	                size: 22
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	                children: [b.a, /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), b.b]
-	              }), bi < BENEFITS.length - 1 && /*#__PURE__*/jsxRuntimeExports.jsx("i", {
-	                className: "bh-hero__bdiv"
-	              })]
-	            }, b.b))
-	          })]
-	        })
+	            className: "v2-btn v2-btn--sm",
+	            children: s.cta.label
+	          })
+	        })]
 	      })]
-	    }, s.id)), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	      className: "bh-hero__arrow bh-hero__arrow--prev",
-	      onClick: () => go(active - 1),
-	      "aria-label": "Previous slide",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "chevronLeft",
-	        size: 22
-	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	      className: "bh-hero__arrow bh-hero__arrow--next",
-	      onClick: () => go(active + 1),
-	      "aria-label": "Next slide",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "chevronRight",
-	        size: 22
-	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "bh-hero__dots",
-	      children: SLIDES.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	        className: i === active ? 'active' : '',
-	        onClick: () => go(i),
-	        "aria-label": `Go to slide ${i + 1}`,
-	        "aria-current": i === active
-	      }, s.id))
+	    }, s.id)), SLIDES.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        className: "v2-hero__arrow v2-hero__arrow--prev",
+	        onClick: () => go(active - 1),
+	        "aria-label": "Previous slide",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronLeft",
+	          size: 18,
+	          stroke: 1.6
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        className: "v2-hero__arrow v2-hero__arrow--next",
+	        onClick: () => go(active + 1),
+	        "aria-label": "Next slide",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronRight",
+	          size: 18,
+	          stroke: 1.6
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-hero__dots",
+	        children: SLIDES.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          className: i === active ? 'is-on' : '',
+	          onClick: () => go(i),
+	          "aria-label": `Go to slide ${i + 1}`,
+	          "aria-current": i === active
+	        }, s.id))
+	      })]
 	    })]
 	  });
 	}
 
-	function StarRating({
-	  value = 0,
-	  count,
-	  size = 15,
-	  showValue = false
-	}) {
-	  const full = Math.round(value);
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	    className: "rating-row",
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "stars",
-	      "aria-label": `${value} out of 5 stars`,
-	      children: [1, 2, 3, 4, 5].map(i => /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "star",
-	        size: size,
-	        fill: i <= full ? 'currentColor' : 'none',
-	        className: i <= full ? 's-full' : 's-empty',
-	        stroke: 1.4
-	      }, i))
-	    }), showValue && /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	      style: {
-	        color: 'var(--color-text)',
-	        fontWeight: 600
-	      },
-	      children: value.toFixed(1)
-	    }), typeof count === 'number' && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	      children: ["(", count.toLocaleString('en-IN'), ")"]
-	    })]
+	function CategoryRail() {
+	  const items = Array.isArray(categories) ? categories.filter(c => c && c.slug && c.name) : [];
+	  if (items.length < 3) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+	    className: "v2-rail v2-cats",
+	    "aria-label": "Shop by category",
+	    children: items.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	      to: `/category/${c.slug}`,
+	      className: "v2-cat",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-cat__tile",
+	        "aria-hidden": "true",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: c.icon || 'leaf',
+	          size: 23,
+	          stroke: 1.5
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-cat__lb",
+	        children: c.name
+	      })]
+	    }, c.slug))
 	  });
 	}
 
@@ -15516,7 +15551,8 @@
 	  product,
 	  showOff = true,
 	  size,
-	  variant = null
+	  variant = null,
+	  v2 = false
 	}) {
 	  const {
 	    currency,
@@ -15528,7 +15564,13 @@
 	  const mrp = variant?.mrp ?? product.mrp;
 	  const discountPct = variant ? variant.discountPct ?? (mrp > price ? Math.round((mrp - price) / mrp * 100) : 0) : product.discountPct;
 	  if (priceVerified === false) {
-	    return /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	    return v2 ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "v2-price",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-price__tbd",
+	        children: "Price coming soon"
+	      })
+	    }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	      className: "price",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	        className: "price-tbd muted",
@@ -15537,6 +15579,24 @@
 	    });
 	  }
 	  const hasDiscount = mrp > price;
+	  if (v2) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      className: `v2-price ${size === 'lg' ? 'v2-price--lg' : ''}`,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-price__now",
+	        children: money(price, currency)
+	      }), hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "v2-price__mrp",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-price__mrp-lbl",
+	          children: "MRP"
+	        }), money(mrp, currency)]
+	      }), showOff && discountPct > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "v2-price__off",
+	        children: [discountPct, "% off"]
+	      })]
+	    });
+	  }
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	    className: `price ${size === 'lg' ? 'price--lg' : ''}`,
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -15555,169 +15615,27 @@
 	  });
 	}
 
-	function QuickView({
-	  product,
-	  onClose
-	}) {
-	  const {
-	    addToCart,
-	    toggleWish,
-	    isWished
-	  } = useStore();
-	  const [qty, setQty] = reactExports.useState(1);
-	  const [variant, setVariant] = reactExports.useState(product.variants?.[0]?.label || null);
-	  const cat = categoryBySlug[product.category];
-	  reactExports.useEffect(() => {
-	    const onKey = e => e.key === 'Escape' && onClose();
-	    document.addEventListener('keydown', onKey);
-	    document.body.style.overflow = 'hidden';
-	    return () => {
-	      document.removeEventListener('keydown', onKey);
-	      document.body.style.overflow = '';
+	function pickBadge(product, out) {
+	  if (out) return {
+	    label: 'Sold out',
+	    cls: 'v2-badge--out'
+	  };
+	  const pct = Number(product.discountPct);
+	  // Under 5% is not worth a badge — and rounding a 3% saving up to "5% off"
+	  // is exactly the kind of thing that erodes trust.
+	  if (Number.isFinite(pct) && pct >= 5) return {
+	    label: `${pct}% off`,
+	    cls: ''
+	  };
+	  const b = Array.isArray(product.badges) ? product.badges[0] : null;
+	  if (b?.label) {
+	    return {
+	      label: b.label,
+	      cls: b.type === 'new' ? 'v2-badge--soft' : 'v2-badge--forest'
 	    };
-	  }, [onClose]);
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	    className: "modal-scrim",
-	    onClick: onClose,
-	    role: "dialog",
-	    "aria-modal": "true",
-	    "aria-label": `Quick view: ${product.name}`,
-	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "modal qv",
-	      onClick: e => e.stopPropagation(),
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	        className: "iconbtn modal__close",
-	        onClick: onClose,
-	        "aria-label": "Close",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "x"
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "qv__grid",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "qv__media",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	            product: product
-	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "qv__info",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "pcard__cat",
-	            children: cat?.name
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	            style: {
-	              fontSize: 'var(--text-2xl)',
-	              margin: '4px 0 8px'
-	            },
-	            children: product.name
-	          }), product.reviewCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx(StarRating, {
-	            value: product.rating,
-	            count: product.reviewCount
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "muted",
-	            style: {
-	              margin: '14px 0'
-	            },
-	            children: product.shortDescription
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
-	            product: product,
-	            size: "lg"
-	          }), product.variants && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            style: {
-	              marginTop: 18
-	            },
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	              className: "label",
-	              style: {
-	                marginBottom: 8
-	              },
-	              children: "Variant"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	              className: "taglist",
-	              children: product.variants.map(v => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	                className: `chip ${variant === v.label ? 'active' : ''}`,
-	                onClick: () => setVariant(v.label),
-	                children: v.label
-	              }, v.id))
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "qv__actions",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "qty",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	                onClick: () => setQty(q => Math.max(1, q - 1)),
-	                "aria-label": "Decrease",
-	                children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                  name: "minus",
-	                  size: 16
-	                })
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                children: qty
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	                onClick: () => setQty(q => q + 1),
-	                "aria-label": "Increase",
-	                children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                  name: "plus",
-	                  size: 16
-	                })
-	              })]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	              className: "btn btn-block",
-	              onClick: () => {
-	                addToCart(product, qty, variant);
-	                onClose();
-	              },
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "bag",
-	                size: 18
-	              }), " Add to cart"]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	              className: "iconbtn",
-	              style: {
-	                border: '1px solid var(--line)'
-	              },
-	              onClick: () => toggleWish(product),
-	              "aria-label": "Wishlist",
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "heart",
-	                size: 20,
-	                fill: isWished(product.id) ? 'currentColor' : 'none',
-	                style: isWished(product.id) ? {
-	                  color: 'var(--color-sale)'
-	                } : undefined
-	              })
-	            })]
-	          }), product.benefits?.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-	            className: "qv__benefits",
-	            children: product.benefits.slice(0, 3).map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "check",
-	                size: 16
-	              }), " ", b]
-	            }, b))
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	            to: `/product/${product.slug}`,
-	            className: "sec-link",
-	            onClick: onClose,
-	            style: {
-	              marginTop: 4
-	            },
-	            children: ["View full details ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "arrowRight",
-	              size: 16
-	            })]
-	          })]
-	        })]
-	      })]
-	    })
-	  });
+	  }
+	  return null;
 	}
-
-	const badgeClass = {
-	  new: 'badge-new',
-	  best: 'badge-best',
-	  sale: 'badge-sale'
-	};
 	function ProductCard({
 	  product
 	}) {
@@ -15726,102 +15644,291 @@
 	    toggleWish,
 	    isWished
 	  } = useStore();
-	  const [qv, setQv] = reactExports.useState(false);
 	  const wished = isWished(product.id);
 	  const out = product.stock === 0;
 	  const cat = categoryBySlug[product.category];
+	  const badge = pickBadge(product, out);
+	  const meta = [cat?.name, product.form].filter(Boolean).join(' · ');
+	  const lowStock = !out && Number.isFinite(product.stock) && product.stock > 0 && product.stock <= 5;
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
-	    className: "pcard",
+	    className: `v2-pc ${out ? 'is-out' : ''}`,
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "pcard__media",
+	      className: "v2-pc__media",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	        to: `/product/${product.slug}`,
 	        "aria-label": product.name,
 	        children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	          product: product
+	          product: product,
+	          frame: "v2"
 	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "pcard__badges",
-	        children: out ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "badge badge-out",
-	          children: "Sold out"
-	        }) : product.badges.slice(0, 2).map(b => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: `badge ${badgeClass[b.type] || ''}`,
-	          children: b.label
-	        }, b.type))
+	      }), badge && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-pc__badges",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: `v2-badge ${badge.cls}`,
+	          children: badge.label
+	        })
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	        className: `pcard__wish ${wished ? 'active' : ''}`,
+	        type: "button",
+	        className: `v2-iconbtn v2-pc__wish ${wished ? 'is-on' : ''}`,
 	        onClick: () => toggleWish(product),
 	        "aria-pressed": wished,
-	        "aria-label": wished ? 'Remove from wishlist' : 'Add to wishlist',
+	        "aria-label": wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`,
 	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	          name: "heart",
-	          size: 20,
+	          size: 14,
+	          stroke: 1.6,
 	          fill: wished ? 'currentColor' : 'none'
 	        })
-	      }), !out && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "pcard__quick",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	          className: "btn btn-sm btn-block pcard__quickadd",
-	          onClick: () => addToCart(product),
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "bag",
-	            size: 16
-	          }), " Quick add"]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          className: "btn btn-sm btn-light",
-	          onClick: () => setQv(true),
-	          "aria-label": "Quick view",
-	          title: "Quick view",
-	          style: {
-	            paddingInline: 12
-	          },
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "eye",
-	            size: 16
-	          })
-	        })]
+	      }), out && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-pc__soldout",
+	        children: "Sold out"
 	      })]
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "pcard__body",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        className: "pcard__cat",
-	        children: [cat?.name, product.form ? /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          className: "pcard__cat-form",
-	          children: [" \xB7 ", product.form]
-	        }) : '']
+	      className: "v2-pc__body",
+	      children: [meta && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-pc__meta",
+	        children: meta
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	        className: "pcard__name",
+	        className: "v2-pc__name",
 	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	          to: `/product/${product.slug}`,
 	          children: product.name
 	        })
-	      }), product.reviewCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx(StarRating, {
-	        value: product.rating,
-	        count: product.reviewCount,
-	        size: 14
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "pcard__foot",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
+	        className: "v2-pc__foot",
+	        children: [lowStock && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "v2-pc__note",
+	          children: ["Only ", product.stock, " left"]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
 	          product: product,
-	          showOff: false
-	        }), out ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "hint",
+	          showOff: false,
+	          v2: true
+	        }), out ? /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "v2-pc__cta v2-pc__cta--out",
+	          disabled: true,
+	          "aria-disabled": "true",
 	          children: "Notify me"
-	        }) : /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          className: "iconbtn pcard__add",
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	          type: "button",
+	          className: "v2-pc__cta",
 	          onClick: () => addToCart(product),
-	          "aria-label": "Add to cart",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "plus",
-	            size: 18
-	          })
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "bag",
+	            size: 14,
+	            stroke: 1.6
+	          }), " Add to cart"]
 	        })]
 	      })]
-	    }), qv && /*#__PURE__*/jsxRuntimeExports.jsx(QuickView, {
-	      product: product,
-	      onClose: () => setQv(false)
 	    })]
+	  });
+	}
+
+	function CompactProductCard({
+	  product
+	}) {
+	  const {
+	    addToCart
+	  } = useStore();
+	  const out = product.stock === 0;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "v2-cc",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	      to: `/product/${product.slug}`,
+	      className: "v2-cc__m",
+	      "aria-hidden": "true",
+	      tabIndex: -1,
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	        product: product,
+	        frame: "v2",
+	        sizes: "80px"
+	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-cc__b",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-cc__brand",
+	        children: branding.siteName
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-cc__n",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: `/product/${product.slug}`,
+	          style: {
+	            color: 'inherit',
+	            textDecoration: 'none'
+	          },
+	          children: product.name
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
+	        product: product,
+	        showOff: false,
+	        v2: true
+	      })]
+	    }), !out && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	      type: "button",
+	      className: "v2-cc__add",
+	      onClick: () => addToCart(product),
+	      "aria-label": `Add ${product.name} to cart`,
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "plus",
+	        size: 12,
+	        stroke: 1.8
+	      })
+	    })]
+	  });
+	}
+
+	function EditorialCard({
+	  item
+	}) {
+	  if (!item || !item.title || !item.href) return null;
+	  const {
+	    kicker,
+	    title,
+	    note,
+	    href,
+	    image,
+	    alt
+	  } = item;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	    to: href,
+	    className: "v2-ed",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-ed__media",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-pimg",
+	        children: image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	          src: image,
+	          alt: alt || '',
+	          loading: "lazy",
+	          decoding: "async"
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-ed__scrim",
+	        "aria-hidden": "true"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-ed__ui",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        children: [kicker && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "v2-ed__k",
+	          children: kicker
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	          className: "v2-ed__h",
+	          children: title
+	        }), note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "v2-ed__note",
+	          children: note
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "v2-ed__cta",
+	        children: ["Shop now ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "arrowRight",
+	          size: 11,
+	          stroke: 1.8
+	        })]
+	      })]
+	    })]
+	  });
+	}
+
+	function StoryBlock({
+	  story
+	}) {
+	  if (!story || !story.title || !story.href) return null;
+	  const {
+	    eyebrow,
+	    title,
+	    body,
+	    cta,
+	    href,
+	    image,
+	    alt
+	  } = story;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	    to: href,
+	    className: "v2-story",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-story__b",
+	      children: [eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-eyebrow",
+	        children: eyebrow
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	        className: "v2-story__h",
+	        children: title
+	      }), body && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-story__p",
+	        children: body
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "v2-story__lk",
+	        children: [cta || 'Read the story', " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "arrowRight",
+	          size: 12,
+	          stroke: 1.8
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-story__m",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-pimg",
+	        children: image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	          src: image,
+	          alt: alt || '',
+	          loading: "lazy",
+	          decoding: "async"
+	        })
+	      })
+	    })]
+	  });
+	}
+
+	function defaultItems() {
+	  const out = [{
+	    icon: 'lock',
+	    title: 'Secure checkout',
+	    sub: 'Encrypted payments'
+	  }];
+	  const threshold = Number(announcement.freeShippingThreshold);
+	  if (Number.isFinite(threshold) && threshold > 0) {
+	    out.push({
+	      icon: 'truck',
+	      title: 'Free shipping',
+	      sub: `On orders above ${money(threshold)}`
+	    });
+	  }
+	  out.push({
+	    icon: 'package',
+	    title: 'Order tracking',
+	    sub: 'In your account'
+	  }, {
+	    icon: 'chat',
+	    title: 'Help & support',
+	    sub: 'Get in touch'
+	  });
+	  return out;
+	}
+	function TrustStrip({
+	  items
+	}) {
+	  const list = (Array.isArray(items) && items.length ? items : defaultItems()).slice(0, 4);
+	  if (!list.length) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	    className: "v2-trust",
+	    children: list.map(it => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	      className: "v2-trust__it",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: it.icon,
+	        size: 19,
+	        stroke: 1.5
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-trust__t",
+	          children: it.title
+	        }), it.sub && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-trust__s",
+	          children: it.sub
+	        })]
+	      })]
+	    }, it.title))
 	  });
 	}
 
@@ -15927,199 +16034,690 @@
 	  });
 	}
 
-	const EDITORIALS = [{
-	  title: 'Pure Himalayan Wellness',
-	  copy: 'Nourish your body with the purity of nature.',
-	  cta: 'SHOP WELLNESS',
-	  to: '/category/wellness',
-	  tone: 'forest'
+	// ============================================================
+	// PROMOTIONS — local SAMPLE fallback (design preview only)
+	//
+	// These rows seed the storefront ONLY when it is running on localhost (see
+	// isLocalPreviewHost() in src/lib/promotions.js), so the promo UI can be
+	// designed and reviewed before migration 0017 exists anywhere. On any
+	// deployed host the starting list is EMPTY, and a successful fetch from the
+	// `promotions` table replaces the list in every environment.
+	//
+	// Every `coupon_code` here is DISPLAY / COPY ONLY. Nothing in this file or
+	// the promotion components touches pricing, cart totals or checkout.
+	// ============================================================
+
+	const PROMOTIONS_FALLBACK = [{
+	  id: 'sample-welcome',
+	  type: 'poster',
+	  title: 'Wellness Week is here',
+	  subtitle: 'Sample campaign. Demo code only — no checkout discount.',
+	  coupon_code: 'DEMO-ONLY',
+	  cta_text: 'Explore all',
+	  cta_url: '/shop',
+	  badge_text: 'Preview offer',
+	  image_url: null,
+	  theme_variant: 'forest',
+	  text_align: 'left',
+	  placements: ['home', 'pdp'],
+	  is_active: true,
+	  starts_at: null,
+	  ends_at: null,
+	  sort_order: 0
 	}, {
-	  title: 'For Healthy Hair, Naturally',
-	  copy: 'Strength from root to tip with nature’s best.',
-	  cta: 'SHOP HAIR CARE',
-	  to: '/category/hair-care',
-	  tone: 'plum'
+	  id: 'sample-freeship',
+	  type: 'offer',
+	  title: 'Discover SORA LIFE essentials',
+	  subtitle: 'Sample campaign for your everyday favourites. Preview only.',
+	  coupon_code: null,
+	  cta_text: '',
+	  cta_url: null,
+	  badge_text: 'Sample campaign',
+	  image_url: null,
+	  theme_variant: 'cream',
+	  text_align: 'left',
+	  placements: ['home', 'pdp', 'cart'],
+	  is_active: true,
+	  starts_at: null,
+	  ends_at: null,
+	  sort_order: 1
 	}, {
-	  title: 'Nourish Your Skin',
-	  copy: 'The natural way.',
-	  cta: 'SHOP SKIN CARE',
-	  to: '/category/skin-care',
-	  tone: 'rose'
+	  id: 'sample-bundle',
+	  type: 'offer',
+	  title: 'A little inspiration for your next order',
+	  subtitle: 'Demo code only — checkout totals stay unchanged.',
+	  coupon_code: 'DEMO-OFFER',
+	  cta_text: '',
+	  cta_url: null,
+	  badge_text: 'Demo code',
+	  image_url: null,
+	  theme_variant: 'minimal',
+	  text_align: 'left',
+	  placements: ['home', 'cart'],
+	  is_active: true,
+	  starts_at: null,
+	  ends_at: null,
+	  sort_order: 2
+	}, {
+	  id: 'sample-prepaid',
+	  type: 'offer',
+	  title: 'Explore more SORA LIFE favourites',
+	  subtitle: 'Display-only sample. Payment fees stay unchanged.',
+	  coupon_code: 'DEMO-PREVIEW',
+	  cta_text: '',
+	  cta_url: null,
+	  badge_text: 'Preview offer',
+	  image_url: null,
+	  theme_variant: 'orange',
+	  text_align: 'left',
+	  placements: ['pdp', 'cart'],
+	  is_active: true,
+	  starts_at: null,
+	  ends_at: null,
+	  sort_order: 3
+	}, {
+	  id: 'sample-honeygold',
+	  type: 'poster',
+	  title: 'The SORA LIFE edit',
+	  subtitle: 'Explore the SORA LIFE collection. Local preview only.',
+	  coupon_code: null,
+	  cta_text: 'Explore the edit',
+	  cta_url: '/shop',
+	  badge_text: 'Sample campaign',
+	  image_url: null,
+	  theme_variant: 'dark',
+	  text_align: 'left',
+	  placements: ['home'],
+	  is_active: true,
+	  starts_at: null,
+	  ends_at: null,
+	  sort_order: 4
 	}];
-	function Home() {
-	  const railRef = reactExports.useRef(null);
-	  const bestsellers = getBestsellers(12);
-	  const newArrivals = getNewArrivals(6);
-	  const scrollRail = dir => {
-	    const el = railRef.current;
-	    if (el) el.scrollBy({
-	      left: dir * (el.clientWidth * 0.8),
-	      behavior: 'smooth'
-	    });
+
+	// ============================================================
+	// PROMOTIONS — live-bound module (mirrors src/lib/settings.js).
+	//
+	// Holds the current promotions list. `applyPromotions()` at bootstrap
+	// replaces it with whatever the `promotions` table returns — INCLUDING an
+	// empty list, which correctly hides every promo section.
+	//
+	// STARTING VALUE — deliberately asymmetric, so sample copy can never reach
+	// a real storefront:
+	//   * on localhost (local design preview)  -> the SAMPLE set, so the promo
+	//     UI is reviewable before migration 0017 has been applied anywhere;
+	//   * anywhere else (production/preview URLs) -> EMPTY, so a deploy that
+	//     lands before the migration shows no promo sections at all rather
+	//     than sample marketing copy.
+	// A successful fetch overrides both. adminApi.fetchPublicPromotions()
+	// returns null (not []) when the table does not exist, so "not provisioned
+	// yet" never gets mistaken for "the store has zero promotions".
+	//
+	// DISPLAY LAYER ONLY. `couponCode` is a string to show / copy. Nothing here
+	// resolves a coupon, changes a price, or touches cart / checkout.
+	// ============================================================
+	const PLACEMENTS = ['home', 'pdp', 'cart'];
+	const TYPES = ['poster', 'offer'];
+	const THEME_VARIANTS = ['forest', 'cream', 'orange', 'dark', 'minimal'];
+	function str$1(v, max = 400) {
+	  return typeof v === 'string' ? v.trim().slice(0, max) : '';
+	}
+
+	// Accepts either a raw Supabase row (snake_case) or an already-shaped object.
+	function normalizePromo(row) {
+	  if (!row || typeof row !== 'object') return null;
+	  const type = TYPES.includes(row.type) ? row.type : 'poster';
+	  const themeVariant = THEME_VARIANTS.includes(row.theme_variant ?? row.themeVariant) ? row.theme_variant ?? row.themeVariant : 'forest';
+	  const rawPlacements = row.placements ?? [];
+	  const placements = Array.isArray(rawPlacements) ? rawPlacements.filter(p => PLACEMENTS.includes(p)) : [];
+	  const ctaUrl = str$1(row.cta_url ?? row.ctaUrl, 500) || null;
+	  return {
+	    id: String(row.id ?? cryptoId()),
+	    type,
+	    title: str$1(row.title, 160),
+	    subtitle: str$1(row.subtitle, 320),
+	    couponCode: normalizeCode(row.coupon_code ?? row.couponCode),
+	    ctaText: str$1(row.cta_text ?? row.ctaText, 60),
+	    ctaUrl: safeCtaUrl(ctaUrl),
+	    badgeText: str$1(row.badge_text ?? row.badgeText, 40),
+	    imageUrl: str$1(row.image_url ?? row.imageUrl, 1000) || null,
+	    themeVariant,
+	    textAlign: (row.text_align ?? row.textAlign) === 'center' ? 'center' : 'left',
+	    placements,
+	    isActive: (row.is_active ?? row.isActive) !== false,
+	    startsAt: row.starts_at ?? row.startsAt ?? null,
+	    endsAt: row.ends_at ?? row.endsAt ?? null,
+	    sortOrder: Number(row.sort_order ?? row.sortOrder) || 0
 	  };
-	  const editorialProduct = slug => getByCategory(slug).find(p => p.stock > 0) || getByCategory(slug)[0];
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Hero, {}), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	      className: "bh-cats",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "container",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "bh-cats__row",
-	          children: categories.map((c, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(Reveal, {
-	            as: Link,
-	            to: `/category/${c.slug}`,
-	            className: "bh-cat",
-	            variant: "scale",
-	            delay: i * 55,
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: `bh-cat__circle tone-${c.tone}`,
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	                product: getByCategory(c.slug)[0]
-	              })
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "bh-cat__name",
-	              children: c.name
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "bh-cat__view",
-	              children: "View all"
-	            })]
-	          }, c.slug))
+	}
+	function normalizeCode(v) {
+	  const s = str$1(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+	  return s || null;
+	}
+
+	// Only allow an internal path or an absolute https URL as a CTA target.
+	// Anything else (javascript:, data:, protocol-relative, http:) is dropped.
+	function safeCtaUrl(v) {
+	  if (!v) return null;
+	  if (v.startsWith('/') && !v.startsWith('//')) return v;
+	  try {
+	    const u = new URL(v);
+	    if (u.protocol === 'https:') return u.href;
+	  } catch {/* not a URL */}
+	  return null;
+	}
+	function cryptoId() {
+	  try {
+	    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+	  } catch {/* noop */}
+	  return `p_${Math.random().toString(36).slice(2)}`;
+	}
+
+	// A promotion the storefront may render: active, has a title, within its
+	// date window. RLS already enforces this for the public read; this is the
+	// same guard applied client-side (and to the local fallback).
+	function isRenderablePromo(p, now = Date.now()) {
+	  if (!p || !p.isActive || !p.title) return false;
+	  if (p.startsAt && new Date(p.startsAt).getTime() > now) return false;
+	  if (p.endsAt && new Date(p.endsAt).getTime() < now) return false;
+	  return true;
+	}
+
+	// True only for a browser sitting on localhost — the local design preview.
+	// Never true on a deployed host, so the sample set below cannot ship.
+	function isLocalPreviewHost() {
+	  try {
+	    const h = globalThis.location?.hostname;
+	    return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]';
+	  } catch {
+	    return false;
+	  }
+	}
+	let promotions = isLocalPreviewHost() ? PROMOTIONS_FALLBACK.map(normalizePromo).filter(Boolean) : [];
+	let promotionsSource = 'fallback'; // 'fallback' | 'supabase'
+
+	/**
+	 * Replace the live promotions list from a Supabase fetch. Called once at
+	 * bootstrap. Passing [] is valid and intentionally clears the fallback.
+	 * Returns true when the list changed.
+	 */
+	function applyPromotions(list) {
+	  if (!Array.isArray(list)) return false;
+	  const next = list.map(normalizePromo).filter(Boolean);
+	  promotions = next;
+	  promotionsSource = 'supabase';
+	  return true;
+	}
+
+	/** Active + valid promotions for one surface, in sort order. */
+	function promosForPlacement(place, now = Date.now()) {
+	  if (!PLACEMENTS.includes(place)) return [];
+	  return promotions.filter(p => p.placements.includes(place)).filter(p => isRenderablePromo(p, now)).sort((a, b) => a.sortOrder - b.sortOrder || String(a.id).localeCompare(String(b.id)));
+	}
+
+	/** Split a placement's promos into { poster, offers } for layout. */
+	function promoLayoutFor(place, now = Date.now()) {
+	  const all = promosForPlacement(place, now);
+	  return {
+	    poster: all.find(p => p.type === 'poster') || null,
+	    offers: all.filter(p => p.type === 'offer'),
+	    all
+	  };
+	}
+
+	// ------------------------------------------------------------
+	// OFFER CALLOUT — the big "10% OFF" line on a campaign poster.
+	//
+	// PRESENTATION ONLY, and derived ONLY by reading the admin's own words back
+	// (badge -> title -> subtitle). It never computes, rounds or invents a
+	// discount, never reads a price, and returns null when the copy states no
+	// offer — in which case the poster simply renders without a callout.
+	// Adding a dedicated column later would replace this single function.
+	// ------------------------------------------------------------
+	const CALLOUT_RULES = [[/\b(?:flat\s*)?(\d{1,2})\s*%\s*(?:off|discount)\b/i, m => `${m[1]}% OFF`], [/₹\s*(\d[\d,]*)\s*(?:off|discount)\b/i, m => `₹${m[1]} OFF`], [/\bfree\s+shipping\b/i, () => 'FREE SHIPPING'], [/\bfree\s+delivery\b/i, () => 'FREE DELIVERY'], [/\bbuy\s*(\d+)\b/i, m => `BUY ${m[1]} & SAVE`], [/\bcashback\b/i, () => 'CASHBACK']];
+	function offerCalloutFrom(promo) {
+	  if (!promo) return null;
+	  for (const source of [promo.badgeText, promo.title, promo.subtitle]) {
+	    if (!source) continue;
+	    for (const [re, fmt] of CALLOUT_RULES) {
+	      const m = source.match(re);
+	      if (m) return fmt(m);
+	    }
+	  }
+	  // Keep the approved callout treatment for explicitly labelled preview
+	  // artwork without inventing savings. Genuine offer wording above wins.
+	  return /^preview offer$/i.test(promo.badgeText || '') ? 'PREVIEW OFFER' : null;
+	}
+
+	function PromoCopyCode({
+	  code,
+	  label = null,
+	  className = ''
+	}) {
+	  const {
+	    toast
+	  } = useStore();
+	  const [copied, setCopied] = reactExports.useState(false);
+	  const timer = reactExports.useRef(null);
+	  reactExports.useEffect(() => () => {
+	    if (timer.current) clearTimeout(timer.current);
+	  }, []);
+	  if (!code) return null;
+	  const copy = async () => {
+	    try {
+	      if (navigator.clipboard?.writeText) {
+	        await navigator.clipboard.writeText(code);
+	      } else {
+	        const ta = document.createElement('textarea');
+	        ta.value = code;
+	        ta.setAttribute('readonly', '');
+	        ta.style.position = 'fixed';
+	        ta.style.opacity = '0';
+	        document.body.appendChild(ta);
+	        ta.select();
+	        document.execCommand('copy');
+	        document.body.removeChild(ta);
+	      }
+	      setCopied(true);
+	      toast(`Code ${code} copied`);
+	      if (timer.current) clearTimeout(timer.current);
+	      timer.current = setTimeout(() => setCopied(false), 1900);
+	    } catch {
+	      toast('Could not copy — long-press the code to copy it');
+	    }
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	    className: `promo-code ${copied ? 'is-copied' : ''} ${className}`,
+	    children: [label && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "promo-code__label",
+	      children: label
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      className: "promo-code__row",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("code", {
+	        className: "promo-code__value",
+	        children: code
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	        type: "button",
+	        className: "promo-code__btn",
+	        onClick: copy,
+	        "aria-label": copied ? `Coupon code ${code} copied` : `Copy coupon code ${code}`,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: copied ? 'check' : 'copy',
+	          size: 14
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          "aria-hidden": "true",
+	          children: copied ? 'Copied' : 'Copy'
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "sr-only",
+	      "aria-live": "polite",
+	      children: copied ? `${code} copied to clipboard` : ''
+	    })]
+	  });
+	}
+
+	function PromoCta({
+	  to,
+	  children
+	}) {
+	  if (!to) return null;
+	  const isExternal = /^https:\/\//i.test(to);
+	  const cls = 'promo-poster__cta';
+	  return isExternal ? /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	    className: cls,
+	    href: to,
+	    target: "_blank",
+	    rel: "noopener noreferrer",
+	    children: [children, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	      name: "arrowRight",
+	      size: 16
+	    })]
+	  }) : /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	    className: cls,
+	    to: to,
+	    children: [children, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	      name: "arrowRight",
+	      size: 16
+	    })]
+	  });
+	}
+	function PromoPoster({
+	  promo
+	}) {
+	  if (!promo) return null;
+	  const {
+	    title,
+	    subtitle,
+	    badgeText,
+	    couponCode,
+	    ctaText,
+	    ctaUrl,
+	    imageUrl,
+	    themeVariant,
+	    textAlign
+	  } = promo;
+	  const callout = offerCalloutFrom(promo);
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+	    className: ['promo-poster', `promo-poster--${themeVariant}`, imageUrl ? 'has-image' : 'no-image', textAlign === 'center' ? 'is-center' : ''].filter(Boolean).join(' '),
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "promo-poster__art",
+	      "aria-hidden": "true",
+	      children: [imageUrl ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	        className: "promo-poster__img",
+	        src: imageUrl,
+	        alt: "",
+	        loading: "lazy",
+	        decoding: "async"
+	      }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "promo-poster__deco",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "promo-poster__leaf"
 	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "promo-poster__scrim"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "promo-poster__body",
+	      children: [badgeText && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "promo-poster__badge",
+	        children: badgeText
+	      }), title && /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	        className: "promo-poster__title serif",
+	        children: title
+	      }), subtitle && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "promo-poster__sub",
+	        children: subtitle
+	      }), callout && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	        className: "promo-poster__callout",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "promo-poster__callout-rule",
+	          "aria-hidden": "true"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "promo-poster__callout-val",
+	          children: callout
+	        })]
+	      }), (couponCode || ctaUrl && ctaText) && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "promo-poster__actions",
+	        children: [couponCode && /*#__PURE__*/jsxRuntimeExports.jsx(PromoCopyCode, {
+	          code: couponCode,
+	          label: "Use code"
+	        }), ctaUrl && ctaText && /*#__PURE__*/jsxRuntimeExports.jsx(PromoCta, {
+	          to: ctaUrl,
+	          children: ctaText
+	        })]
+	      })]
+	    })]
+	  });
+	}
+
+	const BADGE_ICON = {
+	  'Free shipping': 'truck',
+	  'Free delivery': 'truck',
+	  'Limited time': 'clock',
+	  'Weekend offer': 'gift',
+	  'Special deal': 'tag',
+	  Cashback: 'card'
+	};
+	function PromoOfferCard({
+	  promo
+	}) {
+	  if (!promo) return null;
+	  const {
+	    title,
+	    subtitle,
+	    badgeText,
+	    couponCode,
+	    ctaText,
+	    ctaUrl,
+	    imageUrl,
+	    themeVariant
+	  } = promo;
+	  const icon = BADGE_ICON[badgeText] || 'tag';
+	  const isExternal = ctaUrl && /^https:\/\//i.test(ctaUrl);
+	  // "Copy code" is handled by the ticket; only render a link CTA when it
+	  // actually points somewhere and isn't just restating the copy action.
+	  const showLinkCta = ctaUrl && ctaText && !/copy/i.test(ctaText);
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+	    className: `promo-offer promo-offer--${themeVariant}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "promo-offer__top",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "promo-offer__ic",
+	        "aria-hidden": "true",
+	        children: imageUrl ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	          src: imageUrl,
+	          alt: "",
+	          loading: "lazy",
+	          decoding: "async"
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: icon,
+	          size: 18
+	        })
+	      }), badgeText && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "promo-offer__badge",
+	        children: badgeText
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "promo-offer__body",
+	      children: [title && /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	        className: "promo-offer__title",
+	        children: title
+	      }), subtitle && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "promo-offer__sub",
+	        children: subtitle
+	      })]
+	    }), (couponCode || showLinkCta) && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "promo-offer__foot",
+	      children: [couponCode && /*#__PURE__*/jsxRuntimeExports.jsx(PromoCopyCode, {
+	        code: couponCode
+	      }), showLinkCta && (isExternal ? /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	        className: "promo-offer__cta",
+	        href: ctaUrl,
+	        target: "_blank",
+	        rel: "noopener noreferrer",
+	        children: [ctaText, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "arrowRight",
+	          size: 14
+	        })]
+	      }) : /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	        className: "promo-offer__cta",
+	        to: ctaUrl,
+	        children: [ctaText, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "arrowRight",
+	          size: 14
+	        })]
+	      }))]
+	    })]
+	  });
+	}
+
+	function PromoRail({
+	  place,
+	  variant = 'section',
+	  title = 'Offers & savings',
+	  eyebrow = 'For you',
+	  maxOffers = 3
+	}) {
+	  const {
+	    poster,
+	    offers
+	  } = promoLayoutFor(place);
+	  const shownOffers = offers.slice(0, maxOffers);
+	  if (!poster && shownOffers.length === 0) return null;
+	  if (variant === 'compact') {
+	    return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "promo-compact",
+	      "aria-label": "Available offers",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "promo-compact__lbl",
+	        children: "Available offers"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	        className: "promo-compact__list",
+	        children: (poster ? [poster, ...shownOffers] : shownOffers).map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(PromoOfferCard, {
+	            promo: {
+	              ...p,
+	              type: 'offer'
+	            }
+	          })
+	        }, p.id))
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "promo-compact__note",
+	        children: "Copy a code and enter it at checkout if it applies to your order."
+	      })]
+	    });
+	  }
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "promo-section",
+	    "aria-labelledby": `promo-${place}-h`,
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "container",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "promo-section__head",
+	        children: [eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "eyebrow",
+	          children: eyebrow
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	          id: `promo-${place}-h`,
+	          className: "promo-section__title serif",
+	          children: title
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: `promo-section__grid ${poster ? 'has-poster' : ''}`,
+	        children: [poster && /*#__PURE__*/jsxRuntimeExports.jsx(PromoPoster, {
+	          promo: poster
+	        }), shownOffers.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	          className: "promo-offers-rail",
+	          children: shownOffers.map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(PromoOfferCard, {
+	              promo: p
+	            })
+	          }, p.id))
+	        })]
+	      })]
+	    })
+	  });
+	}
+
+	function configuredEditorials() {
+	  const list = homepage?.editorials;
+	  return Array.isArray(list) ? list.filter(e => e && e.title && e.href).slice(0, 3) : [];
+	}
+	function Home() {
+	  const bestsellers = getBestsellers(8);
+	  const newArrivals = getNewArrivals(8);
+	  const editorials = configuredEditorials();
+	  const story = homepage?.story;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "v2-home",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Hero, {}), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	      className: "v2-sec v2-sec--tight",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-wrap",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(CategoryRail, {})
 	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	      className: "bh-best",
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-promo-slot",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(PromoRail, {
+	        place: "home",
+	        eyebrow: "Offers",
+	        title: "Current offers"
+	      })
+	    }), bestsellers.length >= 4 && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	      className: "v2-sec",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "container",
+	        className: "v2-wrap",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "bh-best__head",
+	          className: "v2-sechead",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	              className: "serif bh-best__title",
-	              children: homepage.bestsellerTitle
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	              className: "muted",
-	              children: homepage.bestsellerSubtitle
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              className: "v2-eyebrow",
+	              children: "Loved this month"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	              className: "v2-h2",
+	              children: homepage.bestsellerTitle || 'Bestsellers'
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
 	            to: "/shop?sort=bestselling",
-	            className: "bh-best__all",
-	            children: ["VIEW ALL BESTSELLERS ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "arrowRight",
-	              size: 16
+	            className: "v2-more",
+	            children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "chevronRight",
+	              size: 12,
+	              stroke: 1.8
 	            })]
 	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "bh-best__wrap",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	            className: "bh-grid",
-	            ref: railRef,
-	            children: bestsellers.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(Reveal, {
-	              variant: "scale",
-	              delay: i % 6 * 60,
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
-	                product: p
-	              })
-	            }, p.id))
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            className: "bh-best__arrow",
-	            onClick: () => scrollRail(1),
-	            "aria-label": "Scroll products",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "chevronRight",
-	              size: 20
-	            })
-	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "v2-rail v2-rail--cards",
+	          children: bestsellers.map(p => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
+	            product: p
+	          }, p.id))
 	        })]
 	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	      className: "bh-edit-wrap",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "container",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "bh-edit",
-	          children: EDITORIALS.map(e => {
-	            const p = editorialProduct(e.to.split('/').pop());
-	            return /*#__PURE__*/jsxRuntimeExports.jsx(Reveal, {
-	              children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	                to: e.to,
-	                className: `bh-editcard tone-${e.tone}`,
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                  className: "bh-editcard__body",
-	                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	                    className: "serif",
-	                    children: e.title
-	                  }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	                    children: e.copy
-	                  }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	                    className: "bh-editcard__cta",
-	                    children: [e.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                      name: "arrowRight",
-	                      size: 15
-	                    })]
-	                  })]
-	                }), p && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	                  className: "bh-editcard__img",
-	                  children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	                    product: p
-	                  })
-	                })]
-	              })
-	            }, e.title);
+	    }), editorials.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	      className: "v2-sec",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-wrap",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "v2-sechead",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              className: "v2-eyebrow",
+	              children: "Fresh on the shelf"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	              className: "v2-h2",
+	              children: "This week at Sora Life"
+	            })]
 	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "v2-rail",
+	          children: editorials.map(e => /*#__PURE__*/jsxRuntimeExports.jsx(EditorialCard, {
+	            item: e
+	          }, e.id || e.title))
+	        })]
+	      })
+	    }), story?.title && story?.href && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	      className: "v2-sec",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-wrap",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(StoryBlock, {
+	          story: story
 	        })
 	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	      className: "section-sm",
+	    }), newArrivals.length >= 4 && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	      className: "v2-sec",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "container",
+	        className: "v2-wrap",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "sec-head",
+	          className: "v2-sechead",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "eyebrow",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              className: "v2-eyebrow",
 	              children: "Just added"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	              className: "sec-title serif",
-	              style: {
-	                marginTop: 8
-	              },
+	              className: "v2-h2",
 	              children: "New in at Sora Life"
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
 	            to: "/shop?filter=new",
-	            className: "sec-link",
-	            children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "arrowRight",
-	              size: 17
+	            className: "v2-more",
+	            children: ["See all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "chevronRight",
+	              size: 12,
+	              stroke: 1.8
 	            })]
 	          })]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "rail",
-	          children: newArrivals.slice(0, 4).map(p => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
+	          className: "v2-rail v2-rail--compact",
+	          children: newArrivals.slice(0, 4).map(p => /*#__PURE__*/jsxRuntimeExports.jsx(CompactProductCard, {
 	            product: p
 	          }, p.id))
 	        })]
 	      })
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	      className: "bh-promise",
+	      className: "v2-sec",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "container bh-promise__in",
-	        children: [['leaf', '100% Natural', 'Sea-buckthorn sourced from the Himalayas'], ['award', 'Made in India', 'Ethically produced, lab verified'], ['shield', 'Authentic Biosash', 'Genuine products, authorised store'], ['truck', 'Fast Delivery', 'Free shipping over ₹699 · COD available']].map(([ic, t, s]) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "bh-promise__item",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "bh-promise__ic",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: ic,
-	              size: 22
-	            })
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	              children: t
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-	              children: s
-	            })]
-	          })]
-	        }, t))
+	        className: "v2-wrap",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {})
 	      })
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx(Newsletter, {})]
 	  });
@@ -16160,9 +16758,29 @@
 	  const [flags, setFlags] = reactExports.useState(new Set(initialFlag ? [initialFlag] : []));
 	  const [inStock, setInStock] = reactExports.useState(false);
 	  const [drawer, setDrawer] = reactExports.useState(false);
+	  // Local mirror of the ?q= param so the field can be typed into before submit.
+	  const [qInput, setQInput] = reactExports.useState(q);
 	  reactExports.useEffect(() => {
 	    setSort(params.get('sort') || 'featured');
 	  }, [params]);
+	  reactExports.useEffect(() => {
+	    setQInput(q);
+	  }, [q]);
+
+	  // Same reference-counted lock the header drawer uses, so the two can never
+	  // unlock each other.
+	  reactExports.useEffect(() => {
+	    if (!drawer) return undefined;
+	    lockScroll();
+	    const onKey = e => {
+	      if (e.key === 'Escape') setDrawer(false);
+	    };
+	    document.addEventListener('keydown', onKey);
+	    return () => {
+	      document.removeEventListener('keydown', onKey);
+	      unlockScroll();
+	    };
+	  }, [drawer]);
 	  const toggleSet = (setter, set, val) => {
 	    const next = new Set(set);
 	    next.has(val) ? next.delete(val) : next.add(val);
@@ -16216,91 +16834,97 @@
 	      replace: true
 	    });
 	  };
+	  const setQuery = value => {
+	    const p = new URLSearchParams(params);
+	    if (value) p.set('q', value);else p.delete('q');
+	    setParams(p, {
+	      replace: true
+	    });
+	  };
+	  const submitSearch = e => {
+	    e.preventDefault();
+	    setQuery(qInput.trim());
+	  };
+	  const showCats = showCategoryFilter && !lockCategory;
 	  const FilterPanel = /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	    className: "filters",
+	    className: "v2-fp",
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "filters__head",
+	      className: "v2-fp__head",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	        style: {
-	          fontSize: 'var(--text-lg)'
-	        },
 	        children: "Filters"
 	      }), activeCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	        className: "filters__clear",
+	        className: "v2-fp__clear",
 	        onClick: clearAll,
 	        children: ["Clear all (", activeCount, ")"]
 	      })]
-	    }), showCategoryFilter && !lockCategory && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "filters__group",
+	    }), showCats && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-fp__g",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "filters__title",
+	        className: "v2-fp__t",
 	        children: "Category"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "filters__opts",
-	        children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-	          className: "check",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	            type: "checkbox",
-	            checked: selCats.has(c.slug),
-	            onChange: () => toggleSet(setSelCats, selCats, c.slug)
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "check__box",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "check",
-	              size: 13
-	            })
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            children: c.name
-	          })]
-	        }, c.slug))
-	      })]
+	      }), categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	        className: "v2-check",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          type: "checkbox",
+	          checked: selCats.has(c.slug),
+	          onChange: () => toggleSet(setSelCats, selCats, c.slug)
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-check__box",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "check",
+	            size: 11,
+	            stroke: 2.2
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          children: c.name
+	        })]
+	      }, c.slug))]
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "filters__group",
+	      className: "v2-fp__g",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "filters__title",
+	        className: "v2-fp__t",
 	        children: "Highlights"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "filters__opts",
-	        children: [[['bestseller', 'Bestsellers'], ['new', 'New arrivals'], ['sale', 'On sale']].map(([id, label]) => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-	          className: "check",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	            type: "checkbox",
-	            checked: flags.has(id),
-	            onChange: () => toggleSet(setFlags, flags, id)
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "check__box",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "check",
-	              size: 13
-	            })
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            children: label
-	          })]
-	        }, id)), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-	          className: "check",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	            type: "checkbox",
-	            checked: inStock,
-	            onChange: e => setInStock(e.target.checked)
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "check__box",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "check",
-	              size: 13
-	            })
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            children: "In stock only"
-	          })]
+	      }), [['bestseller', 'Bestsellers'], ['new', 'New arrivals'], ['sale', 'On sale']].map(([id, label]) => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	        className: "v2-check",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          type: "checkbox",
+	          checked: flags.has(id),
+	          onChange: () => toggleSet(setFlags, flags, id)
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-check__box",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "check",
+	            size: 11,
+	            stroke: 2.2
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          children: label
+	        })]
+	      }, id)), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	        className: "v2-check",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          type: "checkbox",
+	          checked: inStock,
+	          onChange: e => setInStock(e.target.checked)
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-check__box",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "check",
+	            size: 11,
+	            stroke: 2.2
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          children: "In stock only"
 	        })]
 	      })]
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "filters__group",
+	      className: "v2-fp__g",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "filters__title",
+	        className: "v2-fp__t",
 	        children: "Max price"
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	        type: "range",
-	        className: "range",
+	        className: "v2-fp__range",
 	        min: priceRange.min,
 	        max: priceRange.max,
 	        step: 50,
@@ -16309,7 +16933,7 @@
 	        "aria-valuetext": money(priceMax),
 	        onChange: e => setPriceMax(Number(e.target.value))
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "filters__range-lbl",
+	        className: "v2-fp__rangelbl",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          children: money(priceRange.min)
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
@@ -16317,19 +16941,19 @@
 	        })]
 	      })]
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "filters__group",
+	      className: "v2-fp__g",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "filters__title",
+	        className: "v2-fp__t",
 	        children: "Rating"
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "taglist",
+	        className: "v2-fp__tags",
 	        children: [0, 4, 4.5].map(r => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          className: `chip ${minRating === r ? 'active' : ''}`,
+	          className: `v2-chip ${minRating === r ? 'is-on' : ''}`,
 	          onClick: () => setMinRating(r),
 	          children: r === 0 ? 'Any' : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	              name: "star",
-	              size: 13,
+	              size: 12,
 	              fill: "currentColor"
 	            }), " ", r, "+"]
 	          })
@@ -16338,112 +16962,176 @@
 	    })]
 	  });
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	    className: "browser container",
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("aside", {
-	      className: "browser__aside hide-mobile",
-	      children: FilterPanel
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "browser__main",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "browser__bar",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	          className: "browser__count",
-	          children: [q && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	            children: ["Results for \u201C", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	              children: q
-	            }), "\u201D \xB7 "]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	            children: filtered.length
-	          }), " ", filtered.length === 1 ? 'product' : 'products']
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "browser__tools",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	            className: "chip only-mobile",
-	            onClick: () => setDrawer(true),
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "sliders",
-	              size: 16
-	            }), " Filters", activeCount ? ` · ${activeCount}` : '']
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-	            className: "sortsel",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "hide-mobile",
-	              children: "Sort"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("select", {
-	              className: "select",
-	              value: sort,
-	              onChange: e => onSort(e.target.value),
-	              children: SORTS.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
-	                value: s.id,
-	                children: s.label
-	              }, s.id))
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "chevronDown",
-	              size: 16
-	            })]
-	          })]
-	        })]
-	      }), filtered.length ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "pgrid",
-	        children: filtered.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(Reveal, {
-	          variant: "scale",
-	          delay: i % 4 * 55,
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
-	            product: p
-	          })
-	        }, p.id))
-	      }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "state",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "state-ic",
+	    className: "v2-wrap",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-shop__search",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	        className: "v2-searchbox",
+	        onSubmit: submitSearch,
+	        role: "search",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "search",
+	          size: 17,
+	          stroke: 1.5
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          value: qInput,
+	          onChange: e => setQInput(e.target.value),
+	          type: "search",
+	          enterKeyHint: "search",
+	          autoComplete: "off",
+	          placeholder: "Search wellness essentials",
+	          "aria-label": "Search products"
+	        }), qInput && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "v2-searchbox__clear",
+	          onClick: () => {
+	            setQInput('');
+	            setQuery('');
+	          },
+	          "aria-label": "Clear search",
 	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "search",
-	            size: 32
+	            name: "x",
+	            size: 15,
+	            stroke: 1.7
 	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	          children: "Nothing matched"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	          children: "Try clearing a filter or searching a different term."
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          className: "btn btn-outline",
-	          onClick: clearAll,
-	          children: "Clear filters"
+	        })]
+	      })
+	    }), showCats && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-rail v2-shop__cats",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	        className: `v2-chip ${selCats.size === 0 ? 'is-on' : ''}`,
+	        onClick: () => setSelCats(new Set()),
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "grid",
+	          size: 14,
+	          stroke: 1.5
+	        }), " All"]
+	      }), categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	        className: `v2-chip ${selCats.has(c.slug) ? 'is-on' : ''}`,
+	        onClick: () => toggleSet(setSelCats, selCats, c.slug),
+	        "aria-pressed": selCats.has(c.slug),
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: c.icon || 'leaf',
+	          size: 14,
+	          stroke: 1.5
+	        }), " ", c.name]
+	      }, c.slug))]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-flt",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	        className: "v2-flt__btn",
+	        onClick: () => setDrawer(true),
+	        "aria-label": "Open filters",
+	        "aria-expanded": drawer,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "sliders",
+	          size: 15,
+	          stroke: 1.5
+	        }), " Filter", activeCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-flt__n",
+	          children: activeCount
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	        className: "v2-flt__count",
+	        children: [q && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: ["\u201C", q, "\u201D \xB7 "]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: filtered.length
+	        }), " ", filtered.length === 1 ? 'product' : 'products']
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	        className: "v2-flt__sort",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "sr-only",
+	          children: "Sort by"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("select", {
+	          value: sort,
+	          onChange: e => onSort(e.target.value),
+	          "aria-label": "Sort products",
+	          children: SORTS.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	            value: s.id,
+	            children: s.label
+	          }, s.id))
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronDown",
+	          size: 14,
+	          stroke: 1.7
 	        })]
 	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-shop__promo",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(PromoRail, {
+	        place: "shop",
+	        eyebrow: "Offers",
+	        title: "Current offers",
+	        maxOffers: 2
+	      })
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: `fdrawer ${drawer ? 'open' : ''}`,
+	      className: "v2-shop__body",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("aside", {
+	        className: "v2-shop__rail hide-mobile",
+	        children: FilterPanel
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        children: filtered.length ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "v2-shop__grid",
+	          children: filtered.map(p => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
+	            product: p
+	          }, p.id))
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "v2-shop__empty",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "search",
+	            size: 30,
+	            stroke: 1.4
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	            children: "Nothing matched"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: "Try clearing a filter or searching a different term."
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: "v2-btn v2-btn--out v2-btn--sm",
+	            onClick: clearAll,
+	            children: "Clear filters"
+	          })]
+	        })
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: `v2-fd ${drawer ? 'is-open' : ''}`,
 	      "aria-hidden": !drawer,
+	      role: "dialog",
+	      "aria-modal": "true",
+	      "aria-label": "Filters",
+	      ...(drawer ? {} : {
+	        inert: ''
+	      }),
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "drawer__scrim",
+	        className: "v2-fd__scrim",
 	        onClick: () => setDrawer(false)
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "fdrawer__panel",
+	        className: "v2-fd__panel",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "drawer__top",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	            style: {
-	              fontSize: 'var(--text-lg)'
-	            },
-	            children: "Filters"
+	          className: "v2-fd__top",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
+	            children: ["Filters", activeCount ? ` (${activeCount})` : '']
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            className: "iconbtn",
+	            className: "v2-iconbtn v2-iconbtn--bare",
 	            onClick: () => setDrawer(false),
-	            "aria-label": "Close",
+	            "aria-label": "Close filters",
 	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "x"
+	              name: "x",
+	              size: 17,
+	              stroke: 1.6
 	            })
 	          })]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "fdrawer__scroll",
+	          className: "v2-fd__scroll",
 	          children: FilterPanel
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "fdrawer__foot",
+	          className: "v2-fd__foot",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            className: "btn btn-ghost",
+	            className: "v2-btn v2-btn--ghost v2-btn--sm",
 	            onClick: clearAll,
 	            children: "Clear"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	            className: "btn btn-block",
+	            className: "v2-btn v2-btn--sm",
 	            onClick: () => setDrawer(false),
 	            children: ["Show ", filtered.length, " results"]
 	          })]
@@ -16454,38 +17142,32 @@
 	}
 
 	function Shop() {
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "pagehead",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "container",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
-	          className: "crumbs",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/",
-	            children: "Home"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "chevronRight",
-	            size: 14
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            children: "Shop"
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-	          className: "serif",
-	          children: "All products"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	          className: "muted",
-	          children: "Everything Sora Life makes \u2014 wellness, nutrition, hair, skin, beauty and everyday care in one place."
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "v2-shop",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap v2-shop__head",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	        className: "v2-crumbs",
+	        "aria-label": "Breadcrumb",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: "/",
+	          children: "Home"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronRight",
+	          size: 12,
+	          stroke: 1.7
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: "Shop"
 	        })]
-	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "section-sm",
-	      style: {
-	        paddingTop: 'var(--sp-8)'
-	      },
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductBrowser, {
-	        baseProducts: products
-	      })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	        className: "v2-shop__title",
+	        children: "All products"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-shop__lede",
+	        children: "Browse wellness, nutrition, hair, skin, beauty and everyday-care products available through Sora Life."
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductBrowser, {
+	      baseProducts: products
 	    })]
 	  });
 	}
@@ -16536,63 +17218,68 @@
 	  const cat = categoryBySlug[slug];
 	  if (!cat) return /*#__PURE__*/jsxRuntimeExports.jsx(NotFound, {});
 	  const items = getByCategory(slug);
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	      className: `cathero tone-${cat.tone}`,
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "container cathero__in",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Reveal, {
-	          variant: "soft",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
-	            className: "crumbs",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	              to: "/",
-	              children: "Home"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "chevronRight",
-	              size: 14
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	              to: "/shop",
-	              children: "Shop"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "chevronRight",
-	              size: 14
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              children: cat.name
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "eyebrow",
-	            children: cat.tagline
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-	            className: "serif cathero__title",
-	            children: cat.name
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "cathero__blurb",
-	            children: cat.blurb
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	            className: "cathero__count",
-	            children: [items.length, " products"]
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Reveal, {
-	          className: "cathero__chips",
-	          delay: 140,
-	          children: categories.filter(c => c.slug !== slug).slice(0, 6).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: `/category/${c.slug}`,
-	            className: "chip",
-	            children: c.name
-	          }, c.slug))
+	  const siblings = categories.filter(c => c.slug !== slug);
+	  const hasConfiguredCopy = hasConfiguredCategoryCopy(cat);
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "v2-shop",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap v2-shop__head",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	        className: "v2-crumbs",
+	        "aria-label": "Breadcrumb",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: "/",
+	          children: "Home"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronRight",
+	          size: 12,
+	          stroke: 1.7
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: "/shop",
+	          children: "Shop"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronRight",
+	          size: 12,
+	          stroke: 1.7
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: cat.name
 	        })]
+	      }), hasConfiguredCopy && cat.tagline && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-eyebrow v2-shop__eyebrow",
+	        children: cat.tagline
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	        className: "v2-shop__title",
+	        children: cat.name
+	      }), hasConfiguredCopy && cat.blurb && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-shop__lede",
+	        children: cat.blurb
+	      })]
+	    }), siblings.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-wrap",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-rail v2-shop__cats",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: "/shop",
+	          className: "v2-chip",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "grid",
+	            size: 14,
+	            stroke: 1.5
+	          }), " All products"]
+	        }), siblings.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: `/category/${c.slug}`,
+	          className: "v2-chip",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: c.icon || 'leaf',
+	            size: 14,
+	            stroke: 1.5
+	          }), " ", c.name]
+	        }, c.slug))]
 	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "section-sm",
-	      style: {
-	        paddingTop: 'var(--sp-8)'
-	      },
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductBrowser, {
-	        baseProducts: items,
-	        lockCategory: true,
-	        showCategoryFilter: false
-	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductBrowser, {
+	      baseProducts: items,
+	      lockCategory: true,
+	      showCategoryFilter: false
 	    })]
 	  });
 	}
@@ -16649,7 +17336,8 @@
 	          product: product,
 	          src: current?.url,
 	          alt: current?.alt || product.name,
-	          sizes: "(max-width: 900px) 92vw, 460px"
+	          sizes: "(max-width: 900px) 92vw, 460px",
+	          frame: "v2"
 	        })
 	      }, current?.url || idx), children, !single && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: "pdp__dots",
@@ -16676,112 +17364,818 @@
 	          product: product,
 	          src: f.url,
 	          alt: f.alt || product.name,
-	          sizes: "84px"
+	          sizes: "84px",
+	          frame: "v2"
 	        })
 	      }, f.id || f.url || i))
 	    })]
 	  });
 	}
 
+	// ============================================================
+	// PDP PRESENTATIONAL CONTENT — Part 1 of the premium PDP upgrade
+	//
+	// The live catalogue (Supabase `products`) carries only a free-text
+	// `description`; there are NO structured benefits / ingredients / usage /
+	// FAQ / review columns. These helpers fill the redesigned PDP sections.
+	//
+	// PRODUCT-CONTENT SAFETY (hard rules — do not relax):
+	//   • Real structured product data ALWAYS wins:
+	//       product.benefits[]  product.ingredients[]  product.usage  product.description
+	//   • A product-specific section shows ONLY when it has real, product-
+	//     specific data. No generic / store-wide / category filler is used to
+	//     keep a section on screen:
+	//       – benefitsFor()      → [] when no product.benefits   → section hidden
+	//       – ingredientsFor()   → [] when no product.ingredients → section hidden
+	//       – howToUseFor()      → empty when no product.usage    → section hidden
+	//       – suitableForList()  → [] (no structured field yet)   → accordion row omitted
+	//   • NEVER name an ingredient/botanical/active or assert a product-specific
+	//     benefit, result, dosage or frequency that is not in the real data.
+	//     Category is not a licence to guess.
+	//   • overviewFor() keeps a neutral product-specific fallback (name / size /
+	//     category) — it is the one always-present textual anchor.
+	//   • Store-wide operational facts live ONLY in <ProductTrustList>
+	//     (TRUST_ITEMS). Unverified sourcing, authenticity and returns claims are
+	//     deliberately excluded.
+	//   • Rating/review helpers never fabricate numbers (Part 3 seam).
+	//   • The offer helper is only the Part 2 entry point — no codes, no math.
+	// ============================================================
+	const FREE_SHIP_THRESHOLD = 699; // mirrors the announcement bar / existing PDP copy
+
+	// ------------------------------------------------------------
+	// RATING / REVIEW SUMMARY  (Part 3 wires these to the real feed)
+	// ------------------------------------------------------------
+	/**
+	 * @returns {{ rating:number|null, count:number, isPreview:boolean }}
+	 *   isPreview=false → real aggregate from the catalogue row
+	 *   isPreview=true  → no real reviews yet; the UI shows a "coming soon"
+	 *                     placeholder and NO numbers (no fabricated ratings).
+	 */
+	function ratingSummaryFor(product) {
+	  if (product && product.reviewCount > 0) {
+	    return {
+	      rating: product.rating,
+	      count: product.reviewCount,
+	      isPreview: false
+	    };
+	  }
+	  return {
+	    rating: null,
+	    count: 0,
+	    isPreview: true
+	  };
+	}
+
+	/**
+	 * Real, persisted reviews when the catalogue has them; otherwise an empty
+	 * list — Part 1 never fabricates a review. Part 3 replaces the source.
+	 * @returns {{ items:object[], isPreview:boolean }}
+	 */
+	function previewReviewsFor(product) {
+	  if (product && Array.isArray(product.reviews) && product.reviews.length) {
+	    return {
+	      items: product.reviews,
+	      isPreview: false
+	    };
+	  }
+	  return {
+	    items: [],
+	    isPreview: true
+	  };
+	}
+
+	// ------------------------------------------------------------
+	// OFFERS TEASER  (Part 2 coupon system plugs in here)
+	// ------------------------------------------------------------
+	/**
+	 * Honest operational rows for the PDP entry point. They mirror the current
+	 * checkout: the ₹699 shipping threshold is used by its total calculation and
+	 * cash on delivery is one of its real payment methods. Configured promotions
+	 * are supplied separately by the promotions system.
+	 */
+	function offersFor(product) {
+	  const currency = product?.currency || '₹';
+	  return [{
+	    icon: 'truck',
+	    title: `Free shipping over ${currency}${FREE_SHIP_THRESHOLD.toLocaleString('en-IN')}`,
+	    note: 'Applied automatically when the order qualifies.',
+	    real: true
+	  }, {
+	    icon: 'card',
+	    title: 'Cash on delivery available',
+	    note: 'Choose it from the payment methods at checkout.',
+	    real: true
+	  }];
+	}
+
+	// ------------------------------------------------------------
+	// DELIVERY / SERVICE
+	// ------------------------------------------------------------
+	/**
+	 * Delivery display data. Timing is intentionally deferred to checkout because
+	 * the PDP has no address or carrier response from which to promise a date.
+	 */
+	function deliveryEstimate() {
+	  return {
+	    range: 'Confirmed at checkout',
+	    days: 'Based on your delivery address and chosen method',
+	    freeThreshold: FREE_SHIP_THRESHOLD
+	  };
+	}
+
+	// ------------------------------------------------------------
+	// BENEFITS — "Why you'll love it"
+	// Real product.benefits[] ONLY. No store-wide / category filler — if the
+	// catalogue has no product-specific benefits the section hides itself.
+	// ------------------------------------------------------------
+	/**
+	 * @returns {{ items: {icon,label,text}[], real:boolean }}
+	 */
+	function benefitsFor(product) {
+	  const real = product && Array.isArray(product.benefits) ? product.benefits.filter(b => typeof b === 'string' && b.trim()) : [];
+	  if (!real.length) return {
+	    items: [],
+	    real: false
+	  };
+	  return {
+	    real: true,
+	    items: real.slice(0, 4).map(b => ({
+	      icon: 'check',
+	      label: b.trim(),
+	      text: ''
+	    }))
+	  };
+	}
+
+	// ------------------------------------------------------------
+	// KEY INGREDIENTS
+	// Real product.ingredients[] ONLY. No hero card, no derived botanical —
+	// if the catalogue has no ingredient data the section hides itself.
+	// ------------------------------------------------------------
+	/**
+	 * @returns {{ items: {name,note}[], real:boolean }}
+	 */
+	function ingredientsFor(product) {
+	  const real = product && Array.isArray(product.ingredients) ? product.ingredients.filter(s => typeof s === 'string' && s.trim()) : [];
+	  if (!real.length) return {
+	    items: [],
+	    real: false
+	  };
+	  return {
+	    real: true,
+	    items: real.map(name => ({
+	      name: name.trim(),
+	      note: ''
+	    }))
+	  };
+	}
+
+	// ------------------------------------------------------------
+	// HOW TO USE
+	// Real product.usage ONLY. No generic "read the pack / storage / safety"
+	// filler — if there is no product-specific usage the section hides itself.
+	// ------------------------------------------------------------
+	/**
+	 * @returns {{ text:string, steps:string[], real:boolean }}
+	 */
+	function howToUseFor(product) {
+	  if (product && typeof product.usage === 'string' && product.usage.trim()) {
+	    return {
+	      text: product.usage.trim(),
+	      steps: [],
+	      real: true
+	    };
+	  }
+	  return {
+	    text: '',
+	    steps: [],
+	    real: false
+	  };
+	}
+
+	// ------------------------------------------------------------
+	// SUITABLE FOR  (accordion row)
+	// The catalogue has no structured "suitable for" field, and category alone
+	// is not enough to assert an audience. Returns [] so the row is omitted.
+	// When a real field is added, return its values here.
+	// ------------------------------------------------------------
+	function suitableForList(product) {
+	  const real = product && Array.isArray(product.suitableFor) ? product.suitableFor.filter(s => typeof s === 'string' && s.trim()) : [];
+	  return real;
+	}
+
+	// ------------------------------------------------------------
+	// OVERVIEW  (accordion) — real description wins; otherwise a neutral catalogue
+	// identity line. It makes no provenance, fulfilment or packaging claim.
+	// ------------------------------------------------------------
+	function overviewFor(product) {
+	  if (product && typeof product.description === 'string' && product.description.trim()) {
+	    return {
+	      text: product.description.trim(),
+	      real: true
+	    };
+	  }
+	  const cat = categoryBySlug[product?.category];
+	  const size = product?.form ? ` (${product.form})` : '';
+	  return {
+	    real: false,
+	    text: `${product?.name}${size} is listed in ${cat?.name || 'the catalogue'}. Refer to the product pack for official product details and directions.`
+	  };
+	}
+
+	// ------------------------------------------------------------
+	// FAQ — real structured catalogue rows only. The current catalogue has no FAQ
+	// field, so this returns [] and the accordion row stays absent.
+	// ------------------------------------------------------------
+	function faqFor(product) {
+	  if (!Array.isArray(product?.faqs)) return [];
+	  return product.faqs.filter(item => item && typeof item.q === 'string' && item.q.trim() && typeof item.a === 'string' && item.a.trim()).map(item => ({
+	    q: item.q.trim(),
+	    a: item.a.trim()
+	  }));
+	}
+
+	// ------------------------------------------------------------
+	// TRUST / ASSURANCE — operational storefront facts only
+	// ------------------------------------------------------------
+	const TRUST_ITEMS = [['truck', 'Free shipping', 'On orders above ₹699'], ['card', 'Payment options', 'Available methods are shown at checkout'], ['package', 'Order details', 'Available in your account after purchase']];
+
+	function ProductRatingTeaser({
+	  product,
+	  href = '#reviews',
+	  className = ''
+	}) {
+	  const {
+	    rating,
+	    count,
+	    isPreview
+	  } = ratingSummaryFor(product);
+	  if (isPreview || rating == null) return null;
+	  const full = Math.round(rating);
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	    href: href,
+	    className: `pdp-rating ${className}`,
+	    "aria-label": `Rated ${rating} out of 5 from ${count} ratings. Jump to reviews.`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	      className: "pdp-rating__score",
+	      children: rating.toFixed(1)
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "pdp-rating__stars",
+	      "aria-hidden": "true",
+	      children: [1, 2, 3, 4, 5].map(i => /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "star",
+	        size: 13,
+	        stroke: 1.4,
+	        fill: i <= full ? 'currentColor' : 'none',
+	        className: i <= full ? 's-full' : 's-empty'
+	      }, i))
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      className: "pdp-rating__count",
+	      children: [count.toLocaleString('en-IN'), " ", count === 1 ? 'rating' : 'ratings']
+	    })]
+	  });
+	}
+
+	function ProductOfferTeaser({
+	  product
+	}) {
+	  const uid = reactExports.useId();
+	  const [open, setOpen] = reactExports.useState(false);
+	  const staticRows = offersFor(product).filter(o => o.real); // keep only the real policy rows
+	  const staticTitles = new Set(staticRows.map(o => o.title.trim().toLowerCase()));
+	  // Don't repeat a promo that just restates a policy row already shown above.
+	  // Local fallback rows are labelled design samples, not configured offers.
+	  // Keep them off the PDP; an Admin-loaded promotion source renders normally.
+	  const promos = promotionsSource === 'supabase' ? promosForPlacement('pdp').filter(p => !staticTitles.has(p.title.trim().toLowerCase())) : [];
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: `pdp-offers ${open ? 'is-open' : ''}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	      type: "button",
+	      className: "pdp-offers__bar",
+	      "aria-expanded": open,
+	      "aria-controls": uid,
+	      onClick: () => setOpen(v => !v),
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "pdp-offers__lead",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "tag",
+	          size: 18
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	            children: "Offers & payment benefits"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+	            children: promos.length ? `${promos.length} configured offer${promos.length > 1 ? 's' : ''}` : 'Shipping and payment details'
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "pdp-offers__toggle",
+	        children: [open ? 'Hide' : 'View', /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: open ? 'chevronUp' : 'chevronDown',
+	          size: 16
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      id: uid,
+	      className: "pdp-offers__panel",
+	      hidden: !open,
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
+	        className: "pdp-offers__list",
+	        children: [staticRows.map(o => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	          className: "pdp-offers__row",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: o.icon,
+	            size: 17
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	              children: o.title
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+	              children: o.note
+	            })]
+	          })]
+	        }, o.title)), promos.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	          className: "pdp-offers__row pdp-offers__row--promo",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: p.badgeText === 'Free shipping' ? 'truck' : 'gift',
+	            size: 17
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	              children: p.title
+	            }), p.subtitle && /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+	              children: p.subtitle
+	            }), p.couponCode && /*#__PURE__*/jsxRuntimeExports.jsx(PromoCopyCode, {
+	              code: p.couponCode,
+	              className: "pdp-offers__code"
+	            })]
+	          })]
+	        }, p.id))]
+	      })
+	    })]
+	  });
+	}
+
+	function ProductDeliveryInfo({
+	  product
+	}) {
+	  const est = deliveryEstimate();
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "pdp-deliver",
+	    "aria-label": "Delivery information",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "pdp-deliver__row",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "truck",
+	        size: 18
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: "Delivery timing"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("em", {
+	          children: [est.range, " \xB7 ", est.days]
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "pdp-deliver__row",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "gift",
+	        size: 18
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: "Free shipping"
+	        }), " on orders above ", money(est.freeThreshold, product?.currency), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+	          children: "Applied automatically when the order qualifies"
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "pdp-deliver__row",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "package",
+	        size: 18
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: "Delivery methods"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+	          children: "Available options are shown at checkout"
+	        })]
+	      })]
+	    })]
+	  });
+	}
+
+	function ProductBenefits({
+	  product
+	}) {
+	  const {
+	    items
+	  } = benefitsFor(product);
+	  if (!items.length) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    className: "pdp-sec pdp-benefits",
+	    "aria-labelledby": "pdp-benefits-h",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	      id: "pdp-benefits-h",
+	      className: "pdp-sec__title serif",
+	      children: "Why you\u2019ll love it"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	      className: "pdp-benefits__grid",
+	      children: items.slice(0, 4).map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        className: "pdp-benefits__card",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "pdp-benefits__ic",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: b.icon,
+	            size: 16
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: b.label
+	        }), b.text && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          children: b.text
+	        })]
+	      }, b.label))
+	    })]
+	  });
+	}
+
+	function ProductIngredients({
+	  product
+	}) {
+	  const {
+	    items
+	  } = ingredientsFor(product);
+	  if (!items.length) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    className: "pdp-sec pdp-ingredients",
+	    "aria-labelledby": "pdp-ingredients-h",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	      id: "pdp-ingredients-h",
+	      className: "pdp-sec__title serif",
+	      children: "Key ingredients"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	      className: `pdp-ingredients__list ${items.length === 1 ? 'is-single' : ''}`,
+	      children: items.map(ing => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        className: "pdp-ingredients__card",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "pdp-ingredients__ic",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "leaf",
+	            size: 20
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "pdp-ingredients__body",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	            children: ing.name
+	          }), ing.note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: ing.note
+	          })]
+	        })]
+	      }, ing.name))
+	    })]
+	  });
+	}
+
+	function ProductHowToUse({
+	  product
+	}) {
+	  const {
+	    text
+	  } = howToUseFor(product);
+	  if (!text) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    className: "pdp-sec pdp-howto",
+	    "aria-labelledby": "pdp-howto-h",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	      id: "pdp-howto-h",
+	      className: "pdp-sec__title serif",
+	      children: "How to use"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "pdp-howto__body",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "pdp-howto__ic",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "droplet",
+	          size: 20
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "pdp-howto__text",
+	        children: text
+	      })]
+	    })]
+	  });
+	}
+
+	function ProductInfoAccordion({
+	  sections
+	}) {
+	  const uid = reactExports.useId();
+	  const [open, setOpen] = reactExports.useState(() => {
+	    const init = {};
+	    sections.forEach((s, i) => {
+	      if (s.defaultOpen) init[i] = true;
+	    });
+	    return init;
+	  });
+	  if (!sections.length) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    className: "pdp-acc",
+	    children: sections.map((s, i) => {
+	      const isOpen = !!open[i];
+	      const btnId = `${uid}-h${i}`;
+	      const panelId = `${uid}-p${i}`;
+	      return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: `pdp-acc__item ${isOpen ? 'is-open' : ''}`,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	          className: "pdp-acc__h",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	            type: "button",
+	            id: btnId,
+	            className: "pdp-acc__btn",
+	            "aria-expanded": isOpen,
+	            "aria-controls": panelId,
+	            onClick: () => setOpen(o => ({
+	              ...o,
+	              [i]: !o[i]
+	            })),
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "pdp-acc__title",
+	              children: [s.icon && /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: s.icon,
+	                size: 17
+	              }), s.title]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "pdp-acc__sign",
+	              "aria-hidden": "true",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: isOpen ? 'minus' : 'plus',
+	                size: 16
+	              })
+	            })]
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          id: panelId,
+	          role: "region",
+	          "aria-labelledby": btnId,
+	          className: "pdp-acc__panel",
+	          hidden: !isOpen,
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	            className: "pdp-acc__inner",
+	            children: s.content
+	          })
+	        })]
+	      }, s.title);
+	    })
+	  });
+	}
+
+	function ProductTrustList() {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    className: "pdp-sec pdp-trust",
+	    "aria-labelledby": "pdp-trust-h",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	      id: "pdp-trust-h",
+	      className: "pdp-sec__title serif",
+	      children: "Shopping with SORA LIFE"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	      className: "pdp-trust__list",
+	      children: TRUST_ITEMS.map(([icon, title, desc]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        className: "pdp-trust__item",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "pdp-trust__ic",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: icon,
+	            size: 20
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "pdp-trust__txt",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	            children: title
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+	            children: desc
+	          })]
+	        })]
+	      }, title))
+	    })]
+	  });
+	}
+
+	function StarRating({
+	  value = 0,
+	  count,
+	  size = 15,
+	  showValue = false
+	}) {
+	  const full = Math.round(value);
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	    className: "rating-row",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "stars",
+	      "aria-label": `${value} out of 5 stars`,
+	      children: [1, 2, 3, 4, 5].map(i => /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "star",
+	        size: size,
+	        fill: i <= full ? 'currentColor' : 'none',
+	        className: i <= full ? 's-full' : 's-empty',
+	        stroke: 1.4
+	      }, i))
+	    }), showValue && /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	      style: {
+	        color: 'var(--color-text)',
+	        fontWeight: 600
+	      },
+	      children: value.toFixed(1)
+	    }), typeof count === 'number' && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      children: ["(", count.toLocaleString('en-IN'), ")"]
+	    })]
+	  });
+	}
+
+	function ProductReviewsTeaser({
+	  product
+	}) {
+	  const {
+	    rating,
+	    count,
+	    isPreview
+	  } = ratingSummaryFor(product);
+	  const {
+	    items
+	  } = previewReviewsFor(product);
+	  if (isPreview) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	      className: "section-sm",
+	      id: "reviews",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "container",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "pdp-sec__head",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            className: "pdp-sec__title serif",
+	            children: "Ratings & reviews"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "pdp-preview-tag",
+	            children: "Coming soon"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "pdp-reviews-soon",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "pdp-reviews-soon__ic",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "chat",
+	              size: 22
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: "Verified customer reviews are on the way. Once shoppers have rated this product, their ratings and notes will appear here."
+	          })]
+	        })]
+	      })
+	    });
+	  }
+	  const full = Math.round(rating);
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "section-sm",
+	    id: "reviews",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "container",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        className: "pdp-sec__title serif",
+	        children: "Ratings & reviews"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "pdp-reviews",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "pdp-reviews__summary",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "pdp-reviews__score serif",
+	            children: rating.toFixed(1)
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "pdp-reviews__stars",
+	            "aria-hidden": "true",
+	            children: [1, 2, 3, 4, 5].map(i => /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "star",
+	              size: 16,
+	              stroke: 1.4,
+	              fill: i <= full ? 'currentColor' : 'none',
+	              className: i <= full ? 's-full' : 's-empty'
+	            }, i))
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            className: "muted",
+	            children: [count.toLocaleString('en-IN'), " ", count === 1 ? 'rating' : 'ratings']
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	            href: "#reviews",
+	            className: "btn btn-outline btn-block pdp-reviews__cta",
+	            children: "Read all reviews"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "pdp-reviews__list",
+	          children: [items.slice(0, 2).map((r, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("figure", {
+	            className: "pdp-reviewcard",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "pdp-reviewcard__top",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "pdp-reviewcard__avatar",
+	                "aria-hidden": "true",
+	                children: r.name.charAt(0)
+	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                  children: r.name
+	                }), r.verified && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	                  className: "pdp-reviewcard__verified",
+	                  children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                    name: "checkCircle",
+	                    size: 13
+	                  }), " Verified buyer"]
+	                })]
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(StarRating, {
+	              value: r.rating,
+	              size: 13
+	            }), r.title && /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	              className: "pdp-reviewcard__title",
+	              children: r.title
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              className: "muted",
+	              children: r.body
+	            })]
+	          }, i)), /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	            href: "#reviews",
+	            className: "pdp-reviews__all",
+	            children: ["View all reviews ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "arrowRight",
+	              size: 16
+	            })]
+	          })]
+	        })]
+	      })]
+	    })
+	  });
+	}
+
 	function ProductRail({
 	  eyebrow,
 	  title,
-	  description,
 	  products,
 	  link,
 	  linkLabel = 'View all',
-	  limit = 4
+	  limit = 8,
+	  minItems = 1
 	}) {
-	  const items = products.slice(0, limit);
-	  if (!items.length) return null;
+	  const items = Array.isArray(products) ? products.slice(0, limit) : [];
+	  if (items.length < minItems) return null;
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	    className: "section",
+	    className: "v2-sec",
 	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "container",
+	      className: "v2-wrap",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "sec-head",
+	        className: "v2-sechead",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          children: [eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "eyebrow",
+	          children: [eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "v2-eyebrow",
 	            children: eyebrow
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	            className: "sec-title serif",
-	            style: {
-	              marginTop: 8
-	            },
+	          }), title && /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            className: "v2-h2",
 	            children: title
-	          }), description && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            children: description
 	          })]
 	        }), link && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
 	          to: link,
-	          className: "sec-link",
+	          className: "v2-more",
 	          children: [linkLabel, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "arrowRight",
-	            size: 17
+	            name: "chevronRight",
+	            size: 12,
+	            stroke: 1.8
 	          })]
 	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "rail",
-	        children: items.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(Reveal, {
-	          delay: i * 60,
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
-	            product: p
-	          })
+	        className: "v2-rail v2-rail--cards",
+	        children: items.map(p => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
+	          product: p
 	        }, p.id))
 	      })]
 	    })
 	  });
 	}
 
-	function Accordion({
-	  items
+	function ProductRecommendations({
+	  product
 	}) {
-	  const [open, setOpen] = reactExports.useState(0);
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	    className: "accordion",
-	    children: items.map((it, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: `accordion__item ${open === i ? 'open' : ''}`,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	        className: "accordion__head",
-	        onClick: () => setOpen(open === i ? -1 : i),
-	        "aria-expanded": open === i,
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          children: it.title
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: open === i ? 'chevronUp' : 'chevronDown',
-	          size: 18
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "accordion__body",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "accordion__inner",
-	          children: it.content
-	        })
-	      })]
-	    }, it.title))
+	  const related = getRelated(product);
+	  if (!related.length) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx(ProductRail, {
+	    eyebrow: "Complete the ritual",
+	    title: "You might also like",
+	    products: related,
+	    limit: 4
 	  });
 	}
 
-	// Shown while the Supabase catalogue is still hydrating, so a direct load of a
-	// live-only product never flashes the 404 page. Display-only; no data/logic.
 	function ProductLoading() {
 	  const bar = w => ({
-	    height: 14,
+	    height: 12,
 	    width: w,
-	    borderRadius: 6,
-	    background: 'var(--color-border, #e8e2d6)',
+	    borderRadius: 2,
+	    background: 'var(--slv2-line, #E5DCCB)',
 	    margin: '12px 0'
 	  });
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	    className: "container",
+	    className: "v2-wrap v2-pdp-loading",
 	    role: "status",
 	    "aria-live": "polite",
 	    "aria-busy": "true",
-	    style: {
-	      padding: 'var(--sp-8, 40px) 0',
-	      maxWidth: 1100
-	    },
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      style: {
 	        display: 'grid',
@@ -16789,10 +18183,10 @@
 	      },
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        style: {
-	          aspectRatio: '4 / 3',
-	          maxWidth: 520,
-	          borderRadius: 16,
-	          background: 'var(--color-surface-2, #f5f2eb)'
+	          aspectRatio: '1',
+	          maxWidth: 620,
+	          borderRadius: 2,
+	          background: 'var(--slv2-cream, #F4EEE1)'
 	        }
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -16825,7 +18219,8 @@
 	  const {
 	    addToCart,
 	    toggleWish,
-	    isWished
+	    isWished,
+	    toast
 	  } = useStore();
 	  const product = productBySlug[slug];
 	  const [qty, setQty] = reactExports.useState(1);
@@ -16889,14 +18284,118 @@
 	    addToCart(product, qty, variant);
 	    navigate('/checkout');
 	  };
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "container",
-	      style: {
-	        paddingTop: 'var(--sp-6)'
-	      },
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
-	        className: "crumbs",
+	  const addNow = () => {
+	    addToCart(product, qty, variant);
+	    setJustAdded(true);
+	  };
+	  const share = async () => {
+	    const url = window.location.href;
+	    try {
+	      if (navigator.share) {
+	        await navigator.share({
+	          title: product.name,
+	          url
+	        });
+	      } else if (navigator.clipboard?.writeText) {
+	        await navigator.clipboard.writeText(url);
+	        toast('Link copied');
+	      }
+	    } catch {/* user dismissed the share sheet — nothing to do */}
+	  };
+
+	  // ---- Product-information accordion. Only rows backed by real, product-
+	  // specific data. Overview keeps a neutral name/size/category fallback (the
+	  // one always-present anchor); every other row is omitted unless the
+	  // catalogue actually carries that field. Store-wide promises live only in
+	  // the SORA LIFE Promise section.
+	  const overview = overviewFor(product);
+	  const suitable = suitableForList(product);
+	  const faq = faqFor(product);
+	  const accordionSections = [{
+	    title: 'Product overview',
+	    icon: 'leaf',
+	    defaultOpen: true,
+	    content: /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "pdp-acc__p",
+	      children: overview.text
+	    })
+	  }, ...(product.ingredients?.length ? [{
+	    title: 'Full ingredient list',
+	    icon: 'flask',
+	    content: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "pdp-acc__tags",
+	      children: product.ingredients.map(ig => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-chip",
+	        children: ig
+	      }, ig))
+	    })
+	  }] : []), ...(product.benefits?.length ? [{
+	    title: 'All benefits',
+	    icon: 'sparkle',
+	    content: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	      className: "ticklist",
+	      children: product.benefits.map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "check",
+	          size: 16
+	        }), " ", b]
+	      }, b))
+	    })
+	  }] : []), ...(product.usage ? [{
+	    title: 'Usage details',
+	    icon: 'droplet',
+	    content: /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "pdp-acc__p muted",
+	      children: product.usage
+	    })
+	  }] : []), ...(suitable.length ? [{
+	    title: 'Suitable for',
+	    icon: 'users',
+	    content: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "pdp-acc__tags",
+	      children: suitable.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-chip",
+	        children: s
+	      }, s))
+	    })
+	  }] : []), {
+	    title: 'Product details',
+	    icon: 'package',
+	    content: /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
+	      className: "ticklist",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "check",
+	          size: 16
+	        }), " Category: ", cat.name]
+	      }), product.form && /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "check",
+	          size: 16
+	        }), " Pack size: ", product.form]
+	      })]
+	    })
+	  }, ...(faq.length ? [{
+	    title: 'FAQ',
+	    icon: 'chat',
+	    content: /*#__PURE__*/jsxRuntimeExports.jsx("dl", {
+	      className: "pdp-faq",
+	      children: faq.map(f => /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	          children: f.q
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	          children: f.a
+	        })]
+	      }, f.q))
+	    })
+	  }] : [])];
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "v2-pdp-root",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap pdp-top",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	        className: "v2-crumbs",
+	        "aria-label": "Breadcrumb",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	          to: "/",
 	          children: "Home"
@@ -16912,78 +18411,84 @@
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          children: product.name
 	        })]
-	      })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	        type: "button",
+	        className: "pdp-back",
+	        onClick: () => navigate(-1),
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronLeft",
+	          size: 16
+	        }), " Back"]
+	      })]
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-	      className: "pdp container",
+	      className: "pdp v2-wrap",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductGallery, {
 	        product: product,
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          className: `pcard__wish pdp__wish ${wished ? 'active' : ''}`,
-	          onClick: () => toggleWish(product),
-	          "aria-label": "Wishlist",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "heart",
-	            size: 22,
-	            fill: wished ? 'currentColor' : 'none'
-	          })
+	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "pdp__galactions",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            type: "button",
+	            className: `v2-iconbtn pdp__galbtn ${wished ? 'is-active' : ''}`,
+	            onClick: () => toggleWish(product),
+	            "aria-pressed": wished,
+	            "aria-label": wished ? 'Remove from wishlist' : 'Save to wishlist',
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "heart",
+	              size: 20,
+	              fill: wished ? 'currentColor' : 'none'
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            type: "button",
+	            className: "v2-iconbtn pdp__galbtn",
+	            onClick: share,
+	            "aria-label": "Share this product",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "externalLink",
+	              size: 19
+	            })
+	          })]
 	        })
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "pdp__info",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "pcard__cat",
-	          children: cat.name
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "pcard__cat pdp__meta",
+	          children: [cat.name, product.form ? /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            className: "pdp__meta-sep",
+	            children: [" \xB7 ", product.form]
+	          }) : '']
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
 	          className: "pdp__title serif",
 	          children: product.name
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "pdp__rate",
-	          children: [product.reviewCount > 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(StarRating, {
-	              value: product.rating,
-	              showValue: true
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
-	              href: "#reviews",
-	              className: "pdp__reviewlink",
-	              children: [product.reviewCount, " reviews"]
-	            })]
-	          }) : /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	            className: "badge badge-soft",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "leaf",
-	              size: 13
-	            }), " Sea buckthorn"]
-	          }), product.form && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	            className: "pdp__sku muted",
-	            children: ["\xB7 ", product.form]
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        }), product.description && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	          className: "pdp__lead",
-	          children: product.shortDescription
+	          children: product.description
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductRatingTeaser, {
+	          product: product
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "pdp__price",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
 	            product: product,
 	            size: "lg",
-	            variant: variant
+	            variant: variant,
+	            v2: true
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "muted",
-	            style: {
-	              fontSize: 'var(--text-sm)'
-	            },
+	            className: "pdp__tax muted",
 	            children: "Inclusive of all taxes"
 	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductOfferTeaser, {
+	          product: product
 	        }), pricedVariants.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "pdp__block",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	            className: "label",
-	            children: "Choose size"
+	            children: "Choose pack size"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	            className: "variantlist",
 	            style: {
 	              marginTop: 8
 	            },
 	            role: "radiogroup",
-	            "aria-label": "Choose size",
+	            "aria-label": "Choose pack size",
 	            children: pricedVariants.map(v => {
 	              const selected = (variant?.id ?? variant?.label) === (v.id ?? v.label);
 	              const soldOut = v.stock === 0;
@@ -17012,16 +18517,16 @@
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	          className: "pdp__stock",
 	          children: out ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "badge badge-out",
+	            className: "v2-badge v2-badge--out",
 	            children: "Out of stock"
 	          }) : lowStock ? /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	            className: "badge badge-sale",
+	            className: "v2-badge",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	              name: "clock",
 	              size: 13
 	            }), " Only ", product.stock, " left"]
 	          }) : /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	            className: "badge",
+	            className: "v2-badge v2-badge--soft",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	              name: "check",
 	              size: 13
@@ -17033,17 +18538,18 @@
 	            className: "qty",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	              onClick: () => setQty(q => Math.max(1, q - 1)),
-	              "aria-label": "Decrease",
+	              "aria-label": "Decrease quantity",
 	              disabled: out,
 	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                name: "minus",
 	                size: 16
 	              })
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              "aria-live": "polite",
 	              children: qty
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	              onClick: () => setQty(q => q + 1),
-	              "aria-label": "Increase",
+	              "aria-label": "Increase quantity",
 	              disabled: out,
 	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                name: "plus",
@@ -17051,12 +18557,9 @@
 	              })
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            className: `btn btn-block pdp__addbtn ${justAdded ? 'is-added' : ''}`,
+	            className: `v2-btn v2-btn--block pdp__addbtn ${justAdded ? 'is-added' : ''}`,
 	            disabled: out,
-	            onClick: () => {
-	              addToCart(product, qty, variant);
-	              setJustAdded(true);
-	            },
+	            onClick: addNow,
 	            children: justAdded ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                name: "check",
@@ -17070,110 +18573,51 @@
 	            })
 	          })]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          className: "btn btn-accent btn-lg btn-block pdp__buynow",
+	          className: "v2-btn v2-btn--ghost v2-btn--block pdp__buynow",
 	          disabled: out,
 	          onClick: buyNow,
 	          children: "Buy it now"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "pdp__assure",
-	          children: [['truck', 'Free delivery', 'On orders over ₹699'], ['return', '15-day returns', 'Easy & free'], ['lock', 'Secure checkout', '100% protected']].map(([ic, t, s]) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "pdp__assure-item",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: ic,
-	              size: 20
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	                children: t
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-	                children: s
-	              })]
-	            })]
-	          }, t))
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "pdp__deliver",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "mapPin",
-	            size: 18
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	            children: ["Deliver to ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	              children: "India"
-	            }), " \u2014 estimated ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	              children: "2\u20134 business days"
-	            }), ". Enter your PIN at checkout for exact dates."]
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Accordion, {
-	          items: [{
-	            title: 'Product details',
-	            content: /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
-	              className: "ticklist",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                  name: "check",
-	                  size: 16
-	                }), " Category: ", cat.name]
-	              }), product.form && /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                  name: "check",
-	                  size: 16
-	                }), " Size: ", product.form]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                  name: "check",
-	                  size: 16
-	                }), " Authentic Biosash product, sourced from the Himalayas"]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                  name: "check",
-	                  size: 16
-	                }), " Fulfilled by Sora Life \xB7 genuine, sealed packaging"]
-	              })]
-	            })
-	          }, ...(product.description ? [{
-	            title: 'Description',
-	            content: /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	              className: "muted",
-	              children: product.description
-	            })
-	          }] : []), ...(product.benefits?.length ? [{
-	            title: 'Key benefits',
-	            content: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-	              className: "ticklist",
-	              children: product.benefits.map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                  name: "check",
-	                  size: 16
-	                }), " ", b]
-	              }, b))
-	            })
-	          }] : []), ...(product.ingredients?.length ? [{
-	            title: 'Ingredients',
-	            content: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	              className: "taglist",
-	              children: product.ingredients.map(ig => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "badge badge-soft",
-	                children: ig
-	              }, ig))
-	            })
-	          }] : []), ...(product.usage ? [{
-	            title: 'How to use',
-	            content: /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	              className: "muted",
-	              children: product.usage
-	            })
-	          }] : [])]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductDeliveryInfo, {
+	          product: product
 	        })]
 	      })]
-	    }), related.length >= 2 && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	      className: "section-sm",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "container",
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap pdp-flow",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductBenefits, {
+	        product: product
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductIngredients, {
+	        product: product
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductHowToUse, {
+	        product: product
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	        className: "pdp-sec",
+	        "aria-labelledby": "pdp-info-h",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	          className: "serif",
-	          style: {
-	            fontSize: 'var(--text-2xl)',
-	            marginBottom: 'var(--sp-6)'
-	          },
-	          children: "Frequently bought together"
+	          id: "pdp-info-h",
+	          className: "pdp-sec__title serif",
+	          children: "Product information"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductInfoAccordion, {
+	          sections: accordionSections
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductTrustList, {})]
+	    }), promotionsSource === 'supabase' && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-pdp__promos",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(PromoRail, {
+	        place: "pdp",
+	        eyebrow: "Available offers",
+	        title: "Offers on your order",
+	        maxOffers: 2
+	      })
+	    }), related.length >= 2 && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	      className: "v2-pdp__fbt-section",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-wrap",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "v2-eyebrow",
+	          children: "Complete the selection"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	          className: "v2-h2",
+	          children: "Goes well with"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "fbt",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -17183,7 +18627,8 @@
 	                to: `/product/${p.slug}`,
 	                className: "fbt__item",
 	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	                  product: p
+	                  product: p,
+	                  frame: "v2"
 	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	                  className: "fbt__name",
 	                  children: p.name
@@ -17202,13 +18647,13 @@
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "fbt__buy",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	              className: "muted",
+	              className: "fbt__label",
 	              children: ["Total for ", fbt.length, " items"]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "fbt__total serif",
+	              className: "fbt__total v2-disp",
 	              children: money(fbtTotal)
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	              className: "btn btn-block",
+	              className: "v2-btn v2-btn--block",
 	              onClick: () => {
 	                fbt.forEach(p => addToCart(p, 1));
 	              },
@@ -17217,120 +18662,33 @@
 	          })]
 	        })]
 	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	      className: "section",
-	      id: "reviews",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "container",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	          className: "serif",
-	          style: {
-	            fontSize: 'var(--text-2xl)',
-	            marginBottom: 'var(--sp-5)'
-	          },
-	          children: "Reviews"
-	        }), product.reviewCount > 0 && product.reviews.length ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "reviews-block",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "reviews-block__summary",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	              className: "reviews-block__score serif",
-	              children: product.rating.toFixed(1)
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(StarRating, {
-	              value: product.rating,
-	              size: 18
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	              className: "muted",
-	              children: [product.reviewCount, " verified reviews"]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	              className: "btn btn-outline btn-block",
-	              style: {
-	                marginTop: 16
-	              },
-	              children: "Write a review"
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	            className: "reviews-block__list",
-	            children: product.reviews.map((r, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("figure", {
-	              className: "rev",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                className: "rev__top",
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                  className: "review__avatar",
-	                  children: r.name.charAt(0)
-	                }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	                    children: r.name
-	                  }), r.verified && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	                    className: "rev__verified",
-	                    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                      name: "checkCircle",
-	                      size: 13
-	                    }), " Verified buyer"]
-	                  })]
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                  className: "muted rev__date",
-	                  children: r.date
-	                })]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx(StarRating, {
-	                value: r.rating,
-	                size: 14
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("h4", {
-	                className: "rev__title",
-	                children: r.title
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	                className: "muted",
-	                children: r.body
-	              })]
-	            }, i))
-	          })]
-	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "surface pad-lg",
-	          style: {
-	            display: 'flex',
-	            alignItems: 'center',
-	            justifyContent: 'space-between',
-	            gap: 'var(--sp-5)',
-	            flexWrap: 'wrap'
-	          },
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	              style: {
-	                fontSize: 'var(--text-lg)'
-	              },
-	              children: "No reviews yet"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	              className: "muted",
-	              children: "Be the first to share your experience with this product."
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            className: "btn btn-outline",
-	            children: "Write a review"
-	          })]
-	        })]
-	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductRail, {
-	      eyebrow: "Complete the ritual",
-	      title: "You may also like",
-	      products: related
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductReviewsTeaser, {
+	      product: product
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductRecommendations, {
+	      product: product
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "buybar only-mobile",
+	      role: "region",
+	      "aria-label": "Purchase",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: "buybar__price",
 	        children: /*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
 	          product: product,
-	          showOff: false
+	          showOff: false,
+	          variant: variant,
+	          v2: true
 	        })
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	        className: "btn",
+	        className: "v2-btn buybar__add",
 	        disabled: out,
-	        onClick: () => addToCart(product, qty, variant),
+	        onClick: addNow,
+	        "aria-label": "Add to cart",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	          name: "bag",
-	          size: 18
+	          size: 17
 	        }), " Add"]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	        className: "btn btn-accent",
+	        className: "v2-btn v2-btn--ghost buybar__buy",
 	        disabled: out,
 	        onClick: buyNow,
 	        children: "Buy now"
@@ -17508,43 +18866,49 @@
 	    }
 	  };
 	  const discount = applied ? Math.round(subtotal * applied.rate) : 0;
-	  const shipping = subtotal === 0 ? 0 : subtotal - discount >= 699 ? 0 : 49;
+	  // Cart has no delivery-method selector; its estimate mirrors the default
+	  // Standard option used by Checkout and the server (free shipping).
+	  const shipping = 0;
 	  if (!cartDetailed.length) {
-	    return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "container section",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "state",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "state-ic",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "bag",
-	            size: 32
-	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	          children: "Your cart is empty"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	          children: "Looks like you haven't added anything yet. Let's fix that."
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	          to: "/shop",
-	          className: "btn",
-	          children: ["Start shopping ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "arrowRight",
-	            size: 18
+	    return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-cart-root",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-wrap v2-cart-empty",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "state",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "state-ic",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "bag",
+	              size: 32
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	            children: "Your cart is empty"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: "Looks like you haven't added anything yet. Let's fix that."
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: "/shop",
+	            className: "btn",
+	            children: ["Start shopping ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "arrowRight",
+	              size: 18
+	            })]
 	          })]
+	        }), savedDetailed.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx(SavedList, {
+	          saved: savedDetailed,
+	          dispatch: dispatch
 	        })]
-	      }), savedDetailed.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx(SavedList, {
-	        saved: savedDetailed,
-	        dispatch: dispatch
-	      })]
+	      })
 	    });
 	  }
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "v2-cart-root",
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "pagehead",
+	      className: "pagehead v2-cart-head",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "container",
+	        className: "v2-wrap",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
-	          className: "crumbs",
+	          className: "crumbs v2-crumbs",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: "/",
 	            children: "Home"
@@ -17559,14 +18923,11 @@
 	          children: "Your cart"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
 	          className: "muted",
-	          children: [cartDetailed.length, " ", cartDetailed.length === 1 ? 'item' : 'items', " ready for a healthier routine."]
+	          children: [cartDetailed.length, " ", cartDetailed.length === 1 ? 'item' : 'items', " in your cart."]
 	        })]
 	      })
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "container section-sm",
-	      style: {
-	        paddingTop: 'var(--sp-8)'
-	      },
+	      className: "v2-wrap section-sm v2-cart-body",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "cartlayout",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -17577,9 +18938,10 @@
 	              className: "cartrow",
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	                to: `/product/${l.product.slug}`,
-	                className: "cartrow__media",
+	                className: "cartrow__media v2-cartrow__media",
 	                children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	                  product: l.product
+	                  product: l.product,
+	                  frame: "v2"
 	                })
 	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	                className: "cartrow__info",
@@ -17672,14 +19034,14 @@
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("aside", {
 	          className: "cartlayout__aside",
 	          children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "summary",
+	            className: "summary v2-summary",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
 	              children: "Order summary"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
 	              className: "summary__coupon",
 	              onSubmit: applyCoupon,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                className: "searchbox",
+	                className: "searchbox v2-coupon",
 	                style: {
 	                  flex: 1
 	                },
@@ -17687,12 +19049,12 @@
 	                  name: "tag"
 	                }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	                  className: "input",
-	                  placeholder: "Coupon code (try SORA10)",
+	                  placeholder: "Coupon code",
 	                  value: coupon,
 	                  onChange: e => setCoupon(e.target.value)
 	                })]
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	                className: "btn btn-light",
+	                className: "btn btn-light v2-btn--out",
 	                type: "submit",
 	                children: "Apply"
 	              })]
@@ -17705,18 +19067,15 @@
 	                name: "checkCircle",
 	                size: 15
 	              }), " ", applied.code, " \u2014 ", applied.rate * 100, "% off"]
+	            }), promotionsSource === 'supabase' && /*#__PURE__*/jsxRuntimeExports.jsx(PromoRail, {
+	              place: "cart",
+	              variant: "compact"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceSummary, {
 	              fallback: {
 	                itemTotal: subtotal - discount,
 	                mrpTotal,
 	                shipping
 	              }
-	            }), shipping > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	              className: "summary__ship-hint",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "truck",
-	                size: 15
-	              }), " Add ", money(699 - (subtotal - discount)), " more for free delivery"]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
 	              to: "/checkout",
 	              className: "btn btn-lg btn-block",
@@ -17734,17 +19093,17 @@
 	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                  name: "lock",
 	                  size: 14
-	                }), " Secure"]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                  name: "return",
-	                  size: 14
-	                }), " Easy returns"]
+	                }), " Secure checkout"]
 	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                  name: "truck",
 	                  size: 14
-	                }), " Fast delivery"]
+	                }), " Free standard shipping"]
+	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                  name: "truck",
+	                  size: 14
+	                }), " Delivery options at checkout"]
 	              })]
 	            })]
 	          })
@@ -17780,7 +19139,8 @@
 	          to: `/product/${l.product.slug}`,
 	          className: "savedcard__media",
 	          children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	            product: l.product
+	            product: l.product,
+	            frame: "v2"
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "savedcard__body",
@@ -41429,9 +42789,8 @@
 	// These are replaced with literal strings at build time by
 	// @rollup/plugin-replace (see rollup.config.mjs) — nothing is read from the
 	// environment at runtime.
-	const supabaseUrl = "https://gbcnvrymoarcqrvdnnvb.supabase.co";
-	const supabasePublishableKey = "sb_publishable_K9yRQPcwih-asuOIkLUExQ_3jFMB8x7";
-	const isSupabaseConfigured = Boolean(supabasePublishableKey);
+	const supabaseUrl = "";
+	const isSupabaseConfigured = Boolean(supabaseUrl );
 	if (!isSupabaseConfigured) {
 	  // Previously this threw, which crashed the very first module import and
 	  // rendered the entire site as a blank page. A missing build-time config
@@ -41445,7 +42804,7 @@
 	// keeps working unchanged. When unconfigured it points at an unreachable
 	// placeholder, so calls reject and are handled by the existing catch paths
 	// rather than throwing at import time.
-	const supabase = createClient(supabaseUrl , supabasePublishableKey );
+	const supabase = createClient("https://unconfigured.supabase.co", "unconfigured");
 
 	// ============================================================
 	// Customer authentication (Supabase Auth, email/password).
@@ -42366,97 +43725,103 @@
 	  const total = Math.max(0, subtotal + shipBase);
 	  if (placed) {
 	    return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "container section",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: `confirm confirm__enter ${celebrate ? 'confirm--celebrate' : ''}`,
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(OrderCelebration, {}), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "eyebrow confirm__reveal",
-	          style: {
-	            '--d': '400ms'
-	          },
-	          children: "Order confirmed"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-	          className: "serif confirm__reveal",
-	          style: {
-	            '--d': '480ms'
-	          },
-	          children: "Thank you \u2014 your ritual is on its way."
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	          className: "muted confirm__reveal",
-	          style: {
-	            '--d': '550ms'
-	          },
-	          children: ["A confirmation has been sent to your email. Order ", /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
-	            children: ["#", orderNo]
-	          }), "."]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "confirm__card confirm__reveal",
-	          style: {
-	            '--d': '620ms'
-	          },
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "confirm__row",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              children: "Estimated delivery"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	              children: DELIVERY.find(d => d.id === delivery)?.eta
+	      className: "v2-checkout-root v2-checkout-confirm-root",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-wrap section",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: `confirm confirm__enter ${celebrate ? 'confirm--celebrate' : ''}`,
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(OrderCelebration, {}), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "eyebrow confirm__reveal",
+	            style: {
+	              '--d': '400ms'
+	            },
+	            children: "Order confirmed"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	            className: "serif confirm__reveal",
+	            style: {
+	              '--d': '480ms'
+	            },
+	            children: "Thank you \u2014 your ritual is on its way."
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	            className: "muted confirm__reveal",
+	            style: {
+	              '--d': '550ms'
+	            },
+	            children: ["A confirmation has been sent to your email. Order ", /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+	              children: ["#", orderNo]
+	            }), "."]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "confirm__card confirm__reveal",
+	            style: {
+	              '--d': '620ms'
+	            },
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "confirm__row",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                children: "Estimated delivery"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                children: DELIVERY.find(d => d.id === delivery)?.eta
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "confirm__row",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                children: "Total paid"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                children: money(orderTotal)
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "confirm__row",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                children: "Payment"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                children: pay === 'cod' ? 'Cash on delivery' : pay.toUpperCase()
+	              })]
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "confirm__row",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              children: "Total paid"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	              children: money(orderTotal)
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "confirm__row",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              children: "Payment"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	              children: pay === 'cod' ? 'Cash on delivery' : pay.toUpperCase()
+	            className: "confirm__actions",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: "/account/orders",
+	              className: "btn confirm__reveal confirm__reveal--btn",
+	              style: {
+	                '--d': '700ms'
+	              },
+	              children: "Track my order"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: "/shop",
+	              className: "btn btn-outline confirm__reveal confirm__reveal--btn",
+	              style: {
+	                '--d': '780ms'
+	              },
+	              children: "Continue shopping"
 	            })]
 	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "confirm__actions",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/account/orders",
-	            className: "btn confirm__reveal confirm__reveal--btn",
-	            style: {
-	              '--d': '700ms'
-	            },
-	            children: "Track my order"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/shop",
-	            className: "btn btn-outline confirm__reveal confirm__reveal--btn",
-	            style: {
-	              '--d': '780ms'
-	            },
-	            children: "Continue shopping"
-	          })]
-	        })]
+	        })
 	      })
 	    });
 	  }
 	  if (!cartDetailed.length) {
 	    return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "container section",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "state",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "state-ic",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "bag",
-	            size: 32
-	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	          children: "Your cart is empty"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	          children: "Add a few essentials before checking out."
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	          to: "/shop",
-	          className: "btn",
-	          children: "Browse products"
-	        })]
+	      className: "v2-checkout-root",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-wrap section",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "state",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "state-ic",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "bag",
+	              size: 32
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	            children: "Your cart is empty"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: "Add a few essentials before checking out."
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/shop",
+	            className: "btn",
+	            children: "Browse products"
+	          })]
+	        })
 	      })
 	    });
 	  }
@@ -42560,21 +43925,21 @@
 	    }
 	  };
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	    className: "checkout",
+	    className: "checkout v2-checkout-root",
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	      className: "checkout__bar",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "container checkout__bar-in",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Logo, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-wrap checkout__bar-in",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	          className: "checkout__secure",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	            name: "lock",
 	            size: 15
 	          }), " Secure checkout"]
-	        })]
+	        })
 	      })
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "container checkout__grid",
+	      className: "v2-wrap checkout__grid",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "checkout__main",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("ol", {
@@ -42687,8 +44052,7 @@
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
 	            className: "check",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	              type: "checkbox",
-	              defaultChecked: true
+	              type: "checkbox"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	              className: "check__box",
 	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -42841,7 +44205,7 @@
 	              children: addrMsg
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	            className: "btn btn-lg",
+	            className: "btn btn-lg v2-btn",
 	            onClick: () => validateShipping() && next(),
 	            children: ["Continue to delivery ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	              name: "arrowRight",
@@ -42879,14 +44243,14 @@
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "cform__nav",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	              className: "btn btn-ghost",
+	              className: "btn btn-ghost v2-btn--ghost",
 	              onClick: () => setStep(0),
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                name: "chevronLeft",
 	                size: 18
 	              }), " Back"]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	              className: "btn btn-lg",
+	              className: "btn btn-lg v2-btn",
 	              onClick: next,
 	              children: ["Continue to payment ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                name: "arrowRight",
@@ -42941,13 +44305,13 @@
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	              className: "paystate__actions",
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	                className: "btn btn-sm",
+	                className: "btn btn-sm v2-btn--sm",
 	                onClick: placeOrder,
 	                disabled: processing,
 	                children: "Try again"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	                to: "/cart",
-	                className: "btn btn-sm btn-outline",
+	                className: "btn btn-sm btn-outline v2-btn--out",
 	                children: "Back to cart"
 	              })]
 	            })]
@@ -42961,7 +44325,7 @@
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "cform__nav",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	              className: "btn btn-ghost",
+	              className: "btn btn-ghost v2-btn--ghost",
 	              onClick: () => setStep(1),
 	              disabled: processing,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -42969,7 +44333,7 @@
 	                size: 18
 	              }), " Back"]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	              className: "btn btn-accent btn-lg",
+	              className: "btn btn-accent btn-lg v2-btn",
 	              onClick: placeOrder,
 	              disabled: processing,
 	              children: processing ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
@@ -42993,7 +44357,7 @@
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("aside", {
 	        className: "checkout__aside",
 	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "summary",
+	          className: "summary v2-summary",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
 	            children: "Order summary"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -43003,7 +44367,8 @@
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	                className: "checkout__thumb",
 	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	                  product: l.product
+	                  product: l.product,
+	                  frame: "v2"
 	                }), /*#__PURE__*/jsxRuntimeExports.jsx("i", {
 	                  className: "checkout__qty",
 	                  children: l.qty
@@ -49287,6 +50652,9 @@
 	  to: '/admin/hero-slides',
 	  label: 'Hero Slides'
 	}, {
+	  to: '/admin/promotions',
+	  label: 'Promotions'
+	}, {
 	  to: '/admin/homepage',
 	  label: 'Homepage'
 	}, {
@@ -50571,6 +51939,272 @@
 	    throw error;
 	  }
 	  return data; // { imported: [...], skipped: [...] }
+	}
+
+	// ---------------------------------------------------------------
+	// PROMOTIONS  (migration 0017) — marketing posters / offer cards.
+	//
+	// DISPLAY LAYER ONLY. A promotion's coupon_code is a string the storefront
+	// shows and lets the customer copy; it is never resolved against
+	// public.coupons here and no promotion changes any price, cart total or
+	// order. Writes are additionally gated by the "promotions admin all" RLS
+	// policy, so a non-admin session is refused by the database.
+	// ---------------------------------------------------------------
+	const PROMO_PLACEMENTS = ['home', 'pdp', 'cart'];
+	const PROMO_TYPES = ['poster', 'offer'];
+	const PROMO_THEMES = ['forest', 'cream', 'orange', 'dark', 'minimal'];
+	const PROMO_MISSING = 'The promotions table does not exist yet. Run supabase/migrations/0017_promotions.sql in the Supabase SQL editor first.';
+	function isMissingPromotions(error) {
+	  return error && (error.code === '42P01' || error.code === 'PGRST205' || error.code === 'PGRST106');
+	}
+
+	/**
+	 * Public read for the storefront bootstrap. Active promotions only; the
+	 * date-window filter is enforced by RLS and re-checked client-side.
+	 *
+	 * Returns NULL when the table has not been migrated yet ("not provisioned",
+	 * an unknown state) and [] when the table exists but holds no live rows
+	 * ("the store genuinely has no promotions"). main.jsx applies an array and
+	 * skips null, so an empty table correctly clears the list while a missing
+	 * table leaves the starting list alone — which is [] on any deployed host,
+	 * so nothing is shown either way before the migration runs.
+	 */
+	async function fetchPublicPromotions() {
+	  const {
+	    data,
+	    error
+	  } = await supabase.from('promotions').select('*').eq('is_active', true).order('sort_order', {
+	    ascending: true
+	  });
+	  if (error) {
+	    if (isMissingPromotions(error)) return null;
+	    throw error;
+	  }
+	  return data || [];
+	}
+
+	/** Every promotion, including drafts / scheduled / expired (admin view). */
+	async function adminListPromotions() {
+	  const {
+	    data,
+	    error
+	  } = await supabase.from('promotions').select('*').order('sort_order', {
+	    ascending: true
+	  }).order('created_at', {
+	    ascending: true
+	  });
+	  if (error) {
+	    if (isMissingPromotions(error)) throw new Error(PROMO_MISSING);
+	    throw error;
+	  }
+	  return data || [];
+	}
+
+	// Mirrors the promotions_cta_url_chk DB constraint so an admin gets a clear
+	// message instead of a raw Postgres check-constraint violation. NULL / '' |
+	// internal absolute path ("/shop") | absolute https URL only.
+	function safeAdminCtaUrl(v) {
+	  const s = typeof v === 'string' ? v.trim() : '';
+	  if (s === '') return null;
+	  if (/\s/.test(s)) throw new Error('CTA link cannot contain spaces or line breaks.');
+	  if (s.startsWith('/') && !s.startsWith('//')) return s.slice(0, 500);
+	  if (/^https:\/\//i.test(s)) return s.slice(0, 500);
+	  throw new Error('CTA link must be an internal path starting with "/" or an absolute https:// URL.');
+	}
+	function promotionRow(p) {
+	  const clean = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
+	  const nullable = (v, max) => {
+	    const s = clean(v, max);
+	    return s === '' ? null : s;
+	  };
+	  const placements = Array.isArray(p.placements) ? [...new Set(p.placements.filter(x => PROMO_PLACEMENTS.includes(x)))] : [];
+	  return {
+	    type: PROMO_TYPES.includes(p.type) ? p.type : 'poster',
+	    title: clean(p.title, 160),
+	    subtitle: clean(p.subtitle, 320),
+	    coupon_code: p.coupon_code ? clean(p.coupon_code, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '') || null : null,
+	    cta_text: clean(p.cta_text, 60),
+	    cta_url: safeAdminCtaUrl(p.cta_url),
+	    badge_text: clean(p.badge_text, 40),
+	    image_url: nullable(p.image_url, 1000),
+	    theme_variant: PROMO_THEMES.includes(p.theme_variant) ? p.theme_variant : 'forest',
+	    text_align: p.text_align === 'center' ? 'center' : 'left',
+	    placements,
+	    is_active: p.is_active !== false,
+	    starts_at: p.starts_at || null,
+	    ends_at: p.ends_at || null,
+	    sort_order: Number(p.sort_order) || 0
+	  };
+	}
+
+	/** Only canonical public URLs generated by this client's promo-media bucket. */
+	function promoImageStoragePath(imageUrl) {
+	  if (typeof imageUrl !== 'string' || !imageUrl || /[\s\\%?#]/.test(imageUrl)) return null;
+	  try {
+	    const base = new URL(supabase.storage.from('promo-media').getPublicUrl('').data.publicUrl);
+	    const url = new URL(imageUrl);
+	    const rawPath = imageUrl.match(/^https?:\/\/[^/]+(\/.*)$/)?.[1];
+	    const prefix = '/storage/v1/object/public/promo-media/';
+	    if (!['https:', 'http:'].includes(base.protocol) || base.pathname !== prefix || url.origin !== base.origin || url.username || url.password || url.search || url.hash || rawPath !== url.pathname || !rawPath.startsWith(prefix)) return null;
+	    const path = rawPath.slice(prefix.length);
+	    // The uploader uses ASCII UUID filenames. Reject encoded/ambiguous paths
+	    // rather than normalizing them into a different object or bucket.
+	    if (!path || path.split('/').some(s => !/^[A-Za-z0-9._-]+$/.test(s) || s === '.' || s === '..')) return null;
+	    return path;
+	  } catch {
+	    return null;
+	  }
+	}
+	async function readPromotionImage(id) {
+	  const {
+	    data,
+	    error
+	  } = await supabase.from('promotions').select('id,image_url').eq('id', id).single();
+	  if (error) throw error;
+	  if (!data) throw new Error('Promotion could not be read. Reload before retrying.');
+	  return data;
+	}
+	function matchingPromotionImage(query, imageUrl) {
+	  return imageUrl == null ? query.is('image_url', null) : query.eq('image_url', imageUrl);
+	}
+	function referencesSamePromoImage(previousUrl, nextUrl) {
+	  // Comparison only: URL aliases may preserve a reference, but NEVER authorize
+	  // deletion. Destructive paths must still pass promoImageStoragePath.
+	  try {
+	    const previous = new URL(previousUrl),
+	      next = new URL(nextUrl);
+	    return previous.origin === next.origin && decodeURIComponent(previous.pathname) === decodeURIComponent(next.pathname);
+	  } catch {
+	    return false;
+	  }
+	}
+	async function removePromotionImage(imageUrl, promotionId) {
+	  const path = promoImageStoragePath(imageUrl);
+	  if (!path) return false; // External / other-bucket / unproven URLs are never deleted.
+	  try {
+	    // An admin may reuse a URL. Preserve an object still used by another promotion.
+	    const {
+	      data: references,
+	      error: referenceError
+	    } = await supabase.from('promotions').select('id').eq('image_url', imageUrl).neq('id', promotionId).limit(1);
+	    if (referenceError) throw referenceError;
+	    if (!Array.isArray(references)) throw new Error('Could not confirm other image references.');
+	    if (references.length) return false;
+	    const bucket = supabase.storage.from('promo-media');
+	    const {
+	      error
+	    } = await bucket.remove([path]);
+	    if (error) throw error;
+	    // A Storage DELETE can return an empty success under RLS. Confirm absence;
+	    // authorization, bucket errors and an unreadable result are not proof.
+	    const {
+	      data: remaining,
+	      error: infoError
+	    } = await bucket.info(path);
+	    const status = Number(infoError?.status || infoError?.statusCode);
+	    const absent = !remaining && [400, 404].includes(status) && (infoError?.code === 'NoSuchKey' || !infoError?.code && /^object not found\.?$/i.test(infoError?.message || ''));
+	    if (!absent) throw infoError || new Error('Storage object removal was not confirmed.');
+	    return true;
+	  } catch (cause) {
+	    const error = new Error(`Image cleanup unresolved for promo-media/${path}: ${cause.message || String(cause)}`);
+	    error.cause = cause;
+	    error.cleanupPending = [path];
+	    throw error;
+	  }
+	}
+	async function adminUpsertPromotion(p) {
+	  const row = promotionRow(p);
+	  try {
+	    if (p.id) {
+	      const previous = await readPromotionImage(p.id);
+	      const {
+	        data,
+	        error
+	      } = await matchingPromotionImage(supabase.from('promotions').update(row).eq('id', p.id), previous.image_url).select().single();
+	      if (error) throw error;
+	      if (!data || data.image_url !== row.image_url) throw new Error('Promotion update could not be confirmed. Reload before retrying; the previous image was not removed.');
+	      if (previous.image_url !== data.image_url && !referencesSamePromoImage(previous.image_url, data.image_url)) {
+	        try {
+	          await removePromotionImage(previous.image_url, p.id);
+	        } catch (cleanupError) {
+	          // The new image has already been saved. Keep that success distinct
+	          // from the unresolved old-object cleanup; never imply a rolled-back save.
+	          cleanupError.message = `Promotion saved, but the previous image needs cleanup. ${cleanupError.message}`;
+	          cleanupError.savedPromotion = data;
+	          throw cleanupError;
+	        }
+	      }
+	      return data;
+	    }
+	    const {
+	      data,
+	      error
+	    } = await supabase.from('promotions').insert(row).select().single();
+	    if (error) throw error;
+	    return data;
+	  } catch (error) {
+	    if (isMissingPromotions(error)) throw new Error(PROMO_MISSING);
+	    throw error;
+	  }
+	}
+	async function adminSetPromotionActive(id, isActive) {
+	  const {
+	    error
+	  } = await supabase.from('promotions').update({
+	    is_active: !!isActive
+	  }).eq('id', id);
+	  if (error) {
+	    if (isMissingPromotions(error)) throw new Error(PROMO_MISSING);
+	    throw error;
+	  }
+	}
+	async function adminDeletePromotion(id) {
+	  let imageRemoved = false;
+	  try {
+	    const previous = await readPromotionImage(id);
+	    imageRemoved = await removePromotionImage(previous.image_url, id);
+	    const {
+	      data,
+	      error
+	    } = await matchingPromotionImage(supabase.from('promotions').delete().eq('id', id), previous.image_url).select('id').single();
+	    if (error) throw error;
+	    if (!data) throw new Error('Promotion row deletion could not be confirmed.');
+	  } catch (cause) {
+	    const detail = isMissingPromotions(cause) ? PROMO_MISSING : cause.message || String(cause);
+	    const error = new Error(imageRemoved ? `The promo image was removed, but promotion row deletion could not be confirmed. Reload before retrying. ${detail}` : `Promotion deletion stopped. ${detail}`);
+	    error.cause = cause;
+	    error.imageRemoved = imageRemoved;
+	    if (cause.cleanupPending) error.cleanupPending = cause.cleanupPending;
+	    throw error;
+	  }
+	}
+	async function adminReorderPromotions(idsInOrder) {
+	  await Promise.all(idsInOrder.map((id, i) => supabase.from('promotions').update({
+	    sort_order: i
+	  }).eq('id', id)));
+	}
+	const PROMO_IMAGE_MAX_BYTES = 6 * 1024 * 1024; // 6MB — posters should be light
+
+	/** Upload a poster / offer image into the dedicated promo-media bucket. */
+	async function uploadPromoImage(file) {
+	  validateMediaFile(file); // shared type/size guard (JPEG/PNG/WebP/GIF/AVIF, <= 8MB)
+	  if (file.size > PROMO_IMAGE_MAX_BYTES) {
+	    throw new Error(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Keep promo art under 6MB.`);
+	  }
+	  const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+	  const path = `promo/${cryptoRandomId()}.${ext}`;
+	  const {
+	    error
+	  } = await supabase.storage.from('promo-media').upload(path, file, {
+	    cacheControl: '3600',
+	    upsert: false,
+	    contentType: file.type || undefined
+	  });
+	  if (error) throw error;
+	  const {
+	    data
+	  } = supabase.storage.from('promo-media').getPublicUrl(path);
+	  return data.publicUrl;
 	}
 
 	function Dashboard() {
@@ -56665,6 +58299,562 @@
 	  });
 	}
 
+	const THEME_OPTIONS = [['forest', 'Forest'], ['cream', 'Warm Cream'], ['orange', 'Orange Accent'], ['dark', 'Dark Luxe'], ['minimal', 'Minimal']];
+	const PLACEMENT_OPTIONS = [['home', 'Homepage'], ['pdp', 'Product page'], ['cart', 'Cart']];
+	const EMPTY = {
+	  type: 'poster',
+	  title: '',
+	  subtitle: '',
+	  coupon_code: '',
+	  cta_text: '',
+	  cta_url: '',
+	  badge_text: '',
+	  image_url: '',
+	  theme_variant: 'forest',
+	  text_align: 'left',
+	  placements: ['home'],
+	  is_active: true,
+	  starts_at: '',
+	  ends_at: '',
+	  sort_order: 0
+	};
+
+	// ISO <-> <input type="datetime-local"> ("YYYY-MM-DDTHH:mm", local time)
+	const toLocalInput = iso => {
+	  if (!iso) return '';
+	  const d = new Date(iso);
+	  if (Number.isNaN(d.getTime())) return '';
+	  const pad = n => String(n).padStart(2, '0');
+	  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+	};
+	const fromLocalInput = v => v ? new Date(v).toISOString() : null;
+	function Promotions() {
+	  const [list, setList] = reactExports.useState([]);
+	  const [loading, setLoading] = reactExports.useState(true);
+	  const [editing, setEditing] = reactExports.useState(null); // 'new' | row | null
+	  const [form, setForm] = reactExports.useState(EMPTY);
+	  const [saving, setSaving] = reactExports.useState(false);
+	  const [uploading, setUploading] = reactExports.useState(false);
+	  const [err, setErr] = reactExports.useState('');
+	  const [notMigrated, setNotMigrated] = reactExports.useState(false);
+	  async function load() {
+	    setLoading(true);
+	    setErr('');
+	    try {
+	      setList(await adminListPromotions());
+	      setNotMigrated(false);
+	    } catch (e) {
+	      const msg = e.message || String(e);
+	      if (/does not exist yet/i.test(msg)) {
+	        setNotMigrated(true);
+	        setList([]);
+	      } else setErr(msg);
+	    }
+	    setLoading(false);
+	  }
+	  reactExports.useEffect(() => {
+	    load();
+	  }, []);
+	  const set = (k, v) => setForm(f => ({
+	    ...f,
+	    [k]: v
+	  }));
+	  const togglePlacement = p => setForm(f => ({
+	    ...f,
+	    placements: f.placements.includes(p) ? f.placements.filter(x => x !== p) : [...f.placements, p]
+	  }));
+	  function startEdit(row) {
+	    if (row) {
+	      setForm({
+	        ...EMPTY,
+	        ...row,
+	        coupon_code: row.coupon_code || '',
+	        cta_text: row.cta_text || '',
+	        cta_url: row.cta_url || '',
+	        badge_text: row.badge_text || '',
+	        image_url: row.image_url || '',
+	        placements: Array.isArray(row.placements) ? row.placements : [],
+	        starts_at: toLocalInput(row.starts_at),
+	        ends_at: toLocalInput(row.ends_at)
+	      });
+	      setEditing(row);
+	    } else {
+	      setForm({
+	        ...EMPTY,
+	        sort_order: list.length
+	      });
+	      setEditing('new');
+	    }
+	    setErr('');
+	  }
+	  async function save(e) {
+	    e.preventDefault();
+	    setSaving(true);
+	    setErr('');
+	    try {
+	      await adminUpsertPromotion({
+	        ...form,
+	        id: editing === 'new' ? undefined : editing.id,
+	        starts_at: fromLocalInput(form.starts_at),
+	        ends_at: fromLocalInput(form.ends_at),
+	        sort_order: Number(form.sort_order) || 0
+	      });
+	      setEditing(null);
+	      await load();
+	    } catch (ex) {
+	      if (ex.savedPromotion) {
+	        setEditing(null);
+	        await load();
+	      }
+	      // A saved replacement can still need old-image cleanup. Show that warning
+	      // after reload, which otherwise clears the error banner.
+	      setErr(ex.message || String(ex));
+	    }
+	    setSaving(false);
+	  }
+	  async function remove(row) {
+	    if (!window.confirm(`Delete promotion "${row.title || 'untitled'}" and its uploaded promo image (unless shared with another promotion)?`)) return;
+	    try {
+	      await adminDeletePromotion(row.id);
+	      await load();
+	    } catch (ex) {
+	      if (ex.imageRemoved) await load();
+	      setErr(ex.message || String(ex));
+	    }
+	  }
+	  async function toggleActive(row) {
+	    try {
+	      await adminSetPromotionActive(row.id, !row.is_active);
+	      await load();
+	    } catch (ex) {
+	      setErr(ex.message || String(ex));
+	    }
+	  }
+	  async function move(row, dir) {
+	    const idx = list.findIndex(x => x.id === row.id);
+	    const j = idx + dir;
+	    if (j < 0 || j >= list.length) return;
+	    const next = [...list];
+	    [next[idx], next[j]] = [next[j], next[idx]];
+	    setList(next);
+	    try {
+	      await adminReorderPromotions(next.map(x => x.id));
+	    } catch (ex) {
+	      setErr(ex.message || String(ex));
+	    }
+	  }
+	  async function onImage(e) {
+	    const file = e.target.files?.[0];
+	    if (!file) return;
+	    setUploading(true);
+	    setErr('');
+	    try {
+	      set('image_url', await uploadPromoImage(file));
+	    } catch (ex) {
+	      setErr('Upload failed: ' + (ex.message || String(ex)));
+	    }
+	    setUploading(false);
+	  }
+	  const preview = normalizePromo({
+	    ...form
+	  });
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm__head",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          children: "Promotions"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          children: [loading ? 'Loading…' : `${list.length} promotion${list.length === 1 ? '' : 's'}`, " \xB7 posters & offer cards for Home, PDP and Cart"]
+	        })]
+	      }), !notMigrated && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        className: "btn btn-sm",
+	        onClick: () => startEdit(null),
+	        children: "+ New promotion"
+	      })]
+	    }), notMigrated && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-banner info",
+	      children: ["The ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+	        children: "promotions"
+	      }), " table has not been created yet. Run", ' ', /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	        children: "supabase/migrations/0017_promotions.sql"
+	      }), " in the Supabase SQL editor, then reload this page. The storefront keeps working without it."]
+	    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm-banner err",
+	      role: "alert",
+	      children: err
+	    }), editing && /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	      className: "surface pad-lg",
+	      onSubmit: save,
+	      style: {
+	        marginBottom: 20,
+	        maxWidth: 760
+	      },
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        style: {
+	          fontFamily: 'var(--font-display)',
+	          marginBottom: 14
+	        },
+	        children: editing === 'new' ? 'New promotion' : `Edit "${editing.title || 'untitled'}"`
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-grid2",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Type"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("select", {
+	            className: "select",
+	            value: form.type,
+	            onChange: e => set('type', e.target.value),
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	              value: "poster",
+	              children: "Poster (large visual card)"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	              value: "offer",
+	              children: "Compact offer card"
+	            })]
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Visual style"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("select", {
+	            className: "select",
+	            value: form.theme_variant,
+	            onChange: e => set('theme_variant', e.target.value),
+	            children: THEME_OPTIONS.map(([v, l]) => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	              value: v,
+	              children: l
+	            }, v))
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-grid2",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Title"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            required: true,
+	            value: form.title,
+	            onChange: e => set('title', e.target.value),
+	            maxLength: 160,
+	            "aria-describedby": "promo-display-notice"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Badge text (optional)"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            value: form.badge_text,
+	            onChange: e => set('badge_text', e.target.value),
+	            placeholder: "Limited time",
+	            maxLength: 40,
+	            "aria-describedby": "promo-display-notice"
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          children: "Subtitle"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          className: "input",
+	          value: form.subtitle,
+	          onChange: e => set('subtitle', e.target.value),
+	          maxLength: 320,
+	          "aria-describedby": "promo-display-notice"
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-banner info",
+	        id: "promo-display-notice",
+	        role: "note",
+	        style: {
+	          color: 'var(--forest-800)'
+	        },
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: "Display & copy only."
+	        }), ' ', "Promotions created here do not automatically change checkout totals. Only publish discount claims that are fulfilled by an approved checkout offer."]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-grid2",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Coupon code (display / copy only \u2014 not applied at checkout)"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            value: form.coupon_code,
+	            onChange: e => set('coupon_code', e.target.value.toUpperCase()),
+	            placeholder: "Approved offer code",
+	            maxLength: 40,
+	            "aria-describedby": "promo-display-notice"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Text alignment"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("select", {
+	            className: "select",
+	            value: form.text_align,
+	            onChange: e => set('text_align', e.target.value),
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	              value: "left",
+	              children: "Left"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	              value: "center",
+	              children: "Center"
+	            })]
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-grid2",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "CTA button text (optional)"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            value: form.cta_text,
+	            onChange: e => set('cta_text', e.target.value),
+	            placeholder: "Explore SORA LIFE",
+	            maxLength: 60
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "CTA link (internal path or https URL)"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            value: form.cta_url,
+	            onChange: e => set('cta_url', e.target.value),
+	            placeholder: "/shop",
+	            maxLength: 500
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          children: "Image (optional \u2014 poster art or offer icon)"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          type: "file",
+	          accept: "image/*",
+	          onChange: onImage,
+	          disabled: uploading
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          className: "input",
+	          style: {
+	            marginTop: 8
+	          },
+	          value: form.image_url,
+	          onChange: e => set('image_url', e.target.value),
+	          placeholder: "or paste an image URL"
+	        }), uploading && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "hint",
+	          children: "Uploading\u2026"
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          children: "Show on"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          style: {
+	            display: 'flex',
+	            gap: 16,
+	            flexWrap: 'wrap'
+	          },
+	          children: PLACEMENT_OPTIONS.map(([v, l]) => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	            className: "adm-checkrow",
+	            style: {
+	              padding: 0
+	            },
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              type: "checkbox",
+	              checked: form.placements.includes(v),
+	              onChange: () => togglePlacement(v)
+	            }), l]
+	          }, v))
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-grid3",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Starts at (optional)"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            type: "datetime-local",
+	            value: form.starts_at,
+	            onChange: e => set('starts_at', e.target.value)
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Ends at (optional)"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            type: "datetime-local",
+	            value: form.ends_at,
+	            onChange: e => set('ends_at', e.target.value)
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Sort order"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            type: "number",
+	            value: form.sort_order,
+	            onChange: e => set('sort_order', e.target.value)
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-checkrow",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          type: "checkbox",
+	          id: "promo-active",
+	          checked: form.is_active !== false,
+	          onChange: e => set('is_active', e.target.checked)
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          htmlFor: "promo-active",
+	          children: "Active (visible on the storefront while within its date window)"
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        style: {
+	          marginTop: 12
+	        },
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          children: "Live preview"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "adm-promo-preview",
+	          children: preview.type === 'poster' ? /*#__PURE__*/jsxRuntimeExports.jsx(PromoPoster, {
+	            promo: preview
+	          }) : /*#__PURE__*/jsxRuntimeExports.jsx(PromoOfferCard, {
+	            promo: preview
+	          })
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        style: {
+	          display: 'flex',
+	          gap: 10,
+	          marginTop: 16
+	        },
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          className: "btn btn-sm",
+	          type: "submit",
+	          disabled: saving || uploading,
+	          children: saving ? 'Saving…' : 'Save promotion'
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "btn btn-outline btn-sm",
+	          onClick: () => setEditing(null),
+	          children: "Cancel"
+	        })]
+	      })]
+	    }), !loading && !notMigrated && list.length === 0 && !editing && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm-empty",
+	      children: "No promotions yet. Create one to show posters and offer cards on the storefront."
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm-slide-list",
+	      children: list.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-slide-card",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "adm-slide-thumb",
+	          style: {
+	            display: 'grid',
+	            placeItems: 'center',
+	            color: 'var(--ink-400)'
+	          },
+	          children: p.image_url ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	            src: p.image_url,
+	            alt: ""
+	          }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            style: {
+	              fontSize: 11,
+	              textTransform: 'uppercase',
+	              letterSpacing: '0.06em'
+	            },
+	            children: p.type
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	            children: p.title || 'Untitled'
+	          }), ' ', !p.is_active && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "badge badge-out",
+	            children: "Hidden"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "hint",
+	            children: [p.type, " \xB7 ", p.theme_variant, p.coupon_code ? ` · code ${p.coupon_code}` : '', p.cta_url ? ` · → ${p.cta_url}` : '']
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-promo-chips",
+	            style: {
+	              marginTop: 6
+	            },
+	            children: [(p.placements || []).length ? p.placements.map(pl => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "adm-promo-chip",
+	              children: pl
+	            }, pl)) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "hint",
+	              children: "no placement"
+	            }), p.ends_at && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "adm-promo-chip",
+	              style: {
+	                background: 'var(--honey-100)',
+	                color: 'var(--honey-700)'
+	              },
+	              children: ["ends ", new Date(p.ends_at).toLocaleDateString()]
+	            })]
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "adm-actions",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: "btn btn-sm btn-light",
+	            onClick: () => move(p, -1),
+	            "aria-label": "Move up",
+	            children: "\u2191"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: "btn btn-sm btn-light",
+	            onClick: () => move(p, 1),
+	            "aria-label": "Move down",
+	            children: "\u2193"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: "btn btn-sm btn-light",
+	            onClick: () => toggleActive(p),
+	            children: p.is_active ? 'Disable' : 'Enable'
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: "btn btn-sm btn-light",
+	            onClick: () => startEdit(p),
+	            children: "Edit"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: "btn btn-sm btn-ghost",
+	            style: {
+	              color: 'var(--color-sale)'
+	            },
+	            onClick: () => remove(p),
+	            children: "Delete"
+	          })]
+	        })]
+	      }, p.id))
+	    })]
+	  });
+	}
+
 	function HomepageSettings() {
 	  const [notices, setNotices] = reactExports.useState(['', '', '']);
 	  const [threshold, setThreshold] = reactExports.useState(699);
@@ -57332,6 +59522,9 @@
 	          path: "hero-slides",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(HeroSlides, {})
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "promotions",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Promotions, {})
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "homepage",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(HomepageSettings, {})
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
@@ -57437,7 +59630,7 @@
 	    let cancelled = false;
 	    (async () => {
 	      try {
-	        const [catalog, categories, heroSlides, settings, variants, media] = await Promise.all([withTimeout(fetchPublicCatalog().catch(() => null), 4000), withTimeout(fetchPublicCategories().catch(() => null), 4000), withTimeout(fetchPublicHeroSlides().catch(() => null), 4000), withTimeout(fetchPublicSettings().catch(() => null), 4000), withTimeout(fetchPublicVariants().catch(() => null), 4000), withTimeout(fetchPublicProductMedia().catch(() => null), 4000)]);
+	        const [catalog, categories, heroSlides, settings, variants, media, promotions] = await Promise.all([withTimeout(fetchPublicCatalog().catch(() => null), 4000), withTimeout(fetchPublicCategories().catch(() => null), 4000), withTimeout(fetchPublicHeroSlides().catch(() => null), 4000), withTimeout(fetchPublicSettings().catch(() => null), 4000), withTimeout(fetchPublicVariants().catch(() => null), 4000), withTimeout(fetchPublicProductMedia().catch(() => null), 4000), withTimeout(fetchPublicPromotions().catch(() => null), 4000)]);
 	        if (cancelled) return;
 	        let changed = false;
 	        if (catalog && applyCatalog(catalog, 'supabase')) changed = true;
@@ -57447,6 +59640,9 @@
 	        if (media && applyProductMedia(media)) changed = true;
 	        if (categories && applyCategories(categories)) changed = true;
 	        if (heroSlides && applyHeroSlides(heroSlides)) changed = true;
+	        // A successful promotions fetch (even []) replaces the local sample
+	        // fallback — an empty table then correctly shows no promo sections.
+	        if (promotions && applyPromotions(promotions)) changed = true;
 	        if (settings) {
 	          if (settings.storefront_theme) {
 	            applyStorefrontTheme(settings.storefront_theme);

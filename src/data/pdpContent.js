@@ -20,7 +20,9 @@
 //     Category is not a licence to guess.
 //   • overviewFor() keeps a neutral product-specific fallback (name / size /
 //     category) — it is the one always-present textual anchor.
-//   • Store-wide trust promises live ONLY in <ProductTrustList> (TRUST_ITEMS).
+//   • Store-wide operational facts live ONLY in <ProductTrustList>
+//     (TRUST_ITEMS). Unverified sourcing, authenticity and returns claims are
+//     deliberately excluded.
 //   • Rating/review helpers never fabricate numbers (Part 3 seam).
 //   • The offer helper is only the Part 2 entry point — no codes, no math.
 // ============================================================
@@ -60,10 +62,10 @@ export function previewReviewsFor(product) {
 // OFFERS TEASER  (Part 2 coupon system plugs in here)
 // ------------------------------------------------------------
 /**
- * Honest offer rows for the PDP entry point. The first two are REAL,
- * store-wide policy (announcement bar). The third is an explicit
- * "coming soon" placeholder for the Part 2 coupon engine — no code,
- * no discount math, nothing wired into checkout.
+ * Honest operational rows for the PDP entry point. They mirror the current
+ * checkout: the ₹699 shipping threshold is used by its total calculation and
+ * cash on delivery is one of its real payment methods. Configured promotions
+ * are supplied separately by the promotions system.
  */
 export function offersFor(product) {
   const currency = product?.currency || '₹';
@@ -71,20 +73,14 @@ export function offersFor(product) {
     {
       icon: 'truck',
       title: `Free shipping over ${currency}${FREE_SHIP_THRESHOLD.toLocaleString('en-IN')}`,
-      note: 'Applied automatically at checkout — no code needed.',
+      note: 'Applied automatically when the order qualifies.',
       real: true,
     },
     {
       icon: 'card',
       title: 'Cash on delivery available',
-      note: 'Pay when your order arrives, on eligible PIN codes.',
+      note: 'Choose it from the payment methods at checkout.',
       real: true,
-    },
-    {
-      icon: 'tag',
-      title: 'Coupons & bank offers',
-      note: 'Promo codes and card offers are launching soon.',
-      real: false,
     },
   ];
 }
@@ -93,19 +89,14 @@ export function offersFor(product) {
 // DELIVERY / SERVICE
 // ------------------------------------------------------------
 /**
- * Presentation-safe delivery estimate. Computes a friendly date window
- * client-side from "today"; makes no real-time carrier claims.
+ * Delivery display data. Timing is intentionally deferred to checkout because
+ * the PDP has no address or carrier response from which to promise a date.
  */
-export function deliveryEstimate(fromDate = new Date()) {
-  const fmt = (d) =>
-    d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
-  const lo = new Date(fromDate); lo.setDate(lo.getDate() + 2);
-  const hi = new Date(fromDate); hi.setDate(hi.getDate() + 4);
+export function deliveryEstimate() {
   return {
-    range: `${fmt(lo)} – ${fmt(hi)}`,
-    days: '2–4 business days',
+    range: 'Confirmed at checkout',
+    days: 'Based on your delivery address and chosen method',
     freeThreshold: FREE_SHIP_THRESHOLD,
-    place: 'India',
   };
 }
 
@@ -173,8 +164,8 @@ export function suitableForList(product) {
 }
 
 // ------------------------------------------------------------
-// OVERVIEW  (accordion) — real description wins; otherwise a neutral
-// sentence with NO category marketing blurb (those mention ingredients).
+// OVERVIEW  (accordion) — real description wins; otherwise a neutral catalogue
+// identity line. It makes no provenance, fulfilment or packaging claim.
 // ------------------------------------------------------------
 export function overviewFor(product) {
   if (product && typeof product.description === 'string' && product.description.trim()) {
@@ -184,46 +175,26 @@ export function overviewFor(product) {
   const size = product?.form ? ` (${product.form})` : '';
   return {
     real: false,
-    text:
-      `${product?.name}${size} is part of the SORA LIFE ${cat?.name || 'wellness'} range, ` +
-      'sourced and fulfilled by SORA LIFE in genuine, sealed packaging. ' +
-      'See the product pack for the full ingredient list and directions for use.',
+    text: `${product?.name}${size} is listed in ${cat?.name || 'the catalogue'}. Refer to the product pack for official product details and directions.`,
   };
 }
 
 // ------------------------------------------------------------
-// FAQ — every answer mirrors an existing store promise
-// (announcement bar / footer / current PDP copy). Nothing new invented.
+// FAQ — real structured catalogue rows only. The current catalogue has no FAQ
+// field, so this returns [] and the accordion row stays absent.
 // ------------------------------------------------------------
 export function faqFor(product) {
-  const currency = product?.currency || '₹';
-  return [
-    {
-      q: 'Are these genuine products?',
-      a: 'Yes. Every order ships as authentic, sealed stock and is fulfilled by SORA LIFE.',
-    },
-    {
-      q: 'How long will delivery take?',
-      a: 'Most orders arrive within 2–4 business days. Enter your PIN code at checkout for a precise estimate.',
-    },
-    {
-      q: 'Is free shipping available?',
-      a: `Yes — free shipping on orders above ${currency}${FREE_SHIP_THRESHOLD.toLocaleString('en-IN')}. Cash on delivery is available on eligible PIN codes.`,
-    },
-    {
-      q: 'Can I return it?',
-      a: 'Unopened items can be returned within 15 days. See Shipping & Returns for full details.',
-    },
-  ];
+  if (!Array.isArray(product?.faqs)) return [];
+  return product.faqs
+    .filter((item) => item && typeof item.q === 'string' && item.q.trim() && typeof item.a === 'string' && item.a.trim())
+    .map((item) => ({ q: item.q.trim(), a: item.a.trim() }));
 }
 
 // ------------------------------------------------------------
-// TRUST / ASSURANCE — mirrors existing footer + announcement promises
+// TRUST / ASSURANCE — operational storefront facts only
 // ------------------------------------------------------------
 export const TRUST_ITEMS = [
-  ['truck', 'Free shipping', 'On every order above ₹699'],
-  ['card', 'COD available', 'Pay on delivery where eligible'],
-  ['lock', 'Secure payments', 'Encrypted checkout via Razorpay'],
-  ['shield', 'Genuine products', 'Authentic, sealed stock only'],
-  ['return', 'Easy 15-day returns', 'On unopened items'],
+  ['truck', 'Free shipping', 'On orders above ₹699'],
+  ['card', 'Payment options', 'Available methods are shown at checkout'],
+  ['package', 'Order details', 'Available in your account after purchase'],
 ];

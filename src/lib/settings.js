@@ -16,7 +16,7 @@ export let branding = {
 
 export let announcement = {
   notices: [
-    'FREE SHIPPING on orders above ₹699',
+    'FREE STANDARD SHIPPING',
     'COD Available',
     '100% Authentic Biosash Products',
   ],
@@ -56,6 +56,11 @@ const DEFAULT_HERO_SLIDES = [
   },
 ];
 export let heroSlides = DEFAULT_HERO_SLIDES;
+// True only once applyHeroSlides() has replaced the built-in defaults with
+// admin-managed rows. The V2 hero uses this to decide whether slide copy is
+// approved configured content (render it) or the hardcoded marketing defaults
+// above (do not carry unverified provenance/claims into V2).
+export let heroSlidesConfigured = false;
 
 // ---- Storefront theme (admin-customizable appearance) ----
 // Lives in site_settings.storefront_theme; consumed via CSS custom properties.
@@ -77,5 +82,6 @@ export function applyContact(v) { if (v && typeof v === 'object') contact = { ..
 export function applyHeroSlides(list) {
   if (!Array.isArray(list) || !list.length) return false;
   heroSlides = list;
+  heroSlidesConfigured = true;
   return true;
 }

@@ -1,26 +1,42 @@
 import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import ProductCard from './ProductCard.jsx';
-import Reveal from './Reveal.jsx';
 
-export default function ProductRail({ eyebrow, title, description, products, link, linkLabel = 'View all', limit = 4 }) {
-  const items = products.slice(0, limit);
-  if (!items.length) return null;
+// V2 product rail.
+//
+// Native horizontal scroll with scroll-snap on mobile (2.2 cards visible, so
+// the partial card advertises the scroll), a real grid from 768 up. No carousel
+// library, no arrows, no JS — it works with a keyboard, a trackpad and a screen
+// reader as-is.
+export default function ProductRail({
+  eyebrow,
+  title,
+  products,
+  link,
+  linkLabel = 'View all',
+  limit = 8,
+  minItems = 1,
+}) {
+  const items = Array.isArray(products) ? products.slice(0, limit) : [];
+  if (items.length < minItems) return null;
+
   return (
-    <section className="section">
-      <div className="container">
-        <div className="sec-head">
+    <section className="v2-sec">
+      <div className="v2-wrap">
+        <div className="v2-sechead">
           <div>
-            {eyebrow && <span className="eyebrow">{eyebrow}</span>}
-            <h2 className="sec-title serif" style={{ marginTop: 8 }}>{title}</h2>
-            {description && <p>{description}</p>}
+            {eyebrow && <p className="v2-eyebrow">{eyebrow}</p>}
+            {title && <h2 className="v2-h2">{title}</h2>}
           </div>
-          {link && <Link to={link} className="sec-link">{linkLabel} <Icon name="arrowRight" size={17} /></Link>}
+          {link && (
+            <Link to={link} className="v2-more">
+              {linkLabel} <Icon name="chevronRight" size={12} stroke={1.8} />
+            </Link>
+          )}
         </div>
-        <div className="rail">
-          {items.map((p, i) => (
-            <Reveal key={p.id} delay={i * 60}><ProductCard product={p} /></Reveal>
-          ))}
+
+        <div className="v2-rail v2-rail--cards">
+          {items.map((p) => <ProductCard key={p.id} product={p} />)}
         </div>
       </div>
     </section>

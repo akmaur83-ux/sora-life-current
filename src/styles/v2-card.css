@@ -1,0 +1,171 @@
+/* ============================================================================
+   SORA LIFE V2 — PRODUCT MEDIA, PRODUCT CARD, COMPACT CARD
+   Square-shouldered throughout. No resting shadow: separation is the hairline
+   plus the surface step (paper #FFFDF8 on ivory #FBF8F1).
+   ========================================================================= */
+
+/* ---------------------------------------------------------- media frame */
+/* The frame is square and sharp. `contain` is deliberate for TODAY's assets:
+   the current catalogue is largely plain-background product photography and
+   `cover` would crop real labels. The warm ground below is what makes a mixed
+   catalogue read as one shoot without faking photography.
+   When a product receives upgraded editorial imagery (stone plinth, warm cream
+   environment, botanical context), add .v2-pimg--cover to that instance to
+   switch it to full-bleed. Nothing else needs to change. */
+.v2-pimg {
+  position:relative; width:100%; aspect-ratio:1 / 1; overflow:hidden;
+  border-radius:0;
+  background:
+    radial-gradient(118% 92% at 66% 10%, #FDFAF3 0%, #F6EFE1 46%, #EFE6D5 100%);
+}
+.v2-pimg img,
+.v2-pimg picture { width:100%; height:100%; display:block; }
+.v2-pimg img { object-fit:contain; object-position:center; padding:8%; }
+.v2-pimg--cover img { object-fit:cover; padding:0; }
+
+/* Neutral fallback: warm ground + category wordmark. Never a grey box, never
+   a broken-image glyph, never invented packaging. */
+.v2-pimg__fallback {
+  position:absolute; inset:0; display:grid; place-items:center; text-align:center;
+  padding:14px; color:var(--slv2-f600);
+}
+.v2-pimg__fallback b {
+  display:block; font-family:var(--slv2-disp);
+  font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+  font-size:13px; font-weight:500; letter-spacing:.16em; text-transform:uppercase;
+  opacity:.62;
+}
+.v2-pimg__fallback span {
+  display:block; margin-top:5px; font-family:var(--slv2-sans);
+  font-size:9px; font-weight:600; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--slv2-ink-4);
+}
+
+/* ---------------------------------------------------------- product card */
+.v2-pc {
+  position:relative; display:flex; flex-direction:column; height:100%;
+  background:var(--slv2-paper);
+  border:1px solid var(--slv2-line-2);
+  border-radius:var(--slv2-r-ui);
+  overflow:hidden;
+  box-shadow:var(--slv2-sh-card);
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+@media (hover: hover) {
+  .v2-pc:hover { border-color:var(--slv2-line); box-shadow:var(--slv2-sh-hover); }
+}
+
+.v2-pc__media { position:relative; background:var(--slv2-cream); }
+.v2-pc__media > a { display:block; }
+
+.v2-pc__badges { position:absolute; top:8px; left:8px; z-index:4; display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
+.v2-pc__wish { position:absolute; top:8px; right:8px; z-index:4; width:26px; height:26px; }
+
+.v2-pc__soldout {
+  position:absolute; inset:auto 0 0; z-index:5;
+  background:rgba(22,33,27,.74); color:#F2EDE1;
+  font-family:var(--slv2-sans);
+  font-size:9.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  text-align:center; padding:5px 0;
+}
+.v2-pc.is-out .v2-pimg { filter:grayscale(.5) opacity(.66); }
+.v2-pc.is-out .v2-pc__name { color:var(--slv2-ink-3); }
+
+.v2-pc__body { padding:10px 10px 11px; display:flex; flex-direction:column; flex:1; }
+.v2-pc__meta {
+  font-family:var(--slv2-sans);
+  font-size:9.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--slv2-ink-4); margin:0 0 5px; line-height:1.3;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.v2-pc__name {
+  font-family:var(--slv2-sans);
+  font-size:12.5px; font-weight:600; line-height:1.32; letter-spacing:-.004em;
+  margin:0 0 6px; color:var(--slv2-ink);
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; min-height:33px;             /* keeps grid baselines aligned */
+}
+.v2-pc__name a { color:inherit; text-decoration:none; }
+.v2-pc__name a:hover { color:var(--slv2-accent-primary-hover); }
+
+.v2-pc__vars { display:flex; gap:4px; margin-bottom:7px; flex-wrap:wrap; }
+.v2-pc__var {
+  font-family:var(--slv2-sans);
+  font-size:9.5px; font-weight:600; letter-spacing:.02em; padding:2px 6px;
+  border-radius:var(--slv2-r-ui); border:1px solid var(--slv2-line);
+  color:var(--slv2-ink-3); background:var(--slv2-ivory);
+}
+.v2-pc__note {
+  font-family:var(--slv2-sans);
+  font-size:9.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+  color:#9A5A2E; margin-bottom:6px;
+}
+
+.v2-pc__foot { margin-top:auto; display:flex; flex-direction:column; gap:8px; padding-top:2px; }
+.v2-pc__cta {
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  width:100%; height:34px; border-radius:var(--slv2-r-ui);
+  background:var(--slv2-cta-primary-bg); color:var(--slv2-cta-primary-text);
+  border:1px solid var(--slv2-cta-primary-bg);
+  font-family:var(--slv2-sans); font-size:12px; font-weight:600; letter-spacing:.005em;
+  cursor:pointer; transition:background .18s ease;
+}
+.v2-pc__cta:hover { background:var(--slv2-cta-primary-hover); border-color:var(--slv2-cta-primary-hover); }
+.v2-pc__cta:focus-visible { outline:2px solid var(--slv2-f500); outline-offset:2px; }
+.v2-pc__cta--out { background:transparent; color:var(--slv2-ink-3); border-color:var(--slv2-line); }
+.v2-pc__cta--out:hover { background:var(--slv2-cream); }
+
+@media (min-width: 768px) {
+  .v2-pc__body { padding:14px 14px 15px; }
+  .v2-pc__meta { font-size:10px; margin-bottom:6px; }
+  .v2-pc__name { font-size:14px; min-height:37px; margin-bottom:8px; }
+  .v2-pc__cta { height:42px; font-size:13px; }
+  .v2-pc__wish { width:32px; height:32px; top:10px; right:10px; }
+  .v2-pc__badges { top:10px; left:10px; }
+}
+@media (min-width: 1024px) {
+  .v2-pc__body { padding:16px 16px 17px; }
+  .v2-pc__name { font-size:15px; min-height:40px; }
+  .v2-pc__cta { height:46px; font-size:14px; }
+}
+
+/* ------------------------------------------- compact horizontal card
+   Home recommendations now; PDP "Goes well with" and the cart upsell reuse
+   this in later phases. */
+.v2-cc {
+  display:flex; flex-direction:row; gap:10px; padding:8px; align-items:center; height:100%;
+  background:var(--slv2-paper);
+  border:1px solid var(--slv2-line-2);
+  border-radius:var(--slv2-r-ui);
+  text-decoration:none; color:inherit;
+  transition:border-color .2s ease;
+}
+@media (hover: hover) { .v2-cc:hover { border-color:var(--slv2-line); } }
+.v2-cc__m { width:54px; height:54px; flex:0 0 auto; overflow:hidden; border-radius:var(--slv2-r-ui); }
+.v2-cc__m .v2-pimg img { padding:6%; }
+.v2-cc__b { min-width:0; flex:1; }
+.v2-cc__brand { font-family:var(--slv2-sans); font-size:8.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--slv2-ink-4); }
+.v2-cc__n {
+  font-family:var(--slv2-sans); font-size:11.5px; font-weight:600; line-height:1.3;
+  margin:2px 0 4px; color:var(--slv2-ink);
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.v2-cc__add {
+  width:26px; height:26px; flex:0 0 auto; position:relative;
+  display:grid; place-items:center; cursor:pointer;
+  border:1px solid var(--slv2-f500); color:var(--slv2-f600);
+  background:transparent; border-radius:var(--slv2-r-ui); padding:0;
+}
+.v2-cc__add::after { content:""; position:absolute; top:50%; left:50%; width:44px; height:44px; transform:translate(-50%,-50%); }
+.v2-cc__add:hover { background:var(--slv2-f50); }
+.v2-cc__add:focus-visible { outline:2px solid var(--slv2-f500); outline-offset:2px; }
+@media (min-width: 768px) {
+  .v2-cc { padding:12px; gap:14px; }
+  .v2-cc__m { width:76px; height:76px; }
+  .v2-cc__n { font-size:14px; }
+  .v2-cc__add { width:32px; height:32px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-pc, .v2-cc, .v2-pc__cta { transition:none; }
+}
