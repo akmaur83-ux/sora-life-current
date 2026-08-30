@@ -58,7 +58,7 @@ export default function CategoryRail() {
   if (items.length < 3) return null;
 
   const renderCategory = (c, duplicate = false) => {
-    const image = CATEGORY_IMAGES[c.slug];
+    const image = c.image || c.image_url || CATEGORY_IMAGES[c.slug];
 
     return (
       <Link
