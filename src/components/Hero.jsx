@@ -4,7 +4,6 @@ import Icon from './Icon.jsx';
 import ProductImage from './ProductImage.jsx';
 import { heroSlides, heroSlidesConfigured } from '../lib/settings.js';
 import { productBySlug, products } from '../data/products.js';
-import { categoryBySlug } from '../data/categories.js';
 
 // ---------------------------------------------------------------------------
 // V2 PRODUCT-LED HERO
@@ -26,6 +25,25 @@ import { categoryBySlug } from '../data/categories.js';
 // that copy is approved content and the original slide rendering is used.
 // ---------------------------------------------------------------------------
 const HERO_PRODUCT_SLUG = 'biosash-sea-buckthorn-juice';
+
+const SAFE_HERO_COPY = {
+  kicker: 'SEA BUCKTHORN COLLECTION',
+  title: 'Sea Buckthorn\nEssentials',
+  sub: 'Explore juices, supplements and everyday care from the collection.',
+  cta: { label: 'EXPLORE COLLECTION', to: '/shop' },
+};
+
+// Replace only the currently published, generic sea-buckthorn slide copy.
+// The configured artwork and every other Admin-managed slide field remain
+// untouched; this is a storefront copy-safety override, not a data write.
+function withSafeHeroCopy(slide) {
+  const isCurrentSeaBuckthornSlide =
+    slide?.kicker?.trim().toUpperCase() === 'HIMALAYAN WELLNESS' &&
+    slide?.title?.trim() === 'The Power of Sea Buckthorn';
+
+  if (!isCurrentSeaBuckthornSlide) return slide;
+  return { ...slide, ...SAFE_HERO_COPY };
+}
 
 function resolveHeroProduct() {
   const exact = productBySlug?.[HERO_PRODUCT_SLUG];
@@ -115,8 +133,6 @@ function ProductHero() {
   const product = resolveHeroProduct();
   if (!product) return null;
 
-  const cat = categoryBySlug[product.category];
-
   return (
     <section className="v2-hero v2-hero--product" aria-label="Featured product">
       <div className="v2-hero__stage">
@@ -142,12 +158,12 @@ function ProductHero() {
 
         {/* Copy is live DOM, held in the left zone, never baked into artwork. */}
         <div className="v2-hero__ui">
-          {cat?.name && <p className="v2-hero__kicker">{cat.name}</p>}
-          <h1 className="v2-hero__title">{product.name}</h1>
-          {product.form && <p className="v2-hero__meta">{product.form}</p>}
+          <p className="v2-hero__kicker">{SAFE_HERO_COPY.kicker}</p>
+          <h1 className="v2-hero__title">{SAFE_HERO_COPY.title}</h1>
+          <p className="v2-hero__sub">{SAFE_HERO_COPY.sub}</p>
           <div>
-            <Link to={`/product/${product.slug}`} className="v2-btn v2-btn--sm">
-              View product
+            <Link to={SAFE_HERO_COPY.cta.to} className="v2-btn v2-btn--sm">
+              {SAFE_HERO_COPY.cta.label}
             </Link>
           </div>
         </div>
@@ -187,6 +203,7 @@ function ConfiguredHero() {
   // hero still has structure rather than collapsing to nothing.
   const renderable = heroSlides.filter((s) => isRenderable(s, useVideo, videoFailed));
   const SLIDES = renderable.length ? renderable : heroSlides;
+  const DISPLAY_SLIDES = SLIDES.map(withSafeHeroCopy);
 
   // A dropped slide shortens the deck; keep the index inside it.
   useEffect(() => {
@@ -243,7 +260,7 @@ function ConfiguredHero() {
       aria-roledescription="carousel"
       aria-label="Sora Life featured"
     >
-      {SLIDES.map((s, i) => (
+      {DISPLAY_SLIDES.map((s, i) => (
         <div
           key={s.id}
           className={`v2-hero__slide ${i === active ? 'is-active' : ''}`}
@@ -281,9 +298,7 @@ function ConfiguredHero() {
             </div>
           </div>
 
-          {/* Copy is live DOM over a scrim, never baked into the artwork, so a
-              swapped image can never break the headline. */}
-          <span className="v2-hero__scrim" aria-hidden="true" />
+          {/* Copy is live DOM directly over the artwork, never baked in. */}
           <div className="v2-hero__ui">
             {s.kicker && <p className="v2-hero__kicker">{s.kicker}</p>}
             <h1 className="v2-hero__title">{s.title}</h1>
@@ -303,7 +318,7 @@ function ConfiguredHero() {
           <button className="v2-hero__arrow v2-hero__arrow--next" onClick={() => go(active + 1)} aria-label="Next slide"><Icon name="chevronRight" size={18} stroke={1.6} /></button>
 
           <div className="v2-hero__dots">
-            {SLIDES.map((s, i) => (
+            {DISPLAY_SLIDES.map((s, i) => (
               <button key={s.id} className={i === active ? 'is-on' : ''} onClick={() => go(i)}
                 aria-label={`Go to slide ${i + 1}`} aria-current={i === active} />
             ))}
