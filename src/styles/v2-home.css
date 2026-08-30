@@ -62,12 +62,14 @@
   .v2-hero__media { aspect-ratio:auto; height:clamp(220px, 60vw, 258px); }
   .v2-hero__par { inset:0; }
   .v2-hero:not(.v2-hero--product) .v2-hero__img { object-position:36% center !important; }
-  .v2-hero:not(.v2-hero--product) .v2-hero__ui { width:46%; padding-right:0; }
+  .v2-hero:not(.v2-hero--product) .v2-hero__ui {
+    width:46%; padding:8px 0 0; justify-content:flex-start; transform:translateY(-4px);
+  }
   .v2-hero:not(.v2-hero--product) .v2-hero__kicker { font-size:7.5px; letter-spacing:.13em; }
-  .v2-hero:not(.v2-hero--product) .v2-hero__title { font-size:24px; }
+  .v2-hero:not(.v2-hero--product) .v2-hero__title { font-size:21px; line-height:1.05; margin-bottom:6px; }
   .v2-hero:not(.v2-hero--product) .v2-hero__sub {
-    max-width:15ch; margin-bottom:10px; font-size:10px; line-height:1.28;
-    -webkit-line-clamp:5;
+    max-width:20ch; margin-bottom:10px; font-size:9.25px; line-height:1.2;
+    -webkit-line-clamp:4;
   }
   .v2-hero:not(.v2-hero--product) .v2-btn {
     padding:9px 10px; font-size:8.5px; letter-spacing:.08em;
