@@ -77,7 +77,18 @@ export function applyStorefrontTheme(v) {
 
 export function applyBranding(v) { if (v && typeof v === 'object') branding = { ...branding, ...v }; }
 export function applyAnnouncement(v) { if (v && typeof v === 'object') announcement = { ...announcement, ...v }; }
-export function applyHomepage(v) { if (v && typeof v === 'object') homepage = { ...homepage, ...v }; }
+const homepageListeners = new Set();
+export const getHomepageSnapshot = () => homepage;
+export function subscribeHomepage(listener) {
+  homepageListeners.add(listener);
+  return () => homepageListeners.delete(listener);
+}
+export function applyHomepage(v) {
+  if (v && typeof v === 'object') {
+    homepage = { ...homepage, ...v };
+    homepageListeners.forEach((listener) => listener());
+  }
+}
 export function applyContact(v) { if (v && typeof v === 'object') contact = { ...contact, ...v }; }
 export function applyHeroSlides(list) {
   if (!Array.isArray(list) || !list.length) return false;

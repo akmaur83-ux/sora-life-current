@@ -1,16 +1,19 @@
+import { useEffect, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import Hero from '../components/Hero.jsx';
-import CategoryRail from '../components/CategoryRail.jsx';
+import HomeCategoryStrip from '../components/HomeCategoryStrip.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import CompactProductCard from '../components/CompactProductCard.jsx';
 import EditorialCard from '../components/EditorialCard.jsx';
 import StoryBlock from '../components/StoryBlock.jsx';
 import TrustStrip from '../components/TrustStrip.jsx';
 import Newsletter from '../components/Newsletter.jsx';
-import PromoRail from '../components/promo/PromoRail.jsx';
+import HomeOffers from '../components/promo/HomeOffers.jsx';
 import { getBestsellers, getNewArrivals } from '../data/products.js';
-import { homepage } from '../lib/settings.js';
+import { homepage, getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+import { sanitizeHomepageVisuals } from '../lib/homepageAppearance.js';
+import { watchHomepageVisuals } from '../lib/homepageVisualSync.js';
 
 // ============================================================================
 // SORA LIFE V2 — HOMEPAGE
@@ -34,6 +37,9 @@ function configuredEditorials() {
 }
 
 export default function Home() {
+  const savedHomepage = useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+  const visuals = sanitizeHomepageVisuals(savedHomepage.visuals);
+  useEffect(watchHomepageVisuals, []);
   const bestsellers = getBestsellers(8);
   const newArrivals = getNewArrivals(8);
   const editorials = configuredEditorials();
@@ -47,17 +53,11 @@ export default function Home() {
       <Hero />
 
       {/* 4 · CATEGORY NAVIGATION — orientation, not merchandising */}
-      <section className="v2-sec v2-sec--tight v2-home-categories">
-        <div className="v2-wrap">
-          <CategoryRail />
-        </div>
-      </section>
+      <HomeCategoryStrip appearance={visuals.categoryStrip} />
 
       {/* 5 · CAMPAIGN / PROMOTION — existing promotions runtime, untouched.
              Renders nothing when no active promotion targets `home`. */}
-      <div className="v2-promo-slot">
-        <PromoRail place="home" eyebrow="Offers" title="Current offers" />
-      </div>
+      <HomeOffers appearance={visuals.offers} />
 
       {/* 6 · BESTSELLERS — compact, 2.2 cards visible on mobile */}
       {bestsellers.length >= 4 && (

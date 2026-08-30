@@ -10,3 +10,8 @@ scripts
 *.bak
 media/*.bak
 __audit.js
+.claude
+.codex
+.env*
+__pycache__
+*.pyc
