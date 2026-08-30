@@ -34,6 +34,9 @@ const SAFE_HERO_COPY = {
   cta: { label: 'EXPLORE COLLECTION', to: '/shop' },
 };
 
+// Only mobile typography responds to length; configured copy stays intact.
+const titleClass = (title) => `v2-hero__title${String(title || '').trim().length > 22 ? ' v2-hero__title--long' : ''}`;
+
 // Replace only the currently published, generic sea-buckthorn slide copy.
 // The configured artwork and every other Admin-managed slide field remain
 // untouched; this is a storefront copy-safety override, not a data write.
@@ -160,7 +163,7 @@ function ProductHero() {
         {/* Copy is live DOM, held in the left zone, never baked into artwork. */}
         <div className="v2-hero__ui">
           <p className="v2-hero__kicker">{SAFE_HERO_COPY.kicker}</p>
-          <h1 className="v2-hero__title">{SAFE_HERO_COPY.title}</h1>
+          <h1 className={titleClass(SAFE_HERO_COPY.title)}>{SAFE_HERO_COPY.title}</h1>
           <p className="v2-hero__sub">
             <span className="v2-hero__sub-full">{SAFE_HERO_COPY.sub}</span>
             <span className="v2-hero__sub-compact">{SAFE_HERO_COPY.mobileSub}</span>
@@ -306,7 +309,7 @@ function ConfiguredHero() {
           {/* Copy is live DOM directly over the artwork, never baked in. */}
           <div className="v2-hero__ui">
             {s.kicker && <p className="v2-hero__kicker">{s.kicker}</p>}
-            <h1 className="v2-hero__title">{s.title}</h1>
+            <h1 className={titleClass(s.title)}>{s.title}</h1>
             {(s.sub || s.lede) && <p className="v2-hero__sub">
               {s.sub === SAFE_HERO_COPY.sub ? <>
                 <span className="v2-hero__sub-full">{s.sub}</span>

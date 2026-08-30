@@ -515,3 +515,49 @@ body:has(.v2-pdp-root .buybar) .page-main {
   .v2-pdp-root .pdp__frame-fade { animation:none; }
   .v2-pdp-root .pdp__dot { transition:none; }
 }
+/* PDP lead description: compact by default, expandable on demand */
+.v2-pdp-root .pdp__leadwrap {
+  margin-top:12px;
+}
+
+.v2-pdp-root .pdp__leadwrap .pdp__lead {
+  margin:0;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:3;
+  overflow:hidden;
+}
+
+.v2-pdp-root .pdp__leadwrap.is-open .pdp__lead {
+  display:block;
+  overflow:visible;
+}
+
+.v2-pdp-root .pdp__leadmore {
+  margin-top:5px;
+  padding:0;
+  border:0;
+  background:none;
+  color:var(--slv2-accent-primary);
+  font-family:var(--slv2-sans);
+  font-size:11.5px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.v2-pdp-root .pdp__leadmore:hover {
+  text-decoration:underline;
+}
+/* Buy Now — muted honey brown */
+.v2-pdp-root .pdp__buynow {
+  background:#B8893B;
+  border-color:#B8893B;
+  color:#fff;
+  font-weight:600;
+}
+
+.v2-pdp-root .pdp__buynow:hover {
+  background:#9F742F;
+  border-color:#9F742F;
+  color:#fff;
+}

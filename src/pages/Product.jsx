@@ -50,6 +50,10 @@ export default function Product() {
   const { addToCart, toggleWish, isWished, toast } = useStore();
   const product = productBySlug[slug];
   const [qty, setQty] = useState(1);
+const [leadExpanded, setLeadExpanded] = useState(false);
+useEffect(() => {
+  setLeadExpanded(false);
+}, [slug]);
   // The selected VARIANT OBJECT (not just its label): price, MRP, SKU, stock
   // and image all follow from it, and the cart needs its id so the server can
   // price the exact pack the customer chose.
@@ -136,7 +140,7 @@ export default function Product() {
   const faq = faqFor(product);
   const accordionSections = [
     {
-      title: 'Product overview', icon: 'leaf', defaultOpen: true,
+      title: 'Product overview', icon: 'leaf',
       content: <p className="pdp-acc__p">{overview.text}</p>,
     },
     ...(product.ingredients?.length ? [{
@@ -234,7 +238,20 @@ export default function Product() {
           <h1 className="pdp__title serif">{product.name}</h1>
           {/* Only a real, authored description earns a lead paragraph — the
               category/size fallback would just repeat the meta line above. */}
-          {product.description && <p className="pdp__lead">{product.description}</p>}
+          {product.description && (
+  <div className={`pdp__leadwrap ${leadExpanded ? 'is-open' : ''}`}>
+    <p className="pdp__lead">{product.description}</p>
+
+    <button
+      type="button"
+      className="pdp__leadmore"
+      onClick={() => setLeadExpanded((v) => !v)}
+      aria-expanded={leadExpanded}
+    >
+      {leadExpanded ? 'Show less' : 'See more'}
+    </button>
+  </div>
+)}
 
           <ProductRatingTeaser product={product} />
 
@@ -307,7 +324,10 @@ export default function Product() {
 
         <section className="pdp-sec" aria-labelledby="pdp-info-h">
           <h2 id="pdp-info-h" className="pdp-sec__title serif">Product information</h2>
-          <ProductInfoAccordion sections={accordionSections} />
+          <ProductInfoAccordion
+  key={product.id ?? product.slug}
+  sections={accordionSections}
+/>
         </section>
 
         <ProductTrustList />

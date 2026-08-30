@@ -163,3 +163,14 @@
 
 /* Below the desktop breakpoint the mega panel must never paint. */
 @media (max-width: 900px) { .v2-hdr__mega { display:none; } }
+/* Mobile header: move brand from centered column toward the left */
+@media (max-width:900px) {
+  .v2-hdr__bar {
+    grid-template-columns:auto 1fr auto;
+  }
+
+  .v2-hdr__brand {
+    justify-content:flex-start;
+    margin-left:8px;
+  }
+}
