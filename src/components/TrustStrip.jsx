@@ -1,6 +1,4 @@
 import Icon from './Icon.jsx';
-import { money } from '../lib/format.js';
-import { announcement } from '../lib/settings.js';
 
 // V2 trust strip.
 //
@@ -14,10 +12,7 @@ function defaultItems() {
     { icon: 'lock', title: 'Secure checkout', sub: 'Encrypted payments' },
   ];
 
-  const threshold = Number(announcement.freeShippingThreshold);
-  if (Number.isFinite(threshold) && threshold > 0) {
-    out.push({ icon: 'truck', title: 'Free shipping', sub: `On orders above ${money(threshold)}` });
-  }
+  out.push({ icon: 'truck', title: 'Free standard shipping', sub: 'Delivery options at checkout' });
 
   out.push(
     { icon: 'package', title: 'Order tracking', sub: 'In your account' },

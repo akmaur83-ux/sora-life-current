@@ -30,6 +30,7 @@ const SAFE_HERO_COPY = {
   kicker: 'SEA BUCKTHORN COLLECTION',
   title: 'Sea Buckthorn\nEssentials',
   sub: 'Explore juices, supplements and everyday care from the collection.',
+  mobileSub: 'Juices, supplements & everyday care.',
   cta: { label: 'EXPLORE COLLECTION', to: '/shop' },
 };
 
@@ -160,10 +161,14 @@ function ProductHero() {
         <div className="v2-hero__ui">
           <p className="v2-hero__kicker">{SAFE_HERO_COPY.kicker}</p>
           <h1 className="v2-hero__title">{SAFE_HERO_COPY.title}</h1>
-          <p className="v2-hero__sub">{SAFE_HERO_COPY.sub}</p>
+          <p className="v2-hero__sub">
+            <span className="v2-hero__sub-full">{SAFE_HERO_COPY.sub}</span>
+            <span className="v2-hero__sub-compact">{SAFE_HERO_COPY.mobileSub}</span>
+          </p>
           <div>
             <Link to={SAFE_HERO_COPY.cta.to} className="v2-btn v2-btn--sm">
-              {SAFE_HERO_COPY.cta.label}
+              <span className="v2-hero__cta-full">{SAFE_HERO_COPY.cta.label}</span>
+              <span className="v2-hero__cta-compact">Explore collection</span>
             </Link>
           </div>
         </div>
@@ -263,7 +268,7 @@ function ConfiguredHero() {
       {DISPLAY_SLIDES.map((s, i) => (
         <div
           key={s.id}
-          className={`v2-hero__slide ${i === active ? 'is-active' : ''}`}
+          className={`v2-hero__slide ${i === active ? 'is-active' : ''} ${s.sub === SAFE_HERO_COPY.sub ? 'v2-hero__slide--collection' : ''}`}
           aria-hidden={i !== active}
         >
           <div className="v2-hero__media">
@@ -302,10 +307,20 @@ function ConfiguredHero() {
           <div className="v2-hero__ui">
             {s.kicker && <p className="v2-hero__kicker">{s.kicker}</p>}
             <h1 className="v2-hero__title">{s.title}</h1>
-            {(s.sub || s.lede) && <p className="v2-hero__sub">{s.sub || s.lede}</p>}
+            {(s.sub || s.lede) && <p className="v2-hero__sub">
+              {s.sub === SAFE_HERO_COPY.sub ? <>
+                <span className="v2-hero__sub-full">{s.sub}</span>
+                <span className="v2-hero__sub-compact">{SAFE_HERO_COPY.mobileSub}</span>
+              </> : (s.sub || s.lede)}
+            </p>}
             {s.cta?.to && (
               <div>
-                <Link to={s.cta.to} className="v2-btn v2-btn--sm">{s.cta.label}</Link>
+                <Link to={s.cta.to} className="v2-btn v2-btn--sm">
+                  {s.cta.label === SAFE_HERO_COPY.cta.label ? <>
+                    <span className="v2-hero__cta-full">{s.cta.label}</span>
+                    <span className="v2-hero__cta-compact">Explore collection</span>
+                  </> : s.cta.label}
+                </Link>
               </div>
             )}
           </div>

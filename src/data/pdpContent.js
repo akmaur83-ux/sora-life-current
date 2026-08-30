@@ -28,8 +28,6 @@
 // ============================================================
 import { categoryBySlug } from './categories.js';
 
-const FREE_SHIP_THRESHOLD = 699; // mirrors the announcement bar / existing PDP copy
-
 // ------------------------------------------------------------
 // RATING / REVIEW SUMMARY  (Part 3 wires these to the real feed)
 // ------------------------------------------------------------
@@ -63,17 +61,16 @@ export function previewReviewsFor(product) {
 // ------------------------------------------------------------
 /**
  * Honest operational rows for the PDP entry point. They mirror the current
- * checkout: the ₹699 shipping threshold is used by its total calculation and
- * cash on delivery is one of its real payment methods. Configured promotions
+ * checkout: Standard delivery is free and cash on delivery is one of its
+ * real payment methods. Configured promotions
  * are supplied separately by the promotions system.
  */
-export function offersFor(product) {
-  const currency = product?.currency || '₹';
+export function offersFor() {
   return [
     {
       icon: 'truck',
-      title: `Free shipping over ${currency}${FREE_SHIP_THRESHOLD.toLocaleString('en-IN')}`,
-      note: 'Applied automatically when the order qualifies.',
+      title: 'Free standard shipping',
+      note: 'Select Standard delivery at checkout.',
       real: true,
     },
     {
@@ -96,7 +93,6 @@ export function deliveryEstimate() {
   return {
     range: 'Confirmed at checkout',
     days: 'Based on your delivery address and chosen method',
-    freeThreshold: FREE_SHIP_THRESHOLD,
   };
 }
 
@@ -194,7 +190,7 @@ export function faqFor(product) {
 // TRUST / ASSURANCE — operational storefront facts only
 // ------------------------------------------------------------
 export const TRUST_ITEMS = [
-  ['truck', 'Free shipping', 'On orders above ₹699'],
+  ['truck', 'Free standard shipping', 'Select Standard delivery at checkout'],
   ['card', 'Payment options', 'Available methods are shown at checkout'],
   ['package', 'Order details', 'Available in your account after purchase'],
 ];

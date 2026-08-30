@@ -40,7 +40,10 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
 
   const [sort, setSort] = useState(initialSort);
   const [selCats, setSelCats] = useState(new Set());
-  const [priceMax, setPriceMax] = useState(priceRange.max);
+  // null means no user cap: follow the live range when the catalogue hydrates.
+  // An explicit selection stays fixed across subsequent catalogue updates.
+  const [selectedPriceMax, setPriceMax] = useState(null);
+  const priceMax = selectedPriceMax ?? priceRange.max;
   const [minRating, setMinRating] = useState(0);
   const [flags, setFlags] = useState(new Set(initialFlag ? [initialFlag] : []));
   const [inStock, setInStock] = useState(false);
@@ -89,7 +92,7 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
   }, [searched, priceMax, minRating, selCats, inStock, flags, sort]);
 
   const activeCount = selCats.size + flags.size + (minRating ? 1 : 0) + (inStock ? 1 : 0) + (priceMax < priceRange.max ? 1 : 0);
-  const clearAll = () => { setSelCats(new Set()); setFlags(new Set()); setMinRating(0); setInStock(false); setPriceMax(priceRange.max); };
+  const clearAll = () => { setSelCats(new Set()); setFlags(new Set()); setMinRating(0); setInStock(false); setPriceMax(null); };
 
   const onSort = (id) => { setSort(id); const p = new URLSearchParams(params); p.set('sort', id); setParams(p, { replace: true }); };
 
@@ -140,7 +143,7 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
 
       <div className="v2-fp__g">
         <span className="v2-fp__t">Max price</span>
-        <input type="range" className="v2-fp__range" min={priceRange.min} max={priceRange.max} step={50} value={priceMax}
+        <input type="range" className="v2-fp__range" min={priceRange.min} max={priceRange.max} step={1} value={priceMax}
           aria-label="Maximum price" aria-valuetext={money(priceMax)}
           onChange={(e) => setPriceMax(Number(e.target.value))} />
         <div className="v2-fp__rangelbl"><span>{money(priceRange.min)}</span><strong>Up to {money(priceMax)}</strong></div>

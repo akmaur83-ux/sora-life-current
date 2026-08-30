@@ -1,18 +1,17 @@
 import Icon from '../Icon.jsx';
-import { money } from '../../lib/format.js';
 import { deliveryEstimate } from '../../data/pdpContent.js';
 
 // ============================================================
 // Compact delivery / service panel for the buying section.
 //
 //   Delivery timing confirmed at checkout
-//   FREE delivery on orders above ₹699
+//   FREE standard shipping
 //   Available delivery methods shown at checkout
 //
 // Presentation-safe: no carrier date or geographic scope is guessed. If real
 // PIN/SLA logic is added later, deliveryEstimate() is the single display seam.
 // ============================================================
-export default function ProductDeliveryInfo({ product }) {
+export default function ProductDeliveryInfo() {
   const est = deliveryEstimate();
   return (
     <div className="pdp-deliver" aria-label="Delivery information">
@@ -26,8 +25,8 @@ export default function ProductDeliveryInfo({ product }) {
       <div className="pdp-deliver__row">
         <Icon name="gift" size={18} />
         <span>
-          <strong>Free shipping</strong> on orders above {money(est.freeThreshold, product?.currency)}
-          <em>Applied automatically when the order qualifies</em>
+          <strong>Free standard shipping</strong>
+          <em>Select Standard delivery at checkout</em>
         </span>
       </div>
       <div className="pdp-deliver__row">

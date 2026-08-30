@@ -43,11 +43,11 @@ export default function Home() {
     <div className="v2-home">
       {/* 1–2 · announcement + header are mounted by Layout via Header */}
 
-      {/* 3 · HERO — image-led, copy over a scrim */}
+      {/* 3 · HERO — image-led, copy directly over the artwork */}
       <Hero />
 
       {/* 4 · CATEGORY NAVIGATION — orientation, not merchandising */}
-      <section className="v2-sec v2-sec--tight">
+      <section className="v2-sec v2-sec--tight v2-home-categories">
         <div className="v2-wrap">
           <CategoryRail />
         </div>

@@ -20,7 +20,11 @@
 }
 .v2-pimg img,
 .v2-pimg picture { width:100%; height:100%; display:block; }
-.v2-pimg img { object-fit:contain; object-position:center; padding:8%; }
+.v2-pimg img {
+  object-fit: contain;
+  object-position: center;
+  padding: 0;
+}
 .v2-pimg--cover img { object-fit:cover; padding:0; }
 
 /* Neutral fallback: warm ground + category wordmark. Never a grey box, never
@@ -142,7 +146,7 @@
 }
 @media (hover: hover) { .v2-cc:hover { border-color:var(--slv2-line); } }
 .v2-cc__m { width:54px; height:54px; flex:0 0 auto; overflow:hidden; border-radius:var(--slv2-r-ui); }
-.v2-cc__m .v2-pimg img { padding:6%; }
+.v2-cc__m .v2-pimg img { padding:0; }
 .v2-cc__b { min-width:0; flex:1; }
 .v2-cc__brand { font-family:var(--slv2-sans); font-size:8.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--slv2-ink-4); }
 .v2-cc__n {

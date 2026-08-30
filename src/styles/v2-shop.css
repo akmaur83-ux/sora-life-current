@@ -76,7 +76,7 @@
 /* -------------------------------------------------- filter | count | sort
    Sticky under the frozen V2 header. Edge-attached, so radius 0. */
 .v2-flt {
-  position:sticky; top:56px; z-index:40;
+  position:sticky; top:57px; z-index:40;
   display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;
   height:44px; border-radius:0;
   background:var(--slv2-ivory);
@@ -157,7 +157,7 @@
 .v2-shop__body { display:block; }
 
 @media (min-width: 901px) {
-  .v2-flt { top:119px; }                       /* clears the 74px bar + nav row */
+  .v2-flt { top:136px; }                       /* clears the complete V2 header */
   /* the persistent rail IS the filter UI on desktop, so the drawer trigger
      would be a second control for the same job */
   .v2-flt { grid-template-columns:1fr auto; }
@@ -167,7 +167,12 @@
     display:grid; grid-template-columns:264px 1fr; gap:36px;
     align-items:start; margin-top:20px;
   }
-  .v2-shop__rail { position:sticky; top:179px; }
+  .v2-shop__rail {
+    position:sticky; top:196px;
+    max-height:calc(100vh - 212px);
+    max-height:calc(100dvh - 212px);
+    overflow-y:auto; overscroll-behavior:contain;
+  }
   .v2-shop__grid { grid-template-columns:repeat(3, 1fr); gap:24px 20px; margin-top:0; }
   .v2-flt { margin-top:12px; }
 }

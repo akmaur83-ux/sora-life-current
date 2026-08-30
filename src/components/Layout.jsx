@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useLocation, Outlet } from 'react-router-dom';
 import Header from './Header.jsx';
 import Footer from './Footer.jsx';
-import MobileTabBar from './MobileTabBar.jsx';
+import MobileCartSummary from './MobileCartSummary.jsx';
 import Toasts from './Toasts.jsx';
 
 function ScrollToTop() {
@@ -21,7 +21,7 @@ export default function Layout() {
         <Outlet />
       </main>
       <Footer />
-      <MobileTabBar />
+      <MobileCartSummary />
       <Toasts />
     </>
   );

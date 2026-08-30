@@ -54,7 +54,7 @@
   background:var(--slv2-cream);
 }
 .v2-pdp-root .pdp__main .v2-pimg { border-radius:0; }
-.v2-pdp-root .pdp__main .v2-pimg img { padding:9%; }
+.v2-pdp-root .pdp__main .v2-pimg img { padding:0; }
 .v2-pdp-root .pdp__frame-fade { animation:pdpV2FrameIn .34s ease; }
 @keyframes pdpV2FrameIn { from { opacity:.5; } to { opacity:1; } }
 

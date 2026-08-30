@@ -377,6 +377,22 @@
 .v2-checkout-root:not(.checkout) .v2-wrap > .state { max-width: 480px; margin-inline: auto; padding: 36px 18px; border: 1px solid var(--v2-line); border-radius: var(--slv2-r-ui, 2px); background: var(--v2-surface); }
 
 /* ----------------------------------------------- responsive constraints */
+@media (min-width: 901px) {
+  /* Stick the grid item, not its same-height child. Clear the V2 desktop
+     header; long carts/offers must still allow access to every summary CTA. */
+  .v2-cart-root .cartlayout__aside,
+  .v2-checkout-root .checkout__aside {
+    position: sticky;
+    top: 136px;
+    align-self: start;
+    max-height: calc(100vh - 152px);
+    max-height: calc(100dvh - 152px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .v2-cart-root .cartlayout__aside .v2-summary,
+  .v2-checkout-root .checkout__aside .v2-summary { position: static; }
+}
 @media (max-width: 900px) {
   .v2-cart-root .cartlayout { grid-template-columns: 1fr; }
   .v2-cart-root .cartlayout__aside { order: 2; }

@@ -46,6 +46,7 @@
   display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
 }
 .v2-hero__ui .v2-btn { white-space:nowrap; }
+.v2-hero__sub-compact, .v2-hero__cta-compact { display:none; }
 .v2-hero__dots { position:absolute; left:0; right:0; bottom:12px; z-index:4; display:flex; justify-content:center; gap:5px; }
 .v2-hero__dots button {
   width:12px; height:2px; border-radius:0; border:0; padding:0; cursor:pointer;
@@ -56,12 +57,13 @@
 .v2-hero__arrow { display:none; }
 
 @media (max-width: 767px) {
-  /* The production hero was 274px tall at 390px. This brings it down by
-     roughly 15–20%, moves categories earlier, and removes the otherwise
-     unnecessary parallax overscan so packaging is not cropped further. */
-  .v2-hero__media { aspect-ratio:auto; height:clamp(220px, 60vw, 258px); }
+  /* Mobile gets a balanced editorial canvas; desktop dimensions stay below.
+     Keep the artwork's upper negative space available to the larger copy. */
+  .v2-home .v2-hero__media { aspect-ratio:auto; height:clamp(310px, 84vw, 340px); }
   .v2-hero__par { inset:0; }
   .v2-hero:not(.v2-hero--product) .v2-hero__img { object-position:36% center !important; }
+  /* Preserve the other configured slides; their photography needs its
+     existing filled CTA, rather than the collection's lighter text link. */
   .v2-hero:not(.v2-hero--product) .v2-hero__ui {
     width:46%; padding:8px 0 0; justify-content:flex-start; transform:translateY(-4px);
   }
@@ -71,9 +73,44 @@
     max-width:20ch; margin-bottom:10px; font-size:9.25px; line-height:1.2;
     -webkit-line-clamp:4;
   }
-  .v2-hero:not(.v2-hero--product) .v2-btn {
-    padding:9px 10px; font-size:8.5px; letter-spacing:.08em;
+  .v2-hero:not(.v2-hero--product) .v2-btn { padding:9px 10px; font-size:8.5px; letter-spacing:.08em; }
+
+  .v2-home .v2-hero__slide--collection .v2-hero__ui {
+    width:44%; padding:12px 0 0 10px; justify-content:flex-start; transform:none;
   }
+  .v2-home .v2-hero__slide--collection .v2-hero__img {
+    object-position:left top !important;
+  }
+  .v2-home .v2-hero__slide--collection .v2-hero__kicker {
+    font-size:9px; font-weight:500; line-height:1.2; letter-spacing:.13em; margin-bottom:6px;
+    white-space:nowrap;
+    color:var(--slv2-ink-2);
+  }
+  .v2-home .v2-hero__slide--collection .v2-hero__title {
+    width:max-content; max-width:calc(100vw - 2 * var(--slv2-gutter) - 24px);
+    font-size:clamp(27px, 8.2vw, 34px); line-height:1.02; letter-spacing:-.04em; margin-bottom:8px;
+  }
+  .v2-home .v2-hero__slide--collection .v2-hero__sub {
+    max-width:100%; margin-bottom:12px; font-size:14px; line-height:1.3;
+    -webkit-line-clamp:4; color:var(--slv2-ink-2);
+  }
+  .v2-home .v2-hero__sub-full, .v2-home .v2-hero__cta-full { display:none; }
+  .v2-home .v2-hero__sub-compact, .v2-home .v2-hero__cta-compact { display:inline; }
+  .v2-home .v2-hero__slide--collection .v2-btn {
+    height:42px; width:100%; padding:0 4px; border:1px solid var(--slv2-cta-primary-bg);
+    border-radius:var(--slv2-r-ui); background:var(--slv2-cta-primary-bg); color:var(--slv2-cta-primary-text);
+    font-size:clamp(11.5px, 3.2vw, 12.5px); font-weight:500; line-height:1.2; letter-spacing:0;
+  }
+  .v2-home .v2-hero__slide--collection .v2-btn:hover {
+    background:var(--slv2-cta-primary-hover); border-color:var(--slv2-cta-primary-hover);
+  }
+}
+
+@media (max-width: 374px) {
+  .v2-home .v2-hero__slide--collection .v2-hero__ui { padding-top:0; }
+  .v2-home .v2-hero__slide--collection .v2-hero__kicker { margin-bottom:3px; }
+  .v2-home .v2-hero__slide--collection .v2-hero__title { line-height:.98; margin-bottom:3px; }
+  .v2-home .v2-hero__slide--collection .v2-hero__sub { font-size:13px; line-height:1.15; margin-bottom:3px; }
 }
 
 @media (min-width: 768px) {
@@ -116,7 +153,7 @@
   background:var(--slv2-cream);
 }
 @media (max-width: 767px) {
-  .v2-hero__stage { aspect-ratio:auto; height:clamp(220px, 60vw, 258px); }
+  .v2-home .v2-hero__stage { aspect-ratio:auto; height:clamp(310px, 84vw, 340px); }
 }
 .v2-hero__ground {
   position:absolute; inset:0; z-index:0;
@@ -216,6 +253,45 @@
 .v2-cat__lb {
   font-family:var(--slv2-sans);
   font-size:9.5px; font-weight:500; line-height:1.28; color:var(--slv2-ink-2);
+}
+.v2-cat__initials { font:400 22px/1 var(--slv2-disp); }
+@media (max-width: 767px) {
+  .v2-home .v2-home-categories { margin-top:16px; }
+  .v2-home .v2-cats { gap:8px; padding-block:2px; scroll-padding-inline:var(--slv2-gutter); }
+  .v2-home .v2-cat {
+    --v2-cat-paper:var(--slv2-cream);
+    position:relative; display:grid; grid-template-columns:minmax(0, 1fr);
+    grid-template-rows:38px minmax(0, 1fr); align-items:start;
+    width:clamp(100px, 27vw, 114px); min-height:90px; padding:9px 10px; gap:5px;
+    text-align:left; background:var(--v2-cat-paper); border:1px solid var(--slv2-line);
+    border-radius:var(--slv2-r-ui); color:var(--slv2-accent-primary);
+  }
+  .v2-home .v2-cat--wellness { --v2-cat-paper:var(--slv2-olive-50); }
+  .v2-home .v2-cat--body-building { --v2-cat-paper:#EDEAE2; }
+  .v2-home .v2-cat--juices-drinks { --v2-cat-paper:var(--slv2-gold-100); }
+  .v2-home .v2-cat--supplements { --v2-cat-paper:#ECEBE2; }
+  .v2-home .v2-cat--skin-care { --v2-cat-paper:#F3E8E1; }
+  .v2-home .v2-cat--hair-care { --v2-cat-paper:#EEE8DF; }
+  .v2-home .v2-cat--bath-body { --v2-cat-paper:#E8EEEA; }
+  .v2-home .v2-cat--mens-care { --v2-cat-paper:#E7E8E2; }
+  .v2-home .v2-cat--personal-care { --v2-cat-paper:#F0EBDF; }
+  .v2-home .v2-cat__tile { width:38px; height:38px; background:none; border:0; color:inherit; }
+  .v2-home .v2-cat__tile svg { width:38px; height:38px; }
+  .v2-home .v2-cat::after {
+    content:""; position:absolute; right:11px; top:12px; width:5px; height:5px;
+    border-top:1px solid var(--slv2-ink-3); border-right:1px solid var(--slv2-ink-3);
+  }
+  .v2-home .v2-cat::before {
+    content:""; position:absolute; right:11px; top:15px; width:8px; height:1px;
+    background:var(--slv2-ink-3); transform:rotate(-45deg);
+  }
+  .v2-home .v2-cat__lb {
+    font-size:12px; font-weight:500; line-height:1.2; letter-spacing:-.015em;
+    align-self:end; overflow-wrap:normal; color:var(--slv2-ink);
+  }
+  .v2-home .v2-cat:hover { border-color:var(--slv2-accent-primary); }
+  .v2-home .v2-cat:focus-visible { outline-offset:-3px; }
+  .v2-home .v2-promo-slot .promo-section { padding-top:26px; }
 }
 @media (min-width: 768px) {
   .v2-cats { display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; overflow:visible; margin-inline:0; padding-inline:0; }
