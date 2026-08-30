@@ -850,3 +850,15 @@
     max-height:210px;
   }
 }
+/* Mobile hero — true edge-to-edge */
+@media (max-width: 767px) {
+  .v2-home .v2-hero {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+}
