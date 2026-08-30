@@ -34,6 +34,19 @@ export default function PromoPoster({ promo }) {
   if (!promo) return null;
   const { title, subtitle, badgeText, couponCode, ctaText, ctaUrl, imageUrl, themeVariant, textAlign } = promo;
   const callout = offerCalloutFrom(promo);
+if (imageUrl) {
+  return (
+    <article className="promo-poster promo-poster--image-only">
+      <img
+        className="promo-poster__fullimg"
+        src={imageUrl}
+        alt={title || 'Promotion poster'}
+        loading="lazy"
+        decoding="async"
+      />
+    </article>
+  );
+}
 
   return (
     <article
