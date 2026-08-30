@@ -12,7 +12,7 @@
   }
   .v2-cart-dock--active > .tabbar { position:static; }
   /* The full-screen filter drawer owns its bottom action area while open. */
-  body:has(.v2-fd.is-open) .v2-cart-dock--active { visibility:hidden; }
+  body:has(.v2-fd.is-open) .v2-cart-dock { visibility:hidden; }
 
   .v2-mobile-cart {
     display:flex; align-items:center; justify-content:space-between; gap:16px;
