@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { promosForPlacement } from '../../lib/promotions.js';
 import { safeVisualUrl, uniqueHomepagePromotions } from '../../lib/homepageAppearance.js';
 import HomeVisualLayers from '../HomeVisualLayers.jsx';
@@ -20,6 +20,33 @@ export default function HomeOffers({ appearance: a }) {
   const rail = useRef(null);
   const [active, setActive] = useState(0);
   const items = uniqueHomepagePromotions(promosForPlacement('home'));
+useEffect(() => {
+  if (items.length < 2) return;
+
+  const mobile = window.matchMedia('(max-width: 767px)');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (!mobile.matches || reduced.matches) return;
+
+  const timer = window.setInterval(() => {
+    setActive((current) => {
+      const next = (current + 1) % items.length;
+      const el = rail.current;
+      const card = el?.children[next];
+
+      if (el && card) {
+        el.scrollTo({
+          left: card.offsetLeft - el.firstElementChild.offsetLeft,
+          behavior: 'smooth',
+        });
+      }
+
+      return next;
+    });
+  }, 2000);
+
+  return () => window.clearInterval(timer);
+}, [items.length]);
   if (!items.length) return null;
   const columns = Math.min(a.desktopColumns, items.length);
   const scrollTo = (index) => {

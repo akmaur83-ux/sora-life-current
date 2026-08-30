@@ -48,3 +48,86 @@
 .hp-admin-image__actions label { position:relative; overflow:hidden; cursor:pointer; }
 .hp-admin-image__actions input { position:absolute; inset:0; opacity:0; width:100%; cursor:pointer; }
 .hp-admin-image__preview { display:block; max-width:100%; width:auto; max-height:140px; object-fit:contain; margin-top:10px; border:1px solid #ded2c4; border-radius:4px; }
+/* Mobile category strip + offers: full bleed, zero dead gap */
+@media (max-width: 767px) {
+  .v2-home .hp-category-strip {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .v2-home .hp-category-strip + .hp-offers,
+  .v2-home .hp-category-strip + section {
+    margin-top: 0 !important;
+  }
+
+  .v2-home .hp-offers {
+    margin-top: 0 !important;
+    padding-top: 0;
+  }
+
+  .v2-home .hp-offers .container {
+    width: 100%;
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .v2-home .hp-offers__heading {
+    padding: 18px 16px 0;
+  }
+
+  .v2-home .hp-offers__frame {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+}
+/* FINAL mobile full-bleed Category -> Offers */
+@media (max-width: 767px) {
+  /* category ke baad zero white gap */
+  .v2-home .hp-offers {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  /* actual wrapper is v2-wrap — remove side gutters */
+  .v2-home .hp-offers > .v2-wrap {
+    width: 100%;
+    max-width: none;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  /* heading ko sirf andar readable spacing */
+  .v2-home .hp-offers__heading {
+    margin: 0 !important;
+    padding: 14px 16px 10px;
+  }
+
+  /* promo gallery/frame edge-to-edge */
+  .v2-home .hp-offers__frame,
+  .v2-home .hp-offers__gallery {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+/* Mobile offers — one complete poster per view, no next-card peek */
+@media (max-width: 767px) {
+  .v2-home .hp-offers__item {
+    flex: 0 0 100%;
+    width: 100%;
+  }
+
+  .v2-home .hp-offers__gallery {
+    gap: 0;
+  }
+
+  .v2-home .hp-offers__hint {
+    display: none;
+  }
+}
