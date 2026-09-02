@@ -1,5 +1,100 @@
-// Product Media orchestration shared by the admin client and importer.
-// Adapters perform the actual I/O; this module has no credentials or network.
+// Product Media orchestration and pure upload validation shared by the admin
+// client and importer. Adapters perform I/O; this module has no credentials.
+export const IMAGE_UPLOAD_TYPES = Object.freeze({
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/avif': 'avif',
+});
+
+export const IMAGE_UPLOAD_ACCEPT = Object.keys(IMAGE_UPLOAD_TYPES).join(',');
+export const IMAGE_UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+export const VIDEO_UPLOAD_TYPES = Object.freeze({ 'video/mp4': 'mp4', 'video/webm': 'webm' });
+
+const ascii = (bytes, start, length) => String.fromCharCode(...bytes.slice(start, start + length));
+const startsWith = (bytes, signature, offset = 0) => signature.every((value, index) => bytes[offset + index] === value);
+
+export function sniffUploadImageType(bytes) {
+  if (!(bytes instanceof Uint8Array) || bytes.length < 12) return null;
+  if (startsWith(bytes, [0xff, 0xd8, 0xff])) return 'image/jpeg';
+  if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10])) return 'image/png';
+  if (['GIF87a', 'GIF89a'].includes(ascii(bytes, 0, 6))) return 'image/gif';
+  if (ascii(bytes, 0, 4) === 'RIFF' && ascii(bytes, 8, 4) === 'WEBP') return 'image/webp';
+  if (ascii(bytes, 4, 4) === 'ftyp') {
+    const brand = ascii(bytes, 8, 4).toLowerCase();
+    if (brand === 'avif' || brand === 'avis') return 'image/avif';
+    if (brand === 'mif1') {
+      const boxSize = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
+      const end = Math.min(bytes.length, boxSize || bytes.length);
+      for (let offset = 16; offset + 4 <= end; offset += 4) {
+        if (['avif', 'avis'].includes(ascii(bytes, offset, 4).toLowerCase())) return 'image/avif';
+      }
+    }
+  }
+  return null;
+}
+
+export function validateImageMetadata(file, { allowedTypes = Object.keys(IMAGE_UPLOAD_TYPES), maxBytes = IMAGE_UPLOAD_MAX_BYTES } = {}) {
+  if (!file) throw new Error('No file selected.');
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error(`Unsupported image type${file.type ? ` (${file.type})` : ''}. Use JPEG, PNG, WebP, GIF or AVIF. SVG is not allowed.`);
+  }
+  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected image is empty.');
+  if (file.size > maxBytes) {
+    throw new Error(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Keep it under ${Math.floor(maxBytes / 1024 / 1024)} MB.`);
+  }
+  if (typeof file.slice !== 'function') throw new Error('The selected image cannot be read.');
+}
+
+async function verifyImageDecode(file, { maxPixels, maxDimension }) {
+  if (typeof globalThis.createImageBitmap !== 'function') return;
+  let bitmap;
+  try { bitmap = await globalThis.createImageBitmap(file); }
+  catch { throw new Error('This image is malformed or could not be decoded.'); }
+  try {
+    const width = Number(bitmap.width), height = Number(bitmap.height);
+    if (!width || !height) throw new Error('This image has invalid dimensions.');
+    if (width > maxDimension || height > maxDimension || width * height > maxPixels) {
+      throw new Error(`Use an image under ${Math.floor(maxPixels / 1000000)} megapixels and ${maxDimension.toLocaleString()} pixels per side.`);
+    }
+  } finally { bitmap.close?.(); }
+}
+
+export async function validateImageUpload(file, {
+  allowedTypes = Object.keys(IMAGE_UPLOAD_TYPES),
+  maxBytes = IMAGE_UPLOAD_MAX_BYTES,
+  maxPixels = 24 * 1000 * 1000,
+  maxDimension = 10000,
+} = {}) {
+  validateImageMetadata(file, { allowedTypes, maxBytes });
+  let bytes;
+  try { bytes = new Uint8Array(await file.slice(0, 512).arrayBuffer()); }
+  catch { throw new Error('The selected image could not be read.'); }
+  const detectedType = sniffUploadImageType(bytes);
+  if (!detectedType || detectedType !== file.type || !allowedTypes.includes(detectedType)) {
+    throw new Error('The image contents do not match its declared file type.');
+  }
+  await verifyImageDecode(file, { maxPixels, maxDimension });
+  return { mime: detectedType, extension: IMAGE_UPLOAD_TYPES[detectedType] };
+}
+
+export async function validateVideoUpload(file, { maxBytes = 100 * 1024 * 1024 } = {}) {
+  if (!file || !VIDEO_UPLOAD_TYPES[file.type]) throw new Error('Please choose an MP4 or WebM video.');
+  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected video is empty.');
+  if (file.size > maxBytes) throw new Error(`Video is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Keep it under ${Math.floor(maxBytes / 1024 / 1024)} MB.`);
+  if (typeof file.slice !== 'function') throw new Error('The selected video cannot be read.');
+  let bytes;
+  try { bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer()); }
+  catch { throw new Error('The selected video could not be read.'); }
+  const mp4 = bytes.length >= 12 && ascii(bytes, 4, 4) === 'ftyp';
+  const webm = bytes.length >= 4 && startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3]);
+  if ((file.type === 'video/mp4' && !mp4) || (file.type === 'video/webm' && !webm)) {
+    throw new Error('The video contents do not match its declared file type.');
+  }
+  return { mime: file.type, extension: VIDEO_UPLOAD_TYPES[file.type] };
+}
+
 export class MediaOperationError extends Error {
   constructor(phase, message, details = {}) {
     super(message);

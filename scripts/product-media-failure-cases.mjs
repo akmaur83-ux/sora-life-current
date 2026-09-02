@@ -7,6 +7,8 @@ import { validateDownloadedImage } from '../api/_lib/ssrf.js';
 const BASE = 'https://supabase.test';
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10, 0, 0, 0, 0]);
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0]);
+const localImage = (name = 'image.png') => ({ name, type: 'image/png', size: PNG.length,
+  slice: () => ({ arrayBuffer: async () => Uint8Array.from(PNG).buffer }) });
 const imageUrl = (n = 1) => `https://8.8.8.8/image-${n}.png`;
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 const copy = (data) => JSON.parse(JSON.stringify(data));
@@ -271,7 +273,7 @@ export async function runMediaFailureTests(t) {
       .replace("import { BIOSASH_PRODUCTS } from '../data/biosash.js';", 'const BIOSASH_PRODUCTS = [];')
       .replace("'./productMediaOperations.js'", JSON.stringify(operationsUrl));
     const api = await import('data:text/javascript;base64,' + Buffer.from(source + '\n//# sourceURL=adminApi.mock.js').toString('base64'));
-    const staged = (preferred = 0) => [0, 1, 2].map((n) => ({ file: { name: `image-${n}.png`, type: 'image/png', size: PNG.length }, isPrimary: n === preferred }));
+    const staged = (preferred = 0) => [0, 1, 2].map((n) => ({ file: localImage(`image-${n}.png`), isPrimary: n === preferred }));
     let state = selectFixture({ failUpload: [1], failInsert: [1] });
     let committed = await api.adminCommitStagedProductMedia(1, staged());
     t(!committed.ok && committed.created.length === 1 && committed.failed.length === 2 && !committed.primaryError && !committed.syncError && exactlyOne(state) && noOrphans(state), 'staged partial upload/insert failures -> structured result, later success primary, zero orphans', 'MOCK');

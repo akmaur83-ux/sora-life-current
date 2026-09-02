@@ -8,6 +8,7 @@ import { applyPromotions, promosForPlacement } from '../src/lib/promotions.js';
 import { categories } from '../src/data/categories.js';
 import * as appearance from '../src/lib/homepageAppearance.js';
 import { applyHomepage, getHomepageSnapshot, subscribeHomepage } from '../src/lib/settings.js';
+import { validateImageUpload } from '../src/lib/productMediaOperations.js';
 
 let passed = 0;
 const check = async (name, fn) => { await fn(); passed++; console.log(`PASS ${name}`); };
@@ -100,9 +101,9 @@ await check('saved settings notify the mounted Homepage immediately', () => {
   let calls = 0; const unsubscribe = subscribeHomepage(() => calls++); applyHomepage({ visuals: defaults }); unsubscribe(); assert.equal(calls, 1); assert.deepEqual(getHomepageSnapshot().visuals, defaults);
 });
 
-const validateImage = component('../src/lib/homepageImageUpload.js', 'validateHomepageImage', {});
+const validateImage = component('../src/lib/homepageImageUpload.js', 'validateHomepageImage', { validateImageUpload });
 const fakeFile = (type, bytes, size = bytes.length) => ({ type, size, slice: () => ({ arrayBuffer: async () => Uint8Array.from(bytes).buffer }) });
-await check('upload accepts matching PNG magic bytes', async () => assert.equal(await validateImage(fakeFile('image/png', [137,80,78,71,13,10,26,10])), 'png'));
+await check('upload accepts matching PNG magic bytes', async () => assert.equal(await validateImage(fakeFile('image/png', [137,80,78,71,13,10,26,10,0,0,0,0])), 'png'));
 await check('upload rejects fake MIME, SVG and oversized files', async () => {
   await assert.rejects(validateImage(fakeFile('image/png', [60,115,118,103])), /contents/);
   await assert.rejects(validateImage(fakeFile('image/svg+xml', [60,115,118,103])), /not allowed/);

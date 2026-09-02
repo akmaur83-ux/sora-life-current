@@ -32930,8 +32930,130 @@
 	  });
 	}
 
-	// Product Media orchestration shared by the admin client and importer.
-	// Adapters perform the actual I/O; this module has no credentials or network.
+	// Product Media orchestration and pure upload validation shared by the admin
+	// client and importer. Adapters perform I/O; this module has no credentials.
+	const IMAGE_UPLOAD_TYPES = Object.freeze({
+	  'image/jpeg': 'jpg',
+	  'image/png': 'png',
+	  'image/webp': 'webp',
+	  'image/gif': 'gif',
+	  'image/avif': 'avif'
+	});
+	Object.keys(IMAGE_UPLOAD_TYPES).join(',');
+	const IMAGE_UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+	const VIDEO_UPLOAD_TYPES = Object.freeze({
+	  'video/mp4': 'mp4',
+	  'video/webm': 'webm'
+	});
+	const ascii = (bytes, start, length) => String.fromCharCode(...bytes.slice(start, start + length));
+	const startsWith = (bytes, signature, offset = 0) => signature.every((value, index) => bytes[offset + index] === value);
+	function sniffUploadImageType(bytes) {
+	  if (!(bytes instanceof Uint8Array) || bytes.length < 12) return null;
+	  if (startsWith(bytes, [0xff, 0xd8, 0xff])) return 'image/jpeg';
+	  if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10])) return 'image/png';
+	  if (['GIF87a', 'GIF89a'].includes(ascii(bytes, 0, 6))) return 'image/gif';
+	  if (ascii(bytes, 0, 4) === 'RIFF' && ascii(bytes, 8, 4) === 'WEBP') return 'image/webp';
+	  if (ascii(bytes, 4, 4) === 'ftyp') {
+	    const brand = ascii(bytes, 8, 4).toLowerCase();
+	    if (brand === 'avif' || brand === 'avis') return 'image/avif';
+	    if (brand === 'mif1') {
+	      const boxSize = (bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3]) >>> 0;
+	      const end = Math.min(bytes.length, boxSize || bytes.length);
+	      for (let offset = 16; offset + 4 <= end; offset += 4) {
+	        if (['avif', 'avis'].includes(ascii(bytes, offset, 4).toLowerCase())) return 'image/avif';
+	      }
+	    }
+	  }
+	  return null;
+	}
+	function validateImageMetadata(file, {
+	  allowedTypes = Object.keys(IMAGE_UPLOAD_TYPES),
+	  maxBytes = IMAGE_UPLOAD_MAX_BYTES
+	} = {}) {
+	  if (!file) throw new Error('No file selected.');
+	  if (!allowedTypes.includes(file.type)) {
+	    throw new Error(`Unsupported image type${file.type ? ` (${file.type})` : ''}. Use JPEG, PNG, WebP, GIF or AVIF. SVG is not allowed.`);
+	  }
+	  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected image is empty.');
+	  if (file.size > maxBytes) {
+	    throw new Error(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Keep it under ${Math.floor(maxBytes / 1024 / 1024)} MB.`);
+	  }
+	  if (typeof file.slice !== 'function') throw new Error('The selected image cannot be read.');
+	}
+	async function verifyImageDecode(file, {
+	  maxPixels,
+	  maxDimension
+	}) {
+	  if (typeof globalThis.createImageBitmap !== 'function') return;
+	  let bitmap;
+	  try {
+	    bitmap = await globalThis.createImageBitmap(file);
+	  } catch {
+	    throw new Error('This image is malformed or could not be decoded.');
+	  }
+	  try {
+	    const width = Number(bitmap.width),
+	      height = Number(bitmap.height);
+	    if (!width || !height) throw new Error('This image has invalid dimensions.');
+	    if (width > maxDimension || height > maxDimension || width * height > maxPixels) {
+	      throw new Error(`Use an image under ${Math.floor(maxPixels / 1000000)} megapixels and ${maxDimension.toLocaleString()} pixels per side.`);
+	    }
+	  } finally {
+	    bitmap.close?.();
+	  }
+	}
+	async function validateImageUpload(file, {
+	  allowedTypes = Object.keys(IMAGE_UPLOAD_TYPES),
+	  maxBytes = IMAGE_UPLOAD_MAX_BYTES,
+	  maxPixels = 24 * 1000 * 1000,
+	  maxDimension = 10000
+	} = {}) {
+	  validateImageMetadata(file, {
+	    allowedTypes,
+	    maxBytes
+	  });
+	  let bytes;
+	  try {
+	    bytes = new Uint8Array(await file.slice(0, 512).arrayBuffer());
+	  } catch {
+	    throw new Error('The selected image could not be read.');
+	  }
+	  const detectedType = sniffUploadImageType(bytes);
+	  if (!detectedType || detectedType !== file.type || !allowedTypes.includes(detectedType)) {
+	    throw new Error('The image contents do not match its declared file type.');
+	  }
+	  await verifyImageDecode(file, {
+	    maxPixels,
+	    maxDimension
+	  });
+	  return {
+	    mime: detectedType,
+	    extension: IMAGE_UPLOAD_TYPES[detectedType]
+	  };
+	}
+	async function validateVideoUpload(file, {
+	  maxBytes = 100 * 1024 * 1024
+	} = {}) {
+	  if (!file || !VIDEO_UPLOAD_TYPES[file.type]) throw new Error('Please choose an MP4 or WebM video.');
+	  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected video is empty.');
+	  if (file.size > maxBytes) throw new Error(`Video is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Keep it under ${Math.floor(maxBytes / 1024 / 1024)} MB.`);
+	  if (typeof file.slice !== 'function') throw new Error('The selected video cannot be read.');
+	  let bytes;
+	  try {
+	    bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+	  } catch {
+	    throw new Error('The selected video could not be read.');
+	  }
+	  const mp4 = bytes.length >= 12 && ascii(bytes, 4, 4) === 'ftyp';
+	  const webm = bytes.length >= 4 && startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3]);
+	  if (file.type === 'video/mp4' && !mp4 || file.type === 'video/webm' && !webm) {
+	    throw new Error('The video contents do not match its declared file type.');
+	  }
+	  return {
+	    mime: file.type,
+	    extension: VIDEO_UPLOAD_TYPES[file.type]
+	  };
+	}
 	class MediaOperationError extends Error {
 	  constructor(phase, message, details = {}) {
 	    super(message);
@@ -33400,9 +33522,10 @@
 	}
 
 	// ---------------------------------------------------------------
-	// ADMIN: orders (read-only)
-	// Orders are written only by the server-side payment API. RLS grants
-	// admins SELECT, so this read runs under the logged-in admin's session.
+	// ADMIN: orders
+	// Payment/order creation stays server-side. The only admin write is the
+	// narrow 0022 RPC, which validates admin membership in Postgres and can
+	// update fulfillment columns only.
 	// ---------------------------------------------------------------
 	async function adminListOrders(limit = 100) {
 	  const {
@@ -33413,6 +33536,23 @@
 	  }).limit(limit);
 	  if (error) throw error;
 	  return data || [];
+	}
+	async function adminUpdateOrderFulfillment(orderId, input, actions = {}) {
+	  if (!orderId) throw new Error('Order ID is required.');
+	  const {
+	    data,
+	    error
+	  } = await supabase.rpc('admin_update_order_fulfillment', {
+	    p_order_id: orderId,
+	    p_fulfillment_status: input?.fulfillmentStatus ?? null,
+	    p_carrier_name: input?.carrierName ?? null,
+	    p_tracking_number: input?.trackingNumber ?? null,
+	    p_tracking_url: input?.trackingUrl ?? null,
+	    p_mark_shipped: actions.markShipped === true,
+	    p_mark_delivered: actions.markDelivered === true
+	  });
+	  if (error) throw error;
+	  return data;
 	}
 
 	// ---------------------------------------------------------------
@@ -33636,14 +33776,17 @@
 	// enforces admin-only writes for both buckets — see the migrations.
 	// ---------------------------------------------------------------
 	async function uploadToBucket(bucket, file, folder, opts = {}) {
-	  const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
-	  const path = `${folder}/${cryptoRandomId()}.${ext}`;
+	  if (!/^[a-z0-9][a-z0-9/_-]{0,63}$/i.test(folder) || folder.includes('..') || folder.includes('//')) {
+	    throw new Error('Invalid upload destination.');
+	  }
+	  if (!opts.extension || !/^[a-z0-9]{2,5}$/.test(opts.extension)) throw new Error('A validated file type is required.');
+	  const path = `${folder}/${cryptoRandomId()}.${opts.extension}`;
 	  const {
 	    error
 	  } = await supabase.storage.from(bucket).upload(path, file, {
 	    cacheControl: opts.cacheControl || '3600',
 	    upsert: false,
-	    contentType: file.type || undefined
+	    contentType: opts.contentType
 	  });
 	  if (error) throw error;
 	  const {
@@ -33652,20 +33795,36 @@
 	  return data.publicUrl;
 	}
 	async function uploadImage(file, folder = 'products') {
-	  return uploadToBucket('product-images', file, folder);
+	  const validated = await validateImageUpload(file);
+	  return uploadToBucket('product-images', file, folder, {
+	    extension: validated.extension,
+	    contentType: validated.mime
+	  });
 	}
 	const MAX_HERO_VIDEO_BYTES = 100 * 1024 * 1024; // 100MB — generous local guard; Supabase project limits still apply
 
+	async function validateHeroVideo(file) {
+	  return validateVideoUpload(file, {
+	    maxBytes: MAX_HERO_VIDEO_BYTES
+	  });
+	}
 	async function uploadHeroVideo(file) {
-	  if (!file.type?.startsWith('video/')) throw new Error('Please choose a video file (MP4 recommended).');
-	  if (file.size > MAX_HERO_VIDEO_BYTES) throw new Error(`Video is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Keep it under 100MB.`);
+	  const validated = await validateHeroVideo(file);
 	  return uploadToBucket('hero-media', file, 'video', {
-	    cacheControl: '31536000'
+	    cacheControl: '31536000',
+	    extension: validated.extension,
+	    contentType: validated.mime
 	  });
 	}
 	function cryptoRandomId() {
-	  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
-	  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+	  const secure = globalThis.window?.crypto || globalThis.crypto;
+	  if (secure?.randomUUID) return secure.randomUUID();
+	  if (secure?.getRandomValues) {
+	    const bytes = new Uint8Array(16);
+	    secure.getRandomValues(bytes);
+	    return [...bytes].map(value => value.toString(16).padStart(2, '0')).join('');
+	  }
+	  throw new Error('Secure random storage naming is unavailable.');
 	}
 
 	/**
@@ -33800,17 +33959,14 @@
 	// importer do. Storage paths are always generated (cryptoRandomId), never
 	// taken from client input, so no arbitrary path can be written.
 	// ---------------------------------------------------------------
-	const MEDIA_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
-	const MEDIA_MAX_BYTES = 8 * 1024 * 1024; // 8MB per product image
+	const MEDIA_ALLOWED_TYPES = Object.keys(IMAGE_UPLOAD_TYPES);
+	const MEDIA_MAX_BYTES = IMAGE_UPLOAD_MAX_BYTES; // 8MB per product image
 
 	function validateMediaFile(file) {
-	  if (!file) throw new Error('No file selected.');
-	  if (!file.type?.startsWith('image/') || !MEDIA_ALLOWED_TYPES.includes(file.type)) {
-	    throw new Error(`Unsupported image type${file.type ? ` (${file.type})` : ''}. Use JPEG, PNG, WebP, GIF or AVIF.`);
-	  }
-	  if (file.size > MEDIA_MAX_BYTES) {
-	    throw new Error(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Keep each image under 8MB.`);
-	  }
+	  validateImageMetadata(file, {
+	    allowedTypes: MEDIA_ALLOWED_TYPES,
+	    maxBytes: MEDIA_MAX_BYTES
+	  });
 	  return true;
 	}
 	function dbMediaToApp(row) {
@@ -33829,16 +33985,18 @@
 	// storage path (kept on the media row so the object can be deleted later) and
 	// its public URL. The path is server-side-random — never client-controlled.
 	async function uploadProductMediaFile(file) {
-	  validateMediaFile(file);
-	  const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
-	  const path = `products/${cryptoRandomId()}.${ext}`;
+	  const validated = await validateImageUpload(file, {
+	    allowedTypes: MEDIA_ALLOWED_TYPES,
+	    maxBytes: MEDIA_MAX_BYTES
+	  });
+	  const path = `products/${cryptoRandomId()}.${validated.extension}`;
 	  try {
 	    const {
 	      error
 	    } = await supabase.storage.from('product-images').upload(path, file, {
 	      cacheControl: '3600',
 	      upsert: false,
-	      contentType: file.type || undefined
+	      contentType: validated.mime
 	    });
 	    if (error) throw error;
 	  } catch (error) {
@@ -34396,18 +34554,17 @@
 
 	/** Upload a poster / offer image into the dedicated promo-media bucket. */
 	async function uploadPromoImage(file) {
-	  validateMediaFile(file); // shared type/size guard (JPEG/PNG/WebP/GIF/AVIF, <= 8MB)
-	  if (file.size > PROMO_IMAGE_MAX_BYTES) {
-	    throw new Error(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Keep promo art under 6MB.`);
-	  }
-	  const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
-	  const path = `promo/${cryptoRandomId()}.${ext}`;
+	  const validated = await validateImageUpload(file, {
+	    allowedTypes: MEDIA_ALLOWED_TYPES,
+	    maxBytes: PROMO_IMAGE_MAX_BYTES
+	  });
+	  const path = `promo/${cryptoRandomId()}.${validated.extension}`;
 	  const {
 	    error
 	  } = await supabase.storage.from('promo-media').upload(path, file, {
 	    cacheControl: '3600',
 	    upsert: false,
-	    contentType: file.type || undefined
+	    contentType: validated.mime
 	  });
 	  if (error) throw error;
 	  const {
@@ -39903,6 +40060,97 @@
 	  };
 	}
 
+	const FULFILLMENT_STATUSES = Object.freeze(['unfulfilled', 'processing', 'shipped', 'delivered', 'cancelled']);
+	const STATUS_LABELS = Object.freeze({
+	  unfulfilled: 'Not yet fulfilled',
+	  processing: 'Preparing order',
+	  shipped: 'Shipped',
+	  delivered: 'Delivered',
+	  cancelled: 'Fulfillment cancelled'
+	});
+	function normalizeFulfillmentStatus(value) {
+	  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+	  return FULFILLMENT_STATUSES.includes(normalized) ? normalized : null;
+	}
+	function fulfillmentStatusLabel(value) {
+	  const status = normalizeFulfillmentStatus(value);
+	  return status ? STATUS_LABELS[status] : null;
+	}
+	function isPrivateHostname(hostname) {
+	  const host = String(hostname || '').replace(/^\[|\]$/g, '').toLowerCase();
+	  if (!host || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return true;
+	  // Carrier links should use a public DNS name. Reject every IPv6 literal
+	  // rather than trying to safely classify mapped and reserved ranges here.
+	  if (host.includes(':')) return true;
+	  const octets = host.split('.').map(Number);
+	  if (octets.length !== 4 || octets.some(n => !Number.isInteger(n) || n < 0 || n > 255)) {
+	    return !host.includes('.') && !host.includes(':');
+	  }
+	  return octets[0] === 10 || octets[0] === 127 || octets[0] === 169 && octets[1] === 254 || octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31 || octets[0] === 192 && octets[1] === 168;
+	}
+
+	// Return one safe, normalized public HTTPS URL or null. No URL is ever
+	// derived from a carrier name or tracking number.
+	function safeTrackingUrl(value) {
+	  if (typeof value !== 'string') return null;
+	  const raw = value.trim();
+	  if (!raw || raw.length > 2048 || /[\u0000-\u001f\u007f\s]/.test(raw)) return null;
+	  try {
+	    const url = new URL(raw);
+	    if (url.protocol !== 'https:' || !url.hostname || url.username || url.password || isPrivateHostname(url.hostname)) return null;
+	    return url.href;
+	  } catch {
+	    return null;
+	  }
+	}
+	function cleanText(value, maxLength, label) {
+	  if (value == null || String(value).trim() === '') return null;
+	  const text = String(value).trim();
+	  if (text.length > maxLength || /[\u0000-\u001f\u007f]/.test(text)) {
+	    throw new Error(`${label} is invalid.`);
+	  }
+	  return text;
+	}
+	function validateFulfillmentInput(input = {}) {
+	  const rawStatus = input.fulfillmentStatus == null ? '' : String(input.fulfillmentStatus).trim();
+	  const fulfillmentStatus = rawStatus === '' ? null : normalizeFulfillmentStatus(rawStatus);
+	  if (rawStatus && !fulfillmentStatus) throw new Error('Choose a valid fulfillment status.');
+	  const rawTrackingUrl = input.trackingUrl == null ? '' : String(input.trackingUrl).trim();
+	  const trackingUrl = rawTrackingUrl ? safeTrackingUrl(rawTrackingUrl) : null;
+	  if (rawTrackingUrl && !trackingUrl) throw new Error('Tracking URL must be a public HTTPS URL.');
+	  return {
+	    fulfillmentStatus,
+	    carrierName: cleanText(input.carrierName, 120, 'Carrier name'),
+	    trackingNumber: cleanText(input.trackingNumber, 160, 'Tracking number'),
+	    trackingUrl
+	  };
+	}
+	function displayText(value, maxLength) {
+	  if (typeof value !== 'string') return null;
+	  const text = value.trim();
+	  return text && text.length <= maxLength && !/[\u0000-\u001f\u007f]/.test(text) ? text : null;
+	}
+	function displayTimestamp(value) {
+	  if (typeof value !== 'string' || value.length > 64) return null;
+	  return Number.isNaN(new Date(value).getTime()) ? null : value;
+	}
+	function fulfillmentForDisplay(value = {}) {
+	  const fulfillmentStatus = normalizeFulfillmentStatus(value.fulfillmentStatus ?? value.fulfillment_status);
+	  const record = {
+	    fulfillmentStatus,
+	    label: fulfillmentStatusLabel(fulfillmentStatus),
+	    carrierName: displayText(value.carrierName ?? value.carrier_name, 120),
+	    trackingNumber: displayText(value.trackingNumber ?? value.tracking_number, 160),
+	    trackingUrl: safeTrackingUrl(value.trackingUrl ?? value.tracking_url),
+	    shippedAt: displayTimestamp(value.shippedAt ?? value.shipped_at),
+	    deliveredAt: displayTimestamp(value.deliveredAt ?? value.delivered_at)
+	  };
+	  return hasFulfillmentData(record) ? record : null;
+	}
+	function hasFulfillmentData(value = {}) {
+	  return Boolean(normalizeFulfillmentStatus(value.fulfillmentStatus ?? value.fulfillment_status) || value.carrierName || value.carrier_name || value.trackingNumber || value.tracking_number || safeTrackingUrl(value.trackingUrl ?? value.tracking_url) || value.shippedAt || value.shipped_at || value.deliveredAt || value.delivered_at);
+	}
+
 	function fmtOrderDate(iso) {
 	  const d = new Date(iso);
 	  if (Number.isNaN(d.getTime())) return '';
@@ -39913,8 +40161,7 @@
 	  }).format(d);
 	}
 
-	// A human status label derived only from real order columns — never an
-	// invented fulfillment step (the orders schema has no shipping timeline).
+	// A human payment/order status label derived only from real order columns.
 	function orderStatusLabel(o) {
 	  if (o.status === 'cancelled') return 'Cancelled';
 	  if (o.payment_status === 'failed') return 'Payment failed';
@@ -40528,7 +40775,7 @@
 	      const {
 	        data,
 	        error: err
-	      } = await supabase.from('orders').select('order_number, created_at, status, payment_status, payment_method, amount_paise, items').order('created_at', {
+	      } = await supabase.from('orders').select('order_number, created_at, status, payment_status, payment_method, amount_paise, items, fulfillment_status, carrier_name, tracking_number, tracking_url, shipped_at, delivered_at').order('created_at', {
 	        ascending: false
 	      }).limit(50);
 	      if (cancelled) return;
@@ -40576,7 +40823,7 @@
 	    return /*#__PURE__*/jsxRuntimeExports.jsx(EmptyPanel, {
 	      icon: "package",
 	      title: "No orders yet",
-	      text: "When you place an order, it will appear here with full tracking.",
+	      text: "When you place an order, its verified status will appear here.",
 	      cta: "/shop",
 	      ctaLabel: "Start shopping"
 	    });
@@ -40591,6 +40838,8 @@
 	        const items = Array.isArray(o.items) ? o.items : [];
 	        const count = items.reduce((n, l) => n + (Number(l?.qty) || 0), 0) || items.length;
 	        const isPaid = o.payment_status === 'paid';
+	        const fulfillmentLabel = fulfillmentStatusLabel(o.fulfillment_status);
+	        const trackingUrl = safeTrackingUrl(o.tracking_url);
 	        return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "ordercard",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -40623,6 +40872,9 @@
 	                children: [count, " item", count === 1 ? '' : 's']
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
 	                children: money((Number(o.amount_paise) || 0) / 100)
+	              }), fulfillmentLabel && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "muted",
+	                children: fulfillmentLabel
 	              })]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	              className: "ordercard__actions",
@@ -40637,6 +40889,15 @@
 	                to: `/passport/${o.order_number}`,
 	                className: "btn btn-sm btn-light btn-goldhover",
 	                children: "View Passport"
+	              }), trackingUrl && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	                href: trackingUrl,
+	                target: "_blank",
+	                rel: "noopener noreferrer",
+	                className: "btn btn-sm btn-light",
+	                children: ["Track shipment ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                  name: "externalLink",
+	                  size: 14
+	                })]
 	              })]
 	            })]
 	          })]
@@ -41351,19 +41612,14 @@
 	// ============================================================
 	// PURCHASE PASSPORT — real order data adapter.
 	//
-	// There is no customer login in this app (Account.jsx's "auth" is a
-	// local-state mock, not wired to anything). Ownership of an order is
-	// proven instead by knowing BOTH the order number and the email used
-	// at checkout — verified server-side in api/orders/lookup.js, which
-	// is the ONLY thing that can read the `orders` table for a customer
-	// (existing RLS still grants admins-only SELECT; nothing here weakens
-	// that). This module never talks to Supabase directly and never sees
-	// a service-role key — it only calls that one API route.
+	// Guests prove ownership by knowing BOTH the order number and the email
+	// used at checkout, verified server-side in api/orders/lookup.js.
+	// Signed-in customers instead read only their own order through the
+	// existing orders RLS policy. Neither path exposes a service-role key.
 	//
-	// Anything the `orders` schema genuinely has no column for (batch
-	// number, expiry date, courier/tracking, delivery ETA, fulfillment
-	// steps beyond "ordered") is surfaced as NOT_AVAILABLE rather than
-	// invented. See the Phase 2 report for exactly what's missing.
+	// Optional 0022 fulfillment fields render only when they are actually stored.
+	// Anything the schema still has no column for (batch/expiry data, carrier ETA,
+	// or unstored milestones) is omitted rather than invented.
 	// ============================================================
 	const NOT_AVAILABLE = 'Not available yet';
 	const PAYMENT_METHOD_LABELS = {
@@ -41391,40 +41647,6 @@
 	    hour12: true
 	  }).format(d);
 	  return `${date}, ${time}`;
-	}
-
-	/**
-	 * Estimated delivery window, derived only from data we actually have: the
-	 * order date plus the standard 3–5 day dispatch window already quoted at
-	 * checkout. It is an ESTIMATE (and labelled as one) — not a courier promise.
-	 * Cancelled orders show nothing.
-	 */
-	function estimateDelivery(order) {
-	  const start = new Date(order?.createdAt);
-	  if (Number.isNaN(start.getTime()) || order?.status === 'cancelled') {
-	    return {
-	      available: false,
-	      display: NOT_AVAILABLE
-	    };
-	  }
-	  const from = new Date(start);
-	  from.setDate(from.getDate() + 3);
-	  const to = new Date(start);
-	  to.setDate(to.getDate() + 5);
-	  const fmtShort = d => new Intl.DateTimeFormat('en-IN', {
-	    day: 'numeric',
-	    month: 'short'
-	  }).format(d);
-	  return {
-	    available: true,
-	    display: `${fmtShort(from)} – ${formatDate(to.toISOString())}`
-	  };
-	}
-	function daysAgo(iso) {
-	  if (!iso) return null;
-	  const d = new Date(iso).getTime();
-	  if (Number.isNaN(d)) return null;
-	  return Math.max(0, Math.floor((Date.now() - d) / 86400000));
 	}
 
 	// Same field order/skip-if-blank convention as the admin Orders page
@@ -41459,8 +41681,7 @@
 	    image: catalogProduct?.image || null,
 	    gallery: catalogProduct?.gallery || [],
 	    category: catalogProduct?.category || null,
-	    shortDescription: catalogProduct?.shortDescription || catalogProduct?.description || '',
-	    usage: catalogProduct?.usage || ''
+	    shortDescription: catalogProduct?.shortDescription || catalogProduct?.description || ''
 	  };
 	}
 
@@ -41477,68 +41698,64 @@
 	  const extraCount = items.length - 1;
 	  const totalQty = items.reduce((n, l) => n + (Number(l.qty) || 0), 0);
 	  const memberName = [order.customer?.firstName, order.customer?.lastName].filter(Boolean).join(' ').trim() || 'Guest';
+	  const fulfillment = fulfillmentForDisplay(order.fulfillment || order);
 
-	  // The schema has no delivery/fulfillment tracking of any kind yet —
-	  // only "an order exists" is provable. See report: DeliveryTimeline
-	  // beyond "Ordered", ETA, and "Delivered on" all require new columns.
+	  // Every timeline entry below comes from a stored timestamp or status. A
+	  // delivered row without shipped_at does not acquire an invented "shipped"
+	  // step, and an old order with no 0022 data keeps its one recorded event.
 	  const timeline = [{
 	    key: 'ordered',
-	    label: 'Ordered',
-	    short: 'Ordered',
+	    label: 'Order recorded',
+	    short: 'Order recorded',
 	    date: formatDate(order.createdAt),
 	    time: formatDateTime(order.createdAt),
 	    done: true,
-	    current: true
-	  }, {
-	    key: 'packed',
-	    label: 'Packed',
-	    short: 'Packed',
-	    date: null,
-	    time: null,
-	    done: false,
-	    current: false
-	  }, {
-	    key: 'shipped',
-	    label: 'Shipped',
-	    short: 'Shipped',
-	    date: null,
-	    time: null,
-	    done: false,
-	    current: false
-	  }, {
-	    key: 'out_for_delivery',
-	    label: 'Out for Delivery',
-	    short: 'Out for Delivery',
-	    date: null,
-	    time: null,
-	    done: false,
-	    current: false
-	  }, {
-	    key: 'delivered',
-	    label: 'Delivered',
-	    short: 'Delivered',
-	    date: null,
-	    time: null,
-	    done: false,
 	    current: false
 	  }];
+	  if (fulfillment?.shippedAt) {
+	    timeline.push({
+	      key: 'shipped',
+	      label: 'Shipped',
+	      short: 'Shipped',
+	      date: formatDate(fulfillment.shippedAt),
+	      time: formatDateTime(fulfillment.shippedAt),
+	      done: true,
+	      current: false
+	    });
+	  }
+	  if (fulfillment?.deliveredAt) {
+	    timeline.push({
+	      key: 'delivered',
+	      label: 'Delivered',
+	      short: 'Delivered',
+	      date: formatDate(fulfillment.deliveredAt),
+	      time: formatDateTime(fulfillment.deliveredAt),
+	      done: true,
+	      current: false
+	    });
+	  }
+	  const statusHasEvent = fulfillment?.fulfillmentStatus === 'shipped' && fulfillment.shippedAt || fulfillment?.fulfillmentStatus === 'delivered' && fulfillment.deliveredAt;
+	  if (fulfillment?.fulfillmentStatus && !statusHasEvent) {
+	    timeline.push({
+	      key: `status-${fulfillment.fulfillmentStatus}`,
+	      label: fulfillment.label,
+	      short: fulfillment.label,
+	      date: null,
+	      time: null,
+	      done: true,
+	      current: false
+	    });
+	  }
+	  timeline[timeline.length - 1].current = true;
 	  return {
 	    passportId: order.orderNumber,
 	    member: {
 	      name: memberName,
-	      tier: 'Premium Member',
-	      tierIcon: 'award'
+	      tier: 'Verified order',
+	      tierIcon: 'checkCircle'
 	    },
 	    status: computeStatusLabel(order),
-	    eta: estimateDelivery(order),
-	    // Courier/tracking have no column on `orders` yet — surfaced as
-	    // "not available" rather than invented. Wired here so the UI reads the
-	    // real values automatically once fulfilment data exists.
-	    shipping: {
-	      carrier: null,
-	      trackingId: null
-	    },
-	    deliveredOn: null,
+	    fulfillment,
 	    product: {
 	      ...product,
 	      qty: first.qty || totalQty || 1,
@@ -41550,82 +41767,7 @@
 	      paymentMethod: PAYMENT_METHOD_LABELS[order.paymentMethod] || order.paymentMethod || NOT_AVAILABLE,
 	      address: formatAddress$1(order.customer)
 	    },
-	    timeline,
-	    care: [{
-	      icon: 'clock',
-	      title: 'Before You Use',
-	      desc: 'Consult your physician if you are pregnant, nursing, or on medication.'
-	    }, {
-	      icon: 'droplet',
-	      title: 'How to Use',
-	      desc: product.usage || 'Use as directed on the product label, or as directed by your practitioner.'
-	    }, {
-	      icon: 'home',
-	      title: 'Storage',
-	      desc: 'Store in a cool, dry place away from direct sunlight. Keep tightly sealed.'
-	    }, {
-	      icon: 'circleAlert',
-	      title: 'Important',
-	      desc: 'Discontinue use and consult a doctor if any adverse reaction occurs.'
-	    }],
-	    returns: {
-	      windowDate: null,
-	      actions: [{
-	        icon: 'return',
-	        title: 'Return this product',
-	        sub: 'Initiate a return request'
-	      }, {
-	        icon: 'circleAlert',
-	        title: 'Report an issue',
-	        sub: 'Tell us what went wrong'
-	      }, {
-	        icon: 'chat',
-	        title: 'Chat with our team',
-	        sub: 'We usually reply in minutes'
-	      }]
-	    },
-	    identity: {
-	      brand: 'SORA LIFE',
-	      batch: null,
-	      mfgDate: null,
-	      expiryDate: null
-	    },
-	    experience: {
-	      faces: [{
-	        key: 'loved',
-	        label: 'Loved it'
-	      }, {
-	        key: 'good',
-	        label: 'Good'
-	      }, {
-	        key: 'unsure',
-	        label: 'Not sure yet'
-	      }, {
-	        key: 'not_for_me',
-	        label: 'Not for me'
-	      }, {
-	        key: 'bad',
-	        label: 'Very bad'
-	      }],
-	      chips: ['Quality', 'Ingredients', 'Results', 'Packaging', 'Delivery', 'Value for Money', 'Other']
-	    },
-	    reminder: {
-	      purchasedDaysAgo: daysAgo(order.createdAt),
-	      options: [{
-	        value: 7,
-	        label: 'Remind me in 7 days'
-	      }, {
-	        value: 14,
-	        label: 'Remind me in 14 days'
-	      }, {
-	        value: 30,
-	        label: 'Remind me in 30 days'
-	      }, {
-	        value: 'none',
-	        label: 'No reminder'
-	      }],
-	      selected: 14
-	    }
+	    timeline
 	  };
 	}
 
@@ -41680,7 +41822,7 @@
 	  const {
 	    data,
 	    error
-	  } = await supabase.from('orders').select('order_number, status, payment_status, payment_method, amount_paise, currency, items, customer, created_at, paid_at').eq('order_number', on).maybeSingle();
+	  } = await supabase.from('orders').select('order_number, status, payment_status, payment_method, amount_paise, currency, items, customer, created_at, paid_at, fulfillment_status, carrier_name, tracking_number, tracking_url, shipped_at, delivered_at').eq('order_number', on).maybeSingle();
 	  if (error) throw error;
 	  if (!data) {
 	    const e = new Error('You do not have access to this order.');
@@ -41700,7 +41842,15 @@
 	    items: Array.isArray(data.items) ? data.items : [],
 	    customer: data.customer || {},
 	    createdAt: data.created_at,
-	    paidAt: data.paid_at || null
+	    paidAt: data.paid_at || null,
+	    fulfillment: {
+	      fulfillmentStatus: data.fulfillment_status,
+	      carrierName: data.carrier_name,
+	      trackingNumber: data.tracking_number,
+	      trackingUrl: data.tracking_url,
+	      shippedAt: data.shipped_at,
+	      deliveredAt: data.delivered_at
+	    }
 	  });
 	}
 
@@ -41732,30 +41882,10 @@
 	  icon: 'mapPin',
 	  to: '/account/addresses'
 	}, {
-	  id: 'care',
-	  label: 'Sora Life Care',
-	  icon: 'leaf',
-	  to: '#'
-	}, {
-	  id: 'rewards',
-	  label: 'Rewards',
-	  icon: 'award',
-	  to: '#'
-	}, {
-	  id: 'reviews',
-	  label: 'My Reviews',
-	  icon: 'star',
-	  to: '#'
-	}, {
 	  id: 'settings',
 	  label: 'Account Settings',
 	  icon: 'settings',
 	  to: '/account/settings'
-	}, {
-	  id: 'support',
-	  label: 'Support',
-	  icon: 'chat',
-	  to: '#'
 	}];
 	const TABS = [{
 	  id: 'overview',
@@ -41763,37 +41893,14 @@
 	  icon: 'grid'
 	}, {
 	  id: 'delivery',
-	  label: 'Delivery Details',
-	  icon: 'truck'
-	}, {
-	  id: 'care',
-	  label: 'Product Care Guide',
-	  icon: 'droplet'
-	}, {
-	  id: 'returns',
-	  label: 'Returns & Support',
-	  icon: 'return'
-	}, {
-	  id: 'identity',
-	  label: 'Product Identity',
-	  icon: 'shield'
-	}, {
-	  id: 'experience',
-	  label: 'My Experience',
-	  icon: 'heartHand'
-	}, {
-	  id: 'reorder',
-	  label: 'Reorder & Reminders',
-	  icon: 'refresh'
+	  label: 'Order Status',
+	  icon: 'package'
 	}];
 	function Passport() {
 	  const {
 	    passportId
 	  } = useParams();
 	  const navigate = useNavigate();
-	  const {
-	    toast
-	  } = useStore();
 	  const {
 	    session,
 	    loading: authLoading
@@ -41808,9 +41915,6 @@
 	  const [sidebarOpen, setSidebarOpen] = reactExports.useState(false);
 	  const [activeTab, setActiveTab] = reactExports.useState('overview');
 	  const [copied, setCopied] = reactExports.useState(false);
-	  const [face, setFace] = reactExports.useState(null);
-	  const [chips, setChips] = reactExports.useState([]);
-	  const [reminder, setReminder] = reactExports.useState(14);
 	  const runLookup = async ({
 	    orderNumber,
 	    email
@@ -41828,7 +41932,6 @@
 	        sessionStorage.setItem(sessionKey(data.passportId), email);
 	      } catch {/* storage unavailable */}
 	      setPassport(data);
-	      setReminder(data.reminder.selected);
 	      setPhase('ready');
 	      if (!passportId || passportId !== data.passportId) {
 	        navigate(`/passport/${data.passportId}`, {
@@ -41855,7 +41958,6 @@
 	    try {
 	      const data = await lookupPassportForUser(orderNumber);
 	      setPassport(data);
-	      setReminder(data.reminder.selected);
 	      setPhase('ready');
 	    } catch {
 	      setPhase('denied');
@@ -41892,18 +41994,7 @@
 	    setCopied(true);
 	    setTimeout(() => setCopied(false), 1500);
 	  };
-	  const download = () => {
-	    toast('PDF export is coming soon');
-	  };
-	  const toggleChip = c => setChips(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
-	  const shareExperience = () => {
-	    if (!face) return;
-	    toast('Thanks for sharing your experience');
-	  };
-	  const setReminderChoice = v => {
-	    setReminder(v);
-	    toast(v === 'none' ? 'Reminder turned off' : `Reminder set for ${v} days`);
-	  };
+	  const printPassport = () => window.print();
 	  if (phase !== 'ready' || !passport) {
 	    // Session not resolved yet — neutral loading, never the email gate.
 	    if (authLoading) {
@@ -41941,7 +42032,7 @@
 	              children: "Loading\u2026"
 	            })
 	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
+	        })]
 	      });
 	    }
 
@@ -42039,7 +42130,7 @@
 	              children: "Opening your Purchase Passport\u2026"
 	            })
 	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
+	        })]
 	      });
 	    }
 
@@ -42074,36 +42165,15 @@
 	        loading: phase === 'loading',
 	        error: lookupError,
 	        onSubmit: vals => runLookup(vals)
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
+	      })]
 	    });
 	  }
 	  const cards = {
 	    delivery: /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryDetailsCard, {
 	      passport: passport
-	    }),
-	    care: /*#__PURE__*/jsxRuntimeExports.jsx(ProductCareCard, {
-	      care: passport.care
-	    }),
-	    returns: /*#__PURE__*/jsxRuntimeExports.jsx(ReturnsSupportCard, {
-	      returns: passport.returns
-	    }),
-	    identity: /*#__PURE__*/jsxRuntimeExports.jsx(ProductIdentityCard, {
-	      identity: passport.identity
-	    }),
-	    experience: /*#__PURE__*/jsxRuntimeExports.jsx(MyExperienceCard, {
-	      experience: passport.experience,
-	      face: face,
-	      setFace: setFace,
-	      chips: chips,
-	      toggleChip: toggleChip,
-	      onSubmit: shareExperience
-	    }),
-	    reorder: /*#__PURE__*/jsxRuntimeExports.jsx(ReorderRemindersCard, {
-	      reminder: passport.reminder,
-	      selected: reminder,
-	      onSelect: setReminderChoice
 	    })
 	  };
+	  const currentStatus = passport.fulfillment?.label || passport.status;
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	    className: "psp",
 	    children: [sidebarOpen && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -42137,7 +42207,7 @@
 	              className: "serif psp__title psp-metal",
 	              children: "Your Purchase Passport"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	              children: "Every detail. Every step. Always with you."
+	              children: "Verified details from your order."
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	            className: "psp__head-rule",
@@ -42164,6 +42234,7 @@
 	                    position: 'relative'
 	                  },
 	                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                    type: "button",
 	                    className: "psp__copybtn",
 	                    onClick: copyId,
 	                    "aria-label": "Copy passport ID",
@@ -42177,20 +42248,20 @@
 	                })]
 	              })]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	              className: "btn psp__download",
-	              onClick: download,
+	              type: "button",
+	              className: "btn psp__download no-print",
+	              onClick: printPassport,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                name: "download",
 	                size: 16
-	              }), " Download Passport"]
+	              }), " Print / Save as PDF"]
 	            })]
 	          })]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	          className: "psp__herowrap",
 	          children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductHero, {
 	            product: passport.product,
-	            order: passport.order,
-	            eta: passport.eta
+	            order: passport.order
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryTimeline, {
 	          timeline: passport.timeline
@@ -42200,6 +42271,7 @@
 	          "aria-label": "Purchase Passport sections",
 	          children: TABS.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
 	            role: "tab",
+	            type: "button",
 	            "aria-selected": activeTab === t.id,
 	            className: `psp__tab ${activeTab === t.id ? 'active' : ''}`,
 	            onClick: () => setActiveTab(t.id),
@@ -42208,91 +42280,27 @@
 	              size: 16
 	            }), " ", t.label]
 	          }, t.id))
-	        }), activeTab === 'overview' ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "psp__summary",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs(SummaryCard, {
+	        }), activeTab === 'overview' ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "psp__summary psp__summary--single",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsxs(SummaryCard, {
 	            icon: "truck",
-	            title: "Delivery Details",
-	            cta: "View Tracking",
+	            title: "Order Status",
+	            cta: "View status",
 	            onCta: () => setActiveTab('delivery'),
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(SummaryRow, {
-	              label: "Shipping via",
-	              value: passport.shipping?.carrier
+	              label: "Current status",
+	              value: currentStatus
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx(SummaryRow, {
-	              label: "Tracking ID",
-	              value: passport.shipping?.trackingId
+	              label: "Order date",
+	              value: passport.order.date
 	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(SummaryCard, {
-	            icon: "droplet",
-	            title: "Product Care Guide",
-	            cta: "View Guide",
-	            onCta: () => setActiveTab('care'),
-	            children: passport.care.slice(0, 3).map(c => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "psp-sum__line",
-	              children: c.title
-	            }, c.title))
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(SummaryCard, {
-	            icon: "return",
-	            title: "Returns & Support",
-	            cta: "View Policy",
-	            onCta: () => setActiveTab('returns'),
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "psp-sum__line",
-	              children: "Easy returns"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "psp-sum__line",
-	              children: passport.returns.windowDate ? `Valid till ${passport.returns.windowDate}` : '7-day return policy'
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "psp-sum__line",
-	              children: "Dedicated support"
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(SummaryCard, {
-	            icon: "shield",
-	            title: "Product Identity",
-	            cta: "View Certificate",
-	            onCta: () => setActiveTab('identity'),
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(SummaryRow, {
-	              label: "Batch No.",
-	              value: passport.identity.batch
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(SummaryRow, {
-	              label: "Mfg. Date",
-	              value: passport.identity.mfgDate
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(SummaryCard, {
-	            icon: "star",
-	            title: "My Experience",
-	            cta: "Write a Review",
-	            onCta: () => setActiveTab('experience'),
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "psp-sum__line",
-	              children: "Rate your experience"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "psp-sum__stars",
-	              "aria-hidden": "true",
-	              children: [0, 1, 2, 3, 4].map(i => /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "star",
-	                size: 19
-	              }, i))
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(SummaryCard, {
-	            icon: "refresh",
-	            title: "Reorder & Reminders",
-	            cta: "Set Reminder",
-	            onCta: () => setActiveTab('reorder'),
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "psp-sum__line",
-	              children: "Reorder this item"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "psp-sum__line",
-	              children: "Never run out"
-	            })]
-	          })]
+	          })
 	        }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	          className: "psp__grid psp__grid--single",
 	          children: cards[activeTab]
 	        })]
 	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
+	    })]
 	  });
 	}
 	function LookupGate({
@@ -42388,6 +42396,15 @@
 	  onClose,
 	  member
 	}) {
+	  const email = typeof contact?.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim()) ? contact.email.trim() : '';
+	  const phone = typeof contact?.phone === 'string' ? contact.phone.replace(/[^\d+]/g, '') : '';
+	  const support = email ? {
+	    href: `mailto:${email}`,
+	    label: 'Email support'
+	  } : phone.replace(/\D/g, '').length >= 7 ? {
+	    href: `tel:${phone}`,
+	    label: 'Call support'
+	  } : null;
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("aside", {
 	    className: `psp__side ${open ? 'open' : ''}`,
 	    "aria-label": "Primary",
@@ -42428,22 +42445,14 @@
 	            className: "psp__navchev"
 	          })]
 	        });
-	        return n.to === '#' ? /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	          href: "#",
-	          className: `psp__navitem ${n.active ? 'active' : ''}`,
-	          onClick: e => {
-	            e.preventDefault();
-	            onClose();
-	          },
-	          children: inner
-	        }, n.id) : /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	        return /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	          to: n.to,
 	          className: `psp__navitem ${n.active ? 'active' : ''}`,
 	          onClick: onClose,
 	          children: inner
 	        }, n.id);
 	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    }), support && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	      className: "psp__side-promo",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "psp__promocard psp__helpcard",
@@ -42458,7 +42467,10 @@
 	            className: "serif",
 	            children: "Need Help?"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            children: "We're here for you"
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	              href: support.href,
+	              children: support.label
+	            })
 	          })]
 	        })]
 	      })
@@ -42467,8 +42479,7 @@
 	}
 	function ProductHero({
 	  product,
-	  order,
-	  eta
+	  order
 	}) {
 	  const fields = [{
 	    icon: 'clock',
@@ -42490,10 +42501,6 @@
 	    icon: 'mapPin',
 	    label: 'Delivery Address',
 	    value: order.address
-	  }, {
-	    icon: 'truck',
-	    label: 'Estimated Delivery',
-	    value: eta.display
 	  }];
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	    className: "psp__hero",
@@ -42516,7 +42523,7 @@
 	      className: "psp__hero-body",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	        className: "psp__hero-eyebrow",
-	        children: "Certified purchase"
+	        children: "Verified order"
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
 	        className: "serif psp__hero-title",
 	        children: product.name
@@ -42524,7 +42531,7 @@
 	        className: "psp__hero-underline"
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
 	        className: "psp__hero-sub",
-	        children: [product.shortDescription || 'Your order, verified and ready to track.', product.extraItemsCount > 0 && ` · +${product.extraItemsCount} more item${product.extraItemsCount > 1 ? 's' : ''} in this order`]
+	        children: [product.shortDescription || 'Order details from your verified purchase.', product.extraItemsCount > 0 && ` · +${product.extraItemsCount} more item${product.extraItemsCount > 1 ? 's' : ''} in this order`]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: "psp__fields",
 	        children: fields.map(f => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -42549,16 +42556,9 @@
 	function DeliveryTimeline({
 	  timeline
 	}) {
-	  const icons = {
-	    ordered: 'check',
-	    packed: 'check',
-	    shipped: 'truck',
-	    out_for_delivery: 'package',
-	    delivered: 'mail'
-	  };
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	    className: "psp__timeline",
-	    "aria-label": "Delivery timeline",
+	    className: `psp__timeline ${timeline.length === 1 ? 'psp__timeline--single' : ''}`,
+	    "aria-label": "Order timeline",
 	    children: /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
 	      className: "psp__tl-track",
 	      children: timeline.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
@@ -42573,7 +42573,7 @@
 	            name: "check",
 	            size: s.current ? 18 : 15
 	          }) : /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: icons[s.key] || 'package',
+	            name: "package",
 	            size: 15
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -42640,20 +42640,11 @@
 	  icon,
 	  title,
 	  subtitle,
-	  seal,
-	  footer,
-	  children,
-	  singleCol
+	  children
 	}) {
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	    className: "psp-card",
-	    children: [seal && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "psp-card__seal",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "award",
-	        size: 26
-	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "psp-card__head",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
 	        className: "serif",
@@ -42664,42 +42655,42 @@
 	      }), subtitle && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	        children: subtitle
 	      })]
-	    }), children, footer && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "psp-card__foot",
-	      children: footer
-	    })]
+	    }), children]
 	  });
 	}
 	function DeliveryDetailsCard({
 	  passport
 	}) {
+	  const fulfillment = passport.fulfillment;
+	  const facts = [['Carrier', fulfillment?.carrierName], ['Tracking number', fulfillment?.trackingNumber], ['Shipped', fulfillment?.shippedAt ? new Date(fulfillment.shippedAt).toLocaleString('en-IN') : null], ['Delivered', fulfillment?.deliveredAt ? new Date(fulfillment.deliveredAt).toLocaleString('en-IN') : null]].filter(([, value]) => Boolean(value));
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs(CardShell, {
 	    icon: "truck",
-	    title: "Delivery Details",
-	    subtitle: "Track where your order is right now",
-	    footer: /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
-	      href: "#",
-	      className: "btn btn-outline btn-sm btn-block",
-	      onClick: e => e.preventDefault(),
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "externalLink",
-	        size: 15
-	      }), " Track on Courier Website"]
-	    }),
+	    title: fulfillment ? 'Fulfillment & tracking' : 'Order Status',
+	    subtitle: "Status recorded for this order",
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "psp-highlight",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "truck",
+	        name: "package",
 	        size: 20
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          className: "lbl",
-	          children: "Estimated delivery"
+	          children: "Current status"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          className: "val",
-	          children: passport.eta.display
+	          children: fulfillment?.label || passport.status
 	        })]
 	      })]
+	    }), facts.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("dl", {
+	      className: "psp-kv psp-kv--tracking",
+	      children: facts.map(([label, value]) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "psp-kv__row",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	          children: label
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	          children: value
+	        })]
+	      }, label))
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	      className: "psp-vt",
 	      children: passport.timeline.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -42726,322 +42717,14 @@
 	          })]
 	        })]
 	      }, s.key))
-	    })]
-	  });
-	}
-	function ProductCareCard({
-	  care
-	}) {
-	  return /*#__PURE__*/jsxRuntimeExports.jsx(CardShell, {
-	    icon: "droplet",
-	    title: "Product Care Guide",
-	    subtitle: "Get the most from your product",
-	    footer: /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
-	      href: "#",
-	      className: "btn btn-outline btn-sm btn-block",
-	      onClick: e => e.preventDefault(),
-	      children: ["View Detailed Guide ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "arrowRight",
+	    }), fulfillment?.trackingUrl && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	      className: "btn btn-outline btn-sm psp__tracking-link",
+	      href: fulfillment.trackingUrl,
+	      target: "_blank",
+	      rel: "noopener noreferrer",
+	      children: ["Track on carrier website ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "externalLink",
 	        size: 15
-	      })]
-	    }),
-	    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "psp-guidelist",
-	      children: care.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "psp-guide",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "psp-guide__ic",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: c.icon,
-	            size: 17
-	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "psp-guide__title",
-	            children: c.title
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "psp-guide__desc",
-	            children: c.desc
-	          })]
-	        })]
-	      }, c.title))
-	    })
-	  });
-	}
-	function ReturnsSupportCard({
-	  returns
-	}) {
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(CardShell, {
-	    icon: "return",
-	    title: "Returns & Support",
-	    subtitle: "We're here to help",
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "psp-highlight",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "clock",
-	        size: 20
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "lbl",
-	          children: returns.windowDate ? 'Return window valid till' : 'Return window'
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "val",
-	          children: returns.windowDate || NOT_AVAILABLE
-	        })]
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      children: returns.actions.map(a => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	        className: "psp-actionrow",
-	        onClick: () => {},
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "psp-actionrow__ic",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: a.icon,
-	            size: 16
-	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "psp-actionrow__title",
-	            style: {
-	              display: 'block'
-	            },
-	            children: a.title
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "psp-actionrow__sub",
-	            children: a.sub
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "psp-actionrow__chev",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "chevronRight",
-	            size: 16
-	          })
-	        })]
-	      }, a.title))
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "psp-genuine",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "shield",
-	        size: 22
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	          children: "100% Genuine Products"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          children: "Sourced directly. Quality assured."
-	        })]
-	      })]
-	    })]
-	  });
-	}
-	function ProductIdentityCard({
-	  identity
-	}) {
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(CardShell, {
-	    icon: "shield",
-	    title: "Product Identity",
-	    subtitle: "Authenticity you can trust",
-	    seal: true,
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
-	      className: "psp-kv",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "psp-kv__row",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	          children: "Brand"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	          children: identity.brand
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "psp-kv__row",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	          children: "Batch No."
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	          children: identity.batch || NOT_AVAILABLE
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "psp-kv__row",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	          children: "Mfg. Date"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	          children: identity.mfgDate || NOT_AVAILABLE
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "psp-kv__row",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	          children: "Expiry Date"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	          children: identity.expiryDate || NOT_AVAILABLE
-	        })]
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "psp-qr",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "psp-qr__box",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "qrCode",
-	          size: 30
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	          children: "Scan to verify authenticity"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          children: "Use the QR code to view product details"
-	        })]
-	      })]
-	    })]
-	  });
-	}
-	const FACE_PATH = {
-	  loved: '<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M8.5 9h.01M15.5 9h.01"/>',
-	  good: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5s1.2 1 3.5 1 3.5-1 3.5-1"/><path d="M8.5 9h.01M15.5 9h.01"/>',
-	  unsure: '<circle cx="12" cy="12" r="9"/><path d="M8.5 15h7"/><path d="M8.5 9h.01M15.5 9h.01"/>',
-	  not_for_me: '<circle cx="12" cy="12" r="9"/><path d="M8.5 15.5s1.2-1 3.5-1 3.5 1 3.5 1"/><path d="M8.5 9h.01M15.5 9h.01"/>',
-	  bad: '<circle cx="12" cy="12" r="9"/><path d="M8 16s1.5-2 4-2 4 2 4 2"/><path d="M8.5 9h.01M15.5 9h.01"/>'
-	};
-	function MyExperienceCard({
-	  experience,
-	  face,
-	  setFace,
-	  chips,
-	  toggleChip,
-	  onSubmit
-	}) {
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(CardShell, {
-	    icon: "heartHand",
-	    title: "My Experience",
-	    subtitle: "Your experience helps us serve you better",
-	    footer: /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	      className: "btn btn-block",
-	      disabled: !face,
-	      onClick: onSubmit,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "gift",
-	        size: 17
-	      }), " Share Experience"]
-	    }),
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
-	      style: {
-	        border: 0,
-	        padding: 0
-	      },
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
-	        className: "hint",
-	        style: {
-	          marginBottom: 10
-	        },
-	        children: "How was your experience with this product?"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "psp-faces",
-	        role: "radiogroup",
-	        "aria-label": "Rate your experience",
-	        children: experience.faces.map(f => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	          type: "button",
-	          role: "radio",
-	          "aria-checked": face === f.key,
-	          className: `psp-face ${face === f.key ? 'active' : ''}`,
-	          onClick: () => setFace(f.key),
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "psp-face__ring",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx("svg", {
-	              width: "20",
-	              height: "20",
-	              viewBox: "0 0 24 24",
-	              fill: "none",
-	              stroke: "currentColor",
-	              strokeWidth: "1.6",
-	              strokeLinecap: "round",
-	              strokeLinejoin: "round",
-	              dangerouslySetInnerHTML: {
-	                __html: FACE_PATH[f.key]
-	              }
-	            })
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            children: f.label
-	          })]
-	        }, f.key))
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	        className: "hint",
-	        style: {
-	          marginBottom: 8
-	        },
-	        children: "What did you like?"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "psp-chiprow",
-	        children: experience.chips.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          type: "button",
-	          className: `chip ${chips.includes(c) ? 'active' : ''}`,
-	          "aria-pressed": chips.includes(c),
-	          onClick: () => toggleChip(c),
-	          children: c
-	        }, c))
-	      })]
-	    })]
-	  });
-	}
-	function ReorderRemindersCard({
-	  reminder,
-	  selected,
-	  onSelect
-	}) {
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(CardShell, {
-	    icon: "refresh",
-	    title: "Reorder & Reminders",
-	    subtitle: "Never run out of what you love",
-	    footer: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	      className: "btn btn-block",
-	      onClick: () => onSelect(selected),
-	      children: "Set Reminder"
-	    }),
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "psp-highlight",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "tag",
-	        size: 20
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "lbl",
-	          children: "You purchased this"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "val",
-	          children: reminder.purchasedDaysAgo != null ? `${reminder.purchasedDaysAgo} day${reminder.purchasedDaysAgo === 1 ? '' : 's'} ago` : NOT_AVAILABLE
-	        })]
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
-	      style: {
-	        border: 0,
-	        padding: 0
-	      },
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
-	        className: "hint",
-	        style: {
-	          marginBottom: 4
-	        },
-	        children: "Set a reminder"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "psp-reminder",
-	        role: "radiogroup",
-	        "aria-label": "Set a reminder",
-	        children: reminder.options.map(o => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-	          className: `psp-reminder__row ${selected === o.value ? 'checked' : ''}`,
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "bell",
-	            size: 16,
-	            className: "bell"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "psp-reminder__label",
-	            children: o.label
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	            type: "radio",
-	            name: "reminder",
-	            className: "sr-only",
-	            checked: selected === o.value,
-	            onChange: () => onSelect(o.value)
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "psp-radio",
-	            "aria-hidden": "true"
-	          })]
-	        }, o.value))
 	      })]
 	    })]
 	  });
@@ -45765,6 +45448,11 @@
 	  failed: 'badge-sale',
 	  cancelled: 'badge-out'
 	};
+	const FULFILLMENT_BADGE = {
+	  shipped: 'badge-soft',
+	  delivered: 'badge-best',
+	  cancelled: 'badge-out'
+	};
 
 	// Build a clean, multi-line postal address from whatever fields an order
 	// actually has. Works for old orders created before some fields existed —
@@ -45832,6 +45520,12 @@
 	    setCopiedId(order.id);
 	    setTimeout(() => setCopiedId(c => c === order.id ? null : c), 1600);
 	  }
+	  function updateOrder(patch) {
+	    setOrders(current => current.map(order => order.id === patch.id ? {
+	      ...order,
+	      ...patch
+	    } : order));
+	  }
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	      className: "adm__head",
@@ -45877,6 +45571,8 @@
 	              children: "Method"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
 	              children: "Payment"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+	              children: "Fulfillment"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {})]
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
@@ -45921,6 +45617,11 @@
 	                    children: o.payment_status
 	                  })
 	                }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	                  children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                    className: `badge ${FULFILLMENT_BADGE[o.fulfillment_status] || 'badge-soft'}`,
+	                    children: fulfillmentStatusLabel(o.fulfillment_status) || 'Not set'
+	                  })
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
 	                  children: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	                    className: "btn btn-sm btn-light",
 	                    onClick: () => setExpandedId(open ? null : o.id),
@@ -45930,7 +45631,7 @@
 	              }), open && /*#__PURE__*/jsxRuntimeExports.jsx("tr", {
 	                className: "adm-order-detail",
 	                children: /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-	                  colSpan: 7,
+	                  colSpan: 8,
 	                  children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	                    className: "adm-order-detail__grid",
 	                    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
@@ -46051,6 +45752,9 @@
 	                        },
 	                        children: "Open invoice"
 	                      })]
+	                    }), /*#__PURE__*/jsxRuntimeExports.jsx(FulfillmentEditor, {
+	                      order: o,
+	                      onUpdated: updateOrder
 	                    }), timeline(o).length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
 	                      className: "adm-order-block",
 	                      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
@@ -46204,6 +45908,155 @@
 	          })
 	        })]
 	      })
+	    })]
+	  });
+	}
+	function FulfillmentEditor({
+	  order,
+	  onUpdated
+	}) {
+	  const [form, setForm] = reactExports.useState(() => ({
+	    fulfillmentStatus: order.fulfillment_status || '',
+	    carrierName: order.carrier_name || '',
+	    trackingNumber: order.tracking_number || '',
+	    trackingUrl: order.tracking_url || ''
+	  }));
+	  const [busy, setBusy] = reactExports.useState('');
+	  const [message, setMessage] = reactExports.useState('');
+	  const [error, setError] = reactExports.useState('');
+	  reactExports.useEffect(() => {
+	    setForm({
+	      fulfillmentStatus: order.fulfillment_status || '',
+	      carrierName: order.carrier_name || '',
+	      trackingNumber: order.tracking_number || '',
+	      trackingUrl: order.tracking_url || ''
+	    });
+	  }, [order.id, order.fulfillment_status, order.carrier_name, order.tracking_number, order.tracking_url]);
+	  const field = key => event => setForm(current => ({
+	    ...current,
+	    [key]: event.target.value
+	  }));
+	  async function save(action = 'save') {
+	    if (busy) return;
+	    setBusy(action);
+	    setMessage('');
+	    setError('');
+	    try {
+	      const safe = validateFulfillmentInput(form);
+	      const updated = await adminUpdateOrderFulfillment(order.id, safe, {
+	        markShipped: action === 'shipped',
+	        markDelivered: action === 'delivered'
+	      });
+	      onUpdated(updated);
+	      setMessage(action === 'save' ? 'Fulfillment details saved.' : action === 'shipped' ? 'Order marked shipped.' : 'Order marked delivered.');
+	    } catch (err) {
+	      setError(err?.message || 'Fulfillment details could not be saved.');
+	    } finally {
+	      setBusy('');
+	    }
+	  }
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    className: "adm-order-block adm-order-block--wide adm-fulfillment",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	      children: "Fulfillment & tracking"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint",
+	      children: "Enter only details supplied by the carrier. A customer tracking link appears only for an explicit public HTTPS URL."
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-grid2 adm-fulfillment__fields",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          htmlFor: `fulfillment-status-${order.id}`,
+	          children: "Fulfillment status"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("select", {
+	          id: `fulfillment-status-${order.id}`,
+	          className: "select",
+	          value: form.fulfillmentStatus,
+	          onChange: field('fulfillmentStatus'),
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	            value: "",
+	            children: "Not set"
+	          }), FULFILLMENT_STATUSES.map(status => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	            value: status,
+	            children: fulfillmentStatusLabel(status)
+	          }, status))]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          htmlFor: `carrier-${order.id}`,
+	          children: "Carrier"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          id: `carrier-${order.id}`,
+	          className: "input",
+	          maxLength: 120,
+	          value: form.carrierName,
+	          onChange: field('carrierName'),
+	          placeholder: "Carrier name"
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          htmlFor: `tracking-number-${order.id}`,
+	          children: "Tracking number"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          id: `tracking-number-${order.id}`,
+	          className: "input",
+	          maxLength: 160,
+	          value: form.trackingNumber,
+	          onChange: field('trackingNumber'),
+	          placeholder: "Carrier-issued number"
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          htmlFor: `tracking-url-${order.id}`,
+	          children: "Tracking URL"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          id: `tracking-url-${order.id}`,
+	          className: "input",
+	          type: "url",
+	          inputMode: "url",
+	          maxLength: 2048,
+	          value: form.trackingUrl,
+	          onChange: field('trackingUrl'),
+	          placeholder: "https://carrier.example/track/\u2026"
+	        })]
+	      })]
+	    }), error && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "error-text",
+	      role: "alert",
+	      children: error
+	    }), message && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "adm-fulfillment__success",
+	      role: "status",
+	      children: message
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-fulfillment__actions",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "button",
+	        className: "btn btn-sm",
+	        disabled: Boolean(busy),
+	        onClick: () => save('save'),
+	        children: busy === 'save' ? 'Saving…' : 'Save details'
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "button",
+	        className: "btn btn-sm btn-light",
+	        disabled: Boolean(busy),
+	        onClick: () => save('shipped'),
+	        children: busy === 'shipped' ? 'Saving…' : 'Mark shipped'
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "button",
+	        className: "btn btn-sm btn-light",
+	        disabled: Boolean(busy),
+	        onClick: () => save('delivered'),
+	        children: busy === 'delivered' ? 'Saving…' : 'Mark delivered'
+	      })]
 	    })]
 	  });
 	}
@@ -46648,7 +46501,7 @@
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	        ref: fileInput,
 	        type: "file",
-	        accept: "image/*",
+	        accept: "image/jpeg,image/png,image/webp,image/gif,image/avif",
 	        multiple: true,
 	        hidden: true,
 	        onChange: e => {
@@ -46718,7 +46571,7 @@
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	            ref: el => replaceInputs.current[it.id] = el,
 	            type: "file",
-	            accept: "image/*",
+	            accept: "image/jpeg,image/png,image/webp,image/gif,image/avif",
 	            hidden: true,
 	            onChange: e => {
 	              onReplaceFile(it.id, e.target.files?.[0]);
@@ -51025,28 +50878,14 @@
 	}
 
 	async function validateHomepageImage(file) {
-	  const types = {
-	    'image/png': 'png',
-	    'image/jpeg': 'jpg',
-	    'image/webp': 'webp'
-	  };
-	  if (!file || !types[file.type]) throw new Error('Choose a PNG, JPEG or WebP image. SVG, HTML and other files are not allowed.');
-	  if (!file.size || file.size > 6 * 1024 * 1024) throw new Error('Choose an image smaller than 6 MB.');
-	  const b = new Uint8Array(await file.slice(0, 16).arrayBuffer());
-	  const starts = (bytes, offset = 0) => bytes.every((n, i) => b[offset + i] === n);
-	  const detected = starts([137, 80, 78, 71, 13, 10, 26, 10]) ? 'image/png' : starts([255, 216, 255]) ? 'image/jpeg' : starts([82, 73, 70, 70]) && starts([87, 69, 66, 80], 8) ? 'image/webp' : null;
-	  if (detected !== file.type) throw new Error('The image contents do not match its file type.');
-	  return types[detected];
+	  const result = await validateImageUpload(file, {
+	    allowedTypes: ['image/png', 'image/jpeg', 'image/webp'],
+	    maxBytes: 6 * 1024 * 1024
+	  });
+	  return result.extension;
 	}
 	async function uploadHomepageImage(file) {
 	  const ext = await validateHomepageImage(file);
-	  // Decode before storage: reject corrupt images and oversized pixel canvases.
-	  const bitmap = await createImageBitmap(file).catch(() => {
-	    throw new Error('This image could not be decoded. Please export it as PNG, JPEG or WebP.');
-	  });
-	  const tooLarge = bitmap.width * bitmap.height > 24000000 || bitmap.width > 10000 || bitmap.height > 10000;
-	  bitmap.close();
-	  if (tooLarge) throw new Error('Use an image under 24 megapixels and 10,000 pixels per side.');
 	  const bucket = supabase.storage.from('product-images');
 	  const path = `homepage-visuals/${crypto.randomUUID()}.${ext}`;
 	  const {
@@ -51477,7 +51316,7 @@
 	          children: "Slide image"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	          type: "file",
-	          accept: "image/*",
+	          accept: "image/jpeg,image/png,image/webp,image/gif,image/avif",
 	          onChange: e => onFile(e, 'image_url'),
 	          disabled: uploading
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
@@ -51500,7 +51339,7 @@
 	            children: "Upload video"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	            type: "file",
-	            accept: "video/*",
+	            accept: "video/mp4,video/webm",
 	            onChange: onVideoFile,
 	            disabled: uploading
 	          }), videoUpload && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -51552,7 +51391,7 @@
 	            children: "Poster image (shown while the video loads, or if it fails)"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	            type: "file",
-	            accept: "image/*",
+	            accept: "image/jpeg,image/png,image/webp,image/gif,image/avif",
 	            onChange: e => onFile(e, 'poster_url'),
 	            disabled: uploading
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
@@ -52095,7 +51934,7 @@
 	          children: "Image (optional \u2014 poster art or offer icon)"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	          type: "file",
-	          accept: "image/*",
+	          accept: "image/jpeg,image/png,image/webp,image/gif,image/avif",
 	          onChange: onImage,
 	          disabled: uploading
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
@@ -52719,7 +52558,7 @@
 	                children: "Upload logo (transparent PNG recommended)"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	                type: "file",
-	                accept: "image/*",
+	                accept: "image/jpeg,image/png,image/webp,image/gif,image/avif",
 	                onChange: e => onFile(e, 'logo_url'),
 	                disabled: !!uploading
 	              })]
@@ -52848,7 +52687,7 @@
 	            })
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	            type: "file",
-	            accept: "image/*",
+	            accept: "image/jpeg,image/png,image/webp,image/gif,image/avif",
 	            onChange: e => onFile(e, 'favicon_url'),
 	            disabled: !!uploading
 	          })]

@@ -324,6 +324,11 @@ console.log('\n— promo-media cleanup (real admin API, mocked Supabase; no netw
     current = { client, state };
     return state;
   }
+  const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10, 0, 0, 0, 0]);
+  const fakeUploadFile = (name, type, bytes, declaredSize = bytes.length) => ({
+    name, type, size: declaredSize,
+    slice: () => ({ arrayBuffer: async () => Uint8Array.from(bytes).buffer }),
+  });
   try {
     globalThis.fetch = async () => { throw new Error('Network is forbidden in promotions cleanup tests'); };
     globalThis.window = { crypto: { randomUUID: () => 'new-456' } };
@@ -466,7 +471,7 @@ console.log('\n— promo-media cleanup (real admin API, mocked Supabase; no netw
     const update = (imageUrl = newUrl) => api.adminUpsertPromotion({ id: 1, title: 'QA edited', image_url: imageUrl, is_active: false });
     await check('replacement uploads, saves new URL, then removes/verifies only the old object', async () => {
       const state = fixture({ objects: [oldPath] });
-      const uploaded = await api.uploadPromoImage({ name: 'new.png', type: 'image/png', size: 128 });
+      const uploaded = await api.uploadPromoImage(fakeUploadFile('new.png', 'image/png', pngBytes));
       const saved = await update(uploaded);
       assert.equal(uploaded, newUrl);
       assert.equal(saved.image_url, newUrl);
@@ -475,7 +480,7 @@ console.log('\n— promo-media cleanup (real admin API, mocked Supabase; no netw
     });
     await check('failed replacement upload never removes the current image or updates its row', async () => {
       const state = fixture({ objects: [oldPath], uploadError: { message: 'Upload denied' } });
-      await rejection(() => api.uploadPromoImage({ name: 'new.png', type: 'image/png', size: 128 }), /Upload denied/);
+      await rejection(() => api.uploadPromoImage(fakeUploadFile('new.png', 'image/png', pngBytes)), /Upload denied/);
       assert.deepEqual(state.calls, ['upload']);
       assert.equal(state.rows[0].image_url, oldUrl);
       assert.ok(state.objects.has(oldPath));
@@ -547,8 +552,8 @@ console.log('\n— promo-media cleanup (real admin API, mocked Supabase; no netw
     });
     await check('invalid and oversized uploads are rejected before Storage access', async () => {
       const state = fixture();
-      await rejection(() => api.uploadPromoImage({ name: 'bad.svg', type: 'image/svg+xml', size: 100 }), /image|type|JPEG|PNG/i);
-      await rejection(() => api.uploadPromoImage({ name: 'large.png', type: 'image/png', size: 6 * 1024 * 1024 + 1 }), /too large/);
+      await rejection(() => api.uploadPromoImage(fakeUploadFile('bad.svg', 'image/svg+xml', Buffer.from('<svg>'))), /image|type|JPEG|PNG/i);
+      await rejection(() => api.uploadPromoImage(fakeUploadFile('large.png', 'image/png', pngBytes, 6 * 1024 * 1024 + 1)), /too large/);
       assert.deepEqual(state.calls, []);
     });
     const adminUi = readFileSync('src/admin/pages/Promotions.jsx', 'utf8');

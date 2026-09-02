@@ -50,7 +50,7 @@ export default function Branding() {
             <div style={{ flex: 1 }}>
               <div className="field">
                 <label className="label">Upload logo (transparent PNG recommended)</label>
-                <input type="file" accept="image/*" onChange={(e) => onFile(e, 'logo_url')} disabled={!!uploading} />
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => onFile(e, 'logo_url')} disabled={!!uploading} />
               </div>
               <div className="field"><label className="label">Or paste logo URL</label><input className="input" value={form.logo_url || ''} onChange={(e) => set('logo_url', e.target.value)} /></div>
             </div>
@@ -89,7 +89,7 @@ export default function Branding() {
           <h2>Favicon</h2>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             <div className="adm-thumb-lg" style={{ width: 48, height: 48 }}>{form.favicon_url && <img src={form.favicon_url} alt="" />}</div>
-            <input type="file" accept="image/*" onChange={(e) => onFile(e, 'favicon_url')} disabled={!!uploading} />
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => onFile(e, 'favicon_url')} disabled={!!uploading} />
           </div>
         </div>
 

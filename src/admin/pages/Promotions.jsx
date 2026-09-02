@@ -214,7 +214,7 @@ export default function Promotions() {
 
           <div className="field">
             <label className="label">Image (optional — poster art or offer icon)</label>
-            <input type="file" accept="image/*" onChange={onImage} disabled={uploading} />
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={onImage} disabled={uploading} />
             <input className="input" style={{ marginTop: 8 }} value={form.image_url}
               onChange={(e) => set('image_url', e.target.value)} placeholder="or paste an image URL" />
             {uploading && <p className="hint">Uploading…</p>}

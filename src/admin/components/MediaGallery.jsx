@@ -275,7 +275,7 @@ const MediaGallery = forwardRef(function MediaGallery({ productId = null, produc
         role="button" tabIndex={0} aria-disabled={working || loading}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!working && !loading) fileInput.current?.click(); } }}
       >
-        <input ref={fileInput} type="file" accept="image/*" multiple hidden
+        <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple hidden
           onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
         <strong>Drop images here</strong>
         <span className="hint">or click to browse · JPEG/PNG/WebP/GIF/AVIF · up to 8MB each · multiple allowed</span>
@@ -313,7 +313,7 @@ const MediaGallery = forwardRef(function MediaGallery({ productId = null, produc
               />
               <div className="ap-media__actions">
                 <button type="button" className="btn btn-xs btn-light" disabled={working || it.isPrimary || !!it.status} onClick={() => setPrimary(it.id)}>Set primary</button>
-                <input ref={(el) => (replaceInputs.current[it.id] = el)} type="file" accept="image/*" hidden
+                <input ref={(el) => (replaceInputs.current[it.id] = el)} type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" hidden
                   onChange={(e) => { onReplaceFile(it.id, e.target.files?.[0]); e.target.value = ''; }} />
                 <button type="button" className="btn btn-xs btn-light" disabled={working || it.status === 'uploading'} onClick={() => replaceInputs.current[it.id]?.click()}>Replace</button>
                 <button type="button" className="btn btn-xs btn-light ap-media__del" disabled={working} onClick={() => removeItem(it.id)}>Delete</button>

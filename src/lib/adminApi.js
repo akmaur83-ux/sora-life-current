@@ -8,7 +8,10 @@
 // ============================================================
 import { supabase } from './supabase.js';
 import { BIOSASH_PRODUCTS } from '../data/biosash.js';
-import { MediaOperationError, persistUploadedMedia, removeMediaObject, settlePrimaryMedia, commitStagedMedia } from './productMediaOperations.js';
+import {
+  MediaOperationError, persistUploadedMedia, removeMediaObject, settlePrimaryMedia, commitStagedMedia,
+  IMAGE_UPLOAD_TYPES, IMAGE_UPLOAD_MAX_BYTES, validateImageMetadata, validateImageUpload, validateVideoUpload,
+} from './productMediaOperations.js';
 
 const DISCOUNT_TIERS = [10, 15, 18, 20];
 
@@ -409,12 +412,15 @@ export async function adminSetSetting(key, value) {
 // enforces admin-only writes for both buckets — see the migrations.
 // ---------------------------------------------------------------
 async function uploadToBucket(bucket, file, folder, opts = {}) {
-  const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
-  const path = `${folder}/${cryptoRandomId()}.${ext}`;
+  if (!/^[a-z0-9][a-z0-9/_-]{0,63}$/i.test(folder) || folder.includes('..') || folder.includes('//')) {
+    throw new Error('Invalid upload destination.');
+  }
+  if (!opts.extension || !/^[a-z0-9]{2,5}$/.test(opts.extension)) throw new Error('A validated file type is required.');
+  const path = `${folder}/${cryptoRandomId()}.${opts.extension}`;
   const { error } = await supabase.storage.from(bucket).upload(path, file, {
     cacheControl: opts.cacheControl || '3600',
     upsert: false,
-    contentType: file.type || undefined,
+    contentType: opts.contentType,
   });
   if (error) throw error;
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
@@ -422,20 +428,31 @@ async function uploadToBucket(bucket, file, folder, opts = {}) {
 }
 
 export async function uploadImage(file, folder = 'products') {
-  return uploadToBucket('product-images', file, folder);
+  const validated = await validateImageUpload(file);
+  return uploadToBucket('product-images', file, folder, { extension: validated.extension, contentType: validated.mime });
 }
 
 const MAX_HERO_VIDEO_BYTES = 100 * 1024 * 1024; // 100MB — generous local guard; Supabase project limits still apply
 
+export async function validateHeroVideo(file) {
+  return validateVideoUpload(file, { maxBytes: MAX_HERO_VIDEO_BYTES });
+}
+
 export async function uploadHeroVideo(file) {
-  if (!file.type?.startsWith('video/')) throw new Error('Please choose a video file (MP4 recommended).');
-  if (file.size > MAX_HERO_VIDEO_BYTES) throw new Error(`Video is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Keep it under 100MB.`);
-  return uploadToBucket('hero-media', file, 'video', { cacheControl: '31536000' });
+  const validated = await validateHeroVideo(file);
+  return uploadToBucket('hero-media', file, 'video', {
+    cacheControl: '31536000', extension: validated.extension, contentType: validated.mime,
+  });
 }
 
 function cryptoRandomId() {
-  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const secure = globalThis.window?.crypto || globalThis.crypto;
+  if (secure?.randomUUID) return secure.randomUUID();
+  if (secure?.getRandomValues) {
+    const bytes = new Uint8Array(16); secure.getRandomValues(bytes);
+    return [...bytes].map((value) => value.toString(16).padStart(2, '0')).join('');
+  }
+  throw new Error('Secure random storage naming is unavailable.');
 }
 
 /**
@@ -571,17 +588,11 @@ export async function adminDeleteVariant(id) {
 // importer do. Storage paths are always generated (cryptoRandomId), never
 // taken from client input, so no arbitrary path can be written.
 // ---------------------------------------------------------------
-export const MEDIA_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
-export const MEDIA_MAX_BYTES = 8 * 1024 * 1024; // 8MB per product image
+export const MEDIA_ALLOWED_TYPES = Object.keys(IMAGE_UPLOAD_TYPES);
+export const MEDIA_MAX_BYTES = IMAGE_UPLOAD_MAX_BYTES; // 8MB per product image
 
 export function validateMediaFile(file) {
-  if (!file) throw new Error('No file selected.');
-  if (!file.type?.startsWith('image/') || !MEDIA_ALLOWED_TYPES.includes(file.type)) {
-    throw new Error(`Unsupported image type${file.type ? ` (${file.type})` : ''}. Use JPEG, PNG, WebP, GIF or AVIF.`);
-  }
-  if (file.size > MEDIA_MAX_BYTES) {
-    throw new Error(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Keep each image under 8MB.`);
-  }
+  validateImageMetadata(file, { allowedTypes: MEDIA_ALLOWED_TYPES, maxBytes: MEDIA_MAX_BYTES });
   return true;
 }
 
@@ -601,12 +612,11 @@ function dbMediaToApp(row) {
 // storage path (kept on the media row so the object can be deleted later) and
 // its public URL. The path is server-side-random — never client-controlled.
 export async function uploadProductMediaFile(file) {
-  validateMediaFile(file);
-  const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
-  const path = `products/${cryptoRandomId()}.${ext}`;
+  const validated = await validateImageUpload(file, { allowedTypes: MEDIA_ALLOWED_TYPES, maxBytes: MEDIA_MAX_BYTES });
+  const path = `products/${cryptoRandomId()}.${validated.extension}`;
   try {
     const { error } = await supabase.storage.from('product-images').upload(path, file, {
-      cacheControl: '3600', upsert: false, contentType: file.type || undefined,
+      cacheControl: '3600', upsert: false, contentType: validated.mime,
     });
     if (error) throw error;
   } catch (error) {
@@ -1057,14 +1067,10 @@ const PROMO_IMAGE_MAX_BYTES = 6 * 1024 * 1024; // 6MB — posters should be ligh
 
 /** Upload a poster / offer image into the dedicated promo-media bucket. */
 export async function uploadPromoImage(file) {
-  validateMediaFile(file); // shared type/size guard (JPEG/PNG/WebP/GIF/AVIF, <= 8MB)
-  if (file.size > PROMO_IMAGE_MAX_BYTES) {
-    throw new Error(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Keep promo art under 6MB.`);
-  }
-  const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
-  const path = `promo/${cryptoRandomId()}.${ext}`;
+  const validated = await validateImageUpload(file, { allowedTypes: MEDIA_ALLOWED_TYPES, maxBytes: PROMO_IMAGE_MAX_BYTES });
+  const path = `promo/${cryptoRandomId()}.${validated.extension}`;
   const { error } = await supabase.storage.from('promo-media').upload(path, file, {
-    cacheControl: '3600', upsert: false, contentType: file.type || undefined,
+    cacheControl: '3600', upsert: false, contentType: validated.mime,
   });
   if (error) throw error;
   const { data } = supabase.storage.from('promo-media').getPublicUrl(path);

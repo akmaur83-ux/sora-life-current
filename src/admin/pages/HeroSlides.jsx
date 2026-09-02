@@ -123,14 +123,14 @@ export default function HeroSlides() {
           {form.kind === 'image' ? (
             <div className="field">
               <label className="label">Slide image</label>
-              <input type="file" accept="image/*" onChange={(e) => onFile(e, 'image_url')} disabled={uploading} />
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => onFile(e, 'image_url')} disabled={uploading} />
               <input className="input" style={{ marginTop: 8 }} value={form.image_url || ''} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} placeholder="or paste an image URL" />
             </div>
           ) : (
             <>
               <div className="field">
                 <label className="label">Upload video</label>
-                <input type="file" accept="video/*" onChange={onVideoFile} disabled={uploading} />
+                <input type="file" accept="video/mp4,video/webm" onChange={onVideoFile} disabled={uploading} />
                 {videoUpload && (
                   <div className={`adm-banner ${videoUpload.status === 'error' ? 'err' : videoUpload.status === 'done' ? 'ok' : 'info'}`} style={{ marginTop: 10, marginBottom: 0 }}>
                     {videoUpload.status === 'uploading' && <>Uploading <strong>{videoUpload.name}</strong>…</>}
@@ -145,7 +145,7 @@ export default function HeroSlides() {
               </div>
               <div className="field">
                 <label className="label">Poster image (shown while the video loads, or if it fails)</label>
-                <input type="file" accept="image/*" onChange={(e) => onFile(e, 'poster_url')} disabled={uploading} />
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => onFile(e, 'poster_url')} disabled={uploading} />
                 <input className="input" style={{ marginTop: 8 }} value={form.poster_url || ''} onChange={(e) => setForm((f) => ({ ...f, poster_url: e.target.value }))} placeholder="or paste a poster image URL" />
               </div>
             </>
