@@ -115,6 +115,11 @@ export default {
       'process.env.NODE_ENV': JSON.stringify('production'),
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
       'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(supabasePublishableKey),
+      // Social sign-in allowlist. Empty unless the owner has finished the
+      // Supabase Dashboard setup for a provider and opted it in explicitly,
+      // so no social button can appear before it actually works. Carries no
+      // secret: provider client ids/secrets live in Supabase, never here.
+      'import.meta.env.VITE_OAUTH_PROVIDERS': JSON.stringify(process.env.VITE_OAUTH_PROVIDERS || ''),
     }),
     nodeResolve({ browser: true, extensions: ['.js', '.jsx'] }),
     commonjs({ transformMixedEsModules: true }),

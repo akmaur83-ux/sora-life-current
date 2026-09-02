@@ -302,8 +302,10 @@ export default function CreatorPortal() {
               )}
 
               <div className="crp__notice" style={{ marginTop: 'var(--sp-5)' }}>
-                <strong>Earnings and payouts will be available in a future release.</strong> These figures are attributed
-                sales, not commission. We never share your shoppers’ personal details with you.
+                <strong>These figures are attributed sales, not commission.</strong> Your commission is in{' '}
+                <Link to="/creator/earnings">My earnings</Link>, and you can request a payout from{' '}
+                <Link to="/creator/payouts">Payouts</Link> once it clears. We never share your shoppers’
+                personal details with you.
               </div>
             </>
           )}

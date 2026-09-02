@@ -7543,6 +7543,9 @@
 	}
 
 	function Footer() {
+	  const email = typeof contact?.email === 'string' ? contact.email.trim() : '';
+	  const phone = typeof contact?.phone === 'string' ? contact.phone.trim() : '';
+	  const hasContact = Boolean(email || phone);
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("footer", {
 	    className: "ftr",
 	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -7554,34 +7557,7 @@
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Logo, {
 	            light: true
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            children: "Modern wellness, beauty and everyday care \u2014 cleanly formulated, honestly made, and delivered to your door."
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "ftr__social",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	              href: "#",
-	              className: "iconbtn",
-	              "aria-label": "Instagram",
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "instagram",
-	                size: 20
-	              })
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	              href: "#",
-	              className: "iconbtn",
-	              "aria-label": "Facebook",
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "facebook",
-	                size: 20
-	              })
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	              href: "#",
-	              className: "iconbtn",
-	              "aria-label": "Twitter",
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "twitter",
-	                size: 20
-	              })
-	            })]
+	            children: "Modern wellness, beauty and everyday care \u2014 delivered to your door."
 	          })]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "ftr__col",
@@ -7610,77 +7586,48 @@
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: "/wishlist",
 	            children: "Wishlist"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: "#",
-	            children: "Shipping & returns"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: "#",
-	            children: "Contact us"
 	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        }), hasContact && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "ftr__col",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
-	            children: "Our promise"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: "#",
-	            children: "Clean ingredients"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: "#",
-	            children: "Sustainability"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: "#",
-	            children: "Cruelty-free"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: "#",
-	            children: "Journal"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: "#",
-	            children: "About Sora Life"
+	            children: "Contact"
+	          }), email && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	            href: `mailto:${email}`,
+	            children: email
+	          }), phone && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	            href: `tel:${phone.replace(/\s+/g, '')}`,
+	            children: phone
 	          })]
 	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "ftr__trust",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "leaf",
+	            name: "lock",
 	            size: 17
-	          }), " Clean, transparent formulas"]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "shield",
-	            size: 17
-	          }), " Dermatologist & lab tested"]
+	          }), " Secure checkout"]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	            name: "truck",
 	            size: 17
-	          }), " Carbon-neutral delivery"]
+	          }), " Free standard shipping"]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "return",
+	            name: "package",
 	            size: 17
-	          }), " Easy 15-day returns"]
+	          }), " Order tracking in your account"]
 	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "ftr__bottom",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	          children: ["\xA9 ", new Date().getFullYear(), " Sora Life. A demo storefront \u2014 placeholder products for design preview."]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          children: ["\xA9 ", new Date().getFullYear(), " Sora Life."]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	          className: "ftr__legal",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: "#",
-	            children: "Privacy"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: "#",
-	            children: "Terms"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: "#",
-	            children: "Cookies"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: "/admin/login",
 	            className: "ftr__admin-link",
 	            children: "Admin Login"
-	          })]
+	          })
 	        })]
 	      })]
 	    })
@@ -9177,15 +9124,44 @@
 	function Newsletter() {
 	  const [email, setEmail] = reactExports.useState('');
 	  const [done, setDone] = reactExports.useState(false);
+	  const [busy, setBusy] = reactExports.useState(false);
 	  const [err, setErr] = reactExports.useState('');
-	  const submit = e => {
+	  const submit = async e => {
 	    e.preventDefault();
-	    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+	    if (busy) return;
+	    if (!/^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/.test(email.trim())) {
 	      setErr('Please enter a valid email address.');
 	      return;
 	    }
+	    setBusy(true);
 	    setErr('');
-	    setDone(true);
+	    try {
+	      const res = await fetch('/api/newsletter/subscribe', {
+	        method: 'POST',
+	        headers: {
+	          'Content-Type': 'application/json'
+	        },
+	        body: JSON.stringify({
+	          email: email.trim()
+	        })
+	      });
+	      let data = null;
+	      try {
+	        data = await res.json();
+	      } catch {/* non-JSON error page */}
+
+	      // Success is contingent on the server confirming the write. A failed
+	      // request must never render the confirmation.
+	      if (!res.ok || !data?.subscribed) {
+	        setErr(data?.error || 'We could not sign you up right now. Please try again.');
+	        return;
+	      }
+	      setDone(true);
+	    } catch {
+	      setErr('We could not reach us just now. Please check your connection and try again.');
+	    } finally {
+	      setBusy(false);
+	    }
 	  };
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
 	    className: "section nl",
@@ -9229,7 +9205,7 @@
 	              color: 'rgba(251,248,241,0.8)',
 	              maxWidth: '46ch'
 	            },
-	            children: "Join for early access to new drops, seasonal rituals and 10% off your first order. No noise \u2014 we promise."
+	            children: "Occasional notes on new products and seasonal rituals. No noise, and you can unsubscribe whenever you like."
 	          }), done ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "nl__done",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -9241,7 +9217,7 @@
 	                name: "check",
 	                size: 18
 	              })
-	            }), " You're in. Check your inbox for your welcome code."]
+	            }), " You're subscribed. We'll be in touch when there's something worth sending."]
 	          }) : /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
 	            className: "nl__form",
 	            onSubmit: submit,
@@ -9256,12 +9232,14 @@
 	                placeholder: "you@email.com",
 	                value: email,
 	                onChange: e => setEmail(e.target.value),
-	                "aria-label": "Email address"
+	                "aria-label": "Email address",
+	                disabled: busy
 	              })]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	              className: "btn btn-accent btn-lg",
 	              type: "submit",
-	              children: "Subscribe"
+	              disabled: busy,
+	              children: busy ? 'Subscribing…' : 'Subscribe'
 	            })]
 	          }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	            className: "error-text",
@@ -36638,6 +36616,46 @@
 	}
 
 	// ============================================================
+	// Password-recovery helpers.
+	//
+	// Kept free of React and of the Supabase client so the rules can be unit
+	// tested directly (scripts/test-feature-activation.mjs). customerAuth.jsx
+	// and Account.jsx import from here rather than defining their own copies.
+	// ============================================================
+
+	// Minimum length the Supabase project itself enforces. Checked in the browser
+	// too so the customer is told before the round-trip rather than after it.
+	const MIN_PASSWORD_LENGTH = 8;
+
+	/**
+	 * True when the current page load is a password-recovery landing.
+	 *
+	 * Supabase returns the customer to `${origin}/account#...type=recovery...`.
+	 * supabase-js consumes that fragment and emits PASSWORD_RECOVERY — but it can
+	 * do so BEFORE the auth provider's listener attaches, and a recovery session
+	 * is an ordinary signed-in session. Without this URL check the customer would
+	 * silently land on their account page with no way to set a password, which is
+	 * the one thing the reset email invited them to do.
+	 */
+	function hashIndicatesRecovery(hash) {
+	  if (typeof hash !== 'string' || !hash) return false;
+	  const params = new URLSearchParams(hash.replace(/^#/, ''));
+	  return params.get('type') === 'recovery';
+	}
+
+	/**
+	 * Validate a proposed new password.
+	 * Returns an error string, or '' when the password is acceptable.
+	 */
+	function validateNewPassword(password, confirm) {
+	  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+	    return `Please use at least ${MIN_PASSWORD_LENGTH} characters.`;
+	  }
+	  if (password !== confirm) return 'Those passwords do not match.';
+	  return '';
+	}
+
+	// ============================================================
 	// Customer authentication (Supabase Auth, email/password).
 	//
 	// This is the storefront-customer counterpart to adminAuth.jsx. It is
@@ -36648,11 +36666,11 @@
 	// membership), NOT by this provider. This provider never checks
 	// admin_users and never grants any elevated capability.
 	//
-	// Phase 1 scope: identity only — sign up, sign in, sign out, and
-	// request-a-password-reset. It does NOT read orders, does NOT touch the
-	// database schema/RLS, and adds NO blocking network call on mount:
-	// getSession() reads the persisted session from local storage, so
-	// storefront routes stay zero-network for auth.
+	// Scope: identity only — sign up, sign in, sign out, request a password
+	// reset, and complete that reset by setting a new password. It does NOT
+	// read orders, does NOT touch the database schema/RLS, and adds NO blocking
+	// network call on mount: getSession() reads the persisted session from local
+	// storage, so storefront routes stay zero-network for auth.
 	// ============================================================
 	const CustomerAuthContext = /*#__PURE__*/reactExports.createContext(null);
 	function CustomerAuthProvider({
@@ -36660,6 +36678,9 @@
 	}) {
 	  const [session, setSession] = reactExports.useState(null);
 	  const [loading, setLoading] = reactExports.useState(true);
+	  // Set while the customer is completing a reset. Gates the account UI so
+	  // the only thing they can do is choose a new password.
+	  const [recovery, setRecovery] = reactExports.useState(() => typeof window !== 'undefined' && hashIndicatesRecovery(window.location.hash));
 	  reactExports.useEffect(() => {
 	    let mounted = true;
 
@@ -36682,8 +36703,12 @@
 	      data: {
 	        subscription
 	      }
-	    } = supabase.auth.onAuthStateChange((_event, current) => {
+	    } = supabase.auth.onAuthStateChange((event, current) => {
 	      if (!mounted) return;
+	      if (event === 'PASSWORD_RECOVERY') setRecovery(true);
+	      // Signing out ends any recovery flow; otherwise a stale flag would
+	      // keep showing the set-password screen over the login card.
+	      if (event === 'SIGNED_OUT') setRecovery(false);
 	      setSession(current);
 	      setLoading(false);
 	    });
@@ -36757,10 +36782,13 @@
 	    setSession(null);
 	  }
 
-	  // Sends a password-reset email. redirectTo brings the user back to the
-	  // account page after they click the link. (Setting the new password on
-	  // that landing — the PASSWORD_RECOVERY event + updateUser — is a later
-	  // phase; Phase 1 only requests the email.)
+	  // Sends a password-reset email. redirectTo brings the customer back to
+	  // /account, where the recovery landing is detected and the set-password
+	  // screen is shown.
+	  //
+	  // The caller must show the SAME confirmation whether or not the address
+	  // has an account — Supabase deliberately does not distinguish, and neither
+	  // should we, or this becomes an account-enumeration oracle.
 	  async function resetPassword(email) {
 	    const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/account` : undefined;
 	    const {
@@ -36772,14 +36800,57 @@
 	      error
 	    };
 	  }
+
+	  /**
+	   * Complete a recovery by setting a new password on the recovery session.
+	   *
+	   * Requires a live session: an expired or already-consumed recovery link
+	   * leaves none, and Supabase rejects the update rather than silently
+	   * succeeding. The caller surfaces that as "link expired, request a new one".
+	   */
+	  async function updatePassword(newPassword) {
+	    const {
+	      data: {
+	        session: current
+	      }
+	    } = await supabase.auth.getSession();
+	    if (!current) {
+	      return {
+	        error: {
+	          message: 'Your reset link has expired. Please request a new one.'
+	        }
+	      };
+	    }
+	    const {
+	      error
+	    } = await supabase.auth.updateUser({
+	      password: newPassword
+	    });
+	    if (error) return {
+	      error
+	    };
+	    // The reset is done — drop the gate so the account UI behaves normally.
+	    setRecovery(false);
+	    return {
+	      error: null
+	    };
+	  }
+
+	  /** Abandon a recovery landing without changing anything. */
+	  function clearRecovery() {
+	    setRecovery(false);
+	  }
 	  const value = {
 	    session,
 	    user: session?.user ?? null,
 	    loading,
+	    recovery,
 	    signUp,
 	    signIn,
 	    signOut,
-	    resetPassword
+	    resetPassword,
+	    updatePassword,
+	    clearRecovery
 	  };
 	  return /*#__PURE__*/jsxRuntimeExports.jsx(CustomerAuthContext.Provider, {
 	    value: value,
@@ -39311,6 +39382,95 @@
 	  });
 	}
 
+	// ============================================================
+	// Which social sign-in providers this build may show.
+	//
+	// Free of the Supabase client and of import.meta so the allowlist rules can
+	// be unit tested in Node (scripts/test-feature-activation.mjs). oauth.js
+	// supplies the build-time value and performs the actual sign-in.
+	// ============================================================
+
+	// Providers this codebase knows how to render and start a flow for.
+	const SUPPORTED_PROVIDERS = ['google', 'apple'];
+	const PROVIDER_LABELS = {
+	  google: 'Continue with Google',
+	  apple: 'Continue with Apple'
+	};
+
+	/**
+	 * Parse the build-time allowlist into the providers that may be shown.
+	 *
+	 * Empty by default and on anything unrecognised: a provider only works once
+	 * it has been configured in the Supabase Dashboard, so the safe answer to
+	 * "should this button exist?" is no until someone says otherwise. Google and
+	 * Apple are independent — enabling one says nothing about the other.
+	 */
+	function parseEnabledProviders(raw) {
+	  if (typeof raw !== 'string' || !raw.trim()) return [];
+	  const wanted = raw.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
+	  // Filtering SUPPORTED_PROVIDERS (rather than the input) keeps button order
+	  // stable and drops duplicates and unknown names in one step.
+	  return SUPPORTED_PROVIDERS.filter(p => wanted.includes(p));
+	}
+
+	// ============================================================
+	// Social sign-in (Supabase OAuth).
+	//
+	// The code path is real. Whether a BUTTON appears is a separate, deliberate
+	// decision, because a provider only works once it has been configured in the
+	// Supabase Dashboard (Authentication -> Providers) with a client id and
+	// secret held there — never in this repository.
+	//
+	// Previously the UI showed "Continue with Google" and "Continue with Apple"
+	// as permanently disabled buttons titled "Coming soon". That is misleading
+	// in both directions: it advertises sign-in methods that do not exist, and
+	// it would keep looking broken even after a provider was switched on.
+	//
+	// So: a provider renders only when it is named in VITE_OAUTH_PROVIDERS at
+	// build time. Nothing is listed by default, so nothing appears until the
+	// owner has genuinely finished the dashboard setup for that provider.
+	//
+	//   VITE_OAUTH_PROVIDERS=google          -> only Google
+	//   VITE_OAUTH_PROVIDERS=google,apple    -> both
+	//   (unset)                              -> no social buttons at all
+	//
+	// Google and Apple are independent: enabling one says nothing about the
+	// other, which matters because Apple's setup requires a paid developer
+	// account and a signing key that Google's does not.
+	// ============================================================
+
+	/** Providers configured for THIS build. Empty unless explicitly opted in. */
+	function enabledOAuthProviders() {
+	  return parseEnabledProviders("");
+	}
+
+	/**
+	 * Start an OAuth sign-in. Refuses any provider that is not enabled for this
+	 * build, so a stale or hand-crafted call cannot launch a flow that the
+	 * project has not configured (which would dead-end on a Supabase error page).
+	 */
+	async function signInWithProvider(provider) {
+	  if (!enabledOAuthProviders().includes(provider)) {
+	    return {
+	      error: {
+	        message: 'That sign-in method is not available.'
+	      }
+	    };
+	  }
+	  const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/account` : undefined;
+	  const {
+	    error
+	  } = await supabase.auth.signInWithOAuth({
+	    provider,
+	    options: redirectTo ? {
+	      redirectTo
+	    } : undefined
+	  });
+	  return {
+	    error
+	  };
+	}
+
 	function fmtOrderDate(iso) {
 	  const d = new Date(iso);
 	  if (Number.isNaN(d.getTime())) return '';
@@ -39371,7 +39531,8 @@
 	    session,
 	    user,
 	    loading,
-	    signOut
+	    signOut,
+	    recovery
 	  } = useCustomerAuth();
 	  const {
 	    wishlist
@@ -39393,6 +39554,12 @@
 	      })
 	    });
 	  }
+
+	  // A password-recovery landing takes priority over everything else. The
+	  // recovery link produces an ordinary signed-in session, so without this the
+	  // customer would land on their account with no way to actually set a new
+	  // password — which is exactly what the reset email invited them to do.
+	  if (recovery) return /*#__PURE__*/jsxRuntimeExports.jsx(SetNewPasswordView, {});
 
 	  // Self-gated inline: no real session → show the sign-in / sign-up card.
 	  if (!session) return /*#__PURE__*/jsxRuntimeExports.jsx(AuthView, {});
@@ -39458,6 +39625,186 @@
 	    })]
 	  });
 	}
+
+	/**
+	 * The landing a customer reaches from the "reset your password" email.
+	 *
+	 * Shown INSTEAD of the account panel while a recovery is in progress, so the
+	 * only available action is choosing a new password. On success the recovery
+	 * gate clears and <Account/> re-renders straight into the normal signed-in
+	 * account — no second login required, because the recovery session is real.
+	 */
+	function SetNewPasswordView() {
+	  const {
+	    updatePassword,
+	    clearRecovery,
+	    signOut
+	  } = useCustomerAuth();
+	  const [password, setPassword] = reactExports.useState('');
+	  const [confirm, setConfirm] = reactExports.useState('');
+	  const [busy, setBusy] = reactExports.useState(false);
+	  const [error, setError] = reactExports.useState('');
+	  const [done, setDone] = reactExports.useState(false);
+	  const submit = async e => {
+	    e.preventDefault();
+	    if (busy) return;
+	    const invalid = validateNewPassword(password, confirm);
+	    if (invalid) {
+	      setError(invalid);
+	      return;
+	    }
+	    setBusy(true);
+	    setError('');
+	    try {
+	      const {
+	        error: err
+	      } = await updatePassword(password);
+	      if (err) {
+	        setError(err.message || 'We could not update your password. Please request a new reset link.');
+	        return;
+	      }
+	      setDone(true);
+	      // The recovery fragment has served its purpose; leaving it in the URL
+	      // means a refresh re-enters this screen.
+	      if (typeof window !== 'undefined' && window.history?.replaceState) {
+	        window.history.replaceState(null, '', window.location.pathname);
+	      }
+	    } catch (ex) {
+	      setError(ex.message || 'Something went wrong. Please try again.');
+	    } finally {
+	      setBusy(false);
+	    }
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "auth",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "auth__art",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "auth__art-in",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "eyebrow",
+	          style: {
+	            color: 'var(--honey-300)'
+	          },
+	          children: "Sora Life members"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	          className: "serif",
+	          style: {
+	            color: '#FBF8F1',
+	            fontSize: 'var(--text-3xl)',
+	            margin: '12px 0'
+	          },
+	          children: "Choose a new password."
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          style: {
+	            color: 'rgba(251,248,241,0.82)'
+	          },
+	          children: "Pick something you don\u2019t use anywhere else. You\u2019ll stay signed in on this device."
+	        })]
+	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "auth__form",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "auth__card",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	          className: "serif",
+	          style: {
+	            fontSize: 'var(--text-xl)',
+	            marginBottom: 'var(--sp-4)'
+	          },
+	          children: "Set a new password"
+	        }), done ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            role: "status",
+	            style: {
+	              marginBottom: 'var(--sp-4)',
+	              fontSize: 'var(--text-sm)',
+	              color: 'var(--color-success)',
+	              background: 'var(--forest-50)',
+	              padding: '10px 12px',
+	              borderRadius: 'var(--r-md)'
+	            },
+	            children: "Your password has been updated."
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: "btn btn-lg btn-block",
+	            type: "button",
+	            onClick: clearRecovery,
+	            children: "Go to my account"
+	          })]
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	          onSubmit: submit,
+	          noValidate: true,
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "field",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	              className: "label",
+	              children: "New password"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              className: "input",
+	              type: "password",
+	              autoComplete: "new-password",
+	              placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+	              value: password,
+	              onChange: e => setPassword(e.target.value),
+	              required: true,
+	              minLength: MIN_PASSWORD_LENGTH
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "field",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	              className: "label",
+	              children: "Confirm new password"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              className: "input",
+	              type: "password",
+	              autoComplete: "new-password",
+	              placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+	              value: confirm,
+	              onChange: e => setConfirm(e.target.value),
+	              required: true,
+	              minLength: MIN_PASSWORD_LENGTH
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	            className: "hint",
+	            style: {
+	              marginBottom: 'var(--sp-3)'
+	            },
+	            children: ["At least ", MIN_PASSWORD_LENGTH, " characters."]
+	          }), error && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "error-text",
+	            role: "alert",
+	            style: {
+	              marginBottom: 'var(--sp-3)'
+	            },
+	            children: error
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: "btn btn-lg btn-block",
+	            type: "submit",
+	            disabled: busy,
+	            children: busy ? 'Saving…' : 'Update password'
+	          })]
+	        }), !done && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "auth__guest",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            type: "button",
+	            onClick: async () => {
+	              await signOut();
+	              clearRecovery();
+	            },
+	            style: {
+	              background: 'none',
+	              border: 0,
+	              cursor: 'pointer',
+	              color: 'var(--color-primary)',
+	              fontWeight: 600
+	            },
+	            children: "\u2190 Cancel and log in instead"
+	          })
+	        })]
+	      })
+	    })]
+	  });
+	}
 	function AuthView() {
 	  const {
 	    signIn,
@@ -39473,10 +39820,27 @@
 	  const [busy, setBusy] = reactExports.useState(false);
 	  const [error, setError] = reactExports.useState('');
 	  const [info, setInfo] = reactExports.useState('');
+
+	  // Fixed for the life of the build — no need to recompute per render.
+	  const [socialProviders] = reactExports.useState(() => enabledOAuthProviders());
 	  const switchMode = m => {
 	    setMode(m);
 	    setError('');
 	    setInfo('');
+	  };
+	  const startOAuth = async provider => {
+	    if (busy) return;
+	    setBusy(true);
+	    setError('');
+	    // On success the browser navigates away to the provider, so `busy` is
+	    // only reset when the flow could not start at all.
+	    const {
+	      error: err
+	    } = await signInWithProvider(provider);
+	    if (err) {
+	      setError(err.message || 'Could not start that sign-in. Please try again.');
+	      setBusy(false);
+	    }
 	  };
 	  const submit = async e => {
 	    e.preventDefault();
@@ -39509,9 +39873,12 @@
 	        const {
 	          error: err
 	        } = await resetPassword(email);
-	        // Deliberately generic so this can't be used to test which
-	        // emails have accounts.
-	        if (err) setError(err.message || 'Could not send the reset email. Please try again.');else setInfo('If an account exists for that email, a password reset link is on its way.');
+	        // The SAME answer either way. Surfacing Supabase's error here would
+	        // turn this form into an account-enumeration oracle: "user not
+	        // found" versus a silent success tells an attacker which addresses
+	        // are registered. Real faults are logged, never shown.
+	        if (err) console.warn('[auth] reset request failed:', err.message);
+	        setInfo('If an account exists for that email, a password reset link is on its way.');
 	      }
 	    } catch (ex) {
 	      setError(ex.message || 'Something went wrong. Please try again.');
@@ -39689,25 +40056,21 @@
 	            children: "\u2190 Back to log in"
 	          })
 	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	            className: "auth__or",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              children: "or"
-	            })
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "auth__social",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	              type: "button",
-	              className: "btn btn-light btn-block",
-	              disabled: true,
-	              title: "Coming soon",
-	              children: "Continue with Google"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	              type: "button",
-	              className: "btn btn-light btn-block",
-	              disabled: true,
-	              title: "Coming soon",
-	              children: "Continue with Apple"
+	          children: [socialProviders.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	              className: "auth__or",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                children: "or"
+	              })
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	              className: "auth__social",
+	              children: socialProviders.map(provider => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                type: "button",
+	                className: "btn btn-light btn-block",
+	                disabled: busy,
+	                onClick: () => startOAuth(provider),
+	                children: PROVIDER_LABELS[provider]
+	              }, provider))
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	            className: "auth__guest",
@@ -43996,8 +44359,14 @@
 	              marginTop: 'var(--sp-5)'
 	            },
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	              children: "Earnings and payouts will be available in a future release."
-	            }), " These figures are attributed sales, not commission. We never share your shoppers\u2019 personal details with you."]
+	              children: "These figures are attributed sales, not commission."
+	            }), " Your commission is in", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: "/creator/earnings",
+	              children: "My earnings"
+	            }), ", and you can request a payout from", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: "/creator/payouts",
+	              children: "Payouts"
+	            }), " once it clears. We never share your shoppers\u2019 personal details with you."]
 	          })]
 	        }), tab === 'earnings' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorEarnings, {
 	          creator: creator,

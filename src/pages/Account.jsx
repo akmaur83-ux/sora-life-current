@@ -7,6 +7,8 @@ import { useCustomerAuth } from '../lib/customerAuth.jsx';
 import CreatorOnboarding from './account/CreatorOnboarding.jsx';
 import { supabase } from '../lib/supabase.js';
 import { listAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '../lib/customerData.js';
+import { enabledOAuthProviders, signInWithProvider, PROVIDER_LABELS } from '../lib/oauth.js';
+import { MIN_PASSWORD_LENGTH, validateNewPassword } from '../lib/authRecovery.js';
 import { products, productById } from '../data/products.js';
 import { money } from '../lib/format.js';
 
@@ -46,7 +48,7 @@ const NAV = [
 export default function Account() {
   const { tab = 'orders' } = useParams();
   const navigate = useNavigate();
-  const { session, user, loading, signOut } = useCustomerAuth();
+  const { session, user, loading, signOut, recovery } = useCustomerAuth();
   const { wishlist } = useStore();
 
   // While the persisted session is being resolved, avoid flashing the
@@ -58,6 +60,12 @@ export default function Account() {
       </div>
     );
   }
+
+  // A password-recovery landing takes priority over everything else. The
+  // recovery link produces an ordinary signed-in session, so without this the
+  // customer would land on their account with no way to actually set a new
+  // password — which is exactly what the reset email invited them to do.
+  if (recovery) return <SetNewPasswordView />;
 
   // Self-gated inline: no real session → show the sign-in / sign-up card.
   if (!session) return <AuthView />;
@@ -101,6 +109,99 @@ export default function Account() {
   );
 }
 
+/**
+ * The landing a customer reaches from the "reset your password" email.
+ *
+ * Shown INSTEAD of the account panel while a recovery is in progress, so the
+ * only available action is choosing a new password. On success the recovery
+ * gate clears and <Account/> re-renders straight into the normal signed-in
+ * account — no second login required, because the recovery session is real.
+ */
+function SetNewPasswordView() {
+  const { updatePassword, clearRecovery, signOut } = useCustomerAuth();
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    const invalid = validateNewPassword(password, confirm);
+    if (invalid) { setError(invalid); return; }
+
+    setBusy(true); setError('');
+    try {
+      const { error: err } = await updatePassword(password);
+      if (err) {
+        setError(err.message || 'We could not update your password. Please request a new reset link.');
+        return;
+      }
+      setDone(true);
+      // The recovery fragment has served its purpose; leaving it in the URL
+      // means a refresh re-enters this screen.
+      if (typeof window !== 'undefined' && window.history?.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch (ex) {
+      setError(ex.message || 'Something went wrong. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="auth">
+      <div className="auth__art">
+        <div className="auth__art-in">
+          <span className="eyebrow" style={{ color: 'var(--honey-300)' }}>Sora Life members</span>
+          <h2 className="serif" style={{ color: '#FBF8F1', fontSize: 'var(--text-3xl)', margin: '12px 0' }}>Choose a new password.</h2>
+          <p style={{ color: 'rgba(251,248,241,0.82)' }}>Pick something you don’t use anywhere else. You’ll stay signed in on this device.</p>
+        </div>
+      </div>
+
+      <div className="auth__form">
+        <div className="auth__card">
+          <h3 className="serif" style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--sp-4)' }}>Set a new password</h3>
+
+          {done ? (
+            <>
+              <p role="status" style={{ marginBottom: 'var(--sp-4)', fontSize: 'var(--text-sm)', color: 'var(--color-success)', background: 'var(--forest-50)', padding: '10px 12px', borderRadius: 'var(--r-md)' }}>
+                Your password has been updated.
+              </p>
+              <button className="btn btn-lg btn-block" type="button" onClick={clearRecovery}>Go to my account</button>
+            </>
+          ) : (
+            <form onSubmit={submit} noValidate>
+              <div className="field"><label className="label">New password</label>
+                <input className="input" type="password" autoComplete="new-password" placeholder="••••••••"
+                  value={password} onChange={(e) => setPassword(e.target.value)} required minLength={MIN_PASSWORD_LENGTH} /></div>
+              <div className="field"><label className="label">Confirm new password</label>
+                <input className="input" type="password" autoComplete="new-password" placeholder="••••••••"
+                  value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={MIN_PASSWORD_LENGTH} /></div>
+              <p className="hint" style={{ marginBottom: 'var(--sp-3)' }}>At least {MIN_PASSWORD_LENGTH} characters.</p>
+              {error && <p className="error-text" role="alert" style={{ marginBottom: 'var(--sp-3)' }}>{error}</p>}
+              <button className="btn btn-lg btn-block" type="submit" disabled={busy}>
+                {busy ? 'Saving…' : 'Update password'}
+              </button>
+            </form>
+          )}
+
+          {!done && (
+            <p className="auth__guest">
+              <button type="button" onClick={async () => { await signOut(); clearRecovery(); }}
+                style={{ background: 'none', border: 0, cursor: 'pointer', color: 'var(--color-primary)', fontWeight: 600 }}>
+                ← Cancel and log in instead
+              </button>
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AuthView() {
   const { signIn, signUp, resetPassword } = useCustomerAuth();
   // 'login' | 'signup' | 'forgot'. The two tabs cover login/signup; the
@@ -113,7 +214,19 @@ function AuthView() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
 
+  // Fixed for the life of the build — no need to recompute per render.
+  const [socialProviders] = useState(() => enabledOAuthProviders());
+
   const switchMode = (m) => { setMode(m); setError(''); setInfo(''); };
+
+  const startOAuth = async (provider) => {
+    if (busy) return;
+    setBusy(true); setError('');
+    // On success the browser navigates away to the provider, so `busy` is
+    // only reset when the flow could not start at all.
+    const { error: err } = await signInWithProvider(provider);
+    if (err) { setError(err.message || 'Could not start that sign-in. Please try again.'); setBusy(false); }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -131,10 +244,12 @@ function AuthView() {
         else if (needsConfirmation) setInfo('Almost there — check your email to confirm your account, then log in.');
       } else {
         const { error: err } = await resetPassword(email);
-        // Deliberately generic so this can't be used to test which
-        // emails have accounts.
-        if (err) setError(err.message || 'Could not send the reset email. Please try again.');
-        else setInfo('If an account exists for that email, a password reset link is on its way.');
+        // The SAME answer either way. Surfacing Supabase's error here would
+        // turn this form into an account-enumeration oracle: "user not
+        // found" versus a silent success tells an attacker which addresses
+        // are registered. Real faults are logged, never shown.
+        if (err) console.warn('[auth] reset request failed:', err.message);
+        setInfo('If an account exists for that email, a password reset link is on its way.');
       }
     } catch (ex) {
       setError(ex.message || 'Something went wrong. Please try again.');
@@ -201,14 +316,24 @@ function AuthView() {
             </p>
           ) : (
             <>
-              <div className="auth__or"><span>or</span></div>
-              <div className="auth__social">
-                {/* Social sign-in is intentionally not enabled yet (Phase 1 is
-                    email/password only). Kept visible but disabled so the layout
-                    is preserved and nothing misleading fires. */}
-                <button type="button" className="btn btn-light btn-block" disabled title="Coming soon">Continue with Google</button>
-                <button type="button" className="btn btn-light btn-block" disabled title="Coming soon">Continue with Apple</button>
-              </div>
+              {/* Social buttons render ONLY for providers this build has
+                  opted into (VITE_OAUTH_PROVIDERS), because a provider works
+                  only once it is configured in the Supabase Dashboard. The
+                  previous permanently-disabled "Coming soon" buttons
+                  advertised sign-in methods that did not exist. */}
+              {socialProviders.length > 0 && (
+                <>
+                  <div className="auth__or"><span>or</span></div>
+                  <div className="auth__social">
+                    {socialProviders.map((provider) => (
+                      <button key={provider} type="button" className="btn btn-light btn-block"
+                        disabled={busy} onClick={() => startOAuth(provider)}>
+                        {PROVIDER_LABELS[provider]}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
               <p className="auth__guest"><Link to="/shop">Continue as guest →</Link></p>
             </>
           )}

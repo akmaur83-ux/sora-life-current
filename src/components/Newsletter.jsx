@@ -1,15 +1,53 @@
 import { useState } from 'react';
 import Icon from './Icon.jsx';
 
+// ============================================================
+// Newsletter signup.
+//
+// This used to flip `done` on submit and claim both a welcome code and 10%
+// off a first order. Nothing was stored and neither offer existed. Now the
+// address is posted to /api/newsletter/subscribe, which writes it with the
+// service-role key, and success is shown ONLY after that write commits.
+//
+// The copy states what actually happens and nothing more. Do not add a
+// discount or welcome-email claim here until such a campaign genuinely
+// exists and is wired up.
+// ============================================================
 export default function Newsletter() {
   const [email, setEmail] = useState('');
   const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setErr('Please enter a valid email address.'); return; }
-    setErr(''); setDone(true);
+    if (busy) return;
+    if (!/^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/.test(email.trim())) {
+      setErr('Please enter a valid email address.');
+      return;
+    }
+    setBusy(true); setErr('');
+    try {
+      const res = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      let data = null;
+      try { data = await res.json(); } catch { /* non-JSON error page */ }
+
+      // Success is contingent on the server confirming the write. A failed
+      // request must never render the confirmation.
+      if (!res.ok || !data?.subscribed) {
+        setErr(data?.error || 'We could not sign you up right now. Please try again.');
+        return;
+      }
+      setDone(true);
+    } catch {
+      setErr('We could not reach us just now. Please check your connection and try again.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -22,17 +60,17 @@ export default function Newsletter() {
           <div className="nl__body">
             <span className="eyebrow" style={{ color: 'var(--honey-300)' }}>The Sora Letter</span>
             <h2 className="serif" style={{ color: '#FBF8F1', fontSize: 'var(--text-3xl)', margin: '10px 0 8px' }}>Wellness notes, quietly good offers.</h2>
-            <p style={{ color: 'rgba(251,248,241,0.8)', maxWidth: '46ch' }}>Join for early access to new drops, seasonal rituals and 10% off your first order. No noise — we promise.</p>
+            <p style={{ color: 'rgba(251,248,241,0.8)', maxWidth: '46ch' }}>Occasional notes on new products and seasonal rituals. No noise, and you can unsubscribe whenever you like.</p>
 
             {done ? (
-              <div className="nl__done"><span className="t-ic" style={{ background: 'rgba(232,176,75,0.2)' }}><Icon name="check" size={18} /></span> You're in. Check your inbox for your welcome code.</div>
+              <div className="nl__done"><span className="t-ic" style={{ background: 'rgba(232,176,75,0.2)' }}><Icon name="check" size={18} /></span> You're subscribed. We'll be in touch when there's something worth sending.</div>
             ) : (
               <form className="nl__form" onSubmit={submit} noValidate>
                 <div className="searchbox nl__input">
                   <Icon name="mail" />
-                  <input className="input" type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email address" />
+                  <input className="input" type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email address" disabled={busy} />
                 </div>
-                <button className="btn btn-accent btn-lg" type="submit">Subscribe</button>
+                <button className="btn btn-accent btn-lg" type="submit" disabled={busy}>{busy ? 'Subscribing…' : 'Subscribe'}</button>
               </form>
             )}
             {err && <p className="error-text" style={{ marginTop: 8 }}>{err}</p>}
