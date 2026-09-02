@@ -12,10 +12,52 @@
 import { computeTax, getTaxConfig, round2 } from './tax.js';
 
 // Mirrors the delivery options shown at checkout. Server-authoritative.
+//
+// These fees are ABSOLUTE: there is deliberately no cart-subtotal threshold
+// that waives Express or Scheduled. Standard is free at every basket size
+// because its fee is ₹0, not because a threshold zeroed it. A threshold used
+// to exist here and silently made a ₹700 basket ship Express for free.
 export const DELIVERY_FEES = { std: 0, exp: 79, sched: 49 };
-export const FREE_SHIPPING_THRESHOLD = 699;
 export const MAX_QTY_PER_LINE = 20;
 export const MAX_LINES = 50;
+
+/**
+ * Collapse repeated lines for the same product+variant into one line.
+ *
+ * A cart can legitimately carry the same SKU twice (added from the PDP and
+ * again from a quick-add), and stock was previously validated per line — so
+ * "qty 4" plus "qty 5" of a variant with 6 in stock passed twice and oversold.
+ * Merging first means every downstream quantity/stock check sees the real
+ * total the customer is asking for.
+ *
+ * Returns { ok: true, items } or { ok: false, error }.
+ */
+export function normalizeCartLines(items) {
+  const merged = new Map();
+  for (const item of items) {
+    // Same product AND same variant is the same physical thing. A line with
+    // no variant is kept distinct from a variant line of the same product.
+    const key = `${item.id}::${item.variantId ?? ''}`;
+    const seen = merged.get(key);
+    if (seen) {
+      seen.qty += item.qty;
+      // Keep the first non-empty label; it is only ever used for display and
+      // is overwritten by the trusted variant row when one resolves.
+      if (!seen.variant && item.variant) seen.variant = item.variant;
+    } else {
+      merged.set(key, { ...item });
+    }
+  }
+  const out = [...merged.values()];
+  for (const line of out) {
+    // The per-line cap must hold for the MERGED quantity, otherwise splitting
+    // one oversized line into several was enough to walk straight past it.
+    if (line.qty > MAX_QTY_PER_LINE) {
+      return { ok: false, error: 'Invalid quantity in cart.' };
+    }
+  }
+  return { ok: true, items: out };
+}
 
 /**
  * Validate the raw cart payload shape from the browser.
@@ -47,7 +89,7 @@ export function validateCartPayload(rawItems) {
       variant: typeof raw.variant === 'string' ? raw.variant.slice(0, 120) : null,
     });
   }
-  return { ok: true, items };
+  return normalizeCartLines(items);
 }
 
 /**
@@ -96,6 +138,28 @@ export function trustedVariantPrice(variantRow) {
     gstRate: Number.isFinite(Number(variantRow.gst_rate)) ? Number(variantRow.gst_rate) : null,
     stock: variantRow.stock,
   };
+}
+
+/**
+ * Interpret a stock value from the database into { tracked, available }.
+ *
+ * The two stock columns in this project do NOT agree on a type, and the
+ * difference matters at checkout:
+ *   * products.stock       — a BOOLEAN "in stock" flag (predates the admin
+ *                            system; see src/lib/adminApi.js).
+ *   * product_variants.stock — an integer COUNT.
+ * A null/undefined value means the row simply does not track stock, which
+ * must stay purchasable rather than becoming un-buyable.
+ */
+export function resolveStock(value) {
+  if (value == null) return { tracked: false, available: Infinity };
+  if (typeof value === 'boolean') {
+    // Boolean flag: in stock means "no quantity ceiling we know of".
+    return { tracked: true, available: value ? Infinity : 0 };
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n)) return { tracked: false, available: Infinity };
+  return { tracked: true, available: Math.max(0, Math.floor(n)) };
 }
 
 /**
@@ -150,11 +214,17 @@ export function computeOrderTotal(items, productRows, deliveryMethod, opts = {})
     if (v && v.id != null) variantById.set(String(v.id), v);
   }
 
+  // Repeated lines for the same product+variant are merged BEFORE any stock
+  // or quantity check, so two lines of the same SKU cannot each pass a check
+  // that their combined quantity would fail.
+  const normalized = normalizeCartLines(items);
+  if (!normalized.ok) return { ok: false, error: normalized.error };
+
   const lines = [];
   let subtotal = 0;   // what the customer pays for goods, after product discount
   let mrpTotal = 0;   // undiscounted reference total
 
-  for (const item of items) {
+  for (const item of normalized.items) {
     const row = byKey.get(item.id);
     // Unknown or inactive product -> reject rather than silently skip, so a
     // tampered/nonexistent id can never quietly reduce the amount.
@@ -164,7 +234,11 @@ export function computeOrderTotal(items, productRows, deliveryMethod, opts = {})
     let unit;
     let unitMrp;
     let sku = row.sku || null;
-    let variantLabel = item.variant;
+    // Deliberately NOT seeded from item.variant: a label the browser sent is
+    // untrusted display text. It is only adopted below when a real variant
+    // row resolves, so a cart line cannot claim "750 ml" while being priced
+    // and shipped as the base product.
+    let variantLabel = null;
     let variantId = null;
     let gstRate = Number.isFinite(Number(row.gst_rate)) ? Number(row.gst_rate) : null;
 
@@ -179,17 +253,40 @@ export function computeOrderTotal(items, productRows, deliveryMethod, opts = {})
       }
       const priced = trustedVariantPrice(vRow);
       if (!priced) return { ok: false, error: 'The selected size is not available for purchase right now.' };
-      if (vRow.stock != null && Number(vRow.stock) === 0) {
-        const outName = `${row.name}${priced.label ? ` ${priced.label}` : ''}`;
+
+      // Stock is a QUANTITY here, so the ordered quantity must fit inside it —
+      // checking only for zero let a customer buy 9 of something with 5 left.
+      const stock = resolveStock(vRow.stock);
+      const outName = `${row.name}${priced.label ? ` ${priced.label}` : ''}`;
+      if (stock.tracked && stock.available === 0) {
         return { ok: false, error: `"${outName}" is out of stock.` };
       }
+      if (stock.tracked && item.qty > stock.available) {
+        return {
+          ok: false,
+          error: `Only ${stock.available} of "${outName}" ${stock.available === 1 ? 'is' : 'are'} left.`,
+        };
+      }
+
       unit = priced.price;
       unitMrp = priced.mrp;
       sku = priced.sku || sku;
-      variantLabel = priced.label || variantLabel;
+      variantLabel = priced.label || null;
       variantId = String(vRow.id);
       if (priced.gstRate != null) gstRate = priced.gstRate;
     } else {
+      // Base products were never stock-checked at all, so a sold-out item
+      // could be bought as long as it had no variants.
+      const stock = resolveStock(row.stock);
+      if (stock.tracked && stock.available === 0) {
+        return { ok: false, error: `"${row.name}" is out of stock.` };
+      }
+      if (stock.tracked && item.qty > stock.available) {
+        return {
+          ok: false,
+          error: `Only ${stock.available} of "${row.name}" ${stock.available === 1 ? 'is' : 'are'} left.`,
+        };
+      }
       unit = trustedUnitPrice(row);
       unitMrp = trustedUnitMrp(row);
     }
@@ -232,11 +329,15 @@ export function computeOrderTotal(items, productRows, deliveryMethod, opts = {})
   const couponDiscount = computeCouponDiscount(coupon, subtotal);
   const goodsAfterDiscount = round2(subtotal - couponDiscount);
 
-  // Free-shipping threshold is evaluated on what the customer actually pays
-  // for goods, so a coupon cannot be used to dodge the threshold.
+  // Shipping is a flat per-method fee and does NOT depend on basket value:
+  // Standard ₹0, Express ₹79, Scheduled ₹49 at every subtotal. The previous
+  // ₹699 threshold zeroed Express/Scheduled on larger baskets, so the courier
+  // cost was absorbed on exactly the orders that cost the most to ship.
   const shippingBase = DELIVERY_FEES[method];
-  const shipping = goodsAfterDiscount >= FREE_SHIPPING_THRESHOLD ? 0 : shippingBase;
-  const shippingWaived = shipping === 0 && shippingBase > 0;
+  const shipping = shippingBase;
+  // Nothing is ever waived now; Standard simply costs nothing. Retained so
+  // the breakdown shape stays stable for stored orders and the admin views.
+  const shippingWaived = false;
 
   const fees = opts.fees || {};
   const platformFee = Number(fees.platform) > 0 ? round2(Number(fees.platform)) : 0;

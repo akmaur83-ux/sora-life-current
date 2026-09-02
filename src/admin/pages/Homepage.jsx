@@ -6,7 +6,6 @@ import { announceHomepageSaved } from '../../lib/homepageVisualSync.js';
 
 export default function HomepageSettings() {
   const [notices, setNotices] = useState(['', '', '']);
-  const [threshold, setThreshold] = useState(699);
   const [bsTitle, setBsTitle] = useState('Bestsellers');
   const [bsSub, setBsSub] = useState('Our most loved products by our customers');
   const [loading, setLoading] = useState(true);
@@ -21,7 +20,7 @@ export default function HomepageSettings() {
       try {
         const ann = await adminGetSetting('announcement');
         const hp = await adminGetSetting('homepage');
-        if (ann) { setNotices(ann.notices || ['', '', '']); setThreshold(ann.free_shipping_threshold ?? 699); }
+        if (ann) { setNotices(ann.notices || ['', '', '']); }
         if (hp) { setBsTitle(hp.bestseller_title || 'Bestsellers'); setBsSub(hp.bestseller_subtitle || ''); setVisuals(sanitizeHomepageVisuals(hp.visuals)); }
       } catch (e) { setErr(e.message || String(e)); }
       setLoading(false);
@@ -44,7 +43,12 @@ export default function HomepageSettings() {
       // Preserve existing story/editorial/unknown keys instead of replacing the
       // entire homepage JSON with just the fields this editor knows about.
       const [currentAnnouncement, currentHomepage] = await Promise.all([adminGetSetting('announcement'), adminGetSetting('homepage')]);
-      await adminSetSetting('announcement', { ...currentAnnouncement, notices: notices.filter(Boolean), free_shipping_threshold: Number(threshold) || 0 });
+      // `free_shipping_threshold` is retired — shipping is a flat per-method
+      // fee with no basket-value threshold. It is dropped rather than
+      // preserved, so saving this page scrubs the stale key that migration
+      // 0001 seeded into site_settings.
+      const { free_shipping_threshold: _retiredThreshold, ...keptAnnouncement } = currentAnnouncement || {};
+      await adminSetSetting('announcement', { ...keptAnnouncement, notices: notices.filter(Boolean) });
       const next = mergeHomepageVisuals({ ...currentHomepage, bestseller_title: bsTitle, bestseller_subtitle: bsSub }, visuals);
       await adminSetSetting('homepage', next);
       setVisuals(next.visuals);
@@ -71,10 +75,6 @@ export default function HomepageSettings() {
               <input className="input" value={notices[i] || ''} onChange={(e) => setNotices((n) => { const c = [...n]; c[i] = e.target.value; return c; })} />
             </div>
           ))}
-          <div className="field">
-            <label className="label">Free shipping threshold (₹)</label>
-            <input className="input" type="number" min="0" value={threshold} onChange={(e) => setThreshold(e.target.value)} style={{ maxWidth: 200 }} />
-          </div>
         </div>
 
         <div className="surface">

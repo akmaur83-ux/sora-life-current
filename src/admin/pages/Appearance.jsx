@@ -179,7 +179,7 @@ function StorefrontPreview({ theme }) {
   return (
     <div className="ap-pv" style={style} data-heading-scale={theme.heading_scale} data-body-scale={theme.body_scale}>
       <div className="ap-pv__annbar">
-        <span className="ap-pv__annbar-acc">✦</span> FREE SHIPPING over ₹699
+        <span className="ap-pv__annbar-acc">✦</span> FREE STANDARD SHIPPING
       </div>
       <div className="ap-pv__hdr">
         <strong>SORA LIFE</strong>

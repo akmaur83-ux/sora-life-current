@@ -1,46 +1,68 @@
 // Offline, Homepage-only regression checks. No network or catalogue writes.
+//
+// This file used to eval a `categoryRepresentative` helper out of
+// CategoryRail.jsx, which picked a representative PRODUCT image per
+// category. That approach was retired in 5b33bac ("use admin category
+// images"): the rail now renders an explicitly configured category image
+// (admin-supplied, falling back to a bundled asset) and never borrows a
+// product photo. The assertions below track the CURRENT implementation —
+// they were not relaxed to make the old ones pass.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { transformSync } from '@babel/core';
 
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
-const { code } = transformSync(read('../src/components/CategoryRail.jsx'), {
-  configFile: false, babelrc: false,
-  presets: [['@babel/preset-react', { runtime: 'classic', pragma: 'h' }]],
-  plugins: [() => ({ visitor: {
-    ImportDeclaration(path) { path.remove(); },
-    ExportNamedDeclaration(path) { path.replaceWith(path.node.declaration); },
-    ExportDefaultDeclaration(path) { path.replaceWith(path.node.declaration); },
-  } })],
-});
-const choose = new Function('h', 'React', `${code}; return categoryRepresentative;`)(() => null, { Fragment: 'Fragment' });
-const category = { slug: 'wellness' };
-const product = (id, extra = {}) => ({ id, slug: id, category: 'wellness', stock: 5, image: '/img/real.jpg', sortOrder: 0, ...extra });
+const rail = read('../src/components/CategoryRail.jsx');
+const css = read('../src/styles/v2-home.css');
+
 let passed = 0;
 const check = (name, fn) => { fn(); passed++; console.log(`PASS ${name}`); };
 
-check('empty category uses its icon', () => assert.equal(choose(category, []), null));
-check('never borrows from another category', () => assert.equal(choose(category, [product('other', { category: 'hair-care' })]), null));
-check('out-of-stock products are excluded', () => assert.equal(choose(category, [product('out', { stock: 0 })]), null));
-check('explicitly inactive products are excluded', () => assert.equal(choose(category, [product('inactive', { isActive: false }), product('inactive-db', { is_active: false })]), null));
-check('missing/invalid images use the icon', () => {
-  for (const image of [null, '', '   ', 'javascript:bad', '//untrusted/image.jpg']) assert.equal(choose(category, [product('bad', { image })]), null);
+console.log('\n— Category rail sourcing —');
+
+check('category art is configured, never borrowed from a product', () => {
+  // The rail must not reach into the catalogue for imagery.
+  assert.doesNotMatch(rail, /categoryRepresentative|products\b|stock|sortOrder/);
+  assert.match(rail, /const CATEGORY_IMAGES = \{/);
 });
-check('real storage images are eligible', () => assert.equal(choose(category, [product('real', { image: 'https://example.com/storage/real.png' })]).id, 'real'));
-check('secondary category membership is respected', () => assert.equal(choose(category, [product('secondary', { category: 'skin-care', categories: ['skin-care', 'wellness'] })]).id, 'secondary'));
-check('primary category wins before sort order', () => assert.equal(choose(category, [product('secondary', { category: 'skin-care', categories: ['wellness'], sortOrder: 0 }), product('primary', { sortOrder: 10 })]).id, 'primary'));
-check('configured ordering wins within a category', () => assert.equal(choose(category, [product('later', { sortOrder: 2 }), product('first', { sortOrder: 1 })]).id, 'first'));
-check('ties are stable across input order', () => {
-  const list = [product('z'), product('a')];
-  assert.equal(choose(category, list).id, 'a');
-  assert.equal(choose(category, [...list].reverse()).id, 'a');
+
+check('every category slug has a bundled fallback image', () => {
+  const slugs = [...rail.matchAll(/^\s{2}'?([a-z-]+)'?:\s*'\/public\/category-images\//gm)].map((m) => m[1]);
+  assert.equal(slugs.length, 9, `expected 9 mapped slugs, got ${slugs.length}`);
+  for (const slug of ['wellness', 'skin-care', 'hair-care', 'juices-drinks', 'supplements']) {
+    assert.ok(slugs.includes(slug), `missing fallback for ${slug}`);
+  }
 });
-check('catalogue records and order are never mutated', () => {
-  const list = Object.freeze([Object.freeze(product('z')), Object.freeze(product('a'))]);
-  choose(category, list);
-  assert.equal(list[0].id, 'z');
+
+check('admin-supplied image wins over the bundled fallback', () => {
+  assert.match(rail, /c\.image \|\| c\.image_url \|\| CATEGORY_IMAGES\[c\.slug\]/);
 });
-const css = read('../src/styles/v2-home.css');
+
+check('a broken image hides itself rather than showing a broken icon', () => {
+  assert.match(rail, /onError=\{\(e\) => \{\s*e\.currentTarget\.style\.display = 'none';/);
+  assert.match(rail, /loading="lazy"/);
+});
+
+check('the rail stays navigation-only — no price, rating or cart affordance', () => {
+  assert.doesNotMatch(rail, /price|rating|Add to cart/i);
+});
+
+check('the marquee duplicate set is hidden from assistive tech', () => {
+  assert.match(rail, /aria-hidden=\{duplicate \? 'true' : undefined\}/);
+  assert.match(rail, /tabIndex=\{duplicate \? -1 : undefined\}/);
+  assert.match(rail, /aria-label="Shop by category"/);
+});
+
+check('the rail renders nothing when there are too few categories', () => {
+  assert.match(rail, /if \(items\.length < 3\) return null;/);
+});
+
+check('categories without an icon fall back to initials', () => {
+  assert.match(rail, /v2-cat__initials/);
+  assert.match(rail, /category\.name\.split\(\/\\s\+\/\)\.map\(\(s\) => s\[0\]\)/);
+});
+
+console.log('\n— Homepage stylesheet —');
+
 check('stylesheet braces stay balanced', () => {
   let depth = 0;
   for (const c of css.replace(/\/\*[\s\S]*?\*\//g, '')) {
@@ -49,15 +71,19 @@ check('stylesheet braces stay balanced', () => {
   }
   assert.equal(depth, 0);
 });
-check('landscape aspect ratio is preserved for both hero modes', () => assert.equal((css.match(/aspect-ratio:358 \/ 215/g) || []).length, 2));
-check('category photos are contained and failed images reveal the icon', () => {
-  assert.match(css, /\.v2-cat__photo img\s*\{[^}]*object-fit:contain/);
-  assert.match(css, /\.v2-cat__photo:has\(\.v2-pimg__fallback\)\s*\{\s*display:none/);
+
+check('the mobile landscape ratio is shared by both hero modes', () => {
+  // One for .v2-hero__media, one for .v2-hero__stage.
+  assert.equal((css.match(/aspect-ratio:358 \/ 200/g) || []).length, 2);
 });
-check('category visuals reuse ProductImage, not another image loader', () => {
-  const source = read('../src/components/CategoryRail.jsx');
-  assert.match(source, /<ProductImage/);
-  assert.match(source, /frame="v2" fit="contain"/);
-  assert.doesNotMatch(source, /<img\b|price|rating|Add to cart/);
+
+check('category photos are hidden by default and revealed on the home rail', () => {
+  assert.match(css, /\.v2-cat__photo \{ display:none; \}/);
+  assert.match(css, /\.v2-home \.v2-cat__photo \{ display:block;/);
 });
+
+check('a category photo replaces the icon tile rather than stacking on it', () => {
+  assert.match(css, /\.v2-home \.v2-cat__visual:has\(\.v2-cat__photo[^)]*\) \.v2-cat__tile \{ display:none; \}/);
+});
+
 console.log(`\n${passed} passed, 0 failed`);

@@ -18,9 +18,9 @@ console.log('\n— Amount is computed from the DB, not the client —');
 {
   const { ok: v, items } = validateCartPayload([{ id: 'b183', qty: 2 }]);
   const t = computeOrderTotal(items, ROWS, 'std');
-  // 236 * 2 = 472 (< 699 so std shipping = 0)
+  // 236 * 2 = 472; standard shipping is ₹0 at every basket size.
   ok('uses DB sale_price, not any client price', v && t.ok && t.subtotal === 472);
-  ok('free-shipping threshold applied (472 < 699, std = 0)', t.shipping === 0 && t.total === 472);
+  ok('standard shipping is free (472 + 0)', t.shipping === 0 && t.total === 472);
   ok('paise conversion is correct (472 -> 47200, not 472)', t.amountPaise === 47200);
 }
 {
@@ -30,12 +30,14 @@ console.log('\n— Amount is computed from the DB, not the client —');
   ok('client-supplied price/amount fields are ignored', t.total === 236);
 }
 {
-  const { items } = validateCartPayload([{ id: 'b183', qty: 3 }]); // 708 >= 699
+  // Express is ₹79 regardless of basket value — there is no threshold that
+  // waives it. A large basket used to ship express for free.
+  const { items } = validateCartPayload([{ id: 'b183', qty: 3 }]); // 708
   const t = computeOrderTotal(items, ROWS, 'exp');
-  ok('express shipping waived above threshold', t.subtotal === 708 && t.shipping === 0);
-  const { items: i2 } = validateCartPayload([{ id: 'b185', qty: 1 }]); // 191 < 699
+  ok('express charged on a large basket (708 + 79)', t.subtotal === 708 && t.shipping === 79 && t.total === 787);
+  const { items: i2 } = validateCartPayload([{ id: 'b185', qty: 1 }]); // 191
   const t2 = computeOrderTotal(i2, ROWS, 'exp');
-  ok('express shipping charged below threshold (79)', t2.shipping === 79 && t2.total === 270);
+  ok('express charged on a small basket (191 + 79)', t2.shipping === 79 && t2.total === 270);
 }
 
 console.log('\n— Tampering is rejected —');

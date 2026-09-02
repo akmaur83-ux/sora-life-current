@@ -117,9 +117,23 @@ await check('posters fill card width while preserving their natural aspect ratio
 });
 await check('offers frame and gallery reserve no padding below poster artwork', () => {
   for (const selector of ['frame', 'gallery']) {
-    const rules = [...css.matchAll(new RegExp('\\.hp-offers__' + selector + '\\s*\\{([^}]+)\\}', 'g'))];
-    assert.ok(rules.length > 0);
-    for (const [, rule] of rules) assert.match(rule, /(?:^|[;\s])padding:0;/);
+    // The BASE rule — the unprefixed selector — defines the box, so that is
+    // where padding:0 belongs. The `.v2-home `-prefixed rules are the mobile
+    // full-bleed overrides added in 58f9587; they only adjust width/margin
+    // and correctly leave padding inherited, so demanding padding:0 inside
+    // them was asserting against the wrong rules.
+    const base = [...css.matchAll(
+      new RegExp('(?:^|[{};]|\\*/)\\s*\\.hp-offers__' + selector + '\\s*\\{([^}]+)\\}', 'gm')
+    )];
+    assert.ok(base.length > 0, `no base .hp-offers__${selector} rule found`);
+    for (const [, rule] of base) assert.match(rule, /(?:^|[;\s])padding:0;/);
+
+    // And no rule anywhere may reintroduce padding on these boxes.
+    for (const [, rule] of css.matchAll(
+      new RegExp('\\.hp-offers__' + selector + '[^{}]*\\{([^}]+)\\}', 'g')
+    )) {
+      assert.doesNotMatch(rule, /(?:^|[;\s])padding(?:-block|-inline|-top|-bottom)?\s*:\s*(?!0)/);
+    }
   }
   assert.match(css, /\.hp-offers__frame[^}]*max-width:calc\(var\(--hp-offers-columns\) \* 620px\)/);
 });

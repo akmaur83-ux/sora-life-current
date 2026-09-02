@@ -67,10 +67,22 @@ async function postJson(url, payload, extraHeaders = {}) {
 }
 
 /**
+ * A fresh key per checkout attempt. Retries of the SAME attempt reuse it, so
+ * the server collapses them into one order; a later, genuinely separate order
+ * gets a new key and is created normally.
+ */
+export function newIdempotencyKey() {
+  try {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  } catch { /* fall through to the non-crypto path */ }
+  return `k-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+/**
  * Ask the server to price the cart and open a payable order.
  * Only ids + quantities are sent — never prices or totals.
  */
-export async function createPaymentOrder({ items, delivery, customer, paymentMethod }) {
+export async function createPaymentOrder({ items, delivery, customer, paymentMethod, idempotencyKey }) {
   const authHeaders = await customerAuthHeader();
   return postJson('/api/razorpay/create-order', {
     // Identifiers and quantities only. No price is sent: the server looks up
@@ -87,7 +99,12 @@ export async function createPaymentOrder({ items, delivery, customer, paymentMet
     // Opaque, self-assigned browser id used ONLY to resolve creator attribution
     // server-side. Carries no internal creator/campaign/link id and no PII.
     visitorId: getVisitorId(),
-  }, authHeaders);
+  }, {
+    ...authHeaders,
+    // Sent as a header (the conventional place) so a retry of this exact
+    // submit resolves to the order already created rather than a second one.
+    ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+  });
 }
 
 /** Hand Razorpay's callback to the server, which alone decides if it's genuine. */

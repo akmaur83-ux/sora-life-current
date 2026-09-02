@@ -8,3 +8,5 @@ dist
 .vercel
 .env*
 .mcp.json
+.build-check
+.flake-reports

@@ -18,6 +18,7 @@ import { getRazorpayCredentials, createRazorpayOrder } from '../_lib/razorpay.js
 import {
   getSupabaseConfig, fetchProductsForCart, insertOrder, getUserIdFromToken,
   fetchVariantsForCart, fetchCouponByCode, recordConversion,
+  findOrderByIdempotencyKey, consumeCouponForOrder,
 } from '../_lib/supabaseAdmin.js';
 import { enforceRateLimit } from '../_lib/rateLimit.js';
 import { computeConversionBase, readVisitorId } from '../_lib/attribution.js';
@@ -44,6 +45,57 @@ function fail(res, status, message) {
   return res.status(status).json({ error: message });
 }
 
+// The delivery details an order genuinely cannot ship without. Matches the
+// fields the checkout form already marks required — nothing new is demanded
+// of the customer, it is simply now enforced on the server too, where it
+// cannot be skipped by posting straight to the API.
+const REQUIRED_DELIVERY_FIELDS = [
+  ['firstName', 'a first name'],
+  ['phone', 'a phone number'],
+  ['address', 'a street address'],
+  ['city', 'a city'],
+  ['state', 'a state'],
+  ['pin', 'a PIN code'],
+];
+
+/**
+ * Reject an order that could never actually be delivered. Previously every
+ * one of these could be an empty string and the order was still written.
+ */
+function validateDeliveryDetails(customer) {
+  const missing = REQUIRED_DELIVERY_FIELDS
+    .filter(([key]) => !customer?.[key])
+    .map(([, label]) => label);
+  if (missing.length) {
+    return { ok: false, error: `Please add ${missing.join(', ')} before placing your order.` };
+  }
+  // Indian mobile numbers, tolerant of +91/0 prefixes and spacing.
+  const digits = String(customer.phone).replace(/\D/g, '');
+  if (digits.length < 10 || digits.length > 13) {
+    return { ok: false, error: 'Please enter a valid phone number.' };
+  }
+  if (!/^\d{6}$/.test(String(customer.pin).replace(/\s/g, ''))) {
+    return { ok: false, error: 'Please enter a valid 6-digit PIN code.' };
+  }
+  return { ok: true };
+}
+
+/**
+ * A client-supplied key identifying ONE submit action.
+ *
+ * Deliberately not derived from cart/name/address: a customer may legitimately
+ * place two identical orders minutes apart, and collapsing those would lose a
+ * real order. The browser mints a fresh key per checkout attempt, so a
+ * double-click, a retried fetch or a back-button resubmit reuses the key while
+ * a genuinely new order gets a new one.
+ */
+function readIdempotencyKey(req, body) {
+  const raw = req.headers?.['idempotency-key'] || body?.idempotencyKey;
+  if (typeof raw !== 'string') return null;
+  const clean = raw.trim().slice(0, 100);
+  return /^[A-Za-z0-9_-]{8,100}$/.test(clean) ? clean : null;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -67,6 +119,26 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     const { items: rawItems, delivery, customer, paymentMethod, couponCode } = body;
+
+    // Replay of a submit we already completed -> hand back the original order
+    // instead of creating a second one. Checked before any work so a retry
+    // never re-prices, re-reserves or re-charges anything.
+    const idempotencyKey = readIdempotencyKey(req, body);
+    if (idempotencyKey) {
+      const existing = await findOrderByIdempotencyKey(idempotencyKey, sb);
+      if (existing) {
+        return res.status(200).json({
+          paymentMethod: existing.payment_method === 'cod' ? 'cod' : 'razorpay',
+          orderNumber: existing.order_number,
+          amount: Number(existing.amount_paise) / 100,
+          subtotal: existing.billing?.subtotal ?? null,
+          shipping: existing.billing?.shipping ?? null,
+          breakdown: existing.billing ?? null,
+          ...(existing.razorpay_order_id ? { razorpayOrderId: existing.razorpay_order_id } : {}),
+          duplicate: true,
+        });
+      }
+    }
 
     const parsed = validateCartPayload(rawItems);
     if (!parsed.ok) return fail(res, 400, parsed.error);
@@ -127,6 +199,12 @@ export default async function handler(req, res) {
       pin: str(customer?.pin, 20),
     };
 
+    // Enforced for BOTH payment methods: a prepaid order with no address is
+    // just as undeliverable as a COD one, and the browser's own validation is
+    // not a control — anyone can POST straight to this endpoint.
+    const delivery_ok = validateDeliveryDetails(safeCustomer);
+    if (!delivery_ok.ok) return fail(res, 400, delivery_ok.error);
+
     // Denormalised billing columns + the full breakdown. Every value here is
     // server-computed; none of it came from the browser. Columns added by
     // migration 0006 — if that migration has not been run yet the insert
@@ -155,19 +233,49 @@ export default async function handler(req, res) {
     // ---- Cash on delivery: no Razorpay involved. Recorded as a pending,
     // unpaid order so it still gets a server-computed, auditable amount.
     if (method === 'cod') {
-      const order = await insertOrder({
-        order_number: orderNumber,
-        status: 'pending',
-        payment_status: 'pending',
-        payment_method: 'cod',
-        amount_paise: totals.amountPaise,
-        currency: 'INR',
-        items: totals.lines,
-        customer: safeCustomer,
-        delivery_method: totals.deliveryMethod,
-        ...billingCols,
-        ...(userId ? { user_id: userId } : {}),
-      }, sb);
+      let order;
+      try {
+        order = await insertOrder({
+          order_number: orderNumber,
+          status: 'pending',
+          payment_status: 'pending',
+          payment_method: 'cod',
+          amount_paise: totals.amountPaise,
+          currency: 'INR',
+          items: totals.lines,
+          customer: safeCustomer,
+          delivery_method: totals.deliveryMethod,
+          ...billingCols,
+          ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
+          ...(userId ? { user_id: userId } : {}),
+        }, sb);
+      } catch (err) {
+        // Two submits raced past the lookup above and both tried to insert.
+        // The unique index decided the winner; return that order rather than
+        // failing a customer whose order was in fact placed.
+        if (err?.details?.code === '23505' && idempotencyKey) {
+          const winner = await findOrderByIdempotencyKey(idempotencyKey, sb);
+          if (winner) {
+            return res.status(200).json({
+              paymentMethod: 'cod',
+              orderNumber: winner.order_number,
+              amount: Number(winner.amount_paise) / 100,
+              subtotal: winner.billing?.subtotal ?? null,
+              shipping: winner.billing?.shipping ?? null,
+              breakdown: winner.billing ?? null,
+              duplicate: true,
+            });
+          }
+        }
+        throw err;
+      }
+
+      // COD orders were never consuming their coupon: consumption only ran on
+      // the Razorpay verify/webhook paths, so a COD customer could reuse a
+      // single-use code indefinitely and blow straight past its usage cap.
+      // The DB function is atomic and idempotent per order, and non-fatal here
+      // — a coupon-ledger hiccup must not lose an order that already exists.
+      await consumeCouponForOrder({ ...order, coupon_code: bd.coupon?.code ?? null }, sb).catch(() => {});
 
       // Attribution snapshot (pending until the order qualifies). Non-fatal.
       await attributeOrder(order, totals, body, userId, sb);

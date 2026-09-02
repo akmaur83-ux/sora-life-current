@@ -162,31 +162,40 @@ test('product discount + coupon produce the correct final price', () => {
   eq(r.breakdown.itemTotal, 1599);
   eq(r.breakdown.couponDiscount, 50);
   eq(r.breakdown.subtotal, 1549);
-  eq(r.total, 1549, 'free shipping over threshold');
+  eq(r.total, 1549, 'standard shipping costs nothing');
 });
 
 console.log('\n— Shipping —');
 
-test('free shipping above threshold', () => {
-  const r = base([{ id: 'b115', qty: 1, variantId: 'v750' }], {}); // 1599 > 699
+test('standard is free at any basket size (it costs ₹0, nothing is waived)', () => {
+  const r = base([{ id: 'b115', qty: 1, variantId: 'v750' }], {}); // 1599
   eq(r.shipping, 0);
   eq(r.breakdown.shippingLabel, 'FREE');
+  eq(r.breakdown.shippingWaived, false, 'std is priced at 0, not discounted to 0');
 });
 
-test('paid express shipping below threshold is added', () => {
+test('paid express shipping is added on a small basket', () => {
   const cheap = { ...PRODUCT, sale_price: 200, original_price: 200, discount_percent: 0 };
   const r = computeOrderTotal([{ id: 'b115', qty: 1 }], [cheap], 'exp', { taxConfig: NO_TAX });
   eq(r.shipping, 79);
   eq(r.total, 279);
 });
 
-test('a coupon cannot be used to dodge the free-shipping threshold', () => {
+test('express stays ₹79 on a large basket — no threshold waives it', () => {
+  const r = computeOrderTotal([{ id: 'b115', qty: 1, variantId: 'v750' }], [PRODUCT], 'exp', {
+    variantRows: VARIANTS, taxConfig: NO_TAX,
+  }); // 1599
+  eq(r.shipping, 79, 'express must NOT be waived at 1599');
+  eq(r.total, 1678);
+});
+
+test('a coupon cannot change the shipping fee in either direction', () => {
   const p = { ...PRODUCT, sale_price: 700, original_price: 700, discount_percent: 0 };
   const r = computeOrderTotal([{ id: 'b115', qty: 1 }], [p], 'exp', {
     taxConfig: NO_TAX, coupon: { type: 'flat', value: 100 },
   });
-  // 700 - 100 = 600 < 699 -> shipping is charged, not waived.
-  eq(r.shipping, 79, 'shipping charged on post-coupon value');
+  eq(r.shipping, 79, 'shipping is independent of basket value');
+  eq(r.total, 679, '700 - 100 + 79');
 });
 
 console.log('\n— GST / tax —');

@@ -15,3 +15,5 @@ __audit.js
 .env*
 __pycache__
 *.pyc
+.build-check
+.flake-reports

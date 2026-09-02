@@ -92,7 +92,9 @@ export async function fetchProductsForCart(ids, cfg) {
   const quoted = ids.map((i) => `"${String(i).replace(/"/g, '')}"`).join(',');
   const numeric = ids.filter((i) => /^\d+$/.test(String(i)));
 
-  const select = 'id,biosash_id,name,original_price,discount_percent,sale_price,is_active';
+  // `stock` is required for the sold-out check in computeOrderTotal. It is a
+  // boolean "in stock" flag on this table, not a count (see adminApi.js).
+  const select = 'id,biosash_id,name,original_price,discount_percent,sale_price,is_active,stock';
   const byBiosash = await rest(
     `products?select=${select}&biosash_id=in.(${quoted})`,
     cfg
@@ -117,6 +119,10 @@ const OPTIONAL_ORDER_COLUMNS = [
   'coupon_discount', 'shipping_fee', 'platform_fee', 'packaging_fee',
   'taxable_amount', 'tax_total', 'tax_mode', 'billing_address',
   'invoice_number', 'invoiced_at',
+  // Added by migration 0018. Same tolerance as the 0006 columns: an
+  // un-migrated deployment loses duplicate-submit protection but still
+  // checks out.
+  'idempotency_key',
 ];
 
 export async function insertOrder(order, cfg) {
@@ -165,14 +171,56 @@ export async function findOrderByNumber(orderNumber, cfg) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
-export async function updateOrderById(id, patch, cfg) {
-  const rows = await rest(`orders?id=eq.${encodeURIComponent(id)}`, {
+/**
+ * Patch an order by id.
+ *
+ * `opts.unlessPaid` adds a WHERE clause so the update only touches an order
+ * that is not already paid. That guard is what makes payment state MONOTONIC:
+ * a late `payment.failed` webhook, a replayed callback, or a forged /verify
+ * attempt racing a genuine one can no longer flip a captured order back to
+ * failed. Postgres evaluates the filter and the write in one statement, so
+ * two concurrent callers cannot both win.
+ *
+ * Returns the updated row, or undefined when the guard matched nothing —
+ * which callers read as "someone else already settled this order".
+ */
+export async function updateOrderById(id, patch, cfg, opts = {}) {
+  const filters = [`id=eq.${encodeURIComponent(id)}`];
+  if (opts.unlessPaid) {
+    // payment_status may legitimately be NULL on very old rows, and a bare
+    // `neq.paid` would skip those (SQL three-valued logic), so match them
+    // explicitly rather than silently refusing to update them.
+    filters.push('or=(payment_status.is.null,payment_status.neq.paid)');
+  }
+  const rows = await rest(`orders?${filters.join('&')}`, {
     ...cfg,
     method: 'PATCH',
     body: { ...patch, updated_at: new Date().toISOString() },
     headers: { Prefer: 'return=representation' },
   });
   return Array.isArray(rows) ? rows[0] : rows;
+}
+
+/**
+ * Look up an order previously created under the same client idempotency key.
+ * Returns null when the key is unknown OR when migration 0018 has not been
+ * applied yet (the column simply does not exist), so checkout keeps working
+ * on an un-migrated deployment exactly as it does today.
+ */
+export async function findOrderByIdempotencyKey(key, cfg) {
+  if (!key) return null;
+  try {
+    const rows = await rest(
+      `orders?select=*&idempotency_key=eq.${encodeURIComponent(key)}&limit=1`,
+      cfg
+    );
+    return Array.isArray(rows) && rows.length ? rows[0] : null;
+  } catch (err) {
+    // PGRST100/42703 = the column is not there yet. Not a fault.
+    if (isMissingRelation(err) || err?.details?.code === '42703') return null;
+    if (/column .* does not exist/i.test(err?.message || '')) return null;
+    return null;
+  }
 }
 
 // ============================================================

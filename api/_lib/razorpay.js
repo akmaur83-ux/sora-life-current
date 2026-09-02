@@ -74,6 +74,52 @@ export async function createRazorpayOrder({ amountPaise, currency, receipt, note
 }
 
 /**
+ * Fetch a payment's authoritative state from Razorpay.
+ *
+ * A valid checkout signature only proves the ids came from Razorpay — it says
+ * nothing about whether the money was actually captured. An `authorized` (not
+ * captured) payment carries a perfectly valid signature, and so does one that
+ * was later voided. So /verify asks Razorpay directly before it will call an
+ * order paid.
+ *
+ * Returns the payment entity. Throws with a generic message on failure; the
+ * caller must treat a throw as "unknown", never as "captured".
+ */
+export async function fetchRazorpayPayment({ paymentId, keyId, keySecret }) {
+  if (!paymentId || !keyId || !keySecret) {
+    throw new Error('Missing payment lookup credentials.');
+  }
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(`${RAZORPAY_API}/payments/${encodeURIComponent(paymentId)}`, {
+      headers: { Authorization: `Basic ${auth}` },
+      signal: controller.signal,
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      // Status code only — the body can echo payment/customer detail that has
+      // no business in our logs or in an error that may bubble to a response.
+      const err = new Error(`Razorpay payment lookup failed (${res.status})`);
+      err.status = res.status;
+      throw err;
+    }
+    return body;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * True only when Razorpay itself reports the money as captured.
+ * `authorized` is explicitly NOT enough: the funds are merely held.
+ */
+export function isCapturedPayment(payment) {
+  return Boolean(payment) && payment.status === 'captured';
+}
+
+/**
  * Verify a Razorpay WEBHOOK signature.
  *
  * Different scheme from the checkout callback: the HMAC is computed over the

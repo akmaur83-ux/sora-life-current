@@ -14,13 +14,17 @@ export let branding = {
   faviconUrl: null,
 };
 
+// `freeShippingThreshold` used to live here. There is no such threshold:
+// shipping is a flat per-method fee (Standard ₹0, Express ₹79, Scheduled
+// ₹49) at every basket size — see api/_lib/pricing.js, which is the only
+// authority on what a customer is charged. The key was read by nothing, so
+// it was a stale contradiction waiting to be re-used.
 export let announcement = {
   notices: [
     'FREE STANDARD SHIPPING',
     'COD Available',
     '100% Authentic Biosash Products',
   ],
-  freeShippingThreshold: 699,
 };
 
 export let homepage = {

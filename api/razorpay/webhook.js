@@ -15,10 +15,22 @@
 //     computed at order creation. A mismatch is recorded and never marked paid.
 //
 // Idempotency:
-//   * payment_transactions.gateway_payment_id is UNIQUE, so a replayed
-//     delivery conflicts and is reported as a duplicate instead of creating a
-//     second payment record.
-//   * An order already marked paid short-circuits.
+//   * The LEDGER is deduplicated by the UNIQUE payment_transactions
+//     .gateway_payment_id, so a replay does not add a second row.
+//   * The ORDER STATE MACHINE is deduplicated separately, by a conditional
+//     update that only fires while the order is not already paid.
+//
+//     These must stay separate. They were previously one thing: a duplicate
+//     ledger insert returned early, which meant the normal Razorpay sequence
+//     `payment.authorized` -> `payment.captured` recorded the authorization
+//     and then discarded the capture as a "duplicate" — the customer paid and
+//     the order stayed pending forever. Different lifecycle events for one
+//     payment must all be processed; only a repeat of the SAME transition is
+//     a no-op.
+//
+//   * Because the ledger no longer gates processing, a DB failure part-way
+//     through is safely retryable: Razorpay redelivers, the ledger insert
+//     no-ops, and the state transition is attempted again.
 //   * Always answers 200 for handled-but-ignored events so Razorpay stops
 //     retrying; only genuine server faults return 5xx.
 // ============================================================
@@ -97,7 +109,10 @@ export default async function handler(req, res) {
     // replayed delivery a no-op rather than a duplicate row.
     const captured = event === 'payment.captured';
     const failed = event === 'payment.failed';
-    const txResult = await recordPaymentTransaction({
+    // Ledger only. `duplicate` here means "this payment id is already in the
+    // ledger" — NOT "this event was already applied to the order", so it must
+    // never short-circuit the state transition below.
+    await recordPaymentTransaction({
       order_id: order?.id ?? null,
       order_number: order?.order_number ?? null,
       gateway: 'razorpay',
@@ -121,21 +136,24 @@ export default async function handler(req, res) {
       return res.status(200).json({ received: true, matched: false });
     }
 
-    if (txResult.duplicate) {
-      return res.status(200).json({ received: true, duplicate: true, orderNumber: order.order_number });
-    }
-
     if (order.payment_status === 'paid') {
       return res.status(200).json({ received: true, alreadyPaid: true, orderNumber: order.order_number });
     }
 
     if (failed) {
-      await updateOrderById(order.id, {
+      // `unlessPaid` is the race guard: Razorpay can deliver a stale
+      // `payment.failed` for an earlier attempt after a later attempt on the
+      // same order already captured. Money confirmed must never be undone by
+      // a message that arrives out of order.
+      const updated = await updateOrderById(order.id, {
         status: 'failed',
         payment_status: 'failed',
         razorpay_payment_id: paymentId,
         failure_reason: entity.error_description || entity.error_code || 'payment_failed',
-      }, sb);
+      }, sb, { unlessPaid: true });
+      if (!updated) {
+        return res.status(200).json({ received: true, alreadyPaid: true, orderNumber: order.order_number });
+      }
       // A failed payment never qualifies its conversion. Non-fatal.
       await setConversionStatus(order.id, 'cancelled', 'payment_failed', sb).catch(() => {});
       return res.status(200).json({ received: true, orderNumber: order.order_number, status: 'failed' });
@@ -153,11 +171,15 @@ export default async function handler(req, res) {
           payment_status: 'failed',
           status: 'failed',
           failure_reason: 'amount_mismatch',
-        }, sb).catch(() => {});
+        }, sb, { unlessPaid: true }).catch(() => {});
         return res.status(200).json({ received: true, mismatch: true });
       }
 
-      await updateOrderById(order.id, {
+      // Conditional on "not already paid", so this is the single place the
+      // paid transition can happen. A redelivered `payment.captured`, or the
+      // /verify callback racing this webhook, matches zero rows and becomes a
+      // no-op instead of re-running the side effects below.
+      const paid = await updateOrderById(order.id, {
         status: 'paid',
         payment_status: 'paid',
         razorpay_payment_id: paymentId,
@@ -165,7 +187,11 @@ export default async function handler(req, res) {
         // Invoice is issued at the moment money is confirmed.
         ...(order.invoice_number ? {} : { invoice_number: generateInvoiceNumber() }),
         invoiced_at: new Date().toISOString(),
-      }, sb);
+      }, sb, { unlessPaid: true });
+
+      if (!paid) {
+        return res.status(200).json({ received: true, alreadyPaid: true, orderNumber: order.order_number });
+      }
 
       // Consume the coupon (if any) now that payment is confirmed. Idempotent
       // per order in the DB, so this webhook and the /verify callback firing

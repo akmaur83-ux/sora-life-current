@@ -8,7 +8,7 @@ import { useStore } from '../lib/store.jsx';
 import { useCustomerAuth } from '../lib/customerAuth.jsx';
 import { getProfile, listAddresses, createAddress, updateAddress, setDefaultAddress } from '../lib/customerData.js';
 import { money } from '../lib/format.js';
-import { loadRazorpayScript, createPaymentOrder, verifyPayment } from '../lib/payments.js';
+import { loadRazorpayScript, createPaymentOrder, verifyPayment, newIdempotencyKey } from '../lib/payments.js';
 
 // Fields that come from a saved address. Editing any of these by hand clears
 // the "selected saved address" highlight so the form reads as custom.
@@ -194,6 +194,11 @@ export default function Checkout() {
   // clicks fired in the same tick would all slip past a state-based guard
   // and create duplicate orders. A ref flips immediately.
   const inFlight = useRef(false);
+  // Server-side companion to that lock. The ref above only protects one tab
+  // in one page session; this key lets the server recognise a resubmitted
+  // request (retry after a dropped connection, back button) as the same
+  // order rather than a new one.
+  const submitKey = useRef(null);
   const [placed, setPlaced] = useState(false);
   // Generated once when the order is placed. It used to be computed inline
   // during render, which meant any re-render (including the celebration's
@@ -222,8 +227,12 @@ export default function Checkout() {
     return () => { cancelAnimationFrame(raf); clearTimeout(done); };
   }, [placed]);
 
+  // Flat per-method fee at every basket size — Standard ₹0, Express ₹79,
+  // Scheduled ₹49 — matching api/_lib/pricing.js exactly. There is no
+  // basket-value threshold: an earlier version waived the fee on larger
+  // baskets and quoted a cheaper total than the server actually charged.
   const deliveryFee = DELIVERY.find((d) => d.id === delivery)?.price || 0;
-  const shipBase = subtotal >= 699 ? 0 : deliveryFee;
+  const shipBase = deliveryFee;
   const total = Math.max(0, subtotal + shipBase);
 
   if (placed) {
@@ -289,12 +298,17 @@ export default function Checkout() {
     setPayNotice('');
 
     try {
+      // One key for this submit, reused if the request itself is retried, so
+      // a flaky connection cannot turn one COD order into two.
+      if (!submitKey.current) submitKey.current = newIdempotencyKey();
+
       // The server prices the cart itself; we only send ids + quantities.
       const created = await createPaymentOrder({
         items: cart,
         delivery,
         customer: form,
         paymentMethod: pay === 'cod' ? 'cod' : 'online',
+        idempotencyKey: submitKey.current,
       });
 
       if (created.breakdown) setServerBreakdown(created.breakdown);
@@ -328,6 +342,15 @@ export default function Checkout() {
             const result = await verifyPayment(response);
             if (result?.verified) {
               completeOrder(result.orderNumber, result.amount);
+            } else if (result?.pending) {
+              // Razorpay has the money authorised but not yet captured. This
+              // is not a failure — telling the customer their order was not
+              // placed here would invite a second payment for the same cart.
+              inFlight.current = false; setProcessing(false);
+              setPayNotice(
+                result.error
+                || 'Your payment is still being confirmed. We will update your order shortly — please do not pay again.'
+              );
             } else {
               inFlight.current = false; setProcessing(false);
               setPayError('We could not verify this payment. Your order has not been placed.');

@@ -23,6 +23,10 @@ if (fs.existsSync('.env.local')) {
 const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabasePublishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 
+// Set when the committed bundle must be preserved: the source is compiled to
+// prove it still builds, but the result is thrown away instead of shipped.
+let verifyOnly = false;
+
 // These two values are inlined into the bundle at build time (see the
 // `replace` plugin below) — nothing reads them at runtime. Historically a
 // missing value threw here, which meant one piece of environment config
@@ -64,29 +68,45 @@ if (!supabaseUrl || !supabasePublishableKey) {
     // repo. Rebuilding now would silently overwrite it with a bundle that
     // has no Supabase config, downgrading production to built-in data only
     // (exactly what happened on deployment 6830ad1). Preserve the good
-    // artifact and exit successfully so the deploy still ships.
+    // artifact so the deploy still ships.
+    //
+    // This used to `process.exit(0)` right here, which meant the source was
+    // never compiled at all: a syntax error, a bad import, anything — the
+    // build "succeeded" and shipped the old bundle. A broken commit could
+    // deploy green and nobody would know until the next configured build.
+    //
+    // So the source is still compiled below; the output is just redirected
+    // to a scratch file that nothing serves. Compilation failures fail the
+    // build exactly as they should, and the good bundle is left alone.
     //
     // This is self-healing: as soon as the variables are readable by the
     // build, the normal build path below runs and emits a fresh bundle.
     console.warn(
       '   Keeping the existing committed public/bundle.js rather than\n' +
-      '   overwriting it with an unconfigured build. Deploy continues.\n'
+      '   overwriting it with an unconfigured build.\n' +
+      '   The source is still compiled to verify it BUILDS — a compile\n' +
+      '   error fails this deploy rather than silently shipping the old\n' +
+      '   bundle.\n'
     );
-    process.exit(0);
+    verifyOnly = true;
+  } else {
+    console.warn(
+      '   No existing bundle to preserve — building without Supabase.\n' +
+      '   The storefront will run on its built-in data.\n'
+    );
   }
-
-  console.warn(
-    '   No existing bundle to preserve — building without Supabase.\n' +
-    '   The storefront will run on its built-in data.\n'
-  );
 }
+
+// Where the compiled output lands. In verify-only mode it goes to a scratch
+// path (gitignored, not deployed) purely so compilation is actually exercised.
+const OUTPUT_FILE = verifyOnly ? '.build-check/bundle.js' : 'public/bundle.js';
 
 export default {
   input: 'src/main.jsx',
   output: {
-    file: 'public/bundle.js',
+    file: OUTPUT_FILE,
     format: 'iife',
-    sourcemap: true,
+    sourcemap: !verifyOnly,
     inlineDynamicImports: true,
   },
   plugins: [
@@ -104,7 +124,16 @@ export default {
       exclude: 'node_modules/**',
       presets: [['@babel/preset-react', { runtime: 'automatic' }]],
     }),
-  ],
+    // The verify-only artifact has done its job once the build succeeds:
+    // it proved the source compiles. Delete it so it cannot be picked up as
+    // deployable output (outputDirectory is the repo root).
+    verifyOnly && {
+      name: 'discard-verify-only-output',
+      closeBundle() {
+        fs.rmSync('.build-check', { recursive: true, force: true });
+      },
+    },
+  ].filter(Boolean),
   onwarn(warning, warn) {
     if (warning.code === 'MODULE_LEVEL_DIRECTIVE' || warning.code === 'CIRCULAR_DEPENDENCY') return;
     warn(warning);
