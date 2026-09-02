@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fulfillmentForDisplay } from '../src/lib/orderFulfillment.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
@@ -45,7 +46,7 @@ ok('signed-in lookup still relies on orders RLS', adapterSource.includes(".from(
 const executableAdapter = adapterSource
   .replace(/^import .*;\r?\n/gm, '')
   .replace(/\bexport\s+/g, '');
-const makeAdapter = new Function('productById', 'supabase', `${executableAdapter}\nreturn { mapOrderToPassport };`);
+const makeAdapter = new Function('productById', 'supabase', 'fulfillmentForDisplay', `${executableAdapter}\nreturn { mapOrderToPassport };`);
 
 const order = {
   orderNumber: 'SORA-REAL-1001',
@@ -57,15 +58,29 @@ const order = {
   customer: { firstName: 'Asha', lastName: 'Rai', address: '12 Cedar Road', city: 'Shimla', state: 'HP', pin: '171001' },
   createdAt: '2026-08-23T10:10:00.000Z',
 };
-const mapped = makeAdapter({}, {}).mapOrderToPassport(order);
+const adapter = makeAdapter({}, {}, fulfillmentForDisplay);
+const mapped = adapter.mapOrderToPassport(order);
 const mappedJson = JSON.stringify(mapped);
 
 ok('retired catalogue product keeps its real order-line name', mapped.product.name === 'Retired catalogue item');
 ok('retired catalogue product has a safe null image fallback', mapped.product.image === null);
 ok('real quantity, amount and order status are preserved', mapped.product.qty === 2 && mapped.order.amount === 619 && mapped.status === 'Payment Confirmed');
 ok('only the recorded order event is rendered', mapped.timeline.length === 1 && mapped.timeline[0].key === 'ordered');
-ok('adapter does not manufacture tracking or fulfillment data', !/carrier|trackingId|packed|shipped|out_for_delivery|deliveredOn|eta/.test(mappedJson));
+ok('old orders receive no invented tracking or fulfillment data', mapped.fulfillment === null && !/carrier|trackingId|packed|shipped|out_for_delivery|deliveredOn|eta/.test(mappedJson));
 ok('fabricated care, returns, identity, experience and reminders are absent', !/"care"|"returns"|"identity"|"experience"|"reminder"/.test(mappedJson));
+
+const tracked = adapter.mapOrderToPassport({
+  ...order,
+  fulfillment: {
+    fulfillmentStatus: 'shipped',
+    carrierName: 'Example Carrier',
+    trackingNumber: 'REAL-123',
+    trackingUrl: 'https://tracking.example/REAL-123',
+    shippedAt: '2026-08-24T09:30:00.000Z',
+  },
+});
+ok('stored fulfillment is preserved without inferred milestones', tracked.fulfillment?.trackingNumber === 'REAL-123' && tracked.timeline.map((step) => step.key).join(',') === 'ordered,shipped');
+ok('tracking CTA is conditional on a validated stored URL', page.includes('{fulfillment?.trackingUrl &&') && page.includes('href={fulfillment.trackingUrl}'));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

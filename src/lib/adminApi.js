@@ -257,9 +257,10 @@ export async function adminImportBiosashCatalog(onProgress) {
 }
 
 // ---------------------------------------------------------------
-// ADMIN: orders (read-only)
-// Orders are written only by the server-side payment API. RLS grants
-// admins SELECT, so this read runs under the logged-in admin's session.
+// ADMIN: orders
+// Payment/order creation stays server-side. The only admin write is the
+// narrow 0022 RPC, which validates admin membership in Postgres and can
+// update fulfillment columns only.
 // ---------------------------------------------------------------
 export async function adminListOrders(limit = 100) {
   const { data, error } = await supabase
@@ -269,6 +270,21 @@ export async function adminListOrders(limit = 100) {
     .limit(limit);
   if (error) throw error;
   return data || [];
+}
+
+export async function adminUpdateOrderFulfillment(orderId, input, actions = {}) {
+  if (!orderId) throw new Error('Order ID is required.');
+  const { data, error } = await supabase.rpc('admin_update_order_fulfillment', {
+    p_order_id: orderId,
+    p_fulfillment_status: input?.fulfillmentStatus ?? null,
+    p_carrier_name: input?.carrierName ?? null,
+    p_tracking_number: input?.trackingNumber ?? null,
+    p_tracking_url: input?.trackingUrl ?? null,
+    p_mark_shipped: actions.markShipped === true,
+    p_mark_delivered: actions.markDelivered === true,
+  });
+  if (error) throw error;
+  return data;
 }
 
 // ---------------------------------------------------------------

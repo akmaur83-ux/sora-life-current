@@ -6,13 +6,13 @@
 // Signed-in customers instead read only their own order through the
 // existing orders RLS policy. Neither path exposes a service-role key.
 //
-// Anything the `orders` schema genuinely has no column for (batch
-// number, expiry date, courier/tracking, delivery ETA, fulfillment
-// steps beyond "ordered") is surfaced as NOT_AVAILABLE rather than
-// invented. See the Phase 2 report for exactly what's missing.
+// Optional 0022 fulfillment fields render only when they are actually stored.
+// Anything the schema still has no column for (batch/expiry data, carrier ETA,
+// or unstored milestones) is omitted rather than invented.
 // ============================================================
 import { productById } from './products.js';
 import { supabase } from '../lib/supabase.js';
+import { fulfillmentForDisplay } from '../lib/orderFulfillment.js';
 
 export const NOT_AVAILABLE = 'Not available yet';
 
@@ -82,16 +82,40 @@ export function mapOrderToPassport(order) {
   const totalQty = items.reduce((n, l) => n + (Number(l.qty) || 0), 0);
   const memberName = [order.customer?.firstName, order.customer?.lastName].filter(Boolean).join(' ').trim() || 'Guest';
 
-  // The schema has no carrier or fulfillment events. Render only the one
-  // event the order record proves, rather than inventing future milestones.
+  const fulfillment = fulfillmentForDisplay(order.fulfillment || order);
+
+  // Every timeline entry below comes from a stored timestamp or status. A
+  // delivered row without shipped_at does not acquire an invented "shipped"
+  // step, and an old order with no 0022 data keeps its one recorded event.
   const timeline = [
-    { key: 'ordered', label: 'Order recorded', short: 'Order recorded', date: formatDate(order.createdAt), time: formatDateTime(order.createdAt), done: true, current: true },
+    { key: 'ordered', label: 'Order recorded', short: 'Order recorded', date: formatDate(order.createdAt), time: formatDateTime(order.createdAt), done: true, current: false },
   ];
+  if (fulfillment?.shippedAt) {
+    timeline.push({ key: 'shipped', label: 'Shipped', short: 'Shipped', date: formatDate(fulfillment.shippedAt), time: formatDateTime(fulfillment.shippedAt), done: true, current: false });
+  }
+  if (fulfillment?.deliveredAt) {
+    timeline.push({ key: 'delivered', label: 'Delivered', short: 'Delivered', date: formatDate(fulfillment.deliveredAt), time: formatDateTime(fulfillment.deliveredAt), done: true, current: false });
+  }
+  const statusHasEvent = (fulfillment?.fulfillmentStatus === 'shipped' && fulfillment.shippedAt)
+    || (fulfillment?.fulfillmentStatus === 'delivered' && fulfillment.deliveredAt);
+  if (fulfillment?.fulfillmentStatus && !statusHasEvent) {
+    timeline.push({
+      key: `status-${fulfillment.fulfillmentStatus}`,
+      label: fulfillment.label,
+      short: fulfillment.label,
+      date: null,
+      time: null,
+      done: true,
+      current: false,
+    });
+  }
+  timeline[timeline.length - 1].current = true;
 
   return {
     passportId: order.orderNumber,
     member: { name: memberName, tier: 'Verified order', tierIcon: 'checkCircle' },
     status: computeStatusLabel(order),
+    fulfillment,
     product: {
       ...product,
       qty: first.qty || totalQty || 1,
@@ -146,7 +170,7 @@ export async function lookupPassportForUser(orderNumber) {
 
   const { data, error } = await supabase
     .from('orders')
-    .select('order_number, status, payment_status, payment_method, amount_paise, currency, items, customer, created_at, paid_at')
+    .select('order_number, status, payment_status, payment_method, amount_paise, currency, items, customer, created_at, paid_at, fulfillment_status, carrier_name, tracking_number, tracking_url, shipped_at, delivered_at')
     .eq('order_number', on)
     .maybeSingle();
   if (error) throw error;
@@ -165,5 +189,13 @@ export async function lookupPassportForUser(orderNumber) {
     customer: data.customer || {},
     createdAt: data.created_at,
     paidAt: data.paid_at || null,
+    fulfillment: {
+      fulfillmentStatus: data.fulfillment_status,
+      carrierName: data.carrier_name,
+      trackingNumber: data.tracking_number,
+      trackingUrl: data.tracking_url,
+      shippedAt: data.shipped_at,
+      deliveredAt: data.delivered_at,
+    },
   });
 }

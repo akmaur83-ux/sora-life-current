@@ -5,11 +5,11 @@
 // tested directly (see scripts/test-order-lookup.mjs), the same way
 // pricing.js and razorpay.js already are.
 //
-// There is no customer login in this app (see Account.jsx — its
-// "auth" is decorative). Ownership of an order is proven instead by
-// knowing BOTH the order number and the email address used at
-// checkout. Neither value alone is ever sufficient.
+// Guests prove ownership by knowing BOTH the order number and checkout
+// email. Signed-in customer reads use the separate RLS-backed browser path.
+// Neither path trusts an order number alone.
 // ============================================================
+import { fulfillmentForDisplay } from '../../src/lib/orderFulfillment.js';
 
 export function normalizeOrderNumber(v) {
   return String(v || '').trim().toUpperCase();
@@ -35,10 +35,11 @@ export function customerEmailMatches(order, email) {
  * screen needs. Deliberately excludes: the internal uuid, Razorpay
  * order/payment ids, failure_reason, and anything else that isn't
  * needed to render the customer's own order. Never include fields
- * that don't exist on the schema (no batch/expiry/courier/tracking —
- * the caller must render those as "not available", not invent them).
+ * unrelated to the customer-facing receipt/passport. Fulfillment is included
+ * only when at least one validated, stored fulfillment field exists.
  */
 export function sanitizeOrderForCustomer(order) {
+  const fulfillment = fulfillmentForDisplay(order);
   return {
     orderNumber: order.order_number,
     status: order.status,
@@ -50,6 +51,7 @@ export function sanitizeOrderForCustomer(order) {
     customer: sanitizeCustomer(order.customer),
     createdAt: order.created_at,
     paidAt: order.paid_at || null,
+    ...(fulfillment ? { fulfillment } : {}),
   };
 }
 

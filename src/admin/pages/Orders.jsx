@@ -1,12 +1,19 @@
 import { useEffect, useState, Fragment } from 'react';
 import { Link } from 'react-router-dom';
-import { adminListOrders } from '../../lib/adminApi.js';
+import { adminListOrders, adminUpdateOrderFulfillment } from '../../lib/adminApi.js';
 import { money } from '../../lib/format.js';
+import { FULFILLMENT_STATUSES, fulfillmentStatusLabel, validateFulfillmentInput } from '../../lib/orderFulfillment.js';
 
 const STATUS_BADGE = {
   paid: 'badge-best',
   pending: 'badge-soft',
   failed: 'badge-sale',
+  cancelled: 'badge-out',
+};
+
+const FULFILLMENT_BADGE = {
+  shipped: 'badge-soft',
+  delivered: 'badge-best',
   cancelled: 'badge-out',
 };
 
@@ -88,6 +95,10 @@ export default function Orders() {
     setTimeout(() => setCopiedId((c) => (c === order.id ? null : c)), 1600);
   }
 
+  function updateOrder(patch) {
+    setOrders((current) => current.map((order) => (order.id === patch.id ? { ...order, ...patch } : order)));
+  }
+
   return (
     <div>
       <div className="adm__head">
@@ -116,7 +127,7 @@ export default function Orders() {
           <table className="adm-table">
             <thead>
               <tr>
-                <th>Order</th><th>Placed</th><th>Customer</th><th>Amount</th><th>Method</th><th>Payment</th><th></th>
+                <th>Order</th><th>Placed</th><th>Customer</th><th>Amount</th><th>Method</th><th>Payment</th><th>Fulfillment</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -146,6 +157,11 @@ export default function Orders() {
                         </span>
                       </td>
                       <td>
+                        <span className={`badge ${FULFILLMENT_BADGE[o.fulfillment_status] || 'badge-soft'}`}>
+                          {fulfillmentStatusLabel(o.fulfillment_status) || 'Not set'}
+                        </span>
+                      </td>
+                      <td>
                         <button className="btn btn-sm btn-light" onClick={() => setExpandedId(open ? null : o.id)}>
                           {open ? 'Hide' : 'View details'}
                         </button>
@@ -154,7 +170,7 @@ export default function Orders() {
 
                     {open && (
                       <tr className="adm-order-detail">
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <div className="adm-order-detail__grid">
                             {/* Delivery / shipping */}
                             <section className="adm-order-block">
@@ -210,6 +226,8 @@ export default function Orders() {
                                 Open invoice
                               </Link>
                             </section>
+
+                            <FulfillmentEditor order={o} onUpdated={updateOrder} />
 
                             {/* Timeline */}
                             {timeline(o).length > 0 && (
@@ -325,5 +343,81 @@ export default function Orders() {
         </div>
       )}
     </div>
+  );
+}
+
+function FulfillmentEditor({ order, onUpdated }) {
+  const [form, setForm] = useState(() => ({
+    fulfillmentStatus: order.fulfillment_status || '',
+    carrierName: order.carrier_name || '',
+    trackingNumber: order.tracking_number || '',
+    trackingUrl: order.tracking_url || '',
+  }));
+  const [busy, setBusy] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setForm({
+      fulfillmentStatus: order.fulfillment_status || '',
+      carrierName: order.carrier_name || '',
+      trackingNumber: order.tracking_number || '',
+      trackingUrl: order.tracking_url || '',
+    });
+  }, [order.id, order.fulfillment_status, order.carrier_name, order.tracking_number, order.tracking_url]);
+
+  const field = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
+
+  async function save(action = 'save') {
+    if (busy) return;
+    setBusy(action); setMessage(''); setError('');
+    try {
+      const safe = validateFulfillmentInput(form);
+      const updated = await adminUpdateOrderFulfillment(order.id, safe, {
+        markShipped: action === 'shipped',
+        markDelivered: action === 'delivered',
+      });
+      onUpdated(updated);
+      setMessage(action === 'save' ? 'Fulfillment details saved.' : action === 'shipped' ? 'Order marked shipped.' : 'Order marked delivered.');
+    } catch (err) {
+      setError(err?.message || 'Fulfillment details could not be saved.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  return (
+    <section className="adm-order-block adm-order-block--wide adm-fulfillment">
+      <h3>Fulfillment &amp; tracking</h3>
+      <p className="hint">Enter only details supplied by the carrier. A customer tracking link appears only for an explicit public HTTPS URL.</p>
+      <div className="adm-grid2 adm-fulfillment__fields">
+        <div className="field">
+          <label className="label" htmlFor={`fulfillment-status-${order.id}`}>Fulfillment status</label>
+          <select id={`fulfillment-status-${order.id}`} className="select" value={form.fulfillmentStatus} onChange={field('fulfillmentStatus')}>
+            <option value="">Not set</option>
+            {FULFILLMENT_STATUSES.map((status) => <option key={status} value={status}>{fulfillmentStatusLabel(status)}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label className="label" htmlFor={`carrier-${order.id}`}>Carrier</label>
+          <input id={`carrier-${order.id}`} className="input" maxLength={120} value={form.carrierName} onChange={field('carrierName')} placeholder="Carrier name" />
+        </div>
+        <div className="field">
+          <label className="label" htmlFor={`tracking-number-${order.id}`}>Tracking number</label>
+          <input id={`tracking-number-${order.id}`} className="input" maxLength={160} value={form.trackingNumber} onChange={field('trackingNumber')} placeholder="Carrier-issued number" />
+        </div>
+        <div className="field">
+          <label className="label" htmlFor={`tracking-url-${order.id}`}>Tracking URL</label>
+          <input id={`tracking-url-${order.id}`} className="input" type="url" inputMode="url" maxLength={2048} value={form.trackingUrl} onChange={field('trackingUrl')} placeholder="https://carrier.example/track/…" />
+        </div>
+      </div>
+      {error && <p className="error-text" role="alert">{error}</p>}
+      {message && <p className="adm-fulfillment__success" role="status">{message}</p>}
+      <div className="adm-fulfillment__actions">
+        <button type="button" className="btn btn-sm" disabled={Boolean(busy)} onClick={() => save('save')}>{busy === 'save' ? 'Saving…' : 'Save details'}</button>
+        <button type="button" className="btn btn-sm btn-light" disabled={Boolean(busy)} onClick={() => save('shipped')}>{busy === 'shipped' ? 'Saving…' : 'Mark shipped'}</button>
+        <button type="button" className="btn btn-sm btn-light" disabled={Boolean(busy)} onClick={() => save('delivered')}>{busy === 'delivered' ? 'Saving…' : 'Mark delivered'}</button>
+      </div>
+    </section>
   );
 }

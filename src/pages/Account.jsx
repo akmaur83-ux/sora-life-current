@@ -11,6 +11,7 @@ import { enabledOAuthProviders, signInWithProvider, PROVIDER_LABELS } from '../l
 import { MIN_PASSWORD_LENGTH, validateNewPassword } from '../lib/authRecovery.js';
 import { products, productById } from '../data/products.js';
 import { money } from '../lib/format.js';
+import { fulfillmentStatusLabel, safeTrackingUrl } from '../lib/orderFulfillment.js';
 
 // Format an ISO timestamp the same way the rest of the app does (en-IN).
 function fmtOrderDate(iso) {
@@ -19,8 +20,7 @@ function fmtOrderDate(iso) {
   return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
 }
 
-// A human status label derived only from real order columns — never an
-// invented fulfillment step (the orders schema has no shipping timeline).
+// A human payment/order status label derived only from real order columns.
 function orderStatusLabel(o) {
   if (o.status === 'cancelled') return 'Cancelled';
   if (o.payment_status === 'failed') return 'Payment failed';
@@ -355,7 +355,7 @@ function Orders() {
       // anyone else's rows. Only the columns My Orders renders are selected.
       const { data, error: err } = await supabase
         .from('orders')
-        .select('order_number, created_at, status, payment_status, payment_method, amount_paise, items')
+        .select('order_number, created_at, status, payment_status, payment_method, amount_paise, items, fulfillment_status, carrier_name, tracking_number, tracking_url, shipped_at, delivered_at')
         .order('created_at', { ascending: false })
         .limit(50);
       if (cancelled) return;
@@ -384,7 +384,7 @@ function Orders() {
   }
 
   if (orders.length === 0) {
-    return <EmptyPanel icon="package" title="No orders yet" text="When you place an order, it will appear here with full tracking." cta="/shop" ctaLabel="Start shopping" />;
+    return <EmptyPanel icon="package" title="No orders yet" text="When you place an order, its verified status will appear here." cta="/shop" ctaLabel="Start shopping" />;
   }
 
   return (
@@ -395,6 +395,8 @@ function Orders() {
           const items = Array.isArray(o.items) ? o.items : [];
           const count = items.reduce((n, l) => n + (Number(l?.qty) || 0), 0) || items.length;
           const isPaid = o.payment_status === 'paid';
+          const fulfillmentLabel = fulfillmentStatusLabel(o.fulfillment_status);
+          const trackingUrl = safeTrackingUrl(o.tracking_url);
           return (
             <div key={o.order_number} className="ordercard">
               <div className="ordercard__head">
@@ -410,6 +412,7 @@ function Orders() {
                 <div className="ordercard__meta">
                   <span className="muted">{count} item{count === 1 ? '' : 's'}</span>
                   <strong>{money((Number(o.amount_paise) || 0) / 100)}</strong>
+                  {fulfillmentLabel && <span className="muted">{fulfillmentLabel}</span>}
                 </div>
                 <div className="ordercard__actions">
                   {/* Real order number → both views resolve it for the
@@ -418,6 +421,11 @@ function Orders() {
                     <Icon name="card" size={15} /> View Invoice
                   </Link>
                   <Link to={`/passport/${o.order_number}`} className="btn btn-sm btn-light btn-goldhover">View Passport</Link>
+                  {trackingUrl && (
+                    <a href={trackingUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light">
+                      Track shipment <Icon name="externalLink" size={14} />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>

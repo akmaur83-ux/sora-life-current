@@ -172,6 +172,7 @@ export default function Passport() {
   const cards = {
     delivery: <DeliveryDetailsCard passport={passport} />,
   };
+  const currentStatus = passport.fulfillment?.label || passport.status;
 
   return (
     <div className="psp">
@@ -239,7 +240,7 @@ export default function Passport() {
           {activeTab === 'overview' ? (
             <div className="psp__summary psp__summary--single">
               <SummaryCard icon="truck" title="Order Status" cta="View status" onCta={() => setActiveTab('delivery')}>
-                <SummaryRow label="Current status" value={passport.status} />
+                <SummaryRow label="Current status" value={currentStatus} />
                 <SummaryRow label="Order date" value={passport.order.date} />
               </SummaryCard>
             </div>
@@ -433,17 +434,29 @@ function CardShell({ icon, title, subtitle, children }) {
 }
 
 function DeliveryDetailsCard({ passport }) {
+  const fulfillment = passport.fulfillment;
+  const facts = [
+    ['Carrier', fulfillment?.carrierName],
+    ['Tracking number', fulfillment?.trackingNumber],
+    ['Shipped', fulfillment?.shippedAt ? new Date(fulfillment.shippedAt).toLocaleString('en-IN') : null],
+    ['Delivered', fulfillment?.deliveredAt ? new Date(fulfillment.deliveredAt).toLocaleString('en-IN') : null],
+  ].filter(([, value]) => Boolean(value));
   return (
     <CardShell
-      icon="truck" title="Order Status" subtitle="Status recorded for this order"
+      icon="truck" title={fulfillment ? 'Fulfillment & tracking' : 'Order Status'} subtitle="Status recorded for this order"
     >
       <div className="psp-highlight">
         <Icon name="package" size={20} />
         <span>
           <span className="lbl">Current status</span>
-          <span className="val">{passport.status}</span>
+          <span className="val">{fulfillment?.label || passport.status}</span>
         </span>
       </div>
+      {facts.length > 0 && (
+        <dl className="psp-kv psp-kv--tracking">
+          {facts.map(([label, value]) => <div className="psp-kv__row" key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+        </dl>
+      )}
       <div className="psp-vt">
         {passport.timeline.map((s) => (
           <div key={s.key} className={`psp-vt__row ${s.done ? 'done' : ''}`}>
@@ -458,6 +471,11 @@ function DeliveryDetailsCard({ passport }) {
           </div>
         ))}
       </div>
+      {fulfillment?.trackingUrl && (
+        <a className="btn btn-outline btn-sm psp__tracking-link" href={fulfillment.trackingUrl} target="_blank" rel="noopener noreferrer">
+          Track on carrier website <Icon name="externalLink" size={15} />
+        </a>
+      )}
     </CardShell>
   );
 }

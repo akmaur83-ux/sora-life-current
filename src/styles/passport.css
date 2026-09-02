@@ -2787,6 +2787,15 @@
   display: none;
 }
 
+.psp-kv--tracking {
+  margin-bottom: var(--sp-5);
+}
+
+.psp__tracking-link {
+  margin-top: var(--sp-5);
+  width: fit-content;
+}
+
 @media print {
   @page { margin: 12mm; }
 

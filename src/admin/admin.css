@@ -146,6 +146,12 @@
 }
 .adm-bill__row.is-strong > span { color: var(--color-text); font-weight: 700; }
 
+.adm-fulfillment > .hint { margin: -2px 0 var(--sp-4); }
+.adm-fulfillment__fields { margin-bottom: var(--sp-3); }
+.adm-fulfillment__fields .field { margin: 0; }
+.adm-fulfillment__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--sp-3); }
+.adm-fulfillment__success { margin-top: var(--sp-2); color: var(--price-save); font-size: var(--text-sm); font-weight: 600; }
+
 /* ---- Variants table row actions ---- */
 .adm-rowacts { display: flex; gap: 6px; flex-wrap: wrap; }
 .adm-table tr.is-muted td { opacity: 0.55; }

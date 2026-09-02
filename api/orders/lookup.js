@@ -1,15 +1,13 @@
 // ============================================================
 // POST /api/orders/lookup
 //
-// Guest order lookup for the Purchase Passport screen. There is no
-// customer login in this app, so ownership is proven by knowing BOTH
-// the order number and the email address used at checkout — the same
-// "track my order" trust model used by most guest-checkout stores.
+// Guest order lookup for the Purchase Passport screen. Ownership is proven
+// by knowing BOTH the order number and the email address used at checkout.
 //
 // Runs entirely server-side with the service-role key (like
 // create-order.js and verify.js). The browser never queries the
-// `orders` table directly — RLS on that table grants SELECT to admins
-// only, and this route does not change that. It reads with the
+// `orders` table directly. Signed-in customers have a separate own-row RLS
+// policy; this guest route reads with the
 // service-role key (which bypasses RLS by design, same as the other
 // order routes) and returns a sanitized subset ONLY when the supplied
 // email matches the order's stored customer email.
