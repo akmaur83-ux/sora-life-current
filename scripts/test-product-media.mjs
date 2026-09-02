@@ -61,6 +61,10 @@ for (const u of [
   'https://foo.internal/x', 'http://0.0.0.0/x', 'http://100.100.0.1/x',
   'ftp://8.8.8.8/x', 'https://user:pass@8.8.8.8/x', 'https://8.8.8.8:22/x', 'https://[::ffff:127.0.0.1]/x',
   'http://[fd00::1]/x', 'http://[fe80::1]/x', 'http://[fc00::1234]/x',
+  'http://0177.0.0.1/x', 'http://0x7f000001/x', 'http://2130706433/x', 'http://127.1/x',
+  'http://[::ffff:7f00:1]/x', 'http://[2001:db8::1]/x', 'http://[2002:7f00:1::]/x',
+  'http://192.0.2.1/x', 'http://198.51.100.1/x', 'http://203.0.113.1/x',
+  'https://single-label/x', 'https://example.com:80/x',
 ]) {
   t(await rejects(() => assertSafeUrl(u)), `blocked: ${u}`);
 }
@@ -117,12 +121,14 @@ t(/action === 'discover'/.test(ENDPOINT) && /action === 'import'/.test(ENDPOINT)
 t(/requireAdmin/.test(ENDPOINT) && /admin_users/.test(ENDPOINT), 'admin-gated (admin_users membership)', 'STATIC');
 t(/getUserIdFromToken/.test(ENDPOINT), 'caller identity taken from validated JWT, not the body', 'STATIC');
 t(/assertSafeUrl/.test(ENDPOINT) && /safeFetch/.test(ENDPOINT), 'uses SSRF-safe URL validation + fetch', 'STATIC');
+t(/import \{ Agent \} from 'undici'/.test(SSRF) && /dispatcher/.test(SSRF) && /connect: \{ lookup \}/.test(SSRF), 'validated DNS answers are pinned into the outbound connection', 'STATIC');
+t(/redirect: 'manual'/.test(SSRF) && /resolveSafeTarget\(current\)/.test(SSRF), 'every redirect target is independently resolved and validated', 'STATIC');
 t(/validateDownloadedImage/.test(ENDPOINT), 'validates Content-Type together with magic bytes', 'STATIC');
 t(/if \(row\.isPrimary\) madePrimary = true/.test(ENDPOINT), 'primary state advances only after a confirmed media row', 'STATIC');
 t(/storage\/v1\/object\/product-images\//.test(ENDPOINT), 'copies into OUR product-images bucket (no hotlink stored)', 'STATIC');
 t(/products\/import\/\$\{randomId\(\)\}/.test(ENDPOINT), 'random, sanitized storage path (no client-controlled path)', 'STATIC');
 t(/enforceRateLimit/.test(ENDPOINT), 'rate-limited', 'STATIC');
-t(/\/\^f\[cd\]\//.test(SSRF) && /\/\^fe\[89ab\]\//.test(SSRF) && /a === 169 && b === 254/.test(SSRF), 'SSRF lib blocks ULA, link-local and metadata ranges', 'STATIC');
+t(/range\('fc00::', 7\)/.test(SSRF) && /range\('fe80::', 10\)/.test(SSRF) && /a === 169 && b === 254/.test(SSRF), 'SSRF lib blocks ULA, link-local and metadata ranges', 'STATIC');
 
 console.log('\n— Admin media safety (STATIC) —');
 {

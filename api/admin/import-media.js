@@ -18,8 +18,8 @@
 //     our own storage public URL is.
 //   • Never overwrites: import only ADDS rows; primary is set only when the
 //     product currently has no media.
-//   • DNS-rebinding TOCTOU remains: fetch resolves again after the DNS check;
-//     see safeFetch. Redirect validation does not pin the connection address.
+//   • DNS-rebinding safe: safeFetch pins each connection to the public address
+//     validated for that redirect hop instead of resolving the hostname twice.
 //
 // Runs server-side with the service-role key (like the order routes). Does not
 // touch pricing, checkout, Razorpay, or creator/attribution logic.

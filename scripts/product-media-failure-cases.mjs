@@ -23,7 +23,7 @@ function fixture(options = {}) {
   async function fetchMock(raw, init = {}) {
     const url = new URL(raw), method = init.method || 'GET';
     const path = url.pathname;
-    state.calls.push({ path, method });
+    state.calls.push({ path, method, pinned: Boolean(init.dispatcher) });
     if (url.host === '8.8.8.8' && method === 'GET') {
       if (options.redirectPrivate) return new Response(null, { status: 302, headers: { location: 'http://127.0.0.1/private' } });
       const headers = {};
@@ -253,6 +253,9 @@ export async function runMediaFailureTests(t) {
     t(result.statusCode === 401 && result.state.uploadCount === 0, 'non-admin importer blocked', 'MOCK');
     result = await call({ redirectPrivate: true });
     t(!result.data.ok && result.state.uploadCount === 0 && result.state.calls.every((entry) => entry.path !== '/private'), 'redirect to private IP rejected before fetch/upload', 'MOCK');
+    result = await call({});
+    const sourceRequest = result.state.calls.find((entry) => entry.path === '/image-1.png');
+    t(result.data.ok && sourceRequest?.pinned, 'remote media fetch carries a DNS-pinned dispatcher', 'MOCK');
 
     console.log('\n— Admin API + staged failure paths (mocked Supabase) —');
     // Only the dependency boundary is replaced; execute the unmodified admin
