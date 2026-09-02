@@ -17,7 +17,7 @@
 // ============================================================
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabase.js';
-import { hashIndicatesRecovery } from './authRecovery.js';
+import { hashIndicatesRecovery, readOAuthError, hashCarriesAuthTokens } from './authRecovery.js';
 
 export { hashIndicatesRecovery };
 
@@ -30,6 +30,15 @@ export function CustomerAuthProvider({ children }) {
   // the only thing they can do is choose a new password.
   const [recovery, setRecovery] = useState(
     () => typeof window !== 'undefined' && hashIndicatesRecovery(window.location.hash)
+  );
+  // A failed OAuth round-trip comes back as ?error=... on the redirect URL.
+  // Captured once at mount, before anything can rewrite the address bar, so
+  // the sign-in card can explain what happened instead of silently showing
+  // an empty logged-out page.
+  const [oauthError, setOauthError] = useState(
+    () => (typeof window === 'undefined'
+      ? ''
+      : readOAuthError(window.location.search, window.location.hash))
   );
 
   useEffect(() => {
@@ -54,6 +63,21 @@ export function CustomerAuthProvider({ children }) {
       // Signing out ends any recovery flow; otherwise a stale flag would
       // keep showing the set-password screen over the login card.
       if (event === 'SIGNED_OUT') setRecovery(false);
+      // A successful sign-in clears any earlier failure notice.
+      if (event === 'SIGNED_IN') setOauthError('');
+
+      // supabase-js reads the tokens out of the fragment but leaves it in the
+      // address bar, so an access token ends up in browser history and in any
+      // URL the customer copies. Strip it once the session exists — but NOT
+      // during recovery, where the fragment is still what gates the
+      // set-password screen on a refresh.
+      if (current && typeof window !== 'undefined'
+          && hashCarriesAuthTokens(window.location.hash)
+          && !hashIndicatesRecovery(window.location.hash)
+          && window.history?.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+
       setSession(current);
       setLoading(false);
     });
@@ -144,6 +168,8 @@ export function CustomerAuthProvider({ children }) {
     user: session?.user ?? null,
     loading,
     recovery,
+    oauthError,
+    clearOauthError: () => setOauthError(''),
     signUp,
     signIn,
     signOut,

@@ -539,6 +539,30 @@
 .auth__or { display: flex; align-items: center; gap: 14px; margin: var(--sp-5) 0; color: var(--color-text-muted); font-size: var(--text-sm); }
 .auth__or::before, .auth__or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .auth__social { display: flex; flex-direction: column; gap: 10px; }
+
+/* Social sign-in button. Neutral white surface with a real border, so the
+   provider mark carries the recognition rather than a coloured fill — what
+   Google's brand guidance asks for, and it keeps the card calm next to the
+   primary CTA. */
+.btn-social {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; min-height: 48px; padding: 0 18px;
+  background: #fff; color: var(--color-text);
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  font-weight: 600; font-size: var(--text-sm); line-height: 1;
+  cursor: pointer;
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.btn-social:hover:not(:disabled) {
+  border-color: var(--forest-300);
+  box-shadow: 0 2px 10px rgba(30, 58, 47, .09);
+  transform: translateY(-1px);
+}
+.btn-social:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+.btn-social:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.btn-social:disabled { opacity: .55; cursor: not-allowed; }
+.btn-social__mark { flex: 0 0 auto; display: block; }
+
 .auth__guest { text-align: center; margin-top: var(--sp-5); }
 .auth__guest a { font-weight: 600; color: var(--color-text-muted); }
 .auth__guest a:hover { color: var(--color-primary); }

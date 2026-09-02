@@ -10,6 +10,7 @@ import {
 } from '../lib/creatorApi.js';
 import { money2 } from '../lib/format.js';
 import CreatorEarnings from '../components/creator/CreatorEarnings.jsx';
+import CreatorHowItWorks from '../components/creator/CreatorHowItWorks.jsx';
 import CreatorPayouts from '../components/creator/CreatorPayouts.jsx';
 
 // ============================================================
@@ -32,6 +33,7 @@ const NAV = [
   { id: 'analytics', label: 'Analytics', icon: 'award' },
   { id: 'earnings', label: 'Earnings', icon: 'crown' },
   { id: 'payouts', label: 'Payouts', icon: 'card' },
+  { id: 'how-it-works', label: 'How you earn', icon: 'circleAlert' },
   { id: 'profile', label: 'Profile', icon: 'user' },
 ];
 
@@ -311,7 +313,14 @@ export default function CreatorPortal() {
           )}
 
           {tab === 'earnings' && (
-            <CreatorEarnings creator={creator} earnings={earnings} />
+            <>
+              <CreatorEarnings creator={creator} earnings={earnings} />
+              <CreatorHowItWorks creator={creator} earnings={earnings} />
+            </>
+          )}
+
+          {tab === 'how-it-works' && (
+            <CreatorHowItWorks creator={creator} earnings={earnings} />
           )}
 
           {tab === 'payouts' && (

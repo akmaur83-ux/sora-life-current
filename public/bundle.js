@@ -29221,6 +29221,56 @@
 	  return '';
 	}
 
+	// ------------------------------------------------------------
+	// OAuth callback handling
+	//
+	// Supabase returns a FAILED sign-in to the redirect URL carrying `error` and
+	// `error_description` — sometimes in the query string, sometimes in the hash,
+	// depending on which stage failed. Nothing read either, so a customer who
+	// declined the Google consent screen, or hit a provider that was not
+	// configured, landed on /account with no session and no explanation: a silent
+	// dead end that looks like the site is broken.
+	// ------------------------------------------------------------
+
+	/** Messages we are willing to show. Provider text is never echoed verbatim. */
+	const OAUTH_ERROR_MESSAGES = {
+	  access_denied: 'Sign-in was cancelled. You can try again or use your email and password.',
+	  server_error: 'That sign-in provider had a problem. Please try again, or use your email and password.',
+	  temporarily_unavailable: 'That sign-in provider is unavailable right now. Please try again shortly.',
+	  provider_email_needs_verification: 'Please verify your email with that provider first, then try again.',
+	  // Raised when an address already belongs to an account created another way.
+	  invalid_request: 'We could not complete that sign-in. If you already have an account, sign in with your email and password.'
+	};
+
+	/**
+	 * Extract an OAuth failure from a callback URL.
+	 *
+	 * Returns a safe, human message, or '' when the URL carries no error. The
+	 * provider's own `error_description` is deliberately NOT rendered: it is
+	 * attacker-influencable text arriving in a URL, and echoing it into the page
+	 * would be a reflected-content risk for no benefit.
+	 */
+	function readOAuthError(search, hash) {
+	  const fromQuery = new URLSearchParams(typeof search === 'string' ? search.replace(/^\?/, '') : '');
+	  const fromHash = new URLSearchParams(typeof hash === 'string' ? hash.replace(/^#/, '') : '');
+	  const code = fromQuery.get('error') || fromHash.get('error') || fromQuery.get('error_code') || fromHash.get('error_code');
+	  if (!code) return '';
+	  return OAUTH_ERROR_MESSAGES[code] || 'We could not complete that sign-in. Please try again, or use your email and password.';
+	}
+
+	/**
+	 * True when the URL fragment carries auth tokens.
+	 *
+	 * supabase-js consumes them, but leaves them in the address bar — so the
+	 * access token sits in browser history and in anything the customer pastes.
+	 * The caller strips the fragment once the session is established.
+	 */
+	function hashCarriesAuthTokens(hash) {
+	  if (typeof hash !== 'string' || !hash) return false;
+	  const params = new URLSearchParams(hash.replace(/^#/, ''));
+	  return params.has('access_token') || params.has('refresh_token');
+	}
+
 	// ============================================================
 	// Customer authentication (Supabase Auth, email/password).
 	//
@@ -29247,6 +29297,11 @@
 	  // Set while the customer is completing a reset. Gates the account UI so
 	  // the only thing they can do is choose a new password.
 	  const [recovery, setRecovery] = reactExports.useState(() => typeof window !== 'undefined' && hashIndicatesRecovery(window.location.hash));
+	  // A failed OAuth round-trip comes back as ?error=... on the redirect URL.
+	  // Captured once at mount, before anything can rewrite the address bar, so
+	  // the sign-in card can explain what happened instead of silently showing
+	  // an empty logged-out page.
+	  const [oauthError, setOauthError] = reactExports.useState(() => typeof window === 'undefined' ? '' : readOAuthError(window.location.search, window.location.hash));
 	  reactExports.useEffect(() => {
 	    let mounted = true;
 
@@ -29275,6 +29330,17 @@
 	      // Signing out ends any recovery flow; otherwise a stale flag would
 	      // keep showing the set-password screen over the login card.
 	      if (event === 'SIGNED_OUT') setRecovery(false);
+	      // A successful sign-in clears any earlier failure notice.
+	      if (event === 'SIGNED_IN') setOauthError('');
+
+	      // supabase-js reads the tokens out of the fragment but leaves it in the
+	      // address bar, so an access token ends up in browser history and in any
+	      // URL the customer copies. Strip it once the session exists — but NOT
+	      // during recovery, where the fragment is still what gates the
+	      // set-password screen on a refresh.
+	      if (current && typeof window !== 'undefined' && hashCarriesAuthTokens(window.location.hash) && !hashIndicatesRecovery(window.location.hash) && window.history?.replaceState) {
+	        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+	      }
 	      setSession(current);
 	      setLoading(false);
 	    });
@@ -29411,6 +29477,8 @@
 	    user: session?.user ?? null,
 	    loading,
 	    recovery,
+	    oauthError,
+	    clearOauthError: () => setOauthError(''),
 	    signUp,
 	    signIn,
 	    signOut,
@@ -40484,11 +40552,63 @@
 	    })]
 	  });
 	}
+
+	/**
+	 * Provider glyph for a social sign-in button.
+	 *
+	 * Google's brand guidelines require their own mark on a "Continue with
+	 * Google" button, so the four-colour G is drawn inline rather than pulled
+	 * from a CDN (the CSP blocks third-party images, and an <img> would flash).
+	 */
+	function ProviderMark({
+	  provider
+	}) {
+	  if (provider === 'google') {
+	    return /*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+	      className: "btn-social__mark",
+	      viewBox: "0 0 18 18",
+	      width: "18",
+	      height: "18",
+	      "aria-hidden": "true",
+	      focusable: "false",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	        fill: "#4285F4",
+	        d: "M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62Z"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	        fill: "#34A853",
+	        d: "M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18Z"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	        fill: "#FBBC05",
+	        d: "M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33Z"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	        fill: "#EA4335",
+	        d: "M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58Z"
+	      })]
+	    });
+	  }
+	  if (provider === 'apple') {
+	    return /*#__PURE__*/jsxRuntimeExports.jsx("svg", {
+	      className: "btn-social__mark",
+	      viewBox: "0 0 18 18",
+	      width: "18",
+	      height: "18",
+	      "aria-hidden": "true",
+	      focusable: "false",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	        fill: "currentColor",
+	        d: "M12.4 9.6c0-1.9 1.5-2.8 1.6-2.9-.9-1.3-2.2-1.4-2.7-1.5-1.2-.1-2.3.7-2.9.7-.6 0-1.5-.7-2.5-.7-1.3 0-2.5.7-3.1 1.9-1.3 2.3-.3 5.8.9 7.6.6.9 1.4 1.9 2.4 1.9.9 0 1.3-.6 2.4-.6s1.4.6 2.4.6c1 0 1.7-.9 2.3-1.8.7-1 1-2 1-2.1 0 0-1.9-.7-1.8-3.1ZM10.7 3.6c.5-.6.9-1.5.8-2.4-.8 0-1.7.5-2.2 1.2-.5.6-.9 1.5-.8 2.4.9.1 1.7-.5 2.2-1.2Z"
+	      })
+	    });
+	  }
+	  return null;
+	}
 	function AuthView() {
 	  const {
 	    signIn,
 	    signUp,
-	    resetPassword
+	    resetPassword,
+	    oauthError,
+	    clearOauthError
 	  } = useCustomerAuth();
 	  // 'login' | 'signup' | 'forgot'. The two tabs cover login/signup; the
 	  // "Forgot password?" link switches into the forgot sub-view.
@@ -40506,11 +40626,13 @@
 	    setMode(m);
 	    setError('');
 	    setInfo('');
+	    clearOauthError();
 	  };
 	  const startOAuth = async provider => {
 	    if (busy) return;
 	    setBusy(true);
 	    setError('');
+	    clearOauthError();
 	    // On success the browser navigates away to the provider, so `busy` is
 	    // only reset when the flow could not start at all.
 	    const {
@@ -40527,6 +40649,7 @@
 	    setBusy(true);
 	    setError('');
 	    setInfo('');
+	    clearOauthError();
 	    try {
 	      if (mode === 'login') {
 	        const {
@@ -40696,6 +40819,13 @@
 	              marginBottom: 'var(--sp-3)'
 	            },
 	            children: "Enter your email and we'll send you a link to reset your password."
+	          }), oauthError && !error && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "error-text",
+	            role: "alert",
+	            style: {
+	              marginBottom: 'var(--sp-3)'
+	            },
+	            children: oauthError
 	          }), error && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	            className: "error-text",
 	            role: "alert",
@@ -40743,12 +40873,16 @@
 	              })
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	              className: "auth__social",
-	              children: socialProviders.map(provider => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	              children: socialProviders.map(provider => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
 	                type: "button",
-	                className: "btn btn-light btn-block",
+	                className: "btn btn-social btn-block",
 	                disabled: busy,
 	                onClick: () => startOAuth(provider),
-	                children: PROVIDER_LABELS[provider]
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProviderMark, {
+	                  provider: provider
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  children: PROVIDER_LABELS[provider]
+	                })]
 	              }, provider))
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -43430,6 +43564,111 @@
 	  });
 	}
 
+	const ordinal$1 = n => {
+	  const v = Number(n);
+	  if (!Number.isFinite(v)) return '';
+	  const s = ['th', 'st', 'nd', 'rd'];
+	  const k = v % 100;
+	  return `${v}${s[(k - 20) % 10] || s[k] || s[0]}`;
+	};
+	function CreatorHowItWorks({
+	  creator,
+	  earnings
+	}) {
+	  const rate = Number(earnings?.commission_rate ?? creator?.default_commission_rate);
+	  const holdDays = Number(earnings?.settlement_hold_days);
+	  const minPayout = Number(earnings?.min_payout);
+	  const payoutDay = Number(earnings?.payout_day);
+	  const windowDays = Number(creator?.default_attribution_window_days);
+	  const has = n => Number.isFinite(n) && n > 0;
+	  const steps = [{
+	    icon: 'externalLink',
+	    tone: 'brand',
+	    title: 'Share your link or code',
+	    body: has(windowDays) ? `Every visit through your link is recorded against your account for ${windowDays} days. If that shopper buys within the window, the sale is attributed to you.` : 'Every visit through your link is recorded against your account, and a purchase within your attribution window is attributed to you.'
+	  }, {
+	    icon: 'bag',
+	    tone: 'brand',
+	    title: 'They shop as normal',
+	    body: 'Nothing changes for the customer — same price, same checkout. You never see their personal details.'
+	  }, {
+	    icon: 'check',
+	    tone: 'ok',
+	    title: 'The sale qualifies',
+	    body: has(rate) ? `Once the order is paid, commission is calculated at ${rate}% of the eligible sale value and locked in at that rate. A campaign link can carry its own rate, and later rate changes never alter commission you have already earned.` : 'Once the order is paid, commission is calculated on the eligible sale value at your agreed rate and locked in — later rate changes never alter commission you have already earned.'
+	  }, {
+	    icon: 'clock',
+	    tone: 'warn',
+	    title: 'It waits out the hold period',
+	    body: has(holdDays) ? `Commission sits as Held for ${holdDays} days after the sale qualifies. This covers returns and cancellations — if an order is refunded in that time, the commission is reversed at the same rate it was earned.` : 'Commission sits as Held for a settlement period after the sale qualifies, covering returns and cancellations.'
+	  }, {
+	    icon: 'card',
+	    tone: 'ok',
+	    title: 'It clears to Available',
+	    body: 'When the hold period passes, the commission moves to your available balance. That is the money you can withdraw.'
+	  }, {
+	    icon: 'shield',
+	    tone: 'brand',
+	    title: 'Verify your details once',
+	    body: 'Submit your KYC and payout details. We store them masked, and an admin verifies them before your first withdrawal.'
+	  }, {
+	    icon: 'arrowRight',
+	    tone: 'brand',
+	    title: 'Request your payout',
+	    body: [has(payoutDay) ? `Requests open on the ${ordinal$1(payoutDay)} of each month` : 'Requests open on the configured payout day each month', has(minPayout) ? `once your available balance reaches ${money2(minPayout)}` : 'once your available balance reaches the minimum'].join(', ') + '. A request withdraws your full cleared balance, and that exact amount is reserved against your ledger.'
+	  }, {
+	    icon: 'award',
+	    tone: 'ok',
+	    title: 'We verify and pay you',
+	    body: 'An admin reviews the request and transfers the money to your verified account. The transfer is made manually and then recorded here with its reference — the amount paid always matches the amount approved.'
+	  }];
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    className: "crp-hiw",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+	      className: "crp-hiw__head",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        className: "crp-hiw__title",
+	        children: "How you earn"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "crp-hiw__lede",
+	        children: "From a shared link to money in your account \u2014 this is exactly what happens, and nothing else."
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+	      className: "crp-hiw__steps",
+	      children: steps.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        className: `crp-hiw__step is-${s.tone}`,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "crp-hiw__num",
+	          "aria-hidden": "true",
+	          children: i + 1
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "crp-hiw__ic",
+	          "aria-hidden": "true",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: s.icon,
+	            size: 17
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "crp-hiw__body",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	            children: s.title
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: s.body
+	          })]
+	        })]
+	      }, s.title))
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	      className: "crp-hiw__foot",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "circleAlert",
+	        size: 15
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        children: "Commission is earned on eligible sale value, not on shipping or fees. Self-referred orders don\u2019t qualify. Payouts are made manually by our team \u2014 SORA LIFE never moves money automatically."
+	      })]
+	    })]
+	  });
+	}
+
 	const fmtDate$2 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
 	  day: 'numeric',
 	  month: 'short',
@@ -44085,6 +44324,10 @@
 	  label: 'Payouts',
 	  icon: 'card'
 	}, {
+	  id: 'how-it-works',
+	  label: 'How you earn',
+	  icon: 'circleAlert'
+	}, {
 	  id: 'profile',
 	  label: 'Profile',
 	  icon: 'user'
@@ -44488,7 +44731,15 @@
 	              children: "Payouts"
 	            }), " once it clears. We never share your shoppers\u2019 personal details with you."]
 	          })]
-	        }), tab === 'earnings' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorEarnings, {
+	        }), tab === 'earnings' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(CreatorEarnings, {
+	            creator: creator,
+	            earnings: earnings
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorHowItWorks, {
+	            creator: creator,
+	            earnings: earnings
+	          })]
+	        }), tab === 'how-it-works' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorHowItWorks, {
 	          creator: creator,
 	          earnings: earnings
 	        }), tab === 'payouts' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorPayouts, {
