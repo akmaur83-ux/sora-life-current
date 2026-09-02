@@ -1,14 +1,10 @@
 // ============================================================
 // PURCHASE PASSPORT — real order data adapter.
 //
-// There is no customer login in this app (Account.jsx's "auth" is a
-// local-state mock, not wired to anything). Ownership of an order is
-// proven instead by knowing BOTH the order number and the email used
-// at checkout — verified server-side in api/orders/lookup.js, which
-// is the ONLY thing that can read the `orders` table for a customer
-// (existing RLS still grants admins-only SELECT; nothing here weakens
-// that). This module never talks to Supabase directly and never sees
-// a service-role key — it only calls that one API route.
+// Guests prove ownership by knowing BOTH the order number and the email
+// used at checkout, verified server-side in api/orders/lookup.js.
+// Signed-in customers instead read only their own order through the
+// existing orders RLS policy. Neither path exposes a service-role key.
 //
 // Anything the `orders` schema genuinely has no column for (batch
 // number, expiry date, courier/tracking, delivery ETA, fulfillment
@@ -36,30 +32,6 @@ function formatDateTime(iso) {
   const date = formatDate(iso);
   const time = new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d);
   return `${date}, ${time}`;
-}
-
-/**
- * Estimated delivery window, derived only from data we actually have: the
- * order date plus the standard 3–5 day dispatch window already quoted at
- * checkout. It is an ESTIMATE (and labelled as one) — not a courier promise.
- * Cancelled orders show nothing.
- */
-function estimateDelivery(order) {
-  const start = new Date(order?.createdAt);
-  if (Number.isNaN(start.getTime()) || order?.status === 'cancelled') {
-    return { available: false, display: NOT_AVAILABLE };
-  }
-  const from = new Date(start); from.setDate(from.getDate() + 3);
-  const to = new Date(start); to.setDate(to.getDate() + 5);
-  const fmtShort = (d) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(d);
-  return { available: true, display: `${fmtShort(from)} – ${formatDate(to.toISOString())}` };
-}
-
-function daysAgo(iso) {
-  if (!iso) return null;
-  const d = new Date(iso).getTime();
-  if (Number.isNaN(d)) return null;
-  return Math.max(0, Math.floor((Date.now() - d) / 86400000));
 }
 
 // Same field order/skip-if-blank convention as the admin Orders page
@@ -92,7 +64,6 @@ function resolveProduct(item) {
     gallery: catalogProduct?.gallery || [],
     category: catalogProduct?.category || null,
     shortDescription: catalogProduct?.shortDescription || catalogProduct?.description || '',
-    usage: catalogProduct?.usage || '',
   };
 }
 
@@ -111,27 +82,16 @@ export function mapOrderToPassport(order) {
   const totalQty = items.reduce((n, l) => n + (Number(l.qty) || 0), 0);
   const memberName = [order.customer?.firstName, order.customer?.lastName].filter(Boolean).join(' ').trim() || 'Guest';
 
-  // The schema has no delivery/fulfillment tracking of any kind yet —
-  // only "an order exists" is provable. See report: DeliveryTimeline
-  // beyond "Ordered", ETA, and "Delivered on" all require new columns.
+  // The schema has no carrier or fulfillment events. Render only the one
+  // event the order record proves, rather than inventing future milestones.
   const timeline = [
-    { key: 'ordered', label: 'Ordered', short: 'Ordered', date: formatDate(order.createdAt), time: formatDateTime(order.createdAt), done: true, current: true },
-    { key: 'packed', label: 'Packed', short: 'Packed', date: null, time: null, done: false, current: false },
-    { key: 'shipped', label: 'Shipped', short: 'Shipped', date: null, time: null, done: false, current: false },
-    { key: 'out_for_delivery', label: 'Out for Delivery', short: 'Out for Delivery', date: null, time: null, done: false, current: false },
-    { key: 'delivered', label: 'Delivered', short: 'Delivered', date: null, time: null, done: false, current: false },
+    { key: 'ordered', label: 'Order recorded', short: 'Order recorded', date: formatDate(order.createdAt), time: formatDateTime(order.createdAt), done: true, current: true },
   ];
 
   return {
     passportId: order.orderNumber,
-    member: { name: memberName, tier: 'Premium Member', tierIcon: 'award' },
+    member: { name: memberName, tier: 'Verified order', tierIcon: 'checkCircle' },
     status: computeStatusLabel(order),
-    eta: estimateDelivery(order),
-    // Courier/tracking have no column on `orders` yet — surfaced as
-    // "not available" rather than invented. Wired here so the UI reads the
-    // real values automatically once fulfilment data exists.
-    shipping: { carrier: null, trackingId: null },
-    deliveredOn: null,
     product: {
       ...product,
       qty: first.qty || totalQty || 1,
@@ -144,46 +104,6 @@ export function mapOrderToPassport(order) {
       address: formatAddress(order.customer),
     },
     timeline,
-    care: [
-      { icon: 'clock', title: 'Before You Use', desc: 'Consult your physician if you are pregnant, nursing, or on medication.' },
-      { icon: 'droplet', title: 'How to Use', desc: product.usage || 'Use as directed on the product label, or as directed by your practitioner.' },
-      { icon: 'home', title: 'Storage', desc: 'Store in a cool, dry place away from direct sunlight. Keep tightly sealed.' },
-      { icon: 'circleAlert', title: 'Important', desc: 'Discontinue use and consult a doctor if any adverse reaction occurs.' },
-    ],
-    returns: {
-      windowDate: null,
-      actions: [
-        { icon: 'return', title: 'Return this product', sub: 'Initiate a return request' },
-        { icon: 'circleAlert', title: 'Report an issue', sub: 'Tell us what went wrong' },
-        { icon: 'chat', title: 'Chat with our team', sub: 'We usually reply in minutes' },
-      ],
-    },
-    identity: {
-      brand: 'SORA LIFE',
-      batch: null,
-      mfgDate: null,
-      expiryDate: null,
-    },
-    experience: {
-      faces: [
-        { key: 'loved', label: 'Loved it' },
-        { key: 'good', label: 'Good' },
-        { key: 'unsure', label: 'Not sure yet' },
-        { key: 'not_for_me', label: 'Not for me' },
-        { key: 'bad', label: 'Very bad' },
-      ],
-      chips: ['Quality', 'Ingredients', 'Results', 'Packaging', 'Delivery', 'Value for Money', 'Other'],
-    },
-    reminder: {
-      purchasedDaysAgo: daysAgo(order.createdAt),
-      options: [
-        { value: 7, label: 'Remind me in 7 days' },
-        { value: 14, label: 'Remind me in 14 days' },
-        { value: 30, label: 'Remind me in 30 days' },
-        { value: 'none', label: 'No reminder' },
-      ],
-      selected: 14,
-    },
   };
 }
 

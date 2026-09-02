@@ -2766,3 +2766,80 @@
 @media (max-width: 900px) {
   .psp__hero-media .pimg img { animation: none !important; }
 }
+
+/* Passport actions are limited to facts present on the order record. A
+   single recorded-order event should read as a compact status, not as an
+   implied multi-stage courier tracker. */
+.psp__summary--single {
+  grid-template-columns: minmax(0, 480px);
+}
+
+.psp__timeline--single .psp__tl-track {
+  max-width: 320px;
+}
+
+.psp__timeline--single .psp__tl-node {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.psp__timeline--single .psp__tl-connector {
+  display: none;
+}
+
+@media print {
+  @page { margin: 12mm; }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  .psp {
+    display: block !important;
+    min-height: auto !important;
+    background: #fff !important;
+    color: #1a1a1a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .psp::before,
+  .psp::after,
+  .psp__main::before,
+  .psp__main::after,
+  .psp__side,
+  .psp__side-scrim,
+  .psp__topbar,
+  .psp__head-rule,
+  .psp__tabs,
+  .psp-sum__cta,
+  .no-print {
+    display: none !important;
+  }
+
+  .psp__main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .psp__inner {
+    max-width: none !important;
+  }
+
+  .psp__head,
+  .psp__herowrap,
+  .psp__hero,
+  .psp__timeline,
+  .psp__summary,
+  .psp-sum,
+  .psp-card {
+    break-inside: avoid;
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .psp__summary--single {
+    grid-template-columns: 1fr !important;
+  }
+}
