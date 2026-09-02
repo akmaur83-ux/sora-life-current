@@ -10389,7 +10389,7 @@
 	  default: '#F0C169',
 	  css: ['--st-footer-accent']
 	}];
-	const GROUPS = ['Brand', 'Header', 'Homepage', 'Product cards', 'Buttons', 'Typography', 'Surfaces', 'Footer'];
+	const GROUPS$1 = ['Brand', 'Header', 'Homepage', 'Product cards', 'Buttons', 'Typography', 'Surfaces', 'Footer'];
 	const TOKEN_BY_KEY = Object.fromEntries(TOKENS.map(t => [t.key, t]));
 
 	// SORA Classic == the exact current storefront. Every default equals the value
@@ -15230,6 +15230,301 @@
 	  });
 	}
 
+	// Structured presentation fields inside site_settings.homepage.visuals.
+	// No CSS/HTML input is accepted. Shared by the editor and storefront reader.
+	const IMAGE_POSITIONS = ['left top', 'center top', 'right top', 'left center', 'center center', 'right center', 'left bottom', 'center bottom', 'right bottom'];
+	const color$1 = (label, value) => ({
+	  label,
+	  type: 'color',
+	  value
+	});
+	const number$1 = (label, value, min, max, step = 1) => ({
+	  label,
+	  type: 'number',
+	  value,
+	  min,
+	  max,
+	  step
+	});
+	const toggle = (label, value = false) => ({
+	  label,
+	  type: 'boolean',
+	  value
+	});
+	const image = label => ({
+	  label,
+	  type: 'image',
+	  value: ''
+	});
+	const select$1 = (label, value, options) => ({
+	  label,
+	  type: 'select',
+	  value,
+	  options
+	});
+	const HOMEPAGE_VISUAL_FIELDS = {
+	  categoryStrip: {
+	    enabled: toggle('Enable category background', false),
+	    backgroundColor: color$1('Background color', '#F7F1E7'),
+	    imageUrl: image('Background strip image'),
+	    imageSize: select$1('Background image fit', 'cover', ['cover', 'contain']),
+	    imagePosition: select$1('Background image position', 'center center', IMAGE_POSITIONS),
+	    imageOpacity: number$1('Background image opacity', 1, 0, 1, 0.05),
+	    overlayColor: color$1('Overlay color', '#FBF8F1'),
+	    overlayOpacity: number$1('Overlay strength (0 = off)', 0, 0, 1, 0.05),
+	    paddingTop: number$1('Top padding (px)', 12, 0, 48),
+	    paddingBottom: number$1('Bottom padding (px)', 12, 0, 48),
+	    borderTop: toggle('Show top border'),
+	    borderBottom: toggle('Show bottom border'),
+	    borderColor: color$1('Border color', '#DED2C4'),
+	    borderWidth: number$1('Border thickness (px)', 1, 0, 4),
+	    radius: number$1('Corner radius (px)', 8, 0, 16),
+	    textureUrl: image('Decorative texture'),
+	    texturePosition: select$1('Texture position', 'center center', IMAGE_POSITIONS),
+	    leftImage: image('Left decoration'),
+	    rightImage: image('Right decoration'),
+	    decorationOpacity: number$1('Decoration opacity', 0.25, 0, 1, 0.05),
+	    decorationSize: number$1('Decoration width (px)', 120, 24, 240),
+	    decorationPosition: select$1('Decoration vertical position', 'center', ['top', 'center', 'bottom']),
+	    hideTextureMobile: toggle('Hide texture on mobile'),
+	    hideLeftMobile: toggle('Hide left decoration on mobile', true),
+	    hideRightMobile: toggle('Hide right decoration on mobile', true)
+	  },
+	  offers: {
+	    backgroundColor: color$1('Section background', '#FBF8F1'),
+	    frameColor: color$1('Frame interior', '#FFF8ED'),
+	    frameEnabled: toggle('Show bordered frame', true),
+	    borderColor: color$1('Frame border color', '#702B3B'),
+	    borderWidth: number$1('Frame border thickness (px)', 1, 0, 4),
+	    accentColor: color$1('Heading and accent color', '#702B3B'),
+	    radius: number$1('Frame corner radius (px)', 12, 0, 16),
+	    textureUrl: image('Frame background image / texture'),
+	    textureOpacity: number$1('Texture opacity', 0.12, 0, 1, 0.01),
+	    padding: number$1('Section top and bottom padding (px)', 20, 0, 48),
+	    gap: number$1('Gap between promotions (px)', 16, 8, 32),
+	    desktopColumns: select$1('Maximum promotions per desktop row', 2, [1, 2, 3]),
+	    mobileWidth: number$1('Mobile promotion width (%)', 90, 88, 92),
+	    decorationUrl: image('Optional decorative artwork'),
+	    decorationOpacity: number$1('Artwork opacity', 0.15, 0, 1, 0.05),
+	    decorationSize: number$1('Artwork width (px)', 160, 24, 240)
+	  }
+	};
+	function safeVisualUrl(value) {
+	  if (typeof value !== 'string' || !value.trim()) return '';
+	  const raw = value.trim();
+	  if (raw.length > 2000 || /[\s\\\u0000-\u001f\u007f]/.test(raw)) return '';
+	  let url;
+	  try {
+	    url = new URL(raw, 'https://visual.invalid');
+	  } catch {
+	    return '';
+	  }
+	  if (url.username || url.password || url.port || /\.(svg|html?)$/i.test(url.pathname)) return '';
+	  let path;
+	  try {
+	    path = decodeURIComponent(url.pathname);
+	  } catch {
+	    return '';
+	  }
+	  if (/[\\\u0000-\u001f\u007f]/.test(path)) return '';
+	  if (raw.startsWith('/') && !raw.startsWith('//') && url.origin === 'https://visual.invalid') return raw;
+	  if (!raw.startsWith('https://') || url.protocol !== 'https:') return '';
+	  const host = url.hostname;
+	  // Visual URLs load in <img>, never via a server fetch. Still reject local,
+	  // private and literal-IP destinations rather than probing a user's LAN.
+	  if (!host.includes('.') || /^(localhost|.*\.(localhost|local|internal|test|invalid|lan|home\.arpa))$/i.test(host) || /^[\d.]+$/.test(host) || host.includes(':')) return '';
+	  return url.href;
+	}
+	function sanitizeHomepageVisuals(raw) {
+	  const result = {};
+	  for (const [group, fields] of Object.entries(HOMEPAGE_VISUAL_FIELDS)) {
+	    result[group] = {};
+	    for (const [key, field] of Object.entries(fields)) {
+	      const v = raw?.[group]?.[key];
+	      let clean = field.value;
+	      if (field.type === 'boolean' && typeof v === 'boolean') clean = v;
+	      if (field.type === 'color' && typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) clean = v;
+	      if (field.type === 'image') clean = safeVisualUrl(v);
+	      if (field.type === 'select' && field.options.includes(v)) clean = v;
+	      if (field.type === 'number' && v !== '' && v != null && Number.isFinite(Number(v))) {
+	        clean = Math.min(field.max, Math.max(field.min, Number(v)));
+	      }
+	      result[group][key] = clean;
+	    }
+	  }
+	  return result;
+	}
+	function mergeHomepageVisuals(current, visuals) {
+	  return {
+	    ...(current && typeof current === 'object' ? current : {}),
+	    visuals: sanitizeHomepageVisuals(visuals)
+	  };
+	}
+
+	// Keep the placement runtime and its sort/date/active rules authoritative.
+	// De-duplicate IDs only; never slice away additional posters or offer cards.
+	function uniqueHomepagePromotions(promotions) {
+	  const seen = new Set();
+	  return promotions.filter(promo => {
+	    if (seen.has(promo.id)) return false;
+	    seen.add(promo.id);
+	    return true;
+	  });
+	}
+
+	const number = (label, value, min, max, step = 1) => ({
+	  label,
+	  type: 'number',
+	  value,
+	  min,
+	  max,
+	  step
+	});
+	const select = (label, value, options) => ({
+	  label,
+	  type: 'select',
+	  value,
+	  options
+	});
+	const color = label => ({
+	  label,
+	  type: 'color',
+	  value: ''
+	});
+	const HERO_CTA_FIELDS = {
+	  desktopPosition: select('Desktop position', 'flow', ['flow', 'custom']),
+	  x: number('Desktop horizontal position (%)', 0, 0, 100),
+	  y: number('Desktop vertical position (%)', 75, 0, 100),
+	  mobilePosition: select('Mobile position', 'auto', ['auto', 'custom']),
+	  mobileX: number('Mobile horizontal position (%)', 50, 0, 100),
+	  mobileY: number('Mobile vertical position (%)', 95, 0, 100),
+	  width: number('Button width (px; 0 = automatic)', 118, 0, 480),
+	  paddingX: number('Horizontal padding (px)', 14, 4, 48),
+	  paddingY: number('Vertical padding (px)', 7, 0, 24),
+	  backgroundColor: color('Background color (blank = theme)'),
+	  textColor: color('Text color (blank = theme)'),
+	  borderColor: color('Border color (blank = theme)'),
+	  borderWidth: number('Border thickness (px)', 1, 0, 6),
+	  radius: number('Corner radius (px)', 2, 0, 40),
+	  fontSize: number('Font size (px; 0 = responsive default)', 13, 0, 24),
+	  fontWeight: select('Font weight', 700, [400, 500, 600, 700]),
+	  opacity: number('Button opacity', 1, 0.3, 1, 0.05),
+	  shadow: select('Button shadow', 'none', ['none', 'subtle']),
+	  textureUrl: {
+	    label: 'Button background texture',
+	    type: 'image',
+	    value: ''
+	  },
+	  textureOpacity: number('Texture opacity', 0.25, 0, 1, 0.05),
+	  textureFit: select('Texture fit', 'cover', ['cover', 'contain']),
+	  iconUrl: {
+	    label: 'Button icon image',
+	    type: 'image',
+	    value: ''
+	  },
+	  iconSide: select('Icon side', 'left', ['left', 'right']),
+	  iconSize: number('Icon size (px)', 16, 10, 32)
+	};
+	function sanitizeHeroCta(input) {
+	  const raw = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+	  return Object.fromEntries(Object.entries(HERO_CTA_FIELDS).map(([key, f]) => {
+	    const v = raw[key];
+	    let value = f.value;
+	    if (f.type === 'number' && v !== '' && (typeof v === 'number' || typeof v === 'string') && Number.isFinite(Number(v))) value = Math.min(f.max, Math.max(f.min, Number(v)));
+	    if (f.type === 'select' && f.options.includes(v)) value = v;
+	    if (f.type === 'color' && typeof v === 'string' && /^#[\da-f]{6}$/i.test(v)) value = v;
+	    if (f.type === 'image') value = safeVisualUrl(v);
+	    return [key, value];
+	  }));
+	}
+	function mergeHeroCta(homepage, slideId, appearance) {
+	  if (typeof slideId !== 'string' || !/^[\w-]{1,100}$/.test(slideId) || ['__proto__', 'constructor', 'prototype'].includes(slideId)) throw new Error('Invalid slide ID');
+	  return {
+	    ...homepage,
+	    heroCtas: {
+	      ...(homepage?.heroCtas || {}),
+	      [slideId]: sanitizeHeroCta(appearance)
+	    }
+	  };
+	}
+	function heroCtaStyle(input) {
+	  const a = sanitizeHeroCta(input);
+	  // Auto always resolves to the current safe mobile default, including for
+	  // older saved records that may contain legacy X/Y values.
+	  const mobileX = a.mobilePosition === 'custom' ? a.mobileX : 50;
+	  const mobileY = a.mobilePosition === 'custom' ? a.mobileY : 95;
+	  return {
+	    '--hcta-x': `${a.x}%`,
+	    '--hcta-y': `${a.y}%`,
+	    '--hcta-mobile-x': `${mobileX}%`,
+	    '--hcta-mobile-y': `${mobileY}%`,
+	    '--hcta-width': a.width ? `${a.width}px` : 'auto',
+	    '--hcta-px': `${a.paddingX}px`,
+	    '--hcta-py': `${a.paddingY}px`,
+	    '--hcta-bg': a.backgroundColor || 'var(--slv2-primary, var(--slv2-f700))',
+	    '--hcta-text': a.textColor || 'var(--slv2-ivory)',
+	    '--hcta-border': a.borderColor || 'transparent',
+	    '--hcta-border-width': `${a.borderWidth}px`,
+	    '--hcta-radius': `${a.radius}px`,
+	    '--hcta-font': a.fontSize ? `${a.fontSize}px` : undefined,
+	    '--hcta-weight': a.fontWeight,
+	    '--hcta-opacity': a.opacity,
+	    '--hcta-shadow': a.shadow === 'subtle' ? '0 2px 6px rgb(0 0 0 / 16%)' : 'none',
+	    '--hcta-texture-opacity': a.textureOpacity,
+	    '--hcta-texture-fit': a.textureFit,
+	    '--hcta-icon-size': `${a.iconSize}px`
+	  };
+	}
+
+	function CtaImage({
+	  src,
+	  className
+	}) {
+	  const [failed, setFailed] = reactExports.useState(false);
+	  return !failed && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	    src: src,
+	    className: className,
+	    alt: "",
+	    "aria-hidden": "true",
+	    onError: () => setFailed(true)
+	  });
+	}
+	function HeroCta({
+	  cta,
+	  appearance,
+	  placement = 'flow',
+	  artworkOnly = false,
+	  active = true,
+	  children
+	}) {
+	  if (!cta?.to) return null;
+	  const a = sanitizeHeroCta(appearance);
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    className: `hero-cta hero-cta--${placement}`,
+	    style: heroCtaStyle(a),
+	    "data-desktop": a.desktopPosition,
+	    "data-mobile": "custom",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	      to: cta.to,
+	      className: "v2-btn v2-btn--sm hero-cta__button",
+	      tabIndex: active ? undefined : -1,
+	      children: [a.textureUrl && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
+	        src: a.textureUrl,
+	        className: "hero-cta__texture"
+	      }, a.textureUrl), a.iconUrl && a.iconSide === 'left' && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
+	        src: a.iconUrl,
+	        className: "hero-cta__icon"
+	      }, a.iconUrl), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "hero-cta__label",
+	        children: children || cta.label
+	      }), a.iconUrl && a.iconSide === 'right' && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
+	        src: a.iconUrl,
+	        className: "hero-cta__icon"
+	      }, a.iconUrl)]
+	    })
+	  });
+	}
+
 	const HERO_PRODUCT_SLUG = 'biosash-sea-buckthorn-juice';
 	const SAFE_HERO_COPY = {
 	  kicker: 'SEA BUCKTHORN COLLECTION',
@@ -15496,101 +15791,113 @@
 	    onMouseLeave: () => setPaused(false),
 	    "aria-roledescription": "carousel",
 	    "aria-label": "Sora Life featured",
-	    children: [DISPLAY_SLIDES.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: `v2-hero__slide ${i === active ? 'is-active' : ''} ${s.sub === SAFE_HERO_COPY.sub ? 'v2-hero__slide--collection' : ''}`,
-	      "aria-hidden": i !== active,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-hero__media",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "v2-hero__par",
-	          ref: el => {
-	            parallaxRefs.current[i] = el;
-	          },
-	          children: s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src ? /*#__PURE__*/jsxRuntimeExports.jsx("video", {
-	            className: "v2-hero__img",
-	            autoPlay: true,
-	            muted: true,
-	            loop: true,
-	            playsInline: true,
-	            preload: "metadata",
-	            poster: s.poster,
-	            style: {
-	              objectPosition: s.position
-	            },
-	            onError: () => setVideoFailed(v => ({
-	              ...v,
-	              [s.id]: true
-	            })),
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx("source", {
-	              src: s.src,
-	              type: "video/mp4"
-	            })
-	          }) : s.kind === 'video' ?
-	          /*#__PURE__*/
-	          // Video skipped on mobile, missing, or failed to load — always resolve
-	          // to a real still (never an empty colour block).
-	          jsxRuntimeExports.jsx("img", {
-	            className: "v2-hero__img",
-	            src: heroSrc(stillFor(s) || FALLBACK_POSTER, 1600),
-	            srcSet: heroSrcSet(stillFor(s) || FALLBACK_POSTER),
-	            sizes: "100vw",
-	            alt: s.title,
-	            style: {
-	              objectPosition: s.position
-	            },
-	            loading: i === active ? 'eager' : 'lazy',
-	            fetchpriority: i === active ? 'high' : undefined,
-	            decoding: "async"
-	          }) : /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	            className: "v2-hero__img",
-	            src: heroSrc(s.src, 1600),
-	            srcSet: heroSrcSet(s.src),
-	            sizes: "100vw",
-	            alt: s.title,
-	            style: {
-	              objectPosition: s.position
-	            },
-	            loading: i === active ? 'eager' : 'lazy',
-	            fetchpriority: i === active ? 'high' : undefined,
-	            decoding: "async"
-	          })
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "v2-hero__ui",
-	        children: [s.kicker && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	          className: "v2-hero__kicker",
-	          children: s.kicker
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-	          className: titleClass(s.title),
-	          children: s.title
-	        }), (s.sub || s.lede) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	          className: "v2-hero__sub",
-	          children: s.sub === SAFE_HERO_COPY.sub ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "v2-hero__sub-full",
-	              children: s.sub
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "v2-hero__sub-compact",
-	              children: SAFE_HERO_COPY.mobileSub
-	            })]
-	          }) : s.sub || s.lede
-	        }), s.cta?.to && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: s.cta.to,
-	            className: "v2-btn v2-btn--sm",
-	            children: s.cta.label === SAFE_HERO_COPY.cta.label ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "v2-hero__cta-full",
-	                children: s.cta.label
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "v2-hero__cta-compact",
-	                children: "Explore collection"
-	              })]
-	            }) : s.cta.label
-	          })
+	    children: [DISPLAY_SLIDES.map((s, i) => (() => {
+	      const appearance = homepage.heroCtas?.[s.id];
+	      const artworkOnly = ![s.kicker, s.title, s.sub, s.lede].some(value => value && /[A-Za-z0-9]/.test(value));
+	      const ctaLabel = s.cta.label === SAFE_HERO_COPY.cta.label ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-hero__cta-full",
+	          children: s.cta.label
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-hero__cta-compact",
+	          children: "Explore collection"
 	        })]
-	      })]
-	    }, s.id)), SLIDES.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	      }) : s.cta.label;
+	      return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: `v2-hero__slide ${i === active ? 'is-active' : ''} ${s.sub === SAFE_HERO_COPY.sub ? 'v2-hero__slide--collection' : ''}`,
+	        "aria-hidden": i !== active,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "v2-hero__media",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	            className: "v2-hero__par",
+	            ref: el => {
+	              parallaxRefs.current[i] = el;
+	            },
+	            children: s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src ? /*#__PURE__*/jsxRuntimeExports.jsx("video", {
+	              className: "v2-hero__img",
+	              autoPlay: true,
+	              muted: true,
+	              loop: true,
+	              playsInline: true,
+	              preload: "metadata",
+	              poster: s.poster,
+	              style: {
+	                objectPosition: s.position
+	              },
+	              onError: () => setVideoFailed(v => ({
+	                ...v,
+	                [s.id]: true
+	              })),
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx("source", {
+	                src: s.src,
+	                type: "video/mp4"
+	              })
+	            }) : s.kind === 'video' ?
+	            /*#__PURE__*/
+	            // Video skipped on mobile, missing, or failed to load — always resolve
+	            // to a real still (never an empty colour block).
+	            jsxRuntimeExports.jsx("img", {
+	              className: "v2-hero__img",
+	              src: heroSrc(stillFor(s) || FALLBACK_POSTER, 1600),
+	              srcSet: heroSrcSet(stillFor(s) || FALLBACK_POSTER),
+	              sizes: "100vw",
+	              alt: s.title,
+	              style: {
+	                objectPosition: s.position
+	              },
+	              loading: i === active ? 'eager' : 'lazy',
+	              fetchpriority: i === active ? 'high' : undefined,
+	              decoding: "async"
+	            }) : /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	              className: "v2-hero__img",
+	              src: heroSrc(s.src, 1600),
+	              srcSet: heroSrcSet(s.src),
+	              sizes: "100vw",
+	              alt: s.title,
+	              style: {
+	                objectPosition: s.position
+	              },
+	              loading: i === active ? 'eager' : 'lazy',
+	              fetchpriority: i === active ? 'high' : undefined,
+	              decoding: "async"
+	            })
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "v2-hero__ui",
+	          children: [s.kicker && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "v2-hero__kicker",
+	            children: s.kicker
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	            className: titleClass(s.title),
+	            children: s.title
+	          }), (s.sub || s.lede) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "v2-hero__sub",
+	            children: s.sub === SAFE_HERO_COPY.sub ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "v2-hero__sub-full",
+	                children: s.sub
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "v2-hero__sub-compact",
+	                children: SAFE_HERO_COPY.mobileSub
+	              })]
+	            }) : s.sub || s.lede
+	          }), s.cta?.to && /*#__PURE__*/jsxRuntimeExports.jsx(HeroCta, {
+	            cta: s.cta,
+	            appearance: appearance,
+	            artworkOnly: artworkOnly,
+	            active: i === active,
+	            children: ctaLabel
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(HeroCta, {
+	          cta: s.cta,
+	          appearance: appearance,
+	          placement: "overlay",
+	          artworkOnly: artworkOnly,
+	          active: i === active,
+	          children: ctaLabel
+	        })]
+	      }, s.id);
+	    })()), SLIDES.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	        className: "v2-hero__arrow v2-hero__arrow--prev",
 	        onClick: () => go(active - 1),
@@ -16603,148 +16910,6 @@
 	  return /^preview offer$/i.test(promo.badgeText || '') ? 'PREVIEW OFFER' : null;
 	}
 
-	// Structured presentation fields inside site_settings.homepage.visuals.
-	// No CSS/HTML input is accepted. Shared by the editor and storefront reader.
-	const IMAGE_POSITIONS = ['left top', 'center top', 'right top', 'left center', 'center center', 'right center', 'left bottom', 'center bottom', 'right bottom'];
-	const color = (label, value) => ({
-	  label,
-	  type: 'color',
-	  value
-	});
-	const number = (label, value, min, max, step = 1) => ({
-	  label,
-	  type: 'number',
-	  value,
-	  min,
-	  max,
-	  step
-	});
-	const toggle = (label, value = false) => ({
-	  label,
-	  type: 'boolean',
-	  value
-	});
-	const image = label => ({
-	  label,
-	  type: 'image',
-	  value: ''
-	});
-	const select = (label, value, options) => ({
-	  label,
-	  type: 'select',
-	  value,
-	  options
-	});
-	const HOMEPAGE_VISUAL_FIELDS = {
-	  categoryStrip: {
-	    enabled: toggle('Enable category background', false),
-	    backgroundColor: color('Background color', '#F7F1E7'),
-	    imageUrl: image('Background strip image'),
-	    imageSize: select('Background image fit', 'cover', ['cover', 'contain']),
-	    imagePosition: select('Background image position', 'center center', IMAGE_POSITIONS),
-	    imageOpacity: number('Background image opacity', 1, 0, 1, 0.05),
-	    overlayColor: color('Overlay color', '#FBF8F1'),
-	    overlayOpacity: number('Overlay strength (0 = off)', 0, 0, 1, 0.05),
-	    paddingTop: number('Top padding (px)', 12, 0, 48),
-	    paddingBottom: number('Bottom padding (px)', 12, 0, 48),
-	    borderTop: toggle('Show top border'),
-	    borderBottom: toggle('Show bottom border'),
-	    borderColor: color('Border color', '#DED2C4'),
-	    borderWidth: number('Border thickness (px)', 1, 0, 4),
-	    radius: number('Corner radius (px)', 8, 0, 16),
-	    textureUrl: image('Decorative texture'),
-	    texturePosition: select('Texture position', 'center center', IMAGE_POSITIONS),
-	    leftImage: image('Left decoration'),
-	    rightImage: image('Right decoration'),
-	    decorationOpacity: number('Decoration opacity', 0.25, 0, 1, 0.05),
-	    decorationSize: number('Decoration width (px)', 120, 24, 240),
-	    decorationPosition: select('Decoration vertical position', 'center', ['top', 'center', 'bottom']),
-	    hideTextureMobile: toggle('Hide texture on mobile'),
-	    hideLeftMobile: toggle('Hide left decoration on mobile', true),
-	    hideRightMobile: toggle('Hide right decoration on mobile', true)
-	  },
-	  offers: {
-	    backgroundColor: color('Section background', '#FBF8F1'),
-	    frameColor: color('Frame interior', '#FFF8ED'),
-	    frameEnabled: toggle('Show bordered frame', true),
-	    borderColor: color('Frame border color', '#702B3B'),
-	    borderWidth: number('Frame border thickness (px)', 1, 0, 4),
-	    accentColor: color('Heading and accent color', '#702B3B'),
-	    radius: number('Frame corner radius (px)', 12, 0, 16),
-	    textureUrl: image('Frame background image / texture'),
-	    textureOpacity: number('Texture opacity', 0.12, 0, 1, 0.01),
-	    padding: number('Section top and bottom padding (px)', 20, 0, 48),
-	    gap: number('Gap between promotions (px)', 16, 8, 32),
-	    desktopColumns: select('Maximum promotions per desktop row', 2, [1, 2, 3]),
-	    mobileWidth: number('Mobile promotion width (%)', 90, 88, 92),
-	    decorationUrl: image('Optional decorative artwork'),
-	    decorationOpacity: number('Artwork opacity', 0.15, 0, 1, 0.05),
-	    decorationSize: number('Artwork width (px)', 160, 24, 240)
-	  }
-	};
-	function safeVisualUrl(value) {
-	  if (typeof value !== 'string' || !value.trim()) return '';
-	  const raw = value.trim();
-	  if (raw.length > 2000 || /[\s\\\u0000-\u001f\u007f]/.test(raw)) return '';
-	  let url;
-	  try {
-	    url = new URL(raw, 'https://visual.invalid');
-	  } catch {
-	    return '';
-	  }
-	  if (url.username || url.password || url.port || /\.(svg|html?)$/i.test(url.pathname)) return '';
-	  let path;
-	  try {
-	    path = decodeURIComponent(url.pathname);
-	  } catch {
-	    return '';
-	  }
-	  if (/[\\\u0000-\u001f\u007f]/.test(path)) return '';
-	  if (raw.startsWith('/') && !raw.startsWith('//') && url.origin === 'https://visual.invalid') return raw;
-	  if (!raw.startsWith('https://') || url.protocol !== 'https:') return '';
-	  const host = url.hostname;
-	  // Visual URLs load in <img>, never via a server fetch. Still reject local,
-	  // private and literal-IP destinations rather than probing a user's LAN.
-	  if (!host.includes('.') || /^(localhost|.*\.(localhost|local|internal|test|invalid|lan|home\.arpa))$/i.test(host) || /^[\d.]+$/.test(host) || host.includes(':')) return '';
-	  return url.href;
-	}
-	function sanitizeHomepageVisuals(raw) {
-	  const result = {};
-	  for (const [group, fields] of Object.entries(HOMEPAGE_VISUAL_FIELDS)) {
-	    result[group] = {};
-	    for (const [key, field] of Object.entries(fields)) {
-	      const v = raw?.[group]?.[key];
-	      let clean = field.value;
-	      if (field.type === 'boolean' && typeof v === 'boolean') clean = v;
-	      if (field.type === 'color' && typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) clean = v;
-	      if (field.type === 'image') clean = safeVisualUrl(v);
-	      if (field.type === 'select' && field.options.includes(v)) clean = v;
-	      if (field.type === 'number' && v !== '' && v != null && Number.isFinite(Number(v))) {
-	        clean = Math.min(field.max, Math.max(field.min, Number(v)));
-	      }
-	      result[group][key] = clean;
-	    }
-	  }
-	  return result;
-	}
-	function mergeHomepageVisuals(current, visuals) {
-	  return {
-	    ...(current && typeof current === 'object' ? current : {}),
-	    visuals: sanitizeHomepageVisuals(visuals)
-	  };
-	}
-
-	// Keep the placement runtime and its sort/date/active rules authoritative.
-	// De-duplicate IDs only; never slice away additional posters or offer cards.
-	function uniqueHomepagePromotions(promotions) {
-	  const seen = new Set();
-	  return promotions.filter(promo => {
-	    if (seen.has(promo.id)) return false;
-	    seen.add(promo.id);
-	    return true;
-	  });
-	}
-
 	function PromoCopyCode({
 	  code,
 	  label = null,
@@ -17032,6 +17197,27 @@
 	  const rail = reactExports.useRef(null);
 	  const [active, setActive] = reactExports.useState(0);
 	  const items = uniqueHomepagePromotions(promosForPlacement('home'));
+	  reactExports.useEffect(() => {
+	    if (items.length < 2) return;
+	    const mobile = window.matchMedia('(max-width: 767px)');
+	    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+	    if (!mobile.matches || reduced.matches) return;
+	    const timer = window.setInterval(() => {
+	      setActive(current => {
+	        const next = (current + 1) % items.length;
+	        const el = rail.current;
+	        const card = el?.children[next];
+	        if (el && card) {
+	          el.scrollTo({
+	            left: card.offsetLeft - el.firstElementChild.offsetLeft,
+	            behavior: 'smooth'
+	          });
+	        }
+	        return next;
+	      });
+	    }, 2000);
+	    return () => window.clearInterval(timer);
+	  }, [items.length]);
 	  if (!items.length) return null;
 	  const columns = Math.min(a.desktopColumns, items.length);
 	  const scrollTo = index => {
@@ -57971,7 +58157,7 @@
 	      className: "ap-layout",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: "ap-controls",
-	        children: GROUPS.map(g => /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	        children: GROUPS$1.map(g => /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
 	          className: `surface ap-group ${openGroup === g ? 'is-open' : ''}`,
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
 	            className: "ap-group__head",
@@ -58468,6 +58654,247 @@
 	  });
 	}
 
+	async function validateHomepageImage(file) {
+	  const types = {
+	    'image/png': 'png',
+	    'image/jpeg': 'jpg',
+	    'image/webp': 'webp'
+	  };
+	  if (!file || !types[file.type]) throw new Error('Choose a PNG, JPEG or WebP image. SVG, HTML and other files are not allowed.');
+	  if (!file.size || file.size > 6 * 1024 * 1024) throw new Error('Choose an image smaller than 6 MB.');
+	  const b = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+	  const starts = (bytes, offset = 0) => bytes.every((n, i) => b[offset + i] === n);
+	  const detected = starts([137, 80, 78, 71, 13, 10, 26, 10]) ? 'image/png' : starts([255, 216, 255]) ? 'image/jpeg' : starts([82, 73, 70, 70]) && starts([87, 69, 66, 80], 8) ? 'image/webp' : null;
+	  if (detected !== file.type) throw new Error('The image contents do not match its file type.');
+	  return types[detected];
+	}
+	async function uploadHomepageImage(file) {
+	  const ext = await validateHomepageImage(file);
+	  // Decode before storage: reject corrupt images and oversized pixel canvases.
+	  const bitmap = await createImageBitmap(file).catch(() => {
+	    throw new Error('This image could not be decoded. Please export it as PNG, JPEG or WebP.');
+	  });
+	  const tooLarge = bitmap.width * bitmap.height > 24000000 || bitmap.width > 10000 || bitmap.height > 10000;
+	  bitmap.close();
+	  if (tooLarge) throw new Error('Use an image under 24 megapixels and 10,000 pixels per side.');
+	  const bucket = supabase.storage.from('product-images');
+	  const path = `homepage-visuals/${crypto.randomUUID()}.${ext}`;
+	  const {
+	    error
+	  } = await bucket.upload(path, file, {
+	    contentType: file.type,
+	    cacheControl: '3600',
+	    upsert: false
+	  });
+	  if (error) throw error;
+	  const url = safeVisualUrl(bucket.getPublicUrl(path).data.publicUrl);
+	  if (!url) throw new Error('Storage returned an unsupported public image URL.');
+	  return url;
+	}
+
+	const GROUPS = [['Position', ['desktopPosition', 'x', 'y', 'mobilePosition', 'mobileX', 'mobileY']], ['Button', ['width', 'paddingX', 'paddingY', 'backgroundColor', 'textColor', 'borderColor', 'borderWidth', 'radius', 'fontSize', 'fontWeight', 'opacity', 'shadow']], ['Texture', ['textureUrl', 'textureOpacity', 'textureFit']], ['Icon', ['iconUrl', 'iconSide', 'iconSize']]];
+	function VisualField({
+	  name,
+	  field,
+	  value,
+	  onChange,
+	  onUploading,
+	  setError,
+	  disabled = false
+	}) {
+	  async function upload(e) {
+	    const file = e.target.files?.[0];
+	    if (!file) return;
+	    onUploading(1);
+	    setError('');
+	    try {
+	      const url = await uploadHomepageImage(file);
+	      // Functional update prevents upload completion from reverting newer edits.
+	      onChange(latest => ({
+	        ...latest,
+	        [name]: url
+	      }));
+	    } catch (error) {
+	      setError(`Upload failed: ${error.message || error}`);
+	    } finally {
+	      onUploading(-1);
+	      e.target.value = '';
+	    }
+	  }
+	  if (field.type === 'image') return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "field",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	      className: "label",
+	      children: field.label
+	    }), value && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	      src: value,
+	      alt: `${field.label} preview`,
+	      style: {
+	        display: 'block',
+	        maxWidth: 240,
+	        maxHeight: 100,
+	        objectFit: 'contain',
+	        marginBottom: 8
+	      }
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	      type: "file",
+	      accept: "image/png,image/jpeg,image/webp",
+	      onChange: upload
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	      className: "input",
+	      style: {
+	        marginTop: 8
+	      },
+	      value: value || '',
+	      onChange: e => onChange(latest => ({
+	        ...latest,
+	        [name]: e.target.value
+	      })),
+	      placeholder: "or paste a public HTTPS image URL"
+	    }), value && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	      type: "button",
+	      className: "btn btn-outline btn-sm",
+	      style: {
+	        marginTop: 8
+	      },
+	      onClick: () => onChange(latest => ({
+	        ...latest,
+	        [name]: ''
+	      })),
+	      children: "Clear image"
+	    })]
+	  });
+	  if (field.type === 'select') return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "field",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	      className: "label",
+	      children: field.label
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("select", {
+	      className: "select",
+	      value: value,
+	      onChange: e => onChange(latest => ({
+	        ...latest,
+	        [name]: field.options.includes(Number(e.target.value)) ? Number(e.target.value) : e.target.value
+	      })),
+	      children: field.options.map(option => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	        value: option,
+	        children: option === 'auto' ? 'Auto — safe default' : option === 'custom' ? 'Custom — use X/Y below' : String(option).replace(/\b\w/g, c => c.toUpperCase())
+	      }, option))
+	    })]
+	  });
+	  if (field.type === 'color') return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "field",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	      className: "label",
+	      children: field.label
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	      className: "input",
+	      value: value || '',
+	      onChange: e => onChange(latest => ({
+	        ...latest,
+	        [name]: e.target.value
+	      })),
+	      placeholder: "#1E3A2F or leave blank"
+	    })]
+	  });
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "field",
+	    style: disabled ? {
+	      opacity: 0.48
+	    } : undefined,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	      className: "label",
+	      children: field.label
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	      className: "input",
+	      type: "number",
+	      min: field.min,
+	      max: field.max,
+	      step: field.step,
+	      value: value,
+	      disabled: disabled,
+	      onChange: e => onChange(latest => ({
+	        ...latest,
+	        [name]: e.target.value
+	      }))
+	    })]
+	  });
+	}
+	function HeroCtaAppearanceControls({
+	  value,
+	  onChange,
+	  onUploading,
+	  setError
+	}) {
+	  const appearance = {
+	    ...sanitizeHeroCta(),
+	    ...value
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    className: "surface",
+	    style: {
+	      marginTop: 16,
+	      padding: 16
+	    },
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      style: {
+	        display: 'flex',
+	        justifyContent: 'space-between',
+	        gap: 12,
+	        alignItems: 'start',
+	        marginBottom: 12
+	      },
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	          style: {
+	            margin: 0
+	          },
+	          children: "CTA appearance"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "hint",
+	          style: {
+	            margin: '4px 0 0'
+	          },
+	          children: "Safe settings saved only for this slide. Auto keeps text-led slides in flow and places artwork-only mobile CTAs lower."
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "button",
+	        className: "btn btn-outline btn-sm",
+	        onClick: () => onChange(sanitizeHeroCta()),
+	        children: "Reset defaults"
+	      })]
+	    }), GROUPS.map(([title, names]) => /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+	      style: {
+	        border: 0,
+	        borderTop: '1px solid var(--border)',
+	        margin: '12px 0 0',
+	        padding: '12px 0 0'
+	      },
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+	        style: {
+	          paddingRight: 8,
+	          fontWeight: 700
+	        },
+	        children: title
+	      }), title === 'Position' && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "hint",
+	        children: "X runs left (0%) to right (100%); Y runs top (0%) to bottom (100%). Auto uses the safe default and ignores X/Y."
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "adm-grid2",
+	        children: names.map(name => /*#__PURE__*/jsxRuntimeExports.jsx(VisualField, {
+	          name: name,
+	          field: HERO_CTA_FIELDS[name],
+	          value: appearance[name],
+	          onChange: onChange,
+	          onUploading: onUploading,
+	          setError: setError,
+	          disabled: name === 'x' || name === 'y' ? appearance.desktopPosition !== 'custom' : name === 'mobileX' || name === 'mobileY' ? appearance.mobilePosition !== 'custom' : false
+	        }, name))
+	      })]
+	    }, title))]
+	  });
+	}
+
 	const empty = {
 	  kind: 'image',
 	  image_url: '',
@@ -58488,13 +58915,18 @@
 	  const [form, setForm] = reactExports.useState(empty);
 	  const [saving, setSaving] = reactExports.useState(false);
 	  const [uploading, setUploading] = reactExports.useState(false);
+	  const [ctaUploading, setCtaUploading] = reactExports.useState(0);
+	  const [ctaAppearance, setCtaAppearance] = reactExports.useState(() => sanitizeHeroCta());
+	  const [heroCtas, setHeroCtas] = reactExports.useState({});
 	  const [err, setErr] = reactExports.useState('');
 	  const [videoUpload, setVideoUpload] = reactExports.useState(null); // { name, status: 'uploading'|'done'|'error', url? }
 
 	  async function load() {
 	    setLoading(true);
 	    try {
-	      setList(await adminListHeroSlides());
+	      const [slides, hp] = await Promise.all([adminListHeroSlides(), adminGetSetting('homepage')]);
+	      setList(slides);
+	      setHeroCtas(hp?.heroCtas || {});
 	    } catch (e) {
 	      setErr(e.message || String(e));
 	    }
@@ -58517,6 +58949,7 @@
 	    setForm(slide ? {
 	      ...slide
 	    } : empty);
+	    setCtaAppearance(sanitizeHeroCta(slide ? heroCtas[slide.id] : null));
 	    setEditing(slide || 'new');
 	    setVideoUpload(null);
 	    setErr('');
@@ -58526,7 +58959,13 @@
 	    setSaving(true);
 	    setErr('');
 	    try {
-	      await adminUpsertHeroSlide(form);
+	      const savedSlide = await adminUpsertHeroSlide(form);
+	      // Re-read immediately before writing: update only this slide's CTA map
+	      // while preserving every unrelated Homepage setting and other slide.
+	      const currentHomepage = (await adminGetSetting('homepage')) || {};
+	      const nextHomepage = mergeHeroCta(currentHomepage, savedSlide.id, ctaAppearance);
+	      await adminSetSetting('homepage', nextHomepage);
+	      announceHomepageSaved(nextHomepage);
 	      setEditing(null);
 	      await load();
 	    } catch (ex) {
@@ -58845,6 +59284,11 @@
 	            placeholder: "/category/wellness"
 	          })]
 	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(HeroCtaAppearanceControls, {
+	        value: ctaAppearance,
+	        onChange: setCtaAppearance,
+	        onUploading: delta => setCtaUploading(n => Math.max(0, n + delta)),
+	        setError: setErr
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "adm-checkrow",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
@@ -58868,11 +59312,12 @@
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	          className: "btn btn-sm",
 	          type: "submit",
-	          disabled: saving || uploading,
-	          children: saving ? 'Saving…' : 'Save slide'
+	          disabled: saving || uploading || ctaUploading > 0,
+	          children: saving ? 'Saving…' : ctaUploading ? 'Uploading CTA image…' : 'Save slide'
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	          type: "button",
 	          className: "btn btn-outline btn-sm",
+	          disabled: saving || uploading || ctaUploading > 0,
 	          onClick: () => setEditing(null),
 	          children: "Cancel"
 	        })]
@@ -59485,44 +59930,6 @@
 	      }, p.id))
 	    })]
 	  });
-	}
-
-	async function validateHomepageImage(file) {
-	  const types = {
-	    'image/png': 'png',
-	    'image/jpeg': 'jpg',
-	    'image/webp': 'webp'
-	  };
-	  if (!file || !types[file.type]) throw new Error('Choose a PNG, JPEG or WebP image. SVG, HTML and other files are not allowed.');
-	  if (!file.size || file.size > 6 * 1024 * 1024) throw new Error('Choose an image smaller than 6 MB.');
-	  const b = new Uint8Array(await file.slice(0, 16).arrayBuffer());
-	  const starts = (bytes, offset = 0) => bytes.every((n, i) => b[offset + i] === n);
-	  const detected = starts([137, 80, 78, 71, 13, 10, 26, 10]) ? 'image/png' : starts([255, 216, 255]) ? 'image/jpeg' : starts([82, 73, 70, 70]) && starts([87, 69, 66, 80], 8) ? 'image/webp' : null;
-	  if (detected !== file.type) throw new Error('The image contents do not match its file type.');
-	  return types[detected];
-	}
-	async function uploadHomepageImage(file) {
-	  const ext = await validateHomepageImage(file);
-	  // Decode before storage: reject corrupt images and oversized pixel canvases.
-	  const bitmap = await createImageBitmap(file).catch(() => {
-	    throw new Error('This image could not be decoded. Please export it as PNG, JPEG or WebP.');
-	  });
-	  const tooLarge = bitmap.width * bitmap.height > 24000000 || bitmap.width > 10000 || bitmap.height > 10000;
-	  bitmap.close();
-	  if (tooLarge) throw new Error('Use an image under 24 megapixels and 10,000 pixels per side.');
-	  const bucket = supabase.storage.from('product-images');
-	  const path = `homepage-visuals/${crypto.randomUUID()}.${ext}`;
-	  const {
-	    error
-	  } = await bucket.upload(path, file, {
-	    contentType: file.type,
-	    cacheControl: '3600',
-	    upsert: false
-	  });
-	  if (error) throw error;
-	  const url = safeVisualUrl(bucket.getPublicUrl(path).data.publicUrl);
-	  if (!url) throw new Error('Storage returned an unsupported public image URL.');
-	  return url;
 	}
 
 	function ImageControl({

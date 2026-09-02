@@ -1,0 +1,15 @@
+/* Per-slide CTA only. Artwork and copy layout are intentionally unchanged. */
+.hero-cta--overlay { display:none; position:absolute; inset:12px; z-index:4; overflow:hidden; pointer-events:none; }
+.hero-cta--overlay .hero-cta__button { position:absolute; left:var(--hcta-x); top:var(--hcta-y); transform:translate(calc(-1 * var(--hcta-x)), calc(-1 * var(--hcta-y))); pointer-events:auto; }
+.v2-home .v2-hero .hero-cta__button { box-sizing:border-box; position:relative; isolation:isolate; overflow:hidden; width:var(--hcta-width); max-width:100%; max-height:100%; min-width:0; height:auto; min-height:36px; padding:var(--hcta-py) var(--hcta-px); gap:7px; background:var(--hcta-bg); color:var(--hcta-text); border:var(--hcta-border-width) solid var(--hcta-border); border-radius:var(--hcta-radius); font-size:var(--hcta-font, 13px); font-weight:var(--hcta-weight); line-height:1.2; opacity:var(--hcta-opacity); box-shadow:var(--hcta-shadow); white-space:normal; }
+.v2-home .v2-hero .hero-cta--overlay .hero-cta__button { position:absolute; }
+.hero-cta__label { position:relative; z-index:1; overflow-wrap:anywhere; }
+.v2-home .hero-cta__texture { position:absolute; inset:0; width:100%; height:100%; object-fit:var(--hcta-texture-fit); opacity:var(--hcta-texture-opacity); pointer-events:none; z-index:0; }
+.v2-home .hero-cta__icon { position:relative; z-index:1; flex:none; width:var(--hcta-icon-size); height:var(--hcta-icon-size); object-fit:contain; }
+@media (min-width:768px) { .hero-cta--overlay[data-desktop="custom"] { display:block; } .hero-cta--flow[data-desktop="custom"] { visibility:hidden; pointer-events:none; } }
+@media (max-width:767px) {
+  .v2-home .v2-hero .hero-cta__button { font-size:var(--hcta-font, 13px); }
+  .hero-cta--overlay[data-mobile="custom"] { display:block; }
+  .hero-cta--flow[data-mobile="custom"] { visibility:hidden; pointer-events:none; }
+  .hero-cta--overlay .hero-cta__button { left:var(--hcta-mobile-x); top:var(--hcta-mobile-y); transform:translate(calc(-1 * var(--hcta-mobile-x)), calc(-1 * var(--hcta-mobile-y))); }
+}

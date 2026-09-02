@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { adminListHeroSlides, adminUpsertHeroSlide, adminDeleteHeroSlide, adminReorderHeroSlides, adminSeedDefaultHeroSlides, uploadImage, uploadHeroVideo } from '../../lib/adminApi.js';
+import { adminListHeroSlides, adminUpsertHeroSlide, adminDeleteHeroSlide, adminReorderHeroSlides, adminSeedDefaultHeroSlides, adminGetSetting, adminSetSetting, uploadImage, uploadHeroVideo } from '../../lib/adminApi.js';
+import HeroCtaAppearanceControls from '../components/HeroCtaAppearanceControls.jsx';
+import { mergeHeroCta, sanitizeHeroCta } from '../../lib/heroCtaAppearance.js';
+import { announceHomepageSaved } from '../../lib/homepageVisualSync.js';
 
 const empty = { kind: 'image', image_url: '', video_url: '', poster_url: '', kicker: '', title: '', subtitle: '', lede: '', cta_label: 'SHOP NOW', cta_link: '/shop', is_active: true };
 
@@ -10,12 +13,18 @@ export default function HeroSlides() {
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [ctaUploading, setCtaUploading] = useState(0);
+  const [ctaAppearance, setCtaAppearance] = useState(() => sanitizeHeroCta());
+  const [heroCtas, setHeroCtas] = useState({});
   const [err, setErr] = useState('');
   const [videoUpload, setVideoUpload] = useState(null); // { name, status: 'uploading'|'done'|'error', url? }
 
   async function load() {
     setLoading(true);
-    try { setList(await adminListHeroSlides()); } catch (e) { setErr(e.message || String(e)); }
+    try {
+      const [slides, hp] = await Promise.all([adminListHeroSlides(), adminGetSetting('homepage')]);
+      setList(slides); setHeroCtas(hp?.heroCtas || {});
+    } catch (e) { setErr(e.message || String(e)); }
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
@@ -26,13 +35,22 @@ export default function HeroSlides() {
     setSaving(false);
   }
 
-  function startEdit(slide) { setForm(slide ? { ...slide } : empty); setEditing(slide || 'new'); setVideoUpload(null); setErr(''); }
+  function startEdit(slide) { setForm(slide ? { ...slide } : empty); setCtaAppearance(sanitizeHeroCta(slide ? heroCtas[slide.id] : null)); setEditing(slide || 'new'); setVideoUpload(null); setErr(''); }
 
   async function save(e) {
     e.preventDefault();
     setSaving(true);
     setErr('');
-    try { await adminUpsertHeroSlide(form); setEditing(null); await load(); } catch (ex) { setErr(ex.message || String(ex)); }
+    try {
+      const savedSlide = await adminUpsertHeroSlide(form);
+      // Re-read immediately before writing: update only this slide's CTA map
+      // while preserving every unrelated Homepage setting and other slide.
+      const currentHomepage = await adminGetSetting('homepage') || {};
+      const nextHomepage = mergeHeroCta(currentHomepage, savedSlide.id, ctaAppearance);
+      await adminSetSetting('homepage', nextHomepage);
+      announceHomepageSaved(nextHomepage);
+      setEditing(null); await load();
+    } catch (ex) { setErr(ex.message || String(ex)); }
     setSaving(false);
   }
 
@@ -142,10 +160,11 @@ export default function HeroSlides() {
             <div className="field"><label className="label">CTA button text</label><input className="input" value={form.cta_label} onChange={(e) => setForm((f) => ({ ...f, cta_label: e.target.value }))} /></div>
             <div className="field"><label className="label">CTA link</label><input className="input" value={form.cta_link} onChange={(e) => setForm((f) => ({ ...f, cta_link: e.target.value }))} placeholder="/category/wellness" /></div>
           </div>
+          <HeroCtaAppearanceControls value={ctaAppearance} onChange={setCtaAppearance} onUploading={(delta) => setCtaUploading((n) => Math.max(0, n + delta))} setError={setErr} />
           <div className="adm-checkrow"><input type="checkbox" id="slide-active" checked={form.is_active !== false} onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))} /><label htmlFor="slide-active">Active (shown in carousel)</label></div>
           <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-            <button className="btn btn-sm" type="submit" disabled={saving || uploading}>{saving ? 'Saving…' : 'Save slide'}</button>
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => setEditing(null)}>Cancel</button>
+            <button className="btn btn-sm" type="submit" disabled={saving || uploading || ctaUploading > 0}>{saving ? 'Saving…' : ctaUploading ? 'Uploading CTA image…' : 'Save slide'}</button>
+            <button type="button" className="btn btn-outline btn-sm" disabled={saving || uploading || ctaUploading > 0} onClick={() => setEditing(null)}>Cancel</button>
           </div>
         </form>
       )}

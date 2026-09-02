@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import ProductImage from './ProductImage.jsx';
-import { heroSlides, heroSlidesConfigured } from '../lib/settings.js';
+import HeroCta from './HeroCta.jsx';
+import { heroSlides, heroSlidesConfigured, homepage } from '../lib/settings.js';
 import { productBySlug, products } from '../data/products.js';
 
 // ---------------------------------------------------------------------------
@@ -269,6 +270,14 @@ function ConfiguredHero() {
       aria-label="Sora Life featured"
     >
       {DISPLAY_SLIDES.map((s, i) => (
+        (() => {
+          const appearance = homepage.heroCtas?.[s.id];
+          const artworkOnly = ![s.kicker, s.title, s.sub, s.lede].some((value) => value && /[A-Za-z0-9]/.test(value));
+          const ctaLabel = s.cta.label === SAFE_HERO_COPY.cta.label ? <>
+            <span className="v2-hero__cta-full">{s.cta.label}</span>
+            <span className="v2-hero__cta-compact">Explore collection</span>
+          </> : s.cta.label;
+          return (
         <div
           key={s.id}
           className={`v2-hero__slide ${i === active ? 'is-active' : ''} ${s.sub === SAFE_HERO_COPY.sub ? 'v2-hero__slide--collection' : ''}`}
@@ -317,17 +326,13 @@ function ConfiguredHero() {
               </> : (s.sub || s.lede)}
             </p>}
             {s.cta?.to && (
-              <div>
-                <Link to={s.cta.to} className="v2-btn v2-btn--sm">
-                  {s.cta.label === SAFE_HERO_COPY.cta.label ? <>
-                    <span className="v2-hero__cta-full">{s.cta.label}</span>
-                    <span className="v2-hero__cta-compact">Explore collection</span>
-                  </> : s.cta.label}
-                </Link>
-              </div>
+              <HeroCta cta={s.cta} appearance={appearance} artworkOnly={artworkOnly} active={i === active}>{ctaLabel}</HeroCta>
             )}
           </div>
+          <HeroCta cta={s.cta} appearance={appearance} placement="overlay" artworkOnly={artworkOnly} active={i === active}>{ctaLabel}</HeroCta>
         </div>
+          );
+        })()
       ))}
 
       {SLIDES.length > 1 && (
