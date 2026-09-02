@@ -83,16 +83,22 @@ function Root() {
   }, []);
 
   return (
+    /* CustomerAuthProvider now wraps StoreProvider. The store has to know who
+       is signed in so the wishlist can sync to that customer's account and be
+       cleared when they leave, and a provider can only read context from
+       above it. StoreProvider still contains AdminAuthProvider, so their
+       relative order — and every existing useStore/useAdminAuth call site —
+       is unchanged. */
     <BrowserRouter>
-      <StoreProvider>
-        <AdminAuthProvider>
-          <CustomerAuthProvider>
+      <CustomerAuthProvider>
+        <StoreProvider>
+          <AdminAuthProvider>
             <ErrorBoundary>
               <App />
             </ErrorBoundary>
-          </CustomerAuthProvider>
-        </AdminAuthProvider>
-      </StoreProvider>
+          </AdminAuthProvider>
+        </StoreProvider>
+      </CustomerAuthProvider>
     </BrowserRouter>
   );
 }

@@ -6841,3073 +6841,6 @@
 	  return changed;
 	}
 
-	const StoreCtx = /*#__PURE__*/reactExports.createContext(null);
-	const KEY = 'sora.store.v1';
-	const initial = {
-	  cart: [],
-	  wishlist: [],
-	  saved: []
-	};
-	function load() {
-	  try {
-	    const raw = localStorage.getItem(KEY);
-	    if (raw) return {
-	      ...initial,
-	      ...JSON.parse(raw)
-	    };
-	  } catch {}
-	  return initial;
-	}
-	function reducer(state, action) {
-	  switch (action.type) {
-	    case 'ADD':
-	      {
-	        const {
-	          id,
-	          qty = 1,
-	          variant = null,
-	          variantId = null
-	        } = action;
-	        // Two different pack sizes of the same product are two cart lines, so
-	        // the key includes the variant. variantId is what the server prices
-	        // against; `variant` is only the human label shown in the UI.
-	        const key = id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
-	        const existing = state.cart.find(l => l.key === key);
-	        const cart = existing ? state.cart.map(l => l.key === key ? {
-	          ...l,
-	          qty: l.qty + qty
-	        } : l) : [...state.cart, {
-	          key,
-	          id,
-	          variant,
-	          variantId,
-	          qty
-	        }];
-	        return {
-	          ...state,
-	          cart
-	        };
-	      }
-	    case 'SET_QTY':
-	      {
-	        const cart = state.cart.map(l => l.key === action.key ? {
-	          ...l,
-	          qty: Math.max(1, action.qty)
-	        } : l);
-	        return {
-	          ...state,
-	          cart
-	        };
-	      }
-	    case 'REMOVE':
-	      return {
-	        ...state,
-	        cart: state.cart.filter(l => l.key !== action.key)
-	      };
-	    case 'SAVE_LATER':
-	      {
-	        const line = state.cart.find(l => l.key === action.key);
-	        if (!line) return state;
-	        return {
-	          ...state,
-	          cart: state.cart.filter(l => l.key !== action.key),
-	          saved: [...state.saved, line]
-	        };
-	      }
-	    case 'MOVE_TO_CART':
-	      {
-	        const line = state.saved.find(l => l.key === action.key);
-	        if (!line) return state;
-	        const existing = state.cart.find(l => l.key === line.key);
-	        const cart = existing ? state.cart.map(l => l.key === line.key ? {
-	          ...l,
-	          qty: l.qty + line.qty
-	        } : l) : [...state.cart, line];
-	        return {
-	          ...state,
-	          cart,
-	          saved: state.saved.filter(l => l.key !== action.key)
-	        };
-	      }
-	    case 'REMOVE_SAVED':
-	      return {
-	        ...state,
-	        saved: state.saved.filter(l => l.key !== action.key)
-	      };
-	    case 'TOGGLE_WISH':
-	      {
-	        const has = state.wishlist.includes(action.id);
-	        return {
-	          ...state,
-	          wishlist: has ? state.wishlist.filter(x => x !== action.id) : [...state.wishlist, action.id]
-	        };
-	      }
-	    case 'CLEAR_CART':
-	      return {
-	        ...state,
-	        cart: []
-	      };
-	    default:
-	      return state;
-	  }
-	}
-	function StoreProvider({
-	  children
-	}) {
-	  const [state, dispatch] = reactExports.useReducer(reducer, undefined, load);
-	  const [toasts, setToasts] = reactExports.useState([]);
-	  reactExports.useEffect(() => {
-	    try {
-	      localStorage.setItem(KEY, JSON.stringify(state));
-	    } catch {}
-	  }, [state]);
-	  const toast = reactExports.useCallback((message, opts = {}) => {
-	    const id = Math.random().toString(36).slice(2);
-	    setToasts(t => [...t, {
-	      id,
-	      message,
-	      ...opts
-	    }]);
-	    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), opts.duration || 2600);
-	  }, []);
-
-	  // `variant` accepts either a variant object ({ id, label, ... }) or a plain
-	  // label string, so existing call sites that pass a label keep working.
-	  const addToCart = reactExports.useCallback((product, qty = 1, variant = null) => {
-	    const isObj = variant && typeof variant === 'object';
-	    const label = isObj ? variant.label ?? null : variant;
-	    // A variantId is only meaningful when it identifies a priced row in
-	    // product_variants. Catalogue variants that carry a label but no price
-	    // are display-only, and sending their local id would make the server
-	    // reject the line ("selected size is no longer available").
-	    const variantId = isObj && variant.price != null ? variant.id ?? null : null;
-	    dispatch({
-	      type: 'ADD',
-	      id: product.id,
-	      qty,
-	      variant: label,
-	      variantId
-	    });
-	    toast(`Added to cart`, {
-	      product: product.id,
-	      kind: 'cart'
-	    });
-	  }, [toast]);
-	  const toggleWish = reactExports.useCallback(product => {
-	    dispatch({
-	      type: 'TOGGLE_WISH',
-	      id: product.id
-	    });
-	    const wasIn = state.wishlist.includes(product.id);
-	    toast(wasIn ? 'Removed from wishlist' : 'Saved to wishlist', {
-	      kind: 'wish'
-	    });
-	  }, [state.wishlist, toast]);
-
-	  // Resolve the chosen pack size so a line is priced at ITS price, not the
-	  // product's base price. These figures are for display only — the payable
-	  // amount is always recomputed server-side (api/_lib/pricing.js).
-	  const hydrate = l => {
-	    const product = productById[l.id];
-	    if (!product) return null;
-	    const variantObj = l.variantId ? (product.variants || []).find(v => String(v.id) === String(l.variantId)) || null : null;
-	    const unitPrice = variantObj?.price ?? product.price;
-	    const unitMrp = variantObj?.mrp ?? product.mrp ?? unitPrice;
-	    return {
-	      ...l,
-	      product,
-	      variantObj,
-	      variantLabel: variantObj?.label ?? l.variant ?? null,
-	      unitPrice,
-	      unitMrp: Math.max(unitMrp, unitPrice),
-	      lineTotal: unitPrice * l.qty
-	    };
-	  };
-
-	  // Variants arrive from Supabase AFTER first render. Memoising on state.cart
-	  // alone meant a line added with a 750 ml variantId kept the pre-variant
-	  // base price (250 ml) forever, because the cart array never changed. Read
-	  // the catalogue version during render so the async load invalidates these.
-	  const catalogVersion = getCatalogVersion();
-	  const cartDetailed = reactExports.useMemo(() => state.cart.map(hydrate).filter(Boolean), [state.cart, catalogVersion]);
-	  const savedDetailed = reactExports.useMemo(() => state.saved.map(hydrate).filter(Boolean), [state.saved, catalogVersion]);
-	  const cartCount = reactExports.useMemo(() => state.cart.reduce((s, l) => s + l.qty, 0), [state.cart]);
-	  const subtotal = reactExports.useMemo(() => cartDetailed.reduce((s, l) => s + l.lineTotal, 0), [cartDetailed]);
-	  const mrpTotal = reactExports.useMemo(() => cartDetailed.reduce((s, l) => s + l.unitMrp * l.qty, 0), [cartDetailed]);
-	  const savings = reactExports.useMemo(() => cartDetailed.reduce((s, l) => s + Math.max(0, l.unitMrp - l.unitPrice) * l.qty, 0), [cartDetailed]);
-	  const value = {
-	    ...state,
-	    dispatch,
-	    toasts,
-	    toast,
-	    addToCart,
-	    toggleWish,
-	    isWished: id => state.wishlist.includes(id),
-	    cartDetailed,
-	    savedDetailed,
-	    cartCount,
-	    wishCount: state.wishlist.length,
-	    subtotal,
-	    mrpTotal,
-	    savings
-	  };
-	  return /*#__PURE__*/jsxRuntimeExports.jsx(StoreCtx.Provider, {
-	    value: value,
-	    children: children
-	  });
-	}
-	function useStore() {
-	  const ctx = reactExports.useContext(StoreCtx);
-	  if (!ctx) throw new Error('useStore must be used within StoreProvider');
-	  return ctx;
-	}
-
-	// General currency formatter for storefront/catalogue prices. Locale grouping,
-	// no forced decimals (so whole-rupee prices read as ₹1,968, not ₹1,968.00).
-	function money(n, currency = '₹') {
-	  return currency + Number(n).toLocaleString('en-IN');
-	}
-
-	// Canonical formatter for creator-program FINANCIAL amounts — earnings,
-	// commission, payouts, eligible/attributed sales, and financial admin views.
-	// Always renders exactly two decimals in INR grouping, so a value like 393.6
-	// shows as ₹393.60 (never a truncated ₹393.6) and 0 shows as ₹0.00. This is
-	// display-only; it never changes stored values or calculations. Null/NaN → ₹0.00.
-	function money2(n, currency = '₹') {
-	  const v = Number(n);
-	  return currency + (Number.isFinite(v) ? v : 0).toLocaleString('en-IN', {
-	    minimumFractionDigits: 2,
-	    maximumFractionDigits: 2
-	  });
-	}
-
-	// Reference-counted body scroll lock.
-	//
-	// Previously the header locked scrolling by writing document.body.style.overflow
-	// directly from two independent effects (the nav drawer and the mobile search
-	// overlay). Whichever closed FIRST cleared the lock, so closing the search
-	// overlay while the drawer was still open let the page scroll behind it.
-	// Counting the locks fixes that: scrolling resumes only when the last holder
-	// releases.
-	//
-	// It also compensates for the scrollbar width, so locking no longer shifts the
-	// layout horizontally on desktop when the scrollbar disappears.
-
-	let locks = 0;
-	let previousOverflow = '';
-	let previousPaddingRight = '';
-	function lockScroll() {
-	  if (typeof document === 'undefined') return;
-	  locks += 1;
-	  if (locks > 1) return;
-	  const body = document.body;
-	  previousOverflow = body.style.overflow;
-	  previousPaddingRight = body.style.paddingRight;
-	  const gap = window.innerWidth - document.documentElement.clientWidth;
-	  body.style.overflow = 'hidden';
-	  if (gap > 0) {
-	    const current = parseFloat(window.getComputedStyle(body).paddingRight) || 0;
-	    body.style.paddingRight = `${current + gap}px`;
-	  }
-	}
-	function unlockScroll() {
-	  if (typeof document === 'undefined') return;
-	  if (locks === 0) return;
-	  locks -= 1;
-	  if (locks > 0) return;
-	  document.body.style.overflow = previousOverflow;
-	  document.body.style.paddingRight = previousPaddingRight;
-	}
-
-	function Header() {
-	  const {
-	    cartCount,
-	    wishCount
-	  } = useStore();
-	  const [drawer, setDrawer] = reactExports.useState(false);
-	  const [q, setQ] = reactExports.useState('');
-	  const [focused, setFocused] = reactExports.useState(false);
-	  const [scrolled, setScrolled] = reactExports.useState(false);
-	  // Mobile search overlay. The desktop search field is hidden on small
-	  // screens, so mobile previously had no way to search at all — the icon
-	  // just navigated to /shop with no query.
-	  const [mobileSearch, setMobileSearch] = reactExports.useState(false);
-	  const navigate = useNavigate();
-	  const location = useLocation();
-	  const boxRef = reactExports.useRef(null);
-	  const mobileInputRef = reactExports.useRef(null);
-	  reactExports.useEffect(() => {
-	    let raf = null;
-	    const onScroll = () => {
-	      if (raf) return;
-	      raf = requestAnimationFrame(() => {
-	        raf = null;
-	        setScrolled(window.scrollY > 8);
-	      });
-	    };
-	    onScroll();
-	    window.addEventListener('scroll', onScroll, {
-	      passive: true
-	    });
-	    return () => {
-	      window.removeEventListener('scroll', onScroll);
-	      if (raf) cancelAnimationFrame(raf);
-	    };
-	  }, []);
-	  reactExports.useEffect(() => {
-	    setDrawer(false);
-	    setFocused(false);
-	    setMobileSearch(false);
-	  }, [location.pathname]);
-
-	  // Focus the field when the overlay opens (so the keyboard appears), lock
-	  // body scroll behind it, and allow Escape to close.
-	  reactExports.useEffect(() => {
-	    if (!mobileSearch) return;
-	    const t = setTimeout(() => mobileInputRef.current?.focus(), 60);
-	    const onKey = e => {
-	      if (e.key === 'Escape') setMobileSearch(false);
-	    };
-	    document.addEventListener('keydown', onKey);
-	    lockScroll();
-	    return () => {
-	      clearTimeout(t);
-	      document.removeEventListener('keydown', onKey);
-	      unlockScroll();
-	    };
-	  }, [mobileSearch]);
-	  // Reference-counted so the drawer and the search overlay can't unlock each
-	  // other (see lib/scrollLock.js).
-	  reactExports.useEffect(() => {
-	    if (!drawer) return undefined;
-	    lockScroll();
-	    // Only close the drawer if the search overlay (which sits above it) isn't
-	    // the topmost layer — Escape should dismiss one layer at a time.
-	    const onKey = e => {
-	      if (e.key === 'Escape' && !mobileSearch) setDrawer(false);
-	    };
-	    document.addEventListener('keydown', onKey);
-	    return () => {
-	      document.removeEventListener('keydown', onKey);
-	      unlockScroll();
-	    };
-	  }, [drawer, mobileSearch]);
-	  reactExports.useEffect(() => {
-	    const onDoc = e => {
-	      if (boxRef.current && !boxRef.current.contains(e.target)) setFocused(false);
-	    };
-	    document.addEventListener('mousedown', onDoc);
-	    return () => document.removeEventListener('mousedown', onDoc);
-	  }, []);
-	  const results = q.trim() ? searchProducts(q).slice(0, 6) : [];
-	  const submit = e => {
-	    e.preventDefault();
-	    if (q.trim()) {
-	      navigate(`/shop?q=${encodeURIComponent(q.trim())}`);
-	      setFocused(false);
-	      setMobileSearch(false);
-	    }
-	  };
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(AnnouncementBar, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
-	      className: `v2-hdr ${scrolled ? 'is-scrolled' : ''}`,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "v2-hdr__bar",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "v2-hdr__left",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            className: "v2-hdr__act",
-	            onClick: () => setDrawer(true),
-	            "aria-label": "Open menu",
-	            "aria-expanded": drawer,
-	            "aria-controls": "mobile-drawer",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "menu",
-	              size: 19,
-	              stroke: 1.5
-	            })
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "v2-hdr__search",
-	            ref: boxRef,
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("form", {
-	              className: "v2-hdr__searchbox",
-	              onSubmit: submit,
-	              role: "search",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "search",
-	                size: 17,
-	                stroke: 1.5
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	                placeholder: "Search wellness essentials",
-	                value: q,
-	                onChange: e => setQ(e.target.value),
-	                onFocus: () => setFocused(true),
-	                "aria-label": "Search for products"
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	                type: "submit",
-	                "aria-label": "Search",
-	                children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                  name: "arrowRight",
-	                  size: 16,
-	                  stroke: 1.6
-	                })
-	              })]
-	            }), focused && q.trim() && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	              className: "v2-hdr__suggest",
-	              children: results.length ? results.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	                to: `/product/${p.slug}`,
-	                className: "v2-hdr__suggest-item",
-	                onClick: () => setFocused(false),
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                  className: "v2-hdr__suggest-thumb",
-	                  children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	                    product: p,
-	                    frame: "v2",
-	                    sizes: "40px"
-	                  })
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                  className: "v2-hdr__suggest-name",
-	                  children: p.name
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                  className: "v2-hdr__suggest-price",
-	                  children: money(p.price)
-	                })]
-	              }, p.id)) : /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	                className: "v2-hdr__suggest-empty",
-	                children: ["No matches for \u201C", q, "\u201D."]
-	              })
-	            })]
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "v2-hdr__brand",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Logo, {})
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "v2-hdr__right",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            className: "v2-hdr__act v2-only-mobile",
-	            onClick: () => setMobileSearch(true),
-	            "aria-label": "Search",
-	            "aria-expanded": mobileSearch,
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "search",
-	              size: 19,
-	              stroke: 1.5
-	            })
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/account",
-	            className: "v2-hdr__act v2-hide-mobile",
-	            "aria-label": "Account",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "user",
-	              size: 19,
-	              stroke: 1.5
-	            })
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	            to: "/wishlist",
-	            className: "v2-hdr__act v2-hide-mobile",
-	            "aria-label": `Wishlist${wishCount > 0 ? `, ${wishCount} items` : ''}`,
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "heart",
-	              size: 19,
-	              stroke: 1.5
-	            }), wishCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "v2-hdr__count",
-	              children: wishCount
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	            to: "/cart",
-	            className: "v2-hdr__act",
-	            "aria-label": `Cart${cartCount > 0 ? `, ${cartCount} items` : ''}`,
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "bag",
-	              size: 19,
-	              stroke: 1.5
-	            }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "v2-hdr__count",
-	              children: cartCount
-	            })]
-	          })]
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
-	        className: "v2-hdr__nav",
-	        "aria-label": "Primary",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "v2-hdr__navitem",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
-	            to: "/shop",
-	            className: ({
-	              isActive
-	            }) => `v2-hdr__link ${isActive ? 'active' : ''}`,
-	            children: ["Shop ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "chevronDown",
-	              size: 13,
-	              stroke: 1.6
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "v2-hdr__mega",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	              className: "v2-hdr__mega-grid",
-	              children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	                to: `/category/${c.slug}`,
-	                className: "v2-hdr__mega-cell",
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                  className: "v2-hdr__mega-name",
-	                  children: c.name
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                  className: "v2-hdr__mega-tag",
-	                  "aria-hidden": !hasConfiguredCategoryCopy(c) || !c.tagline,
-	                  children: hasConfiguredCategoryCopy(c) && c.tagline ? c.tagline : '\u00A0'
-	                })]
-	              }, c.slug))
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	              to: "/shop",
-	              className: "v2-hdr__mega-all",
-	              children: ["Shop all products ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "arrowRight",
-	                size: 14,
-	                stroke: 1.8
-	              })]
-	            })]
-	          })]
-	        }), categories.slice(0, 5).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
-	          to: `/category/${c.slug}`,
-	          className: ({
-	            isActive
-	          }) => `v2-hdr__link ${isActive ? 'active' : ''}`,
-	          children: c.name
-	        }, c.slug)), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
-	          to: "/shop?sort=bestselling",
-	          className: "v2-hdr__link",
-	          children: "Bestsellers"
-	        })]
-	      })]
-	    }), mobileSearch && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "search-overlay",
-	      onClick: () => setMobileSearch(false),
-	      role: "dialog",
-	      "aria-modal": "true",
-	      "aria-label": "Search products",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "search-panel",
-	        onClick: e => e.stopPropagation(),
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("form", {
-	          className: "searchbox search-panel__box",
-	          onSubmit: submit,
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "search"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	            ref: mobileInputRef,
-	            className: "input",
-	            type: "search",
-	            enterKeyHint: "search",
-	            autoComplete: "off",
-	            placeholder: "Search for products...",
-	            "aria-label": "Search for products",
-	            value: q,
-	            onChange: e => setQ(e.target.value)
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            type: "button",
-	            className: "iconbtn",
-	            onClick: () => setMobileSearch(false),
-	            "aria-label": "Close search",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "x"
-	            })
-	          })]
-	        }), q.trim() ? results.length ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "search-results",
-	          children: [results.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	            to: `/product/${p.slug}`,
-	            className: "search-result",
-	            onClick: () => setMobileSearch(false),
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "search-thumb",
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	                product: p
-	              })
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	              className: "search-meta",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "search-name",
-	                children: p.name
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "hint",
-	                children: money(p.price)
-	              })]
-	            })]
-	          }, p.id)), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	            className: "btn btn-ghost btn-block",
-	            onClick: submit,
-	            children: ["See all results for \u201C", q, "\u201D"]
-	          })]
-	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	          className: "muted",
-	          style: {
-	            padding: '18px 4px'
-	          },
-	          children: ["No matches for \u201C", q, "\u201D. Try \u201Cjuice\u201D, \u201Csoap\u201D or \u201Chair\u201D."]
-	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "search-suggest",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "hint",
-	            children: "Popular:"
-	          }), ['Juice', 'Shampoo', 'Soap', 'Face wash'].map(s => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            type: "button",
-	            className: "chip",
-	            onClick: () => setQ(s),
-	            children: s
-	          }, s))]
-	        })]
-	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      id: "mobile-drawer",
-	      className: `drawer ${drawer ? 'open' : ''}`,
-	      "aria-hidden": !drawer,
-	      role: "dialog",
-	      "aria-modal": "true",
-	      "aria-label": "Menu",
-	      ...(drawer ? {} : {
-	        inert: ''
-	      }),
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "drawer__scrim",
-	        onClick: () => setDrawer(false)
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "drawer__panel",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "drawer__top",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Logo, {
-	            compact: true,
-	            tagline: false
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            className: "iconbtn",
-	            onClick: () => setDrawer(false),
-	            "aria-label": "Close menu",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "x"
-	            })
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
-	          className: "searchbox",
-	          style: {
-	            margin: '0 16px 8px'
-	          },
-	          onSubmit: submit,
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "search"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	            className: "input",
-	            placeholder: "Search for products...",
-	            value: q,
-	            onChange: e => setQ(e.target.value)
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
-	          className: "drawer__nav",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/shop",
-	            className: "drawer__link",
-	            children: "All products"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/shop?sort=bestselling",
-	            className: "drawer__link",
-	            children: "Bestsellers"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/shop?filter=new",
-	            className: "drawer__link",
-	            children: "New in"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	            className: "drawer__sec",
-	            children: "Categories"
-	          }), categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	            to: `/category/${c.slug}`,
-	            className: "drawer__cat",
-	            children: [c.name, /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "chevronRight",
-	              size: 17
-	            })]
-	          }, c.slug))]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "drawer__foot",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	            to: "/account",
-	            className: "btn btn-outline btn-block",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "user",
-	              size: 18
-	            }), " Account"]
-	          })
-	        })]
-	      })]
-	    })]
-	  });
-	}
-
-	function Footer() {
-	  const email = typeof contact?.email === 'string' ? contact.email.trim() : '';
-	  const phone = typeof contact?.phone === 'string' ? contact.phone.trim() : '';
-	  const hasContact = Boolean(email || phone);
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("footer", {
-	    className: "ftr",
-	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "container",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "ftr__top",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "ftr__brand",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Logo, {
-	            light: true
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            children: "Modern wellness, beauty and everyday care \u2014 delivered to your door."
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "ftr__col",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
-	            children: "Shop"
-	          }), categories.slice(0, 6).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: `/category/${c.slug}`,
-	            children: c.name
-	          }, c.slug)), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/shop",
-	            children: "All products"
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "ftr__col",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
-	            children: "Care"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/account",
-	            children: "My account"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/account",
-	            children: "Track my order"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/cart",
-	            children: "My cart"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/wishlist",
-	            children: "Wishlist"
-	          })]
-	        }), hasContact && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "ftr__col",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
-	            children: "Contact"
-	          }), email && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: `mailto:${email}`,
-	            children: email
-	          }), phone && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: `tel:${phone.replace(/\s+/g, '')}`,
-	            children: phone
-	          })]
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "ftr__trust",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "lock",
-	            size: 17
-	          }), " Secure checkout"]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "truck",
-	            size: 17
-	          }), " Free standard shipping"]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "package",
-	            size: 17
-	          }), " Order tracking in your account"]
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "ftr__bottom",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	          children: ["\xA9 ", new Date().getFullYear(), " Sora Life."]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "ftr__legal",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/admin/login",
-	            className: "ftr__admin-link",
-	            children: "Admin Login"
-	          })
-	        })]
-	      })]
-	    })
-	  });
-	}
-
-	function MobileTabBar() {
-	  const {
-	    cartCount,
-	    wishCount
-	  } = useStore();
-	  const item = ({
-	    isActive
-	  }) => `tabbar__item ${isActive ? 'active' : ''}`;
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
-	    className: "tabbar only-mobile",
-	    "aria-label": "Mobile navigation",
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
-	      to: "/",
-	      className: item,
-	      end: true,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "home",
-	        size: 22
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        children: "Home"
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
-	      to: "/shop",
-	      className: item,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "grid",
-	        size: 22
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        children: "Shop"
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
-	      to: "/wishlist",
-	      className: item,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        className: "tabbar__ic",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "heart",
-	          size: 22
-	        }), wishCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("i", {
-	          className: "tabbar__dot"
-	        }, wishCount)]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        children: "Saved"
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
-	      to: "/cart",
-	      className: item,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        className: "tabbar__ic",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "bag",
-	          size: 22
-	        }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("i", {
-	          className: "tabbar__badge",
-	          children: cartCount
-	        }, cartCount)]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        children: "Cart"
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
-	      to: "/account",
-	      className: item,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "user",
-	        size: 22
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        children: "Account"
-	      })]
-	    })]
-	  });
-	}
-
-	function MobileCartSummary() {
-	  const {
-	    pathname
-	  } = useLocation();
-	  const {
-	    cartCount,
-	    subtotal
-	  } = useStore();
-	  const browseRoute = /^\/(?:shop\/?|wishlist\/?|category\/[^/]+\/?)?$/.test(pathname);
-	  const visible = browseRoute && cartCount > 0;
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	    className: `v2-cart-dock${visible ? ' v2-cart-dock--active' : ''}`,
-	    children: [visible && /*#__PURE__*/jsxRuntimeExports.jsxs("aside", {
-	      className: "v2-mobile-cart",
-	      "aria-label": "Cart summary",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "v2-mobile-cart__totals",
-	        "aria-live": "polite",
-	        "aria-atomic": "true",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          className: "v2-mobile-cart__count",
-	          children: [cartCount, " ", cartCount === 1 ? 'item' : 'items']
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
-	          className: "v2-mobile-cart__subtotal",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "sr-only",
-	            children: "Item subtotal "
-	          }), money(subtotal)]
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	        to: "/cart",
-	        className: "v2-mobile-cart__link",
-	        children: ["View cart ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "arrowRight",
-	          size: 17
-	        })]
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx(MobileTabBar, {})]
-	  });
-	}
-
-	function Toasts() {
-	  const {
-	    toasts
-	  } = useStore();
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	    className: "toast-wrap",
-	    role: "status",
-	    "aria-live": "polite",
-	    children: toasts.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "toast",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "t-ic",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: t.kind === 'wish' ? 'heart' : 'checkCircle',
-	          size: 18
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "t-body",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	          children: t.message
-	        })
-	      })]
-	    }, t.id))
-	  });
-	}
-
-	function ScrollToTop() {
-	  const {
-	    pathname
-	  } = useLocation();
-	  reactExports.useEffect(() => {
-	    window.scrollTo({
-	      top: 0,
-	      behavior: 'instant' in window ? 'instant' : 'auto'
-	    });
-	  }, [pathname]);
-	  return null;
-	}
-	function Layout() {
-	  const {
-	    pathname
-	  } = useLocation();
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(ScrollToTop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Header, {}), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
-	      className: "page-main",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Outlet, {})
-	    }, pathname), /*#__PURE__*/jsxRuntimeExports.jsx(Footer, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MobileCartSummary, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
-	  });
-	}
-
-	// Structured presentation fields inside site_settings.homepage.visuals.
-	// No CSS/HTML input is accepted. Shared by the editor and storefront reader.
-	const IMAGE_POSITIONS = ['left top', 'center top', 'right top', 'left center', 'center center', 'right center', 'left bottom', 'center bottom', 'right bottom'];
-	const color$1 = (label, value) => ({
-	  label,
-	  type: 'color',
-	  value
-	});
-	const number$1 = (label, value, min, max, step = 1) => ({
-	  label,
-	  type: 'number',
-	  value,
-	  min,
-	  max,
-	  step
-	});
-	const toggle = (label, value = false) => ({
-	  label,
-	  type: 'boolean',
-	  value
-	});
-	const image = label => ({
-	  label,
-	  type: 'image',
-	  value: ''
-	});
-	const select$1 = (label, value, options) => ({
-	  label,
-	  type: 'select',
-	  value,
-	  options
-	});
-	const HOMEPAGE_VISUAL_FIELDS = {
-	  categoryStrip: {
-	    enabled: toggle('Enable category background', false),
-	    backgroundColor: color$1('Background color', '#F7F1E7'),
-	    imageUrl: image('Background strip image'),
-	    imageSize: select$1('Background image fit', 'cover', ['cover', 'contain']),
-	    imagePosition: select$1('Background image position', 'center center', IMAGE_POSITIONS),
-	    imageOpacity: number$1('Background image opacity', 1, 0, 1, 0.05),
-	    overlayColor: color$1('Overlay color', '#FBF8F1'),
-	    overlayOpacity: number$1('Overlay strength (0 = off)', 0, 0, 1, 0.05),
-	    paddingTop: number$1('Top padding (px)', 12, 0, 48),
-	    paddingBottom: number$1('Bottom padding (px)', 12, 0, 48),
-	    borderTop: toggle('Show top border'),
-	    borderBottom: toggle('Show bottom border'),
-	    borderColor: color$1('Border color', '#DED2C4'),
-	    borderWidth: number$1('Border thickness (px)', 1, 0, 4),
-	    radius: number$1('Corner radius (px)', 8, 0, 16),
-	    textureUrl: image('Decorative texture'),
-	    texturePosition: select$1('Texture position', 'center center', IMAGE_POSITIONS),
-	    leftImage: image('Left decoration'),
-	    rightImage: image('Right decoration'),
-	    decorationOpacity: number$1('Decoration opacity', 0.25, 0, 1, 0.05),
-	    decorationSize: number$1('Decoration width (px)', 120, 24, 240),
-	    decorationPosition: select$1('Decoration vertical position', 'center', ['top', 'center', 'bottom']),
-	    hideTextureMobile: toggle('Hide texture on mobile'),
-	    hideLeftMobile: toggle('Hide left decoration on mobile', true),
-	    hideRightMobile: toggle('Hide right decoration on mobile', true)
-	  },
-	  offers: {
-	    backgroundColor: color$1('Section background', '#FBF8F1'),
-	    frameColor: color$1('Frame interior', '#FFF8ED'),
-	    frameEnabled: toggle('Show bordered frame', true),
-	    borderColor: color$1('Frame border color', '#702B3B'),
-	    borderWidth: number$1('Frame border thickness (px)', 1, 0, 4),
-	    accentColor: color$1('Heading and accent color', '#702B3B'),
-	    radius: number$1('Frame corner radius (px)', 12, 0, 16),
-	    textureUrl: image('Frame background image / texture'),
-	    textureOpacity: number$1('Texture opacity', 0.12, 0, 1, 0.01),
-	    padding: number$1('Section top and bottom padding (px)', 20, 0, 48),
-	    gap: number$1('Gap between promotions (px)', 16, 8, 32),
-	    desktopColumns: select$1('Maximum promotions per desktop row', 2, [1, 2, 3]),
-	    mobileWidth: number$1('Mobile promotion width (%)', 90, 88, 92),
-	    decorationUrl: image('Optional decorative artwork'),
-	    decorationOpacity: number$1('Artwork opacity', 0.15, 0, 1, 0.05),
-	    decorationSize: number$1('Artwork width (px)', 160, 24, 240)
-	  }
-	};
-	function safeVisualUrl(value) {
-	  if (typeof value !== 'string' || !value.trim()) return '';
-	  const raw = value.trim();
-	  if (raw.length > 2000 || /[\s\\\u0000-\u001f\u007f]/.test(raw)) return '';
-	  let url;
-	  try {
-	    url = new URL(raw, 'https://visual.invalid');
-	  } catch {
-	    return '';
-	  }
-	  if (url.username || url.password || url.port || /\.(svg|html?)$/i.test(url.pathname)) return '';
-	  let path;
-	  try {
-	    path = decodeURIComponent(url.pathname);
-	  } catch {
-	    return '';
-	  }
-	  if (/[\\\u0000-\u001f\u007f]/.test(path)) return '';
-	  if (raw.startsWith('/') && !raw.startsWith('//') && url.origin === 'https://visual.invalid') return raw;
-	  if (!raw.startsWith('https://') || url.protocol !== 'https:') return '';
-	  const host = url.hostname;
-	  // Visual URLs load in <img>, never via a server fetch. Still reject local,
-	  // private and literal-IP destinations rather than probing a user's LAN.
-	  if (!host.includes('.') || /^(localhost|.*\.(localhost|local|internal|test|invalid|lan|home\.arpa))$/i.test(host) || /^[\d.]+$/.test(host) || host.includes(':')) return '';
-	  return url.href;
-	}
-	function sanitizeHomepageVisuals(raw) {
-	  const result = {};
-	  for (const [group, fields] of Object.entries(HOMEPAGE_VISUAL_FIELDS)) {
-	    result[group] = {};
-	    for (const [key, field] of Object.entries(fields)) {
-	      const v = raw?.[group]?.[key];
-	      let clean = field.value;
-	      if (field.type === 'boolean' && typeof v === 'boolean') clean = v;
-	      if (field.type === 'color' && typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) clean = v;
-	      if (field.type === 'image') clean = safeVisualUrl(v);
-	      if (field.type === 'select' && field.options.includes(v)) clean = v;
-	      if (field.type === 'number' && v !== '' && v != null && Number.isFinite(Number(v))) {
-	        clean = Math.min(field.max, Math.max(field.min, Number(v)));
-	      }
-	      result[group][key] = clean;
-	    }
-	  }
-	  return result;
-	}
-	function mergeHomepageVisuals(current, visuals) {
-	  return {
-	    ...(current && typeof current === 'object' ? current : {}),
-	    visuals: sanitizeHomepageVisuals(visuals)
-	  };
-	}
-
-	// Keep the placement runtime and its sort/date/active rules authoritative.
-	// De-duplicate IDs only; never slice away additional posters or offer cards.
-	function uniqueHomepagePromotions(promotions) {
-	  const seen = new Set();
-	  return promotions.filter(promo => {
-	    if (seen.has(promo.id)) return false;
-	    seen.add(promo.id);
-	    return true;
-	  });
-	}
-
-	const number = (label, value, min, max, step = 1) => ({
-	  label,
-	  type: 'number',
-	  value,
-	  min,
-	  max,
-	  step
-	});
-	const select = (label, value, options) => ({
-	  label,
-	  type: 'select',
-	  value,
-	  options
-	});
-	const color = label => ({
-	  label,
-	  type: 'color',
-	  value: ''
-	});
-	const HERO_CTA_FIELDS = {
-	  desktopPosition: select('Desktop position', 'flow', ['flow', 'custom']),
-	  x: number('Desktop horizontal position (%)', 0, 0, 100),
-	  y: number('Desktop vertical position (%)', 75, 0, 100),
-	  mobilePosition: select('Mobile position', 'auto', ['auto', 'custom']),
-	  mobileX: number('Mobile horizontal position (%)', 50, 0, 100),
-	  mobileY: number('Mobile vertical position (%)', 95, 0, 100),
-	  width: number('Button width (px; 0 = automatic)', 118, 0, 480),
-	  paddingX: number('Horizontal padding (px)', 14, 4, 48),
-	  paddingY: number('Vertical padding (px)', 7, 0, 24),
-	  backgroundColor: color('Background color (blank = theme)'),
-	  textColor: color('Text color (blank = theme)'),
-	  borderColor: color('Border color (blank = theme)'),
-	  borderWidth: number('Border thickness (px)', 1, 0, 6),
-	  radius: number('Corner radius (px)', 2, 0, 40),
-	  fontSize: number('Font size (px; 0 = responsive default)', 13, 0, 24),
-	  fontWeight: select('Font weight', 700, [400, 500, 600, 700]),
-	  opacity: number('Button opacity', 1, 0.3, 1, 0.05),
-	  shadow: select('Button shadow', 'none', ['none', 'subtle']),
-	  textureUrl: {
-	    label: 'Button background texture',
-	    type: 'image',
-	    value: ''
-	  },
-	  textureOpacity: number('Texture opacity', 0.25, 0, 1, 0.05),
-	  textureFit: select('Texture fit', 'cover', ['cover', 'contain']),
-	  iconUrl: {
-	    label: 'Button icon image',
-	    type: 'image',
-	    value: ''
-	  },
-	  iconSide: select('Icon side', 'left', ['left', 'right']),
-	  iconSize: number('Icon size (px)', 16, 10, 32)
-	};
-	function sanitizeHeroCta(input) {
-	  const raw = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
-	  return Object.fromEntries(Object.entries(HERO_CTA_FIELDS).map(([key, f]) => {
-	    const v = raw[key];
-	    let value = f.value;
-	    if (f.type === 'number' && v !== '' && (typeof v === 'number' || typeof v === 'string') && Number.isFinite(Number(v))) value = Math.min(f.max, Math.max(f.min, Number(v)));
-	    if (f.type === 'select' && f.options.includes(v)) value = v;
-	    if (f.type === 'color' && typeof v === 'string' && /^#[\da-f]{6}$/i.test(v)) value = v;
-	    if (f.type === 'image') value = safeVisualUrl(v);
-	    return [key, value];
-	  }));
-	}
-	function mergeHeroCta(homepage, slideId, appearance) {
-	  if (typeof slideId !== 'string' || !/^[\w-]{1,100}$/.test(slideId) || ['__proto__', 'constructor', 'prototype'].includes(slideId)) throw new Error('Invalid slide ID');
-	  return {
-	    ...homepage,
-	    heroCtas: {
-	      ...(homepage?.heroCtas || {}),
-	      [slideId]: sanitizeHeroCta(appearance)
-	    }
-	  };
-	}
-	function heroCtaStyle(input) {
-	  const a = sanitizeHeroCta(input);
-	  // Auto always resolves to the current safe mobile default, including for
-	  // older saved records that may contain legacy X/Y values.
-	  const mobileX = a.mobilePosition === 'custom' ? a.mobileX : 50;
-	  const mobileY = a.mobilePosition === 'custom' ? a.mobileY : 95;
-	  return {
-	    '--hcta-x': `${a.x}%`,
-	    '--hcta-y': `${a.y}%`,
-	    '--hcta-mobile-x': `${mobileX}%`,
-	    '--hcta-mobile-y': `${mobileY}%`,
-	    '--hcta-width': a.width ? `${a.width}px` : 'auto',
-	    '--hcta-px': `${a.paddingX}px`,
-	    '--hcta-py': `${a.paddingY}px`,
-	    '--hcta-bg': a.backgroundColor || 'var(--slv2-primary, var(--slv2-f700))',
-	    '--hcta-text': a.textColor || 'var(--slv2-ivory)',
-	    '--hcta-border': a.borderColor || 'transparent',
-	    '--hcta-border-width': `${a.borderWidth}px`,
-	    '--hcta-radius': `${a.radius}px`,
-	    '--hcta-font': a.fontSize ? `${a.fontSize}px` : undefined,
-	    '--hcta-weight': a.fontWeight,
-	    '--hcta-opacity': a.opacity,
-	    '--hcta-shadow': a.shadow === 'subtle' ? '0 2px 6px rgb(0 0 0 / 16%)' : 'none',
-	    '--hcta-texture-opacity': a.textureOpacity,
-	    '--hcta-texture-fit': a.textureFit,
-	    '--hcta-icon-size': `${a.iconSize}px`
-	  };
-	}
-
-	function CtaImage({
-	  src,
-	  className
-	}) {
-	  const [failed, setFailed] = reactExports.useState(false);
-	  return !failed && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	    src: src,
-	    className: className,
-	    alt: "",
-	    "aria-hidden": "true",
-	    onError: () => setFailed(true)
-	  });
-	}
-	function HeroCta({
-	  cta,
-	  appearance,
-	  placement = 'flow',
-	  artworkOnly = false,
-	  active = true,
-	  children
-	}) {
-	  if (!cta?.to) return null;
-	  const a = sanitizeHeroCta(appearance);
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	    className: `hero-cta hero-cta--${placement}`,
-	    style: heroCtaStyle(a),
-	    "data-desktop": a.desktopPosition,
-	    "data-mobile": "custom",
-	    children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	      to: cta.to,
-	      className: "v2-btn v2-btn--sm hero-cta__button",
-	      tabIndex: active ? undefined : -1,
-	      children: [a.textureUrl && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
-	        src: a.textureUrl,
-	        className: "hero-cta__texture"
-	      }, a.textureUrl), a.iconUrl && a.iconSide === 'left' && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
-	        src: a.iconUrl,
-	        className: "hero-cta__icon"
-	      }, a.iconUrl), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "hero-cta__label",
-	        children: children || cta.label
-	      }), a.iconUrl && a.iconSide === 'right' && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
-	        src: a.iconUrl,
-	        className: "hero-cta__icon"
-	      }, a.iconUrl)]
-	    })
-	  });
-	}
-
-	const HERO_PRODUCT_SLUG = 'biosash-sea-buckthorn-juice';
-	const SAFE_HERO_COPY = {
-	  kicker: 'SEA BUCKTHORN COLLECTION',
-	  title: 'Sea Buckthorn\nEssentials',
-	  sub: 'Explore juices, supplements and everyday care from the collection.',
-	  mobileSub: 'Juices, supplements & everyday care.',
-	  cta: {
-	    label: 'EXPLORE COLLECTION',
-	    to: '/shop'
-	  }
-	};
-
-	// Only mobile typography responds to length; configured copy stays intact.
-	const titleClass = title => `v2-hero__title${String(title || '').trim().length > 22 ? ' v2-hero__title--long' : ''}`;
-
-	// Replace only the currently published, generic sea-buckthorn slide copy.
-	// The configured artwork and every other Admin-managed slide field remain
-	// untouched; this is a storefront copy-safety override, not a data write.
-	function withSafeHeroCopy(slide) {
-	  const isCurrentSeaBuckthornSlide = slide?.kicker?.trim().toUpperCase() === 'HIMALAYAN WELLNESS' && slide?.title?.trim() === 'The Power of Sea Buckthorn';
-	  if (!isCurrentSeaBuckthornSlide) return slide;
-	  return {
-	    ...slide,
-	    ...SAFE_HERO_COPY
-	  };
-	}
-	function resolveHeroProduct() {
-	  const exact = productBySlug?.[HERO_PRODUCT_SLUG];
-	  if (exact?.image) return exact;
-	  // Defensive: if the catalogue is swapped by applyCatalog() and that slug is
-	  // gone, fall back to the first in-stock product that has a real image.
-	  return (products || []).find(p => p?.image && p.stock !== 0) || null;
-	}
-
-	// V2 note: the previous hardcoded BENEFITS strip ("Rich in 190+ Nutrients",
-	// "Boosts Immunity & Wellness") was authored marketing copy baked into this
-	// component, not data the storefront can substantiate. V2 does not render
-	// product claims that are not bound to verified data, so it has been removed
-	// rather than restyled.
-
-	const INTERVAL = 6000;
-
-	// Brand hero still (Himalayan sea buckthorn). Last-resort visual so a slide
-	// can never render as an empty colour block — see posterFor() below.
-	const FALLBACK_POSTER = '/media/hero-poster.jpg';
-
-	// Admin-uploaded hero art lives in Supabase Storage and is served at full size
-	// (the current slides are a 1.8 MB PNG and a 1.6 MB JPEG). Supabase can render
-	// resized, format-negotiated variants from the same object, so we ask for a
-	// width-appropriate rendition instead of the original. Non-Supabase paths
-	// (our local /media stills) are returned untouched.
-	const SB_OBJECT = '/storage/v1/object/public/';
-	const SB_RENDER = '/storage/v1/render/image/public/';
-	const HERO_WIDTHS = [640, 1024, 1600, 1920];
-	function isSupabaseObject(src) {
-	  return typeof src === 'string' && src.includes(SB_OBJECT) && /supabase\.co/.test(src);
-	}
-	function heroSrc(src, width) {
-	  if (!isSupabaseObject(src)) return src;
-	  return `${src.replace(SB_OBJECT, SB_RENDER)}?width=${width}&quality=72`;
-	}
-	// Locally-shipped hero stills that have pre-built WebP renditions alongside
-	// them (see media/hero-poster-<w>.webp). Keyed by the original path.
-	// 640w is deliberately absent: the hero is full-bleed, so on a DPR-2 phone
-	// (390 CSS px -> ~780 device px) the browser would pick 640w, then upgrade to
-	// 1024w and pay for both. Starting at 1024w costs one request, 60 KB, and is
-	// still smaller than the 82 KB JPEG it replaces.
-	const LOCAL_HERO_VARIANTS = {
-	  '/media/hero-poster.jpg': [1024, 1600]
-	};
-	function heroSrcSet(src) {
-	  const local = LOCAL_HERO_VARIANTS[src];
-	  if (local) {
-	    const base = src.replace(/\.[a-z]+$/i, '');
-	    return local.map(w => `${base}-${w}.webp ${w}w`).join(', ');
-	  }
-	  if (!isSupabaseObject(src)) return undefined;
-	  return HERO_WIDTHS.map(w => `${heroSrc(src, w)} ${w}w`).join(', ');
-	}
-
-	// The still we can show for a slide, if any. A video slide whose poster is
-	// missing used to fall through to a bare coloured <div> — that is how the
-	// duplicate "Mom's Trust" slide (poster_url null, video_url returns 400)
-	// rendered as a large empty block on every device.
-	function stillFor(slide) {
-	  // Image slides carry their URL in `src` (adminApi maps image_url -> src);
-	  // video slides carry a separate poster. Check the right field for each, or
-	  // an image slide gets treated as having no still and is wrongly dropped.
-	  if (slide.kind === 'image') return slide.src || slide.poster || null;
-	  return slide.poster || slide.image || null;
-	}
-
-	// A slide is only worth rendering if it can actually show something: either a
-	// video we are going to play, or a still. Anything else would paint an empty
-	// block, so it is dropped from the carousel rather than shown broken.
-	function isRenderable(slide, canUseVideo, failed) {
-	  if (slide.kind === 'video' && canUseVideo && slide.src && !failed[slide.id]) return true;
-	  return Boolean(stillFor(slide));
-	}
-	function Hero() {
-	  // Product-led hero is the V2 default. Admin-configured slides opt back into
-	  // the original slide rendering because that copy is approved content.
-	  if (!heroSlidesConfigured) return /*#__PURE__*/jsxRuntimeExports.jsx(ProductHero$1, {});
-	  return /*#__PURE__*/jsxRuntimeExports.jsx(ConfiguredHero, {});
-	}
-
-	// ---------------------------------------------------------------- product-led
-	function ProductHero$1() {
-	  const product = resolveHeroProduct();
-	  if (!product) return null;
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	    className: "v2-hero v2-hero--product",
-	    "aria-label": "Featured product",
-	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-hero__stage",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-hero__ground",
-	        "aria-hidden": "true"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-hero__leaf v2-hero__leaf--a",
-	        "aria-hidden": "true"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-hero__leaf v2-hero__leaf--b",
-	        "aria-hidden": "true"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-hero__plinth",
-	        "aria-hidden": "true"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-hero__contact",
-	        "aria-hidden": "true"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-hero__productwrap",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	          product: product,
-	          frame: "hero",
-	          sizes: "(max-width: 767px) 62vw, 46vw",
-	          alt: product.name
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "v2-hero__ui",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	          className: "v2-hero__kicker",
-	          children: SAFE_HERO_COPY.kicker
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-	          className: titleClass(SAFE_HERO_COPY.title),
-	          children: SAFE_HERO_COPY.title
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	          className: "v2-hero__sub",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "v2-hero__sub-full",
-	            children: SAFE_HERO_COPY.sub
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "v2-hero__sub-compact",
-	            children: SAFE_HERO_COPY.mobileSub
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	            to: SAFE_HERO_COPY.cta.to,
-	            className: "v2-btn v2-btn--sm",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "v2-hero__cta-full",
-	              children: SAFE_HERO_COPY.cta.label
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "v2-hero__cta-compact",
-	              children: "Explore collection"
-	            })]
-	          })
-	        })]
-	      })]
-	    })
-	  });
-	}
-
-	// ------------------------------------------------- admin-configured slides
-	function ConfiguredHero() {
-	  const [active, setActive] = reactExports.useState(0);
-	  const [paused, setPaused] = reactExports.useState(false);
-	  const [videoFailed, setVideoFailed] = reactExports.useState({}); // { [slideId]: true } — fall back to poster on load error
-	  const timer = reactExports.useRef(null);
-	  const sectionRef = reactExports.useRef(null);
-	  const parallaxRefs = reactExports.useRef([]);
-	  const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-
-	  // The hero video is a ~6 MB MP4 — fine on desktop broadband, but it was
-	  // the single largest cost on mobile (it dominated the phone payload for a
-	  // decorative background). Phones, data-saver users and reduced-motion users
-	  // get the poster still instead, which is already authored for every video
-	  // slide and is ~70x smaller. Desktop behaviour is unchanged.
-	  const [useVideo, setUseVideo] = reactExports.useState(false);
-	  reactExports.useEffect(() => {
-	    if (typeof window === 'undefined' || !window.matchMedia) return;
-	    const mq = window.matchMedia('(min-width: 768px)');
-	    const saveData = navigator.connection?.saveData === true;
-	    const evaluate = () => setUseVideo(mq.matches && !reduced && !saveData);
-	    evaluate();
-	    mq.addEventListener?.('change', evaluate);
-	    return () => mq.removeEventListener?.('change', evaluate);
-	  }, [reduced]);
-
-	  // Only carry slides that can actually paint something. If a deck were ever
-	  // configured with nothing renderable at all, keep the original list so the
-	  // hero still has structure rather than collapsing to nothing.
-	  const renderable = heroSlides.filter(s => isRenderable(s, useVideo, videoFailed));
-	  const SLIDES = renderable.length ? renderable : heroSlides;
-	  const DISPLAY_SLIDES = SLIDES.map(withSafeHeroCopy);
-
-	  // A dropped slide shortens the deck; keep the index inside it.
-	  reactExports.useEffect(() => {
-	    if (active >= SLIDES.length) setActive(0);
-	  }, [SLIDES.length, active]);
-	  const go = reactExports.useCallback(i => setActive((i + SLIDES.length) % SLIDES.length), [SLIDES.length]);
-	  const next = reactExports.useCallback(() => setActive(a => (a + 1) % SLIDES.length), [SLIDES.length]);
-	  reactExports.useEffect(() => {
-	    if (paused || reduced || SLIDES.length < 2) return;
-	    timer.current = setTimeout(next, INTERVAL);
-	    return () => clearTimeout(timer.current);
-	  }, [active, paused, reduced, next, SLIDES.length]);
-
-	  // Very slow, depth-only scroll parallax on the background media — never on
-	  // the text. Disabled entirely for reduced-motion and on narrow/mobile
-	  // viewports (per the "reduce parallax on mobile" requirement). Applied via
-	  // a rAF-throttled scroll listener to a wrapper element that sits outside
-	  // the Ken-Burns-scaled media, so the two transforms never fight.
-	  reactExports.useEffect(() => {
-	    if (reduced) return;
-	    const isMobile = () => window.innerWidth < 768;
-	    if (isMobile()) return;
-	    let raf = null;
-	    const onScroll = () => {
-	      // Below 768px the media sits in normal flow (see the mobile hero block in
-	      // home.css), so an inline translate would shift it out of place. Clear it
-	      // and bail if the viewport was resized down after mount.
-	      if (isMobile()) {
-	        parallaxRefs.current.forEach(n => {
-	          if (n) n.style.transform = '';
-	        });
-	        return;
-	      }
-	      if (raf) return;
-	      raf = requestAnimationFrame(() => {
-	        raf = null;
-	        const el = sectionRef.current;
-	        if (!el) return;
-	        const rect = el.getBoundingClientRect();
-	        if (rect.bottom < 0 || rect.top > window.innerHeight) return; // out of view, skip
-	        const offset = Math.max(-40, Math.min(40, rect.top * -0.06));
-	        parallaxRefs.current.forEach(node => {
-	          if (node) node.style.transform = `translate3d(0, ${offset}px, 0)`;
-	        });
-	      });
-	    };
-	    window.addEventListener('scroll', onScroll, {
-	      passive: true
-	    });
-	    return () => {
-	      window.removeEventListener('scroll', onScroll);
-	      if (raf) cancelAnimationFrame(raf);
-	    };
-	  }, [reduced]);
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-	    ref: sectionRef,
-	    className: "v2-hero",
-	    onMouseEnter: () => setPaused(true),
-	    onMouseLeave: () => setPaused(false),
-	    "aria-roledescription": "carousel",
-	    "aria-label": "Sora Life featured",
-	    children: [DISPLAY_SLIDES.map((s, i) => (() => {
-	      const appearance = homepage.heroCtas?.[s.id];
-	      const artworkOnly = ![s.kicker, s.title, s.sub, s.lede].some(value => value && /[A-Za-z0-9]/.test(value));
-	      const ctaLabel = s.cta.label === SAFE_HERO_COPY.cta.label ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "v2-hero__cta-full",
-	          children: s.cta.label
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "v2-hero__cta-compact",
-	          children: "Explore collection"
-	        })]
-	      }) : s.cta.label;
-	      return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: `v2-hero__slide ${i === active ? 'is-active' : ''} ${s.sub === SAFE_HERO_COPY.sub ? 'v2-hero__slide--collection' : ''}`,
-	        "aria-hidden": i !== active,
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "v2-hero__media",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	            className: "v2-hero__par",
-	            ref: el => {
-	              parallaxRefs.current[i] = el;
-	            },
-	            children: s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src ? /*#__PURE__*/jsxRuntimeExports.jsx("video", {
-	              className: "v2-hero__img",
-	              autoPlay: true,
-	              muted: true,
-	              loop: true,
-	              playsInline: true,
-	              preload: "metadata",
-	              poster: s.poster,
-	              style: {
-	                objectPosition: s.position
-	              },
-	              onError: () => setVideoFailed(v => ({
-	                ...v,
-	                [s.id]: true
-	              })),
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx("source", {
-	                src: s.src,
-	                type: "video/mp4"
-	              })
-	            }) : s.kind === 'video' ?
-	            /*#__PURE__*/
-	            // Video skipped on mobile, missing, or failed to load — always resolve
-	            // to a real still (never an empty colour block).
-	            jsxRuntimeExports.jsx("img", {
-	              className: "v2-hero__img",
-	              src: heroSrc(stillFor(s) || FALLBACK_POSTER, 1600),
-	              srcSet: heroSrcSet(stillFor(s) || FALLBACK_POSTER),
-	              sizes: "100vw",
-	              alt: s.title,
-	              style: {
-	                objectPosition: s.position
-	              },
-	              loading: i === active ? 'eager' : 'lazy',
-	              fetchpriority: i === active ? 'high' : undefined,
-	              decoding: "async"
-	            }) : /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	              className: "v2-hero__img",
-	              src: heroSrc(s.src, 1600),
-	              srcSet: heroSrcSet(s.src),
-	              sizes: "100vw",
-	              alt: s.title,
-	              style: {
-	                objectPosition: s.position
-	              },
-	              loading: i === active ? 'eager' : 'lazy',
-	              fetchpriority: i === active ? 'high' : undefined,
-	              decoding: "async"
-	            })
-	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "v2-hero__ui",
-	          children: [s.kicker && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "v2-hero__kicker",
-	            children: s.kicker
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-	            className: titleClass(s.title),
-	            children: s.title
-	          }), (s.sub || s.lede) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "v2-hero__sub",
-	            children: s.sub === SAFE_HERO_COPY.sub ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "v2-hero__sub-full",
-	                children: s.sub
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "v2-hero__sub-compact",
-	                children: SAFE_HERO_COPY.mobileSub
-	              })]
-	            }) : s.sub || s.lede
-	          }), s.cta?.to && /*#__PURE__*/jsxRuntimeExports.jsx(HeroCta, {
-	            cta: s.cta,
-	            appearance: appearance,
-	            artworkOnly: artworkOnly,
-	            active: i === active,
-	            children: ctaLabel
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx(HeroCta, {
-	          cta: s.cta,
-	          appearance: appearance,
-	          placement: "overlay",
-	          artworkOnly: artworkOnly,
-	          active: i === active,
-	          children: ctaLabel
-	        })]
-	      }, s.id);
-	    })()), SLIDES.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	        className: "v2-hero__arrow v2-hero__arrow--prev",
-	        onClick: () => go(active - 1),
-	        "aria-label": "Previous slide",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "chevronLeft",
-	          size: 18,
-	          stroke: 1.6
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	        className: "v2-hero__arrow v2-hero__arrow--next",
-	        onClick: () => go(active + 1),
-	        "aria-label": "Next slide",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "chevronRight",
-	          size: 18,
-	          stroke: 1.6
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-hero__dots",
-	        children: DISPLAY_SLIDES.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          className: i === active ? 'is-on' : '',
-	          onClick: () => go(i),
-	          "aria-label": `Go to slide ${i + 1}`,
-	          "aria-current": i === active
-	        }, s.id))
-	      })]
-	    })]
-	  });
-	}
-
-	const CATEGORY_IMAGES = {
-	  wellness: '/public/category-images/wellness.webp',
-	  'body-building': '/public/category-images/body-building.webp',
-	  'juices-drinks': '/public/category-images/juices-drinks.webp',
-	  supplements: '/public/category-images/supplements.webp',
-	  'skin-care': '/public/category-images/skin-care.webp',
-	  'hair-care': '/public/category-images/hair-care.webp',
-	  'bath-body': '/public/category-images/bath-body.webp',
-	  'mens-care': '/public/category-images/mens-care.webp',
-	  'personal-care': '/public/category-images/personal-care.webp'
-	};
-	const CATEGORY_MARKS = {
-	  wellness: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("path", {
-	      d: "M16 28V12M16 22C6 23 5 17 5 14c7-1 11 3 11 8ZM16 17c8 0 11-5 11-10-7 0-11 4-11 10Z"
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("circle", {
-	      cx: "10",
-	      cy: "7",
-	      r: "2"
-	    })]
-	  }),
-	  'body-building': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-	      d: "m10 22 12-12M6 18l8 8M18 6l8 8M4 20l8 8M20 4l8 8M4 24l4 4M24 4l4 4"
-	    })
-	  }),
-	  'juices-drinks': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-	      d: "M10 4h7v5l3 4v15H7V13l3-4V4ZM10 8h7M7 17h13M10 21h7"
-	    })
-	  }),
-	  supplements: /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-	      d: "m7 15 8-8a6 6 0 0 1 9 9l-8 8a6 6 0 0 1-9-9ZM11 11l9 9"
-	    })
-	  }),
-	  'skin-care': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-	      d: "M6 16h20v12H6V16ZM8 12h16v4H8V12ZM10 21h12"
-	    })
-	  }),
-	  'hair-care': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-	      d: "M5 5h9v21H5V5ZM9 9h5M9 13h5M9 17h5M9 21h5"
-	    })
-	  }),
-	  'bath-body': /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("rect", {
-	      x: "5",
-	      y: "14",
-	      width: "23",
-	      height: "14",
-	      rx: "2"
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-	      d: "M9 19c4-4 10 4 15 0"
-	    })]
-	  }),
-	  'mens-care': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-	      d: "M7 5h19v7H7V5ZM10 8h13M12 12v5h9v-5"
-	    })
-	  }),
-	  'personal-care': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-	      d: "M5 12h11l-2 16H7L5 12ZM8 8h5v4"
-	    })
-	  })
-	};
-	function CategoryMark({
-	  category
-	}) {
-	  const mark = CATEGORY_MARKS[category.slug];
-	  if (!mark) {
-	    return /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "v2-cat__initials",
-	      children: category.name.split(/\s+/).map(s => s[0]).slice(0, 2).join('')
-	    });
-	  }
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("svg", {
-	    viewBox: "0 0 32 32",
-	    fill: "none",
-	    stroke: "currentColor",
-	    strokeWidth: "1.25",
-	    strokeLinecap: "round",
-	    strokeLinejoin: "round",
-	    children: mark
-	  });
-	}
-	function CategoryRail() {
-	  const items = Array.isArray(categories) ? categories.filter(c => c && c.slug && c.name) : [];
-	  if (items.length < 3) return null;
-	  const renderCategory = (c, duplicate = false) => {
-	    const image = c.image || c.image_url || CATEGORY_IMAGES[c.slug];
-	    return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	      to: `/category/${c.slug}`,
-	      className: `v2-cat v2-cat--${c.slug}`,
-	      "aria-hidden": duplicate ? 'true' : undefined,
-	      tabIndex: duplicate ? -1 : undefined,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        className: "v2-cat__visual",
-	        "aria-hidden": "true",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "v2-cat__tile",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(CategoryMark, {
-	            category: c
-	          })
-	        }), image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	          className: "v2-cat__photo",
-	          src: image,
-	          alt: "",
-	          loading: "lazy",
-	          onError: e => {
-	            e.currentTarget.style.display = 'none';
-	          }
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-cat__lb",
-	        children: c.name
-	      })]
-	    }, `${duplicate ? 'duplicate-' : ''}${c.slug}`);
-	  };
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
-	    className: "v2-cats-marquee",
-	    "aria-label": "Shop by category",
-	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-cats-track",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-cats-set",
-	        children: items.map(c => renderCategory(c))
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-cats-set",
-	        "aria-hidden": "true",
-	        children: items.map(c => renderCategory(c, true))
-	      })]
-	    })
-	  });
-	}
-
-	// Decorative images are separate, non-interactive layers, never content
-	// overlays. Their opacity cannot fade category labels or promotion artwork.
-	function HomeVisualLayers({
-	  background,
-	  texture,
-	  left,
-	  right
-	}) {
-	  const layers = [background && {
-	    ...background,
-	    name: 'background'
-	  }, texture && {
-	    ...texture,
-	    name: 'texture'
-	  }, left && {
-	    ...left,
-	    name: 'left'
-	  }, right && {
-	    ...right,
-	    name: 'right'
-	  }].filter(layer => layer?.url);
-	  if (!layers.length) return null;
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	    className: "hp-visual-layers",
-	    "aria-hidden": "true",
-	    children: layers.map(layer => /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	      alt: "",
-	      src: layer.url,
-	      className: `hp-visual-layer hp-visual-layer--${layer.name}${layer.hideMobile ? ' hp-visual-layer--mobile-hidden' : ''}`,
-	      style: {
-	        opacity: layer.opacity,
-	        objectFit: layer.fit || 'contain',
-	        objectPosition: layer.position || 'center',
-	        ...(layer.size ? {
-	          width: layer.size
-	        } : {})
-	      },
-	      loading: "lazy",
-	      decoding: "async",
-	      onError: e => {
-	        e.currentTarget.hidden = true;
-	      }
-	    }, `${layer.name}:${layer.url}`))
-	  });
-	}
-
-	function HomeCategoryStrip({
-	  appearance: a
-	}) {
-	  // Match CategoryRail's existing empty-state rule, without changing its links.
-	  if (categories.filter(c => c?.slug && c?.name).length < 3) return null;
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-	    className: "v2-home-categories hp-category-strip",
-	    style: {
-	      paddingTop: a.paddingTop,
-	      paddingBottom: a.paddingBottom,
-	      backgroundColor: a.enabled ? a.backgroundColor : 'transparent',
-	      borderTop: a.borderTop ? `${a.borderWidth}px solid ${a.borderColor}` : undefined,
-	      borderBottom: a.borderBottom ? `${a.borderWidth}px solid ${a.borderColor}` : undefined,
-	      borderRadius: a.radius
-	    },
-	    children: [a.enabled && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeVisualLayers, {
-	        background: {
-	          url: a.imageUrl,
-	          fit: a.imageSize,
-	          position: a.imagePosition,
-	          opacity: a.imageOpacity
-	        },
-	        texture: {
-	          url: a.textureUrl,
-	          fit: 'cover',
-	          position: a.texturePosition,
-	          opacity: a.decorationOpacity,
-	          hideMobile: a.hideTextureMobile
-	        },
-	        left: {
-	          url: a.leftImage,
-	          opacity: a.decorationOpacity,
-	          size: a.decorationSize,
-	          position: `left ${a.decorationPosition}`,
-	          hideMobile: a.hideLeftMobile
-	        },
-	        right: {
-	          url: a.rightImage,
-	          opacity: a.decorationOpacity,
-	          size: a.decorationSize,
-	          position: `right ${a.decorationPosition}`,
-	          hideMobile: a.hideRightMobile
-	        }
-	      }), a.overlayOpacity > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        "aria-hidden": "true",
-	        className: "hp-category-overlay",
-	        style: {
-	          backgroundColor: a.overlayColor,
-	          opacity: a.overlayOpacity
-	        }
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "v2-wrap hp-category-strip__content",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(CategoryRail, {})
-	    })]
-	  });
-	}
-
-	function PriceTag({
-	  product,
-	  showOff = true,
-	  size,
-	  variant = null,
-	  v2 = false
-	}) {
-	  const {
-	    currency,
-	    priceVerified
-	  } = product;
-	  // When a pack size is selected its own price is what the customer pays,
-	  // so the whole tag (price, MRP and % off) comes from the variant.
-	  const price = variant?.price ?? product.price;
-	  const mrp = variant?.mrp ?? product.mrp;
-	  const discountPct = variant ? variant.discountPct ?? (mrp > price ? Math.round((mrp - price) / mrp * 100) : 0) : product.discountPct;
-	  if (priceVerified === false) {
-	    return v2 ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "v2-price",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-price__tbd",
-	        children: "Price coming soon"
-	      })
-	    }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "price",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "price-tbd muted",
-	        children: "Price coming soon"
-	      })
-	    });
-	  }
-	  const hasDiscount = mrp > price;
-	  if (v2) {
-	    return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	      className: `v2-price ${size === 'lg' ? 'v2-price--lg' : ''}`,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-price__now",
-	        children: money(price, currency)
-	      }), hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        className: "v2-price__mrp",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "v2-price__mrp-lbl",
-	          children: "MRP"
-	        }), money(mrp, currency)]
-	      }), showOff && discountPct > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        className: "v2-price__off",
-	        children: [discountPct, "% off"]
-	      })]
-	    });
-	  }
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	    className: `price ${size === 'lg' ? 'price--lg' : ''}`,
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "now",
-	      children: money(price, currency)
-	    }), hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	      className: "was",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "was-lbl",
-	        children: "MRP"
-	      }), " ", money(mrp, currency)]
-	    }), showOff && discountPct > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	      className: "off",
-	      children: [discountPct, "% off"]
-	    })]
-	  });
-	}
-
-	function pickBadge(product, out) {
-	  if (out) return {
-	    label: 'Sold out',
-	    cls: 'v2-badge--out'
-	  };
-	  const pct = Number(product.discountPct);
-	  // Under 5% is not worth a badge — and rounding a 3% saving up to "5% off"
-	  // is exactly the kind of thing that erodes trust.
-	  if (Number.isFinite(pct) && pct >= 5) return {
-	    label: `${pct}% off`,
-	    cls: ''
-	  };
-	  const b = Array.isArray(product.badges) ? product.badges[0] : null;
-	  if (b?.label) {
-	    return {
-	      label: b.label,
-	      cls: b.type === 'new' ? 'v2-badge--soft' : 'v2-badge--forest'
-	    };
-	  }
-	  return null;
-	}
-	function ProductCard({
-	  product
-	}) {
-	  const {
-	    addToCart,
-	    toggleWish,
-	    isWished
-	  } = useStore();
-	  const wished = isWished(product.id);
-	  const out = product.stock === 0;
-	  const cat = categoryBySlug[product.category];
-	  const badge = pickBadge(product, out);
-	  const meta = [cat?.name, product.form].filter(Boolean).join(' · ');
-	  const lowStock = !out && Number.isFinite(product.stock) && product.stock > 0 && product.stock <= 5;
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
-	    className: `v2-pc ${out ? 'is-out' : ''}`,
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-pc__media",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	        to: `/product/${product.slug}`,
-	        "aria-label": product.name,
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	          product: product,
-	          frame: "v2"
-	        })
-	      }), badge && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-pc__badges",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: `v2-badge ${badge.cls}`,
-	          children: badge.label
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	        type: "button",
-	        className: `v2-iconbtn v2-pc__wish ${wished ? 'is-on' : ''}`,
-	        onClick: () => toggleWish(product),
-	        "aria-pressed": wished,
-	        "aria-label": wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`,
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "heart",
-	          size: 14,
-	          stroke: 1.6,
-	          fill: wished ? 'currentColor' : 'none'
-	        })
-	      }), out && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-pc__soldout",
-	        children: "Sold out"
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-pc__body",
-	      children: [meta && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	        className: "v2-pc__meta",
-	        children: meta
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	        className: "v2-pc__name",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	          to: `/product/${product.slug}`,
-	          children: product.name
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "v2-pc__foot",
-	        children: [lowStock && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          className: "v2-pc__note",
-	          children: ["Only ", product.stock, " left"]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
-	          product: product,
-	          showOff: false,
-	          v2: true
-	        }), out ? /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          type: "button",
-	          className: "v2-pc__cta v2-pc__cta--out",
-	          disabled: true,
-	          "aria-disabled": "true",
-	          children: "Notify me"
-	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	          type: "button",
-	          className: "v2-pc__cta",
-	          onClick: () => addToCart(product),
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "bag",
-	            size: 14,
-	            stroke: 1.6
-	          }), " Add to cart"]
-	        })]
-	      })]
-	    })]
-	  });
-	}
-
-	function CompactProductCard({
-	  product
-	}) {
-	  const {
-	    addToCart
-	  } = useStore();
-	  const out = product.stock === 0;
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	    className: "v2-cc",
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	      to: `/product/${product.slug}`,
-	      className: "v2-cc__m",
-	      "aria-hidden": "true",
-	      tabIndex: -1,
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	        product: product,
-	        frame: "v2",
-	        sizes: "80px"
-	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-cc__b",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-cc__brand",
-	        children: branding.siteName
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	        className: "v2-cc__n",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	          to: `/product/${product.slug}`,
-	          style: {
-	            color: 'inherit',
-	            textDecoration: 'none'
-	          },
-	          children: product.name
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
-	        product: product,
-	        showOff: false,
-	        v2: true
-	      })]
-	    }), !out && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	      type: "button",
-	      className: "v2-cc__add",
-	      onClick: () => addToCart(product),
-	      "aria-label": `Add ${product.name} to cart`,
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "plus",
-	        size: 12,
-	        stroke: 1.8
-	      })
-	    })]
-	  });
-	}
-
-	function EditorialCard({
-	  item
-	}) {
-	  if (!item || !item.title || !item.href) return null;
-	  const {
-	    kicker,
-	    title,
-	    note,
-	    href,
-	    image,
-	    alt
-	  } = item;
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	    to: href,
-	    className: "v2-ed",
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-ed__media",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-pimg",
-	        children: image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	          src: image,
-	          alt: alt || '',
-	          loading: "lazy",
-	          decoding: "async"
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-ed__scrim",
-	        "aria-hidden": "true"
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-ed__ui",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        children: [kicker && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	          className: "v2-ed__k",
-	          children: kicker
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	          className: "v2-ed__h",
-	          children: title
-	        }), note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	          className: "v2-ed__note",
-	          children: note
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        className: "v2-ed__cta",
-	        children: ["Shop now ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "arrowRight",
-	          size: 11,
-	          stroke: 1.8
-	        })]
-	      })]
-	    })]
-	  });
-	}
-
-	function StoryBlock({
-	  story
-	}) {
-	  if (!story || !story.title || !story.href) return null;
-	  const {
-	    eyebrow,
-	    title,
-	    body,
-	    cta,
-	    href,
-	    image,
-	    alt
-	  } = story;
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	    to: href,
-	    className: "v2-story",
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-story__b",
-	      children: [eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	        className: "v2-eyebrow",
-	        children: eyebrow
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	        className: "v2-story__h",
-	        children: title
-	      }), body && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	        className: "v2-story__p",
-	        children: body
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        className: "v2-story__lk",
-	        children: [cta || 'Read the story', " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "arrowRight",
-	          size: 12,
-	          stroke: 1.8
-	        })]
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "v2-story__m",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-pimg",
-	        children: image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	          src: image,
-	          alt: alt || '',
-	          loading: "lazy",
-	          decoding: "async"
-	        })
-	      })
-	    })]
-	  });
-	}
-
-	function defaultItems() {
-	  const out = [{
-	    icon: 'lock',
-	    title: 'Secure checkout',
-	    sub: 'Encrypted payments'
-	  }];
-	  out.push({
-	    icon: 'truck',
-	    title: 'Free standard shipping',
-	    sub: 'Delivery options at checkout'
-	  });
-	  out.push({
-	    icon: 'package',
-	    title: 'Order tracking',
-	    sub: 'In your account'
-	  }, {
-	    icon: 'chat',
-	    title: 'Help & support',
-	    sub: 'Get in touch'
-	  });
-	  return out;
-	}
-	function TrustStrip({
-	  items
-	}) {
-	  const list = (Array.isArray(items) && items.length ? items : defaultItems()).slice(0, 4);
-	  if (!list.length) return null;
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-	    className: "v2-trust",
-	    children: list.map(it => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-	      className: "v2-trust__it",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: it.icon,
-	        size: 19,
-	        stroke: 1.5
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "v2-trust__t",
-	          children: it.title
-	        }), it.sub && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "v2-trust__s",
-	          children: it.sub
-	        })]
-	      })]
-	    }, it.title))
-	  });
-	}
-
-	function Newsletter() {
-	  const [email, setEmail] = reactExports.useState('');
-	  const [done, setDone] = reactExports.useState(false);
-	  const [busy, setBusy] = reactExports.useState(false);
-	  const [err, setErr] = reactExports.useState('');
-	  const submit = async e => {
-	    e.preventDefault();
-	    if (busy) return;
-	    if (!/^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/.test(email.trim())) {
-	      setErr('Please enter a valid email address.');
-	      return;
-	    }
-	    setBusy(true);
-	    setErr('');
-	    try {
-	      const res = await fetch('/api/newsletter/subscribe', {
-	        method: 'POST',
-	        headers: {
-	          'Content-Type': 'application/json'
-	        },
-	        body: JSON.stringify({
-	          email: email.trim()
-	        })
-	      });
-	      let data = null;
-	      try {
-	        data = await res.json();
-	      } catch {/* non-JSON error page */}
-
-	      // Success is contingent on the server confirming the write. A failed
-	      // request must never render the confirmation.
-	      if (!res.ok || !data?.subscribed) {
-	        setErr(data?.error || 'We could not sign you up right now. Please try again.');
-	        return;
-	      }
-	      setDone(true);
-	    } catch {
-	      setErr('We could not reach us just now. Please check your connection and try again.');
-	    } finally {
-	      setBusy(false);
-	    }
-	  };
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	    className: "section nl",
-	    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "container",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "nl__card",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "nl__deco",
-	          "aria-hidden": "true",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
-	            viewBox: "0 0 200 200",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("path", {
-	              d: "M100 20c40 34 40 96 0 160-40-64-40-126 0-160Z",
-	              fill: "var(--honey-500)",
-	              opacity: "0.16"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-	              d: "M100 40c26 24 26 72 0 120-26-48-26-96 0-120Z",
-	              fill: "var(--forest-300)",
-	              opacity: "0.22"
-	            })]
-	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "nl__body",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "eyebrow",
-	            style: {
-	              color: 'var(--honey-300)'
-	            },
-	            children: "The Sora Letter"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	            className: "serif",
-	            style: {
-	              color: '#FBF8F1',
-	              fontSize: 'var(--text-3xl)',
-	              margin: '10px 0 8px'
-	            },
-	            children: "Wellness notes, quietly good offers."
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            style: {
-	              color: 'rgba(251,248,241,0.8)',
-	              maxWidth: '46ch'
-	            },
-	            children: "Occasional notes on new products and seasonal rituals. No noise, and you can unsubscribe whenever you like."
-	          }), done ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "nl__done",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "t-ic",
-	              style: {
-	                background: 'rgba(232,176,75,0.2)'
-	              },
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "check",
-	                size: 18
-	              })
-	            }), " You're subscribed. We'll be in touch when there's something worth sending."]
-	          }) : /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
-	            className: "nl__form",
-	            onSubmit: submit,
-	            noValidate: true,
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "searchbox nl__input",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "mail"
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	                className: "input",
-	                type: "email",
-	                placeholder: "you@email.com",
-	                value: email,
-	                onChange: e => setEmail(e.target.value),
-	                "aria-label": "Email address",
-	                disabled: busy
-	              })]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	              className: "btn btn-accent btn-lg",
-	              type: "submit",
-	              disabled: busy,
-	              children: busy ? 'Subscribing…' : 'Subscribe'
-	            })]
-	          }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "error-text",
-	            style: {
-	              marginTop: 8
-	            },
-	            children: err
-	          })]
-	        })]
-	      })
-	    })
-	  });
-	}
-
-	// ============================================================
-	// PROMOTIONS — local SAMPLE fallback (design preview only)
-	//
-	// These rows seed the storefront ONLY when it is running on localhost (see
-	// isLocalPreviewHost() in src/lib/promotions.js), so the promo UI can be
-	// designed and reviewed before migration 0017 exists anywhere. On any
-	// deployed host the starting list is EMPTY, and a successful fetch from the
-	// `promotions` table replaces the list in every environment.
-	//
-	// Every `coupon_code` here is DISPLAY / COPY ONLY. Nothing in this file or
-	// the promotion components touches pricing, cart totals or checkout.
-	// ============================================================
-
-	const PROMOTIONS_FALLBACK = [{
-	  id: 'sample-welcome',
-	  type: 'poster',
-	  title: 'Wellness Week is here',
-	  subtitle: 'Sample campaign. Demo code only — no checkout discount.',
-	  coupon_code: 'DEMO-ONLY',
-	  cta_text: 'Explore all',
-	  cta_url: '/shop',
-	  badge_text: 'Preview offer',
-	  image_url: null,
-	  theme_variant: 'forest',
-	  text_align: 'left',
-	  placements: ['home', 'pdp'],
-	  is_active: true,
-	  starts_at: null,
-	  ends_at: null,
-	  sort_order: 0
-	}, {
-	  id: 'sample-freeship',
-	  type: 'offer',
-	  title: 'Discover SORA LIFE essentials',
-	  subtitle: 'Sample campaign for your everyday favourites. Preview only.',
-	  coupon_code: null,
-	  cta_text: '',
-	  cta_url: null,
-	  badge_text: 'Sample campaign',
-	  image_url: null,
-	  theme_variant: 'cream',
-	  text_align: 'left',
-	  placements: ['home', 'pdp', 'cart'],
-	  is_active: true,
-	  starts_at: null,
-	  ends_at: null,
-	  sort_order: 1
-	}, {
-	  id: 'sample-bundle',
-	  type: 'offer',
-	  title: 'A little inspiration for your next order',
-	  subtitle: 'Demo code only — checkout totals stay unchanged.',
-	  coupon_code: 'DEMO-OFFER',
-	  cta_text: '',
-	  cta_url: null,
-	  badge_text: 'Demo code',
-	  image_url: null,
-	  theme_variant: 'minimal',
-	  text_align: 'left',
-	  placements: ['home', 'cart'],
-	  is_active: true,
-	  starts_at: null,
-	  ends_at: null,
-	  sort_order: 2
-	}, {
-	  id: 'sample-prepaid',
-	  type: 'offer',
-	  title: 'Explore more SORA LIFE favourites',
-	  subtitle: 'Display-only sample. Payment fees stay unchanged.',
-	  coupon_code: 'DEMO-PREVIEW',
-	  cta_text: '',
-	  cta_url: null,
-	  badge_text: 'Preview offer',
-	  image_url: null,
-	  theme_variant: 'orange',
-	  text_align: 'left',
-	  placements: ['pdp', 'cart'],
-	  is_active: true,
-	  starts_at: null,
-	  ends_at: null,
-	  sort_order: 3
-	}, {
-	  id: 'sample-honeygold',
-	  type: 'poster',
-	  title: 'The SORA LIFE edit',
-	  subtitle: 'Explore the SORA LIFE collection. Local preview only.',
-	  coupon_code: null,
-	  cta_text: 'Explore the edit',
-	  cta_url: '/shop',
-	  badge_text: 'Sample campaign',
-	  image_url: null,
-	  theme_variant: 'dark',
-	  text_align: 'left',
-	  placements: ['home'],
-	  is_active: true,
-	  starts_at: null,
-	  ends_at: null,
-	  sort_order: 4
-	}];
-
-	// ============================================================
-	// PROMOTIONS — live-bound module (mirrors src/lib/settings.js).
-	//
-	// Holds the current promotions list. `applyPromotions()` at bootstrap
-	// replaces it with whatever the `promotions` table returns — INCLUDING an
-	// empty list, which correctly hides every promo section.
-	//
-	// STARTING VALUE — deliberately asymmetric, so sample copy can never reach
-	// a real storefront:
-	//   * on localhost (local design preview)  -> the SAMPLE set, so the promo
-	//     UI is reviewable before migration 0017 has been applied anywhere;
-	//   * anywhere else (production/preview URLs) -> EMPTY, so a deploy that
-	//     lands before the migration shows no promo sections at all rather
-	//     than sample marketing copy.
-	// A successful fetch overrides both. adminApi.fetchPublicPromotions()
-	// returns null (not []) when the table does not exist, so "not provisioned
-	// yet" never gets mistaken for "the store has zero promotions".
-	//
-	// DISPLAY LAYER ONLY. `couponCode` is a string to show / copy. Nothing here
-	// resolves a coupon, changes a price, or touches cart / checkout.
-	// ============================================================
-	const PLACEMENTS = ['home', 'pdp', 'cart'];
-	const TYPES = ['poster', 'offer'];
-	const THEME_VARIANTS = ['forest', 'cream', 'orange', 'dark', 'minimal'];
-	function str$1(v, max = 400) {
-	  return typeof v === 'string' ? v.trim().slice(0, max) : '';
-	}
-
-	// Accepts either a raw Supabase row (snake_case) or an already-shaped object.
-	function normalizePromo(row) {
-	  if (!row || typeof row !== 'object') return null;
-	  const type = TYPES.includes(row.type) ? row.type : 'poster';
-	  const themeVariant = THEME_VARIANTS.includes(row.theme_variant ?? row.themeVariant) ? row.theme_variant ?? row.themeVariant : 'forest';
-	  const rawPlacements = row.placements ?? [];
-	  const placements = Array.isArray(rawPlacements) ? rawPlacements.filter(p => PLACEMENTS.includes(p)) : [];
-	  const ctaUrl = str$1(row.cta_url ?? row.ctaUrl, 500) || null;
-	  return {
-	    id: String(row.id ?? cryptoId()),
-	    type,
-	    title: str$1(row.title, 160),
-	    subtitle: str$1(row.subtitle, 320),
-	    couponCode: normalizeCode(row.coupon_code ?? row.couponCode),
-	    ctaText: str$1(row.cta_text ?? row.ctaText, 60),
-	    ctaUrl: safeCtaUrl(ctaUrl),
-	    badgeText: str$1(row.badge_text ?? row.badgeText, 40),
-	    imageUrl: str$1(row.image_url ?? row.imageUrl, 1000) || null,
-	    themeVariant,
-	    textAlign: (row.text_align ?? row.textAlign) === 'center' ? 'center' : 'left',
-	    placements,
-	    isActive: (row.is_active ?? row.isActive) !== false,
-	    startsAt: row.starts_at ?? row.startsAt ?? null,
-	    endsAt: row.ends_at ?? row.endsAt ?? null,
-	    sortOrder: Number(row.sort_order ?? row.sortOrder) || 0
-	  };
-	}
-	function normalizeCode(v) {
-	  const s = str$1(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
-	  return s || null;
-	}
-
-	// Only allow an internal path or an absolute https URL as a CTA target.
-	// Anything else (javascript:, data:, protocol-relative, http:) is dropped.
-	function safeCtaUrl(v) {
-	  if (!v) return null;
-	  if (v.startsWith('/') && !v.startsWith('//')) return v;
-	  try {
-	    const u = new URL(v);
-	    if (u.protocol === 'https:') return u.href;
-	  } catch {/* not a URL */}
-	  return null;
-	}
-	function cryptoId() {
-	  try {
-	    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-	  } catch {/* noop */}
-	  return `p_${Math.random().toString(36).slice(2)}`;
-	}
-
-	// A promotion the storefront may render: active, has a title, within its
-	// date window. RLS already enforces this for the public read; this is the
-	// same guard applied client-side (and to the local fallback).
-	function isRenderablePromo(p, now = Date.now()) {
-	  if (!p || !p.isActive || !p.title) return false;
-	  if (p.startsAt && new Date(p.startsAt).getTime() > now) return false;
-	  if (p.endsAt && new Date(p.endsAt).getTime() < now) return false;
-	  return true;
-	}
-
-	// True only for a browser sitting on localhost — the local design preview.
-	// Never true on a deployed host, so the sample set below cannot ship.
-	function isLocalPreviewHost() {
-	  try {
-	    const h = globalThis.location?.hostname;
-	    return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]';
-	  } catch {
-	    return false;
-	  }
-	}
-	let promotions = isLocalPreviewHost() ? PROMOTIONS_FALLBACK.map(normalizePromo).filter(Boolean) : [];
-	let promotionsSource = 'fallback'; // 'fallback' | 'supabase'
-
-	/**
-	 * Replace the live promotions list from a Supabase fetch. Called once at
-	 * bootstrap. Passing [] is valid and intentionally clears the fallback.
-	 * Returns true when the list changed.
-	 */
-	function applyPromotions(list) {
-	  if (!Array.isArray(list)) return false;
-	  const next = list.map(normalizePromo).filter(Boolean);
-	  promotions = next;
-	  promotionsSource = 'supabase';
-	  return true;
-	}
-
-	/** Active + valid promotions for one surface, in sort order. */
-	function promosForPlacement(place, now = Date.now()) {
-	  if (!PLACEMENTS.includes(place)) return [];
-	  return promotions.filter(p => p.placements.includes(place)).filter(p => isRenderablePromo(p, now)).sort((a, b) => a.sortOrder - b.sortOrder || String(a.id).localeCompare(String(b.id)));
-	}
-
-	/** Split a placement's promos into { poster, offers } for layout. */
-	function promoLayoutFor(place, now = Date.now()) {
-	  const all = promosForPlacement(place, now);
-	  return {
-	    poster: all.find(p => p.type === 'poster') || null,
-	    offers: all.filter(p => p.type === 'offer'),
-	    all
-	  };
-	}
-
-	// ------------------------------------------------------------
-	// OFFER CALLOUT — the big "10% OFF" line on a campaign poster.
-	//
-	// PRESENTATION ONLY, and derived ONLY by reading the admin's own words back
-	// (badge -> title -> subtitle). It never computes, rounds or invents a
-	// discount, never reads a price, and returns null when the copy states no
-	// offer — in which case the poster simply renders without a callout.
-	// Adding a dedicated column later would replace this single function.
-	// ------------------------------------------------------------
-	const CALLOUT_RULES = [[/\b(?:flat\s*)?(\d{1,2})\s*%\s*(?:off|discount)\b/i, m => `${m[1]}% OFF`], [/₹\s*(\d[\d,]*)\s*(?:off|discount)\b/i, m => `₹${m[1]} OFF`], [/\bfree\s+shipping\b/i, () => 'FREE SHIPPING'], [/\bfree\s+delivery\b/i, () => 'FREE DELIVERY'], [/\bbuy\s*(\d+)\b/i, m => `BUY ${m[1]} & SAVE`], [/\bcashback\b/i, () => 'CASHBACK']];
-	function offerCalloutFrom(promo) {
-	  if (!promo) return null;
-	  for (const source of [promo.badgeText, promo.title, promo.subtitle]) {
-	    if (!source) continue;
-	    for (const [re, fmt] of CALLOUT_RULES) {
-	      const m = source.match(re);
-	      if (m) return fmt(m);
-	    }
-	  }
-	  // Keep the approved callout treatment for explicitly labelled preview
-	  // artwork without inventing savings. Genuine offer wording above wins.
-	  return /^preview offer$/i.test(promo.badgeText || '') ? 'PREVIEW OFFER' : null;
-	}
-
-	function PromoCopyCode({
-	  code,
-	  label = null,
-	  className = ''
-	}) {
-	  const {
-	    toast
-	  } = useStore();
-	  const [copied, setCopied] = reactExports.useState(false);
-	  const timer = reactExports.useRef(null);
-	  reactExports.useEffect(() => () => {
-	    if (timer.current) clearTimeout(timer.current);
-	  }, []);
-	  if (!code) return null;
-	  const copy = async () => {
-	    try {
-	      if (navigator.clipboard?.writeText) {
-	        await navigator.clipboard.writeText(code);
-	      } else {
-	        const ta = document.createElement('textarea');
-	        ta.value = code;
-	        ta.setAttribute('readonly', '');
-	        ta.style.position = 'fixed';
-	        ta.style.opacity = '0';
-	        document.body.appendChild(ta);
-	        ta.select();
-	        document.execCommand('copy');
-	        document.body.removeChild(ta);
-	      }
-	      setCopied(true);
-	      toast(`Code ${code} copied`);
-	      if (timer.current) clearTimeout(timer.current);
-	      timer.current = setTimeout(() => setCopied(false), 1900);
-	    } catch {
-	      toast('Could not copy — long-press the code to copy it');
-	    }
-	  };
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	    className: `promo-code ${copied ? 'is-copied' : ''} ${className}`,
-	    children: [label && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "promo-code__label",
-	      children: label
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	      className: "promo-code__row",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("code", {
-	        className: "promo-code__value",
-	        children: code
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	        type: "button",
-	        className: "promo-code__btn",
-	        onClick: copy,
-	        "aria-label": copied ? `Coupon code ${code} copied` : `Copy coupon code ${code}`,
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: copied ? 'check' : 'copy',
-	          size: 14
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          "aria-hidden": "true",
-	          children: copied ? 'Copied' : 'Copy'
-	        })]
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "sr-only",
-	      "aria-live": "polite",
-	      children: copied ? `${code} copied to clipboard` : ''
-	    })]
-	  });
-	}
-
-	function PromoCta({
-	  to,
-	  children
-	}) {
-	  if (!to) return null;
-	  const isExternal = /^https:\/\//i.test(to);
-	  const cls = 'promo-poster__cta';
-	  return isExternal ? /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
-	    className: cls,
-	    href: to,
-	    target: "_blank",
-	    rel: "noopener noreferrer",
-	    children: [children, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	      name: "arrowRight",
-	      size: 16
-	    })]
-	  }) : /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	    className: cls,
-	    to: to,
-	    children: [children, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	      name: "arrowRight",
-	      size: 16
-	    })]
-	  });
-	}
-	function PromoPoster({
-	  promo
-	}) {
-	  if (!promo) return null;
-	  const {
-	    title,
-	    subtitle,
-	    badgeText,
-	    couponCode,
-	    ctaText,
-	    ctaUrl,
-	    imageUrl,
-	    themeVariant,
-	    textAlign
-	  } = promo;
-	  const callout = offerCalloutFrom(promo);
-	  if (imageUrl) {
-	    return /*#__PURE__*/jsxRuntimeExports.jsx("article", {
-	      className: "promo-poster promo-poster--image-only",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	        className: "promo-poster__fullimg",
-	        src: imageUrl,
-	        alt: title || 'Promotion poster',
-	        loading: "lazy",
-	        decoding: "async"
-	      })
-	    });
-	  }
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
-	    className: ['promo-poster', `promo-poster--${themeVariant}`, imageUrl ? 'has-image' : 'no-image', textAlign === 'center' ? 'is-center' : ''].filter(Boolean).join(' '),
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "promo-poster__art",
-	      "aria-hidden": "true",
-	      children: [imageUrl ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	        className: "promo-poster__img",
-	        src: imageUrl,
-	        alt: "",
-	        loading: "lazy",
-	        decoding: "async"
-	      }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "promo-poster__deco",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "promo-poster__leaf"
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "promo-poster__scrim"
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "promo-poster__body",
-	      children: [badgeText && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "promo-poster__badge",
-	        children: badgeText
-	      }), title && /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	        className: "promo-poster__title serif",
-	        children: title
-	      }), subtitle && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	        className: "promo-poster__sub",
-	        children: subtitle
-	      }), callout && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	        className: "promo-poster__callout",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "promo-poster__callout-rule",
-	          "aria-hidden": "true"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "promo-poster__callout-val",
-	          children: callout
-	        })]
-	      }), (couponCode || ctaUrl && ctaText) && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "promo-poster__actions",
-	        children: [couponCode && /*#__PURE__*/jsxRuntimeExports.jsx(PromoCopyCode, {
-	          code: couponCode,
-	          label: "Use code"
-	        }), ctaUrl && ctaText && /*#__PURE__*/jsxRuntimeExports.jsx(PromoCta, {
-	          to: ctaUrl,
-	          children: ctaText
-	        })]
-	      })]
-	    })]
-	  });
-	}
-
-	const BADGE_ICON = {
-	  'Free shipping': 'truck',
-	  'Free delivery': 'truck',
-	  'Limited time': 'clock',
-	  'Weekend offer': 'gift',
-	  'Special deal': 'tag',
-	  Cashback: 'card'
-	};
-	function PromoOfferCard({
-	  promo
-	}) {
-	  if (!promo) return null;
-	  const {
-	    title,
-	    subtitle,
-	    badgeText,
-	    couponCode,
-	    ctaText,
-	    ctaUrl,
-	    imageUrl,
-	    themeVariant
-	  } = promo;
-	  const icon = BADGE_ICON[badgeText] || 'tag';
-	  const isExternal = ctaUrl && /^https:\/\//i.test(ctaUrl);
-	  // "Copy code" is handled by the ticket; only render a link CTA when it
-	  // actually points somewhere and isn't just restating the copy action.
-	  const showLinkCta = ctaUrl && ctaText && !/copy/i.test(ctaText);
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
-	    className: `promo-offer promo-offer--${themeVariant}`,
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "promo-offer__top",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "promo-offer__ic",
-	        "aria-hidden": "true",
-	        children: imageUrl ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	          src: imageUrl,
-	          alt: "",
-	          loading: "lazy",
-	          decoding: "async"
-	        }) : /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: icon,
-	          size: 18
-	        })
-	      }), badgeText && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "promo-offer__badge",
-	        children: badgeText
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "promo-offer__body",
-	      children: [title && /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	        className: "promo-offer__title",
-	        children: title
-	      }), subtitle && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	        className: "promo-offer__sub",
-	        children: subtitle
-	      })]
-	    }), (couponCode || showLinkCta) && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "promo-offer__foot",
-	      children: [couponCode && /*#__PURE__*/jsxRuntimeExports.jsx(PromoCopyCode, {
-	        code: couponCode
-	      }), showLinkCta && (isExternal ? /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
-	        className: "promo-offer__cta",
-	        href: ctaUrl,
-	        target: "_blank",
-	        rel: "noopener noreferrer",
-	        children: [ctaText, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "arrowRight",
-	          size: 14
-	        })]
-	      }) : /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	        className: "promo-offer__cta",
-	        to: ctaUrl,
-	        children: [ctaText, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "arrowRight",
-	          size: 14
-	        })]
-	      }))]
-	    })]
-	  });
-	}
-
-	function HomeOfferArtwork({
-	  promo
-	}) {
-	  const [failed, setFailed] = reactExports.useState(false);
-	  const url = safeVisualUrl(promo.imageUrl);
-	  if (url && !failed) return /*#__PURE__*/jsxRuntimeExports.jsx("article", {
-	    className: "hp-offers__poster",
-	    children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	      src: url,
-	      alt: promo.title,
-	      loading: "lazy",
-	      decoding: "async",
-	      onError: () => setFailed(true)
-	    })
-	  });
-	  // Missing or failed artwork falls back to existing, real configured copy.
-	  const content = {
-	    ...promo,
-	    imageUrl: null
-	  };
-	  return promo.type === 'poster' ? /*#__PURE__*/jsxRuntimeExports.jsx(PromoPoster, {
-	    promo: content
-	  }) : /*#__PURE__*/jsxRuntimeExports.jsx(PromoOfferCard, {
-	    promo: content
-	  });
-	}
-	function HomeOffers({
-	  appearance: a
-	}) {
-	  const rail = reactExports.useRef(null);
-	  const [active, setActive] = reactExports.useState(0);
-	  const items = uniqueHomepagePromotions(promosForPlacement('home'));
-	  reactExports.useEffect(() => {
-	    if (items.length < 2) return;
-	    const mobile = window.matchMedia('(max-width: 767px)');
-	    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-	    if (!mobile.matches || reduced.matches) return;
-	    const timer = window.setInterval(() => {
-	      setActive(current => {
-	        const next = (current + 1) % items.length;
-	        const el = rail.current;
-	        const card = el?.children[next];
-	        if (el && card) {
-	          el.scrollTo({
-	            left: card.offsetLeft - el.firstElementChild.offsetLeft,
-	            behavior: 'smooth'
-	          });
-	        }
-	        return next;
-	      });
-	    }, 2000);
-	    return () => window.clearInterval(timer);
-	  }, [items.length]);
-	  if (!items.length) return null;
-	  const columns = Math.min(a.desktopColumns, items.length);
-	  const scrollTo = index => {
-	    const el = rail.current;
-	    const card = el?.children[index];
-	    if (card) el.scrollTo({
-	      left: card.offsetLeft - el.firstElementChild.offsetLeft,
-	      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
-	    });
-	  };
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	    className: "hp-offers",
-	    "aria-labelledby": "homepage-offers-title",
-	    style: {
-	      backgroundColor: a.backgroundColor,
-	      paddingBlock: a.padding,
-	      '--hp-offers-accent': a.accentColor,
-	      '--hp-offers-gap': `${a.gap}px`,
-	      '--hp-offers-columns': columns,
-	      '--hp-offers-mobile-width': `${a.mobileWidth}%`
-	    },
-	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-wrap",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "hp-offers__heading",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "v2-eyebrow",
-	            children: "Offers"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	            className: "v2-h2",
-	            id: "homepage-offers-title",
-	            children: "Current offers"
-	          })]
-	        }), items.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          className: "hp-offers__hint",
-	          children: ["Swipe to explore ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            "aria-hidden": "true",
-	            children: "\u2192"
-	          })]
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "hp-offers__frame",
-	        style: {
-	          backgroundColor: a.frameColor,
-	          border: a.frameEnabled ? `${a.borderWidth}px solid ${a.borderColor}` : '0 solid transparent',
-	          borderRadius: a.radius
-	        },
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeVisualLayers, {
-	          texture: {
-	            url: a.textureUrl,
-	            opacity: a.textureOpacity,
-	            fit: 'cover'
-	          },
-	          right: {
-	            url: a.decorationUrl,
-	            opacity: a.decorationOpacity,
-	            size: a.decorationSize
-	          }
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-	          ref: rail,
-	          className: `hp-offers__gallery${items.length === 1 ? ' hp-offers__gallery--single' : ''}`,
-	          "aria-label": "Homepage promotions",
-	          onScroll: () => {
-	            const el = rail.current;
-	            if (!el?.children.length) return;
-	            const positions = [...el.children].map(child => Math.abs(child.offsetLeft - el.firstElementChild.offsetLeft - el.scrollLeft));
-	            setActive(positions.indexOf(Math.min(...positions)));
-	          },
-	          children: items.map(promo => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-	            className: "hp-offers__item",
-	            "data-promotion-id": promo.id,
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(HomeOfferArtwork, {
-	              promo: promo
-	            }, `${promo.id}:${promo.imageUrl}`)
-	          }, promo.id))
-	        }), items.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "hp-offers__pagination",
-	          "aria-label": "Choose promotion",
-	          children: items.map((promo, index) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            type: "button",
-	            "aria-label": `Show promotion ${index + 1}: ${promo.title}`,
-	            "aria-current": index === Math.min(active, items.length - 1) ? 'true' : undefined,
-	            onClick: () => scrollTo(index),
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {})
-	          }, promo.id))
-	        })]
-	      })]
-	    })
-	  });
-	}
-
 	//#region src/lib/tracingRegistry.ts
 	const EXTRACTOR_KEY = Symbol.for("@supabase/supabase-js.traceContextExtractor");
 	/**
@@ -23427,7 +20360,7 @@
 	function _sessionResponse(data) {
 	    var _a;
 	    let session = null;
-	    if (hasSession(data)) {
+	    if (hasSession$1(data)) {
 	        session = Object.assign({}, data);
 	        if (!data.expires_at) {
 	            session.expires_at = expiresAt(data.expires_in);
@@ -23486,7 +20419,7 @@
 	 * @param data A response object
 	 * @returns true if a session is in the response
 	 */
-	function hasSession(data) {
+	function hasSession$1(data) {
 	    return !!data.access_token && !!data.refresh_token && !!data.expires_in;
 	}
 
@@ -32248,6 +29181,3755 @@
 	// rather than throwing at import time.
 	const supabase = createClient(supabaseUrl , supabasePublishableKey );
 
+	// ============================================================
+	// Password-recovery helpers.
+	//
+	// Kept free of React and of the Supabase client so the rules can be unit
+	// tested directly (scripts/test-feature-activation.mjs). customerAuth.jsx
+	// and Account.jsx import from here rather than defining their own copies.
+	// ============================================================
+
+	// Minimum length the Supabase project itself enforces. Checked in the browser
+	// too so the customer is told before the round-trip rather than after it.
+	const MIN_PASSWORD_LENGTH = 8;
+
+	/**
+	 * True when the current page load is a password-recovery landing.
+	 *
+	 * Supabase returns the customer to `${origin}/account#...type=recovery...`.
+	 * supabase-js consumes that fragment and emits PASSWORD_RECOVERY — but it can
+	 * do so BEFORE the auth provider's listener attaches, and a recovery session
+	 * is an ordinary signed-in session. Without this URL check the customer would
+	 * silently land on their account page with no way to set a password, which is
+	 * the one thing the reset email invited them to do.
+	 */
+	function hashIndicatesRecovery(hash) {
+	  if (typeof hash !== 'string' || !hash) return false;
+	  const params = new URLSearchParams(hash.replace(/^#/, ''));
+	  return params.get('type') === 'recovery';
+	}
+
+	/**
+	 * Validate a proposed new password.
+	 * Returns an error string, or '' when the password is acceptable.
+	 */
+	function validateNewPassword(password, confirm) {
+	  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+	    return `Please use at least ${MIN_PASSWORD_LENGTH} characters.`;
+	  }
+	  if (password !== confirm) return 'Those passwords do not match.';
+	  return '';
+	}
+
+	// ============================================================
+	// Customer authentication (Supabase Auth, email/password).
+	//
+	// This is the storefront-customer counterpart to adminAuth.jsx. It is
+	// deliberately SEPARATE from the admin provider so the two roles stay
+	// cleanly isolated and independently auditable. Both use the one shared
+	// Supabase session (there is a single session per browser); "admin" vs
+	// "customer" is a role distinction decided elsewhere (admin_users
+	// membership), NOT by this provider. This provider never checks
+	// admin_users and never grants any elevated capability.
+	//
+	// Scope: identity only — sign up, sign in, sign out, request a password
+	// reset, and complete that reset by setting a new password. It does NOT
+	// read orders, does NOT touch the database schema/RLS, and adds NO blocking
+	// network call on mount: getSession() reads the persisted session from local
+	// storage, so storefront routes stay zero-network for auth.
+	// ============================================================
+	const CustomerAuthContext = /*#__PURE__*/reactExports.createContext(null);
+	function CustomerAuthProvider({
+	  children
+	}) {
+	  const [session, setSession] = reactExports.useState(null);
+	  const [loading, setLoading] = reactExports.useState(true);
+	  // Set while the customer is completing a reset. Gates the account UI so
+	  // the only thing they can do is choose a new password.
+	  const [recovery, setRecovery] = reactExports.useState(() => typeof window !== 'undefined' && hashIndicatesRecovery(window.location.hash));
+	  reactExports.useEffect(() => {
+	    let mounted = true;
+
+	    // Local storage read — no network round-trip, so this never blocks
+	    // or slows first paint on any storefront route.
+	    supabase.auth.getSession().then(({
+	      data: {
+	        session: current
+	      }
+	    }) => {
+	      if (!mounted) return;
+	      setSession(current);
+	      setLoading(false);
+	    });
+
+	    // Keeps this provider in sync with sign-in/out that happen anywhere
+	    // (including the single shared session being replaced). Passive
+	    // listener; fires no query of its own.
+	    const {
+	      data: {
+	        subscription
+	      }
+	    } = supabase.auth.onAuthStateChange((event, current) => {
+	      if (!mounted) return;
+	      if (event === 'PASSWORD_RECOVERY') setRecovery(true);
+	      // Signing out ends any recovery flow; otherwise a stale flag would
+	      // keep showing the set-password screen over the login card.
+	      if (event === 'SIGNED_OUT') setRecovery(false);
+	      setSession(current);
+	      setLoading(false);
+	    });
+	    return () => {
+	      mounted = false;
+	      subscription.unsubscribe();
+	    };
+	  }, []);
+
+	  // Create an account. If the Supabase project requires email
+	  // confirmation, no session is returned yet (data.session is null) —
+	  // the caller should tell the user to confirm via email before logging
+	  // in. If confirmation is disabled, the user is signed in immediately.
+	  async function signUp({
+	    email,
+	    password,
+	    fullName
+	  }) {
+	    // Send the confirmation email's link back to the SAME environment the
+	    // customer signed up from — production, a Vercel preview, or localhost —
+	    // by using the live origin. Without this, Supabase falls back to the
+	    // project's Site URL (which was localhost), so a production signup would
+	    // open localhost after tapping the emailed link. The target /account is
+	    // where supabase-js (detectSessionInUrl: true, on by default) picks up the
+	    // session from the URL and signs the customer in.
+	    const options = {};
+	    if (fullName) options.data = {
+	      full_name: fullName
+	    };
+	    if (typeof window !== 'undefined') options.emailRedirectTo = `${window.location.origin}/account`;
+	    const {
+	      data,
+	      error
+	    } = await supabase.auth.signUp({
+	      email,
+	      password,
+	      options: Object.keys(options).length ? options : undefined
+	    });
+	    if (error) return {
+	      error,
+	      needsConfirmation: false,
+	      session: null
+	    };
+	    return {
+	      error: null,
+	      needsConfirmation: !data.session,
+	      session: data.session ?? null
+	    };
+	  }
+	  async function signIn({
+	    email,
+	    password
+	  }) {
+	    const {
+	      data,
+	      error
+	    } = await supabase.auth.signInWithPassword({
+	      email,
+	      password
+	    });
+	    if (error) return {
+	      error
+	    };
+	    setSession(data.session);
+	    return {
+	      error: null
+	    };
+	  }
+	  async function signOut() {
+	    await supabase.auth.signOut();
+	    setSession(null);
+	  }
+
+	  // Sends a password-reset email. redirectTo brings the customer back to
+	  // /account, where the recovery landing is detected and the set-password
+	  // screen is shown.
+	  //
+	  // The caller must show the SAME confirmation whether or not the address
+	  // has an account — Supabase deliberately does not distinguish, and neither
+	  // should we, or this becomes an account-enumeration oracle.
+	  async function resetPassword(email) {
+	    const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/account` : undefined;
+	    const {
+	      error
+	    } = await supabase.auth.resetPasswordForEmail(email, redirectTo ? {
+	      redirectTo
+	    } : undefined);
+	    return {
+	      error
+	    };
+	  }
+
+	  /**
+	   * Complete a recovery by setting a new password on the recovery session.
+	   *
+	   * Requires a live session: an expired or already-consumed recovery link
+	   * leaves none, and Supabase rejects the update rather than silently
+	   * succeeding. The caller surfaces that as "link expired, request a new one".
+	   */
+	  async function updatePassword(newPassword) {
+	    const {
+	      data: {
+	        session: current
+	      }
+	    } = await supabase.auth.getSession();
+	    if (!current) {
+	      return {
+	        error: {
+	          message: 'Your reset link has expired. Please request a new one.'
+	        }
+	      };
+	    }
+	    const {
+	      error
+	    } = await supabase.auth.updateUser({
+	      password: newPassword
+	    });
+	    if (error) return {
+	      error
+	    };
+	    // The reset is done — drop the gate so the account UI behaves normally.
+	    setRecovery(false);
+	    return {
+	      error: null
+	    };
+	  }
+
+	  /** Abandon a recovery landing without changing anything. */
+	  function clearRecovery() {
+	    setRecovery(false);
+	  }
+	  const value = {
+	    session,
+	    user: session?.user ?? null,
+	    loading,
+	    recovery,
+	    signUp,
+	    signIn,
+	    signOut,
+	    resetPassword,
+	    updatePassword,
+	    clearRecovery
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsx(CustomerAuthContext.Provider, {
+	    value: value,
+	    children: children
+	  });
+	}
+	function useCustomerAuth() {
+	  const context = reactExports.useContext(CustomerAuthContext);
+	  if (!context) {
+	    throw new Error('useCustomerAuth must be used inside CustomerAuthProvider');
+	  }
+	  return context;
+	}
+
+	// ============================================================
+	// Wishlist state machine — pure, no React, no Supabase.
+	//
+	// Lives apart from store.jsx so the ownership invariants can be executed
+	// directly in Node (scripts/test-wishlist-sync.mjs) rather than asserted
+	// against source text. The rule this file exists to enforce:
+	//
+	//   guestWish    belongs to the BROWSER. Persisted. Survives sign-out.
+	//   accountWish  belongs to the SIGNED-IN CUSTOMER. Memory only. Cleared
+	//                on sign-out.
+	//
+	// One customer's saved items must never become visible to the next person
+	// who signs in on the same browser, and the only thing that guarantees that
+	// is accountWish never being persisted and always being cleared.
+	// ============================================================
+
+	// Matches the length bound in migration 0021.
+	const MAX_KEY_LENGTH = 64;
+
+	// The only fields written to localStorage. accountWish and syncedUserId are
+	// deliberately absent.
+	const PERSISTED_KEYS = ['cart', 'saved', 'guestWish'];
+	const initialWishlistState = {
+	  guestWish: [],
+	  accountWish: [],
+	  syncedUserId: null
+	};
+
+	/**
+	 * The single definition of a wishlist key.
+	 *
+	 * The catalogue exposes ids as `biosash_id || id`, so a numeric row id
+	 * arrives as a number on some paths and a string on others. productById is a
+	 * plain object whose keys are strings either way, so normalising to String is
+	 * what stops 5 and '5' becoming two entries.
+	 *
+	 * Returns '' for anything unusable; every caller treats that as "skip".
+	 */
+	function normalizeKey(raw) {
+	  if (raw == null) return '';
+	  if (typeof raw === 'object') return '';
+	  const key = String(raw).trim();
+	  if (!key || key.length > MAX_KEY_LENGTH) return '';
+	  // What String() produces from a failed lookup — never a real catalogue key.
+	  if (key === 'undefined' || key === 'null' || key === 'NaN') return '';
+	  return key;
+	}
+
+	/** Normalise a list, dropping invalid entries and duplicates, order kept. */
+	function normalizeKeys(list) {
+	  const out = [];
+	  const seen = new Set();
+	  for (const raw of Array.isArray(list) ? list : []) {
+	    const key = normalizeKey(raw);
+	    if (!key || seen.has(key)) continue;
+	    seen.add(key);
+	    out.push(key);
+	  }
+	  return out;
+	}
+
+	/** The array the UI renders: guest items, plus account items when signed in. */
+	function visibleWishlist(state) {
+	  const guest = state.guestWish || [];
+	  if (!state.syncedUserId) return guest;
+	  const seen = new Set(guest);
+	  return [...guest, ...(state.accountWish || []).filter(k => !seen.has(k))];
+	}
+
+	/**
+	 * What a login merge should do, given the guest list captured at login and
+	 * the customer's existing remote list.
+	 *
+	 * `missing` is what must be written (guest items not already saved);
+	 * `union` is what the account list becomes. Pure, so the merge rules are
+	 * testable without a network or a React tree.
+	 */
+	function planWishlistSync({
+	  guestAtLogin,
+	  remote
+	}) {
+	  const guest = normalizeKeys(guestAtLogin);
+	  const saved = normalizeKeys(remote);
+	  const savedSet = new Set(saved);
+	  const missing = guest.filter(k => !savedSet.has(k));
+	  return {
+	    missing,
+	    union: [...saved, ...missing]
+	  };
+	}
+
+	/**
+	 * Wishlist reducer cases. Returns the SAME state object when an action is
+	 * not a wishlist action, so store.jsx can delegate and fall through.
+	 */
+	function wishlistReducer(state, action) {
+	  switch (action.type) {
+	    // Signed OUT: the browser's own list, no network involved.
+	    case 'WISH_GUEST_TOGGLE':
+	      {
+	        const key = normalizeKey(action.key);
+	        if (!key) return state;
+	        const has = state.guestWish.includes(key);
+	        return {
+	          ...state,
+	          guestWish: has ? state.guestWish.filter(k => k !== key) : [...state.guestWish, key]
+	        };
+	      }
+
+	    // Signed IN, saving: ACCOUNT list only. Adding it to guestWish as well
+	    // would make it survive sign-out and show up for whoever signs in next.
+	    case 'WISH_ACCOUNT_ADD':
+	      {
+	        const key = normalizeKey(action.key);
+	        if (!key || state.accountWish.includes(key)) return state;
+	        return {
+	          ...state,
+	          accountWish: [...state.accountWish, key]
+	        };
+	      }
+
+	    // Signed IN, removing: clears BOTH lists. The visible list is their
+	    // union, so a leftover guest copy would make the item reappear and the
+	    // removal look broken.
+	    case 'WISH_ACCOUNT_REMOVE':
+	      {
+	        const key = normalizeKey(action.key);
+	        if (!key) return state;
+	        return {
+	          ...state,
+	          accountWish: state.accountWish.filter(k => k !== key),
+	          guestWish: state.guestWish.filter(k => k !== key)
+	        };
+	      }
+
+	    // A completed login merge.
+	    case 'WISH_SYNCED':
+	      return {
+	        ...state,
+	        accountWish: normalizeKeys(action.keys),
+	        syncedUserId: action.userId
+	      };
+
+	    // Sign-out or account switch. Drops every account-only item; the guest
+	    // list is untouched, and nothing remote is deleted.
+	    case 'WISH_SESSION_CLEARED':
+	      return {
+	        ...state,
+	        accountWish: [],
+	        syncedUserId: null
+	      };
+	    default:
+	      return state;
+	  }
+	}
+
+	/**
+	 * Parse persisted store state, migrating the pre-sync format.
+	 *
+	 * Before cross-device sync this was a single `wishlist` array of raw product
+	 * ids. Those items belong to the browser, so they become guestWish.
+	 */
+	function loadPersistedWishlist(saved) {
+	  if (!saved || typeof saved !== 'object') return [];
+	  return normalizeKeys(Array.isArray(saved.guestWish) ? saved.guestWish : saved.wishlist || []);
+	}
+
+	/** The object written to localStorage — the whitelist, nothing else. */
+	function pickPersisted(state) {
+	  const out = {};
+	  for (const k of PERSISTED_KEYS) out[k] = state[k];
+	  return out;
+	}
+
+	// ============================================================
+	// Wishlist data helpers (browser client).
+	//
+	// Same security model as customerData.js:
+	//   * The normal anon-key browser client only. NEVER the service role.
+	//   * The caller never supplies user_id. customer_wishlist.user_id defaults
+	//     to auth.uid() in the database, so inserts send { product_key } alone,
+	//     and the RLS `with check (auth.uid() = user_id)` re-verifies it server
+	//     side. A spoofed id is rejected by the policy, not merely ignored.
+	//   * Cross-user access is impossible: every policy is scoped to auth.uid(),
+	//     so another customer's rows simply do not exist for this session.
+	//   * Nothing here logs an email, a user id, or any row content.
+	//
+	// Every function is failure-tolerant by contract. The wishlist is a
+	// convenience, not a transaction: if Supabase is unreachable the storefront
+	// must keep working on the local list rather than break. Reads therefore
+	// return [] and writes return a boolean, so the caller can decide whether to
+	// roll an optimistic update back.
+	// ============================================================
+	const TABLE = 'customer_wishlist';
+
+	/** True when there is a signed-in session. Local read, no network. */
+	async function hasSession() {
+	  try {
+	    const {
+	      data
+	    } = await supabase.auth.getSession();
+	    return Boolean(data?.session?.user?.id);
+	  } catch {
+	    return false;
+	  }
+	}
+
+	/**
+	 * This customer's saved product keys, newest first.
+	 * Returns [] when signed out, on any error, or if migration 0021 has not
+	 * been applied yet — never throws.
+	 */
+	async function listWishlist() {
+	  if (!(await hasSession())) return [];
+	  try {
+	    const {
+	      data,
+	      error
+	    } = await supabase.from(TABLE).select('product_key').order('created_at', {
+	      ascending: false
+	    });
+	    if (error) return [];
+	    return normalizeKeys((data || []).map(r => r.product_key));
+	  } catch {
+	    return [];
+	  }
+	}
+
+	/**
+	 * Save one product. Returns true only when the row is definitely stored.
+	 *
+	 * Uses upsert with ignoreDuplicates so re-saving something already saved is
+	 * a success rather than a primary-key error — the customer's intent ("this
+	 * should be in my wishlist") is satisfied either way.
+	 */
+	async function addWishlistItem(productKey) {
+	  const key = normalizeKey(productKey);
+	  if (!key) return false;
+	  if (!(await hasSession())) return false;
+	  try {
+	    // user_id is omitted on purpose — the column defaults to auth.uid().
+	    const {
+	      error
+	    } = await supabase.from(TABLE).upsert({
+	      product_key: key
+	    }, {
+	      onConflict: 'user_id,product_key',
+	      ignoreDuplicates: true
+	    });
+	    return !error;
+	  } catch {
+	    return false;
+	  }
+	}
+
+	/**
+	 * Remove one product. Returns true when the delete was accepted.
+	 *
+	 * No user_id filter is needed or wanted: the delete policy already scopes the
+	 * statement to auth.uid(), so this can only ever affect the caller's own row.
+	 */
+	async function removeWishlistItem(productKey) {
+	  const key = normalizeKey(productKey);
+	  if (!key) return false;
+	  if (!(await hasSession())) return false;
+	  try {
+	    const {
+	      error
+	    } = await supabase.from(TABLE).delete().eq('product_key', key);
+	    return !error;
+	  } catch {
+	    return false;
+	  }
+	}
+
+	/**
+	 * Push a whole set of keys in ONE round trip.
+	 *
+	 * Used by the login merge, where the guest list can hold many items. Sending
+	 * them individually would be N requests and N chances to half-fail; a single
+	 * duplicate-safe upsert is atomic from the client's point of view and is
+	 * naturally idempotent, so a StrictMode double-invocation or a retry cannot
+	 * create duplicate rows.
+	 *
+	 * Returns true when the write succeeded (or when there was nothing to send).
+	 */
+	async function mergeWishlist(productKeys) {
+	  const keys = normalizeKeys(productKeys);
+	  if (!keys.length) return true;
+	  if (!(await hasSession())) return false;
+	  try {
+	    const {
+	      error
+	    } = await supabase.from(TABLE).upsert(keys.map(product_key => ({
+	      product_key
+	    })), {
+	      onConflict: 'user_id,product_key',
+	      ignoreDuplicates: true
+	    });
+	    return !error;
+	  } catch {
+	    return false;
+	  }
+	}
+
+	const StoreCtx = /*#__PURE__*/reactExports.createContext(null);
+	const KEY = 'sora.store.v1';
+
+	// PERSISTED_KEYS, the ownership rules and every wishlist reducer case live
+	// in wishlistState.js so they can be executed directly in tests.
+	const initial = {
+	  cart: [],
+	  saved: [],
+	  ...initialWishlistState
+	};
+	function load() {
+	  try {
+	    const raw = localStorage.getItem(KEY);
+	    if (!raw) return initial;
+	    const saved = JSON.parse(raw);
+	    // Legacy migration: before cross-device sync this was a single
+	    // `wishlist` array of raw product ids (numbers on some paths, strings on
+	    // others). Those items belong to the browser, so they become guestWish —
+	    // normalised, so 5 and '5' stop being two entries.
+	    const guest = loadPersistedWishlist(saved);
+	    return {
+	      ...initial,
+	      cart: Array.isArray(saved.cart) ? saved.cart : [],
+	      saved: Array.isArray(saved.saved) ? saved.saved : [],
+	      guestWish: guest
+	    };
+	  } catch {}
+	  return initial;
+	}
+	function reducer(state, action) {
+	  switch (action.type) {
+	    case 'ADD':
+	      {
+	        const {
+	          id,
+	          qty = 1,
+	          variant = null,
+	          variantId = null
+	        } = action;
+	        // Two different pack sizes of the same product are two cart lines, so
+	        // the key includes the variant. variantId is what the server prices
+	        // against; `variant` is only the human label shown in the UI.
+	        const key = id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
+	        const existing = state.cart.find(l => l.key === key);
+	        const cart = existing ? state.cart.map(l => l.key === key ? {
+	          ...l,
+	          qty: l.qty + qty
+	        } : l) : [...state.cart, {
+	          key,
+	          id,
+	          variant,
+	          variantId,
+	          qty
+	        }];
+	        return {
+	          ...state,
+	          cart
+	        };
+	      }
+	    case 'SET_QTY':
+	      {
+	        const cart = state.cart.map(l => l.key === action.key ? {
+	          ...l,
+	          qty: Math.max(1, action.qty)
+	        } : l);
+	        return {
+	          ...state,
+	          cart
+	        };
+	      }
+	    case 'REMOVE':
+	      return {
+	        ...state,
+	        cart: state.cart.filter(l => l.key !== action.key)
+	      };
+	    case 'SAVE_LATER':
+	      {
+	        const line = state.cart.find(l => l.key === action.key);
+	        if (!line) return state;
+	        return {
+	          ...state,
+	          cart: state.cart.filter(l => l.key !== action.key),
+	          saved: [...state.saved, line]
+	        };
+	      }
+	    case 'MOVE_TO_CART':
+	      {
+	        const line = state.saved.find(l => l.key === action.key);
+	        if (!line) return state;
+	        const existing = state.cart.find(l => l.key === line.key);
+	        const cart = existing ? state.cart.map(l => l.key === line.key ? {
+	          ...l,
+	          qty: l.qty + line.qty
+	        } : l) : [...state.cart, line];
+	        return {
+	          ...state,
+	          cart,
+	          saved: state.saved.filter(l => l.key !== action.key)
+	        };
+	      }
+	    case 'REMOVE_SAVED':
+	      return {
+	        ...state,
+	        saved: state.saved.filter(l => l.key !== action.key)
+	      };
+	    // ---- Wishlist ------------------------------------------------
+	    // Delegated so the ownership rules have exactly ONE implementation,
+	    // executable in tests without React (see src/lib/wishlistState.js).
+	    case 'WISH_GUEST_TOGGLE':
+	    case 'WISH_ACCOUNT_ADD':
+	    case 'WISH_ACCOUNT_REMOVE':
+	    case 'WISH_SYNCED':
+	    case 'WISH_SESSION_CLEARED':
+	      return wishlistReducer(state, action);
+	    case 'CLEAR_CART':
+	      return {
+	        ...state,
+	        cart: []
+	      };
+	    default:
+	      return state;
+	  }
+	}
+	function StoreProvider({
+	  children
+	}) {
+	  const [state, dispatch] = reactExports.useReducer(reducer, undefined, load);
+	  const [toasts, setToasts] = reactExports.useState([]);
+	  const {
+	    user
+	  } = useCustomerAuth();
+	  const userId = user?.id ?? null;
+
+	  // Persist a WHITELIST, never the whole state. accountWish and syncedUserId
+	  // must not reach localStorage — see the ownership note at the top.
+	  reactExports.useEffect(() => {
+	    try {
+	      localStorage.setItem(KEY, JSON.stringify(pickPersisted(state)));
+	    } catch {}
+	  }, [state.cart, state.saved, state.guestWish]);
+	  const toast = reactExports.useCallback((message, opts = {}) => {
+	    const id = Math.random().toString(36).slice(2);
+	    setToasts(t => [...t, {
+	      id,
+	      message,
+	      ...opts
+	    }]);
+	    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), opts.duration || 2600);
+	  }, []);
+
+	  // `variant` accepts either a variant object ({ id, label, ... }) or a plain
+	  // label string, so existing call sites that pass a label keep working.
+	  const addToCart = reactExports.useCallback((product, qty = 1, variant = null) => {
+	    const isObj = variant && typeof variant === 'object';
+	    const label = isObj ? variant.label ?? null : variant;
+	    // A variantId is only meaningful when it identifies a priced row in
+	    // product_variants. Catalogue variants that carry a label but no price
+	    // are display-only, and sending their local id would make the server
+	    // reject the line ("selected size is no longer available").
+	    const variantId = isObj && variant.price != null ? variant.id ?? null : null;
+	    dispatch({
+	      type: 'ADD',
+	      id: product.id,
+	      qty,
+	      variant: label,
+	      variantId
+	    });
+	    toast(`Added to cart`, {
+	      product: product.id,
+	      kind: 'cart'
+	    });
+	  }, [toast]);
+
+	  // What the UI renders. Recomputed from the two lists, never stored.
+	  const wishlist = reactExports.useMemo(() => visibleWishlist(state), [state.guestWish, state.accountWish, state.syncedUserId]);
+
+	  // ---- Wishlist sync lifecycle ---------------------------------------
+	  //
+	  // Identifies the request that is allowed to apply its result. An account
+	  // switch bumps it, so a slow response for the previous customer can never
+	  // land in the new customer's wishlist.
+	  const syncTokenRef = reactExports.useRef(0);
+	  reactExports.useEffect(() => {
+	    // Signed out (or signed out of an account we had synced): drop the
+	    // account list and fall back to the guest list. Never deletes anything
+	    // remote — the customer's wishlist stays in the database for next time.
+	    if (!userId) {
+	      syncTokenRef.current += 1;
+	      if (state.syncedUserId) dispatch({
+	        type: 'WISH_SESSION_CLEARED'
+	      });
+	      return;
+	    }
+	    // Already synced for this exact user — nothing to do. This is also what
+	    // makes StrictMode's double effect invocation harmless.
+	    if (state.syncedUserId === userId) return;
+	    const token = syncTokenRef.current += 1;
+	    // Snapshot BEFORE awaiting: this is the true guest list at login time.
+	    // Reading it after the fetch could pick up a toggle made meanwhile.
+	    const guestAtLogin = normalizeKeys(state.guestWish);
+	    (async () => {
+	      const remote = await listWishlist();
+	      // A different user signed in (or out) while this was in flight.
+	      if (token !== syncTokenRef.current) return;
+	      const {
+	        missing,
+	        union
+	      } = planWishlistSync({
+	        guestAtLogin,
+	        remote
+	      });
+	      if (missing.length) {
+	        // One duplicate-safe upsert for the whole set, so a retry or a
+	        // double-invocation cannot create duplicate rows.
+	        await mergeWishlist(missing);
+	        if (token !== syncTokenRef.current) return;
+	      }
+	      dispatch({
+	        type: 'WISH_SYNCED',
+	        userId,
+	        keys: union
+	      });
+	    })();
+	    // state.guestWish is read through the snapshot above rather than tracked
+	    // as a dependency: re-running this on every guest toggle would re-fetch
+	    // and re-merge on each heart tap.
+	    // eslint-disable-next-line react-hooks/exhaustive-deps
+	  }, [userId, state.syncedUserId]);
+	  const toggleWish = reactExports.useCallback(product => {
+	    const key = normalizeKey(product?.id);
+	    // A product with no usable id must never become a wishlist row.
+	    if (!key) return;
+	    const signedIn = Boolean(userId) && state.syncedUserId === userId;
+	    const wasIn = visibleWishlist(state).includes(key);
+
+	    // Signed out: purely local, no network, instant.
+	    if (!signedIn) {
+	      dispatch({
+	        type: 'WISH_GUEST_TOGGLE',
+	        key
+	      });
+	      toast(wasIn ? 'Removed from wishlist' : 'Saved to wishlist', {
+	        kind: 'wish'
+	      });
+	      return;
+	    }
+
+	    // Signed in: update optimistically so the heart responds immediately,
+	    // then persist. If the write fails we put the state back rather than
+	    // leaving the customer believing something was saved that was not.
+	    const inGuestBefore = state.guestWish.includes(key);
+	    dispatch({
+	      type: wasIn ? 'WISH_ACCOUNT_REMOVE' : 'WISH_ACCOUNT_ADD',
+	      key
+	    });
+	    toast(wasIn ? 'Removed from wishlist' : 'Saved to wishlist', {
+	      kind: 'wish'
+	    });
+	    (async () => {
+	      const ok = wasIn ? await removeWishlistItem(key) : await addWishlistItem(key);
+	      if (ok) return;
+	      // Roll back to exactly the previous state, including the guest copy
+	      // that WISH_ACCOUNT_REMOVE cleared.
+	      if (wasIn) {
+	        dispatch({
+	          type: 'WISH_ACCOUNT_ADD',
+	          key
+	        });
+	        if (inGuestBefore) dispatch({
+	          type: 'WISH_GUEST_TOGGLE',
+	          key
+	        });
+	      } else {
+	        dispatch({
+	          type: 'WISH_ACCOUNT_REMOVE',
+	          key
+	        });
+	      }
+	      toast('Could not sync wishlist. Please try again.', {
+	        kind: 'wish'
+	      });
+	    })();
+	  }, [state, userId, toast]);
+
+	  // Resolve the chosen pack size so a line is priced at ITS price, not the
+	  // product's base price. These figures are for display only — the payable
+	  // amount is always recomputed server-side (api/_lib/pricing.js).
+	  const hydrate = l => {
+	    const product = productById[l.id];
+	    if (!product) return null;
+	    const variantObj = l.variantId ? (product.variants || []).find(v => String(v.id) === String(l.variantId)) || null : null;
+	    const unitPrice = variantObj?.price ?? product.price;
+	    const unitMrp = variantObj?.mrp ?? product.mrp ?? unitPrice;
+	    return {
+	      ...l,
+	      product,
+	      variantObj,
+	      variantLabel: variantObj?.label ?? l.variant ?? null,
+	      unitPrice,
+	      unitMrp: Math.max(unitMrp, unitPrice),
+	      lineTotal: unitPrice * l.qty
+	    };
+	  };
+
+	  // Variants arrive from Supabase AFTER first render. Memoising on state.cart
+	  // alone meant a line added with a 750 ml variantId kept the pre-variant
+	  // base price (250 ml) forever, because the cart array never changed. Read
+	  // the catalogue version during render so the async load invalidates these.
+	  const catalogVersion = getCatalogVersion();
+	  const cartDetailed = reactExports.useMemo(() => state.cart.map(hydrate).filter(Boolean), [state.cart, catalogVersion]);
+	  const savedDetailed = reactExports.useMemo(() => state.saved.map(hydrate).filter(Boolean), [state.saved, catalogVersion]);
+	  const cartCount = reactExports.useMemo(() => state.cart.reduce((s, l) => s + l.qty, 0), [state.cart]);
+	  const subtotal = reactExports.useMemo(() => cartDetailed.reduce((s, l) => s + l.lineTotal, 0), [cartDetailed]);
+	  const mrpTotal = reactExports.useMemo(() => cartDetailed.reduce((s, l) => s + l.unitMrp * l.qty, 0), [cartDetailed]);
+	  const savings = reactExports.useMemo(() => cartDetailed.reduce((s, l) => s + Math.max(0, l.unitMrp - l.unitPrice) * l.qty, 0), [cartDetailed]);
+	  const value = {
+	    ...state,
+	    // The visible union replaces the old raw array, so every existing
+	    // consumer (Wishlist page, Account tab, header counts) keeps reading
+	    // `wishlist` and gets the right list for the current session.
+	    wishlist,
+	    dispatch,
+	    toasts,
+	    toast,
+	    addToCart,
+	    toggleWish,
+	    // Normalised on both sides: a caller passing the numeric 5 still matches
+	    // a stored '5'.
+	    isWished: id => wishlist.includes(normalizeKey(id)),
+	    cartDetailed,
+	    savedDetailed,
+	    cartCount,
+	    wishCount: wishlist.length,
+	    subtotal,
+	    mrpTotal,
+	    savings
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsx(StoreCtx.Provider, {
+	    value: value,
+	    children: children
+	  });
+	}
+	function useStore() {
+	  const ctx = reactExports.useContext(StoreCtx);
+	  if (!ctx) throw new Error('useStore must be used within StoreProvider');
+	  return ctx;
+	}
+
+	// General currency formatter for storefront/catalogue prices. Locale grouping,
+	// no forced decimals (so whole-rupee prices read as ₹1,968, not ₹1,968.00).
+	function money(n, currency = '₹') {
+	  return currency + Number(n).toLocaleString('en-IN');
+	}
+
+	// Canonical formatter for creator-program FINANCIAL amounts — earnings,
+	// commission, payouts, eligible/attributed sales, and financial admin views.
+	// Always renders exactly two decimals in INR grouping, so a value like 393.6
+	// shows as ₹393.60 (never a truncated ₹393.6) and 0 shows as ₹0.00. This is
+	// display-only; it never changes stored values or calculations. Null/NaN → ₹0.00.
+	function money2(n, currency = '₹') {
+	  const v = Number(n);
+	  return currency + (Number.isFinite(v) ? v : 0).toLocaleString('en-IN', {
+	    minimumFractionDigits: 2,
+	    maximumFractionDigits: 2
+	  });
+	}
+
+	// Reference-counted body scroll lock.
+	//
+	// Previously the header locked scrolling by writing document.body.style.overflow
+	// directly from two independent effects (the nav drawer and the mobile search
+	// overlay). Whichever closed FIRST cleared the lock, so closing the search
+	// overlay while the drawer was still open let the page scroll behind it.
+	// Counting the locks fixes that: scrolling resumes only when the last holder
+	// releases.
+	//
+	// It also compensates for the scrollbar width, so locking no longer shifts the
+	// layout horizontally on desktop when the scrollbar disappears.
+
+	let locks = 0;
+	let previousOverflow = '';
+	let previousPaddingRight = '';
+	function lockScroll() {
+	  if (typeof document === 'undefined') return;
+	  locks += 1;
+	  if (locks > 1) return;
+	  const body = document.body;
+	  previousOverflow = body.style.overflow;
+	  previousPaddingRight = body.style.paddingRight;
+	  const gap = window.innerWidth - document.documentElement.clientWidth;
+	  body.style.overflow = 'hidden';
+	  if (gap > 0) {
+	    const current = parseFloat(window.getComputedStyle(body).paddingRight) || 0;
+	    body.style.paddingRight = `${current + gap}px`;
+	  }
+	}
+	function unlockScroll() {
+	  if (typeof document === 'undefined') return;
+	  if (locks === 0) return;
+	  locks -= 1;
+	  if (locks > 0) return;
+	  document.body.style.overflow = previousOverflow;
+	  document.body.style.paddingRight = previousPaddingRight;
+	}
+
+	function Header() {
+	  const {
+	    cartCount,
+	    wishCount
+	  } = useStore();
+	  const [drawer, setDrawer] = reactExports.useState(false);
+	  const [q, setQ] = reactExports.useState('');
+	  const [focused, setFocused] = reactExports.useState(false);
+	  const [scrolled, setScrolled] = reactExports.useState(false);
+	  // Mobile search overlay. The desktop search field is hidden on small
+	  // screens, so mobile previously had no way to search at all — the icon
+	  // just navigated to /shop with no query.
+	  const [mobileSearch, setMobileSearch] = reactExports.useState(false);
+	  const navigate = useNavigate();
+	  const location = useLocation();
+	  const boxRef = reactExports.useRef(null);
+	  const mobileInputRef = reactExports.useRef(null);
+	  reactExports.useEffect(() => {
+	    let raf = null;
+	    const onScroll = () => {
+	      if (raf) return;
+	      raf = requestAnimationFrame(() => {
+	        raf = null;
+	        setScrolled(window.scrollY > 8);
+	      });
+	    };
+	    onScroll();
+	    window.addEventListener('scroll', onScroll, {
+	      passive: true
+	    });
+	    return () => {
+	      window.removeEventListener('scroll', onScroll);
+	      if (raf) cancelAnimationFrame(raf);
+	    };
+	  }, []);
+	  reactExports.useEffect(() => {
+	    setDrawer(false);
+	    setFocused(false);
+	    setMobileSearch(false);
+	  }, [location.pathname]);
+
+	  // Focus the field when the overlay opens (so the keyboard appears), lock
+	  // body scroll behind it, and allow Escape to close.
+	  reactExports.useEffect(() => {
+	    if (!mobileSearch) return;
+	    const t = setTimeout(() => mobileInputRef.current?.focus(), 60);
+	    const onKey = e => {
+	      if (e.key === 'Escape') setMobileSearch(false);
+	    };
+	    document.addEventListener('keydown', onKey);
+	    lockScroll();
+	    return () => {
+	      clearTimeout(t);
+	      document.removeEventListener('keydown', onKey);
+	      unlockScroll();
+	    };
+	  }, [mobileSearch]);
+	  // Reference-counted so the drawer and the search overlay can't unlock each
+	  // other (see lib/scrollLock.js).
+	  reactExports.useEffect(() => {
+	    if (!drawer) return undefined;
+	    lockScroll();
+	    // Only close the drawer if the search overlay (which sits above it) isn't
+	    // the topmost layer — Escape should dismiss one layer at a time.
+	    const onKey = e => {
+	      if (e.key === 'Escape' && !mobileSearch) setDrawer(false);
+	    };
+	    document.addEventListener('keydown', onKey);
+	    return () => {
+	      document.removeEventListener('keydown', onKey);
+	      unlockScroll();
+	    };
+	  }, [drawer, mobileSearch]);
+	  reactExports.useEffect(() => {
+	    const onDoc = e => {
+	      if (boxRef.current && !boxRef.current.contains(e.target)) setFocused(false);
+	    };
+	    document.addEventListener('mousedown', onDoc);
+	    return () => document.removeEventListener('mousedown', onDoc);
+	  }, []);
+	  const results = q.trim() ? searchProducts(q).slice(0, 6) : [];
+	  const submit = e => {
+	    e.preventDefault();
+	    if (q.trim()) {
+	      navigate(`/shop?q=${encodeURIComponent(q.trim())}`);
+	      setFocused(false);
+	      setMobileSearch(false);
+	    }
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(AnnouncementBar, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+	      className: `v2-hdr ${scrolled ? 'is-scrolled' : ''}`,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-hdr__bar",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "v2-hdr__left",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: "v2-hdr__act",
+	            onClick: () => setDrawer(true),
+	            "aria-label": "Open menu",
+	            "aria-expanded": drawer,
+	            "aria-controls": "mobile-drawer",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "menu",
+	              size: 19,
+	              stroke: 1.5
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "v2-hdr__search",
+	            ref: boxRef,
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	              className: "v2-hdr__searchbox",
+	              onSubmit: submit,
+	              role: "search",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "search",
+	                size: 17,
+	                stroke: 1.5
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                placeholder: "Search wellness essentials",
+	                value: q,
+	                onChange: e => setQ(e.target.value),
+	                onFocus: () => setFocused(true),
+	                "aria-label": "Search for products"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                type: "submit",
+	                "aria-label": "Search",
+	                children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                  name: "arrowRight",
+	                  size: 16,
+	                  stroke: 1.6
+	                })
+	              })]
+	            }), focused && q.trim() && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	              className: "v2-hdr__suggest",
+	              children: results.length ? results.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	                to: `/product/${p.slug}`,
+	                className: "v2-hdr__suggest-item",
+	                onClick: () => setFocused(false),
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  className: "v2-hdr__suggest-thumb",
+	                  children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	                    product: p,
+	                    frame: "v2",
+	                    sizes: "40px"
+	                  })
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  className: "v2-hdr__suggest-name",
+	                  children: p.name
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  className: "v2-hdr__suggest-price",
+	                  children: money(p.price)
+	                })]
+	              }, p.id)) : /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	                className: "v2-hdr__suggest-empty",
+	                children: ["No matches for \u201C", q, "\u201D."]
+	              })
+	            })]
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "v2-hdr__brand",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Logo, {})
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "v2-hdr__right",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: "v2-hdr__act v2-only-mobile",
+	            onClick: () => setMobileSearch(true),
+	            "aria-label": "Search",
+	            "aria-expanded": mobileSearch,
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "search",
+	              size: 19,
+	              stroke: 1.5
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/account",
+	            className: "v2-hdr__act v2-hide-mobile",
+	            "aria-label": "Account",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "user",
+	              size: 19,
+	              stroke: 1.5
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: "/wishlist",
+	            className: "v2-hdr__act v2-hide-mobile",
+	            "aria-label": `Wishlist${wishCount > 0 ? `, ${wishCount} items` : ''}`,
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "heart",
+	              size: 19,
+	              stroke: 1.5
+	            }), wishCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "v2-hdr__count",
+	              children: wishCount
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: "/cart",
+	            className: "v2-hdr__act",
+	            "aria-label": `Cart${cartCount > 0 ? `, ${cartCount} items` : ''}`,
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "bag",
+	              size: 19,
+	              stroke: 1.5
+	            }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "v2-hdr__count",
+	              children: cartCount
+	            })]
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	        className: "v2-hdr__nav",
+	        "aria-label": "Primary",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "v2-hdr__navitem",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
+	            to: "/shop",
+	            className: ({
+	              isActive
+	            }) => `v2-hdr__link ${isActive ? 'active' : ''}`,
+	            children: ["Shop ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "chevronDown",
+	              size: 13,
+	              stroke: 1.6
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "v2-hdr__mega",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	              className: "v2-hdr__mega-grid",
+	              children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	                to: `/category/${c.slug}`,
+	                className: "v2-hdr__mega-cell",
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  className: "v2-hdr__mega-name",
+	                  children: c.name
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  className: "v2-hdr__mega-tag",
+	                  "aria-hidden": !hasConfiguredCategoryCopy(c) || !c.tagline,
+	                  children: hasConfiguredCategoryCopy(c) && c.tagline ? c.tagline : '\u00A0'
+	                })]
+	              }, c.slug))
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	              to: "/shop",
+	              className: "v2-hdr__mega-all",
+	              children: ["Shop all products ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "arrowRight",
+	                size: 14,
+	                stroke: 1.8
+	              })]
+	            })]
+	          })]
+	        }), categories.slice(0, 5).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
+	          to: `/category/${c.slug}`,
+	          className: ({
+	            isActive
+	          }) => `v2-hdr__link ${isActive ? 'active' : ''}`,
+	          children: c.name
+	        }, c.slug)), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
+	          to: "/shop?sort=bestselling",
+	          className: "v2-hdr__link",
+	          children: "Bestsellers"
+	        })]
+	      })]
+	    }), mobileSearch && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "search-overlay",
+	      onClick: () => setMobileSearch(false),
+	      role: "dialog",
+	      "aria-modal": "true",
+	      "aria-label": "Search products",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "search-panel",
+	        onClick: e => e.stopPropagation(),
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	          className: "searchbox search-panel__box",
+	          onSubmit: submit,
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "search"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            ref: mobileInputRef,
+	            className: "input",
+	            type: "search",
+	            enterKeyHint: "search",
+	            autoComplete: "off",
+	            placeholder: "Search for products...",
+	            "aria-label": "Search for products",
+	            value: q,
+	            onChange: e => setQ(e.target.value)
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            type: "button",
+	            className: "iconbtn",
+	            onClick: () => setMobileSearch(false),
+	            "aria-label": "Close search",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "x"
+	            })
+	          })]
+	        }), q.trim() ? results.length ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "search-results",
+	          children: [results.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: `/product/${p.slug}`,
+	            className: "search-result",
+	            onClick: () => setMobileSearch(false),
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "search-thumb",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	                product: p
+	              })
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "search-meta",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "search-name",
+	                children: p.name
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "hint",
+	                children: money(p.price)
+	              })]
+	            })]
+	          }, p.id)), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	            className: "btn btn-ghost btn-block",
+	            onClick: submit,
+	            children: ["See all results for \u201C", q, "\u201D"]
+	          })]
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "muted",
+	          style: {
+	            padding: '18px 4px'
+	          },
+	          children: ["No matches for \u201C", q, "\u201D. Try \u201Cjuice\u201D, \u201Csoap\u201D or \u201Chair\u201D."]
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "search-suggest",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "hint",
+	            children: "Popular:"
+	          }), ['Juice', 'Shampoo', 'Soap', 'Face wash'].map(s => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            type: "button",
+	            className: "chip",
+	            onClick: () => setQ(s),
+	            children: s
+	          }, s))]
+	        })]
+	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      id: "mobile-drawer",
+	      className: `drawer ${drawer ? 'open' : ''}`,
+	      "aria-hidden": !drawer,
+	      role: "dialog",
+	      "aria-modal": "true",
+	      "aria-label": "Menu",
+	      ...(drawer ? {} : {
+	        inert: ''
+	      }),
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "drawer__scrim",
+	        onClick: () => setDrawer(false)
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "drawer__panel",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "drawer__top",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Logo, {
+	            compact: true,
+	            tagline: false
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            className: "iconbtn",
+	            onClick: () => setDrawer(false),
+	            "aria-label": "Close menu",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "x"
+	            })
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	          className: "searchbox",
+	          style: {
+	            margin: '0 16px 8px'
+	          },
+	          onSubmit: submit,
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "search"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            placeholder: "Search for products...",
+	            value: q,
+	            onChange: e => setQ(e.target.value)
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	          className: "drawer__nav",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/shop",
+	            className: "drawer__link",
+	            children: "All products"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/shop?sort=bestselling",
+	            className: "drawer__link",
+	            children: "Bestsellers"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/shop?filter=new",
+	            className: "drawer__link",
+	            children: "New in"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	            className: "drawer__sec",
+	            children: "Categories"
+	          }), categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: `/category/${c.slug}`,
+	            className: "drawer__cat",
+	            children: [c.name, /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "chevronRight",
+	              size: 17
+	            })]
+	          }, c.slug))]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "drawer__foot",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: "/account",
+	            className: "btn btn-outline btn-block",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "user",
+	              size: 18
+	            }), " Account"]
+	          })
+	        })]
+	      })]
+	    })]
+	  });
+	}
+
+	function Footer() {
+	  const email = typeof contact?.email === 'string' ? contact.email.trim() : '';
+	  const phone = typeof contact?.phone === 'string' ? contact.phone.trim() : '';
+	  const hasContact = Boolean(email || phone);
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("footer", {
+	    className: "ftr",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "container",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "ftr__top",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "ftr__brand",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Logo, {
+	            light: true
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: "Modern wellness, beauty and everyday care \u2014 delivered to your door."
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "ftr__col",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
+	            children: "Shop"
+	          }), categories.slice(0, 6).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: `/category/${c.slug}`,
+	            children: c.name
+	          }, c.slug)), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/shop",
+	            children: "All products"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "ftr__col",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
+	            children: "Care"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/account",
+	            children: "My account"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/account",
+	            children: "Track my order"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/cart",
+	            children: "My cart"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/wishlist",
+	            children: "Wishlist"
+	          })]
+	        }), hasContact && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "ftr__col",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
+	            children: "Contact"
+	          }), email && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	            href: `mailto:${email}`,
+	            children: email
+	          }), phone && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	            href: `tel:${phone.replace(/\s+/g, '')}`,
+	            children: phone
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "ftr__trust",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "lock",
+	            size: 17
+	          }), " Secure checkout"]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "truck",
+	            size: 17
+	          }), " Free standard shipping"]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "package",
+	            size: 17
+	          }), " Order tracking in your account"]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "ftr__bottom",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          children: ["\xA9 ", new Date().getFullYear(), " Sora Life."]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "ftr__legal",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/admin/login",
+	            className: "ftr__admin-link",
+	            children: "Admin Login"
+	          })
+	        })]
+	      })]
+	    })
+	  });
+	}
+
+	function MobileTabBar() {
+	  const {
+	    cartCount,
+	    wishCount
+	  } = useStore();
+	  const item = ({
+	    isActive
+	  }) => `tabbar__item ${isActive ? 'active' : ''}`;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	    className: "tabbar only-mobile",
+	    "aria-label": "Mobile navigation",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
+	      to: "/",
+	      className: item,
+	      end: true,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "home",
+	        size: 22
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        children: "Home"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
+	      to: "/shop",
+	      className: item,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "grid",
+	        size: 22
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        children: "Shop"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
+	      to: "/wishlist",
+	      className: item,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "tabbar__ic",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "heart",
+	          size: 22
+	        }), wishCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+	          className: "tabbar__dot"
+	        }, wishCount)]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        children: "Saved"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
+	      to: "/cart",
+	      className: item,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "tabbar__ic",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "bag",
+	          size: 22
+	        }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+	          className: "tabbar__badge",
+	          children: cartCount
+	        }, cartCount)]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        children: "Cart"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
+	      to: "/account",
+	      className: item,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "user",
+	        size: 22
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        children: "Account"
+	      })]
+	    })]
+	  });
+	}
+
+	function MobileCartSummary() {
+	  const {
+	    pathname
+	  } = useLocation();
+	  const {
+	    cartCount,
+	    subtotal
+	  } = useStore();
+	  const browseRoute = /^\/(?:shop\/?|wishlist\/?|category\/[^/]+\/?)?$/.test(pathname);
+	  const visible = browseRoute && cartCount > 0;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: `v2-cart-dock${visible ? ' v2-cart-dock--active' : ''}`,
+	    children: [visible && /*#__PURE__*/jsxRuntimeExports.jsxs("aside", {
+	      className: "v2-mobile-cart",
+	      "aria-label": "Cart summary",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-mobile-cart__totals",
+	        "aria-live": "polite",
+	        "aria-atomic": "true",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "v2-mobile-cart__count",
+	          children: [cartCount, " ", cartCount === 1 ? 'item' : 'items']
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+	          className: "v2-mobile-cart__subtotal",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "sr-only",
+	            children: "Item subtotal "
+	          }), money(subtotal)]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	        to: "/cart",
+	        className: "v2-mobile-cart__link",
+	        children: ["View cart ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "arrowRight",
+	          size: 17
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(MobileTabBar, {})]
+	  });
+	}
+
+	function Toasts() {
+	  const {
+	    toasts
+	  } = useStore();
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    className: "toast-wrap",
+	    role: "status",
+	    "aria-live": "polite",
+	    children: toasts.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "toast",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "t-ic",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: t.kind === 'wish' ? 'heart' : 'checkCircle',
+	          size: 18
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "t-body",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: t.message
+	        })
+	      })]
+	    }, t.id))
+	  });
+	}
+
+	function ScrollToTop() {
+	  const {
+	    pathname
+	  } = useLocation();
+	  reactExports.useEffect(() => {
+	    window.scrollTo({
+	      top: 0,
+	      behavior: 'instant' in window ? 'instant' : 'auto'
+	    });
+	  }, [pathname]);
+	  return null;
+	}
+	function Layout() {
+	  const {
+	    pathname
+	  } = useLocation();
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(ScrollToTop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Header, {}), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
+	      className: "page-main",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Outlet, {})
+	    }, pathname), /*#__PURE__*/jsxRuntimeExports.jsx(Footer, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MobileCartSummary, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
+	  });
+	}
+
+	// Structured presentation fields inside site_settings.homepage.visuals.
+	// No CSS/HTML input is accepted. Shared by the editor and storefront reader.
+	const IMAGE_POSITIONS = ['left top', 'center top', 'right top', 'left center', 'center center', 'right center', 'left bottom', 'center bottom', 'right bottom'];
+	const color$1 = (label, value) => ({
+	  label,
+	  type: 'color',
+	  value
+	});
+	const number$1 = (label, value, min, max, step = 1) => ({
+	  label,
+	  type: 'number',
+	  value,
+	  min,
+	  max,
+	  step
+	});
+	const toggle = (label, value = false) => ({
+	  label,
+	  type: 'boolean',
+	  value
+	});
+	const image = label => ({
+	  label,
+	  type: 'image',
+	  value: ''
+	});
+	const select$1 = (label, value, options) => ({
+	  label,
+	  type: 'select',
+	  value,
+	  options
+	});
+	const HOMEPAGE_VISUAL_FIELDS = {
+	  categoryStrip: {
+	    enabled: toggle('Enable category background', false),
+	    backgroundColor: color$1('Background color', '#F7F1E7'),
+	    imageUrl: image('Background strip image'),
+	    imageSize: select$1('Background image fit', 'cover', ['cover', 'contain']),
+	    imagePosition: select$1('Background image position', 'center center', IMAGE_POSITIONS),
+	    imageOpacity: number$1('Background image opacity', 1, 0, 1, 0.05),
+	    overlayColor: color$1('Overlay color', '#FBF8F1'),
+	    overlayOpacity: number$1('Overlay strength (0 = off)', 0, 0, 1, 0.05),
+	    paddingTop: number$1('Top padding (px)', 12, 0, 48),
+	    paddingBottom: number$1('Bottom padding (px)', 12, 0, 48),
+	    borderTop: toggle('Show top border'),
+	    borderBottom: toggle('Show bottom border'),
+	    borderColor: color$1('Border color', '#DED2C4'),
+	    borderWidth: number$1('Border thickness (px)', 1, 0, 4),
+	    radius: number$1('Corner radius (px)', 8, 0, 16),
+	    textureUrl: image('Decorative texture'),
+	    texturePosition: select$1('Texture position', 'center center', IMAGE_POSITIONS),
+	    leftImage: image('Left decoration'),
+	    rightImage: image('Right decoration'),
+	    decorationOpacity: number$1('Decoration opacity', 0.25, 0, 1, 0.05),
+	    decorationSize: number$1('Decoration width (px)', 120, 24, 240),
+	    decorationPosition: select$1('Decoration vertical position', 'center', ['top', 'center', 'bottom']),
+	    hideTextureMobile: toggle('Hide texture on mobile'),
+	    hideLeftMobile: toggle('Hide left decoration on mobile', true),
+	    hideRightMobile: toggle('Hide right decoration on mobile', true)
+	  },
+	  offers: {
+	    backgroundColor: color$1('Section background', '#FBF8F1'),
+	    frameColor: color$1('Frame interior', '#FFF8ED'),
+	    frameEnabled: toggle('Show bordered frame', true),
+	    borderColor: color$1('Frame border color', '#702B3B'),
+	    borderWidth: number$1('Frame border thickness (px)', 1, 0, 4),
+	    accentColor: color$1('Heading and accent color', '#702B3B'),
+	    radius: number$1('Frame corner radius (px)', 12, 0, 16),
+	    textureUrl: image('Frame background image / texture'),
+	    textureOpacity: number$1('Texture opacity', 0.12, 0, 1, 0.01),
+	    padding: number$1('Section top and bottom padding (px)', 20, 0, 48),
+	    gap: number$1('Gap between promotions (px)', 16, 8, 32),
+	    desktopColumns: select$1('Maximum promotions per desktop row', 2, [1, 2, 3]),
+	    mobileWidth: number$1('Mobile promotion width (%)', 90, 88, 92),
+	    decorationUrl: image('Optional decorative artwork'),
+	    decorationOpacity: number$1('Artwork opacity', 0.15, 0, 1, 0.05),
+	    decorationSize: number$1('Artwork width (px)', 160, 24, 240)
+	  }
+	};
+	function safeVisualUrl(value) {
+	  if (typeof value !== 'string' || !value.trim()) return '';
+	  const raw = value.trim();
+	  if (raw.length > 2000 || /[\s\\\u0000-\u001f\u007f]/.test(raw)) return '';
+	  let url;
+	  try {
+	    url = new URL(raw, 'https://visual.invalid');
+	  } catch {
+	    return '';
+	  }
+	  if (url.username || url.password || url.port || /\.(svg|html?)$/i.test(url.pathname)) return '';
+	  let path;
+	  try {
+	    path = decodeURIComponent(url.pathname);
+	  } catch {
+	    return '';
+	  }
+	  if (/[\\\u0000-\u001f\u007f]/.test(path)) return '';
+	  if (raw.startsWith('/') && !raw.startsWith('//') && url.origin === 'https://visual.invalid') return raw;
+	  if (!raw.startsWith('https://') || url.protocol !== 'https:') return '';
+	  const host = url.hostname;
+	  // Visual URLs load in <img>, never via a server fetch. Still reject local,
+	  // private and literal-IP destinations rather than probing a user's LAN.
+	  if (!host.includes('.') || /^(localhost|.*\.(localhost|local|internal|test|invalid|lan|home\.arpa))$/i.test(host) || /^[\d.]+$/.test(host) || host.includes(':')) return '';
+	  return url.href;
+	}
+	function sanitizeHomepageVisuals(raw) {
+	  const result = {};
+	  for (const [group, fields] of Object.entries(HOMEPAGE_VISUAL_FIELDS)) {
+	    result[group] = {};
+	    for (const [key, field] of Object.entries(fields)) {
+	      const v = raw?.[group]?.[key];
+	      let clean = field.value;
+	      if (field.type === 'boolean' && typeof v === 'boolean') clean = v;
+	      if (field.type === 'color' && typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) clean = v;
+	      if (field.type === 'image') clean = safeVisualUrl(v);
+	      if (field.type === 'select' && field.options.includes(v)) clean = v;
+	      if (field.type === 'number' && v !== '' && v != null && Number.isFinite(Number(v))) {
+	        clean = Math.min(field.max, Math.max(field.min, Number(v)));
+	      }
+	      result[group][key] = clean;
+	    }
+	  }
+	  return result;
+	}
+	function mergeHomepageVisuals(current, visuals) {
+	  return {
+	    ...(current && typeof current === 'object' ? current : {}),
+	    visuals: sanitizeHomepageVisuals(visuals)
+	  };
+	}
+
+	// Keep the placement runtime and its sort/date/active rules authoritative.
+	// De-duplicate IDs only; never slice away additional posters or offer cards.
+	function uniqueHomepagePromotions(promotions) {
+	  const seen = new Set();
+	  return promotions.filter(promo => {
+	    if (seen.has(promo.id)) return false;
+	    seen.add(promo.id);
+	    return true;
+	  });
+	}
+
+	const number = (label, value, min, max, step = 1) => ({
+	  label,
+	  type: 'number',
+	  value,
+	  min,
+	  max,
+	  step
+	});
+	const select = (label, value, options) => ({
+	  label,
+	  type: 'select',
+	  value,
+	  options
+	});
+	const color = label => ({
+	  label,
+	  type: 'color',
+	  value: ''
+	});
+	const HERO_CTA_FIELDS = {
+	  desktopPosition: select('Desktop position', 'flow', ['flow', 'custom']),
+	  x: number('Desktop horizontal position (%)', 0, 0, 100),
+	  y: number('Desktop vertical position (%)', 75, 0, 100),
+	  mobilePosition: select('Mobile position', 'auto', ['auto', 'custom']),
+	  mobileX: number('Mobile horizontal position (%)', 50, 0, 100),
+	  mobileY: number('Mobile vertical position (%)', 95, 0, 100),
+	  width: number('Button width (px; 0 = automatic)', 118, 0, 480),
+	  paddingX: number('Horizontal padding (px)', 14, 4, 48),
+	  paddingY: number('Vertical padding (px)', 7, 0, 24),
+	  backgroundColor: color('Background color (blank = theme)'),
+	  textColor: color('Text color (blank = theme)'),
+	  borderColor: color('Border color (blank = theme)'),
+	  borderWidth: number('Border thickness (px)', 1, 0, 6),
+	  radius: number('Corner radius (px)', 2, 0, 40),
+	  fontSize: number('Font size (px; 0 = responsive default)', 13, 0, 24),
+	  fontWeight: select('Font weight', 700, [400, 500, 600, 700]),
+	  opacity: number('Button opacity', 1, 0.3, 1, 0.05),
+	  shadow: select('Button shadow', 'none', ['none', 'subtle']),
+	  textureUrl: {
+	    label: 'Button background texture',
+	    type: 'image',
+	    value: ''
+	  },
+	  textureOpacity: number('Texture opacity', 0.25, 0, 1, 0.05),
+	  textureFit: select('Texture fit', 'cover', ['cover', 'contain']),
+	  iconUrl: {
+	    label: 'Button icon image',
+	    type: 'image',
+	    value: ''
+	  },
+	  iconSide: select('Icon side', 'left', ['left', 'right']),
+	  iconSize: number('Icon size (px)', 16, 10, 32)
+	};
+	function sanitizeHeroCta(input) {
+	  const raw = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+	  return Object.fromEntries(Object.entries(HERO_CTA_FIELDS).map(([key, f]) => {
+	    const v = raw[key];
+	    let value = f.value;
+	    if (f.type === 'number' && v !== '' && (typeof v === 'number' || typeof v === 'string') && Number.isFinite(Number(v))) value = Math.min(f.max, Math.max(f.min, Number(v)));
+	    if (f.type === 'select' && f.options.includes(v)) value = v;
+	    if (f.type === 'color' && typeof v === 'string' && /^#[\da-f]{6}$/i.test(v)) value = v;
+	    if (f.type === 'image') value = safeVisualUrl(v);
+	    return [key, value];
+	  }));
+	}
+	function mergeHeroCta(homepage, slideId, appearance) {
+	  if (typeof slideId !== 'string' || !/^[\w-]{1,100}$/.test(slideId) || ['__proto__', 'constructor', 'prototype'].includes(slideId)) throw new Error('Invalid slide ID');
+	  return {
+	    ...homepage,
+	    heroCtas: {
+	      ...(homepage?.heroCtas || {}),
+	      [slideId]: sanitizeHeroCta(appearance)
+	    }
+	  };
+	}
+	function heroCtaStyle(input) {
+	  const a = sanitizeHeroCta(input);
+	  // Auto always resolves to the current safe mobile default, including for
+	  // older saved records that may contain legacy X/Y values.
+	  const mobileX = a.mobilePosition === 'custom' ? a.mobileX : 50;
+	  const mobileY = a.mobilePosition === 'custom' ? a.mobileY : 95;
+	  return {
+	    '--hcta-x': `${a.x}%`,
+	    '--hcta-y': `${a.y}%`,
+	    '--hcta-mobile-x': `${mobileX}%`,
+	    '--hcta-mobile-y': `${mobileY}%`,
+	    '--hcta-width': a.width ? `${a.width}px` : 'auto',
+	    '--hcta-px': `${a.paddingX}px`,
+	    '--hcta-py': `${a.paddingY}px`,
+	    '--hcta-bg': a.backgroundColor || 'var(--slv2-primary, var(--slv2-f700))',
+	    '--hcta-text': a.textColor || 'var(--slv2-ivory)',
+	    '--hcta-border': a.borderColor || 'transparent',
+	    '--hcta-border-width': `${a.borderWidth}px`,
+	    '--hcta-radius': `${a.radius}px`,
+	    '--hcta-font': a.fontSize ? `${a.fontSize}px` : undefined,
+	    '--hcta-weight': a.fontWeight,
+	    '--hcta-opacity': a.opacity,
+	    '--hcta-shadow': a.shadow === 'subtle' ? '0 2px 6px rgb(0 0 0 / 16%)' : 'none',
+	    '--hcta-texture-opacity': a.textureOpacity,
+	    '--hcta-texture-fit': a.textureFit,
+	    '--hcta-icon-size': `${a.iconSize}px`
+	  };
+	}
+
+	function CtaImage({
+	  src,
+	  className
+	}) {
+	  const [failed, setFailed] = reactExports.useState(false);
+	  return !failed && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	    src: src,
+	    className: className,
+	    alt: "",
+	    "aria-hidden": "true",
+	    onError: () => setFailed(true)
+	  });
+	}
+	function HeroCta({
+	  cta,
+	  appearance,
+	  placement = 'flow',
+	  artworkOnly = false,
+	  active = true,
+	  children
+	}) {
+	  if (!cta?.to) return null;
+	  const a = sanitizeHeroCta(appearance);
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    className: `hero-cta hero-cta--${placement}`,
+	    style: heroCtaStyle(a),
+	    "data-desktop": a.desktopPosition,
+	    "data-mobile": "custom",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	      to: cta.to,
+	      className: "v2-btn v2-btn--sm hero-cta__button",
+	      tabIndex: active ? undefined : -1,
+	      children: [a.textureUrl && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
+	        src: a.textureUrl,
+	        className: "hero-cta__texture"
+	      }, a.textureUrl), a.iconUrl && a.iconSide === 'left' && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
+	        src: a.iconUrl,
+	        className: "hero-cta__icon"
+	      }, a.iconUrl), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "hero-cta__label",
+	        children: children || cta.label
+	      }), a.iconUrl && a.iconSide === 'right' && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
+	        src: a.iconUrl,
+	        className: "hero-cta__icon"
+	      }, a.iconUrl)]
+	    })
+	  });
+	}
+
+	const HERO_PRODUCT_SLUG = 'biosash-sea-buckthorn-juice';
+	const SAFE_HERO_COPY = {
+	  kicker: 'SEA BUCKTHORN COLLECTION',
+	  title: 'Sea Buckthorn\nEssentials',
+	  sub: 'Explore juices, supplements and everyday care from the collection.',
+	  mobileSub: 'Juices, supplements & everyday care.',
+	  cta: {
+	    label: 'EXPLORE COLLECTION',
+	    to: '/shop'
+	  }
+	};
+
+	// Only mobile typography responds to length; configured copy stays intact.
+	const titleClass = title => `v2-hero__title${String(title || '').trim().length > 22 ? ' v2-hero__title--long' : ''}`;
+
+	// Replace only the currently published, generic sea-buckthorn slide copy.
+	// The configured artwork and every other Admin-managed slide field remain
+	// untouched; this is a storefront copy-safety override, not a data write.
+	function withSafeHeroCopy(slide) {
+	  const isCurrentSeaBuckthornSlide = slide?.kicker?.trim().toUpperCase() === 'HIMALAYAN WELLNESS' && slide?.title?.trim() === 'The Power of Sea Buckthorn';
+	  if (!isCurrentSeaBuckthornSlide) return slide;
+	  return {
+	    ...slide,
+	    ...SAFE_HERO_COPY
+	  };
+	}
+	function resolveHeroProduct() {
+	  const exact = productBySlug?.[HERO_PRODUCT_SLUG];
+	  if (exact?.image) return exact;
+	  // Defensive: if the catalogue is swapped by applyCatalog() and that slug is
+	  // gone, fall back to the first in-stock product that has a real image.
+	  return (products || []).find(p => p?.image && p.stock !== 0) || null;
+	}
+
+	// V2 note: the previous hardcoded BENEFITS strip ("Rich in 190+ Nutrients",
+	// "Boosts Immunity & Wellness") was authored marketing copy baked into this
+	// component, not data the storefront can substantiate. V2 does not render
+	// product claims that are not bound to verified data, so it has been removed
+	// rather than restyled.
+
+	const INTERVAL = 6000;
+
+	// Brand hero still (Himalayan sea buckthorn). Last-resort visual so a slide
+	// can never render as an empty colour block — see posterFor() below.
+	const FALLBACK_POSTER = '/media/hero-poster.jpg';
+
+	// Admin-uploaded hero art lives in Supabase Storage and is served at full size
+	// (the current slides are a 1.8 MB PNG and a 1.6 MB JPEG). Supabase can render
+	// resized, format-negotiated variants from the same object, so we ask for a
+	// width-appropriate rendition instead of the original. Non-Supabase paths
+	// (our local /media stills) are returned untouched.
+	const SB_OBJECT = '/storage/v1/object/public/';
+	const SB_RENDER = '/storage/v1/render/image/public/';
+	const HERO_WIDTHS = [640, 1024, 1600, 1920];
+	function isSupabaseObject(src) {
+	  return typeof src === 'string' && src.includes(SB_OBJECT) && /supabase\.co/.test(src);
+	}
+	function heroSrc(src, width) {
+	  if (!isSupabaseObject(src)) return src;
+	  return `${src.replace(SB_OBJECT, SB_RENDER)}?width=${width}&quality=72`;
+	}
+	// Locally-shipped hero stills that have pre-built WebP renditions alongside
+	// them (see media/hero-poster-<w>.webp). Keyed by the original path.
+	// 640w is deliberately absent: the hero is full-bleed, so on a DPR-2 phone
+	// (390 CSS px -> ~780 device px) the browser would pick 640w, then upgrade to
+	// 1024w and pay for both. Starting at 1024w costs one request, 60 KB, and is
+	// still smaller than the 82 KB JPEG it replaces.
+	const LOCAL_HERO_VARIANTS = {
+	  '/media/hero-poster.jpg': [1024, 1600]
+	};
+	function heroSrcSet(src) {
+	  const local = LOCAL_HERO_VARIANTS[src];
+	  if (local) {
+	    const base = src.replace(/\.[a-z]+$/i, '');
+	    return local.map(w => `${base}-${w}.webp ${w}w`).join(', ');
+	  }
+	  if (!isSupabaseObject(src)) return undefined;
+	  return HERO_WIDTHS.map(w => `${heroSrc(src, w)} ${w}w`).join(', ');
+	}
+
+	// The still we can show for a slide, if any. A video slide whose poster is
+	// missing used to fall through to a bare coloured <div> — that is how the
+	// duplicate "Mom's Trust" slide (poster_url null, video_url returns 400)
+	// rendered as a large empty block on every device.
+	function stillFor(slide) {
+	  // Image slides carry their URL in `src` (adminApi maps image_url -> src);
+	  // video slides carry a separate poster. Check the right field for each, or
+	  // an image slide gets treated as having no still and is wrongly dropped.
+	  if (slide.kind === 'image') return slide.src || slide.poster || null;
+	  return slide.poster || slide.image || null;
+	}
+
+	// A slide is only worth rendering if it can actually show something: either a
+	// video we are going to play, or a still. Anything else would paint an empty
+	// block, so it is dropped from the carousel rather than shown broken.
+	function isRenderable(slide, canUseVideo, failed) {
+	  if (slide.kind === 'video' && canUseVideo && slide.src && !failed[slide.id]) return true;
+	  return Boolean(stillFor(slide));
+	}
+	function Hero() {
+	  // Product-led hero is the V2 default. Admin-configured slides opt back into
+	  // the original slide rendering because that copy is approved content.
+	  if (!heroSlidesConfigured) return /*#__PURE__*/jsxRuntimeExports.jsx(ProductHero$1, {});
+	  return /*#__PURE__*/jsxRuntimeExports.jsx(ConfiguredHero, {});
+	}
+
+	// ---------------------------------------------------------------- product-led
+	function ProductHero$1() {
+	  const product = resolveHeroProduct();
+	  if (!product) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "v2-hero v2-hero--product",
+	    "aria-label": "Featured product",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-hero__stage",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-hero__ground",
+	        "aria-hidden": "true"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-hero__leaf v2-hero__leaf--a",
+	        "aria-hidden": "true"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-hero__leaf v2-hero__leaf--b",
+	        "aria-hidden": "true"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-hero__plinth",
+	        "aria-hidden": "true"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-hero__contact",
+	        "aria-hidden": "true"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-hero__productwrap",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	          product: product,
+	          frame: "hero",
+	          sizes: "(max-width: 767px) 62vw, 46vw",
+	          alt: product.name
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-hero__ui",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "v2-hero__kicker",
+	          children: SAFE_HERO_COPY.kicker
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          className: titleClass(SAFE_HERO_COPY.title),
+	          children: SAFE_HERO_COPY.title
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "v2-hero__sub",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "v2-hero__sub-full",
+	            children: SAFE_HERO_COPY.sub
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "v2-hero__sub-compact",
+	            children: SAFE_HERO_COPY.mobileSub
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: SAFE_HERO_COPY.cta.to,
+	            className: "v2-btn v2-btn--sm",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "v2-hero__cta-full",
+	              children: SAFE_HERO_COPY.cta.label
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "v2-hero__cta-compact",
+	              children: "Explore collection"
+	            })]
+	          })
+	        })]
+	      })]
+	    })
+	  });
+	}
+
+	// ------------------------------------------------- admin-configured slides
+	function ConfiguredHero() {
+	  const [active, setActive] = reactExports.useState(0);
+	  const [paused, setPaused] = reactExports.useState(false);
+	  const [videoFailed, setVideoFailed] = reactExports.useState({}); // { [slideId]: true } — fall back to poster on load error
+	  const timer = reactExports.useRef(null);
+	  const sectionRef = reactExports.useRef(null);
+	  const parallaxRefs = reactExports.useRef([]);
+	  const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+	  // The hero video is a ~6 MB MP4 — fine on desktop broadband, but it was
+	  // the single largest cost on mobile (it dominated the phone payload for a
+	  // decorative background). Phones, data-saver users and reduced-motion users
+	  // get the poster still instead, which is already authored for every video
+	  // slide and is ~70x smaller. Desktop behaviour is unchanged.
+	  const [useVideo, setUseVideo] = reactExports.useState(false);
+	  reactExports.useEffect(() => {
+	    if (typeof window === 'undefined' || !window.matchMedia) return;
+	    const mq = window.matchMedia('(min-width: 768px)');
+	    const saveData = navigator.connection?.saveData === true;
+	    const evaluate = () => setUseVideo(mq.matches && !reduced && !saveData);
+	    evaluate();
+	    mq.addEventListener?.('change', evaluate);
+	    return () => mq.removeEventListener?.('change', evaluate);
+	  }, [reduced]);
+
+	  // Only carry slides that can actually paint something. If a deck were ever
+	  // configured with nothing renderable at all, keep the original list so the
+	  // hero still has structure rather than collapsing to nothing.
+	  const renderable = heroSlides.filter(s => isRenderable(s, useVideo, videoFailed));
+	  const SLIDES = renderable.length ? renderable : heroSlides;
+	  const DISPLAY_SLIDES = SLIDES.map(withSafeHeroCopy);
+
+	  // A dropped slide shortens the deck; keep the index inside it.
+	  reactExports.useEffect(() => {
+	    if (active >= SLIDES.length) setActive(0);
+	  }, [SLIDES.length, active]);
+	  const go = reactExports.useCallback(i => setActive((i + SLIDES.length) % SLIDES.length), [SLIDES.length]);
+	  const next = reactExports.useCallback(() => setActive(a => (a + 1) % SLIDES.length), [SLIDES.length]);
+	  reactExports.useEffect(() => {
+	    if (paused || reduced || SLIDES.length < 2) return;
+	    timer.current = setTimeout(next, INTERVAL);
+	    return () => clearTimeout(timer.current);
+	  }, [active, paused, reduced, next, SLIDES.length]);
+
+	  // Very slow, depth-only scroll parallax on the background media — never on
+	  // the text. Disabled entirely for reduced-motion and on narrow/mobile
+	  // viewports (per the "reduce parallax on mobile" requirement). Applied via
+	  // a rAF-throttled scroll listener to a wrapper element that sits outside
+	  // the Ken-Burns-scaled media, so the two transforms never fight.
+	  reactExports.useEffect(() => {
+	    if (reduced) return;
+	    const isMobile = () => window.innerWidth < 768;
+	    if (isMobile()) return;
+	    let raf = null;
+	    const onScroll = () => {
+	      // Below 768px the media sits in normal flow (see the mobile hero block in
+	      // home.css), so an inline translate would shift it out of place. Clear it
+	      // and bail if the viewport was resized down after mount.
+	      if (isMobile()) {
+	        parallaxRefs.current.forEach(n => {
+	          if (n) n.style.transform = '';
+	        });
+	        return;
+	      }
+	      if (raf) return;
+	      raf = requestAnimationFrame(() => {
+	        raf = null;
+	        const el = sectionRef.current;
+	        if (!el) return;
+	        const rect = el.getBoundingClientRect();
+	        if (rect.bottom < 0 || rect.top > window.innerHeight) return; // out of view, skip
+	        const offset = Math.max(-40, Math.min(40, rect.top * -0.06));
+	        parallaxRefs.current.forEach(node => {
+	          if (node) node.style.transform = `translate3d(0, ${offset}px, 0)`;
+	        });
+	      });
+	    };
+	    window.addEventListener('scroll', onScroll, {
+	      passive: true
+	    });
+	    return () => {
+	      window.removeEventListener('scroll', onScroll);
+	      if (raf) cancelAnimationFrame(raf);
+	    };
+	  }, [reduced]);
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    ref: sectionRef,
+	    className: "v2-hero",
+	    onMouseEnter: () => setPaused(true),
+	    onMouseLeave: () => setPaused(false),
+	    "aria-roledescription": "carousel",
+	    "aria-label": "Sora Life featured",
+	    children: [DISPLAY_SLIDES.map((s, i) => (() => {
+	      const appearance = homepage.heroCtas?.[s.id];
+	      const artworkOnly = ![s.kicker, s.title, s.sub, s.lede].some(value => value && /[A-Za-z0-9]/.test(value));
+	      const ctaLabel = s.cta.label === SAFE_HERO_COPY.cta.label ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-hero__cta-full",
+	          children: s.cta.label
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-hero__cta-compact",
+	          children: "Explore collection"
+	        })]
+	      }) : s.cta.label;
+	      return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: `v2-hero__slide ${i === active ? 'is-active' : ''} ${s.sub === SAFE_HERO_COPY.sub ? 'v2-hero__slide--collection' : ''}`,
+	        "aria-hidden": i !== active,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "v2-hero__media",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	            className: "v2-hero__par",
+	            ref: el => {
+	              parallaxRefs.current[i] = el;
+	            },
+	            children: s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src ? /*#__PURE__*/jsxRuntimeExports.jsx("video", {
+	              className: "v2-hero__img",
+	              autoPlay: true,
+	              muted: true,
+	              loop: true,
+	              playsInline: true,
+	              preload: "metadata",
+	              poster: s.poster,
+	              style: {
+	                objectPosition: s.position
+	              },
+	              onError: () => setVideoFailed(v => ({
+	                ...v,
+	                [s.id]: true
+	              })),
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx("source", {
+	                src: s.src,
+	                type: "video/mp4"
+	              })
+	            }) : s.kind === 'video' ?
+	            /*#__PURE__*/
+	            // Video skipped on mobile, missing, or failed to load — always resolve
+	            // to a real still (never an empty colour block).
+	            jsxRuntimeExports.jsx("img", {
+	              className: "v2-hero__img",
+	              src: heroSrc(stillFor(s) || FALLBACK_POSTER, 1600),
+	              srcSet: heroSrcSet(stillFor(s) || FALLBACK_POSTER),
+	              sizes: "100vw",
+	              alt: s.title,
+	              style: {
+	                objectPosition: s.position
+	              },
+	              loading: i === active ? 'eager' : 'lazy',
+	              fetchpriority: i === active ? 'high' : undefined,
+	              decoding: "async"
+	            }) : /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	              className: "v2-hero__img",
+	              src: heroSrc(s.src, 1600),
+	              srcSet: heroSrcSet(s.src),
+	              sizes: "100vw",
+	              alt: s.title,
+	              style: {
+	                objectPosition: s.position
+	              },
+	              loading: i === active ? 'eager' : 'lazy',
+	              fetchpriority: i === active ? 'high' : undefined,
+	              decoding: "async"
+	            })
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "v2-hero__ui",
+	          children: [s.kicker && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "v2-hero__kicker",
+	            children: s.kicker
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	            className: titleClass(s.title),
+	            children: s.title
+	          }), (s.sub || s.lede) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "v2-hero__sub",
+	            children: s.sub === SAFE_HERO_COPY.sub ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "v2-hero__sub-full",
+	                children: s.sub
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "v2-hero__sub-compact",
+	                children: SAFE_HERO_COPY.mobileSub
+	              })]
+	            }) : s.sub || s.lede
+	          }), s.cta?.to && /*#__PURE__*/jsxRuntimeExports.jsx(HeroCta, {
+	            cta: s.cta,
+	            appearance: appearance,
+	            artworkOnly: artworkOnly,
+	            active: i === active,
+	            children: ctaLabel
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(HeroCta, {
+	          cta: s.cta,
+	          appearance: appearance,
+	          placement: "overlay",
+	          artworkOnly: artworkOnly,
+	          active: i === active,
+	          children: ctaLabel
+	        })]
+	      }, s.id);
+	    })()), SLIDES.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        className: "v2-hero__arrow v2-hero__arrow--prev",
+	        onClick: () => go(active - 1),
+	        "aria-label": "Previous slide",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronLeft",
+	          size: 18,
+	          stroke: 1.6
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        className: "v2-hero__arrow v2-hero__arrow--next",
+	        onClick: () => go(active + 1),
+	        "aria-label": "Next slide",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronRight",
+	          size: 18,
+	          stroke: 1.6
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-hero__dots",
+	        children: DISPLAY_SLIDES.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          className: i === active ? 'is-on' : '',
+	          onClick: () => go(i),
+	          "aria-label": `Go to slide ${i + 1}`,
+	          "aria-current": i === active
+	        }, s.id))
+	      })]
+	    })]
+	  });
+	}
+
+	const CATEGORY_IMAGES = {
+	  wellness: '/public/category-images/wellness.webp',
+	  'body-building': '/public/category-images/body-building.webp',
+	  'juices-drinks': '/public/category-images/juices-drinks.webp',
+	  supplements: '/public/category-images/supplements.webp',
+	  'skin-care': '/public/category-images/skin-care.webp',
+	  'hair-care': '/public/category-images/hair-care.webp',
+	  'bath-body': '/public/category-images/bath-body.webp',
+	  'mens-care': '/public/category-images/mens-care.webp',
+	  'personal-care': '/public/category-images/personal-care.webp'
+	};
+	const CATEGORY_MARKS = {
+	  wellness: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	      d: "M16 28V12M16 22C6 23 5 17 5 14c7-1 11 3 11 8ZM16 17c8 0 11-5 11-10-7 0-11 4-11 10Z"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+	      cx: "10",
+	      cy: "7",
+	      r: "2"
+	    })]
+	  }),
+	  'body-building': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	      d: "m10 22 12-12M6 18l8 8M18 6l8 8M4 20l8 8M20 4l8 8M4 24l4 4M24 4l4 4"
+	    })
+	  }),
+	  'juices-drinks': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	      d: "M10 4h7v5l3 4v15H7V13l3-4V4ZM10 8h7M7 17h13M10 21h7"
+	    })
+	  }),
+	  supplements: /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	      d: "m7 15 8-8a6 6 0 0 1 9 9l-8 8a6 6 0 0 1-9-9ZM11 11l9 9"
+	    })
+	  }),
+	  'skin-care': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	      d: "M6 16h20v12H6V16ZM8 12h16v4H8V12ZM10 21h12"
+	    })
+	  }),
+	  'hair-care': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	      d: "M5 5h9v21H5V5ZM9 9h5M9 13h5M9 17h5M9 21h5"
+	    })
+	  }),
+	  'bath-body': /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("rect", {
+	      x: "5",
+	      y: "14",
+	      width: "23",
+	      height: "14",
+	      rx: "2"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	      d: "M9 19c4-4 10 4 15 0"
+	    })]
+	  }),
+	  'mens-care': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	      d: "M7 5h19v7H7V5ZM10 8h13M12 12v5h9v-5"
+	    })
+	  }),
+	  'personal-care': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	      d: "M5 12h11l-2 16H7L5 12ZM8 8h5v4"
+	    })
+	  })
+	};
+	function CategoryMark({
+	  category
+	}) {
+	  const mark = CATEGORY_MARKS[category.slug];
+	  if (!mark) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "v2-cat__initials",
+	      children: category.name.split(/\s+/).map(s => s[0]).slice(0, 2).join('')
+	    });
+	  }
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("svg", {
+	    viewBox: "0 0 32 32",
+	    fill: "none",
+	    stroke: "currentColor",
+	    strokeWidth: "1.25",
+	    strokeLinecap: "round",
+	    strokeLinejoin: "round",
+	    children: mark
+	  });
+	}
+	function CategoryRail() {
+	  const items = Array.isArray(categories) ? categories.filter(c => c && c.slug && c.name) : [];
+	  if (items.length < 3) return null;
+	  const renderCategory = (c, duplicate = false) => {
+	    const image = c.image || c.image_url || CATEGORY_IMAGES[c.slug];
+	    return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	      to: `/category/${c.slug}`,
+	      className: `v2-cat v2-cat--${c.slug}`,
+	      "aria-hidden": duplicate ? 'true' : undefined,
+	      tabIndex: duplicate ? -1 : undefined,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "v2-cat__visual",
+	        "aria-hidden": "true",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-cat__tile",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(CategoryMark, {
+	            category: c
+	          })
+	        }), image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	          className: "v2-cat__photo",
+	          src: image,
+	          alt: "",
+	          loading: "lazy",
+	          onError: e => {
+	            e.currentTarget.style.display = 'none';
+	          }
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-cat__lb",
+	        children: c.name
+	      })]
+	    }, `${duplicate ? 'duplicate-' : ''}${c.slug}`);
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+	    className: "v2-cats-marquee",
+	    "aria-label": "Shop by category",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-cats-track",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-cats-set",
+	        children: items.map(c => renderCategory(c))
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-cats-set",
+	        "aria-hidden": "true",
+	        children: items.map(c => renderCategory(c, true))
+	      })]
+	    })
+	  });
+	}
+
+	// Decorative images are separate, non-interactive layers, never content
+	// overlays. Their opacity cannot fade category labels or promotion artwork.
+	function HomeVisualLayers({
+	  background,
+	  texture,
+	  left,
+	  right
+	}) {
+	  const layers = [background && {
+	    ...background,
+	    name: 'background'
+	  }, texture && {
+	    ...texture,
+	    name: 'texture'
+	  }, left && {
+	    ...left,
+	    name: 'left'
+	  }, right && {
+	    ...right,
+	    name: 'right'
+	  }].filter(layer => layer?.url);
+	  if (!layers.length) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    className: "hp-visual-layers",
+	    "aria-hidden": "true",
+	    children: layers.map(layer => /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	      alt: "",
+	      src: layer.url,
+	      className: `hp-visual-layer hp-visual-layer--${layer.name}${layer.hideMobile ? ' hp-visual-layer--mobile-hidden' : ''}`,
+	      style: {
+	        opacity: layer.opacity,
+	        objectFit: layer.fit || 'contain',
+	        objectPosition: layer.position || 'center',
+	        ...(layer.size ? {
+	          width: layer.size
+	        } : {})
+	      },
+	      loading: "lazy",
+	      decoding: "async",
+	      onError: e => {
+	        e.currentTarget.hidden = true;
+	      }
+	    }, `${layer.name}:${layer.url}`))
+	  });
+	}
+
+	function HomeCategoryStrip({
+	  appearance: a
+	}) {
+	  // Match CategoryRail's existing empty-state rule, without changing its links.
+	  if (categories.filter(c => c?.slug && c?.name).length < 3) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    className: "v2-home-categories hp-category-strip",
+	    style: {
+	      paddingTop: a.paddingTop,
+	      paddingBottom: a.paddingBottom,
+	      backgroundColor: a.enabled ? a.backgroundColor : 'transparent',
+	      borderTop: a.borderTop ? `${a.borderWidth}px solid ${a.borderColor}` : undefined,
+	      borderBottom: a.borderBottom ? `${a.borderWidth}px solid ${a.borderColor}` : undefined,
+	      borderRadius: a.radius
+	    },
+	    children: [a.enabled && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeVisualLayers, {
+	        background: {
+	          url: a.imageUrl,
+	          fit: a.imageSize,
+	          position: a.imagePosition,
+	          opacity: a.imageOpacity
+	        },
+	        texture: {
+	          url: a.textureUrl,
+	          fit: 'cover',
+	          position: a.texturePosition,
+	          opacity: a.decorationOpacity,
+	          hideMobile: a.hideTextureMobile
+	        },
+	        left: {
+	          url: a.leftImage,
+	          opacity: a.decorationOpacity,
+	          size: a.decorationSize,
+	          position: `left ${a.decorationPosition}`,
+	          hideMobile: a.hideLeftMobile
+	        },
+	        right: {
+	          url: a.rightImage,
+	          opacity: a.decorationOpacity,
+	          size: a.decorationSize,
+	          position: `right ${a.decorationPosition}`,
+	          hideMobile: a.hideRightMobile
+	        }
+	      }), a.overlayOpacity > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        "aria-hidden": "true",
+	        className: "hp-category-overlay",
+	        style: {
+	          backgroundColor: a.overlayColor,
+	          opacity: a.overlayOpacity
+	        }
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-wrap hp-category-strip__content",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(CategoryRail, {})
+	    })]
+	  });
+	}
+
+	function PriceTag({
+	  product,
+	  showOff = true,
+	  size,
+	  variant = null,
+	  v2 = false
+	}) {
+	  const {
+	    currency,
+	    priceVerified
+	  } = product;
+	  // When a pack size is selected its own price is what the customer pays,
+	  // so the whole tag (price, MRP and % off) comes from the variant.
+	  const price = variant?.price ?? product.price;
+	  const mrp = variant?.mrp ?? product.mrp;
+	  const discountPct = variant ? variant.discountPct ?? (mrp > price ? Math.round((mrp - price) / mrp * 100) : 0) : product.discountPct;
+	  if (priceVerified === false) {
+	    return v2 ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "v2-price",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-price__tbd",
+	        children: "Price coming soon"
+	      })
+	    }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "price",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "price-tbd muted",
+	        children: "Price coming soon"
+	      })
+	    });
+	  }
+	  const hasDiscount = mrp > price;
+	  if (v2) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      className: `v2-price ${size === 'lg' ? 'v2-price--lg' : ''}`,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-price__now",
+	        children: money(price, currency)
+	      }), hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "v2-price__mrp",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-price__mrp-lbl",
+	          children: "MRP"
+	        }), money(mrp, currency)]
+	      }), showOff && discountPct > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "v2-price__off",
+	        children: [discountPct, "% off"]
+	      })]
+	    });
+	  }
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	    className: `price ${size === 'lg' ? 'price--lg' : ''}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "now",
+	      children: money(price, currency)
+	    }), hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      className: "was",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "was-lbl",
+	        children: "MRP"
+	      }), " ", money(mrp, currency)]
+	    }), showOff && discountPct > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      className: "off",
+	      children: [discountPct, "% off"]
+	    })]
+	  });
+	}
+
+	function pickBadge(product, out) {
+	  if (out) return {
+	    label: 'Sold out',
+	    cls: 'v2-badge--out'
+	  };
+	  const pct = Number(product.discountPct);
+	  // Under 5% is not worth a badge — and rounding a 3% saving up to "5% off"
+	  // is exactly the kind of thing that erodes trust.
+	  if (Number.isFinite(pct) && pct >= 5) return {
+	    label: `${pct}% off`,
+	    cls: ''
+	  };
+	  const b = Array.isArray(product.badges) ? product.badges[0] : null;
+	  if (b?.label) {
+	    return {
+	      label: b.label,
+	      cls: b.type === 'new' ? 'v2-badge--soft' : 'v2-badge--forest'
+	    };
+	  }
+	  return null;
+	}
+	function ProductCard({
+	  product
+	}) {
+	  const {
+	    addToCart,
+	    toggleWish,
+	    isWished
+	  } = useStore();
+	  const wished = isWished(product.id);
+	  const out = product.stock === 0;
+	  const cat = categoryBySlug[product.category];
+	  const badge = pickBadge(product, out);
+	  const meta = [cat?.name, product.form].filter(Boolean).join(' · ');
+	  const lowStock = !out && Number.isFinite(product.stock) && product.stock > 0 && product.stock <= 5;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+	    className: `v2-pc ${out ? 'is-out' : ''}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-pc__media",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	        to: `/product/${product.slug}`,
+	        "aria-label": product.name,
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	          product: product,
+	          frame: "v2"
+	        })
+	      }), badge && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-pc__badges",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: `v2-badge ${badge.cls}`,
+	          children: badge.label
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "button",
+	        className: `v2-iconbtn v2-pc__wish ${wished ? 'is-on' : ''}`,
+	        onClick: () => toggleWish(product),
+	        "aria-pressed": wished,
+	        "aria-label": wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`,
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "heart",
+	          size: 14,
+	          stroke: 1.6,
+	          fill: wished ? 'currentColor' : 'none'
+	        })
+	      }), out && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-pc__soldout",
+	        children: "Sold out"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-pc__body",
+	      children: [meta && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-pc__meta",
+	        children: meta
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	        className: "v2-pc__name",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: `/product/${product.slug}`,
+	          children: product.name
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-pc__foot",
+	        children: [lowStock && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "v2-pc__note",
+	          children: ["Only ", product.stock, " left"]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
+	          product: product,
+	          showOff: false,
+	          v2: true
+	        }), out ? /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "v2-pc__cta v2-pc__cta--out",
+	          disabled: true,
+	          "aria-disabled": "true",
+	          children: "Notify me"
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	          type: "button",
+	          className: "v2-pc__cta",
+	          onClick: () => addToCart(product),
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "bag",
+	            size: 14,
+	            stroke: 1.6
+	          }), " Add to cart"]
+	        })]
+	      })]
+	    })]
+	  });
+	}
+
+	function CompactProductCard({
+	  product
+	}) {
+	  const {
+	    addToCart
+	  } = useStore();
+	  const out = product.stock === 0;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "v2-cc",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	      to: `/product/${product.slug}`,
+	      className: "v2-cc__m",
+	      "aria-hidden": "true",
+	      tabIndex: -1,
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	        product: product,
+	        frame: "v2",
+	        sizes: "80px"
+	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-cc__b",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-cc__brand",
+	        children: branding.siteName
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-cc__n",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: `/product/${product.slug}`,
+	          style: {
+	            color: 'inherit',
+	            textDecoration: 'none'
+	          },
+	          children: product.name
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
+	        product: product,
+	        showOff: false,
+	        v2: true
+	      })]
+	    }), !out && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	      type: "button",
+	      className: "v2-cc__add",
+	      onClick: () => addToCart(product),
+	      "aria-label": `Add ${product.name} to cart`,
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "plus",
+	        size: 12,
+	        stroke: 1.8
+	      })
+	    })]
+	  });
+	}
+
+	function EditorialCard({
+	  item
+	}) {
+	  if (!item || !item.title || !item.href) return null;
+	  const {
+	    kicker,
+	    title,
+	    note,
+	    href,
+	    image,
+	    alt
+	  } = item;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	    to: href,
+	    className: "v2-ed",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-ed__media",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-pimg",
+	        children: image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	          src: image,
+	          alt: alt || '',
+	          loading: "lazy",
+	          decoding: "async"
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-ed__scrim",
+	        "aria-hidden": "true"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-ed__ui",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        children: [kicker && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "v2-ed__k",
+	          children: kicker
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	          className: "v2-ed__h",
+	          children: title
+	        }), note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "v2-ed__note",
+	          children: note
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "v2-ed__cta",
+	        children: ["Shop now ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "arrowRight",
+	          size: 11,
+	          stroke: 1.8
+	        })]
+	      })]
+	    })]
+	  });
+	}
+
+	function StoryBlock({
+	  story
+	}) {
+	  if (!story || !story.title || !story.href) return null;
+	  const {
+	    eyebrow,
+	    title,
+	    body,
+	    cta,
+	    href,
+	    image,
+	    alt
+	  } = story;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	    to: href,
+	    className: "v2-story",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-story__b",
+	      children: [eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-eyebrow",
+	        children: eyebrow
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	        className: "v2-story__h",
+	        children: title
+	      }), body && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-story__p",
+	        children: body
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "v2-story__lk",
+	        children: [cta || 'Read the story', " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "arrowRight",
+	          size: 12,
+	          stroke: 1.8
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-story__m",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-pimg",
+	        children: image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	          src: image,
+	          alt: alt || '',
+	          loading: "lazy",
+	          decoding: "async"
+	        })
+	      })
+	    })]
+	  });
+	}
+
+	function defaultItems() {
+	  const out = [{
+	    icon: 'lock',
+	    title: 'Secure checkout',
+	    sub: 'Encrypted payments'
+	  }];
+	  out.push({
+	    icon: 'truck',
+	    title: 'Free standard shipping',
+	    sub: 'Delivery options at checkout'
+	  });
+	  out.push({
+	    icon: 'package',
+	    title: 'Order tracking',
+	    sub: 'In your account'
+	  }, {
+	    icon: 'chat',
+	    title: 'Help & support',
+	    sub: 'Get in touch'
+	  });
+	  return out;
+	}
+	function TrustStrip({
+	  items
+	}) {
+	  const list = (Array.isArray(items) && items.length ? items : defaultItems()).slice(0, 4);
+	  if (!list.length) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	    className: "v2-trust",
+	    children: list.map(it => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	      className: "v2-trust__it",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: it.icon,
+	        size: 19,
+	        stroke: 1.5
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-trust__t",
+	          children: it.title
+	        }), it.sub && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-trust__s",
+	          children: it.sub
+	        })]
+	      })]
+	    }, it.title))
+	  });
+	}
+
+	function Newsletter() {
+	  const [email, setEmail] = reactExports.useState('');
+	  const [done, setDone] = reactExports.useState(false);
+	  const [busy, setBusy] = reactExports.useState(false);
+	  const [err, setErr] = reactExports.useState('');
+	  const submit = async e => {
+	    e.preventDefault();
+	    if (busy) return;
+	    if (!/^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/.test(email.trim())) {
+	      setErr('Please enter a valid email address.');
+	      return;
+	    }
+	    setBusy(true);
+	    setErr('');
+	    try {
+	      const res = await fetch('/api/newsletter/subscribe', {
+	        method: 'POST',
+	        headers: {
+	          'Content-Type': 'application/json'
+	        },
+	        body: JSON.stringify({
+	          email: email.trim()
+	        })
+	      });
+	      let data = null;
+	      try {
+	        data = await res.json();
+	      } catch {/* non-JSON error page */}
+
+	      // Success is contingent on the server confirming the write. A failed
+	      // request must never render the confirmation.
+	      if (!res.ok || !data?.subscribed) {
+	        setErr(data?.error || 'We could not sign you up right now. Please try again.');
+	        return;
+	      }
+	      setDone(true);
+	    } catch {
+	      setErr('We could not reach us just now. Please check your connection and try again.');
+	    } finally {
+	      setBusy(false);
+	    }
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "section nl",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "container",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "nl__card",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "nl__deco",
+	          "aria-hidden": "true",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+	            viewBox: "0 0 200 200",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	              d: "M100 20c40 34 40 96 0 160-40-64-40-126 0-160Z",
+	              fill: "var(--honey-500)",
+	              opacity: "0.16"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	              d: "M100 40c26 24 26 72 0 120-26-48-26-96 0-120Z",
+	              fill: "var(--forest-300)",
+	              opacity: "0.22"
+	            })]
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "nl__body",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "eyebrow",
+	            style: {
+	              color: 'var(--honey-300)'
+	            },
+	            children: "The Sora Letter"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            className: "serif",
+	            style: {
+	              color: '#FBF8F1',
+	              fontSize: 'var(--text-3xl)',
+	              margin: '10px 0 8px'
+	            },
+	            children: "Wellness notes, quietly good offers."
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            style: {
+	              color: 'rgba(251,248,241,0.8)',
+	              maxWidth: '46ch'
+	            },
+	            children: "Occasional notes on new products and seasonal rituals. No noise, and you can unsubscribe whenever you like."
+	          }), done ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "nl__done",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "t-ic",
+	              style: {
+	                background: 'rgba(232,176,75,0.2)'
+	              },
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "check",
+	                size: 18
+	              })
+	            }), " You're subscribed. We'll be in touch when there's something worth sending."]
+	          }) : /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	            className: "nl__form",
+	            onSubmit: submit,
+	            noValidate: true,
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "searchbox nl__input",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "mail"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                className: "input",
+	                type: "email",
+	                placeholder: "you@email.com",
+	                value: email,
+	                onChange: e => setEmail(e.target.value),
+	                "aria-label": "Email address",
+	                disabled: busy
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	              className: "btn btn-accent btn-lg",
+	              type: "submit",
+	              disabled: busy,
+	              children: busy ? 'Subscribing…' : 'Subscribe'
+	            })]
+	          }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "error-text",
+	            style: {
+	              marginTop: 8
+	            },
+	            children: err
+	          })]
+	        })]
+	      })
+	    })
+	  });
+	}
+
+	// ============================================================
+	// PROMOTIONS — local SAMPLE fallback (design preview only)
+	//
+	// These rows seed the storefront ONLY when it is running on localhost (see
+	// isLocalPreviewHost() in src/lib/promotions.js), so the promo UI can be
+	// designed and reviewed before migration 0017 exists anywhere. On any
+	// deployed host the starting list is EMPTY, and a successful fetch from the
+	// `promotions` table replaces the list in every environment.
+	//
+	// Every `coupon_code` here is DISPLAY / COPY ONLY. Nothing in this file or
+	// the promotion components touches pricing, cart totals or checkout.
+	// ============================================================
+
+	const PROMOTIONS_FALLBACK = [{
+	  id: 'sample-welcome',
+	  type: 'poster',
+	  title: 'Wellness Week is here',
+	  subtitle: 'Sample campaign. Demo code only — no checkout discount.',
+	  coupon_code: 'DEMO-ONLY',
+	  cta_text: 'Explore all',
+	  cta_url: '/shop',
+	  badge_text: 'Preview offer',
+	  image_url: null,
+	  theme_variant: 'forest',
+	  text_align: 'left',
+	  placements: ['home', 'pdp'],
+	  is_active: true,
+	  starts_at: null,
+	  ends_at: null,
+	  sort_order: 0
+	}, {
+	  id: 'sample-freeship',
+	  type: 'offer',
+	  title: 'Discover SORA LIFE essentials',
+	  subtitle: 'Sample campaign for your everyday favourites. Preview only.',
+	  coupon_code: null,
+	  cta_text: '',
+	  cta_url: null,
+	  badge_text: 'Sample campaign',
+	  image_url: null,
+	  theme_variant: 'cream',
+	  text_align: 'left',
+	  placements: ['home', 'pdp', 'cart'],
+	  is_active: true,
+	  starts_at: null,
+	  ends_at: null,
+	  sort_order: 1
+	}, {
+	  id: 'sample-bundle',
+	  type: 'offer',
+	  title: 'A little inspiration for your next order',
+	  subtitle: 'Demo code only — checkout totals stay unchanged.',
+	  coupon_code: 'DEMO-OFFER',
+	  cta_text: '',
+	  cta_url: null,
+	  badge_text: 'Demo code',
+	  image_url: null,
+	  theme_variant: 'minimal',
+	  text_align: 'left',
+	  placements: ['home', 'cart'],
+	  is_active: true,
+	  starts_at: null,
+	  ends_at: null,
+	  sort_order: 2
+	}, {
+	  id: 'sample-prepaid',
+	  type: 'offer',
+	  title: 'Explore more SORA LIFE favourites',
+	  subtitle: 'Display-only sample. Payment fees stay unchanged.',
+	  coupon_code: 'DEMO-PREVIEW',
+	  cta_text: '',
+	  cta_url: null,
+	  badge_text: 'Preview offer',
+	  image_url: null,
+	  theme_variant: 'orange',
+	  text_align: 'left',
+	  placements: ['pdp', 'cart'],
+	  is_active: true,
+	  starts_at: null,
+	  ends_at: null,
+	  sort_order: 3
+	}, {
+	  id: 'sample-honeygold',
+	  type: 'poster',
+	  title: 'The SORA LIFE edit',
+	  subtitle: 'Explore the SORA LIFE collection. Local preview only.',
+	  coupon_code: null,
+	  cta_text: 'Explore the edit',
+	  cta_url: '/shop',
+	  badge_text: 'Sample campaign',
+	  image_url: null,
+	  theme_variant: 'dark',
+	  text_align: 'left',
+	  placements: ['home'],
+	  is_active: true,
+	  starts_at: null,
+	  ends_at: null,
+	  sort_order: 4
+	}];
+
+	// ============================================================
+	// PROMOTIONS — live-bound module (mirrors src/lib/settings.js).
+	//
+	// Holds the current promotions list. `applyPromotions()` at bootstrap
+	// replaces it with whatever the `promotions` table returns — INCLUDING an
+	// empty list, which correctly hides every promo section.
+	//
+	// STARTING VALUE — deliberately asymmetric, so sample copy can never reach
+	// a real storefront:
+	//   * on localhost (local design preview)  -> the SAMPLE set, so the promo
+	//     UI is reviewable before migration 0017 has been applied anywhere;
+	//   * anywhere else (production/preview URLs) -> EMPTY, so a deploy that
+	//     lands before the migration shows no promo sections at all rather
+	//     than sample marketing copy.
+	// A successful fetch overrides both. adminApi.fetchPublicPromotions()
+	// returns null (not []) when the table does not exist, so "not provisioned
+	// yet" never gets mistaken for "the store has zero promotions".
+	//
+	// DISPLAY LAYER ONLY. `couponCode` is a string to show / copy. Nothing here
+	// resolves a coupon, changes a price, or touches cart / checkout.
+	// ============================================================
+	const PLACEMENTS = ['home', 'pdp', 'cart'];
+	const TYPES = ['poster', 'offer'];
+	const THEME_VARIANTS = ['forest', 'cream', 'orange', 'dark', 'minimal'];
+	function str$1(v, max = 400) {
+	  return typeof v === 'string' ? v.trim().slice(0, max) : '';
+	}
+
+	// Accepts either a raw Supabase row (snake_case) or an already-shaped object.
+	function normalizePromo(row) {
+	  if (!row || typeof row !== 'object') return null;
+	  const type = TYPES.includes(row.type) ? row.type : 'poster';
+	  const themeVariant = THEME_VARIANTS.includes(row.theme_variant ?? row.themeVariant) ? row.theme_variant ?? row.themeVariant : 'forest';
+	  const rawPlacements = row.placements ?? [];
+	  const placements = Array.isArray(rawPlacements) ? rawPlacements.filter(p => PLACEMENTS.includes(p)) : [];
+	  const ctaUrl = str$1(row.cta_url ?? row.ctaUrl, 500) || null;
+	  return {
+	    id: String(row.id ?? cryptoId()),
+	    type,
+	    title: str$1(row.title, 160),
+	    subtitle: str$1(row.subtitle, 320),
+	    couponCode: normalizeCode(row.coupon_code ?? row.couponCode),
+	    ctaText: str$1(row.cta_text ?? row.ctaText, 60),
+	    ctaUrl: safeCtaUrl(ctaUrl),
+	    badgeText: str$1(row.badge_text ?? row.badgeText, 40),
+	    imageUrl: str$1(row.image_url ?? row.imageUrl, 1000) || null,
+	    themeVariant,
+	    textAlign: (row.text_align ?? row.textAlign) === 'center' ? 'center' : 'left',
+	    placements,
+	    isActive: (row.is_active ?? row.isActive) !== false,
+	    startsAt: row.starts_at ?? row.startsAt ?? null,
+	    endsAt: row.ends_at ?? row.endsAt ?? null,
+	    sortOrder: Number(row.sort_order ?? row.sortOrder) || 0
+	  };
+	}
+	function normalizeCode(v) {
+	  const s = str$1(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+	  return s || null;
+	}
+
+	// Only allow an internal path or an absolute https URL as a CTA target.
+	// Anything else (javascript:, data:, protocol-relative, http:) is dropped.
+	function safeCtaUrl(v) {
+	  if (!v) return null;
+	  if (v.startsWith('/') && !v.startsWith('//')) return v;
+	  try {
+	    const u = new URL(v);
+	    if (u.protocol === 'https:') return u.href;
+	  } catch {/* not a URL */}
+	  return null;
+	}
+	function cryptoId() {
+	  try {
+	    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+	  } catch {/* noop */}
+	  return `p_${Math.random().toString(36).slice(2)}`;
+	}
+
+	// A promotion the storefront may render: active, has a title, within its
+	// date window. RLS already enforces this for the public read; this is the
+	// same guard applied client-side (and to the local fallback).
+	function isRenderablePromo(p, now = Date.now()) {
+	  if (!p || !p.isActive || !p.title) return false;
+	  if (p.startsAt && new Date(p.startsAt).getTime() > now) return false;
+	  if (p.endsAt && new Date(p.endsAt).getTime() < now) return false;
+	  return true;
+	}
+
+	// True only for a browser sitting on localhost — the local design preview.
+	// Never true on a deployed host, so the sample set below cannot ship.
+	function isLocalPreviewHost() {
+	  try {
+	    const h = globalThis.location?.hostname;
+	    return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]';
+	  } catch {
+	    return false;
+	  }
+	}
+	let promotions = isLocalPreviewHost() ? PROMOTIONS_FALLBACK.map(normalizePromo).filter(Boolean) : [];
+	let promotionsSource = 'fallback'; // 'fallback' | 'supabase'
+
+	/**
+	 * Replace the live promotions list from a Supabase fetch. Called once at
+	 * bootstrap. Passing [] is valid and intentionally clears the fallback.
+	 * Returns true when the list changed.
+	 */
+	function applyPromotions(list) {
+	  if (!Array.isArray(list)) return false;
+	  const next = list.map(normalizePromo).filter(Boolean);
+	  promotions = next;
+	  promotionsSource = 'supabase';
+	  return true;
+	}
+
+	/** Active + valid promotions for one surface, in sort order. */
+	function promosForPlacement(place, now = Date.now()) {
+	  if (!PLACEMENTS.includes(place)) return [];
+	  return promotions.filter(p => p.placements.includes(place)).filter(p => isRenderablePromo(p, now)).sort((a, b) => a.sortOrder - b.sortOrder || String(a.id).localeCompare(String(b.id)));
+	}
+
+	/** Split a placement's promos into { poster, offers } for layout. */
+	function promoLayoutFor(place, now = Date.now()) {
+	  const all = promosForPlacement(place, now);
+	  return {
+	    poster: all.find(p => p.type === 'poster') || null,
+	    offers: all.filter(p => p.type === 'offer'),
+	    all
+	  };
+	}
+
+	// ------------------------------------------------------------
+	// OFFER CALLOUT — the big "10% OFF" line on a campaign poster.
+	//
+	// PRESENTATION ONLY, and derived ONLY by reading the admin's own words back
+	// (badge -> title -> subtitle). It never computes, rounds or invents a
+	// discount, never reads a price, and returns null when the copy states no
+	// offer — in which case the poster simply renders without a callout.
+	// Adding a dedicated column later would replace this single function.
+	// ------------------------------------------------------------
+	const CALLOUT_RULES = [[/\b(?:flat\s*)?(\d{1,2})\s*%\s*(?:off|discount)\b/i, m => `${m[1]}% OFF`], [/₹\s*(\d[\d,]*)\s*(?:off|discount)\b/i, m => `₹${m[1]} OFF`], [/\bfree\s+shipping\b/i, () => 'FREE SHIPPING'], [/\bfree\s+delivery\b/i, () => 'FREE DELIVERY'], [/\bbuy\s*(\d+)\b/i, m => `BUY ${m[1]} & SAVE`], [/\bcashback\b/i, () => 'CASHBACK']];
+	function offerCalloutFrom(promo) {
+	  if (!promo) return null;
+	  for (const source of [promo.badgeText, promo.title, promo.subtitle]) {
+	    if (!source) continue;
+	    for (const [re, fmt] of CALLOUT_RULES) {
+	      const m = source.match(re);
+	      if (m) return fmt(m);
+	    }
+	  }
+	  // Keep the approved callout treatment for explicitly labelled preview
+	  // artwork without inventing savings. Genuine offer wording above wins.
+	  return /^preview offer$/i.test(promo.badgeText || '') ? 'PREVIEW OFFER' : null;
+	}
+
+	function PromoCopyCode({
+	  code,
+	  label = null,
+	  className = ''
+	}) {
+	  const {
+	    toast
+	  } = useStore();
+	  const [copied, setCopied] = reactExports.useState(false);
+	  const timer = reactExports.useRef(null);
+	  reactExports.useEffect(() => () => {
+	    if (timer.current) clearTimeout(timer.current);
+	  }, []);
+	  if (!code) return null;
+	  const copy = async () => {
+	    try {
+	      if (navigator.clipboard?.writeText) {
+	        await navigator.clipboard.writeText(code);
+	      } else {
+	        const ta = document.createElement('textarea');
+	        ta.value = code;
+	        ta.setAttribute('readonly', '');
+	        ta.style.position = 'fixed';
+	        ta.style.opacity = '0';
+	        document.body.appendChild(ta);
+	        ta.select();
+	        document.execCommand('copy');
+	        document.body.removeChild(ta);
+	      }
+	      setCopied(true);
+	      toast(`Code ${code} copied`);
+	      if (timer.current) clearTimeout(timer.current);
+	      timer.current = setTimeout(() => setCopied(false), 1900);
+	    } catch {
+	      toast('Could not copy — long-press the code to copy it');
+	    }
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	    className: `promo-code ${copied ? 'is-copied' : ''} ${className}`,
+	    children: [label && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "promo-code__label",
+	      children: label
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      className: "promo-code__row",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("code", {
+	        className: "promo-code__value",
+	        children: code
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	        type: "button",
+	        className: "promo-code__btn",
+	        onClick: copy,
+	        "aria-label": copied ? `Coupon code ${code} copied` : `Copy coupon code ${code}`,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: copied ? 'check' : 'copy',
+	          size: 14
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          "aria-hidden": "true",
+	          children: copied ? 'Copied' : 'Copy'
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "sr-only",
+	      "aria-live": "polite",
+	      children: copied ? `${code} copied to clipboard` : ''
+	    })]
+	  });
+	}
+
+	function PromoCta({
+	  to,
+	  children
+	}) {
+	  if (!to) return null;
+	  const isExternal = /^https:\/\//i.test(to);
+	  const cls = 'promo-poster__cta';
+	  return isExternal ? /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	    className: cls,
+	    href: to,
+	    target: "_blank",
+	    rel: "noopener noreferrer",
+	    children: [children, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	      name: "arrowRight",
+	      size: 16
+	    })]
+	  }) : /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	    className: cls,
+	    to: to,
+	    children: [children, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	      name: "arrowRight",
+	      size: 16
+	    })]
+	  });
+	}
+	function PromoPoster({
+	  promo
+	}) {
+	  if (!promo) return null;
+	  const {
+	    title,
+	    subtitle,
+	    badgeText,
+	    couponCode,
+	    ctaText,
+	    ctaUrl,
+	    imageUrl,
+	    themeVariant,
+	    textAlign
+	  } = promo;
+	  const callout = offerCalloutFrom(promo);
+	  if (imageUrl) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsx("article", {
+	      className: "promo-poster promo-poster--image-only",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	        className: "promo-poster__fullimg",
+	        src: imageUrl,
+	        alt: title || 'Promotion poster',
+	        loading: "lazy",
+	        decoding: "async"
+	      })
+	    });
+	  }
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+	    className: ['promo-poster', `promo-poster--${themeVariant}`, imageUrl ? 'has-image' : 'no-image', textAlign === 'center' ? 'is-center' : ''].filter(Boolean).join(' '),
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "promo-poster__art",
+	      "aria-hidden": "true",
+	      children: [imageUrl ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	        className: "promo-poster__img",
+	        src: imageUrl,
+	        alt: "",
+	        loading: "lazy",
+	        decoding: "async"
+	      }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "promo-poster__deco",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "promo-poster__leaf"
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "promo-poster__scrim"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "promo-poster__body",
+	      children: [badgeText && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "promo-poster__badge",
+	        children: badgeText
+	      }), title && /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	        className: "promo-poster__title serif",
+	        children: title
+	      }), subtitle && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "promo-poster__sub",
+	        children: subtitle
+	      }), callout && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	        className: "promo-poster__callout",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "promo-poster__callout-rule",
+	          "aria-hidden": "true"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "promo-poster__callout-val",
+	          children: callout
+	        })]
+	      }), (couponCode || ctaUrl && ctaText) && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "promo-poster__actions",
+	        children: [couponCode && /*#__PURE__*/jsxRuntimeExports.jsx(PromoCopyCode, {
+	          code: couponCode,
+	          label: "Use code"
+	        }), ctaUrl && ctaText && /*#__PURE__*/jsxRuntimeExports.jsx(PromoCta, {
+	          to: ctaUrl,
+	          children: ctaText
+	        })]
+	      })]
+	    })]
+	  });
+	}
+
+	const BADGE_ICON = {
+	  'Free shipping': 'truck',
+	  'Free delivery': 'truck',
+	  'Limited time': 'clock',
+	  'Weekend offer': 'gift',
+	  'Special deal': 'tag',
+	  Cashback: 'card'
+	};
+	function PromoOfferCard({
+	  promo
+	}) {
+	  if (!promo) return null;
+	  const {
+	    title,
+	    subtitle,
+	    badgeText,
+	    couponCode,
+	    ctaText,
+	    ctaUrl,
+	    imageUrl,
+	    themeVariant
+	  } = promo;
+	  const icon = BADGE_ICON[badgeText] || 'tag';
+	  const isExternal = ctaUrl && /^https:\/\//i.test(ctaUrl);
+	  // "Copy code" is handled by the ticket; only render a link CTA when it
+	  // actually points somewhere and isn't just restating the copy action.
+	  const showLinkCta = ctaUrl && ctaText && !/copy/i.test(ctaText);
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+	    className: `promo-offer promo-offer--${themeVariant}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "promo-offer__top",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "promo-offer__ic",
+	        "aria-hidden": "true",
+	        children: imageUrl ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	          src: imageUrl,
+	          alt: "",
+	          loading: "lazy",
+	          decoding: "async"
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: icon,
+	          size: 18
+	        })
+	      }), badgeText && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "promo-offer__badge",
+	        children: badgeText
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "promo-offer__body",
+	      children: [title && /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	        className: "promo-offer__title",
+	        children: title
+	      }), subtitle && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "promo-offer__sub",
+	        children: subtitle
+	      })]
+	    }), (couponCode || showLinkCta) && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "promo-offer__foot",
+	      children: [couponCode && /*#__PURE__*/jsxRuntimeExports.jsx(PromoCopyCode, {
+	        code: couponCode
+	      }), showLinkCta && (isExternal ? /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	        className: "promo-offer__cta",
+	        href: ctaUrl,
+	        target: "_blank",
+	        rel: "noopener noreferrer",
+	        children: [ctaText, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "arrowRight",
+	          size: 14
+	        })]
+	      }) : /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	        className: "promo-offer__cta",
+	        to: ctaUrl,
+	        children: [ctaText, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "arrowRight",
+	          size: 14
+	        })]
+	      }))]
+	    })]
+	  });
+	}
+
+	function HomeOfferArtwork({
+	  promo
+	}) {
+	  const [failed, setFailed] = reactExports.useState(false);
+	  const url = safeVisualUrl(promo.imageUrl);
+	  if (url && !failed) return /*#__PURE__*/jsxRuntimeExports.jsx("article", {
+	    className: "hp-offers__poster",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	      src: url,
+	      alt: promo.title,
+	      loading: "lazy",
+	      decoding: "async",
+	      onError: () => setFailed(true)
+	    })
+	  });
+	  // Missing or failed artwork falls back to existing, real configured copy.
+	  const content = {
+	    ...promo,
+	    imageUrl: null
+	  };
+	  return promo.type === 'poster' ? /*#__PURE__*/jsxRuntimeExports.jsx(PromoPoster, {
+	    promo: content
+	  }) : /*#__PURE__*/jsxRuntimeExports.jsx(PromoOfferCard, {
+	    promo: content
+	  });
+	}
+	function HomeOffers({
+	  appearance: a
+	}) {
+	  const rail = reactExports.useRef(null);
+	  const [active, setActive] = reactExports.useState(0);
+	  const items = uniqueHomepagePromotions(promosForPlacement('home'));
+	  reactExports.useEffect(() => {
+	    if (items.length < 2) return;
+	    const mobile = window.matchMedia('(max-width: 767px)');
+	    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+	    if (!mobile.matches || reduced.matches) return;
+	    const timer = window.setInterval(() => {
+	      setActive(current => {
+	        const next = (current + 1) % items.length;
+	        const el = rail.current;
+	        const card = el?.children[next];
+	        if (el && card) {
+	          el.scrollTo({
+	            left: card.offsetLeft - el.firstElementChild.offsetLeft,
+	            behavior: 'smooth'
+	          });
+	        }
+	        return next;
+	      });
+	    }, 2000);
+	    return () => window.clearInterval(timer);
+	  }, [items.length]);
+	  if (!items.length) return null;
+	  const columns = Math.min(a.desktopColumns, items.length);
+	  const scrollTo = index => {
+	    const el = rail.current;
+	    const card = el?.children[index];
+	    if (card) el.scrollTo({
+	      left: card.offsetLeft - el.firstElementChild.offsetLeft,
+	      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+	    });
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "hp-offers",
+	    "aria-labelledby": "homepage-offers-title",
+	    style: {
+	      backgroundColor: a.backgroundColor,
+	      paddingBlock: a.padding,
+	      '--hp-offers-accent': a.accentColor,
+	      '--hp-offers-gap': `${a.gap}px`,
+	      '--hp-offers-columns': columns,
+	      '--hp-offers-mobile-width': `${a.mobileWidth}%`
+	    },
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "hp-offers__heading",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "v2-eyebrow",
+	            children: "Offers"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            className: "v2-h2",
+	            id: "homepage-offers-title",
+	            children: "Current offers"
+	          })]
+	        }), items.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "hp-offers__hint",
+	          children: ["Swipe to explore ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            "aria-hidden": "true",
+	            children: "\u2192"
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "hp-offers__frame",
+	        style: {
+	          backgroundColor: a.frameColor,
+	          border: a.frameEnabled ? `${a.borderWidth}px solid ${a.borderColor}` : '0 solid transparent',
+	          borderRadius: a.radius
+	        },
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeVisualLayers, {
+	          texture: {
+	            url: a.textureUrl,
+	            opacity: a.textureOpacity,
+	            fit: 'cover'
+	          },
+	          right: {
+	            url: a.decorationUrl,
+	            opacity: a.decorationOpacity,
+	            size: a.decorationSize
+	          }
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	          ref: rail,
+	          className: `hp-offers__gallery${items.length === 1 ? ' hp-offers__gallery--single' : ''}`,
+	          "aria-label": "Homepage promotions",
+	          onScroll: () => {
+	            const el = rail.current;
+	            if (!el?.children.length) return;
+	            const positions = [...el.children].map(child => Math.abs(child.offsetLeft - el.firstElementChild.offsetLeft - el.scrollLeft));
+	            setActive(positions.indexOf(Math.min(...positions)));
+	          },
+	          children: items.map(promo => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+	            className: "hp-offers__item",
+	            "data-promotion-id": promo.id,
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(HomeOfferArtwork, {
+	              promo: promo
+	            }, `${promo.id}:${promo.imageUrl}`)
+	          }, promo.id))
+	        }), items.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "hp-offers__pagination",
+	          "aria-label": "Choose promotion",
+	          children: items.map((promo, index) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            type: "button",
+	            "aria-label": `Show promotion ${index + 1}: ${promo.title}`,
+	            "aria-current": index === Math.min(active, items.length - 1) ? 'true' : undefined,
+	            onClick: () => scrollTo(index),
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {})
+	          }, promo.id))
+	        })]
+	      })]
+	    })
+	  });
+	}
+
 	// Product Media orchestration shared by the admin client and importer.
 	// Adapters perform the actual I/O; this module has no credentials or network.
 	class MediaOperationError extends Error {
@@ -36613,256 +37295,6 @@
 	      }, `d${i}`))]
 	    })]
 	  });
-	}
-
-	// ============================================================
-	// Password-recovery helpers.
-	//
-	// Kept free of React and of the Supabase client so the rules can be unit
-	// tested directly (scripts/test-feature-activation.mjs). customerAuth.jsx
-	// and Account.jsx import from here rather than defining their own copies.
-	// ============================================================
-
-	// Minimum length the Supabase project itself enforces. Checked in the browser
-	// too so the customer is told before the round-trip rather than after it.
-	const MIN_PASSWORD_LENGTH = 8;
-
-	/**
-	 * True when the current page load is a password-recovery landing.
-	 *
-	 * Supabase returns the customer to `${origin}/account#...type=recovery...`.
-	 * supabase-js consumes that fragment and emits PASSWORD_RECOVERY — but it can
-	 * do so BEFORE the auth provider's listener attaches, and a recovery session
-	 * is an ordinary signed-in session. Without this URL check the customer would
-	 * silently land on their account page with no way to set a password, which is
-	 * the one thing the reset email invited them to do.
-	 */
-	function hashIndicatesRecovery(hash) {
-	  if (typeof hash !== 'string' || !hash) return false;
-	  const params = new URLSearchParams(hash.replace(/^#/, ''));
-	  return params.get('type') === 'recovery';
-	}
-
-	/**
-	 * Validate a proposed new password.
-	 * Returns an error string, or '' when the password is acceptable.
-	 */
-	function validateNewPassword(password, confirm) {
-	  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
-	    return `Please use at least ${MIN_PASSWORD_LENGTH} characters.`;
-	  }
-	  if (password !== confirm) return 'Those passwords do not match.';
-	  return '';
-	}
-
-	// ============================================================
-	// Customer authentication (Supabase Auth, email/password).
-	//
-	// This is the storefront-customer counterpart to adminAuth.jsx. It is
-	// deliberately SEPARATE from the admin provider so the two roles stay
-	// cleanly isolated and independently auditable. Both use the one shared
-	// Supabase session (there is a single session per browser); "admin" vs
-	// "customer" is a role distinction decided elsewhere (admin_users
-	// membership), NOT by this provider. This provider never checks
-	// admin_users and never grants any elevated capability.
-	//
-	// Scope: identity only — sign up, sign in, sign out, request a password
-	// reset, and complete that reset by setting a new password. It does NOT
-	// read orders, does NOT touch the database schema/RLS, and adds NO blocking
-	// network call on mount: getSession() reads the persisted session from local
-	// storage, so storefront routes stay zero-network for auth.
-	// ============================================================
-	const CustomerAuthContext = /*#__PURE__*/reactExports.createContext(null);
-	function CustomerAuthProvider({
-	  children
-	}) {
-	  const [session, setSession] = reactExports.useState(null);
-	  const [loading, setLoading] = reactExports.useState(true);
-	  // Set while the customer is completing a reset. Gates the account UI so
-	  // the only thing they can do is choose a new password.
-	  const [recovery, setRecovery] = reactExports.useState(() => typeof window !== 'undefined' && hashIndicatesRecovery(window.location.hash));
-	  reactExports.useEffect(() => {
-	    let mounted = true;
-
-	    // Local storage read — no network round-trip, so this never blocks
-	    // or slows first paint on any storefront route.
-	    supabase.auth.getSession().then(({
-	      data: {
-	        session: current
-	      }
-	    }) => {
-	      if (!mounted) return;
-	      setSession(current);
-	      setLoading(false);
-	    });
-
-	    // Keeps this provider in sync with sign-in/out that happen anywhere
-	    // (including the single shared session being replaced). Passive
-	    // listener; fires no query of its own.
-	    const {
-	      data: {
-	        subscription
-	      }
-	    } = supabase.auth.onAuthStateChange((event, current) => {
-	      if (!mounted) return;
-	      if (event === 'PASSWORD_RECOVERY') setRecovery(true);
-	      // Signing out ends any recovery flow; otherwise a stale flag would
-	      // keep showing the set-password screen over the login card.
-	      if (event === 'SIGNED_OUT') setRecovery(false);
-	      setSession(current);
-	      setLoading(false);
-	    });
-	    return () => {
-	      mounted = false;
-	      subscription.unsubscribe();
-	    };
-	  }, []);
-
-	  // Create an account. If the Supabase project requires email
-	  // confirmation, no session is returned yet (data.session is null) —
-	  // the caller should tell the user to confirm via email before logging
-	  // in. If confirmation is disabled, the user is signed in immediately.
-	  async function signUp({
-	    email,
-	    password,
-	    fullName
-	  }) {
-	    // Send the confirmation email's link back to the SAME environment the
-	    // customer signed up from — production, a Vercel preview, or localhost —
-	    // by using the live origin. Without this, Supabase falls back to the
-	    // project's Site URL (which was localhost), so a production signup would
-	    // open localhost after tapping the emailed link. The target /account is
-	    // where supabase-js (detectSessionInUrl: true, on by default) picks up the
-	    // session from the URL and signs the customer in.
-	    const options = {};
-	    if (fullName) options.data = {
-	      full_name: fullName
-	    };
-	    if (typeof window !== 'undefined') options.emailRedirectTo = `${window.location.origin}/account`;
-	    const {
-	      data,
-	      error
-	    } = await supabase.auth.signUp({
-	      email,
-	      password,
-	      options: Object.keys(options).length ? options : undefined
-	    });
-	    if (error) return {
-	      error,
-	      needsConfirmation: false,
-	      session: null
-	    };
-	    return {
-	      error: null,
-	      needsConfirmation: !data.session,
-	      session: data.session ?? null
-	    };
-	  }
-	  async function signIn({
-	    email,
-	    password
-	  }) {
-	    const {
-	      data,
-	      error
-	    } = await supabase.auth.signInWithPassword({
-	      email,
-	      password
-	    });
-	    if (error) return {
-	      error
-	    };
-	    setSession(data.session);
-	    return {
-	      error: null
-	    };
-	  }
-	  async function signOut() {
-	    await supabase.auth.signOut();
-	    setSession(null);
-	  }
-
-	  // Sends a password-reset email. redirectTo brings the customer back to
-	  // /account, where the recovery landing is detected and the set-password
-	  // screen is shown.
-	  //
-	  // The caller must show the SAME confirmation whether or not the address
-	  // has an account — Supabase deliberately does not distinguish, and neither
-	  // should we, or this becomes an account-enumeration oracle.
-	  async function resetPassword(email) {
-	    const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/account` : undefined;
-	    const {
-	      error
-	    } = await supabase.auth.resetPasswordForEmail(email, redirectTo ? {
-	      redirectTo
-	    } : undefined);
-	    return {
-	      error
-	    };
-	  }
-
-	  /**
-	   * Complete a recovery by setting a new password on the recovery session.
-	   *
-	   * Requires a live session: an expired or already-consumed recovery link
-	   * leaves none, and Supabase rejects the update rather than silently
-	   * succeeding. The caller surfaces that as "link expired, request a new one".
-	   */
-	  async function updatePassword(newPassword) {
-	    const {
-	      data: {
-	        session: current
-	      }
-	    } = await supabase.auth.getSession();
-	    if (!current) {
-	      return {
-	        error: {
-	          message: 'Your reset link has expired. Please request a new one.'
-	        }
-	      };
-	    }
-	    const {
-	      error
-	    } = await supabase.auth.updateUser({
-	      password: newPassword
-	    });
-	    if (error) return {
-	      error
-	    };
-	    // The reset is done — drop the gate so the account UI behaves normally.
-	    setRecovery(false);
-	    return {
-	      error: null
-	    };
-	  }
-
-	  /** Abandon a recovery landing without changing anything. */
-	  function clearRecovery() {
-	    setRecovery(false);
-	  }
-	  const value = {
-	    session,
-	    user: session?.user ?? null,
-	    loading,
-	    recovery,
-	    signUp,
-	    signIn,
-	    signOut,
-	    resetPassword,
-	    updatePassword,
-	    clearRecovery
-	  };
-	  return /*#__PURE__*/jsxRuntimeExports.jsx(CustomerAuthContext.Provider, {
-	    value: value,
-	    children: children
-	  });
-	}
-	function useCustomerAuth() {
-	  const context = reactExports.useContext(CustomerAuthContext);
-	  if (!context) {
-	    throw new Error('useCustomerAuth must be used inside CustomerAuthProvider');
-	  }
-	  return context;
 	}
 
 	// ============================================================
@@ -52864,17 +53296,26 @@
 	      cancelled = true;
 	    };
 	  }, []);
-	  return /*#__PURE__*/jsxRuntimeExports.jsx(BrowserRouter, {
-	    children: /*#__PURE__*/jsxRuntimeExports.jsx(StoreProvider, {
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(AdminAuthProvider, {
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(CustomerAuthProvider, {
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(ErrorBoundary, {
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(App, {})
+	  return (
+	    /*#__PURE__*/
+	    /* CustomerAuthProvider now wraps StoreProvider. The store has to know who
+	       is signed in so the wishlist can sync to that customer's account and be
+	       cleared when they leave, and a provider can only read context from
+	       above it. StoreProvider still contains AdminAuthProvider, so their
+	       relative order — and every existing useStore/useAdminAuth call site —
+	       is unchanged. */
+	    jsxRuntimeExports.jsx(BrowserRouter, {
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(CustomerAuthProvider, {
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(StoreProvider, {
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(AdminAuthProvider, {
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(ErrorBoundary, {
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(App, {})
+	            })
 	          })
 	        })
 	      })
 	    })
-	  });
+	  );
 	}
 	client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntimeExports.jsx(React.StrictMode, {
 	  children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})

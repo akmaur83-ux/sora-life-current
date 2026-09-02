@@ -1,19 +1,64 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useMemo, useReducer, useState, useCallback, useRef } from 'react';
 import { productById, getCatalogVersion } from '../data/products.js';
+import { useCustomerAuth } from './customerAuth.jsx';
+import { listWishlist, addWishlistItem, removeWishlistItem, mergeWishlist } from './wishlistData.js';
+import {
+  normalizeKey, normalizeKeys, visibleWishlist, wishlistReducer,
+  planWishlistSync, loadPersistedWishlist, pickPersisted, PERSISTED_KEYS, initialWishlistState,
+} from './wishlistState.js';
 
 // ============================================================
 // Global store — cart, wishlist, saved-for-later, toasts.
-// Persisted to localStorage so the prototype feels real.
+//
+// WISHLIST OWNERSHIP MODEL
+//
+// There are deliberately TWO wishlists, not one:
+//
+//   guestWish    items this BROWSER saved. Persisted to localStorage,
+//                belongs to nobody, survives sign-out.
+//   accountWish  items the SIGNED-IN customer has saved. Held in memory
+//                only, sourced from customer_wishlist, and dropped the
+//                moment the session ends.
+//
+// What the UI shows:
+//   signed out -> guestWish
+//   signed in  -> union(guestWish, accountWish)
+//
+// Collapsing these into one persisted array is the bug this design exists
+// to prevent: A signs in, A's account items merge into the local list, A
+// signs out, B signs in — and B is looking at A's wishlist. Because
+// accountWish is never written to localStorage and is cleared on sign-out,
+// that cannot happen. An account-only item disappears when its owner leaves;
+// only the browser's own guest items remain.
+//
+// Guest items DO flow the other way on login: they are pushed into the
+// signed-in customer's remote wishlist, because the person who saved them is
+// the person now signing in. Account-only items never flow back into
+// guestWish.
 // ============================================================
 const StoreCtx = createContext(null);
 const KEY = 'sora.store.v1';
 
-const initial = { cart: [], wishlist: [], saved: [] };
+// PERSISTED_KEYS, the ownership rules and every wishlist reducer case live
+// in wishlistState.js so they can be executed directly in tests.
+const initial = { cart: [], saved: [], ...initialWishlistState };
 
-function load() {
+export function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...initial, ...JSON.parse(raw) };
+    if (!raw) return initial;
+    const saved = JSON.parse(raw);
+    // Legacy migration: before cross-device sync this was a single
+    // `wishlist` array of raw product ids (numbers on some paths, strings on
+    // others). Those items belong to the browser, so they become guestWish —
+    // normalised, so 5 and '5' stop being two entries.
+    const guest = loadPersistedWishlist(saved);
+    return {
+      ...initial,
+      cart: Array.isArray(saved.cart) ? saved.cart : [],
+      saved: Array.isArray(saved.saved) ? saved.saved : [],
+      guestWish: guest,
+    };
   } catch {}
   return initial;
 }
@@ -55,10 +100,15 @@ function reducer(state, action) {
     }
     case 'REMOVE_SAVED':
       return { ...state, saved: state.saved.filter((l) => l.key !== action.key) };
-    case 'TOGGLE_WISH': {
-      const has = state.wishlist.includes(action.id);
-      return { ...state, wishlist: has ? state.wishlist.filter((x) => x !== action.id) : [...state.wishlist, action.id] };
-    }
+    // ---- Wishlist ------------------------------------------------
+    // Delegated so the ownership rules have exactly ONE implementation,
+    // executable in tests without React (see src/lib/wishlistState.js).
+    case 'WISH_GUEST_TOGGLE':
+    case 'WISH_ACCOUNT_ADD':
+    case 'WISH_ACCOUNT_REMOVE':
+    case 'WISH_SYNCED':
+    case 'WISH_SESSION_CLEARED':
+      return wishlistReducer(state, action);
     case 'CLEAR_CART':
       return { ...state, cart: [] };
     default:
@@ -69,8 +119,16 @@ function reducer(state, action) {
 export function StoreProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, undefined, load);
   const [toasts, setToasts] = useState([]);
+  const { user } = useCustomerAuth();
+  const userId = user?.id ?? null;
 
-  useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }, [state]);
+  // Persist a WHITELIST, never the whole state. accountWish and syncedUserId
+  // must not reach localStorage — see the ownership note at the top.
+  useEffect(() => {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(pickPersisted(state)));
+    } catch {}
+  }, [state.cart, state.saved, state.guestWish]);
 
   const toast = useCallback((message, opts = {}) => {
     const id = Math.random().toString(36).slice(2);
@@ -92,11 +150,91 @@ export function StoreProvider({ children }) {
     toast(`Added to cart`, { product: product.id, kind: 'cart' });
   }, [toast]);
 
+  // What the UI renders. Recomputed from the two lists, never stored.
+  const wishlist = useMemo(() => visibleWishlist(state), [state.guestWish, state.accountWish, state.syncedUserId]);
+
+  // ---- Wishlist sync lifecycle ---------------------------------------
+  //
+  // Identifies the request that is allowed to apply its result. An account
+  // switch bumps it, so a slow response for the previous customer can never
+  // land in the new customer's wishlist.
+  const syncTokenRef = useRef(0);
+
+  useEffect(() => {
+    // Signed out (or signed out of an account we had synced): drop the
+    // account list and fall back to the guest list. Never deletes anything
+    // remote — the customer's wishlist stays in the database for next time.
+    if (!userId) {
+      syncTokenRef.current += 1;
+      if (state.syncedUserId) dispatch({ type: 'WISH_SESSION_CLEARED' });
+      return;
+    }
+    // Already synced for this exact user — nothing to do. This is also what
+    // makes StrictMode's double effect invocation harmless.
+    if (state.syncedUserId === userId) return;
+
+    const token = (syncTokenRef.current += 1);
+    // Snapshot BEFORE awaiting: this is the true guest list at login time.
+    // Reading it after the fetch could pick up a toggle made meanwhile.
+    const guestAtLogin = normalizeKeys(state.guestWish);
+
+    (async () => {
+      const remote = await listWishlist();
+      // A different user signed in (or out) while this was in flight.
+      if (token !== syncTokenRef.current) return;
+
+      const { missing, union } = planWishlistSync({ guestAtLogin, remote });
+      if (missing.length) {
+        // One duplicate-safe upsert for the whole set, so a retry or a
+        // double-invocation cannot create duplicate rows.
+        await mergeWishlist(missing);
+        if (token !== syncTokenRef.current) return;
+      }
+
+      dispatch({ type: 'WISH_SYNCED', userId, keys: union });
+    })();
+    // state.guestWish is read through the snapshot above rather than tracked
+    // as a dependency: re-running this on every guest toggle would re-fetch
+    // and re-merge on each heart tap.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, state.syncedUserId]);
+
   const toggleWish = useCallback((product) => {
-    dispatch({ type: 'TOGGLE_WISH', id: product.id });
-    const wasIn = state.wishlist.includes(product.id);
+    const key = normalizeKey(product?.id);
+    // A product with no usable id must never become a wishlist row.
+    if (!key) return;
+
+    const signedIn = Boolean(userId) && state.syncedUserId === userId;
+    const wasIn = visibleWishlist(state).includes(key);
+
+    // Signed out: purely local, no network, instant.
+    if (!signedIn) {
+      dispatch({ type: 'WISH_GUEST_TOGGLE', key });
+      toast(wasIn ? 'Removed from wishlist' : 'Saved to wishlist', { kind: 'wish' });
+      return;
+    }
+
+    // Signed in: update optimistically so the heart responds immediately,
+    // then persist. If the write fails we put the state back rather than
+    // leaving the customer believing something was saved that was not.
+    const inGuestBefore = state.guestWish.includes(key);
+    dispatch({ type: wasIn ? 'WISH_ACCOUNT_REMOVE' : 'WISH_ACCOUNT_ADD', key });
     toast(wasIn ? 'Removed from wishlist' : 'Saved to wishlist', { kind: 'wish' });
-  }, [state.wishlist, toast]);
+
+    (async () => {
+      const ok = wasIn ? await removeWishlistItem(key) : await addWishlistItem(key);
+      if (ok) return;
+      // Roll back to exactly the previous state, including the guest copy
+      // that WISH_ACCOUNT_REMOVE cleared.
+      if (wasIn) {
+        dispatch({ type: 'WISH_ACCOUNT_ADD', key });
+        if (inGuestBefore) dispatch({ type: 'WISH_GUEST_TOGGLE', key });
+      } else {
+        dispatch({ type: 'WISH_ACCOUNT_REMOVE', key });
+      }
+      toast('Could not sync wishlist. Please try again.', { kind: 'wish' });
+    })();
+  }, [state, userId, toast]);
 
   // Resolve the chosen pack size so a line is priced at ITS price, not the
   // product's base price. These figures are for display only — the payable
@@ -135,16 +273,22 @@ export function StoreProvider({ children }) {
 
   const value = {
     ...state,
+    // The visible union replaces the old raw array, so every existing
+    // consumer (Wishlist page, Account tab, header counts) keeps reading
+    // `wishlist` and gets the right list for the current session.
+    wishlist,
     dispatch,
     toasts,
     toast,
     addToCart,
     toggleWish,
-    isWished: (id) => state.wishlist.includes(id),
+    // Normalised on both sides: a caller passing the numeric 5 still matches
+    // a stored '5'.
+    isWished: (id) => wishlist.includes(normalizeKey(id)),
     cartDetailed,
     savedDetailed,
     cartCount,
-    wishCount: state.wishlist.length,
+    wishCount: wishlist.length,
     subtotal,
     mrpTotal,
     savings,
