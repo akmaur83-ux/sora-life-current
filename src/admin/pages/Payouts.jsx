@@ -93,11 +93,8 @@ export default function Payouts() {
     const reference = window.prompt(`Record the MANUAL payment for ${row.creator?.display_name}.\n\nEnter the bank/UPI transaction reference (required). This does NOT move money — it records that you already paid ${money2(row.requested_amount)} externally.`, '');
     if (reference == null) return;
     if (!reference.trim()) { setErr('A transaction reference is required to mark a payout paid.'); return; }
-    const amtStr = window.prompt(`Amount actually paid? (must not exceed approved ${money2(row.requested_amount)})`, String(row.requested_amount));
-    if (amtStr == null) return;
-    const amt = Number(amtStr);
-    if (!Number.isFinite(amt) || amt <= 0) { setErr('Enter a valid paid amount.'); return; }
-    if (amt > Number(row.requested_amount) + 0.001) { setErr('Paid amount cannot exceed the approved amount.'); return; }
+    const amt = Number(row.requested_amount);
+    if (!Number.isFinite(amt) || amt <= 0) { setErr('This payout has an invalid approved amount.'); return; }
     if (!window.confirm(`Confirm: you have already transferred ${money2(amt)} to ${row.creator?.display_name} (ref ${reference.trim()}). Mark this payout as PAID?`)) return;
     setBusy(true);
     try {
@@ -254,7 +251,10 @@ export default function Payouts() {
 function mapErr(reason, row) {
   return ({
     reference_required: 'A transaction reference is required to mark a payout paid.',
-    overpayment: `Paid amount cannot exceed the approved ${row ? money2(row.requested_amount) : 'amount'}.`,
+    invalid_amount: 'This payout has an invalid approved amount.',
+    exact_amount_required: `Only the exact approved ${row ? money2(row.requested_amount) : 'amount'} can be settled.`,
+    reservation_mismatch: 'The reserved ledger amount does not match this payout. Reject it to release the balance; do not record payment.',
+    already_paid_mismatch: 'This payout is already paid with different settlement details.',
     not_approved: 'A payout must be approved before it can be marked paid.',
     duplicate_reference: 'That transaction reference is already used on another payout.',
     bad_action: 'Unknown action.',

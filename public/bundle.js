@@ -44050,7 +44050,12 @@
 	    window_closed: `Payouts can only be requested on the ${ordinal(payoutDay)} of the month.`,
 	    already_requested: 'You’ve already requested a payout this month.',
 	    below_minimum: `You need at least ${money2(minPayout)} cleared to request a payout.`,
+	    no_balance: 'You don’t have any cleared earnings to withdraw yet.',
 	    exceeds_available: 'That’s more than your cleared balance.',
+	    // Until amount-level ledger allocations exist, a payout settles the whole
+	    // cleared balance — a partial request cannot be backed exactly.
+	    full_balance_required: 'Payouts currently withdraw your full cleared balance.',
+	    invalid_amount: 'That payout amount isn’t valid.',
 	    not_a_creator: 'This account isn’t a creator account.'
 	  }[reason] || 'Couldn’t submit your payout request. Please try again.';
 	}
@@ -49918,15 +49923,9 @@
 	      setErr('A transaction reference is required to mark a payout paid.');
 	      return;
 	    }
-	    const amtStr = window.prompt(`Amount actually paid? (must not exceed approved ${money2(row.requested_amount)})`, String(row.requested_amount));
-	    if (amtStr == null) return;
-	    const amt = Number(amtStr);
+	    const amt = Number(row.requested_amount);
 	    if (!Number.isFinite(amt) || amt <= 0) {
-	      setErr('Enter a valid paid amount.');
-	      return;
-	    }
-	    if (amt > Number(row.requested_amount) + 0.001) {
-	      setErr('Paid amount cannot exceed the approved amount.');
+	      setErr('This payout has an invalid approved amount.');
 	      return;
 	    }
 	    if (!window.confirm(`Confirm: you have already transferred ${money2(amt)} to ${row.creator?.display_name} (ref ${reference.trim()}). Mark this payout as PAID?`)) return;
@@ -50205,7 +50204,10 @@
 	function mapErr(reason, row) {
 	  return {
 	    reference_required: 'A transaction reference is required to mark a payout paid.',
-	    overpayment: `Paid amount cannot exceed the approved ${row ? money2(row.requested_amount) : 'amount'}.`,
+	    invalid_amount: 'This payout has an invalid approved amount.',
+	    exact_amount_required: `Only the exact approved ${row ? money2(row.requested_amount) : 'amount'} can be settled.`,
+	    reservation_mismatch: 'The reserved ledger amount does not match this payout. Reject it to release the balance; do not record payment.',
+	    already_paid_mismatch: 'This payout is already paid with different settlement details.',
 	    not_approved: 'A payout must be approved before it can be marked paid.',
 	    duplicate_reference: 'That transaction reference is already used on another payout.',
 	    bad_action: 'Unknown action.',

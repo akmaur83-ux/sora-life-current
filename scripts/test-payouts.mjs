@@ -3,7 +3,7 @@
 //
 //   node scripts/test-payouts.mjs
 //
-//   MODEL  — faithful mirrors of the 0014 SQL (commission, snapshot, reversal,
+//   MODEL  — faithful mirrors of the current 0014 + 0023 SQL (commission, snapshot, reversal,
 //            ledger buckets, hold, payout window/min/one-per-period/reserve/
 //            reject-release/approve/mark-paid/overpayment/duplicate-ref).
 //   STATIC — asserts the migration keeps the security + privacy shape (no raw
@@ -17,7 +17,10 @@ const bad = (m, k = 'MODEL') => { console.log(`  FAIL [${k}]  ${m}`); fail++; };
 const eq = (a, b, m, k) => (a === b ? ok(m, k) : bad(`${m} (got ${JSON.stringify(a)}, want ${JSON.stringify(b)})`, k));
 const truthy = (v, m, k) => (v ? ok(m, k) : bad(m, k));
 const r2 = (n) => Math.round(n * 100) / 100;
-const SQL = readFileSync('supabase/migrations/0014_creator_earnings_payouts.sql', 'utf8');
+const SQL = [
+  'supabase/migrations/0014_creator_earnings_payouts.sql',
+  'supabase/migrations/0023_creator_payout_settlement_safety.sql',
+].map((file) => readFileSync(file, 'utf8')).join('\n');
 const nsp = (s) => s.replace(/\s+/g, ' ');
 
 // ============================================================
@@ -94,9 +97,8 @@ console.log('\n— Payout request lifecycle —');
         if (requests.some(r => r.period === period && ['requested', 'under_review', 'approved', 'paid'].includes(r.status)))
           return { ok: false, reason: 'already_requested' };
         if (ledgerAvailable < cfg.min_payout) return { ok: false, reason: 'below_minimum' };
-        let amt = amount == null ? ledgerAvailable : amount;
-        if (!cfg.allow_partial) amt = ledgerAvailable;
-        if (amt > ledgerAvailable) return { ok: false, reason: 'exceeds_available' };
+        if (amount != null && amount !== ledgerAvailable) return { ok: false, reason: 'full_balance_required' };
+        const amt = ledgerAvailable;
         const req = { id: 'p' + (requests.length + 1), period, amount: r2(amt), status: 'requested', reserved: r2(amt) };
         requests.push(req);
         ledgerAvailable = r2(ledgerAvailable - amt); // reserved out of available
@@ -105,7 +107,7 @@ console.log('\n— Payout request lifecycle —');
       review(id, action) {
         const r = requests.find(x => x.id === id);
         if (!r) return { ok: false };
-        if (['paid', 'cancelled'].includes(r.status)) return { ok: false, reason: 'terminal' };
+        if (['paid', 'rejected', 'cancelled'].includes(r.status)) return { ok: false, reason: 'terminal' };
         if (action === 'approve') { r.status = 'approved'; return { ok: true }; }
         if (action === 'reject') { r.status = 'rejected'; ledgerAvailable = r2(ledgerAvailable + r.reserved); r.reserved = 0; return { ok: true, released: true }; }
         if (action === 'review') { r.status = 'under_review'; return { ok: true }; }
@@ -113,9 +115,11 @@ console.log('\n— Payout request lifecycle —');
       markPaid(id, paidAmount, ref) {
         const r = requests.find(x => x.id === id);
         if (!r) return { ok: false };
-        if (r.status === 'paid') return { ok: true, noop: 'already_paid' };
+        if (r.status === 'paid') return r.paidAmount === paidAmount && r.reference === ref
+          ? { ok: true, noop: 'already_paid' }
+          : { ok: false, reason: 'already_paid_mismatch' };
         if (r.status !== 'approved') return { ok: false, reason: 'not_approved' };
-        if (paidAmount > r.amount) return { ok: false, reason: 'overpayment' };
+        if (paidAmount !== r.amount) return { ok: false, reason: 'exact_amount_required' };
         if (requests.some(x => x.reference === ref)) return { ok: false, reason: 'duplicate_reference' };
         r.status = 'paid'; r.reference = ref; r.paidAmount = paidAmount;
         return { ok: true };
@@ -157,9 +161,10 @@ console.log('\n— Payout request lifecycle —');
   const r2q = e.request({ dayOfMonth: 1 });
   eq(e.markPaid(r2q.id, 8420, 'TXN1').reason, 'not_approved', 'cannot mark paid before approval', 'MODEL');
   e.review(r2q.id, 'approve');
-  eq(e.markPaid(r2q.id, 9000, 'TXN1').reason, 'overpayment', 'paid amount cannot exceed the approved amount', 'MODEL');
+  eq(e.markPaid(r2q.id, 9000, 'TXN1').reason, 'exact_amount_required', 'paid amount must exactly equal the approved amount', 'MODEL');
   eq(e.markPaid(r2q.id, 8420, 'TXN1').ok, true, 'admin marks paid with a reference', 'MODEL');
-  eq(e.markPaid(r2q.id, 8420, 'TXN2').noop, 'already_paid', 'a second mark-paid is idempotent (no double pay)', 'MODEL');
+  eq(e.markPaid(r2q.id, 8420, 'TXN1').noop, 'already_paid', 'an identical mark-paid retry is idempotent (no double pay)', 'MODEL');
+  eq(e.markPaid(r2q.id, 8420, 'TXN2').reason, 'already_paid_mismatch', 'a conflicting retry cannot rewrite settlement details', 'MODEL');
 
   // duplicate reference across payouts
   e.reset(600, 'verified');
@@ -168,10 +173,11 @@ console.log('\n— Payout request lifecycle —');
   eq(e.markPaid(r3.id, 600, 'TXN1').ok, true, 'a different payout can be paid', 'MODEL');
   // (reference uniqueness is enforced by a DB unique index — asserted below)
 
-  // partial payout only when configured
+  // Partial settlement is disabled until the ledger has amount allocations.
   const eP = payoutEngine({ payout_day: 1, min_payout: 500, allow_partial: true });
   eP.reset(8420, 'verified');
-  eq(eP.request({ dayOfMonth: 1, amount: 2000 }).amount, 2000, 'partial payout honoured when allow_partial is on', 'MODEL');
+  eq(eP.request({ dayOfMonth: 1, amount: 2000 }).reason, 'full_balance_required', 'partial request cannot over-reserve the ledger', 'MODEL');
+  eq(eP.available(), 8420, 'a rejected partial request consumes no earnings', 'MODEL');
 }
 
 // ============================================================

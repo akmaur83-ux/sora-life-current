@@ -406,7 +406,12 @@ function friendlyPayoutError(reason, { minPayout, payoutDay }) {
     window_closed: `Payouts can only be requested on the ${ordinal(payoutDay)} of the month.`,
     already_requested: 'You’ve already requested a payout this month.',
     below_minimum: `You need at least ${money2(minPayout)} cleared to request a payout.`,
+    no_balance: 'You don’t have any cleared earnings to withdraw yet.',
     exceeds_available: 'That’s more than your cleared balance.',
+    // Until amount-level ledger allocations exist, a payout settles the whole
+    // cleared balance — a partial request cannot be backed exactly.
+    full_balance_required: 'Payouts currently withdraw your full cleared balance.',
+    invalid_amount: 'That payout amount isn’t valid.',
     not_a_creator: 'This account isn’t a creator account.',
   }[reason]) || 'Couldn’t submit your payout request. Please try again.';
 }
