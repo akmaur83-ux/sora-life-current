@@ -186,45 +186,61 @@ function KycForm({ kyc, onSubmitKyc, onDone, onCancel }) {
         only ever see a masked version (e.g. <code>ABCDE****F</code>).
       </p>
 
-      <label className="crp__field">
-        <span>Legal name (as on PAN)</span>
-        <input value={legalName} onChange={(e) => setLegalName(e.target.value)} placeholder="Full legal name" />
-      </label>
+      <fieldset className="ck-fieldset ck-tone-brand">
+        <legend className="ck-fieldset__legend">
+          <span className="ck-fieldset__ic" aria-hidden="true"><Icon name="user" size={14} /></span>
+          Identity details
+        </legend>
+        <p className="ck-fieldset__hint">Must match your PAN exactly — a mismatch is the most common reason verification is sent back.</p>
 
-      <label className="crp__field">
-        <span>PAN</span>
-        <input value={pan} onChange={(e) => setPan(e.target.value.toUpperCase())} maxLength={10} placeholder="ABCDE1234F" className="is-mono" />
-      </label>
-
-      <div className="crp__field">
-        <span>Payout method</span>
-        <div className="crp__seg">
-          <button type="button" className={method === 'bank' ? 'active' : ''} onClick={() => setMethod('bank')}>Bank transfer</button>
-          <button type="button" className={method === 'upi' ? 'active' : ''} onClick={() => setMethod('upi')}>UPI</button>
-        </div>
-      </div>
-
-      {method === 'bank' ? (
-        <>
-          <label className="crp__field">
-            <span>Account holder name</span>
-            <input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} placeholder="Name on the bank account" />
-          </label>
-          <label className="crp__field">
-            <span>Bank account number</span>
-            <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))} inputMode="numeric" placeholder="Account number" className="is-mono" />
-          </label>
-          <label className="crp__field">
-            <span>IFSC code</span>
-            <input value={ifsc} onChange={(e) => setIfsc(e.target.value.toUpperCase())} maxLength={11} placeholder="ABCD0123456" className="is-mono" />
-          </label>
-        </>
-      ) : (
         <label className="crp__field">
-          <span>UPI ID</span>
-          <input value={upi} onChange={(e) => setUpi(e.target.value)} placeholder="name@bank" className="is-mono" />
+          <span>Legal name (as on PAN)</span>
+          <input value={legalName} onChange={(e) => setLegalName(e.target.value)} placeholder="Full legal name" />
         </label>
-      )}
+
+        <label className="crp__field">
+          <span>PAN</span>
+          <input value={pan} onChange={(e) => setPan(e.target.value.toUpperCase())} maxLength={10} placeholder="ABCDE1234F" className="is-mono" />
+        </label>
+      </fieldset>
+
+      <fieldset className="ck-fieldset ck-tone-info">
+        <legend className="ck-fieldset__legend">
+          <span className="ck-fieldset__ic" aria-hidden="true"><Icon name="card" size={14} /></span>
+          Payment method
+        </legend>
+        <p className="ck-fieldset__hint">Where we send your payout. You can change this later by resubmitting your details.</p>
+
+        <div className="crp__field">
+          <span>Payout method</span>
+          <div className="crp__seg">
+            <button type="button" className={method === 'bank' ? 'active' : ''} onClick={() => setMethod('bank')}>Bank transfer</button>
+            <button type="button" className={method === 'upi' ? 'active' : ''} onClick={() => setMethod('upi')}>UPI</button>
+          </div>
+        </div>
+
+        {method === 'bank' ? (
+          <>
+            <label className="crp__field">
+              <span>Account holder name</span>
+              <input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} placeholder="Name on the bank account" />
+            </label>
+            <label className="crp__field">
+              <span>Bank account number</span>
+              <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))} inputMode="numeric" placeholder="Account number" className="is-mono" />
+            </label>
+            <label className="crp__field">
+              <span>IFSC code</span>
+              <input value={ifsc} onChange={(e) => setIfsc(e.target.value.toUpperCase())} maxLength={11} placeholder="ABCD0123456" className="is-mono" />
+            </label>
+          </>
+        ) : (
+          <label className="crp__field">
+            <span>UPI ID</span>
+            <input value={upi} onChange={(e) => setUpi(e.target.value)} placeholder="name@bank" className="is-mono" />
+          </label>
+        )}
+      </fieldset>
 
       {err && <p className="crp__form-err">{err}</p>}
 

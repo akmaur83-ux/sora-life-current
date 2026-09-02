@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
+import { Metric } from '../../components/creator/CreatorUI.jsx';
 import CopyButton from '../../components/CopyButton.jsx';
 import { useCustomerAuth } from '../../lib/customerAuth.jsx';
 import { getMyCreator, applyAsCreator, buildTrackingUrl } from '../../lib/creatorApi.js';
@@ -138,16 +139,21 @@ export default function CreatorOnboarding() {
           </>
         )}
 
-        <dl className="crob__meta">
-          <div><dt>Status</dt><dd><span className={`crp__pill is-${s === 'active' ? 'ok' : s === 'pending' ? 'warn' : 'bad'}`}>{s}</span></dd></div>
-          <div><dt>Creator code</dt><dd><code>{creator.creator_code}</code></dd></div>
-          <div><dt>Commission rate</dt><dd>{Number(creator.default_commission_rate)}%</dd></div>
-          <div><dt>Joined</dt><dd>{fmtDate(creator.joined_at)}</dd></div>
-        </dl>
+        <div className="ck-metrics ck-metrics--2" style={{ marginTop: 'var(--sp-4)' }}>
+          <Metric label="Creator code" value={creator.creator_code} tone="brand" icon="crown" mono />
+          <Metric label="Commission rate" value={`${Number(creator.default_commission_rate)}%`} tone="brand" icon="tag"
+            hint="Applied to eligible sale value when a sale qualifies." />
+          <Metric label="Status" value={s} tone={s === 'active' ? 'ok' : s === 'pending' ? 'hold' : 'bad'} icon="shield" />
+          <Metric label="Joined" value={fmtDate(creator.joined_at)} tone="neutral" icon="clock" />
+        </div>
 
-        <div className="crob__soon">
-          <Icon name="clock" size={15} />
-          <span><strong>Earnings &amp; payouts</strong> aren’t available yet — they arrive in a later release. Your links are already live and every visit is recorded.</span>
+        <div className="crob__next">
+          <Icon name="crown" size={15} />
+          <span>
+            <strong>Earnings and payouts are live.</strong> Track cleared commission, verify your payout
+            details and request a withdrawal from{' '}
+            <Link to="/creator/earnings">Earnings</Link> and <Link to="/creator/payouts">Payouts</Link>.
+          </span>
         </div>
         <p className="crob__note">Your commission rate and status are managed by SORA LIFE.</p>
       </div>

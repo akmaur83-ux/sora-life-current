@@ -365,87 +365,11 @@
   .crp__kv--2 > div { grid-template-columns: 150px 1fr; }
 }
 
-/* ============================================================
-   HOW YOU EARN
-   ------------------------------------------------------------
-   The portal read as one flat beige plane, so nothing guided the eye and
-   every state looked equally important. This section introduces a small,
-   deliberate tonal system that the rest of the portal already implies
-   through .is-ok / .is-warn:
-
-     brand  neutral pipeline steps          forest
-     ok     money is yours / cleared        green
-     warn   waiting, not yet spendable      gold
-
-   Colour is used to mean something. It is never decoration, and the
-   surfaces stay quiet enough that the numbers remain the loudest thing on
-   the page.
-   ============================================================ */
-.crp-hiw {
-  margin-top: var(--sp-6);
-  padding: clamp(20px, 3vw, 30px);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg, 14px);
-  background:
-    radial-gradient(120% 100% at 0% 0%, rgba(30, 58, 47, .05) 0%, transparent 58%),
-    linear-gradient(180deg, #fff 0%, var(--sand-50, #FBF8F1) 100%);
-  box-shadow: 0 1px 2px rgba(28, 26, 23, .04), 0 10px 28px -20px rgba(28, 26, 23, .3);
-}
-.crp-hiw__head { margin-bottom: var(--sp-5); }
-.crp-hiw__title {
-  font-family: var(--font-display); font-size: clamp(1.25rem, 2.4vw, 1.6rem);
-  font-weight: 600; margin: 0 0 6px; color: var(--color-primary);
-}
-.crp-hiw__lede { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); max-width: 62ch; }
-
-.crp-hiw__steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-
-.crp-hiw__step {
-  position: relative;
-  display: grid; grid-template-columns: auto auto 1fr; align-items: start; gap: 14px;
-  padding: 15px 16px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--forest-300, #9db3a4);
-  border-radius: var(--r-md, 10px);
-  background: #fff;
-  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
-}
-.crp-hiw__step:hover {
-  transform: translateX(2px);
-  box-shadow: 0 2px 14px -6px rgba(28, 26, 23, .22);
-}
-.crp-hiw__step.is-ok   { border-left-color: var(--price-save, #4E7452); }
-.crp-hiw__step.is-warn { border-left-color: var(--gold-600, #B87514); }
-
-.crp-hiw__num {
-  display: grid; place-items: center;
-  width: 22px; height: 22px; margin-top: 1px;
-  border-radius: 999px;
-  background: var(--forest-50, #eef2ef); color: var(--color-primary);
-  font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
-}
-.crp-hiw__step.is-ok .crp-hiw__num   { background: rgba(78, 116, 82, .12); color: var(--price-save, #4E7452); }
-.crp-hiw__step.is-warn .crp-hiw__num { background: rgba(184, 117, 20, .12); color: var(--gold-600, #B87514); }
-
-.crp-hiw__ic { display: grid; place-items: center; margin-top: 1px; color: var(--color-primary); opacity: .75; }
-.crp-hiw__step.is-ok .crp-hiw__ic   { color: var(--price-save, #4E7452); opacity: .9; }
-.crp-hiw__step.is-warn .crp-hiw__ic { color: var(--gold-600, #B87514); opacity: .9; }
-
-.crp-hiw__body h3 { margin: 0 0 3px; font-size: var(--text-sm); font-weight: 700; letter-spacing: -0.01em; }
-.crp-hiw__body p  { margin: 0; font-size: var(--text-sm); line-height: 1.55; color: var(--color-text-muted); }
-
-.crp-hiw__foot {
-  display: flex; align-items: flex-start; gap: 9px;
-  margin: var(--sp-5) 0 0; padding: 12px 14px;
-  border-radius: var(--r-md, 10px);
-  background: var(--forest-50, #eef2ef);
-  color: var(--color-text-muted); font-size: 12.5px; line-height: 1.5;
-}
-.crp-hiw__foot svg { flex: 0 0 auto; margin-top: 1px; color: var(--color-primary); opacity: .7; }
-
-@media (max-width: 560px) {
-  .crp-hiw { padding: 18px 15px; }
-  .crp-hiw__step { grid-template-columns: auto 1fr; gap: 11px; padding: 13px 13px; }
-  /* The icon is decorative once space is tight; the number carries the order. */
-  .crp-hiw__ic { display: none; }
-}
+/* The first-pass "HOW YOU EARN" block lived here. It was written for the
+   abandoned cream/serif direction and its selectors (e.g.
+   .crp-hiw__step.is-ok .crp-hiw__num, specificity 0-3-0) were BEATING the
+   new creator-expressive.css layer, so the journey badges kept rendering in
+   the old muted palette. Removed rather than overridden: creator-expressive
+   .css now owns every .crp-hiw rule, and two files fighting over the same
+   component is exactly how this bug happened.
+   Found in browser QA, not by tests. */

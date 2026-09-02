@@ -11,6 +11,7 @@ import {
 import { money2 } from '../lib/format.js';
 import CreatorEarnings from '../components/creator/CreatorEarnings.jsx';
 import CreatorHowItWorks from '../components/creator/CreatorHowItWorks.jsx';
+import { Metric, Section, Empty, Pill, Step } from '../components/creator/CreatorUI.jsx';
 import CreatorPayouts from '../components/creator/CreatorPayouts.jsx';
 
 // ============================================================
@@ -36,6 +37,67 @@ const NAV = [
   { id: 'how-it-works', label: 'How you earn', icon: 'circleAlert' },
   { id: 'profile', label: 'Profile', icon: 'user' },
 ];
+
+// ---- Dashboard copy helpers -------------------------------------------
+// Extracted so the JSX stays legible and so every sentence that quotes a
+// live figure is a plain function that can be asserted in tests. None of
+// these invent a value: each falls back to wording that makes no claim.
+const initialsOf = (name) => String(name || '')
+  .split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
+
+const SHARE_TITLE = (creator) => `Shop SORA LIFE with ${creator.display_name}`;
+
+const ordinalDay = (n) => {
+  const v = Number(n);
+  if (!Number.isFinite(v) || v <= 0) return '';
+  const suffix = ['th', 'st', 'nd', 'rd'];
+  const k = v % 100;
+  return `${v}${suffix[(k - 20) % 10] || suffix[k] || suffix[0]}`;
+};
+
+const ratePct = (creator) => {
+  const r = Number(creator?.default_commission_rate);
+  return Number.isFinite(r) ? `${r}%` : '—';
+};
+
+const windowLabel = (creator) => {
+  const d = Number(creator?.default_attribution_window_days);
+  return Number.isFinite(d) && d > 0 ? `${d} days` : '—';
+};
+
+const holdHint = (earnings) => {
+  const d = Number(earnings?.settlement_hold_days);
+  return Number.isFinite(d) && d > 0
+    ? `Clears ${d} days after each sale qualifies.`
+    : 'Clears once each sale passes the settlement hold.';
+};
+
+const hasAnyCommission = (earnings) =>
+  Number(earnings?.paid ?? 0) > 0
+  || Number(earnings?.available ?? 0) > 0
+  || Number(earnings?.held ?? 0) > 0
+  || Number(earnings?.reserved ?? 0) > 0;
+
+const activationHint = (creator) =>
+  `Your account is ${creator?.status || 'pending'}. Links won’t attribute visits until an admin activates it.`;
+
+const clicksHint = (analytics) => {
+  const c = Number(analytics?.clicks ?? 0);
+  if (c > 0) return `${c} visit${c === 1 ? '' : 's'} have arrived through your links.`;
+  return 'Post your link or code where your audience already is. Visits show up here automatically.';
+};
+
+const payoutHint = (earnings) => {
+  const min = Number(earnings?.min_payout);
+  const day = ordinalDay(earnings?.payout_day);
+  if (Number.isFinite(min) && min > 0 && day) {
+    return `Requests open on the ${day} of each month, once your available balance reaches ${money2(min)}.`;
+  }
+  return 'Requests open on the configured payout day each month, once your available balance reaches the minimum.';
+};
+
+const totalLabel = (n, tail) => `${n} ${tail}`;
+const linksHint = (n) => `${n} campaign link${n === 1 ? '' : 's'}, plus your default link.`;
 
 const fmtDate = (iso) => (iso
   ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso))
@@ -168,52 +230,127 @@ export default function CreatorPortal() {
           {tab === 'dashboard' && (
             <>
               {isLive ? (
-                <section className="crp__hero">
-                  <span className="crp__hero-eyebrow"><Icon name="sparkle" size={13} /> SORA LIFE Creator</span>
-                  <h1 className="serif crp__hero-title">Your creator link is ready.</h1>
-                  <p className="crp__hero-sub">Share it with your audience and track the orders you help generate.</p>
-                  <code className="crp__url crp__hero-url">{defaultLink}</code>
-                  <div className="crp__hero-actions">
+                <section className="ck-share">
+                  <span className="ck-share__eyebrow"><Icon name="sparkle" size={13} /> SORA LIFE Creator</span>
+                  <h1 className="serif ck-share__title">Your link is live, {creator.display_name.split(' ')[0]}.</h1>
+                  <p className="ck-share__sub">
+                    Share this anywhere. Every visit through it is recorded against your account for{' '}
+                    {creator.default_attribution_window_days} days, and any order in that window earns you commission.
+                  </p>
+                  <code className="ck-share__url">{defaultLink}</code>
+                  <div className="ck-share__actions">
                     <CopyButton value={defaultLink} className="btn" label="Copy link" />
-                    <ShareButton url={defaultLink} title={`Shop SORA LIFE with ${creator.display_name}`} />
-                    <Link to="/creator/links" className="btn btn-light"><Icon name="externalLink" size={15} /> Campaign links</Link>
+                    <ShareButton url={defaultLink} title={SHARE_TITLE(creator)} />
+                    <Link to="/creator/links" className="btn btn-light"><Icon name="externalLink" size={15} /> All links</Link>
                   </div>
+                  <span className="ck-share__code">
+                    Your code <code>{creator.creator_code}</code>
+                    <CopyButton value={creator.creator_code} className="btn btn-xs btn-light" label="Copy" />
+                  </span>
                 </section>
               ) : (
                 <h1 className="serif crp__h1">Welcome, {creator.display_name.split(' ')[0]}</h1>
               )}
-              <div className="crp__stats">
-                <Stat label="Your creator code" value={creator.creator_code} mono copy />
-                <Stat label="Status" value={creator.status} tone={STATUS_TONE[creator.status]} />
-                <Stat label="Commission rate" value={`${Number(creator.default_commission_rate)}%`} />
-                <Stat label="Attribution window" value={`${creator.default_attribution_window_days} days`} />
-              </div>
 
-              <div className="crp__cards">
-                <div className="crp__card">
-                  <h2>Campaigns</h2>
-                  <p className="crp__big">{activeCampaigns.length}<span> active of {campaigns.length}</span></p>
-                  <Link to="/creator/campaigns" className="btn btn-sm btn-light">View campaigns</Link>
+              <Section
+                title="Performance"
+                sub="Attributed activity from your links. Figures update as orders qualify."
+                action={<Link to="/creator/analytics" className="ck-section__link">Full analytics</Link>}
+              >
+                <div className="ck-metrics">
+                  <Metric label="Link clicks" value={String(analytics?.clicks ?? 0)} tone="info" icon="externalLink"
+                    hint="Every visit that arrived through one of your links." />
+                  <Metric label="Attributed orders" value={String(analytics?.attributed_orders ?? 0)} tone="brand" icon="package"
+                    hint="Orders matched to you inside your attribution window." />
+                  <Metric label="Products sold" value={String(analytics?.products_sold ?? 0)} tone="hold" icon="bag"
+                    hint="Individual units across your attributed orders." />
+                  <Metric label="Attributed sales" value={money2(analytics?.attributed_sales ?? 0)} tone="ok" icon="tag"
+                    hint="Eligible sale value, before commission." />
                 </div>
-                <div className="crp__card">
-                  <h2>Tracking links</h2>
-                  <p className="crp__big">{activeLinks.length}<span> active of {links.length}</span></p>
-                  <Link to="/creator/links" className="btn btn-sm btn-light">View links</Link>
-                </div>
-              </div>
+              </Section>
 
-              <p className="crp__foot-note">
-                Earnings and payouts aren’t part of this release yet. Your links are live and every
-                visit is being recorded, so nothing is lost in the meantime.
-              </p>
+              <Section
+                title="Earnings"
+                sub="Commission is calculated on eligible sale value and clears after the hold period."
+                action={<Link to="/creator/earnings" className="ck-section__link">Earnings detail</Link>}
+              >
+                <div className="ck-metrics ck-metrics--bento">
+                  <Metric hero label="Available to withdraw" value={money2(earnings?.available ?? 0)} tone="ok" icon="card"
+                    hint="Cleared commission. This is what a payout request withdraws." />
+                  <Metric label="Held" value={money2(earnings?.held ?? 0)} tone="hold" icon="clock"
+                    hint={holdHint(earnings)} />
+                  <Metric label="In payout" value={money2(earnings?.reserved ?? 0)} tone="brand" icon="shield"
+                    hint="Reserved against a payout request that is being processed." />
+                  <Metric label="Paid out" value={money2(earnings?.paid ?? 0)} tone="ok" icon="check" />
+                </div>
+              </Section>
+
+              <Section title="What to do next" sub="Based on your account right now.">
+                <ol className="ck-steps">
+                  <Step index={1} done={isLive} tone="brand"
+                    title="Get your account activated"
+                    body={isLive
+                      ? 'Your creator account is active and your links attribute visits.'
+                      : activationHint(creator)} />
+                  <Step index={2} done={Number(analytics?.clicks ?? 0) > 0} tone="brand"
+                    title="Share your link"
+                    body={clicksHint(analytics)} />
+                  <Step index={3} done={hasAnyCommission(earnings)} tone="hold"
+                    title="Earn your first commission"
+                    body="When an attributed order is paid, commission is created and enters the hold period." />
+                  <Step index={4} done={kyc?.identity_status === 'verified'} tone="info"
+                    title="Verify your payout details"
+                    body={kyc?.identity_status === 'verified'
+                      ? 'Your details are verified. You can request a payout when your balance clears.'
+                      : 'Submit your KYC and payout details once. An admin verifies them before your first withdrawal.'} />
+                  <Step index={5} done={Number(earnings?.paid ?? 0) > 0} tone="ok"
+                    title="Request a payout"
+                    body={payoutHint(earnings)} />
+                </ol>
+              </Section>
+
+              <Section title="Your programme" sub="The terms your commission is calculated on.">
+                <div className="ck-metrics ck-metrics--3">
+                  <Metric label="Commission rate" value={ratePct(creator)} tone="brand" icon="crown"
+                    hint="Applied to eligible sale value and locked in when a sale qualifies." />
+                  <Metric label="Attribution window" value={windowLabel(creator)} tone="brand" icon="clock"
+                    hint="How long after a visit a purchase still counts as yours." />
+                  <Metric label="Account status" value={creator.status} tone={isLive ? 'ok' : 'hold'} icon="shield" />
+                </div>
+              </Section>
+
+              <Section
+                title="Campaigns and links"
+                action={<Link to="/creator/campaigns" className="ck-section__link">Campaigns</Link>}
+              >
+                <div className="ck-metrics ck-metrics--2">
+                  <Metric label="Active campaigns" value={String(activeCampaigns.length)} tone="brand" icon="sparkle"
+                    hint={totalLabel(campaigns.length, 'total on your account.')} />
+                  <Metric label="Active tracking links" value={String(activeLinks.length)} tone="brand" icon="externalLink"
+                    hint={linksHint(links.length)} />
+                </div>
+              </Section>
             </>
           )}
+
 
           {tab === 'campaigns' && (
             <>
               <h1 className="serif crp__h1">My campaigns</h1>
               {campaigns.length === 0 ? (
-                <div className="crp__empty">No campaigns yet. Your SORA LIFE contact will set these up for you.</div>
+                <Empty
+                  tone="brand"
+                  icon="sparkle"
+                  title="No campaigns running yet"
+                  body="Campaigns are seasonal pushes SORA LIFE builds for creators — a launch, a festive edit, a category focus. Your programme manager sets them up; you don’t create them yourself."
+                  points={[
+                    'A campaign link of your own, tracked separately from your default link',
+                    'Its own commission rate when the campaign carries one',
+                    'Performance you can see split out in Analytics',
+                  ]}
+                >
+                  <Link to="/creator/links" className="btn btn-light">Use my default link</Link>
+                </Empty>
               ) : (
                 <div className="crp__list">
                   {campaigns.map((c) => (
@@ -266,9 +403,12 @@ export default function CreatorPortal() {
               </div>
 
               {links.length === 0 && (
-                <p className="crp__foot-note">
-                  Campaign-specific links are set up with your SORA LIFE programme manager. Your default link above is always ready to share.
-                </p>
+                <Empty
+                  tone="brand"
+                  icon="externalLink"
+                  title="No campaign links yet"
+                  body="Campaign links are created alongside a campaign by your SORA LIFE programme manager. You don’t need one to start — your default link above is always ready and always attributes."
+                />
               )}
             </>
           )}
@@ -277,11 +417,15 @@ export default function CreatorPortal() {
             <>
               <h1 className="serif crp__h1">My analytics</h1>
               <p className="crp__lede">Attributed activity from your links. Figures update as orders qualify.</p>
-              <div className="crp__stats">
-                <Stat label="Link clicks" value={String(analytics?.clicks ?? 0)} />
-                <Stat label="Attributed orders" value={String(analytics?.attributed_orders ?? 0)} />
-                <Stat label="Products sold" value={String(analytics?.products_sold ?? 0)} />
-                <Stat label="Attributed sales" value={money2(analytics?.attributed_sales ?? 0)} tone="ok" />
+              <div className="ck-metrics ck-metrics--bento">
+                <Metric hero label="Attributed sales" value={money2(analytics?.attributed_sales ?? 0)} tone="ok" icon="tag"
+                  hint="Eligible sale value your links generated, before commission." />
+                <Metric label="Link clicks" value={String(analytics?.clicks ?? 0)} tone="info" icon="externalLink"
+                  hint="Visits that arrived through one of your links." />
+                <Metric label="Attributed orders" value={String(analytics?.attributed_orders ?? 0)} tone="brand" icon="package"
+                  hint="Orders matched to you inside your attribution window." />
+                <Metric label="Products sold" value={String(analytics?.products_sold ?? 0)} tone="hold" icon="bag"
+                  hint="Individual units across your attributed orders." />
               </div>
 
               {Array.isArray(analytics?.top_products) && analytics.top_products.length > 0 ? (
@@ -298,9 +442,19 @@ export default function CreatorPortal() {
                   </div>
                 </div>
               ) : (
-                <div className="crp__empty" style={{ marginTop: 'var(--sp-5)' }}>
-                  No attributed orders yet. Share your links — qualifying orders will show up here.
-                </div>
+                <Empty
+                  tone="info"
+                  icon="award"
+                  title="No attributed orders yet"
+                  body="These figures fill in on their own once someone shops through your link. Nothing here is estimated — every number is a real, matched order."
+                  points={[
+                    'A visit through your link is recorded immediately',
+                    'It stays attributed to you for your full attribution window',
+                    'Once that order is paid, it appears here and commission is created',
+                  ]}
+                >
+                  <Link to="/creator/how-it-works" className="btn btn-light">How earning works</Link>
+                </Empty>
               )}
 
               <div className="crp__notice" style={{ marginTop: 'var(--sp-5)' }}>
@@ -338,22 +492,38 @@ export default function CreatorPortal() {
           {tab === 'profile' && (
             <>
               <h1 className="serif crp__h1">My profile</h1>
-              <div className="crp__panel">
-                <dl className="crp__kv">
-                  <div><dt>Name</dt><dd>{creator.display_name}</dd></div>
-                  <div><dt>Creator code</dt><dd><code>{creator.creator_code}</code></dd></div>
-                  <div><dt>Email</dt><dd>{creator.email}</dd></div>
-                  {creator.phone && <div><dt>Phone</dt><dd>{creator.phone}</dd></div>}
-                  <div><dt>Status</dt><dd><span className={`crp__pill is-${STATUS_TONE[creator.status] || 'warn'}`}>{creator.status}</span></dd></div>
-                  <div><dt>Commission rate</dt><dd>{Number(creator.default_commission_rate)}%</dd></div>
-                  <div><dt>Attribution window</dt><dd>{creator.default_attribution_window_days} days</dd></div>
-                  <div><dt>Joined</dt><dd>{fmtDate(creator.joined_at)}</dd></div>
-                </dl>
-                <p className="crp__foot-note">
-                  Your commission rate and status are managed by SORA LIFE. Contact your programme
-                  manager if something here looks wrong.
-                </p>
-              </div>
+              <p className="crp__lede">Your creator identity and the terms your commission runs on.</p>
+
+              <section className="ck-idcard">
+                <span className="ck-idcard__avatar" aria-hidden="true">{initialsOf(creator.display_name)}</span>
+                <div className="ck-idcard__main">
+                  <h2 className="ck-idcard__name">{creator.display_name}</h2>
+                  <p className="ck-idcard__email">{creator.email}</p>
+                  {creator.phone && <p className="ck-idcard__email">{creator.phone}</p>}
+                  <div className="ck-idcard__tags">
+                    <Pill tone={isLive ? 'ok' : 'hold'}>{creator.status}</Pill>
+                    <span className="ck-idcard__code">
+                      <code>{creator.creator_code}</code>
+                      <CopyButton value={creator.creator_code} className="btn btn-xs btn-light" label="Copy" />
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              <Section title="Programme terms" sub="Set by SORA LIFE — these are not editable here.">
+                <div className="ck-metrics ck-metrics--3">
+                  <Metric label="Commission rate" value={ratePct(creator)} tone="brand" icon="crown"
+                    hint="Applied to eligible sale value and locked in when a sale qualifies." />
+                  <Metric label="Attribution window" value={windowLabel(creator)} tone="brand" icon="clock"
+                    hint="How long after a visit a purchase still counts as yours." />
+                  <Metric label="Creator since" value={fmtDate(creator.joined_at)} tone="neutral" icon="award" />
+                </div>
+              </Section>
+
+              <p className="crp__foot-note">
+                Your commission rate and status are managed by SORA LIFE. Contact your programme
+                manager if something here looks wrong.
+              </p>
             </>
           )}
         </main>

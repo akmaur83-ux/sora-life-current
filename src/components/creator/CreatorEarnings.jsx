@@ -1,4 +1,5 @@
 import Icon from '../Icon.jsx';
+import { Metric } from './CreatorUI.jsx';
 import { money2 } from '../../lib/format.js';
 
 // ============================================================
@@ -47,27 +48,28 @@ export default function CreatorEarnings({ creator, earnings }) {
         settled ledger — nothing here can be edited from this page.
       </p>
 
-      {/* Four balance buckets, derived from the ledger. */}
-      <div className="crp__buckets">
-        <Bucket
+      {/* Four balance buckets, derived from the ledger. Available is the
+          hero: it is the only figure here the creator can act on. */}
+      <div className="ck-metrics">
+        <Metric
+          hero tone="ok" icon="checkCircle" label="Available to withdraw"
+          value={money2(earnings.available ?? 0)}
+          hint="Cleared commission. A payout request withdraws this full amount."
+        />
+        <Metric
           tone="hold" icon="clock" label="Pending"
-          value={earnings.held}
-          note={`In ${hold}-day settlement hold`}
+          value={money2(earnings.held ?? 0)}
+          hint={`In the ${hold}-day settlement hold. It clears to Available automatically.`}
         />
-        <Bucket
-          tone="ok" icon="checkCircle" label="Available"
-          value={earnings.available}
-          note="Cleared — withdrawable"
+        <Metric
+          tone="ok" icon="card" label="Paid out"
+          value={money2(earnings.paid ?? 0)}
+          hint="Already transferred to you, all time."
         />
-        <Bucket
-          tone="paid" icon="card" label="Paid out"
-          value={earnings.paid}
-          note="Transferred to you"
-        />
-        <Bucket
-          tone="rev" icon="refresh" label="Reversed"
-          value={earnings.reversed}
-          note="Refunds & adjustments"
+        <Metric
+          tone={Number(earnings.reversed ?? 0) > 0 ? 'bad' : 'neutral'} icon="refresh" label="Reversed"
+          value={money2(earnings.reversed ?? 0)}
+          hint="Refunds and adjustments, reversed at the rate they were earned."
         />
       </div>
 
@@ -151,12 +153,6 @@ export default function CreatorEarnings({ creator, earnings }) {
   );
 }
 
-function Bucket({ tone, icon, label, value, note }) {
-  return (
-    <div className={`crp__bucket is-${tone}`}>
-      <span className="crp__bucket-top"><Icon name={icon} size={15} /> {label}</span>
-      <span className="crp__bucket-v">{money2(value ?? 0)}</span>
-      <span className="crp__bucket-note">{note}</span>
-    </div>
-  );
-}
+// `Bucket` lived here until the balance tiles moved to the shared <Metric>
+// primitive in CreatorUI.jsx. Removed rather than left behind, so there is
+// exactly one way to render a creator figure.

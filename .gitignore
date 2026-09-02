@@ -10,3 +10,4 @@ dist
 .mcp.json
 .build-check
 .flake-reports
+.creator-qa

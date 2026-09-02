@@ -39007,6 +39007,172 @@
 	  });
 	}
 
+	const TONES$1 = ['ok', 'hold', 'info', 'brand', 'bad', 'neutral'];
+	const toneClass = tone => `ck-tone-${TONES$1.includes(tone) ? tone : 'neutral'}`;
+
+	/**
+	 * A single figure with its meaning attached.
+	 *
+	 * `hint` is where the honest caveat goes — "clears after the hold period",
+	 * "counts every visit through your links" — so a number is never presented
+	 * without the reader knowing what it actually counts.
+	 */
+	function Metric({
+	  label,
+	  value,
+	  tone = 'neutral',
+	  icon,
+	  hint,
+	  mono = false,
+	  hero = false,
+	  children
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: `ck-metric ${hero ? 'ck-metric--hero' : ''} ${toneClass(tone)}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "ck-metric__top",
+	      children: [icon && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "ck-metric__ic",
+	        "aria-hidden": "true",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: icon,
+	          size: 15
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "ck-metric__label",
+	        children: label
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: `ck-metric__value ${mono ? 'is-mono' : ''}`,
+	      children: value
+	    }), hint && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "ck-metric__hint",
+	      children: hint
+	    }), children && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "ck-metric__foot",
+	      children: children
+	    })]
+	  });
+	}
+
+	/** Section heading with an optional right-hand link. */
+	function Section({
+	  title,
+	  sub,
+	  action,
+	  children,
+	  className = ''
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    className: `ck-section ${className}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+	      className: "ck-section__head",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	          className: "ck-section__title",
+	          children: title
+	        }), sub && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "ck-section__sub",
+	          children: sub
+	        })]
+	      }), action]
+	    }), children]
+	  });
+	}
+
+	/**
+	 * Empty state.
+	 *
+	 * An empty creator account is the FIRST thing a new creator sees, and a bare
+	 * white box reads as broken. `points` is for explaining what will fill this
+	 * space — never for implying data that does not exist.
+	 */
+	function Empty({
+	  icon = 'sparkle',
+	  tone = 'neutral',
+	  title,
+	  body,
+	  points,
+	  children
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: `ck-empty ${toneClass(tone)}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "ck-empty__ic",
+	      "aria-hidden": "true",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: icon,
+	        size: 21
+	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	      className: "ck-empty__title",
+	      children: title
+	    }), body && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "ck-empty__body",
+	      children: body
+	    }), Array.isArray(points) && points.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	      className: "ck-empty__points",
+	      children: points.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "check",
+	          size: 14
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          children: p
+	        })]
+	      }, p))
+	    }), children && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "ck-empty__foot",
+	      children: children
+	    })]
+	  });
+	}
+
+	/** Status chip. */
+	function Pill({
+	  tone = 'neutral',
+	  children,
+	  dot = true
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	    className: `ck-pill ${toneClass(tone)}`,
+	    children: [dot && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "ck-pill__dot",
+	      "aria-hidden": "true"
+	    }), children]
+	  });
+	}
+
+	/**
+	 * One item in a "what to do next" checklist.
+	 * `done` is driven by real account state — never optimistic.
+	 */
+	function Step({
+	  done,
+	  index,
+	  tone = 'neutral',
+	  title,
+	  body
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	    className: `ck-step ${done ? 'is-done' : ''} ${toneClass(done ? 'ok' : tone)}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "ck-step__mark",
+	      "aria-hidden": "true",
+	      children: done ? /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "check",
+	        size: 13
+	      }) : index
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "ck-step__body",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	        children: title
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        children: body
+	      })]
+	    })]
+	  });
+	}
+
 	function CopyButton({
 	  value,
 	  className = 'btn btn-sm',
@@ -39845,47 +40011,49 @@
 	            size: 16
 	          }), " Open my Creator dashboard"]
 	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
-	        className: "crob__meta",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	            children: "Status"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: `crp__pill is-${s === 'active' ? 'ok' : s === 'pending' ? 'warn' : 'bad'}`,
-	              children: s
-	            })
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	            children: "Creator code"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx("code", {
-	              children: creator.creator_code
-	            })
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	            children: "Commission rate"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("dd", {
-	            children: [Number(creator.default_commission_rate), "%"]
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	            children: "Joined"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	            children: fmtDate$3(creator.joined_at)
-	          })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "ck-metrics ck-metrics--2",
+	        style: {
+	          marginTop: 'var(--sp-4)'
+	        },
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	          label: "Creator code",
+	          value: creator.creator_code,
+	          tone: "brand",
+	          icon: "crown",
+	          mono: true
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	          label: "Commission rate",
+	          value: `${Number(creator.default_commission_rate)}%`,
+	          tone: "brand",
+	          icon: "tag",
+	          hint: "Applied to eligible sale value when a sale qualifies."
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	          label: "Status",
+	          value: s,
+	          tone: s === 'active' ? 'ok' : s === 'pending' ? 'hold' : 'bad',
+	          icon: "shield"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	          label: "Joined",
+	          value: fmtDate$3(creator.joined_at),
+	          tone: "neutral",
+	          icon: "clock"
 	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "crob__soon",
+	        className: "crob__next",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "clock",
+	          name: "crown",
 	          size: 15
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	            children: "Earnings & payouts"
-	          }), " aren\u2019t available yet \u2014 they arrive in a later release. Your links are already live and every visit is recorded."]
+	            children: "Earnings and payouts are live."
+	          }), " Track cleared commission, verify your payout details and request a withdrawal from", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/creator/earnings",
+	            children: "Earnings"
+	          }), " and ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/creator/payouts",
+	            children: "Payouts"
+	          }), "."]
 	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	        className: "crob__note",
@@ -43349,31 +43517,32 @@
 	      className: "crp__lede",
 	      children: "Commission on the orders your links generated. Figures are derived from your settled ledger \u2014 nothing here can be edited from this page."
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "crp__buckets",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Bucket, {
+	      className: "ck-metrics",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	        hero: true,
+	        tone: "ok",
+	        icon: "checkCircle",
+	        label: "Available to withdraw",
+	        value: money2(earnings.available ?? 0),
+	        hint: "Cleared commission. A payout request withdraws this full amount."
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
 	        tone: "hold",
 	        icon: "clock",
 	        label: "Pending",
-	        value: earnings.held,
-	        note: `In ${hold}-day settlement hold`
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Bucket, {
+	        value: money2(earnings.held ?? 0),
+	        hint: `In the ${hold}-day settlement hold. It clears to Available automatically.`
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
 	        tone: "ok",
-	        icon: "checkCircle",
-	        label: "Available",
-	        value: earnings.available,
-	        note: "Cleared \u2014 withdrawable"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Bucket, {
-	        tone: "paid",
 	        icon: "card",
 	        label: "Paid out",
-	        value: earnings.paid,
-	        note: "Transferred to you"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Bucket, {
-	        tone: "rev",
+	        value: money2(earnings.paid ?? 0),
+	        hint: "Already transferred to you, all time."
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	        tone: Number(earnings.reversed ?? 0) > 0 ? 'bad' : 'neutral',
 	        icon: "refresh",
 	        label: "Reversed",
-	        value: earnings.reversed,
-	        note: "Refunds & adjustments"
+	        value: money2(earnings.reversed ?? 0),
+	        hint: "Refunds and adjustments, reversed at the rate they were earned."
 	      })]
 	    }), earnings.reserved > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
 	      className: "crp__reserve-note",
@@ -43539,30 +43708,10 @@
 	    })]
 	  });
 	}
-	function Bucket({
-	  tone,
-	  icon,
-	  label,
-	  value,
-	  note
-	}) {
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	    className: `crp__bucket is-${tone}`,
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	      className: "crp__bucket-top",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: icon,
-	        size: 15
-	      }), " ", label]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "crp__bucket-v",
-	      children: money2(value ?? 0)
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "crp__bucket-note",
-	      children: note
-	    })]
-	  });
-	}
+
+	// `Bucket` lived here until the balance tiles moved to the shared <Metric>
+	// primitive in CreatorUI.jsx. Removed rather than left behind, so there is
+	// exactly one way to render a creator figure.
 
 	const ordinal$1 = n => {
 	  const v = Number(n);
@@ -43928,86 +44077,118 @@
 	      }), " These details are encrypted and masked. Even SORA LIFE staff only ever see a masked version (e.g. ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
 	        children: "ABCDE****F"
 	      }), ")."]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-	      className: "crp__field",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        children: "Legal name (as on PAN)"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	        value: legalName,
-	        onChange: e => setLegalName(e.target.value),
-	        placeholder: "Full legal name"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+	      className: "ck-fieldset ck-tone-brand",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("legend", {
+	        className: "ck-fieldset__legend",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "ck-fieldset__ic",
+	          "aria-hidden": "true",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "user",
+	            size: 14
+	          })
+	        }), "Identity details"]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "ck-fieldset__hint",
+	        children: "Must match your PAN exactly \u2014 a mismatch is the most common reason verification is sent back."
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	        className: "crp__field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          children: "Legal name (as on PAN)"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          value: legalName,
+	          onChange: e => setLegalName(e.target.value),
+	          placeholder: "Full legal name"
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	        className: "crp__field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          children: "PAN"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          value: pan,
+	          onChange: e => setPan(e.target.value.toUpperCase()),
+	          maxLength: 10,
+	          placeholder: "ABCDE1234F",
+	          className: "is-mono"
+	        })]
 	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-	      className: "crp__field",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        children: "PAN"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	        value: pan,
-	        onChange: e => setPan(e.target.value.toUpperCase()),
-	        maxLength: 10,
-	        placeholder: "ABCDE1234F",
-	        className: "is-mono"
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "crp__field",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        children: "Payout method"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+	      className: "ck-fieldset ck-tone-info",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("legend", {
+	        className: "ck-fieldset__legend",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "ck-fieldset__ic",
+	          "aria-hidden": "true",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "card",
+	            size: 14
+	          })
+	        }), "Payment method"]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "ck-fieldset__hint",
+	        children: "Where we send your payout. You can change this later by resubmitting your details."
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "crp__seg",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          type: "button",
-	          className: method === 'bank' ? 'active' : '',
-	          onClick: () => setMethod('bank'),
-	          children: "Bank transfer"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          type: "button",
-	          className: method === 'upi' ? 'active' : '',
-	          onClick: () => setMethod('upi'),
-	          children: "UPI"
-	        })]
-	      })]
-	    }), method === 'bank' ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
 	        className: "crp__field",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          children: "Account holder name"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	          value: accountHolder,
-	          onChange: e => setAccountHolder(e.target.value),
-	          placeholder: "Name on the bank account"
+	          children: "Payout method"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "crp__seg",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            type: "button",
+	            className: method === 'bank' ? 'active' : '',
+	            onClick: () => setMethod('bank'),
+	            children: "Bank transfer"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            type: "button",
+	            className: method === 'upi' ? 'active' : '',
+	            onClick: () => setMethod('upi'),
+	            children: "UPI"
+	          })]
 	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	      }), method === 'bank' ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	          className: "crp__field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            children: "Account holder name"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            value: accountHolder,
+	            onChange: e => setAccountHolder(e.target.value),
+	            placeholder: "Name on the bank account"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	          className: "crp__field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            children: "Bank account number"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            value: accountNumber,
+	            onChange: e => setAccountNumber(e.target.value.replace(/\D/g, '')),
+	            inputMode: "numeric",
+	            placeholder: "Account number",
+	            className: "is-mono"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	          className: "crp__field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            children: "IFSC code"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            value: ifsc,
+	            onChange: e => setIfsc(e.target.value.toUpperCase()),
+	            maxLength: 11,
+	            placeholder: "ABCD0123456",
+	            className: "is-mono"
+	          })]
+	        })]
+	      }) : /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
 	        className: "crp__field",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          children: "Bank account number"
+	          children: "UPI ID"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	          value: accountNumber,
-	          onChange: e => setAccountNumber(e.target.value.replace(/\D/g, '')),
-	          inputMode: "numeric",
-	          placeholder: "Account number",
+	          value: upi,
+	          onChange: e => setUpi(e.target.value),
+	          placeholder: "name@bank",
 	          className: "is-mono"
 	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-	        className: "crp__field",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          children: "IFSC code"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	          value: ifsc,
-	          onChange: e => setIfsc(e.target.value.toUpperCase()),
-	          maxLength: 11,
-	          placeholder: "ABCD0123456",
-	          className: "is-mono"
-	        })]
-	      })]
-	    }) : /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-	      className: "crp__field",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        children: "UPI ID"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	        value: upi,
-	        onChange: e => setUpi(e.target.value),
-	        placeholder: "name@bank",
-	        className: "is-mono"
 	      })]
 	    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	      className: "crp__form-err",
@@ -44332,6 +44513,49 @@
 	  label: 'Profile',
 	  icon: 'user'
 	}];
+
+	// ---- Dashboard copy helpers -------------------------------------------
+	// Extracted so the JSX stays legible and so every sentence that quotes a
+	// live figure is a plain function that can be asserted in tests. None of
+	// these invent a value: each falls back to wording that makes no claim.
+	const initialsOf = name => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+	const SHARE_TITLE = creator => `Shop SORA LIFE with ${creator.display_name}`;
+	const ordinalDay = n => {
+	  const v = Number(n);
+	  if (!Number.isFinite(v) || v <= 0) return '';
+	  const suffix = ['th', 'st', 'nd', 'rd'];
+	  const k = v % 100;
+	  return `${v}${suffix[(k - 20) % 10] || suffix[k] || suffix[0]}`;
+	};
+	const ratePct = creator => {
+	  const r = Number(creator?.default_commission_rate);
+	  return Number.isFinite(r) ? `${r}%` : '—';
+	};
+	const windowLabel = creator => {
+	  const d = Number(creator?.default_attribution_window_days);
+	  return Number.isFinite(d) && d > 0 ? `${d} days` : '—';
+	};
+	const holdHint = earnings => {
+	  const d = Number(earnings?.settlement_hold_days);
+	  return Number.isFinite(d) && d > 0 ? `Clears ${d} days after each sale qualifies.` : 'Clears once each sale passes the settlement hold.';
+	};
+	const hasAnyCommission = earnings => Number(earnings?.paid ?? 0) > 0 || Number(earnings?.available ?? 0) > 0 || Number(earnings?.held ?? 0) > 0 || Number(earnings?.reserved ?? 0) > 0;
+	const activationHint = creator => `Your account is ${creator?.status || 'pending'}. Links won’t attribute visits until an admin activates it.`;
+	const clicksHint = analytics => {
+	  const c = Number(analytics?.clicks ?? 0);
+	  if (c > 0) return `${c} visit${c === 1 ? '' : 's'} have arrived through your links.`;
+	  return 'Post your link or code where your audience already is. Visits show up here automatically.';
+	};
+	const payoutHint = earnings => {
+	  const min = Number(earnings?.min_payout);
+	  const day = ordinalDay(earnings?.payout_day);
+	  if (Number.isFinite(min) && min > 0 && day) {
+	    return `Requests open on the ${day} of each month, once your available balance reaches ${money2(min)}.`;
+	  }
+	  return 'Requests open on the configured payout day each month, once your available balance reaches the minimum.';
+	};
+	const totalLabel = (n, tail) => `${n} ${tail}`;
+	const linksHint = n => `${n} campaign link${n === 1 ? '' : 's'}, plus your default link.`;
 	const fmtDate$1 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
 	  day: 'numeric',
 	  month: 'short',
@@ -44508,103 +44732,224 @@
 	          }), ". Your links won\u2019t attribute visits until an admin activates it."]
 	        }), tab === 'dashboard' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
 	          children: [isLive ? /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-	            className: "crp__hero",
+	            className: "ck-share",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	              className: "crp__hero-eyebrow",
+	              className: "ck-share__eyebrow",
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                name: "sparkle",
 	                size: 13
 	              }), " SORA LIFE Creator"]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-	              className: "serif crp__hero-title",
-	              children: "Your creator link is ready."
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	              className: "crp__hero-sub",
-	              children: "Share it with your audience and track the orders you help generate."
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("h1", {
+	              className: "serif ck-share__title",
+	              children: ["Your link is live, ", creator.display_name.split(' ')[0], "."]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	              className: "ck-share__sub",
+	              children: ["Share this anywhere. Every visit through it is recorded against your account for", ' ', creator.default_attribution_window_days, " days, and any order in that window earns you commission."]
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("code", {
-	              className: "crp__url crp__hero-url",
+	              className: "ck-share__url",
 	              children: defaultLink
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "crp__hero-actions",
+	              className: "ck-share__actions",
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(CopyButton, {
 	                value: defaultLink,
 	                className: "btn",
 	                label: "Copy link"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx(ShareButton, {
 	                url: defaultLink,
-	                title: `Shop SORA LIFE with ${creator.display_name}`
+	                title: SHARE_TITLE(creator)
 	              }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
 	                to: "/creator/links",
 	                className: "btn btn-light",
 	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                  name: "externalLink",
 	                  size: 15
-	                }), " Campaign links"]
+	                }), " All links"]
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "ck-share__code",
+	              children: ["Your code ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+	                children: creator.creator_code
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(CopyButton, {
+	                value: creator.creator_code,
+	                className: "btn btn-xs btn-light",
+	                label: "Copy"
 	              })]
 	            })]
 	          }) : /*#__PURE__*/jsxRuntimeExports.jsxs("h1", {
 	            className: "serif crp__h1",
 	            children: ["Welcome, ", creator.display_name.split(' ')[0]]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "crp__stats",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Stat, {
-	              label: "Your creator code",
-	              value: creator.creator_code,
-	              mono: true,
-	              copy: true
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Stat, {
-	              label: "Status",
-	              value: creator.status,
-	              tone: STATUS_TONE[creator.status]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Stat, {
-	              label: "Commission rate",
-	              value: `${Number(creator.default_commission_rate)}%`
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Stat, {
-	              label: "Attribution window",
-	              value: `${creator.default_attribution_window_days} days`
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "crp__cards",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "crp__card",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	                children: "Campaigns"
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	                className: "crp__big",
-	                children: [activeCampaigns.length, /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	                  children: [" active of ", campaigns.length]
-	                })]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	                to: "/creator/campaigns",
-	                className: "btn btn-sm btn-light",
-	                children: "View campaigns"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
+	            title: "Performance",
+	            sub: "Attributed activity from your links. Figures update as orders qualify.",
+	            action: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: "/creator/analytics",
+	              className: "ck-section__link",
+	              children: "Full analytics"
+	            }),
+	            children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "ck-metrics",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Link clicks",
+	                value: String(analytics?.clicks ?? 0),
+	                tone: "info",
+	                icon: "externalLink",
+	                hint: "Every visit that arrived through one of your links."
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Attributed orders",
+	                value: String(analytics?.attributed_orders ?? 0),
+	                tone: "brand",
+	                icon: "package",
+	                hint: "Orders matched to you inside your attribution window."
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Products sold",
+	                value: String(analytics?.products_sold ?? 0),
+	                tone: "hold",
+	                icon: "bag",
+	                hint: "Individual units across your attributed orders."
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Attributed sales",
+	                value: money2(analytics?.attributed_sales ?? 0),
+	                tone: "ok",
+	                icon: "tag",
+	                hint: "Eligible sale value, before commission."
 	              })]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "crp__card",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	                children: "Tracking links"
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	                className: "crp__big",
-	                children: [activeLinks.length, /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	                  children: [" active of ", links.length]
-	                })]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	                to: "/creator/links",
-	                className: "btn btn-sm btn-light",
-	                children: "View links"
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
+	            title: "Earnings",
+	            sub: "Commission is calculated on eligible sale value and clears after the hold period.",
+	            action: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: "/creator/earnings",
+	              className: "ck-section__link",
+	              children: "Earnings detail"
+	            }),
+	            children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "ck-metrics ck-metrics--bento",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                hero: true,
+	                label: "Available to withdraw",
+	                value: money2(earnings?.available ?? 0),
+	                tone: "ok",
+	                icon: "card",
+	                hint: "Cleared commission. This is what a payout request withdraws."
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Held",
+	                value: money2(earnings?.held ?? 0),
+	                tone: "hold",
+	                icon: "clock",
+	                hint: holdHint(earnings)
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "In payout",
+	                value: money2(earnings?.reserved ?? 0),
+	                tone: "brand",
+	                icon: "shield",
+	                hint: "Reserved against a payout request that is being processed."
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Paid out",
+	                value: money2(earnings?.paid ?? 0),
+	                tone: "ok",
+	                icon: "check"
 	              })]
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "crp__foot-note",
-	            children: "Earnings and payouts aren\u2019t part of this release yet. Your links are live and every visit is being recorded, so nothing is lost in the meantime."
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
+	            title: "What to do next",
+	            sub: "Based on your account right now.",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsxs("ol", {
+	              className: "ck-steps",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Step, {
+	                index: 1,
+	                done: isLive,
+	                tone: "brand",
+	                title: "Get your account activated",
+	                body: isLive ? 'Your creator account is active and your links attribute visits.' : activationHint(creator)
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Step, {
+	                index: 2,
+	                done: Number(analytics?.clicks ?? 0) > 0,
+	                tone: "brand",
+	                title: "Share your link",
+	                body: clicksHint(analytics)
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Step, {
+	                index: 3,
+	                done: hasAnyCommission(earnings),
+	                tone: "hold",
+	                title: "Earn your first commission",
+	                body: "When an attributed order is paid, commission is created and enters the hold period."
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Step, {
+	                index: 4,
+	                done: kyc?.identity_status === 'verified',
+	                tone: "info",
+	                title: "Verify your payout details",
+	                body: kyc?.identity_status === 'verified' ? 'Your details are verified. You can request a payout when your balance clears.' : 'Submit your KYC and payout details once. An admin verifies them before your first withdrawal.'
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Step, {
+	                index: 5,
+	                done: Number(earnings?.paid ?? 0) > 0,
+	                tone: "ok",
+	                title: "Request a payout",
+	                body: payoutHint(earnings)
+	              })]
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
+	            title: "Your programme",
+	            sub: "The terms your commission is calculated on.",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "ck-metrics ck-metrics--3",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Commission rate",
+	                value: ratePct(creator),
+	                tone: "brand",
+	                icon: "crown",
+	                hint: "Applied to eligible sale value and locked in when a sale qualifies."
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Attribution window",
+	                value: windowLabel(creator),
+	                tone: "brand",
+	                icon: "clock",
+	                hint: "How long after a visit a purchase still counts as yours."
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Account status",
+	                value: creator.status,
+	                tone: isLive ? 'ok' : 'hold',
+	                icon: "shield"
+	              })]
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
+	            title: "Campaigns and links",
+	            action: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: "/creator/campaigns",
+	              className: "ck-section__link",
+	              children: "Campaigns"
+	            }),
+	            children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "ck-metrics ck-metrics--2",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Active campaigns",
+	                value: String(activeCampaigns.length),
+	                tone: "brand",
+	                icon: "sparkle",
+	                hint: totalLabel(campaigns.length, 'total on your account.')
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Active tracking links",
+	                value: String(activeLinks.length),
+	                tone: "brand",
+	                icon: "externalLink",
+	                hint: linksHint(links.length)
+	              })]
+	            })
 	          })]
 	        }), tab === 'campaigns' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
 	            className: "serif crp__h1",
 	            children: "My campaigns"
-	          }), campaigns.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	            className: "crp__empty",
-	            children: "No campaigns yet. Your SORA LIFE contact will set these up for you."
+	          }), campaigns.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx(Empty, {
+	            tone: "brand",
+	            icon: "sparkle",
+	            title: "No campaigns running yet",
+	            body: "Campaigns are seasonal pushes SORA LIFE builds for creators \u2014 a launch, a festive edit, a category focus. Your programme manager sets them up; you don\u2019t create them yourself.",
+	            points: ['A campaign link of your own, tracked separately from your default link', 'Its own commission rate when the campaign carries one', 'Performance you can see split out in Analytics'],
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: "/creator/links",
+	              className: "btn btn-light",
+	              children: "Use my default link"
+	            })
 	          }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	            className: "crp__list",
 	            children: campaigns.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
@@ -44654,9 +44999,11 @@
 	              createdLabel: fmtDate$1(l.created_at),
 	              url: buildTrackingUrl(l, creator, campaignById[l.campaign_id])
 	            }, l.id))]
-	          }), links.length === 0 && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "crp__foot-note",
-	            children: "Campaign-specific links are set up with your SORA LIFE programme manager. Your default link above is always ready to share."
+	          }), links.length === 0 && /*#__PURE__*/jsxRuntimeExports.jsx(Empty, {
+	            tone: "brand",
+	            icon: "externalLink",
+	            title: "No campaign links yet",
+	            body: "Campaign links are created alongside a campaign by your SORA LIFE programme manager. You don\u2019t need one to start \u2014 your default link above is always ready and always attributes."
 	          })]
 	        }), tab === 'analytics' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
@@ -44666,20 +45013,32 @@
 	            className: "crp__lede",
 	            children: "Attributed activity from your links. Figures update as orders qualify."
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "crp__stats",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Stat, {
-	              label: "Link clicks",
-	              value: String(analytics?.clicks ?? 0)
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Stat, {
-	              label: "Attributed orders",
-	              value: String(analytics?.attributed_orders ?? 0)
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Stat, {
-	              label: "Products sold",
-	              value: String(analytics?.products_sold ?? 0)
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Stat, {
+	            className: "ck-metrics ck-metrics--bento",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	              hero: true,
 	              label: "Attributed sales",
 	              value: money2(analytics?.attributed_sales ?? 0),
-	              tone: "ok"
+	              tone: "ok",
+	              icon: "tag",
+	              hint: "Eligible sale value your links generated, before commission."
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	              label: "Link clicks",
+	              value: String(analytics?.clicks ?? 0),
+	              tone: "info",
+	              icon: "externalLink",
+	              hint: "Visits that arrived through one of your links."
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	              label: "Attributed orders",
+	              value: String(analytics?.attributed_orders ?? 0),
+	              tone: "brand",
+	              icon: "package",
+	              hint: "Orders matched to you inside your attribution window."
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	              label: "Products sold",
+	              value: String(analytics?.products_sold ?? 0),
+	              tone: "hold",
+	              icon: "bag",
+	              hint: "Individual units across your attributed orders."
 	            })]
 	          }), Array.isArray(analytics?.top_products) && analytics.top_products.length > 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "crp__panel",
@@ -44710,12 +45069,17 @@
 	                })]
 	              }, i))
 	            })]
-	          }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	            className: "crp__empty",
-	            style: {
-	              marginTop: 'var(--sp-5)'
-	            },
-	            children: "No attributed orders yet. Share your links \u2014 qualifying orders will show up here."
+	          }) : /*#__PURE__*/jsxRuntimeExports.jsx(Empty, {
+	            tone: "info",
+	            icon: "award",
+	            title: "No attributed orders yet",
+	            body: "These figures fill in on their own once someone shops through your link. Nothing here is estimated \u2014 every number is a real, matched order.",
+	            points: ['A visit through your link is recorded immediately', 'It stays attributed to you for your full attribution window', 'Once that order is paid, it appears here and commission is created'],
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: "/creator/how-it-works",
+	              className: "btn btn-light",
+	              children: "How earning works"
+	            })
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "crp__notice",
 	            style: {
@@ -44754,68 +45118,70 @@
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
 	            className: "serif crp__h1",
 	            children: "My profile"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "crp__panel",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
-	              className: "crp__kv",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	                  children: "Name"
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	                  children: creator.display_name
-	                })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "crp__lede",
+	            children: "Your creator identity and the terms your commission runs on."
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	            className: "ck-idcard",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "ck-idcard__avatar",
+	              "aria-hidden": "true",
+	              children: initialsOf(creator.display_name)
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "ck-idcard__main",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	                className: "ck-idcard__name",
+	                children: creator.display_name
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	                className: "ck-idcard__email",
+	                children: creator.email
+	              }), creator.phone && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	                className: "ck-idcard__email",
+	                children: creator.phone
 	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	                  children: "Creator code"
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	                  children: /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+	                className: "ck-idcard__tags",
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Pill, {
+	                  tone: isLive ? 'ok' : 'hold',
+	                  children: creator.status
+	                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	                  className: "ck-idcard__code",
+	                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("code", {
 	                    children: creator.creator_code
-	                  })
-	                })]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	                  children: "Email"
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	                  children: creator.email
-	                })]
-	              }), creator.phone && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	                  children: "Phone"
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	                  children: creator.phone
-	                })]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	                  children: "Status"
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	                  children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                    className: `crp__pill is-${STATUS_TONE[creator.status] || 'warn'}`,
-	                    children: creator.status
-	                  })
-	                })]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	                  children: "Commission rate"
-	                }), /*#__PURE__*/jsxRuntimeExports.jsxs("dd", {
-	                  children: [Number(creator.default_commission_rate), "%"]
-	                })]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	                  children: "Attribution window"
-	                }), /*#__PURE__*/jsxRuntimeExports.jsxs("dd", {
-	                  children: [creator.default_attribution_window_days, " days"]
-	                })]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-	                  children: "Joined"
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-	                  children: fmtDate$1(creator.joined_at)
+	                  }), /*#__PURE__*/jsxRuntimeExports.jsx(CopyButton, {
+	                    value: creator.creator_code,
+	                    className: "btn btn-xs btn-light",
+	                    label: "Copy"
+	                  })]
 	                })]
 	              })]
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	              className: "crp__foot-note",
-	              children: "Your commission rate and status are managed by SORA LIFE. Contact your programme manager if something here looks wrong."
 	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
+	            title: "Programme terms",
+	            sub: "Set by SORA LIFE \u2014 these are not editable here.",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "ck-metrics ck-metrics--3",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Commission rate",
+	                value: ratePct(creator),
+	                tone: "brand",
+	                icon: "crown",
+	                hint: "Applied to eligible sale value and locked in when a sale qualifies."
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Attribution window",
+	                value: windowLabel(creator),
+	                tone: "brand",
+	                icon: "clock",
+	                hint: "How long after a visit a purchase still counts as yours."
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Metric, {
+	                label: "Creator since",
+	                value: fmtDate$1(creator.joined_at),
+	                tone: "neutral",
+	                icon: "award"
+	              })]
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "crp__foot-note",
+	            children: "Your commission rate and status are managed by SORA LIFE. Contact your programme manager if something here looks wrong."
 	          })]
 	        })]
 	      })]
@@ -44922,28 +45288,6 @@
 	      name: "externalLink",
 	      size: small ? 15 : 16
 	    }), " ", shared ? 'Shared' : 'Share']
-	  });
-	}
-	function Stat({
-	  label,
-	  value,
-	  mono,
-	  tone,
-	  copy
-	}) {
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	    className: "crp__stat",
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "crp__stat-l",
-	      children: label
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: `crp__stat-v ${mono ? 'is-mono' : ''} ${tone ? `is-${tone}` : ''}`,
-	      children: value
-	    }), copy && /*#__PURE__*/jsxRuntimeExports.jsx(CopyButton, {
-	      value: value,
-	      className: "btn btn-xs btn-light",
-	      label: "Copy"
-	    })]
 	  });
 	}
 	function Shell({
