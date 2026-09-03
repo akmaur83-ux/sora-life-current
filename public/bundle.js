@@ -32666,6 +32666,63 @@
 	  });
 	}
 
+	function artworkLinkLabel(promo) {
+	  const name = [promo?.ctaText, promo?.title, promo?.badgeText].map(v => typeof v === 'string' ? v.trim() : '').find(Boolean);
+	  return name || null;
+	}
+	function PromoArtwork({
+	  promo,
+	  src,
+	  className = '',
+	  imgClassName = '',
+	  onError
+	}) {
+	  if (!promo || !src) return null;
+	  const {
+	    ctaUrl,
+	    couponCode,
+	    title
+	  } = promo;
+	  const label = artworkLinkLabel(promo);
+	  // Routing shape only — the value is already policy-checked upstream.
+	  const isExternal = !!ctaUrl && /^https:\/\//i.test(ctaUrl);
+	  const image = /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	    className: imgClassName,
+	    src: src,
+	    alt: title || 'Promotion',
+	    loading: "lazy",
+	    decoding: "async",
+	    onError: onError
+	  });
+	  let artwork = image;
+	  if (ctaUrl) {
+	    artwork = isExternal ? /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	      className: "promo-artwork__link",
+	      href: ctaUrl,
+	      target: "_blank",
+	      rel: "noopener noreferrer",
+	      ...(label ? {
+	        'aria-label': label
+	      } : {}),
+	      children: image
+	    }) : /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	      className: "promo-artwork__link",
+	      to: ctaUrl,
+	      ...(label ? {
+	        'aria-label': label
+	      } : {}),
+	      children: image
+	    });
+	  }
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+	    className: `${className}${couponCode ? ' promo-artwork--has-code' : ''}`,
+	    children: [artwork, couponCode && /*#__PURE__*/jsxRuntimeExports.jsx(PromoCopyCode, {
+	      code: couponCode,
+	      className: "promo-artwork__code"
+	    })]
+	  });
+	}
+
 	function PromoCta({
 	  to,
 	  children
@@ -32707,16 +32764,15 @@
 	    textAlign
 	  } = promo;
 	  const callout = offerCalloutFrom(promo);
+	  // Uploaded artwork stands on its own — no scrim, no overlaid copy. The
+	  // admin's CTA and coupon still function: PromoArtwork makes the image itself
+	  // the click target and puts the code ticket below it, never over it.
 	  if (imageUrl) {
-	    return /*#__PURE__*/jsxRuntimeExports.jsx("article", {
+	    return /*#__PURE__*/jsxRuntimeExports.jsx(PromoArtwork, {
+	      promo: promo,
+	      src: imageUrl,
 	      className: "promo-poster promo-poster--image-only",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	        className: "promo-poster__fullimg",
-	        src: imageUrl,
-	        alt: title || 'Promotion poster',
-	        loading: "lazy",
-	        decoding: "async"
-	      })
+	      imgClassName: "promo-poster__fullimg"
 	    });
 	  }
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
@@ -32858,16 +32914,17 @@
 	}) {
 	  const [failed, setFailed] = reactExports.useState(false);
 	  const url = safeVisualUrl(promo.imageUrl);
-	  if (url && !failed) return /*#__PURE__*/jsxRuntimeExports.jsx("article", {
-	    className: "hp-offers__poster",
-	    children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	  // Rendered through the shared PromoArtwork so the rail honours the same
+	  // CTA/coupon contract as PromoPoster: the image becomes the click target
+	  // when a ctaUrl exists, and a coupon code stays reachable below the art.
+	  if (url && !failed) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsx(PromoArtwork, {
+	      promo: promo,
 	      src: url,
-	      alt: promo.title,
-	      loading: "lazy",
-	      decoding: "async",
+	      className: "hp-offers__poster",
 	      onError: () => setFailed(true)
-	    })
-	  });
+	    });
+	  }
 	  // Missing or failed artwork falls back to existing, real configured copy.
 	  const content = {
 	    ...promo,

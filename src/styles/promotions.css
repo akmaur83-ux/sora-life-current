@@ -422,3 +422,39 @@
     border-radius: 12px;
   }
 }
+/* ---- Uploaded artwork: click target + coupon ------------------------
+   The image-first look is unchanged — nothing is drawn over the artwork.
+   These rules only give the poster a real click target and a place for the
+   coupon ticket BELOW the image. Shared by PromoPoster's image branch and
+   the homepage offers rail (see src/components/promo/PromoArtwork.jsx). */
+.promo-artwork__link {
+  display: block;
+  width: 100%;
+  border-radius: inherit;
+  /* The artwork is the button; no colour or spacing is added over it. */
+  text-decoration: none;
+  color: inherit;
+}
+.promo-artwork__link img { display: block; width: 100%; height: auto; }
+
+/* Keep the artwork's own corner radius on focus rather than the global
+   --r-xs, and make the ring clearly visible against any uploaded image. */
+.promo-artwork__link:focus-visible {
+  outline: 2px solid var(--color-primary, #1E3A2F);
+  outline-offset: 3px;
+  box-shadow: none;
+  border-radius: inherit;
+}
+
+/* Only applied when a coupon actually renders, so a poster without one keeps
+   its existing layout byte-for-byte. */
+.promo-artwork--has-code {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.promo-artwork__code { align-self: flex-start; }
+@media (max-width: 767px) {
+  .promo-artwork--has-code { gap: 8px; }
+}

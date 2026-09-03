@@ -4,13 +4,24 @@ import { safeVisualUrl, uniqueHomepagePromotions } from '../../lib/homepageAppea
 import HomeVisualLayers from '../HomeVisualLayers.jsx';
 import PromoPoster from './PromoPoster.jsx';
 import PromoOfferCard from './PromoOfferCard.jsx';
+import PromoArtwork from './PromoArtwork.jsx';
 
 export function HomeOfferArtwork({ promo }) {
   const [failed, setFailed] = useState(false);
   const url = safeVisualUrl(promo.imageUrl);
-  if (url && !failed) return <article className="hp-offers__poster">
-    <img src={url} alt={promo.title} loading="lazy" decoding="async" onError={() => setFailed(true)} />
-  </article>;
+  // Rendered through the shared PromoArtwork so the rail honours the same
+  // CTA/coupon contract as PromoPoster: the image becomes the click target
+  // when a ctaUrl exists, and a coupon code stays reachable below the art.
+  if (url && !failed) {
+    return (
+      <PromoArtwork
+        promo={promo}
+        src={url}
+        className="hp-offers__poster"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
   // Missing or failed artwork falls back to existing, real configured copy.
   const content = { ...promo, imageUrl: null };
   return promo.type === 'poster' ? <PromoPoster promo={content} /> : <PromoOfferCard promo={content} />;

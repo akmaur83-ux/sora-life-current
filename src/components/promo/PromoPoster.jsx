@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import Icon from '../Icon.jsx';
 import PromoCopyCode from './PromoCopyCode.jsx';
+import PromoArtwork from './PromoArtwork.jsx';
 import { offerCalloutFrom } from '../../lib/promotions.js';
 
 // ============================================================
@@ -34,17 +35,17 @@ export default function PromoPoster({ promo }) {
   if (!promo) return null;
   const { title, subtitle, badgeText, couponCode, ctaText, ctaUrl, imageUrl, themeVariant, textAlign } = promo;
   const callout = offerCalloutFrom(promo);
+// Uploaded artwork stands on its own — no scrim, no overlaid copy. The
+// admin's CTA and coupon still function: PromoArtwork makes the image itself
+// the click target and puts the code ticket below it, never over it.
 if (imageUrl) {
   return (
-    <article className="promo-poster promo-poster--image-only">
-      <img
-        className="promo-poster__fullimg"
-        src={imageUrl}
-        alt={title || 'Promotion poster'}
-        loading="lazy"
-        decoding="async"
-      />
-    </article>
+    <PromoArtwork
+      promo={promo}
+      src={imageUrl}
+      className="promo-poster promo-poster--image-only"
+      imgClassName="promo-poster__fullimg"
+    />
   );
 }
 
