@@ -35,7 +35,7 @@
 //     retrying; only genuine server faults return 5xx.
 // ============================================================
 import { getWebhookSecret, verifyWebhookSignature } from '../_lib/razorpay.js';
-import { generateInvoiceNumber } from '../_lib/pricing.js';
+import { invoicePatchForPaidTransition } from '../_lib/pricing.js';
 import {
   getSupabaseConfig, findOrderByRazorpayOrderId, updateOrderById,
   recordPaymentTransaction, consumeCouponForOrder, setConversionStatus,
@@ -184,9 +184,10 @@ export default async function handler(req, res) {
         payment_status: 'paid',
         razorpay_payment_id: paymentId,
         paid_at: new Date().toISOString(),
-        // Invoice is issued at the moment money is confirmed.
-        ...(order.invoice_number ? {} : { invoice_number: generateInvoiceNumber() }),
-        invoiced_at: new Date().toISOString(),
+        // Invoice is issued at the moment money is confirmed. Shared with
+        // /verify so both settlement paths write identical metadata; it also
+        // no longer overwrites an invoiced_at a legacy row already carries.
+        ...invoicePatchForPaidTransition(order),
       }, sb, { unlessPaid: true });
 
       if (!paid) {

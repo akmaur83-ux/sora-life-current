@@ -12,7 +12,7 @@
 // order id, the server-computed amount, and the PUBLIC key id. The key
 // secret never leaves the server.
 // ============================================================
-import { validateCartPayload, computeOrderTotal, generateOrderNumber, generateInvoiceNumber } from '../_lib/pricing.js';
+import { validateCartPayload, computeOrderTotal, generateOrderNumber } from '../_lib/pricing.js';
 import { getTaxConfig } from '../_lib/tax.js';
 import { getRazorpayCredentials, createRazorpayOrder } from '../_lib/razorpay.js';
 import {
@@ -348,9 +348,14 @@ export default async function handler(req, res) {
       billing_address: safeCustomer,
     };
 
-    // COD is unpaid at creation, so it gets its invoice number when it is
-    // marked paid on delivery. An online order is invoiced on verification.
-    const invoiceCols = { invoice_number: generateInvoiceNumber() };
+    // NO invoice columns are written here, for either payment method. An
+    // order is created UNPAID, and an invoice records that money was taken —
+    // so invoice_number and invoiced_at are issued together at the paid
+    // transition (see invoicePatchForPaidTransition in _lib/pricing.js).
+    //
+    // The prepaid branch used to stamp an invoice_number at creation, which
+    // burned a number on every abandoned or failed payment attempt and left
+    // the matching invoiced_at unset.
 
     // ---- Cash on delivery: no Razorpay involved. Recorded as a pending,
     // unpaid order so it still gets a server-computed, auditable amount.
@@ -424,7 +429,6 @@ export default async function handler(req, res) {
       customer: safeCustomer,
       delivery_method: totals.deliveryMethod,
       ...billingCols,
-      ...invoiceCols,
       ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
       ...(userId ? { user_id: userId } : {}),
     };

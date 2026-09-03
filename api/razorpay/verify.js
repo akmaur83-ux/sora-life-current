@@ -28,6 +28,7 @@ import {
   getRazorpayCredentials, verifyPaymentSignature, fetchRazorpayPayment, isCapturedPayment,
 } from '../_lib/razorpay.js';
 import { getSupabaseConfig, findOrderByRazorpayOrderId, updateOrderById, consumeCouponForOrder, setConversionStatus } from '../_lib/supabaseAdmin.js';
+import { invoicePatchForPaidTransition } from '../_lib/pricing.js';
 import { enforceRateLimit } from '../_lib/rateLimit.js';
 
 function fail(res, status, message) {
@@ -148,11 +149,17 @@ export default async function handler(req, res) {
       });
     }
 
+    // The invoice is issued HERE, inside the same conditional write that
+    // flips the order to paid — identical to the webhook, so both settlement
+    // paths produce the same invoice metadata. `unlessPaid` makes this the
+    // single writer: if the webhook won the race this update matches zero
+    // rows, and the number generated for it is discarded, never persisted.
     const paid = await updateOrderById(order.id, {
       status: 'paid',
       payment_status: 'paid',
       razorpay_payment_id: paymentId,
       paid_at: new Date().toISOString(),
+      ...invoicePatchForPaidTransition(order),
     }, sb, { unlessPaid: true });
 
     // The webhook won the race and already settled this order. That is a

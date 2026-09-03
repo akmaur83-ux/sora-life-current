@@ -454,3 +454,33 @@ function randomToken(len) {
   }
   return out;
 }
+
+/**
+ * The invoice columns to attach to an order's PAID transition.
+ *
+ * An invoice is a record that money was taken, so it is issued at the moment
+ * payment is confirmed — never at order creation. Previously the prepaid
+ * branch of create-order stamped an invoice_number onto every pending
+ * Razorpay order, which meant abandoned and failed attempts consumed invoice
+ * numbers, and /verify (the common settlement path) then never wrote an
+ * invoiced_at at all — so most paid orders carried a number with no date.
+ *
+ * Both settlement paths (/api/razorpay/verify and the webhook) call this so
+ * they cannot drift apart.
+ *
+ * Both fields are filled ONLY when missing:
+ *   * a legacy row that already carries an invoice_number keeps it — invoice
+ *     numbers are never reissued or renumbered;
+ *   * a row that already carries an invoiced_at keeps that timestamp.
+ *
+ * Callers must apply the result inside the `unlessPaid` conditional update,
+ * which is what guarantees a single writer: the loser of a /verify-vs-webhook
+ * race matches zero rows, so its generated number is discarded rather than
+ * persisted. Returns {} when both fields are already present.
+ */
+export function invoicePatchForPaidTransition(order, now = new Date()) {
+  return {
+    ...(order?.invoice_number ? {} : { invoice_number: generateInvoiceNumber(now) }),
+    ...(order?.invoiced_at ? {} : { invoiced_at: now.toISOString() }),
+  };
+}

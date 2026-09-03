@@ -753,6 +753,152 @@ await test('E: stale recovery uses the reserved price even when the catalogue pr
 });
 
 // ============================================================
+console.log('\n— M3: prepaid invoice number + date lifecycle —');
+// ============================================================
+//
+// An invoice records that money was taken, so it is issued at the PAID
+// transition and nowhere else. Previously create-order stamped an
+// invoice_number onto every pending Razorpay order (burning numbers on
+// abandoned attempts) while /verify never wrote invoiced_at at all — so
+// orders settled through the browser callback showed a number with no date.
+
+const invoiceBody = () => ({
+  items: [{ id: 'b115', qty: 1 }],
+  delivery: 'std',
+  paymentMethod: 'online',
+  customer: {
+    firstName: 'Asha', lastName: 'K', email: 'a@example.com', phone: '9876543210',
+    address: '12 Rose Lane', city: 'Amritsar', state: 'Punjab', pin: '143001',
+  },
+});
+const INVOICE_PRODUCT = {
+  id: 101, biosash_id: 'b115', name: 'Diabo Juice',
+  original_price: 999, sale_price: 749, discount_percent: 25, is_active: true, stock: true,
+};
+const capturedEntity = (id) => ({ id, order_id: 'order_RZ1', amount: 47200, currency: 'INR' });
+const verifyReq = (payId) => ({
+  method: 'POST', headers: {},
+  body: { razorpay_order_id: 'order_RZ1', razorpay_payment_id: payId, razorpay_signature: sign('order_RZ1', payId) },
+});
+const capturedPayment = (payId) => ({ [payId]: { id: payId, order_id: 'order_RZ1', status: 'captured', amount: 47200 } });
+
+await test('M3.1 a fresh prepaid order is created UNINVOICED', async () => {
+  const w = makeWorld({ products: [INVOICE_PRODUCT] });
+  const r = mockRes();
+  await createOrderHandler({ method: 'POST', headers: { 'idempotency-key': 'inv-create-001' }, body: invoiceBody() }, r);
+  eq(r.statusCode, 200);
+  eq(w.orders.length, 1);
+  eq(w.orders[0].payment_status, 'pending');
+  eq(w.orders[0].invoice_number, undefined, 'no invoice number while unpaid');
+  eq(w.orders[0].invoiced_at, undefined, 'no invoice date while unpaid');
+});
+
+await test('M3.2 /verify paid transition assigns BOTH invoice_number and invoiced_at', async () => {
+  const w = makeWorld({ orders: [PENDING_ORDER], payments: capturedPayment('pay_V10') });
+  const r = mockRes();
+  await verifyHandler(verifyReq('pay_V10'), r);
+  eq(r.statusCode, 200);
+  eq(w.orders[0].payment_status, 'paid');
+  ok(w.orders[0].invoice_number, 'verify must issue an invoice number');
+  ok(w.orders[0].invoiced_at, 'verify must issue an invoice date');
+  ok(/^SL\//.test(w.orders[0].invoice_number), 'uses the shared generator format');
+});
+
+await test('M3.3 webhook paid transition produces the SAME contract', async () => {
+  const w = makeWorld({ orders: [PENDING_ORDER] });
+  await webhookHandler(webhookReq('payment.captured', capturedEntity('pay_W10')), mockRes());
+  eq(w.orders[0].payment_status, 'paid');
+  ok(w.orders[0].invoice_number, 'webhook must issue an invoice number');
+  ok(w.orders[0].invoiced_at, 'webhook must issue an invoice date');
+  ok(/^SL\//.test(w.orders[0].invoice_number));
+});
+
+await test('M3.4 replayed verify preserves the original invoice metadata', async () => {
+  const w = makeWorld({ orders: [PENDING_ORDER], payments: capturedPayment('pay_V11') });
+  await verifyHandler(verifyReq('pay_V11'), mockRes());
+  const num = w.orders[0].invoice_number;
+  const at = w.orders[0].invoiced_at;
+
+  const r2 = mockRes();
+  await verifyHandler(verifyReq('pay_V11'), r2);
+  eq(r2.statusCode, 200);
+  eq(r2.body.alreadyProcessed, true);
+  eq(w.orders[0].invoice_number, num, 'invoice number must not be regenerated');
+  eq(w.orders[0].invoiced_at, at, 'invoice date must not be rewritten');
+});
+
+await test('M3.5 redelivered webhook preserves the original invoice metadata', async () => {
+  const w = makeWorld({ orders: [PENDING_ORDER] });
+  await webhookHandler(webhookReq('payment.captured', capturedEntity('pay_W11')), mockRes());
+  const num = w.orders[0].invoice_number;
+  const at = w.orders[0].invoiced_at;
+
+  await webhookHandler(webhookReq('payment.captured', capturedEntity('pay_W11')), mockRes());
+  eq(w.orders[0].invoice_number, num, 'invoice number must survive redelivery unchanged');
+  eq(w.orders[0].invoiced_at, at, 'invoice date must survive redelivery unchanged');
+});
+
+await test('M3.6 verify racing the webhook yields ONE stable invoice number', async () => {
+  const w = makeWorld({ orders: [PENDING_ORDER], payments: capturedPayment('pay_R1') });
+  const [rv, rw] = await Promise.all([
+    (async () => { const r = mockRes(); await verifyHandler(verifyReq('pay_R1'), r); return r; })(),
+    (async () => { const r = mockRes(); await webhookHandler(webhookReq('payment.captured', capturedEntity('pay_R1')), r); return r; })(),
+  ]);
+  eq(rv.statusCode, 200);
+  eq(rw.statusCode, 200);
+  eq(w.orders.length, 1);
+  eq(w.orders[0].payment_status, 'paid');
+  ok(w.orders[0].invoice_number, 'exactly one invoice number is persisted');
+  ok(w.orders[0].invoiced_at, 'exactly one invoice date is persisted');
+  eq(typeof w.orders[0].invoice_number, 'string');
+});
+
+await test('M3.7 a failed prepaid payment stays uninvoiced', async () => {
+  const w = makeWorld({ orders: [PENDING_ORDER] });
+  const entity = capturedEntity('pay_F1');
+  entity.error_description = 'declined';
+  await webhookHandler(webhookReq('payment.failed', entity), mockRes());
+  eq(w.orders[0].payment_status, 'failed');
+  eq(w.orders[0].invoice_number, undefined, 'a failed order must never hold an invoice number');
+  eq(w.orders[0].invoiced_at, undefined, 'a failed order must never hold an invoice date');
+});
+
+await test('M3.7b a late failed event cannot clear invoice metadata on a paid order', async () => {
+  const w = makeWorld({ orders: [PENDING_ORDER] });
+  await webhookHandler(webhookReq('payment.captured', capturedEntity('pay_W12')), mockRes());
+  const num = w.orders[0].invoice_number;
+  const at = w.orders[0].invoiced_at;
+
+  const stale = capturedEntity('pay_OLD');
+  stale.error_description = 'stale attempt';
+  await webhookHandler(webhookReq('payment.failed', stale), mockRes());
+  eq(w.orders[0].payment_status, 'paid', 'paid state stays monotonic');
+  eq(w.orders[0].invoice_number, num, 'invoice number survives a stale failure');
+  eq(w.orders[0].invoiced_at, at, 'invoice date survives a stale failure');
+});
+
+await test('M3.8 a legacy row keeps its invoice_number and only gains the missing date', async () => {
+  const legacy = { ...PENDING_ORDER, invoice_number: 'SL/2526/LEGACY01' };
+  const w = makeWorld({ orders: [legacy], payments: capturedPayment('pay_L1') });
+  await verifyHandler(verifyReq('pay_L1'), mockRes());
+  eq(w.orders[0].invoice_number, 'SL/2526/LEGACY01', 'historical number is never renumbered');
+  ok(w.orders[0].invoiced_at, 'the missing invoice date is filled at the paid transition');
+});
+
+await test('M3.9 COD orders are unaffected - still created uninvoiced', async () => {
+  const w = makeWorld({ products: [INVOICE_PRODUCT] });
+  const r = mockRes();
+  const body = invoiceBody();
+  body.paymentMethod = 'cod';
+  await createOrderHandler({ method: 'POST', headers: { 'idempotency-key': 'inv-cod-001' }, body }, r);
+  eq(r.statusCode, 200);
+  eq(r.body.paymentMethod, 'cod');
+  eq(w.orders[0].payment_status, 'pending');
+  eq(w.orders[0].invoice_number, undefined, 'COD is uninvoiced at creation, exactly as before');
+  eq(w.orders[0].invoiced_at, undefined);
+});
+
+// ============================================================
 console.log('\n— Coupons —');
 // ============================================================
 
