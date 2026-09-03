@@ -368,19 +368,29 @@ await test('unsupported product and delivery claims are gone', () => {
   }
 });
 
-await test('placeholder policy and journal links are gone', () => {
-  for (const link of [/Shipping & returns/i, /\bJournal\b/, /About Sora Life/i, /\bPrivacy\b/, /\bTerms\b/, /\bCookies\b/]) {
+await test('legacy placeholder links stay gone while real company routes are linked', () => {
+  for (const link of [/\bJournal\b/, /\bCookies\b/, /href=["']#/i]) {
     assert.doesNotMatch(code(footer), link, `placeholder link still present: ${link}`);
+  }
+  for (const path of ['/about', '/contact', '/privacy', '/terms', '/shipping', '/returns']) {
+    assert.match(code(footer), new RegExp(`to=["']${path.replace('/', '\\/')}["']`));
   }
 });
 
-await test('social icon links with no configured account are gone', () => {
-  for (const s of [/Instagram/i, /Facebook/i, /Twitter/i]) assert.doesNotMatch(code(footer), s);
+await test('social links render only from validated configured accounts', () => {
+  const c = code(footer);
+  assert.match(c, /socials\.length > 0/);
+  assert.match(c, /href=\{social\.url\}/);
+  assert.match(c, /socials\.map/);
+  assert.doesNotMatch(c, /href=["']https:\/\/(instagram|facebook|x|twitter)\./i);
 });
 
 await test('remaining footer links all point at real in-app routes', () => {
   const targets = [...code(footer).matchAll(/to=[`"]([^`"{]+)[`"]/g)].map((m) => m[1]);
-  const known = ['/shop', '/account', '/cart', '/wishlist', '/admin/login'];
+  const known = [
+    '/shop', '/account', '/account/orders', '/wishlist', '/account/creator',
+    '/about', '/contact', '/privacy', '/terms', '/shipping', '/returns', '/admin/login',
+  ];
   for (const t of targets) {
     const ok = known.includes(t) || t.startsWith('/category/');
     assert.ok(ok, `unknown footer route: ${t}`);
@@ -388,10 +398,12 @@ await test('remaining footer links all point at real in-app routes', () => {
   assert.ok(targets.length >= 5, 'the footer should still carry its real navigation');
 });
 
-await test('the contact row only renders when contact details are configured', () => {
+await test('the contact row only renders from sanitized configured details', () => {
   const c = code(footer);
-  assert.match(c, /const hasContact = Boolean\(email \|\| phone\)/);
-  assert.match(c, /\{hasContact && \(/);
+  assert.match(c, /const info = companyInfo\(\)/);
+  assert.match(c, /\{\(info\.email \|\| info\.phone\) && \(/);
+  assert.match(c, /mailto:\$\{info\.email\}/);
+  assert.match(c, /telHref\(info\.phone\)/);
 });
 
 await test('the footer trust row states only operational facts', () => {

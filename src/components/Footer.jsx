@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import Logo from './Logo.jsx';
 import { categories } from '../data/categories.js';
-import { contact } from '../lib/settings.js';
+import { branding } from '../lib/settings.js';
+import { companyInfo, socialLinks, telHref } from '../lib/company.js';
 
 // ============================================================
 // Footer.
@@ -10,37 +11,15 @@ import { contact } from '../lib/settings.js';
 // RULE FOR THIS FILE: every link goes somewhere real, and every line is
 // something the business has actually configured. No placeholders.
 //
-// The following were REMOVED rather than left as href="#". A link that
-// silently does nothing is worse than an absent one, and none of these
-// claims were backed by data the storefront holds:
-//
-//   social icons (Instagram / Facebook / Twitter)  no accounts configured
-//   Shipping & returns                             no policy text supplied
-//   Contact us                                     replaced by the real
-//                                                  contact row below
-//   Clean ingredients / Sustainability /
-//   Cruelty-free / Journal / About Sora Life       no page content supplied
-//   Privacy / Terms / Cookies                      no legal text supplied
-//   "Clean, transparent formulas"                  unverifiable claim
-//   "Dermatologist & lab tested"                   no certification on record
-//   "Carbon-neutral delivery"                      no such programme exists
-//   "Easy 15-day returns"                          no returns policy defined
-//   "A demo storefront - placeholder products
-//    for design preview."                          untrue in production
-//
-// The trust row now states only operational facts that are true by
-// construction: shipping options and payment security are implemented in
-// api/_lib/pricing.js and the Razorpay flow; order tracking exists in the
-// account area.
-//
-// The contact row renders ONLY when an admin has set a phone or email in
-// Settings, so it can never show an empty promise. To restore any removed
-// entry, supply the real destination or the real business fact first.
+// The information architecture below intentionally contains only real routes.
+// Optional contact/social details are sanitized and render only when an admin
+// has configured them. The trust row states operational facts implemented by
+// server pricing, checkout and customer order history — not marketing claims.
 // ============================================================
 export default function Footer() {
-  const email = typeof contact?.email === 'string' ? contact.email.trim() : '';
-  const phone = typeof contact?.phone === 'string' ? contact.phone.trim() : '';
-  const hasContact = Boolean(email || phone);
+  const info = companyInfo();
+  const socials = socialLinks(info);
+  const name = branding?.siteName || 'SORA LIFE';
 
   return (
     <footer className="ftr">
@@ -49,31 +28,53 @@ export default function Footer() {
           <div className="ftr__brand">
             <Logo light />
             <p>A marketplace for wellness, personal care and everyday essentials.</p>
+            {(info.email || info.phone) && (
+              <div className="ftr__contact" aria-label="Store contact details">
+                {info.email && <a href={`mailto:${info.email}`}>{info.email}</a>}
+                {info.phone && <a href={telHref(info.phone)}>{info.phone}</a>}
+              </div>
+            )}
+            {socials.length > 0 && (
+              <div className="ftr__social" aria-label="Official social profiles">
+                {socials.map((social) => (
+                  <a key={social.key} href={social.url} target="_blank" rel="noopener noreferrer nofollow"
+                    aria-label={social.label} className="ftr__social-link">
+                    <Icon name={social.icon} size={17} stroke={1.6} />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="ftr__col">
             <h4>Shop</h4>
-            {categories.slice(0, 6).map((c) => (
+            <Link to="/shop">All products</Link>
+            {categories.slice(0, 3).map((c) => (
               <Link key={c.slug} to={`/category/${c.slug}`}>{c.name}</Link>
             ))}
-            <Link to="/shop">All products</Link>
           </div>
 
           <div className="ftr__col">
-            <h4>Care</h4>
+            <h4>Account</h4>
             <Link to="/account">My account</Link>
-            <Link to="/account">Track my order</Link>
-            <Link to="/cart">My cart</Link>
+            <Link to="/account/orders">Orders</Link>
             <Link to="/wishlist">Wishlist</Link>
           </div>
 
-          {hasContact && (
-            <div className="ftr__col">
-              <h4>Contact</h4>
-              {email && <a href={`mailto:${email}`}>{email}</a>}
-              {phone && <a href={`tel:${phone.replace(/\s+/g, '')}`}>{phone}</a>}
-            </div>
-          )}
+          <div className="ftr__col">
+            <h4>Company</h4>
+            <Link to="/about">About {name}</Link>
+            <Link to="/contact">Contact &amp; help</Link>
+            <Link to="/account/creator">Creator Program</Link>
+          </div>
+
+          <div className="ftr__col">
+            <h4>Legal</h4>
+            <Link to="/privacy">Privacy</Link>
+            <Link to="/terms">Terms</Link>
+            <Link to="/shipping">Shipping</Link>
+            <Link to="/returns">Returns &amp; refunds</Link>
+          </div>
         </div>
 
         <div className="ftr__trust">
@@ -83,7 +84,7 @@ export default function Footer() {
         </div>
 
         <div className="ftr__bottom">
-          <p>© {new Date().getFullYear()} Sora Life.</p>
+          <p>© {new Date().getFullYear()} {info.legalName || name}.</p>
           <div className="ftr__legal">
             <Link to="/admin/login" className="ftr__admin-link">Admin Login</Link>
           </div>

@@ -9,6 +9,9 @@ import Cart from './pages/Cart.jsx';
 import Checkout from './pages/Checkout.jsx';
 import Account from './pages/Account.jsx';
 import Wishlist from './pages/Wishlist.jsx';
+import About from './pages/About.jsx';
+import Contact from './pages/Contact.jsx';
+import Legal from './pages/Legal.jsx';
 import Passport from './pages/Passport.jsx';
 import Invoice from './pages/Invoice.jsx';
 import CreatorPortal from './pages/CreatorPortal.jsx';
@@ -127,6 +130,12 @@ export default function App() {
         <Route path="/account" element={<Account />} />
         <Route path="/account/:tab" element={<Account />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/privacy" element={<Legal doc="privacy" />} />
+        <Route path="/terms" element={<Legal doc="terms" />} />
+        <Route path="/shipping" element={<Legal doc="shipping" />} />
+        <Route path="/returns" element={<Legal doc="returns" />} />
         <Route path="*" element={<NotFound />} />
       </Route>
       </Routes>
