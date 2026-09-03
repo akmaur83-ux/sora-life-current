@@ -49,7 +49,7 @@ const CategoryRail = component('../src/components/CategoryRail.jsx', 'CategoryRa
 const ProductImage = () => h('span');
 const ShopByCategory = component('../src/components/HomeDiscoveryRails.jsx', 'ShopByCategory',
   { Link, Icon, ProductImage, selectCategoryCards, selectConcernCards: () => [] });
-const HomeCategoryStrip = component('../src/components/HomeCategoryStrip.jsx', 'HomeCategoryStrip', { categories, ShopByCategory, HomeVisualLayers });
+const HomeCategoryStrip = component('../src/components/HomeCategoryStrip.jsx', 'HomeCategoryStrip', { categories, CategoryRail, HomeVisualLayers });
 const defaults = appearance.sanitizeHomepageVisuals();
 const promo = (id, extra = {}) => ({ id, title: `Promotion ${id}`, type: 'poster', placements: ['home'], is_active: true, sort_order: 0, image_url: `/public/${id}.png`, ...extra });
 const offers = (rows, config = defaults.offers) => { applyPromotions(rows); return renderToStaticMarkup(h(HomeOffers, { appearance: config })); };
@@ -87,19 +87,16 @@ await check('mobile extra posters expose discoverable controls', () => assert.ma
 
 const categoryLinks = (html) => [...html.matchAll(/href="(\/category\/[^\"]+)"/g)].map((m) => m[1]);
 const originalLinks = categoryLinks(renderToStaticMarkup(h(CategoryRail)));
-// The marquee duplicated each link; the card rail lists each category once,
-// so reachability is now asserted as a set rather than a sequence.
-await check('category strip still reaches every category CategoryRail did', () =>
-  assert.deepEqual([...new Set(categoryLinks(strip()))].sort(), [...new Set(originalLinks)].sort()));
-await check('every real category remains reachable', () => { const l = categoryLinks(strip()); for (const c of categories) assert.ok(l.includes(`/category/${c.slug}`)); });
+await check('category strip keeps every existing link, including marquee copies', () => assert.deepEqual(categoryLinks(strip()), originalLinks));
+await check('every real category remains reachable', () => { for (const c of categories) assert.ok(originalLinks.includes(`/category/${c.slug}`)); });
 await check('no configured category background works without an image layer', () => { const html = strip(); assert.match(html, /Shop by category/); assert.doesNotMatch(html, /hp-visual-layer--background/); });
 await check('configured background retains all category links and image sources', () => {
   const html = strip({ ...defaults.categoryStrip, enabled: true, imageUrl: '/public/strip.png', imageSize: 'contain' });
-  assert.match(html, /src="\/public\/strip.png"/); assert.match(html, /object-fit:contain/); assert.deepEqual([...new Set(categoryLinks(html))].sort(), [...new Set(originalLinks)].sort());
+  assert.match(html, /src="\/public\/strip.png"/); assert.match(html, /object-fit:contain/); assert.deepEqual(categoryLinks(html), originalLinks);
 });
 await check('disabling category background suppresses decoration layers', () => assert.doesNotMatch(strip({ ...defaults.categoryStrip, imageUrl: '/public/strip.png', leftImage: '/public/left.png' }), /hp-visual-layers/));
 await check('fewer than three categories leave no empty section', () => {
-  const C = component('../src/components/HomeCategoryStrip.jsx', 'HomeCategoryStrip', { categories: [], ShopByCategory, HomeVisualLayers });
+  const C = component('../src/components/HomeCategoryStrip.jsx', 'HomeCategoryStrip', { categories: [], CategoryRail, HomeVisualLayers });
   assert.equal(renderToStaticMarkup(h(C, { appearance: defaults.categoryStrip })), '');
 });
 await check('legacy settings without visuals receive complete safe defaults', () => assert.deepEqual(appearance.sanitizeHomepageVisuals({}), defaults));

@@ -203,13 +203,39 @@ test('D17 the footer states the marketplace positioning without inventing claims
     'no invented history, counts, certifications or guarantees');
 });
 
-test('D18 one category section, not two near-identical rails', () => {
+test('D18 two distinct category experiences, each rendered once', () => {
+  // A: the circular quick-nav rail under the hero. B: the editorial browse
+  // further down. They are deliberately different sections, not duplicates,
+  // so each must appear exactly once and neither may replace the other.
   const strip = src('../src/components/HomeCategoryStrip.jsx');
-  assert.match(strip, /<ShopByCategory \/>/, 'the strip renders the large cards');
-  assert.doesNotMatch(strip, /<CategoryRail \/>/, 'the small circular rail is no longer rendered here');
+  assert.match(strip, /<CategoryRail \/>/, 'the quick-nav rail keeps its original circular implementation');
+  assert.doesNotMatch(strip, /ShopByCategory/, 'the editorial rail does not live inside the quick-nav strip');
+
   const home = src('../src/pages/Home.jsx');
-  assert.equal((home.match(/<HomeCategoryStrip/g) || []).length, 1, 'exactly one category section');
+  assert.equal((home.match(/<HomeCategoryStrip/g) || []).length, 1, 'exactly one quick-nav rail');
+  assert.equal((home.match(/<ShopByCategory\s*\/>/g) || []).length, 1, 'exactly one editorial category rail');
   assert.equal((home.match(/<ShopByConcerns/g) || []).length, 1, 'exactly one concerns section');
+
+  // Order: hero -> quick-nav rail ... editorial category -> concerns.
+  const iStrip = home.indexOf('<HomeCategoryStrip');
+  const iOffers = home.indexOf('<HomeOffers');
+  const iCat = home.indexOf('<ShopByCategory');
+  const iCon = home.indexOf('<ShopByConcerns');
+  assert.ok(iStrip < iOffers, 'the quick-nav rail sits directly under the hero, above offers');
+  assert.ok(iOffers < iCat, 'the editorial rail sits below offers, not beside the quick-nav rail');
+  assert.ok(iCat < iCon, 'Shop by Category immediately precedes Shop by Concerns');
+});
+
+test('D25 the discovery sections stay compact, with no wasted space', () => {
+  const css = src('../src/styles/v2-home-discovery.css');
+  const pad = css.match(/\.hd-section \{[^}]*padding-block: (\d+)px (\d+)px/);
+  assert.ok(pad, 'the section must declare its own vertical padding');
+  assert.ok(Number(pad[1]) <= 24 && Number(pad[2]) <= 24, 'mobile section padding stays within 16-24px');
+  assert.match(css, /\.hd-section > \.v2-wrap \{ padding-inline: 16px; \}/, 'tight horizontal gutter on mobile');
+  assert.match(css, /\.hd-section \+ \.hd-section \{ margin-top: 0; \}/,
+    'the pair reads as one block — no band of page ground between them');
+  assert.doesNotMatch(css, /min-height:\s*\d/, 'no min-height may pad the section out');
+  assert.doesNotMatch(css, /margin-top:\s*-/, 'spacing is fixed at the cause, never with negative margins');
 });
 
 console.log('\n— Admin-assigned discovery artwork —');

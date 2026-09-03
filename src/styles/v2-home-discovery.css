@@ -7,10 +7,16 @@
    five on a desktop. Scoped to .hd-* so no other homepage section is touched.
    ============================================================ */
 
-.hd-section { background: #fff; padding-block: 34px; }
+.hd-section { background: #fff; padding-block: 20px 16px; }
+/* The two rails are a pair and read as one block, so the generic .v2-sec
+   margin between them is collapsed — it was showing a band of page ground. */
+.hd-section + .hd-section { margin-top: 0; }
+/* The shared .v2-wrap gutter is wider than these rails want on a phone; this
+   keeps the tiles close to the screen edge like the reference. */
+.hd-section > .v2-wrap { padding-inline: 16px; }
 
 .hd-title {
-  margin: 0 0 18px;
+  margin: 0 0 14px;
   font-family: var(--slv2-sans, var(--font-sans));
   font-size: clamp(26px, 6.4vw, 34px);
   line-height: 1.12;
@@ -101,7 +107,7 @@
 /* One quiet line under the tile. Nothing else. */
 .hd-tile__caption {
   display: block;
-  margin-top: 10px;
+  margin-top: 8px;
   text-align: center;
   font-family: var(--slv2-sans, var(--font-sans));
   font-size: 14px;
@@ -116,14 +122,16 @@
   align-items: center;
   justify-content: center;
   gap: 14px;
-  margin-top: 22px;
+  /* cards -> controls, and the row is the last thing in the section: its own
+     height plus the 20px section padding is all that follows it. */
+  margin-top: 14px;
 }
 .hd-nav__btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   flex: none;
   padding: 0;
   border: 0;
@@ -154,8 +162,9 @@
 }
 
 @media (min-width: 768px) {
-  .hd-section { padding-block: 46px; }
-  .hd-title { margin-bottom: 22px; }
+  .hd-section { padding-block: 34px 28px; }
+  .hd-section > .v2-wrap { padding-inline: 0; }
+  .hd-title { margin-bottom: 18px; }
   .hd-rail { grid-auto-columns: calc((100% - 3 * 16px) / 3.4); }
   .hd-tile__caption { font-size: 15px; margin-top: 12px; }
   .hd-nav__track { flex-basis: 240px; }
