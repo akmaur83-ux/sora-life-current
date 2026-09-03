@@ -192,6 +192,9 @@ export async function updateOrderById(id, patch, cfg, opts = {}) {
     // explicitly rather than silently refusing to update them.
     filters.push('or=(payment_status.is.null,payment_status.neq.paid)');
   }
+  if (opts.ifRazorpayOrderMissing) {
+    filters.push('razorpay_order_id=is.null');
+  }
   const rows = await rest(`orders?${filters.join('&')}`, {
     ...cfg,
     method: 'PATCH',

@@ -20,6 +20,7 @@
 // The fake Supabase/Razorpay world lives in one module so this suite and
 // the concurrency stress suite cannot drift apart. Importing it installs
 // the fake environment; no real credentials are involved.
+import { readFileSync } from 'node:fs';
 import {
   makeWorld, mockRes, sign, webhookReq, PENDING_ORDER, KEY_SECRET, WEBHOOK_SECRET,
 } from './lib/payment-test-harness.mjs';
@@ -28,6 +29,7 @@ const { computeOrderTotal, validateCartPayload, normalizeCartLines } = await imp
 const verifyHandler = (await import('../api/razorpay/verify.js')).default;
 const webhookHandler = (await import('../api/razorpay/webhook.js')).default;
 const createOrderHandler = (await import('../api/razorpay/create-order.js')).default;
+const checkoutSource = readFileSync(new URL('../src/pages/Checkout.jsx', import.meta.url), 'utf8');
 
 let passed = 0, failed = 0;
 let currentTest = '(startup)';
@@ -547,6 +549,207 @@ await test('COD stock is revalidated server-side', async () => {
   await createOrderHandler({ method: 'POST', headers: {}, body: codBody({ items: [{ id: 'b115', qty: 7, variantId: 'v250' }] }) }, r);
   eq(r.statusCode, 400, 'over-stock COD must be rejected');
   eq(w.orders.length, 0);
+});
+
+// ============================================================
+console.log('\n— Prepaid order idempotency + Checkout contract —');
+// ============================================================
+
+const onlineBody = (overrides = {}) => ({
+  items: [{ id: 'b115', qty: 1 }],
+  delivery: 'std',
+  paymentMethod: 'online',
+  customer: {
+    firstName: 'Asha', lastName: 'K', email: 'a@example.com', phone: '9876543210',
+    address: '12 Rose Lane', city: 'Amritsar', state: 'Punjab', pin: '143001',
+  },
+  ...overrides,
+});
+
+const ONLINE_PRODUCT = {
+  id: 101, biosash_id: 'b115', name: 'Diabo Juice',
+  original_price: 999, sale_price: 749, discount_percent: 25, is_active: true, stock: true,
+};
+
+const ageReservation = (order) => {
+  const stale = new Date(Date.now() - 20_000).toISOString();
+  order.created_at = stale;
+  order.updated_at = stale;
+};
+
+const reservedPrepaidOrder = (key, ageMs = 0) => {
+  const timestamp = new Date(Date.now() - ageMs).toISOString();
+  return {
+    id: `ord_${key}`,
+    order_number: `SORA-${key.toUpperCase()}`,
+    status: 'pending', payment_status: 'pending', payment_method: 'razorpay',
+    amount_paise: 74900, currency: 'INR', idempotency_key: key,
+    items: [{ biosash_id: 'b115', name: 'Diabo Juice', qty: 1, unit_price: 749, line_total: 749 }],
+    billing: { subtotal: 749, shipping: 0, itemTotal: 749, couponDiscount: 0 },
+    customer: onlineBody().customer, delivery_method: 'std',
+    created_at: timestamp, updated_at: timestamp,
+  };
+};
+
+await test('sequential prepaid submits reuse one DB order and one Razorpay order', async () => {
+  const w = makeWorld({ products: [ONLINE_PRODUCT] });
+  const req = () => ({ method: 'POST', headers: { 'idempotency-key': 'online-submit-123' }, body: onlineBody() });
+  const r1 = mockRes(); await createOrderHandler(req(), r1);
+  const r2 = mockRes(); await createOrderHandler(req(), r2);
+
+  eq(r1.statusCode, 200);
+  eq(r2.statusCode, 200);
+  eq(w.orders.length, 1, 'one local order');
+  eq(w.calls.razorpayOrders, 1, 'one external Razorpay order');
+  eq(w.orders[0].idempotency_key, 'online-submit-123', 'key persisted on prepaid row');
+  eq(r2.body.orderNumber, r1.body.orderNumber, 'replay returns the winner');
+  eq(r2.body.razorpayOrderId, r1.body.razorpayOrderId, 'replay returns the same gateway order');
+  eq(r2.body.duplicate, true);
+});
+
+await test('fresh and replay prepaid payloads both satisfy Checkout Razorpay options', async () => {
+  const w = makeWorld({ products: [ONLINE_PRODUCT] });
+  const req = () => ({ method: 'POST', headers: { 'idempotency-key': 'online-shape-123' }, body: onlineBody() });
+  const fresh = mockRes(); await createOrderHandler(req(), fresh);
+  const replay = mockRes(); await createOrderHandler(req(), replay);
+
+  for (const [label, response] of [['fresh', fresh.body], ['replay', replay.body]]) {
+    eq(response.keyId, process.env.RAZORPAY_KEY_ID, `${label} uses configured public key id`);
+    eq(response.amountPaise, w.orders[0].amount_paise, `${label} uses persisted paise amount`);
+    eq(response.currency, w.orders[0].currency, `${label} uses persisted currency`);
+    eq(response.razorpayOrderId, w.orders[0].razorpay_order_id, `${label} uses persisted Razorpay order id`);
+    ok(Number.isInteger(response.amountPaise) && response.amountPaise > 0, `${label} amount is Checkout-ready`);
+    ok(typeof response.keyId === 'string' && typeof response.razorpayOrderId === 'string', `${label} ids are Checkout-ready`);
+  }
+
+  for (const contract of [
+    /key:\s*created\.keyId/,
+    /order_id:\s*created\.razorpayOrderId/,
+    /amount:\s*created\.amountPaise/,
+    /currency:\s*created\.currency/,
+  ]) ok(contract.test(checkoutSource), `Checkout consumer must retain ${contract}`);
+});
+
+await test('A: failed Razorpay creation leaves one reservation that a stale retry adopts', async () => {
+  const w = makeWorld({ products: [ONLINE_PRODUCT] });
+  w.failNextRazorpayOrderCreate = true;
+  const req = () => ({ method: 'POST', headers: { 'idempotency-key': 'online-create-fail' }, body: onlineBody() });
+
+  const first = mockRes(); await createOrderHandler(req(), first);
+  eq(first.statusCode, 500, 'first gateway attempt fails');
+  eq(w.orders.length, 1, 'reservation remains the only local row');
+  eq(w.razorpayOrders.length, 0, 'failed gateway attempt created no payable order');
+
+  ageReservation(w.orders[0]);
+  const retry = mockRes(); await createOrderHandler(req(), retry);
+  eq(retry.statusCode, 200, 'stale retry recovers');
+  eq(w.orders.length, 1, 'recovery reuses the local row');
+  eq(w.razorpayOrders.length, 1, 'one successful gateway order exists');
+  eq(retry.body.razorpayOrderId, w.orders[0].razorpay_order_id);
+});
+
+await test('A2: stale adoption gateway failure is sanitized and remains recoverable', async () => {
+  const key = 'online-stale-create-fail';
+  const w = makeWorld({
+    products: [ONLINE_PRODUCT],
+    orders: [reservedPrepaidOrder(key, 20_000)],
+  });
+  w.failNextRazorpayOrderCreate = true;
+  const req = () => ({ method: 'POST', headers: { 'idempotency-key': key }, body: onlineBody() });
+
+  const failed = mockRes(); await createOrderHandler(req(), failed);
+  eq(failed.statusCode, 500, 'adoption failure is handled by the outer handler catch');
+  eq(failed.body?.error, 'We could not start your payment. Please try again.');
+  const publicFailure = JSON.stringify(failed.body);
+  ok(!/simulated|stack|razorpay order failure/i.test(publicFailure), 'response leaks no internal error or stack detail');
+  eq(w.orders.length, 1, 'failure leaves the original reservation in place');
+  ok(!w.orders[0].razorpay_order_id, 'failed reservation remains unlinked and adoptable');
+
+  const retry = mockRes(); await createOrderHandler(req(), retry);
+  eq(retry.statusCode, 200, 'a later same-key retry adopts the unchanged stale reservation');
+  eq(w.orders.length, 1, 'recovery creates no second local row');
+  eq(retry.body.razorpayOrderId, w.orders[0].razorpay_order_id);
+});
+
+await test('B: failed Razorpay id writeback is recovered into the same local row', async () => {
+  const w = makeWorld({ products: [ONLINE_PRODUCT] });
+  w.failNextOrderPatch = true;
+  const req = () => ({ method: 'POST', headers: { 'idempotency-key': 'online-link-fail' }, body: onlineBody() });
+
+  const first = mockRes(); await createOrderHandler(req(), first);
+  eq(first.statusCode, 500, 'first writeback fails');
+  eq(w.orders.length, 1, 'writeback failure creates no second local row');
+  ok(!w.orders[0].razorpay_order_id, 'reservation remains unlinked');
+
+  ageReservation(w.orders[0]);
+  const retry = mockRes(); await createOrderHandler(req(), retry);
+  eq(retry.statusCode, 200, 'stale retry links a recoverable gateway order');
+  eq(w.orders.length, 1, 'same local row retained');
+  eq(retry.body.razorpayOrderId, w.orders[0].razorpay_order_id);
+});
+
+await test('C: a genuinely fresh prepaid reservation stays in-flight and returns 409', async () => {
+  const key = 'online-fresh-reservation';
+  const w = makeWorld({ orders: [reservedPrepaidOrder(key)] });
+  const res = mockRes();
+  await createOrderHandler({ method: 'POST', headers: { 'idempotency-key': key }, body: onlineBody() }, res);
+  eq(res.statusCode, 409, 'fresh reservation is not stolen');
+  eq(w.calls.razorpayOrders, 0, 'no competing gateway order is created');
+  eq(w.orders.length, 1);
+});
+
+await test('D: two stale adopters both replay the one Razorpay id that wins the guarded link', async () => {
+  const key = 'online-stale-race';
+  const w = makeWorld({ orders: [reservedPrepaidOrder(key, 20_000)] });
+  const req = () => ({ method: 'POST', headers: { 'idempotency-key': key }, body: onlineBody() });
+  const [a, b] = await Promise.all([
+    (async () => { const r = mockRes(); await createOrderHandler(req(), r); return r; })(),
+    (async () => { const r = mockRes(); await createOrderHandler(req(), r); return r; })(),
+  ]);
+
+  eq(a.statusCode, 200);
+  eq(b.statusCode, 200);
+  eq(w.orders.length, 1, 'stale adoption never inserts another local row');
+  eq(a.body.razorpayOrderId, b.body.razorpayOrderId, 'both callers receive the guarded winner');
+  eq(a.body.razorpayOrderId, w.orders[0].razorpay_order_id, 'returned id is the persisted winner');
+});
+
+await test('D2: a stale adopter that loses the guarded link replays the persisted winner', async () => {
+  const key = 'online-stale-cas-loss';
+  const winnerId = 'order_persisted_winner';
+  const w = makeWorld({ orders: [reservedPrepaidOrder(key, 20_000)] });
+  let loserGatewayId = null;
+  w.beforeOrderPatch = async () => {
+    loserGatewayId = w.razorpayOrders.at(-1)?.id || null;
+    w.orders[0].razorpay_order_id = winnerId;
+    w.orders[0].updated_at = new Date().toISOString();
+  };
+
+  const res = mockRes();
+  await createOrderHandler({ method: 'POST', headers: { 'idempotency-key': key }, body: onlineBody() }, res);
+
+  eq(res.statusCode, 200);
+  ok(loserGatewayId && loserGatewayId !== winnerId, 'test creates a distinct losing gateway id');
+  eq(w.orders[0].razorpay_order_id, winnerId, 'guarded loser does not overwrite the persisted winner');
+  eq(res.body.razorpayOrderId, winnerId, 'response replays the winner persisted by the competing adopter');
+  ok(res.body.razorpayOrderId !== loserGatewayId, 'loser gateway id is never returned');
+});
+
+await test('E: stale recovery uses the reserved price even when the catalogue price changes', async () => {
+  const w = makeWorld({ products: [ONLINE_PRODUCT] });
+  w.failNextRazorpayOrderCreate = true;
+  const req = () => ({ method: 'POST', headers: { 'idempotency-key': 'online-price-change' }, body: onlineBody() });
+  const first = mockRes(); await createOrderHandler(req(), first);
+  eq(first.statusCode, 500);
+  eq(w.orders[0].amount_paise, 74900, 'original authoritative amount is reserved');
+
+  w.products[0].sale_price = 1;
+  ageReservation(w.orders[0]);
+  const retry = mockRes(); await createOrderHandler(req(), retry);
+  eq(retry.statusCode, 200);
+  eq(w.razorpayOrders.at(-1).amount, 74900, 'gateway receives persisted amount, not the new ₹1 price');
+  eq(retry.body.amountPaise, 74900, 'Checkout receives the same persisted amount');
+  eq(w.orders.length, 1);
 });
 
 // ============================================================

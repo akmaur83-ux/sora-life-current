@@ -215,6 +215,30 @@ await race('concurrent COD submits with one coupon consume it once', async () =>
   eq(w.coupons[0].used_count, 1, 'coupon consumed once, not once per submit');
 });
 
+await race('concurrent prepaid submits with one key create one DB and one Razorpay order', async () => {
+  const w = jitter(makeWorld({ products: [PRODUCT] }));
+  const req = () => ({
+    method: 'POST', headers: { 'idempotency-key': 'online-race-key-1' },
+    body: { ...COD_BODY, paymentMethod: 'online' },
+  });
+  const [r1, r2] = await Promise.all([
+    (async () => { const r = mockRes(); await createOrderHandler(req(), r); return r; })(),
+    (async () => { const r = mockRes(); await createOrderHandler(req(), r); return r; })(),
+  ]);
+
+  eq(w.orders.length, 1, 'exactly one local order may exist');
+  eq(w.calls.razorpayOrders, 1, 'exactly one Razorpay order may be created');
+  eq(r1.statusCode, 200, 'first caller succeeds');
+  eq(r2.statusCode, 200, 'racing caller receives the completed replay');
+  eq(r1.body?.orderNumber, r2.body?.orderNumber, 'both callers see the same local order');
+  eq(r1.body?.razorpayOrderId, r2.body?.razorpayOrderId, 'both callers see the same Razorpay order');
+  for (const response of [r1.body, r2.body]) {
+    eq(response?.keyId, process.env.RAZORPAY_KEY_ID, 'Checkout key id is present');
+    eq(response?.amountPaise, 74900, 'Checkout paise amount is present');
+    eq(response?.currency, 'INR', 'Checkout currency is present');
+  }
+});
+
 console.log(`\n  (${handlerLogs} expected handler log lines captured, not printed)`);
 console.log(`\n${passed} passed, ${failed} failed  (${ROUNDS} rounds each)\n`);
 

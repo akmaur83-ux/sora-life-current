@@ -44,10 +44,12 @@ export function makeWorld(seed = {}) {
     products: seed.products ? structuredClone(seed.products) : [],
     variants: seed.variants ? structuredClone(seed.variants) : [],
     payments: seed.payments ? structuredClone(seed.payments) : {},
+    razorpayOrders: [],
     // Fault injection + interleaving hooks.
     failNextOrderPatch: false,
+    failNextRazorpayOrderCreate: false,
     beforeOrderPatch: null,
-    calls: { orderPatches: 0, txInserts: 0, consumeCoupon: 0, paymentLookups: 0 },
+    calls: { orderPatches: 0, txInserts: 0, consumeCoupon: 0, paymentLookups: 0, razorpayOrders: 0 },
   };
 
   const json = (status, body) => new Response(JSON.stringify(body ?? null), {
@@ -71,7 +73,14 @@ export function makeWorld(seed = {}) {
         return json(200, p);
       }
       if (url.pathname === '/v1/orders' && method === 'POST') {
-        return json(200, { id: `order_fake_${world.orders.length + 1}`, amount: body.amount });
+        world.calls.razorpayOrders += 1;
+        if (world.failNextRazorpayOrderCreate) {
+          world.failNextRazorpayOrderCreate = false;
+          return json(500, { error: { description: 'simulated Razorpay order failure' } });
+        }
+        const order = { id: `order_fake_${world.calls.razorpayOrders}`, ...body };
+        world.razorpayOrders.push(order);
+        return json(200, order);
       }
       throw new Error(`unhandled razorpay call: ${method} ${url.pathname}`);
     }
@@ -134,7 +143,13 @@ export function makeWorld(seed = {}) {
           && world.orders.some((o) => o.idempotency_key === body.idempotency_key)) {
         return json(409, { code: '23505', message: 'duplicate key value violates unique constraint' });
       }
-      const row = { id: `ord_${world.orders.length + 1}`, ...body };
+      const now = new Date().toISOString();
+      const row = {
+        id: `ord_${world.orders.length + 1}`,
+        created_at: body.created_at || now,
+        updated_at: body.updated_at || now,
+        ...body,
+      };
       world.orders.push(row);
       return json(201, [row]);
     }
@@ -160,8 +175,11 @@ export function makeWorld(seed = {}) {
       const id = (q.get('id') || '').replace('eq.', '');
       // The `unlessPaid` guard is expressed as an `or=` filter.
       const guarded = (q.get('or') || '').includes('payment_status');
+      const razorpayMissing = q.get('razorpay_order_id') === 'is.null';
       const hits = world.orders.filter(
-        (o) => o.id === id && (!guarded || o.payment_status !== 'paid')
+        (o) => o.id === id
+          && (!guarded || o.payment_status !== 'paid')
+          && (!razorpayMissing || !o.razorpay_order_id)
       );
       for (const row of hits) Object.assign(row, body);
       return json(200, structuredClone(hits));
@@ -191,4 +209,3 @@ export function webhookReq(event, entity) {
   const signature = crypto.createHmac('sha256', WEBHOOK_SECRET).update(raw, 'utf8').digest('hex');
   return { method: 'POST', headers: { 'x-razorpay-signature': signature }, body: raw };
 }
-

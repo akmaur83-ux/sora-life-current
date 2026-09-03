@@ -18,7 +18,7 @@ import { getRazorpayCredentials, createRazorpayOrder } from '../_lib/razorpay.js
 import {
   getSupabaseConfig, fetchProductsForCart, insertOrder, getUserIdFromToken,
   fetchVariantsForCart, fetchCouponByCode, recordConversion,
-  findOrderByIdempotencyKey, consumeCouponForOrder,
+  findOrderByIdempotencyKey, consumeCouponForOrder, updateOrderById,
 } from '../_lib/supabaseAdmin.js';
 import { enforceRateLimit } from '../_lib/rateLimit.js';
 import { computeConversionBase, readVisitorId } from '../_lib/attribution.js';
@@ -96,6 +96,137 @@ function readIdempotencyKey(req, body) {
   return /^[A-Za-z0-9_-]{8,100}$/.test(clean) ? clean : null;
 }
 
+const PREPAID_RESERVATION_STALE_MS = 15_000;
+const PREPAID_REPLAY_DELAYS_MS = [0, 10, 25, 50, 100, 200];
+
+function isStalePrepaidReservation(order, now = Date.now()) {
+  const timestamp = Date.parse(order?.updated_at || order?.created_at || '');
+  return Number.isFinite(timestamp) && now - timestamp >= PREPAID_RESERVATION_STALE_MS;
+}
+
+/**
+ * A prepaid request reserves its idempotency key in the local order row
+ * before calling Razorpay. A concurrent caller can therefore observe the
+ * row while the winning request is still attaching its Razorpay order id.
+ * Wait briefly for that write instead of creating a second gateway order.
+ */
+async function waitForPrepaidOrder(existing, idempotencyKey, sb) {
+  let current = existing;
+  for (const delayMs of PREPAID_REPLAY_DELAYS_MS) {
+    if (current?.payment_method === 'cod' || current?.razorpay_order_id) return current;
+    if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
+    else await Promise.resolve();
+    current = await findOrderByIdempotencyKey(idempotencyKey, sb) || current;
+  }
+  return current;
+}
+
+async function createRazorpayOrderFromPersisted(order, rz) {
+  const amountPaise = Number(order?.amount_paise);
+  const orderNumber = typeof order?.order_number === 'string' ? order.order_number : '';
+  const currency = (typeof order?.currency === 'string' && order.currency.trim()) || 'INR';
+  if (!Number.isInteger(amountPaise) || amountPaise <= 0 || !orderNumber) {
+    throw new Error('Persisted prepaid order is not payable.');
+  }
+  return createRazorpayOrder({
+    amountPaise,
+    currency,
+    receipt: orderNumber,
+    notes: { order_number: orderNumber },
+    keyId: rz.keyId,
+    keySecret: rz.keySecret,
+  });
+}
+
+/**
+ * Attach one gateway order with a compare-and-set update. If another stale
+ * adopter linked first, its id is authoritative and this caller replays it;
+ * the losing gateway order is never returned to a customer.
+ */
+async function linkRazorpayOrder(order, razorpayOrderId, idempotencyKey, sb) {
+  try {
+    const linked = await updateOrderById(
+      order.id,
+      { razorpay_order_id: razorpayOrderId },
+      sb,
+      { ifRazorpayOrderMissing: true },
+    );
+    if (linked?.razorpay_order_id) return linked;
+  } catch (err) {
+    // A response can be lost after Postgres committed. Re-read before
+    // treating the writeback as failed, so an already-linked winner survives.
+    const winner = await findOrderByIdempotencyKey(idempotencyKey, sb);
+    if (winner?.razorpay_order_id) return winner;
+    throw err;
+  }
+
+  const winner = await findOrderByIdempotencyKey(idempotencyKey, sb);
+  if (winner?.razorpay_order_id) return winner;
+  throw new Error('Razorpay order could not be linked to the local order.');
+}
+
+async function adoptStalePrepaidOrder(order, idempotencyKey, sb, rz) {
+  const gatewayOrder = await createRazorpayOrderFromPersisted(order, rz);
+  return linkRazorpayOrder(order, gatewayOrder.id, idempotencyKey, sb);
+}
+
+function replayPayload(order, rz) {
+  const paymentMethod = order.payment_method === 'cod' ? 'cod' : 'razorpay';
+  const payload = {
+    paymentMethod,
+    orderNumber: order.order_number,
+    amount: Number(order.amount_paise) / 100,
+    subtotal: order.billing?.subtotal ?? null,
+    shipping: order.billing?.shipping ?? null,
+    breakdown: order.billing ?? null,
+    duplicate: true,
+  };
+
+  if (paymentMethod === 'razorpay') {
+    payload.keyId = rz.keyId;
+    payload.amountPaise = Number(order.amount_paise);
+    payload.currency = order.currency || 'INR';
+    payload.razorpayOrderId = order.razorpay_order_id;
+  }
+  return payload;
+}
+
+async function returnExistingOrder(existing, idempotencyKey, sb, rz, res, body) {
+  let ready = existing;
+  let adopted = false;
+  if (ready?.payment_method !== 'cod') {
+    if (!rz.configured) {
+      return fail(res, 503, 'Online payment is not available right now. Please try again later.');
+    }
+
+    if (!ready?.razorpay_order_id && isStalePrepaidReservation(ready)) {
+      ready = await adoptStalePrepaidOrder(ready, idempotencyKey, sb, rz);
+      adopted = true;
+    } else if (!ready?.razorpay_order_id) {
+      ready = await waitForPrepaidOrder(ready, idempotencyKey, sb);
+      if (!ready?.razorpay_order_id && isStalePrepaidReservation(ready)) {
+        ready = await adoptStalePrepaidOrder(ready, idempotencyKey, sb, rz);
+        adopted = true;
+      }
+    }
+
+    if (!ready?.razorpay_order_id) {
+      return fail(res, 409, 'Your payment is still being prepared. Please try again.');
+    }
+  }
+
+  if (adopted) {
+    await attributeOrder(
+      ready,
+      { lines: ready.items || [], breakdown: ready.billing || {} },
+      body,
+      ready.user_id ?? null,
+      sb,
+    );
+  }
+  return res.status(200).json(replayPayload(ready, rz));
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -127,16 +258,7 @@ export default async function handler(req, res) {
     if (idempotencyKey) {
       const existing = await findOrderByIdempotencyKey(idempotencyKey, sb);
       if (existing) {
-        return res.status(200).json({
-          paymentMethod: existing.payment_method === 'cod' ? 'cod' : 'razorpay',
-          orderNumber: existing.order_number,
-          amount: Number(existing.amount_paise) / 100,
-          subtotal: existing.billing?.subtotal ?? null,
-          shipping: existing.billing?.shipping ?? null,
-          breakdown: existing.billing ?? null,
-          ...(existing.razorpay_order_id ? { razorpayOrderId: existing.razorpay_order_id } : {}),
-          duplicate: true,
-        });
+        return await returnExistingOrder(existing, idempotencyKey, sb, rz, res, body);
       }
     }
 
@@ -291,21 +413,11 @@ export default async function handler(req, res) {
     }
 
     // ---- Online payment via Razorpay
-    const rzOrder = await createRazorpayOrder({
-      amountPaise: totals.amountPaise,
-      currency: 'INR',
-      receipt: orderNumber,
-      notes: { order_number: orderNumber },
-      keyId: rz.keyId,
-      keySecret: rz.keySecret,
-    });
-
-    const rzOrderRow = await insertOrder({
+    const prepaidRow = {
       order_number: orderNumber,
       status: 'pending',
       payment_status: 'pending',
       payment_method: 'razorpay',
-      razorpay_order_id: rzOrder.id,
       amount_paise: totals.amountPaise,
       currency: 'INR',
       items: totals.lines,
@@ -313,15 +425,48 @@ export default async function handler(req, res) {
       delivery_method: totals.deliveryMethod,
       ...billingCols,
       ...invoiceCols,
+      ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
       ...(userId ? { user_id: userId } : {}),
-    }, sb);
+    };
+
+    let rzOrderRow;
+    let rzOrder;
+
+    if (idempotencyKey) {
+      // Claim the unique key in Postgres BEFORE creating an external order.
+      // Only the insert winner may call Razorpay; a 23505 loser replays the
+      // winner's row, so one submit cannot fan out into two payable orders.
+      try {
+        rzOrderRow = await insertOrder(prepaidRow, sb);
+      } catch (err) {
+        if (err?.details?.code === '23505') {
+          const winner = await findOrderByIdempotencyKey(idempotencyKey, sb);
+          if (winner) return await returnExistingOrder(winner, idempotencyKey, sb, rz, res, body);
+        }
+        throw err;
+      }
+
+      rzOrder = await createRazorpayOrderFromPersisted(rzOrderRow, rz);
+      rzOrderRow = await linkRazorpayOrder(rzOrderRow, rzOrder.id, idempotencyKey, sb);
+    } else {
+      // Legacy clients without a key retain the existing single-request flow.
+      rzOrder = await createRazorpayOrder({
+        amountPaise: totals.amountPaise,
+        currency: 'INR',
+        receipt: orderNumber,
+        notes: { order_number: orderNumber },
+        keyId: rz.keyId,
+        keySecret: rz.keySecret,
+      });
+      rzOrderRow = await insertOrder({ ...prepaidRow, razorpay_order_id: rzOrder.id }, sb);
+    }
 
     // Attribution snapshot (pending; flips to eligible when payment verifies).
     await attributeOrder(rzOrderRow, totals, body, userId, sb);
 
     return res.status(200).json({
       paymentMethod: 'razorpay',
-      razorpayOrderId: rzOrder.id,
+      razorpayOrderId: rzOrderRow.razorpay_order_id,
       // PUBLIC key id — safe in the browser. The secret is never sent.
       keyId: rz.keyId,
       amountPaise: totals.amountPaise,
