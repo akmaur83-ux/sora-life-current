@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { adminGetSetting, adminSetSetting } from '../../lib/adminApi.js';
 import HomepageVisualControls from '../components/HomepageVisualControls.jsx';
 import DiscoveryImageControls from '../components/DiscoveryImageControls.jsx';
-import { sanitizeDiscoveryImages, CONCERN_REGISTRY } from '../../lib/homeDiscovery.js';
+import { sanitizeDiscoveryImages, sanitizeConcernProducts, CONCERN_REGISTRY } from '../../lib/homeDiscovery.js';
 import { categories } from '../../data/categories.js';
+import { products } from '../../data/products.js';
 import { HOMEPAGE_VISUAL_FIELDS, mergeHomepageVisuals, safeVisualUrl, sanitizeHomepageVisuals } from '../../lib/homepageAppearance.js';
 import { announceHomepageSaved } from '../../lib/homepageVisualSync.js';
 
@@ -19,6 +20,9 @@ export default function HomepageSettings() {
   const [uploads, setUploads] = useState(0);
   // Artwork for the two discovery rails, stored under `homepage.discovery`.
   const [discovery, setDiscovery] = useState(() => sanitizeDiscoveryImages());
+  // Which products each concern card opens — same `discovery` object,
+  // under `concernProducts`. Empty means "match the catalogue automatically".
+  const [concernProducts, setConcernProducts] = useState(() => sanitizeConcernProducts());
 
   useEffect(() => {
     (async () => {
@@ -26,7 +30,7 @@ export default function HomepageSettings() {
         const ann = await adminGetSetting('announcement');
         const hp = await adminGetSetting('homepage');
         if (ann) { setNotices(ann.notices || ['', '', '']); }
-        if (hp) { setBsTitle(hp.bestseller_title || 'Bestsellers'); setBsSub(hp.bestseller_subtitle || ''); setVisuals(sanitizeHomepageVisuals(hp.visuals)); setDiscovery(sanitizeDiscoveryImages(hp.discovery)); }
+        if (hp) { setBsTitle(hp.bestseller_title || 'Bestsellers'); setBsSub(hp.bestseller_subtitle || ''); setVisuals(sanitizeHomepageVisuals(hp.visuals)); setDiscovery(sanitizeDiscoveryImages(hp.discovery)); setConcernProducts(sanitizeConcernProducts(hp.discovery?.concernProducts)); }
       } catch (e) { setErr(e.message || String(e)); }
       setLoading(false);
     })();
@@ -54,12 +58,15 @@ export default function HomepageSettings() {
       // 0001 seeded into site_settings.
       const { free_shipping_threshold: _retiredThreshold, ...keptAnnouncement } = currentAnnouncement || {};
       await adminSetSetting('announcement', { ...keptAnnouncement, notices: notices.filter(Boolean) });
-      // Sanitised on the way out too, so an unusable URL is never persisted.
-      const cleanDiscovery = sanitizeDiscoveryImages(discovery);
+      // Sanitised on the way out too, so an unusable URL — or a product slug
+      // for a concern that does not exist — is never persisted.
+      const cleanProducts = sanitizeConcernProducts(concernProducts);
+      const cleanDiscovery = { ...sanitizeDiscoveryImages(discovery), concernProducts: cleanProducts };
       const next = mergeHomepageVisuals({ ...currentHomepage, bestseller_title: bsTitle, bestseller_subtitle: bsSub, discovery: cleanDiscovery }, visuals);
       await adminSetSetting('homepage', next);
       setVisuals(next.visuals);
       setDiscovery(cleanDiscovery);
+      setConcernProducts(cleanProducts);
       announceHomepageSaved(next);
       setMsg('Saved. Homepage appearance is live; open storefront tabs update automatically.');
     } catch (ex) { setErr(ex.message || String(ex)); }
@@ -99,6 +106,9 @@ export default function HomepageSettings() {
           value={discovery}
           onChange={setDiscovery}
           onBusy={(delta) => setUploads((n) => n + delta)}
+          catalogue={products}
+          concernProducts={concernProducts}
+          onConcernProductsChange={setConcernProducts}
         />
         <button className="btn" type="submit" disabled={saving || uploads > 0}>{saving ? 'Saving…' : uploads ? 'Uploading images…' : 'Save changes'}</button>
       </form>

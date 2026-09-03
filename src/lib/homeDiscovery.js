@@ -76,6 +76,93 @@ export function discoveryImages(source = homepage) {
   return sanitizeDiscoveryImages(source?.discovery);
 }
 
+// ------------------------------------------------------------
+// Admin-chosen products per concern.
+//
+// Stored alongside the artwork, in the same `homepage` site_settings row:
+//   discovery: { concernProducts: { [concernId]: [slug, slug, ...] } }
+//
+// Only the product SLUG is stored. It is the catalogue's stable public key —
+// it already names every /product/:slug route — so a mapping keeps working
+// when a product is renamed, repriced or restocked. Deliberately no name,
+// price or image is copied here: a snapshot of those would go stale silently.
+//
+// An unknown concern key, a non-slug value, a duplicate or anything past the
+// cap is dropped rather than persisted. An empty selection is not stored at
+// all, which is exactly how a concern falls back to automatic matching.
+// ------------------------------------------------------------
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,79}$/i;
+export const MAX_CONCERN_PRODUCTS = 24;
+
+export function sanitizeConcernProducts(raw, registry = CONCERNS) {
+  const known = new Set((Array.isArray(registry) ? registry : []).map((c) => c.id));
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const out = {};
+  for (const [key, value] of Object.entries(src)) {
+    if (!known.has(key) || !Array.isArray(value)) continue;
+    const picked = [];
+    const seen = new Set();
+    for (const entry of value) {
+      if (picked.length >= MAX_CONCERN_PRODUCTS) break;
+      if (typeof entry !== 'string') continue;
+      const slug = entry.trim();
+      if (!SLUG_RE.test(slug) || seen.has(slug)) continue;
+      seen.add(slug);
+      picked.push(slug);
+    }
+    if (picked.length) out[key] = picked;
+  }
+  return out;
+}
+
+/** The saved concern -> product-slug mapping for the current session. */
+export function discoveryConcernProducts(source = homepage) {
+  return sanitizeConcernProducts(source?.discovery?.concernProducts);
+}
+
+/**
+ * Catalogue search for the admin's concern picker.
+ *
+ * Lives here rather than inside the .jsx so the rule that decides what an
+ * admin is offered is plain, testable code rather than component internals.
+ * Matches on the fields an admin actually types — name, pack size, brand —
+ * excludes what is already chosen, and stops at `limit` because a picker is
+ * for finding one product, not for browsing the catalogue.
+ */
+export function searchCatalogueForPicker(catalogue, term, { exclude = [], limit = 8 } = {}) {
+  const t = String(term || '').trim().toLowerCase();
+  if (!t) return [];
+  const chosen = new Set(exclude);
+  const hits = [];
+  for (const p of Array.isArray(catalogue) ? catalogue : []) {
+    if (hits.length >= limit) break;
+    if (!p?.slug || chosen.has(p.slug)) continue;
+    if (`${p.name || ''} ${p.form || ''} ${p.brand || ''}`.toLowerCase().includes(t)) hits.push(p);
+  }
+  return hits;
+}
+
+/**
+ * Resolve stored slugs against the live catalogue, in the admin's order.
+ *
+ * A slug that no longer resolves, or resolves to a deactivated product, is
+ * skipped silently — a stale mapping can thin a concern out but can never
+ * put a dead card or a missing product on the page. Stock is deliberately
+ * NOT filtered here, so a concern lists exactly what the rest of Shop lists
+ * (the "In stock only" filter still applies on top, as everywhere else).
+ */
+export function resolveConcernProducts(slugs, productList = products) {
+  if (!Array.isArray(slugs) || !slugs.length) return [];
+  const list = Array.isArray(productList) ? productList : [];
+  const bySlug = new Map(list.map((p) => [p?.slug, p]));
+  const out = [];
+  for (const slug of slugs) {
+    const found = bySlug.get(slug);
+    if (found && found.isActive !== false) out.push(found);
+  }
+  return out;
+}
+
 /** First product in `list` that has usable artwork, for a card's fallback image. */
 function firstImaged(list) {
   return (list || []).find((p) => {
@@ -149,8 +236,20 @@ const CONCERNS = [
   { id: 'massage', label: 'Massage & Body Oils', group: 'Personal care', query: 'massage' },
 ];
 
-/** Products a concern actually resolves to — the same set its link opens. */
-export function concernMatches(concern, productList = products) {
+/**
+ * Products a concern actually resolves to — the same set its link opens.
+ *
+ * Priority, highest first:
+ *   1. the products an admin chose for this concern, in their order;
+ *   2. the automatic catalogue match (the behaviour that shipped before);
+ *   3. nothing, which hides the card.
+ *
+ * An admin choice therefore replaces the text search rather than being mixed
+ * into it: "show exactly these four" has to mean exactly those four.
+ */
+export function concernMatches(concern, productList = products, manual = discoveryConcernProducts()) {
+  const chosen = resolveConcernProducts(manual?.[concern?.id], productList);
+  if (chosen.length) return chosen;
   if (concern?.categorySlug) return getByCategory(concern.categorySlug);
   if (!concern?.query) return [];
   const found = searchProducts(concern.query);
@@ -160,10 +259,39 @@ export function concernMatches(concern, productList = products) {
   return found.filter((p) => ids.has(p.id));
 }
 
+/** True when this concern is driven by an explicit admin selection. */
+export function concernIsCurated(concern, productList = products, manual = discoveryConcernProducts()) {
+  return resolveConcernProducts(manual?.[concern?.id], productList).length > 0;
+}
+
+/**
+ * A readable alias for a concern, derived from its label ("Acne Care" ->
+ * "acne-care"). The registry `id` stays the canonical key — it is what names
+ * the saved artwork and the saved product mapping — but /shop accepts this
+ * form too, so a hand-typed or shared link reads the way a person expects.
+ */
+export function concernSlug(concern) {
+  return String(concern?.label || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** Resolve a ?concern= value back to its registry entry. Null when unknown. */
+export function findConcern(param, registry = CONCERNS) {
+  if (typeof param !== 'string') return null;
+  const key = param.trim().toLowerCase();
+  if (!key) return null;
+  const list = Array.isArray(registry) ? registry : [];
+  return list.find((c) => c.id === key) || list.find((c) => concernSlug(c) === key) || null;
+}
+
+// One destination for every concern, whether it is curated or automatic, so
+// the heading, the count and the grid are produced by one code path.
 export function concernDestination(concern) {
   return concern?.categorySlug
     ? `/category/${concern.categorySlug}`
-    : `/shop?q=${encodeURIComponent(concern.query)}`;
+    : `/shop?concern=${encodeURIComponent(concern?.id || '')}`;
 }
 
 /**
@@ -172,11 +300,17 @@ export function concernDestination(concern) {
  * Returns [] when too few qualify, which hides the section entirely rather
  * than shipping a thin rail of near-empty results.
  */
-export function selectConcernCards(productList = products, registry = CONCERNS, images = discoveryImages()) {
+export function selectConcernCards(
+  productList = products,
+  registry = CONCERNS,
+  images = discoveryImages(),
+  manual = discoveryConcernProducts(),
+) {
   const assigned = images?.concerns || {};
   const cards = registry
     .map((concern) => {
-      const matches = concernMatches(concern, productList);
+      const curated = resolveConcernProducts(manual?.[concern.id], productList);
+      const matches = curated.length ? curated : concernMatches(concern, productList, {});
       const groupImage = categoryImage(CONCERN_GROUP_IMAGE[concern.group] || '');
       const image = assigned[concern.id] || groupImage || null;
       return {
@@ -185,13 +319,19 @@ export function selectConcernCards(productList = products, registry = CONCERNS, 
         group: concern.group,
         to: concernDestination(concern),
         count: matches.length,
+        source: curated.length ? 'admin' : 'auto',
         image,
         imageSource: assigned[concern.id] ? 'admin' : (groupImage ? 'group' : 'product'),
         // Last resort only, when the group has no artwork of its own.
         product: image ? null : firstImaged(matches),
       };
     })
-    .filter((card) => card.count >= MIN_CONCERN_PRODUCTS && (card.image || card.product));
+    // An automatic concern still has to clear the minimum, because nobody
+    // vouched for what a text search happened to return. A curated one only
+    // has to resolve to something: choosing two products is a decision, not
+    // a thin result, and second-guessing it would make the picker a lie.
+    .filter((card) => card.count >= (card.source === 'admin' ? 1 : MIN_CONCERN_PRODUCTS)
+      && (card.image || card.product));
   return cards.length >= MIN_CONCERNS_TO_RENDER ? cards : [];
 }
 

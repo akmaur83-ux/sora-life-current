@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { safeVisualUrl } from '../../lib/homepageAppearance.js';
 import { uploadHomepageImage } from '../../lib/homepageImageUpload.js';
+import ConcernProductPicker from './ConcernProductPicker.jsx';
 
 // ============================================================
 // Admin control for the two homepage discovery rails' artwork.
@@ -12,8 +13,13 @@ import { uploadHomepageImage } from '../../lib/homepageImageUpload.js';
 // Leaving a row empty is a valid, supported state — the storefront falls back
 // to its built-in artwork (see homeDiscovery.js). Nothing here can produce a
 // broken card.
+//
+// A concern row carries one extra control: which products its card opens.
+// That lives in the same row because it is the same decision — what this
+// card is — and splitting it into a second list keyed by name would make
+// the two drift apart.
 // ============================================================
-function ImageRow({ label, hint, value, onChange, onBusy }) {
+function ImageRow({ label, hint, value, onChange, onBusy, children }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const preview = safeVisualUrl(value);
@@ -61,16 +67,30 @@ function ImageRow({ label, hint, value, onChange, onBusy }) {
           )}
           {busy && <span className="hint">Uploading…</span>}
         </div>
+        {children}
       </div>
     </div>
   );
 }
 
-export default function DiscoveryImageControls({ categories, concerns, value, onChange, onBusy }) {
+export default function DiscoveryImageControls({
+  categories, concerns, value, onChange, onBusy,
+  catalogue = [], concernProducts = {}, onConcernProductsChange,
+}) {
   const set = (group, key) => (url) => onChange({
     ...value,
     [group]: { ...(value?.[group] || {}), [key]: url },
   });
+
+  // An emptied selection is removed outright rather than stored as [], so
+  // "no manual choice" has exactly one representation and the storefront's
+  // fallback is reached the same way whether a concern was never curated or
+  // was curated and then cleared.
+  const setProducts = (id) => (slugs) => {
+    const next = { ...concernProducts };
+    if (slugs.length) next[id] = slugs; else delete next[id];
+    onConcernProductsChange(next);
+  };
 
   return (
     <>
@@ -94,9 +114,10 @@ export default function DiscoveryImageControls({ categories, concerns, value, on
       <div className="surface">
         <h2>Shop by Concerns images</h2>
         <p className="hint">
-          The image shown on each concern card. A concern only appears on the
-          homepage when the catalogue actually has products behind it, so some
-          rows here may not be visible on the storefront yet.
+          The image on each concern card, and the products its card opens.
+          Choose products to control the result exactly; leave the list empty
+          and the card keeps matching the catalogue automatically. A concern
+          with nothing behind it either way stays off the homepage.
         </p>
         {concerns.map((c) => (
           <ImageRow
@@ -106,7 +127,14 @@ export default function DiscoveryImageControls({ categories, concerns, value, on
             value={value?.concerns?.[c.id] || ''}
             onChange={set('concerns', c.id)}
             onBusy={onBusy}
-          />
+          >
+            <ConcernProductPicker
+              label={c.label}
+              catalogue={catalogue}
+              value={concernProducts?.[c.id] || []}
+              onChange={setProducts(c.id)}
+            />
+          </ImageRow>
         ))}
       </div>
     </>

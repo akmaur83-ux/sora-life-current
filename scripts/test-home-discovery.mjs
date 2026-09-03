@@ -15,10 +15,15 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { products, searchProducts, getByCategory } from '../src/data/products.js';
 import { categories } from '../src/data/categories.js';
+import { transformSync } from '@babel/core';
 import {
   selectCategoryCards, selectConcernCards, concernMatches, concernDestination,
   CONCERN_REGISTRY, MIN_CONCERN_PRODUCTS, sanitizeDiscoveryImages,
+  sanitizeConcernProducts, discoveryConcernProducts, resolveConcernProducts,
+  concernIsCurated, concernSlug, findConcern, MAX_CONCERN_PRODUCTS,
+  searchCatalogueForPicker,
 } from '../src/lib/homeDiscovery.js';
+import { applyHomepage, getHomepageSnapshot, subscribeHomepage } from '../src/lib/settings.js';
 
 let passed = 0, failed = 0;
 const test = (name, fn) => {
@@ -81,8 +86,11 @@ test('D6 a concern\'s backing IS its destination, so the card cannot over-promis
     const matches = concernMatches(concern);
     const to = concernDestination(concern);
     if (concern.query) {
-      assert.equal(to, `/shop?q=${encodeURIComponent(concern.query)}`);
-      // The link opens exactly the set the card was measured on.
+      // One destination for every concern. /shop resolves the id back to this
+      // same registry entry and re-runs concernMatches, so the page shows
+      // exactly the set the card was measured on.
+      assert.equal(to, `/shop?concern=${encodeURIComponent(concern.id)}`);
+      assert.equal(findConcern(concern.id), concern, 'the destination must resolve back');
       assert.equal(matches.length, searchProducts(concern.query).length);
     } else {
       assert.equal(to, `/category/${concern.categorySlug}`);
@@ -304,6 +312,243 @@ test('D24 the tile geometry stays sharp and editorial', () => {
   assert.match(css, /aspect-ratio: 4 \/ 3/, 'landscape tiles, close to the reference');
   const tileBlock = css.slice(css.indexOf('.hd-tile__link {'), css.indexOf('.hd-tile__media {'));
   assert.doesNotMatch(tileBlock, /border:\s*1px/, 'no card border — the tile is the artwork');
+});
+
+console.log('\n— Admin-chosen products per concern —');
+
+// A tiny catalogue whose products share no words with any concern query, so a
+// curated result can only come from the explicit mapping — never from the text
+// matcher leaking through.
+const pick = (slug, extra = {}) => ({
+  id: slug, slug, name: slug.replace(/-/g, ' '), category: 'wellness', categories: ['wellness'],
+  price: 199, stock: 5, image: `/img/${slug}.png`, media: [], isActive: true, ...extra,
+});
+const CURATED = [pick('zeta-one'), pick('zeta-two'), pick('zeta-three'), pick('zeta-four')];
+const OTHER = [pick('omega-unrelated'), pick('omega-also-unrelated')];
+const TINY = [...CURATED, ...OTHER];
+const curatedSlugs = CURATED.map((p) => p.slug);
+
+test('D26 a saved mapping keeps only known concerns and real slug values', () => {
+  const clean = sanitizeConcernProducts({
+    acne: ['zeta-one', 'zeta-one', 'zeta-two'],        // duplicate collapses
+    'not-a-concern': ['zeta-one'],                      // unknown key dropped
+    dandruff: 'zeta-one',                               // not an array
+    detan: ['javascript:alert(1)', '../../etc/passwd', '', 42, 'zeta-three'],
+    scrubs: [],                                         // empty is not stored
+  });
+  assert.deepEqual(clean, { acne: ['zeta-one', 'zeta-two'], detan: ['zeta-three'] });
+});
+
+test('D27 only slugs are stored — never a copy of name, price or image', () => {
+  const clean = sanitizeConcernProducts({ acne: curatedSlugs });
+  assert.deepEqual(clean.acne, curatedSlugs);
+  for (const value of clean.acne) assert.equal(typeof value, 'string');
+  const lib = src('../src/lib/homeDiscovery.js');
+  const block = lib.slice(lib.indexOf('export function sanitizeConcernProducts'), lib.indexOf('export function discoveryConcernProducts'));
+  assert.doesNotMatch(block, /\bprice\b|\bname\b|\bimage\b/, 'the sanitiser must not carry product copy');
+});
+
+test('D28 an oversized selection is capped rather than stored whole', () => {
+  const many = Array.from({ length: MAX_CONCERN_PRODUCTS + 10 }, (_, i) => `zeta-${i}`);
+  assert.equal(sanitizeConcernProducts({ acne: many }).acne.length, MAX_CONCERN_PRODUCTS);
+});
+
+test('D29 a curated concern opens exactly the chosen products, in order', () => {
+  const manual = { acne: ['zeta-three', 'zeta-one', 'zeta-four'] };
+  const concern = CONCERN_REGISTRY.find((c) => c.id === 'acne');
+  const got = concernMatches(concern, TINY, manual);
+  assert.deepEqual(got.map((p) => p.slug), manual.acne, 'admin order is preserved');
+  assert.ok(concernIsCurated(concern, TINY, manual));
+});
+
+test('D30 unrelated products never leak into a curated concern', () => {
+  const manual = { acne: ['zeta-one', 'zeta-two'] };
+  const concern = CONCERN_REGISTRY.find((c) => c.id === 'acne');
+  const slugs = concernMatches(concern, TINY, manual).map((p) => p.slug);
+  for (const other of OTHER) assert.ok(!slugs.includes(other.slug), `${other.slug} must not appear`);
+  assert.equal(slugs.length, 2, 'the matcher must not top the selection up');
+});
+
+test('D31 missing and deactivated selections are skipped, never rendered', () => {
+  const catalogue = [...CURATED, pick('zeta-retired', { isActive: false })];
+  const resolved = resolveConcernProducts(
+    ['zeta-one', 'ghost-product', 'zeta-retired', 'zeta-two'], catalogue,
+  );
+  assert.deepEqual(resolved.map((p) => p.slug), ['zeta-one', 'zeta-two']);
+});
+
+test('D32 with no mapping the automatic matcher still drives the concern', () => {
+  for (const concern of CONCERN_REGISTRY) {
+    assert.deepEqual(
+      concernMatches(concern, products, {}).map((p) => p.id),
+      concern.query ? searchProducts(concern.query).map((p) => p.id) : getByCategory(concern.categorySlug).map((p) => p.id),
+      `${concern.label} changed behaviour without a mapping`,
+    );
+    assert.equal(concernIsCurated(concern, products, {}), false);
+  }
+});
+
+test('D33 a concern with neither manual nor automatic backing stays hidden', () => {
+  const cards = selectConcernCards(TINY, CONCERN_REGISTRY, { concerns: {} }, {});
+  assert.deepEqual(cards, [], 'nothing is backed by this catalogue, so nothing renders');
+});
+
+test('D34 a curated concern shows even below the automatic minimum', () => {
+  // "acne" resolves to nothing automatically in the real catalogue, so it is
+  // hidden today. Two hand-picked products is a decision, and must be honoured.
+  const manual = { acne: ['zeta-one', 'zeta-two'] };
+  const card = selectConcernCards([...products, ...CURATED], CONCERN_REGISTRY, { concerns: {} }, manual)
+    .find((c) => c.id === 'acne');
+  assert.ok(card, 'a curated concern must not be filtered out by the automatic minimum');
+  assert.equal(card.count, 2);
+  assert.equal(card.source, 'admin');
+  assert.equal(card.to, '/shop?concern=acne');
+  assert.ok(!selectConcernCards(products, CONCERN_REGISTRY, { concerns: {} }, {}).some((c) => c.id === 'acne'),
+    'and it stays hidden while nothing backs it');
+});
+
+test('D35 /shop accepts the concern id and its readable alias', () => {
+  const concern = CONCERN_REGISTRY.find((c) => c.id === 'detan');
+  assert.equal(concernSlug(concern), 'de-tan-care');
+  assert.equal(findConcern('detan'), concern);
+  assert.equal(findConcern('de-tan-care'), concern, 'the label form must resolve too');
+  assert.equal(findConcern('DeTan'.toLowerCase()), concern);
+  assert.equal(findConcern('not-a-concern'), null, 'an unknown value resolves to nothing');
+  assert.equal(findConcern(''), null);
+  assert.equal(findConcern(null), null);
+});
+
+test('D36 the saved setting is what the storefront reads', () => {
+  const before = getHomepageSnapshot().discovery;
+  try {
+    applyHomepage({ discovery: { concerns: {}, concernProducts: { acne: curatedSlugs, bogus: ['x'] } } });
+    assert.deepEqual(discoveryConcernProducts().acne, curatedSlugs);
+    assert.equal(discoveryConcernProducts().bogus, undefined, 'an unknown key never reaches the storefront');
+  } finally {
+    applyHomepage({ discovery: before });
+  }
+});
+
+console.log('\n— /shop?concern= —');
+
+const jsx = (file, name, deps = {}) => {
+  const { code } = transformSync(src(file), {
+    configFile: false, babelrc: false,
+    presets: [['@babel/preset-react', { runtime: 'classic' }]],
+    plugins: [() => ({ visitor: {
+      ImportDeclaration(path) { path.remove(); },
+      ExportDefaultDeclaration(path) { path.replaceWith(path.node.declaration); },
+      ExportNamedDeclaration(path) { path.replaceWith(path.node.declaration); },
+    } })],
+  });
+  const scope = { React, ...React, ...deps };
+  return new Function(...Object.keys(scope), `${code}; return ${name};`)(...Object.values(scope));
+};
+const h = React.createElement;
+const Link = ({ to, children, ...rest }) => h('a', { ...rest, href: to }, children);
+const Icon = () => h('span');
+// Stands in for the real browser so the assertions can see exactly which
+// products the page handed it. ProductBrowser itself is unchanged and is
+// covered by the storefront suites.
+const ProductBrowser = ({ baseProducts }) => h('div', { 'data-browser': String(baseProducts.length) },
+  baseProducts.map((p) => h('span', { key: p.slug, 'data-slug': p.slug })));
+const shopPage = (query, deps = {}) => {
+  const ShopPage = jsx('../src/pages/Shop.jsx', 'Shop', {
+    Link, Icon, ProductBrowser, products, getHomepageSnapshot, subscribeHomepage,
+    concernMatches, discoveryConcernProducts, findConcern, selectConcernCards,
+    useSearchParams: () => [new URLSearchParams(query)],
+    ...deps,
+  });
+  return renderToStaticMarkup(h(ShopPage));
+};
+const shownSlugs = (html) => [...html.matchAll(/data-slug="([^"]+)"/g)].map((m) => m[1]);
+
+test('D37 a concern page shows its label and a plain product count', () => {
+  const html = shopPage('concern=detan');
+  assert.match(html, /<h1[^>]*>De-Tan Care<\/h1>/);
+  assert.match(html, /class="v2-shop__count">4 products</, 'the count is stated plainly');
+  assert.equal(shownSlugs(html).length, 4);
+  assert.doesNotMatch(html, /All products<\/h1>/);
+});
+
+test('D38 the page hands the browser exactly the concern set', () => {
+  const concern = CONCERN_REGISTRY.find((c) => c.id === 'scrubs');
+  const expected = concernMatches(concern).map((p) => p.slug);
+  assert.deepEqual(shownSlugs(shopPage('concern=scrubs')), expected);
+  assert.deepEqual(shownSlugs(shopPage(`concern=${concernSlug(concern)}`)), expected,
+    'the readable alias opens the same set');
+});
+
+test('D39 an admin selection wins on the page, and nothing else appears', () => {
+  const html = shopPage('concern=acne', {
+    products: TINY,
+    discoveryConcernProducts: () => ({ acne: ['zeta-two', 'zeta-one'] }),
+  });
+  assert.deepEqual(shownSlugs(html), ['zeta-two', 'zeta-one']);
+  assert.match(html, /class="v2-shop__count">2 products</);
+  for (const other of OTHER) assert.ok(!html.includes(other.slug));
+});
+
+test('D40 one product reads as "1 product", not "1 products"', () => {
+  const html = shopPage('concern=acne', {
+    products: TINY, discoveryConcernProducts: () => ({ acne: ['zeta-one'] }),
+  });
+  assert.match(html, /class="v2-shop__count">1 product</);
+});
+
+test('D41 an unknown or absent concern falls back to the full catalogue', () => {
+  for (const query of ['', 'concern=', 'concern=ghost-concern']) {
+    const html = shopPage(query);
+    assert.match(html, /All products<\/h1>/, `"${query}" must render the normal Shop page`);
+    assert.equal(shownSlugs(html).length, products.length, 'the whole catalogue is offered');
+    assert.doesNotMatch(html, /v2-shop__count/);
+  }
+});
+
+test('D42 concern pages reuse the existing browser — no bespoke product card', () => {
+  const page = src('../src/pages/Shop.jsx');
+  assert.match(page, /<ProductBrowser baseProducts=\{items\}/, 'the same browser renders both modes');
+  assert.doesNotMatch(page, /ProductCard|addToCart|wishlist|money\(|price/i,
+    'pricing, cart and wishlist stay entirely inside the existing components');
+});
+
+test('D44 the picker search finds real products and hides what is chosen', () => {
+  const hit = searchCatalogueForPicker(products, 'beard');
+  assert.ok(hit.length >= 3, 'a real catalogue term must return real products');
+  for (const p of hit) assert.match(p.name.toLowerCase(), /beard/);
+
+  // Already-chosen products drop out, so the same product cannot be added twice.
+  const without = searchCatalogueForPicker(products, 'beard', { exclude: [hit[0].slug] });
+  assert.ok(!without.some((p) => p.slug === hit[0].slug));
+
+  // Case-insensitive, capped, and empty-safe.
+  assert.deepEqual(searchCatalogueForPicker(products, 'BEARD').map((p) => p.slug), hit.map((p) => p.slug));
+  assert.ok(searchCatalogueForPicker(products, 'a', { limit: 4 }).length <= 4, 'results are capped');
+  for (const empty of ['', '   ', null, undefined]) {
+    assert.deepEqual(searchCatalogueForPicker(products, empty), [], 'no term means no list to scroll');
+  }
+  assert.deepEqual(searchCatalogueForPicker(products, 'zzz-not-a-product'), []);
+});
+
+test('D43 the admin editor writes the mapping into the same homepage setting', () => {
+  const page = src('../src/admin/pages/Homepage.jsx');
+  assert.match(page, /sanitizeConcernProducts\(concernProducts\)/, 'sanitised before saving');
+  assert.match(page, /concernProducts: cleanProducts/, 'stored under discovery.concernProducts');
+  assert.match(page, /adminSetSetting\('homepage'/, 'no new settings key is introduced');
+  assert.match(page, /onConcernProductsChange=\{setConcernProducts\}/);
+
+  const ctl = src('../src/admin/components/DiscoveryImageControls.jsx');
+  assert.match(ctl, /<ConcernProductPicker/, 'the picker sits on the concern row');
+  assert.match(ctl, /uploadHomepageImage/, 'the image control is still intact');
+  assert.match(ctl, /Use default/, 'clearing back to the built-in image still works');
+
+  // Comments stripped first: the file explains in prose why it is not a
+  // <select>, and that sentence must not be read as the markup itself.
+  const picker = src('../src/admin/components/ConcernProductPicker.jsx').replace(/^\s*\/\/.*$/gm, '');
+  assert.doesNotMatch(picker, /<select/, 'a 149-item select is exactly what this replaces');
+  assert.match(picker, /type="search"/, 'selection is search-driven');
+  assert.match(picker, /aria-label=\{`Remove /, 'each chosen product can be removed');
+  assert.match(picker, /move\(i, -1\)[\s\S]*move\(i, 1\)/, 'chosen products can be reordered');
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

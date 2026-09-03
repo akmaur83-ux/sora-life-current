@@ -29,10 +29,17 @@
 }
 .v2-shop__lede { display:none; }
 .v2-shop__eyebrow { margin-bottom:3px; }
+/* The concern count. Unlike the lede this stays visible on a phone: it is the
+   page's whole promise ("Acne Care — 4 products"), not supporting copy. */
+.v2-shop__count {
+  margin:6px 0 0; font-family:var(--slv2-sans); font-size:13px;
+  letter-spacing:.01em; color:var(--slv2-ink-3);
+}
 
 @media (min-width: 768px) {
   .v2-shop__head { padding-top:22px; }
   .v2-shop__title { font-size:34px; }
+  .v2-shop__count { font-size:14px; margin-top:8px; }
   .v2-shop__lede {
     display:block; font-family:var(--slv2-sans);
     font-size:14.5px; line-height:1.6; color:var(--slv2-ink-3);
