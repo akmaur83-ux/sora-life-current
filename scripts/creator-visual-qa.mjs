@@ -58,15 +58,36 @@ const Link = ({ to, children, ...rest }) => h('a', { href: to, ...rest }, childr
 const CopyButton = ({ label = 'Copy', className = 'btn' }) => h('button', { type: 'button', className }, label);
 const ShareButton = () => h('button', { type: 'button', className: 'btn btn-light' }, 'Share');
 
-const [Metric, Section, Empty, Pill, Step] =
-  component('../src/components/creator/CreatorUI.jsx', ['Metric', 'Section', 'Empty', 'Pill', 'Step'], { Icon });
+const [Metric, Section, Empty, Pill, Step, Band, Cell, Balance, IdBar] =
+  component('../src/components/creator/CreatorUI.jsx', ['Metric', 'Section', 'Empty', 'Pill', 'Step', 'Band', 'Cell', 'Balance', 'IdBar'], { Icon });
 const [CreatorHowItWorks] =
   component('../src/components/creator/CreatorHowItWorks.jsx', ['CreatorHowItWorks'], { Icon, money2 });
 const [CreatorEarnings] =
-  component('../src/components/creator/CreatorEarnings.jsx', ['CreatorEarnings'], { Icon, money2, Metric });
+  component('../src/components/creator/CreatorEarnings.jsx', ['CreatorEarnings'], { Icon, money2, Balance, Cell });
 const [CreatorPayouts] =
   component('../src/components/creator/CreatorPayouts.jsx', ['CreatorPayouts'],
-    { Icon, money2, Metric, CopyButton, Link });
+    { Icon, money2, Balance, Cell, CopyButton, Link });
+
+// CreatorOnboarding is a stateful page: it reads the customer session and
+// loads its own record. useEffect never runs under renderToStaticMarkup, so
+// a plain render would only ever show the "loading" branch. We seed the
+// initial useState values by call order instead, which renders the real
+// active-creator and application markup without touching the component.
+// The counter must reset per RENDER, not per extraction: every panel is
+// rendered twice (once into index.html, once into its own page), and a
+// counter that kept climbing left the second render unseeded — which is
+// exactly the "Loading…" branch.
+function seededOnboarding(overrides, deps) {
+  const cursor = { i: 0 };
+  const [Comp] = component('../src/pages/account/CreatorOnboarding.jsx', ['CreatorOnboarding'], {
+    ...deps,
+    useState: (init) => {
+      const n = cursor.i++;
+      return React.useState(Object.prototype.hasOwnProperty.call(overrides, n) ? overrides[n] : init);
+    },
+  });
+  return (props) => { cursor.i = 0; return h(Comp, props); };
+}
 
 // ---- Representative data (shape matches the real RPCs) ------------------
 const creator = {
@@ -100,44 +121,45 @@ const noop = () => {};
 // ---- Dashboard, composed from the same primitives the portal uses -------
 const ordinalDay = (n) => { const s = ['th','st','nd','rd']; const k = n % 100; return `${n}${s[(k-20)%10]||s[k]||s[0]}`; };
 const Dashboard = () => h(React.Fragment, null,
+  h(IdBar, { eyebrow: 'SORA LIFE Creator', name: creator.display_name, items: [
+    { k: 'Status', v: creator.status },
+    { k: 'Creator code', v: h('code', null, creator.creator_code) },
+    { k: 'Commission', v: `${creator.default_commission_rate}%` },
+    { k: 'Attribution', v: `${creator.default_attribution_window_days} days` },
+  ] }),
   h('section', { className: 'ck-share' },
-    h('span', { className: 'ck-share__eyebrow' }, h(Icon, { size: 13 }), ' SORA LIFE Creator'),
-    h('h1', { className: 'serif ck-share__title' }, 'Your link is live, Anjali.'),
-    h('p', { className: 'ck-share__sub' }, `Share this anywhere. Every visit through it is recorded against your account for ${creator.default_attribution_window_days} days, and any order in that window earns you commission.`),
+    h('span', { className: 'ck-share__eyebrow' }, 'Your creator link'),
+    h('h2', { className: 'ck-share__title' }, 'Share it anywhere.'),
+    h('p', { className: 'ck-share__sub' }, `Every visit through this link is recorded against your account for ${creator.default_attribution_window_days} days. Any order in that window earns commission.`),
     h('code', { className: 'ck-share__url' }, defaultLink),
     h('div', { className: 'ck-share__actions' },
       h(CopyButton, { label: 'Copy link' }), h(ShareButton),
       h('a', { className: 'btn btn-light', href: '#' }, 'All links')),
-    h('span', { className: 'ck-share__code' }, 'Your code ', h('code', null, creator.creator_code),
-      h(CopyButton, { label: 'Copy', className: 'btn btn-xs btn-light' }))),
-
-  h(Section, { title: 'Performance', sub: 'Attributed activity from your links. Figures update as orders qualify.', action: h('a', { className: 'ck-section__link', href: '#' }, 'Full analytics') },
-    h('div', { className: 'ck-metrics' },
-      h(Metric, { label: 'Link clicks', value: String(analytics.clicks), tone: 'info', icon: 'externalLink', hint: 'Every visit that arrived through one of your links.' }),
-      h(Metric, { label: 'Attributed orders', value: String(analytics.attributed_orders), tone: 'brand', icon: 'package', hint: 'Orders matched to you inside your attribution window.' }),
-      h(Metric, { label: 'Products sold', value: String(analytics.products_sold), tone: 'hold', icon: 'bag', hint: 'Individual units across your attributed orders.' }),
-      h(Metric, { label: 'Attributed sales', value: money2(analytics.attributed_sales), tone: 'ok', icon: 'tag', hint: 'Eligible sale value, before commission.' }))),
-
-  h(Section, { title: 'Earnings', sub: 'Commission is calculated on eligible sale value and clears after the hold period.', action: h('a', { className: 'ck-section__link', href: '#' }, 'Earnings detail') },
-    h('div', { className: 'ck-metrics ck-metrics--bento' },
-      h(Metric, { hero: true, label: 'Available to withdraw', value: money2(earnings.available), tone: 'ok', icon: 'card', hint: 'Cleared commission. This is what a payout request withdraws.' }),
-      h(Metric, { label: 'Held', value: money2(earnings.held), tone: 'hold', icon: 'clock', hint: `Clears ${earnings.settlement_hold_days} days after each sale qualifies.` }),
-      h(Metric, { label: 'In payout', value: money2(earnings.reserved), tone: 'brand', icon: 'shield', hint: 'Reserved against a payout request that is being processed.' }),
-      h(Metric, { label: 'Paid out', value: money2(earnings.paid), tone: 'ok', icon: 'check' }))),
-
-  h(Section, { title: 'What to do next', sub: 'Based on your account right now.' },
+    h('span', { className: 'ck-share__code' }, 'Code ', h('code', null, creator.creator_code),
+      h(CopyButton, { label: 'Copy', className: 'btn btn-xs' }))),
+  h(Section, { title: 'Performance', action: h('a', { className: 'ck-section__link', href: '#' }, 'Analytics') },
+    h(Band, null,
+      h(Cell, { label: 'Link clicks', value: String(analytics.clicks), tone: 'info' }),
+      h(Cell, { label: 'Orders', value: String(analytics.attributed_orders), tone: 'brand' }),
+      h(Cell, { label: 'Products sold', value: String(analytics.products_sold), tone: 'hold' }),
+      h(Cell, { label: 'Attributed sales', value: money2(analytics.attributed_sales), tone: 'ok' }))),
+  h(Section, { title: 'Earnings', action: h('a', { className: 'ck-section__link', href: '#' }, 'Earnings') },
+    h(Balance, { label: 'Available to withdraw', value: money2(earnings.available), hint: 'Cleared commission. A payout request withdraws this full amount.' },
+      h(Cell, { label: 'Held', value: money2(earnings.held), tone: 'hold' }),
+      h(Cell, { label: 'In payout', value: money2(earnings.reserved), tone: 'brand' }),
+      h(Cell, { label: 'Paid out', value: money2(earnings.paid), tone: 'ok' }))),
+  h(Section, { title: 'Next steps' },
     h('ol', { className: 'ck-steps' },
-      h(Step, { index: 1, done: true, tone: 'brand', title: 'Get your account activated', body: 'Your creator account is active and your links attribute visits.' }),
-      h(Step, { index: 2, done: true, tone: 'brand', title: 'Share your link', body: '318 visits have arrived through your links.' }),
-      h(Step, { index: 3, done: true, tone: 'hold', title: 'Earn your first commission', body: 'When an attributed order is paid, commission is created and enters the hold period.' }),
-      h(Step, { index: 4, done: false, tone: 'info', title: 'Verify your payout details', body: 'Submit your KYC and payout details once. An admin verifies them before your first withdrawal.' }),
-      h(Step, { index: 5, done: false, tone: 'ok', title: 'Request a payout', body: `Requests open on the ${ordinalDay(earnings.payout_day)} of each month, once your available balance reaches ${money2(earnings.min_payout)}.` }))),
-
-  h(Section, { title: 'Your programme', sub: 'The terms your commission is calculated on.' },
-    h('div', { className: 'ck-metrics ck-metrics--3' },
-      h(Metric, { label: 'Commission rate', value: `${creator.default_commission_rate}%`, tone: 'brand', icon: 'crown', hint: 'Applied to eligible sale value and locked in when a sale qualifies.' }),
-      h(Metric, { label: 'Attribution window', value: `${creator.default_attribution_window_days} days`, tone: 'brand', icon: 'clock', hint: 'How long after a visit a purchase still counts as yours.' }),
-      h(Metric, { label: 'Account status', value: creator.status, tone: 'ok', icon: 'shield' }))));
+      h(Step, { index: 1, done: true, title: 'Account active', body: 'Your links attribute visits.' }),
+      h(Step, { index: 2, done: true, title: 'Share your first link', body: '318 visits have arrived through your links.' }),
+      h(Step, { index: 3, done: true, title: 'Earn first commission', body: 'When an attributed order is paid, commission is created and enters the hold period.' }),
+      h(Step, { index: 4, done: false, next: true, title: 'Verify payout details', body: 'Submit KYC once. An admin verifies it before your first withdrawal.' }),
+      h(Step, { index: 5, done: false, title: 'Request a payout', body: 'Requests open on the 1st of each month, once your available balance reaches ₹500.00.' }))),
+  h(Section, { title: 'Campaigns and links', action: h('a', { className: 'ck-section__link', href: '#' }, 'Campaigns') },
+    h(Band, { cols: 3 },
+      h(Cell, { label: 'Active campaigns', value: '2', tone: 'brand', hint: '2 on your account' }),
+      h(Cell, { label: 'Active links', value: '1', tone: 'brand', hint: '1 campaign link, plus your default link.' }),
+      h(Cell, { label: 'Attribution window', value: '30 days' }))));
 
 const ProfileCard = () => h(React.Fragment, null,
   h('h1', { className: 'serif crp__h1' }, 'My profile'),
@@ -152,11 +174,11 @@ const ProfileCard = () => h(React.Fragment, null,
         h(Pill, { tone: 'ok' }, 'active'),
         h('span', { className: 'ck-idcard__code' }, h('code', null, creator.creator_code),
           h(CopyButton, { label: 'Copy', className: 'btn btn-xs btn-light' }))))),
-  h(Section, { title: 'Programme terms', sub: 'Set by SORA LIFE — these are not editable here.' },
-    h('div', { className: 'ck-metrics ck-metrics--3' },
-      h(Metric, { label: 'Commission rate', value: '12%', tone: 'brand', icon: 'crown', hint: 'Applied to eligible sale value and locked in when a sale qualifies.' }),
-      h(Metric, { label: 'Attribution window', value: '30 days', tone: 'brand', icon: 'clock', hint: 'How long after a visit a purchase still counts as yours.' }),
-      h(Metric, { label: 'Creator since', value: '18 Apr 2026', tone: 'neutral', icon: 'award' }))));
+  h(Section, { title: 'Programme terms', sub: 'Set by SORA LIFE - not editable here.' },
+    h(Band, { cols: 3 },
+      h(Cell, { label: 'Commission rate', value: '12%', tone: 'brand' }),
+      h(Cell, { label: 'Attribution window', value: '30 days', tone: 'brand' }),
+      h(Cell, { label: 'Creator since', value: '18 Apr 2026' }))));
 
 const Empties = () => h(React.Fragment, null,
   h(Empty, { tone: 'brand', icon: 'sparkle', title: 'No campaigns running yet',
@@ -194,6 +216,17 @@ const Lists = () => h(React.Fragment, null,
       h('span', { className: 'crp__pill is-ok' }, 'always on'))));
 
 // ---- Page ---------------------------------------------------------------
+// ---- /account/creator, rendered from the real page component ------------
+const onboardingDeps = {
+  Icon, CopyButton, Link,
+  useEffect: () => {},
+  useCustomerAuth: () => ({ user: { user_metadata: { full_name: creator.display_name } } }),
+  getMyCreator: noop, applyAsCreator: noop,
+  buildTrackingUrl: () => defaultLink,
+};
+const OnboardingActive = seededOnboarding({ 0: 'has', 1: creator }, onboardingDeps);
+const OnboardingApply = seededOnboarding({ 0: 'none', 1: null }, onboardingDeps);
+
 const panels = [
   ['dashboard', 'Dashboard  /creator', h(Dashboard)],
   ['earnings', 'Earnings  /creator/earnings', h(CreatorEarnings, { creator, earnings })],
@@ -203,6 +236,8 @@ const panels = [
   ['profile', 'Profile  /creator/profile', h(ProfileCard)],
   ['empties', 'Empty states  campaigns + analytics', h(Empties)],
   ['lists', 'Campaign + link list items', h(Lists)],
+  ['account-active', 'Account seam  /account/creator  (active creator)', h(OnboardingActive)],
+  ['account-apply', 'Account seam  /account/creator  (application form)', h(OnboardingApply)],
 ];
 
 const body = panels.map(([id, label, node]) => {

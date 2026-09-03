@@ -83,6 +83,63 @@ export function Empty({ icon = 'sparkle', tone = 'neutral', title, body, points,
   );
 }
 
+// ---- Data band -------------------------------------------------------
+// Replaces one-card-per-number. A single rectangular panel whose cells are
+// separated by 1px rules, so four figures read as one object on a shared
+// baseline instead of four stacked boxes.
+export function Band({ cols, children }) {
+  return <div className={`ck-band ${cols === 3 ? 'ck-band--3' : ''}`}>{children}</div>;
+}
+
+/** One figure inside a Band. `tone` draws a short rule above the label. */
+export function Cell({ label, value, tone, hint, mono = false }) {
+  return (
+    <div className="ck-band__cell" data-tone={TONES.includes(tone) && tone !== 'neutral' ? tone : undefined}>
+      <span className="ck-band__label">{label}</span>
+      <div className={`ck-band__fig ${mono ? 'is-mono' : ''}`}>{value}</div>
+      {hint && <p className="ck-band__hint">{hint}</p>}
+    </div>
+  );
+}
+
+/**
+ * Financial composition: one dominant figure, then a ruled row of the
+ * supporting states. The balance a creator can act on should not be one of
+ * four equal tiles.
+ */
+export function Balance({ label, value, hint, children }) {
+  return (
+    <div className="ck-balance">
+      <div className="ck-balance__main">
+        <span className="ck-band__label">{label}</span>
+        <div className="ck-balance__fig">{value}</div>
+        {hint && <p className="ck-balance__hint">{hint}</p>}
+      </div>
+      <div className="ck-balance__row">{children}</div>
+    </div>
+  );
+}
+
+/** Identity + key terms header. Replaces a row of stat cards. */
+export function IdBar({ eyebrow, name, items = [] }) {
+  return (
+    <header className="ck-idbar">
+      {eyebrow && <span className="ck-idbar__eyebrow">{eyebrow}</span>}
+      <h1 className="ck-idbar__name">{name}</h1>
+      {items.length > 0 && (
+        <div className="ck-idbar__meta">
+          {items.map((it) => (
+            <div className="ck-idbar__item" key={it.k}>
+              <span className="ck-idbar__k">{it.k}</span>
+              <span className="ck-idbar__v">{it.v}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </header>
+  );
+}
+
 /** Status chip. */
 export function Pill({ tone = 'neutral', children, dot = true }) {
   return (
@@ -97,16 +154,16 @@ export function Pill({ tone = 'neutral', children, dot = true }) {
  * One item in a "what to do next" checklist.
  * `done` is driven by real account state — never optimistic.
  */
-export function Step({ done, index, tone = 'neutral', title, body }) {
+export function Step({ done, next = false, index, tone = 'neutral', title, body }) {
+  const label = done ? 'Done' : next ? 'Next' : '';
   return (
-    <li className={`ck-step ${done ? 'is-done' : ''} ${toneClass(done ? 'ok' : tone)}`}>
-      <span className="ck-step__mark" aria-hidden="true">
-        {done ? <Icon name="check" size={13} /> : index}
-      </span>
+    <li className={`ck-step ${done ? 'is-done' : ''} ${next ? 'is-next' : ''} ${toneClass(done ? 'ok' : tone)}`}>
+      <span className="ck-step__mark" aria-hidden="true">{String(index).padStart(2, '0')}</span>
       <div className="ck-step__body">
         <h3>{title}</h3>
         <p>{body}</p>
       </div>
+      <span className="ck-step__state">{label}</span>
     </li>
   );
 }

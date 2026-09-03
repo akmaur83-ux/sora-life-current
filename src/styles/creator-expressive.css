@@ -1,647 +1,622 @@
 /* ============================================================
-   SORA LIFE Creator Program — 2026 creator-platform layer
+   SORA LIFE Creator Program — editorial-tech system
    ------------------------------------------------------------
-   The first attempt kept the storefront's cream ground and put thin
-   coloured borders on white cards. It read as an editorial wellness site
-   with accents, not as a creator product. This replaces that direction:
+   RESET of the previous direction, which leaned on the vocabulary that
+   reads as machine-generated: 18–26px card radii, 999px pills, a
+   violet→cobalt gradient on every control, a glow under every module, an
+   icon bubble in every metric, and one rounded card per number.
 
-     canvas   clean #F6F7FB, not cream
-     type     Inter throughout. The Fraunces serif is overridden inside the
-              portal only — that serif is the single biggest reason the old
-              screens felt like a magazine rather than a dashboard
-     colour   real surfaces: gradient heroes, tinted card grounds, gradient
-              icon chips, glow shadows — not 2px borders
-     shape    18–26px radii, layered tinted shadows, bento composition
+   This system is architectural instead:
 
-   EVERYTHING is scoped to .crp / .crob. The storefront keeps its cream-and-
-   serif identity untouched; only the creator product changes.
+     geometry   0–4px radii. No pills. Rules and grids do the work that
+                border-plus-shadow used to.
+     structure  data BANDS with internal dividers, not one card per figure
+     colour     carried by thin rules, labels, figures and side accents.
+                Exactly ONE gradient surface per page — the share band.
+     type       Inter, tight tracking, a real editorial scale
+     density    mobile is compact: rows and 2-up grids, never a 200px-tall
+                panel wrapped around "₹0"
+
+   Scoped to .crp / .crob throughout; the storefront is untouched.
    ============================================================ */
 
 .crp, .crob {
-  --c-violet:  #7C3AED;
-  --c-cobalt:  #2563EB;
-  --c-cyan:    #06B6D4;
-  --c-emerald: #10B981;
-  --c-lime:    #84CC16;
-  --c-orange:  #F97316;
-  --c-coral:   #FB5A72;
-  --c-magenta: #DB4BB5;
-  --c-ink:     #111827;
-  --c-canvas:  #F6F7FB;
+  --c-paper:   #FFFFFF;
+  --c-canvas:  #F7F7F5;
+  --c-ink:     #111111;
+  --c-ink-2:   #3D3D3D;
+  --c-ink-3:   #767676;
+  --c-rule:    #E2E2DE;
+  --c-rule-2:  #CFCFC9;
 
-  --c-ink-2:   #374151;
-  --c-ink-3:   #6B7280;
-  --c-line:    #E6E8F0;
+  --c-violet:  #6437FF;
+  --c-cobalt:  #1E5EFF;
+  --c-emerald: #00A878;
+  --c-amber:   #F28C28;
+  --c-coral:   #E34B63;
 
-  --ck-r:    20px;
-
-  /* Tinted, layered shadows. Flat grey shadow is what makes a dashboard
-     look cheap, so these carry the ink hue. */
-  --ck-sh:      0 1px 2px rgba(17,24,39,.04), 0 8px 24px -12px rgba(17,24,39,.16);
-  --ck-sh-lift: 0 2px 6px rgba(17,24,39,.06), 0 20px 44px -18px rgba(17,24,39,.28);
-  --ck-sh-glow: 0 18px 50px -22px var(--ck-glow, rgba(124,58,237,.55));
+  --r: 2px;   /* the only radius in the system */
 }
 
-/* ---- Typography: retire the editorial serif inside the portal --------
-   .serif is a global storefront class. Rather than edit every heading in
-   the JSX, it is neutralised here — scoped, so the storefront is untouched. */
-.crp, .crob { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+/* ---- Typography ------------------------------------------------------
+   The serif is retired inside the portal only. Scoped, so the storefront
+   keeps its editorial identity. */
+.crp, .crob {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--c-ink-2);
+  -webkit-font-smoothing: antialiased;
+}
 .crp .serif, .crob .serif,
 .crp h1, .crp h2, .crp h3, .crob h1, .crob h2, .crob h3 {
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  color: var(--c-ink);
+  color: var(--c-ink); font-weight: 700; letter-spacing: -0.03em;
 }
-.crp h1, .crob h1, .crp .crp__h1 { font-size: clamp(1.75rem, 5.5vw, 2.6rem); line-height: 1.05; }
-.crp h2, .crob h2 { font-size: clamp(1.1rem, 3vw, 1.35rem); line-height: 1.15; }
-
-/* ---- Canvas ---------------------------------------------------------- */
-.crp { background: var(--c-canvas); color: var(--c-ink-2); }
-.crp .crp__top { background: rgba(255,255,255,.82); backdrop-filter: blur(12px); border-bottom: 1px solid var(--c-line); }
-.crp .crp__lede, .crp .crp__meta, .crp .crp__foot-note, .crp .muted { color: var(--c-ink-3); }
-
-/* ---- Tone tokens ----------------------------------------------------- */
-.ck-tone-ok      { --ck-c: var(--c-emerald); --ck-c2: #34D399; --ck-glow: rgba(16,185,129,.45); }
-.ck-tone-hold    { --ck-c: var(--c-orange);  --ck-c2: #FBBF24; --ck-glow: rgba(249,115,22,.42); }
-.ck-tone-info    { --ck-c: var(--c-cobalt);  --ck-c2: var(--c-cyan); --ck-glow: rgba(37,99,235,.42); }
-.ck-tone-brand   { --ck-c: var(--c-violet);  --ck-c2: var(--c-magenta); --ck-glow: rgba(124,58,237,.45); }
-.ck-tone-bad     { --ck-c: var(--c-coral);   --ck-c2: #F97316; --ck-glow: rgba(251,90,114,.42); }
-.ck-tone-neutral { --ck-c: var(--c-ink);     --ck-c2: #4B5563; --ck-glow: rgba(17,24,39,.28); }
-
-/* ---- Metric card: a tinted MODULE, not a white table cell ------------ */
-.ck-metrics { display: grid; gap: 14px; grid-template-columns: 1fr; }
-.ck-metric {
-  position: relative; overflow: hidden; min-width: 0;
-  padding: 18px;
-  border-radius: var(--ck-r);
-  border: 1px solid transparent;
-  /* Gradient BORDER via padding-box/border-box, over a tinted ground. This
-     is what stops every module reading as the same white rectangle. */
-  background:
-    linear-gradient(#fff, #fff) padding-box,
-    linear-gradient(140deg, color-mix(in srgb, var(--ck-c) 55%, transparent),
-                            color-mix(in srgb, var(--ck-c2, var(--ck-c)) 22%, transparent)) border-box;
-  box-shadow: var(--ck-sh);
-  transition: transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s ease;
+.crp .crp__h1, .crp h1, .crob h1 {
+  font-size: clamp(28px, 4.4vw, 48px); line-height: 1.02; font-weight: 800;
+  letter-spacing: -0.04em; margin: 0 0 8px;
 }
-.ck-metric::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background:
-    radial-gradient(120% 130% at 100% 0%, color-mix(in srgb, var(--ck-c) 15%, transparent) 0%, transparent 60%),
-    linear-gradient(180deg, color-mix(in srgb, var(--ck-c) 8%, transparent) 0%, transparent 55%);
-}
-.ck-metric > * { position: relative; z-index: 1; }
-.ck-metric:hover { transform: translateY(-3px); box-shadow: var(--ck-sh-lift); }
-
-.ck-metric__top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.ck-metric__ic {
-  display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 auto;
-  border-radius: 11px; color: #fff;
-  background: linear-gradient(140deg, var(--ck-c) 0%, var(--ck-c2, var(--ck-c)) 100%);
-  box-shadow: 0 6px 14px -6px var(--ck-glow);
-}
-.ck-metric__label {
-  font-size: 11px; letter-spacing: .09em; text-transform: uppercase;
-  font-weight: 700; color: var(--c-ink-3); min-width: 0;
-}
-.ck-metric__value {
-  font-weight: 800; letter-spacing: -.04em; font-variant-numeric: tabular-nums;
-  font-size: clamp(1.55rem, 5.5vw, 1.95rem); line-height: 1.05;
-  color: var(--c-ink); overflow-wrap: anywhere;
-}
-.ck-metric__value.is-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.1rem; letter-spacing: 0; }
-.ck-metric__hint { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--c-ink-3); }
-.ck-metric__foot { margin-top: 12px; }
-
-/* The balance a creator can actually act on: a full gradient surface. */
-.ck-metric--hero {
-  grid-column: 1 / -1;
-  padding: 26px; border: 0; color: #fff;
-  background: linear-gradient(135deg, var(--ck-c) 0%, var(--ck-c2, var(--ck-c)) 100%);
-  box-shadow: var(--ck-sh-glow), var(--ck-sh);
-}
-.ck-metric--hero::before {
-  background:
-    radial-gradient(80% 120% at 100% 0%, rgba(255,255,255,.30) 0%, transparent 55%),
-    radial-gradient(70% 100% at 0% 100%, rgba(255,255,255,.16) 0%, transparent 60%);
-}
-.ck-metric--hero .ck-metric__label { color: rgba(255,255,255,.85); }
-.ck-metric--hero .ck-metric__value { color: #fff; font-size: clamp(2.2rem, 9vw, 3.1rem); }
-.ck-metric--hero .ck-metric__hint  { color: rgba(255,255,255,.86); }
-.ck-metric--hero .ck-metric__ic {
-  background: rgba(255,255,255,.22); box-shadow: none; backdrop-filter: blur(6px);
-  width: 38px; height: 38px;
+.crp h2, .crob h2 { font-size: clamp(18px, 2.2vw, 22px); line-height: 1.15; }
+.crp .crp__lede, .crp .crp__meta, .crp .crp__foot-note, .crp .muted, .crob .muted {
+  color: var(--c-ink-3); font-size: 14px; line-height: 1.55;
 }
 
-/* ---- Section --------------------------------------------------------- */
-.ck-section { margin-top: 30px; }
-.ck-section__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
-.ck-section__title { font-size: 1.15rem; font-weight: 800; letter-spacing: -.03em; margin: 0; color: var(--c-ink); }
-.ck-section__sub { margin: 4px 0 0; font-size: 13px; color: var(--c-ink-3); }
+/* One label style across every band, table head and field. */
+.ck-metric__label, .ck-band__label, .ck-section__title,
+.crp .crp__field > span, .crp .crp__panel table th {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--c-ink-3);
+}
+
+/* ---- Canvas + shell --------------------------------------------------- */
+.crp { background: var(--c-canvas); }
+.crp .crp__top { background: var(--c-paper); border-bottom: 1px solid var(--c-rule); backdrop-filter: none; }
+.crp .crp__brand-mark { border-radius: var(--r); background: var(--c-ink); color: #fff; box-shadow: none; }
+.crp .crp__brand em { color: var(--c-violet); letter-spacing: .14em; }
+
+/* ---- Navigation: rectangular, rail-marked active --------------------- */
+.crp .crp__nav { gap: 0; border-bottom: 1px solid var(--c-rule); }
+.crp .crp__navitem {
+  border: 0; border-radius: 0; background: transparent; color: var(--c-ink-3);
+  font-weight: 600; font-size: 13px; min-height: 44px; padding: 11px 14px;
+  border-bottom: 2px solid transparent;
+  transition: color .14s ease, border-color .14s ease, background .14s ease;
+}
+.crp .crp__navitem:hover { color: var(--c-ink); background: rgba(0,0,0,.03); transform: none; }
+.crp .crp__navitem.active {
+  color: var(--c-ink); background: transparent; box-shadow: none;
+  border-bottom-color: var(--c-violet);
+}
+@media (min-width: 1020px) {
+  /* Desktop becomes a true vertical rail. */
+  .crp .crp__nav {
+    flex-direction: column; align-items: stretch; gap: 0;
+    border-bottom: 0; border-right: 1px solid var(--c-rule);
+  }
+  .crp .crp__navitem {
+    justify-content: flex-start; border-bottom: 0;
+    border-left: 2px solid transparent; padding: 11px 16px;
+  }
+  .crp .crp__navitem.active { border-left-color: var(--c-violet); background: rgba(100,55,255,.05); }
+}
+
+/* ---- Section heading -------------------------------------------------- */
+.ck-section { margin-top: 34px; }
+.ck-section__head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+  padding-bottom: 9px; margin-bottom: 0; border-bottom: 1px solid var(--c-ink); flex-wrap: wrap;
+}
+.ck-section__title { margin: 0; }
+.ck-section__sub { margin: 7px 0 0; font-size: 13px; color: var(--c-ink-3); flex-basis: 100%; }
 .ck-section__link {
-  font-size: 13px; font-weight: 700; color: var(--c-violet); white-space: nowrap;
-  padding: 7px 13px; border-radius: 999px;
-  background: color-mix(in srgb, var(--c-violet) 9%, transparent);
-  transition: background .16s ease;
+  font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--c-violet); white-space: nowrap; padding: 0; background: none; border-radius: 0;
+  border-bottom: 1px solid transparent;
 }
-.ck-section__link:hover { background: color-mix(in srgb, var(--c-violet) 17%, transparent); }
+.ck-section__link:hover { border-bottom-color: var(--c-violet); background: none; }
 
-/* ---- Share hero: gradient mesh --------------------------------------- */
+/* ---- DATA BAND -------------------------------------------------------
+   The replacement for card soup: one rectangular panel, internal 1px
+   dividers, figures on a shared baseline. Four numbers occupy one band
+   instead of four 180px boxes. */
+.ck-band {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: var(--c-paper); border: 1px solid var(--c-rule); border-radius: var(--r);
+}
+.ck-band__cell {
+  position: relative; min-width: 0; padding: 16px 16px 15px;
+  border-right: 1px solid var(--c-rule); border-bottom: 1px solid var(--c-rule);
+}
+.ck-band__cell:nth-child(2n) { border-right: 0; }
+.ck-band__cell:nth-last-child(-n+2) { border-bottom: 0; }
+.ck-band__label { display: block; margin-bottom: 7px; }
+.ck-band__fig {
+  font-weight: 800; letter-spacing: -.035em; font-variant-numeric: tabular-nums;
+  font-size: clamp(24px, 4vw, 32px); line-height: 1.02; color: var(--c-ink);
+  overflow-wrap: anywhere;
+}
+.ck-band__hint { margin: 6px 0 0; font-size: 12px; line-height: 1.45; color: var(--c-ink-3); }
+/* A 26px top rule is the only decoration a cell gets. */
+.ck-band__cell[data-tone]::before { content: ''; position: absolute; inset: 0 auto auto 0; width: 26px; height: 2px; }
+.ck-band__cell[data-tone="info"]::before  { background: var(--c-cobalt); }
+.ck-band__cell[data-tone="brand"]::before { background: var(--c-violet); }
+.ck-band__cell[data-tone="hold"]::before  { background: var(--c-amber); }
+.ck-band__cell[data-tone="ok"]::before    { background: var(--c-emerald); }
+.ck-band__cell[data-tone="bad"]::before   { background: var(--c-coral); }
+.ck-band__cell[data-tone] { padding-top: 22px; }
+
+@media (min-width: 720px) {
+  .ck-band { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ck-band--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ck-band__cell { border-bottom: 0; padding: 20px 20px 19px; }
+  .ck-band__cell[data-tone] { padding-top: 26px; }
+  .ck-band__cell:nth-child(2n) { border-right: 1px solid var(--c-rule); }
+  .ck-band__cell:last-child { border-right: 0; }
+  .ck-band--3 .ck-band__cell:nth-child(3n) { border-right: 0; }
+}
+
+/* ---- BALANCE: one dominant figure, then a ruled row ------------------ */
+.ck-balance {
+  background: var(--c-paper); border: 1px solid var(--c-rule); border-radius: var(--r);
+  border-top: 3px solid var(--c-emerald);
+}
+.ck-balance__main { padding: 22px 20px 20px; border-bottom: 1px solid var(--c-rule); }
+.ck-balance__fig {
+  font-weight: 800; letter-spacing: -.045em; font-variant-numeric: tabular-nums;
+  font-size: clamp(38px, 7vw, 58px); line-height: 1; color: var(--c-ink); margin-top: 8px;
+}
+.ck-balance__hint { margin: 10px 0 0; font-size: 13px; color: var(--c-ink-3); max-width: 52ch; }
+.ck-balance__row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ck-balance__row .ck-band__cell { border-bottom: 0; padding: 14px 16px; }
+.ck-balance__row .ck-band__cell:last-child { border-right: 0; }
+.ck-balance__row .ck-band__fig { font-size: clamp(18px, 3vw, 24px); }
+
+/* ---- SHARE BAND: the ONE gradient surface on the page ---------------- */
 .ck-share {
-  position: relative; overflow: hidden;
-  padding: clamp(24px, 5vw, 38px);
-  border-radius: 26px; color: #fff;
-  background:
-    radial-gradient(90% 120% at 10% 0%, rgba(219,75,181,.55) 0%, transparent 55%),
-    radial-gradient(80% 120% at 100% 20%, rgba(6,182,212,.45) 0%, transparent 55%),
-    radial-gradient(70% 110% at 60% 110%, rgba(37,99,235,.50) 0%, transparent 60%),
-    linear-gradient(135deg, #7C3AED 0%, #4F2ABF 55%, #111827 100%);
-  box-shadow: 0 24px 60px -26px rgba(124,58,237,.65), var(--ck-sh);
+  position: relative; overflow: hidden; border-radius: var(--r);
+  padding: clamp(22px, 3.4vw, 34px); color: #fff;
+  background: linear-gradient(101deg, #6437FF 0%, #4B2AE0 46%, #111111 100%);
+  box-shadow: none;
 }
 .ck-share__eyebrow {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 6px 12px; border-radius: 999px; margin-bottom: 16px;
-  background: rgba(255,255,255,.16); backdrop-filter: blur(6px);
-  font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #fff;
+  display: block; margin-bottom: 14px; padding: 0; background: none; border-radius: 0;
+  backdrop-filter: none;
+  font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+  color: rgba(255,255,255,.62);
 }
 .ck-share__title {
-  font-size: clamp(1.7rem, 6vw, 2.5rem); font-weight: 800; letter-spacing: -.04em;
-  line-height: 1.05; margin: 0 0 10px; color: #fff;
+  font-size: clamp(24px, 3.4vw, 36px); font-weight: 800; letter-spacing: -.04em;
+  line-height: 1.04; margin: 0 0 10px; color: #fff;
 }
-.ck-share__sub { margin: 0 0 18px; font-size: 14.5px; line-height: 1.6; color: rgba(255,255,255,.82); max-width: 56ch; }
+.ck-share__sub { margin: 0 0 20px; font-size: 14px; line-height: 1.55; color: rgba(255,255,255,.72); max-width: 58ch; }
 .ck-share__url {
-  display: block; padding: 14px 16px; margin-bottom: 14px;
-  border-radius: 14px; border: 1px solid rgba(255,255,255,.22);
-  background: rgba(255,255,255,.12); backdrop-filter: blur(8px);
+  display: block; padding: 13px 14px; margin-bottom: 12px; border-radius: var(--r);
+  border: 1px solid rgba(255,255,255,.22); background: rgba(0,0,0,.22); backdrop-filter: none;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
   color: #fff; overflow-wrap: anywhere;
 }
-.ck-share__actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.crp .ck-share__actions .btn {
-  min-height: 46px; border-radius: 999px; font-weight: 700; border: 0;
-  background: #fff; color: var(--c-ink); box-shadow: 0 10px 24px -14px rgba(0,0,0,.6);
-}
-.crp .ck-share__actions .btn-light {
-  background: rgba(255,255,255,.16); color: #fff;
-  backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,.26); box-shadow: none;
-}
-.crp .ck-share__actions .btn-light:hover { background: rgba(255,255,255,.26); }
+.ck-share__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .ck-share__code {
   display: inline-flex; align-items: center; gap: 10px; margin-top: 16px;
-  padding: 9px 14px; border-radius: 999px;
-  background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.24);
-  font-size: 12.5px; color: rgba(255,255,255,.82); backdrop-filter: blur(6px);
+  padding: 0; background: none; border: 0; border-radius: 0; backdrop-filter: none;
+  font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  color: rgba(255,255,255,.6);
 }
-.ck-share__code code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; color: #fff; letter-spacing: .06em; }
+.ck-share__code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700;
+  font-size: 13px; color: #fff; letter-spacing: .06em; text-transform: none;
+}
 
-/* ---- Empty state: tinted panel, not a white void --------------------- */
+/* ---- IDENTITY HEADER -------------------------------------------------- */
+.ck-idbar { border-bottom: 1px solid var(--c-ink); padding-bottom: 16px; margin-bottom: 22px; }
+.ck-idbar__eyebrow {
+  display: block; margin-bottom: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--c-violet);
+}
+.ck-idbar__name {
+  font-size: clamp(28px, 4.4vw, 46px); font-weight: 800; letter-spacing: -.04em;
+  line-height: 1; margin: 0; color: var(--c-ink);
+}
+.ck-idbar__meta { display: flex; flex-wrap: wrap; gap: 14px 26px; margin-top: 15px; }
+.ck-idbar__k { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--c-ink-3); }
+.ck-idbar__v { display: block; margin-top: 3px; font-size: 14px; font-weight: 700; color: var(--c-ink); letter-spacing: -.01em; }
+.ck-idbar__v code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; }
+
+/* ---- Status chips: rectangular, outlined ----------------------------- */
+.crp .crp__pill, .ck-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 8px; border-radius: var(--r); border: 1px solid currentColor;
+  background: transparent; box-shadow: none;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; white-space: nowrap;
+}
+.crp .crp__pill.is-ok,   .ck-pill.ck-tone-ok    { color: #00795A; background: rgba(0,168,120,.07); }
+.crp .crp__pill.is-warn, .ck-pill.ck-tone-hold  { color: #A8600F; background: rgba(242,140,40,.09); }
+.crp .crp__pill.is-bad,  .ck-pill.ck-tone-bad   { color: #B22B42; background: rgba(227,75,99,.08); }
+.ck-pill.ck-tone-brand   { color: #4A24CC; background: rgba(100,55,255,.07); }
+.ck-pill.ck-tone-info    { color: #1345C4; background: rgba(30,94,255,.07); }
+.ck-pill.ck-tone-neutral { color: var(--c-ink-2); background: rgba(0,0,0,.04); }
+.ck-pill__dot { display: none; }
+
+/* ---- Buttons: rectangular -------------------------------------------- */
+.crp .btn, .crob .btn {
+  border-radius: var(--r); font-weight: 700; min-height: 46px; font-size: 13px;
+  box-shadow: none; transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.crp .btn:not(.btn-light):not(.btn-outline) { background: var(--c-ink); color: #fff; border: 1px solid var(--c-ink); }
+.crp .btn:not(.btn-light):not(.btn-outline):hover {
+  background: var(--c-violet); border-color: var(--c-violet); transform: none; filter: none;
+}
+.crp .btn-light { background: transparent; color: var(--c-ink); border: 1px solid var(--c-rule-2); }
+.crp .btn-light:hover { border-color: var(--c-ink); background: transparent; transform: none; }
+.crp .btn:focus-visible, .crob .btn:focus-visible { outline: 2px solid var(--c-violet); outline-offset: 2px; }
+.crp .btn-xs { min-height: 32px; padding: 0 10px; font-size: 11px; }
+/* Inverted inside the share band. */
+.crp .ck-share__actions .btn { background: #fff; color: var(--c-ink); border: 1px solid #fff; }
+.crp .ck-share__actions .btn:hover { background: rgba(255,255,255,.86); border-color: rgba(255,255,255,.86); }
+.crp .ck-share__actions .btn-light { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.4); }
+.crp .ck-share__actions .btn-light:hover { border-color: #fff; background: rgba(255,255,255,.1); }
+.crp .ck-share__code .btn-xs { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.4); }
+
+/* ---- CHECKLIST: numbered rows ---------------------------------------- */
+.ck-steps { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--c-rule); }
+.ck-step {
+  position: relative; display: grid; grid-template-columns: 26px 1fr auto;
+  gap: 14px; align-items: baseline; padding: 15px 2px;
+  border: 0; border-bottom: 1px solid var(--c-rule); background: none; border-radius: 0;
+  box-shadow: none; transition: none;
+}
+.ck-step:hover { transform: none; box-shadow: none; }
+.ck-step__mark {
+  width: auto; height: auto; border-radius: 0; background: none; box-shadow: none;
+  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--c-ink-3);
+}
+.ck-step.is-done { background: none; }
+.ck-step.is-done .ck-step__mark { color: var(--c-emerald); background: none; }
+.ck-step__body h3 { margin: 0 0 3px; font-size: 14px; font-weight: 700; letter-spacing: -.015em; color: var(--c-ink); }
+.ck-step__body p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--c-ink-3); }
+.ck-step__state {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--c-ink-3); white-space: nowrap;
+}
+.ck-step.is-done .ck-step__state { color: var(--c-emerald); }
+.ck-step.is-next .ck-step__state { color: var(--c-violet); }
+.ck-step.is-next { box-shadow: inset 2px 0 0 var(--c-violet); padding-left: 12px; }
+
+/* ---- Empty state: editorial panel ------------------------------------ */
 .ck-empty {
-  position: relative; overflow: hidden;
-  padding: clamp(30px, 6vw, 48px) clamp(20px, 4vw, 34px);
-  border-radius: var(--ck-r); border: 1px solid var(--c-line);
-  background:
-    radial-gradient(90% 130% at 50% 0%, color-mix(in srgb, var(--ck-c) 14%, transparent) 0%, transparent 68%),
-    linear-gradient(180deg, #fff 0%, var(--c-canvas) 100%);
-  text-align: center; box-shadow: var(--ck-sh);
+  padding: 24px 22px; text-align: left; border-radius: var(--r);
+  background: var(--c-paper); border: 1px solid var(--c-rule);
+  border-left: 3px solid var(--c-violet); box-shadow: none;
 }
-.ck-empty__ic {
-  display: grid; place-items: center; width: 62px; height: 62px; margin: 0 auto 18px;
-  border-radius: 20px; color: #fff;
-  background: linear-gradient(140deg, var(--ck-c) 0%, var(--ck-c2, var(--ck-c)) 100%);
-  box-shadow: 0 14px 30px -12px var(--ck-glow);
-}
-.ck-empty__title { font-size: 1.3rem; font-weight: 800; letter-spacing: -.03em; margin: 0 0 9px; color: var(--c-ink); }
-.ck-empty__body { margin: 0 auto; max-width: 52ch; font-size: 14px; line-height: 1.65; color: var(--c-ink-3); }
-.ck-empty__points { list-style: none; margin: 20px auto 0; padding: 0; display: grid; gap: 11px; max-width: 46ch; text-align: left; }
+.ck-empty__ic { display: none; }
+.ck-empty__title { font-size: 17px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 8px; color: var(--c-ink); }
+.ck-empty__body { margin: 0; max-width: 62ch; font-size: 13.5px; line-height: 1.6; color: var(--c-ink-3); }
+.ck-empty__points { list-style: none; margin: 16px 0 0; padding: 0; display: block; max-width: none; text-align: left; }
 .ck-empty__points li {
-  display: grid; grid-template-columns: auto 1fr; gap: 11px; align-items: start;
-  padding: 11px 14px; border-radius: 13px; background: #fff; border: 1px solid var(--c-line);
+  display: grid; grid-template-columns: 16px 1fr; gap: 10px; align-items: baseline;
+  padding: 9px 0; border-top: 1px solid var(--c-rule); border-radius: 0; background: none; border-left: 0;
   font-size: 13px; line-height: 1.5; color: var(--c-ink-2);
 }
-.ck-empty__points svg { margin-top: 2px; color: var(--ck-c); flex: 0 0 auto; }
-.ck-empty__foot { margin-top: 22px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.ck-empty__points li::before { content: '—'; color: var(--c-violet); font-weight: 700; }
+.ck-empty__points svg { display: none; }
+.ck-empty__foot { margin-top: 18px; display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap; }
 
-/* ---- Pill ------------------------------------------------------------ */
-.ck-pill {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 6px 13px; border-radius: 999px; border: 0;
-  background: linear-gradient(135deg, var(--ck-c) 0%, var(--ck-c2, var(--ck-c)) 100%);
-  color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .07em;
-  text-transform: uppercase; white-space: nowrap;
-  box-shadow: 0 6px 16px -8px var(--ck-glow);
+/* ---- TIMELINE: How you earn ------------------------------------------ */
+.crp-hiw { margin-top: 34px; padding: 0; border: 0; background: none; box-shadow: none; border-radius: 0; }
+.crp-hiw__head { border-bottom: 1px solid var(--c-ink); padding-bottom: 11px; margin-bottom: 0; }
+.crp .crp-hiw__title {
+  /* `.crp h2` (0,1,1) outranked the bare class, capping this page title at
+     22px. Scoped to match, so /creator/how-it-works gets a real title. */
+  font-size: clamp(28px, 4.2vw, 44px); font-weight: 800;
+  letter-spacing: -.04em; line-height: 1.03; margin: 0 0 8px; color: var(--c-ink);
 }
-.ck-pill__dot { width: 6px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.9); flex: 0 0 auto; }
-
-/* ---- Steps ----------------------------------------------------------- */
-.ck-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.ck-step {
-  display: grid; grid-template-columns: auto 1fr; gap: 15px; align-items: start;
-  padding: 17px 18px; border-radius: 18px; border: 1px solid var(--c-line); background: #fff;
-  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-}
-.ck-step:hover { transform: translateX(3px); box-shadow: var(--ck-sh); border-color: color-mix(in srgb, var(--ck-c) 40%, transparent); }
-.ck-step__mark {
-  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 12px;
-  background: linear-gradient(140deg, var(--ck-c) 0%, var(--ck-c2, var(--ck-c)) 100%);
-  color: #fff; font-size: 13px; font-weight: 800; box-shadow: 0 8px 18px -8px var(--ck-glow);
-}
-.ck-step.is-done {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--c-emerald) 13%, #fff) 0%, #fff 65%);
-  border-color: color-mix(in srgb, var(--c-emerald) 34%, transparent);
-}
-.ck-step__body h3 { margin: 0 0 4px; font-size: 14.5px; font-weight: 700; letter-spacing: -.015em; color: var(--c-ink); }
-.ck-step__body p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--c-ink-3); }
-
-/* ---- Navigation ------------------------------------------------------ */
-.crp .crp__nav { gap: 8px; }
-.crp .crp__navitem {
-  border-radius: 14px; border: 1px solid transparent;
-  background: rgba(255,255,255,.72); color: var(--c-ink-3);
-  font-weight: 650; min-height: 44px; padding: 10px 15px;
-  transition: background .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
-}
-.crp .crp__navitem:hover { background: #fff; color: var(--c-ink); transform: translateY(-1px); }
-.crp .crp__navitem.active {
-  background: linear-gradient(135deg, var(--c-violet) 0%, var(--c-cobalt) 100%);
-  color: #fff; border-color: transparent;
-  box-shadow: 0 10px 24px -12px rgba(124,58,237,.75);
-}
-.crp .crp__brand-mark {
-  border-radius: 12px;
-  background: linear-gradient(140deg, var(--c-violet) 0%, var(--c-magenta) 100%);
-  box-shadow: 0 8px 20px -10px rgba(124,58,237,.7);
-}
-.crp .crp__brand em { color: var(--c-violet); }
-
-/* ---- Panels ---------------------------------------------------------- */
-.crp .crp__panel {
-  background: #fff; border: 1px solid var(--c-line);
-  border-radius: var(--ck-r); box-shadow: var(--ck-sh); padding: 20px;
-}
-.crp .crp__panel-h { font-size: 1rem; font-weight: 800; letter-spacing: -.025em; color: var(--c-ink); }
-.crp .crp__notice {
-  border-radius: 16px; border: 1px solid color-mix(in srgb, var(--c-orange) 35%, transparent);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--c-orange) 13%, #fff) 0%, #fff 70%);
-  color: #92400E;
-}
-
-/* ---- Payout method: modern segmented control ------------------------- */
-.crp .crp__seg {
-  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
-  gap: 5px; padding: 5px; border-radius: 16px;
-  background: var(--c-canvas); border: 1px solid var(--c-line);
-}
-.crp .crp__seg button {
-  min-height: 46px; padding: 0 16px; border: 0; border-radius: 12px;
-  background: transparent; color: var(--c-ink-3);
-  font-size: 13.5px; font-weight: 700; cursor: pointer;
-  transition: background .16s ease, color .16s ease, box-shadow .16s ease;
-}
-.crp .crp__seg button:hover:not(.active) { background: rgba(255,255,255,.85); color: var(--c-ink); }
-.crp .crp__seg button.active {
-  background: linear-gradient(135deg, var(--c-violet) 0%, var(--c-cobalt) 100%);
-  color: #fff; box-shadow: 0 10px 22px -12px rgba(124,58,237,.8);
-}
-.crp .crp__seg button:focus-visible { outline: 2px solid var(--c-violet); outline-offset: 2px; }
-
-/* ---- Form fields ----------------------------------------------------- */
-.crp .crp__field > span {
-  display: block; margin-bottom: 7px;
-  font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--c-ink-2);
-}
-.crp .crp__field input, .crp .crp__field select {
-  min-height: 50px; border-radius: 14px; border: 1px solid var(--c-line);
-  background: #fff; font-size: 14.5px;
-  transition: border-color .16s ease, box-shadow .16s ease;
-}
-.crp .crp__field input:focus, .crp .crp__field select:focus {
-  outline: none; border-color: var(--c-violet);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c-violet) 15%, transparent);
-}
-
-/* ---- Buttons --------------------------------------------------------- */
-.crp .btn { border-radius: 999px; font-weight: 700; min-height: 46px; transition: transform .16s ease, box-shadow .16s ease, filter .16s ease; }
-.crp .btn:not(.btn-light):not(.btn-outline):not(.btn-xs):not(.btn-sm):not(.ck-share__actions .btn) {
-  background: linear-gradient(135deg, var(--c-violet) 0%, var(--c-cobalt) 100%);
-  border: 0; color: #fff; box-shadow: 0 12px 26px -14px rgba(124,58,237,.85);
-}
-.crp .btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
-.crp .btn:focus-visible { outline: 2px solid var(--c-violet); outline-offset: 3px; }
-.crp .btn-light { background: #fff; border: 1px solid var(--c-line); color: var(--c-ink); }
-
-/* ---- List items ------------------------------------------------------ */
-.crp .crp__item {
-  border-radius: 18px; background: #fff; border: 1px solid var(--c-line); box-shadow: var(--ck-sh);
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-}
-.crp .crp__item:hover {
-  transform: translateY(-2px); box-shadow: var(--ck-sh-lift);
-  border-color: color-mix(in srgb, var(--c-violet) 35%, transparent);
-}
-
-/* ---- Identity card --------------------------------------------------- */
-.ck-idcard {
-  display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center;
-  padding: clamp(22px, 4vw, 30px); border-radius: 24px; border: 0; color: #fff;
-  background:
-    radial-gradient(80% 130% at 100% 0%, rgba(219,75,181,.5) 0%, transparent 55%),
-    linear-gradient(135deg, #7C3AED 0%, #2563EB 100%);
-  box-shadow: 0 22px 54px -24px rgba(124,58,237,.7), var(--ck-sh);
-}
-.ck-idcard__avatar {
-  display: grid; place-items: center; width: 68px; height: 68px; flex: 0 0 auto;
-  border-radius: 22px; background: rgba(255,255,255,.2); backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,.3);
-  color: #fff; font-weight: 800; font-size: 23px; letter-spacing: .02em;
-}
-.ck-idcard__main { min-width: 0; }
-.ck-idcard__name { font-size: clamp(1.3rem, 4.5vw, 1.7rem); font-weight: 800; letter-spacing: -.035em; margin: 0 0 4px; color: #fff; }
-.ck-idcard__email { margin: 0; font-size: 13.5px; color: rgba(255,255,255,.8); overflow-wrap: anywhere; }
-.ck-idcard__tags { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
-.ck-idcard__tags .ck-pill { background: rgba(255,255,255,.2); box-shadow: none; border: 1px solid rgba(255,255,255,.3); }
-.ck-idcard__code {
-  display: inline-flex; align-items: center; gap: 9px; padding: 7px 13px; border-radius: 999px;
-  background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28); backdrop-filter: blur(6px);
-}
-.ck-idcard__code code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; font-size: 13px; color: #fff; letter-spacing: .06em; }
-
-/* ---- How you earn: coloured journey ---------------------------------- */
-.crp-hiw {
-  margin-top: 30px; padding: clamp(22px, 4vw, 34px);
-  border-radius: 24px; border: 1px solid var(--c-line);
-  background: linear-gradient(180deg, #fff 0%, var(--c-canvas) 100%);
-  box-shadow: var(--ck-sh);
-}
-.crp-hiw__title { font-size: clamp(1.4rem, 4.5vw, 1.9rem); font-weight: 800; letter-spacing: -.035em; margin: 0 0 8px; color: var(--c-ink); }
-.crp-hiw__lede { margin: 0 0 22px; color: var(--c-ink-3); font-size: 14px; max-width: 62ch; }
-.crp-hiw__steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.crp-hiw__lede { margin: 0; color: var(--c-ink-3); font-size: 13.5px; max-width: 62ch; }
+.crp-hiw__steps { list-style: none; margin: 0; padding: 0; }
 .crp-hiw__step {
-  position: relative;
-  display: grid; grid-template-columns: auto auto 1fr; gap: 15px; align-items: start;
-  padding: 18px; border-radius: 18px; border: 1px solid var(--c-line); background: #fff;
-  transition: transform .18s ease, box-shadow .18s ease;
+  position: relative; display: grid; grid-template-columns: 46px 1fr; gap: 0 18px;
+  align-items: start; padding: 20px 0; border: 0; border-bottom: 1px solid var(--c-rule);
+  background: none; border-radius: 0; box-shadow: none; transition: none;
 }
-/* Connector: the journey reads as a sequence, not a list. */
+.crp-hiw__step:hover { transform: none; box-shadow: none; }
+/* The connecting rule runs down the number column. */
 .crp-hiw__step::after {
-  content: ''; position: absolute; left: 35px; top: 100%; width: 2px; height: 12px;
-  background: linear-gradient(180deg, var(--ck-c, var(--c-violet)) 0%, transparent 100%);
+  content: ''; position: absolute; left: 15px; top: 44px; bottom: -1px;
+  width: 1px; height: auto; background: var(--c-rule-2);
 }
+.crp-hiw__step:last-child { border-bottom: 0; }
 .crp-hiw__step:last-child::after { display: none; }
-.crp-hiw__step:hover { transform: translateX(3px); box-shadow: var(--ck-sh); }
-.crp-hiw__step.is-brand { --ck-c: var(--c-violet);  --ck-c2: var(--c-magenta); --ck-glow: rgba(124,58,237,.45); }
-.crp-hiw__step.is-ok    { --ck-c: var(--c-emerald); --ck-c2: var(--c-lime);    --ck-glow: rgba(16,185,129,.45); }
-.crp-hiw__step.is-warn  { --ck-c: var(--c-orange);  --ck-c2: #FBBF24;          --ck-glow: rgba(249,115,22,.45); }
 .crp-hiw__num {
-  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 12px;
-  background: linear-gradient(140deg, var(--ck-c) 0%, var(--ck-c2, var(--ck-c)) 100%);
-  color: #fff; font-size: 13px; font-weight: 800; box-shadow: 0 8px 18px -8px var(--ck-glow);
+  position: relative; z-index: 1; display: block; width: auto; height: auto;
+  border-radius: 0; background: var(--c-canvas); box-shadow: none; color: var(--c-ink);
+  font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+  padding-bottom: 4px;
 }
-.crp-hiw__ic { display: grid; place-items: center; margin-top: 5px; color: var(--ck-c); }
-.crp-hiw__body h3 { margin: 0 0 4px; font-size: 14.5px; font-weight: 700; letter-spacing: -.015em; color: var(--c-ink); }
-.crp-hiw__body p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--c-ink-3); }
+.crp-hiw__ic { display: none; }
+.crp-hiw__body h3 {
+  /* A step title is a title, not a label: 11px uppercase made all eight
+     read as one undifferentiated run of micro-caps. */
+  margin: 0 0 5px; font-size: 15.5px; font-weight: 700; letter-spacing: -.015em;
+  text-transform: none; color: var(--c-ink);
+}
+.crp-hiw__step.is-brand .crp-hiw__body h3 { color: var(--c-violet); }
+.crp-hiw__step.is-ok    .crp-hiw__body h3 { color: var(--c-emerald); }
+.crp-hiw__step.is-warn  .crp-hiw__body h3 { color: var(--c-amber); }
+.crp-hiw__body p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--c-ink-2); max-width: 68ch; }
 .crp-hiw__foot {
-  display: flex; align-items: flex-start; gap: 10px; margin: 22px 0 0; padding: 14px 16px;
-  border-radius: 16px; background: color-mix(in srgb, var(--c-cobalt) 8%, #fff);
-  border: 1px solid color-mix(in srgb, var(--c-cobalt) 20%, transparent);
-  color: var(--c-ink-2); font-size: 13px; line-height: 1.55;
+  display: block; margin: 22px 0 0; padding: 14px 0 0; border-top: 1px solid var(--c-ink);
+  border-radius: 0; background: none; color: var(--c-ink-3); font-size: 12.5px; line-height: 1.55;
 }
-.crp-hiw__foot svg { flex: 0 0 auto; margin-top: 2px; color: var(--c-cobalt); }
+.crp-hiw__foot svg { display: none; }
 
-/* ---- Account entry --------------------------------------------------- */
-.crob__next {
-  display: flex; align-items: flex-start; gap: 11px; margin-top: 18px; padding: 15px 17px;
-  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--c-emerald) 30%, transparent);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--c-emerald) 12%, #fff) 0%, #fff 70%);
-  font-size: 13.5px; line-height: 1.6; color: var(--c-ink-2);
+/* ---- Panels, tables, fields ------------------------------------------ */
+.crp .crp__panel {
+  background: var(--c-paper); border: 1px solid var(--c-rule);
+  border-radius: var(--r); box-shadow: none; padding: 20px;
 }
-.crob__next svg { flex: 0 0 auto; margin-top: 2px; color: var(--c-emerald); }
-.crob__next strong { color: #047857; }
-.crob__next a { font-weight: 700; color: #047857; text-decoration: underline; text-underline-offset: 3px; }
+.crp .crp__panel-h {
+  font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--c-ink-3); padding-bottom: 9px; border-bottom: 1px solid var(--c-rule); margin-bottom: 14px;
+}
+.crp .crp__notice {
+  border-radius: var(--r); border: 0; border-left: 3px solid var(--c-amber);
+  background: rgba(242,140,40,.06); color: #8A5209; padding: 12px 14px; font-size: 13px;
+}
+.crp .crp__empty {
+  border-radius: var(--r); border: 1px solid var(--c-rule); border-left: 3px solid var(--c-violet);
+  background: var(--c-paper); text-align: left; padding: 20px;
+}
+.crp .crp__panel table th { padding-bottom: 9px; border-bottom: 1px solid var(--c-ink); }
+.crp .crp__panel table td { font-size: 13.5px; border-bottom: 1px solid var(--c-rule); }
+.crp .crp__kv dt { font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--c-ink-3); }
+.crp .crp__kv dd { font-size: 14px; font-weight: 600; color: var(--c-ink); }
 
-/* ---- Tap targets ----------------------------------------------------- */
-.crp .ck-share__code .btn-xs, .crp .ck-idcard__code .btn-xs { position: relative; }
-.crp .ck-share__code .btn-xs::after, .crp .ck-idcard__code .btn-xs::after {
-  content: ''; position: absolute; inset: 50% auto auto 50%;
-  transform: translate(-50%, -50%); width: max(100%, 44px); height: 44px;
-}
-
-/* ---- Bento / responsive ---------------------------------------------- */
-@media (min-width: 720px) {
-  .ck-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (min-width: 1020px) {
-  .ck-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .ck-metrics--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .ck-metrics--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  /* Bento: the balance takes a 2x2 block beside its supporting figures
-     rather than sitting as a full-width band. */
-  .ck-metrics--bento .ck-metric--hero {
-    grid-column: span 2; grid-row: span 2;
-    display: flex; flex-direction: column; justify-content: center;
-  }
-}
-@media (max-width: 480px) {
-  .ck-idcard { grid-template-columns: 1fr; }
-  .crp-hiw__step { grid-template-columns: auto 1fr; }
-  .crp-hiw__ic { display: none; }
-  .crp-hiw__step::after { left: 32px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ck-metric, .ck-step, .crp .crp__item, .crp-hiw__step, .crp .btn, .crp .crp__navitem { transition: none; }
-  .ck-metric:hover, .ck-step:hover, .crp .crp__item:hover, .crp-hiw__step:hover,
-  .crp .btn:hover, .crp .crp__navitem:hover { transform: none; }
-}
-
-/* The hero CTA sits ON the violet mesh, so it must stay white: a later
-   generic .btn rule was repainting it violet-on-violet and destroying the
-   contrast. Declared last so it wins without !important. */
-.crp .ck-share__actions .btn { background: #fff; color: var(--c-ink); border: 0; box-shadow: 0 10px 24px -14px rgba(0,0,0,.6); }
-.crp .ck-share__actions .btn-light { background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.26); box-shadow: none; }
-.crp .ck-share__actions .btn-light:hover { background: rgba(255,255,255,.28); }
-
-/* ---- Contrast fix on gradient surfaces ------------------------------
-   Caught in the browser, not by tests: the heading reset above
-   (`.crp h1, .crp h2 { color: var(--c-ink) }`, specificity 0,1,1) was
-   beating `.ck-share__title` / `.ck-idcard__name` (0,1,0), so white text
-   on the violet mesh rendered as near-black ink — unreadable.
-   These re-assert white at a specificity that wins. */
-.crp .ck-share__title,
-.crob .ck-share__title { color: #fff; }
-.crp .ck-idcard__name,
-.crob .ck-idcard__name { color: #fff; }
-.crp .ck-metric--hero .ck-metric__value,
-.crob .ck-metric--hero .ck-metric__value { color: #fff; }
-
-/* ---- Payout balance band --------------------------------------------
-   Still rendering in the old deep-forest green from creator.css, which
-   read as a different product to the emerald balance card on Earnings.
-   Brought onto the new emerald so the same number looks the same
-   everywhere a creator sees it. */
-.crp .crp__payout-bal {
-  border-radius: var(--ck-r); border: 0; color: #fff;
-  background:
-    radial-gradient(80% 130% at 100% 0%, rgba(255,255,255,.22) 0%, transparent 55%),
-    linear-gradient(135deg, var(--c-emerald) 0%, #059669 100%);
-  box-shadow: 0 18px 44px -22px rgba(16,185,129,.7), var(--ck-sh);
-}
-.crp .crp__payout-bal-l { color: rgba(255,255,255,.85); }
-.crp .crp__payout-bal-v { color: #fff; font-weight: 800; letter-spacing: -.04em; }
-
-/* ============================================================
-   FINAL POLISH PASS
-   ============================================================ */
-
-/* ---- 1. Status pills -------------------------------------------------
-   .crp__pill is used in five places (KYC "NOT STARTED", payout history,
-   campaign + link status, creator status) and still carried the old muted
-   palette. Restyled here rather than swapped in the JSX: the tone
-   vocabulary is already ok|warn|bad, so one rule upgrades every usage
-   with zero risk to the maps that produce them. */
-.crp .crp__pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 12px; border-radius: 999px; border: 0;
-  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-  color: #fff;
-}
-.crp .crp__pill.is-ok {
-  background: linear-gradient(135deg, var(--c-emerald) 0%, #34D399 100%);
-  box-shadow: 0 6px 16px -8px rgba(16,185,129,.6);
-}
-.crp .crp__pill.is-warn {
-  background: linear-gradient(135deg, var(--c-orange) 0%, #FBBF24 100%);
-  box-shadow: 0 6px 16px -8px rgba(249,115,22,.6);
-}
-.crp .crp__pill.is-bad {
-  background: linear-gradient(135deg, var(--c-coral) 0%, #F97316 100%);
-  box-shadow: 0 6px 16px -8px rgba(251,90,114,.6);
-}
-
-/* ---- 2. KYC form sections -------------------------------------------
-   The form was one undifferentiated column of inputs. These group it into
-   Identity / Payment without touching a single value, handler or field
-   order — the submitted payload is unchanged. */
+/* ---- KYC: numbered sections ------------------------------------------ */
 .crp .ck-fieldset {
-  margin: 20px 0 0; padding: 18px; border: 1px solid var(--c-line);
-  border-radius: 18px; background: #fff; min-width: 0;
+  margin: 26px 0 0; padding: 0; border: 0; border-top: 1px solid var(--c-ink); border-radius: 0;
 }
 .crp .ck-fieldset__legend {
-  display: inline-flex; align-items: center; gap: 9px;
-  padding: 0 4px; margin-left: -4px;
-  font-size: 13.5px; font-weight: 800; letter-spacing: -.015em; color: var(--c-ink);
+  display: block; padding: 14px 0 0; margin: 0;
+  font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--c-ink);
 }
-.crp .ck-fieldset__ic {
-  display: grid; place-items: center; width: 26px; height: 26px; border-radius: 9px;
-  color: #fff; background: linear-gradient(140deg, var(--ck-c) 0%, var(--ck-c2, var(--ck-c)) 100%);
-  box-shadow: 0 5px 12px -5px var(--ck-glow);
+.crp .ck-fieldset__legend::before {
+  content: attr(data-step) ' — '; color: var(--c-violet); font-variant-numeric: tabular-nums;
 }
-.crp .ck-fieldset__hint { margin: 8px 0 14px; font-size: 12.5px; line-height: 1.5; color: var(--c-ink-3); }
-
-/* The security notice is the reassurance that makes people fill this in. */
+.crp .ck-fieldset__ic { display: none; }
+.crp .ck-fieldset__hint { margin: 7px 0 16px; font-size: 12.5px; line-height: 1.5; color: var(--c-ink-3); }
 .crp .crp__form-note {
-  display: flex; align-items: flex-start; gap: 9px;
-  padding: 12px 14px; border-radius: 14px;
-  background: color-mix(in srgb, var(--c-cobalt) 7%, #fff);
-  border: 1px solid color-mix(in srgb, var(--c-cobalt) 20%, transparent);
-  color: var(--c-ink-2); font-size: 12.5px; line-height: 1.5;
+  display: block; padding: 11px 0 11px 12px; border-radius: 0; border: 0;
+  border-left: 2px solid var(--c-cobalt); background: none;
+  color: var(--c-ink-3); font-size: 12.5px; line-height: 1.5;
 }
-.crp .crp__form-note svg { flex: 0 0 auto; margin-top: 2px; color: var(--c-cobalt); }
+.crp .crp__form-note svg { display: none; }
 .crp .crp__form-note code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  background: color-mix(in srgb, var(--c-cobalt) 12%, transparent);
-  padding: 1px 5px; border-radius: 5px;
+  background: rgba(30,94,255,.07); padding: 1px 5px; border-radius: var(--r);
 }
-
-/* Status messages inside the KYC panel, on the new palette. */
 .crp .crp__kyc-msg {
-  display: flex; align-items: flex-start; gap: 9px;
-  padding: 12px 14px; border-radius: 14px; font-size: 13px; line-height: 1.5;
-  background: color-mix(in srgb, var(--c-orange) 9%, #fff);
-  border: 1px solid color-mix(in srgb, var(--c-orange) 24%, transparent);
-  color: #92400E;
+  display: block; padding: 11px 0 11px 12px; border-radius: 0; border: 0;
+  border-left: 2px solid var(--c-amber); background: none; color: #8A5209; font-size: 13px;
 }
-.crp .crp__kyc-msg svg { flex: 0 0 auto; margin-top: 2px; }
-.crp .crp__kyc-msg.is-ok {
-  background: color-mix(in srgb, var(--c-emerald) 9%, #fff);
-  border-color: color-mix(in srgb, var(--c-emerald) 26%, transparent); color: #047857;
+.crp .crp__kyc-msg svg { display: none; }
+.crp .crp__kyc-msg.is-ok  { border-left-color: var(--c-emerald); color: #00795A; }
+.crp .crp__kyc-msg.is-bad { border-left-color: var(--c-coral); color: #B22B42; }
+
+.crp .crp__field > span { display: block; margin-bottom: 7px; }
+.crp .crp__field input, .crp .crp__field select {
+  min-height: 50px; border-radius: var(--r); border: 1px solid var(--c-rule-2);
+  background: var(--c-paper); font-size: 14.5px;
+  transition: border-color .14s ease, box-shadow .14s ease;
 }
-.crp .crp__kyc-msg.is-bad {
-  background: color-mix(in srgb, var(--c-coral) 9%, #fff);
-  border-color: color-mix(in srgb, var(--c-coral) 26%, transparent); color: #9F2F35;
+.crp .crp__field input:focus, .crp .crp__field select:focus {
+  outline: none; border-color: var(--c-violet); box-shadow: inset 0 0 0 1px var(--c-violet);
 }
 
-/* ---- 3. Campaign / link / product list items ------------------------
-   Still plain white rows beside gradient modules. Given a violet identity
-   edge and the same lift, so a list reads as part of the same system. */
+/* Bank / UPI: rectangular tabs, not a pill switch. */
+.crp .crp__seg {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; padding: 0;
+  border-radius: 0; background: none; border: 0; border-bottom: 1px solid var(--c-rule);
+}
+.crp .crp__seg button {
+  min-height: 46px; padding: 0 4px; border: 0; border-radius: 0; background: none;
+  color: var(--c-ink-3); font-size: 12px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; cursor: pointer; margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  transition: color .14s ease, border-color .14s ease;
+}
+.crp .crp__seg button:hover:not(.active) { background: none; color: var(--c-ink); }
+.crp .crp__seg button.active { background: none; color: var(--c-ink); border-bottom-color: var(--c-violet); box-shadow: none; }
+.crp .crp__seg button:focus-visible { outline: 2px solid var(--c-violet); outline-offset: -2px; }
+
+/* ---- List items: ruled rows ------------------------------------------ */
+.crp .crp__list { border-top: 1px solid var(--c-rule); }
 .crp .crp__item {
-  position: relative; overflow: hidden;
-  border-radius: 18px; background: #fff; border: 1px solid var(--c-line);
-  box-shadow: var(--ck-sh);
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  border-radius: 0; background: none; border: 0; border-bottom: 1px solid var(--c-rule);
+  box-shadow: none; padding: 16px 0; transition: background .14s ease;
 }
-.crp .crp__item::before {
-  content: ''; position: absolute; inset: 0 auto 0 0; width: 3px;
-  background: linear-gradient(180deg, var(--c-violet) 0%, var(--c-cobalt) 100%);
-  opacity: .85;
-}
-.crp .crp__item:hover {
-  transform: translateY(-2px); box-shadow: var(--ck-sh-lift);
-  border-color: color-mix(in srgb, var(--c-violet) 34%, transparent);
-}
+.crp .crp__item::before { display: none; }
+.crp .crp__item:hover { transform: none; box-shadow: none; background: rgba(0,0,0,.015); }
 .crp .crp__item h3 { font-size: 14.5px; font-weight: 700; letter-spacing: -.015em; color: var(--c-ink); }
 .crp .crp__item code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  background: color-mix(in srgb, var(--c-violet) 9%, transparent);
-  color: var(--c-violet); padding: 2px 6px; border-radius: 6px; font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  background: none; color: var(--c-violet); padding: 0; border-radius: 0; font-weight: 700;
 }
-
-/* ---- 4. Link cards --------------------------------------------------- */
 .crp .crp__url {
-  border-radius: 12px; border: 1px solid var(--c-line); background: var(--c-canvas);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
-  color: var(--c-ink-2); overflow-wrap: anywhere;
+  display: block; padding: 10px 12px; border: 1px solid var(--c-rule); border-radius: var(--r);
+  background: var(--c-canvas); color: var(--c-ink-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  font-weight: 400; overflow-wrap: anywhere;
 }
 
-/* ---- 5. Account -> Creator seam --------------------------------------
-   The storefront account page is calm cream; the creator dashboard is
-   vibrant violet. Crossing between them was abrupt. This card sits on the
-   account page and introduces the creator palette gently — a violet-tinted
-   surface and gradient CTA — so the jump reads as intentional rather than
-   like landing in a different product. */
+/* ---- Identity block (Profile) ---------------------------------------- */
+.ck-idcard {
+  display: block; padding: 0 0 18px; border: 0; border-bottom: 1px solid var(--c-ink);
+  border-radius: 0; background: none; box-shadow: none; color: var(--c-ink);
+}
+.ck-idcard__avatar { display: none; }
+.ck-idcard__name { font-size: clamp(28px, 4.4vw, 44px); font-weight: 800; letter-spacing: -.04em; margin: 0 0 6px; color: var(--c-ink); }
+.ck-idcard__email { margin: 0; font-size: 13.5px; color: var(--c-ink-3); }
+.ck-idcard__tags { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.ck-idcard__code { display: inline-flex; align-items: center; gap: 10px; padding: 0; background: none; border: 0; border-radius: 0; backdrop-filter: none; }
+.ck-idcard__code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; font-size: 14px;
+  color: var(--c-ink); letter-spacing: .06em;
+}
+
+/* ---- Account -> Creator seam ----------------------------------------- */
+.crob input.input, .crob select.select { border-radius: var(--r); }
 .crob .crob__status.is-active {
-  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--c-violet) 26%, transparent);
-  background:
-    radial-gradient(110% 140% at 100% 0%, color-mix(in srgb, var(--c-violet) 13%, transparent) 0%, transparent 60%),
-    linear-gradient(135deg, color-mix(in srgb, var(--c-emerald) 8%, #fff) 0%, #fff 70%);
-  padding: 16px 18px;
+  border-radius: var(--r); border: 1px solid var(--c-rule); border-left: 3px solid var(--c-emerald);
+  background: var(--c-paper); padding: 15px 17px; box-shadow: none;
 }
 .crob .crob__status.is-active svg { color: var(--c-emerald); }
-.crob .crob__status.is-active strong { color: var(--c-ink); font-weight: 800; letter-spacing: -.02em; }
-
+.crob .crob__status.is-active strong { color: var(--c-ink); font-weight: 700; letter-spacing: -.015em; }
 .crob .crob__linkcard {
-  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--c-violet) 22%, transparent);
-  background:
-    radial-gradient(100% 140% at 0% 0%, color-mix(in srgb, var(--c-violet) 10%, transparent) 0%, transparent 62%),
-    #fff;
-  box-shadow: var(--ck-sh); padding: 18px;
+  border-radius: var(--r); border: 1px solid var(--c-rule); border-left: 3px solid var(--c-violet);
+  background: var(--c-paper); box-shadow: none; padding: 17px;
 }
-.crob .crob__linklabel {
-  font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--c-violet);
-}
+.crob .crob__linklabel { font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--c-violet); }
 .crob .crob__link {
-  border-radius: 12px; border: 1px solid var(--c-line); background: var(--c-canvas);
+  border-radius: var(--r); border: 1px solid var(--c-rule); background: var(--c-canvas);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
   color: var(--c-ink-2); overflow-wrap: anywhere;
 }
-/* The one CTA that carries you into the creator product gets its palette. */
 .crob a.btn[href="/creator"], .crob a.btn-block {
-  background: linear-gradient(135deg, var(--c-violet) 0%, var(--c-cobalt) 100%);
-  border: 0; color: #fff; border-radius: 999px; min-height: 48px; font-weight: 700;
-  box-shadow: 0 14px 30px -16px rgba(124,58,237,.85);
+  background: var(--c-ink); border: 1px solid var(--c-ink); color: #fff;
+  border-radius: var(--r); min-height: 48px; font-weight: 700; box-shadow: none;
 }
-.crob a.btn[href="/creator"]:hover, .crob a.btn-block:hover { filter: brightness(1.05); }
+.crob a.btn[href="/creator"]:hover, .crob a.btn-block:hover { background: var(--c-violet); border-color: var(--c-violet); filter: none; }
+.crob .crob__next {
+  border-radius: var(--r); border: 0; border-left: 3px solid var(--c-emerald);
+  background: rgba(0,168,120,.05); padding: 13px 15px; font-size: 13px; color: var(--c-ink-2);
+}
+.crob .crob__next svg { display: none; }
+.crob .crob__next strong { color: #00795A; }
+.crob .crob__next a { font-weight: 700; color: #00795A; }
+
+/* ---- Mobile density ---------------------------------------------------
+   The previous build turned 390px into a stream of tall panels. Rows and
+   2-up grids instead; "₹0" never gets 200px of height. */
+@media (max-width: 719px) {
+  .ck-section { margin-top: 26px; }
+  .ck-band__cell { padding: 13px 13px 12px; }
+  .ck-band__cell[data-tone] { padding-top: 19px; }
+  .ck-band--3 .ck-band__cell:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    border-right: 0;
+  }
+  .ck-band--3 .ck-band__cell:nth-last-child(2) { border-bottom: 1px solid var(--c-rule); }
+  .ck-band__fig { font-size: 22px; }
+  .ck-band__hint { display: none; }   /* the label already carries it */
+  .ck-balance__main { padding: 18px 15px 16px; }
+  .ck-balance__row .ck-band__cell { padding: 11px 10px; }
+  .ck-balance__row .ck-band__fig { font-size: 15px; }
+  .ck-balance__row .ck-band__label { font-size: 9.5px; letter-spacing: .05em; }
+  .ck-share { padding: 20px 16px; }
+  .ck-idbar__meta { gap: 12px 18px; }
+  .crp-hiw__step { grid-template-columns: 34px 1fr; padding: 16px 0; }
+  .crp-hiw__step::after { left: 11px; top: 38px; }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .crp .crp__item, .crp .crp__item:hover { transition: none; transform: none; }
+  .crp *, .crob * { transition: none !important; }
 }
+
+/* ---- Share-band button contrast -------------------------------------
+   The generic rule is `.crp .btn:not(.btn-light):not(.btn-outline)`, and
+   each :not() argument contributes its own specificity — 0,4,1 — which
+   beat the share override at 0,3,0, so the primary CTA rendered black on
+   the violet band. Matching the :not() chain restores white. */
+.crp .ck-share .ck-share__actions .btn:not(.btn-light):not(.btn-outline) {
+  background: #fff; color: var(--c-ink); border: 1px solid #fff;
+}
+.crp .ck-share .ck-share__actions .btn:not(.btn-light):not(.btn-outline):hover {
+  background: rgba(255,255,255,.86); border-color: rgba(255,255,255,.86);
+}
+.crp .ck-share .ck-share__code .btn:not(.btn-light):not(.btn-outline) {
+  background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.45);
+}
+.crp .ck-share .ck-share__code .btn:not(.btn-light):not(.btn-outline):hover {
+  background: rgba(255,255,255,.12); border-color: #fff;
+}
+
+/* ---- Payouts: the last three rounded surfaces -----------------------
+   creator.css still shipped this page's own vocabulary — a 16px green
+   GRADIENT balance card, a 14px banner, and a 38px rounded icon bubble.
+   Recomposed here to match the balance/step language used everywhere
+   else: rules and side accents, no second gradient, no bubble. */
+.crp .crp__payout-bal {
+  background: var(--c-paper); color: var(--c-ink);
+  border: 1px solid var(--c-rule); border-top: 3px solid var(--c-emerald);
+  border-radius: var(--r); padding: 20px; margin-bottom: 0;
+}
+.crp .crp__payout-bal-l {
+  font-size: 11px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--c-ink-3); opacity: 1;
+}
+.crp .crp__payout-bal-v {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: clamp(32px, 5vw, 44px); font-weight: 800; letter-spacing: -.045em;
+  line-height: 1.02; font-variant-numeric: tabular-nums; color: var(--c-ink); margin-top: 4px;
+}
+.crp .crp__payout-bal-meta {
+  margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--c-rule);
+  font-size: 12px; color: var(--c-ink-3); opacity: 1;
+}
+
+/* Banner: tone moves from a tinted rounded box to a 3px side rule. */
+.crp .crp__banner {
+  border-radius: var(--r); border: 1px solid var(--c-rule);
+  border-left: 3px solid var(--c-rule-2); background: var(--c-paper);
+  padding: 15px 16px; gap: 11px; align-items: flex-start; margin-top: -1px;
+}
+.crp .crp__banner.is-ok   { border-left-color: var(--c-emerald); }
+.crp .crp__banner.is-warn { border-left-color: var(--c-amber); }
+.crp .crp__banner.is-live { border-left-color: var(--c-violet); background: var(--c-paper); }
+.crp .crp__banner.is-bad  { border-left-color: var(--c-coral); }
+.crp .crp__banner-txt strong {
+  font-size: 14px; font-weight: 700; color: var(--c-ink); letter-spacing: -.01em;
+}
+.crp .crp__banner-txt p { font-size: 13px; color: var(--c-ink-3); }
+
+/* The icon bubble is removed outright — the glyph carries the tone. */
+.crp .crp__banner-icon,
+.crp .crp__banner.is-ok .crp__banner-icon,
+.crp .crp__banner.is-warn .crp__banner-icon,
+.crp .crp__banner.is-live .crp__banner-icon {
+  width: auto; height: auto; border-radius: 0; background: none;
+  padding: 1px 0 0; place-items: start;
+}
+.crp .crp__banner.is-ok   .crp__banner-icon { color: var(--c-emerald); }
+.crp .crp__banner.is-warn .crp__banner-icon { color: var(--c-amber); }
+.crp .crp__banner.is-live .crp__banner-icon { color: var(--c-violet); }
+.crp .crp__banner.is-bad  .crp__banner-icon { color: var(--c-coral); }
+.crp .crp__banner.is-muted .crp__banner-icon { color: var(--c-ink-3); }
+
+/* ---- Tables ---------------------------------------------------------
+   `.ta-r` zeroed padding-right on EVERY right-aligned cell, so a numeric
+   column ran straight into the next one ("AMOUNTSTATUS" in the payout
+   history head). Only the final column should sit flush. */
+.crp .crp__table { font-size: 13px; }
+.crp .crp__table th {
+  padding-bottom: 9px; border-bottom: 1px solid var(--c-ink); color: var(--c-ink-3);
+}
+.crp .crp__table td { padding: 11px 14px 11px 0; border-bottom: 1px solid var(--c-rule); color: var(--c-ink-2); }
+.crp .crp__table tr:last-child td { border-bottom: 0; }
+.crp .crp__table .ta-r, .crp .crp__table th.ta-r {
+  padding-right: 18px; font-variant-numeric: tabular-nums;
+}
+.crp .crp__table .ta-r:last-child, .crp .crp__table th.ta-r:last-child { padding-right: 0; }
+.crp .crp__table td.is-ok { color: var(--c-emerald); font-weight: 700; }
+
+/* ---- Last serif figures ---------------------------------------------
+   creator.css still set `--font-display` (the storefront serif) on six
+   value elements. Inside the portal every FIGURE is Inter with tabular
+   numerals, so columns of money line up. Storefront is untouched. */
+.crp .crp__hist-amt, .crp .crp__bucket-v, .crp .crp__stat-v,
+.crp .crp__big, .crp .crp__lc-campaign, .crob .crp__stat-v {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em; color: var(--c-ink);
+}
+.crp .crp__hist-amt { font-weight: 700; }
+.crp .crp__hist-amt.is-bad { color: var(--c-coral); }
+.crp .crp__big { font-weight: 800; letter-spacing: -.04em; }
+.crp .crp__lc-campaign { font-weight: 700; letter-spacing: -.01em; }

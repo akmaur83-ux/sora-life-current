@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
-import { Metric } from '../../components/creator/CreatorUI.jsx';
 import CopyButton from '../../components/CopyButton.jsx';
 import { useCustomerAuth } from '../../lib/customerAuth.jsx';
 import { getMyCreator, applyAsCreator, buildTrackingUrl } from '../../lib/creatorApi.js';
@@ -139,12 +138,23 @@ export default function CreatorOnboarding() {
           </>
         )}
 
-        <div className="ck-metrics ck-metrics--2" style={{ marginTop: 'var(--sp-4)' }}>
-          <Metric label="Creator code" value={creator.creator_code} tone="brand" icon="crown" mono />
-          <Metric label="Commission rate" value={`${Number(creator.default_commission_rate)}%`} tone="brand" icon="tag"
-            hint="Applied to eligible sale value when a sale qualifies." />
-          <Metric label="Status" value={s} tone={s === 'active' ? 'ok' : s === 'pending' ? 'hold' : 'bad'} icon="shield" />
-          <Metric label="Joined" value={fmtDate(creator.joined_at)} tone="neutral" icon="clock" />
+        <div className="ck-band" style={{ marginTop: 'var(--sp-4)' }}>
+          <div className="ck-band__cell" data-tone="brand">
+            <span className="ck-band__label">Creator code</span>
+            <div className="ck-band__fig" style={{ fontSize: 18, fontFamily: 'ui-monospace, Menlo, monospace' }}>{creator.creator_code}</div>
+          </div>
+          <div className="ck-band__cell" data-tone="brand">
+            <span className="ck-band__label">Commission</span>
+            <div className="ck-band__fig">{Number(creator.default_commission_rate)}%</div>
+          </div>
+          <div className="ck-band__cell" data-tone={s === 'active' ? 'ok' : 'hold'}>
+            <span className="ck-band__label">Status</span>
+            <div className="ck-band__fig" style={{ fontSize: 18 }}>{s}</div>
+          </div>
+          <div className="ck-band__cell">
+            <span className="ck-band__label">Joined</span>
+            <div className="ck-band__fig" style={{ fontSize: 18 }}>{fmtDate(creator.joined_at)}</div>
+          </div>
         </div>
 
         <div className="crob__next">

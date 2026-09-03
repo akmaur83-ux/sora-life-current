@@ -11,7 +11,7 @@ import {
 import { money2 } from '../lib/format.js';
 import CreatorEarnings from '../components/creator/CreatorEarnings.jsx';
 import CreatorHowItWorks from '../components/creator/CreatorHowItWorks.jsx';
-import { Metric, Section, Empty, Pill, Step } from '../components/creator/CreatorUI.jsx';
+import { Section, Empty, Pill, Step, Band, Cell, Balance, IdBar } from '../components/creator/CreatorUI.jsx';
 import CreatorPayouts from '../components/creator/CreatorPayouts.jsx';
 
 // ============================================================
@@ -229,106 +229,96 @@ export default function CreatorPortal() {
 
           {tab === 'dashboard' && (
             <>
-              {isLive ? (
+              <IdBar
+                eyebrow="SORA LIFE Creator"
+                name={creator.display_name}
+                items={[
+                  { k: 'Status', v: creator.status },
+                  { k: 'Creator code', v: <code>{creator.creator_code}</code> },
+                  { k: 'Commission', v: ratePct(creator) },
+                  { k: 'Attribution', v: windowLabel(creator) },
+                ]}
+              />
+
+              {isLive && (
                 <section className="ck-share">
-                  <span className="ck-share__eyebrow"><Icon name="sparkle" size={13} /> SORA LIFE Creator</span>
-                  <h1 className="serif ck-share__title">Your link is live, {creator.display_name.split(' ')[0]}.</h1>
+                  <span className="ck-share__eyebrow">Your creator link</span>
+                  <h2 className="ck-share__title">Share it anywhere.</h2>
                   <p className="ck-share__sub">
-                    Share this anywhere. Every visit through it is recorded against your account for{' '}
-                    {creator.default_attribution_window_days} days, and any order in that window earns you commission.
+                    Every visit through this link is recorded against your account for{' '}
+                    {creator.default_attribution_window_days} days. Any order in that window earns commission.
                   </p>
                   <code className="ck-share__url">{defaultLink}</code>
                   <div className="ck-share__actions">
                     <CopyButton value={defaultLink} className="btn" label="Copy link" />
                     <ShareButton url={defaultLink} title={SHARE_TITLE(creator)} />
-                    <Link to="/creator/links" className="btn btn-light"><Icon name="externalLink" size={15} /> All links</Link>
+                    <Link to="/creator/links" className="btn btn-light">All links</Link>
                   </div>
                   <span className="ck-share__code">
-                    Your code <code>{creator.creator_code}</code>
-                    <CopyButton value={creator.creator_code} className="btn btn-xs btn-light" label="Copy" />
+                    Code <code>{creator.creator_code}</code>
+                    <CopyButton value={creator.creator_code} className="btn btn-xs" label="Copy" />
                   </span>
                 </section>
-              ) : (
-                <h1 className="serif crp__h1">Welcome, {creator.display_name.split(' ')[0]}</h1>
               )}
 
               <Section
                 title="Performance"
-                sub="Attributed activity from your links. Figures update as orders qualify."
-                action={<Link to="/creator/analytics" className="ck-section__link">Full analytics</Link>}
+                action={<Link to="/creator/analytics" className="ck-section__link">Analytics</Link>}
               >
-                <div className="ck-metrics">
-                  <Metric label="Link clicks" value={String(analytics?.clicks ?? 0)} tone="info" icon="externalLink"
-                    hint="Every visit that arrived through one of your links." />
-                  <Metric label="Attributed orders" value={String(analytics?.attributed_orders ?? 0)} tone="brand" icon="package"
-                    hint="Orders matched to you inside your attribution window." />
-                  <Metric label="Products sold" value={String(analytics?.products_sold ?? 0)} tone="hold" icon="bag"
-                    hint="Individual units across your attributed orders." />
-                  <Metric label="Attributed sales" value={money2(analytics?.attributed_sales ?? 0)} tone="ok" icon="tag"
-                    hint="Eligible sale value, before commission." />
-                </div>
+                <Band>
+                  <Cell label="Link clicks" value={String(analytics?.clicks ?? 0)} tone="info" />
+                  <Cell label="Orders" value={String(analytics?.attributed_orders ?? 0)} tone="brand" />
+                  <Cell label="Products sold" value={String(analytics?.products_sold ?? 0)} tone="hold" />
+                  <Cell label="Attributed sales" value={money2(analytics?.attributed_sales ?? 0)} tone="ok" />
+                </Band>
               </Section>
 
               <Section
                 title="Earnings"
-                sub="Commission is calculated on eligible sale value and clears after the hold period."
-                action={<Link to="/creator/earnings" className="ck-section__link">Earnings detail</Link>}
+                action={<Link to="/creator/earnings" className="ck-section__link">Earnings</Link>}
               >
-                <div className="ck-metrics ck-metrics--bento">
-                  <Metric hero label="Available to withdraw" value={money2(earnings?.available ?? 0)} tone="ok" icon="card"
-                    hint="Cleared commission. This is what a payout request withdraws." />
-                  <Metric label="Held" value={money2(earnings?.held ?? 0)} tone="hold" icon="clock"
-                    hint={holdHint(earnings)} />
-                  <Metric label="In payout" value={money2(earnings?.reserved ?? 0)} tone="brand" icon="shield"
-                    hint="Reserved against a payout request that is being processed." />
-                  <Metric label="Paid out" value={money2(earnings?.paid ?? 0)} tone="ok" icon="check" />
-                </div>
+                <Balance
+                  label="Available to withdraw"
+                  value={money2(earnings?.available ?? 0)}
+                  hint="Cleared commission. A payout request withdraws this full amount."
+                >
+                  <Cell label="Held" value={money2(earnings?.held ?? 0)} tone="hold" />
+                  <Cell label="In payout" value={money2(earnings?.reserved ?? 0)} tone="brand" />
+                  <Cell label="Paid out" value={money2(earnings?.paid ?? 0)} tone="ok" />
+                </Balance>
               </Section>
 
-              <Section title="What to do next" sub="Based on your account right now.">
+              <Section title="Next steps">
                 <ol className="ck-steps">
-                  <Step index={1} done={isLive} tone="brand"
-                    title="Get your account activated"
-                    body={isLive
-                      ? 'Your creator account is active and your links attribute visits.'
-                      : activationHint(creator)} />
-                  <Step index={2} done={Number(analytics?.clicks ?? 0) > 0} tone="brand"
-                    title="Share your link"
-                    body={clicksHint(analytics)} />
-                  <Step index={3} done={hasAnyCommission(earnings)} tone="hold"
-                    title="Earn your first commission"
+                  <Step index={1} done={isLive} title="Account active"
+                    body={isLive ? 'Your links attribute visits.' : activationHint(creator)} />
+                  <Step index={2} done={Number(analytics?.clicks ?? 0) > 0} next={isLive && Number(analytics?.clicks ?? 0) === 0}
+                    title="Share your first link" body={clicksHint(analytics)} />
+                  <Step index={3} done={hasAnyCommission(earnings)} next={Number(analytics?.clicks ?? 0) > 0 && !hasAnyCommission(earnings)}
+                    title="Earn first commission"
                     body="When an attributed order is paid, commission is created and enters the hold period." />
-                  <Step index={4} done={kyc?.identity_status === 'verified'} tone="info"
-                    title="Verify your payout details"
+                  <Step index={4} done={kyc?.identity_status === 'verified'} next={hasAnyCommission(earnings) && kyc?.identity_status !== 'verified'}
+                    title="Verify payout details"
                     body={kyc?.identity_status === 'verified'
-                      ? 'Your details are verified. You can request a payout when your balance clears.'
-                      : 'Submit your KYC and payout details once. An admin verifies them before your first withdrawal.'} />
-                  <Step index={5} done={Number(earnings?.paid ?? 0) > 0} tone="ok"
-                    title="Request a payout"
-                    body={payoutHint(earnings)} />
+                      ? 'Verified. You can request a payout when your balance clears.'
+                      : 'Submit KYC once. An admin verifies it before your first withdrawal.'} />
+                  <Step index={5} done={Number(earnings?.paid ?? 0) > 0}
+                    next={kyc?.identity_status === 'verified' && Number(earnings?.available ?? 0) > 0 && Number(earnings?.paid ?? 0) === 0}
+                    title="Request a payout" body={payoutHint(earnings)} />
                 </ol>
-              </Section>
-
-              <Section title="Your programme" sub="The terms your commission is calculated on.">
-                <div className="ck-metrics ck-metrics--3">
-                  <Metric label="Commission rate" value={ratePct(creator)} tone="brand" icon="crown"
-                    hint="Applied to eligible sale value and locked in when a sale qualifies." />
-                  <Metric label="Attribution window" value={windowLabel(creator)} tone="brand" icon="clock"
-                    hint="How long after a visit a purchase still counts as yours." />
-                  <Metric label="Account status" value={creator.status} tone={isLive ? 'ok' : 'hold'} icon="shield" />
-                </div>
               </Section>
 
               <Section
                 title="Campaigns and links"
                 action={<Link to="/creator/campaigns" className="ck-section__link">Campaigns</Link>}
               >
-                <div className="ck-metrics ck-metrics--2">
-                  <Metric label="Active campaigns" value={String(activeCampaigns.length)} tone="brand" icon="sparkle"
-                    hint={totalLabel(campaigns.length, 'total on your account.')} />
-                  <Metric label="Active tracking links" value={String(activeLinks.length)} tone="brand" icon="externalLink"
+                <Band cols={3}>
+                  <Cell label="Active campaigns" value={String(activeCampaigns.length)} tone="brand"
+                    hint={totalLabel(campaigns.length, 'on your account')} />
+                  <Cell label="Active links" value={String(activeLinks.length)} tone="brand"
                     hint={linksHint(links.length)} />
-                </div>
+                  <Cell label="Attribution window" value={windowLabel(creator)} />
+                </Band>
               </Section>
             </>
           )}
@@ -417,16 +407,16 @@ export default function CreatorPortal() {
             <>
               <h1 className="serif crp__h1">My analytics</h1>
               <p className="crp__lede">Attributed activity from your links. Figures update as orders qualify.</p>
-              <div className="ck-metrics ck-metrics--bento">
-                <Metric hero label="Attributed sales" value={money2(analytics?.attributed_sales ?? 0)} tone="ok" icon="tag"
-                  hint="Eligible sale value your links generated, before commission." />
-                <Metric label="Link clicks" value={String(analytics?.clicks ?? 0)} tone="info" icon="externalLink"
+              <Band>
+                <Cell label="Link clicks" value={String(analytics?.clicks ?? 0)} tone="info"
                   hint="Visits that arrived through one of your links." />
-                <Metric label="Attributed orders" value={String(analytics?.attributed_orders ?? 0)} tone="brand" icon="package"
+                <Cell label="Attributed orders" value={String(analytics?.attributed_orders ?? 0)} tone="brand"
                   hint="Orders matched to you inside your attribution window." />
-                <Metric label="Products sold" value={String(analytics?.products_sold ?? 0)} tone="hold" icon="bag"
+                <Cell label="Products sold" value={String(analytics?.products_sold ?? 0)} tone="hold"
                   hint="Individual units across your attributed orders." />
-              </div>
+                <Cell label="Attributed sales" value={money2(analytics?.attributed_sales ?? 0)} tone="ok"
+                  hint="Eligible sale value, before commission." />
+              </Band>
 
               {Array.isArray(analytics?.top_products) && analytics.top_products.length > 0 ? (
                 <div className="crp__panel" style={{ marginTop: 'var(--sp-5)' }}>
@@ -510,14 +500,12 @@ export default function CreatorPortal() {
                 </div>
               </section>
 
-              <Section title="Programme terms" sub="Set by SORA LIFE — these are not editable here.">
-                <div className="ck-metrics ck-metrics--3">
-                  <Metric label="Commission rate" value={ratePct(creator)} tone="brand" icon="crown"
-                    hint="Applied to eligible sale value and locked in when a sale qualifies." />
-                  <Metric label="Attribution window" value={windowLabel(creator)} tone="brand" icon="clock"
-                    hint="How long after a visit a purchase still counts as yours." />
-                  <Metric label="Creator since" value={fmtDate(creator.joined_at)} tone="neutral" icon="award" />
-                </div>
+              <Section title="Programme terms" sub="Set by SORA LIFE — not editable here.">
+                <Band cols={3}>
+                  <Cell label="Commission rate" value={ratePct(creator)} tone="brand" />
+                  <Cell label="Attribution window" value={windowLabel(creator)} tone="brand" />
+                  <Cell label="Creator since" value={fmtDate(creator.joined_at)} />
+                </Band>
               </Section>
 
               <p className="crp__foot-note">

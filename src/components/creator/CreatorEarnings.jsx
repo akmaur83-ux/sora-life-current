@@ -1,5 +1,5 @@
 import Icon from '../Icon.jsx';
-import { Metric } from './CreatorUI.jsx';
+import { Balance, Cell } from './CreatorUI.jsx';
 import { money2 } from '../../lib/format.js';
 
 // ============================================================
@@ -50,28 +50,18 @@ export default function CreatorEarnings({ creator, earnings }) {
 
       {/* Four balance buckets, derived from the ledger. Available is the
           hero: it is the only figure here the creator can act on. */}
-      <div className="ck-metrics">
-        <Metric
-          hero tone="ok" icon="checkCircle" label="Available to withdraw"
-          value={money2(earnings.available ?? 0)}
-          hint="Cleared commission. A payout request withdraws this full amount."
-        />
-        <Metric
-          tone="hold" icon="clock" label="Pending"
-          value={money2(earnings.held ?? 0)}
-          hint={`In the ${hold}-day settlement hold. It clears to Available automatically.`}
-        />
-        <Metric
-          tone="ok" icon="card" label="Paid out"
-          value={money2(earnings.paid ?? 0)}
-          hint="Already transferred to you, all time."
-        />
-        <Metric
-          tone={Number(earnings.reversed ?? 0) > 0 ? 'bad' : 'neutral'} icon="refresh" label="Reversed"
-          value={money2(earnings.reversed ?? 0)}
-          hint="Refunds and adjustments, reversed at the rate they were earned."
-        />
-      </div>
+      <Balance
+        label="Available to withdraw"
+        value={money2(earnings.available ?? 0)}
+        hint="Cleared commission. A payout request withdraws this full amount."
+      >
+        <Cell label="Held" value={money2(earnings.held ?? 0)} tone="hold"
+          hint={`In the ${hold}-day settlement hold.`} />
+        <Cell label="Paid out" value={money2(earnings.paid ?? 0)} tone="ok" hint="All time." />
+        <Cell label="Reversed" value={money2(earnings.reversed ?? 0)}
+          tone={Number(earnings.reversed ?? 0) > 0 ? 'bad' : undefined}
+          hint="Refunds and adjustments." />
+      </Balance>
 
       {earnings.reserved > 0 && (
         <p className="crp__reserve-note">

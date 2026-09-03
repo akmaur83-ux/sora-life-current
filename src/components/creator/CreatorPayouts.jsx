@@ -187,10 +187,7 @@ function KycForm({ kyc, onSubmitKyc, onDone, onCancel }) {
       </p>
 
       <fieldset className="ck-fieldset ck-tone-brand">
-        <legend className="ck-fieldset__legend">
-          <span className="ck-fieldset__ic" aria-hidden="true"><Icon name="user" size={14} /></span>
-          Identity details
-        </legend>
+        <legend className="ck-fieldset__legend" data-step="01">Identity</legend>
         <p className="ck-fieldset__hint">Must match your PAN exactly — a mismatch is the most common reason verification is sent back.</p>
 
         <label className="crp__field">
@@ -205,10 +202,7 @@ function KycForm({ kyc, onSubmitKyc, onDone, onCancel }) {
       </fieldset>
 
       <fieldset className="ck-fieldset ck-tone-info">
-        <legend className="ck-fieldset__legend">
-          <span className="ck-fieldset__ic" aria-hidden="true"><Icon name="card" size={14} /></span>
-          Payment method
-        </legend>
+        <legend className="ck-fieldset__legend" data-step="02">Payout method</legend>
         <p className="ck-fieldset__hint">Where we send your payout. You can change this later by resubmitting your details.</p>
 
         <div className="crp__field">

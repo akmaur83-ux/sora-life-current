@@ -120,8 +120,8 @@ await test('no unsupported earning promises', () => {
 console.log('\n— Shared primitives —');
 // ============================================================
 
-await test('CreatorUI exports the five primitives the portal composes from', () => {
-  for (const c of ['Metric', 'Section', 'Empty', 'Pill', 'Step']) {
+await test('CreatorUI exports the shared primitives the portal composes from', () => {
+  for (const c of ['Section', 'Empty', 'Pill', 'Step', 'Band', 'Cell', 'Balance', 'IdBar']) {
     assert.match(ui, new RegExp(`export function ${c}\\(`), `missing ${c}`);
   }
 });
@@ -139,8 +139,8 @@ await test('the old one-off Bucket component was removed, not left dead', () => 
 
 await test('the portal actually uses the shared primitives', () => {
   const c = js(portal);
-  assert.match(c, /import \{ Metric, Section, Empty, Pill, Step \} from/);
-  for (const el of ['<Metric', '<Section', '<Empty', '<Step']) {
+  assert.match(c, /import \{ Section, Empty, Pill, Step, Band, Cell, Balance, IdBar \} from/);
+  for (const el of ['<Section', '<Empty', '<Step', '<Band', '<Cell', '<Balance', '<IdBar']) {
     assert.ok(c.includes(el), `portal should use ${el}`);
   }
 });
@@ -170,7 +170,7 @@ await test('the stylesheet is loaded after creator.css so it layers', () => {
 });
 
 await test('cards, empty states and share surfaces all exist', () => {
-  for (const cls of ['.ck-metric', '.ck-empty', '.ck-share', '.ck-steps', '.ck-pill', '.ck-idcard']) {
+  for (const cls of ['.ck-band', '.ck-empty', '.ck-share', '.ck-steps', '.ck-pill', '.ck-idcard']) {
     assert.match(css, new RegExp(cls.replace('.', '\\.') + '\\s*[,{]'), `missing ${cls}`);
   }
 });
@@ -179,13 +179,13 @@ await test('motion is disabled for reduced-motion users', () => {
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-await test('mobile is handled: single column by default, no fixed widths', () => {
-  // Behaviour, not an exact literal: the base rule must declare a single
-  // column, whatever the gap happens to be. The previous assertion pinned
-  // the gap value and broke on a purely cosmetic change.
-  const base = css.match(/\.ck-metrics \{[^}]*\}/);
-  assert.ok(base, '.ck-metrics base rule missing');
-  assert.match(base[0], /grid-template-columns:\s*1fr/, 'metrics must start single-column');
+await test('mobile uses compact two-column bands without orphaned three-cell rows', () => {
+  const base = css.match(/\.ck-band \{[^}]*\}/);
+  assert.ok(base, '.ck-band base rule missing');
+  assert.match(base[0], /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/,
+    'mobile bands must start as two equal columns');
+  assert.match(css, /\.ck-band--3 \.ck-band__cell:last-child:nth-child\(odd\)[^{]*\{[^}]*grid-column:\s*1 \/ -1/,
+    'the final cell in a three-cell mobile band must span the full row');
   assert.match(css, /@media \(min-width: 720px\)/);
   assert.match(css, /@media \(min-width: 1020px\)/);
   // Long URLs and codes must wrap rather than force a sideways scroll.
