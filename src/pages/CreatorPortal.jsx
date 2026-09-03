@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import CopyButton from '../components/CopyButton.jsx';
@@ -121,6 +121,7 @@ export default function CreatorPortal() {
   const [earnings, setEarnings] = useState(null);
   const [kyc, setKyc] = useState(null);
   const [payouts, setPayouts] = useState([]);
+  const navRef = useRef(null);
 
   // Reload just the money surfaces (earnings buckets, KYC, payout history)
   // after an action, without re-fetching the whole portal.
@@ -157,6 +158,24 @@ export default function CreatorPortal() {
     if (!session) { setState('none'); return; }
     load();
   }, [authLoading, session, load]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const nav = navRef.current;
+      const active = nav?.querySelector('.crp__navitem.active');
+      if (!nav || !active || nav.scrollWidth <= nav.clientWidth) return;
+
+      const inset = 12;
+      const visibleLeft = nav.scrollLeft + inset;
+      const visibleRight = nav.scrollLeft + nav.clientWidth - inset;
+      const itemLeft = active.offsetLeft;
+      const itemRight = itemLeft + active.offsetWidth;
+
+      if (itemLeft < visibleLeft) nav.scrollTo({ left: Math.max(0, itemLeft - inset) });
+      else if (itemRight > visibleRight) nav.scrollTo({ left: itemRight - nav.clientWidth + inset });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [tab, state]);
 
   if (authLoading || state === 'loading') {
     return <Shell><p className="muted">Loading your creator portal…</p></Shell>;
@@ -210,14 +229,17 @@ export default function CreatorPortal() {
       </header>
 
       <div className="container crp__body">
-        <nav className="crp__nav" aria-label="Creator portal">
-          {NAV.map((n) => (
-            <Link key={n.id} to={`/creator/${n.id}`}
-              className={`crp__navitem ${tab === n.id ? 'active' : ''}`}>
-              <Icon name={n.icon} size={16} /> {n.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="crp__nav-wrap">
+          <nav ref={navRef} className="crp__nav" aria-label="Creator portal">
+            {NAV.map((n) => (
+              <Link key={n.id} to={`/creator/${n.id}`}
+                className={`crp__navitem ${tab === n.id ? 'active' : ''}`}>
+                <Icon name={n.icon} size={16} /> {n.label}
+              </Link>
+            ))}
+          </nav>
+          <span className="crp__nav-cue" aria-hidden="true">›</span>
+        </div>
 
         <main className="crp__main">
           {!isLive && (
@@ -331,6 +353,7 @@ export default function CreatorPortal() {
                 <Empty
                   tone="brand"
                   icon="sparkle"
+                  eyebrow="Campaign status"
                   title="No campaigns running yet"
                   body="Campaigns are seasonal pushes SORA LIFE builds for creators — a launch, a festive edit, a category focus. Your programme manager sets them up; you don’t create them yourself."
                   points={[
@@ -435,6 +458,7 @@ export default function CreatorPortal() {
                 <Empty
                   tone="info"
                   icon="award"
+                  eyebrow="Analytics status"
                   title="No attributed orders yet"
                   body="These figures fill in on their own once someone shops through your link. Nothing here is estimated — every number is a real, matched order."
                   points={[

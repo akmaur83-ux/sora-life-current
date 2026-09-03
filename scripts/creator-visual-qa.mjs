@@ -118,6 +118,35 @@ const payoutHistory = [
 const defaultLink = 'https://sora-life-current.vercel.app/?ref=ANJALI10';
 const noop = () => {};
 
+const creatorNav = [
+  ['dashboard', 'Dashboard', 'grid'], ['campaigns', 'Campaigns', 'sparkle'],
+  ['links', 'Links', 'externalLink'], ['analytics', 'Analytics', 'award'],
+  ['earnings', 'Earnings', 'crown'], ['payouts', 'Payouts', 'card'],
+  ['how-it-works', 'How you earn', 'circleAlert'], ['profile', 'Profile', 'user'],
+];
+
+// The page panels use the real components. This thin test-only shell mirrors
+// CreatorPortal's production header/navigation DOM so mobile crowding and
+// horizontal-nav affordances are covered by the same viewport checks.
+const PortalFrame = ({ active, children }) => h('div', { className: 'crp' },
+  h('header', { className: 'crp__top' },
+    h('div', { className: 'container crp__top-in' },
+      h('a', { href: '/', className: 'crp__brand' },
+        h('span', { className: 'crp__brand-mark' }, 'SL'),
+        h('span', null, h('strong', null, 'SORA LIFE'), h('em', null, 'Creator Program'))),
+      h('div', { className: 'crp__top-right' },
+        h('span', { className: 'crp__who' }, creator.display_name),
+        h('button', { type: 'button', className: 'btn btn-sm btn-light' }, 'Log out')))),
+  h('div', { className: 'container crp__body' },
+    h('div', { className: 'crp__nav-wrap' },
+      h('nav', { className: 'crp__nav', 'aria-label': 'Creator portal' },
+        ...creatorNav.map(([id, label, icon]) => h('a', {
+          key: id, href: `/creator/${id}`,
+          className: `crp__navitem ${active === id ? 'active' : ''}`,
+        }, h(Icon, { name: icon, size: 16 }), label))),
+      h('span', { className: 'crp__nav-cue', 'aria-hidden': 'true' }, '›')),
+    h('main', { className: 'crp__main' }, children)));
+
 // ---- Dashboard, composed from the same primitives the portal uses -------
 const ordinalDay = (n) => { const s = ['th','st','nd','rd']; const k = n % 100; return `${n}${s[(k-20)%10]||s[k]||s[0]}`; };
 const Dashboard = () => h(React.Fragment, null,
@@ -134,16 +163,16 @@ const Dashboard = () => h(React.Fragment, null,
     h('code', { className: 'ck-share__url' }, defaultLink),
     h('div', { className: 'ck-share__actions' },
       h(CopyButton, { label: 'Copy link' }), h(ShareButton),
-      h('a', { className: 'btn btn-light', href: '#' }, 'All links')),
+      h('a', { className: 'btn btn-light', href: '/creator/links' }, 'All links')),
     h('span', { className: 'ck-share__code' }, 'Code ', h('code', null, creator.creator_code),
       h(CopyButton, { label: 'Copy', className: 'btn btn-xs' }))),
-  h(Section, { title: 'Performance', action: h('a', { className: 'ck-section__link', href: '#' }, 'Analytics') },
+  h(Section, { title: 'Performance', action: h('a', { className: 'ck-section__link', href: '/creator/analytics' }, 'Analytics') },
     h(Band, null,
       h(Cell, { label: 'Link clicks', value: String(analytics.clicks), tone: 'info' }),
       h(Cell, { label: 'Orders', value: String(analytics.attributed_orders), tone: 'brand' }),
       h(Cell, { label: 'Products sold', value: String(analytics.products_sold), tone: 'hold' }),
       h(Cell, { label: 'Attributed sales', value: money2(analytics.attributed_sales), tone: 'ok' }))),
-  h(Section, { title: 'Earnings', action: h('a', { className: 'ck-section__link', href: '#' }, 'Earnings') },
+  h(Section, { title: 'Earnings', action: h('a', { className: 'ck-section__link', href: '/creator/earnings' }, 'Earnings') },
     h(Balance, { label: 'Available to withdraw', value: money2(earnings.available), hint: 'Cleared commission. A payout request withdraws this full amount.' },
       h(Cell, { label: 'Held', value: money2(earnings.held), tone: 'hold' }),
       h(Cell, { label: 'In payout', value: money2(earnings.reserved), tone: 'brand' }),
@@ -155,7 +184,7 @@ const Dashboard = () => h(React.Fragment, null,
       h(Step, { index: 3, done: true, title: 'Earn first commission', body: 'When an attributed order is paid, commission is created and enters the hold period.' }),
       h(Step, { index: 4, done: false, next: true, title: 'Verify payout details', body: 'Submit KYC once. An admin verifies it before your first withdrawal.' }),
       h(Step, { index: 5, done: false, title: 'Request a payout', body: 'Requests open on the 1st of each month, once your available balance reaches ₹500.00.' }))),
-  h(Section, { title: 'Campaigns and links', action: h('a', { className: 'ck-section__link', href: '#' }, 'Campaigns') },
+  h(Section, { title: 'Campaigns and links', action: h('a', { className: 'ck-section__link', href: '/creator/campaigns' }, 'Campaigns') },
     h(Band, { cols: 3 },
       h(Cell, { label: 'Active campaigns', value: '2', tone: 'brand', hint: '2 on your account' }),
       h(Cell, { label: 'Active links', value: '1', tone: 'brand', hint: '1 campaign link, plus your default link.' }),
@@ -180,16 +209,26 @@ const ProfileCard = () => h(React.Fragment, null,
       h(Cell, { label: 'Attribution window', value: '30 days', tone: 'brand' }),
       h(Cell, { label: 'Creator since', value: '18 Apr 2026' }))));
 
-const Empties = () => h(React.Fragment, null,
-  h(Empty, { tone: 'brand', icon: 'sparkle', title: 'No campaigns running yet',
+const CampaignsEmpty = () => h(React.Fragment, null,
+  h('h1', { className: 'serif crp__h1' }, 'My campaigns'),
+  h(Empty, { tone: 'brand', icon: 'sparkle', eyebrow: 'Campaign status', title: 'No campaigns running yet',
     body: 'Campaigns are seasonal pushes SORA LIFE builds for creators — a launch, a festive edit, a category focus. Your programme manager sets them up; you don’t create them yourself.',
     points: ['A campaign link of your own, tracked separately from your default link', 'Its own commission rate when the campaign carries one', 'Performance you can see split out in Analytics'] },
-    h('a', { className: 'btn btn-light', href: '#' }, 'Use my default link')),
-  h('div', { style: { height: 18 } }),
-  h(Empty, { tone: 'info', icon: 'award', title: 'No attributed orders yet',
+    h('a', { className: 'btn btn-light', href: '/creator/links' }, 'Use my default link')));
+
+const AnalyticsEmpty = () => h(React.Fragment, null,
+  h('h1', { className: 'serif crp__h1' }, 'My analytics'),
+  h('p', { className: 'crp__lede' }, 'Attributed activity from your links. Figures update as orders qualify.'),
+  h(Band, null,
+    h(Cell, { label: 'Link clicks', value: '0', tone: 'info', hint: 'Visits that arrived through one of your links.' }),
+    h(Cell, { label: 'Attributed orders', value: '0', tone: 'brand', hint: 'Orders matched to you inside your attribution window.' }),
+    h(Cell, { label: 'Products sold', value: '0', tone: 'hold', hint: 'Individual units across your attributed orders.' }),
+    h(Cell, { label: 'Attributed sales', value: money2(0), tone: 'ok', hint: 'Eligible sale value, before commission.' })),
+  h('div', { style: { height: 24 } }),
+  h(Empty, { tone: 'info', icon: 'award', eyebrow: 'Analytics status', title: 'No attributed orders yet',
     body: 'These figures fill in on their own once someone shops through your link. Nothing here is estimated — every number is a real, matched order.',
     points: ['A visit through your link is recorded immediately', 'It stays attributed to you for your full attribution window', 'Once that order is paid, it appears here and commission is created'] },
-    h('a', { className: 'btn btn-light', href: '#' }, 'How earning works')));
+    h('a', { className: 'btn btn-light', href: '/creator/how-it-works' }, 'How earning works')));
 
 
 const Lists = () => h(React.Fragment, null,
@@ -234,19 +273,33 @@ const panels = [
   ['payouts-new', 'Payouts  /creator/payouts  (KYC not started)', h(CreatorPayouts, { creator, earnings: { ...earnings, available: 120 }, kyc: kycNone, payouts: [], onSubmitKyc: noop, onRequestPayout: noop, onChanged: noop })],
   ['how', 'How you earn  /creator/how-it-works', h(CreatorHowItWorks, { creator, earnings })],
   ['profile', 'Profile  /creator/profile', h(ProfileCard)],
-  ['empties', 'Empty states  campaigns + analytics', h(Empties)],
+  ['campaigns', 'Campaigns  /creator/campaigns  (empty)', h(CampaignsEmpty)],
+  ['analytics', 'Analytics  /creator/analytics  (empty)', h(AnalyticsEmpty)],
   ['lists', 'Campaign + link list items', h(Lists)],
   ['account-active', 'Account seam  /account/creator  (active creator)', h(OnboardingActive)],
   ['account-apply', 'Account seam  /account/creator  (application form)', h(OnboardingApply)],
 ];
 
+const activeTab = (id) => ({
+  dashboard: 'dashboard', campaigns: 'campaigns', lists: 'links', analytics: 'analytics',
+  earnings: 'earnings', 'payouts-verified': 'payouts', 'payouts-new': 'payouts',
+  how: 'how-it-works', profile: 'profile',
+}[id] || 'dashboard');
+
+const panelMarkup = (id, node) => {
+  if (id.startsWith('account-')) {
+    return `<div class="crp"><div class="container"><main class="crp__main">${renderToStaticMarkup(node)}</main></div></div>`;
+  }
+  return renderToStaticMarkup(h(PortalFrame, { active: activeTab(id) }, node));
+};
+
 const body = panels.map(([id, label, node]) => {
   let html;
-  try { html = renderToStaticMarkup(node); }
+  try { html = panelMarkup(id, node); }
   catch (e) { html = `<pre style="color:#b3453f">RENDER FAILED: ${e.message}</pre>`; }
   return `<section class="qa-panel" id="qa-${id}">
     <h2 class="qa-label">${label}</h2>
-    <div class="crp"><div class="container"><main class="crp__main">${html}</main></div></div>
+    ${html}
   </section>`;
 }).join('\n');
 
@@ -268,7 +321,8 @@ const page = `<!doctype html>
     background: #1E3A2F; color: #fff; font: 700 12px/1.2 ui-monospace, Menlo, monospace;
     letter-spacing: .1em; text-transform: uppercase; }
   .qa-panel { margin-bottom: 34px; }
-  .qa-panel .crp { min-height: 0; padding: 22px 0 30px; }
+  .qa-panel > .crp { min-height: 100vh; padding-bottom: 30px; }
+  .qa-panel[id^="qa-account-"] > .crp { min-height: 0; padding: 22px 0 30px; }
 </style>
 </head><body>
 ${body}
@@ -283,11 +337,10 @@ writeFileSync(new URL('index.html', OUT_DIR), page, 'utf8');
 const shell = (inner) => page.replace(body, inner);
 for (const [id, label, node] of panels) {
   let html;
-  try { html = renderToStaticMarkup(node); }
+  try { html = panelMarkup(id, node); }
   catch (e) { html = `<pre>RENDER FAILED: ${e.message}</pre>`; }
   const one = `<section class="qa-panel" id="qa-${id}">
-    <h2 class="qa-label">${label}</h2>
-    <div class="crp"><div class="container"><main class="crp__main">${html}</main></div></div>
+    ${html}
   </section>`;
   writeFileSync(new URL(`${id}.html`, OUT_DIR), shell(one), 'utf8');
 }

@@ -25,7 +25,7 @@
   --c-canvas:  #F7F7F5;
   --c-ink:     #111111;
   --c-ink-2:   #3D3D3D;
-  --c-ink-3:   #767676;
+  --c-ink-3:   #6D6D6D;
   --c-rule:    #E2E2DE;
   --c-rule-2:  #CFCFC9;
 
@@ -70,13 +70,22 @@
 /* ---- Canvas + shell --------------------------------------------------- */
 .crp { background: var(--c-canvas); }
 .crp .crp__top { background: var(--c-paper); border-bottom: 1px solid var(--c-rule); backdrop-filter: none; }
-.crp .crp__brand-mark { border-radius: var(--r); background: var(--c-ink); color: #fff; box-shadow: none; }
+.crp .crp__brand-mark {
+  border-radius: var(--r); background: var(--c-ink); color: #fff; box-shadow: none;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+.crp .crp__brand strong {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
 .crp .crp__brand em { color: var(--c-violet); letter-spacing: .14em; }
+.crp .crp__top-right .btn { min-height: 44px; }
 
 /* ---- Navigation: rectangular, rail-marked active --------------------- */
+.crp .crp__nav-wrap { min-width: 0; }
 .crp .crp__nav { gap: 0; border-bottom: 1px solid var(--c-rule); }
 .crp .crp__navitem {
   border: 0; border-radius: 0; background: transparent; color: var(--c-ink-3);
+  flex: 0 0 auto;
   font-weight: 600; font-size: 13px; min-height: 44px; padding: 11px 14px;
   border-bottom: 2px solid transparent;
   transition: color .14s ease, border-color .14s ease, background .14s ease;
@@ -86,7 +95,25 @@
   color: var(--c-ink); background: transparent; box-shadow: none;
   border-bottom-color: var(--c-violet);
 }
+@media (max-width: 1019px) {
+  .crp .crp__nav-wrap {
+    display: grid; grid-template-columns: minmax(0, 1fr) 26px;
+    border-bottom: 1px solid var(--c-rule);
+  }
+  .crp .crp__nav {
+    min-width: 0; padding-inline-end: 26px; scroll-padding-inline-end: 26px;
+    border-bottom: 0; overscroll-behavior-inline: contain;
+  }
+  .crp .crp__nav-cue {
+    display: grid; place-items: center; min-height: 44px;
+    border-left: 1px solid var(--c-rule-2);
+    background: var(--c-canvas); color: var(--c-violet);
+    font-size: 21px; font-weight: 700; line-height: 1;
+    pointer-events: none;
+  }
+}
 @media (min-width: 1020px) {
+  .crp .crp__nav-cue { display: none; }
   /* Desktop becomes a true vertical rail. */
   .crp .crp__nav {
     flex-direction: column; align-items: stretch; gap: 0;
@@ -181,13 +208,13 @@
   display: block; margin-bottom: 14px; padding: 0; background: none; border-radius: 0;
   backdrop-filter: none;
   font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
-  color: rgba(255,255,255,.62);
+  color: rgba(255,255,255,.78);
 }
 .ck-share__title {
   font-size: clamp(24px, 3.4vw, 36px); font-weight: 800; letter-spacing: -.04em;
   line-height: 1.04; margin: 0 0 10px; color: #fff;
 }
-.ck-share__sub { margin: 0 0 20px; font-size: 14px; line-height: 1.55; color: rgba(255,255,255,.72); max-width: 58ch; }
+.ck-share__sub { margin: 0 0 20px; font-size: 14px; line-height: 1.55; color: rgba(255,255,255,.82); max-width: 58ch; }
 .ck-share__url {
   display: block; padding: 13px 14px; margin-bottom: 12px; border-radius: var(--r);
   border: 1px solid rgba(255,255,255,.22); background: rgba(0,0,0,.22); backdrop-filter: none;
@@ -199,7 +226,7 @@
   display: inline-flex; align-items: center; gap: 10px; margin-top: 16px;
   padding: 0; background: none; border: 0; border-radius: 0; backdrop-filter: none;
   font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
-  color: rgba(255,255,255,.6);
+  color: rgba(255,255,255,.72);
 }
 .ck-share__code code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700;
@@ -283,12 +310,21 @@
 
 /* ---- Empty state: editorial panel ------------------------------------ */
 .ck-empty {
-  padding: 24px 22px; text-align: left; border-radius: var(--r);
-  background: var(--c-paper); border: 1px solid var(--c-rule);
-  border-left: 3px solid var(--c-violet); box-shadow: none;
+  padding: 22px; text-align: left; border-radius: var(--r);
+  background: #FBFBF8; border: 1px solid var(--c-rule);
+  border-top: 2px solid var(--c-rule-2); box-shadow: none;
 }
+.ck-empty.ck-tone-brand { border-top-color: var(--c-violet); }
+.ck-empty.ck-tone-info { border-top-color: var(--c-cobalt); }
+.ck-empty.ck-tone-ok { border-top-color: var(--c-emerald); }
+.ck-empty.ck-tone-hold { border-top-color: var(--c-amber); }
+.ck-empty.ck-tone-bad { border-top-color: var(--c-coral); }
 .ck-empty__ic { display: none; }
-.ck-empty__title { font-size: 17px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 8px; color: var(--c-ink); }
+.ck-empty__eyebrow {
+  display: block; margin: 0 0 9px; font-size: 10.5px; line-height: 1.25;
+  font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--c-ink-3);
+}
+.ck-empty__title { font-size: 18px; line-height: 1.2; font-weight: 700; letter-spacing: -.02em; margin: 0 0 9px; color: var(--c-ink); }
 .ck-empty__body { margin: 0; max-width: 62ch; font-size: 13.5px; line-height: 1.6; color: var(--c-ink-3); }
 .ck-empty__points { list-style: none; margin: 16px 0 0; padding: 0; display: block; max-width: none; text-align: left; }
 .ck-empty__points li {
@@ -492,10 +528,37 @@
 .crob .crob__next strong { color: #00795A; }
 .crob .crob__next a { font-weight: 700; color: #00795A; }
 
+/* ---- Earnings: financial hierarchy without another card grid -------- */
+.crp .crp__earn-grid {
+  gap: 0; margin-top: 30px; border-top: 1px solid var(--c-ink);
+}
+.crp .crp__earn-grid > .crp__panel {
+  padding: 19px 0 0; border: 0; border-radius: 0; background: transparent;
+}
+.crp .crp__earn-grid > .crp__panel + .crp__panel {
+  margin-top: 24px; padding-top: 19px; border-top: 1px solid var(--c-rule-2);
+}
+
+@media (min-width: 720px) {
+  .crp .crp__earn-grid > .crp__panel { padding: 20px 24px 0 0; }
+  .crp .crp__earn-grid > .crp__panel + .crp__panel {
+    margin-top: 0; padding: 20px 0 0 24px;
+    border-top: 0; border-left: 1px solid var(--c-rule);
+  }
+}
+
 /* ---- Mobile density ---------------------------------------------------
    The previous build turned 390px into a stream of tall panels. Rows and
    2-up grids instead; "₹0" never gets 200px of height. */
 @media (max-width: 719px) {
+  .crp .crp__top-in { flex-wrap: nowrap; gap: 8px; padding-block: 8px; }
+  .crp .crp__brand { min-width: 0; gap: 8px; }
+  .crp .crp__brand-mark { width: 32px; height: 32px; flex: 0 0 32px; }
+  .crp .crp__brand strong { font-size: 13.5px; }
+  .crp .crp__brand em { font-size: 9px; letter-spacing: .13em; }
+  .crp .crp__top-right { flex: none; gap: 0; }
+  .crp .crp__who { display: none; }
+  .crp .crp__top-right .btn { padding-inline: 13px; }
   .ck-section { margin-top: 26px; }
   .ck-band__cell { padding: 13px 13px 12px; }
   .ck-band__cell[data-tone] { padding-top: 19px; }
@@ -509,8 +572,10 @@
   .ck-balance__main { padding: 18px 15px 16px; }
   .ck-balance__row .ck-band__cell { padding: 11px 10px; }
   .ck-balance__row .ck-band__fig { font-size: 15px; }
-  .ck-balance__row .ck-band__label { font-size: 9.5px; letter-spacing: .05em; }
+  .ck-balance__row .ck-band__label { font-size: 10px; line-height: 1.3; letter-spacing: .05em; }
   .ck-share { padding: 20px 16px; }
+  .ck-share__actions .btn { flex: 1 1 auto; min-height: 44px; padding-inline: 10px; }
+  .ck-empty { padding: 19px 17px; }
   .ck-idbar__meta { gap: 12px 18px; }
   .crp-hiw__step { grid-template-columns: 34px 1fr; padding: 16px 0; }
   .crp-hiw__step::after { left: 11px; top: 38px; }

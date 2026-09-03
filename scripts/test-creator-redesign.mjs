@@ -175,6 +175,44 @@ await test('cards, empty states and share surfaces all exist', () => {
   }
 });
 
+await test('mobile header removes only the crowded username and keeps a real logout target', () => {
+  const mobile = css.match(/@media \(max-width: 719px\) \{[\s\S]*?\n\}/);
+  assert.ok(mobile, 'mobile Creator breakpoint missing');
+  assert.match(mobile[0], /\.crp \.crp__who \{ display: none; \}/);
+  assert.match(mobile[0], /\.crp \.crp__top-right \.btn \{ padding-inline: 13px; \}/);
+  assert.match(portal, />Log out<\/button>/);
+  assert.match(css, /\.crp \.crp__top-right \.btn \{ min-height: 44px; \}/);
+});
+
+await test('mobile navigation cue is separate from the scroll rail and never a gradient or button', () => {
+  assert.match(portal, /className="crp__nav-wrap"/);
+  assert.match(portal, /className="crp__nav-cue" aria-hidden="true">›<\/span>/);
+  assert.match(css, /grid-template-columns: minmax\(0, 1fr\) 26px/);
+  assert.match(css, /flex: 0 0 auto/);
+  assert.match(css, /padding-inline-end: 26px; scroll-padding-inline-end: 26px/);
+  assert.match(portal, /navRef\?\.current|navRef\.current/);
+  assert.match(portal, /itemRight - nav\.clientWidth \+ inset/);
+  const cue = css.match(/\.crp \.crp__nav-cue \{[\s\S]*?\n  \}/);
+  assert.ok(cue, 'mobile continuation cue styling missing');
+  assert.doesNotMatch(cue[0], /gradient|position:\s*(absolute|fixed)|border-radius/);
+  assert.match(cue[0], /pointer-events: none/);
+});
+
+await test('campaign and analytics empty states carry factual editorial labels and ruled rows', () => {
+  assert.match(ui, /ck-empty__eyebrow/);
+  assert.match(portal, /eyebrow="Campaign status"/);
+  assert.match(portal, /eyebrow="Analytics status"/);
+  assert.match(css, /\.ck-empty__eyebrow \{/);
+  assert.match(css, /border-top: 2px solid var\(--c-rule-2\)/);
+  assert.match(css, /\.ck-empty__points li \{[\s\S]*?border-top: 1px solid var\(--c-rule\)/);
+});
+
+await test('earnings terms use one ruled financial composition instead of another card grid', () => {
+  assert.match(css, /\.crp \.crp__earn-grid \{[\s\S]*?border-top: 1px solid var\(--c-ink\)/);
+  assert.match(css, /\.crp \.crp__earn-grid > \.crp__panel \{[\s\S]*?border: 0; border-radius: 0; background: transparent/);
+  assert.match(earnings, /<Balance[\s\S]*label="Held"[\s\S]*label="Paid out"[\s\S]*label="Reversed"/);
+});
+
 await test('motion is disabled for reduced-motion users', () => {
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });

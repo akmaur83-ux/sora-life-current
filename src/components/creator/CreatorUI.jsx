@@ -65,10 +65,11 @@ export function Section({ title, sub, action, children, className = '' }) {
  * white box reads as broken. `points` is for explaining what will fill this
  * space — never for implying data that does not exist.
  */
-export function Empty({ icon = 'sparkle', tone = 'neutral', title, body, points, children }) {
+export function Empty({ icon = 'sparkle', tone = 'neutral', eyebrow, title, body, points, children }) {
   return (
     <div className={`ck-empty ${toneClass(tone)}`}>
       <span className="ck-empty__ic" aria-hidden="true"><Icon name={icon} size={21} /></span>
+      {eyebrow && <span className="ck-empty__eyebrow">{eyebrow}</span>}
       <h3 className="ck-empty__title">{title}</h3>
       {body && <p className="ck-empty__body">{body}</p>}
       {Array.isArray(points) && points.length > 0 && (

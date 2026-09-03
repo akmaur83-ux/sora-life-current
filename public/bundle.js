@@ -43372,6 +43372,7 @@
 	function Empty({
 	  icon = 'sparkle',
 	  tone = 'neutral',
+	  eyebrow,
 	  title,
 	  body,
 	  points,
@@ -43386,6 +43387,9 @@
 	        name: icon,
 	        size: 21
 	      })
+	    }), eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "ck-empty__eyebrow",
+	      children: eyebrow
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
 	      className: "ck-empty__title",
 	      children: title
@@ -44648,6 +44652,7 @@
 	  const [earnings, setEarnings] = reactExports.useState(null);
 	  const [kyc, setKyc] = reactExports.useState(null);
 	  const [payouts, setPayouts] = reactExports.useState([]);
+	  const navRef = reactExports.useRef(null);
 
 	  // Reload just the money surfaces (earnings buckets, KYC, payout history)
 	  // after an action, without re-fetching the whole portal.
@@ -44685,6 +44690,24 @@
 	    }
 	    load();
 	  }, [authLoading, session, load]);
+	  reactExports.useEffect(() => {
+	    const frame = requestAnimationFrame(() => {
+	      const nav = navRef.current;
+	      const active = nav?.querySelector('.crp__navitem.active');
+	      if (!nav || !active || nav.scrollWidth <= nav.clientWidth) return;
+	      const inset = 12;
+	      const visibleLeft = nav.scrollLeft + inset;
+	      const visibleRight = nav.scrollLeft + nav.clientWidth - inset;
+	      const itemLeft = active.offsetLeft;
+	      const itemRight = itemLeft + active.offsetWidth;
+	      if (itemLeft < visibleLeft) nav.scrollTo({
+	        left: Math.max(0, itemLeft - inset)
+	      });else if (itemRight > visibleRight) nav.scrollTo({
+	        left: itemRight - nav.clientWidth + inset
+	      });
+	    });
+	    return () => cancelAnimationFrame(frame);
+	  }, [tab, state]);
 	  if (authLoading || state === 'loading') {
 	    return /*#__PURE__*/jsxRuntimeExports.jsx(Shell, {
 	      children: /*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -44772,17 +44795,25 @@
 	      })
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "container crp__body",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("nav", {
-	        className: "crp__nav",
-	        "aria-label": "Creator portal",
-	        children: NAV$1.map(n => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	          to: `/creator/${n.id}`,
-	          className: `crp__navitem ${tab === n.id ? 'active' : ''}`,
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: n.icon,
-	            size: 16
-	          }), " ", n.label]
-	        }, n.id))
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "crp__nav-wrap",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+	          ref: navRef,
+	          className: "crp__nav",
+	          "aria-label": "Creator portal",
+	          children: NAV$1.map(n => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: `/creator/${n.id}`,
+	            className: `crp__navitem ${tab === n.id ? 'active' : ''}`,
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: n.icon,
+	              size: 16
+	            }), " ", n.label]
+	          }, n.id))
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "crp__nav-cue",
+	          "aria-hidden": "true",
+	          children: "\u203A"
+	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("main", {
 	        className: "crp__main",
 	        children: [!isLive && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -44965,6 +44996,7 @@
 	          }), campaigns.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx(Empty, {
 	            tone: "brand",
 	            icon: "sparkle",
+	            eyebrow: "Campaign status",
 	            title: "No campaigns running yet",
 	            body: "Campaigns are seasonal pushes SORA LIFE builds for creators \u2014 a launch, a festive edit, a category focus. Your programme manager sets them up; you don\u2019t create them yourself.",
 	            points: ['A campaign link of your own, tracked separately from your default link', 'Its own commission rate when the campaign carries one', 'Performance you can see split out in Analytics'],
@@ -45089,6 +45121,7 @@
 	          }) : /*#__PURE__*/jsxRuntimeExports.jsx(Empty, {
 	            tone: "info",
 	            icon: "award",
+	            eyebrow: "Analytics status",
 	            title: "No attributed orders yet",
 	            body: "These figures fill in on their own once someone shops through your link. Nothing here is estimated \u2014 every number is a real, matched order.",
 	            points: ['A visit through your link is recorded immediately', 'It stays attributed to you for your full attribution window', 'Once that order is paid, it appears here and commission is created'],
