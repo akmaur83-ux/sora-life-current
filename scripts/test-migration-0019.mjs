@@ -83,7 +83,7 @@ const MUST_MATCH = [
 const MUST_NOT_MATCH = [
   'FREE STANDARD SHIPPING',
   'COD Available',
-  '100% Authentic Biosash Products',
+  'EXPLORE WELLNESS, PERSONAL CARE & MORE',
   'Free shipping, delivered all over India',
   'Free shipping all over 100 cities',
   'Trusted all over Punjab since 2019',

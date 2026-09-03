@@ -42,6 +42,7 @@ export function dbRowToProduct(row) {
     id: row.biosash_id || row.id,
     slug: row.slug,
     name: row.name,
+    brand: row.brand || row.brand_name || row.manufacturer || null,
     category: row.category,
     categories: [row.category],
     form: row.form || null,

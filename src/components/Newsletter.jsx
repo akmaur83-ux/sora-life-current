@@ -59,8 +59,8 @@ export default function Newsletter() {
           </div>
           <div className="nl__body">
             <span className="eyebrow" style={{ color: 'var(--honey-300)' }}>The Sora Letter</span>
-            <h2 className="serif" style={{ color: '#FBF8F1', fontSize: 'var(--text-3xl)', margin: '10px 0 8px' }}>Wellness notes, quietly good offers.</h2>
-            <p style={{ color: 'rgba(251,248,241,0.8)', maxWidth: '46ch' }}>Occasional notes on new products and seasonal rituals. No noise, and you can unsubscribe whenever you like.</p>
+            <h2 className="serif" style={{ color: '#FBF8F1', fontSize: 'var(--text-3xl)', margin: '10px 0 8px' }}>New finds, useful updates, occasional offers.</h2>
+            <p style={{ color: 'rgba(251,248,241,0.8)', maxWidth: '46ch' }}>Hear about products and marketplace updates when there is something worth sharing. No noise, and you can unsubscribe whenever you like.</p>
 
             {done ? (
               <div className="nl__done"><span className="t-ic" style={{ background: 'rgba(232,176,75,0.2)' }}><Icon name="check" size={18} /></span> You're subscribed. We'll be in touch when there's something worth sending.</div>

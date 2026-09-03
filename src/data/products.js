@@ -39,6 +39,9 @@ function normalizeProduct(p) {
     dbId: p.dbId ?? null,
     slug: p.slug,
     name: p.name,
+    // Optional catalogue metadata. No fallback is invented: Homepage brand
+    // discovery renders only when the source record provides evidence.
+    brand: p.brand || p.brandName || p.manufacturer || null,
     category: p.category,
     categories: p.categories && p.categories.length ? p.categories : [p.category],
     form: p.form || null,
@@ -76,6 +79,7 @@ function normalizeProduct(p) {
     isNew: !!p.isNew,
     isBestseller: !!p.isBestseller,
     isFeatured: !!p.isFeatured,
+    isActive: p.isActive !== false,
   };
 }
 
@@ -90,6 +94,7 @@ function seedFromBiosash() {
       id: p.id,
       slug: p.slug,
       name: p.name,
+      brand: p.brand || 'Biosash',
       category: p.category,
       categories: p.categories || [p.category],
       form: p.form || null,

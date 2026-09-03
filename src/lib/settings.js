@@ -23,7 +23,10 @@ export let announcement = {
   notices: [
     'FREE STANDARD SHIPPING',
     'COD Available',
-    '100% Authentic Biosash Products',
+    // Marketplace-neutral. The storefront carries many labels, so the built-in
+    // default no longer leads with a single brand. Admin-configured notices
+    // still replace this list wholesale via applyAnnouncement().
+    'EXPLORE WELLNESS, PERSONAL CARE & MORE',
   ],
 };
 

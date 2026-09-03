@@ -4,58 +4,35 @@ import Icon from './Icon.jsx';
 import ProductImage from './ProductImage.jsx';
 import HeroCta from './HeroCta.jsx';
 import { heroSlides, heroSlidesConfigured, homepage } from '../lib/settings.js';
-import { productBySlug, products } from '../data/products.js';
+import { products } from '../data/products.js';
+import { categories } from '../data/categories.js';
+import { selectMarketplaceHeroProducts } from '../lib/homeMerchandising.js';
 
 // ---------------------------------------------------------------------------
-// V2 PRODUCT-LED HERO
+// V2 HOMEPAGE HERO
 //
-// The approved V2 direction is product-led: a real product, dominant, grounded
-// on a stone plinth in a warm ivory environment, with the copy held clear on
-// the left. The environment (ground, plinth, botanical depth, contact shadow)
-// is drawn in CSS; the product is the REAL catalogue image, unmodified — no
-// packaging is redrawn, no label altered, no text baked into artwork.
-//
-// Copy safety: the built-in DEFAULT_HERO_SLIDES in settings.js carry
-// unverified provenance and product claims ("Harvested from the Himalayas",
-// "Sun-ripened … gently cold-pressed", "Nutrient-dense wellness"). Those are
-// hardcoded marketing defaults, not approved configured content, so V2 does
-// not render them. In product-led mode every string comes from the product
-// record itself: category name, product name, pack size. Nothing else.
-//
-// When an admin HAS configured hero_slides (heroSlidesConfigured === true),
-// that copy is approved content and the original slide rendering is used.
+// Admin-managed slides are rendered exactly as configured. If none have
+// hydrated, the fallback is a real-catalogue marketplace composition rather
+// than a hardcoded product or brand takeover.
 // ---------------------------------------------------------------------------
-const HERO_PRODUCT_SLUG = 'biosash-sea-buckthorn-juice';
-
-const SAFE_HERO_COPY = {
-  kicker: 'SEA BUCKTHORN COLLECTION',
-  title: 'Sea Buckthorn\nEssentials',
-  sub: 'Explore juices, supplements and everyday care from the collection.',
-  mobileSub: 'Juices, supplements & everyday care.',
-  cta: { label: 'EXPLORE COLLECTION', to: '/shop' },
+const MARKETPLACE_HERO_COPY = {
+  kicker: 'SORA LIFE MARKETPLACE',
+  title: 'Discover what fits your life.',
+  cta: { label: 'Explore marketplace', to: '/shop' },
 };
 
 // Only mobile typography responds to length; configured copy stays intact.
 const titleClass = (title) => `v2-hero__title${String(title || '').trim().length > 22 ? ' v2-hero__title--long' : ''}`;
 
-// Replace only the currently published, generic sea-buckthorn slide copy.
-// The configured artwork and every other Admin-managed slide field remain
-// untouched; this is a storefront copy-safety override, not a data write.
-function withSafeHeroCopy(slide) {
-  const isCurrentSeaBuckthornSlide =
-    slide?.kicker?.trim().toUpperCase() === 'HIMALAYAN WELLNESS' &&
-    slide?.title?.trim() === 'The Power of Sea Buckthorn';
-
-  if (!isCurrentSeaBuckthornSlide) return slide;
-  return { ...slide, ...SAFE_HERO_COPY };
-}
-
-function resolveHeroProduct() {
-  const exact = productBySlug?.[HERO_PRODUCT_SLUG];
-  if (exact?.image) return exact;
-  // Defensive: if the catalogue is swapped by applyCatalog() and that slug is
-  // gone, fall back to the first in-stock product that has a real image.
-  return (products || []).find((p) => p?.image && p.stock !== 0) || null;
+function fallbackCategoryCount(productList) {
+  const validSlugs = new Set((categories || []).filter((category) => category?.slug).map((category) => category.slug));
+  const slugs = new Set();
+  for (const product of productList) {
+    for (const slug of product.categories || [product.category]) {
+      if (validSlugs.has(slug)) slugs.add(slug);
+    }
+  }
+  return slugs.size;
 }
 
 // V2 note: the previous hardcoded BENEFITS strip ("Rich in 190+ Nutrients",
@@ -127,54 +104,36 @@ function isRenderable(slide, canUseVideo, failed) {
 }
 
 export default function Hero() {
-  // Product-led hero is the V2 default. Admin-configured slides opt back into
-  // the original slide rendering because that copy is approved content.
-  if (!heroSlidesConfigured) return <ProductHero />;
+  if (!heroSlidesConfigured) return <MarketplaceHero />;
   return <ConfiguredHero />;
 }
 
-// ---------------------------------------------------------------- product-led
-function ProductHero() {
-  const product = resolveHeroProduct();
-  if (!product) return null;
+// ----------------------------------------------------------- marketplace fall
+function MarketplaceHero() {
+  const heroProducts = selectMarketplaceHeroProducts(products, 5);
+  if (!heroProducts.length) return null;
+  const categoryCount = fallbackCategoryCount(heroProducts);
+  const supportingCopy = categoryCount > 1
+    ? `Explore products across ${categoryCount} catalogue categories, all in one place.`
+    : 'Explore the active catalogue, all in one place.';
 
   return (
-    <section className="v2-hero v2-hero--product" aria-label="Featured product">
-      <div className="v2-hero__stage">
-        {/* Editorial environment — CSS only. Warm ivory ground, travertine
-            plinth, restrained botanical depth. No fabricated photography. */}
-        <span className="v2-hero__ground" aria-hidden="true" />
-        <span className="v2-hero__leaf v2-hero__leaf--a" aria-hidden="true" />
-        <span className="v2-hero__leaf v2-hero__leaf--b" aria-hidden="true" />
-        <span className="v2-hero__plinth" aria-hidden="true" />
-        <span className="v2-hero__contact" aria-hidden="true" />
-
-        {/* Real product image, unmodified. mix-blend-mode:multiply drops the
-            asset's white studio background into the cream ground without
-            editing the file or touching the packaging. */}
-        <div className="v2-hero__productwrap">
-          <ProductImage
-            product={product}
-            frame="hero"
-            sizes="(max-width: 767px) 62vw, 46vw"
-            alt={product.name}
-          />
+    <section className="v2-hero v2-hero--marketplace" aria-labelledby="marketplace-hero-title">
+      <div className="v2-hero__stage hm-hero">
+        <div className="hm-hero__copy">
+          <p className="hm-hero__kicker">{MARKETPLACE_HERO_COPY.kicker}</p>
+          <h1 id="marketplace-hero-title">{MARKETPLACE_HERO_COPY.title}</h1>
+          <p>{supportingCopy}</p>
+          <Link to={MARKETPLACE_HERO_COPY.cta.to} className="hm-hero__cta">
+            {MARKETPLACE_HERO_COPY.cta.label} <Icon name="arrowRight" size={16} stroke={1.8} />
+          </Link>
         </div>
-
-        {/* Copy is live DOM, held in the left zone, never baked into artwork. */}
-        <div className="v2-hero__ui">
-          <p className="v2-hero__kicker">{SAFE_HERO_COPY.kicker}</p>
-          <h1 className={titleClass(SAFE_HERO_COPY.title)}>{SAFE_HERO_COPY.title}</h1>
-          <p className="v2-hero__sub">
-            <span className="v2-hero__sub-full">{SAFE_HERO_COPY.sub}</span>
-            <span className="v2-hero__sub-compact">{SAFE_HERO_COPY.mobileSub}</span>
-          </p>
-          <div>
-            <Link to={SAFE_HERO_COPY.cta.to} className="v2-btn v2-btn--sm">
-              <span className="v2-hero__cta-full">{SAFE_HERO_COPY.cta.label}</span>
-              <span className="v2-hero__cta-compact">Explore collection</span>
+        <div className="hm-hero__assortment" aria-label="Products from across the marketplace">
+          {heroProducts.map((product, index) => (
+            <Link key={product.id} to={`/product/${product.slug}`} className={`hm-hero__product hm-hero__product--${index + 1}`} aria-label={product.name}>
+              <ProductImage product={product} frame="v2" sizes="(max-width: 767px) 24vw, 220px" />
             </Link>
-          </div>
+          ))}
         </div>
       </div>
     </section>
@@ -212,7 +171,7 @@ function ConfiguredHero() {
   // hero still has structure rather than collapsing to nothing.
   const renderable = heroSlides.filter((s) => isRenderable(s, useVideo, videoFailed));
   const SLIDES = renderable.length ? renderable : heroSlides;
-  const DISPLAY_SLIDES = SLIDES.map(withSafeHeroCopy);
+  const DISPLAY_SLIDES = SLIDES;
 
   // A dropped slide shortens the deck; keep the index inside it.
   useEffect(() => {
@@ -273,14 +232,11 @@ function ConfiguredHero() {
         (() => {
           const appearance = homepage.heroCtas?.[s.id];
           const artworkOnly = ![s.kicker, s.title, s.sub, s.lede].some((value) => value && /[A-Za-z0-9]/.test(value));
-          const ctaLabel = s.cta.label === SAFE_HERO_COPY.cta.label ? <>
-            <span className="v2-hero__cta-full">{s.cta.label}</span>
-            <span className="v2-hero__cta-compact">Explore collection</span>
-          </> : s.cta.label;
+          const ctaLabel = s.cta?.label;
           return (
         <div
           key={s.id}
-          className={`v2-hero__slide ${i === active ? 'is-active' : ''} ${s.sub === SAFE_HERO_COPY.sub ? 'v2-hero__slide--collection' : ''}`}
+          className={`v2-hero__slide ${i === active ? 'is-active' : ''}`}
           aria-hidden={i !== active}
         >
           <div className="v2-hero__media">
@@ -319,12 +275,7 @@ function ConfiguredHero() {
           <div className="v2-hero__ui">
             {s.kicker && <p className="v2-hero__kicker">{s.kicker}</p>}
             <h1 className={titleClass(s.title)}>{s.title}</h1>
-            {(s.sub || s.lede) && <p className="v2-hero__sub">
-              {s.sub === SAFE_HERO_COPY.sub ? <>
-                <span className="v2-hero__sub-full">{s.sub}</span>
-                <span className="v2-hero__sub-compact">{SAFE_HERO_COPY.mobileSub}</span>
-              </> : (s.sub || s.lede)}
-            </p>}
+            {(s.sub || s.lede) && <p className="v2-hero__sub">{s.sub || s.lede}</p>}
             {s.cta?.to && (
               <HeroCta cta={s.cta} appearance={appearance} artworkOnly={artworkOnly} active={i === active}>{ctaLabel}</HeroCta>
             )}

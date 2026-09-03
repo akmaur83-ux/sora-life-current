@@ -20,6 +20,15 @@ export default function HomeCategoryStrip({ appearance: a }) {
         right={{ url: a.rightImage, opacity: a.decorationOpacity, size: a.decorationSize, position: `right ${a.decorationPosition}`, hideMobile: a.hideRightMobile }} />
       {a.overlayOpacity > 0 && <span aria-hidden="true" className="hp-category-overlay" style={{ backgroundColor: a.overlayColor, opacity: a.overlayOpacity }} />}
     </>}
-    <div className="v2-wrap hp-category-strip__content"><CategoryRail /></div>
+    <div className="v2-wrap hp-category-strip__content">
+      <div className="hm-category-head">
+        <div>
+          <p className="v2-eyebrow">Shop the catalogue</p>
+          <h2 className="v2-h2">Browse by category</h2>
+        </div>
+        <span>Swipe to explore <span aria-hidden="true">→</span></span>
+      </div>
+      <CategoryRail />
+    </div>
   </section>;
 }
