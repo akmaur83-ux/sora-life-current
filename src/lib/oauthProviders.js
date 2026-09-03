@@ -9,6 +9,37 @@
 // Providers this codebase knows how to render and start a flow for.
 export const SUPPORTED_PROVIDERS = ['google', 'apple'];
 
+/**
+ * Providers this repository INTENDS a shipped build to enable.
+ *
+ * The committed, reviewable source of truth the build checks itself against.
+ * It exists because the provider list previously came ONLY from the
+ * VITE_OAUTH_PROVIDERS environment variable: an environment that simply
+ * lacked that variable produced a bundle with social sign-in silently switched
+ * off, and because public/bundle.js is the deployed artifact, that downgraded
+ * bundle could then be committed and shipped.
+ *
+ * Add a provider here ONLY once it is actually configured in the Supabase
+ * Dashboard (Authentication -> Providers) with its client id and secret. Those
+ * credentials live in Supabase and never in this repository — the names below
+ * are public configuration and carry no secret.
+ *
+ * Removing a provider here is the supported way to turn one off: a reviewed
+ * code change rather than an invisible environment edit.
+ */
+export const INTENDED_PROVIDERS = ['google'];
+
+/**
+ * Intended providers that are missing from `enabled`.
+ *
+ * The build uses this to refuse to ship an artifact that would quietly drop a
+ * sign-in method customers already rely on.
+ */
+export function missingIntendedProviders(enabled, intended = INTENDED_PROVIDERS) {
+  const have = Array.isArray(enabled) ? enabled : [];
+  return intended.filter((p) => !have.includes(p));
+}
+
 export const PROVIDER_LABELS = {
   google: 'Continue with Google',
   apple: 'Continue with Apple',
