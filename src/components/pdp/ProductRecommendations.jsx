@@ -1,24 +1,27 @@
-import ProductRail from '../ProductRail.jsx';
-import { getRelated } from '../../data/products.js';
+import ProductCard from '../ProductCard.jsx';
+import { products } from '../../data/products.js';
+import { selectPdpRecommendations } from '../../lib/pdpRecommendations.js';
 
 // ============================================================
-// PDP recommendations. Reuses the existing ProductRail + ProductCard
-// architecture and the real catalogue's `getRelated()` — no new card
-// component, no fabricated products. On mobile ProductRail is already a
-// snap-scrolling carousel; on desktop it is a 4-up grid.
-//
-// The "Goes well with" pairing story is handled by the Frequently-bought-
-// together block higher up the page, so this stays to a single rail.
+// PDP-only recommendation grid. It keeps the frozen ProductCard intact and
+// selects only active, in-stock, payable products from the real catalogue.
 // ============================================================
 export default function ProductRecommendations({ product }) {
-  const related = getRelated(product);
+  const related = selectPdpRecommendations(product, products, 12);
   if (!related.length) return null;
   return (
-    <ProductRail
-      eyebrow="Complete the ritual"
-      title="You might also like"
-      products={related}
-      limit={4}
-    />
+    <section className="v2-sec pdp-recommendations" aria-labelledby="pdp-recommendations-h">
+      <div className="v2-wrap">
+        <div className="v2-sechead">
+          <div>
+            <p className="v2-eyebrow">Continue shopping</p>
+            <h2 id="pdp-recommendations-h" className="v2-h2">You might also like</h2>
+          </div>
+        </div>
+        <div className="pdp-recommendations__grid">
+          {related.map((item) => <ProductCard key={item.id} product={item} />)}
+        </div>
+      </div>
+    </section>
   );
 }

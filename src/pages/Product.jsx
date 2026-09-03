@@ -18,6 +18,7 @@ import ProductIngredients from '../components/pdp/ProductIngredients.jsx';
 import ProductHowToUse from '../components/pdp/ProductHowToUse.jsx';
 import ProductInfoAccordion from '../components/pdp/ProductInfoAccordion.jsx';
 import ProductTrustList from '../components/pdp/ProductTrustList.jsx';
+import ProductCatalogueGallery from '../components/pdp/ProductCatalogueGallery.jsx';
 import ProductReviewsTeaser from '../components/pdp/ProductReviewsTeaser.jsx';
 import ProductRecommendations from '../components/pdp/ProductRecommendations.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
@@ -337,6 +338,8 @@ useEffect(() => {
 
         <ProductTrustList />
       </div>
+
+      <ProductCatalogueGallery product={product} />
 
       {/* Promotions (pdp placement; renders nothing when there are none).
           Presentation only — no pricing / cart interaction. */}

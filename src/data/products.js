@@ -57,8 +57,8 @@ function normalizeProduct(p) {
     image: p.image,
     gallery: p.gallery && p.gallery.length ? p.gallery : [],
     // Structured multi-image gallery (product_media rows). Attached later by
-    // applyProductMedia(); empty here so a product with no media rows falls
-    // back to its single primary image via productGallery().
+    // applyProductMedia(); productGallery() also retains unique legacy
+    // catalogue secondaries when structured rows do not include them.
     media: Array.isArray(p.media) ? p.media : [],
     permalink: p.permalink || null,
     rating: p.reviewCount > 0 ? p.rating : 0,
@@ -292,15 +292,50 @@ export function applyProductMedia(mediaList) {
 }
 
 /**
- * The ordered gallery for a product: its media rows when present, otherwise a
- * one-item fallback built from the single primary image. Never fabricates
- * placeholder tiles. Returns [{ url, alt, isPrimary, sortOrder }].
+ * The ordered gallery for a product: structured media rows when present,
+ * otherwise the local primary plus any real legacy catalogue gallery images.
+ *
+ * The legacy import stores the source image for `product.image` at gallery[0],
+ * so that entry is intentionally replaced by the local/optimised primary. This
+ * keeps the same artwork from appearing twice while preserving every genuine
+ * secondary image. Never fabricates placeholder tiles.
+ * Returns [{ url, alt, isPrimary, sortOrder }].
  */
 export function productGallery(product) {
   if (!product) return [];
-  if (Array.isArray(product.media) && product.media.length) return product.media;
-  if (product.image) return [{ url: product.image, alt: product.name, isPrimary: true, sortOrder: 0 }];
-  return [];
+  const legacy = Array.isArray(product.gallery)
+    ? product.gallery.filter((url) => typeof url === 'string' && url.trim())
+    : [];
+  const structured = Array.isArray(product.media)
+    ? product.media.filter((frame) => frame?.url)
+    : [];
+  const primary = structured[0]?.url || product.image || legacy[0];
+  if (!primary) return [];
+
+  const frames = structured.length ? [...structured] : [{
+    url: primary, alt: product.name, isPrimary: true, sortOrder: 0,
+  }];
+  const seen = new Set(frames.map((frame) => frame.url));
+
+  // gallery[0] is the source artwork behind the locally optimised primary.
+  // Append only genuine legacy secondaries that are not already represented
+  // by structured product_media rows.
+  for (const url of legacy.slice(product.image ? 1 : 0)) {
+    if (seen.has(url)) continue;
+    seen.add(url);
+    frames.push({
+      url,
+      alt: `${product.name} — image ${frames.length + 1}`,
+      isPrimary: false,
+      sortOrder: frames.length,
+    });
+  }
+  return frames;
+}
+
+/** Real secondary gallery frames for long-form PDP merchandising. */
+export function secondaryProductGallery(product) {
+  return productGallery(product).slice(1);
 }
 
 export function applyVariants(variantList) {

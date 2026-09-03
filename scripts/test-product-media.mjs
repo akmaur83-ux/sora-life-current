@@ -32,10 +32,14 @@ console.log('\n— Storefront gallery model —');
 {
   const p = products[0];
   const key = p.dbId ?? p.id;
-  // No media -> single-primary fallback, never a fabricated placeholder.
+  // No structured media -> real primary + imported catalogue gallery, never
+  // a fabricated placeholder. The imported first frame backs the local
+  // primary, so only genuine secondary frames follow it.
   p.media = [];
   const fb = productGallery(p);
-  t(fb.length === 1 && fb[0].url === p.image && fb[0].isPrimary, 'no media rows -> single primary fallback');
+  const expectedFallbackLength = 1 + Math.max(0, (p.gallery?.length || 0) - 1);
+  t(fb.length === expectedFallbackLength && fb[0].url === p.image && fb[0].isPrimary,
+    'no media rows -> primary plus unique real catalogue images');
 
   applyProductMedia([
     { productId: key, id: 'm2', url: 'U-second', alt: 'b', isPrimary: false, sortOrder: 1 },

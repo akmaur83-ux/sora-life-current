@@ -322,6 +322,24 @@
 .v2-pdp-root .pdp-trust__txt strong { color:var(--slv2-ink); font-size:12px; }
 .v2-pdp-root .pdp-trust__txt em { color:var(--slv2-ink-4); font-size:10.5px; }
 
+/* ------------------------------------------------ real catalogue imagery */
+.v2-pdp-root .pdp-catalogue { padding-block:30px 6px; }
+.v2-pdp-root .pdp-catalogue__head { margin-bottom:14px; }
+.v2-pdp-root .pdp-catalogue__head .pdp-sec__title { margin-bottom:0; }
+.v2-pdp-root .pdp-catalogue__grid {
+  display:grid;
+  grid-template-columns:minmax(0, 1fr);
+  gap:10px;
+}
+.v2-pdp-root .pdp-catalogue__image {
+  width:100%;
+  aspect-ratio:1 / 1;
+  border:1px solid var(--slv2-line-2);
+  border-radius:var(--slv2-r-art);
+  background:var(--slv2-cream);
+}
+.v2-pdp-root .pdp-catalogue__image img { object-fit:contain; padding:0; }
+
 /* --------------------------------------------------------- configured promos */
 .v2-pdp-root .v2-pdp__promos { margin-top:10px; }
 .v2-pdp-root .v2-pdp__promos .promo-section { padding-block:26px; }
@@ -404,8 +422,13 @@
 .v2-pdp-root .pdp-reviews__cta { border-radius:var(--slv2-r-ui); }
 .v2-pdp-root .pdp-reviews__all { color:var(--slv2-accent-primary); }
 
-/* Recommendations already use the frozen V2 ProductCard and ProductRail. */
+/* PDP recommendations are a vertical shopping grid, never a mobile rail. */
 .v2-pdp-root > .v2-sec { margin-top:34px; }
+.v2-pdp-root .pdp-recommendations__grid {
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+}
 
 /* ----------------------------------------------------------- sticky mobile */
 .v2-pdp-root .buybar {
@@ -491,6 +514,10 @@ body:has(.v2-pdp-root .buybar) .page-main {
   .v2-pdp-root .pdp-trust__item + .pdp-trust__item {
     border-top:0; border-left:1px solid var(--slv2-line-2);
   }
+  .v2-pdp-root .pdp-catalogue { padding-block:48px 8px; }
+  .v2-pdp-root .pdp-catalogue__grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
+  .v2-pdp-root .pdp-catalogue__grid--single { grid-template-columns:minmax(0, 620px); }
+  .v2-pdp-root .pdp-recommendations__grid { grid-template-columns:repeat(4, minmax(0, 1fr)); gap:24px; }
   .v2-pdp-root .v2-pdp__fbt-section { margin-top:48px; }
   .v2-pdp-root .fbt {
     grid-template-columns:minmax(0, 1fr) 260px; gap:36px; padding-top:24px;
@@ -504,6 +531,11 @@ body:has(.v2-pdp-root .buybar) .page-main {
   .v2-pdp-root #reviews.section-sm,
   .v2-pdp-root > .v2-sec { margin-top:48px; }
   .v2-pdp-root .buybar { display:none; }
+}
+
+@media (min-width:600px) and (max-width:900px) {
+  .v2-pdp-root .pdp-catalogue__grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; }
+  .v2-pdp-root .pdp-recommendations__grid { grid-template-columns:repeat(3, minmax(0, 1fr)); gap:18px; }
 }
 
 @media (min-width:1200px) {

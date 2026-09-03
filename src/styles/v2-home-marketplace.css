@@ -316,9 +316,16 @@
 
 /* ----------------------------------------------------- curated collections */
 .v2-home [data-home-section="collections"] { background:var(--hm-bg); }
-.v2-home .hm-collections { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.v2-home .hm-collections {
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  grid-auto-rows:1fr;
+  gap:8px;
+}
 .v2-home .hm-collection {
   min-width:0;
+  display:grid;
+  grid-template-rows:118px minmax(0, 1fr);
   overflow:hidden;
   color:var(--hm-ink);
   text-decoration:none;
@@ -326,16 +333,16 @@
   border:1px solid var(--hm-line);
   border-radius:2px;
 }
-.v2-home .hm-collection:first-child { grid-column:1 / -1; display:grid; grid-template-columns:1.15fr .85fr; }
-.v2-home .hm-collection:last-child:nth-child(even) { grid-column:1 / -1; display:grid; grid-template-columns:1.15fr .85fr; }
 .v2-home .hm-collection__images { display:grid; grid-template-columns:1fr 1fr; height:118px; overflow:hidden; background:#F1F3F0; }
-.v2-home .hm-collection:first-child .hm-collection__images { height:148px; }
-.v2-home .hm-collection:last-child:nth-child(even) .hm-collection__images { height:148px; }
 .v2-home .hm-collection__images .v2-pimg { height:100%; aspect-ratio:auto; border-right:1px solid var(--hm-line); background:#F1F3F0; }
 .v2-home .hm-collection__images .v2-pimg:nth-child(3) { display:none; }
-.v2-home .hm-collection__body { padding:12px; border-top:1px solid var(--hm-line); }
-.v2-home .hm-collection:first-child .hm-collection__body { display:flex; flex-direction:column; justify-content:center; border-top:0; border-left:1px solid var(--hm-line); }
-.v2-home .hm-collection:last-child:nth-child(even) .hm-collection__body { display:flex; flex-direction:column; justify-content:center; border-top:0; border-left:1px solid var(--hm-line); }
+.v2-home .hm-collection__body {
+  display:grid;
+  grid-template-rows:auto minmax(37px, auto) auto;
+  align-content:start;
+  padding:12px;
+  border-top:1px solid var(--hm-line);
+}
 .v2-home .hm-collection h3 { margin:5px 0 13px; color:var(--hm-ink); font-size:17px; font-weight:780; line-height:1.08; letter-spacing:-.025em; }
 
 /* ----------------------------------------------------- creator / community */
@@ -421,7 +428,16 @@
   .v2-home .hm-section,
   .v2-home .v2-sec.hm-section { padding-block:38px; }
   .v2-home .hm-heading__copy { font-size:11px; }
-  .v2-home .hm-product-rail > * { min-width:148px; width:calc(50% - 22px); }
+  .v2-home .hm-product-rail {
+    margin-inline:0;
+    padding-inline:0;
+    scroll-padding-inline:0;
+  }
+  .v2-home .hm-product-rail > * {
+    flex:0 0 calc((100% - 12px) / 2);
+    width:calc((100% - 12px) / 2);
+    min-width:0;
+  }
 
   .v2-home .hm-discover__list .v2-cc:nth-child(n+4) { display:none; }
   .v2-home .nl { padding:38px 0; }
@@ -466,15 +482,9 @@
   .v2-home .hm-mom__body { display:flex; flex-direction:column; justify-content:center; padding:38px; }
   .v2-home .hm-mom h2 { font-size:44px; }
   .v2-home .hm-collections { grid-template-columns:repeat(2, 1fr); gap:12px; }
-  .v2-home .hm-collection:first-child { grid-column:auto; }
-  .v2-home .hm-collection:last-child:nth-child(even) { grid-column:auto; }
   .v2-home .hm-collection { display:grid; grid-template-columns:1.15fr .85fr; min-height:190px; }
-  .v2-home .hm-collection__images,
-  .v2-home .hm-collection:first-child .hm-collection__images,
-  .v2-home .hm-collection:last-child:nth-child(even) .hm-collection__images { height:auto; }
-  .v2-home .hm-collection__body,
-  .v2-home .hm-collection:first-child .hm-collection__body,
-  .v2-home .hm-collection:last-child:nth-child(even) .hm-collection__body { display:flex; flex-direction:column; justify-content:center; padding:18px; border-top:0; border-left:1px solid var(--hm-line); }
+  .v2-home .hm-collection__images { height:auto; }
+  .v2-home .hm-collection__body { display:flex; flex-direction:column; justify-content:center; padding:18px; border-top:0; border-left:1px solid var(--hm-line); }
   .v2-home .hm-creator { grid-template-columns:auto 1fr auto; gap:24px; padding:32px; }
   .v2-home .hm-creator > .v2-btn { grid-column:auto; width:auto; }
   .v2-home .hm-trust { grid-template-columns:repeat(4, 1fr); }
