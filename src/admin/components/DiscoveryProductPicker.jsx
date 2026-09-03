@@ -3,7 +3,7 @@ import { productGallery } from '../../data/products.js';
 import { MAX_CONCERN_PRODUCTS, searchCatalogueForPicker } from '../../lib/homeDiscovery.js';
 
 // ============================================================
-// Admin picker: which products a concern card opens.
+// Admin picker: which products a discovery card opens.
 //
 // Search-driven on purpose. The catalogue is well past a hundred products, so
 // a <select> listing all of them would be unusable — you would be hunting a
@@ -31,7 +31,7 @@ function Thumb({ product }) {
   );
 }
 
-export default function ConcernProductPicker({ label, catalogue, value, onChange }) {
+export default function DiscoveryProductPicker({ label, catalogue, value, onChange, fallbackHint }) {
   const [term, setTerm] = useState('');
   const selected = Array.isArray(value) ? value : [];
   const full = selected.length >= MAX_CONCERN_PRODUCTS;
@@ -61,8 +61,8 @@ export default function ConcernProductPicker({ label, catalogue, value, onChange
       <label className="label" htmlFor={`pp-${label}`}>Linked products</label>
       <p className="hint">
         {selected.length
-          ? `${selected.length} chosen — the concern card opens exactly these, in this order.`
-          : 'None chosen. The card falls back to matching the catalogue automatically.'}
+          ? `${selected.length} chosen — this card opens exactly these, in this order.`
+          : fallbackHint}
       </p>
 
       <input

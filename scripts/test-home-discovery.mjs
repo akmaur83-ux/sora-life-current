@@ -21,7 +21,10 @@ import {
   CONCERN_REGISTRY, MIN_CONCERN_PRODUCTS, sanitizeDiscoveryImages,
   sanitizeConcernProducts, discoveryConcernProducts, resolveConcernProducts,
   concernIsCurated, concernSlug, findConcern, MAX_CONCERN_PRODUCTS,
-  searchCatalogueForPicker,
+  searchCatalogueForPicker, sanitizeDiscoveryCards, makeDiscoveryId,
+  normalizeDiscovery, discoveryPayload, defaultCategoryCards, defaultConcernCards,
+  findCollectionCard, findConcernCard, collectionProducts, concernCardProducts,
+  MAX_DISCOVERY_CARDS,
 } from '../src/lib/homeDiscovery.js';
 import { applyHomepage, getHomepageSnapshot, subscribeHomepage } from '../src/lib/settings.js';
 
@@ -296,11 +299,11 @@ test('D22 unusable admin URLs are dropped rather than rendered', () => {
 
 test('D23 the admin editor is wired to the same setting the storefront reads', () => {
   const page = src('../src/admin/pages/Homepage.jsx');
-  assert.match(page, /<DiscoveryImageControls/, 'the control must be mounted on Admin -> Homepage');
-  assert.match(page, /sanitizeDiscoveryImages\(discovery\)/, 'values are sanitised before saving');
+  assert.match(page, /<DiscoveryCardControls/, 'the control must be mounted on Admin -> Homepage');
+  assert.match(page, /discoveryPayload\(categoryCards, concernCards\)/, 'values are sanitised before saving');
   assert.match(page, /discovery: cleanDiscovery/, 'saved inside the existing homepage setting');
   assert.match(page, /adminSetSetting\('homepage'/, 'no new settings key is introduced');
-  const ctl = src('../src/admin/components/DiscoveryImageControls.jsx');
+  const ctl = src('../src/admin/components/DiscoveryCardControls.jsx');
   assert.match(ctl, /uploadHomepageImage/, 'reuses the existing homepage image uploader');
   assert.match(ctl, /Use default/, 'an admin can clear back to the built-in image');
 });
@@ -455,12 +458,15 @@ const ProductBrowser = ({ baseProducts }) => h('div', { 'data-browser': String(b
 const shopPage = (query, deps = {}) => {
   const ShopPage = jsx('../src/pages/Shop.jsx', 'Shop', {
     Link, Icon, ProductBrowser, products, getHomepageSnapshot, subscribeHomepage,
-    concernMatches, discoveryConcernProducts, findConcern, selectConcernCards,
+    normalizeDiscovery, findCollectionCard, findConcernCard,
+    collectionProducts, concernCardProducts, selectCategoryCards, selectConcernCards,
     useSearchParams: () => [new URLSearchParams(query)],
     ...deps,
   });
   return renderToStaticMarkup(h(ShopPage));
 };
+// Saved-settings shaped input for the page, without touching real settings.
+const withDiscovery = (discovery) => ({ getHomepageSnapshot: () => ({ discovery }) });
 const shownSlugs = (html) => [...html.matchAll(/data-slug="([^"]+)"/g)].map((m) => m[1]);
 
 test('D37 a concern page shows its label and a plain product count', () => {
@@ -476,13 +482,13 @@ test('D38 the page hands the browser exactly the concern set', () => {
   const expected = concernMatches(concern).map((p) => p.slug);
   assert.deepEqual(shownSlugs(shopPage('concern=scrubs')), expected);
   assert.deepEqual(shownSlugs(shopPage(`concern=${concernSlug(concern)}`)), expected,
-    'the readable alias opens the same set');
+    'the readable name form opens the same set');
 });
 
 test('D39 an admin selection wins on the page, and nothing else appears', () => {
   const html = shopPage('concern=acne', {
     products: TINY,
-    discoveryConcernProducts: () => ({ acne: ['zeta-two', 'zeta-one'] }),
+    ...withDiscovery({ concernCards: [{ id: 'acne', name: 'Acne Care', productSlugs: ['zeta-two', 'zeta-one'] }] }),
   });
   assert.deepEqual(shownSlugs(html), ['zeta-two', 'zeta-one']);
   assert.match(html, /class="v2-shop__count">2 products</);
@@ -491,7 +497,8 @@ test('D39 an admin selection wins on the page, and nothing else appears', () => 
 
 test('D40 one product reads as "1 product", not "1 products"', () => {
   const html = shopPage('concern=acne', {
-    products: TINY, discoveryConcernProducts: () => ({ acne: ['zeta-one'] }),
+    products: TINY,
+    ...withDiscovery({ concernCards: [{ id: 'acne', name: 'Acne Care', productSlugs: ['zeta-one'] }] }),
   });
   assert.match(html, /class="v2-shop__count">1 product</);
 });
@@ -507,7 +514,7 @@ test('D41 an unknown or absent concern falls back to the full catalogue', () => 
 
 test('D42 concern pages reuse the existing browser — no bespoke product card', () => {
   const page = src('../src/pages/Shop.jsx');
-  assert.match(page, /<ProductBrowser baseProducts=\{items\}/, 'the same browser renders both modes');
+  assert.match(page, /<ProductBrowser baseProducts=\{view\.items\}/, 'the same browser renders every mode');
   assert.doesNotMatch(page, /ProductCard|addToCart|wishlist|money\(|price/i,
     'pricing, cart and wishlist stay entirely inside the existing components');
 });
@@ -532,23 +539,373 @@ test('D44 the picker search finds real products and hides what is chosen', () =>
 
 test('D43 the admin editor writes the mapping into the same homepage setting', () => {
   const page = src('../src/admin/pages/Homepage.jsx');
-  assert.match(page, /sanitizeConcernProducts\(concernProducts\)/, 'sanitised before saving');
-  assert.match(page, /concernProducts: cleanProducts/, 'stored under discovery.concernProducts');
+  assert.match(page, /discoveryPayload\(categoryCards, concernCards\)/, 'sanitised before saving');
   assert.match(page, /adminSetSetting\('homepage'/, 'no new settings key is introduced');
-  assert.match(page, /onConcernProductsChange=\{setConcernProducts\}/);
+  assert.match(page, /onConcernCardsChange=\{setConcernCards\}/);
 
-  const ctl = src('../src/admin/components/DiscoveryImageControls.jsx');
-  assert.match(ctl, /<ConcernProductPicker/, 'the picker sits on the concern row');
+  const ctl = src('../src/admin/components/DiscoveryCardControls.jsx');
+  assert.match(ctl, /<DiscoveryProductPicker/, 'the picker sits on every card');
   assert.match(ctl, /uploadHomepageImage/, 'the image control is still intact');
   assert.match(ctl, /Use default/, 'clearing back to the built-in image still works');
 
   // Comments stripped first: the file explains in prose why it is not a
   // <select>, and that sentence must not be read as the markup itself.
-  const picker = src('../src/admin/components/ConcernProductPicker.jsx').replace(/^\s*\/\/.*$/gm, '');
+  const picker = src('../src/admin/components/DiscoveryProductPicker.jsx').replace(/^\s*\/\/.*$/gm, '');
   assert.doesNotMatch(picker, /<select/, 'a 149-item select is exactly what this replaces');
   assert.match(picker, /type="search"/, 'selection is search-driven');
   assert.match(picker, /aria-label=\{`Remove /, 'each chosen product can be removed');
   assert.match(picker, /move\(i, -1\)[\s\S]*move\(i, 1\)/, 'chosen products can be reordered');
+});
+
+console.log('\n— Discovery cards: the admin-owned model —');
+
+// A catalogue whose names share no words with any concern query, so a curated
+// result can only come from an explicit selection.
+const CARD_CATALOGUE = [...CURATED, ...OTHER];
+const card = (over = {}) => ({ id: 'zeta-shelf', name: 'Zeta Shelf', image: '', productSlugs: [], enabled: true, ...over });
+
+test('D45 the pre-card configuration survives, card for card', () => {
+  // Exactly what an admin had saved before this existed: images by slug,
+  // concern images by id, and a concern -> products mapping.
+  const legacy = {
+    categories: { wellness: 'https://cdn.example.com/wellness.jpg' },
+    concerns: { detan: 'https://cdn.example.com/detan.jpg' },
+    concernProducts: { detan: ['vitamin-c-face-cream-de-tan'] },
+  };
+  const norm = normalizeDiscovery(legacy);
+  assert.equal(norm.categoriesAreCurated, false, 'nothing was curated yet, so these are the built-in rails');
+  assert.equal(norm.concernsAreCurated, false);
+
+  const wellness = norm.categoryCards.find((c) => c.id === 'wellness');
+  assert.equal(wellness.name, 'Wellness', 'the catalogue name is carried over');
+  assert.equal(wellness.image, legacy.categories.wellness, 'the saved image survives');
+
+  const detan = norm.concernCards.find((c) => c.id === 'detan');
+  assert.equal(detan.name, 'De-Tan Care');
+  assert.equal(detan.group, 'Skin');
+  assert.equal(detan.image, legacy.concerns.detan);
+  assert.deepEqual(detan.productSlugs, legacy.concernProducts.detan, 'the saved product mapping survives');
+
+  // And every built-in category/concern is present, none invented.
+  assert.deepEqual(norm.categoryCards.map((c) => c.id), categories.map((c) => c.slug));
+  assert.deepEqual(norm.concernCards.map((c) => c.id), CONCERN_REGISTRY.map((c) => c.id));
+});
+
+test('D46 with nothing saved at all the rails are byte-for-byte what they were', () => {
+  const fresh = normalizeDiscovery({});
+  assert.deepEqual(fresh.categoryCards, defaultCategoryCards(categories, { categories: {} }));
+  assert.deepEqual(fresh.concernCards, defaultConcernCards(CONCERN_REGISTRY, { concerns: {} }, {}));
+  // The rendered rail is identical to the pre-card selector output.
+  const rail = selectCategoryCards(categories, products, { categories: {} }, undefined);
+  for (const c of rail) assert.equal(c.to, `/category/${c.slug}`, 'an uncurated card still opens its real category');
+});
+
+test('D47 a new card gets a readable, unique, stable id without anyone typing one', () => {
+  const taken = ['healthy-skin'];
+  assert.equal(makeDiscoveryId('Healthy Skin', []), 'healthy-skin', 'the plain form is used when free');
+  const second = makeDiscoveryId('Healthy Skin', taken);
+  assert.notEqual(second, 'healthy-skin', 'a collision must not produce a duplicate');
+  assert.match(second, /^healthy-skin-[a-z0-9]{1,8}$/, 'and stays recognisable');
+  // Names that carry nothing usable still produce a valid id.
+  for (const name of ['', '   ', '!!!', '///']) {
+    assert.match(makeDiscoveryId(name, []), /^[a-z0-9][a-z0-9-]{0,63}$/);
+  }
+});
+
+test('D48 renaming a card changes nothing but the label', () => {
+  const before = card({ id: 'wellness', name: 'Wellness', image: 'https://cdn.example.com/a.jpg', productSlugs: ['zeta-one'] });
+  const after = { ...before, name: 'Daily Wellness' };
+  const [clean] = sanitizeDiscoveryCards([after]);
+  assert.equal(clean.id, 'wellness', 'the id is what everything hangs on, so it must not move');
+  assert.equal(clean.image, before.image, 'the artwork follows the id, not the name');
+  assert.deepEqual(clean.productSlugs, before.productSlugs);
+  // And the saved link still resolves.
+  assert.equal(findCollectionCard('wellness', [clean]).name, 'Daily Wellness');
+});
+
+test('D49 a curated category card opens a collection, not the raw category', () => {
+  const cards = [card({ id: 'zeta-shelf', name: 'Zeta Shelf', productSlugs: ['zeta-two', 'zeta-one'] })];
+  const [rendered] = selectCategoryCards(categories, CARD_CATALOGUE, { categories: {} }, cards);
+  assert.equal(rendered.to, '/shop?collection=zeta-shelf');
+  assert.equal(rendered.count, 2);
+  assert.equal(rendered.source, 'admin');
+  assert.deepEqual(
+    collectionProducts(cards[0], CARD_CATALOGUE).map((p) => p.slug),
+    ['zeta-two', 'zeta-one'],
+    'the admin order is the customer order',
+  );
+});
+
+test('D50 a renamed catalogue card opens the collection so the heading matches the tile', () => {
+  const cards = [card({ id: 'wellness', name: 'Daily Wellness' })];
+  const [rendered] = selectCategoryCards(categories, products, { categories: {} }, cards);
+  assert.equal(rendered.to, '/shop?collection=wellness',
+    'a customer must never click "Daily Wellness" and land on a page headed "Wellness"');
+  assert.equal(rendered.name, 'Daily Wellness');
+  // Still backed by the real category, because nothing was curated.
+  assert.equal(rendered.count, getByCategory('wellness').length);
+});
+
+test('D51 the homepage follows the admin order exactly', () => {
+  const order = ['skin-care', 'wellness', 'hair-care'];
+  const cards = order.map((id) => card({ id, name: categories.find((c) => c.slug === id).name }));
+  assert.deepEqual(selectCategoryCards(categories, products, { categories: {} }, cards).map((c) => c.id), order);
+  const reversed = [...cards].reverse();
+  assert.deepEqual(selectCategoryCards(categories, products, { categories: {} }, reversed).map((c) => c.id), [...order].reverse());
+});
+
+test('D52 a disabled card leaves the rail and stops resolving', () => {
+  const cards = [card({ id: 'wellness', name: 'Wellness', enabled: false }), card({ id: 'skin-care', name: 'Skin Care' })];
+  const rail = selectCategoryCards(categories, products, { categories: {} }, cards);
+  assert.deepEqual(rail.map((c) => c.id), ['skin-care'], 'a hidden card must not render');
+  assert.equal(findCollectionCard('wellness', cards), null, 'nor be reachable by typing its URL');
+  assert.equal(shownSlugs(shopPage('collection=wellness', { ...withDiscovery({ categoryCards: cards }) })).length,
+    products.length, 'the URL falls back to the full catalogue rather than erroring');
+});
+
+test('D53 deleting a card removes the tile and nothing else', () => {
+  const catalogueBefore = products.map((p) => p.slug);
+  const categoriesBefore = categories.map((c) => c.slug);
+  const cards = [card({ id: 'wellness', name: 'Wellness' }), card({ id: 'skin-care', name: 'Skin Care' })];
+
+  const afterDelete = cards.filter((c) => c.id !== 'wellness');
+  assert.deepEqual(selectCategoryCards(categories, products, { categories: {} }, afterDelete).map((c) => c.id), ['skin-care']);
+
+  // The catalogue is untouched: same products, same categories, same route.
+  assert.deepEqual(products.map((p) => p.slug), catalogueBefore, 'no product may be removed');
+  assert.deepEqual(categories.map((c) => c.slug), categoriesBefore, 'no catalogue category may be removed');
+  assert.ok(getByCategory('wellness').length > 0, '/category/wellness still resolves to its products');
+
+  // And the editor says so before it happens.
+  const ctl = src('../src/admin/components/DiscoveryCardControls.jsx');
+  assert.match(ctl, /window\.confirm\(/, 'delete must be confirmed');
+  assert.match(ctl, /Products will not be deleted/, 'and must say what it does not do');
+});
+
+test('D54 /shop?collection= shows exactly the chosen products and nothing else', () => {
+  const cards = [card({ id: 'zeta-shelf', name: 'Zeta Shelf', productSlugs: ['zeta-three', 'zeta-one'] })];
+  const html = shopPage('collection=zeta-shelf', {
+    products: CARD_CATALOGUE, ...withDiscovery({ categoryCards: cards }),
+  });
+  assert.match(html, /<h1[^>]*>Zeta Shelf<\/h1>/);
+  assert.match(html, /class="v2-shop__count">2 products</);
+  assert.deepEqual(shownSlugs(html), ['zeta-three', 'zeta-one']);
+  for (const other of OTHER) assert.ok(!html.includes(other.slug), `${other.slug} must not appear`);
+});
+
+test('D55 a deleted or unknown collection falls back to Shop instead of breaking', () => {
+  for (const query of ['collection=', 'collection=deleted-card', 'collection=../../etc']) {
+    const html = shopPage(query, { ...withDiscovery({ categoryCards: [card()] }) });
+    assert.match(html, /All products<\/h1>/, `"${query}" must render the normal Shop page`);
+    assert.equal(shownSlugs(html).length, products.length);
+  }
+});
+
+test('D56 missing and deactivated products are skipped in a collection', () => {
+  const catalogue = [...CURATED, pick('zeta-retired', { isActive: false })];
+  const one = card({ productSlugs: ['zeta-one', 'ghost-product', 'zeta-retired', 'zeta-two'] });
+  assert.deepEqual(collectionProducts(one, catalogue).map((p) => p.slug), ['zeta-one', 'zeta-two']);
+  const [rendered] = selectCategoryCards(categories, catalogue, { categories: {} }, [one]);
+  assert.equal(rendered.count, 2, 'the tile counts what a customer will actually see');
+});
+
+console.log('\n— Discovery cards: concerns —');
+
+test('D57 a concern an admin invented stays hidden until it has products', () => {
+  const custom = card({ id: 'dark-circles', name: 'Dark Circles', group: 'Skin' });
+  const cards = [custom, ...defaultConcernCards(CONCERN_REGISTRY, { concerns: {} }, {})];
+  const rail = selectConcernCards(products, CONCERN_REGISTRY, { concerns: {} }, {}, cards);
+  assert.ok(!rail.some((c) => c.id === 'dark-circles'),
+    'a custom concern has no matcher to fall back on, so an empty one must not ship');
+});
+
+test('D58 the same concern appears the moment products are chosen', () => {
+  const custom = card({ id: 'dark-circles', name: 'Dark Circles', group: 'Skin', productSlugs: ['zeta-one', 'zeta-two'] });
+  const rail = selectConcernCards(CARD_CATALOGUE, CONCERN_REGISTRY, { concerns: {} }, {}, [custom]);
+  const found = rail.find((c) => c.id === 'dark-circles');
+  assert.ok(found, 'a curated custom concern renders');
+  assert.equal(found.count, 2);
+  assert.equal(found.label, 'Dark Circles');
+  assert.equal(found.source, 'admin');
+  assert.equal(found.to, '/shop?concern=dark-circles');
+  // Its group still selects the owned Skin artwork rather than a product bottle.
+  assert.equal(found.imageSource, 'group');
+});
+
+test('D59 an explicit concern list is honoured below the automatic rail minimum', () => {
+  // Two curated concerns is a decision. The 3-card minimum only ever existed
+  // to stop the BUILT-IN default shipping a thin rail nobody chose.
+  const cards = [
+    card({ id: 'a-shelf', name: 'A Shelf', productSlugs: ['zeta-one'] }),
+    card({ id: 'b-shelf', name: 'B Shelf', productSlugs: ['zeta-two'] }),
+  ];
+  const rail = selectConcernCards(CARD_CATALOGUE, CONCERN_REGISTRY, { concerns: {} }, {}, cards);
+  assert.deepEqual(rail.map((c) => c.id), ['a-shelf', 'b-shelf']);
+  // But the untouched default still hides a thin automatic rail.
+  assert.deepEqual(selectConcernCards(products, CONCERN_REGISTRY.slice(0, 1)), []);
+});
+
+test('D60 concern cards reorder, disable and delete like category cards', () => {
+  const mk = (id, name) => card({ id, name, productSlugs: ['zeta-one'] });
+  const cards = [mk('a-shelf', 'A'), mk('b-shelf', 'B'), mk('c-shelf', 'C')];
+  const ids = (list) => selectConcernCards(CARD_CATALOGUE, CONCERN_REGISTRY, { concerns: {} }, {}, list).map((c) => c.id);
+
+  assert.deepEqual(ids(cards), ['a-shelf', 'b-shelf', 'c-shelf']);
+  const moved = [cards[1], cards[0], cards[2]];
+  assert.deepEqual(ids(moved), ['b-shelf', 'a-shelf', 'c-shelf'], 'order in the array is order on the page');
+  const disabled = cards.map((c) => (c.id === 'b-shelf' ? { ...c, enabled: false } : c));
+  assert.deepEqual(ids(disabled), ['a-shelf', 'c-shelf']);
+  assert.deepEqual(ids(cards.filter((c) => c.id !== 'a-shelf')), ['b-shelf', 'c-shelf']);
+});
+
+test('D61 renaming a built-in concern keeps its id, artwork, products and link', () => {
+  const renamed = card({ id: 'detan', name: 'Summer De-Tan', group: 'Skin', image: 'https://cdn.example.com/d.jpg' });
+  const [rendered] = selectConcernCards(products, CONCERN_REGISTRY, { concerns: {} }, {}, [renamed]);
+  assert.equal(rendered.id, 'detan');
+  assert.equal(rendered.label, 'Summer De-Tan');
+  assert.equal(rendered.image, 'https://cdn.example.com/d.jpg');
+  assert.equal(rendered.to, '/shop?concern=detan');
+  // Still backed by the built-in matcher, because nothing was curated.
+  assert.equal(rendered.count, concernMatches(CONCERN_REGISTRY.find((c) => c.id === 'detan'), products, {}).length);
+  assert.equal(findConcernCard('detan', [renamed]).name, 'Summer De-Tan');
+  assert.equal(findConcernCard('summer-de-tan', [renamed]).id, 'detan', 'the new name resolves too');
+});
+
+test('D62 /shop?concern= shows a renamed concern under its new name', () => {
+  const cards = [card({ id: 'detan', name: 'Summer De-Tan', productSlugs: ['zeta-one', 'zeta-four'] })];
+  const html = shopPage('concern=detan', {
+    products: CARD_CATALOGUE, ...withDiscovery({ concernCards: cards }),
+  });
+  assert.match(html, /<h1[^>]*>Summer De-Tan<\/h1>/);
+  assert.deepEqual(shownSlugs(html), ['zeta-one', 'zeta-four']);
+  assert.match(html, /class="v2-shop__count">2 products</);
+});
+
+console.log('\n— Discovery cards: security and storage —');
+
+test('D63 unusable image URLs never reach a card', () => {
+  const dirty = sanitizeDiscoveryCards([
+    card({ id: 'a', name: 'A', image: 'javascript:alert(1)' }),
+    card({ id: 'b', name: 'B', image: '//evil.example/x.png' }),
+    card({ id: 'c', name: 'C', image: 'data:text/html,<script>x</script>' }),
+    card({ id: 'd', name: 'D', image: 'http://insecure.example/x.png' }),
+    card({ id: 'e', name: 'E', image: 'https://cdn.example.com/ok.jpg' }),
+  ]);
+  assert.deepEqual(dirty.map((c) => c.image), ['', '', '', '', 'https://cdn.example.com/ok.jpg']);
+});
+
+test('D64 malformed ids, duplicates, blank names and overflow are all rejected', () => {
+  const clean = sanitizeDiscoveryCards([
+    card({ id: '../../etc/passwd', name: 'Traversal' }),
+    card({ id: 'has space', name: 'Space' }),
+    card({ id: '-leading', name: 'Leading dash' }),
+    card({ id: 'UPPER', name: 'Uppercased' }),        // lowercased, then valid
+    card({ id: 'dup', name: 'First' }),
+    card({ id: 'dup', name: 'Second' }),              // duplicate id dropped
+    card({ id: 'blank', name: '   ' }),               // no visible name
+    card({ id: 'ctrl', name: 'Bad\u0000Name' }),  // control chars stripped
+    'not-an-object',
+    null,
+  ]);
+  assert.deepEqual(clean.map((c) => c.id), ['upper', 'dup', 'ctrl']);
+  assert.equal(clean.find((c) => c.id === 'dup').name, 'First', 'the first of a duplicate pair wins');
+  assert.equal(clean.find((c) => c.id === 'ctrl').name, 'Bad Name');
+  assert.equal(sanitizeDiscoveryCards(null).length, 0);
+  assert.equal(
+    sanitizeDiscoveryCards(Array.from({ length: MAX_DISCOVERY_CARDS + 12 }, (_, i) => card({ id: `c${i}`, name: `C${i}` }))).length,
+    MAX_DISCOVERY_CARDS,
+  );
+});
+
+test('D65 no saved value can surface a product the catalogue is hiding', () => {
+  const hidden = pick('zeta-hidden', { isActive: false });
+  const catalogue = [...CURATED, hidden];
+  const cards = [card({ id: 'zeta-shelf', name: 'Zeta Shelf', productSlugs: ['zeta-hidden', 'zeta-one'] })];
+  assert.deepEqual(collectionProducts(cards[0], catalogue).map((p) => p.slug), ['zeta-one']);
+  const html = shopPage('collection=zeta-shelf', { products: catalogue, ...withDiscovery({ categoryCards: cards }) });
+  assert.ok(!shownSlugs(html).includes('zeta-hidden'), 'a deactivated product stays off the page');
+  // The same holds for a concern card, and for a slug that is simply invented.
+  assert.deepEqual(concernCardProducts(card({ id: 'x', productSlugs: ['nope', 'zeta-hidden'] }), catalogue), []);
+  // Product slugs are the only thing a mapping can name — no free-text query.
+  const lib = src('../src/lib/homeDiscovery.js');
+  const cleaner = lib.slice(lib.indexOf('function cleanSlugList'), lib.indexOf('export function sanitizeDiscoveryCards'));
+  assert.match(cleaner, /SLUG_RE\.test/, 'every stored slug is charset-checked');
+});
+
+test('D66 what is saved is exactly what is read back, plus a faithful legacy mirror', () => {
+  const cats = [card({ id: 'zeta-shelf', name: 'Zeta Shelf', image: 'https://cdn.example.com/z.jpg', productSlugs: ['zeta-one'] })];
+  const cons = [card({ id: 'detan', name: 'De-Tan Care', group: 'Skin', image: 'https://cdn.example.com/d.jpg', productSlugs: ['zeta-two'] })];
+  const saved = discoveryPayload(cats, cons);
+
+  // Round trip: reading the payload back gives the same cards, now curated.
+  const back = normalizeDiscovery(saved);
+  assert.deepEqual(back.categoryCards, saved.categoryCards);
+  assert.deepEqual(back.concernCards, saved.concernCards);
+  assert.equal(back.categoriesAreCurated, true);
+  assert.equal(back.concernsAreCurated, true);
+
+  // The pre-card keys are rewritten from the cards, so an older build still
+  // finds every image and mapping exactly where it used to look.
+  assert.deepEqual(saved.categories, { 'zeta-shelf': 'https://cdn.example.com/z.jpg' });
+  assert.deepEqual(saved.concerns, { detan: 'https://cdn.example.com/d.jpg' });
+  assert.deepEqual(saved.concernProducts, { detan: ['zeta-two'] });
+  assert.deepEqual(sanitizeDiscoveryImages(saved).concerns, saved.concerns);
+  assert.deepEqual(sanitizeConcernProducts(saved.concernProducts), saved.concernProducts);
+});
+
+test('D67 the round rail under the hero is not part of this system', () => {
+  // It renders real catalogue categories through its own component, and nothing
+  // in the card model can reach it.
+  const strip = src('../src/components/HomeCategoryStrip.jsx');
+  assert.match(strip, /<CategoryRail \/>/, 'the quick-nav rail keeps its original implementation');
+  assert.doesNotMatch(strip, /discovery|categoryCards|collection/i, 'and knows nothing about discovery cards');
+
+  const rail = src('../src/components/CategoryRail.jsx');
+  assert.match(rail, /categories/, 'it reads the real catalogue categories');
+  assert.doesNotMatch(rail, /homeDiscovery|categoryCards|\?collection=/,
+    'it must never be routed through the merchandising model');
+
+  const home = src('../src/pages/Home.jsx');
+  const order = ['<Hero', '<HomeCategoryStrip', '<HomeOffers', '<ShopByCategory', '<ShopByConcerns'];
+  let cursor = -1;
+  for (const token of order) {
+    const at = home.indexOf(token);
+    assert.ok(at > cursor, `${token} is out of order`);
+    cursor = at;
+  }
+});
+
+test('D69 every sibling chip leads somewhere real', () => {
+  // Not every configured concern is backed — the built-in list deliberately
+  // describes more of the range than this catalogue holds. A chip for one of
+  // those would be a link to an empty page.
+  const html = shopPage('concern=detan');
+  const chips = [...html.matchAll(/class="v2-chip"[^>]*href="([^"]+)"|href="([^"]+)"[^>]*class="v2-chip"/g)]
+    .map((m) => m[1] || m[2]);
+  const linked = chips.filter((h) => h.startsWith('/shop?concern='))
+    .map((h) => decodeURIComponent(h.split('=')[1]));
+  assert.ok(linked.length > 0, 'there should be sibling concerns to offer');
+  // The chips must be exactly the rail, minus the current card.
+  const rail = selectConcernCards().map((c) => c.id);
+  assert.deepEqual(linked, rail.filter((id) => id !== 'detan'),
+    'the sibling chips are the homepage rail, so neither can offer what the other hides');
+  for (const id of linked) {
+    assert.ok(concernCardProducts(findConcernCard(id), products).length > 0, `${id} opens an empty page`);
+  }
+  assert.ok(!linked.includes('acne'), 'an unbacked concern must not be offered');
+  assert.ok(!linked.includes('strength'), 'nor one the rail itself judged too thin');
+});
+
+test('D68 a card cannot create, rename or delete anything in the catalogue', () => {
+  const lib = src('../src/lib/homeDiscovery.js');
+  // The module reads the catalogue and never writes to it.
+  assert.doesNotMatch(lib, /applyCatalog|applyCategories|adminSetSetting|\.push\(categories|categories\s*=/,
+    'homeDiscovery must stay a read-only view of the catalogue');
+  const ctl = src('../src/admin/components/DiscoveryCardControls.jsx');
+  assert.doesNotMatch(ctl, /adminSaveCategory|adminDeleteProduct|adminSetSetting|from '\.\.\/\.\.\/lib\/adminApi/,
+    'the card editor must not reach the catalogue admin API');
+  assert.match(ctl, /do not create or change catalogue categories/,
+    'and must tell the admin so');
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

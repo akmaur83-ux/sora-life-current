@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { adminGetSetting, adminSetSetting } from '../../lib/adminApi.js';
 import HomepageVisualControls from '../components/HomepageVisualControls.jsx';
-import DiscoveryImageControls from '../components/DiscoveryImageControls.jsx';
-import { sanitizeDiscoveryImages, sanitizeConcernProducts, CONCERN_REGISTRY } from '../../lib/homeDiscovery.js';
-import { categories } from '../../data/categories.js';
+import DiscoveryCardControls from '../components/DiscoveryCardControls.jsx';
+import { normalizeDiscovery, discoveryPayload } from '../../lib/homeDiscovery.js';
 import { products } from '../../data/products.js';
 import { HOMEPAGE_VISUAL_FIELDS, mergeHomepageVisuals, safeVisualUrl, sanitizeHomepageVisuals } from '../../lib/homepageAppearance.js';
 import { announceHomepageSaved } from '../../lib/homepageVisualSync.js';
@@ -18,11 +17,11 @@ export default function HomepageSettings() {
   const [err, setErr] = useState('');
   const [visuals, setVisuals] = useState(() => sanitizeHomepageVisuals());
   const [uploads, setUploads] = useState(0);
-  // Artwork for the two discovery rails, stored under `homepage.discovery`.
-  const [discovery, setDiscovery] = useState(() => sanitizeDiscoveryImages());
-  // Which products each concern card opens — same `discovery` object,
-  // under `concernProducts`. Empty means "match the catalogue automatically".
-  const [concernProducts, setConcernProducts] = useState(() => sanitizeConcernProducts());
+  // The two discovery rails, as ordered card lists under `homepage.discovery`.
+  // Before an admin has saved anything these are the built-in rails expressed
+  // as cards, so the editor opens on exactly what the homepage is showing.
+  const [categoryCards, setCategoryCards] = useState(() => normalizeDiscovery({}).categoryCards);
+  const [concernCards, setConcernCards] = useState(() => normalizeDiscovery({}).concernCards);
 
   useEffect(() => {
     (async () => {
@@ -30,7 +29,14 @@ export default function HomepageSettings() {
         const ann = await adminGetSetting('announcement');
         const hp = await adminGetSetting('homepage');
         if (ann) { setNotices(ann.notices || ['', '', '']); }
-        if (hp) { setBsTitle(hp.bestseller_title || 'Bestsellers'); setBsSub(hp.bestseller_subtitle || ''); setVisuals(sanitizeHomepageVisuals(hp.visuals)); setDiscovery(sanitizeDiscoveryImages(hp.discovery)); setConcernProducts(sanitizeConcernProducts(hp.discovery?.concernProducts)); }
+        if (hp) {
+          setBsTitle(hp.bestseller_title || 'Bestsellers');
+          setBsSub(hp.bestseller_subtitle || '');
+          setVisuals(sanitizeHomepageVisuals(hp.visuals));
+          const cards = normalizeDiscovery(hp.discovery);
+          setCategoryCards(cards.categoryCards);
+          setConcernCards(cards.concernCards);
+        }
       } catch (e) { setErr(e.message || String(e)); }
       setLoading(false);
     })();
@@ -58,15 +64,14 @@ export default function HomepageSettings() {
       // 0001 seeded into site_settings.
       const { free_shipping_threshold: _retiredThreshold, ...keptAnnouncement } = currentAnnouncement || {};
       await adminSetSetting('announcement', { ...keptAnnouncement, notices: notices.filter(Boolean) });
-      // Sanitised on the way out too, so an unusable URL — or a product slug
-      // for a concern that does not exist — is never persisted.
-      const cleanProducts = sanitizeConcernProducts(concernProducts);
-      const cleanDiscovery = { ...sanitizeDiscoveryImages(discovery), concernProducts: cleanProducts };
+      // Sanitised on the way out too: an unusable image URL, a malformed id,
+      // a duplicate or a slug that is not a product never reaches storage.
+      const cleanDiscovery = discoveryPayload(categoryCards, concernCards);
       const next = mergeHomepageVisuals({ ...currentHomepage, bestseller_title: bsTitle, bestseller_subtitle: bsSub, discovery: cleanDiscovery }, visuals);
       await adminSetSetting('homepage', next);
       setVisuals(next.visuals);
-      setDiscovery(cleanDiscovery);
-      setConcernProducts(cleanProducts);
+      setCategoryCards(cleanDiscovery.categoryCards);
+      setConcernCards(cleanDiscovery.concernCards);
       announceHomepageSaved(next);
       setMsg('Saved. Homepage appearance is live; open storefront tabs update automatically.');
     } catch (ex) { setErr(ex.message || String(ex)); }
@@ -77,7 +82,7 @@ export default function HomepageSettings() {
 
   return (
     <div className="adm-form">
-      <div className="adm__head"><div><h1>Homepage</h1><p>Homepage copy, category strip appearance and the offers gallery.</p></div></div>
+      <div className="adm__head"><div><h1>Homepage</h1><p>Homepage copy, appearance, the offers gallery and the two discovery rails.</p></div></div>
       {err && <div className="adm-banner err">{err}</div>}
       {msg && <div className="adm-banner ok">{msg}</div>}
 
@@ -100,15 +105,13 @@ export default function HomepageSettings() {
 
         <HomepageVisualControls value={visuals} onChange={setVisuals} onUploading={(delta) => setUploads((n) => n + delta)} />
 
-        <DiscoveryImageControls
-          categories={categories.filter((c) => c?.slug && c?.name)}
-          concerns={CONCERN_REGISTRY}
-          value={discovery}
-          onChange={setDiscovery}
-          onBusy={(delta) => setUploads((n) => n + delta)}
+        <DiscoveryCardControls
+          categoryCards={categoryCards}
+          concernCards={concernCards}
+          onCategoryCardsChange={setCategoryCards}
+          onConcernCardsChange={setConcernCards}
           catalogue={products}
-          concernProducts={concernProducts}
-          onConcernProductsChange={setConcernProducts}
+          onBusy={(delta) => setUploads((n) => n + delta)}
         />
         <button className="btn" type="submit" disabled={saving || uploads > 0}>{saving ? 'Saving…' : uploads ? 'Uploading images…' : 'Save changes'}</button>
       </form>
