@@ -13,7 +13,7 @@ import { promotionsSource } from '../lib/promotions.js';
 const COUPONS = { SORA10: 0.1, WELCOME: 0.15 };
 
 export default function Cart() {
-  const { cartDetailed, savedDetailed, dispatch, subtotal, mrpTotal, savings, toast } = useStore();
+  const { cartDetailed, savedDetailed, dispatch, subtotal, mrpTotal, savings, toast, blockedCartLines } = useStore();
   const [coupon, setCoupon] = useState('');
   const [applied, setApplied] = useState(null);
   const [couponErr, setCouponErr] = useState('');
@@ -124,7 +124,24 @@ export default function Cart() {
               <PriceSummary
                 fallback={{ itemTotal: subtotal - discount, mrpTotal, shipping }}
               />
-              <Link to="/checkout" className="btn btn-lg btn-block">Checkout <Icon name="arrowRight" size={18} /></Link>
+              {blockedCartLines.length > 0 ? (
+                  /* A line stored before purchase gating existed, or one whose
+                     price vanished when the catalogue hydrated. Say which item
+                     and why rather than failing at the payment step. */
+                  <>
+                    <p className="summary__blocked" role="alert">
+                      {blockedCartLines.length === 1
+                        ? `"${blockedCartLines[0].product.name}" is not available to buy right now.`
+                        : `${blockedCartLines.length} items in your cart are not available to buy right now.`}
+                      {' '}Remove {blockedCartLines.length === 1 ? 'it' : 'them'} to continue.
+                    </p>
+                    <button type="button" className="btn btn-lg btn-block" disabled aria-disabled="true">
+                      Checkout
+                    </button>
+                  </>
+                ) : (
+                  <Link to="/checkout" className="btn btn-lg btn-block">Checkout <Icon name="arrowRight" size={18} /></Link>
+                )}
               <Link to="/shop" className="summary__continue">or continue shopping</Link>
               <div className="summary__badges">
                 <span><Icon name="lock" size={14} /> Secure checkout</span>

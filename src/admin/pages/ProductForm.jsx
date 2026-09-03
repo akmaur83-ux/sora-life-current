@@ -70,6 +70,13 @@ export default function ProductForm() {
   async function onSubmit(e) {
     e.preventDefault();
     if (mediaRef.current?.isBusy?.()) { setErr('Wait for the current media operation to finish before saving.'); return; }
+    // The `min` attribute alone is a hint the browser can be talked out of.
+    // A product saved at zero renders "Price coming soon" and can never be
+    // bought — the server refuses the line at checkout — so refuse it here.
+    if (!(original > 0)) {
+      setErr('Enter an original price of at least ₹1 — a product with no price cannot be purchased.');
+      return;
+    }
     setSaving(true);
     setErr('');
     try {
@@ -176,7 +183,11 @@ export default function ProductForm() {
           <div className="adm-grid2">
             <div className="field">
               <label className="label">Original price / MRP (₹)</label>
-              <input className="input" type="number" min="0" step="1" required value={values.originalPrice} onChange={(e) => set('originalPrice', e.target.value)} />
+              <input className="input" type="number" min="1" step="1" required value={values.originalPrice} onChange={(e) => set('originalPrice', e.target.value)} />
+              {/* min="0" let a product be published at zero: the storefront
+                  then showed "Price coming soon" and the server refused the
+                  line at checkout. A published product needs a real price. */}
+              <p className="hint">Must be at least ₹1. A product with no price cannot be purchased.</p>
             </div>
             <div className="field">
               <label className="label">Discount</label>

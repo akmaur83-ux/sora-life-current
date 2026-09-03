@@ -174,3 +174,24 @@
     margin-left:8px;
   }
 }
+
+/* Nav placeholder: holds a link's exact slot while the category list settles,
+   so hydration cannot reflow the row or swap a label under the cursor. */
+.v2-hdr__link--ph {
+  position: relative;
+  color: transparent;          /* reserves the label's exact width, unseen */
+  pointer-events: none;
+  user-select: none;
+}
+.v2-hdr__link--ph::after {     /* the visible "loading" bar */
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 11px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: rgba(22, 33, 27, 0.11);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .v2-hdr__link--ph { transition: opacity .2s ease; }
+}

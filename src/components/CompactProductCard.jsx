@@ -4,6 +4,7 @@ import ProductImage from './ProductImage.jsx';
 import PriceTag from './PriceTag.jsx';
 import { useStore } from '../lib/store.jsx';
 import { branding } from '../lib/settings.js';
+import { isPurchasable } from '../data/products.js';
 
 // V2 compact horizontal product card.
 //
@@ -34,7 +35,9 @@ export default function CompactProductCard({ product }) {
         <PriceTag product={product} showOff={false} v2 />
       </div>
 
-      {!out && (
+      {/* Hidden when out of stock, and equally when there is no usable
+          price — a "+" that silently does nothing is worse than none. */}
+      {!out && isPurchasable(product) && (
         <button
           type="button"
           className="v2-cc__add"

@@ -332,3 +332,42 @@ export function applyVariants(variantList) {
   if (changed) catalogVersion += 1;
   return changed;
 }
+
+// ============================================================
+// PURCHASABILITY — one definition of "can this actually be bought?".
+//
+// `priceVerified` was previously display-only: a product whose price could not
+// be resolved rendered "Price coming soon" but still had a live Add to cart
+// button. The customer could carry it all the way to checkout, where the
+// server correctly refused the line — the first honest signal they got.
+//
+// Everything that can put a line in the cart now asks this instead, so the
+// storefront tells the truth at the point of the click. The server-side
+// rejection in api/_lib/pricing.js stays exactly as it is: this is the UX
+// contract, not the security boundary.
+// ============================================================
+
+/** A usable, payable amount: a finite number strictly greater than zero. */
+export function isPayableAmount(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0;
+}
+
+/**
+ * Can this product (optionally at this pack size) be added to a cart?
+ *
+ * A variant is only purchasable at its OWN price — falling back to the base
+ * price for a pack the customer did not choose is exactly the substitution the
+ * server refuses.
+ */
+export function isPurchasable(product, variant = null) {
+  if (!product) return false;
+  if (product.priceVerified === false) return false;
+  if (variant && typeof variant === 'object' && variant.price != null) {
+    return isPayableAmount(variant.price);
+  }
+  return isPayableAmount(product.price);
+}
+
+/** Copy for a control that cannot be a working Add to cart. */
+export const UNAVAILABLE_LABEL = 'Unavailable';

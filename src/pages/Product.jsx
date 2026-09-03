@@ -6,7 +6,7 @@ import ProductGallery from '../components/ProductGallery.jsx';
 import PriceTag from '../components/PriceTag.jsx';
 import NotFound from './NotFound.jsx';
 import { useStore } from '../lib/store.jsx';
-import { productBySlug, isCatalogHydrated, productRouteState, getRelated } from '../data/products.js';
+import { productBySlug, isCatalogHydrated, productRouteState, getRelated, isPurchasable, UNAVAILABLE_LABEL } from '../data/products.js';
 import { categoryBySlug } from '../data/categories.js';
 import { money } from '../lib/format.js';
 
@@ -110,6 +110,11 @@ useEffect(() => {
   const related = getRelated(product);
   const wished = isWished(product.id);
   const out = product.stock === 0;
+  // No usable price for this product (or the chosen pack size) means it
+  // cannot be bought. Checkout would refuse the line, so the PDP says so
+  // here rather than letting the customer find out at the payment step.
+  const buyable = isPurchasable(product, variant);
+  const blocked = out || !buyable;
   const lowStock = product.stock > 0 && product.stock <= 5;
 
   const fbt = [product, ...related.slice(0, 2)];
@@ -306,11 +311,11 @@ useEffect(() => {
               <span aria-live="polite">{qty}</span>
               <button onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity" disabled={out}><Icon name="plus" size={16} /></button>
             </div>
-            <button className={`v2-btn v2-btn--block pdp__addbtn ${justAdded ? 'is-added' : ''}`} disabled={out} onClick={addNow}>
-              {justAdded ? <><Icon name="check" size={18} /> Added to cart</> : <><Icon name="bag" size={18} /> Add to cart</>}
+            <button className={`v2-btn v2-btn--block pdp__addbtn ${justAdded ? 'is-added' : ''}`} disabled={blocked} onClick={addNow}>
+              {!buyable ? UNAVAILABLE_LABEL : justAdded ? <><Icon name="check" size={18} /> Added to cart</> : <><Icon name="bag" size={18} /> Add to cart</>}
             </button>
           </div>
-          <button className="v2-btn v2-btn--ghost v2-btn--block pdp__buynow" disabled={out} onClick={buyNow}>Buy it now</button>
+          <button className="v2-btn v2-btn--ghost v2-btn--block pdp__buynow" disabled={blocked} onClick={buyNow}>Buy it now</button>
 
           <ProductDeliveryInfo product={product} />
         </div>
@@ -381,10 +386,10 @@ useEffect(() => {
         <div className="buybar__price">
           <PriceTag product={product} showOff={false} variant={variant} v2 />
         </div>
-        <button className="v2-btn buybar__add" disabled={out} onClick={addNow} aria-label="Add to cart">
-          <Icon name="bag" size={17} /> Add
+        <button className="v2-btn buybar__add" disabled={blocked} onClick={addNow} aria-label="Add to cart">
+          <Icon name="bag" size={17} /> {buyable ? 'Add' : UNAVAILABLE_LABEL}
         </button>
-        <button className="v2-btn v2-btn--ghost buybar__buy" disabled={out} onClick={buyNow}>Buy now</button>
+        <button className="v2-btn v2-btn--ghost buybar__buy" disabled={blocked} onClick={buyNow}>Buy now</button>
       </div>
     </div>
   );

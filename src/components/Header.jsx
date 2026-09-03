@@ -5,10 +5,34 @@ import Logo from './Logo.jsx';
 import ProductImage from './ProductImage.jsx';
 import AnnouncementBar from './AnnouncementBar.jsx';
 import { useStore } from '../lib/store.jsx';
-import { categories, hasConfiguredCategoryCopy } from '../data/categories.js';
+import { categories, hasConfiguredCategoryCopy, isCategoriesHydrated } from '../data/categories.js';
 import { searchProducts } from '../data/products.js';
 import { money } from '../lib/format.js';
 import { lockScroll, unlockScroll } from '../lib/scrollLock.js';
+
+// The desktop nav used to paint the built-in category set and then visibly
+// swap it for the Supabase set once hydration landed a few hundred ms later —
+// labels changed under the cursor on every page load.
+//
+// Now the row is laid out from the BUILT-IN names while the real list is still
+// unknown, but those names are rendered invisibly: the browser reserves each
+// slot's true width, so nothing reflows, and no label is ever shown and then
+// replaced. A muted bar is drawn over each reserved slot so the row reads as
+// loading rather than as blank space.
+const NAV_PLACEHOLDER_COUNT = 5;
+
+// Mirrors the catalogue settle rule in src/pages/Product.jsx: show the real
+// links once hydrated, and fall back to the built-in list if Supabase never
+// answers, so the nav can never be stuck as a skeleton.
+function useCategoriesSettled() {
+  const [timedOut, setTimedOut] = useState(false);
+  useEffect(() => {
+    if (isCategoriesHydrated()) return undefined;
+    const t = setTimeout(() => setTimedOut(true), 5000);
+    return () => clearTimeout(t);
+  }, []);
+  return isCategoriesHydrated() || timedOut;
+}
 
 // ============================================================================
 // SORA LIFE V2 — HEADER
@@ -25,6 +49,7 @@ import { lockScroll, unlockScroll } from '../lib/scrollLock.js';
 // crowd a 390px bar, and MobileTabBar already carries "Saved".
 // ============================================================================
 export default function Header() {
+  const categoriesSettled = useCategoriesSettled();
   const { cartCount, wishCount } = useStore();
   const [drawer, setDrawer] = useState(false);
   const [q, setQ] = useState('');
@@ -168,11 +193,17 @@ export default function Header() {
               <Link to="/shop" className="v2-hdr__mega-all">Shop all products <Icon name="arrowRight" size={14} stroke={1.8} /></Link>
             </div>
           </div>
-          {categories.slice(0, 5).map((c) => (
-            <NavLink key={c.slug} to={`/category/${c.slug}`} className={({ isActive }) => `v2-hdr__link ${isActive ? 'active' : ''}`}>
-              {c.name}
-            </NavLink>
-          ))}
+          {categoriesSettled
+            ? categories.slice(0, 5).map((c) => (
+              <NavLink key={c.slug} to={`/category/${c.slug}`} className={({ isActive }) => `v2-hdr__link ${isActive ? 'active' : ''}`}>
+                {c.name}
+              </NavLink>
+            ))
+            : categories.slice(0, NAV_PLACEHOLDER_COUNT).map((c, i) => (
+              <span key={`ph-${i}`} className="v2-hdr__link v2-hdr__link--ph" aria-hidden="true">
+                {c.name}
+              </span>
+            ))}
           <NavLink to="/shop?sort=bestselling" className="v2-hdr__link">Bestsellers</NavLink>
         </nav>
       </header>

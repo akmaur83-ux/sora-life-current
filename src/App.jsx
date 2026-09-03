@@ -39,9 +39,27 @@ import Branding from './admin/pages/Branding.jsx';
 import Settings from './admin/pages/Settings.jsx';
 
 function ProtectedAdminRoute({ children }) {
-  const { isAdmin, loading, session } = useAdminAuth();
+  const { isAdmin, loading, session, verificationFailed, retryVerification } = useAdminAuth();
   if (loading) {
     return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#55655B' }}>Checking session…</div>;
+  }
+  // The membership check could not be completed. That is NOT a denial: bouncing
+  // a signed-in admin to the login page over a dropped request sends them to
+  // re-enter credentials for a problem that has nothing to do with them.
+  // Access is still withheld — isAdmin stays false — we just say why.
+  if (session && verificationFailed) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
+        <div style={{ maxWidth: 420, textAlign: 'center', color: '#55655B' }}>
+          <h1 style={{ fontSize: 18, margin: '0 0 8px', color: '#16211B' }}>Could not verify your access</h1>
+          <p style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.55 }}>
+            We could not reach the server to confirm your admin account. You are still
+            signed in — this is a connection problem, not a permissions one.
+          </p>
+          <button type="button" className="btn" onClick={() => retryVerification()}>Try again</button>
+        </div>
+      </div>
+    );
   }
   if (!session || !isAdmin) return <Navigate to="/admin/login" replace />;
   return children;

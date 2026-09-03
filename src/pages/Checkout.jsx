@@ -27,7 +27,7 @@ const EMPTY_FORM = {
 };
 
 export default function Checkout() {
-  const { cart, cartDetailed, subtotal, mrpTotal, savings, dispatch } = useStore();
+  const { cart, cartDetailed, subtotal, mrpTotal, savings, dispatch, blockedCartLines } = useStore();
   const [step, setStep] = useState(0);
   const [delivery, setDelivery] = useState('std');
   const [pay, setPay] = useState('online');
@@ -292,6 +292,16 @@ export default function Checkout() {
     // Defensive: never start a payment without complete delivery details,
     // even if the user somehow reached this step. Send them back to fix it.
     if (!validateShipping()) { setStep(0); return; }
+    // An unpriced line can only end in a server rejection of the whole order.
+    // Refuse here and name the item, so the customer can fix it in the cart.
+    if (blockedCartLines.length) {
+      setPayError(
+        blockedCartLines.length === 1
+          ? `"${blockedCartLines[0].product.name}" is not available to buy right now. Please remove it from your cart to continue.`
+          : `${blockedCartLines.length} items in your cart are not available to buy right now. Please remove them to continue.`
+      );
+      return;
+    }
     inFlight.current = true;
     setProcessing(true);
     setPayError('');

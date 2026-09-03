@@ -4,6 +4,7 @@ import ProductImage from './ProductImage.jsx';
 import PriceTag from './PriceTag.jsx';
 import { useStore } from '../lib/store.jsx';
 import { categoryBySlug } from '../data/categories.js';
+import { isPurchasable, UNAVAILABLE_LABEL } from '../data/products.js';
 
 // ============================================================================
 // SORA LIFE V2 — PRODUCT CARD
@@ -41,6 +42,7 @@ function pickBadge(product, out) {
 
 export default function ProductCard({ product }) {
   const { addToCart, toggleWish, isWished } = useStore();
+  const buyable = isPurchasable(product);
   const wished = isWished(product.id);
   const out = product.stock === 0;
   const cat = categoryBySlug[product.category];
@@ -88,6 +90,13 @@ export default function ProductCard({ product }) {
           {out ? (
             <button type="button" className="v2-pc__cta v2-pc__cta--out" disabled aria-disabled="true">
               Notify me
+            </button>
+          ) : !buyable ? (
+            /* No usable price yet. The card already says "Price coming soon";
+               the control now says the same rather than offering a purchase
+               that checkout would refuse. */
+            <button type="button" className="v2-pc__cta v2-pc__cta--out" disabled aria-disabled="true">
+              {UNAVAILABLE_LABEL}
             </button>
           ) : (
             <button type="button" className="v2-pc__cta" onClick={() => addToCart(product)}>

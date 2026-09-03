@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useState, useCallback, useRef } from 'react';
-import { productById, getCatalogVersion } from '../data/products.js';
+import { productById, getCatalogVersion, isPurchasable } from '../data/products.js';
 import { useCustomerAuth } from './customerAuth.jsx';
 import { listWishlist, addWishlistItem, removeWishlistItem, mergeWishlist } from './wishlistData.js';
 import {
@@ -140,6 +140,14 @@ export function StoreProvider({ children }) {
   // label string, so existing call sites that pass a label keep working.
   const addToCart = useCallback((product, qty = 1, variant = null) => {
     const isObj = variant && typeof variant === 'object';
+    // Nothing without a real price may enter the cart. Every add path funnels
+    // through here — cards, quick view, PDP, "add all to cart" — so this is
+    // the one place that has to hold. The buttons are disabled too, but a
+    // disabled button is a courtesy; this is the guarantee.
+    if (!isPurchasable(product, isObj ? variant : null)) {
+      toast('This item isn’t available to buy yet.', { kind: 'cart' });
+      return false;
+    }
     const label = isObj ? (variant.label ?? null) : variant;
     // A variantId is only meaningful when it identifies a priced row in
     // product_variants. Catalogue variants that carry a label but no price
@@ -148,6 +156,7 @@ export function StoreProvider({ children }) {
     const variantId = isObj && variant.price != null ? (variant.id ?? null) : null;
     dispatch({ type: 'ADD', id: product.id, qty, variant: label, variantId });
     toast(`Added to cart`, { product: product.id, kind: 'cart' });
+    return true;
   }, [toast]);
 
   // What the UI renders. Recomputed from the two lists, never stored.
@@ -255,6 +264,11 @@ export function StoreProvider({ children }) {
       unitPrice,
       unitMrp: Math.max(unitMrp, unitPrice),
       lineTotal: unitPrice * l.qty,
+      // A line already persisted in localStorage from before this guard
+      // existed — or one whose price disappeared when the catalogue
+      // hydrated — must not be checkout-able. The cart says so plainly
+      // instead of letting the server refuse the whole order later.
+      purchasable: isPurchasable(product, variantObj),
     };
   };
 
@@ -266,6 +280,12 @@ export function StoreProvider({ children }) {
   const cartDetailed = useMemo(() => state.cart.map(hydrate).filter(Boolean), [state.cart, catalogVersion]);
   const savedDetailed = useMemo(() => state.saved.map(hydrate).filter(Boolean), [state.saved, catalogVersion]);
 
+  // Lines that cannot be paid for. Cart and Checkout read this to block the
+  // order instead of letting the customer discover it at the payment step.
+  const blockedCartLines = useMemo(
+    () => cartDetailed.filter((l) => !l.purchasable),
+    [cartDetailed],
+  );
   const cartCount = useMemo(() => state.cart.reduce((s, l) => s + l.qty, 0), [state.cart]);
   const subtotal = useMemo(() => cartDetailed.reduce((s, l) => s + l.lineTotal, 0), [cartDetailed]);
   const mrpTotal = useMemo(() => cartDetailed.reduce((s, l) => s + l.unitMrp * l.qty, 0), [cartDetailed]);
@@ -287,6 +307,7 @@ export function StoreProvider({ children }) {
     isWished: (id) => wishlist.includes(normalizeKey(id)),
     cartDetailed,
     savedDetailed,
+    blockedCartLines,
     cartCount,
     wishCount: wishlist.length,
     subtotal,

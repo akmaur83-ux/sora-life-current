@@ -5,6 +5,7 @@ import ProductImage from './ProductImage.jsx';
 import StarRating from './StarRating.jsx';
 import PriceTag from './PriceTag.jsx';
 import { useStore } from '../lib/store.jsx';
+import { isPurchasable, UNAVAILABLE_LABEL } from '../data/products.js';
 import { categoryBySlug } from '../data/categories.js';
 
 export default function QuickView({ product, onClose }) {
@@ -50,8 +51,8 @@ export default function QuickView({ product, onClose }) {
                 <span>{qty}</span>
                 <button onClick={() => setQty((q) => q + 1)} aria-label="Increase"><Icon name="plus" size={16} /></button>
               </div>
-              <button className="btn btn-block" onClick={() => { addToCart(product, qty, variant); onClose(); }}>
-                <Icon name="bag" size={18} /> Add to cart
+              <button className="btn btn-block" disabled={!isPurchasable(product, variant)} onClick={() => { addToCart(product, qty, variant); onClose(); }}>
+                <Icon name="bag" size={18} /> {isPurchasable(product, variant) ? 'Add to cart' : UNAVAILABLE_LABEL}
               </button>
               <button className="iconbtn" style={{ border: '1px solid var(--line)' }} onClick={() => toggleWish(product)} aria-label="Wishlist">
                 <Icon name="heart" size={20} fill={isWished(product.id) ? 'currentColor' : 'none'} style={isWished(product.id) ? { color: 'var(--color-sale)' } : undefined} />

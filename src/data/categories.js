@@ -19,6 +19,13 @@ const DEFAULT_CATEGORIES = [
 export let categories = DEFAULT_CATEGORIES;
 export let categoryBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]));
 
+// True once the Supabase `categories` table has replaced the built-in list.
+// The header uses this to avoid painting the fallback set and then visibly
+// swapping it for a different one a few hundred ms later — labels used to
+// change underneath the cursor on every page load.
+let categoriesSource = 'static'; // 'static' | 'supabase'
+export function isCategoriesHydrated() { return categoriesSource === 'supabase'; }
+
 // Category copy is safe to present as approved only after it has come from the
 // public categories table managed by Admin. The built-in list is a navigation
 // fallback; its historical taglines/blurbs are not proof of configured copy.
@@ -46,6 +53,7 @@ export function applyCategories(list) {
     return repaired ? { ...c, slug: repaired, _copyConfigured: true } : { ...c, _copyConfigured: true };
   });
   categoryBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]));
+  categoriesSource = 'supabase';
   return true;
 }
 
