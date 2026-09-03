@@ -1,5 +1,9 @@
+// The admin-configurable wrapper (background, borders, padding, decorations)
+// is unchanged. Only its contents were upgraded, from the small circular rail
+// to the large image-led category cards, so the homepage carries ONE category
+// section rather than two near-identical ones.
 import { categories } from '../data/categories.js';
-import CategoryRail from './CategoryRail.jsx';
+import { ShopByCategory } from './HomeDiscoveryRails.jsx';
 import HomeVisualLayers from './HomeVisualLayers.jsx';
 
 export default function HomeCategoryStrip({ appearance: a }) {
@@ -21,14 +25,7 @@ export default function HomeCategoryStrip({ appearance: a }) {
       {a.overlayOpacity > 0 && <span aria-hidden="true" className="hp-category-overlay" style={{ backgroundColor: a.overlayColor, opacity: a.overlayOpacity }} />}
     </>}
     <div className="v2-wrap hp-category-strip__content">
-      <div className="hm-category-head">
-        <div>
-          <p className="v2-eyebrow">Shop the catalogue</p>
-          <h2 className="v2-h2">Browse by category</h2>
-        </div>
-        <span>Swipe to explore <span aria-hidden="true">→</span></span>
-      </div>
-      <CategoryRail />
+      <ShopByCategory />
     </div>
   </section>;
 }

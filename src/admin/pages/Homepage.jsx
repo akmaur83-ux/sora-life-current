@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { adminGetSetting, adminSetSetting } from '../../lib/adminApi.js';
 import HomepageVisualControls from '../components/HomepageVisualControls.jsx';
+import DiscoveryImageControls from '../components/DiscoveryImageControls.jsx';
+import { sanitizeDiscoveryImages, CONCERN_REGISTRY } from '../../lib/homeDiscovery.js';
+import { categories } from '../../data/categories.js';
 import { HOMEPAGE_VISUAL_FIELDS, mergeHomepageVisuals, safeVisualUrl, sanitizeHomepageVisuals } from '../../lib/homepageAppearance.js';
 import { announceHomepageSaved } from '../../lib/homepageVisualSync.js';
 
@@ -14,6 +17,8 @@ export default function HomepageSettings() {
   const [err, setErr] = useState('');
   const [visuals, setVisuals] = useState(() => sanitizeHomepageVisuals());
   const [uploads, setUploads] = useState(0);
+  // Artwork for the two discovery rails, stored under `homepage.discovery`.
+  const [discovery, setDiscovery] = useState(() => sanitizeDiscoveryImages());
 
   useEffect(() => {
     (async () => {
@@ -21,7 +26,7 @@ export default function HomepageSettings() {
         const ann = await adminGetSetting('announcement');
         const hp = await adminGetSetting('homepage');
         if (ann) { setNotices(ann.notices || ['', '', '']); }
-        if (hp) { setBsTitle(hp.bestseller_title || 'Bestsellers'); setBsSub(hp.bestseller_subtitle || ''); setVisuals(sanitizeHomepageVisuals(hp.visuals)); }
+        if (hp) { setBsTitle(hp.bestseller_title || 'Bestsellers'); setBsSub(hp.bestseller_subtitle || ''); setVisuals(sanitizeHomepageVisuals(hp.visuals)); setDiscovery(sanitizeDiscoveryImages(hp.discovery)); }
       } catch (e) { setErr(e.message || String(e)); }
       setLoading(false);
     })();
@@ -49,9 +54,12 @@ export default function HomepageSettings() {
       // 0001 seeded into site_settings.
       const { free_shipping_threshold: _retiredThreshold, ...keptAnnouncement } = currentAnnouncement || {};
       await adminSetSetting('announcement', { ...keptAnnouncement, notices: notices.filter(Boolean) });
-      const next = mergeHomepageVisuals({ ...currentHomepage, bestseller_title: bsTitle, bestseller_subtitle: bsSub }, visuals);
+      // Sanitised on the way out too, so an unusable URL is never persisted.
+      const cleanDiscovery = sanitizeDiscoveryImages(discovery);
+      const next = mergeHomepageVisuals({ ...currentHomepage, bestseller_title: bsTitle, bestseller_subtitle: bsSub, discovery: cleanDiscovery }, visuals);
       await adminSetSetting('homepage', next);
       setVisuals(next.visuals);
+      setDiscovery(cleanDiscovery);
       announceHomepageSaved(next);
       setMsg('Saved. Homepage appearance is live; open storefront tabs update automatically.');
     } catch (ex) { setErr(ex.message || String(ex)); }
@@ -84,6 +92,14 @@ export default function HomepageSettings() {
         </div>
 
         <HomepageVisualControls value={visuals} onChange={setVisuals} onUploading={(delta) => setUploads((n) => n + delta)} />
+
+        <DiscoveryImageControls
+          categories={categories.filter((c) => c?.slug && c?.name)}
+          concerns={CONCERN_REGISTRY}
+          value={discovery}
+          onChange={setDiscovery}
+          onBusy={(delta) => setUploads((n) => n + delta)}
+        />
         <button className="btn" type="submit" disabled={saving || uploads > 0}>{saving ? 'Saving…' : uploads ? 'Uploading images…' : 'Save changes'}</button>
       </form>
     </div>

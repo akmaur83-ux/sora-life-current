@@ -9,6 +9,7 @@ import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
 } from '../components/HomeMarketplace.jsx';
+import { ShopByConcerns } from '../components/HomeDiscoveryRails.jsx';
 import { products } from '../data/products.js';
 import { categories } from '../data/categories.js';
 import { selectHomeMerchandising } from '../lib/homeMerchandising.js';
@@ -59,6 +60,10 @@ export default function Home() {
       <HomeOffers appearance={visuals.offers} />
 
       <MarketplaceProductRail id="trending" eyebrow="Across the catalogue" title="Trending now" products={merchandise.trending} />
+
+      {/* Need-led discovery, distinct from the category rail above: every
+          concern is backed by real catalogue results (see homeDiscovery.js). */}
+      <ShopByConcerns />
 
       <FeaturedBrands brands={merchandise.brands} />
 

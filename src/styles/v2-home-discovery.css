@@ -1,0 +1,172 @@
+/* ============================================================
+   HOMEPAGE DISCOVERY RAILS — "Shop by Category" / "Shop by Concerns".
+
+   Editorial discovery, not merchandising. A wide landscape tile with sharp
+   corners and no border, a quiet caption underneath, and one control row of
+   chevron / centred progress / chevron. Two tiles in view on a phone, four to
+   five on a desktop. Scoped to .hd-* so no other homepage section is touched.
+   ============================================================ */
+
+.hd-section { background: #fff; padding-block: 34px; }
+
+.hd-title {
+  margin: 0 0 18px;
+  font-family: var(--slv2-sans, var(--font-sans));
+  font-size: clamp(26px, 6.4vw, 34px);
+  line-height: 1.12;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text, #16211B);
+}
+
+/* ---- rail ------------------------------------------------------------- */
+.hd-rail {
+  display: grid;
+  grid-auto-flow: column;
+  /* Two tiles in view, with the next one just breaking the edge so the row
+     reads as scrollable without needing a hint. */
+  grid-auto-columns: calc((100% - 16px) / 2 - 10px);
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.hd-rail::-webkit-scrollbar { display: none; }
+.hd-tile { scroll-snap-align: start; scroll-snap-stop: always; min-width: 0; }
+
+/* ---- tile ------------------------------------------------------------- */
+.hd-tile__link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.hd-tile__link:focus-visible {
+  outline: 2px solid var(--color-primary, #1E3A2F);
+  outline-offset: 3px;
+}
+
+.hd-tile__media {
+  position: relative;
+  display: block;
+  /* Landscape, close to the reference's proportions. */
+  aspect-ratio: 4 / 3;
+  /* Sharp geometry — the tile is the artwork, not a card. */
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--ivory, #F2EFE9);
+}
+.hd-tile__media img,
+.hd-tile__media > * {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@media (hover: hover) {
+  .hd-tile__media img { transition: transform .35s ease; }
+  .hd-tile__link:hover .hd-tile__media img { transform: scale(1.03); }
+}
+
+/* Title set over the artwork (categories). A soft bottom-weighted scrim
+   keeps it readable on light and dark photography alike. */
+.hd-tile__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  color: #fff;
+  font-family: var(--slv2-sans, var(--font-sans));
+  font-size: clamp(17px, 4.4vw, 22px);
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, .55);
+  /* The owned category artwork is pale product photography, so a light
+     bottom-gradient could not hold white type. A full, even wash makes the
+     tile read as an editorial discovery panel and keeps the label legible
+     whatever image an admin assigns. */
+  background: linear-gradient(180deg, rgba(16,24,20,.34) 0%, rgba(16,24,20,.46) 100%);
+}
+@media (hover: hover) {
+  .hd-tile__link:hover .hd-tile__overlay { background: linear-gradient(180deg, rgba(16,24,20,.28) 0%, rgba(16,24,20,.40) 100%); }
+}
+
+/* One quiet line under the tile. Nothing else. */
+.hd-tile__caption {
+  display: block;
+  margin-top: 10px;
+  text-align: center;
+  font-family: var(--slv2-sans, var(--font-sans));
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 500;
+  color: var(--color-text, #16211B);
+}
+
+/* ---- controls: chevron / centred progress / chevron -------------------- */
+.hd-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 22px;
+}
+.hd-nav__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text, #16211B);
+  cursor: pointer;
+  transition: opacity .16s ease;
+}
+.hd-nav__btn:disabled { opacity: .28; cursor: default; }
+.hd-nav__btn:focus-visible { outline: 2px solid var(--color-primary, #1E3A2F); outline-offset: 2px; }
+
+.hd-nav__track {
+  position: relative;
+  flex: 0 1 190px;
+  height: 4px;
+  border-radius: 4px;
+  background: #E6E6E6;
+  overflow: hidden;
+}
+.hd-nav__thumb {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  display: block;
+  border-radius: 4px;
+  background: var(--color-text, #16211B);
+  transition: transform .12s linear;
+}
+
+@media (min-width: 768px) {
+  .hd-section { padding-block: 46px; }
+  .hd-title { margin-bottom: 22px; }
+  .hd-rail { grid-auto-columns: calc((100% - 3 * 16px) / 3.4); }
+  .hd-tile__caption { font-size: 15px; margin-top: 12px; }
+  .hd-nav__track { flex-basis: 240px; }
+}
+
+@media (min-width: 1100px) {
+  /* Four and a half in view, so the rail still reads as scrollable. */
+  .hd-rail { grid-auto-columns: calc((100% - 4 * 16px) / 4.5); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hd-nav__thumb, .hd-tile__media img { transition: none; }
+  .hd-tile__link:hover .hd-tile__media img { transform: none; }
+}

@@ -600,3 +600,16 @@
   .v2-home .hm-hero__product .v2-pimg img,
   .v2-home .hm-brand__media img { transition:none; }
 }
+
+/* ---- Newsletter → Footer seam ---------------------------------------
+   `.ftr` carries a global `margin-top: var(--sp-8)` to separate it from page
+   content. On the homepage the newsletter is a full-bleed tinted band that
+   already ends with its own padding, so that margin rendered as a strip of
+   bare page background between the band and the dark footer.
+
+   (Production still shows the larger, pre-commit version of this: before the
+   band existed, `.section`'s 64px bottom padding sat on the page background
+   too, so the strip was ~96px on a phone.)
+
+   Removed for this adjacency only — every other page keeps the separator. */
+body:has(.v2-home) .ftr { margin-top: 0; }

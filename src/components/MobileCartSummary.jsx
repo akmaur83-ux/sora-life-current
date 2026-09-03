@@ -16,11 +16,16 @@ export default function MobileCartSummary() {
     <div className={`v2-cart-dock${visible ? ' v2-cart-dock--active' : ''}`}>
       {visible && (
         <aside className="v2-mobile-cart" aria-label="Cart summary">
+          {/* Count and amount share one line: the stacked block made the bar
+              tall enough that, with the tab bar under it, the two together
+              covered a meaningful slice of a 390px screen. */}
           <div className="v2-mobile-cart__totals" aria-live="polite" aria-atomic="true">
-            <span className="v2-mobile-cart__count">{cartCount} {cartCount === 1 ? 'item' : 'items'}</span>
             <strong className="v2-mobile-cart__subtotal">
               <span className="sr-only">Item subtotal </span>{money(subtotal)}
             </strong>
+            <span className="v2-mobile-cart__count">
+              {cartCount} {cartCount === 1 ? 'item' : 'items'}
+            </span>
           </div>
           <Link to="/cart" className="v2-mobile-cart__link">
             View cart <Icon name="arrowRight" size={17} />

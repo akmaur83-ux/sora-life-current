@@ -48,7 +48,7 @@ export default function Footer() {
         <div className="ftr__top">
           <div className="ftr__brand">
             <Logo light />
-            <p>Modern wellness, beauty and everyday care — delivered to your door.</p>
+            <p>A marketplace for wellness, personal care and everyday essentials.</p>
           </div>
 
           <div className="ftr__col">

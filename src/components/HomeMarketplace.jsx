@@ -50,7 +50,10 @@ export function FeaturedBrands({ brands }) {
               <Link key={brand.name} to={`/product/${product.slug}`} className={`hm-brand hm-brand--${index + 1}`}>
                 <div className="hm-brand__media"><ProductImage product={product} frame="v2" sizes="(max-width: 767px) 48vw, 300px" /></div>
                 <div className="hm-brand__body">
-                  <span>{brand.products.length} {brand.products.length === 1 ? 'product' : 'products'} in the catalogue</span>
+                  {/* The raw count was truthful but made the marketplace read
+                      as one dominant label beside a small one. Brand discovery
+                      does not need the tally to be useful. */}
+                  <span className="hm-brand__kicker">Brand</span>
                   <h3>{brand.name}</h3>
                   <span className="hm-brand__link">Discover the brand <Icon name="arrowRight" size={14} /></span>
                 </div>
