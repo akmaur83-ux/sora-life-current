@@ -30825,7 +30825,18 @@
 	              name: "chevronRight",
 	              size: 17
 	            })]
-	          }, c.slug))]
+	          }, c.slug)), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	            className: "drawer__sec",
+	            children: "Company"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: "/about",
+	            className: "drawer__minor",
+	            children: ["About ", branding?.siteName || 'SORA LIFE']
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/contact",
+	            className: "drawer__minor",
+	            children: "Contact & help"
+	          })]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	          className: "drawer__foot",
 	          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
@@ -31844,6 +31855,22 @@
 
 	// Only mobile typography responds to length; configured copy stays intact.
 	const titleClass = title => `v2-hero__title${String(title || '').trim().length > 22 ? ' v2-hero__title--long' : ''}`;
+
+	/**
+	 * Admin copy that is safe to render as a heading or as alt text.
+	 *
+	 * A slide deck can legitimately be saved mid-edit, and placeholder values have
+	 * reached production before — a title of "." rendered a visible stray glyph
+	 * over the artwork AND made it the document's only <h1>, which is worth
+	 * nothing to a search engine and reads as a lone full stop to a screen reader.
+	 * A heading has to contain a letter or a digit; punctuation alone does not
+	 * become one. Nothing is substituted in its place: the slide simply renders
+	 * without a heading until real copy is configured.
+	 */
+	const headingText = value => {
+	  const text = String(value ?? '').trim();
+	  return /[\p{L}\p{N}]/u.test(text) ? text : '';
+	};
 	function fallbackCategoryCount(productList) {
 	  const validSlugs = new Set((categories || []).filter(category => category?.slug).map(category => category.slug));
 	  const slugs = new Set();
@@ -31920,9 +31947,34 @@
 	  if (slide.kind === 'video' && canUseVideo && slide.src && !failed[slide.id]) return true;
 	  return Boolean(stillFor(slide));
 	}
+
+	/**
+	 * The page's one and only <h1>.
+	 *
+	 * It used to come from whichever hero slide happened to be configured, which
+	 * made the homepage's most important semantic element a moving target: three
+	 * slides meant three <h1> elements, an unconfigured deck meant none, and a
+	 * placeholder title meant the document was headed ".". None of that describes
+	 * the site.
+	 *
+	 * So the heading is stated once, here, from the configured site name plus the
+	 * positioning the footer already uses. It is visually hidden because the hero
+	 * artwork carries its own baked-in campaign headline — showing both would
+	 * duplicate it on screen. This is not hidden SEO text: it is the accurate,
+	 * plain-language title of the page, available to every screen reader and
+	 * unchanged by whatever campaign is running.
+	 */
+	function PageHeading() {
+	  const name = branding?.siteName || 'SORA LIFE';
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("h1", {
+	    className: "sr-only",
+	    children: [name, " \u2014 a marketplace for wellness, personal care and everyday essentials"]
+	  });
+	}
 	function Hero() {
-	  if (!heroSlidesConfigured) return /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceHero, {});
-	  return /*#__PURE__*/jsxRuntimeExports.jsx(ConfiguredHero, {});
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(PageHeading, {}), heroSlidesConfigured ? /*#__PURE__*/jsxRuntimeExports.jsx(ConfiguredHero, {}) : /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceHero, {})]
+	  });
 	}
 
 	// ----------------------------------------------------------- marketplace fall
@@ -31941,7 +31993,7 @@
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	          className: "hm-hero__kicker",
 	          children: MARKETPLACE_HERO_COPY.kicker
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
 	          id: "marketplace-hero-title",
 	          children: MARKETPLACE_HERO_COPY.title
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -32142,7 +32194,7 @@
 	              src: heroSrc(stillFor(s) || FALLBACK_POSTER, 1600),
 	              srcSet: heroSrcSet(stillFor(s) || FALLBACK_POSTER),
 	              sizes: "100vw",
-	              alt: s.title,
+	              alt: headingText(s.title) || headingText(s.kicker) || '',
 	              style: {
 	                objectPosition: s.position
 	              },
@@ -32155,7 +32207,7 @@
 	              src: heroSrc(s.src, 1600),
 	              srcSet: heroSrcSet(s.src),
 	              sizes: "100vw",
-	              alt: s.title,
+	              alt: headingText(s.title) || headingText(s.kicker) || '',
 	              style: {
 	                objectPosition: s.position
 	              },
@@ -32167,13 +32219,13 @@
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "v2-hero__ui",
-	          children: [s.kicker && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          children: [headingText(s.kicker) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	            className: "v2-hero__kicker",
 	            children: s.kicker
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          }), headingText(s.title) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	            className: titleClass(s.title),
 	            children: s.title
-	          }), (s.sub || s.lede) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          }), headingText(s.sub || s.lede) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	            className: "v2-hero__sub",
 	            children: s.sub || s.lede
 	          }), s.cta?.to && /*#__PURE__*/jsxRuntimeExports.jsx(HeroCta, {
@@ -33739,9 +33791,9 @@
 	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "v2-wrap",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHeading, {
-	        eyebrow: "Brand directory",
-	        title: "Featured brands",
-	        copy: "Meet labels already represented in the SORA LIFE catalogue."
+	        eyebrow: "Multi-brand marketplace",
+	        title: "Brands in the range",
+	        copy: "A few of the labels you'll find here \u2014 the catalogue carries more."
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: `hm-brands${brands.length === 1 ? ' hm-brands--single' : ''}`,
 	        children: brands.map((brand, index) => {
@@ -33789,9 +33841,9 @@
 	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "v2-wrap",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHeading, {
-	        eyebrow: "New / discover",
-	        title: "A fresh route through the catalogue",
-	        copy: "Real products, selected across the marketplace for a broader browse.",
+	        eyebrow: "Keep exploring",
+	        title: "More of the range",
+	        copy: "Products from across the catalogue you have not already seen further up this page.",
 	        link: link,
 	        linkLabel: "Explore all"
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -33872,9 +33924,9 @@
 	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "v2-wrap",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHeading, {
-	        eyebrow: "Curated paths",
-	        title: "Shop the marketplace your way",
-	        copy: "Category-led edits built only from products currently in the catalogue."
+	        eyebrow: "Browse the range",
+	        title: "Inside every category",
+	        copy: "Real products from each part of the catalogue, so you can see where to start."
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: "hm-collections",
 	        children: collections.map(({
@@ -36514,7 +36566,7 @@
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
 	      id: "trending",
 	      eyebrow: "Across the catalogue",
-	      title: "Trending now",
+	      title: "Start here",
 	      products: merchandise.trending
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByConcerns, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FeaturedBrands, {
 	      brands: merchandise.brands
@@ -37518,6 +37570,56 @@
 	}
 
 	// ============================================================
+	// LEGACY PRODUCT SLUG COMPATIBILITY
+	//
+	// Six products reached production with malformed slugs — two of them carrying
+	// literal authoring notes ("(or let it auto-generate...)"), four with spaces
+	// and capitals. Once those rows are renamed to the canonical forms below, any
+	// link, bookmark or shared URL using the old value would 404.
+	//
+	// This is a shim for six known mistakes, not a slug-migration framework. It
+	// holds one explicit map and one rule, and it is deliberately ORDERED AFTER
+	// the normal catalogue lookup:
+	//
+	//   while production still stores the malformed slug, that slug resolves on
+	//   its own and nothing here fires;
+	//   once production stores the canonical slug, the old URL stops resolving,
+	//   falls through to this map, and redirects.
+	//
+	// So the same build is correct before and after the rename, and the rename can
+	// happen in Admin whenever the owner is ready with no deploy in between.
+	//
+	// React-free so the rule can be tested in Node without a DOM.
+	// ============================================================
+
+	const LEGACY_PRODUCT_SLUGS = Object.freeze({
+	  'biosash-dhaniya-powder (or let it auto-generate if the system handles it)': 'biosash-dhaniya-powder',
+	  'biosash-sea-buckthorn-diabo-juice (or let it auto-generate)': 'sea-buckthorn-diabo-juice',
+	  'Foot-Massager': 'blood-circulative-massager',
+	  'Tiens 7 in 1 Water Purifier With Hydrogen Generator TQ-D36': 'tiens-7-in-1-water-purifier-with-hydrogen-generator-tq-d36',
+	  'Beautiful Skin Dense Beauty Device': 'beautiful-skin-dense-beauty-device',
+	  'TIENS AIRIZ SHREE EXIM Active Oxygen and Negative Ion Soft-Cotton Sanitary Pads for Day and Night Use': 'tiens-airiz-sanitary-pads-for-day-and-night-use'
+	});
+
+	/**
+	 * The slug a legacy product URL should be sent to, or '' to stay put.
+	 *
+	 * Returns '' — meaning "do not redirect" — in every case except the one this
+	 * exists for:
+	 *   * the requested slug still resolves          -> the catalogue wins
+	 *   * the slug is not one of the six             -> ordinary 404 handling
+	 *   * the canonical target does not resolve      -> never redirect into a 404
+	 */
+	function canonicalProductSlug(slug, bySlug) {
+	  if (typeof slug !== 'string' || !slug) return '';
+	  const catalogue = bySlug || {};
+	  if (catalogue[slug]) return '';
+	  const canonical = LEGACY_PRODUCT_SLUGS[slug];
+	  if (!canonical || !catalogue[canonical]) return '';
+	  return canonical;
+	}
+
+	// ============================================================
 	// PDP PRESENTATIONAL CONTENT — Part 1 of the premium PDP upgrade
 	//
 	// The live catalogue (Supabase `products`) carries only a free-text
@@ -38421,6 +38523,7 @@
 	    slug
 	  } = useParams();
 	  const navigate = useNavigate();
+	  const location = useLocation();
 	  const {
 	    addToCart,
 	    toggleWish,
@@ -38481,6 +38584,17 @@
 	  }, [slug]);
 	  const view = productRouteState(!!product, isCatalogHydrated() || catalogTimedOut);
 	  if (view === 'loading') return /*#__PURE__*/jsxRuntimeExports.jsx(ProductLoading, {});
+
+	  // Six products shipped with malformed slugs (see legacyProductSlugs.js).
+	  // This runs only once the normal lookup has already failed AND the catalogue
+	  // has settled, so while production still stores the old slug it resolves
+	  // directly and nothing redirects. The query string is carried across because
+	  // product URLs can arrive with creator attribution (?ref=/&trk=) attached.
+	  const canonical = canonicalProductSlug(slug, productBySlug);
+	  if (canonical) return /*#__PURE__*/jsxRuntimeExports.jsx(Navigate, {
+	    to: `/product/${canonical}${location.search}${location.hash}`,
+	    replace: true
+	  });
 	  if (view === 'notfound') return /*#__PURE__*/jsxRuntimeExports.jsx(NotFound, {});
 	  const cat = categoryBySlug[product.category];
 	  const related = getRelated(product);
