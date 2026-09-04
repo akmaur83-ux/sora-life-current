@@ -38,10 +38,16 @@ export function FeaturedBrands({ brands }) {
   return (
     <section className="v2-sec hm-section hm-section--brands" data-home-section="brands">
       <div className="v2-wrap">
+        {/* NOT a directory. This section can only show labels the catalogue can
+            prove, and the catalogue has no brand field yet — so it currently
+            surfaces a couple of names while other real brands (Roshna Herbals,
+            TIENS) sit in the range unrepresented. "Brand directory" promised a
+            complete list we cannot deliver; a spotlight promises exactly what
+            this is. Revisit when brand metadata exists. */}
         <SectionHeading
-          eyebrow="Brand directory"
-          title="Featured brands"
-          copy="Meet labels already represented in the SORA LIFE catalogue."
+          eyebrow="Multi-brand marketplace"
+          title="Brands in the range"
+          copy="A few of the labels you'll find here — the catalogue carries more."
         />
         <div className={`hm-brands${brands.length === 1 ? ' hm-brands--single' : ''}`}>
           {brands.map((brand, index) => {
@@ -73,9 +79,9 @@ export function DiscoveryEdit({ products, link = '/shop' }) {
     <section className="v2-sec hm-section hm-section--discover" data-home-section="discover">
       <div className="v2-wrap">
         <SectionHeading
-          eyebrow="New / discover"
-          title="A fresh route through the catalogue"
-          copy="Real products, selected across the marketplace for a broader browse."
+          eyebrow="Keep exploring"
+          title="More of the range"
+          copy="Products from across the catalogue you have not already seen further up this page."
           link={link}
           linkLabel="Explore all"
         />
@@ -124,9 +130,9 @@ export function CuratedCollections({ collections }) {
     <section className="v2-sec hm-section" data-home-section="collections">
       <div className="v2-wrap">
         <SectionHeading
-          eyebrow="Curated paths"
-          title="Shop the marketplace your way"
-          copy="Category-led edits built only from products currently in the catalogue."
+          eyebrow="Browse the range"
+          title="Inside every category"
+          copy="Real products from each part of the catalogue, so you can see where to start."
         />
         <div className="hm-collections">
           {collections.map(({ category, products }) => (

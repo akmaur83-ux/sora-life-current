@@ -89,12 +89,30 @@ check('fallback hero excludes missing-image, inactive and out-of-stock products'
   assert.deepEqual(hero.map((item) => item.id), [40]);
 });
 
+check('Homepage states exactly one H1, whatever the hero deck contains', () => {
+  const raw = readFileSync(new URL('../src/components/Hero.jsx', import.meta.url), 'utf8');
+  // Comments stripped first: the file explains the h1 rule in prose, and that
+  // prose must not be counted as markup.
+  const hero = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  // The page heading must not come from a slide: three slides would mean three
+  // <h1>s, an empty deck none, and a placeholder title a document headed ".".
+  assert.equal((hero.match(/<h1/g) || []).length, 1, 'Hero.jsx must render exactly one <h1>');
+  assert.match(hero, /function PageHeading\(\)/, 'the page heading is its own component');
+  assert.match(hero, /<h1 className="sr-only">/, 'it is available to screen readers, not shown twice on screen');
+  assert.match(hero, /branding\?\.siteName/, 'it uses the configured site name rather than a hardcoded brand');
+  assert.doesNotMatch(hero, /<h1 className=\{titleClass/, 'slide titles must not be headings');
+  assert.match(hero, /<p className=\{titleClass\(s\.title\)\}/, 'slide titles keep their class, so the visual is unchanged');
+});
+
 check('Homepage has no placeholder links or fabricated social proof', () => {
   const home = readFileSync(new URL('../src/pages/Home.jsx', import.meta.url), 'utf8');
   const sections = readFileSync(new URL('../src/components/HomeMarketplace.jsx', import.meta.url), 'utf8');
   const hero = readFileSync(new URL('../src/components/Hero.jsx', import.meta.url), 'utf8');
   assert.doesNotMatch(`${home}\n${sections}\n${hero}`, /href=["']#|customers served|five[- ]star|guaranteed delivery|HERO_PRODUCT_SLUG|SAFE_HERO_COPY/i);
-  assert.match(hero, /if \(!heroSlidesConfigured\) return <MarketplaceHero \/>/);
+  // The unconfigured-deck fallback must stay reachable. Asserted as "the
+  // fallback is gated on heroSlidesConfigured" rather than one exact
+  // syntax, so an early return and a ternary both satisfy it.
+  assert.match(hero, /heroSlidesConfigured[\s\S]{0,80}<MarketplaceHero \/>/);
   assert.match(hero, /const DISPLAY_SLIDES = SLIDES/);
   assert.doesNotMatch(hero, /withSafeHeroCopy/);
   for (const id of ['brands', 'discover', 'mom-trust', 'collections', 'creator', 'why-sora-life']) {

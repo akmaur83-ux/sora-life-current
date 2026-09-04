@@ -59,7 +59,13 @@ export default function Home() {
              Renders nothing when no active promotion targets `home`. */}
       <HomeOffers appearance={visuals.offers} />
 
-      <MarketplaceProductRail id="trending" eyebrow="Across the catalogue" title="Trending now" products={merchandise.trending} />
+      {/* selectHomeMerchandising balances this across categories. It is NOT a
+          popularity measure, and today it is not a curated one either: the live
+          catalogue has no is_featured or is_bestseller rows, and every product
+          carries a discount — so "trending", "featured" and "on offer" would
+          all be claims the data cannot back. It is an entry point, so it says
+          so. Flag real featured products and this can become a Featured rail. */}
+      <MarketplaceProductRail id="trending" eyebrow="Across the catalogue" title="Start here" products={merchandise.trending} />
 
       {/* Two deliberately different category experiences: the circular rail
           under the hero is quick navigation, and this is the editorial browse.

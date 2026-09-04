@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import ProductImage from './ProductImage.jsx';
 import HeroCta from './HeroCta.jsx';
-import { heroSlides, heroSlidesConfigured, homepage } from '../lib/settings.js';
+import { branding, heroSlides, heroSlidesConfigured, homepage } from '../lib/settings.js';
 import { products } from '../data/products.js';
 import { categories } from '../data/categories.js';
 import { selectMarketplaceHeroProducts } from '../lib/homeMerchandising.js';
@@ -23,6 +23,22 @@ const MARKETPLACE_HERO_COPY = {
 
 // Only mobile typography responds to length; configured copy stays intact.
 const titleClass = (title) => `v2-hero__title${String(title || '').trim().length > 22 ? ' v2-hero__title--long' : ''}`;
+
+/**
+ * Admin copy that is safe to render as a heading or as alt text.
+ *
+ * A slide deck can legitimately be saved mid-edit, and placeholder values have
+ * reached production before — a title of "." rendered a visible stray glyph
+ * over the artwork AND made it the document's only <h1>, which is worth
+ * nothing to a search engine and reads as a lone full stop to a screen reader.
+ * A heading has to contain a letter or a digit; punctuation alone does not
+ * become one. Nothing is substituted in its place: the slide simply renders
+ * without a heading until real copy is configured.
+ */
+const headingText = (value) => {
+  const text = String(value ?? '').trim();
+  return /[\p{L}\p{N}]/u.test(text) ? text : '';
+};
 
 function fallbackCategoryCount(productList) {
   const validSlugs = new Set((categories || []).filter((category) => category?.slug).map((category) => category.slug));
@@ -103,9 +119,34 @@ function isRenderable(slide, canUseVideo, failed) {
   return Boolean(stillFor(slide));
 }
 
+/**
+ * The page's one and only <h1>.
+ *
+ * It used to come from whichever hero slide happened to be configured, which
+ * made the homepage's most important semantic element a moving target: three
+ * slides meant three <h1> elements, an unconfigured deck meant none, and a
+ * placeholder title meant the document was headed ".". None of that describes
+ * the site.
+ *
+ * So the heading is stated once, here, from the configured site name plus the
+ * positioning the footer already uses. It is visually hidden because the hero
+ * artwork carries its own baked-in campaign headline — showing both would
+ * duplicate it on screen. This is not hidden SEO text: it is the accurate,
+ * plain-language title of the page, available to every screen reader and
+ * unchanged by whatever campaign is running.
+ */
+function PageHeading() {
+  const name = branding?.siteName || 'SORA LIFE';
+  return <h1 className="sr-only">{name} — a marketplace for wellness, personal care and everyday essentials</h1>;
+}
+
 export default function Hero() {
-  if (!heroSlidesConfigured) return <MarketplaceHero />;
-  return <ConfiguredHero />;
+  return (
+    <>
+      <PageHeading />
+      {heroSlidesConfigured ? <ConfiguredHero /> : <MarketplaceHero />}
+    </>
+  );
 }
 
 // ----------------------------------------------------------- marketplace fall
@@ -122,7 +163,7 @@ function MarketplaceHero() {
       <div className="v2-hero__stage hm-hero">
         <div className="hm-hero__copy">
           <p className="hm-hero__kicker">{MARKETPLACE_HERO_COPY.kicker}</p>
-          <h1 id="marketplace-hero-title">{MARKETPLACE_HERO_COPY.title}</h1>
+          <h2 id="marketplace-hero-title">{MARKETPLACE_HERO_COPY.title}</h2>
           <p>{supportingCopy}</p>
           <Link to={MARKETPLACE_HERO_COPY.cta.to} className="hm-hero__cta">
             {MARKETPLACE_HERO_COPY.cta.label} <Icon name="arrowRight" size={16} stroke={1.8} />
@@ -299,14 +340,14 @@ function ConfiguredHero() {
                 // to a real still (never an empty colour block).
                 <img className="v2-hero__img" src={heroSrc(stillFor(s) || FALLBACK_POSTER, 1600)}
                   srcSet={heroSrcSet(stillFor(s) || FALLBACK_POSTER)} sizes="100vw"
-                  alt={s.title} style={{ objectPosition: s.position }}
+                  alt={headingText(s.title) || headingText(s.kicker) || ''} style={{ objectPosition: s.position }}
                   loading={i === active ? 'eager' : 'lazy'}
                   fetchPriority={i === active ? 'high' : undefined} decoding="async"
                   onLoad={() => mediaReady(s.id, i)} />
               ) : (
                 <img className="v2-hero__img" src={heroSrc(s.src, 1600)}
                   srcSet={heroSrcSet(s.src)} sizes="100vw"
-                  alt={s.title} style={{ objectPosition: s.position }}
+                  alt={headingText(s.title) || headingText(s.kicker) || ''} style={{ objectPosition: s.position }}
                   loading={i === active ? 'eager' : 'lazy'}
                   fetchPriority={i === active ? 'high' : undefined} decoding="async"
                   onLoad={() => mediaReady(s.id, i)} />
@@ -316,9 +357,12 @@ function ConfiguredHero() {
 
           {/* Copy is live DOM directly over the artwork, never baked in. */}
           <div className="v2-hero__ui">
-            {s.kicker && <p className="v2-hero__kicker">{s.kicker}</p>}
-            <h1 className={titleClass(s.title)}>{s.title}</h1>
-            {(s.sub || s.lede) && <p className="v2-hero__sub">{s.sub || s.lede}</p>}
+            {headingText(s.kicker) && <p className="v2-hero__kicker">{s.kicker}</p>}
+            {/* Not a heading: only one slide is visible at a time, so three
+                headings would put two invisible ones in the outline. The
+                class is unchanged, so the visual is identical. */}
+            {headingText(s.title) && <p className={titleClass(s.title)}>{s.title}</p>}
+            {headingText(s.sub || s.lede) && <p className="v2-hero__sub">{s.sub || s.lede}</p>}
             {s.cta?.to && (
               <HeroCta cta={s.cta} appearance={appearance} artworkOnly={artworkOnly} active={i === active}>{ctaLabel}</HeroCta>
             )}

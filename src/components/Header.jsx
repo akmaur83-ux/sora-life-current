@@ -8,6 +8,7 @@ import { useStore } from '../lib/store.jsx';
 import { categories, hasConfiguredCategoryCopy, isCategoriesHydrated } from '../data/categories.js';
 import { searchProducts } from '../data/products.js';
 import { money } from '../lib/format.js';
+import { branding } from '../lib/settings.js';
 import { lockScroll, unlockScroll } from '../lib/scrollLock.js';
 
 // The desktop nav used to paint the built-in category set and then visibly
@@ -278,6 +279,13 @@ export default function Header() {
             {categories.map((c) => (
               <Link key={c.slug} to={`/category/${c.slug}`} className="drawer__cat">{c.name}<Icon name="chevronRight" size={17} /></Link>
             ))}
+            {/* Last and quiet on purpose — shopping keeps the priority. These
+                two lived only in the footer, ~8 screens down, which is a long
+                way for the pages a first-time buyer checks before trusting a
+                store. */}
+            <div className="drawer__sec">Company</div>
+            <Link to="/about" className="drawer__minor">About {branding?.siteName || 'SORA LIFE'}</Link>
+            <Link to="/contact" className="drawer__minor">Contact &amp; help</Link>
           </nav>
           <div className="drawer__foot">
             <Link to="/account" className="btn btn-outline btn-block"><Icon name="user" size={18} /> Account</Link>

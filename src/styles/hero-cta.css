@@ -8,7 +8,11 @@
 .v2-home .hero-cta__icon { position:relative; z-index:1; flex:none; width:var(--hcta-icon-size); height:var(--hcta-icon-size); object-fit:contain; }
 @media (min-width:768px) { .hero-cta--overlay[data-desktop="custom"] { display:block; } .hero-cta--flow[data-desktop="custom"] { visibility:hidden; pointer-events:none; } }
 @media (max-width:767px) {
-  .v2-home .v2-hero .hero-cta__button { font-size:var(--hcta-font, 13px); }
+  /* The hero's primary action is the one control on the page a thumb is most
+     likely to aim for, and it was the only one under the 44px target every
+     header icon already meets. The button keeps its configured padding and
+     type — this raises the floor, not the design. */
+  .v2-home .v2-hero .hero-cta__button { font-size:var(--hcta-font, 13px); min-height:44px; }
   .hero-cta--overlay[data-mobile="custom"] { display:block; }
   .hero-cta--flow[data-mobile="custom"] { visibility:hidden; pointer-events:none; }
   .hero-cta--overlay .hero-cta__button { left:var(--hcta-mobile-x); top:var(--hcta-mobile-y); transform:translate(calc(-1 * var(--hcta-mobile-x)), calc(-1 * var(--hcta-mobile-y))); }

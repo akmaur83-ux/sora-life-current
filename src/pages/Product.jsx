@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductImage from '../components/ProductImage.jsx';
 import ProductGallery from '../components/ProductGallery.jsx';
@@ -8,6 +8,7 @@ import NotFound from './NotFound.jsx';
 import { useStore } from '../lib/store.jsx';
 import { productBySlug, isCatalogHydrated, productRouteState, getRelated, isPurchasable, UNAVAILABLE_LABEL } from '../data/products.js';
 import { categoryBySlug } from '../data/categories.js';
+import { canonicalProductSlug } from '../data/legacyProductSlugs.js';
 import { money } from '../lib/format.js';
 
 import ProductRatingTeaser from '../components/pdp/ProductRatingTeaser.jsx';
@@ -48,6 +49,7 @@ function ProductLoading() {
 export default function Product() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToCart, toggleWish, isWished, toast } = useStore();
   const product = productBySlug[slug];
   const [qty, setQty] = useState(1);
@@ -105,6 +107,15 @@ useEffect(() => {
 
   const view = productRouteState(!!product, isCatalogHydrated() || catalogTimedOut);
   if (view === 'loading') return <ProductLoading />;
+
+  // Six products shipped with malformed slugs (see legacyProductSlugs.js).
+  // This runs only once the normal lookup has already failed AND the catalogue
+  // has settled, so while production still stores the old slug it resolves
+  // directly and nothing redirects. The query string is carried across because
+  // product URLs can arrive with creator attribution (?ref=/&trk=) attached.
+  const canonical = canonicalProductSlug(slug, productBySlug);
+  if (canonical) return <Navigate to={`/product/${canonical}${location.search}${location.hash}`} replace />;
+
   if (view === 'notfound') return <NotFound />;
 
   const cat = categoryBySlug[product.category];
