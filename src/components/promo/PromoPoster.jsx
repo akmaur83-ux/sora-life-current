@@ -3,7 +3,6 @@ import Icon from '../Icon.jsx';
 import PromoCopyCode from './PromoCopyCode.jsx';
 import PromoArtwork from './PromoArtwork.jsx';
 import { offerCalloutFrom } from '../../lib/promotions.js';
-import DeferredImage from '../DeferredImage.jsx';
 
 // ============================================================
 // PROMO POSTER — the campaign creative.
@@ -60,13 +59,9 @@ if (imageUrl) {
       ].filter(Boolean).join(' ')}
     >
       <div className="promo-poster__art" aria-hidden="true">
-        {imageUrl
-          ? <DeferredImage className="promo-poster__img" src={imageUrl} alt="" />
-          : (
-            <span className="promo-poster__deco">
-              <span className="promo-poster__leaf" />
-            </span>
-          )}
+        <span className="promo-poster__deco">
+          <span className="promo-poster__leaf" />
+        </span>
         <span className="promo-poster__scrim" />
       </div>
 

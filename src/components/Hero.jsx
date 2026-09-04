@@ -165,8 +165,12 @@ function ConfiguredHero() {
     const saveData = navigator.connection?.saveData === true;
     const evaluate = () => setUseVideo(mq.matches && !reduced && !saveData);
     evaluate();
-    mq.addEventListener?.('change', evaluate);
-    return () => mq.removeEventListener?.('change', evaluate);
+    if (mq.addEventListener) mq.addEventListener('change', evaluate);
+    else mq.addListener?.(evaluate);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', evaluate);
+      else mq.removeListener?.(evaluate);
+    };
   }, [reduced]);
 
   // Only carry slides that can actually paint something. If a deck were ever
@@ -176,6 +180,7 @@ function ConfiguredHero() {
   const SLIDES = renderable.length ? renderable : heroSlides;
   const DISPLAY_SLIDES = SLIDES;
   const [preparedSlides, setPreparedSlides] = useState(() => new Set(SLIDES[0]?.id ? [SLIDES[0].id] : []));
+  const loadedSlides = useRef(new Set());
 
   const prepareSlide = useCallback((index) => {
     if (!SLIDES.length) return;
@@ -193,7 +198,14 @@ function ConfiguredHero() {
   // A dropped slide shortens the deck; keep the index inside it.
   useEffect(() => {
     if (active >= SLIDES.length) setActive(0);
-    else prepareSlide(active);
+    else {
+      prepareSlide(active);
+      // A slide normally loads while hidden as the prepared neighbour. Its
+      // load event has already fired by the time it becomes active, so prepare
+      // the following slide here rather than leaving the next transition cold.
+      const id = SLIDES[active]?.id;
+      if (id && loadedSlides.current.has(id)) prepareSlide(active + 1);
+    }
   }, [SLIDES.length, active, prepareSlide]);
 
   const go = useCallback((i) => {
@@ -202,7 +214,10 @@ function ConfiguredHero() {
     setActive(target);
   }, [SLIDES.length, prepareSlide]);
   const next = useCallback(() => go(active + 1), [active, go]);
-  const prepareNext = useCallback(() => prepareSlide(active + 1), [active, prepareSlide]);
+  const mediaReady = useCallback((id, index) => {
+    loadedSlides.current.add(id);
+    if (index === active) prepareSlide(index + 1);
+  }, [active, prepareSlide]);
 
   useEffect(() => {
     if (paused || reduced || SLIDES.length < 2) return;
@@ -275,7 +290,7 @@ function ConfiguredHero() {
                   poster={s.poster}
                   style={{ objectPosition: s.position }}
                   onError={() => setVideoFailed((v) => ({ ...v, [s.id]: true }))}
-                  onLoadedData={prepareNext}
+                  onLoadedData={() => mediaReady(s.id, i)}
                 >
                   <source src={s.src} type="video/mp4" />
                 </video>
@@ -287,14 +302,14 @@ function ConfiguredHero() {
                   alt={s.title} style={{ objectPosition: s.position }}
                   loading={i === active ? 'eager' : 'lazy'}
                   fetchPriority={i === active ? 'high' : undefined} decoding="async"
-                  onLoad={i === active ? prepareNext : undefined} />
+                  onLoad={() => mediaReady(s.id, i)} />
               ) : (
                 <img className="v2-hero__img" src={heroSrc(s.src, 1600)}
                   srcSet={heroSrcSet(s.src)} sizes="100vw"
                   alt={s.title} style={{ objectPosition: s.position }}
                   loading={i === active ? 'eager' : 'lazy'}
                   fetchPriority={i === active ? 'high' : undefined} decoding="async"
-                  onLoad={i === active ? prepareNext : undefined} />
+                  onLoad={() => mediaReady(s.id, i)} />
               ))}
             </div>
           </div>

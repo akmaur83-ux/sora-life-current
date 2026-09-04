@@ -11,8 +11,12 @@ export default function HomeVisualLayers({ background, texture, left, right }) {
     const mq = window.matchMedia('(max-width: 767px)');
     const update = () => setMobile(mq.matches);
     update();
-    mq.addEventListener?.('change', update);
-    return () => mq.removeEventListener?.('change', update);
+    if (mq.addEventListener) mq.addEventListener('change', update);
+    else mq.addListener?.(update);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', update);
+      else mq.removeListener?.(update);
+    };
   }, []);
   const layers = [
     background && { ...background, name: 'background' },

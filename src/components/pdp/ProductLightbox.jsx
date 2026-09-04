@@ -70,6 +70,7 @@ export default function ProductLightbox({ product, frames, active, onChange, onC
           sizes="100vw"
           frame="v2"
           className="pdp-lightbox__image"
+          loading="eager"
           onImageError={onImageError}
         />
         {count > 1 && (

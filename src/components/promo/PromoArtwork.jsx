@@ -65,6 +65,8 @@ export default function PromoArtwork({
       className={imgClassName}
       src={src}
       alt={title || 'Promotion'}
+      width={1500}
+      height={1000}
       onError={onError}
     />
   );
