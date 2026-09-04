@@ -1,11 +1,31 @@
+import { useEffect, useState } from 'react';
 import ProductImage from '../ProductImage.jsx';
 import { secondaryProductGallery } from '../../data/products.js';
 
 // A continuous, image-led view of genuine secondary catalogue media. The
 // primary image stays in the main gallery above and is never repeated here.
 export default function ProductCatalogueGallery({ product }) {
-  const frames = secondaryProductGallery(product);
+  // Product media is attached during live catalogue hydration, so do not memo
+  // against only the stable product object reference.
+  const candidates = secondaryProductGallery(product);
+  const [failedUrls, setFailedUrls] = useState(() => new Set());
+
+  // A hydrated product can replace the legacy seed without remounting the
+  // route. Failed media belongs to that specific product/media set only.
+  useEffect(() => { setFailedUrls(new Set()); }, [product?.id, product?.media, product?.gallery]);
+
+  const frames = candidates.filter((frame) => !failedUrls.has(frame.url));
   if (!frames.length) return null;
+
+  const rejectFrame = (url) => {
+    if (!url) return;
+    setFailedUrls((current) => {
+      if (current.has(url)) return current;
+      const next = new Set(current);
+      next.add(url);
+      return next;
+    });
+  };
 
   return (
     <section className="pdp-catalogue" aria-labelledby="pdp-catalogue-h">
@@ -24,6 +44,7 @@ export default function ProductCatalogueGallery({ product }) {
               sizes="(max-width: 767px) 100vw, (max-width: 1100px) 50vw, 580px"
               frame="v2"
               className="pdp-catalogue__image"
+              onImageError={rejectFrame}
             />
           ))}
         </div>

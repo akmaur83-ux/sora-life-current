@@ -427,6 +427,9 @@
 
   .v2-home .hm-section,
   .v2-home .v2-sec.hm-section { padding-block:38px; }
+  /* This module already carries its own internal breathing room. The generic
+     section padding produced two empty pale-blue bands around real content. */
+  .v2-home .v2-sec.hm-section[data-home-section="creator"] { padding-block:0; }
   .v2-home .hm-heading__copy { font-size:11px; }
   .v2-home .hm-product-rail {
     margin-inline:0;

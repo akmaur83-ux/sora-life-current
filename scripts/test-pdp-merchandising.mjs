@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { productGallery, secondaryProductGallery } from '../src/data/products.js';
 import { selectPdpRecommendations } from '../src/lib/pdpRecommendations.js';
 
@@ -74,6 +75,20 @@ run('recommendations exclude current and ineligible products', () => {
     valid,
   ]);
   assert.deepEqual(result.map((item) => item.id), ['valid']);
+});
+
+run('PDP media rejects failed catalogue URLs and exposes a real image viewer', () => {
+  const productImage = readFileSync(new URL('../src/components/ProductImage.jsx', import.meta.url), 'utf8');
+  const gallery = readFileSync(new URL('../src/components/pdp/ProductCatalogueGallery.jsx', import.meta.url), 'utf8');
+  const mainGallery = readFileSync(new URL('../src/components/ProductGallery.jsx', import.meta.url), 'utf8');
+  const lightbox = readFileSync(new URL('../src/components/pdp/ProductLightbox.jsx', import.meta.url), 'utf8');
+  assert.match(productImage, /onImageError\?\.\(src\)/, 'image failures must reach the gallery owner');
+  assert.match(gallery, /failedUrls\.has\(frame\.url\)/, 'failed catalogue frames must leave the rendered grid');
+  assert.match(mainGallery, /ProductLightbox/, 'the primary PDP gallery must open the viewer');
+  assert.match(lightbox, /aria-modal="true"/);
+  assert.match(lightbox, /event\.key === 'Escape'/);
+  assert.match(lightbox, /ArrowRight/);
+  assert.match(lightbox, /Math\.abs\(dx\) > 45/, 'touch swipe must navigate real frames');
 });
 
 console.log('\nPDP merchandising regression checks passed.');

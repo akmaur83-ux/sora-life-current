@@ -31,6 +31,7 @@ export default function ProductImage({
   alt: altOverride = null,
   frame = 'legacy',
   fit = 'contain',
+  onImageError = null,
 }) {
   const [failed, setFailed] = useState(false);
 
@@ -64,7 +65,10 @@ export default function ProductImage({
     const img = (
       <img src={src} alt={alt} loading="lazy" decoding="async"
         sizes={base ? sizes : undefined}
-        onError={() => setFailed(true)} />
+        onError={() => {
+          setFailed(true);
+          onImageError?.(src);
+        }} />
     );
     if (base) {
       const srcSet = OPTIMIZED_WIDTHS.map((w) => `/img/${base}-${w}.webp ${w}w`).join(', ');
