@@ -37583,15 +37583,9 @@
 	        })]
 	      }, current?.url || idx), children, !single && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: "pdp__dots",
-	        role: "tablist",
-	        "aria-label": "Gallery images",
-	        children: frames.map((f, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          type: "button",
-	          role: "tab",
-	          "aria-selected": i === idx,
-	          "aria-label": `Show image ${i + 1}`,
-	          className: `pdp__dot ${i === idx ? 'active' : ''}`,
-	          onClick: () => go(i)
+	        "aria-hidden": "true",
+	        children: frames.map((f, i) => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: `pdp__dot ${i === idx ? 'active' : ''}`
 	        }, f.id || f.url || i))
 	      })]
 	    }), !single && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -38928,7 +38922,7 @@
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	              onClick: () => setQty(q => Math.max(1, q - 1)),
 	              "aria-label": "Decrease quantity",
-	              disabled: out,
+	              disabled: out || qty <= 1,
 	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                name: "minus",
 	                size: 16
