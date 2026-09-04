@@ -81,7 +81,7 @@ export default function Contact() {
   const socials = socialLinks(info);
 
   return (
-    <div className="info">
+    <div className="info info--contact">
       <div className="v2-wrap">
         <nav className="v2-crumbs" aria-label="Breadcrumb">
           <Link to="/">Home</Link>

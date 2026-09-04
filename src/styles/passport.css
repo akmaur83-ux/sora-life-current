@@ -2852,3 +2852,45 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ============================================================================
+   PASSPORT — geometry and control alignment with the storefront
+   ----------------------------------------------------------------------------
+   The Passport keeps its own character on purpose: it is a record of a
+   purchase, and the forest/gold treatment is the point. What it should NOT
+   keep is a different set of PHYSICAL rules — 20px cards, 999px buttons and
+   54px inputs next to a storefront built on 2px corners and 44px controls.
+
+   So: same corners, same control heights, same focus ring. Colour, imagery,
+   layout, the serif title and every piece of behaviour are untouched.
+   ========================================================================== */
+.psp .surface { border-radius: var(--slv2-r-ui); }
+.psp .psp-card,
+.psp .psp__hero,
+.psp .psp__status,
+.psp .psp-promoband,
+.psp .psp-promocard-wide,
+.psp .psp__promocard { border-radius: var(--slv2-r-ui); }
+
+.psp .input, .psp .select, .psp .textarea {
+  border-radius: var(--slv2-r-ui);
+  min-height: 46px; padding: 12px 14px; font-size: 14px;
+}
+.psp .input:focus, .psp .select:focus, .psp .textarea:focus {
+  box-shadow: none; outline: 2px solid var(--honey-600); outline-offset: -1px;
+}
+.psp .btn {
+  border-radius: var(--slv2-r-ui);
+  min-height: 46px; font-size: 13px; letter-spacing: .01em;
+  transition: filter .18s ease, background .18s ease, color .18s ease;
+}
+.psp .btn:hover { transform: none; box-shadow: none; filter: brightness(1.05); }
+.psp .btn:active { transform: scale(.985); }
+.psp :is(button, a):focus-visible {
+  outline: 2px solid var(--honey-600); outline-offset: 3px; border-radius: var(--slv2-r-ui);
+}
+
+/* The lookup title ran to within 16px of the viewport edge at 375px and would
+   have wrapped mid-phrase on a narrower handset. */
+.psp .psp__title { font-size: clamp(20px, 5.9vw, 26px); line-height: 1.2; }
+.psp .psp__head p { margin-top: 6px; font-size: 13.5px; line-height: 1.55; }

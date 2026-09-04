@@ -294,25 +294,31 @@ function AuthView() {
         <div className="auth__art-in">
           <span className="eyebrow" style={{ color: 'var(--honey-300)' }}>Sora Life members</span>
           <h2 className="serif" style={{ color: '#FBF8F1', fontSize: 'var(--text-3xl)', margin: '12px 0' }}>Your rituals, remembered.</h2>
-          <p style={{ color: 'rgba(251,248,241,0.82)' }}>Save favourites, track orders, reorder in a tap and unlock members-only drops.</p>
+          {/* Every line here is a feature that exists. "Members-only drops" and
+              "early access to new launches" were neither built nor planned, and
+              a sign-up panel is the worst place to promise something that will
+              not arrive. */}
+          <p style={{ color: 'rgba(251,248,241,0.82)' }}>Keep your orders, addresses and saved products together, and pick up where you left off on any device.</p>
           <ul className="auth__perks">
-            <li><Icon name="check" size={17} /> Faster, saved checkout</li>
-            <li><Icon name="check" size={17} /> Order tracking &amp; history</li>
-            <li><Icon name="check" size={17} /> Early access to new launches</li>
+            <li><Icon name="check" size={17} /> Saved delivery addresses at checkout</li>
+            <li><Icon name="check" size={17} /> Order history &amp; tracking</li>
+            <li><Icon name="check" size={17} /> Your wishlist, synced to your account</li>
           </ul>
         </div>
       </div>
 
       <div className="auth__form">
         <div className="auth__card">
+          {/* The page had no heading at all in the login/signup states: the tab
+              buttons carried the hierarchy visually but are controls, not
+              headings, so the document started at h3 or nothing. */}
+          <h1 className="auth__h1">{mode === 'forgot' ? heading : 'Your account'}</h1>
           {mode !== 'forgot' ? (
             <div className="auth__tabs">
               <button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => switchMode('login')}>Log in</button>
               <button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => switchMode('signup')}>Create account</button>
             </div>
-          ) : (
-            <h3 className="serif" style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--sp-4)' }}>{heading}</h3>
-          )}
+          ) : null}
 
           <form onSubmit={submit}>
             {mode === 'signup' && (

@@ -149,7 +149,7 @@
 .ftr__social { display: flex; gap: 6px; }
 .ftr__social .iconbtn { color: var(--forest-50); background: rgba(251,248,241,0.08); }
 .ftr__social .iconbtn:hover { background: var(--honey-500); color: var(--forest-900); }
-.ftr__col h4 { color: #fff; font-family: var(--font-sans); font-size: var(--text-xs); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: var(--sp-4); font-weight: 700; }
+.ftr__col h4 { color: #fff; font-family: var(--slv2-sans); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 10px; font-weight: 750; }
 .ftr__col a { display: block; padding: 6px 0; font-size: var(--text-sm); transition: color var(--t) var(--ease); }
 .ftr__col a:hover { color: var(--st-footer-accent, var(--honey-300)); }
 .ftr__trust { display: flex; flex-wrap: wrap; gap: var(--sp-6); padding-block: var(--sp-6); border-top: 1px solid rgba(251,248,241,0.12); }
@@ -161,8 +161,11 @@
 .ftr__admin-link { margin-left: var(--sp-2); padding-left: var(--sp-4); border-left: 1px solid rgba(251,248,241,0.3); color: rgba(251,248,241,0.78); font-size: 11px; font-weight: 500; letter-spacing: 0.02em; white-space: nowrap; }
 .ftr__admin-link:hover { color: var(--honey-300); }
 @media (max-width: 900px) {
-  .ftr__top { grid-template-columns: 1fr 1fr; gap: var(--sp-8); }
-  .ftr__brand { grid-column: 1 / -1; }
+  /* A tighter, even rhythm on a phone: the columns are short, so 64px of lead
+     air and a 32px row gap left the groups floating rather than grouped. */
+  .ftr__top { grid-template-columns: 1fr 1fr; gap: var(--sp-7) var(--sp-6); padding-block: var(--sp-10) var(--sp-8); }
+  .ftr__brand { grid-column: 1 / -1; margin-bottom: var(--sp-2); }
+  .ftr__brand p { margin: var(--sp-3) 0 0; }
   .ftr__bottom { flex-direction: column; align-items: flex-start; gap: 10px; }
 
   /* The mobile tab bar is fixed at the bottom, so the last ~60px of the page
@@ -176,7 +179,7 @@
   .ftr__legal { flex-wrap: wrap; gap: var(--sp-3) var(--sp-4); }
   .ftr__admin-link {
     margin-left: 0; padding: 9px 16px;
-    border: 1px solid rgba(251,248,241,0.32); border-radius: var(--r-pill);
+    border: 1px solid rgba(251,248,241,0.32); border-radius: var(--slv2-r-ui);
     font-size: var(--text-xs); display: inline-flex; align-items: center; min-height: 38px;
   }
 }

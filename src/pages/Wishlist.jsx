@@ -11,15 +11,24 @@ export default function Wishlist() {
 
   if (!items.length) {
     return (
-      <div className="container section">
-        <div className="state">
-          <span className="state-ic"><Icon name="heart" size={32} /></span>
-          <h3>Your wishlist is empty</h3>
-          <p>Save the products you love by tapping the heart — they'll live here for later.</p>
-          <Link to="/shop" className="btn">Find something you love <Icon name="arrowRight" size={18} /></Link>
+      <>
+        {/* The empty state had no page heading at all, so the route began at an
+            h3 inside a panel. Same head as the populated view, so the page does
+            not change shape when the first item is saved. */}
+        <div className="pagehead"><div className="container">
+          <nav className="crumbs"><Link to="/">Home</Link><Icon name="chevronRight" size={14} /><span>Wishlist</span></nav>
+          <div className="wishhead"><div><h1 className="serif">Your wishlist</h1><p className="muted">Nothing saved yet.</p></div></div>
+        </div></div>
+        <div className="container section-sm">
+          <div className="state">
+            <span className="state-ic"><Icon name="heart" size={32} /></span>
+            <h3>Your wishlist is empty</h3>
+            <p>Save the products you love by tapping the heart — they&apos;ll live here for later.</p>
+            <Link to="/shop" className="btn">Find something you love <Icon name="arrowRight" size={18} /></Link>
+          </div>
         </div>
         <ProductRail eyebrow="Get inspired" title="Popular right now" products={getBestsellers()} link="/shop" />
-      </div>
+      </>
     );
   }
 

@@ -856,3 +856,111 @@
   font-size: 13px;
   line-height: 1.5;
 }
+
+/* ============================================================================
+   ACCOUNT + WISHLIST — alignment with the V2 storefront system
+   ----------------------------------------------------------------------------
+   These two surfaces were the last customer pages still wearing the original
+   design language: pill buttons, 14-20px card radii and a serif page heading,
+   sitting one click away from a Shop and a Homepage that are sharp, 2px and
+   sans. Nothing below is a new design — every value is an existing --slv2-*
+   token, pulled onto the pages that had not caught up.
+
+   Deliberately scoped to .auth / .acct / the wishlist head. Cart, Checkout,
+   the Creator Program and Admin share .btn / .input / .state and are NOT part
+   of this pass, so their appearance is unchanged.
+   ========================================================================== */
+
+/* -- page heading: the same Inter scale as .v2-shop__title and .hd-title --- */
+.pagehead .crumbs { font-size: 11px; letter-spacing: .03em; color: var(--slv2-ink-4); margin-bottom: 6px; }
+.pagehead .crumbs span { color: var(--slv2-ink-2); font-weight: 600; }
+.wishhead h1.serif {
+  font-family: var(--slv2-sans);
+  font-size: 26px; font-weight: 700; letter-spacing: -.022em; line-height: 1.15;
+  margin: 0; color: var(--slv2-ink);
+}
+.wishhead .muted { margin: 6px 0 0; font-size: 13px; color: var(--slv2-ink-3); }
+@media (min-width: 768px) { .wishhead h1.serif { font-size: 34px; } }
+
+/* -- controls: 2px geometry, one control height, one focus ring ------------ */
+.auth .btn, .acct .btn, .wishhead .btn {
+  border-radius: var(--slv2-r-ui);
+  padding: 0 22px; height: 44px; font-size: 13px; letter-spacing: .005em;
+  /* the legacy lift-and-shadow hover reads as a different interaction model
+     from the flat background change every V2 control uses */
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+.auth .btn:hover, .acct .btn:hover, .wishhead .btn:hover { transform: none; box-shadow: none; }
+.auth .btn:active, .acct .btn:active, .wishhead .btn:active { transform: scale(.985); }
+.auth .btn-sm, .acct .btn-sm { height: 36px; padding: 0 16px; font-size: 12px; }
+.auth .input, .auth .select, .acct .input, .acct .select {
+  border-radius: var(--slv2-r-ui); border-color: var(--slv2-line);
+  min-height: 44px; padding: 11px 14px; font-size: 14px;
+}
+.auth .textarea, .acct .textarea { border-radius: var(--slv2-r-ui); border-color: var(--slv2-line); }
+.auth .input:focus, .auth .select:focus, .acct .input:focus, .acct .select:focus,
+.acct .textarea:focus, .auth .textarea:focus {
+  border-color: var(--slv2-f500); box-shadow: none;
+  outline: 2px solid var(--slv2-f500); outline-offset: -1px;
+}
+.auth :is(button, a):focus-visible, .acct :is(button, a):focus-visible {
+  outline: 2px solid var(--slv2-f500); outline-offset: 3px; border-radius: var(--slv2-r-ui);
+}
+
+/* -- sign-in / create-account switch: a segmented control, not a pill ------ */
+.auth__tabs {
+  padding: 0; gap: 0; background: none; border-radius: 0;
+  border-bottom: 1px solid var(--slv2-line); margin-bottom: var(--sp-5);
+}
+.auth__tabs button {
+  border-radius: 0; padding: 12px 4px; min-height: 44px;
+  font-size: 13px; letter-spacing: .01em;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color .18s ease, border-color .18s ease;
+}
+.auth__tabs button.active {
+  background: none; box-shadow: none;
+  color: var(--slv2-ink); border-bottom-color: var(--slv2-accent-primary);
+}
+
+/* -- the form is top-aligned on a phone: vertical centring in a 100vh grid
+      pushed the first field a long way down an otherwise empty screen ------ */
+.auth__form { padding: var(--sp-8) var(--sp-5) var(--sp-10); }
+@media (max-width: 860px) {
+  .auth { min-height: 0; }
+  .auth__form { align-content: start; padding-top: var(--sp-6); }
+}
+
+/* -- account shell: sharp panels instead of 20px cards -------------------- */
+.acct__nav { border-radius: var(--slv2-r-ui); border-color: var(--slv2-line); }
+.acct__navitem { border-radius: var(--slv2-r-ui); font-size: 13.5px; }
+.acct__logout { border-radius: 0; }
+.acct__h {
+  font-family: var(--slv2-sans); font-size: 20px; font-weight: 700;
+  letter-spacing: -.018em; color: var(--slv2-ink);
+}
+.acct__wishcard { border-radius: var(--slv2-r-ui); border-color: var(--slv2-line); }
+.acct__wishcard:hover { box-shadow: none; border-color: var(--slv2-ink-4); }
+.acct__wishcard .pimg { border-radius: var(--slv2-r-ui); }
+
+/* -- empty states on these two pages: no 76px circle, no pill CTA --------- */
+.acct .state, .page-main > .container > .state {
+  padding-block: var(--sp-10);
+}
+.acct .state .state-ic, .page-main > .container > .state .state-ic {
+  width: 52px; height: 52px; border-radius: var(--slv2-r-ui);
+  background: var(--slv2-f50); color: var(--slv2-f500); margin-bottom: var(--sp-4);
+}
+.acct .state .state-ic svg, .page-main > .container > .state .state-ic svg { width: 24px; height: 24px; }
+.acct .state h3, .page-main > .container > .state h3 {
+  font-family: var(--slv2-sans); font-size: 19px; font-weight: 700; letter-spacing: -.015em;
+}
+.page-main > .container > .state .btn {
+  border-radius: var(--slv2-r-ui); height: 44px; padding: 0 22px; font-size: 13px;
+}
+.page-main > .container > .state .btn:hover { transform: none; box-shadow: none; }
+.auth__h1 {
+  font-family: var(--slv2-sans);
+  font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2;
+  margin: 0 0 var(--sp-4); color: var(--slv2-ink);
+}
