@@ -6777,7 +6777,7 @@
 	  productBySlug = built.productBySlug;
 	  productById = built.productById;
 	  catalogSource = source;
-	  priceRange = getPriceRange();
+	  getPriceRange();
 	  catalogVersion += 1;
 	  return true;
 	}
@@ -6815,10 +6815,18 @@
 	function getRelated(product) {
 	  return (product.relatedIds || []).map(id => productById[id]).filter(Boolean);
 	}
+	function normalizeSearchText(value) {
+	  return String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[’‘'`´]/g, '').replace(/[-_/]+/g, ' ').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+	}
 	function searchProducts(q) {
-	  const t = q.trim().toLowerCase();
-	  if (!t) return [];
-	  return products.filter(p => p.name.toLowerCase().includes(t) || (categoryBySlug[p.category]?.name || '').toLowerCase().includes(t) || (p.form || '').toLowerCase().includes(t));
+	  const query = normalizeSearchText(q);
+	  if (!query) return [];
+	  const compactQuery = query.replace(/\s/g, '');
+	  return products.filter(product => {
+	    const categoryText = (product.categories || [product.category]).flatMap(slug => [slug, categoryBySlug[slug]?.name || '']).join(' ');
+	    const haystack = normalizeSearchText(`${product.name || ''} ${categoryText}`);
+	    return haystack.includes(query) || haystack.replace(/\s/g, '').includes(compactQuery);
+	  });
 	}
 	function getPriceRange() {
 	  if (!products.length) return {
@@ -6832,7 +6840,7 @@
 	  };
 	}
 	// Back-compat live-binding export (ProductBrowser reads this directly).
-	let priceRange = getPriceRange();
+	getPriceRange();
 
 	/**
 	 * Attach priced variants (pack sizes) to the in-memory catalogue.
@@ -30675,11 +30683,7 @@
 	          className: "v2-hdr__link v2-hdr__link--ph",
 	          "aria-hidden": "true",
 	          children: c.name
-	        }, `ph-${i}`)), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
-	          to: "/shop?sort=bestselling",
-	          className: "v2-hdr__link",
-	          children: "Bestsellers"
-	        })]
+	        }, `ph-${i}`))]
 	      })]
 	    }), mobileSearch && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	      className: "search-overlay",
@@ -30807,10 +30811,6 @@
 	            to: "/shop",
 	            className: "drawer__link",
 	            children: "All products"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/shop?sort=bestselling",
-	            className: "drawer__link",
-	            children: "Bestsellers"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: "/shop?filter=new",
 	            className: "drawer__link",
@@ -36686,12 +36686,9 @@
 	  });
 	}
 
-	const SORTS = [{
-	  id: 'featured',
-	  label: 'Featured'
-	}, {
-	  id: 'bestselling',
-	  label: 'Best selling'
+	const SHOP_SORTS = [{
+	  id: 'recommended',
+	  label: 'Recommended'
 	}, {
 	  id: 'price-asc',
 	  label: 'Price: low to high'
@@ -36699,36 +36696,121 @@
 	  id: 'price-desc',
 	  label: 'Price: high to low'
 	}, {
-	  id: 'rating',
-	  label: 'Top rated'
-	}, {
 	  id: 'new',
 	  label: 'Newest'
 	}];
+	const PRICE_BANDS = [{
+	  id: 'under-500',
+	  label: 'Under ₹500',
+	  min: 0,
+	  maxExclusive: 500
+	}, {
+	  id: '500-999',
+	  label: '₹500–₹999',
+	  min: 500,
+	  maxExclusive: 1000
+	}, {
+	  id: '1000-1999',
+	  label: '₹1,000–₹1,999',
+	  min: 1000,
+	  maxExclusive: 2000
+	}, {
+	  id: '2000-4999',
+	  label: '₹2,000–₹4,999',
+	  min: 2000,
+	  maxExclusive: 5000
+	}, {
+	  id: '5000-plus',
+	  label: '₹5,000 & above',
+	  min: 5000,
+	  maxExclusive: Infinity
+	}];
+	const SORT_IDS = new Set(SHOP_SORTS.map(item => item.id));
+	const HIGHLIGHT_IDS = new Set(['new', 'sale', 'bestseller']);
+	const PRICE_IDS = new Set(PRICE_BANDS.map(item => item.id));
+	function values(value) {
+	  return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
+	}
+	function validValues(value, allowed) {
+	  return [...new Set(values(value).filter(item => allowed.has(item)))];
+	}
+	function normalizedShopSort(value) {
+	  // `featured` was the old ID for this same stable/curated ordering.
+	  if (value === 'featured') return 'recommended';
+	  return SORT_IDS.has(value) ? value : 'recommended';
+	}
+	function readShopUrlState(searchParams, categorySlugs = []) {
+	  const params = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
+	  const allowedCategories = new Set(categorySlugs);
+	  const price = params.get('price');
+	  return {
+	    q: (params.get('q') || '').trim(),
+	    sort: normalizedShopSort(params.get('sort') || ''),
+	    categories: validValues(params.get('category'), allowedCategories),
+	    highlights: validValues(params.get('filter'), HIGHLIGHT_IDS),
+	    inStock: params.get('stock') === '1',
+	    priceBand: PRICE_IDS.has(price) ? price : null
+	  };
+	}
+	function setList(params, key, list) {
+	  if (Array.isArray(list) && list.length) params.set(key, [...new Set(list)].join(','));else params.delete(key);
+	}
+	function updateShopUrlState(searchParams, patch) {
+	  const params = new URLSearchParams(searchParams);
+	  const has = key => Object.prototype.hasOwnProperty.call(patch, key);
+	  if (has('q')) {
+	    const q = String(patch.q || '').trim();
+	    if (q) params.set('q', q);else params.delete('q');
+	  }
+	  if (has('sort')) {
+	    const sort = normalizedShopSort(patch.sort);
+	    if (sort === 'recommended') params.delete('sort');else params.set('sort', sort);
+	  }
+	  if (has('categories')) setList(params, 'category', patch.categories);
+	  if (has('highlights')) setList(params, 'filter', patch.highlights);
+	  if (has('inStock')) {
+	    if (patch.inStock) params.set('stock', '1');else params.delete('stock');
+	  }
+	  if (has('priceBand')) {
+	    if (PRICE_IDS.has(patch.priceBand)) params.set('price', patch.priceBand);else params.delete('price');
+	  }
+	  return params;
+	}
+	function productMatchesHighlight(product, highlight) {
+	  if (highlight === 'new') return product?.isNew === true;
+	  if (highlight === 'bestseller') return product?.isBestseller === true;
+	  if (highlight === 'sale') {
+	    return product?.onSale === true || Number(product?.discountPct) > 0;
+	  }
+	  return true;
+	}
+	function productMatchesPriceBand(product, bandId) {
+	  if (!bandId) return true;
+	  const band = PRICE_BANDS.find(item => item.id === bandId);
+	  if (!band) return true;
+	  const price = Number(product?.price);
+	  return Number.isFinite(price) && price >= band.min && price < band.maxExclusive;
+	}
+
 	function ProductBrowser({
 	  baseProducts,
 	  lockCategory = false,
 	  showCategoryFilter = true
 	}) {
 	  const [params, setParams] = useSearchParams();
-	  const q = params.get('q') || '';
-	  const initialSort = params.get('sort') || 'featured';
-	  const initialFlag = params.get('filter') || '';
-	  const [sort, setSort] = reactExports.useState(initialSort);
-	  const [selCats, setSelCats] = reactExports.useState(new Set());
-	  // null means no user cap: follow the live range when the catalogue hydrates.
-	  // An explicit selection stays fixed across subsequent catalogue updates.
-	  const [selectedPriceMax, setPriceMax] = reactExports.useState(null);
-	  const priceMax = selectedPriceMax ?? priceRange.max;
-	  const [minRating, setMinRating] = reactExports.useState(0);
-	  const [flags, setFlags] = reactExports.useState(new Set(initialFlag ? [initialFlag] : []));
-	  const [inStock, setInStock] = reactExports.useState(false);
+	  const showCats = showCategoryFilter && !lockCategory;
+	  const urlState = reactExports.useMemo(() => readShopUrlState(params, showCats ? categories.map(category => category.slug) : []), [params, showCats, categories]);
+	  const {
+	    q,
+	    sort,
+	    inStock,
+	    priceBand
+	  } = urlState;
+	  const selCats = reactExports.useMemo(() => new Set(urlState.categories), [urlState.categories]);
+	  const flags = reactExports.useMemo(() => new Set(urlState.highlights), [urlState.highlights]);
 	  const [drawer, setDrawer] = reactExports.useState(false);
 	  // Local mirror of the ?q= param so the field can be typed into before submit.
 	  const [qInput, setQInput] = reactExports.useState(q);
-	  reactExports.useEffect(() => {
-	    setSort(params.get('sort') || 'featured');
-	  }, [params]);
 	  reactExports.useEffect(() => {
 	    setQInput(q);
 	  }, [q]);
@@ -36747,10 +36829,11 @@
 	      unlockScroll();
 	    };
 	  }, [drawer]);
-	  const toggleSet = (setter, set, val) => {
+	  const setUrlState = patch => setParams(updateShopUrlState(params, patch));
+	  const toggled = (set, value) => {
 	    const next = new Set(set);
-	    next.has(val) ? next.delete(val) : next.add(val);
-	    setter(next);
+	    if (next.has(value)) next.delete(value);else next.add(value);
+	    return [...next];
 	  };
 	  const searched = reactExports.useMemo(() => {
 	    if (!q) return baseProducts;
@@ -36758,10 +36841,10 @@
 	    return baseProducts.filter(p => ids.has(p.id));
 	  }, [q, baseProducts]);
 	  const filtered = reactExports.useMemo(() => {
-	    let list = searched.filter(p => p.price <= priceMax && p.rating >= minRating);
+	    let list = searched.filter(product => productMatchesPriceBand(product, priceBand));
 	    if (selCats.size) list = list.filter(p => [...selCats].some(c => (p.categories || [p.category]).includes(c)));
 	    if (inStock) list = list.filter(p => p.stock > 0);
-	    if (flags.size) list = list.filter(p => [...flags].every(f => f === 'sale' ? p.discountPct > 0 : p.flags.includes(f)));
+	    if (flags.size) list = list.filter(p => [...flags].every(flag => productMatchesHighlight(p, flag)));
 	    const s = [...list];
 	    switch (sort) {
 	      case 'price-asc':
@@ -36770,12 +36853,6 @@
 	      case 'price-desc':
 	        s.sort((a, b) => b.price - a.price);
 	        break;
-	      case 'rating':
-	        s.sort((a, b) => b.rating - a.rating);
-	        break;
-	      case 'bestselling':
-	        s.sort((a, b) => b.reviewCount - a.reviewCount);
-	        break;
 	      case 'new':
 	        s.sort((a, b) => Number(b.isNew) - Number(a.isNew));
 	        break;
@@ -36783,40 +36860,29 @@
 	        s.sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured));
 	    }
 	    return s;
-	  }, [searched, priceMax, minRating, selCats, inStock, flags, sort]);
-	  const activeCount = selCats.size + flags.size + (minRating ? 1 : 0) + (inStock ? 1 : 0) + (priceMax < priceRange.max ? 1 : 0);
-	  const clearAll = () => {
-	    setSelCats(new Set());
-	    setFlags(new Set());
-	    setMinRating(0);
-	    setInStock(false);
-	    setPriceMax(null);
-	  };
-	  const onSort = id => {
-	    setSort(id);
-	    const p = new URLSearchParams(params);
-	    p.set('sort', id);
-	    setParams(p, {
-	      replace: true
-	    });
-	  };
-	  const setQuery = value => {
-	    const p = new URLSearchParams(params);
-	    if (value) p.set('q', value);else p.delete('q');
-	    setParams(p, {
-	      replace: true
-	    });
-	  };
+	  }, [searched, priceBand, selCats, inStock, flags, sort]);
+	  const activeCount = selCats.size + flags.size + (inStock ? 1 : 0) + (priceBand ? 1 : 0);
+	  const clearAll = () => setUrlState({
+	    categories: [],
+	    highlights: [],
+	    inStock: false,
+	    priceBand: null
+	  });
+	  const onSort = id => setUrlState({
+	    sort: id
+	  });
+	  const setQuery = value => setUrlState({
+	    q: value
+	  });
 	  const submitSearch = e => {
 	    e.preventDefault();
 	    setQuery(qInput.trim());
 	  };
-	  const showCats = showCategoryFilter && !lockCategory;
 	  const FilterPanel = /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	    className: "v2-fp",
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "v2-fp__head",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
 	        children: "Filters"
 	      }), activeCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
 	        className: "v2-fp__clear",
@@ -36833,7 +36899,9 @@
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	          type: "checkbox",
 	          checked: selCats.has(c.slug),
-	          onChange: () => toggleSet(setSelCats, selCats, c.slug)
+	          onChange: () => setUrlState({
+	            categories: toggled(selCats, c.slug)
+	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          className: "v2-check__box",
 	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -36850,12 +36918,14 @@
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	        className: "v2-fp__t",
 	        children: "Highlights"
-	      }), [['bestseller', 'Bestsellers'], ['new', 'New arrivals'], ['sale', 'On sale']].map(([id, label]) => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	      }), [['new', 'New arrivals'], ['sale', 'On sale']].map(([id, label]) => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
 	        className: "v2-check",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	          type: "checkbox",
 	          checked: flags.has(id),
-	          onChange: () => toggleSet(setFlags, flags, id)
+	          onChange: () => setUrlState({
+	            highlights: toggled(flags, id)
+	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          className: "v2-check__box",
 	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -36871,7 +36941,9 @@
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	          type: "checkbox",
 	          checked: inStock,
-	          onChange: e => setInStock(e.target.checked)
+	          onChange: e => setUrlState({
+	            inStock: e.target.checked
+	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          className: "v2-check__box",
 	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -36887,43 +36959,20 @@
 	      className: "v2-fp__g",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	        className: "v2-fp__t",
-	        children: "Max price"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	        type: "range",
-	        className: "v2-fp__range",
-	        min: priceRange.min,
-	        max: priceRange.max,
-	        step: 1,
-	        value: priceMax,
-	        "aria-label": "Maximum price",
-	        "aria-valuetext": money(priceMax),
-	        onChange: e => setPriceMax(Number(e.target.value))
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "v2-fp__rangelbl",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          children: money(priceRange.min)
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
-	          children: ["Up to ", money(priceMax)]
-	        })]
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-fp__g",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-fp__t",
-	        children: "Rating"
+	        children: "Price"
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-fp__tags",
-	        children: [0, 4, 4.5].map(r => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          className: `v2-chip ${minRating === r ? 'is-on' : ''}`,
-	          onClick: () => setMinRating(r),
-	          children: r === 0 ? 'Any' : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "star",
-	              size: 12,
-	              fill: "currentColor"
-	            }), " ", r, "+"]
-	          })
-	        }, r))
+	        className: "v2-fp__prices",
+	        role: "group",
+	        "aria-label": "Price range",
+	        children: PRICE_BANDS.map(band => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: `v2-fp__price ${priceBand === band.id ? 'is-on' : ''}`,
+	          "aria-pressed": priceBand === band.id,
+	          onClick: () => setUrlState({
+	            priceBand: priceBand === band.id ? null : band.id
+	          }),
+	          children: band.label
+	        }, band.id))
 	      })]
 	    })]
 	  });
@@ -36966,7 +37015,9 @@
 	      className: "v2-rail v2-shop__cats",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
 	        className: `v2-chip ${selCats.size === 0 ? 'is-on' : ''}`,
-	        onClick: () => setSelCats(new Set()),
+	        onClick: () => setUrlState({
+	          categories: []
+	        }),
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	          name: "grid",
 	          size: 14,
@@ -36974,7 +37025,9 @@
 	        }), " All"]
 	      }), categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
 	        className: `v2-chip ${selCats.has(c.slug) ? 'is-on' : ''}`,
-	        onClick: () => toggleSet(setSelCats, selCats, c.slug),
+	        onClick: () => setUrlState({
+	          categories: toggled(selCats, c.slug)
+	        }),
 	        "aria-pressed": selCats.has(c.slug),
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	          name: c.icon || 'leaf',
@@ -37013,7 +37066,7 @@
 	          value: sort,
 	          onChange: e => onSort(e.target.value),
 	          "aria-label": "Sort products",
-	          children: SORTS.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	          children: SHOP_SORTS.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
 	            value: s.id,
 	            children: s.label
 	          }, s.id))
@@ -37048,7 +37101,7 @@
 	            name: "search",
 	            size: 30,
 	            stroke: 1.4
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
 	            children: "Nothing matched"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	            children: "Try clearing a filter or searching a different term."
@@ -37075,7 +37128,7 @@
 	        className: "v2-fd__panel",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "v2-fd__top",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
 	            children: ["Filters", activeCount ? ` (${activeCount})` : '']
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	            className: "v2-iconbtn v2-iconbtn--bare",
