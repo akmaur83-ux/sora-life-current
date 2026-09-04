@@ -3160,7 +3160,11 @@
 	// authority on what a customer is charged. The key was read by nothing, so
 	// it was a stale contradiction waiting to be re-used.
 	let announcement = {
-	  notices: ['FREE STANDARD SHIPPING', 'COD Available', '100% Authentic Biosash Products']
+	  notices: ['FREE STANDARD SHIPPING', 'COD Available',
+	  // Marketplace-neutral. The storefront carries many labels, so the built-in
+	  // default no longer leads with a single brand. Admin-configured notices
+	  // still replace this list wholesale via applyAnnouncement().
+	  'EXPLORE WELLNESS, PERSONAL CARE & MORE']
 	};
 	let homepage = {
 	  bestsellerTitle: 'Bestsellers',
@@ -3463,6 +3467,15 @@
 	let categories = DEFAULT_CATEGORIES;
 	let categoryBySlug = Object.fromEntries(categories.map(c => [c.slug, c]));
 
+	// True once the Supabase `categories` table has replaced the built-in list.
+	// The header uses this to avoid painting the fallback set and then visibly
+	// swapping it for a different one a few hundred ms later — labels used to
+	// change underneath the cursor on every page load.
+	let categoriesSource = 'static'; // 'static' | 'supabase'
+	function isCategoriesHydrated() {
+	  return categoriesSource === 'supabase';
+	}
+
 	// Category copy is safe to present as approved only after it has come from the
 	// public categories table managed by Admin. The built-in list is a navigation
 	// fallback; its historical taglines/blurbs are not proof of configured copy.
@@ -3498,6 +3511,7 @@
 	    };
 	  });
 	  categoryBySlug = Object.fromEntries(categories.map(c => [c.slug, c]));
+	  categoriesSource = 'supabase';
 	  return true;
 	}
 
@@ -3570,6 +3584,75 @@
 	const OPTIMIZED_IMAGES = new Set(["b108", "b110", "b114", "b1149", "b115", "b1152", "b1154", "b1156", "b1158", "b117", "b119", "b122", "b126", "b127", "b128", "b1280", "b129", "b1295", "b1313", "b1348", "b139", "b1395", "b1403", "b141", "b1420", "b1422", "b1424", "b1426", "b143", "b1432", "b1435", "b145", "b1461", "b1463", "b1465", "b1467", "b1469", "b147", "b1471", "b1473", "b149", "b151", "b153", "b155", "b157", "b159", "b1602", "b161", "b165", "b1661", "b1672", "b1680", "b169", "b171", "b173", "b175", "b179", "b1792", "b1795", "b1798", "b181", "b1822", "b1825", "b1828", "b183", "b1831", "b1833", "b1839", "b1842", "b185", "b1857", "b1882", "b190", "b193", "b195", "b197", "b205", "b209", "b211", "b213", "b215", "b217", "b219", "b224", "b226", "b239", "b241", "b243", "b247", "b249", "b254", "b257", "b259", "b2697", "b2698", "b2699", "b2700", "b2701", "b2702", "b2703", "b2704", "b2705", "b2706", "b2707", "b2708", "b296", "b298", "b300", "b302", "b306", "b310", "b313", "b315", "b317", "b319", "b321", "b325", "b327", "b333", "b335", "b337", "b342", "b344", "b347", "b349", "b351", "b353", "b372", "b374", "b382", "b383", "b385", "b386", "b388", "b389", "b390", "b391", "b392", "b393", "b394", "b395", "b396", "b397", "b398", "b399", "b400", "b401", "b82"]);
 	const OPTIMIZED_WIDTHS = [400, 800];
 
+	const callbacks = new WeakMap();
+	let observer;
+	function sharedObserver() {
+	  if (typeof window === 'undefined' || typeof window.IntersectionObserver === 'undefined') return null;
+	  if (!observer) {
+	    observer = new window.IntersectionObserver(entries => {
+	      for (const entry of entries) {
+	        if (!entry.isIntersecting) continue;
+	        const reveal = callbacks.get(entry.target);
+	        observer.unobserve(entry.target);
+	        callbacks.delete(entry.target);
+	        reveal?.();
+	      }
+	    }, {
+	      rootMargin: '240px 160px'
+	    });
+	  }
+	  return observer;
+	}
+	function useDeferredMedia(eager = false) {
+	  const ref = reactExports.useRef(null);
+	  const [ready, setReady] = reactExports.useState(eager);
+	  reactExports.useEffect(() => {
+	    if (eager) {
+	      setReady(true);
+	      return undefined;
+	    }
+	    if (ready) return undefined;
+	    const node = ref.current;
+	    const io = sharedObserver();
+	    if (!node || !io) {
+	      // Progressive fallback for older browsers: never strand an image.
+	      setReady(true);
+	      return undefined;
+	    }
+	    callbacks.set(node, () => setReady(true));
+	    io.observe(node);
+	    return () => {
+	      io.unobserve(node);
+	      callbacks.delete(node);
+	    };
+	  }, [eager, ready]);
+	  return {
+	    ref,
+	    ready
+	  };
+	}
+	function DeferredImage({
+	  src,
+	  loading = 'lazy',
+	  decoding = 'async',
+	  fetchPriority,
+	  ...props
+	}) {
+	  const eager = loading === 'eager' || fetchPriority === 'high';
+	  const {
+	    ref,
+	    ready
+	  } = useDeferredMedia(eager);
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	    ...props,
+	    ref: ref,
+	    src: ready ? src : undefined,
+	    loading: loading,
+	    decoding: decoding,
+	    fetchPriority: fetchPriority
+	  });
+	}
+
 	const GRID_SIZES = '(max-width: 640px) 46vw, (max-width: 1024px) 30vw, 240px';
 
 	// If the source is a local /img/<name>.<png|jpg> that the optimizer has covered,
@@ -3596,9 +3679,18 @@
 	  src: mediaSrc = null,
 	  alt: altOverride = null,
 	  frame = 'legacy',
-	  fit = 'contain'
+	  fit = 'contain',
+	  onImageError = null,
+	  loading = 'lazy',
+	  decoding = 'async',
+	  fetchPriority
 	}) {
 	  const [failed, setFailed] = reactExports.useState(false);
+	  const eager = loading === 'eager' || fetchPriority === 'high';
+	  const {
+	    ref: mediaRef,
+	    ready
+	  } = useDeferredMedia(eager);
 	  const v2 = frame === 'v2';
 	  const hero = frame === 'hero';
 	  // V2 media frames are square and sharp. `contain` is deliberate for today's
@@ -3622,21 +3714,26 @@
 	  if (src && !failed) {
 	    const base = optimizedBase(src);
 	    const img = /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-	      src: src,
+	      src: ready ? src : undefined,
 	      alt: alt,
-	      loading: "lazy",
-	      decoding: "async",
+	      loading: loading,
+	      decoding: decoding,
+	      fetchPriority: fetchPriority,
 	      sizes: base ? sizes : undefined,
-	      onError: () => setFailed(true)
+	      onError: () => {
+	        setFailed(true);
+	        onImageError?.(src);
+	      }
 	    });
 	    if (base) {
 	      const srcSet = OPTIMIZED_WIDTHS.map(w => `/img/${base}-${w}.webp ${w}w`).join(', ');
 	      return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: wrapClass,
+	        ref: mediaRef,
 	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("source", {
 	            type: "image/webp",
-	            srcSet: srcSet,
+	            srcSet: ready ? srcSet : undefined,
 	            sizes: sizes
 	          }), img]
 	        })
@@ -3644,6 +3741,7 @@
 	    }
 	    return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	      className: wrapClass,
+	      ref: mediaRef,
 	      children: img
 	    });
 	  }
@@ -6533,6 +6631,9 @@
 	    dbId: p.dbId ?? null,
 	    slug: p.slug,
 	    name: p.name,
+	    // Optional catalogue metadata. No fallback is invented: Homepage brand
+	    // discovery renders only when the source record provides evidence.
+	    brand: p.brand || p.brandName || p.manufacturer || null,
 	    category: p.category,
 	    categories: p.categories && p.categories.length ? p.categories : [p.category],
 	    form: p.form || null,
@@ -6548,8 +6649,8 @@
 	    image: p.image,
 	    gallery: p.gallery && p.gallery.length ? p.gallery : [],
 	    // Structured multi-image gallery (product_media rows). Attached later by
-	    // applyProductMedia(); empty here so a product with no media rows falls
-	    // back to its single primary image via productGallery().
+	    // applyProductMedia(); productGallery() also retains unique legacy
+	    // catalogue secondaries when structured rows do not include them.
 	    media: Array.isArray(p.media) ? p.media : [],
 	    permalink: p.permalink || null,
 	    rating: p.reviewCount > 0 ? p.rating : 0,
@@ -6567,7 +6668,8 @@
 	    usage: p.usage || '',
 	    isNew: !!p.isNew,
 	    isBestseller: !!p.isBestseller,
-	    isFeatured: !!p.isFeatured
+	    isFeatured: !!p.isFeatured,
+	    isActive: p.isActive !== false
 	  };
 	}
 
@@ -6582,6 +6684,7 @@
 	      id: p.id,
 	      slug: p.slug,
 	      name: p.name,
+	      brand: p.brand || 'Biosash',
 	      category: p.category,
 	      categories: p.categories || [p.category],
 	      form: p.form || null,
@@ -6709,21 +6812,6 @@
 	  }
 	  return picks.slice(0, n);
 	}
-	function getNewArrivals(n = 8) {
-	  const flagged = inStock(products).filter(p => p.isNew);
-	  if (flagged.length >= n) return flagged.slice(0, n);
-	  const rest = inStock([...products].sort((a, b) => Number(String(b.id).replace(/\D/g, '')) - Number(String(a.id).replace(/\D/g, ''))));
-	  const used = new Set(flagged.map(p => p.id));
-	  const picks = [...flagged];
-	  for (const p of rest) {
-	    if (picks.length >= n) break;
-	    if (!used.has(p.id)) {
-	      picks.push(p);
-	      used.add(p.id);
-	    }
-	  }
-	  return picks.slice(0, n);
-	}
 	function getRelated(product) {
 	  return (product.relatedIds || []).map(id => productById[id]).filter(Boolean);
 	}
@@ -6794,20 +6882,48 @@
 	}
 
 	/**
-	 * The ordered gallery for a product: its media rows when present, otherwise a
-	 * one-item fallback built from the single primary image. Never fabricates
-	 * placeholder tiles. Returns [{ url, alt, isPrimary, sortOrder }].
+	 * The ordered gallery for a product: structured media rows when present,
+	 * otherwise the local primary plus any real legacy catalogue gallery images.
+	 *
+	 * The legacy import stores the source image for `product.image` at gallery[0],
+	 * so that entry is intentionally replaced by the local/optimised primary. This
+	 * keeps the same artwork from appearing twice while preserving every genuine
+	 * secondary image. Never fabricates placeholder tiles.
+	 * Returns [{ url, alt, isPrimary, sortOrder }].
 	 */
 	function productGallery(product) {
 	  if (!product) return [];
-	  if (Array.isArray(product.media) && product.media.length) return product.media;
-	  if (product.image) return [{
-	    url: product.image,
+	  const legacy = Array.isArray(product.gallery) ? product.gallery.filter(url => typeof url === 'string' && url.trim()) : [];
+	  const structured = Array.isArray(product.media) ? product.media.filter(frame => frame?.url) : [];
+	  const primary = structured[0]?.url || product.image || legacy[0];
+	  if (!primary) return [];
+	  const frames = structured.length ? [...structured] : [{
+	    url: primary,
 	    alt: product.name,
 	    isPrimary: true,
 	    sortOrder: 0
 	  }];
-	  return [];
+	  const seen = new Set(frames.map(frame => frame.url));
+
+	  // gallery[0] is the source artwork behind the locally optimised primary.
+	  // Append only genuine legacy secondaries that are not already represented
+	  // by structured product_media rows.
+	  for (const url of legacy.slice(product.image ? 1 : 0)) {
+	    if (seen.has(url)) continue;
+	    seen.add(url);
+	    frames.push({
+	      url,
+	      alt: `${product.name} — image ${frames.length + 1}`,
+	      isPrimary: false,
+	      sortOrder: frames.length
+	    });
+	  }
+	  return frames;
+	}
+
+	/** Real secondary gallery frames for long-form PDP merchandising. */
+	function secondaryProductGallery(product) {
+	  return productGallery(product).slice(1);
 	}
 	function applyVariants(variantList) {
 	  if (!Array.isArray(variantList) || variantList.length === 0) return false;
@@ -6840,6 +6956,45 @@
 	  if (changed) catalogVersion += 1;
 	  return changed;
 	}
+
+	// ============================================================
+	// PURCHASABILITY — one definition of "can this actually be bought?".
+	//
+	// `priceVerified` was previously display-only: a product whose price could not
+	// be resolved rendered "Price coming soon" but still had a live Add to cart
+	// button. The customer could carry it all the way to checkout, where the
+	// server correctly refused the line — the first honest signal they got.
+	//
+	// Everything that can put a line in the cart now asks this instead, so the
+	// storefront tells the truth at the point of the click. The server-side
+	// rejection in api/_lib/pricing.js stays exactly as it is: this is the UX
+	// contract, not the security boundary.
+	// ============================================================
+
+	/** A usable, payable amount: a finite number strictly greater than zero. */
+	function isPayableAmount(value) {
+	  const n = Number(value);
+	  return Number.isFinite(n) && n > 0;
+	}
+
+	/**
+	 * Can this product (optionally at this pack size) be added to a cart?
+	 *
+	 * A variant is only purchasable at its OWN price — falling back to the base
+	 * price for a pack the customer did not choose is exactly the substitution the
+	 * server refuses.
+	 */
+	function isPurchasable(product, variant = null) {
+	  if (!product) return false;
+	  if (product.priceVerified === false) return false;
+	  if (variant && typeof variant === 'object' && variant.price != null) {
+	    return isPayableAmount(variant.price);
+	  }
+	  return isPayableAmount(product.price);
+	}
+
+	/** Copy for a control that cannot be a working Add to cart. */
+	const UNAVAILABLE_LABEL = 'Unavailable';
 
 	//#region src/lib/tracingRegistry.ts
 	const EXTRACTOR_KEY = Symbol.for("@supabase/supabase-js.traceContextExtractor");
@@ -29163,8 +29318,8 @@
 	// These are replaced with literal strings at build time by
 	// @rollup/plugin-replace (see rollup.config.mjs) — nothing is read from the
 	// environment at runtime.
-	const supabaseUrl = "[SENSITIVE]";
-	const supabasePublishableKey = "[SENSITIVE]";
+	const supabaseUrl = "https://gbcnvrymoarcqrvdnnvb.supabase.co";
+	const supabasePublishableKey = "sb_publishable_K9yRQPcwih-asuOIkLUExQ_3jFMB8x7";
 	const isSupabaseConfigured = Boolean(supabasePublishableKey);
 	if (!isSupabaseConfigured) {
 	  // Previously this threw, which crashed the very first module import and
@@ -29958,6 +30113,16 @@
 	  // label string, so existing call sites that pass a label keep working.
 	  const addToCart = reactExports.useCallback((product, qty = 1, variant = null) => {
 	    const isObj = variant && typeof variant === 'object';
+	    // Nothing without a real price may enter the cart. Every add path funnels
+	    // through here — cards, quick view, PDP, "add all to cart" — so this is
+	    // the one place that has to hold. The buttons are disabled too, but a
+	    // disabled button is a courtesy; this is the guarantee.
+	    if (!isPurchasable(product, isObj ? variant : null)) {
+	      toast('This item isn’t available to buy yet.', {
+	        kind: 'cart'
+	      });
+	      return false;
+	    }
 	    const label = isObj ? variant.label ?? null : variant;
 	    // A variantId is only meaningful when it identifies a priced row in
 	    // product_variants. Catalogue variants that carry a label but no price
@@ -29975,6 +30140,7 @@
 	      product: product.id,
 	      kind: 'cart'
 	    });
+	    return true;
 	  }, [toast]);
 
 	  // What the UI renders. Recomputed from the two lists, never stored.
@@ -30104,7 +30270,12 @@
 	      variantLabel: variantObj?.label ?? l.variant ?? null,
 	      unitPrice,
 	      unitMrp: Math.max(unitMrp, unitPrice),
-	      lineTotal: unitPrice * l.qty
+	      lineTotal: unitPrice * l.qty,
+	      // A line already persisted in localStorage from before this guard
+	      // existed — or one whose price disappeared when the catalogue
+	      // hydrated — must not be checkout-able. The cart says so plainly
+	      // instead of letting the server refuse the whole order later.
+	      purchasable: isPurchasable(product, variantObj)
 	    };
 	  };
 
@@ -30115,6 +30286,10 @@
 	  const catalogVersion = getCatalogVersion();
 	  const cartDetailed = reactExports.useMemo(() => state.cart.map(hydrate).filter(Boolean), [state.cart, catalogVersion]);
 	  const savedDetailed = reactExports.useMemo(() => state.saved.map(hydrate).filter(Boolean), [state.saved, catalogVersion]);
+
+	  // Lines that cannot be paid for. Cart and Checkout read this to block the
+	  // order instead of letting the customer discover it at the payment step.
+	  const blockedCartLines = reactExports.useMemo(() => cartDetailed.filter(l => !l.purchasable), [cartDetailed]);
 	  const cartCount = reactExports.useMemo(() => state.cart.reduce((s, l) => s + l.qty, 0), [state.cart]);
 	  const subtotal = reactExports.useMemo(() => cartDetailed.reduce((s, l) => s + l.lineTotal, 0), [cartDetailed]);
 	  const mrpTotal = reactExports.useMemo(() => cartDetailed.reduce((s, l) => s + l.unitMrp * l.qty, 0), [cartDetailed]);
@@ -30135,6 +30310,7 @@
 	    isWished: id => wishlist.includes(normalizeKey(id)),
 	    cartDetailed,
 	    savedDetailed,
+	    blockedCartLines,
 	    cartCount,
 	    wishCount: wishlist.length,
 	    subtotal,
@@ -30209,7 +30385,37 @@
 	  document.body.style.paddingRight = previousPaddingRight;
 	}
 
+	const NAV_PLACEHOLDER_COUNT = 5;
+
+	// Mirrors the catalogue settle rule in src/pages/Product.jsx: show the real
+	// links once hydrated, and fall back to the built-in list if Supabase never
+	// answers, so the nav can never be stuck as a skeleton.
+	function useCategoriesSettled() {
+	  const [timedOut, setTimedOut] = reactExports.useState(false);
+	  reactExports.useEffect(() => {
+	    if (isCategoriesHydrated()) return undefined;
+	    const t = setTimeout(() => setTimedOut(true), 5000);
+	    return () => clearTimeout(t);
+	  }, []);
+	  return isCategoriesHydrated() || timedOut;
+	}
+
+	// ============================================================================
+	// SORA LIFE V2 — HEADER
+	//
+	// Chrome only. Every interaction below is carried over unchanged from V1: the
+	// scroll listener, the drawer, the mobile search overlay, the reference-counted
+	// scroll lock, Escape layering and the outside-click handler. The drawer and
+	// the search overlay keep their existing markup and classes deliberately —
+	// they are outside Phase 1 scope and rewriting working focus/scroll-lock
+	// behaviour for a restyle would be a poor trade.
+	//
+	// Mobile bar: hamburger / centred wordmark / search + bag.
+	// Wishlist intentionally moves off the mobile header — three right-hand icons
+	// crowd a 390px bar, and MobileTabBar already carries "Saved".
+	// ============================================================================
 	function Header() {
+	  const categoriesSettled = useCategoriesSettled();
 	  const {
 	    cartCount,
 	    wishCount
@@ -30459,13 +30665,17 @@
 	              })]
 	            })]
 	          })]
-	        }), categories.slice(0, 5).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
+	        }), categoriesSettled ? categories.slice(0, 5).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
 	          to: `/category/${c.slug}`,
 	          className: ({
 	            isActive
 	          }) => `v2-hdr__link ${isActive ? 'active' : ''}`,
 	          children: c.name
-	        }, c.slug)), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
+	        }, c.slug)) : categories.slice(0, NAV_PLACEHOLDER_COUNT).map((c, i) => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-hdr__link v2-hdr__link--ph",
+	          "aria-hidden": "true",
+	          children: c.name
+	        }, `ph-${i}`)), /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
 	          to: "/shop?sort=bestselling",
 	          className: "v2-hdr__link",
 	          children: "Bestsellers"
@@ -30632,10 +30842,263 @@
 	  });
 	}
 
+	const FULFILLMENT_STATUSES = Object.freeze(['unfulfilled', 'processing', 'shipped', 'delivered', 'cancelled']);
+	const STATUS_LABELS = Object.freeze({
+	  unfulfilled: 'Not yet fulfilled',
+	  processing: 'Preparing order',
+	  shipped: 'Shipped',
+	  delivered: 'Delivered',
+	  cancelled: 'Fulfillment cancelled'
+	});
+	function normalizeFulfillmentStatus(value) {
+	  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+	  return FULFILLMENT_STATUSES.includes(normalized) ? normalized : null;
+	}
+	function fulfillmentStatusLabel(value) {
+	  const status = normalizeFulfillmentStatus(value);
+	  return status ? STATUS_LABELS[status] : null;
+	}
+	function isPrivateHostname(hostname) {
+	  const host = String(hostname || '').replace(/^\[|\]$/g, '').toLowerCase();
+	  if (!host || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return true;
+	  // Carrier links should use a public DNS name. Reject every IPv6 literal
+	  // rather than trying to safely classify mapped and reserved ranges here.
+	  if (host.includes(':')) return true;
+	  const octets = host.split('.').map(Number);
+	  if (octets.length !== 4 || octets.some(n => !Number.isInteger(n) || n < 0 || n > 255)) {
+	    return !host.includes('.') && !host.includes(':');
+	  }
+	  return octets[0] === 10 || octets[0] === 127 || octets[0] === 169 && octets[1] === 254 || octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31 || octets[0] === 192 && octets[1] === 168;
+	}
+
+	// Return one safe, normalized public HTTPS URL or null. No URL is ever
+	// derived from a carrier name or tracking number.
+	function safeTrackingUrl(value) {
+	  if (typeof value !== 'string') return null;
+	  const raw = value.trim();
+	  if (!raw || raw.length > 2048 || /[\u0000-\u001f\u007f\s]/.test(raw)) return null;
+	  try {
+	    const url = new URL(raw);
+	    if (url.protocol !== 'https:' || !url.hostname || url.username || url.password || isPrivateHostname(url.hostname)) return null;
+	    return url.href;
+	  } catch {
+	    return null;
+	  }
+	}
+	function cleanText(value, maxLength, label) {
+	  if (value == null || String(value).trim() === '') return null;
+	  const text = String(value).trim();
+	  if (text.length > maxLength || /[\u0000-\u001f\u007f]/.test(text)) {
+	    throw new Error(`${label} is invalid.`);
+	  }
+	  return text;
+	}
+	function validateFulfillmentInput(input = {}) {
+	  const rawStatus = input.fulfillmentStatus == null ? '' : String(input.fulfillmentStatus).trim();
+	  const fulfillmentStatus = rawStatus === '' ? null : normalizeFulfillmentStatus(rawStatus);
+	  if (rawStatus && !fulfillmentStatus) throw new Error('Choose a valid fulfillment status.');
+	  const rawTrackingUrl = input.trackingUrl == null ? '' : String(input.trackingUrl).trim();
+	  const trackingUrl = rawTrackingUrl ? safeTrackingUrl(rawTrackingUrl) : null;
+	  if (rawTrackingUrl && !trackingUrl) throw new Error('Tracking URL must be a public HTTPS URL.');
+	  return {
+	    fulfillmentStatus,
+	    carrierName: cleanText(input.carrierName, 120, 'Carrier name'),
+	    trackingNumber: cleanText(input.trackingNumber, 160, 'Tracking number'),
+	    trackingUrl
+	  };
+	}
+	function displayText(value, maxLength) {
+	  if (typeof value !== 'string') return null;
+	  const text = value.trim();
+	  return text && text.length <= maxLength && !/[\u0000-\u001f\u007f]/.test(text) ? text : null;
+	}
+	function displayTimestamp(value) {
+	  if (typeof value !== 'string' || value.length > 64) return null;
+	  return Number.isNaN(new Date(value).getTime()) ? null : value;
+	}
+	function fulfillmentForDisplay(value = {}) {
+	  const fulfillmentStatus = normalizeFulfillmentStatus(value.fulfillmentStatus ?? value.fulfillment_status);
+	  const record = {
+	    fulfillmentStatus,
+	    label: fulfillmentStatusLabel(fulfillmentStatus),
+	    carrierName: displayText(value.carrierName ?? value.carrier_name, 120),
+	    trackingNumber: displayText(value.trackingNumber ?? value.tracking_number, 160),
+	    trackingUrl: safeTrackingUrl(value.trackingUrl ?? value.tracking_url),
+	    shippedAt: displayTimestamp(value.shippedAt ?? value.shipped_at),
+	    deliveredAt: displayTimestamp(value.deliveredAt ?? value.delivered_at)
+	  };
+	  return hasFulfillmentData(record) ? record : null;
+	}
+	function hasFulfillmentData(value = {}) {
+	  return Boolean(normalizeFulfillmentStatus(value.fulfillmentStatus ?? value.fulfillment_status) || value.carrierName || value.carrier_name || value.trackingNumber || value.tracking_number || safeTrackingUrl(value.trackingUrl ?? value.tracking_url) || value.shippedAt || value.shipped_at || value.deliveredAt || value.delivered_at);
+	}
+
+	// ============================================================
+	// COMPANY / BUSINESS INFORMATION
+	//
+	// The factual details a marketplace is expected to publish: who operates it,
+	// how to reach them, when. Every value is admin-entered and every one is
+	// OPTIONAL — nothing here has a default, because a default would be a
+	// fabricated fact. Whatever is unset is simply absent from the public UI.
+	//
+	// Stored inside the EXISTING `contact` site_settings row, which is already on
+	// the public-read allowlist (migrations 0009 and 0015). A dedicated `company`
+	// key would have needed a migration to be readable by the storefront, and this
+	// record is exactly what `contact` already was — the store's own details — so
+	// it is widened rather than duplicated.
+	//
+	//   contact = {
+	//     email, phone, address,                       // pre-existing
+	//     legalName, hours,                            // added here
+	//     social:   { instagram, facebook, ... },      // added here
+	//     policies: { privacy, terms, shipping, returns },  // owner legal text
+	//   }
+	//
+	// This module is deliberately React-free so the rules below can be tested in
+	// Node without a DOM.
+	// ============================================================
+
+	const SOCIAL_NETWORKS = [{
+	  key: 'instagram',
+	  label: 'Instagram',
+	  icon: 'instagram'
+	}, {
+	  key: 'facebook',
+	  label: 'Facebook',
+	  icon: 'facebook'
+	}, {
+	  key: 'x',
+	  label: 'X',
+	  icon: 'twitter'
+	}, {
+	  key: 'youtube',
+	  label: 'YouTube',
+	  icon: 'externalLink'
+	}, {
+	  key: 'linkedin',
+	  label: 'LinkedIn',
+	  icon: 'externalLink'
+	}];
+
+	// One URL policy for every admin-supplied external link. safeTrackingUrl
+	// already IS that policy — https only, no embedded credentials, no local,
+	// private or literal-IP hosts — so it is reused rather than reimplemented,
+	// keeping a single place where the rule can be reviewed.
+	const safeExternalUrl = safeTrackingUrl;
+
+	/** One line of admin text: no control characters, collapsed, length-capped. */
+	function line(value, max) {
+	  if (typeof value !== 'string') return '';
+	  return value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/[ \t]+/g, ' ').trim().slice(0, max);
+	}
+
+	/** Multi-line admin text (an address, a policy). Blank lines collapse to one. */
+	function block(value, max) {
+	  if (typeof value !== 'string') return '';
+	  return value.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').split('\n').map(l => l.trim()).join('\n').trim().slice(0, max);
+	}
+
+	/**
+	 * An address good enough to render as a mailto:. Deliberately strict rather
+	 * than RFC-complete: a value that does not look like an address is far more
+	 * likely to be a typo than a valid exotic one, and publishing a broken
+	 * support address is worse than publishing none.
+	 */
+	function safeEmail(value) {
+	  // Trimmed, never repaired. Stripping the space out of "a b@x.com" would
+	  // publish a mailto: for an address nobody typed, which is worse than
+	  // publishing none — so an address with anything odd inside it is rejected.
+	  const text = line(value, 200);
+	  return /^[^\s@,;:<>"'()[\]\\]+@[^\s@,;:<>"'()[\]\\]+\.[A-Za-z]{2,}$/.test(text) ? text : '';
+	}
+
+	/** A dialable number. Digits, spaces and the usual separators only. */
+	function safePhone(value) {
+	  const text = line(value, 40);
+	  if (!/^\+?[\d][\d\s\-().]{4,}$/.test(text)) return '';
+	  return /\d{5,}/.test(text.replace(/\D/g, '')) ? text : '';
+	}
+
+	/** `tel:` target for a phone that has already passed safePhone(). */
+	function telHref(phone) {
+	  const cleaned = String(phone || '').replace(/[^\d+]/g, '');
+	  return cleaned ? `tel:${cleaned}` : '';
+	}
+	const POLICY_KEYS = ['privacy', 'terms', 'shipping', 'returns'];
+	const MAX_POLICY_LENGTH = 20000;
+	function sanitizeCompany(raw) {
+	  const src = raw && typeof raw === 'object' ? raw : {};
+	  const social = {};
+	  for (const network of SOCIAL_NETWORKS) {
+	    const url = safeExternalUrl(src.social?.[network.key]);
+	    if (url) social[network.key] = url;
+	  }
+	  const policies = {};
+	  for (const key of POLICY_KEYS) {
+	    const text = block(src.policies?.[key], MAX_POLICY_LENGTH);
+	    if (text) policies[key] = text;
+	  }
+	  return {
+	    legalName: line(src.legalName, 120),
+	    email: safeEmail(src.email),
+	    phone: safePhone(src.phone),
+	    address: block(src.address, 400),
+	    hours: line(src.hours, 160),
+	    social,
+	    policies
+	  };
+	}
+
+	/**
+	 * Admin-side validation. Public rendering is deliberately forgiving and hides
+	 * malformed values; saving should be stricter so an admin is told which field
+	 * needs attention rather than believing an unusable contact method is live.
+	 */
+	function validateCompanyForSave(raw) {
+	  const src = raw && typeof raw === 'object' ? raw : {};
+	  if (String(src.email || '').trim() && !safeEmail(src.email)) {
+	    throw new Error('Enter a valid support email address or leave it blank.');
+	  }
+	  if (String(src.phone || '').trim() && !safePhone(src.phone)) {
+	    throw new Error('Enter a valid support phone number or leave it blank.');
+	  }
+	  for (const network of SOCIAL_NETWORKS) {
+	    const value = String(src.social?.[network.key] || '').trim();
+	    if (value && !safeExternalUrl(value)) {
+	      throw new Error(`${network.label} must be a public https:// URL or left blank.`);
+	    }
+	  }
+	  return sanitizeCompany(src);
+	}
+
+	/** The business record for the current session. */
+	function companyInfo(source = contact) {
+	  return sanitizeCompany(source);
+	}
+
+	/** True when there is at least one way for a customer to make contact. */
+	function hasContactChannel(info) {
+	  return Boolean(info?.email || info?.phone || info?.address);
+	}
+
+	/** The social links that are actually configured, in a stable order. */
+	function socialLinks(info) {
+	  return SOCIAL_NETWORKS.filter(network => info?.social?.[network.key]).map(network => ({
+	    ...network,
+	    url: info.social[network.key]
+	  }));
+	}
+
+	/** Owner-supplied text for one policy, split into paragraphs. [] when unset. */
+	function policyParagraphs(info, key) {
+	  const text = info?.policies?.[key];
+	  return text ? text.split(/\n{2,}/).map(p => p.trim()).filter(Boolean) : [];
+	}
+
 	function Footer() {
-	  const email = typeof contact?.email === 'string' ? contact.email.trim() : '';
-	  const phone = typeof contact?.phone === 'string' ? contact.phone.trim() : '';
-	  const hasContact = Boolean(email || phone);
+	  const info = companyInfo();
+	  const socials = socialLinks(info);
+	  const name = branding?.siteName || 'SORA LIFE';
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("footer", {
 	    className: "ftr",
 	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -30647,46 +31110,88 @@
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Logo, {
 	            light: true
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            children: "Modern wellness, beauty and everyday care \u2014 delivered to your door."
+	            children: "A marketplace for wellness, personal care and everyday essentials."
+	          }), (info.email || info.phone) && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "ftr__contact",
+	            "aria-label": "Store contact details",
+	            children: [info.email && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	              href: `mailto:${info.email}`,
+	              children: info.email
+	            }), info.phone && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	              href: telHref(info.phone),
+	              children: info.phone
+	            })]
+	          }), socials.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	            className: "ftr__social",
+	            "aria-label": "Official social profiles",
+	            children: socials.map(social => /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	              href: social.url,
+	              target: "_blank",
+	              rel: "noopener noreferrer nofollow",
+	              "aria-label": social.label,
+	              className: "ftr__social-link",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: social.icon,
+	                size: 17,
+	                stroke: 1.6
+	              })
+	            }, social.key))
 	          })]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "ftr__col",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
 	            children: "Shop"
-	          }), categories.slice(0, 6).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: `/category/${c.slug}`,
-	            children: c.name
-	          }, c.slug)), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: "/shop",
 	            children: "All products"
-	          })]
+	          }), categories.slice(0, 3).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: `/category/${c.slug}`,
+	            children: c.name
+	          }, c.slug))]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "ftr__col",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
-	            children: "Care"
+	            children: "Account"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: "/account",
 	            children: "My account"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/account",
-	            children: "Track my order"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/cart",
-	            children: "My cart"
+	            to: "/account/orders",
+	            children: "Orders"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: "/wishlist",
 	            children: "Wishlist"
 	          })]
-	        }), hasContact && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "ftr__col",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
-	            children: "Contact"
-	          }), email && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: `mailto:${email}`,
-	            children: email
-	          }), phone && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-	            href: `tel:${phone.replace(/\s+/g, '')}`,
-	            children: phone
+	            children: "Company"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: "/about",
+	            children: ["About ", name]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/contact",
+	            children: "Contact & help"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/account/creator",
+	            children: "Creator Program"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "ftr__col",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
+	            children: "Legal"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/privacy",
+	            children: "Privacy"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/terms",
+	            children: "Terms"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/shipping",
+	            children: "Shipping"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/returns",
+	            children: "Returns & refunds"
 	          })]
 	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -30710,7 +31215,7 @@
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "ftr__bottom",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	          children: ["\xA9 ", new Date().getFullYear(), " Sora Life."]
+	          children: ["\xA9 ", new Date().getFullYear(), " ", info.legalName || name, "."]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	          className: "ftr__legal",
 	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
@@ -30815,15 +31320,15 @@
 	        className: "v2-mobile-cart__totals",
 	        "aria-live": "polite",
 	        "aria-atomic": "true",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          className: "v2-mobile-cart__count",
-	          children: [cartCount, " ", cartCount === 1 ? 'item' : 'items']
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
 	          className: "v2-mobile-cart__subtotal",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	            className: "sr-only",
 	            children: "Item subtotal "
 	          }), money(subtotal)]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "v2-mobile-cart__count",
+	          children: [cartCount, " ", cartCount === 1 ? 'item' : 'items']
 	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
 	        to: "/cart",
@@ -31138,11 +31643,12 @@
 	  className
 	}) {
 	  const [failed, setFailed] = reactExports.useState(false);
-	  return !failed && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	  return !failed && /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
 	    src: src,
 	    className: className,
 	    alt: "",
 	    "aria-hidden": "true",
+	    loading: "eager",
 	    onError: () => setFailed(true)
 	  });
 	}
@@ -31165,16 +31671,16 @@
 	      to: cta.to,
 	      className: "v2-btn v2-btn--sm hero-cta__button",
 	      tabIndex: active ? undefined : -1,
-	      children: [a.textureUrl && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
+	      children: [active && a.textureUrl && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
 	        src: a.textureUrl,
 	        className: "hero-cta__texture"
-	      }, a.textureUrl), a.iconUrl && a.iconSide === 'left' && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
+	      }, a.textureUrl), active && a.iconUrl && a.iconSide === 'left' && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
 	        src: a.iconUrl,
 	        className: "hero-cta__icon"
 	      }, a.iconUrl), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	        className: "hero-cta__label",
 	        children: children || cta.label
-	      }), a.iconUrl && a.iconSide === 'right' && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
+	      }), active && a.iconUrl && a.iconSide === 'right' && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
 	        src: a.iconUrl,
 	        className: "hero-cta__icon"
 	      }, a.iconUrl)]
@@ -31182,38 +31688,171 @@
 	  });
 	}
 
-	const HERO_PRODUCT_SLUG = 'biosash-sea-buckthorn-juice';
-	const SAFE_HERO_COPY = {
-	  kicker: 'SEA BUCKTHORN COLLECTION',
-	  title: 'Sea Buckthorn\nEssentials',
-	  sub: 'Explore juices, supplements and everyday care from the collection.',
-	  mobileSub: 'Juices, supplements & everyday care.',
+	// Pure, deterministic Homepage merchandising selectors.
+	//
+	// Every item returned here comes from the hydrated catalogue/category data.
+	// The selector never creates prices, discounts, ratings, brands or categories;
+	// sections whose supporting data does not exist simply receive an empty list.
+
+	function eligibleProduct(product) {
+	  return Boolean(product && product.id != null && product.slug && product.name && product.isActive !== false && Number(product.stock) > 0);
+	}
+	function stableProducts(list) {
+	  return [...list].sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0) || String(a.id).localeCompare(String(b.id)));
+	}
+	function distinct(primary, fallback, limit, excluded = new Set()) {
+	  const result = [];
+	  const seen = new Set(excluded);
+	  for (const product of [...primary, ...fallback]) {
+	    if (!eligibleProduct(product) || seen.has(product.id)) continue;
+	    seen.add(product.id);
+	    result.push(product);
+	    if (result.length === limit) break;
+	  }
+	  return result;
+	}
+
+	// Avoid filling a discovery rail with one category when a broad catalogue is
+	// available. Category order and product order remain deterministic.
+	function categoryBalanced(list, limit) {
+	  const groups = new Map();
+	  for (const product of list) {
+	    const key = product.category || 'uncategorized';
+	    if (!groups.has(key)) groups.set(key, []);
+	    groups.get(key).push(product);
+	  }
+	  const output = [];
+	  let row = 0;
+	  while (output.length < limit) {
+	    let added = false;
+	    for (const products of groups.values()) {
+	      if (products[row]) {
+	        output.push(products[row]);
+	        added = true;
+	        if (output.length === limit) break;
+	      }
+	    }
+	    if (!added) break;
+	    row += 1;
+	  }
+	  return output;
+	}
+
+	// A broad fallback hero must not silently become a single-brand or
+	// single-category takeover. Prefer real, imaged products across categories;
+	// when two candidates represent the same category, brand diversity breaks the
+	// tie. The output remains stable for the same hydrated catalogue.
+	function selectMarketplaceHeroProducts(productList, limit = 6) {
+	  const available = stableProducts((Array.isArray(productList) ? productList : []).filter(product => eligibleProduct(product) && product.image));
+	  const preferred = [...available.filter(product => product.isFeatured), ...available.filter(product => product.isNew), ...available];
+	  const unique = distinct(preferred, available, available.length);
+	  const balanced = categoryBalanced(unique, Math.max(0, limit));
+	  if (balanced.length <= 1) return balanced;
+	  const result = [];
+	  const remaining = [...balanced];
+	  const brands = new Set();
+	  while (remaining.length && result.length < limit) {
+	    const nextIndex = remaining.findIndex(product => {
+	      const brand = productBrandName(product);
+	      return brand && !brands.has(brand.toLocaleLowerCase());
+	    });
+	    const [next] = remaining.splice(nextIndex >= 0 ? nextIndex : 0, 1);
+	    result.push(next);
+	    const brand = productBrandName(next);
+	    if (brand) brands.add(brand.toLocaleLowerCase());
+	  }
+	  return result;
+	}
+	function cleanBrand(value) {
+	  const brand = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+	  return brand && brand.length <= 60 ? brand : '';
+	}
+	function productBrandName(product) {
+	  const explicit = cleanBrand(product?.brand || product?.brandName || product?.manufacturer);
+	  if (explicit) return explicit;
+
+	  // These two names are only inferred when they are literally present in the
+	  // catalogue record (name/category) or its existing source URL.
+	  const evidence = `${product?.name || ''} ${product?.category || ''}`;
+	  if (/\bmom[\s-]*trust\b/i.test(evidence)) return 'Mom Trust';
+	  try {
+	    const host = new URL(product?.permalink || '').hostname.toLowerCase().replace(/^www\./, '');
+	    if (host === 'biosash.com' || host.endsWith('.biosash.com')) return 'Biosash';
+	    if (/^mom-?trust\./.test(host) || host.includes('momtrust')) return 'Mom Trust';
+	  } catch {
+	    // Missing/relative source URLs carry no usable brand evidence.
+	  }
+	  return '';
+	}
+	function selectHomeMerchandising(productList, categoryList) {
+	  const available = stableProducts((Array.isArray(productList) ? productList : []).filter(eligibleProduct));
+	  const categories = (Array.isArray(categoryList) ? categoryList : []).filter(category => category?.slug && category?.name);
+	  const featured = available.filter(product => product.isFeatured);
+	  const discounted = available.filter(product => product.onSale || Number(product.discountPct) > 0);
+	  const trending = categoryBalanced(distinct(featured, discounted, Math.min(8, available.length)), 8);
+	  const trendingFilled = distinct(trending, categoryBalanced(available, 8), Math.min(8, available.length));
+	  const trendingIds = new Set(trendingFilled.map(product => product.id));
+	  const newProducts = available.filter(product => product.isNew);
+	  const discover = distinct(newProducts, [...available].reverse(), 5, trendingIds);
+	  const discoverFilled = discover.length >= 4 ? discover : distinct(discover, available, 5);
+	  const flaggedPopular = available.filter(product => product.isBestseller);
+	  const popularIsVerified = flaggedPopular.length >= 4;
+	  const priorIds = new Set([...trendingFilled, ...discoverFilled].map(product => product.id));
+	  const popular = popularIsVerified ? distinct(flaggedPopular, [], 8) : distinct(categoryBalanced(available, 8), available, 8, priorIds);
+	  const popularFilled = popular.length >= 4 ? popular : distinct(popular, available, 8);
+	  const brandMap = new Map();
+	  for (const product of available) {
+	    const name = productBrandName(product);
+	    if (!name) continue;
+	    const key = name.toLocaleLowerCase();
+	    if (!brandMap.has(key)) brandMap.set(key, {
+	      name,
+	      products: []
+	    });
+	    brandMap.get(key).products.push(product);
+	  }
+	  const brands = [...brandMap.values()].sort((a, b) => b.products.length - a.products.length || a.name.localeCompare(b.name)).slice(0, 4);
+	  const collections = categories.map(category => ({
+	    category,
+	    products: available.filter(product => (product.categories || [product.category]).includes(category.slug)).slice(0, 4)
+	  })).filter(collection => collection.products.length > 0).slice(0, 4);
+	  const momCategory = categories.find(category => /mom[\s-]*trust/i.test(`${category.slug} ${category.name}`));
+	  const momProducts = available.filter(product => productBrandName(product) === 'Mom Trust' || momCategory && (product.categories || [product.category]).includes(momCategory.slug)).slice(0, 6);
+	  return {
+	    available,
+	    trending: trendingFilled,
+	    discover: discoverFilled,
+	    discoverLink: newProducts.length ? '/shop?filter=new' : '/shop',
+	    popular: popularFilled,
+	    popularTitle: popularIsVerified ? 'Bestsellers' : 'Worth discovering',
+	    popularEyebrow: popularIsVerified ? 'Catalogue favourites' : 'Across the marketplace',
+	    brands,
+	    collections,
+	    momCategory,
+	    momProducts
+	  };
+	}
+
+	const MARKETPLACE_HERO_COPY = {
+	  kicker: 'SORA LIFE MARKETPLACE',
+	  title: 'Discover what fits your life.',
 	  cta: {
-	    label: 'EXPLORE COLLECTION',
+	    label: 'Explore marketplace',
 	    to: '/shop'
 	  }
 	};
 
 	// Only mobile typography responds to length; configured copy stays intact.
 	const titleClass = title => `v2-hero__title${String(title || '').trim().length > 22 ? ' v2-hero__title--long' : ''}`;
-
-	// Replace only the currently published, generic sea-buckthorn slide copy.
-	// The configured artwork and every other Admin-managed slide field remain
-	// untouched; this is a storefront copy-safety override, not a data write.
-	function withSafeHeroCopy(slide) {
-	  const isCurrentSeaBuckthornSlide = slide?.kicker?.trim().toUpperCase() === 'HIMALAYAN WELLNESS' && slide?.title?.trim() === 'The Power of Sea Buckthorn';
-	  if (!isCurrentSeaBuckthornSlide) return slide;
-	  return {
-	    ...slide,
-	    ...SAFE_HERO_COPY
-	  };
-	}
-	function resolveHeroProduct() {
-	  const exact = productBySlug?.[HERO_PRODUCT_SLUG];
-	  if (exact?.image) return exact;
-	  // Defensive: if the catalogue is swapped by applyCatalog() and that slug is
-	  // gone, fall back to the first in-stock product that has a real image.
-	  return (products || []).find(p => p?.image && p.stock !== 0) || null;
+	function fallbackCategoryCount(productList) {
+	  const validSlugs = new Set((categories || []).filter(category => category?.slug).map(category => category.slug));
+	  const slugs = new Set();
+	  for (const product of productList) {
+	    for (const slug of product.categories || [product.category]) {
+	      if (validSlugs.has(slug)) slugs.add(slug);
+	    }
+	  }
+	  return slugs.size;
 	}
 
 	// V2 note: the previous hardcoded BENEFITS strip ("Rich in 190+ Nutrients",
@@ -31282,74 +31921,53 @@
 	  return Boolean(stillFor(slide));
 	}
 	function Hero() {
-	  // Product-led hero is the V2 default. Admin-configured slides opt back into
-	  // the original slide rendering because that copy is approved content.
-	  if (!heroSlidesConfigured) return /*#__PURE__*/jsxRuntimeExports.jsx(ProductHero$1, {});
+	  if (!heroSlidesConfigured) return /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceHero, {});
 	  return /*#__PURE__*/jsxRuntimeExports.jsx(ConfiguredHero, {});
 	}
 
-	// ---------------------------------------------------------------- product-led
-	function ProductHero$1() {
-	  const product = resolveHeroProduct();
-	  if (!product) return null;
+	// ----------------------------------------------------------- marketplace fall
+	function MarketplaceHero() {
+	  const heroProducts = selectMarketplaceHeroProducts(products, 5);
+	  if (!heroProducts.length) return null;
+	  const categoryCount = fallbackCategoryCount(heroProducts);
+	  const supportingCopy = categoryCount > 1 ? `Explore products across ${categoryCount} catalogue categories, all in one place.` : 'Explore the active catalogue, all in one place.';
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	    className: "v2-hero v2-hero--product",
-	    "aria-label": "Featured product",
+	    className: "v2-hero v2-hero--marketplace",
+	    "aria-labelledby": "marketplace-hero-title",
 	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-hero__stage",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-hero__ground",
-	        "aria-hidden": "true"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-hero__leaf v2-hero__leaf--a",
-	        "aria-hidden": "true"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-hero__leaf v2-hero__leaf--b",
-	        "aria-hidden": "true"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-hero__plinth",
-	        "aria-hidden": "true"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-hero__contact",
-	        "aria-hidden": "true"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-hero__productwrap",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	          product: product,
-	          frame: "hero",
-	          sizes: "(max-width: 767px) 62vw, 46vw",
-	          alt: product.name
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "v2-hero__ui",
+	      className: "v2-hero__stage hm-hero",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "hm-hero__copy",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	          className: "v2-hero__kicker",
-	          children: SAFE_HERO_COPY.kicker
+	          className: "hm-hero__kicker",
+	          children: MARKETPLACE_HERO_COPY.kicker
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-	          className: titleClass(SAFE_HERO_COPY.title),
-	          children: SAFE_HERO_COPY.title
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	          className: "v2-hero__sub",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "v2-hero__sub-full",
-	            children: SAFE_HERO_COPY.sub
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "v2-hero__sub-compact",
-	            children: SAFE_HERO_COPY.mobileSub
+	          id: "marketplace-hero-title",
+	          children: MARKETPLACE_HERO_COPY.title
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          children: supportingCopy
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: MARKETPLACE_HERO_COPY.cta.to,
+	          className: "hm-hero__cta",
+	          children: [MARKETPLACE_HERO_COPY.cta.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "arrowRight",
+	            size: 16,
+	            stroke: 1.8
 	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	            to: SAFE_HERO_COPY.cta.to,
-	            className: "v2-btn v2-btn--sm",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "v2-hero__cta-full",
-	              children: SAFE_HERO_COPY.cta.label
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "v2-hero__cta-compact",
-	              children: "Explore collection"
-	            })]
-	          })
 	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "hm-hero__assortment",
+	        "aria-label": "Products from across the marketplace",
+	        children: heroProducts.map((product, index) => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: `/product/${product.slug}`,
+	          className: `hm-hero__product hm-hero__product--${index + 1}`,
+	          "aria-label": product.name,
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	            product: product,
+	            frame: "v2",
+	            sizes: "(max-width: 767px) 24vw, 220px"
+	          })
+	        }, product.id))
 	      })]
 	    })
 	  });
@@ -31370,7 +31988,7 @@
 	  // decorative background). Phones, data-saver users and reduced-motion users
 	  // get the poster still instead, which is already authored for every video
 	  // slide and is ~70x smaller. Desktop behaviour is unchanged.
-	  const [useVideo, setUseVideo] = reactExports.useState(false);
+	  const [useVideo, setUseVideo] = reactExports.useState(() => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches && !reduced && navigator.connection?.saveData !== true);
 	  reactExports.useEffect(() => {
 	    if (typeof window === 'undefined' || !window.matchMedia) return;
 	    const mq = window.matchMedia('(min-width: 768px)');
@@ -31386,14 +32004,32 @@
 	  // hero still has structure rather than collapsing to nothing.
 	  const renderable = heroSlides.filter(s => isRenderable(s, useVideo, videoFailed));
 	  const SLIDES = renderable.length ? renderable : heroSlides;
-	  const DISPLAY_SLIDES = SLIDES.map(withSafeHeroCopy);
+	  const DISPLAY_SLIDES = SLIDES;
+	  const [preparedSlides, setPreparedSlides] = reactExports.useState(() => new Set(SLIDES[0]?.id ? [SLIDES[0].id] : []));
+	  const prepareSlide = reactExports.useCallback(index => {
+	    if (!SLIDES.length) return;
+	    const target = (index + SLIDES.length) % SLIDES.length;
+	    const id = SLIDES[target]?.id;
+	    if (!id) return;
+	    setPreparedSlides(current => {
+	      if (current.has(id)) return current;
+	      const nextSet = new Set(current);
+	      nextSet.add(id);
+	      return nextSet;
+	    });
+	  }, [SLIDES]);
 
 	  // A dropped slide shortens the deck; keep the index inside it.
 	  reactExports.useEffect(() => {
-	    if (active >= SLIDES.length) setActive(0);
-	  }, [SLIDES.length, active]);
-	  const go = reactExports.useCallback(i => setActive((i + SLIDES.length) % SLIDES.length), [SLIDES.length]);
-	  const next = reactExports.useCallback(() => setActive(a => (a + 1) % SLIDES.length), [SLIDES.length]);
+	    if (active >= SLIDES.length) setActive(0);else prepareSlide(active);
+	  }, [SLIDES.length, active, prepareSlide]);
+	  const go = reactExports.useCallback(i => {
+	    const target = (i + SLIDES.length) % SLIDES.length;
+	    prepareSlide(target);
+	    setActive(target);
+	  }, [SLIDES.length, prepareSlide]);
+	  const next = reactExports.useCallback(() => go(active + 1), [active, go]);
+	  const prepareNext = reactExports.useCallback(() => prepareSlide(active + 1), [active, prepareSlide]);
 	  reactExports.useEffect(() => {
 	    if (paused || reduced || SLIDES.length < 2) return;
 	    timer.current = setTimeout(next, INTERVAL);
@@ -31451,17 +32087,11 @@
 	    children: [DISPLAY_SLIDES.map((s, i) => (() => {
 	      const appearance = homepage.heroCtas?.[s.id];
 	      const artworkOnly = ![s.kicker, s.title, s.sub, s.lede].some(value => value && /[A-Za-z0-9]/.test(value));
-	      const ctaLabel = s.cta.label === SAFE_HERO_COPY.cta.label ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "v2-hero__cta-full",
-	          children: s.cta.label
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "v2-hero__cta-compact",
-	          children: "Explore collection"
-	        })]
-	      }) : s.cta.label;
+	      const ctaLabel = s.cta?.label;
+	      const mediaPrepared = i === active || preparedSlides.has(s.id);
+	      const activeVideo = i === active && s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src;
 	      return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: `v2-hero__slide ${i === active ? 'is-active' : ''} ${s.sub === SAFE_HERO_COPY.sub ? 'v2-hero__slide--collection' : ''}`,
+	        className: `v2-hero__slide ${i === active ? 'is-active' : ''}`,
 	        "aria-hidden": i !== active,
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	          className: "v2-hero__media",
@@ -31470,7 +32100,7 @@
 	            ref: el => {
 	              parallaxRefs.current[i] = el;
 	            },
-	            children: s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src ? /*#__PURE__*/jsxRuntimeExports.jsx("video", {
+	            children: mediaPrepared && (activeVideo ? /*#__PURE__*/jsxRuntimeExports.jsx("video", {
 	              className: "v2-hero__img",
 	              autoPlay: true,
 	              muted: true,
@@ -31485,6 +32115,7 @@
 	                ...v,
 	                [s.id]: true
 	              })),
+	              onLoadedData: prepareNext,
 	              children: /*#__PURE__*/jsxRuntimeExports.jsx("source", {
 	                src: s.src,
 	                type: "video/mp4"
@@ -31503,8 +32134,9 @@
 	                objectPosition: s.position
 	              },
 	              loading: i === active ? 'eager' : 'lazy',
-	              fetchpriority: i === active ? 'high' : undefined,
-	              decoding: "async"
+	              fetchPriority: i === active ? 'high' : undefined,
+	              decoding: "async",
+	              onLoad: i === active ? prepareNext : undefined
 	            }) : /*#__PURE__*/jsxRuntimeExports.jsx("img", {
 	              className: "v2-hero__img",
 	              src: heroSrc(s.src, 1600),
@@ -31515,9 +32147,10 @@
 	                objectPosition: s.position
 	              },
 	              loading: i === active ? 'eager' : 'lazy',
-	              fetchpriority: i === active ? 'high' : undefined,
-	              decoding: "async"
-	            })
+	              fetchPriority: i === active ? 'high' : undefined,
+	              decoding: "async",
+	              onLoad: i === active ? prepareNext : undefined
+	            }))
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "v2-hero__ui",
@@ -31529,15 +32162,7 @@
 	            children: s.title
 	          }), (s.sub || s.lede) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	            className: "v2-hero__sub",
-	            children: s.sub === SAFE_HERO_COPY.sub ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "v2-hero__sub-full",
-	                children: s.sub
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                className: "v2-hero__sub-compact",
-	                children: SAFE_HERO_COPY.mobileSub
-	              })]
-	            }) : s.sub || s.lede
+	            children: s.sub || s.lede
 	          }), s.cta?.to && /*#__PURE__*/jsxRuntimeExports.jsx(HeroCta, {
 	            cta: s.cta,
 	            appearance: appearance,
@@ -31692,7 +32317,7 @@
 	          children: /*#__PURE__*/jsxRuntimeExports.jsx(CategoryMark, {
 	            category: c
 	          })
-	        }), image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	        }), image && /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
 	          className: "v2-cat__photo",
 	          src: image,
 	          alt: "",
@@ -31724,14 +32349,21 @@
 	  });
 	}
 
-	// Decorative images are separate, non-interactive layers, never content
-	// overlays. Their opacity cannot fade category labels or promotion artwork.
 	function HomeVisualLayers({
 	  background,
 	  texture,
 	  left,
 	  right
 	}) {
+	  const [mobile, setMobile] = reactExports.useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)').matches);
+	  reactExports.useEffect(() => {
+	    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+	    const mq = window.matchMedia('(max-width: 767px)');
+	    const update = () => setMobile(mq.matches);
+	    update();
+	    mq.addEventListener?.('change', update);
+	    return () => mq.removeEventListener?.('change', update);
+	  }, []);
 	  const layers = [background && {
 	    ...background,
 	    name: 'background'
@@ -31744,12 +32376,12 @@
 	  }, right && {
 	    ...right,
 	    name: 'right'
-	  }].filter(layer => layer?.url);
+	  }].filter(layer => layer?.url && !(mobile && layer.hideMobile));
 	  if (!layers.length) return null;
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	    className: "hp-visual-layers",
 	    "aria-hidden": "true",
-	    children: layers.map(layer => /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	    children: layers.map(layer => /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
 	      alt: "",
 	      src: layer.url,
 	      className: `hp-visual-layer hp-visual-layer--${layer.name}${layer.hideMobile ? ' hp-visual-layer--mobile-hidden' : ''}`,
@@ -31822,239 +32454,25 @@
 	          opacity: a.overlayOpacity
 	        }
 	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "v2-wrap hp-category-strip__content",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(CategoryRail, {})
-	    })]
-	  });
-	}
-
-	function PriceTag({
-	  product,
-	  showOff = true,
-	  size,
-	  variant = null,
-	  v2 = false
-	}) {
-	  const {
-	    currency,
-	    priceVerified
-	  } = product;
-	  // When a pack size is selected its own price is what the customer pays,
-	  // so the whole tag (price, MRP and % off) comes from the variant.
-	  const price = variant?.price ?? product.price;
-	  const mrp = variant?.mrp ?? product.mrp;
-	  const discountPct = variant ? variant.discountPct ?? (mrp > price ? Math.round((mrp - price) / mrp * 100) : 0) : product.discountPct;
-	  if (priceVerified === false) {
-	    return v2 ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "v2-price",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-price__tbd",
-	        children: "Price coming soon"
-	      })
-	    }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "price",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "price-tbd muted",
-	        children: "Price coming soon"
-	      })
-	    });
-	  }
-	  const hasDiscount = mrp > price;
-	  if (v2) {
-	    return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	      className: `v2-price ${size === 'lg' ? 'v2-price--lg' : ''}`,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-price__now",
-	        children: money(price, currency)
-	      }), hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        className: "v2-price__mrp",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "v2-price__mrp-lbl",
-	          children: "MRP"
-	        }), money(mrp, currency)]
-	      }), showOff && discountPct > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        className: "v2-price__off",
-	        children: [discountPct, "% off"]
-	      })]
-	    });
-	  }
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	    className: `price ${size === 'lg' ? 'price--lg' : ''}`,
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	      className: "now",
-	      children: money(price, currency)
-	    }), hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	      className: "was",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "was-lbl",
-	        children: "MRP"
-	      }), " ", money(mrp, currency)]
-	    }), showOff && discountPct > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	      className: "off",
-	      children: [discountPct, "% off"]
-	    })]
-	  });
-	}
-
-	function pickBadge(product, out) {
-	  if (out) return {
-	    label: 'Sold out',
-	    cls: 'v2-badge--out'
-	  };
-	  const pct = Number(product.discountPct);
-	  // Under 5% is not worth a badge — and rounding a 3% saving up to "5% off"
-	  // is exactly the kind of thing that erodes trust.
-	  if (Number.isFinite(pct) && pct >= 5) return {
-	    label: `${pct}% off`,
-	    cls: ''
-	  };
-	  const b = Array.isArray(product.badges) ? product.badges[0] : null;
-	  if (b?.label) {
-	    return {
-	      label: b.label,
-	      cls: b.type === 'new' ? 'v2-badge--soft' : 'v2-badge--forest'
-	    };
-	  }
-	  return null;
-	}
-	function ProductCard({
-	  product
-	}) {
-	  const {
-	    addToCart,
-	    toggleWish,
-	    isWished
-	  } = useStore();
-	  const wished = isWished(product.id);
-	  const out = product.stock === 0;
-	  const cat = categoryBySlug[product.category];
-	  const badge = pickBadge(product, out);
-	  const meta = [cat?.name, product.form].filter(Boolean).join(' · ');
-	  const lowStock = !out && Number.isFinite(product.stock) && product.stock > 0 && product.stock <= 5;
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
-	    className: `v2-pc ${out ? 'is-out' : ''}`,
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-pc__media",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	        to: `/product/${product.slug}`,
-	        "aria-label": product.name,
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	          product: product,
-	          frame: "v2"
-	        })
-	      }), badge && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-pc__badges",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: `v2-badge ${badge.cls}`,
-	          children: badge.label
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	        type: "button",
-	        className: `v2-iconbtn v2-pc__wish ${wished ? 'is-on' : ''}`,
-	        onClick: () => toggleWish(product),
-	        "aria-pressed": wished,
-	        "aria-label": wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`,
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "heart",
-	          size: 14,
-	          stroke: 1.6,
-	          fill: wished ? 'currentColor' : 'none'
-	        })
-	      }), out && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-pc__soldout",
-	        children: "Sold out"
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-pc__body",
-	      children: [meta && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	        className: "v2-pc__meta",
-	        children: meta
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	        className: "v2-pc__name",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	          to: `/product/${product.slug}`,
-	          children: product.name
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "v2-pc__foot",
-	        children: [lowStock && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          className: "v2-pc__note",
-	          children: ["Only ", product.stock, " left"]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
-	          product: product,
-	          showOff: false,
-	          v2: true
-	        }), out ? /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	          type: "button",
-	          className: "v2-pc__cta v2-pc__cta--out",
-	          disabled: true,
-	          "aria-disabled": "true",
-	          children: "Notify me"
-	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	          type: "button",
-	          className: "v2-pc__cta",
-	          onClick: () => addToCart(product),
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "bag",
-	            size: 14,
-	            stroke: 1.6
-	          }), " Add to cart"]
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "hm-category-head",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "v2-eyebrow",
+	            children: "Shop the catalogue"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            className: "v2-h2",
+	            children: "Browse by category"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          children: ["Swipe to explore ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            "aria-hidden": "true",
+	            children: "\u2192"
+	          })]
 	        })]
-	      })]
-	    })]
-	  });
-	}
-
-	function CompactProductCard({
-	  product
-	}) {
-	  const {
-	    addToCart
-	  } = useStore();
-	  const out = product.stock === 0;
-	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	    className: "v2-cc",
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	      to: `/product/${product.slug}`,
-	      className: "v2-cc__m",
-	      "aria-hidden": "true",
-	      tabIndex: -1,
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	        product: product,
-	        frame: "v2",
-	        sizes: "80px"
-	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-cc__b",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-cc__brand",
-	        children: branding.siteName
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	        className: "v2-cc__n",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	          to: `/product/${product.slug}`,
-	          style: {
-	            color: 'inherit',
-	            textDecoration: 'none'
-	          },
-	          children: product.name
-	        })
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
-	        product: product,
-	        showOff: false,
-	        v2: true
-	      })]
-	    }), !out && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	      type: "button",
-	      className: "v2-cc__add",
-	      onClick: () => addToCart(product),
-	      "aria-label": `Add ${product.name} to cart`,
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "plus",
-	        size: 12,
-	        stroke: 1.8
-	      })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryRail, {})]
 	    })]
 	  });
 	}
@@ -32078,11 +32496,9 @@
 	      className: "v2-ed__media",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: "v2-pimg",
-	        children: image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	        children: image && /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
 	          src: image,
-	          alt: alt || '',
-	          loading: "lazy",
-	          decoding: "async"
+	          alt: alt || ''
 	        })
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	        className: "v2-ed__scrim",
@@ -32152,62 +32568,12 @@
 	      className: "v2-story__m",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: "v2-pimg",
-	        children: image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	        children: image && /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
 	          src: image,
-	          alt: alt || '',
-	          loading: "lazy",
-	          decoding: "async"
+	          alt: alt || ''
 	        })
 	      })
 	    })]
-	  });
-	}
-
-	function defaultItems() {
-	  const out = [{
-	    icon: 'lock',
-	    title: 'Secure checkout',
-	    sub: 'Encrypted payments'
-	  }];
-	  out.push({
-	    icon: 'truck',
-	    title: 'Free standard shipping',
-	    sub: 'Delivery options at checkout'
-	  });
-	  out.push({
-	    icon: 'package',
-	    title: 'Order tracking',
-	    sub: 'In your account'
-	  }, {
-	    icon: 'chat',
-	    title: 'Help & support',
-	    sub: 'Get in touch'
-	  });
-	  return out;
-	}
-	function TrustStrip({
-	  items
-	}) {
-	  const list = (Array.isArray(items) && items.length ? items : defaultItems()).slice(0, 4);
-	  if (!list.length) return null;
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-	    className: "v2-trust",
-	    children: list.map(it => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-	      className: "v2-trust__it",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: it.icon,
-	        size: 19,
-	        stroke: 1.5
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "v2-trust__t",
-	          children: it.title
-	        }), it.sub && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "v2-trust__s",
-	          children: it.sub
-	        })]
-	      })]
-	    }, it.title))
 	  });
 	}
 
@@ -32289,13 +32655,13 @@
 	              fontSize: 'var(--text-3xl)',
 	              margin: '10px 0 8px'
 	            },
-	            children: "Wellness notes, quietly good offers."
+	            children: "New finds, useful updates, occasional offers."
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	            style: {
 	              color: 'rgba(251,248,241,0.8)',
 	              maxWidth: '46ch'
 	            },
-	            children: "Occasional notes on new products and seasonal rituals. No noise, and you can unsubscribe whenever you like."
+	            children: "Hear about products and marketplace updates when there is something worth sharing. No noise, and you can unsubscribe whenever you like."
 	          }), done ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "nl__done",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -32686,12 +33052,10 @@
 	  const label = artworkLinkLabel(promo);
 	  // Routing shape only — the value is already policy-checked upstream.
 	  const isExternal = !!ctaUrl && /^https:\/\//i.test(ctaUrl);
-	  const image = /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	  const image = /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
 	    className: imgClassName,
 	    src: src,
 	    alt: title || 'Promotion',
-	    loading: "lazy",
-	    decoding: "async",
 	    onError: onError
 	  });
 	  let artwork = image;
@@ -32780,12 +33144,10 @@
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "promo-poster__art",
 	      "aria-hidden": "true",
-	      children: [imageUrl ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	      children: [imageUrl ? /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
 	        className: "promo-poster__img",
 	        src: imageUrl,
-	        alt: "",
-	        loading: "lazy",
-	        decoding: "async"
+	        alt: ""
 	      }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	        className: "promo-poster__deco",
 	        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -32862,11 +33224,9 @@
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	        className: "promo-offer__ic",
 	        "aria-hidden": "true",
-	        children: imageUrl ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	        children: imageUrl ? /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
 	          src: imageUrl,
-	          alt: "",
-	          loading: "lazy",
-	          decoding: "async"
+	          alt: ""
 	        }) : /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	          name: icon,
 	          size: 18
@@ -33052,6 +33412,1394 @@
 	        })]
 	      })]
 	    })
+	  });
+	}
+
+	function PriceTag({
+	  product,
+	  showOff = true,
+	  size,
+	  variant = null,
+	  v2 = false
+	}) {
+	  const {
+	    currency,
+	    priceVerified
+	  } = product;
+	  // When a pack size is selected its own price is what the customer pays,
+	  // so the whole tag (price, MRP and % off) comes from the variant.
+	  const price = variant?.price ?? product.price;
+	  const mrp = variant?.mrp ?? product.mrp;
+	  const discountPct = variant ? variant.discountPct ?? (mrp > price ? Math.round((mrp - price) / mrp * 100) : 0) : product.discountPct;
+	  if (priceVerified === false) {
+	    return v2 ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "v2-price",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-price__tbd",
+	        children: "Price coming soon"
+	      })
+	    }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "price",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "price-tbd muted",
+	        children: "Price coming soon"
+	      })
+	    });
+	  }
+	  const hasDiscount = mrp > price;
+	  if (v2) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      className: `v2-price ${size === 'lg' ? 'v2-price--lg' : ''}`,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-price__now",
+	        children: money(price, currency)
+	      }), hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "v2-price__mrp",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "v2-price__mrp-lbl",
+	          children: "MRP"
+	        }), money(mrp, currency)]
+	      }), showOff && discountPct > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "v2-price__off",
+	        children: [discountPct, "% off"]
+	      })]
+	    });
+	  }
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	    className: `price ${size === 'lg' ? 'price--lg' : ''}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "now",
+	      children: money(price, currency)
+	    }), hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      className: "was",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "was-lbl",
+	        children: "MRP"
+	      }), " ", money(mrp, currency)]
+	    }), showOff && discountPct > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      className: "off",
+	      children: [discountPct, "% off"]
+	    })]
+	  });
+	}
+
+	function pickBadge(product, out) {
+	  if (out) return {
+	    label: 'Sold out',
+	    cls: 'v2-badge--out'
+	  };
+	  const pct = Number(product.discountPct);
+	  // Under 5% is not worth a badge — and rounding a 3% saving up to "5% off"
+	  // is exactly the kind of thing that erodes trust.
+	  if (Number.isFinite(pct) && pct >= 5) return {
+	    label: `${pct}% off`,
+	    cls: ''
+	  };
+	  const b = Array.isArray(product.badges) ? product.badges[0] : null;
+	  if (b?.label) {
+	    return {
+	      label: b.label,
+	      cls: b.type === 'new' ? 'v2-badge--soft' : 'v2-badge--forest'
+	    };
+	  }
+	  return null;
+	}
+	function ProductCard({
+	  product
+	}) {
+	  const {
+	    addToCart,
+	    toggleWish,
+	    isWished
+	  } = useStore();
+	  const buyable = isPurchasable(product);
+	  const wished = isWished(product.id);
+	  const out = product.stock === 0;
+	  const cat = categoryBySlug[product.category];
+	  const badge = pickBadge(product, out);
+	  const meta = [cat?.name, product.form].filter(Boolean).join(' · ');
+	  const lowStock = !out && Number.isFinite(product.stock) && product.stock > 0 && product.stock <= 5;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+	    className: `v2-pc ${out ? 'is-out' : ''}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-pc__media",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	        to: `/product/${product.slug}`,
+	        "aria-label": product.name,
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	          product: product,
+	          frame: "v2"
+	        })
+	      }), badge && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-pc__badges",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: `v2-badge ${badge.cls}`,
+	          children: badge.label
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "button",
+	        className: `v2-iconbtn v2-pc__wish ${wished ? 'is-on' : ''}`,
+	        onClick: () => toggleWish(product),
+	        "aria-pressed": wished,
+	        "aria-label": wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`,
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "heart",
+	          size: 14,
+	          stroke: 1.6,
+	          fill: wished ? 'currentColor' : 'none'
+	        })
+	      }), out && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-pc__soldout",
+	        children: "Sold out"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-pc__body",
+	      children: [meta && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-pc__meta",
+	        children: meta
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	        className: "v2-pc__name",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: `/product/${product.slug}`,
+	          children: product.name
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-pc__foot",
+	        children: [lowStock && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "v2-pc__note",
+	          children: ["Only ", product.stock, " left"]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
+	          product: product,
+	          showOff: false,
+	          v2: true
+	        }), out ? /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "v2-pc__cta v2-pc__cta--out",
+	          disabled: true,
+	          "aria-disabled": "true",
+	          children: "Notify me"
+	        }) : !buyable ?
+	        /*#__PURE__*/
+	        /* No usable price yet. The card already says "Price coming soon";
+	           the control now says the same rather than offering a purchase
+	           that checkout would refuse. */
+	        jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "v2-pc__cta v2-pc__cta--out",
+	          disabled: true,
+	          "aria-disabled": "true",
+	          children: UNAVAILABLE_LABEL
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	          type: "button",
+	          className: "v2-pc__cta",
+	          onClick: () => addToCart(product),
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "bag",
+	            size: 14,
+	            stroke: 1.6
+	          }), " Add to cart"]
+	        })]
+	      })]
+	    })]
+	  });
+	}
+
+	function CompactProductCard({
+	  product
+	}) {
+	  const {
+	    addToCart
+	  } = useStore();
+	  const out = product.stock === 0;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "v2-cc",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	      to: `/product/${product.slug}`,
+	      className: "v2-cc__m",
+	      "aria-hidden": "true",
+	      tabIndex: -1,
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	        product: product,
+	        frame: "v2",
+	        sizes: "80px"
+	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-cc__b",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "v2-cc__brand",
+	        children: branding.siteName
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-cc__n",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: `/product/${product.slug}`,
+	          style: {
+	            color: 'inherit',
+	            textDecoration: 'none'
+	          },
+	          children: product.name
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
+	        product: product,
+	        showOff: false,
+	        v2: true
+	      })]
+	    }), !out && isPurchasable(product) && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	      type: "button",
+	      className: "v2-cc__add",
+	      onClick: () => addToCart(product),
+	      "aria-label": `Add ${product.name} to cart`,
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "plus",
+	        size: 12,
+	        stroke: 1.8
+	      })
+	    })]
+	  });
+	}
+
+	function SectionHeading({
+	  eyebrow,
+	  title,
+	  copy,
+	  link,
+	  linkLabel = 'View all'
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "v2-sechead hm-heading",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      children: [eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "v2-eyebrow",
+	        children: eyebrow
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        className: "v2-h2",
+	        children: title
+	      }), copy && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "hm-heading__copy",
+	        children: copy
+	      })]
+	    }), link && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	      to: link,
+	      className: "v2-more",
+	      children: [linkLabel, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "chevronRight",
+	        size: 12,
+	        stroke: 1.8
+	      })]
+	    })]
+	  });
+	}
+	function MarketplaceProductRail({
+	  id,
+	  eyebrow,
+	  title,
+	  products,
+	  link = '/shop'
+	}) {
+	  if (!Array.isArray(products) || products.length < 4) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "v2-sec hm-section",
+	    "data-home-section": id,
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHeading, {
+	        eyebrow: eyebrow,
+	        title: title,
+	        link: link
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-rail v2-rail--cards hm-product-rail",
+	        children: products.map(product => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
+	          product: product
+	        }, product.id))
+	      })]
+	    })
+	  });
+	}
+	function FeaturedBrands({
+	  brands
+	}) {
+	  // One brand would turn a marketplace module into a takeover. Wait until the
+	  // real catalogue can support an actual comparison/discovery experience.
+	  if (!Array.isArray(brands) || brands.length < 2) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "v2-sec hm-section hm-section--brands",
+	    "data-home-section": "brands",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHeading, {
+	        eyebrow: "Brand directory",
+	        title: "Featured brands",
+	        copy: "Meet labels already represented in the SORA LIFE catalogue."
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: `hm-brands${brands.length === 1 ? ' hm-brands--single' : ''}`,
+	        children: brands.map((brand, index) => {
+	          const product = brand.products[0];
+	          return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: `/product/${product.slug}`,
+	            className: `hm-brand hm-brand--${index + 1}`,
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	              className: "hm-brand__media",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	                product: product,
+	                frame: "v2",
+	                sizes: "(max-width: 767px) 48vw, 300px"
+	              })
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "hm-brand__body",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "hm-brand__kicker",
+	                children: "Brand"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	                children: brand.name
+	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	                className: "hm-brand__link",
+	                children: ["Discover the brand ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                  name: "arrowRight",
+	                  size: 14
+	                })]
+	              })]
+	            })]
+	          }, brand.name);
+	        })
+	      })]
+	    })
+	  });
+	}
+	function DiscoveryEdit({
+	  products,
+	  link = '/shop'
+	}) {
+	  if (!Array.isArray(products) || products.length < 4) return null;
+	  const [lead, ...supporting] = products;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "v2-sec hm-section hm-section--discover",
+	    "data-home-section": "discover",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHeading, {
+	        eyebrow: "New / discover",
+	        title: "A fresh route through the catalogue",
+	        copy: "Real products, selected across the marketplace for a broader browse.",
+	        link: link,
+	        linkLabel: "Explore all"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "hm-discover",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "hm-discover__lead",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
+	            product: lead
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "hm-discover__list",
+	          children: supporting.slice(0, 4).map(product => /*#__PURE__*/jsxRuntimeExports.jsx(CompactProductCard, {
+	            product: product
+	          }, product.id))
+	        })]
+	      })]
+	    })
+	  });
+	}
+	function MomTrustSpotlight({
+	  category,
+	  products
+	}) {
+	  if (!Array.isArray(products) || !products.length) return null;
+	  const [lead, ...more] = products;
+	  const destination = category?.slug ? `/category/${category.slug}` : `/product/${lead.slug}`;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "v2-sec hm-section",
+	    "data-home-section": "mom-trust",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-wrap",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "hm-mom",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: `/product/${lead.slug}`,
+	          className: "hm-mom__media",
+	          "aria-label": lead.name,
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	            product: lead,
+	            frame: "v2",
+	            sizes: "(max-width: 767px) 100vw, 560px"
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "hm-mom__body",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "v2-eyebrow",
+	            children: "Brand spotlight"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            children: "Mom Trust"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: "Explore the Mom Trust products currently available through the SORA LIFE catalogue."
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	            className: "hm-mom__products",
+	            children: [lead, ...more].slice(0, 3).map(product => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	              to: `/product/${product.slug}`,
+	              children: [product.name, /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "chevronRight",
+	                size: 13
+	              })]
+	            }, product.id))
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: destination,
+	            className: "v2-btn v2-btn--sm",
+	            children: "Explore Mom Trust"
+	          })]
+	        })]
+	      })
+	    })
+	  });
+	}
+	function CuratedCollections({
+	  collections
+	}) {
+	  if (!Array.isArray(collections) || collections.length < 2) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "v2-sec hm-section",
+	    "data-home-section": "collections",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHeading, {
+	        eyebrow: "Curated paths",
+	        title: "Shop the marketplace your way",
+	        copy: "Category-led edits built only from products currently in the catalogue."
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "hm-collections",
+	        children: collections.map(({
+	          category,
+	          products
+	        }) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: `/category/${category.slug}`,
+	          className: "hm-collection",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	            className: "hm-collection__images",
+	            "aria-hidden": "true",
+	            children: products.slice(0, 3).map(product => /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	              product: product,
+	              frame: "v2",
+	              sizes: "160px"
+	            }, product.id))
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "hm-collection__body",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              children: "Curated category"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	              children: category.name
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "hm-collection__link",
+	              children: ["Explore category ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "arrowRight",
+	                size: 14
+	              })]
+	            })]
+	          })]
+	        }, category.slug))
+	      })]
+	    })
+	  });
+	}
+	function CreatorCommunity() {
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "v2-sec hm-section",
+	    "data-home-section": "creator",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-wrap",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "hm-creator",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "hm-creator__mark",
+	          "aria-hidden": "true",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "users",
+	            size: 42,
+	            stroke: 1.25
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "hm-creator__copy",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "v2-eyebrow",
+	            children: "SORA LIFE Creator Program"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            children: "Share what you genuinely discover."
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: "Use your customer account to explore the Creator Program, its attribution model and your application status."
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: "/account/creator",
+	          className: "v2-btn v2-btn--gold",
+	          children: ["Explore the program ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "arrowRight",
+	            size: 15
+	          })]
+	        })]
+	      })
+	    })
+	  });
+	}
+	const TRUST_ITEMS$1 = [{
+	  icon: 'grid',
+	  title: 'Broad discovery',
+	  copy: 'Browse the active catalogue by category, search and filters.',
+	  to: '/shop'
+	}, {
+	  icon: 'lock',
+	  title: 'Secure checkout',
+	  copy: 'Payment amounts are verified by the server before an order is created.',
+	  to: '/cart'
+	}, {
+	  icon: 'heart',
+	  title: 'Keep a wishlist',
+	  copy: 'Save products and return to them from your account or this device.',
+	  to: '/wishlist'
+	}, {
+	  icon: 'package',
+	  title: 'Orders in one place',
+	  copy: 'Signed-in customers can revisit their order information.',
+	  to: '/account/orders'
+	}];
+	function WhySoraLife() {
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "v2-sec hm-section hm-section--trust",
+	    "data-home-section": "why-sora-life",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHeading, {
+	        eyebrow: "Built for confident browsing",
+	        title: "Why shop SORA LIFE"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "hm-trust",
+	        children: TRUST_ITEMS$1.map((item, index) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: item.to,
+	          className: "hm-trust__item",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            className: "hm-trust__number",
+	            children: ["0", index + 1]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: item.icon,
+	            size: 21,
+	            stroke: 1.4
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	            children: item.title
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: item.copy
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            className: "hm-trust__link",
+	            children: ["Explore ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "arrowRight",
+	              size: 13
+	            })]
+	          })]
+	        }, item.title))
+	      })]
+	    })
+	  });
+	}
+
+	// ============================================================
+	// HOMEPAGE DISCOVERY — "Shop by category" and "Shop by concerns".
+	//
+	// Both rails are built from the LIVE catalogue at render time. Nothing here
+	// invents a category, a concern, a product count or an image path:
+	//
+	//   * a category card appears only for a category that actually holds
+	//     products, and links to that category's existing route;
+	//   * a concern card appears only when its destination genuinely returns
+	//     enough products, and its backing test IS its destination — so the card
+	//     can never promise a result the linked page does not show.
+	//
+	// Concerns are commerce labels ("Acne Care", "Hair Fall Care"), never claims
+	// of treatment, cure or medical efficacy. A concern the current catalogue
+	// cannot support is hidden rather than shipped as a dead card.
+	// ============================================================
+
+	// A concern must lead somewhere worth going. Below this it is hidden.
+	const MIN_CONCERN_PRODUCTS = 3;
+	// Fewer than this and the whole concerns rail is not worth a section.
+	const MIN_CONCERNS_TO_RENDER = 3;
+
+	// Category artwork committed under public/category-images/. Listed explicitly
+	// because the browser cannot test for a file's existence — an unlisted slug
+	// falls back to real product imagery instead of a guessed path.
+	const CATEGORY_IMAGE_SLUGS = new Set(['bath-body', 'body-building', 'hair-care', 'juices-drinks', 'mens-care', 'personal-care', 'skin-care', 'supplements', 'wellness']);
+	function categoryImage(slug) {
+	  return CATEGORY_IMAGE_SLUGS.has(slug) ? `/public/category-images/${slug}.webp` : null;
+	}
+
+	// A concern is a need, not a product, so its fallback is the owned contextual
+	// artwork for the area of the range it belongs to — never a product bottle,
+	// which reads as merchandising rather than discovery. A bottle is only used if
+	// there is no group artwork at all.
+	const CONCERN_GROUP_IMAGE = {
+	  Skin: 'skin-care',
+	  Hair: 'hair-care',
+	  Wellness: 'wellness',
+	  'Personal care': 'personal-care'
+	};
+
+	// ------------------------------------------------------------
+	// Admin-assigned artwork.
+	//
+	// Stored inside the existing `homepage` site_settings row as
+	//   discovery: { categories: { [slug]: url }, concerns: { [id]: url } }
+	// so nothing new is provisioned and no migration is needed. Every value is
+	// put through safeVisualUrl(), the same guard the rest of the homepage
+	// appearance settings use, so a bad or hostile URL is dropped rather than
+	// rendered. An unset entry simply falls through to the built-in artwork.
+	// ------------------------------------------------------------
+	function sanitizeDiscoveryImages(raw) {
+	  const clean = group => {
+	    const out = {};
+	    const src = raw && typeof raw[group] === 'object' && raw[group] ? raw[group] : {};
+	    for (const [key, value] of Object.entries(src)) {
+	      const url = safeVisualUrl(value);
+	      if (url) out[key] = url;
+	    }
+	    return out;
+	  };
+	  return {
+	    categories: clean('categories'),
+	    concerns: clean('concerns')
+	  };
+	}
+
+	/** The saved discovery artwork for the current build/session. */
+	function discoveryImages(source = homepage) {
+	  return sanitizeDiscoveryImages(source?.discovery);
+	}
+
+	// ------------------------------------------------------------
+	// Admin-chosen products per concern.
+	//
+	// Stored alongside the artwork, in the same `homepage` site_settings row:
+	//   discovery: { concernProducts: { [concernId]: [slug, slug, ...] } }
+	//
+	// Only the product SLUG is stored. It is the catalogue's stable public key —
+	// it already names every /product/:slug route — so a mapping keeps working
+	// when a product is renamed, repriced or restocked. Deliberately no name,
+	// price or image is copied here: a snapshot of those would go stale silently.
+	//
+	// An unknown concern key, a non-slug value, a duplicate or anything past the
+	// cap is dropped rather than persisted. An empty selection is not stored at
+	// all, which is exactly how a concern falls back to automatic matching.
+	// ------------------------------------------------------------
+	const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,79}$/i;
+	const MAX_CONCERN_PRODUCTS = 24;
+	function sanitizeConcernProducts(raw, registry = CONCERNS) {
+	  const known = new Set((Array.isArray(registry) ? registry : []).map(c => c.id));
+	  const src = raw && typeof raw === 'object' ? raw : {};
+	  const out = {};
+	  for (const [key, value] of Object.entries(src)) {
+	    if (!known.has(key) || !Array.isArray(value)) continue;
+	    const picked = [];
+	    const seen = new Set();
+	    for (const entry of value) {
+	      if (picked.length >= MAX_CONCERN_PRODUCTS) break;
+	      if (typeof entry !== 'string') continue;
+	      const slug = entry.trim();
+	      if (!SLUG_RE.test(slug) || seen.has(slug)) continue;
+	      seen.add(slug);
+	      picked.push(slug);
+	    }
+	    if (picked.length) out[key] = picked;
+	  }
+	  return out;
+	}
+
+	/** The saved concern -> product-slug mapping for the current session. */
+	function discoveryConcernProducts(source = homepage) {
+	  return sanitizeConcernProducts(source?.discovery?.concernProducts);
+	}
+
+	// ============================================================
+	// DISCOVERY CARDS — the admin-owned model behind both lower rails.
+	//
+	// The two lower rails stopped being a view of the catalogue and became
+	// merchandising an admin composes: a card carries its own display name, its
+	// own artwork, its own hand-picked products, its own position and its own
+	// on/off switch. Cards live in the SAME `homepage` site_settings row, as two
+	// ordered arrays — order in the array IS order on the page.
+	//
+	//   discovery.categoryCards = [{ id, name, image, productSlugs[], enabled }]
+	//   discovery.concernCards  = [{ id, name, group, image, productSlugs[], enabled }]
+	//
+	// THE `id` IS THE ONLY STABLE THING. It is generated once from the name and
+	// never changes again, so renaming a card cannot break its saved artwork, its
+	// saved products, or a link somebody has already shared.
+	//
+	// NOTHING HERE TOUCHES THE CATALOGUE. A card is presentation: deleting one
+	// removes a tile from the homepage and nothing else. The real categories, the
+	// real products and the /category/:slug routes are owned by the catalogue and
+	// are read-only from here — which is also why the round rail under the hero,
+	// which renders those real categories, is entirely unaffected by this file.
+	// ============================================================
+	const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+	const MAX_DISCOVERY_CARDS = 24;
+	const MAX_CARD_NAME = 60;
+	const MAX_CARD_GROUP = 40;
+
+	/** One line of admin-entered text: no control characters, no runaway length. */
+	function cleanLine(value, max) {
+	  if (typeof value !== 'string') return '';
+	  return value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+	}
+
+	/** Product slugs only — deduped, charset-checked and capped. */
+	function cleanSlugList(value) {
+	  if (!Array.isArray(value)) return [];
+	  const out = [];
+	  const seen = new Set();
+	  for (const entry of value) {
+	    if (out.length >= MAX_CONCERN_PRODUCTS) break;
+	    if (typeof entry !== 'string') continue;
+	    const slug = entry.trim();
+	    if (!SLUG_RE.test(slug) || seen.has(slug)) continue;
+	    seen.add(slug);
+	    out.push(slug);
+	  }
+	  return out;
+	}
+
+	/**
+	 * Everything an admin can save about a rail, checked on the way in and on the
+	 * way out. A card without a usable id or a visible name is not a card, so it
+	 * is dropped rather than stored as a blank tile.
+	 */
+	function sanitizeDiscoveryCards(raw, {
+	  withGroup = false
+	} = {}) {
+	  if (!Array.isArray(raw)) return [];
+	  const out = [];
+	  const seen = new Set();
+	  for (const entry of raw) {
+	    if (out.length >= MAX_DISCOVERY_CARDS) break;
+	    if (!entry || typeof entry !== 'object') continue;
+	    const id = typeof entry.id === 'string' ? entry.id.trim().toLowerCase() : '';
+	    if (!ID_RE.test(id) || seen.has(id)) continue;
+	    const name = cleanLine(entry.name, MAX_CARD_NAME);
+	    if (!name) continue;
+	    seen.add(id);
+	    const card = {
+	      id,
+	      name,
+	      image: safeVisualUrl(entry.image) || '',
+	      productSlugs: cleanSlugList(entry.productSlugs),
+	      enabled: entry.enabled !== false
+	    };
+	    if (withGroup) card.group = cleanLine(entry.group, MAX_CARD_GROUP);
+	    out.push(card);
+	  }
+	  return out;
+	}
+
+	/**
+	 * A stable id for a new card, derived from its name.
+	 *
+	 * The plain form is used whenever it is free, so ids and the URLs built from
+	 * them stay readable. A collision appends a short suffix and tries again — an
+	 * admin never has to invent an id, and never has to resolve a clash by hand.
+	 */
+	function makeDiscoveryId(name, taken = []) {
+	  const base = cleanLine(name, MAX_CARD_NAME).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
+	  const stem = ID_RE.test(base) ? base : 'card';
+	  const used = new Set(taken);
+	  if (!used.has(stem)) return stem;
+	  for (let i = 0; i < 64; i += 1) {
+	    const candidate = `${stem}-${Math.random().toString(36).slice(2, 6)}`;
+	    if (ID_RE.test(candidate) && !used.has(candidate)) return candidate;
+	  }
+	  return `${stem}-${Date.now().toString(36)}`;
+	}
+
+	/**
+	 * Today's built-in rails, expressed as cards.
+	 *
+	 * This is the upgrade path: before an admin has saved anything, the rails are
+	 * these, which is byte-for-byte what they were before cards existed. The
+	 * saved artwork and the saved concern products are folded in, so nothing an
+	 * admin already configured is lost when the new shape takes over.
+	 */
+	function defaultCategoryCards(categoryList = categories, images = discoveryImages()) {
+	  const assigned = images?.categories || {};
+	  return (Array.isArray(categoryList) ? categoryList : []).filter(c => c?.slug && c?.name && ID_RE.test(c.slug)).map(c => ({
+	    id: c.slug,
+	    name: c.name,
+	    image: assigned[c.slug] || '',
+	    productSlugs: [],
+	    enabled: true
+	  }));
+	}
+	function defaultConcernCards(registry = CONCERNS, images = discoveryImages(), manual = discoveryConcernProducts()) {
+	  const assigned = images?.concerns || {};
+	  return (Array.isArray(registry) ? registry : []).map(c => ({
+	    id: c.id,
+	    name: c.label,
+	    group: c.group || '',
+	    image: assigned[c.id] || '',
+	    productSlugs: Array.isArray(manual?.[c.id]) ? [...manual[c.id]] : [],
+	    enabled: true
+	  }));
+	}
+
+	/**
+	 * The two card lists for the current settings, whatever shape they are saved
+	 * in. `*AreCurated` says whether an admin has taken ownership of that rail —
+	 * the automatic minimums below only police the built-in defaults, never a
+	 * list somebody deliberately composed.
+	 */
+	function normalizeDiscovery(raw, {
+	  categoryList = categories,
+	  registry = CONCERNS
+	} = {}) {
+	  const source = raw === undefined ? homepage?.discovery : raw;
+	  const images = sanitizeDiscoveryImages(source);
+	  const manual = sanitizeConcernProducts(source?.concernProducts, registry);
+	  const savedCategories = sanitizeDiscoveryCards(source?.categoryCards);
+	  const savedConcerns = sanitizeDiscoveryCards(source?.concernCards, {
+	    withGroup: true
+	  });
+	  return {
+	    categoryCards: savedCategories.length ? savedCategories : defaultCategoryCards(categoryList, images),
+	    concernCards: savedConcerns.length ? savedConcerns : defaultConcernCards(registry, images, manual),
+	    categoriesAreCurated: savedCategories.length > 0,
+	    concernsAreCurated: savedConcerns.length > 0
+	  };
+	}
+
+	/**
+	 * What the admin editor saves back.
+	 *
+	 * The cards are authoritative, but the pre-card keys are rewritten from them
+	 * as a faithful mirror rather than dropped. They are never edited separately,
+	 * so they cannot drift — and keeping them means a rollback to the previous
+	 * build still finds every image and every concern mapping where it expects.
+	 */
+	function discoveryPayload(categoryCards, concernCards) {
+	  const cats = sanitizeDiscoveryCards(categoryCards);
+	  const cons = sanitizeDiscoveryCards(concernCards, {
+	    withGroup: true
+	  });
+	  const categories_ = {};
+	  const concerns_ = {};
+	  const concernProducts = {};
+	  for (const c of cats) if (c.image) categories_[c.id] = c.image;
+	  for (const c of cons) {
+	    if (c.image) concerns_[c.id] = c.image;
+	    if (c.productSlugs.length) concernProducts[c.id] = [...c.productSlugs];
+	  }
+	  return {
+	    categoryCards: cats,
+	    concernCards: cons,
+	    categories: categories_,
+	    concerns: concerns_,
+	    concernProducts
+	  };
+	}
+
+	/**
+	 * Catalogue search for the admin's product picker.
+	 *
+	 * Lives here rather than inside the .jsx so the rule that decides what an
+	 * admin is offered is plain, testable code rather than component internals.
+	 * Matches on the fields an admin actually types — name, pack size, brand —
+	 * excludes what is already chosen, and stops at `limit` because a picker is
+	 * for finding one product, not for browsing the catalogue.
+	 */
+	function searchCatalogueForPicker(catalogue, term, {
+	  exclude = [],
+	  limit = 8
+	} = {}) {
+	  const t = String(term || '').trim().toLowerCase();
+	  if (!t) return [];
+	  const chosen = new Set(exclude);
+	  const hits = [];
+	  for (const p of Array.isArray(catalogue) ? catalogue : []) {
+	    if (hits.length >= limit) break;
+	    if (!p?.slug || chosen.has(p.slug)) continue;
+	    if (`${p.name || ''} ${p.form || ''} ${p.brand || ''}`.toLowerCase().includes(t)) hits.push(p);
+	  }
+	  return hits;
+	}
+
+	/**
+	 * Resolve stored slugs against the live catalogue, in the admin's order.
+	 *
+	 * A slug that no longer resolves, or resolves to a deactivated product, is
+	 * skipped silently — a stale mapping can thin a concern out but can never
+	 * put a dead card or a missing product on the page. Stock is deliberately
+	 * NOT filtered here, so a concern lists exactly what the rest of Shop lists
+	 * (the "In stock only" filter still applies on top, as everywhere else).
+	 */
+	function resolveConcernProducts(slugs, productList = products) {
+	  if (!Array.isArray(slugs) || !slugs.length) return [];
+	  const list = Array.isArray(productList) ? productList : [];
+	  const bySlug = new Map(list.map(p => [p?.slug, p]));
+	  const out = [];
+	  for (const slug of slugs) {
+	    const found = bySlug.get(slug);
+	    if (found && found.isActive !== false) out.push(found);
+	  }
+	  return out;
+	}
+
+	/** First product in `list` that has usable artwork, for a card's fallback image. */
+	function firstImaged(list) {
+	  return (list || []).find(p => {
+	    const gallery = productGallery(p);
+	    return Array.isArray(gallery) ? gallery.length > 0 : !!p?.image;
+	  }) || (list || [])[0] || null;
+	}
+
+	/** The catalogue category a card's id names, if any. Read-only lookup. */
+	function catalogueCategoryFor(id, categoryList = categories) {
+	  return (Array.isArray(categoryList) ? categoryList : []).find(c => c?.slug === id) || null;
+	}
+
+	/** The products behind a category card: hand-picked first, category second. */
+	function collectionProducts(card, productList = products, categoryList = categories) {
+	  if (!card) return [];
+	  const list = Array.isArray(productList) ? productList : [];
+	  const curated = resolveConcernProducts(card.productSlugs, list);
+	  if (curated.length) return curated;
+	  // An uncurated card whose id names a real category is still just a shortcut
+	  // to that category — that is what every card was before this existed.
+	  return catalogueCategoryFor(card.id, categoryList) ? list.filter(p => (p.categories || [p.category]).includes(card.id)) : [];
+	}
+
+	/** Resolve a ?collection= value. Disabled and unknown ids resolve to null. */
+	function findCollectionCard(param, cards) {
+	  if (typeof param !== 'string') return null;
+	  const key = param.trim().toLowerCase();
+	  if (!key) return null;
+	  const list = Array.isArray(cards) ? cards : normalizeDiscovery().categoryCards;
+	  return list.find(c => c.enabled && c.id === key) || null;
+	}
+
+	/**
+	 * Category cards for the "Shop by category" rail, in the admin's order.
+	 *
+	 * A card is dropped when nothing stands behind it, so an empty or misconfigured
+	 * entry never ships as a dead tile.
+	 */
+	function selectCategoryCards(categoryList = categories, productList = products, images = discoveryImages(), savedCards = undefined) {
+	  const saved = sanitizeDiscoveryCards(savedCards === undefined ? homepage?.discovery?.categoryCards : savedCards);
+	  const cards = saved.length ? saved : defaultCategoryCards(categoryList, images);
+	  return cards.filter(card => card.enabled).map(card => {
+	    const backing = collectionProducts(card, productList, categoryList);
+	    const curated = resolveConcernProducts(card.productSlugs, productList).length > 0;
+	    const category = catalogueCategoryFor(card.id, categoryList);
+	    // An uncurated card still carrying its category's own name opens the
+	    // real category page. Curate it, or rename it, and it opens the curated
+	    // listing instead — so the heading a customer lands on is always the
+	    // name they clicked.
+	    const usesCategoryRoute = !curated && category && category.name === card.name;
+	    const asset = categoryImage(card.id);
+	    return {
+	      id: card.id,
+	      // `slug` is kept as an alias: it is what the rail and the older tests
+	      // read, and for every migrated card it is still the category slug.
+	      slug: card.id,
+	      name: card.name,
+	      to: usesCategoryRoute ? `/category/${card.id}` : `/shop?collection=${encodeURIComponent(card.id)}`,
+	      // Admin artwork wins; the committed category asset is the fallback.
+	      image: card.image || asset,
+	      imageSource: card.image ? 'admin' : asset ? 'asset' : 'product',
+	      fallbackProduct: firstImaged(backing),
+	      count: backing.length,
+	      source: curated ? 'admin' : 'catalogue'
+	    };
+	  }).filter(card => card.count > 0 && (card.image || card.fallbackProduct));
+	}
+
+	// ------------------------------------------------------------
+	// Concern registry.
+	//
+	// `query` is BOTH the backing test and the destination, so a card's promise
+	// and the page it opens can never drift apart. Category-shaped entries use
+	// `categorySlug` instead and link to that category.
+	//
+	// Entries the current catalogue cannot back are filtered out at render time,
+	// so this list can safely describe more of the range than any one catalogue
+	// holds — the richer the catalogue, the more of it lights up.
+	// ------------------------------------------------------------
+	const CONCERNS = [
+	// Skin
+	{
+	  id: 'acne',
+	  label: 'Acne Care',
+	  group: 'Skin',
+	  query: 'acne'
+	}, {
+	  id: 'brightening',
+	  label: 'Brightening',
+	  group: 'Skin',
+	  query: 'brightening'
+	}, {
+	  id: 'detan',
+	  label: 'De-Tan Care',
+	  group: 'Skin',
+	  query: 'detan'
+	}, {
+	  id: 'dry-skin',
+	  label: 'Dry Skin Care',
+	  group: 'Skin',
+	  query: 'moisturiser'
+	}, {
+	  id: 'face-care',
+	  label: 'Face Care',
+	  group: 'Skin',
+	  query: 'face'
+	}, {
+	  id: 'scrubs',
+	  label: 'Scrub & Polish',
+	  group: 'Skin',
+	  query: 'scrub'
+	},
+	// Hair
+	{
+	  id: 'hair-fall',
+	  label: 'Hair Fall Care',
+	  group: 'Hair',
+	  query: 'hair fall'
+	}, {
+	  id: 'dandruff',
+	  label: 'Dandruff Care',
+	  group: 'Hair',
+	  query: 'dandruff'
+	}, {
+	  id: 'hair-oils',
+	  label: 'Hair Oils',
+	  group: 'Hair',
+	  query: 'hair oil'
+	}, {
+	  id: 'shampoo',
+	  label: 'Shampoo & Wash',
+	  group: 'Hair',
+	  query: 'shampoo'
+	},
+	// Wellness
+	{
+	  id: 'immunity',
+	  label: 'Immunity Support',
+	  group: 'Wellness',
+	  query: 'immunity'
+	}, {
+	  id: 'vitamins',
+	  label: 'Daily Vitamins',
+	  group: 'Wellness',
+	  query: 'vitamin'
+	}, {
+	  id: 'digestion',
+	  label: 'Digestive Wellness',
+	  group: 'Wellness',
+	  query: 'digestive'
+	}, {
+	  id: 'strength',
+	  label: 'Strength & Fitness',
+	  group: 'Wellness',
+	  query: 'protein'
+	}, {
+	  id: 'herbal',
+	  label: 'Herbal & Ayurvedic',
+	  group: 'Wellness',
+	  query: 'tulsi'
+	},
+	// Personal care
+	{
+	  id: 'intimate',
+	  label: 'Intimate Care',
+	  group: 'Personal care',
+	  query: 'intimate'
+	}, {
+	  id: 'grooming',
+	  label: "Men's Grooming",
+	  group: 'Personal care',
+	  query: 'beard'
+	}, {
+	  id: 'soaps',
+	  label: 'Soaps & Bathing',
+	  group: 'Personal care',
+	  query: 'soap'
+	}, {
+	  id: 'massage',
+	  label: 'Massage & Body Oils',
+	  group: 'Personal care',
+	  query: 'massage'
+	}];
+
+	/**
+	 * Products a concern actually resolves to — the same set its link opens.
+	 *
+	 * Priority, highest first:
+	 *   1. the products an admin chose for this concern, in their order;
+	 *   2. the automatic catalogue match (the behaviour that shipped before);
+	 *   3. nothing, which hides the card.
+	 *
+	 * An admin choice therefore replaces the text search rather than being mixed
+	 * into it: "show exactly these four" has to mean exactly those four.
+	 */
+	function concernMatches(concern, productList = products, manual = discoveryConcernProducts()) {
+	  const chosen = resolveConcernProducts(manual?.[concern?.id], productList);
+	  if (chosen.length) return chosen;
+	  if (concern?.categorySlug) return getByCategory(concern.categorySlug);
+	  if (!concern?.query) return [];
+	  const found = searchProducts(concern.query);
+	  if (!Array.isArray(productList) || productList === products) return found;
+	  // Tests pass their own catalogue; keep the result inside it.
+	  const ids = new Set(productList.map(p => p.id));
+	  return found.filter(p => ids.has(p.id));
+	}
+
+	/**
+	 * Concern cards the current catalogue can genuinely support.
+	 *
+	 * Returns [] when too few qualify, which hides the section entirely rather
+	 * than shipping a thin rail of near-empty results.
+	 */
+	/** The products behind a concern card: hand-picked first, legacy matcher second. */
+	function concernCardProducts(card, productList = products, registry = CONCERNS) {
+	  if (!card) return [];
+	  const curated = resolveConcernProducts(card.productSlugs, productList);
+	  if (curated.length) return curated;
+	  // Only a card that corresponds to a built-in concern has a matcher at all.
+	  // A concern an admin invented has no text query to fall back on, so it stays
+	  // empty — and therefore hidden — until products are chosen for it.
+	  const legacy = (Array.isArray(registry) ? registry : []).find(c => c.id === card.id);
+	  return legacy ? concernMatches(legacy, productList, {}) : [];
+	}
+
+	/** Resolve a ?concern= value: card id first, then its readable name form. */
+	function findConcernCard(param, cards) {
+	  if (typeof param !== 'string') return null;
+	  const key = param.trim().toLowerCase();
+	  if (!key) return null;
+	  const list = Array.isArray(cards) ? cards : normalizeDiscovery().concernCards;
+	  const nameSlug = c => String(c?.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+	  return list.find(c => c.enabled && c.id === key) || list.find(c => c.enabled && nameSlug(c) === key) || null;
+	}
+	function selectConcernCards(productList = products, registry = CONCERNS, images = discoveryImages(), manual = discoveryConcernProducts(), savedCards = undefined) {
+	  const saved = sanitizeDiscoveryCards(savedCards === undefined ? homepage?.discovery?.concernCards : savedCards, {
+	    withGroup: true
+	  });
+	  const isCurated = saved.length > 0;
+	  const cards = isCurated ? saved : defaultConcernCards(registry, images, manual);
+	  const out = cards.filter(card => card.enabled).map(card => {
+	    const chosen = resolveConcernProducts(card.productSlugs, productList);
+	    const legacy = (Array.isArray(registry) ? registry : []).find(c => c.id === card.id) || null;
+	    const matches = chosen.length ? chosen : legacy ? concernMatches(legacy, productList, {}) : [];
+	    const group = card.group || legacy?.group || '';
+	    const groupImage = categoryImage(CONCERN_GROUP_IMAGE[group] || '');
+	    const image = card.image || groupImage || null;
+	    return {
+	      id: card.id,
+	      label: card.name,
+	      group,
+	      to: `/shop?concern=${encodeURIComponent(card.id)}`,
+	      count: matches.length,
+	      source: chosen.length ? 'admin' : 'auto',
+	      image,
+	      imageSource: card.image ? 'admin' : groupImage ? 'group' : 'product',
+	      // Last resort only, when the group has no artwork of its own.
+	      product: image ? null : firstImaged(matches)
+	    };
+	  })
+	  // An automatic concern still has to clear the minimum, because nobody
+	  // vouched for what a text search happened to return. A curated one only
+	  // has to resolve to something: choosing two products is a decision, not
+	  // a thin result, and second-guessing it would make the picker a lie.
+	  .filter(card => card.count >= (card.source === 'admin' ? 1 : MIN_CONCERN_PRODUCTS) && (card.image || card.product));
+	  // The rail minimum exists to stop the BUILT-IN default shipping a thin rail
+	  // nobody chose. Once an admin owns the list, their list is the answer.
+	  return isCurated || out.length >= MIN_CONCERNS_TO_RENDER ? out : [];
+	}
+
+	function RailControls({
+	  railRef,
+	  label
+	}) {
+	  const [state, setState] = reactExports.useState({
+	    ratio: 0,
+	    thumb: 1,
+	    atStart: true,
+	    atEnd: true
+	  });
+	  const measure = reactExports.useCallback(() => {
+	    const el = railRef.current;
+	    if (!el) return;
+	    const max = el.scrollWidth - el.clientWidth;
+	    setState({
+	      ratio: max > 0 ? el.scrollLeft / max : 0,
+	      thumb: el.scrollWidth > 0 ? Math.max(0.2, el.clientWidth / el.scrollWidth) : 1,
+	      atStart: el.scrollLeft <= 1,
+	      atEnd: max <= 1 || el.scrollLeft >= max - 1
+	    });
+	  }, [railRef]);
+	  reactExports.useEffect(() => {
+	    const el = railRef.current;
+	    if (!el) return undefined;
+	    measure();
+	    el.addEventListener('scroll', measure, {
+	      passive: true
+	    });
+	    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+	    ro?.observe(el);
+	    return () => {
+	      el.removeEventListener('scroll', measure);
+	      ro?.disconnect();
+	    };
+	  }, [measure, railRef]);
+
+	  // Step by whole tiles so the snap points stay aligned with what is in view.
+	  const nudge = dir => {
+	    const el = railRef.current;
+	    if (!el) return;
+	    const card = el.firstElementChild;
+	    const step = card ? card.getBoundingClientRect().width + 16 : el.clientWidth * 0.8;
+	    el.scrollBy({
+	      left: dir * step * 2,
+	      behavior: 'smooth'
+	    });
+	  };
+
+	  // Nothing to scroll: show no controls rather than dead ones.
+	  if (state.atStart && state.atEnd) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "hd-nav",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	      type: "button",
+	      className: "hd-nav__btn",
+	      onClick: () => nudge(-1),
+	      disabled: state.atStart,
+	      "aria-label": `Scroll ${label} backward`,
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "chevronLeft",
+	        size: 18,
+	        stroke: 1.8
+	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "hd-nav__track",
+	      "aria-hidden": "true",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "hd-nav__thumb",
+	        style: {
+	          width: `${state.thumb * 100}%`,
+	          transform: `translateX(${state.ratio * (1 - state.thumb) * 100 / (state.thumb || 1)}%)`
+	        }
+	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	      type: "button",
+	      className: "hd-nav__btn",
+	      onClick: () => nudge(1),
+	      disabled: state.atEnd,
+	      "aria-label": `Scroll ${label} forward`,
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	        name: "chevronRight",
+	        size: 18,
+	        stroke: 1.8
+	      })
+	    })]
+	  });
+	}
+	function DiscoveryRail({
+	  id,
+	  title,
+	  label,
+	  children
+	}) {
+	  const railRef = reactExports.useRef(null);
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "v2-sec hd-section",
+	    "data-home-section": id,
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        className: "hd-title",
+	        children: title
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	        className: "hd-rail",
+	        ref: railRef,
+	        "aria-label": label,
+	        children: children
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(RailControls, {
+	        railRef: railRef,
+	        label: label
+	      })]
+	    })
+	  });
+	}
+
+	/**
+	 * One discovery tile.
+	 *
+	 * `image` is an admin-assigned or committed asset URL. `product` is only the
+	 * last-resort visual, used when neither exists (see homeDiscovery.js).
+	 * `overlay` sets the title over the artwork, which categories use and
+	 * concerns do not.
+	 */
+	function DiscoveryTile({
+	  to,
+	  image,
+	  product,
+	  caption,
+	  overlay = false
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+	    className: `hd-tile${overlay ? ' hd-tile--overlay' : ''}`,
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	      to: to,
+	      className: "hd-tile__link",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "hd-tile__media",
+	        children: [image ? /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+	          src: image,
+	          alt: ""
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	          product: product,
+	          frame: "v2",
+	          sizes: "(max-width: 767px) 46vw, 300px"
+	        }), overlay && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "hd-tile__overlay",
+	          children: caption
+	        })]
+	      }), !overlay && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "hd-tile__caption",
+	        children: caption
+	      })]
+	    })
+	  });
+	}
+	function ShopByCategory({
+	  cards
+	}) {
+	  const list = Array.isArray(cards) ? cards : selectCategoryCards();
+	  if (list.length < 3) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx(DiscoveryRail, {
+	    id: "shop-by-category",
+	    title: "Shop by Category",
+	    label: "Shop by category",
+	    children: list.map(card => /*#__PURE__*/jsxRuntimeExports.jsx(DiscoveryTile, {
+	      to: card.to,
+	      image: card.image,
+	      product: card.fallbackProduct,
+	      caption: card.name,
+	      overlay: true
+	    }, card.slug))
+	  });
+	}
+	function ShopByConcerns({
+	  cards
+	}) {
+	  const list = Array.isArray(cards) ? cards : selectConcernCards();
+	  // selectConcernCards already returns [] when too few are backed.
+	  if (!list.length) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx(DiscoveryRail, {
+	    id: "shop-by-concerns",
+	    title: "Shop by Concerns",
+	    label: "Shop by concerns",
+	    children: list.map(card => /*#__PURE__*/jsxRuntimeExports.jsx(DiscoveryTile, {
+	      to: card.to,
+	      image: card.image,
+	      product: card.product,
+	      caption: card.label
+	    }, card.id))
 	  });
 	}
 
@@ -33390,6 +35138,7 @@
 	    id: row.biosash_id || row.id,
 	    slug: row.slug,
 	    name: row.name,
+	    brand: row.brand || row.brand_name || row.manufacturer || null,
 	    category: row.category,
 	    categories: [row.category],
 	    form: row.form || null,
@@ -34740,8 +36489,7 @@
 	  const savedHomepage = reactExports.useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
 	  const visuals = sanitizeHomepageVisuals(savedHomepage.visuals);
 	  reactExports.useEffect(watchHomepageVisuals, []);
-	  const bestsellers = getBestsellers(8);
-	  const newArrivals = getNewArrivals(8);
+	  const merchandise = selectHomeMerchandising(products, categories);
 	  const editorials = configuredEditorials();
 	  const story = homepage?.story;
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -34750,36 +36498,27 @@
 	      appearance: visuals.categoryStrip
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
 	      appearance: visuals.offers
-	    }), bestsellers.length >= 4 && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	      className: "v2-sec",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "v2-wrap",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "v2-sechead",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	              className: "v2-eyebrow",
-	              children: "Loved this month"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	              className: "v2-h2",
-	              children: homepage.bestsellerTitle || 'Bestsellers'
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	            to: "/shop?sort=bestselling",
-	            className: "v2-more",
-	            children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "chevronRight",
-	              size: 12,
-	              stroke: 1.8
-	            })]
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "v2-rail v2-rail--cards",
-	          children: bestsellers.map(p => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
-	            product: p
-	          }, p.id))
-	        })]
-	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+	      id: "trending",
+	      eyebrow: "Across the catalogue",
+	      title: "Trending now",
+	      products: merchandise.trending
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByConcerns, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FeaturedBrands, {
+	      brands: merchandise.brands
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(DiscoveryEdit, {
+	      products: merchandise.discover,
+	      link: merchandise.discoverLink
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+	      id: "popular",
+	      eyebrow: merchandise.popularEyebrow,
+	      title: merchandise.popularTitle,
+	      products: merchandise.popular,
+	      link: merchandise.popularTitle === 'Bestsellers' ? '/shop?sort=bestselling' : '/shop'
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(MomTrustSpotlight, {
+	      category: merchandise.momCategory,
+	      products: merchandise.momProducts
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(CuratedCollections, {
+	      collections: merchandise.collections
 	    }), editorials.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
 	      className: "v2-sec",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -34810,43 +36549,7 @@
 	          story: story
 	        })
 	      })
-	    }), newArrivals.length >= 4 && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	      className: "v2-sec",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "v2-wrap",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "v2-sechead",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	              className: "v2-eyebrow",
-	              children: "Just added"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	              className: "v2-h2",
-	              children: "New in at Sora Life"
-	            })]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	            to: "/shop?filter=new",
-	            className: "v2-more",
-	            children: ["See all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "chevronRight",
-	              size: 12,
-	              stroke: 1.8
-	            })]
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	          className: "v2-rail v2-rail--compact",
-	          children: newArrivals.slice(0, 4).map(p => /*#__PURE__*/jsxRuntimeExports.jsx(CompactProductCard, {
-	            product: p
-	          }, p.id))
-	        })]
-	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	      className: "v2-sec",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-wrap",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {})
-	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx(Newsletter, {})]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorCommunity, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WhySoraLife, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Newsletter, {})]
 	  });
 	}
 
@@ -35340,6 +37043,70 @@
 	}
 
 	function Shop() {
+	  const [params] = useSearchParams();
+	  // Read through the settings store so an admin's saved cards are picked up on
+	  // the same render as the rest of the homepage settings.
+	  const savedHomepage = reactExports.useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+	  const discovery = normalizeDiscovery(savedHomepage?.discovery);
+
+	  // A collection wins if both are present: one URL, one meaning.
+	  const collection = findCollectionCard(params.get('collection'), discovery.categoryCards);
+	  const concern = collection ? null : findConcernCard(params.get('concern'), discovery.concernCards);
+
+	  // The sibling chips ARE the homepage rail, minus the card you are on. Built
+	  // from the same selector rather than from the raw card list, because not
+	  // every configured card is worth offering: a built-in concern this catalogue
+	  // cannot back, or one nobody has curated yet, is hidden on the homepage and
+	  // must not reappear here as a link to an empty page.
+	  const siblingsOf = (railCards, currentId) => railCards.filter(c => c.id !== currentId).map(c => ({
+	    key: c.id,
+	    label: c.name || c.label,
+	    to: c.to
+	  }));
+	  let view = null;
+	  if (collection) {
+	    view = {
+	      name: collection.name,
+	      items: collectionProducts(collection, products),
+	      siblings: siblingsOf(selectCategoryCards(undefined, products, undefined, savedHomepage?.discovery?.categoryCards), collection.id)
+	    };
+	  } else if (concern) {
+	    view = {
+	      name: concern.name,
+	      items: concernCardProducts(concern, products),
+	      siblings: siblingsOf(selectConcernCards(products, undefined, undefined, undefined, savedHomepage?.discovery?.concernCards), concern.id)
+	    };
+	  }
+	  if (!view) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-shop",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-wrap v2-shop__head",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	          className: "v2-crumbs",
+	          "aria-label": "Breadcrumb",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/",
+	            children: "Home"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "chevronRight",
+	            size: 12,
+	            stroke: 1.7
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	            children: "Shop"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          className: "v2-shop__title",
+	          children: "All products"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "v2-shop__lede",
+	          children: "Browse wellness, nutrition, hair, skin, beauty and everyday-care products available through Sora Life."
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductBrowser, {
+	        baseProducts: products
+	      })]
+	    });
+	  }
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	    className: "v2-shop",
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -35354,18 +37121,44 @@
 	          name: "chevronRight",
 	          size: 12,
 	          stroke: 1.7
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: "/shop",
 	          children: "Shop"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronRight",
+	          size: 12,
+	          stroke: 1.7
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: view.name
 	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
 	        className: "v2-shop__title",
-	        children: "All products"
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	        className: "v2-shop__lede",
-	        children: "Browse wellness, nutrition, hair, skin, beauty and everyday-care products available through Sora Life."
+	        children: view.name
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	        className: "v2-shop__count",
+	        children: [view.items.length, " ", view.items.length === 1 ? 'product' : 'products']
 	      })]
+	    }), view.siblings.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "v2-wrap",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-rail v2-shop__cats",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: "/shop",
+	          className: "v2-chip",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "grid",
+	            size: 14,
+	            stroke: 1.5
+	          }), " All products"]
+	        }), view.siblings.map(s => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: s.to,
+	          className: "v2-chip",
+	          children: s.label
+	        }, s.key))]
+	      })
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductBrowser, {
-	      baseProducts: products
+	      baseProducts: view.items,
+	      showCategoryFilter: false
 	    })]
 	  });
 	}
@@ -35482,24 +37275,144 @@
 	  });
 	}
 
+	function ProductLightbox({
+	  product,
+	  frames,
+	  active,
+	  onChange,
+	  onClose,
+	  onImageError
+	}) {
+	  const closeRef = reactExports.useRef(null);
+	  const startX = reactExports.useRef(null);
+	  const count = frames.length;
+	  const index = Math.min(active, Math.max(0, count - 1));
+	  const current = frames[index];
+	  const go = next => {
+	    if (count > 1) onChange((next % count + count) % count);
+	  };
+	  reactExports.useEffect(() => {
+	    const previousOverflow = document.body.style.overflow;
+	    document.body.style.overflow = 'hidden';
+	    closeRef.current?.focus();
+	    const onKeyDown = event => {
+	      if (event.key === 'Escape') onClose();
+	      if (event.key === 'ArrowRight') go(index + 1);
+	      if (event.key === 'ArrowLeft') go(index - 1);
+	    };
+	    document.addEventListener('keydown', onKeyDown);
+	    return () => {
+	      document.removeEventListener('keydown', onKeyDown);
+	      document.body.style.overflow = previousOverflow;
+	    };
+	  }, [index, count, onClose]);
+	  if (!current) return null;
+	  return /*#__PURE__*/reactDomExports.createPortal(/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "pdp-lightbox",
+	    role: "dialog",
+	    "aria-modal": "true",
+	    "aria-label": `${product.name} image viewer`,
+	    onMouseDown: event => {
+	      if (event.target === event.currentTarget) onClose();
+	    },
+	    onPointerDown: event => {
+	      startX.current = event.clientX;
+	    },
+	    onPointerUp: event => {
+	      if (startX.current == null) return;
+	      const dx = event.clientX - startX.current;
+	      startX.current = null;
+	      if (Math.abs(dx) > 45) go(index + (dx < 0 ? 1 : -1));
+	    },
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "pdp-lightbox__topbar",
+	      children: [count > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        "aria-live": "polite",
+	        children: [index + 1, " / ", count]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        ref: closeRef,
+	        type: "button",
+	        className: "pdp-lightbox__close",
+	        onClick: onClose,
+	        "aria-label": "Close image viewer",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "x",
+	          size: 22
+	        })
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "pdp-lightbox__stage",
+	      onMouseDown: event => {
+	        if (event.target === event.currentTarget) onClose();
+	      },
+	      children: [count > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "button",
+	        className: "pdp-lightbox__nav pdp-lightbox__nav--prev",
+	        onClick: () => go(index - 1),
+	        "aria-label": "Previous product image",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronLeft",
+	          size: 26
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	        product: product,
+	        src: current.url,
+	        alt: current.alt || product.name,
+	        sizes: "100vw",
+	        frame: "v2",
+	        className: "pdp-lightbox__image",
+	        onImageError: onImageError
+	      }, current.url), count > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "button",
+	        className: "pdp-lightbox__nav pdp-lightbox__nav--next",
+	        onClick: () => go(index + 1),
+	        "aria-label": "Next product image",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronRight",
+	          size: 26
+	        })
+	      })]
+	    }), count > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "pdp-lightbox__hint",
+	      children: "Swipe or use arrow keys to browse"
+	    })]
+	  }), document.body);
+	}
+
 	function ProductGallery({
 	  product,
 	  children
 	}) {
-	  const frames = productGallery(product);
+	  // Recompute on every render because catalogue hydration attaches media to
+	  // the existing product object after the route's first paint.
+	  const candidates = productGallery(product);
+	  const [failedUrls, setFailedUrls] = reactExports.useState(() => new Set());
+	  const frames = candidates.filter(frame => !failedUrls.has(frame.url));
 	  const [active, setActive] = reactExports.useState(0);
+	  const [lightboxOpen, setLightboxOpen] = reactExports.useState(false);
 	  const startX = reactExports.useRef(null);
 
 	  // Reset to the primary whenever the product changes, and clamp if the media
 	  // set shrank (e.g. after a live re-hydration from Supabase).
 	  reactExports.useEffect(() => {
 	    setActive(0);
-	  }, [product?.id]);
+	    setLightboxOpen(false);
+	    setFailedUrls(new Set());
+	  }, [product?.id, product?.media, product?.gallery]);
 	  const count = frames.length;
 	  const idx = Math.min(active, Math.max(0, count - 1));
 	  const current = frames[idx] || frames[0];
 	  const go = n => {
 	    if (count) setActive((n % count + count) % count);
+	  };
+	  const rejectFrame = url => {
+	    if (!url) return;
+	    setFailedUrls(currentFailed => {
+	      if (currentFailed.has(url)) return currentFailed;
+	      const next = new Set(currentFailed);
+	      next.add(url);
+	      return next;
+	    });
 	  };
 
 	  // Touch/pointer swipe on the main image (mobile). A small threshold avoids
@@ -35528,15 +37441,27 @@
 	      role: single ? undefined : 'group',
 	      "aria-roledescription": single ? undefined : 'carousel',
 	      "aria-label": single ? undefined : `${product.name} — image ${idx + 1} of ${count}`,
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "pdp__frame-fade",
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	        type: "button",
+	        className: "pdp__frame-fade pdp__zoom-trigger",
+	        onClick: () => setLightboxOpen(true),
+	        "aria-label": `View ${product.name} image larger`,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
 	          product: product,
 	          src: current?.url,
 	          alt: current?.alt || product.name,
 	          sizes: "(max-width: 900px) 92vw, 460px",
-	          frame: "v2"
-	        })
+	          frame: "v2",
+	          loading: "eager",
+	          fetchPriority: "high",
+	          onImageError: rejectFrame
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "pdp__zoom-label",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            "aria-hidden": "true",
+	            children: "\uFF0B"
+	          }), " View larger"]
+	        })]
 	      }, current?.url || idx), children, !single && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: "pdp__dots",
 	        role: "tablist",
@@ -35563,9 +37488,17 @@
 	          src: f.url,
 	          alt: f.alt || product.name,
 	          sizes: "84px",
-	          frame: "v2"
+	          frame: "v2",
+	          onImageError: rejectFrame
 	        })
 	      }, f.id || f.url || i))
+	    }), lightboxOpen && /*#__PURE__*/jsxRuntimeExports.jsx(ProductLightbox, {
+	      product: product,
+	      frames: frames,
+	      active: idx,
+	      onChange: setActive,
+	      onClose: () => setLightboxOpen(false),
+	      onImageError: rejectFrame
 	    })]
 	  });
 	}
@@ -36148,6 +38081,61 @@
 	  });
 	}
 
+	function ProductCatalogueGallery({
+	  product
+	}) {
+	  // Product media is attached during live catalogue hydration, so do not memo
+	  // against only the stable product object reference.
+	  const candidates = secondaryProductGallery(product);
+	  const [failedUrls, setFailedUrls] = reactExports.useState(() => new Set());
+
+	  // A hydrated product can replace the legacy seed without remounting the
+	  // route. Failed media belongs to that specific product/media set only.
+	  reactExports.useEffect(() => {
+	    setFailedUrls(new Set());
+	  }, [product?.id, product?.media, product?.gallery]);
+	  const frames = candidates.filter(frame => !failedUrls.has(frame.url));
+	  if (!frames.length) return null;
+	  const rejectFrame = url => {
+	    if (!url) return;
+	    setFailedUrls(current => {
+	      if (current.has(url)) return current;
+	      const next = new Set(current);
+	      next.add(url);
+	      return next;
+	    });
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "pdp-catalogue",
+	    "aria-labelledby": "pdp-catalogue-h",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "pdp-catalogue__head",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "v2-eyebrow",
+	          children: "Product gallery"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	          id: "pdp-catalogue-h",
+	          className: "pdp-sec__title serif",
+	          children: "A closer look"
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: `pdp-catalogue__grid${frames.length === 1 ? ' pdp-catalogue__grid--single' : ''}`,
+	        children: frames.map((frame, index) => /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	          product: product,
+	          src: frame.url,
+	          alt: frame.alt || `${product.name} — image ${index + 2}`,
+	          sizes: "(max-width: 767px) 100vw, (max-width: 1100px) 50vw, 580px",
+	          frame: "v2",
+	          className: "pdp-catalogue__image",
+	          onImageError: rejectFrame
+	        }, frame.id || frame.url))
+	      })]
+	    })
+	  });
+	}
+
 	function StarRating({
 	  value = 0,
 	  count,
@@ -36299,60 +38287,70 @@
 	  });
 	}
 
-	function ProductRail({
-	  eyebrow,
-	  title,
-	  products,
-	  link,
-	  linkLabel = 'View all',
-	  limit = 8,
-	  minItems = 1
-	}) {
-	  const items = Array.isArray(products) ? products.slice(0, limit) : [];
-	  if (items.length < minItems) return null;
-	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	    className: "v2-sec",
-	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-wrap",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "v2-sechead",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          children: [eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "v2-eyebrow",
-	            children: eyebrow
-	          }), title && /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	            className: "v2-h2",
-	            children: title
-	          })]
-	        }), link && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	          to: link,
-	          className: "v2-more",
-	          children: [linkLabel, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "chevronRight",
-	            size: 12,
-	            stroke: 1.8
-	          })]
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	        className: "v2-rail v2-rail--cards",
-	        children: items.map(p => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
-	          product: p
-	        }, p.id))
-	      })]
-	    })
-	  });
+	function productKey(product) {
+	  return String(product?.id ?? product?.slug ?? '');
+	}
+	function categoriesFor(product) {
+	  const values = product?.categories?.length ? product.categories : [product?.category];
+	  return new Set(values.filter(Boolean));
+	}
+	function recommendationEligible(product) {
+	  return Boolean(product && product.slug && product.isActive !== false && Number(product.stock) > 0 && isPurchasable(product));
+	}
+
+	/**
+	 * Deterministic PDP recommendations from the real catalogue only:
+	 * shared category, then shared evidenced brand, then catalogue order.
+	 */
+	function selectPdpRecommendations(current, catalogue, limit = 12) {
+	  if (!current || !Array.isArray(catalogue) || limit <= 0) return [];
+	  const currentKey = productKey(current);
+	  const currentCategories = categoriesFor(current);
+	  const currentBrand = productBrandName(current).toLocaleLowerCase();
+	  const candidates = catalogue.filter(product => recommendationEligible(product) && productKey(product) !== currentKey && product.slug !== current.slug);
+	  const sameCategory = candidates.filter(product => [...categoriesFor(product)].some(category => currentCategories.has(category)));
+	  const sameBrand = currentBrand ? candidates.filter(product => productBrandName(product).toLocaleLowerCase() === currentBrand) : [];
+	  const result = [];
+	  const seen = new Set();
+	  for (const product of [...sameCategory, ...sameBrand, ...candidates]) {
+	    const key = productKey(product);
+	    if (!key || seen.has(key)) continue;
+	    seen.add(key);
+	    result.push(product);
+	    if (result.length >= limit) break;
+	  }
+	  return result;
 	}
 
 	function ProductRecommendations({
 	  product
 	}) {
-	  const related = getRelated(product);
+	  const related = selectPdpRecommendations(product, products, 12);
 	  if (!related.length) return null;
-	  return /*#__PURE__*/jsxRuntimeExports.jsx(ProductRail, {
-	    eyebrow: "Complete the ritual",
-	    title: "You might also like",
-	    products: related,
-	    limit: 4
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "v2-sec pdp-recommendations",
+	    "aria-labelledby": "pdp-recommendations-h",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-sechead",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "v2-eyebrow",
+	            children: "Continue shopping"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            id: "pdp-recommendations-h",
+	            className: "v2-h2",
+	            children: "You might also like"
+	          })]
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "pdp-recommendations__grid",
+	        children: related.map(item => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
+	          product: item
+	        }, item.id))
+	      })]
+	    })
 	  });
 	}
 
@@ -36474,6 +38472,11 @@
 	  const related = getRelated(product);
 	  const wished = isWished(product.id);
 	  const out = product.stock === 0;
+	  // No usable price for this product (or the chosen pack size) means it
+	  // cannot be bought. Checkout would refuse the line, so the PDP says so
+	  // here rather than letting the customer find out at the payment step.
+	  const buyable = isPurchasable(product, variant);
+	  const blocked = out || !buyable;
 	  const lowStock = product.stock > 0 && product.stock <= 5;
 	  const fbt = [product, ...related.slice(0, 2)];
 	  const fbtTotal = fbt.reduce((s, p) => s + p.price, 0);
@@ -36763,9 +38766,9 @@
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	            className: `v2-btn v2-btn--block pdp__addbtn ${justAdded ? 'is-added' : ''}`,
-	            disabled: out,
+	            disabled: blocked,
 	            onClick: addNow,
-	            children: justAdded ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	            children: !buyable ? UNAVAILABLE_LABEL : justAdded ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	                name: "check",
 	                size: 18
@@ -36779,7 +38782,7 @@
 	          })]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	          className: "v2-btn v2-btn--ghost v2-btn--block pdp__buynow",
-	          disabled: out,
+	          disabled: blocked,
 	          onClick: buyNow,
 	          children: "Buy it now"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductDeliveryInfo, {
@@ -36805,6 +38808,8 @@
 	          sections: accordionSections
 	        }, product.id ?? product.slug)]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductTrustList, {})]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductCatalogueGallery, {
+	      product: product
 	    }), promotionsSource === 'supabase' && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	      className: "v2-pdp__promos",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsx(PromoRail, {
@@ -36885,20 +38890,64 @@
 	        })
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
 	        className: "v2-btn buybar__add",
-	        disabled: out,
+	        disabled: blocked,
 	        onClick: addNow,
 	        "aria-label": "Add to cart",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	          name: "bag",
 	          size: 17
-	        }), " Add"]
+	        }), " ", buyable ? 'Add' : UNAVAILABLE_LABEL]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	        className: "v2-btn v2-btn--ghost buybar__buy",
-	        disabled: out,
+	        disabled: blocked,
 	        onClick: buyNow,
 	        children: "Buy now"
 	      })]
 	    })]
+	  });
+	}
+
+	function ProductRail({
+	  eyebrow,
+	  title,
+	  products,
+	  link,
+	  linkLabel = 'View all',
+	  limit = 8,
+	  minItems = 1
+	}) {
+	  const items = Array.isArray(products) ? products.slice(0, limit) : [];
+	  if (items.length < minItems) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+	    className: "v2-sec",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "v2-sechead",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          children: [eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "v2-eyebrow",
+	            children: eyebrow
+	          }), title && /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            className: "v2-h2",
+	            children: title
+	          })]
+	        }), link && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: link,
+	          className: "v2-more",
+	          children: [linkLabel, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "chevronRight",
+	            size: 12,
+	            stroke: 1.8
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "v2-rail v2-rail--cards",
+	        children: items.map(p => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
+	          product: p
+	        }, p.id))
+	      })]
+	    })
 	  });
 	}
 
@@ -37050,7 +39099,8 @@
 	    subtotal,
 	    mrpTotal,
 	    savings,
-	    toast
+	    toast,
+	    blockedCartLines
 	  } = useStore();
 	  const [coupon, setCoupon] = reactExports.useState('');
 	  const [applied, setApplied] = reactExports.useState(null);
@@ -37281,7 +39331,24 @@
 	                mrpTotal,
 	                shipping
 	              }
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            }), blockedCartLines.length > 0 ?
+	            /*#__PURE__*/
+	            /* A line stored before purchase gating existed, or one whose
+	               price vanished when the catalogue hydrated. Say which item
+	               and why rather than failing at the payment step. */
+	            jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	                className: "summary__blocked",
+	                role: "alert",
+	                children: [blockedCartLines.length === 1 ? `"${blockedCartLines[0].product.name}" is not available to buy right now.` : `${blockedCartLines.length} items in your cart are not available to buy right now.`, ' ', "Remove ", blockedCartLines.length === 1 ? 'it' : 'them', " to continue."]
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                type: "button",
+	                className: "btn btn-lg btn-block",
+	                disabled: true,
+	                "aria-disabled": "true",
+	                children: "Checkout"
+	              })]
+	            }) : /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
 	              to: "/checkout",
 	              className: "btn btn-lg btn-block",
 	              children: ["Checkout ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -38116,7 +40183,8 @@
 	    subtotal,
 	    mrpTotal,
 	    savings,
-	    dispatch
+	    dispatch,
+	    blockedCartLines
 	  } = useStore();
 	  const [step, setStep] = reactExports.useState(0);
 	  const [delivery, setDelivery] = reactExports.useState('std');
@@ -38491,6 +40559,12 @@
 	    // even if the user somehow reached this step. Send them back to fix it.
 	    if (!validateShipping()) {
 	      setStep(0);
+	      return;
+	    }
+	    // An unpriced line can only end in a server rejection of the whole order.
+	    // Refuse here and name the item, so the customer can fix it in the cart.
+	    if (blockedCartLines.length) {
+	      setPayError(blockedCartLines.length === 1 ? `"${blockedCartLines[0].product.name}" is not available to buy right now. Please remove it from your cart to continue.` : `${blockedCartLines.length} items in your cart are not available to buy right now. Please remove them to continue.`);
 	      return;
 	    }
 	    inFlight.current = true;
@@ -40184,7 +42258,7 @@
 
 	/** Providers configured for THIS build. Empty unless explicitly opted in. */
 	function enabledOAuthProviders() {
-	  return parseEnabledProviders("");
+	  return parseEnabledProviders("google");
 	}
 
 	/**
@@ -40212,97 +42286,6 @@
 	  return {
 	    error
 	  };
-	}
-
-	const FULFILLMENT_STATUSES = Object.freeze(['unfulfilled', 'processing', 'shipped', 'delivered', 'cancelled']);
-	const STATUS_LABELS = Object.freeze({
-	  unfulfilled: 'Not yet fulfilled',
-	  processing: 'Preparing order',
-	  shipped: 'Shipped',
-	  delivered: 'Delivered',
-	  cancelled: 'Fulfillment cancelled'
-	});
-	function normalizeFulfillmentStatus(value) {
-	  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
-	  return FULFILLMENT_STATUSES.includes(normalized) ? normalized : null;
-	}
-	function fulfillmentStatusLabel(value) {
-	  const status = normalizeFulfillmentStatus(value);
-	  return status ? STATUS_LABELS[status] : null;
-	}
-	function isPrivateHostname(hostname) {
-	  const host = String(hostname || '').replace(/^\[|\]$/g, '').toLowerCase();
-	  if (!host || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return true;
-	  // Carrier links should use a public DNS name. Reject every IPv6 literal
-	  // rather than trying to safely classify mapped and reserved ranges here.
-	  if (host.includes(':')) return true;
-	  const octets = host.split('.').map(Number);
-	  if (octets.length !== 4 || octets.some(n => !Number.isInteger(n) || n < 0 || n > 255)) {
-	    return !host.includes('.') && !host.includes(':');
-	  }
-	  return octets[0] === 10 || octets[0] === 127 || octets[0] === 169 && octets[1] === 254 || octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31 || octets[0] === 192 && octets[1] === 168;
-	}
-
-	// Return one safe, normalized public HTTPS URL or null. No URL is ever
-	// derived from a carrier name or tracking number.
-	function safeTrackingUrl(value) {
-	  if (typeof value !== 'string') return null;
-	  const raw = value.trim();
-	  if (!raw || raw.length > 2048 || /[\u0000-\u001f\u007f\s]/.test(raw)) return null;
-	  try {
-	    const url = new URL(raw);
-	    if (url.protocol !== 'https:' || !url.hostname || url.username || url.password || isPrivateHostname(url.hostname)) return null;
-	    return url.href;
-	  } catch {
-	    return null;
-	  }
-	}
-	function cleanText(value, maxLength, label) {
-	  if (value == null || String(value).trim() === '') return null;
-	  const text = String(value).trim();
-	  if (text.length > maxLength || /[\u0000-\u001f\u007f]/.test(text)) {
-	    throw new Error(`${label} is invalid.`);
-	  }
-	  return text;
-	}
-	function validateFulfillmentInput(input = {}) {
-	  const rawStatus = input.fulfillmentStatus == null ? '' : String(input.fulfillmentStatus).trim();
-	  const fulfillmentStatus = rawStatus === '' ? null : normalizeFulfillmentStatus(rawStatus);
-	  if (rawStatus && !fulfillmentStatus) throw new Error('Choose a valid fulfillment status.');
-	  const rawTrackingUrl = input.trackingUrl == null ? '' : String(input.trackingUrl).trim();
-	  const trackingUrl = rawTrackingUrl ? safeTrackingUrl(rawTrackingUrl) : null;
-	  if (rawTrackingUrl && !trackingUrl) throw new Error('Tracking URL must be a public HTTPS URL.');
-	  return {
-	    fulfillmentStatus,
-	    carrierName: cleanText(input.carrierName, 120, 'Carrier name'),
-	    trackingNumber: cleanText(input.trackingNumber, 160, 'Tracking number'),
-	    trackingUrl
-	  };
-	}
-	function displayText(value, maxLength) {
-	  if (typeof value !== 'string') return null;
-	  const text = value.trim();
-	  return text && text.length <= maxLength && !/[\u0000-\u001f\u007f]/.test(text) ? text : null;
-	}
-	function displayTimestamp(value) {
-	  if (typeof value !== 'string' || value.length > 64) return null;
-	  return Number.isNaN(new Date(value).getTime()) ? null : value;
-	}
-	function fulfillmentForDisplay(value = {}) {
-	  const fulfillmentStatus = normalizeFulfillmentStatus(value.fulfillmentStatus ?? value.fulfillment_status);
-	  const record = {
-	    fulfillmentStatus,
-	    label: fulfillmentStatusLabel(fulfillmentStatus),
-	    carrierName: displayText(value.carrierName ?? value.carrier_name, 120),
-	    trackingNumber: displayText(value.trackingNumber ?? value.tracking_number, 160),
-	    trackingUrl: safeTrackingUrl(value.trackingUrl ?? value.tracking_url),
-	    shippedAt: displayTimestamp(value.shippedAt ?? value.shipped_at),
-	    deliveredAt: displayTimestamp(value.deliveredAt ?? value.delivered_at)
-	  };
-	  return hasFulfillmentData(record) ? record : null;
-	}
-	function hasFulfillmentData(value = {}) {
-	  return Boolean(normalizeFulfillmentStatus(value.fulfillmentStatus ?? value.fulfillment_status) || value.carrierName || value.carrier_name || value.trackingNumber || value.tracking_number || safeTrackingUrl(value.trackingUrl ?? value.tracking_url) || value.shippedAt || value.shipped_at || value.deliveredAt || value.delivered_at);
 	}
 
 	function fmtOrderDate(iso) {
@@ -41826,6 +43809,751 @@
 	      products: getBestsellers(),
 	      link: "/shop"
 	    })]
+	  });
+	}
+
+	const CAPABILITIES = [{
+	  icon: 'grid',
+	  title: 'Broad discovery',
+	  body: 'Browse wellness, nutrition, hair, skin, beauty and everyday-care products across the catalogue — by category, search or curated collections.'
+	}, {
+	  icon: 'user',
+	  title: 'Your own account',
+	  body: 'Create an account to keep your order history, saved addresses and a wishlist in one place, on any device you sign in from.'
+	}, {
+	  icon: 'lock',
+	  title: 'Secure checkout',
+	  body: 'Every price and order total is recalculated on our server before payment, and card payments are processed by Razorpay — Sora Life never sees or stores your card details.'
+	}, {
+	  icon: 'package',
+	  title: 'Orders you can follow',
+	  body: 'Once you have placed an order, its verified status — and tracking, when the seller adds it — is available in your account.'
+	}];
+	function About() {
+	  const name = branding?.siteName || 'SORA LIFE';
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    className: "info",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	        className: "v2-crumbs",
+	        "aria-label": "Breadcrumb",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: "/",
+	          children: "Home"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronRight",
+	          size: 12,
+	          stroke: 1.7
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: "About"
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+	        className: "info-hero",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "info-eyebrow",
+	          children: ["About ", name]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          className: "info-title",
+	          children: "A modern marketplace for wellness, personal care and everyday essentials."
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "info-lede",
+	          children: [name, " brings a broad range of products together in one place \u2014 so you can discover what fits your routine, buy it through a secure checkout, and keep track of your orders from your own account."]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "info-hero__cta",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: "/shop",
+	            className: "v2-btn",
+	            children: ["Browse the catalogue ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "arrowRight",
+	              size: 15
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/account/creator",
+	            className: "v2-btn v2-btn--out",
+	            children: "Explore the Creator Program"
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	        className: "info-sec",
+	        "aria-labelledby": "about-what",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "info-sechead",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            id: "about-what",
+	            className: "info-h2",
+	            children: "What you can do here"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "info-sub",
+	            children: "Everything below is part of the platform today."
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "info-grid info-grid--2",
+	          children: CAPABILITIES.map(item => /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+	            className: "info-card",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "info-card__ic",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: item.icon,
+	                size: 22,
+	                stroke: 1.5
+	              })
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	              className: "info-card__t",
+	              children: item.title
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              className: "info-card__b",
+	              children: item.body
+	            })]
+	          }, item.title))
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	        className: "info-sec",
+	        "aria-labelledby": "about-cats",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "info-sechead",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            id: "about-cats",
+	            className: "info-h2",
+	            children: "Explore the range"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	            className: "info-sub",
+	            children: ["Product categories available across ", name, "."]
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	          className: "info-cats",
+	          children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+	            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	              to: `/category/${c.slug}`,
+	              className: "info-cat",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                children: c.name
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "arrowRight",
+	                size: 14,
+	                stroke: 1.7
+	              })]
+	            })
+	          }, c.slug))
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	        className: "info-sec info-creator",
+	        "aria-labelledby": "about-creator",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	            className: "info-eyebrow",
+	            children: [name, " Creator Program"]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            id: "about-creator",
+	            className: "info-h2",
+	            children: "Share what you genuinely discover"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	            className: "info-sub info-sub--wide",
+	            children: ["Creators use their ", name, " account to join the program, share products they believe in, and follow their attribution and application status in one place."]
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: "/account/creator",
+	          className: "v2-btn v2-btn--gold",
+	          children: ["Explore the program ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "arrowRight",
+	            size: 15
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	        className: "info-more",
+	        "aria-label": "More information",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: "/contact",
+	          className: "info-more__link",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	              children: "Contact & help"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+	              children: "Get in touch or find order help"
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "arrowRight",
+	            size: 16,
+	            stroke: 1.7
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: "/shipping",
+	          className: "info-more__link",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	              children: "Shipping"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+	              children: "Delivery options and charges"
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "arrowRight",
+	            size: 16,
+	            stroke: 1.7
+	          })]
+	        })]
+	      })]
+	    })
+	  });
+	}
+
+	const FAQS = [{
+	  q: 'How do I track my order?',
+	  a: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	    children: ["Open ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	      to: "/account/orders",
+	      children: "your orders"
+	    }), " to see each order's verified status. When the seller adds a tracking link, a \u201CTrack shipment\u201D button appears there. You can also look up a single order from the", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	      to: "/passport",
+	      children: "Purchase Passport"
+	    }), " page using its order number and email."]
+	  })
+	}, {
+	  q: 'Do I need an account to buy?',
+	  a: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	    children: ["You can check out as a guest. Creating an ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	      to: "/account",
+	      children: "account"
+	    }), " keeps your order history, saved addresses and ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	      to: "/wishlist",
+	      children: "wishlist"
+	    }), " together and lets you reorder more easily."]
+	  })
+	}, {
+	  q: 'What are the delivery options and charges?',
+	  a: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	    children: ["Standard, Express and Scheduled delivery are offered, each with its own charge. The current options and any delivery estimate are shown at checkout before you pay. See the", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	      to: "/shipping",
+	      children: "Shipping page"
+	    }), " for the full breakdown."]
+	  })
+	}, {
+	  q: 'How is my payment handled?',
+	  a: /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
+	    children: "Your order total is recalculated on our server before payment, and online payments are processed by Razorpay \u2014 Sora Life does not receive or store your full card details. Cash on delivery is also presented as a payment option at checkout."
+	  })
+	}, {
+	  q: 'What is the Creator Program?',
+	  a: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	    children: ["It lets you share products you believe in and follow your attribution and application status from your account. Start from", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	      to: "/account/creator",
+	      children: "the Creator Program"
+	    }), "."]
+	  })
+	}];
+	function HelpLink({
+	  to,
+	  title,
+	  note
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	    to: to,
+	    className: "info-more__link",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	        children: title
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+	        children: note
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	      name: "arrowRight",
+	      size: 16,
+	      stroke: 1.7
+	    })]
+	  });
+	}
+	function Contact() {
+	  const name = branding?.siteName || 'SORA LIFE';
+	  const info = companyInfo();
+	  const channels = hasContactChannel(info);
+	  const publishedDetails = channels || Boolean(info.legalName);
+	  const socials = socialLinks(info);
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    className: "info",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	        className: "v2-crumbs",
+	        "aria-label": "Breadcrumb",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: "/",
+	          children: "Home"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronRight",
+	          size: 12,
+	          stroke: 1.7
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: "Contact & help"
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+	        className: "info-hero",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "info-eyebrow",
+	          children: "Contact & help"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          className: "info-title",
+	          children: "We're here to help."
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "info-lede",
+	          children: channels ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	            children: ["Find quick answers below, track an order from your account, or reach ", name, " through the published contact channels."]
+	          }) : /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
+	            children: "Find quick answers below, track an order, or use the available account and programme support tools."
+	          })
+	        })]
+	      }), publishedDetails && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	        className: "info-sec",
+	        "aria-labelledby": "contact-reach",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "info-sechead",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            id: "contact-reach",
+	            className: "info-h2",
+	            children: "Reach us"
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "info-channels",
+	          children: [info.legalName && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "info-channel info-channel--static",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "info-channel__ic",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "package",
+	                size: 20,
+	                stroke: 1.5
+	              })
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "info-channel__body",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "info-channel__label",
+	                children: "Business name"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "info-channel__value",
+	                children: info.legalName
+	              })]
+	            })]
+	          }), info.email && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	            className: "info-channel",
+	            href: `mailto:${info.email}`,
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "info-channel__ic",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "mail",
+	                size: 20,
+	                stroke: 1.5
+	              })
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "info-channel__body",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "info-channel__label",
+	                children: "Email"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "info-channel__value",
+	                children: info.email
+	              })]
+	            })]
+	          }), info.phone && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	            className: "info-channel",
+	            href: telHref(info.phone),
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "info-channel__ic",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "phone",
+	                size: 20,
+	                stroke: 1.5
+	              })
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "info-channel__body",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "info-channel__label",
+	                children: "Phone"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "info-channel__value",
+	                children: info.phone
+	              })]
+	            })]
+	          }), info.address && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "info-channel info-channel--static",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "info-channel__ic",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "mapPin",
+	                size: 20,
+	                stroke: 1.5
+	              })
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "info-channel__body",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "info-channel__label",
+	                children: "Address"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "info-channel__value info-channel__value--multiline",
+	                children: info.address
+	              })]
+	            })]
+	          }), info.hours && channels && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "info-channel info-channel--static",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "info-channel__ic",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "clock",
+	                size: 20,
+	                stroke: 1.5
+	              })
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "info-channel__body",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "info-channel__label",
+	                children: "Support hours"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "info-channel__value",
+	                children: info.hours
+	              })]
+	            })]
+	          })]
+	        }), socials.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "info-social",
+	          children: socials.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+	            href: s.url,
+	            target: "_blank",
+	            rel: "noopener noreferrer nofollow",
+	            className: "info-social__link",
+	            "aria-label": s.label,
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: s.icon,
+	              size: 18,
+	              stroke: 1.6
+	            }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              children: s.label
+	            })]
+	          }, s.key))
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	        className: "info-sec",
+	        "aria-labelledby": "contact-self",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "info-sechead",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            id: "contact-self",
+	            className: "info-h2",
+	            children: "Self-service"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "info-sub",
+	            children: "Order, account and programme tools available on the platform."
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	          className: "info-more",
+	          "aria-label": "Help links",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(HelpLink, {
+	            to: "/account/orders",
+	            title: "Track an order",
+	            note: "Status and tracking in your account"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(HelpLink, {
+	            to: "/passport",
+	            title: "Purchase Passport",
+	            note: "Look up one order by number and email"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(HelpLink, {
+	            to: "/account",
+	            title: "Your account",
+	            note: "Orders, addresses and profile"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(HelpLink, {
+	            to: "/wishlist",
+	            title: "Wishlist",
+	            note: "Products you have saved"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(HelpLink, {
+	            to: "/account/creator",
+	            title: "Creator Program",
+	            note: "Join and track your status"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(HelpLink, {
+	            to: "/shipping",
+	            title: "Shipping",
+	            note: "Delivery options and charges"
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	        className: "info-sec",
+	        "aria-labelledby": "contact-faq",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "info-sechead",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            id: "contact-faq",
+	            className: "info-h2",
+	            children: "Common questions"
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "info-faq",
+	          children: FAQS.map(item => /*#__PURE__*/jsxRuntimeExports.jsxs("details", {
+	            className: "info-faq__item",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("summary", {
+	              className: "info-faq__q",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                children: item.q
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                name: "chevronDown",
+	                size: 16,
+	                stroke: 1.8
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	              className: "info-faq__a",
+	              children: item.a
+	            })]
+	          }, item.q))
+	        })]
+	      })]
+	    })
+	  });
+	}
+
+	const SHIPPING_METHODS = [{
+	  name: 'Standard',
+	  fee: '₹0',
+	  note: 'Free on every order, at any basket value.'
+	}, {
+	  name: 'Express',
+	  fee: '₹79',
+	  note: 'A flat charge, added at checkout.'
+	}, {
+	  name: 'Scheduled',
+	  fee: '₹49',
+	  note: 'A flat charge for the Scheduled option at checkout.'
+	}];
+
+	// key -> { title, blurb, facts[], ownerLabel, showContact }
+	function documents(name) {
+	  return {
+	    privacy: {
+	      title: 'Privacy Policy',
+	      blurb: `How ${name} handles the information you share when you use the store.`,
+	      facts: [{
+	        heading: 'What an account stores',
+	        body: `When you create an account, ${name} keeps your email, any delivery addresses you save, your order history and your wishlist so they are available when you sign in.`
+	      }, {
+	        heading: 'What an order records',
+	        body: 'To fulfil an order we store the delivery details you enter at checkout — name, contact number, address — alongside the order itself. Your order total is calculated on our server.'
+	      }, {
+	        heading: 'Payments',
+	        body: 'Card and online payments are processed by Razorpay. Sora Life never sees or stores your full card details — only the confirmation Razorpay returns for your order.'
+	      }, {
+	        heading: 'On this device',
+	        body: 'Your cart and, for guests, your wishlist are kept in your browser so they persist between visits. A referral link may store a creator attribution identifier in your browser; it holds no personal information.'
+	      }],
+	      ownerLabel: 'privacy',
+	      showContact: true
+	    },
+	    terms: {
+	      title: 'Terms & Conditions',
+	      blurb: `The basis on which you use ${name} and place orders.`,
+	      facts: [{
+	        heading: 'Prices and totals',
+	        body: 'Product prices, discounts, delivery charges and the final payable amount are recalculated on our server at checkout. The amount confirmed there is the amount you are charged.'
+	      }, {
+	        heading: 'Placing an order',
+	        body: 'An order is created once you submit it and is confirmed once payment is completed, or recorded when you choose cash on delivery. Availability is subject to stock at the time of purchase.'
+	      }, {
+	        heading: 'Your account',
+	        body: 'You are responsible for keeping your sign-in details secure. Products, prices and availability are managed by the store and may change.'
+	      }, {
+	        heading: 'Creator Program',
+	        body: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: ["Participation in the ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/account/creator",
+	            children: "Creator Program"
+	          }), " is governed by the terms presented within the program itself."]
+	        })
+	      }],
+	      ownerLabel: 'terms',
+	      showContact: true
+	    },
+	    shipping: {
+	      title: 'Shipping Policy',
+	      blurb: 'The delivery options offered at checkout, and what each costs.',
+	      methods: SHIPPING_METHODS,
+	      facts: [{
+	        heading: 'Delivery charges',
+	        body: 'Each method carries the flat charge shown above, applied at checkout regardless of order value. There is no minimum-order threshold for free shipping — Standard delivery is free on every order.'
+	      }, {
+	        heading: 'Delivery estimates',
+	        body: 'Checkout presents the current delivery options and may show an estimated window before payment. No fixed delivery timeline is promised on this page.'
+	      }, {
+	        heading: 'Cash on delivery',
+	        body: 'Cash on delivery is available at checkout where eligible for your order.'
+	      }, {
+	        heading: 'Tracking',
+	        body: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: ["Once an order ships, its status \u2014 and a tracking link, when the seller provides one \u2014 appears in ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/account/orders",
+	            children: "your orders"
+	          }), "."]
+	        })
+	      }],
+	      ownerLabel: 'shipping',
+	      showContact: true
+	    },
+	    returns: {
+	      title: 'Returns, Refunds & Cancellation',
+	      blurb: 'How to raise an issue with an order.',
+	      facts: [{
+	        heading: 'Raising a request',
+	        body: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: ["If something is wrong with an order, contact the store with your order number \u2014 you can find it in ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/account/orders",
+	            children: "your orders"
+	          }), " or on your", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/passport",
+	            children: "Purchase Passport"
+	          }), ". The store will confirm how your request is handled."]
+	        })
+	      }, {
+	        heading: 'Order status',
+	        body: 'Every order shows its current status in your account, so you can see where it stands before and after raising a request.'
+	      }],
+	      ownerLabel: 'returns',
+	      showContact: true
+	      // Formal return windows, refund timing and cancellation terms are the
+	      // store operator's to define. They remain absent until approved.
+	    }
+	  };
+	}
+	function Legal({
+	  doc
+	}) {
+	  const name = branding?.siteName || 'SORA LIFE';
+	  const info = companyInfo();
+	  const spec = documents(name)[doc];
+	  if (!spec) return null;
+	  const ownerText = policyParagraphs(info, spec.ownerLabel);
+	  const canContact = hasContactChannel(info);
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    className: "info info--legal",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap info-legal__wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	        className: "v2-crumbs",
+	        "aria-label": "Breadcrumb",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: "/",
+	          children: "Home"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronRight",
+	          size: 12,
+	          stroke: 1.7
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: spec.title
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+	        className: "info-hero info-hero--legal",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          className: "info-title info-title--legal",
+	          children: spec.title
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "info-lede",
+	          children: spec.blurb
+	        })]
+	      }), spec.methods && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "info-ship",
+	        role: "table",
+	        "aria-label": "Delivery options and charges",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "info-ship__row info-ship__row--head",
+	          role: "row",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            role: "columnheader",
+	            children: "Method"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            role: "columnheader",
+	            children: "Charge"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            role: "columnheader",
+	            children: "Notes"
+	          })]
+	        }), spec.methods.map(m => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "info-ship__row",
+	          role: "row",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            role: "cell",
+	            className: "info-ship__name",
+	            children: m.name
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            role: "cell",
+	            className: "info-ship__fee",
+	            children: m.fee
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            role: "cell",
+	            className: "info-ship__note",
+	            children: m.note
+	          })]
+	        }, m.name))]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "info-legal",
+	        children: [spec.facts.map(f => /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	          className: "info-legal__block",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            className: "info-legal__h",
+	            children: f.heading
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "info-legal__p",
+	            children: f.body
+	          })]
+	        }, f.heading)), ownerText.length > 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	          className: "info-legal__block info-legal__owner",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            className: "info-legal__h",
+	            children: "Full policy"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	            className: "info-legal__copy",
+	            children: ownerText.map((para, i) => /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              className: "info-legal__p",
+	              children: para
+	            }, i))
+	          })]
+	        }) : null, spec.showContact && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	          className: "info-legal__block info-legal__contact",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            className: "info-legal__h",
+	            children: "Questions about this?"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            className: "info-legal__p",
+	            children: canContact ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: ["See the ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	                to: "/contact",
+	                children: "Contact & help"
+	              }), " page for the store's published contact channels and support hours, when available."]
+	            }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: ["Visit ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	                to: "/contact",
+	                children: "Contact & help"
+	              }), " for available support and order-tracking options."]
+	            })
+	          }), (info.legalName || info.address) && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	            className: "info-legal__p",
+	            children: [info.legalName && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                children: "Business:"
+	              }), " ", info.legalName]
+	            }), info.legalName && info.address && /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), info.address && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                children: "Published address:"
+	              }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "info-address",
+	                children: info.address
+	              })]
+	            })]
+	          }), info.email && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	            className: "info-legal__p",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	              href: `mailto:${info.email}`,
+	              className: "info-legal__mail",
+	              children: info.email
+	            }), info.phone && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: [" \xB7 ", /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	                href: telHref(info.phone),
+	                className: "info-legal__mail",
+	                children: info.phone
+	              })]
+	            })]
+	          })]
+	        })]
+	      })]
+	    })
 	  });
 	}
 
@@ -45439,25 +48167,100 @@
 	  return null;
 	}
 
+	// ============================================================
+	// Admin access decision rules.
+	//
+	// Free of React and of the Supabase client, so the rules can be unit tested in
+	// Node (scripts/test-purchase-gating.mjs) — the same split authRecovery.js and
+	// oauthProviders.js use. adminAuth.jsx performs the query and holds the state.
+	//
+	// The states exist because "not an admin" and "the membership query failed"
+	// used to collapse into a single boolean. A dropped request then looked
+	// exactly like a denial and bounced a signed-in admin to the login page, so
+	// they re-entered credentials for a problem that was never about them.
+	//
+	//   'unknown'  not checked yet
+	//   'admin'    the query SUCCEEDED and returned a membership row
+	//   'denied'   the query SUCCEEDED and returned nothing — genuinely not an admin
+	//   'error'    the query FAILED; membership is still unknown
+	//
+	// Separating them cannot widen access: `grantsAdminAccess` returns true for
+	// exactly one state, and the real enforcement is RLS on the server regardless.
+	// ============================================================
+	const ADMIN_UNKNOWN = 'unknown';
+	const ADMIN_YES = 'admin';
+	const ADMIN_DENIED = 'denied';
+	const ADMIN_ERROR = 'error';
+
+	/** Map a Supabase `{ data, error }` response to a verification state. */
+	function adminStateFromResult({
+	  data,
+	  error
+	} = {}) {
+	  if (error) return ADMIN_ERROR;
+	  return data ? ADMIN_YES : ADMIN_DENIED;
+	}
+
+	/**
+	 * The single definition of "may use the admin area".
+	 *
+	 * Deliberately an allowlist of one: anything that is not a confirmed,
+	 * successfully-read membership is not access.
+	 */
+	function grantsAdminAccess(state) {
+	  return state === ADMIN_YES;
+	}
+
 	const AdminAuthContext = /*#__PURE__*/reactExports.createContext(null);
+
+	// The decision rules live in a React-free module so they can be unit
+	// tested directly in Node; see src/lib/adminAccess.js for why the states
+	// exist and why only one of them grants access.
 	function AdminAuthProvider({
 	  children
 	}) {
 	  const [session, setSession] = reactExports.useState(null);
-	  const [isAdmin, setIsAdmin] = reactExports.useState(false);
+	  const [adminState, setAdminState] = reactExports.useState(ADMIN_UNKNOWN);
 	  const [loading, setLoading] = reactExports.useState(true);
+
+	  // Derived, never stored: there is one definition of "is an admin" and it is
+	  // strictly the successful-and-present case.
+	  const isAdmin = grantsAdminAccess(adminState);
+	  async function queryMembership(userId) {
+	    try {
+	      const res = await supabase.from("admin_users").select("user_id").eq("user_id", userId).maybeSingle();
+	      return adminStateFromResult(res);
+	    } catch {
+	      // A thrown client/network error is the same class of "we don't know".
+	      return ADMIN_ERROR;
+	    }
+	  }
 	  async function verifyAdmin(currentSession) {
 	    if (!currentSession?.user) {
-	      setIsAdmin(false);
-	      return false;
+	      setAdminState(ADMIN_DENIED);
+	      return ADMIN_DENIED;
 	    }
+	    let state = await queryMembership(currentSession.user.id);
+	    // One retry: a single dropped request should not cost an admin their
+	    // session. A genuine denial ('denied') is never retried.
+	    if (state === ADMIN_ERROR) {
+	      await new Promise(r => setTimeout(r, 400));
+	      state = await queryMembership(currentSession.user.id);
+	    }
+	    setAdminState(state);
+	    return state;
+	  }
+
+	  /** Lets the error screen ask again without a full reload. */
+	  async function retryVerification() {
+	    setAdminState(ADMIN_UNKNOWN);
 	    const {
-	      data,
-	      error
-	    } = await supabase.from("admin_users").select("user_id").eq("user_id", currentSession.user.id).maybeSingle();
-	    const authorized = !error && !!data;
-	    setIsAdmin(authorized);
-	    return authorized;
+	      data: {
+	        session: current
+	      }
+	    } = await supabase.auth.getSession();
+	    setSession(current);
+	    return verifyAdmin(current);
 	  }
 	  reactExports.useEffect(() => {
 	    let mounted = true;
@@ -45501,13 +48304,17 @@
 	      };
 	    }
 	    setSession(data.session);
-	    const authorized = await verifyAdmin(data.session);
-	    if (!data.session || !authorized) {
+	    const state = await verifyAdmin(data.session);
+	    if (!data.session || !grantsAdminAccess(state)) {
 	      await supabase.auth.signOut();
 	      setSession(null);
-	      setIsAdmin(false);
+	      setAdminState(ADMIN_DENIED);
+
+	      // Say which of the two it was. Telling someone their account is not
+	      // authorized when the check simply could not run sends them looking for
+	      // the wrong problem.
 	      return {
-	        error: new Error("This account is not authorized as a SORA LIFE admin.")
+	        error: new Error(state === ADMIN_ERROR ? "We could not verify your admin access just now. Please check your connection and try again." : "This account is not authorized as a SORA LIFE admin.")
 	      };
 	    }
 	    return {
@@ -45517,12 +48324,16 @@
 	  async function signOut() {
 	    await supabase.auth.signOut();
 	    setSession(null);
-	    setIsAdmin(false);
+	    setAdminState(ADMIN_DENIED);
 	  }
 	  return /*#__PURE__*/jsxRuntimeExports.jsx(AdminAuthContext.Provider, {
 	    value: {
 	      session,
 	      isAdmin,
+	      // Lets the route tell "not an admin" apart from "could not check".
+	      adminState,
+	      verificationFailed: adminState === ADMIN_ERROR,
+	      retryVerification,
 	      loading,
 	      signIn,
 	      signOut
@@ -47538,6 +50349,13 @@
 	      setErr('Wait for the current media operation to finish before saving.');
 	      return;
 	    }
+	    // The `min` attribute alone is a hint the browser can be talked out of.
+	    // A product saved at zero renders "Price coming soon" and can never be
+	    // bought — the server refuses the line at checkout — so refuse it here.
+	    if (!(original > 0)) {
+	      setErr('Enter an original price of at least ₹1 — a product with no price cannot be purchased.');
+	      return;
+	    }
 	    setSaving(true);
 	    setErr('');
 	    try {
@@ -47706,11 +50524,14 @@
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	              className: "input",
 	              type: "number",
-	              min: "0",
+	              min: "1",
 	              step: "1",
 	              required: true,
 	              value: values.originalPrice,
 	              onChange: e => set('originalPrice', e.target.value)
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              className: "hint",
+	              children: "Must be at least \u20B91. A product with no price cannot be purchased."
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "field",
@@ -52999,6 +55820,438 @@
 	  });
 	}
 
+	const RESULT_LIMIT = 8;
+	function thumbUrl(product) {
+	  const first = productGallery(product)[0];
+	  return first?.url || product?.image || '';
+	}
+	function Thumb({
+	  product
+	}) {
+	  const url = thumbUrl(product);
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	    className: "adm-pp__thumb",
+	    children: url ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	      src: url,
+	      alt: "",
+	      loading: "lazy",
+	      decoding: "async"
+	    }) : null
+	  });
+	}
+	function DiscoveryProductPicker({
+	  label,
+	  catalogue,
+	  value,
+	  onChange,
+	  fallbackHint
+	}) {
+	  const [term, setTerm] = reactExports.useState('');
+	  const selected = Array.isArray(value) ? value : [];
+	  const full = selected.length >= MAX_CONCERN_PRODUCTS;
+	  const bySlug = reactExports.useMemo(() => new Map((catalogue || []).map(p => [p.slug, p])), [catalogue]);
+	  const results = reactExports.useMemo(() => searchCatalogueForPicker(catalogue, term, {
+	    exclude: selected,
+	    limit: RESULT_LIMIT
+	  }), [term, catalogue, selected]);
+	  const add = slug => {
+	    if (!full && !selected.includes(slug)) onChange([...selected, slug]);
+	    setTerm('');
+	  };
+	  const remove = slug => onChange(selected.filter(s => s !== slug));
+	  const move = (index, delta) => {
+	    const next = [...selected];
+	    const target = index + delta;
+	    if (target < 0 || target >= next.length) return;
+	    [next[index], next[target]] = [next[target], next[index]];
+	    onChange(next);
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "adm-pp",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	      className: "label",
+	      htmlFor: `pp-${label}`,
+	      children: "Linked products"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint",
+	      children: selected.length ? `${selected.length} chosen — this card opens exactly these, in this order.` : fallbackHint
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	      id: `pp-${label}`,
+	      className: "input",
+	      type: "search",
+	      autoComplete: "off",
+	      value: term,
+	      onChange: e => setTerm(e.target.value),
+	      placeholder: full ? `Limit of ${MAX_CONCERN_PRODUCTS} reached` : 'Search products by name…',
+	      disabled: full,
+	      "aria-label": `Search products to link to ${label}`
+	    }), term.trim() && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	      className: "adm-pp__results",
+	      children: results.length ? results.map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	          type: "button",
+	          className: "adm-pp__result",
+	          onClick: () => add(p.slug),
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Thumb, {
+	            product: p
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            className: "adm-pp__name",
+	            children: [p.name, p.form ? /*#__PURE__*/jsxRuntimeExports.jsxs("em", {
+	              children: [" \xB7 ", p.form]
+	            }) : null]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "adm-pp__add",
+	            children: "Add"
+	          })]
+	        })
+	      }, p.slug)) : /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        className: "adm-pp__none",
+	        children: ["No product matches \u201C", term.trim(), "\u201D."]
+	      })
+	    }), selected.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+	      className: "adm-pp__chosen",
+	      children: selected.map((slug, i) => {
+	        const product = bySlug.get(slug);
+	        return /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	          children: [product ? /*#__PURE__*/jsxRuntimeExports.jsx(Thumb, {
+	            product: product
+	          }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "adm-pp__thumb"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "adm-pp__name",
+	            children: product ? product.name : /*#__PURE__*/jsxRuntimeExports.jsxs("em", {
+	              children: ["Not in the catalogue \u2014 ", slug]
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            className: "adm-pp__order",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	              type: "button",
+	              onClick: () => move(i, -1),
+	              disabled: i === 0,
+	              "aria-label": `Move ${product?.name || slug} up`,
+	              children: "\u2191"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	              type: "button",
+	              onClick: () => move(i, 1),
+	              disabled: i === selected.length - 1,
+	              "aria-label": `Move ${product?.name || slug} down`,
+	              children: "\u2193"
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            type: "button",
+	            className: "adm-pp__rm",
+	            onClick: () => remove(slug),
+	            "aria-label": `Remove ${product?.name || slug} from ${label}`,
+	            children: "\xD7"
+	          })]
+	        }, slug);
+	      })
+	    })]
+	  });
+	}
+
+	function ImageField({
+	  label,
+	  value,
+	  onChange,
+	  onBusy
+	}) {
+	  const [busy, setBusy] = reactExports.useState(false);
+	  const [err, setErr] = reactExports.useState('');
+	  const preview = safeVisualUrl(value);
+	  const invalid = !!value && !preview;
+	  async function pick(e) {
+	    const file = e.target.files?.[0];
+	    e.target.value = '';
+	    if (!file) return;
+	    setBusy(true);
+	    onBusy(1);
+	    setErr('');
+	    try {
+	      onChange(await uploadHomepageImage(file));
+	    } catch (ex) {
+	      setErr(ex.message || 'Upload failed.');
+	    }
+	    setBusy(false);
+	    onBusy(-1);
+	  }
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "adm-dc__image",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	      className: "label",
+	      children: "Image"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	      className: "input",
+	      value: value || '',
+	      onChange: e => onChange(e.target.value),
+	      placeholder: "Leave empty to use the built-in image",
+	      "aria-label": `${label} image URL`
+	    }), invalid && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint err",
+	      children: "Not a usable image URL \u2014 it will be ignored."
+	    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint err",
+	      children: err
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-disc-row__actions",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	        type: "file",
+	        accept: "image/png,image/jpeg,image/webp",
+	        onChange: pick,
+	        disabled: busy,
+	        "aria-label": `Upload an image for ${label}`
+	      }), value && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "button",
+	        className: "btn btn-sm btn-light",
+	        onClick: () => onChange(''),
+	        children: "Use default"
+	      }), busy && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "hint",
+	        children: "Uploading\u2026"
+	      })]
+	    })]
+	  });
+	}
+	function CardEditor({
+	  card,
+	  index,
+	  total,
+	  kind,
+	  catalogue,
+	  onPatch,
+	  onMove,
+	  onRemove,
+	  onBusy
+	}) {
+	  const patch = fields => onPatch({
+	    ...card,
+	    ...fields
+	  });
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("details", {
+	    className: `adm-dc${card.enabled ? '' : ' adm-dc--off'}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("summary", {
+	      className: "adm-dc__sum",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "adm-disc-row__thumb",
+	        children: safeVisualUrl(card.image) ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	          src: safeVisualUrl(card.image),
+	          alt: ""
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "adm-disc-row__empty",
+	          children: "Default"
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	        className: "adm-dc__title",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: card.name
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "hint",
+	          children: [card.productSlugs.length ? `${card.productSlugs.length} product${card.productSlugs.length === 1 ? '' : 's'}` : 'No products chosen', card.group ? ` · ${card.group}` : '', ` · ${card.id}`]
+	        })]
+	      }), !card.enabled && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "adm-dc__badge",
+	        children: "Hidden"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-dc__body",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          children: "Display name"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          className: "input",
+	          value: card.name,
+	          maxLength: 60,
+	          onChange: e => patch({
+	            name: e.target.value
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "hint",
+	          children: ["Internal id ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+	            children: card.id
+	          }), " \u2014 fixed, so renaming is always safe."]
+	        })]
+	      }), kind === 'concern' && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	          className: "label",
+	          children: ["Group ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "hint",
+	            children: "(optional)"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          className: "input",
+	          value: card.group || '',
+	          maxLength: 40,
+	          placeholder: "Skin, Hair, Wellness, Personal care",
+	          onChange: e => patch({
+	            group: e.target.value
+	          })
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ImageField, {
+	        label: card.name,
+	        value: card.image,
+	        onBusy: onBusy,
+	        onChange: image => patch({
+	          image
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(DiscoveryProductPicker, {
+	        label: card.name,
+	        catalogue: catalogue,
+	        value: card.productSlugs,
+	        onChange: productSlugs => patch({
+	          productSlugs
+	        }),
+	        fallbackHint: kind === 'concern' ? 'None chosen. A built-in concern falls back to matching the catalogue automatically; a concern you created stays hidden until you choose products.' : 'None chosen. A card matching a real catalogue category opens that category; a card you created stays hidden until you choose products.'
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-dc__foot",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "btn btn-sm btn-light",
+	          onClick: () => onMove(-1),
+	          disabled: index === 0,
+	          children: "\u2191 Move up"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "btn btn-sm btn-light",
+	          onClick: () => onMove(1),
+	          disabled: index === total - 1,
+	          children: "\u2193 Move down"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "btn btn-sm btn-light",
+	          onClick: () => patch({
+	            enabled: !card.enabled
+	          }),
+	          children: card.enabled ? 'Disable' : 'Enable'
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "btn btn-sm adm-dc__del",
+	          onClick: onRemove,
+	          children: "Delete"
+	        })]
+	      })]
+	    })]
+	  });
+	}
+	function CardList({
+	  title,
+	  hint,
+	  kind,
+	  cards,
+	  catalogue,
+	  onChange,
+	  onBusy
+	}) {
+	  const [draft, setDraft] = reactExports.useState('');
+	  const noun = kind === 'concern' ? 'concern' : 'category';
+	  const full = cards.length >= MAX_DISCOVERY_CARDS;
+	  const patchAt = i => next => onChange(cards.map((c, j) => j === i ? next : c));
+	  const moveAt = i => delta => {
+	    const target = i + delta;
+	    if (target < 0 || target >= cards.length) return;
+	    const next = [...cards];
+	    [next[i], next[target]] = [next[target], next[i]];
+	    onChange(next);
+	  };
+	  const removeAt = i => () => {
+	    // Deleting a card removes a tile from the homepage. Nothing in the
+	    // catalogue is touched, and the confirmation has to say so plainly —
+	    // a Delete button next to a product list invites the wrong assumption.
+	    const ok = typeof window === 'undefined' || window.confirm('Remove this Homepage discovery card? Products will not be deleted.');
+	    if (ok) onChange(cards.filter((_, j) => j !== i));
+	  };
+	  const add = () => {
+	    const name = draft.trim();
+	    if (!name || full) return;
+	    onChange([...cards, {
+	      id: makeDiscoveryId(name, cards.map(c => c.id)),
+	      name,
+	      image: '',
+	      productSlugs: [],
+	      enabled: true,
+	      ...(kind === 'concern' ? {
+	        group: ''
+	      } : {})
+	    }]);
+	    setDraft('');
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "surface",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	      children: title
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint",
+	      children: hint
+	    }), cards.length === 0 && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint",
+	      children: "No cards yet \u2014 add one below."
+	    }), cards.map((card, i) => /*#__PURE__*/jsxRuntimeExports.jsx(CardEditor, {
+	      card: card,
+	      index: i,
+	      total: cards.length,
+	      kind: kind,
+	      catalogue: catalogue,
+	      onPatch: patchAt(i),
+	      onMove: moveAt(i),
+	      onRemove: removeAt(i),
+	      onBusy: onBusy
+	    }, card.id)), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-dc__add",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	        className: "input",
+	        value: draft,
+	        maxLength: 60,
+	        onChange: e => setDraft(e.target.value),
+	        onKeyDown: e => {
+	          if (e.key === 'Enter') {
+	            e.preventDefault();
+	            add();
+	          }
+	        },
+	        placeholder: full ? `Limit of ${MAX_DISCOVERY_CARDS} cards reached` : `New ${noun} name…`,
+	        disabled: full,
+	        "aria-label": `Name for a new ${noun} card`
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	        type: "button",
+	        className: "btn btn-sm",
+	        onClick: add,
+	        disabled: full || !draft.trim(),
+	        children: ["+ Add ", noun]
+	      })]
+	    })]
+	  });
+	}
+	function DiscoveryCardControls({
+	  categoryCards,
+	  concernCards,
+	  onCategoryCardsChange,
+	  onConcernCardsChange,
+	  catalogue = [],
+	  onBusy
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(CardList, {
+	      title: "Shop by Category",
+	      hint: "The homepage category rail, in this order. These cards are merchandising \u2014 they do not create or change catalogue categories, and the round rail under the hero keeps following the real catalogue.",
+	      kind: "category",
+	      cards: categoryCards,
+	      catalogue: catalogue,
+	      onChange: onCategoryCardsChange,
+	      onBusy: onBusy
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(CardList, {
+	      title: "Shop by Concerns",
+	      hint: "The homepage concerns rail, in this order. Choose products to control a card exactly; a built-in concern with no products keeps matching the catalogue automatically.",
+	      kind: "concern",
+	      cards: concernCards,
+	      catalogue: catalogue,
+	      onChange: onConcernCardsChange,
+	      onBusy: onBusy
+	    })]
+	  });
+	}
+
 	function HomepageSettings() {
 	  const [notices, setNotices] = reactExports.useState(['', '', '']);
 	  const [bsTitle, setBsTitle] = reactExports.useState('Bestsellers');
@@ -53009,6 +56262,11 @@
 	  const [err, setErr] = reactExports.useState('');
 	  const [visuals, setVisuals] = reactExports.useState(() => sanitizeHomepageVisuals());
 	  const [uploads, setUploads] = reactExports.useState(0);
+	  // The two discovery rails, as ordered card lists under `homepage.discovery`.
+	  // Before an admin has saved anything these are the built-in rails expressed
+	  // as cards, so the editor opens on exactly what the homepage is showing.
+	  const [categoryCards, setCategoryCards] = reactExports.useState(() => normalizeDiscovery({}).categoryCards);
+	  const [concernCards, setConcernCards] = reactExports.useState(() => normalizeDiscovery({}).concernCards);
 	  reactExports.useEffect(() => {
 	    (async () => {
 	      try {
@@ -53021,6 +56279,9 @@
 	          setBsTitle(hp.bestseller_title || 'Bestsellers');
 	          setBsSub(hp.bestseller_subtitle || '');
 	          setVisuals(sanitizeHomepageVisuals(hp.visuals));
+	          const cards = normalizeDiscovery(hp.discovery);
+	          setCategoryCards(cards.categoryCards);
+	          setConcernCards(cards.concernCards);
 	        }
 	      } catch (e) {
 	        setErr(e.message || String(e));
@@ -53058,13 +56319,19 @@
 	        ...keptAnnouncement,
 	        notices: notices.filter(Boolean)
 	      });
+	      // Sanitised on the way out too: an unusable image URL, a malformed id,
+	      // a duplicate or a slug that is not a product never reaches storage.
+	      const cleanDiscovery = discoveryPayload(categoryCards, concernCards);
 	      const next = mergeHomepageVisuals({
 	        ...currentHomepage,
 	        bestseller_title: bsTitle,
-	        bestseller_subtitle: bsSub
+	        bestseller_subtitle: bsSub,
+	        discovery: cleanDiscovery
 	      }, visuals);
 	      await adminSetSetting('homepage', next);
 	      setVisuals(next.visuals);
+	      setCategoryCards(cleanDiscovery.categoryCards);
+	      setConcernCards(cleanDiscovery.concernCards);
 	      announceHomepageSaved(next);
 	      setMsg('Saved. Homepage appearance is live; open storefront tabs update automatically.');
 	    } catch (ex) {
@@ -53084,7 +56351,7 @@
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
 	          children: "Homepage"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	          children: "Homepage copy, category strip appearance and the offers gallery."
+	          children: "Homepage copy, appearance, the offers gallery and the two discovery rails."
 	        })]
 	      })
 	    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -53143,6 +56410,13 @@
 	        value: visuals,
 	        onChange: setVisuals,
 	        onUploading: delta => setUploads(n => n + delta)
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(DiscoveryCardControls, {
+	        categoryCards: categoryCards,
+	        concernCards: concernCards,
+	        onCategoryCardsChange: setCategoryCards,
+	        onConcernCardsChange: setConcernCards,
+	        catalogue: products,
+	        onBusy: delta => setUploads(n => n + delta)
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	        className: "btn",
 	        type: "submit",
@@ -53400,15 +56674,25 @@
 	  });
 	}
 
+	const POLICY_LABELS = {
+	  privacy: 'Privacy policy',
+	  terms: 'Terms & conditions',
+	  shipping: 'Shipping policy',
+	  returns: 'Returns, refunds & cancellation'
+	};
 	function Settings() {
 	  const {
 	    session,
 	    signOut
 	  } = useAdminAuth();
 	  const [contact, setContact] = reactExports.useState({
+	    legalName: '',
 	    phone: '',
 	    email: '',
-	    address: ''
+	    address: '',
+	    hours: '',
+	    social: {},
+	    policies: {}
 	  });
 	  const [loading, setLoading] = reactExports.useState(true);
 	  const [saving, setSaving] = reactExports.useState(false);
@@ -53419,7 +56703,12 @@
 	  const [pwSaving, setPwSaving] = reactExports.useState(false);
 	  reactExports.useEffect(() => {
 	    adminGetSetting('contact').then(v => {
-	      if (v) setContact(v);
+	      if (v) setContact(current => ({
+	        ...current,
+	        ...v,
+	        social: v.social || {},
+	        policies: v.policies || {}
+	      }));
 	    }).catch(e => setErr(e.message || String(e))).finally(() => setLoading(false));
 	  }, []);
 	  async function save(e) {
@@ -53428,8 +56717,16 @@
 	    setErr('');
 	    setMsg('');
 	    try {
-	      await adminSetSetting('contact', contact);
-	      setMsg('Saved.');
+	      const clean = validateCompanyForSave(contact);
+	      const next = {
+	        ...contact,
+	        ...clean,
+	        social: clean.social,
+	        policies: clean.policies
+	      };
+	      await adminSetSetting('contact', next);
+	      setContact(next);
+	      setMsg('Business information saved.');
 	    } catch (ex) {
 	      setErr(ex.message || String(ex));
 	    }
@@ -53531,51 +56828,151 @@
 	      onSubmit: save,
 	      className: "surface",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	        children: "Store contact information"
+	        children: "Business & support information"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "muted",
+	        style: {
+	          marginBottom: 20
+	        },
+	        children: "Only completed, valid fields appear publicly. Leave unknown details blank."
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "field",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	          className: "label",
-	          children: "Phone"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	          className: "input",
-	          value: contact.phone || '',
-	          onChange: e => setContact(c => ({
-	            ...c,
-	            phone: e.target.value
-	          }))
+	        className: "adm-formgrid",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Business / legal name"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            maxLength: 120,
+	            value: contact.legalName || '',
+	            onChange: e => setContact(c => ({
+	              ...c,
+	              legalName: e.target.value
+	            }))
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Support email"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            type: "email",
+	            maxLength: 200,
+	            value: contact.email || '',
+	            onChange: e => setContact(c => ({
+	              ...c,
+	              email: e.target.value
+	            }))
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Support phone"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            type: "tel",
+	            maxLength: 40,
+	            value: contact.phone || '',
+	            onChange: e => setContact(c => ({
+	              ...c,
+	              phone: e.target.value
+	            }))
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Support hours"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            maxLength: 160,
+	            placeholder: "Publish only confirmed hours",
+	            value: contact.hours || '',
+	            onChange: e => setContact(c => ({
+	              ...c,
+	              hours: e.target.value
+	            }))
+	          })]
 	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "field",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	          className: "label",
-	          children: "Email"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	          className: "input",
-	          value: contact.email || '',
-	          onChange: e => setContact(c => ({
-	            ...c,
-	            email: e.target.value
-	          }))
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "field",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	          className: "label",
-	          children: "Address"
+	          children: "Registered / business address"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
 	          className: "textarea",
+	          maxLength: 400,
+	          rows: 3,
 	          value: contact.address || '',
 	          onChange: e => setContact(c => ({
 	            ...c,
 	            address: e.target.value
 	          }))
 	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-settings-group",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	          children: "Official social profiles"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "muted",
+	          children: "Optional public HTTPS links. Empty networks stay hidden."
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "adm-formgrid",
+	          children: SOCIAL_NETWORKS.map(network => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "field",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	              className: "label",
+	              children: network.label
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              className: "input",
+	              type: "url",
+	              inputMode: "url",
+	              placeholder: "https://",
+	              value: contact.social?.[network.key] || '',
+	              onChange: e => setContact(c => ({
+	                ...c,
+	                social: {
+	                  ...(c.social || {}),
+	                  [network.key]: e.target.value
+	                }
+	              }))
+	            })]
+	          }, network.key))
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-settings-group",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	          children: "Owner-approved policy text"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "muted",
+	          children: "Plain text only. Leave a policy blank until its business terms have been approved."
+	        }), POLICY_KEYS.map(key => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: POLICY_LABELS[key]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
+	            className: "textarea",
+	            rows: 7,
+	            maxLength: 20000,
+	            value: contact.policies?.[key] || '',
+	            onChange: e => setContact(c => ({
+	              ...c,
+	              policies: {
+	                ...(c.policies || {}),
+	                [key]: e.target.value
+	              }
+	            }))
+	          })]
+	        }, key))]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	        className: "btn",
 	        type: "submit",
 	        disabled: saving,
-	        children: saving ? 'Saving…' : 'Save'
+	        children: saving ? 'Saving…' : 'Save business information'
 	      })]
 	    })]
 	  });
@@ -53587,7 +56984,9 @@
 	  const {
 	    isAdmin,
 	    loading,
-	    session
+	    session,
+	    verificationFailed,
+	    retryVerification
 	  } = useAdminAuth();
 	  if (loading) {
 	    return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -53598,6 +56997,47 @@
 	        color: '#55655B'
 	      },
 	      children: "Checking session\u2026"
+	    });
+	  }
+	  // The membership check could not be completed. That is NOT a denial: bouncing
+	  // a signed-in admin to the login page over a dropped request sends them to
+	  // re-enter credentials for a problem that has nothing to do with them.
+	  // Access is still withheld — isAdmin stays false — we just say why.
+	  if (session && verificationFailed) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      style: {
+	        minHeight: '100vh',
+	        display: 'grid',
+	        placeItems: 'center',
+	        padding: 24
+	      },
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        style: {
+	          maxWidth: 420,
+	          textAlign: 'center',
+	          color: '#55655B'
+	        },
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          style: {
+	            fontSize: 18,
+	            margin: '0 0 8px',
+	            color: '#16211B'
+	          },
+	          children: "Could not verify your access"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          style: {
+	            margin: '0 0 16px',
+	            fontSize: 14,
+	            lineHeight: 1.55
+	          },
+	          children: "We could not reach the server to confirm your admin account. You are still signed in \u2014 this is a connection problem, not a permissions one."
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "btn",
+	          onClick: () => retryVerification(),
+	          children: "Try again"
+	        })]
+	      })
 	    });
 	  }
 	  if (!session || !isAdmin) return /*#__PURE__*/jsxRuntimeExports.jsx(Navigate, {
@@ -53733,6 +57173,32 @@
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "/wishlist",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Wishlist, {})
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "/about",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(About, {})
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "/contact",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Contact, {})
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "/privacy",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Legal, {
+	            doc: "privacy"
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "/terms",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Legal, {
+	            doc: "terms"
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "/shipping",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Legal, {
+	            doc: "shipping"
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "/returns",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Legal, {
+	            doc: "returns"
+	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "*",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(NotFound, {})
