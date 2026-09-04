@@ -319,7 +319,9 @@ useEffect(() => {
 
           <div className="pdp__buy">
             <div className="qty">
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease quantity" disabled={out}><Icon name="minus" size={16} /></button>
+              {/* The clamp already prevented 0; the button just stayed enabled and
+                  did nothing when it was pressed. Native `disabled` says so. */}
+              <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease quantity" disabled={out || qty <= 1}><Icon name="minus" size={16} /></button>
               <span aria-live="polite">{qty}</span>
               <button onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity" disabled={out}><Icon name="plus" size={16} /></button>
             </div>

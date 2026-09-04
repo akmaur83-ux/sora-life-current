@@ -91,4 +91,80 @@ run('PDP media rejects failed catalogue URLs and exposes a real image viewer', (
   assert.match(lightbox, /Math\.abs\(dx\) > 45/, 'touch swipe must navigate real frames');
 });
 
+run('gallery dots are position indicators, not controls', () => {
+  const gallery = readFileSync(new URL('../src/components/ProductGallery.jsx', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/styles/v2-pdp.css', import.meta.url), 'utf8');
+  const dots = gallery.slice(gallery.indexOf('className="pdp__dots"'), gallery.indexOf('pdp__thumbs'));
+
+  // Not interactive: no button, no handler, no focus, no widget semantics.
+  assert.match(dots, /<span/, 'each indicator is a span, not a button');
+  assert.doesNotMatch(dots, /<button/, 'indicators must not be buttons');
+  assert.doesNotMatch(dots, /onClick/, 'indicators must not be clickable');
+  assert.doesNotMatch(dots, /tabIndex/, 'indicators must not be focusable');
+  assert.doesNotMatch(dots, /role="tab"|role="tablist"/, 'no tab/tablist semantics');
+  assert.doesNotMatch(dots, /aria-selected|aria-pressed/, 'no widget selection state');
+  assert.match(dots, /className="pdp__dots" aria-hidden="true"/,
+    'the strip is hidden from assistive tech - .pdp__main already announces "image N of M"');
+
+  // Exactly one active indicator, driven by the current frame.
+  assert.match(dots, /\$\{i === idx \? 'active' : ''\}/, 'exactly one indicator is active, and it follows idx');
+
+  // No hit-area scaffolding left behind.
+  assert.doesNotMatch(css, /\.pdp__dot::after/, 'the pseudo-element hit area must be gone');
+  assert.doesNotMatch(css, /width:calc\(100% \+ 5px\)/, 'the tiled hit width must be gone');
+
+  // Visual appearance is exactly as before.
+  const dotRule = css.slice(css.indexOf('.v2-pdp-root .pdp__dot {'), css.indexOf('.v2-pdp-root .pdp__dot.active'));
+  assert.match(dotRule, /width:14px; height:2px/, 'the 2px line is unchanged');
+  assert.doesNotMatch(dotRule, /position:relative/, 'the positioning context is no longer needed');
+  assert.match(css, /\.v2-pdp-root \.pdp__dot\.active \{ width:24px/, 'the active indicator still widens to 24px');
+  assert.match(css, /\.v2-pdp-root \.pdp__dots \{[\s\S]*?gap:5px/, 'strip layout unchanged');
+});
+
+run('the thumbnail rail remains the accessible image selector', () => {
+  const gallery = readFileSync(new URL('../src/components/ProductGallery.jsx', import.meta.url), 'utf8');
+  const thumbs = gallery.slice(gallery.indexOf('className="pdp__thumbs"'));
+
+  assert.match(thumbs, /<button/, 'thumbnails stay real buttons');
+  assert.match(thumbs, /onClick=\{\(\) => go\(i\)\}/, 'a thumbnail still selects its image');
+  assert.match(thumbs, /aria-label=\{`View image \$\{i \+ 1\}\$\{f\.isPrimary \? ' \(primary\)' : ''\}`\}/,
+    'thumbnails stay labelled');
+  assert.match(thumbs, /aria-pressed=\{i === idx\}/, 'thumbnail selection stays exposed');
+
+  // Swipe and keyboard remain on the frame, so the dots losing their handler
+  // costs nothing: every way of changing image still exists.
+  assert.match(gallery, /if \(Math\.abs\(dx\) > 40\) go\(idx \+ \(dx < 0 \? 1 : -1\)\)/, 'swipe still changes image');
+  assert.match(gallery, /if \(e\.key === 'ArrowRight'\) go\(idx \+ 1\); if \(e\.key === 'ArrowLeft'\) go\(idx - 1\)/,
+    'arrow keys still change image');
+  assert.match(gallery, /aria-label=\{single \? undefined : `\$\{product\.name\} — image \$\{idx \+ 1\} of \$\{count\}`\}/,
+    'the frame announces the current position, which is what the dots used to convey');
+});
+
+run('quantity cannot go below one, and says so', () => {
+  const page = readFileSync(new URL('../src/pages/Product.jsx', import.meta.url), 'utf8');
+
+  // Starts at 1 and is still clamped.
+  assert.match(page, /const \[qty, setQty\] = useState\(1\)/, 'quantity starts at 1');
+  assert.match(page, /setQty\(\(q\) => Math\.max\(1, q - 1\)\)/, 'the clamp stays - never below 1');
+
+  // Native disabled state at the minimum, so it is not a silent no-op.
+  assert.match(page, /aria-label="Decrease quantity" disabled=\{out \|\| qty <= 1\}/,
+    'minus is disabled at qty 1 (and when out of stock)');
+  // Increase is untouched: only out-of-stock disables it, no arbitrary maximum.
+  assert.match(page, /aria-label="Increase quantity" disabled=\{out\}/,
+    'increase behaviour is unchanged and uncapped');
+
+  // The Add to Cart payload is unchanged.
+  assert.match(page, /addToCart\(product, qty, variant\)/, 'add still sends the chosen quantity and variant');
+});
+
+run('variant radio semantics are intact (not re-fixed)', () => {
+  // Recorded because a prior audit wrongly reported these as missing. They were
+  // already correct; this pins them so the false positive cannot come back.
+  const page = readFileSync(new URL('../src/pages/Product.jsx', import.meta.url), 'utf8');
+  assert.match(page, /role="radiogroup"/, 'the pack-size group is a radiogroup');
+  assert.match(page, /role="radio"/, 'each pack size is a radio');
+  assert.match(page, /aria-checked=\{selected\}/, 'selection is exposed to assistive tech');
+});
+
 console.log('\nPDP merchandising regression checks passed.');

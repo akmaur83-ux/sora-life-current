@@ -89,17 +89,19 @@ export default function ProductGallery({ product, children }) {
           <span className="pdp__zoom-label"><span aria-hidden="true">＋</span> View larger</span>
         </button>
         {children}
+        {/* Position indicator, not a control. Twelve to fifteen dots cannot each
+            carry a 44px target across a 375px screen without overlapping, and an
+            under-sized tap target that also takes focus is worse than no control
+            at all. So these only report where you are: the thumbnail rail below
+            is the real, properly sized image selector, and the frame itself
+            handles swipe and arrow keys. Hidden from assistive tech because
+            .pdp__main already announces "image N of M". */}
         {!single && (
-          <div className="pdp__dots" role="tablist" aria-label="Gallery images">
+          <div className="pdp__dots" aria-hidden="true">
             {frames.map((f, i) => (
-              <button
+              <span
                 key={f.id || f.url || i}
-                type="button"
-                role="tab"
-                aria-selected={i === idx}
-                aria-label={`Show image ${i + 1}`}
                 className={`pdp__dot ${i === idx ? 'active' : ''}`}
-                onClick={() => go(i)}
               />
             ))}
           </div>

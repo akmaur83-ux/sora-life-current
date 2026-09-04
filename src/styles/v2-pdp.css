@@ -91,6 +91,10 @@
   position:absolute; left:0; right:0; bottom:12px; z-index:2;
   display:flex; justify-content:center; gap:5px;
 }
+/* A position indicator, not a control (see ProductGallery.jsx). It carries no
+   hit area on purpose: twelve to fifteen 44px targets cannot tile across a
+   375px screen without overlapping, so selection lives on the thumbnail rail
+   instead and these only show where you are. */
 .v2-pdp-root .pdp__dot {
   width:14px; height:2px; padding:0; border:0; border-radius:0;
   background:rgba(22,33,27,.25); transition:background .16s ease, width .16s ease;
@@ -224,6 +228,11 @@
 .v2-pdp-root .qty button:last-child { border-left:1px solid var(--slv2-line-2); }
 .v2-pdp-root .qty button:hover { background:var(--slv2-cream); }
 .v2-pdp-root .qty button:active { transform:scale(.98); }
+/* Minus is disabled at qty 1 rather than silently doing nothing. Kept subtle:
+   the control still reads as part of the stepper, just clearly inactive. */
+.v2-pdp-root .qty button:disabled { color:var(--slv2-ink-4); cursor:not-allowed; }
+.v2-pdp-root .qty button:disabled:hover { background:transparent; }
+.v2-pdp-root .qty button:disabled:active { transform:none; }
 .v2-pdp-root .qty span { min-width:34px; color:var(--slv2-ink); font-size:13px; }
 .v2-pdp-root .pdp__addbtn { flex:1; min-width:0; }
 .v2-pdp-root .pdp__addbtn.is-added {
