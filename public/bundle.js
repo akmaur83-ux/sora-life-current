@@ -42796,24 +42796,24 @@
 	          style: {
 	            color: 'rgba(251,248,241,0.82)'
 	          },
-	          children: "Save favourites, track orders, reorder in a tap and unlock members-only drops."
+	          children: "Keep your orders, addresses and saved products together, and pick up where you left off on any device."
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
 	          className: "auth__perks",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	              name: "check",
 	              size: 17
-	            }), " Faster, saved checkout"]
+	            }), " Saved delivery addresses at checkout"]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	              name: "check",
 	              size: 17
-	            }), " Order tracking & history"]
+	            }), " Order history & tracking"]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	              name: "check",
 	              size: 17
-	            }), " Early access to new launches"]
+	            }), " Your wishlist, synced to your account"]
 	          })]
 	        })]
 	      })
@@ -42821,7 +42821,10 @@
 	      className: "auth__form",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "auth__card",
-	        children: [mode !== 'forgot' ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          className: "auth__h1",
+	          children: mode === 'forgot' ? heading : 'Your account'
+	        }), mode !== 'forgot' ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "auth__tabs",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	            type: "button",
@@ -42834,14 +42837,7 @@
 	            onClick: () => switchMode('signup'),
 	            children: "Create account"
 	          })]
-	        }) : /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	          className: "serif",
-	          style: {
-	            fontSize: 'var(--text-xl)',
-	            marginBottom: 'var(--sp-4)'
-	          },
-	          children: heading
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	        }) : null, /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
 	          onSubmit: submit,
 	          children: [mode === 'signup' && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "field",
@@ -43740,28 +43736,58 @@
 	  } = useStore();
 	  const items = wishlist.map(id => productById[id]).filter(Boolean);
 	  if (!items.length) {
-	    return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "container section",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "state",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          className: "state-ic",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "heart",
-	            size: 32
-	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-	          children: "Your wishlist is empty"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	          children: "Save the products you love by tapping the heart \u2014 they'll live here for later."
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	          to: "/shop",
-	          className: "btn",
-	          children: ["Find something you love ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "arrowRight",
-	            size: 18
+	    return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "pagehead",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "container",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	            className: "crumbs",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: "/",
+	              children: "Home"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "chevronRight",
+	              size: 14
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              children: "Wishlist"
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	            className: "wishhead",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	                className: "serif",
+	                children: "Your wishlist"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	                className: "muted",
+	                children: "Nothing saved yet."
+	              })]
+	            })
 	          })]
-	        })]
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "container section-sm",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "state",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "state-ic",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "heart",
+	              size: 32
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	            children: "Your wishlist is empty"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: "Save the products you love by tapping the heart \u2014 they'll live here for later."
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	            to: "/shop",
+	            className: "btn",
+	            children: ["Find something you love ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "arrowRight",
+	              size: 18
+	            })]
+	          })]
+	        })
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductRail, {
 	        eyebrow: "Get inspired",
 	        title: "Popular right now",
@@ -44082,7 +44108,7 @@
 	  const publishedDetails = channels || Boolean(info.legalName);
 	  const socials = socialLinks(info);
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	    className: "info",
+	    className: "info info--contact",
 	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "v2-wrap",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
