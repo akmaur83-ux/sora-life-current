@@ -3082,7 +3082,7 @@
 
 	// Whitelist + validate. Unknown keys are dropped; invalid values fall back to
 	// the token default. The result only ever contains known keys with safe values.
-	function sanitizeTheme(input) {
+	function sanitizeTheme$1(input) {
 	  const out = {};
 	  const src = input && typeof input === 'object' ? input : {};
 	  for (const t of TOKENS) {
@@ -3105,7 +3105,7 @@
 	// differ from the default (so SORA Classic yields {}). This is the pure,
 	// testable core of "storefront receives theme variables".
 	function themeToCssVars(theme) {
-	  const clean = sanitizeTheme(theme);
+	  const clean = sanitizeTheme$1(theme);
 	  const vars = {};
 	  for (const t of TOKENS) {
 	    if (!t.css) continue;
@@ -3123,7 +3123,7 @@
 	function applyTheme(theme, root) {
 	  const el = root || (typeof document !== 'undefined' ? document.documentElement : null);
 	  if (!el) return;
-	  const clean = sanitizeTheme(theme);
+	  const clean = sanitizeTheme$1(theme);
 	  const vars = themeToCssVars(clean);
 	  for (const t of TOKENS) {
 	    if (!t.css) continue;
@@ -3214,7 +3214,7 @@
 	};
 	function applyStorefrontTheme(v) {
 	  if (!v || typeof v !== 'object') return false;
-	  theme = sanitizeTheme(v);
+	  theme = sanitizeTheme$1(v);
 	  applyTheme(theme);
 	  return true;
 	}
@@ -33064,7 +33064,7 @@
 	const PLACEMENTS = ['home', 'pdp', 'cart'];
 	const TYPES = ['poster', 'offer'];
 	const THEME_VARIANTS = ['forest', 'cream', 'orange', 'dark', 'minimal'];
-	function str$1(v, max = 400) {
+	function str$2(v, max = 400) {
 	  return typeof v === 'string' ? v.trim().slice(0, max) : '';
 	}
 
@@ -33075,17 +33075,17 @@
 	  const themeVariant = THEME_VARIANTS.includes(row.theme_variant ?? row.themeVariant) ? row.theme_variant ?? row.themeVariant : 'forest';
 	  const rawPlacements = row.placements ?? [];
 	  const placements = Array.isArray(rawPlacements) ? rawPlacements.filter(p => PLACEMENTS.includes(p)) : [];
-	  const ctaUrl = str$1(row.cta_url ?? row.ctaUrl, 500) || null;
+	  const ctaUrl = str$2(row.cta_url ?? row.ctaUrl, 500) || null;
 	  return {
 	    id: String(row.id ?? cryptoId()),
 	    type,
-	    title: str$1(row.title, 160),
-	    subtitle: str$1(row.subtitle, 320),
+	    title: str$2(row.title, 160),
+	    subtitle: str$2(row.subtitle, 320),
 	    couponCode: normalizeCode(row.coupon_code ?? row.couponCode),
-	    ctaText: str$1(row.cta_text ?? row.ctaText, 60),
+	    ctaText: str$2(row.cta_text ?? row.ctaText, 60),
 	    ctaUrl: safeCtaUrl(ctaUrl),
-	    badgeText: str$1(row.badge_text ?? row.badgeText, 40),
-	    imageUrl: str$1(row.image_url ?? row.imageUrl, 1000) || null,
+	    badgeText: str$2(row.badge_text ?? row.badgeText, 40),
+	    imageUrl: str$2(row.image_url ?? row.imageUrl, 1000) || null,
 	    themeVariant,
 	    textAlign: (row.text_align ?? row.textAlign) === 'center' ? 'center' : 'left',
 	    placements,
@@ -33096,7 +33096,7 @@
 	  };
 	}
 	function normalizeCode(v) {
-	  const s = str$1(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+	  const s = str$2(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
 	  return s || null;
 	}
 
@@ -37444,6 +37444,762 @@
 	  });
 	}
 
+	// ============================================================
+	// Category Experience — the spotlight stage that opens a category page.
+	//
+	// STORAGE
+	// Everything lives under the EXISTING `homepage` site_settings key, beside
+	// `discovery`, as `homepage.categoryExperience`. That key is already on the
+	// public-read allowlist (migrations 0009 + 0015: branding, announcement,
+	// contact, homepage, storefront_theme), already has a subscribe/snapshot
+	// pair in settings.js, and already carries a nested curated sub-object. So
+	// this feature needs NO migration and NO new RLS policy. A new top-level key
+	// would have needed both.
+	//
+	// WHAT ADMIN OWNS vs WHAT THE CATALOGUE OWNS
+	// Admin owns presentation: which products, in what order, on what background,
+	// with an optional headline/subline it authored. The catalogue owns every
+	// fact — name, pack size, price, rating, image. Nothing here invents a
+	// benefit, a claim, a rating or a "bestseller" status, and a stored item that
+	// no longer resolves to a live, purchasable product is dropped rather than
+	// rendered from its own stale copy.
+	//
+	// Pure and dependency-light on purpose, so the rules run directly in tests.
+	// ============================================================
+
+
+	/**
+	 * A structural ceiling on stored items, NOT a merchandising cap.
+	 *
+	 * Every eligible product in a category may take part in the spotlight: the
+	 * stage mounts three seats no matter how deep the pool is (see
+	 * visibleWindow), so a 46-product category costs exactly what a 3-product one
+	 * costs. The two real caps that used to live here — 12 curated, 8 automatic —
+	 * were removed because they hid products for no benefit.
+	 *
+	 * This bound only stops a malformed or hostile settings value from putting an
+	 * unbounded array into the homepage row. It sits well above the entire
+	 * catalogue (164 products), so no real category can reach it.
+	 */
+	const MAX_STORED_ITEMS = 250;
+	const MIN_INTERVAL_MS = 3000;
+	const MAX_INTERVAL_MS = 15000;
+	const DEFAULT_INTERVAL_MS = 5200;
+
+	/**
+	 * Category-level default backgrounds, keyed by the `tone` the categories
+	 * table already carries. Muted and warm on purpose — this is a wellness
+	 * marketplace, not a toy store. Admin can override per category and per item.
+	 */
+	const TONE_THEMES = {
+	  forest: {
+	    background: '#E8EFE8',
+	    gradient: 'linear-gradient(168deg, #EDF2EC 0%, #DCE7DC 100%)'
+	  },
+	  lime: {
+	    background: '#EDF0DF',
+	    gradient: 'linear-gradient(168deg, #F2F4E4 0%, #E2E8D2 100%)'
+	  },
+	  clay: {
+	    background: '#F4EADF',
+	    gradient: 'linear-gradient(168deg, #F7EFE6 0%, #EDDFCE 100%)'
+	  },
+	  rose: {
+	    background: '#F7EAE6',
+	    gradient: 'linear-gradient(168deg, #FAF0EC 0%, #F1DED8 100%)'
+	  },
+	  plum: {
+	    background: '#EFE9F1',
+	    gradient: 'linear-gradient(168deg, #F4EFF5 0%, #E6DCEA 100%)'
+	  },
+	  teal: {
+	    background: '#E4EEEE',
+	    gradient: 'linear-gradient(168deg, #EBF3F2 0%, #D8E7E6 100%)'
+	  },
+	  moss: {
+	    background: '#E9EEE6',
+	    gradient: 'linear-gradient(168deg, #EFF3EC 0%, #DEE7DA 100%)'
+	  },
+	  sky: {
+	    background: '#E7EDF3',
+	    gradient: 'linear-gradient(168deg, #EEF2F7 0%, #DCE5EF 100%)'
+	  }
+	};
+	/** Used when a category has no tone, or an unknown one. */
+	const NEUTRAL_THEME = {
+	  background: '#F1EDE4',
+	  gradient: 'linear-gradient(168deg, #F6F2EA 0%, #E9E3D7 100%)'
+	};
+	const str$1 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
+
+	/**
+	 * A CSS colour we are willing to inline as a style value.
+	 *
+	 * Deliberately narrow: hex, rgb/rgba, hsl/hsla and a bare keyword. This value
+	 * reaches an inline style attribute, so anything with a bracket, semicolon,
+	 * quote or url() is refused rather than escaped.
+	 */
+	function safeColor(value) {
+	  const v = str$1(value, 40);
+	  if (!v) return '';
+	  if (/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) return v;
+	  if (/^(?:rgb|hsl)a?\(\s*[\d.,%\s/deg]+\)$/i.test(v)) return v;
+	  if (/^[a-z]{3,20}$/i.test(v)) return v;
+	  return '';
+	}
+
+	/**
+	 * A CSS gradient we are willing to inline.
+	 *
+	 * Only the gradient functions, and only characters that can appear inside
+	 * one. No url(), no var(), no expression, no nesting of other functions.
+	 */
+	function safeGradient(value) {
+	  const v = str$1(value, 240);
+	  if (!v) return '';
+	  if (!/^(?:linear|radial|conic)-gradient\(/i.test(v)) return '';
+	  if (!v.endsWith(')')) return '';
+	  if (/[;{}<>"'\\]|url\(|var\(|expression|image-set|@import/i.test(v)) return '';
+	  // Balanced parens, and only one function deep.
+	  const opens = (v.match(/\(/g) || []).length;
+	  const closes = (v.match(/\)/g) || []).length;
+	  if (opens !== closes) return '';
+	  if (!/^[a-z0-9\s(),.#%\-/]+$/i.test(v)) return '';
+	  return v;
+	}
+
+	/** Resolve a theme object from raw stored values, falling back cleanly. */
+	function sanitizeTheme(raw, fallback = NEUTRAL_THEME) {
+	  const src = raw && typeof raw === 'object' ? raw : {};
+	  const background = safeColor(src.background) || fallback.background;
+	  const gradient = safeGradient(src.gradient) || (safeColor(src.background) ? '' : fallback.gradient);
+	  return {
+	    background,
+	    gradient
+	  };
+	}
+
+	/** The built-in theme for a category, from the `tone` its record already has. */
+	function categoryToneTheme(slug) {
+	  const tone = categoryBySlug[slug]?.tone;
+	  return TONE_THEMES[tone] || NEUTRAL_THEME;
+	}
+	const clampInterval = n => {
+	  const v = Number(n);
+	  if (!Number.isFinite(v)) return DEFAULT_INTERVAL_MS;
+	  return Math.min(MAX_INTERVAL_MS, Math.max(MIN_INTERVAL_MS, Math.round(v)));
+	};
+
+	/** Stable id for a curated item. Slug-derived, de-duplicated against `taken`. */
+	function makeSpotlightId(productSlug, taken = []) {
+	  const base = String(productSlug || 'item').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'item';
+	  const used = new Set(taken);
+	  if (!used.has(base)) return base;
+	  for (let i = 2; i < 200; i += 1) {
+	    const next = `${base}-${i}`;
+	    if (!used.has(next)) return next;
+	  }
+	  return `${base}-${Date.now()}`;
+	}
+
+	/**
+	 * Clean one stored spotlight item.
+	 *
+	 * `productSlug` is the only load-bearing field — it is what the item resolves
+	 * against at render time. Everything else is optional presentation, and a
+	 * malformed value is dropped rather than allowed to reach the DOM.
+	 */
+	function sanitizeSpotlightItem(raw, taken = []) {
+	  if (!raw || typeof raw !== 'object') return null;
+	  const productSlug = str$1(raw.productSlug ?? raw.productId ?? raw.slug, 120);
+	  if (!productSlug) return null;
+	  return {
+	    id: str$1(raw.id, 60) || makeSpotlightId(productSlug, taken),
+	    productSlug,
+	    // Optional cutout/hero asset. Same URL policy the homepage visuals use.
+	    spotlightImage: safeVisualUrl(raw.spotlightImage) || '',
+	    // Owner-authored, and shown verbatim. Never generated from product data.
+	    headline: str$1(raw.headline, 60),
+	    subline: str$1(raw.subline, 90),
+	    background: safeColor(raw.background),
+	    gradient: safeGradient(raw.gradient),
+	    enabled: raw.enabled !== false
+	  };
+	}
+
+	/** Clean one category's configuration. */
+	function sanitizeCategoryConfig(raw, slug) {
+	  const src = raw && typeof raw === 'object' ? raw : {};
+	  const taken = [];
+	  const items = (Array.isArray(src.items) ? src.items : []).slice(0, MAX_STORED_ITEMS).map(it => {
+	    const clean = sanitizeSpotlightItem(it, taken);
+	    if (clean) taken.push(clean.id);
+	    return clean;
+	  }).filter(Boolean);
+	  return {
+	    // OPT-IN, and deliberately so. A category shows the spotlight only after
+	    // the owner has explicitly switched it on; no configuration and an absent
+	    // `enabled` both mean off. The automatic fallback pool is still here and
+	    // still uncapped — it just cannot publish itself. Without this gate,
+	    // deploying the feature would light up every category at once using
+	    // whatever catalogue images happen to exist, which for this catalogue
+	    // means rectangular lifestyle photos in a stage built for cutouts.
+	    enabled: src.enabled === true,
+	    autoRotate: src.autoRotate !== false,
+	    intervalMs: clampInterval(src.intervalMs),
+	    theme: sanitizeTheme(src.theme, categoryToneTheme(slug)),
+	    items
+	  };
+	}
+
+	/** Clean the whole `homepage.categoryExperience` blob. */
+	function normalizeCategoryExperience(raw) {
+	  const src = raw && typeof raw === 'object' ? raw : {};
+	  const rawCats = src.categories && typeof src.categories === 'object' ? src.categories : {};
+	  const out = {};
+	  for (const cat of categories) {
+	    if (Object.prototype.hasOwnProperty.call(rawCats, cat.slug)) {
+	      out[cat.slug] = sanitizeCategoryConfig(rawCats[cat.slug], cat.slug);
+	    }
+	  }
+	  return {
+	    categories: out
+	  };
+	}
+
+	/** Config for one category, defaulted when the admin has never touched it. */
+	function categoryConfig(slug, source = homepage) {
+	  const all = normalizeCategoryExperience(source?.categoryExperience);
+	  return all.categories[slug] || sanitizeCategoryConfig({}, slug);
+	}
+
+	/** What gets written back to settings. Empty categories are not persisted. */
+	function categoryExperiencePayload(bySlug) {
+	  const out = {};
+	  for (const [slug, cfg] of Object.entries(bySlug || {})) {
+	    if (!categoryBySlug[slug]) continue;
+	    const clean = sanitizeCategoryConfig(cfg, slug);
+	    // "Nothing meaningful configured" — off, untouched settings, no items.
+	    // Such a category is not persisted, so an absent key and a pristine one
+	    // mean the same thing: no spotlight.
+	    const isDefault = !clean.enabled && clean.autoRotate && clean.intervalMs === DEFAULT_INTERVAL_MS && clean.items.length === 0 && clean.theme.background === categoryToneTheme(slug).background;
+	    if (isDefault) continue;
+	    out[slug] = clean;
+	  }
+	  return {
+	    categories: out
+	  };
+	}
+
+	/**
+	 * Is this product fit to headline a category?
+	 *
+	 * The same bar the storefront already applies elsewhere: a real product, a
+	 * usable slug, a payable price, and in stock. No invented featured/bestseller
+	 * status — ordering is the admin's job, or catalogue order.
+	 */
+	function isSpotlightEligible(product) {
+	  if (!product || !product.slug || typeof product.slug !== 'string') return false;
+	  if (product.isActive === false) return false;
+	  if (!isPurchasable(product)) return false;
+	  if (product.stock === 0) return false;
+	  return true;
+	}
+
+	/**
+	 * Choose the products for a category's stage.
+	 *
+	 * Curated items win, in the admin's order, resolved against the LIVE
+	 * catalogue — a curated slug that no longer exists, was deactivated or sold
+	 * out is skipped, so a stale mapping can thin the stage but never put a dead
+	 * product on it. When nothing usable is curated, fall back to the category's
+	 * own products in catalogue order.
+	 */
+	function resolveSpotlightItems(slug, {
+	  config = null,
+	  productList = products,
+	  catalogue = null
+	} = {}) {
+	  const cfg = config || categoryConfig(slug);
+	  const bySlug = catalogue || Object.fromEntries((productList || []).filter(p => p?.slug).map(p => [p.slug, p]));
+	  const curated = cfg.items.filter(it => it.enabled).map(it => ({
+	    item: it,
+	    product: bySlug[it.productSlug]
+	  })).filter(({
+	    product
+	  }) => isSpotlightEligible(product))
+	  // A curated item must still belong to the category it was curated for;
+	  // a product that has since been recategorised does not linger here.
+	  .filter(({
+	    product
+	  }) => (product.categories || [product.category]).includes(slug)).map(({
+	    item,
+	    product
+	  }) => buildSlide(item, product, cfg, slug));
+	  if (curated.length) return curated;
+	  return (productList || []).filter(p => (p.categories || [p.category]).includes(slug)).filter(isSpotlightEligible)
+	  // No slice: every eligible product in the category rotates. Only three
+	  // seats are ever mounted, so the pool's depth costs nothing.
+	  .map(product => buildSlide(null, product, cfg, slug));
+	}
+
+	/**
+	 * One rendered slide: catalogue facts + admin presentation, already merged.
+	 *
+	 * `image` follows the required priority — configured spotlight asset, then a
+	 * transparent-looking product asset, then the ordinary product image. When we
+	 * cannot tell that an image is a cutout, `framed` is true and the component
+	 * presents it in a contained panel instead of pretending it floats.
+	 */
+	function buildSlide(item, product, cfg, slug) {
+	  const configured = item?.spotlightImage || '';
+	  const productImage = product.image || product.gallery?.[0] || '';
+	  const image = configured || productImage;
+	  const cutout = Boolean(configured) || looksTransparent(configured || productImage);
+	  const theme = {
+	    background: item?.background || cfg.theme.background,
+	    gradient: item?.background ? item.gradient || '' : item?.gradient || cfg.theme.gradient
+	  };
+	  return {
+	    id: item?.id || `auto-${product.slug}`,
+	    productSlug: product.slug,
+	    product,
+	    name: product.name,
+	    // Genuine catalogue facts only.
+	    form: product.form || null,
+	    rating: product.reviewCount > 0 && product.rating > 0 ? product.rating : null,
+	    reviewCount: product.reviewCount > 0 ? product.reviewCount : 0,
+	    price: product.price,
+	    // Owner-authored, optional, never synthesised.
+	    headline: item?.headline || '',
+	    subline: item?.subline || '',
+	    image,
+	    framed: !cutout,
+	    theme,
+	    categorySlug: slug
+	  };
+	}
+
+	/** A cheap, honest guess: only PNG/WebP/AVIF can carry an alpha channel. */
+	function looksTransparent(url) {
+	  if (typeof url !== 'string' || !url) return false;
+	  const path = url.split('?')[0].split('#')[0];
+	  return /\.(png|webp|avif)$/i.test(path);
+	}
+
+	/** Wrap an index into range. Used by every navigation path. */
+	function wrapIndex(i, len) {
+	  if (!Number.isFinite(len) || len <= 0) return 0;
+	  return (Math.trunc(i) % len + len) % len;
+	}
+
+	/**
+	 * The only slides the stage may render: previous, active, next.
+	 *
+	 * This is the whole virtualization strategy — a 100-product category renders
+	 * three nodes, not a hundred. With one slide there are no neighbours; with
+	 * two, prev and next are the same slide, so it is offered once rather than
+	 * twice in the same position.
+	 */
+	function visibleWindow(items, index) {
+	  const len = items.length;
+	  if (!len) return {
+	    prev: null,
+	    active: null,
+	    next: null
+	  };
+	  const active = {
+	    slide: items[wrapIndex(index, len)],
+	    index: wrapIndex(index, len),
+	    role: 'active'
+	  };
+	  if (len === 1) return {
+	    prev: null,
+	    active,
+	    next: null
+	  };
+	  const prevIdx = wrapIndex(index - 1, len);
+	  const nextIdx = wrapIndex(index + 1, len);
+	  const prev = {
+	    slide: items[prevIdx],
+	    index: prevIdx,
+	    role: 'prev'
+	  };
+	  if (len === 2) return {
+	    prev,
+	    active,
+	    next: null
+	  };
+	  return {
+	    prev,
+	    active,
+	    next: {
+	      slide: items[nextIdx],
+	      index: nextIdx,
+	      role: 'next'
+	    }
+	  };
+	}
+
+	/**
+	 * Should the stage render on the storefront?
+	 *
+	 * Two conditions, both required: the owner has explicitly enabled this
+	 * category, AND there is something eligible to show. `enabled` is never
+	 * inferred from the presence of products — see sanitizeCategoryConfig.
+	 */
+	function spotlightVisible(slug, items, config = null) {
+	  const cfg = config || categoryConfig(slug);
+	  return cfg.enabled === true && items.length > 0;
+	}
+
+	/**
+	 * Has the owner configured anything here yet?
+	 *
+	 * Used by Admin to say "READY — NOT LIVE": items are assigned and waiting,
+	 * but the category has not been published.
+	 */
+	function categoryIsReadyButOff(config) {
+	  return Boolean(config) && config.enabled !== true && config.items.length > 0;
+	}
+
+	const RESUME_AFTER_INTERACTION_MS = 9000;
+	// Above this many products the pip strip stops being readable AND stops
+	// fitting: 43 pips measured 812px inside a 358px row, which shoved both
+	// arrows off a 390px screen. Deeper pools get a plain position readout
+	// instead. This governs the INDICATOR only — the pool itself is uncapped.
+	const MAX_PIPS = 12;
+	const SWIPE_THRESHOLD_PX = 44;
+	function useReducedMotion() {
+	  const [reduced, setReduced] = reactExports.useState(() => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+	  reactExports.useEffect(() => {
+	    if (typeof matchMedia !== 'function') return undefined;
+	    const mq = matchMedia('(prefers-reduced-motion: reduce)');
+	    const onChange = () => setReduced(mq.matches);
+	    mq.addEventListener?.('change', onChange);
+	    return () => mq.removeEventListener?.('change', onChange);
+	  }, []);
+	  return reduced;
+	}
+
+	/**
+	 * True only while the stage is meaningfully on screen. Auto-rotation off
+	 * screen is wasted work and a wasted product impression, so it stops.
+	 */
+	function useOnScreen(ref, threshold = 0.45) {
+	  const [onScreen, setOnScreen] = reactExports.useState(false);
+	  reactExports.useEffect(() => {
+	    const node = ref.current;
+	    if (!node) return undefined;
+	    if (typeof IntersectionObserver !== 'function') {
+	      setOnScreen(true);
+	      return undefined;
+	    }
+	    const io = new IntersectionObserver(([entry]) => setOnScreen(entry.isIntersecting && entry.intersectionRatio >= threshold), {
+	      threshold: [0, threshold, 1]
+	    });
+	    io.observe(node);
+	    return () => io.disconnect();
+	  }, [ref, threshold]);
+	  return onScreen;
+	}
+
+	/** Document visibility, so a backgrounded tab does not rotate. */
+	function usePageVisible() {
+	  const [visible, setVisible] = reactExports.useState(() => typeof document === 'undefined' || !document.hidden);
+	  reactExports.useEffect(() => {
+	    if (typeof document === 'undefined') return undefined;
+	    const onChange = () => setVisible(!document.hidden);
+	    document.addEventListener('visibilitychange', onChange);
+	    return () => document.removeEventListener('visibilitychange', onChange);
+	  }, []);
+	  return visible;
+	}
+
+	/**
+	 * @param configOverride  Admin preview only. Supplies the configuration being
+	 *   edited instead of the saved settings, so the owner can look at a category
+	 *   before publishing it.
+	 * @param preview  Admin preview only. Renders the stage even when the category
+	 *   is not enabled. It NEVER changes what the storefront shows — the storefront
+	 *   passes neither prop, so it always goes through spotlightVisible().
+	 */
+	function CategorySpotlight({
+	  category,
+	  products,
+	  configOverride = null,
+	  preview = false
+	}) {
+	  const slug = category?.slug;
+	  // Read through the settings store so an admin save lands without a reload,
+	  // exactly as the homepage discovery rails do.
+	  const savedHomepage = reactExports.useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+	  const config = reactExports.useMemo(() => configOverride || categoryConfig(slug, savedHomepage), [slug, savedHomepage, configOverride]);
+	  const items = reactExports.useMemo(() => resolveSpotlightItems(slug, {
+	    config,
+	    productList: products
+	  }), [slug, config, products]);
+	  const [index, setIndex] = reactExports.useState(0);
+	  // Which way the last change went, so CSS can send the outgoing slide out of
+	  // the side it actually left towards rather than always the same way.
+	  const [dir, setDir] = reactExports.useState(1);
+	  const [paused, setPaused] = reactExports.useState(false);
+	  const stageRef = reactExports.useRef(null);
+	  const resumeTimer = reactExports.useRef(null);
+	  const reducedMotion = useReducedMotion();
+	  const onScreen = useOnScreen(stageRef);
+	  const pageVisible = usePageVisible();
+	  const count = items.length;
+
+	  // A category whose catalogue shrank under us must not point past the end.
+	  reactExports.useEffect(() => {
+	    setIndex(i => wrapIndex(i, Math.max(count, 1)));
+	  }, [count]);
+	  const holdAutoRotate = reactExports.useCallback(() => {
+	    setPaused(true);
+	    clearTimeout(resumeTimer.current);
+	    resumeTimer.current = setTimeout(() => setPaused(false), RESUME_AFTER_INTERACTION_MS);
+	  }, []);
+	  const go = reactExports.useCallback((delta, {
+	    user = true
+	  } = {}) => {
+	    if (count < 2) return;
+	    setDir(delta >= 0 ? 1 : -1);
+	    setIndex(i => wrapIndex(i + delta, count));
+	    if (user) holdAutoRotate();
+	  }, [count, holdAutoRotate]);
+	  const goTo = reactExports.useCallback(target => {
+	    if (count < 2) return;
+	    setIndex(current => {
+	      if (target === current) return current;
+	      // Shortest way round, so tapping the left product always moves left.
+	      const forward = wrapIndex(target - current, count);
+	      setDir(forward <= count / 2 ? 1 : -1);
+	      return wrapIndex(target, count);
+	    });
+	    holdAutoRotate();
+	  }, [count, holdAutoRotate]);
+	  reactExports.useEffect(() => () => clearTimeout(resumeTimer.current), []);
+
+	  // Auto-rotate. Every condition that should stop it is in the guard, so
+	  // there is one timer and no polling.
+	  reactExports.useEffect(() => {
+	    if (!config.autoRotate || paused || reducedMotion) return undefined;
+	    if (!onScreen || !pageVisible || count < 2) return undefined;
+	    const t = setInterval(() => {
+	      setDir(1);
+	      setIndex(i => wrapIndex(i + 1, count));
+	    }, config.intervalMs);
+	    return () => clearInterval(t);
+	  }, [config.autoRotate, config.intervalMs, paused, reducedMotion, onScreen, pageVisible, count]);
+
+	  // Pointer swipe. Tracked on the stage so a horizontal drag anywhere across
+	  // it works, and so a vertical scroll is never hijacked.
+	  const drag = reactExports.useRef(null);
+	  const onPointerDown = e => {
+	    drag.current = {
+	      x: e.clientX,
+	      y: e.clientY
+	    };
+	  };
+	  const onPointerUp = e => {
+	    const start = drag.current;
+	    drag.current = null;
+	    if (!start) return;
+	    const dx = e.clientX - start.x;
+	    const dy = e.clientY - start.y;
+	    if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) <= Math.abs(dy)) return;
+	    go(dx < 0 ? 1 : -1);
+	  };
+	  const onKeyDown = e => {
+	    if (e.key === 'ArrowRight') {
+	      e.preventDefault();
+	      go(1);
+	    }
+	    if (e.key === 'ArrowLeft') {
+	      e.preventDefault();
+	      go(-1);
+	    }
+	  };
+	  const win = visibleWindow(items, index);
+	  const active = win.active?.slide || null;
+
+	  // The storefront gate. A category that the owner has not switched on shows
+	  // nothing at all, whatever products it happens to contain. Preview bypasses
+	  // only this check — everything above it is the same code path.
+	  if (preview ? items.length === 0 : !spotlightVisible(slug, items, config)) return null;
+	  const seats = [win.prev, win.active, win.next].filter(Boolean);
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    className: `cspot${reducedMotion ? ' cspot--still' : ''}${active.framed ? ' cspot--framed' : ''}`
+	    // The active item's theme drives the whole stage. Both are already
+	    // validated by categoryExperience.js before reaching this attribute.
+	    ,
+	    style: {
+	      '--cspot-bg': active.theme.background,
+	      '--cspot-grad': active.theme.gradient || 'none'
+	    },
+	    "aria-roledescription": "carousel",
+	    "aria-label": `${category.name} spotlight`,
+	    onMouseEnter: () => setPaused(true),
+	    onMouseLeave: () => {
+	      clearTimeout(resumeTimer.current);
+	      setPaused(false);
+	    },
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "cspot__bg",
+	      "aria-hidden": "true"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "cspot__inner",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "cspot__eyebrow",
+	        children: category.name
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "sr-only",
+	        "aria-live": "polite",
+	        "aria-atomic": "true",
+	        children: [active.name, ", item ", win.active.index + 1, " of ", count]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "cspot__stage",
+	        ref: stageRef,
+	        "data-dir": dir > 0 ? 'fwd' : 'back',
+	        onPointerDown: onPointerDown,
+	        onPointerUp: onPointerUp,
+	        onPointerCancel: () => {
+	          drag.current = null;
+	        },
+	        onKeyDown: onKeyDown,
+	        tabIndex: count > 1 ? 0 : -1,
+	        role: count > 1 ? 'group' : undefined,
+	        "aria-label": count > 1 ? `${category.name} products — use arrow keys to browse` : undefined,
+	        children: seats.map(seat => {
+	          const isActive = seat.role === 'active';
+	          const s = seat.slide;
+	          return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: `cspot__seat cspot__seat--${seat.role}`,
+	            "data-role": seat.role
+	            // A side product is decoration until it is chosen. It stays
+	            // out of the tab order so the stage is not a keyboard trap;
+	            // the arrow keys and the prev/next buttons reach it instead.
+	            ,
+	            "aria-hidden": !isActive,
+	            children: [isActive ? /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: `/product/${s.productSlug}`,
+	              className: "cspot__shot cspot__shot--link",
+	              draggable: "false",
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(SpotlightImage, {
+	                slide: s,
+	                eager: true
+	              })
+	            }) : /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	              type: "button",
+	              className: "cspot__shot",
+	              tabIndex: -1,
+	              onClick: () => goTo(seat.index),
+	              "aria-label": `Show ${s.name}`,
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(SpotlightImage, {
+	                slide: s
+	              })
+	            }), !isActive && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "cspot__sidename",
+	              children: s.name
+	            })]
+	          }, s.id);
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "cspot__meta",
+	        children: [active.headline && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "cspot__headline",
+	          children: active.headline
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	          className: "cspot__name",
+	          children: active.name
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "cspot__facts",
+	          children: [active.form && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "cspot__form",
+	            children: active.form
+	          }), active.rating != null && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            className: "cspot__rating",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	              name: "star",
+	              size: 13
+	            }), " ", active.rating.toFixed(1), active.reviewCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "cspot__reviews",
+	              children: [" (", active.reviewCount, ")"]
+	            })]
+	          })]
+	        }), active.subline && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "cspot__subline",
+	          children: active.subline
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: `/product/${active.productSlug}`,
+	          className: "cspot__cta",
+	          children: ["View product ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "arrowRight",
+	            size: 16
+	          })]
+	        })]
+	      }, active.id), count > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "cspot__nav",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "cspot__arrow",
+	          onClick: () => go(-1),
+	          "aria-label": "Previous product",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "chevronLeft",
+	            size: 18
+	          })
+	        }), count <= MAX_PIPS ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "cspot__pips",
+	          "aria-hidden": "true",
+	          children: items.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: `cspot__pip${i === win.active.index ? ' is-on' : ''}`
+	          }, s.id))
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "cspot__position",
+	          "aria-hidden": "true",
+	          children: [win.active.index + 1, " / ", count]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "cspot__arrow",
+	          onClick: () => go(1),
+	          "aria-label": "Next product",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "chevronRight",
+	            size: 18
+	          })
+	        })]
+	      })]
+	    })]
+	  });
+	}
+
+	/**
+	 * A cutout floats on the stage; anything else sits in a contained panel
+	 * rather than pretending its white box is transparent.
+	 */
+	function SpotlightImage({
+	  slide,
+	  eager = false
+	}) {
+	  if (!slide.image) {
+	    return /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      className: "cspot__img cspot__img--empty",
+	      "aria-hidden": "true"
+	    });
+	  }
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	    className: `cspot__img${slide.framed ? ' cspot__img--framed' : ''}`,
+	    src: slide.image,
+	    alt: slide.name,
+	    draggable: "false",
+	    loading: eager ? 'eager' : 'lazy',
+	    decoding: "async",
+	    fetchpriority: eager ? 'high' : undefined
+	  });
+	}
+
 	function NotFound() {
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	    className: "container section",
@@ -37493,9 +38249,9 @@
 	  const siblings = categories.filter(c => c.slug !== slug);
 	  const hasConfiguredCopy = hasConfiguredCategoryCopy(cat);
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	    className: "v2-shop",
+	    className: "v2-shop v2-shop--spotlit",
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "v2-wrap v2-shop__head",
+	      className: "v2-wrap v2-shop__head v2-shop__head--tight",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
 	        className: "v2-crumbs",
 	        "aria-label": "Breadcrumb",
@@ -37516,16 +38272,16 @@
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
 	          children: cat.name
 	        })]
-	      }), hasConfiguredCopy && cat.tagline && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	        className: "v2-eyebrow v2-shop__eyebrow",
-	        children: cat.tagline
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
 	        className: "v2-shop__title",
 	        children: cat.name
-	      }), hasConfiguredCopy && cat.blurb && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      }), hasConfiguredCopy && cat.tagline && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	        className: "v2-shop__lede",
-	        children: cat.blurb
+	        children: cat.tagline
 	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategorySpotlight, {
+	      category: cat,
+	      products: items
 	    }), siblings.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	      className: "v2-wrap",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -48873,6 +49629,9 @@
 	  to: '/admin/homepage',
 	  label: 'Homepage'
 	}, {
+	  to: '/admin/category-experience',
+	  label: 'Category Experience'
+	}, {
 	  to: '/admin/branding',
 	  label: 'Branding'
 	}, {
@@ -54105,7 +54864,7 @@
 	  const load = reactExports.useCallback(async () => {
 	    setLoading(true);
 	    const t = await adminGetTheme();
-	    const clean = sanitizeTheme(t || DEFAULT_THEME);
+	    const clean = sanitizeTheme$1(t || DEFAULT_THEME);
 	    setSaved(clean);
 	    setWorking({
 	      ...clean
@@ -54132,7 +54891,7 @@
 	  }));
 	  const resetToken = key => setToken(key, DEFAULT_THEME[key]);
 	  const applyPreset = p => {
-	    setWorking(sanitizeTheme(p.theme));
+	    setWorking(sanitizeTheme$1(p.theme));
 	    setErr('');
 	    flash(`“${p.name}” loaded — review, then Save.`);
 	  };
@@ -54164,7 +54923,7 @@
 	        setBusy(false);
 	        return;
 	      }
-	      const clean = sanitizeTheme(res.theme || working);
+	      const clean = sanitizeTheme$1(res.theme || working);
 	      setSaved(clean);
 	      setWorking({
 	        ...clean
@@ -56773,6 +57532,1185 @@
 	  });
 	}
 
+	// ============================================================
+	// Bulk spotlight packshot import — matching and assignment rules.
+	//
+	// The owner has a folder of packshots already named by SORA LIFE product slug
+	// (<product-slug>.png). This module decides, for a given set of files, which
+	// product each one belongs to and where its uploaded URL should land in
+	// homepage.categoryExperience — WITHOUT guessing.
+	//
+	// MATCHING IS EXACT. A filename matches a product only if, with its extension
+	// removed, it equals that product's slug. There is no fuzzy matching, no
+	// normalisation beyond trimming and lowercasing, and no "closest match". A
+	// file that does not resolve is reported as unmatched and left alone.
+	//
+	// AMBIGUITY IS REPORTED, NEVER RESOLVED. If two files claim the same product,
+	// or a supplied mapping row disagrees with a filename, or one source asset is
+	// mapped to two products, every side of the conflict is skipped and named for
+	// the owner. This is the class of problem the Immunosash case belongs to: one
+	// source packshot recorded against both the 30-capsule pack and the 250 ml
+	// juice. Nothing here will pick one.
+	//
+	// Pure and free of React, Supabase and the DOM, so the rules run in tests.
+	// ============================================================
+
+
+	/** Statuses a selected file can end in. Order is the reporting order. */
+	const IMPORT_STATUS = Object.freeze({
+	  MATCHED: 'matched',
+	  UPLOADING: 'uploading',
+	  UPLOADED: 'uploaded',
+	  SKIPPED: 'skipped',
+	  FAILED: 'failed',
+	  AMBIGUOUS: 'ambiguous',
+	  UNMATCHED: 'unmatched'
+	});
+
+	/**
+	 * The product slug a file claims, from its name alone.
+	 *
+	 * Only the extension is removed. Case and surrounding whitespace are
+	 * normalised because file systems vary on those; nothing else is touched, so
+	 * "hair-oil (1).png" does NOT become "hair-oil".
+	 */
+	function slugFromFilename(filename) {
+	  if (typeof filename !== 'string') return '';
+	  const base = filename.split(/[\\/]/).pop() || '';
+	  return base.replace(/\.[a-z0-9]{2,5}$/i, '').trim().toLowerCase();
+	}
+
+	/**
+	 * Parse the mapping CSV the staging step produced. Optional — the filenames
+	 * already carry the slug; this is a cross-check, not the source of truth.
+	 *
+	 * Deliberately small: the file is one we generated, with a fixed header.
+	 */
+	function parseMappingCsv(text) {
+	  if (typeof text !== 'string' || !text.trim()) return [];
+	  const lines = text.replace(/\r\n/g, '\n').split('\n').filter(l => l.trim());
+	  if (!lines.length) return [];
+	  const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+	  const iSlug = header.indexOf('sora_product_slug');
+	  const iFile = header.indexOf('local_file');
+	  const iSource = header.indexOf('source_url');
+	  if (iSlug < 0 || iFile < 0) return [];
+	  const rows = [];
+	  for (const line of lines.slice(1)) {
+	    // Fields may be quoted (product names contain commas).
+	    const cells = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g) || [];
+	    const val = i => (cells[i] || '').replace(/,$/, '').replace(/^"|"$/g, '').replace(/""/g, '"').trim();
+	    const slug = val(iSlug).toLowerCase();
+	    const file = val(iFile);
+	    if (!slug || !file) continue;
+	    rows.push({
+	      slug,
+	      file,
+	      sourceUrl: iSource >= 0 ? val(iSource) : ''
+	    });
+	  }
+	  return rows;
+	}
+
+	/**
+	 * Decide what happens to each selected file.
+	 *
+	 * @param files      [{ name, size }] — enough to plan without reading bytes
+	 * @param products   the live catalogue
+	 * @param csvRows    optional parseMappingCsv() output, used only to CONTRADICT
+	 * @returns { plan, counts } — plan is one entry per file, in input order
+	 */
+	function planImport({
+	  files = [],
+	  products = [],
+	  csvRows = []
+	} = {}) {
+	  const bySlug = new Map();
+	  for (const p of products) if (p?.slug) bySlug.set(String(p.slug).toLowerCase(), p);
+
+	  // A slug claimed by more than one selected file is ambiguous on both sides.
+	  const claimCount = new Map();
+	  for (const f of files) {
+	    const s = slugFromFilename(f.name);
+	    if (!s) continue;
+	    claimCount.set(s, (claimCount.get(s) || 0) + 1);
+	  }
+
+	  // Cross-check structures from the optional CSV.
+	  const csvBySlug = new Map();
+	  const csvFileToSlugs = new Map();
+	  for (const r of csvRows) {
+	    if (!csvBySlug.has(r.slug)) csvBySlug.set(r.slug, r);
+	    // One SOURCE asset attributed to two products is exactly the Immunosash
+	    // collision. Both sides stay out of the import.
+	    const key = (r.sourceUrl || r.file).toLowerCase();
+	    if (!csvFileToSlugs.has(key)) csvFileToSlugs.set(key, new Set());
+	    csvFileToSlugs.get(key).add(r.slug);
+	  }
+	  const contestedSources = new Set();
+	  for (const [, slugs] of csvFileToSlugs) {
+	    if (slugs.size > 1) for (const s of slugs) contestedSources.add(s);
+	  }
+	  const plan = files.map(file => {
+	    const slug = slugFromFilename(file.name);
+	    const base = {
+	      file,
+	      filename: file.name,
+	      slug
+	    };
+	    if (!slug) return {
+	      ...base,
+	      status: IMPORT_STATUS.UNMATCHED,
+	      reason: 'No product slug in the filename.'
+	    };
+	    if ((claimCount.get(slug) || 0) > 1) {
+	      return {
+	        ...base,
+	        status: IMPORT_STATUS.AMBIGUOUS,
+	        reason: `More than one selected file claims "${slug}".`
+	      };
+	    }
+	    if (contestedSources.has(slug)) {
+	      return {
+	        ...base,
+	        status: IMPORT_STATUS.AMBIGUOUS,
+	        reason: 'The mapping attributes one source packshot to more than one product. Assign this one by hand.'
+	      };
+	    }
+	    const product = bySlug.get(slug);
+	    if (!product) return {
+	      ...base,
+	      status: IMPORT_STATUS.UNMATCHED,
+	      reason: `No product has the slug "${slug}".`
+	    };
+	    const csvRow = csvBySlug.get(slug);
+	    if (csvRow && csvRow.file && csvRow.file.toLowerCase() !== String(file.name).toLowerCase()) {
+	      return {
+	        ...base,
+	        product,
+	        status: IMPORT_STATUS.AMBIGUOUS,
+	        reason: `The mapping expects "${csvRow.file}" for this product, not "${file.name}".`
+	      };
+	    }
+	    if (!isSpotlightEligible(product)) {
+	      return {
+	        ...base,
+	        product,
+	        status: IMPORT_STATUS.SKIPPED,
+	        reason: 'Product is not active, priced and in stock.'
+	      };
+	    }
+	    const categories = (product.categories || [product.category]).filter(c => categoryBySlug[c]);
+	    if (!categories.length) {
+	      return {
+	        ...base,
+	        product,
+	        status: IMPORT_STATUS.SKIPPED,
+	        reason: 'Product is not in any known category.'
+	      };
+	    }
+	    return {
+	      ...base,
+	      product,
+	      categories,
+	      status: IMPORT_STATUS.MATCHED,
+	      reason: ''
+	    };
+	  });
+	  return {
+	    plan,
+	    counts: countByStatus(plan)
+	  };
+	}
+	function countByStatus(plan) {
+	  const counts = {};
+	  for (const key of Object.values(IMPORT_STATUS)) counts[key] = 0;
+	  for (const row of plan) counts[row.status] = (counts[row.status] || 0) + 1;
+	  return counts;
+	}
+
+	/**
+	 * Fold uploaded URLs into the existing category-experience configuration.
+	 *
+	 * Everything already configured is preserved: a category's enabled flag,
+	 * auto-rotate, interval, theme, and each item's headline, subline, background,
+	 * gradient, enabled flag and ORDER. An item that already exists for a product
+	 * has only its spotlightImage replaced. A product with no item yet gets one
+	 * appended carrying nothing but its slug and the new image, so the category's
+	 * own theme continues to supply the background.
+	 *
+	 * @param existing  normalised { categories: { slug: config } }
+	 * @param uploads   [{ slug, url, categories: [slug] }]
+	 * @returns { categories, report } — report says what each category received
+	 */
+	function applyUploads(existing, uploads = []) {
+	  const out = {};
+	  for (const [slug, cfg] of Object.entries(existing?.categories || {})) out[slug] = sanitizeCategoryConfig(cfg, slug);
+	  const report = {};
+	  const touch = catSlug => {
+	    if (!out[catSlug]) out[catSlug] = sanitizeCategoryConfig({}, catSlug);
+	    if (!report[catSlug]) {
+	      report[catSlug] = {
+	        category: catSlug,
+	        updated: [],
+	        created: [],
+	        // Whether this category is published. The import NEVER changes it —
+	        // it is reported so the owner can see which categories are still
+	        // waiting to be switched on.
+	        enabled: out[catSlug].enabled === true,
+	        wasUsingFallback: out[catSlug].items.length === 0
+	      };
+	    }
+	    return out[catSlug];
+	  };
+	  for (const up of uploads) {
+	    if (!up?.slug || !up?.url) continue;
+	    for (const catSlug of up.categories || []) {
+	      if (!categoryBySlug[catSlug]) continue;
+	      const cfg = touch(catSlug);
+	      const idx = cfg.items.findIndex(it => it.productSlug === up.slug);
+	      if (idx >= 0) {
+	        // Update in place: order and every authored field survive.
+	        cfg.items[idx] = {
+	          ...cfg.items[idx],
+	          spotlightImage: up.url
+	        };
+	        report[catSlug].updated.push(up.slug);
+	        continue;
+	      }
+	      cfg.items.push({
+	        id: makeSpotlightId(up.slug, cfg.items.map(it => it.id)),
+	        productSlug: up.slug,
+	        spotlightImage: up.url,
+	        headline: '',
+	        subline: '',
+	        background: '',
+	        gradient: '',
+	        enabled: true
+	      });
+	      report[catSlug].created.push(up.slug);
+	    }
+	  }
+	  return {
+	    categories: out,
+	    report: Object.values(report)
+	  };
+	}
+
+	/**
+	 * Merge the new category-experience block into the WHOLE homepage settings
+	 * object, so discovery, the visuals and every other homepage key survive.
+	 *
+	 * The caller must pass the homepage object it just re-read, not a stale copy.
+	 */
+	function mergeIntoHomepage(currentHomepage, categoryExperience) {
+	  const base = currentHomepage && typeof currentHomepage === 'object' ? currentHomepage : {};
+	  return {
+	    ...base,
+	    categoryExperience
+	  };
+	}
+
+	/** A plain-text summary the owner can copy or save. */
+	function buildSummaryText(plan, {
+	  uploadedUrls = new Map()
+	} = {}) {
+	  const group = status => plan.filter(r => r.status === status);
+	  const lines = [];
+	  const section = (title, rows, render) => {
+	    lines.push(`${title} (${rows.length})`);
+	    if (!rows.length) lines.push('  —');else rows.forEach(r => lines.push(`  ${render(r)}`));
+	    lines.push('');
+	  };
+	  lines.push('SORA LIFE — spotlight packshot import');
+	  lines.push(new Date().toISOString());
+	  lines.push('');
+	  section('UPLOADED', group(IMPORT_STATUS.UPLOADED), r => `${r.slug}  ${uploadedUrls.get(r.slug) || ''}`.trim());
+	  section('FAILED', group(IMPORT_STATUS.FAILED), r => `${r.slug}  — ${r.reason}`);
+	  section('SKIPPED', group(IMPORT_STATUS.SKIPPED), r => `${r.slug}  — ${r.reason}`);
+	  section('AMBIGUOUS (left for review, nothing assigned)', group(IMPORT_STATUS.AMBIGUOUS), r => `${r.filename}  — ${r.reason}`);
+	  section('UNMATCHED FILES', group(IMPORT_STATUS.UNMATCHED), r => `${r.filename}  — ${r.reason}`);
+	  return lines.join('\n');
+	}
+
+	function BulkPackshotImport({
+	  onImported
+	}) {
+	  const [files, setFiles] = reactExports.useState([]);
+	  const [csvRows, setCsvRows] = reactExports.useState([]);
+	  const [csvName, setCsvName] = reactExports.useState('');
+	  const [rows, setRows] = reactExports.useState([]); // live plan, mutated as we go
+	  const [running, setRunning] = reactExports.useState(false);
+	  const [done, setDone] = reactExports.useState(false);
+	  const [err, setErr] = reactExports.useState('');
+	  const [saveNote, setSaveNote] = reactExports.useState('');
+	  const [catReport, setCatReport] = reactExports.useState([]);
+	  const urlsRef = reactExports.useRef(new Map());
+	  const cancelRef = reactExports.useRef(false);
+	  const plan = reactExports.useMemo(() => rows.length ? rows : planImport({
+	    files,
+	    products,
+	    csvRows
+	  }).plan, [files, csvRows, rows]);
+	  const counts = reactExports.useMemo(() => countByStatus(plan), [plan]);
+	  const uploadedCount = counts[IMPORT_STATUS.UPLOADED] || 0;
+
+	  // What the import will actually do, per category, before it runs. One
+	  // product can belong to several categories, so the number of ASSIGNMENTS is
+	  // legitimately higher than the number of images — they are counted, and
+	  // named, separately.
+	  const preflight = reactExports.useMemo(() => {
+	    const byCat = new Map();
+	    let assignments = 0;
+	    for (const r of plan) {
+	      if (r.status !== IMPORT_STATUS.MATCHED) continue;
+	      for (const c of r.categories || []) {
+	        byCat.set(c, (byCat.get(c) || 0) + 1);
+	        assignments += 1;
+	      }
+	    }
+	    return {
+	      assignments,
+	      categories: [...byCat.entries()].map(([category, n]) => ({
+	        category,
+	        n
+	      })).sort((a, b) => b.n - a.n)
+	    };
+	  }, [plan]);
+	  const totalToUpload = plan.filter(r => r.status === IMPORT_STATUS.MATCHED || r.status === IMPORT_STATUS.UPLOADING || r.status === IMPORT_STATUS.UPLOADED || r.status === IMPORT_STATUS.FAILED).length;
+	  function pickImages(e) {
+	    const picked = [...(e.target.files || [])].filter(f => /^image\//.test(f.type));
+	    setFiles(picked);
+	    setRows([]);
+	    setDone(false);
+	    setErr('');
+	    setSaveNote('');
+	    setCatReport([]);
+	    urlsRef.current = new Map();
+	  }
+	  async function pickCsv(e) {
+	    const f = e.target.files?.[0];
+	    e.target.value = '';
+	    if (!f) return;
+	    try {
+	      const parsed = parseMappingCsv(await f.text());
+	      setCsvRows(parsed);
+	      setCsvName(`${f.name} — ${parsed.length} row${parsed.length === 1 ? '' : 's'}`);
+	      setRows([]);
+	    } catch {
+	      setErr('Could not read that mapping file.');
+	    }
+	  }
+	  async function run() {
+	    setRunning(true);
+	    setErr('');
+	    setSaveNote('');
+	    cancelRef.current = false;
+	    urlsRef.current = new Map();
+
+	    // Freeze the plan so the table stops recomputing under us.
+	    const live = planImport({
+	      files,
+	      products,
+	      csvRows
+	    }).plan.map(r => ({
+	      ...r
+	    }));
+	    setRows(live);
+	    const uploads = [];
+	    for (let i = 0; i < live.length; i += 1) {
+	      if (cancelRef.current) break;
+	      const row = live[i];
+	      if (row.status !== IMPORT_STATUS.MATCHED) continue;
+	      live[i] = {
+	        ...row,
+	        status: IMPORT_STATUS.UPLOADING
+	      };
+	      setRows([...live]);
+	      try {
+	        // The existing single-image admin upload path, unchanged.
+	        const url = await uploadHomepageImage(row.file);
+	        urlsRef.current.set(row.slug, url);
+	        uploads.push({
+	          slug: row.slug,
+	          url,
+	          categories: row.categories
+	        });
+	        live[i] = {
+	          ...row,
+	          status: IMPORT_STATUS.UPLOADED,
+	          url
+	        };
+	      } catch (ex) {
+	        // One bad file must not end the batch.
+	        live[i] = {
+	          ...row,
+	          status: IMPORT_STATUS.FAILED,
+	          reason: ex?.message || 'Upload failed.'
+	        };
+	      }
+	      setRows([...live]);
+	    }
+	    if (uploads.length) {
+	      try {
+	        // Re-read immediately before writing so a concurrent edit to
+	        // discovery or the homepage visuals is carried through, not clobbered.
+	        const currentHomepage = (await adminGetSetting('homepage')) || {};
+	        const existing = normalizeCategoryExperience(currentHomepage.categoryExperience);
+	        const {
+	          categories,
+	          report
+	        } = applyUploads(existing, uploads);
+	        const payload = categoryExperiencePayload(categories);
+	        await adminSetSetting('homepage', mergeIntoHomepage(currentHomepage, payload));
+	        setCatReport(report);
+	        const assignments = report.reduce((n, c) => n + c.updated.length + c.created.length, 0);
+	        setSaveNote(`${uploads.length} source image${uploads.length === 1 ? '' : 's'} uploaded, ` + `${assignments} category assignment${assignments === 1 ? '' : 's'} created. Saved. ` + 'Packshots are ready. Review each category and turn Spotlight enabled on when you ' + 'are ready to publish it — nothing is live until you do.');
+	        onImported?.();
+	      } catch (ex) {
+	        setErr(`${uploads.length} image${uploads.length === 1 ? '' : 's'} uploaded, but saving the assignment failed: ` + `${ex?.message || 'unknown error'}. The images are stored — run the import again to assign them.`);
+	      }
+	    } else {
+	      setSaveNote('Nothing was uploaded, so no settings were changed.');
+	    }
+	    setRunning(false);
+	    setDone(true);
+	  }
+	  function downloadSummary() {
+	    const text = buildSummaryText(plan, {
+	      uploadedUrls: urlsRef.current
+	    });
+	    const blob = new Blob([text], {
+	      type: 'text/plain'
+	    });
+	    const a = document.createElement('a');
+	    a.href = URL.createObjectURL(blob);
+	    a.download = `spotlight-import-${new Date().toISOString().slice(0, 10)}.txt`;
+	    a.click();
+	    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+	  }
+	  const matched = counts[IMPORT_STATUS.MATCHED] || 0;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "card adm-bpi",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	      className: "adm-cx__h2",
+	      children: "Bulk import spotlight packshots"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	      className: "hint",
+	      children: ["Select a folder of packshots named after their product \u2014 ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+	        children: "aloe-vera-protein-shampoo.png"
+	      }), ". Each file is uploaded to SORA LIFE\u2019s own media storage and assigned as that product\u2019s spotlight image. Files are matched on the exact product slug; nothing is guessed."]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint",
+	      children: "Importing never publishes anything. A category you have not switched on stays off, and one that was already on stays on \u2014 you decide when each goes live."
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-bpi__pickers",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          htmlFor: "bpi-files",
+	          children: "Packshot images"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          id: "bpi-files",
+	          type: "file",
+	          multiple: true,
+	          accept: "image/png,image/jpeg,image/webp",
+	          onChange: pickImages,
+	          disabled: running
+	        }), files.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "hint",
+	          children: [files.length, " image", files.length === 1 ? '' : 's', " selected."]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          htmlFor: "bpi-csv",
+	          children: "Mapping file (optional)"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          id: "bpi-csv",
+	          type: "file",
+	          accept: ".csv,text/csv",
+	          onChange: pickCsv,
+	          disabled: running
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "hint",
+	          children: csvName || 'If you have _MAPPING.csv, add it and the import will refuse anything it disagrees with.'
+	        })]
+	      })]
+	    }), plan.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-bpi__counts",
+	        role: "status",
+	        "aria-live": "polite",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Tally, {
+	          label: "Matched",
+	          n: matched
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Tally, {
+	          label: "Uploading",
+	          n: counts[IMPORT_STATUS.UPLOADING] || 0
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Tally, {
+	          label: "Uploaded",
+	          n: uploadedCount,
+	          tone: "ok"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Tally, {
+	          label: "Skipped",
+	          n: counts[IMPORT_STATUS.SKIPPED] || 0
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Tally, {
+	          label: "Failed",
+	          n: counts[IMPORT_STATUS.FAILED] || 0,
+	          tone: "bad"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Tally, {
+	          label: "Ambiguous",
+	          n: counts[IMPORT_STATUS.AMBIGUOUS] || 0,
+	          tone: "warn"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Tally, {
+	          label: "Unmatched",
+	          n: counts[IMPORT_STATUS.UNMATCHED] || 0
+	        })]
+	      }), !running && !done && matched > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-bpi__preflight",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "hint",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	            children: matched
+	          }), " image", matched === 1 ? '' : 's', " will be uploaded and assigned, creating ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	            children: preflight.assignments
+	          }), " category assignment", preflight.assignments === 1 ? '' : 's', preflight.assignments > matched && ' — some products belong to more than one category, so they are assigned in each', "."]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "hint adm-bpi__cats-line",
+	          children: preflight.categories.map(c => `${c.category} (${c.n})`).join(' · ')
+	        })]
+	      }), (running || done) && totalToUpload > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	        className: "adm-bpi__progress",
+	        role: "status",
+	        "aria-live": "polite",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+	          children: [uploadedCount, " / ", totalToUpload]
+	        }), " uploaded", counts[IMPORT_STATUS.FAILED] > 0 && ` · ${counts[IMPORT_STATUS.FAILED]} failed`]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "adm-bpi__list",
+	        children: plan.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: `adm-bpi__row adm-bpi__row--${r.status}`,
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "adm-bpi__file",
+	            children: r.filename
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "adm-bpi__status",
+	            children: r.status
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "adm-bpi__note",
+	            children: r.reason || (r.product ? r.product.name : '')
+	          })]
+	        }, r.filename))
+	      })]
+	    }), catReport.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-bpi__cats",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	        className: "adm-bpi__h3",
+	        children: "Categories changed"
+	      }), catReport.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	        className: "hint",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: c.category
+	        }), ": ", c.updated.length, " updated, ", c.created.length, " added", c.enabled ? ' · live' : ' · READY — NOT LIVE']
+	      }, c.category))]
+	    }), saveNote && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint ok",
+	      children: saveNote
+	    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint err",
+	      children: err
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-bpi__actions",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        className: "btn",
+	        onClick: run,
+	        disabled: running || matched === 0,
+	        children: running ? 'Importing…' : `Import ${matched || ''} packshot${matched === 1 ? '' : 's'}`.trim()
+	      }), running && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        className: "btn btn-light",
+	        onClick: () => {
+	          cancelRef.current = true;
+	        },
+	        children: "Stop after this file"
+	      }), done && plan.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        className: "btn btn-light",
+	        onClick: downloadSummary,
+	        children: "Download summary"
+	      })]
+	    })]
+	  });
+	}
+	function Tally({
+	  label,
+	  n,
+	  tone
+	}) {
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	    className: `adm-bpi__tally${tone ? ` adm-bpi__tally--${tone}` : ''}${n ? '' : ' is-zero'}`,
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	      children: n
+	    }), " ", label]
+	  });
+	}
+
+	function CategoryExperience() {
+	  const [slug, setSlug] = reactExports.useState(categories[0]?.slug || '');
+	  const [bySlug, setBySlug] = reactExports.useState({});
+	  const [loading, setLoading] = reactExports.useState(true);
+	  const [saving, setSaving] = reactExports.useState(false);
+	  const [uploads, setUploads] = reactExports.useState(0);
+	  const [msg, setMsg] = reactExports.useState('');
+	  const [err, setErr] = reactExports.useState('');
+	  // A category can now hold every one of its products — Wellness has 46 —
+	  // so the editor needs a way to reach one row without scrolling past forty.
+	  const [filter, setFilter] = reactExports.useState('');
+	  const [showPreview, setShowPreview] = reactExports.useState(false);
+	  async function reloadFromSettings() {
+	    try {
+	      const hp = (await adminGetSetting('homepage')) || {};
+	      setBySlug(normalizeCategoryExperience(hp.categoryExperience).categories);
+	    } catch (ex) {
+	      setErr(ex.message || 'Could not load settings.');
+	    }
+	  }
+	  reactExports.useEffect(() => {
+	    (async () => {
+	      await reloadFromSettings();
+	      setLoading(false);
+	    })();
+	    // eslint-disable-next-line react-hooks/exhaustive-deps
+	  }, []);
+	  const cfg = reactExports.useMemo(() => sanitizeCategoryConfig(bySlug[slug], slug), [bySlug, slug]);
+
+	  // Only this category's sellable products may be spotlighted. Filtering here
+	  // rather than in the picker means the rule holds however the list is used.
+	  const eligible = reactExports.useMemo(() => products.filter(p => (p.categories || [p.category]).includes(slug)).filter(isSpotlightEligible), [slug]);
+	  const chosen = new Set(cfg.items.map(i => i.productSlug));
+	  const available = eligible.filter(p => !chosen.has(p.slug));
+	  const patch = fields => setBySlug(prev => ({
+	    ...prev,
+	    [slug]: {
+	      ...cfg,
+	      ...fields
+	    }
+	  }));
+	  const patchItems = items => patch({
+	    items
+	  });
+	  const addItem = productSlug => {
+	    if (!productSlug) return;
+	    patchItems([...cfg.items, {
+	      id: makeSpotlightId(productSlug, cfg.items.map(i => i.id)),
+	      productSlug,
+	      spotlightImage: '',
+	      headline: '',
+	      subline: '',
+	      background: '',
+	      gradient: '',
+	      enabled: true
+	    }]);
+	  };
+	  const patchItem = (i, fields) => patchItems(cfg.items.map((it, n) => n === i ? {
+	    ...it,
+	    ...fields
+	  } : it));
+	  const removeItem = i => patchItems(cfg.items.filter((_, n) => n !== i));
+	  const moveItem = (i, delta) => {
+	    const to = i + delta;
+	    if (to < 0 || to >= cfg.items.length) return;
+	    const next = [...cfg.items];
+	    [next[i], next[to]] = [next[to], next[i]];
+	    patchItems(next);
+	  };
+	  const save = async () => {
+	    setSaving(true);
+	    setMsg('');
+	    setErr('');
+	    try {
+	      // Read-modify-write the whole homepage object so a concurrent edit to
+	      // discovery or the visuals is not clobbered by this save.
+	      const current = (await adminGetSetting('homepage')) || {};
+	      const next = {
+	        ...current,
+	        categoryExperience: categoryExperiencePayload({
+	          ...bySlug,
+	          [slug]: cfg
+	        })
+	      };
+	      await adminSetSetting('homepage', next);
+	      setBySlug(normalizeCategoryExperience(next.categoryExperience).categories);
+	      setMsg('Saved. The category page updates on next load.');
+	    } catch (ex) {
+	      setErr(ex.message || 'Could not save.');
+	    }
+	    setSaving(false);
+	  };
+
+	  // Rows stay collapsed (<details>) and are filtered by product name, so a
+	  // 46-item category is a short searchable list rather than a wall of forms.
+	  // The original INDEX travels with each row, so Move up/down and Remove keep
+	  // acting on the real list while a filter is applied.
+	  const visibleItems = cfg.items.map((item, index) => ({
+	    item,
+	    index
+	  })).filter(({
+	    item
+	  }) => {
+	    const q = filter.trim().toLowerCase();
+	    if (!q) return true;
+	    const product = products.find(pr => pr.slug === item.productSlug);
+	    return `${product?.name || ''} ${item.productSlug}`.toLowerCase().includes(q);
+	  });
+	  const readyButOff = categoryIsReadyButOff(cfg);
+	  if (loading) return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "adm__head",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	      children: "Category Experience"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      children: "Loading\u2026"
+	    })]
+	  });
+	  const tone = categoryToneTheme(slug);
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm__head",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          children: "Category Experience"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          children: "The animated product stage at the top of a category page. Choose which products appear and how they look. Leave the list empty and the stage fills itself from the category\u2019s own products."
+	        })]
+	      })
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "card",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          htmlFor: "cx-cat",
+	          children: "Category"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("select", {
+	          id: "cx-cat",
+	          className: "input",
+	          value: slug,
+	          onChange: e => setSlug(e.target.value),
+	          children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	            value: c.slug,
+	            children: c.name
+	          }, c.slug))
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "hint",
+	          children: [eligible.length, " product", eligible.length === 1 ? '' : 's', " in this category can be spotlighted."]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: `adm-cx__state adm-cx__state--${cfg.enabled ? 'live' : readyButOff ? 'ready' : 'off'}`,
+	        children: cfg.enabled ? 'LIVE — customers see this spotlight.' : readyButOff ? `READY — NOT LIVE. ${cfg.items.length} product${cfg.items.length === 1 ? '' : 's'} assigned. Turn it on below when you are happy with it.` : 'NOT LIVE. Nothing is shown on this category page yet.'
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-cx__row",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	          className: "check",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            type: "checkbox",
+	            checked: cfg.enabled,
+	            onChange: e => patch({
+	              enabled: e.target.checked
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "check__box"
+	          }), " Show the spotlight on this category"]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	          className: "check",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            type: "checkbox",
+	            checked: cfg.autoRotate,
+	            onChange: e => patch({
+	              autoRotate: e.target.checked
+	            })
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "check__box"
+	          }), " Rotate automatically"]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	          className: "label",
+	          htmlFor: "cx-int",
+	          children: ["Time on each product \u2014 ", (cfg.intervalMs / 1000).toFixed(1), "s"]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          id: "cx-int",
+	          type: "range",
+	          className: "input",
+	          min: MIN_INTERVAL_MS,
+	          max: MAX_INTERVAL_MS,
+	          step: 100,
+	          value: cfg.intervalMs,
+	          onChange: e => patch({
+	            intervalMs: Number(e.target.value)
+	          }),
+	          disabled: !cfg.autoRotate
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "hint",
+	          children: "Rotation always pauses while a customer is looking at or using the stage."
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "card",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        className: "adm-cx__h2",
+	        children: "Category background"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "hint",
+	        children: "Used for any product that has no background of its own."
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ThemeFields, {
+	        theme: cfg.theme,
+	        fallback: tone,
+	        onChange: theme => patch({
+	          theme
+	        }),
+	        idPrefix: "cx-cat-theme"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "card",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+	        className: "adm-cx__h2",
+	        children: ["Spotlight products", cfg.items.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "adm-cx__count",
+	          children: [" \xB7 ", cfg.items.length]
+	        })]
+	      }), cfg.items.length === 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	        className: "hint",
+	        children: ["Nothing chosen yet \u2014 the stage will show every one of this category\u2019s", ' ', eligible.length, " sellable products automatically, in catalogue order. Add products below to control the order and the look."]
+	      }), cfg.items.length > 6 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field adm-cx__filter",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label sr-only",
+	          htmlFor: "cx-filter",
+	          children: "Find a product in this list"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          id: "cx-filter",
+	          className: "input",
+	          type: "search",
+	          value: filter,
+	          onChange: e => setFilter(e.target.value),
+	          placeholder: `Find one of the ${cfg.items.length} products…`
+	        }), filter && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "hint",
+	          children: [visibleItems.length, " of ", cfg.items.length, " shown.", ' ', "Ordering moves the product within the full list, not the filtered view."]
+	        })]
+	      }), visibleItems.map(({
+	        item,
+	        index: i
+	      }) => {
+	        const product = eligible.find(p => p.slug === item.productSlug) || products.find(p => p.slug === item.productSlug);
+	        const stale = !product || !isSpotlightEligible(product) || !(product.categories || [product.category]).includes(slug);
+	        return /*#__PURE__*/jsxRuntimeExports.jsxs("details", {
+	          className: `adm-dc${item.enabled ? '' : ' adm-dc--off'}`,
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("summary", {
+	            className: "adm-dc__sum",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "adm-dc__title",
+	              children: [i + 1, ". ", product?.name || item.productSlug]
+	            }), !item.enabled && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "adm-dc__badge",
+	              children: "Hidden"
+	            }), stale && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "adm-dc__badge",
+	              children: "Not shown"
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-dc__body",
+	            children: [stale && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              className: "hint err",
+	              children: "This product is no longer sellable in this category, so the stage skips it. Remove it, or fix the product."
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	              className: "check",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                type: "checkbox",
+	                checked: item.enabled,
+	                onChange: e => patchItem(i, {
+	                  enabled: e.target.checked
+	                })
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "check__box"
+	              }), " Include this product"]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(SpotlightImageField, {
+	              value: item.spotlightImage,
+	              name: product?.name || item.productSlug,
+	              onChange: spotlightImage => patchItem(i, {
+	                spotlightImage
+	              }),
+	              onBusy: d => setUploads(n => n + d)
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "field",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	                className: "label",
+	                htmlFor: `cx-h-${item.id}`,
+	                children: "Headline (optional)"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                id: `cx-h-${item.id}`,
+	                className: "input",
+	                maxLength: 60,
+	                value: item.headline,
+	                onChange: e => patchItem(i, {
+	                  headline: e.target.value
+	                }),
+	                placeholder: "A short line above the product name"
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "field",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	                className: "label",
+	                htmlFor: `cx-s-${item.id}`,
+	                children: "Subline (optional)"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                id: `cx-s-${item.id}`,
+	                className: "input",
+	                maxLength: 90,
+	                value: item.subline,
+	                onChange: e => patchItem(i, {
+	                  subline: e.target.value
+	                }),
+	                placeholder: "One short supporting line"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	                className: "hint",
+	                children: "Your own words, shown exactly as written. Do not describe results or benefits the product has not been approved to claim."
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(ThemeFields, {
+	              theme: {
+	                background: item.background,
+	                gradient: item.gradient
+	              },
+	              fallback: cfg.theme,
+	              optional: true,
+	              onChange: ({
+	                background,
+	                gradient
+	              }) => patchItem(i, {
+	                background,
+	                gradient
+	              }),
+	              idPrefix: `cx-item-${item.id}`
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "adm-dc__foot",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                type: "button",
+	                className: "btn btn-sm btn-light",
+	                onClick: () => moveItem(i, -1),
+	                disabled: i === 0,
+	                children: "\u2191 Move up"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                type: "button",
+	                className: "btn btn-sm btn-light",
+	                onClick: () => moveItem(i, 1),
+	                disabled: i === cfg.items.length - 1,
+	                children: "\u2193 Move down"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                type: "button",
+	                className: "linkbtn linkbtn--danger",
+	                onClick: () => removeItem(i),
+	                children: "Remove"
+	              })]
+	            })]
+	          })]
+	        }, item.id);
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-dc__add",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          htmlFor: "cx-add",
+	          children: "Add a product"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("select", {
+	          id: "cx-add",
+	          className: "input",
+	          value: "",
+	          disabled: !available.length,
+	          onChange: e => addItem(e.target.value),
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	            value: "",
+	            children: available.length ? 'Choose a product…' : 'Every eligible product is already added'
+	          }), available.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("option", {
+	            value: p.slug,
+	            children: [p.name, p.form ? ` · ${p.form}` : '']
+	          }, p.slug))]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "hint",
+	          children: ["Only products from ", categories.find(c => c.slug === slug)?.name, " that are active, priced and in stock."]
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "card",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        className: "adm-cx__h2",
+	        children: "Preview"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "hint",
+	        children: "Exactly what the category page would show, using the settings above \u2014 including unsaved changes. Visible only here; turning the spotlight on is what publishes it."
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "button",
+	        className: "btn btn-light",
+	        onClick: () => setShowPreview(v => !v),
+	        children: showPreview ? 'Hide preview' : 'Show preview'
+	      }), showPreview && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "adm-cx__preview",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(CategorySpotlight, {
+	          category: categories.find(c => c.slug === slug),
+	          products: products.filter(p => (p.categories || [p.category]).includes(slug)),
+	          configOverride: cfg,
+	          preview: true
+	        }, `${slug}-${cfg.items.length}-${cfg.theme.background}`)
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(BulkPackshotImport, {
+	      onImported: reloadFromSettings
+	    }), msg && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint ok",
+	      children: msg
+	    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint err",
+	      children: err
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	      className: "btn",
+	      onClick: save,
+	      disabled: saving || uploads > 0,
+	      children: saving ? 'Saving…' : uploads > 0 ? 'Waiting for upload…' : 'Save Category Experience'
+	    })]
+	  });
+	}
+
+	/** Background colour + optional gradient, with live validation feedback. */
+	function ThemeFields({
+	  theme,
+	  fallback,
+	  onChange,
+	  idPrefix,
+	  optional = false
+	}) {
+	  const bgOk = !theme.background || Boolean(safeColor(theme.background));
+	  const gradOk = !theme.gradient || Boolean(safeGradient(theme.gradient));
+	  const shownBg = safeColor(theme.background) || fallback.background;
+	  const shownGrad = safeGradient(theme.gradient) || (theme.background ? '' : fallback.gradient);
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "adm-cx__theme",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-cx__theme-fields",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          htmlFor: `${idPrefix}-bg`,
+	          children: "Background colour"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          id: `${idPrefix}-bg`,
+	          className: "input",
+	          value: theme.background || '',
+	          onChange: e => onChange({
+	            background: e.target.value,
+	            gradient: theme.gradient || ''
+	          }),
+	          placeholder: optional ? `Leave empty to use ${fallback.background}` : fallback.background
+	        }), !bgOk && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "hint err",
+	          children: "Not a colour we can use \u2014 it will be ignored."
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "field",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	          className: "label",
+	          htmlFor: `${idPrefix}-grad`,
+	          children: "Gradient (optional)"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          id: `${idPrefix}-grad`,
+	          className: "input",
+	          value: theme.gradient || '',
+	          onChange: e => onChange({
+	            background: theme.background || '',
+	            gradient: e.target.value
+	          }),
+	          placeholder: "linear-gradient(168deg, #F4EFF5 0%, #E6DCEA 100%)"
+	        }), !gradOk && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "hint err",
+	          children: "Only a plain linear/radial/conic gradient is accepted."
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm-cx__swatch",
+	      style: {
+	        background: shownGrad || shownBg
+	      },
+	      "aria-hidden": "true"
+	    })]
+	  });
+	}
+
+	/** Optional cutout asset. Reuses the homepage image upload path unchanged. */
+	function SpotlightImageField({
+	  value,
+	  name,
+	  onChange,
+	  onBusy
+	}) {
+	  const [busy, setBusy] = reactExports.useState(false);
+	  const [err, setErr] = reactExports.useState('');
+	  async function pick(e) {
+	    const file = e.target.files?.[0];
+	    e.target.value = '';
+	    if (!file) return;
+	    setBusy(true);
+	    onBusy(1);
+	    setErr('');
+	    try {
+	      onChange(await uploadHomepageImage(file));
+	    } catch (ex) {
+	      setErr(ex.message || 'Upload failed.');
+	    }
+	    setBusy(false);
+	    onBusy(-1);
+	  }
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "field",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	      className: "label",
+	      children: "Spotlight packshot"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	      className: "input",
+	      value: value || '',
+	      onChange: e => onChange(e.target.value),
+	      placeholder: "Leave empty to use the product's own image",
+	      "aria-label": `Spotlight packshot URL for ${name}`
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	      className: "hint",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	        children: "Use a packshot: the product on its own, with nothing behind it."
+	      }), " A cut-out PNG on a transparent background is ideal; a clean white-background studio shot also works. The spotlight floats this image directly on the category colour, so it is not a photo frame \u2014 a lifestyle photo, a banner, or a shot with a room, table or props behind the product will show its rectangular edges against the background and look wrong here."]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint",
+	      children: "Leave this empty and the product\u2019s normal catalogue image is used instead. That still works, but if that image is a lifestyle photo the stage will show its edges \u2014 which is why a packshot here is worth uploading."
+	    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "hint err",
+	      children: err
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-disc-row__actions",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	        type: "file",
+	        accept: "image/png,image/jpeg,image/webp",
+	        onChange: pick,
+	        disabled: busy,
+	        "aria-label": `Upload a spotlight image for ${name}`
+	      }), value && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "button",
+	        className: "btn btn-sm btn-light",
+	        onClick: () => onChange(''),
+	        children: "Use product image"
+	      }), busy && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        className: "hint",
+	        children: "Uploading\u2026"
+	      })]
+	    })]
+	  });
+	}
+
 	function Branding() {
 	  const [form, setForm] = reactExports.useState({
 	    logo_url: '',
@@ -57471,6 +59409,9 @@
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "homepage",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(HomepageSettings, {})
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "category-experience",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(CategoryExperience, {})
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "branding",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Branding, {})
