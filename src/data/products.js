@@ -228,14 +228,29 @@ export function getRelated(product) {
   return (product.relatedIds || []).map((id) => productById[id]).filter(Boolean);
 }
 
+export function normalizeSearchText(value) {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’‘'`´]/g, '')
+    .replace(/[-_/]+/g, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLocaleLowerCase();
+}
+
 export function searchProducts(q) {
-  const t = q.trim().toLowerCase();
-  if (!t) return [];
-  return products.filter((p) =>
-    p.name.toLowerCase().includes(t) ||
-    (categoryBySlug[p.category]?.name || '').toLowerCase().includes(t) ||
-    (p.form || '').toLowerCase().includes(t)
-  );
+  const query = normalizeSearchText(q);
+  if (!query) return [];
+  const compactQuery = query.replace(/\s/g, '');
+  return products.filter((product) => {
+    const categoryText = (product.categories || [product.category])
+      .flatMap((slug) => [slug, categoryBySlug[slug]?.name || ''])
+      .join(' ');
+    const haystack = normalizeSearchText(`${product.name || ''} ${categoryText}`);
+    return haystack.includes(query) || haystack.replace(/\s/g, '').includes(compactQuery);
+  });
 }
 
 export function getPriceRange() {

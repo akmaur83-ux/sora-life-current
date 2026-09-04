@@ -205,7 +205,6 @@ export default function Header() {
                 {c.name}
               </span>
             ))}
-          <NavLink to="/shop?sort=bestselling" className="v2-hdr__link">Bestsellers</NavLink>
         </nav>
       </header>
 
@@ -273,7 +272,6 @@ export default function Header() {
           </form>
           <nav className="drawer__nav">
             <Link to="/shop" className="drawer__link">All products</Link>
-            <Link to="/shop?sort=bestselling" className="drawer__link">Bestsellers</Link>
             <Link to="/shop?filter=new" className="drawer__link">New in</Link>
             <div className="drawer__sec">Categories</div>
             {categories.map((c) => (
