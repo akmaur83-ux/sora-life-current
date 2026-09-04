@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useState, useCallback, useRef } from 'react';
-import { productById, getCatalogVersion, isPurchasable } from '../data/products.js';
+import { productById, getCatalogVersion, isCatalogHydrated, isPurchasable } from '../data/products.js';
+import { hydrateCartLine, cartSubtotal, cartMrpTotal, cartSavings } from './cartLine.js';
 import { useCustomerAuth } from './customerAuth.jsx';
 import { listWishlist, addWishlistItem, removeWishlistItem, mergeWishlist } from './wishlistData.js';
 import {
@@ -84,6 +85,20 @@ function reducer(state, action) {
     }
     case 'REMOVE':
       return { ...state, cart: state.cart.filter((l) => l.key !== action.key) };
+    // Drop stored lines whose PRODUCT no longer exists in the catalogue. Such
+    // a line cannot render (hydrate returns null), so leaving it in state made
+    // the header badge count an item the cart page could never show, forever.
+    // Only ever dispatched once the real catalogue has hydrated — see
+    // reconcileCart below. Returns the SAME state object when there is nothing
+    // to drop, so it cannot loop.
+    case 'PRUNE_MISSING': {
+      const gone = new Set(action.keys);
+      if (!gone.size) return state;
+      const cart = state.cart.filter((l) => !gone.has(l.key));
+      const saved = state.saved.filter((l) => !gone.has(l.key));
+      if (cart.length === state.cart.length && saved.length === state.saved.length) return state;
+      return { ...state, cart, saved };
+    }
     case 'SAVE_LATER': {
       const line = state.cart.find((l) => l.key === action.key);
       if (!line) return state;
@@ -245,32 +260,11 @@ export function StoreProvider({ children }) {
     })();
   }, [state, userId, toast]);
 
-  // Resolve the chosen pack size so a line is priced at ITS price, not the
-  // product's base price. These figures are for display only — the payable
-  // amount is always recomputed server-side (api/_lib/pricing.js).
-  const hydrate = (l) => {
-    const product = productById[l.id];
-    if (!product) return null;
-    const variantObj = l.variantId
-      ? (product.variants || []).find((v) => String(v.id) === String(l.variantId)) || null
-      : null;
-    const unitPrice = variantObj?.price ?? product.price;
-    const unitMrp = variantObj?.mrp ?? product.mrp ?? unitPrice;
-    return {
-      ...l,
-      product,
-      variantObj,
-      variantLabel: variantObj?.label ?? l.variant ?? null,
-      unitPrice,
-      unitMrp: Math.max(unitMrp, unitPrice),
-      lineTotal: unitPrice * l.qty,
-      // A line already persisted in localStorage from before this guard
-      // existed — or one whose price disappeared when the catalogue
-      // hydrated — must not be checkout-able. The cart says so plainly
-      // instead of letting the server refuse the whole order later.
-      purchasable: isPurchasable(product, variantObj),
-    };
-  };
+  // Priced and judged by src/lib/cartLine.js, so the rules that decide what a
+  // line costs and whether it can be bought have exactly ONE implementation —
+  // the same arrangement wishlistState.js uses, and for the same reason: those
+  // rules are executed directly in tests rather than through a provider.
+  const hydrate = (l) => hydrateCartLine(l, productById[l.id]);
 
   // Variants arrive from Supabase AFTER first render. Memoising on state.cart
   // alone meant a line added with a 750 ml variantId kept the pre-variant
@@ -286,10 +280,41 @@ export function StoreProvider({ children }) {
     () => cartDetailed.filter((l) => !l.purchasable),
     [cartDetailed],
   );
-  const cartCount = useMemo(() => state.cart.reduce((s, l) => s + l.qty, 0), [state.cart]);
-  const subtotal = useMemo(() => cartDetailed.reduce((s, l) => s + l.lineTotal, 0), [cartDetailed]);
-  const mrpTotal = useMemo(() => cartDetailed.reduce((s, l) => s + l.unitMrp * l.qty, 0), [cartDetailed]);
-  const savings = useMemo(() => cartDetailed.reduce((s, l) => s + Math.max(0, l.unitMrp - l.unitPrice) * l.qty, 0), [cartDetailed]);
+
+  // ---- Ghost-line reconciliation -------------------------------------
+  //
+  // A product deleted from the catalogue leaves a line that hydrate() cannot
+  // render. It has to be cleared from storage, or it counts toward the badge
+  // forever. Two rules make this safe:
+  //
+  //   1. Only when the REAL catalogue has landed. Before Supabase answers the
+  //      app is running on the bundled seed, which does not contain every
+  //      product — pruning against it would delete valid lines. If Supabase is
+  //      unreachable this never runs, which is the right failure mode: keep
+  //      the customer's cart.
+  //   2. Only for a missing PRODUCT ID. A retired pack size is not pruned; it
+  //      becomes a visible blocked line the customer is asked to remove, so a
+  //      deliberate choice of theirs is never silently discarded.
+  //
+  // PRUNE_MISSING returns the identical state when there is nothing to drop,
+  // so this cannot re-trigger itself.
+  useEffect(() => {
+    if (!isCatalogHydrated()) return;
+    const keys = [...state.cart, ...state.saved]
+      .filter((l) => !productById[l.id])
+      .map((l) => l.key);
+    if (keys.length) dispatch({ type: 'PRUNE_MISSING', keys });
+  }, [state.cart, state.saved, catalogVersion]);
+  // Counted from the lines the cart can actually SHOW, so the badge can never
+  // advertise an item the page does not list. state.cart may still hold a line
+  // whose product has vanished; reconcileCart() below clears those for good.
+  const cartCount = useMemo(() => cartDetailed.reduce((s, l) => s + l.qty, 0), [cartDetailed]);
+  // Summed in cartLine.js, where lines with an unknown price (a retired pack
+  // size) are skipped rather than counted as zero — Math.max(0, null - null)
+  // is NaN, and one such line would have made every total on the page NaN.
+  const subtotal = useMemo(() => cartSubtotal(cartDetailed), [cartDetailed]);
+  const mrpTotal = useMemo(() => cartMrpTotal(cartDetailed), [cartDetailed]);
+  const savings = useMemo(() => cartSavings(cartDetailed), [cartDetailed]);
 
   const value = {
     ...state,

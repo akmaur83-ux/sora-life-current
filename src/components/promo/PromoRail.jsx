@@ -36,7 +36,12 @@ export default function PromoRail({
             <li key={p.id}><PromoOfferCard promo={{ ...p, type: 'offer' }} /></li>
           ))}
         </ul>
-        <p className="promo-compact__note">Copy a code and enter it at checkout if it applies to your order.</p>
+        {/* This used to read "Copy a code and enter it at checkout" — checkout
+            has no code field, and the cart's own field applied two codes that
+            existed nowhere outside that one file (see the note in Cart.jsx).
+            Offers stay announcements until a validated coupon path exists; the
+            note no longer sends anyone hunting for a box that isn't there. */}
+        <p className="promo-compact__note">Current offers on selected products.</p>
       </div>
     );
   }

@@ -196,6 +196,10 @@
   font-size: 22px;
   line-height: 1.15;
 }
+/* No markup uses these right now: the cart's coupon field was removed because
+   it applied codes the server had never heard of (see Cart.jsx). The styling
+   is kept so restoring the field, once a validated coupon path exists, is a
+   JSX change and not a re-design. */
 .v2-cart-root .summary__coupon { align-items: stretch; gap: 7px; margin-bottom: 12px; }
 .v2-cart-root .v2-coupon {
   min-width: 0;
@@ -435,4 +439,74 @@
 @media (min-width: 901px) {
   .v2-cart-root .cartrow { min-height: 156px; }
   .v2-checkout-root .checkout__aside { min-width: 0; }
+}
+
+/* ============================================================
+   Cart line: unavailable state, and mobile touch targets.
+
+   TOUCH TARGETS — pages.css already raises the cart stepper and the
+   Save/Remove links to 44px on phones, with a comment explaining why
+   ("were 21-23px tall on phones"). Those rules were still in the codebase
+   but had stopped applying: every rule in THIS file is scoped under
+   .v2-cart-root, which outranks them, so the redesign silently pinned the
+   controls back to 32-34px. The originals are left untouched; these
+   restore the same intent at the same specificity the override needs.
+
+   The stepper stays visually 34px tall — the taller hit area comes from
+   padding on the button, so the design does not change, only the target.
+   ============================================================ */
+.v2-cart-root .cartrow__unavailable {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 8px 0 0;
+  color: var(--color-sale, #A94F4F);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.v2-cart-root .cartrow__unavailable svg { flex: 0 0 auto; margin-top: 1px; }
+/* Dimmed, not hidden: the customer still has to recognise the item to act
+   on it. The warning text and the controls stay at full contrast. */
+.v2-cart-root .cartrow--blocked .cartrow__media,
+.v2-cart-root .cartrow--blocked .cartrow__name { opacity: 0.62; }
+
+.v2-cart-root .savedcard__variant {
+  align-self: flex-start;
+  padding: 2px 6px;
+  border: 1px solid var(--v2-line);
+  border-radius: var(--slv2-r-ui, 2px);
+  color: var(--v2-muted);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+/* The empty cart's heading is an <h1> so the page has one; it keeps the
+   size the .state block was designed around. */
+.v2-cart-root .v2-cart-empty .state__h {
+  margin: 0 0 10px;
+  font-size: var(--text-2xl);
+  font-weight: 600;
+}
+
+/* Minus is disabled at qty 1 rather than silently doing nothing — matching
+   the PDP stepper. Kept subtle: still part of the control, clearly inactive. */
+.v2-cart-root .qty.qty--sm button:disabled { color: var(--slv2-ink-4, var(--v2-muted)); cursor: not-allowed; }
+.v2-cart-root .qty.qty--sm button:disabled:hover { background: transparent; }
+
+@media (max-width: 900px) {
+  /* The stepper grows to 44px on phones and keeps its 34px density from
+     901px up, so desktop is untouched. The container carries a fixed height,
+     so it has to be raised with the buttons or it would clip them —
+     everything here is border-box. 44 + 34 + 44 = 122px wide, comfortably
+     inside the ~330px content column at 390px. */
+  .v2-cart-root .qty.qty--sm { height: 44px; }
+  .v2-cart-root .qty.qty--sm button { width: 44px; height: 44px; }
+  .v2-cart-root .qty.qty--sm span { width: 34px; }
+  /* Remove is destructive and was the smallest target on the row. Matched at
+     .cartrow__actions depth on purpose: a narrower rule below pins these to
+     34px at 560px and would otherwise outrank a plainer .v2-cart-root
+     .linkbtn selector on exactly the phone widths this is for. */
+  .v2-cart-root .cartrow__actions .linkbtn,
+  .v2-cart-root .savedlist .linkbtn { min-height: 44px; }
+  .v2-cart-root .savedcard__actions .btn { min-height: 44px; }
 }

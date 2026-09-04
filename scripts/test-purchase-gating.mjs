@@ -22,6 +22,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { transformSync } from '@babel/core';
 import { isPurchasable, isPayableAmount, UNAVAILABLE_LABEL } from '../src/data/products.js';
+import { hydrateCartLine } from '../src/lib/cartLine.js';
 import { isCategoriesHydrated, applyCategories } from '../src/data/categories.js';
 import {
   adminStateFromResult, grantsAdminAccess,
@@ -133,8 +134,16 @@ test('M2.5 the store refuses to put an unpriced line in the cart', () => {
   const add = guard.indexOf("dispatch({ type: 'ADD'");
   assert.ok(bail > -1 && add > -1, 'both the guard and the dispatch must be present');
   assert.ok(bail < add, 'the guard must return BEFORE the ADD dispatch');
-  assert.match(store, /purchasable: isPurchasable\(product, variantObj\)/,
-    'every hydrated cart line must carry its purchasability');
+  // Line-level purchasability moved into src/lib/cartLine.js in Phase 1E.2,
+  // where the rule also got STRICTER (a retired pack size is now blocked
+  // instead of being re-priced at the base). Assert the guarantee against the
+  // real function rather than against a line of source text, so it cannot
+  // break again on a move and cannot be satisfied by a comment.
+  assert.match(store, /hydrateCartLine/, 'the store must price lines through the shared rule');
+  const priceless = hydrateCartLine({ key: 'k', id: unpriced.id, variant: null, variantId: null, qty: 1 }, unpriced);
+  assert.equal(priceless.purchasable, false, 'an unpriced line must never be purchasable');
+  const good = hydrateCartLine({ key: 'k', id: priced.id, variant: null, variantId: null, qty: 1 }, priced);
+  assert.equal(good.purchasable, true, 'a properly priced line still is');
   assert.match(store, /blockedCartLines/, 'blocked lines must be exposed to the cart and checkout');
 });
 
@@ -143,7 +152,12 @@ test('M2.6 a legacy unpriced line already in the cart cannot reach payment', () 
   assert.match(cart, /blockedCartLines\.length > 0/, 'the cart must detect blocked lines');
   assert.match(cart, /disabled aria-disabled="true"[\s\S]{0,80}Checkout/,
     'the Checkout control must be disabled while a line is unbuyable');
-  assert.match(cart, /not available to buy right now/, 'and must say why, naming the item');
+  // The summary names the item; since Phase 1E.2 the reason is also stated on
+  // the row itself, which is where the customer has to act.
+  assert.match(cart, /blockedCartLines\[0\]\.product\.name/, 'the summary names the item');
+  assert.match(cart, /l\.unavailableReason/, 'and each row says why it is blocked');
+  assert.match(src('../src/lib/cartLine.js'), /not available to buy right now/,
+    'an unpriced line still explains itself in those words');
 
   const checkout = src('../src/pages/Checkout.jsx');
   const submit = checkout.slice(checkout.indexOf('const placeOrder'));
