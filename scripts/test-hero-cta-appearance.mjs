@@ -50,7 +50,8 @@ function loadComponent() {
     ImportDeclaration(path) { path.remove(); }, ExportDefaultDeclaration(path) { path.replaceWith(path.node.declaration); },
   } })] });
   const Link = ({ to, children, ...props }) => React.createElement('a', { href: to, ...props }, children);
-  return new Function('React', 'useState', 'Link', 'sanitizeHeroCta', 'heroCtaStyle', `${code}; return HeroCta;`)(React, React.useState, Link, sanitizeHeroCta, heroCtaStyle);
+  const DeferredImage = (props) => React.createElement('img', props);
+  return new Function('React', 'useState', 'Link', 'DeferredImage', 'sanitizeHeroCta', 'heroCtaStyle', `${code}; return HeroCta;`)(React, React.useState, Link, DeferredImage, sanitizeHeroCta, heroCtaStyle);
 }
 
 check('texture and icon render as decorative images in their selected order', () => {

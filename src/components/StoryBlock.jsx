@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
+import DeferredImage from './DeferredImage.jsx';
 
 // V2 editorial story block — the single long-form entry point on Home.
 //
@@ -23,7 +24,7 @@ export default function StoryBlock({ story }) {
       </div>
       <div className="v2-story__m">
         <div className="v2-pimg">
-          {image && <img src={image} alt={alt || ''} loading="lazy" decoding="async" />}
+          {image && <DeferredImage src={image} alt={alt || ''} />}
         </div>
       </div>
     </Link>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import ProductImage from './ProductImage.jsx';
+import DeferredImage from './DeferredImage.jsx';
 import { selectCategoryCards, selectConcernCards } from '../lib/homeDiscovery.js';
 
 // ============================================================
@@ -107,7 +108,7 @@ function DiscoveryTile({ to, image, product, caption, overlay = false }) {
       <Link to={to} className="hd-tile__link">
         <span className="hd-tile__media">
           {image
-            ? <img src={image} alt="" loading="lazy" decoding="async" />
+            ? <DeferredImage src={image} alt="" />
             : <ProductImage product={product} frame="v2" sizes="(max-width: 767px) 46vw, 300px" />}
           {overlay && <span className="hd-tile__overlay">{caption}</span>}
         </span>

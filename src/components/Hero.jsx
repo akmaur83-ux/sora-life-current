@@ -155,7 +155,10 @@ function ConfiguredHero() {
   // decorative background). Phones, data-saver users and reduced-motion users
   // get the poster still instead, which is already authored for every video
   // slide and is ~70x smaller. Desktop behaviour is unchanged.
-  const [useVideo, setUseVideo] = useState(false);
+  const [useVideo, setUseVideo] = useState(() => typeof window !== 'undefined'
+    && window.matchMedia?.('(min-width: 768px)').matches
+    && !reduced
+    && navigator.connection?.saveData !== true);
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
     const mq = window.matchMedia('(min-width: 768px)');
@@ -172,14 +175,34 @@ function ConfiguredHero() {
   const renderable = heroSlides.filter((s) => isRenderable(s, useVideo, videoFailed));
   const SLIDES = renderable.length ? renderable : heroSlides;
   const DISPLAY_SLIDES = SLIDES;
+  const [preparedSlides, setPreparedSlides] = useState(() => new Set(SLIDES[0]?.id ? [SLIDES[0].id] : []));
+
+  const prepareSlide = useCallback((index) => {
+    if (!SLIDES.length) return;
+    const target = (index + SLIDES.length) % SLIDES.length;
+    const id = SLIDES[target]?.id;
+    if (!id) return;
+    setPreparedSlides((current) => {
+      if (current.has(id)) return current;
+      const nextSet = new Set(current);
+      nextSet.add(id);
+      return nextSet;
+    });
+  }, [SLIDES]);
 
   // A dropped slide shortens the deck; keep the index inside it.
   useEffect(() => {
     if (active >= SLIDES.length) setActive(0);
-  }, [SLIDES.length, active]);
+    else prepareSlide(active);
+  }, [SLIDES.length, active, prepareSlide]);
 
-  const go = useCallback((i) => setActive((i + SLIDES.length) % SLIDES.length), [SLIDES.length]);
-  const next = useCallback(() => setActive((a) => (a + 1) % SLIDES.length), [SLIDES.length]);
+  const go = useCallback((i) => {
+    const target = (i + SLIDES.length) % SLIDES.length;
+    prepareSlide(target);
+    setActive(target);
+  }, [SLIDES.length, prepareSlide]);
+  const next = useCallback(() => go(active + 1), [active, go]);
+  const prepareNext = useCallback(() => prepareSlide(active + 1), [active, prepareSlide]);
 
   useEffect(() => {
     if (paused || reduced || SLIDES.length < 2) return;
@@ -233,6 +256,8 @@ function ConfiguredHero() {
           const appearance = homepage.heroCtas?.[s.id];
           const artworkOnly = ![s.kicker, s.title, s.sub, s.lede].some((value) => value && /[A-Za-z0-9]/.test(value));
           const ctaLabel = s.cta?.label;
+          const mediaPrepared = i === active || preparedSlides.has(s.id);
+          const activeVideo = i === active && s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src;
           return (
         <div
           key={s.id}
@@ -243,13 +268,14 @@ function ConfiguredHero() {
             {/* Parallax wrapper is inset inside the frame so its transform can
                 never push the artwork past the frame's own edge. */}
             <div className="v2-hero__par" ref={(el) => { parallaxRefs.current[i] = el; }}>
-              {s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src ? (
+              {mediaPrepared && (activeVideo ? (
                 <video
                   className="v2-hero__img"
                   autoPlay muted loop playsInline preload="metadata"
                   poster={s.poster}
                   style={{ objectPosition: s.position }}
                   onError={() => setVideoFailed((v) => ({ ...v, [s.id]: true }))}
+                  onLoadedData={prepareNext}
                 >
                   <source src={s.src} type="video/mp4" />
                 </video>
@@ -260,14 +286,16 @@ function ConfiguredHero() {
                   srcSet={heroSrcSet(stillFor(s) || FALLBACK_POSTER)} sizes="100vw"
                   alt={s.title} style={{ objectPosition: s.position }}
                   loading={i === active ? 'eager' : 'lazy'}
-                  fetchpriority={i === active ? 'high' : undefined} decoding="async" />
+                  fetchPriority={i === active ? 'high' : undefined} decoding="async"
+                  onLoad={i === active ? prepareNext : undefined} />
               ) : (
                 <img className="v2-hero__img" src={heroSrc(s.src, 1600)}
                   srcSet={heroSrcSet(s.src)} sizes="100vw"
                   alt={s.title} style={{ objectPosition: s.position }}
                   loading={i === active ? 'eager' : 'lazy'}
-                  fetchpriority={i === active ? 'high' : undefined} decoding="async" />
-              )}
+                  fetchPriority={i === active ? 'high' : undefined} decoding="async"
+                  onLoad={i === active ? prepareNext : undefined} />
+              ))}
             </div>
           </div>
 

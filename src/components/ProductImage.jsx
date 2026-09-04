@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { categoryBySlug, tones } from '../data/categories.js';
 import { OPTIMIZED_IMAGES, OPTIMIZED_WIDTHS } from '../data/optimizedImages.js';
+import { useDeferredMedia } from './DeferredImage.jsx';
 
 // Default sizes hint tuned for the product grid (2-up on phones, up to ~240px
 // tiles on desktop). Detail/hero contexts pass a larger `sizes`.
@@ -32,8 +33,13 @@ export default function ProductImage({
   frame = 'legacy',
   fit = 'contain',
   onImageError = null,
+  loading = 'lazy',
+  decoding = 'async',
+  fetchPriority,
 }) {
   const [failed, setFailed] = useState(false);
+  const eager = loading === 'eager' || fetchPriority === 'high';
+  const { ref: mediaRef, ready } = useDeferredMedia(eager);
 
   const v2 = frame === 'v2';
   const hero = frame === 'hero';
@@ -63,7 +69,8 @@ export default function ProductImage({
   if (src && !failed) {
     const base = optimizedBase(src);
     const img = (
-      <img src={src} alt={alt} loading="lazy" decoding="async"
+      <img src={ready ? src : undefined} alt={alt} loading={loading} decoding={decoding}
+        fetchPriority={fetchPriority}
         sizes={base ? sizes : undefined}
         onError={() => {
           setFailed(true);
@@ -73,15 +80,15 @@ export default function ProductImage({
     if (base) {
       const srcSet = OPTIMIZED_WIDTHS.map((w) => `/img/${base}-${w}.webp ${w}w`).join(', ');
       return (
-        <div className={wrapClass}>
+        <div className={wrapClass} ref={mediaRef}>
           <picture>
-            <source type="image/webp" srcSet={srcSet} sizes={sizes} />
+            <source type="image/webp" srcSet={ready ? srcSet : undefined} sizes={sizes} />
             {img}
           </picture>
         </div>
       );
     }
-    return <div className={wrapClass}>{img}</div>;
+    return <div className={wrapClass} ref={mediaRef}>{img}</div>;
   }
 
   // Fallback: warm neutral ground plus the brand and category wordmark. Never a

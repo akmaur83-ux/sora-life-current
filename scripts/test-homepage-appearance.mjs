@@ -30,6 +30,10 @@ function component(file, name, deps = {}) {
 const h = React.createElement;
 const Link = ({ to, children, ...props }) => h('a', { ...props, href: to }, children);
 const Icon = () => h('span');
+// The production component delays `src` until an IntersectionObserver reveals
+// the image. This server-render harness has no viewport, so use an ordinary
+// image while retaining the same props for appearance assertions.
+const DeferredImage = (props) => h('img', props);
 // Mirrors the real ticket's shape (visible code + a real copy button) so the
 // tests below can see whether a coupon actually reached the customer.
 const PromoCopyCode = ({ code, className = '' }) => (code
@@ -37,18 +41,18 @@ const PromoCopyCode = ({ code, className = '' }) => (code
     h('code', { className: 'promo-code__value' }, code),
     h('button', { type: 'button', 'aria-label': `Copy coupon code ${code}` }, 'Copy'))
   : null);
-const PromoArtwork = component('../src/components/promo/PromoArtwork.jsx', 'PromoArtwork', { Link, PromoCopyCode });
-const PromoPoster = component('../src/components/promo/PromoPoster.jsx', 'PromoPoster', { Link, Icon, PromoCopyCode, PromoArtwork, offerCalloutFrom: () => null });
+const PromoArtwork = component('../src/components/promo/PromoArtwork.jsx', 'PromoArtwork', { Link, PromoCopyCode, DeferredImage });
+const PromoPoster = component('../src/components/promo/PromoPoster.jsx', 'PromoPoster', { Link, Icon, PromoCopyCode, PromoArtwork, DeferredImage, offerCalloutFrom: () => null });
 const PromoOfferCard = ({ promo }) => h('article', { className: 'promo-offer' }, promo.title);
-const HomeVisualLayers = component('../src/components/HomeVisualLayers.jsx', 'HomeVisualLayers');
+const HomeVisualLayers = component('../src/components/HomeVisualLayers.jsx', 'HomeVisualLayers', { DeferredImage });
 const HomeOffers = component('../src/components/promo/HomeOffers.jsx', 'HomeOffers', { ...appearance, promosForPlacement, HomeVisualLayers, PromoPoster, PromoOfferCard, PromoArtwork });
-const CategoryRail = component('../src/components/CategoryRail.jsx', 'CategoryRail', { Link, categories });
+const CategoryRail = component('../src/components/CategoryRail.jsx', 'CategoryRail', { Link, categories, DeferredImage });
 // The strip now renders the large image-led category cards instead of the
 // small circular marquee; the admin appearance wrapper it is tested for is
 // unchanged.
 const ProductImage = () => h('span');
 const ShopByCategory = component('../src/components/HomeDiscoveryRails.jsx', 'ShopByCategory',
-  { Link, Icon, ProductImage, selectCategoryCards, selectConcernCards: () => [] });
+  { Link, Icon, ProductImage, DeferredImage, selectCategoryCards, selectConcernCards: () => [] });
 const HomeCategoryStrip = component('../src/components/HomeCategoryStrip.jsx', 'HomeCategoryStrip', { categories, CategoryRail, HomeVisualLayers });
 const defaults = appearance.sanitizeHomepageVisuals();
 const promo = (id, extra = {}) => ({ id, title: `Promotion ${id}`, type: 'poster', placements: ['home'], is_active: true, sort_order: 0, image_url: `/public/${id}.png`, ...extra });

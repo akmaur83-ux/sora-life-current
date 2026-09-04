@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { categories } from '../data/categories.js';
+import DeferredImage from './DeferredImage.jsx';
 
 const CATEGORY_IMAGES = {
   wellness: '/public/category-images/wellness.webp',
@@ -74,7 +75,7 @@ export default function CategoryRail() {
           </span>
 
           {image && (
-            <img
+            <DeferredImage
               className="v2-cat__photo"
               src={image}
               alt=""

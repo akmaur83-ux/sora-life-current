@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import PromoCopyCode from './PromoCopyCode.jsx';
+import DeferredImage from '../DeferredImage.jsx';
 
 // ============================================================
 // UPLOADED PROMOTION ARTWORK — the shared image-first renderer.
@@ -60,12 +61,10 @@ export default function PromoArtwork({
   const isExternal = !!ctaUrl && /^https:\/\//i.test(ctaUrl);
 
   const image = (
-    <img
+    <DeferredImage
       className={imgClassName}
       src={src}
       alt={title || 'Promotion'}
-      loading="lazy"
-      decoding="async"
       onError={onError}
     />
   );

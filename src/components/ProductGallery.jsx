@@ -82,6 +82,8 @@ export default function ProductGallery({ product, children }) {
             alt={current?.alt || product.name}
             sizes="(max-width: 900px) 92vw, 460px"
             frame="v2"
+            loading="eager"
+            fetchPriority="high"
             onImageError={rejectFrame}
           />
           <span className="pdp__zoom-label"><span aria-hidden="true">＋</span> View larger</span>

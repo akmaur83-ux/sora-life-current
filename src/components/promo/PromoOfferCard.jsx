@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import Icon from '../Icon.jsx';
 import PromoCopyCode from './PromoCopyCode.jsx';
+import DeferredImage from '../DeferredImage.jsx';
 
 // ============================================================
 // COMPACT OFFER CARD — a mini campaign creative, not a system alert.
@@ -39,7 +40,7 @@ export default function PromoOfferCard({ promo }) {
     <article className={`promo-offer promo-offer--${themeVariant}`}>
       <div className="promo-offer__top">
         <span className="promo-offer__ic" aria-hidden="true">
-          {imageUrl ? <img src={imageUrl} alt="" loading="lazy" decoding="async" /> : <Icon name={icon} size={18} />}
+          {imageUrl ? <DeferredImage src={imageUrl} alt="" /> : <Icon name={icon} size={18} />}
         </span>
         {badgeText && <span className="promo-offer__badge">{badgeText}</span>}
       </div>

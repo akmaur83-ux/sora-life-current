@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
+import DeferredImage from './DeferredImage.jsx';
 
 // V2 editorial card — the brand talking, not a product tile.
 //
@@ -19,7 +20,7 @@ export default function EditorialCard({ item }) {
     <Link to={href} className="v2-ed">
       <div className="v2-ed__media">
         <div className="v2-pimg">
-          {image && <img src={image} alt={alt || ''} loading="lazy" decoding="async" />}
+          {image && <DeferredImage src={image} alt={alt || ''} />}
         </div>
         <span className="v2-ed__scrim" aria-hidden="true" />
       </div>
