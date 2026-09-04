@@ -31995,8 +31995,10 @@
 	    const saveData = navigator.connection?.saveData === true;
 	    const evaluate = () => setUseVideo(mq.matches && !reduced && !saveData);
 	    evaluate();
-	    mq.addEventListener?.('change', evaluate);
-	    return () => mq.removeEventListener?.('change', evaluate);
+	    if (mq.addEventListener) mq.addEventListener('change', evaluate);else mq.addListener?.(evaluate);
+	    return () => {
+	      if (mq.removeEventListener) mq.removeEventListener('change', evaluate);else mq.removeListener?.(evaluate);
+	    };
 	  }, [reduced]);
 
 	  // Only carry slides that can actually paint something. If a deck were ever
@@ -32006,6 +32008,7 @@
 	  const SLIDES = renderable.length ? renderable : heroSlides;
 	  const DISPLAY_SLIDES = SLIDES;
 	  const [preparedSlides, setPreparedSlides] = reactExports.useState(() => new Set(SLIDES[0]?.id ? [SLIDES[0].id] : []));
+	  const loadedSlides = reactExports.useRef(new Set());
 	  const prepareSlide = reactExports.useCallback(index => {
 	    if (!SLIDES.length) return;
 	    const target = (index + SLIDES.length) % SLIDES.length;
@@ -32021,7 +32024,14 @@
 
 	  // A dropped slide shortens the deck; keep the index inside it.
 	  reactExports.useEffect(() => {
-	    if (active >= SLIDES.length) setActive(0);else prepareSlide(active);
+	    if (active >= SLIDES.length) setActive(0);else {
+	      prepareSlide(active);
+	      // A slide normally loads while hidden as the prepared neighbour. Its
+	      // load event has already fired by the time it becomes active, so prepare
+	      // the following slide here rather than leaving the next transition cold.
+	      const id = SLIDES[active]?.id;
+	      if (id && loadedSlides.current.has(id)) prepareSlide(active + 1);
+	    }
 	  }, [SLIDES.length, active, prepareSlide]);
 	  const go = reactExports.useCallback(i => {
 	    const target = (i + SLIDES.length) % SLIDES.length;
@@ -32029,7 +32039,10 @@
 	    setActive(target);
 	  }, [SLIDES.length, prepareSlide]);
 	  const next = reactExports.useCallback(() => go(active + 1), [active, go]);
-	  const prepareNext = reactExports.useCallback(() => prepareSlide(active + 1), [active, prepareSlide]);
+	  const mediaReady = reactExports.useCallback((id, index) => {
+	    loadedSlides.current.add(id);
+	    if (index === active) prepareSlide(index + 1);
+	  }, [active, prepareSlide]);
 	  reactExports.useEffect(() => {
 	    if (paused || reduced || SLIDES.length < 2) return;
 	    timer.current = setTimeout(next, INTERVAL);
@@ -32115,7 +32128,7 @@
 	                ...v,
 	                [s.id]: true
 	              })),
-	              onLoadedData: prepareNext,
+	              onLoadedData: () => mediaReady(s.id, i),
 	              children: /*#__PURE__*/jsxRuntimeExports.jsx("source", {
 	                src: s.src,
 	                type: "video/mp4"
@@ -32136,7 +32149,7 @@
 	              loading: i === active ? 'eager' : 'lazy',
 	              fetchPriority: i === active ? 'high' : undefined,
 	              decoding: "async",
-	              onLoad: i === active ? prepareNext : undefined
+	              onLoad: () => mediaReady(s.id, i)
 	            }) : /*#__PURE__*/jsxRuntimeExports.jsx("img", {
 	              className: "v2-hero__img",
 	              src: heroSrc(s.src, 1600),
@@ -32149,7 +32162,7 @@
 	              loading: i === active ? 'eager' : 'lazy',
 	              fetchPriority: i === active ? 'high' : undefined,
 	              decoding: "async",
-	              onLoad: i === active ? prepareNext : undefined
+	              onLoad: () => mediaReady(s.id, i)
 	            }))
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -32361,8 +32374,10 @@
 	    const mq = window.matchMedia('(max-width: 767px)');
 	    const update = () => setMobile(mq.matches);
 	    update();
-	    mq.addEventListener?.('change', update);
-	    return () => mq.removeEventListener?.('change', update);
+	    if (mq.addEventListener) mq.addEventListener('change', update);else mq.addListener?.(update);
+	    return () => {
+	      if (mq.removeEventListener) mq.removeEventListener('change', update);else mq.removeListener?.(update);
+	    };
 	  }, []);
 	  const layers = [background && {
 	    ...background,
@@ -33056,6 +33071,8 @@
 	    className: imgClassName,
 	    src: src,
 	    alt: title || 'Promotion',
+	    width: 1500,
+	    height: 1000,
 	    onError: onError
 	  });
 	  let artwork = image;
@@ -33144,11 +33161,7 @@
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "promo-poster__art",
 	      "aria-hidden": "true",
-	      children: [imageUrl ? /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-	        className: "promo-poster__img",
-	        src: imageUrl,
-	        alt: ""
-	      }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	        className: "promo-poster__deco",
 	        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          className: "promo-poster__leaf"
@@ -37361,6 +37374,7 @@
 	        sizes: "100vw",
 	        frame: "v2",
 	        className: "pdp-lightbox__image",
+	        loading: "eager",
 	        onImageError: onImageError
 	      }, current.url), count > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	        type: "button",
