@@ -7004,6 +7004,137 @@
 	/** Copy for a control that cannot be a working Add to cart. */
 	const UNAVAILABLE_LABEL = 'Unavailable';
 
+	// ============================================================
+	// Cart line hydration — the single place that decides what a stored cart
+	// line costs and whether it can be bought.
+	//
+	// Split out of store.jsx for the same reason wishlistState.js was: these
+	// rules are the ones most worth executing directly in a test, and doing that
+	// through a React provider proves less while costing more.
+	//
+	// A stored line holds identifiers only — { key, id, variant, variantId, qty }.
+	// Every price is re-derived from the LIVE catalogue on each render, so a
+	// price change reaches the cart on the next hydration and a stale figure in
+	// localStorage can never be spent. These numbers are for display; the payable
+	// amount is always recomputed server-side (api/_lib/pricing.js).
+	// ============================================================
+
+
+	/**
+	 * Interpret a stock value the way the cart is allowed to.
+	 *
+	 * The two stock sources do NOT mean the same thing, and treating them alike
+	 * is how a cart starts making promises it cannot keep:
+	 *
+	 *   variant stock   a real integer count — adminApi passes v.stock straight
+	 *                   through, so 3 means three.
+	 *   product stock   a boolean in disguise — adminApi maps `true` to the
+	 *                   stand-in IN_STOCK_QTY (40) and `false` to 0, so the
+	 *                   number carries no information beyond "some" or "none".
+	 *
+	 * So a quantity ceiling is only honest for a variant. For a base product we
+	 * may say "out of stock" and nothing more. This is the same split the server
+	 * makes in api/_lib/pricing.js -> resolveStock().
+	 *
+	 * @returns {number|null} a real remaining count, or null when unknowable
+	 */
+	function countableStock(variantObj) {
+	  if (!variantObj) return null;
+	  return Number.isFinite(variantObj.stock) ? variantObj.stock : null;
+	}
+
+	/**
+	 * Why this line cannot be ordered, or null when it can.
+	 *
+	 * Ordered so the customer is told the most specific thing that is wrong:
+	 * a pack size that no longer exists explains itself better than the generic
+	 * "not available", and both beat letting create-order refuse the whole order
+	 * after the address is filled in.
+	 */
+	function unavailableReasonFor({
+	  product,
+	  line,
+	  variantObj,
+	  variantMissing
+	}) {
+	  if (variantMissing) {
+	    return line.variant ? `Pack size “${line.variant}” is no longer available.` : 'The pack size you chose is no longer available.';
+	  }
+	  if (product.isActive === false) return 'This item is no longer available.';
+	  const stock = countableStock(variantObj);
+	  if (stock === 0 || !variantObj && product.stock === 0) return 'This item is out of stock.';
+	  if (stock != null && line.qty > stock) {
+	    return stock === 1 ? 'Only 1 left — please reduce the quantity.' : `Only ${stock} left — please reduce the quantity.`;
+	  }
+	  // A line persisted from before purchase gating existed, or one whose price
+	  // disappeared when the catalogue hydrated.
+	  if (!isPurchasable(product, variantObj)) return 'This item is not available to buy right now.';
+	  return null;
+	}
+
+	/**
+	 * Price and judge one stored cart line against the live catalogue.
+	 *
+	 * @param line     the stored line: { key, id, variant, variantId, qty }
+	 * @param product  the live catalogue product, or null/undefined if it is gone
+	 * @returns the hydrated line, or null when the product no longer exists
+	 *          (the caller drops those — see PRUNE_MISSING in store.jsx)
+	 */
+	function hydrateCartLine(line, product) {
+	  if (!product) return null;
+	  const variantObj = line.variantId ? (product.variants || []).find(v => String(v.id) === String(line.variantId)) || null : null;
+
+	  // The customer chose a pack size and that pack is gone. Falling back to
+	  // product.price would quietly re-price a 750 ml line at the 250 ml price —
+	  // exactly the substitution create-order refuses with "The selected size is
+	  // no longer available", and exactly what isPurchasable's own contract warns
+	  // against. So the price stays UNKNOWN and the line is blocked. A product
+	  // that never had a variant is untouched by this.
+	  const variantMissing = Boolean(line.variantId) && !variantObj;
+	  const unavailableReason = unavailableReasonFor({
+	    product,
+	    line,
+	    variantObj,
+	    variantMissing
+	  });
+
+	  // Only a missing variant leaves the price genuinely unknowable. Every other
+	  // blocked line has a real price, and showing it is more honest than blanking
+	  // it — checkout is disabled either way.
+	  const unitPrice = variantMissing ? null : variantObj?.price ?? product.price;
+	  const unitMrpRaw = variantMissing ? null : variantObj?.mrp ?? product.mrp ?? unitPrice;
+	  return {
+	    ...line,
+	    product,
+	    variantObj,
+	    variantLabel: variantObj?.label ?? line.variant ?? null,
+	    variantMissing,
+	    variantStock: countableStock(variantObj),
+	    unitPrice,
+	    unitMrp: unitPrice == null ? null : Math.max(unitMrpRaw, unitPrice),
+	    // A price we cannot know contributes nothing to the totals, rather than
+	    // contributing a guess.
+	    lineTotal: unitPrice == null ? 0 : unitPrice * line.qty,
+	    unavailableReason,
+	    purchasable: unavailableReason == null
+	  };
+	}
+
+	/** Item subtotal. Lines with an unknown price contribute nothing. */
+	function cartSubtotal(lines) {
+	  return lines.reduce((s, l) => s + l.lineTotal, 0);
+	}
+
+	/** MRP total. A line with no known MRP is skipped rather than counted as 0. */
+	function cartMrpTotal(lines) {
+	  return lines.reduce((s, l) => l.unitMrp == null ? s : s + l.unitMrp * l.qty, 0);
+	}
+
+	/** Total saved against MRP. Skips lines with no comparable pair (never NaN). */
+	function cartSavings(lines) {
+	  return lines.reduce((s, l) => l.unitMrp == null || l.unitPrice == null ? s : s + Math.max(0, l.unitMrp - l.unitPrice) * l.qty, 0);
+	}
+
 	//#region src/lib/tracingRegistry.ts
 	const EXTRACTOR_KEY = Symbol.for("@supabase/supabase-js.traceContextExtractor");
 	/**
@@ -30042,6 +30173,25 @@
 	        ...state,
 	        cart: state.cart.filter(l => l.key !== action.key)
 	      };
+	    // Drop stored lines whose PRODUCT no longer exists in the catalogue. Such
+	    // a line cannot render (hydrate returns null), so leaving it in state made
+	    // the header badge count an item the cart page could never show, forever.
+	    // Only ever dispatched once the real catalogue has hydrated — see
+	    // reconcileCart below. Returns the SAME state object when there is nothing
+	    // to drop, so it cannot loop.
+	    case 'PRUNE_MISSING':
+	      {
+	        const gone = new Set(action.keys);
+	        if (!gone.size) return state;
+	        const cart = state.cart.filter(l => !gone.has(l.key));
+	        const saved = state.saved.filter(l => !gone.has(l.key));
+	        if (cart.length === state.cart.length && saved.length === state.saved.length) return state;
+	        return {
+	          ...state,
+	          cart,
+	          saved
+	        };
+	      }
 	    case 'SAVE_LATER':
 	      {
 	        const line = state.cart.find(l => l.key === action.key);
@@ -30262,30 +30412,11 @@
 	    })();
 	  }, [state, userId, toast]);
 
-	  // Resolve the chosen pack size so a line is priced at ITS price, not the
-	  // product's base price. These figures are for display only — the payable
-	  // amount is always recomputed server-side (api/_lib/pricing.js).
-	  const hydrate = l => {
-	    const product = productById[l.id];
-	    if (!product) return null;
-	    const variantObj = l.variantId ? (product.variants || []).find(v => String(v.id) === String(l.variantId)) || null : null;
-	    const unitPrice = variantObj?.price ?? product.price;
-	    const unitMrp = variantObj?.mrp ?? product.mrp ?? unitPrice;
-	    return {
-	      ...l,
-	      product,
-	      variantObj,
-	      variantLabel: variantObj?.label ?? l.variant ?? null,
-	      unitPrice,
-	      unitMrp: Math.max(unitMrp, unitPrice),
-	      lineTotal: unitPrice * l.qty,
-	      // A line already persisted in localStorage from before this guard
-	      // existed — or one whose price disappeared when the catalogue
-	      // hydrated — must not be checkout-able. The cart says so plainly
-	      // instead of letting the server refuse the whole order later.
-	      purchasable: isPurchasable(product, variantObj)
-	    };
-	  };
+	  // Priced and judged by src/lib/cartLine.js, so the rules that decide what a
+	  // line costs and whether it can be bought have exactly ONE implementation —
+	  // the same arrangement wishlistState.js uses, and for the same reason: those
+	  // rules are executed directly in tests rather than through a provider.
+	  const hydrate = l => hydrateCartLine(l, productById[l.id]);
 
 	  // Variants arrive from Supabase AFTER first render. Memoising on state.cart
 	  // alone meant a line added with a 750 ml variantId kept the pre-variant
@@ -30298,10 +30429,42 @@
 	  // Lines that cannot be paid for. Cart and Checkout read this to block the
 	  // order instead of letting the customer discover it at the payment step.
 	  const blockedCartLines = reactExports.useMemo(() => cartDetailed.filter(l => !l.purchasable), [cartDetailed]);
-	  const cartCount = reactExports.useMemo(() => state.cart.reduce((s, l) => s + l.qty, 0), [state.cart]);
-	  const subtotal = reactExports.useMemo(() => cartDetailed.reduce((s, l) => s + l.lineTotal, 0), [cartDetailed]);
-	  const mrpTotal = reactExports.useMemo(() => cartDetailed.reduce((s, l) => s + l.unitMrp * l.qty, 0), [cartDetailed]);
-	  const savings = reactExports.useMemo(() => cartDetailed.reduce((s, l) => s + Math.max(0, l.unitMrp - l.unitPrice) * l.qty, 0), [cartDetailed]);
+
+	  // ---- Ghost-line reconciliation -------------------------------------
+	  //
+	  // A product deleted from the catalogue leaves a line that hydrate() cannot
+	  // render. It has to be cleared from storage, or it counts toward the badge
+	  // forever. Two rules make this safe:
+	  //
+	  //   1. Only when the REAL catalogue has landed. Before Supabase answers the
+	  //      app is running on the bundled seed, which does not contain every
+	  //      product — pruning against it would delete valid lines. If Supabase is
+	  //      unreachable this never runs, which is the right failure mode: keep
+	  //      the customer's cart.
+	  //   2. Only for a missing PRODUCT ID. A retired pack size is not pruned; it
+	  //      becomes a visible blocked line the customer is asked to remove, so a
+	  //      deliberate choice of theirs is never silently discarded.
+	  //
+	  // PRUNE_MISSING returns the identical state when there is nothing to drop,
+	  // so this cannot re-trigger itself.
+	  reactExports.useEffect(() => {
+	    if (!isCatalogHydrated()) return;
+	    const keys = [...state.cart, ...state.saved].filter(l => !productById[l.id]).map(l => l.key);
+	    if (keys.length) dispatch({
+	      type: 'PRUNE_MISSING',
+	      keys
+	    });
+	  }, [state.cart, state.saved, catalogVersion]);
+	  // Counted from the lines the cart can actually SHOW, so the badge can never
+	  // advertise an item the page does not list. state.cart may still hold a line
+	  // whose product has vanished; reconcileCart() below clears those for good.
+	  const cartCount = reactExports.useMemo(() => cartDetailed.reduce((s, l) => s + l.qty, 0), [cartDetailed]);
+	  // Summed in cartLine.js, where lines with an unknown price (a retired pack
+	  // size) are skipped rather than counted as zero — Math.max(0, null - null)
+	  // is NaN, and one such line would have made every total on the page NaN.
+	  const subtotal = reactExports.useMemo(() => cartSubtotal(cartDetailed), [cartDetailed]);
+	  const mrpTotal = reactExports.useMemo(() => cartMrpTotal(cartDetailed), [cartDetailed]);
+	  const savings = reactExports.useMemo(() => cartSavings(cartDetailed), [cartDetailed]);
 	  const value = {
 	    ...state,
 	    // The visible union replaces the old raw array, so every existing
@@ -36650,7 +36813,7 @@
 	        }, p.id))
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	        className: "promo-compact__note",
-	        children: "Copy a code and enter it at checkout if it applies to your order."
+	        children: "Current offers on selected products."
 	      })]
 	    });
 	  }
@@ -39262,10 +39425,6 @@
 	  });
 	}
 
-	const COUPONS = {
-	  SORA10: 0.1,
-	  WELCOME: 0.15
-	};
 	function Cart() {
 	  const {
 	    cartDetailed,
@@ -39273,29 +39432,10 @@
 	    dispatch,
 	    subtotal,
 	    mrpTotal,
-	    savings,
-	    toast,
+	    cartCount,
 	    blockedCartLines
 	  } = useStore();
-	  const [coupon, setCoupon] = reactExports.useState('');
-	  const [applied, setApplied] = reactExports.useState(null);
-	  const [couponErr, setCouponErr] = reactExports.useState('');
-	  const applyCoupon = e => {
-	    e.preventDefault();
-	    const code = coupon.trim().toUpperCase();
-	    if (COUPONS[code]) {
-	      setApplied({
-	        code,
-	        rate: COUPONS[code]
-	      });
-	      setCouponErr('');
-	      toast(`Coupon ${code} applied`);
-	    } else {
-	      setApplied(null);
-	      setCouponErr('That code is not valid.');
-	    }
-	  };
-	  const discount = applied ? Math.round(subtotal * applied.rate) : 0;
+
 	  // Cart has no delivery-method selector; its estimate mirrors the default
 	  // Standard option used by Checkout and the server (free shipping).
 	  const shipping = 0;
@@ -39312,7 +39452,8 @@
 	              name: "bag",
 	              size: 32
 	            })
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	            className: "state__h",
 	            children: "Your cart is empty"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	            children: "Looks like you haven't added anything yet. Let's fix that."
@@ -39353,7 +39494,9 @@
 	          children: "Your cart"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
 	          className: "muted",
-	          children: [cartDetailed.length, " ", cartDetailed.length === 1 ? 'item' : 'items', " in your cart."]
+	          children: [cartDetailed.length, " ", cartDetailed.length === 1 ? 'product' : 'products', cartCount !== cartDetailed.length && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	            children: [" \xB7 ", cartCount, " ", cartCount === 1 ? 'item' : 'items']
+	          }), ' ', "in your cart."]
 	        })]
 	      })
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -39364,98 +39507,119 @@
 	          className: "cartlayout__main",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	            className: "cartlist",
-	            children: cartDetailed.map(l => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "cartrow",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	                to: `/product/${l.product.slug}`,
-	                className: "cartrow__media v2-cartrow__media",
-	                children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	                  product: l.product,
-	                  frame: "v2"
-	                })
-	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                className: "cartrow__info",
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                  className: "cartrow__top",
+	            children: cartDetailed.map(l => {
+	              // Four "Remove" buttons in a row tell a screen-reader user
+	              // nothing. Naming the product — and the pack size when two
+	              // lines are the same product — makes each control unique.
+	              const who = l.variantLabel ? `${l.product.name}, ${l.variantLabel}` : l.product.name;
+	              return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                className: `cartrow ${l.purchasable ? '' : 'cartrow--blocked'}`,
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	                  to: `/product/${l.product.slug}`,
+	                  className: "cartrow__media v2-cartrow__media",
+	                  children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	                    product: l.product,
+	                    frame: "v2"
+	                  })
+	                }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                  className: "cartrow__info",
 	                  children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	                      to: `/product/${l.product.slug}`,
-	                      className: "cartrow__name serif",
-	                      children: l.product.name
-	                    }), (l.variantLabel || l.product.form) && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                      className: "cartrow__variant",
-	                      children: l.variantLabel || l.product.form
-	                    }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	                      className: "cartrow__unit",
-	                      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                        className: "cartrow__unitprice",
-	                        children: money(l.unitPrice)
+	                    className: "cartrow__top",
+	                    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	                        to: `/product/${l.product.slug}`,
+	                        className: "cartrow__name serif",
+	                        children: l.product.name
+	                      }), (l.variantLabel || l.product.form) && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                        className: "cartrow__variant",
+	                        children: l.variantLabel || l.product.form
 	                      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                        className: "muted",
-	                        children: " each"
-	                      }), l.unitMrp > l.unitPrice && /*#__PURE__*/jsxRuntimeExports.jsx("s", {
-	                        children: money(l.unitMrp)
+	                        className: "cartrow__unit",
+	                        children: l.unitPrice == null ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                          className: "muted",
+	                          children: "Price unavailable"
+	                        }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	                          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                            className: "cartrow__unitprice",
+	                            children: money(l.unitPrice)
+	                          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                            className: "muted",
+	                            children: " each"
+	                          }), l.unitMrp > l.unitPrice && /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+	                            children: money(l.unitMrp)
+	                          })]
+	                        })
+	                      })]
+	                    }), l.unitPrice != null && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                      className: "cartrow__price",
+	                      children: [money(l.lineTotal), l.unitMrp > l.unitPrice && /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+	                        children: money(l.unitMrp * l.qty)
 	                      })]
 	                    })]
+	                  }), l.unavailableReason && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	                    className: "cartrow__unavailable",
+	                    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                      name: "circleAlert",
+	                      size: 14
+	                    }), " ", l.unavailableReason]
 	                  }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                    className: "cartrow__price",
-	                    children: [money(l.lineTotal), l.unitMrp > l.unitPrice && /*#__PURE__*/jsxRuntimeExports.jsx("s", {
-	                      children: money(l.unitMrp * l.qty)
-	                    })]
-	                  })]
-	                }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                  className: "cartrow__actions",
-	                  children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                    className: "qty qty--sm",
-	                    children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                    className: "cartrow__actions",
+	                    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                      className: "qty qty--sm",
+	                      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                        onClick: () => dispatch({
+	                          type: 'SET_QTY',
+	                          key: l.key,
+	                          qty: l.qty - 1
+	                        }),
+	                        "aria-label": `Decrease quantity for ${who}`,
+	                        disabled: l.qty <= 1,
+	                        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                          name: "minus",
+	                          size: 15
+	                        })
+	                      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                        "aria-live": "polite",
+	                        children: l.qty
+	                      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                        onClick: () => dispatch({
+	                          type: 'SET_QTY',
+	                          key: l.key,
+	                          qty: l.qty + 1
+	                        }),
+	                        "aria-label": `Increase quantity for ${who}`,
+	                        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                          name: "plus",
+	                          size: 15
+	                        })
+	                      })]
+	                    }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	                      className: "linkbtn",
+	                      "aria-label": `Save ${who} for later`,
 	                      onClick: () => dispatch({
-	                        type: 'SET_QTY',
-	                        key: l.key,
-	                        qty: l.qty - 1
+	                        type: 'SAVE_LATER',
+	                        key: l.key
 	                      }),
-	                      "aria-label": "Decrease",
-	                      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                        name: "minus",
+	                      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                        name: "heart",
 	                        size: 15
-	                      })
-	                    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	                      children: l.qty
-	                    }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                      }), " Save for later"]
+	                    }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	                      className: "linkbtn linkbtn--danger",
+	                      "aria-label": `Remove ${who} from cart`,
 	                      onClick: () => dispatch({
-	                        type: 'SET_QTY',
-	                        key: l.key,
-	                        qty: l.qty + 1
+	                        type: 'REMOVE',
+	                        key: l.key
 	                      }),
-	                      "aria-label": "Increase",
-	                      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                        name: "plus",
+	                      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                        name: "trash",
 	                        size: 15
-	                      })
+	                      }), " Remove"]
 	                    })]
-	                  }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	                    className: "linkbtn",
-	                    onClick: () => dispatch({
-	                      type: 'SAVE_LATER',
-	                      key: l.key
-	                    }),
-	                    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                      name: "heart",
-	                      size: 15
-	                    }), " Save for later"]
-	                  }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-	                    className: "linkbtn linkbtn--danger",
-	                    onClick: () => dispatch({
-	                      type: 'REMOVE',
-	                      key: l.key
-	                    }),
-	                    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                      name: "trash",
-	                      size: 15
-	                    }), " Remove"]
 	                  })]
 	                })]
-	              })]
-	            }, l.key))
+	              }, l.key);
+	            })
 	          }), savedDetailed.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx(SavedList, {
 	            saved: savedDetailed,
 	            dispatch: dispatch,
@@ -39467,55 +39631,26 @@
 	            className: "summary v2-summary",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
 	              children: "Order summary"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
-	              className: "summary__coupon",
-	              onSubmit: applyCoupon,
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	                className: "searchbox v2-coupon",
-	                style: {
-	                  flex: 1
-	                },
-	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                  name: "tag"
-	                }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	                  className: "input",
-	                  placeholder: "Coupon code",
-	                  value: coupon,
-	                  onChange: e => setCoupon(e.target.value)
-	                })]
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	                className: "btn btn-light v2-btn--out",
-	                type: "submit",
-	                children: "Apply"
-	              })]
-	            }), couponErr && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	              className: "error-text",
-	              children: couponErr
-	            }), applied && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-	              className: "summary__applied",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "checkCircle",
-	                size: 15
-	              }), " ", applied.code, " \u2014 ", applied.rate * 100, "% off"]
 	            }), promotionsSource === 'supabase' && /*#__PURE__*/jsxRuntimeExports.jsx(PromoRail, {
 	              place: "cart",
 	              variant: "compact"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceSummary, {
 	              fallback: {
-	                itemTotal: subtotal - discount,
+	                itemTotal: subtotal,
 	                mrpTotal,
 	                shipping
 	              }
 	            }), blockedCartLines.length > 0 ?
 	            /*#__PURE__*/
-	            /* A line stored before purchase gating existed, or one whose
-	               price vanished when the catalogue hydrated. Say which item
-	               and why rather than failing at the payment step. */
+	            /* A retired pack size, a deactivated or sold-out product, or
+	               a line stored before purchase gating existed. Each row
+	               already states its own reason; this repeats the count and
+	               holds the checkout shut. */
 	            jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
 	                className: "summary__blocked",
 	                role: "alert",
-	                children: [blockedCartLines.length === 1 ? `"${blockedCartLines[0].product.name}" is not available to buy right now.` : `${blockedCartLines.length} items in your cart are not available to buy right now.`, ' ', "Remove ", blockedCartLines.length === 1 ? 'it' : 'them', " to continue."]
+	                children: [blockedCartLines.length === 1 ? `“${blockedCartLines[0].product.name}” cannot be ordered right now.` : `${blockedCartLines.length} items in your cart cannot be ordered right now.`, ' ', "See the note on ", blockedCartLines.length === 1 ? 'that item' : 'those items', " above to continue."]
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	                type: "button",
 	                className: "btn btn-lg btn-block",
@@ -39580,54 +39715,64 @@
 	      children: ["Saved for later (", saved.length, ")"]
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	      className: "savedlist__grid",
-	      children: saved.map(l => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "savedcard",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	          to: `/product/${l.product.slug}`,
-	          className: "savedcard__media",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	            product: l.product,
-	            frame: "v2"
-	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "savedcard__body",
+	      children: saved.map(l => {
+	        const who = l.variantLabel ? `${l.product.name}, ${l.variantLabel}` : l.product.name;
+	        return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "savedcard",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: `/product/${l.product.slug}`,
-	            className: "savedcard__name",
-	            children: l.product.name
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "price",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	              className: "now",
-	              style: {
-	                fontSize: 'var(--text-md)'
-	              },
-	              children: money(l.product.price)
+	            className: "savedcard__media",
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
+	              product: l.product,
+	              frame: "v2"
 	            })
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "savedcard__actions",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	              className: "btn btn-sm btn-light",
-	              onClick: () => dispatch({
-	                type: 'MOVE_TO_CART',
-	                key: l.key
-	              }),
-	              children: "Move to cart"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	              className: "linkbtn linkbtn--danger",
-	              onClick: () => dispatch({
-	                type: 'REMOVE_SAVED',
-	                key: l.key
-	              }),
-	              "aria-label": "Remove",
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	                name: "trash",
-	                size: 15
+	            className: "savedcard__body",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: `/product/${l.product.slug}`,
+	              className: "savedcard__name",
+	              children: l.product.name
+	            }), l.variantLabel && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "savedcard__variant",
+	              children: l.variantLabel
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "price",
+	              children: l.unitPrice == null ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "muted",
+	                children: "Price unavailable"
+	              }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "now",
+	                style: {
+	                  fontSize: 'var(--text-md)'
+	                },
+	                children: money(l.unitPrice)
 	              })
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "savedcard__actions",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                className: "btn btn-sm btn-light",
+	                "aria-label": `Move ${who} to cart`,
+	                onClick: () => dispatch({
+	                  type: 'MOVE_TO_CART',
+	                  key: l.key
+	                }),
+	                children: "Move to cart"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                className: "linkbtn linkbtn--danger",
+	                onClick: () => dispatch({
+	                  type: 'REMOVE_SAVED',
+	                  key: l.key
+	                }),
+	                "aria-label": `Remove ${who} from saved items`,
+	                children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                  name: "trash",
+	                  size: 15
+	                })
+	              })]
 	            })]
 	          })]
-	        })]
-	      }, l.key))
+	        }, l.key);
+	      })
 	    })]
 	  });
 	}
