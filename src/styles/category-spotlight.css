@@ -1,0 +1,439 @@
+/* ============================================================
+   CATEGORY SPOTLIGHT
+
+   ART DIRECTION HAPPENS HERE. Every number the composition depends on is a
+   custom property in the :root-scoped block below — stage height, product
+   scale, side offsets, vertical lift, opacity, timing and easing. Tuning the
+   look should mean editing values in ONE place, never touching the JSX.
+
+   Only `transform` and `opacity` are animated, so transitions stay on the
+   compositor. No layout properties, no filters, no blur.
+   ============================================================ */
+
+.cspot {
+  /* -- stage -------------------------------------------------- */
+  --cspot-h: 420px;              /* total stage height, mobile first       */
+  /* Seat width, % of stage. MUST stay well under 100%: at 100% the active
+     seat covers the whole stage and the side products sit BEHIND it rather
+     than beside it, which is what the first pass did. */
+  --cspot-seat-w: 64%;
+  --cspot-shot-h: 74%;           /* active product visual, % of stage      */
+  --cspot-side-scale: 0.74;      /* side products, relative to active      */
+  --cspot-side-x: 34vw;          /* side seat offset from centre           */
+  --cspot-side-op: 0.78;         /* side opacity — kept high on purpose:
+                                    the sides read as secondary through SCALE
+                                    and POSITION, not through fading out     */
+  --cspot-active-y: -6px;        /* active lift                            */
+  --cspot-side-y: 16px;          /* side drop                              */
+
+  /* -- motion ------------------------------------------------- */
+  --cspot-dur: 560ms;
+  --cspot-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --cspot-meta-dur: 420ms;
+
+  /* -- theme (set inline per active product, with a safe default) -- */
+  --cspot-bg: #F1EDE4;
+  --cspot-grad: none;
+
+  /* -- type / spacing ----------------------------------------- */
+  --cspot-pad-top: 10px;
+  --cspot-pad-bottom: 10px;
+  --cspot-name-size: 21px;
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: var(--cspot-pad-top) 0 var(--cspot-pad-bottom);
+  background: var(--cspot-bg);
+  transition: background var(--cspot-dur) var(--cspot-ease);
+}
+
+/* The gradient rides on its own layer so it can cross-fade with the colour
+   underneath instead of snapping. */
+.cspot__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--cspot-grad);
+  transition: background var(--cspot-dur) var(--cspot-ease), opacity var(--cspot-dur) var(--cspot-ease);
+  pointer-events: none;
+}
+
+.cspot__inner {
+  position: relative;
+  z-index: 1;
+  max-width: var(--wrap, 1200px);
+  margin-inline: auto;
+  padding-inline: var(--sp-4, 16px);
+  text-align: center;
+}
+
+.cspot__eyebrow {
+  margin: 0 0 2px;
+  color: var(--slv2-ink-4, #6B7168);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------- stage */
+
+.cspot__stage {
+  position: relative;
+  /* Explicit width, not `margin: 0 auto`. Every seat inside is absolutely
+     positioned, so the stage has no content width of its own — and on desktop
+     it becomes a GRID ITEM, where an auto inline margin turns off stretch and
+     sizes the box to that (zero) content. The stage collapsed to 0px and the
+     whole spotlight disappeared above 1100px. */
+  width: 100%;
+  height: var(--cspot-h);
+  touch-action: pan-y;         /* horizontal swipe is ours, vertical is theirs */
+  -webkit-user-select: none;
+  user-select: none;
+}
+.cspot__stage:focus-visible {
+  outline: 2px solid var(--slv2-accent-primary, #1E3A2F);
+  outline-offset: 4px;
+  border-radius: var(--slv2-r-ui, 2px);
+}
+
+/* Every seat is the same box in the same place; only the transform differs.
+   That is what makes the reshuffle a pure compositor move. */
+.cspot__seat {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: var(--cspot-seat-w);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition:
+    transform var(--cspot-dur) var(--cspot-ease),
+    opacity var(--cspot-dur) var(--cspot-ease);
+  will-change: transform, opacity;
+}
+
+.cspot__seat--active {
+  transform: translate3d(-50%, var(--cspot-active-y), 0) scale(1);
+  opacity: 1;
+  z-index: 2;
+}
+.cspot__seat--prev {
+  transform: translate3d(calc(-50% - var(--cspot-side-x)), var(--cspot-side-y), 0) scale(var(--cspot-side-scale));
+  opacity: var(--cspot-side-op);
+  z-index: 1;
+}
+.cspot__seat--next {
+  transform: translate3d(calc(-50% + var(--cspot-side-x)), var(--cspot-side-y), 0) scale(var(--cspot-side-scale));
+  opacity: var(--cspot-side-op);
+  z-index: 1;
+}
+
+/* An entry animation for the newly-mounted seat was tried with
+   @starting-style and removed: the seat is keyed by product, so it remounts on
+   every advance, and it kept settling back into the starting state instead of
+   transitioning out of it — the incoming product sat at scale(0.42), opacity 0
+   and never arrived. The motion that carries the interaction is the reshuffle
+   of the seats that PERSIST across an advance (next becomes active, active
+   becomes prev): those are the same DOM nodes with a changed class, so their
+   transform/opacity transition runs normally. Entry is left to the meta fade
+   until this can be done with an explicit enter class rather than a mount
+   hook. */
+
+.cspot__shot {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: var(--cspot-shot-h);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.cspot__shot--link { text-decoration: none; }
+.cspot__shot:focus-visible {
+  outline: 2px solid var(--slv2-accent-primary, #1E3A2F);
+  outline-offset: 3px;
+}
+
+/* ISOLATED PACKSHOTS ONLY.
+   The stage shows the product and nothing else: no card, no panel, no second
+   background. The category theme is the only ground, and a single soft
+   drop-shadow grounds the product on it. drop-shadow() follows the alpha
+   outline of a true cutout, so a transparent PNG casts a shadow shaped like
+   the bottle rather than like a rectangle. It is a static filter — never
+   transitioned, so nothing moves off the compositor. */
+.cspot__img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 18px rgba(24, 32, 26, 0.14));
+}
+
+/* A white-background packshot is a spotlight asset, not a lifestyle card, so
+   it gets the same floating treatment — this used to paint a white panel with
+   padding and a box-shadow behind it, which is exactly the boxed look the
+   stage is meant to avoid. The class is still emitted (the data still knows
+   which assets carry no alpha) so a future pass can treat them differently
+   without touching the component; today the only difference is a slightly
+   tighter shadow, since a rectangle needs less lift than a cutout. */
+.cspot__img--framed {
+  filter: drop-shadow(0 10px 14px rgba(24, 32, 26, 0.12));
+}
+
+.cspot__img--empty {
+  display: block;
+  width: 60%;
+  height: 100%;
+  border-radius: var(--slv2-r-ui, 2px);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.15));
+}
+
+/* The side product's name, small and quiet — enough to know what you are
+   about to tap, not enough to compete with the active item. */
+.cspot__sidename {
+  max-width: 44vw;
+  color: var(--slv2-ink-4, #6B7168);
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* ----------------------------------------------------------------- meta */
+
+.cspot__meta {
+  margin-top: -2px;
+  animation: cspot-meta-in var(--cspot-meta-dur) var(--cspot-ease) both;
+}
+@keyframes cspot-meta-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+.cspot__headline {
+  margin: 0 0 1px;
+  color: var(--slv2-ink-3, #4A5147);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.cspot__name {
+  margin: 0;
+  color: var(--slv2-ink, #16211B);
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: var(--cspot-name-size);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.cspot__facts {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 3px 0 0;
+  color: var(--slv2-ink-4, #6B7168);
+  font-size: 12px;
+}
+.cspot__facts:empty { display: none; }
+.cspot__form {
+  padding: 2px 7px;
+  border: 1px solid rgba(24, 32, 26, 0.14);
+  border-radius: var(--slv2-r-ui, 2px);
+}
+.cspot__rating { display: inline-flex; align-items: center; gap: 4px; }
+.cspot__rating svg { color: var(--slv2-accent-primary, #1E3A2F); }
+.cspot__reviews { color: var(--slv2-ink-4, #6B7168); }
+.cspot__subline {
+  margin: 4px 0 0;
+  color: var(--slv2-ink-3, #4A5147);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.cspot__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 0 20px;
+  border-radius: var(--slv2-r-ui, 2px);
+  background: var(--slv2-cta-primary-bg, #1E3A2F);
+  color: var(--slv2-cta-primary-text, #FBF8F1);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.cspot__cta:hover { opacity: 0.92; }
+
+/* ------------------------------------------------------------------ nav */
+
+.cspot__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+.cspot__arrow {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(24, 32, 26, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--slv2-ink, #16211B);
+  cursor: pointer;
+}
+.cspot__arrow:hover { background: rgba(255, 255, 255, 0.9); }
+.cspot__pips { display: inline-flex; gap: 5px; }
+.cspot__pip {
+  width: 14px;
+  height: 2px;
+  background: rgba(24, 32, 26, 0.22);
+  transition: width var(--cspot-dur) var(--cspot-ease), background var(--cspot-dur) var(--cspot-ease);
+}
+.cspot__pip.is-on { width: 24px; background: var(--slv2-accent-primary, #1E3A2F); }
+
+/* ---------------------------------------------------------- tablet 768 */
+
+@media (min-width: 768px) {
+  .cspot {
+    --cspot-h: 528px;
+    /* Pinned so the tightened mobile values above cannot leak up. This pass
+       deliberately did not re-art-direct tablet or desktop. */
+    --cspot-active-y: -12px;
+    --cspot-side-y: 20px;
+    --cspot-pad-top: 20px;
+    --cspot-pad-bottom: 22px;
+    --cspot-seat-w: 46%;
+    --cspot-shot-h: 64%;
+    --cspot-side-scale: 0.74;
+    --cspot-side-x: 30vw;
+    --cspot-side-op: 0.72;
+    --cspot-name-size: 26px;
+    --cspot-pad-top: 20px;
+    --cspot-pad-bottom: 22px;
+  }
+  .cspot__sidename { max-width: 26vw; font-size: 12px; }
+}
+
+/* --------------------------------------------------------- desktop 1440 */
+
+@media (min-width: 1100px) {
+  .cspot {
+    --cspot-h: 500px;
+    --cspot-active-y: -12px;   /* pinned — see the tablet block */
+    --cspot-side-y: 20px;
+    --cspot-seat-w: 34%;
+    --cspot-shot-h: 70%;
+    --cspot-side-scale: 0.62;
+    /* Fixed px rather than vw: past ~1100px a viewport-relative offset flings
+       the side products into the far corners of a very wide screen. */
+    --cspot-side-x: 340px;
+    --cspot-side-op: 0.7;
+    --cspot-name-size: 30px;
+    --cspot-pad-top: 26px;
+    --cspot-pad-bottom: 26px;
+  }
+  /* Editorial: copy on the left, stage centre, so the catalogue below is not
+     pushed off the fold by a stacked hero. */
+  .cspot__inner {
+    display: grid;
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+    align-items: center;
+    gap: 28px;
+    text-align: left;
+  }
+  .cspot__eyebrow { grid-column: 1; margin-bottom: 8px; align-self: end; }
+  .cspot__meta { grid-column: 1; grid-row: 2; margin-top: 0; align-self: start; }
+  .cspot__stage { grid-column: 2; grid-row: 1 / span 3; }
+  .cspot__nav { grid-column: 1; grid-row: 3; justify-content: flex-start; align-self: start; }
+  .cspot__facts { justify-content: flex-start; }
+  .cspot__sidename { max-width: 200px; }
+}
+
+/* ------------------------------------------------------- reduced motion */
+
+/* Movement is removed; the product still changes, just instantly. The stage
+   stays usable — this is a preference about motion, not about content. */
+@media (prefers-reduced-motion: reduce) {
+  .cspot,
+  .cspot__bg,
+  .cspot__seat,
+  .cspot__pip {
+    transition: none !important;
+  }
+  .cspot__meta { animation: none !important; }
+}
+.cspot--still .cspot__seat,
+.cspot--still .cspot__bg,
+.cspot--still .cspot__pip { transition: none !important; }
+.cspot--still .cspot__meta { animation: cspot-fade-in var(--cspot-meta-dur) linear both; }
+@keyframes cspot-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ============================================================
+   CATEGORY PAGE DENSITY
+
+   The category page used to open with a tall head, a big title, a blurb, a
+   chip rail and only then the grid. With a 470px stage in the middle of that,
+   the catalogue would start most of a second screen down. These rules tighten
+   the surrounding chrome so the stage earns its height and the grid still
+   arrives quickly. Scoped to .v2-shop--spotlit so Shop is untouched.
+   ============================================================ */
+
+.v2-shop--spotlit .v2-shop__head--tight { padding-top: 10px; padding-bottom: 8px; }
+.v2-shop--spotlit .v2-shop__head--tight .v2-shop__title {
+  font-size: 23px;
+  line-height: 1.15;
+  margin: 0;
+}
+.v2-shop--spotlit .v2-shop__head--tight .v2-shop__lede {
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+/* The sibling rail sits right under the stage, and the browser right under
+   that — no decorative gaps between the three. */
+/* Spotlight -> chips -> search -> filter row -> grid. Each of these carried
+   its own comfortable margin, and stacked they put 114px of nothing between
+   the stage and the filter row. Trimmed to margins that still separate the
+   bands without a decorative void; the search box and the filter row are real
+   controls and keep their full height. All scoped to .v2-shop--spotlit, so
+   Shop and the un-spotlit pages are untouched. */
+.v2-shop--spotlit .v2-shop__cats { margin-top: 8px; margin-bottom: 0; }
+.v2-shop--spotlit .v2-shop__search { margin-top: 8px; }
+.v2-shop--spotlit .v2-flt { margin-top: 8px; }
+.v2-shop--spotlit .v2-pb { padding-top: 0; }
+
+@media (min-width: 768px) {
+  .v2-shop--spotlit .v2-shop__head--tight { padding-top: 16px; }
+  .v2-shop--spotlit .v2-shop__head--tight .v2-shop__title { font-size: 28px; }
+  .v2-shop--spotlit .v2-shop__head--tight .v2-shop__lede { font-size: 13.5px; margin-top: 5px; }
+}
+@media (min-width: 1100px) {
+  .v2-shop--spotlit .v2-shop__head--tight .v2-shop__title { font-size: 32px; }
+}
+
+/* A deep pool shows its position as text rather than as pips. 43 pips came to
+   812px in a 358px row, clipping the strip and pushing both arrows off a
+   390px screen. This is an INDICATOR limit only — the rotation pool itself is
+   uncapped, and every product in the category still takes a turn. */
+.cspot__position {
+  min-width: 58px;
+  color: var(--slv2-ink-4, #6B7168);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}

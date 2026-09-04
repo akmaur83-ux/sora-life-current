@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductBrowser from '../components/ProductBrowser.jsx';
+import CategorySpotlight from '../components/category/CategorySpotlight.jsx';
 import NotFound from './NotFound.jsx';
 import { categoryBySlug, categories, hasConfiguredCategoryCopy } from '../data/categories.js';
 import { getByCategory } from '../data/products.js';
@@ -8,6 +9,12 @@ import { getByCategory } from '../data/products.js';
 // SORA LIFE V2 — Category listing. Same compact head as Shop, plus a rail of
 // sibling categories. All copy comes from the real category record (name,
 // tagline, blurb); nothing is authored here.
+//
+// The page opens with the CategorySpotlight stage, then the sibling rail,
+// then ProductBrowser unchanged — the browser still owns the category tabs,
+// the compact Filter | count | Sort row, the URL state and the grid, so none
+// of that is duplicated here. The spotlight removes itself when a category
+// has nothing eligible to show, leaving the original page exactly as it was.
 export default function Category() {
   const { slug } = useParams();
   const cat = categoryBySlug[slug];
@@ -17,8 +24,8 @@ export default function Category() {
   const hasConfiguredCopy = hasConfiguredCategoryCopy(cat);
 
   return (
-    <div className="v2-shop">
-      <div className="v2-wrap v2-shop__head">
+    <div className="v2-shop v2-shop--spotlit">
+      <div className="v2-wrap v2-shop__head v2-shop__head--tight">
         <nav className="v2-crumbs" aria-label="Breadcrumb">
           <Link to="/">Home</Link>
           <Icon name="chevronRight" size={12} stroke={1.7} />
@@ -26,10 +33,14 @@ export default function Category() {
           <Icon name="chevronRight" size={12} stroke={1.7} />
           <strong>{cat.name}</strong>
         </nav>
-        {hasConfiguredCopy && cat.tagline && <p className="v2-eyebrow v2-shop__eyebrow">{cat.tagline}</p>}
+        {/* The page keeps exactly one h1 and it stays the category name; the
+            spotlight's product heading is an h2 beneath it. The blurb moves
+            out of the way of the stage — the tagline alone carries the head. */}
         <h1 className="v2-shop__title">{cat.name}</h1>
-        {hasConfiguredCopy && cat.blurb && <p className="v2-shop__lede">{cat.blurb}</p>}
+        {hasConfiguredCopy && cat.tagline && <p className="v2-shop__lede">{cat.tagline}</p>}
       </div>
+
+      <CategorySpotlight category={cat} products={items} />
 
       {siblings.length > 0 && (
         <div className="v2-wrap">

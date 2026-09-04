@@ -448,3 +448,94 @@
 .adm-pp__rm { font-size:16px; }
 .adm-pp__rm:hover { background:#F6E7E3; border-color:#D8BDB6; color:#9A3F33; }
 .hint.err { color: var(--color-sale, #A94F4F); }
+
+/* ---- Category Experience -------------------------------------------- */
+.adm-cx__h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+.adm-cx__row { display: flex; flex-wrap: wrap; gap: 18px; margin: 10px 0 14px; }
+.adm-cx__theme { display: flex; align-items: flex-start; gap: 14px; }
+.adm-cx__theme-fields { flex: 1 1 auto; min-width: 0; }
+/* Shows what the two fields actually resolve to, fallback included, so the
+   owner is never guessing what a blank field will produce. */
+.adm-cx__swatch {
+  flex: 0 0 auto;
+  width: 72px; height: 72px;
+  margin-top: 22px;
+  border: 1px solid var(--adm-line, rgba(0, 0, 0, 0.12));
+  border-radius: 4px;
+}
+
+/* ---- Bulk spotlight packshot import ---------------------------------- */
+.adm-bpi__pickers { display: flex; flex-wrap: wrap; gap: 20px; }
+.adm-bpi__pickers .field { flex: 1 1 260px; min-width: 0; }
+.adm-bpi__counts { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 8px; }
+.adm-bpi__tally {
+  padding: 4px 9px;
+  border: 1px solid var(--adm-line, rgba(0, 0, 0, 0.12));
+  border-radius: 999px;
+  font-size: 11px;
+}
+.adm-bpi__tally.is-zero { opacity: 0.45; }
+.adm-bpi__tally--ok   { border-color: rgba(30, 120, 70, 0.5); }
+.adm-bpi__tally--bad  { border-color: rgba(169, 79, 79, 0.55); }
+.adm-bpi__tally--warn { border-color: rgba(180, 130, 40, 0.55); }
+.adm-bpi__progress { margin: 4px 0 10px; font-size: 13px; }
+/* Capped so 132 rows cannot push the save button off the page. */
+.adm-bpi__list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--adm-line, rgba(0, 0, 0, 0.12));
+  border-radius: 4px;
+}
+.adm-bpi__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 92px minmax(0, 1.6fr);
+  gap: 10px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--adm-line, rgba(0, 0, 0, 0.07));
+  font-size: 11.5px;
+}
+.adm-bpi__row:last-child { border-bottom: 0; }
+.adm-bpi__file, .adm-bpi__note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-bpi__status { text-transform: capitalize; font-weight: 600; }
+.adm-bpi__row--uploaded  .adm-bpi__status { color: #1E7846; }
+.adm-bpi__row--failed    .adm-bpi__status { color: #A94F4F; }
+.adm-bpi__row--ambiguous .adm-bpi__status { color: #9A7220; }
+.adm-bpi__row--uploading .adm-bpi__status { opacity: 0.7; }
+.adm-bpi__row--skipped   .adm-bpi__status,
+.adm-bpi__row--unmatched .adm-bpi__status { opacity: 0.6; }
+.adm-bpi__note { opacity: 0.75; }
+.adm-bpi__cats { margin-top: 12px; }
+.adm-bpi__h3 { margin: 0 0 4px; font-size: 13px; font-weight: 600; }
+.adm-bpi__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+
+/* Large spotlight lists: a category may hold every one of its products. */
+.adm-cx__count { opacity: 0.6; font-weight: 400; }
+.adm-cx__filter { margin-bottom: 10px; }
+.adm-bpi__cats-line { word-break: break-word; opacity: 0.8; }
+.adm-bpi__preflight {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--adm-line, rgba(0, 0, 0, 0.12));
+  border-radius: 4px;
+}
+.adm-bpi__preflight .hint { margin: 0 0 4px; }
+.adm-bpi__preflight .hint:last-child { margin-bottom: 0; }
+
+/* Publish state. Informational, never alarming — a category waiting to be
+   switched on is ready, not broken. */
+.adm-cx__state {
+  margin: 0 0 12px;
+  padding: 8px 11px;
+  border-left: 3px solid var(--adm-line, rgba(0, 0, 0, 0.18));
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.025);
+  font-size: 12px;
+}
+.adm-cx__state--live  { border-left-color: #1E7846; }
+.adm-cx__state--ready { border-left-color: #9A7220; }
+.adm-cx__preview {
+  margin-top: 12px;
+  border: 1px solid var(--adm-line, rgba(0, 0, 0, 0.12));
+  border-radius: 4px;
+  overflow: hidden;
+}
