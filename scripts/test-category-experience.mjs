@@ -433,7 +433,7 @@ test('M3 the mobile stage geometry stays within art-directed bounds', () => {
     'a full-width seat would hide the side products behind the active one');
   assert.ok(num('--cspot-shot-h') >= 70 && num('--cspot-shot-h') <= 95,
     'the product fills the stage rather than floating in empty space');
-  assert.ok(num('--cspot-side-scale') >= 0.6 && num('--cspot-side-scale') < 1,
+  assert.ok(num('--cspot-side-scale') >= 0.5 && num('--cspot-side-scale') < 1,
     'sides are smaller than the active product, but not tiny');
   assert.ok(num('--cspot-side-op') >= 0.7,
     'sides are secondary through scale and position, not through heavy fading');
@@ -848,6 +848,27 @@ test('F2 fit reaches the IMAGE, never the seat whose transform is the animation'
   assert.doesNotMatch(img, /transition/);
 });
 
+test('F4 a packshot can never exceed its seat, whatever its aspect ratio', () => {
+  // The bug this pins: with `width: auto; height: 100%` the percentage height
+  // did not bind for portrait sources. A 347x851 bottle resolved to 615px
+  // inside a 288px box and rendered 394px tall in a 184px side seat — the side
+  // products came out LARGER than the active one and covered the product
+  // title, the size chip and the CTA.
+  const css = code('../src/styles/category-spotlight.css');
+  const shot = css.slice(css.indexOf('.cspot__shot {'), css.indexOf('.cspot__shot--link'));
+  assert.match(shot, /position: relative/, 'the shot is the positioning context');
+  assert.match(shot, /height: var\(--cspot-shot-h\)/, 'and has a definite height');
+
+  const img = css.slice(css.indexOf('.cspot__img {'), css.indexOf('.cspot__img--framed'));
+  assert.match(img, /position: absolute/, 'the image is placed against that box');
+  assert.match(img, /inset: 0/);
+  assert.match(img, /width: 100%/);
+  assert.match(img, /height: 100%/);
+  assert.match(img, /object-fit: contain/, 'so it letterboxes rather than overflowing');
+  // The aspect-dependent sizing that caused the bug must not come back.
+  assert.doesNotMatch(img, /width: auto/, 'auto width reintroduces aspect-dependent sizing');
+});
+
 test('F3 the mobile art direction values are pinned', () => {
   const css = src('../src/styles/category-spotlight.css');
   const base = css.slice(css.indexOf('.cspot {'), css.indexOf('.cspot__bg'));
@@ -856,14 +877,15 @@ test('F3 the mobile art direction values are pinned', () => {
     if (!line) throw new Error(`${name} is not declared`);
     return parseFloat(line.split(':')[1].trim());
   };
-  assert.equal(num('--cspot-h'), 320);
-  assert.equal(num('--cspot-seat-w'), 70);
-  assert.equal(num('--cspot-shot-h'), 90);
-  assert.equal(num('--cspot-side-scale'), 0.64);
-  assert.equal(num('--cspot-side-x'), 27);
+  // Art-direction pass 4, measured against the real Hair Care packshots.
+  assert.equal(num('--cspot-h'), 300);
+  assert.equal(num('--cspot-seat-w'), 46);
+  assert.equal(num('--cspot-shot-h'), 86);
+  assert.equal(num('--cspot-side-scale'), 0.56);
+  assert.equal(num('--cspot-side-x'), 26.5);
   assert.equal(num('--cspot-side-op'), 0.70);
   assert.equal(num('--cspot-active-y'), 0);
-  assert.equal(num('--cspot-side-y'), 8);
+  assert.equal(num('--cspot-side-y'), 12);
   assert.equal(num('--cspot-item-scale'), 1, 'the per-item default is neutral');
 
   // Side captions are off on phones; the active product keeps its metadata.
@@ -884,6 +906,70 @@ test('F3 the mobile art direction values are pinned', () => {
   assert.match(desktop, /--cspot-side-x: 220px/);
   assert.match(desktop, /--cspot-active-y: -12px/);
   assert.match(desktop, /\.cspot__sidename \{ display: none; \}/);
+});
+
+test('F5 the hero ground is a curved field, not a rectangle', () => {
+  // The stage used to be a plain coloured block meeting the catalogue below on
+  // a hard horizontal edge. The colour now lives on a single dome layer with an
+  // elliptical bottom, and this pins every part of that: the section itself
+  // stays transparent (a painted section puts a rectangle back behind the dome
+  // and the curve stops being visible), the dome carries a real bottom radius,
+  // and no breakpoint may flatten the curve away.
+  const css = src('../src/styles/category-spotlight.css');
+
+  // Sliced on the RULE, not the bare name: the .cspot block's own comment
+  // mentions .cspot__bg, and cutting there truncated the block before its
+  // background declaration.
+  const section = css.slice(css.indexOf('.cspot {'), css.indexOf('.cspot__bg {'));
+  assert.match(section, /background: transparent;/,
+    'a painted section would put a rectangle behind the dome');
+
+  const dome = css.slice(css.indexOf('.cspot__bg {'), css.indexOf('.cspot__inner'));
+  assert.match(dome, /position: absolute/);
+  assert.match(dome, /width: var\(--cspot-arc-w\)/);
+  assert.match(dome, /height: var\(--cspot-arc-h\)/);
+  assert.match(dome, /border-radius: 0 0 50% 50% \/ 0 0 var\(--cspot-arc-curve\) var\(--cspot-arc-curve\)/,
+    'the bottom edge is an ellipse whose vertical radius is tunable');
+  assert.match(dome, /background-color: var\(--cspot-bg\)/, 'the per-slide colour rides on the dome');
+  assert.match(dome, /background-image: var\(--cspot-grad\)/, 'and so does its gradient');
+  assert.match(dome, /transition: background var\(--cspot-dur\)/, 'so the cross-fade still runs');
+
+  // Every breakpoint: an over-wide field, a full-height dome, a real curve.
+  const blocks = {
+    mobile: section,
+    tablet: css.slice(css.indexOf('@media (min-width: 768px)'), css.indexOf('@media (min-width: 1100px)')),
+    desktop: css.slice(css.indexOf('@media (min-width: 1100px)')),
+  };
+  for (const [name, block] of Object.entries(blocks)) {
+    const arc = (v) => {
+      const found = block.match(new RegExp(`--cspot-arc-${v}:\\s*([\\d.]+)`));
+      if (!found) throw new Error(`${name} does not set --cspot-arc-${v}`);
+      return parseFloat(found[1]);
+    };
+    assert.ok(arc('w') > 100,
+      `${name}: the field must be wider than the viewport, or the arc bows up steeply at the screen edges`);
+    assert.equal(arc('h'), 100,
+      `${name}: a dome shorter than the section cuts the curve through the middle of the metadata`);
+    assert.ok(arc('curve') >= 10,
+      `${name}: curve ${arc('curve')}% is too flat to read as a curve`);
+  }
+});
+
+test('F6 secondary type on the dome uses the spotlight ink, not the page grey', () => {
+  // The page greys are tuned for the ivory page ground. With the grounds now
+  // carrying real colour, --slv2-ink-4 (#6B7168) measures 2.6:1 against the
+  // deepest of them, below AA. Every muted label inside the spotlight must
+  // read the local darker token instead.
+  const css = code('../src/styles/category-spotlight.css');
+  const spotlight = css.slice(0, css.indexOf('.v2-shop--spotlit'));
+  assert.match(css, /--cspot-ink-mute: #[0-9A-F]{6};/, 'the token exists');
+  assert.doesNotMatch(spotlight, /--slv2-ink-4/,
+    'no spotlight rule may fall back to the page grey while sitting on colour');
+  assert.doesNotMatch(spotlight, /--slv2-ink-3/,
+    'nor to the mid grey, for the same reason');
+  // The active product name keeps the full-strength ink.
+  const name = css.slice(css.indexOf('.cspot__name {'), css.indexOf('.cspot__facts {'));
+  assert.match(name, /--slv2-ink,/, 'the product name keeps the primary ink');
 });
 
 test('R1 the stage renders three seats, one active, with real product copy', () => {

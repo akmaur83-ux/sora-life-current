@@ -12,19 +12,19 @@
 
 .cspot {
   /* -- stage -------------------------------------------------- */
-  --cspot-h: 320px;              /* compact mobile product stage           */
+  --cspot-h: 300px;              /* compact mobile product stage           */
   /* Seat width, % of stage. MUST stay well under 100%: at 100% the active
      seat covers the whole stage and the side products sit BEHIND it rather
      than beside it, which is what the first pass did. */
-  --cspot-seat-w: 70%;
-  --cspot-shot-h: 90%;           /* 288px active visual at the base size   */
-  --cspot-side-scale: 0.64;      /* side products, relative to active      */
-  --cspot-side-x: 27vw;          /* side seat offset from centre           */
+  --cspot-seat-w: 46%;
+  --cspot-shot-h: 86%;           /* 288px active visual at the base size   */
+  --cspot-side-scale: 0.56;      /* side products, relative to active      */
+  --cspot-side-x: 26.5vw;          /* side seat offset from centre           */
   --cspot-side-op: 0.70;         /* side opacity — kept high on purpose:
                                     the sides read as secondary through SCALE
                                     and POSITION, not through fading out     */
   --cspot-active-y: 0px;         /* centred; never intrudes into metadata  */
-  --cspot-side-y: 8px;           /* slight side drop                       */
+  --cspot-side-y: 12px;           /* slight side drop                       */
 
   /* Per-item adjustment, set inline from the item's saved values. Packshots
      arrive with different amounts of blank canvas around the product, so the
@@ -42,26 +42,83 @@
   --cspot-bg: #F1EDE4;
   --cspot-grad: none;
 
+  /* -- curved hero backdrop ----------------------------------- */
+  /* The colour is a dome, not a block: one field that carries the whole hero
+     and ends on an elliptical bottom edge, so the join between the spotlight
+     and the catalogue below is a curve rather than a ruled line.
+
+     `--cspot-arc-w` draws the field WIDER than the viewport and pulls it back
+     to centre. That matters more than the radius does: at 100% width the
+     ellipse bows up almost vertically at the screen edges and reads as a
+     circle with its top cut off. Over-widening it means the visible slice is
+     the shallow middle of the arc — deepest at the centre, lifting away in the
+     two bottom corners, which is the shape a premium hero actually uses.
+
+     `--cspot-arc-h` is 100% on purpose. An earlier attempt ended the colour
+     part-way down so the bottles could cross its edge, but at every height
+     that cleared the product cluster the curve landed in the middle of the
+     title and the size chip and simply looked like a mistake. The whole
+     composition sits on the colour instead; the packshots are true cutouts
+     carrying their own drop-shadow, so they stay grounded on it.
+
+     `--cspot-arc-curve` is the ellipse's VERTICAL radius as a % of height —
+     how far the bottom corners lift. It is scaled down per breakpoint below,
+     because the same percentage across 1440px would bow far too deeply. */
+  --cspot-arc-w: 122%;
+  --cspot-arc-h: 100%;
+  --cspot-arc-curve: 28%;
+
   /* -- type / spacing ----------------------------------------- */
   --cspot-pad-top: 10px;
-  --cspot-pad-bottom: 10px;
+  /* The nav row is the thing the curve can collide with: the two arrows sit
+     near the left and right ends of the row, which is exactly where the dome
+     lifts away. At 18px the arrows crossed the edge by a few pixels. This
+     keeps the whole row on the colour and leaves the curve some room to read
+     as a deliberate shape rather than a clipped one. */
+  --cspot-pad-bottom: 34px;
   --cspot-name-size: 21px;
+
+  /* -- ink on the dome ---------------------------------------- */
+  /* The page greys are tuned for the ivory page ground and do not survive on a
+     mid-tone colour: --slv2-ink-4 (#6B7168) measures 2.6:1 there, and even a
+     dark grey-green (#39413A) only reached 4.4:1 once the grounds were pushed
+     to their final depth. So the muted label colour is near-ink, and the
+     hierarchy between the product name and its metadata is carried by size and
+     weight instead of by lightness — which is how it has to work on a coloured
+     field anyway; a mid grey on a saturated ground reads as faded, not quiet.
+     White was measured too and is worse: it peaks at 3.0:1 on the deepest
+     ground and falls further on the lighter ones.
+
+     This value is load-bearing. GROUND.lumFloor in spotlightPackshotProcessing
+     is the luminance at which THIS ink clears 4.5:1; changing one without
+     recomputing the other breaks the contrast guarantee. Local to the
+     spotlight — the global tokens are untouched. */
+  --cspot-ink-mute: #232E26;
 
   position: relative;
   isolation: isolate;
+  /* Clips the over-wide arc back to the viewport. */
   overflow: hidden;
   padding: var(--cspot-pad-top) 0 var(--cspot-pad-bottom);
-  background: var(--cspot-bg);
-  transition: background var(--cspot-dur) var(--cspot-ease);
+  /* The section itself is transparent: the page ground shows beneath the dome,
+     which is what gives the colour field an edge to curve against. The colour
+     lives on .cspot__bg below. */
+  background: transparent;
 }
 
-/* The gradient rides on its own layer so it can cross-fade with the colour
-   underneath instead of snapping. */
+/* THE DOME. Both the flat colour and the gradient ride on this one layer, so
+   the shape, the colour and the per-slide cross-fade stay together. */
 .cspot__bg {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 50%;
   z-index: 0;
-  background: var(--cspot-grad);
+  width: var(--cspot-arc-w);
+  height: var(--cspot-arc-h);
+  transform: translateX(-50%);
+  border-radius: 0 0 50% 50% / 0 0 var(--cspot-arc-curve) var(--cspot-arc-curve);
+  background-color: var(--cspot-bg);
+  background-image: var(--cspot-grad);
   transition: background var(--cspot-dur) var(--cspot-ease), opacity var(--cspot-dur) var(--cspot-ease);
   pointer-events: none;
 }
@@ -82,7 +139,7 @@
   margin: 0 0 -14px;
   position: relative;
   z-index: 2;
-  color: var(--slv2-ink-4, #6B7168);
+  color: var(--cspot-ink-mute);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -157,6 +214,9 @@
    hook. */
 
 .cspot__shot {
+  /* Positioning context for the image below, which is absolutely placed so it
+     can never exceed this box. */
+  position: relative;
   display: grid;
   place-items: center;
   width: 100%;
@@ -179,10 +239,22 @@
    outline of a true cutout, so a transparent PNG casts a shadow shaped like
    the bottle rather than like a rectangle. It is a static filter — never
    transitioned, so nothing moves off the compositor. */
+/* ONE VISUAL BASELINE FOR EVERY PACKSHOT.
+   The image fills its seat's shot box exactly and letterboxes inside it, so a
+   tall 347x851 bottle and a wide 747x511 jar occupy the same footprint and the
+   seat scale alone decides their size.
+
+   It is absolutely positioned on purpose. With `width:auto; height:100%` the
+   percentage height did not bind for portrait sources: a 347x851 packshot
+   resolved to 615px inside a 288px box and rendered 394px tall in a 184px
+   side seat — the side products came out LARGER than the active one and
+   spilled over the product title, the size chip and the CTA. Absolute
+   placement against a definite-height parent removes that whole class of
+   aspect-dependent sizing. */
 .cspot__img {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
+  position: absolute;
+  inset: 0;
+  width: 100%;
   height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 14px 18px rgba(24, 32, 26, 0.14));
@@ -205,9 +277,13 @@
   filter: drop-shadow(0 10px 14px rgba(24, 32, 26, 0.12));
 }
 
+/* Shown only when a product has no usable image at all. It inherits the
+   absolute placement above, so it is inset rather than sized, otherwise a
+   fixed width with `inset: 0` would pin it to the left edge. */
 .cspot__img--empty {
   display: block;
-  width: 60%;
+  inset: 0 20%;
+  width: auto;
   height: 100%;
   border-radius: var(--slv2-r-ui, 2px);
   background: linear-gradient(150deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.15));
@@ -217,7 +293,7 @@
    about to tap, not enough to compete with the active item. */
 .cspot__sidename {
   max-width: 44vw;
-  color: var(--slv2-ink-4, #6B7168);
+  color: var(--cspot-ink-mute);
   font-size: 11px;
   line-height: 1.3;
   text-align: center;
@@ -250,7 +326,7 @@
 
 .cspot__headline {
   margin: 0 0 1px;
-  color: var(--slv2-ink-3, #4A5147);
+  color: var(--cspot-ink-mute);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -269,21 +345,21 @@
   justify-content: center;
   gap: 10px;
   margin: 2px 0 0;
-  color: var(--slv2-ink-4, #6B7168);
+  color: var(--cspot-ink-mute);
   font-size: 12px;
 }
 .cspot__facts:empty { display: none; }
 .cspot__form {
   padding: 2px 7px;
-  border: 1px solid rgba(24, 32, 26, 0.14);
+  border: 1px solid rgba(24, 32, 26, 0.22);
   border-radius: var(--slv2-r-ui, 2px);
 }
 .cspot__rating { display: inline-flex; align-items: center; gap: 4px; }
 .cspot__rating svg { color: var(--slv2-accent-primary, #1E3A2F); }
-.cspot__reviews { color: var(--slv2-ink-4, #6B7168); }
+.cspot__reviews { color: var(--cspot-ink-mute); }
 .cspot__subline {
   margin: 4px 0 0;
-  color: var(--slv2-ink-3, #4A5147);
+  color: var(--cspot-ink-mute);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -318,9 +394,9 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 1px solid rgba(24, 32, 26, 0.16);
+  border: 1px solid rgba(24, 32, 26, 0.14);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.74);
   color: var(--slv2-ink, #16211B);
   cursor: pointer;
 }
@@ -329,7 +405,7 @@
 .cspot__pip {
   width: 14px;
   height: 2px;
-  background: rgba(24, 32, 26, 0.22);
+  background: rgba(24, 32, 26, 0.30);
   transition: width var(--cspot-dur) var(--cspot-ease), background var(--cspot-dur) var(--cspot-ease);
 }
 .cspot__pip.is-on { width: 24px; background: var(--slv2-accent-primary, #1E3A2F); }
@@ -338,6 +414,12 @@
 
 @media (min-width: 768px) {
   .cspot {
+    /* Same shape language, shallower: the field is proportionally less
+       over-wide and the radius smaller, so the corner lift stays around 55px
+       instead of scaling with the viewport. Geometry is otherwise untouched. */
+    --cspot-arc-w: 116%;
+    --cspot-arc-h: 100%;
+    --cspot-arc-curve: 16%;
     --cspot-h: 528px;
     /* Pinned so the tightened mobile values above cannot leak up. Neither this
        pass nor the previous one re-art-directed tablet or desktop. */
@@ -363,6 +445,9 @@
 @media (min-width: 1100px) {
   .cspot {
     /* 420px stage + 30px section padding = a compact 450px composition. */
+    --cspot-arc-w: 110%;
+    --cspot-arc-h: 100%;
+    --cspot-arc-curve: 14%;
     --cspot-h: 420px;
     --cspot-active-y: -12px;   /* pinned — see the tablet block */
     --cspot-side-y: 20px;
@@ -462,7 +547,7 @@
    uncapped, and every product in the category still takes a turn. */
 .cspot__position {
   min-width: 58px;
-  color: var(--slv2-ink-4, #6B7168);
+  color: var(--cspot-ink-mute);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   text-align: center;

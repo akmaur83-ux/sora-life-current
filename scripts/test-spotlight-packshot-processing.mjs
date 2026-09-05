@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  normalizePackshotPixels, pastelThemeFromAccent, PACKSHOT_PADDING_RATIO,
+  normalizePackshotPixels, groundThemeFromAccent, PACKSHOT_PADDING_RATIO,
 } from '../src/lib/spotlightPackshotProcessing.js';
 
 let passed = 0, failed = 0;
@@ -53,18 +53,51 @@ test('N2 transparent excess is cropped with five percent breathing room', () => 
   assert.equal(PACKSHOT_PADDING_RATIO, 0.05);
 });
 
-test('N3 accent-derived themes are light, restrained and visibly distinct', () => {
+// Contrast, not channel floors. The grounds used to be near-white and an
+// "every channel >= 190" test was a fair proxy for "text will be readable on
+// this". They are mid-tone now, so that proxy would only ever measure how pale
+// the palette is. These helpers measure the thing that actually matters.
+const chan = (hex) => hex.match(/[0-9A-F]{2}/g).map((v) => parseInt(v, 16));
+const relLum = (hex) => {
+  const [r, g, b] = chan(hex).map((v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const contrast = (a, b) => {
+  const x = relLum(a), y = relLum(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+};
+// The three things that sit on the dome, read from the stylesheet so a change
+// there cannot silently invalidate these numbers.
+const spotlightCss = readFileSync(new URL('../src/styles/category-spotlight.css', import.meta.url), 'utf8');
+const INK_TITLE = '#16211B';
+const INK_MUTE = spotlightCss.match(/--cspot-ink-mute:\s*(#[0-9A-Fa-f]{6})/)[1].toUpperCase();
+const CTA_PILL = '#1E3A2F';
+// Every stop a viewer's eye actually lands on: the flat ground and both ends
+// of the gradient that replaces it.
+const stopsOf = (theme) => [theme.background, ...theme.gradient.match(/#[0-9A-F]{6}/g)];
+
+test('N3 accent-derived themes are colourful, distinct and readable', () => {
   const themes = [
-    pastelThemeFromAccent([230, 90, 20]),
-    pastelThemeFromAccent([45, 140, 70]),
-    pastelThemeFromAccent([125, 65, 165]),
+    groundThemeFromAccent([230, 90, 20]),
+    groundThemeFromAccent([45, 140, 70]),
+    groundThemeFromAccent([125, 65, 165]),
   ];
   assert.equal(new Set(themes.map((t) => t.background)).size, 3);
   for (const theme of themes) {
     assert.match(theme.background, /^#[0-9A-F]{6}$/);
     assert.match(theme.gradient, /^linear-gradient\(168deg, #[0-9A-F]{6} 0%, #[0-9A-F]{6} 100%\)$/);
-    const channels = theme.background.match(/[0-9A-F]{2}/g).map((v) => parseInt(v, 16));
-    assert.ok(channels.every((v) => v >= 190), `${theme.background} remains pastel`);
+    for (const stop of stopsOf(theme)) {
+      assert.ok(contrast(stop, INK_TITLE) >= 4.5,
+        `${stop}: product title only reaches ${contrast(stop, INK_TITLE).toFixed(2)}:1`);
+      assert.ok(contrast(stop, INK_MUTE) >= 4.5,
+        `${stop}: muted text (${INK_MUTE}) only reaches ${contrast(stop, INK_MUTE).toFixed(2)}:1`);
+      // The CTA is a filled pill, not text: WCAG asks 3:1 of a UI shape.
+      assert.ok(contrast(stop, CTA_PILL) >= 3,
+        `${stop}: the CTA pill only reaches ${contrast(stop, CTA_PILL).toFixed(2)}:1`);
+    }
   }
 });
 
@@ -75,6 +108,95 @@ test('N4 the browser importer validates, normalizes, encodes PNG and never uploa
   assert.match(source, /normalizePackshotPixels\(pixels\.data/);
   assert.match(source, /toBlob[\s\S]{0,220}['"]image\/png['"]/);
   assert.doesNotMatch(source, /supabase|\.storage\.|fetch\(/i, 'preprocessing performs no network I/O');
+});
+
+test('N3b the ground carries real colour and keeps the accent hue', () => {
+  // The grounds used to be a flat 12% mix toward ivory, which pulled every hue
+  // toward one pale point: ten real Hair Care products landed on #DDE4D8,
+  // #E6E7DA, #E2E6DE — a narrow grey band you could not tell apart as the
+  // carousel advanced. These assertions are what stop that returning.
+  const chroma = (hex) => { const c = chan(hex); return Math.max(...c) - Math.min(...c); };
+  const hueOf = (r, g, b) => {
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+    if (!d) return null;
+    let x = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return (x * 60 + 360) % 360;
+  };
+  const hueGap = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+
+  // Real accents measured from the actual Hair Care packshots.
+  const accents = {
+    aloeGreen: [0x6C, 0x99, 0x2D],
+    sesameAmber: [0xDF, 0x93, 0x1D],
+    serumCoral: [0xD7, 0x74, 0x59],
+    avocadoTeal: [0x35, 0x68, 0x5D],
+    pomadeForest: [0x0C, 0x56, 0x29],
+    cocoaRose: [0x40, 0x16, 0x1B],
+  };
+
+  for (const [label, accent] of Object.entries(accents)) {
+    const theme = groundThemeFromAccent(accent);
+    // 80 sits above everything the two previous, paler formulas could produce
+    // (their weakest grounds were chroma 27 and 48) and below the weakest this
+    // one does (85), so reverting the constants fails here rather than passing
+    // quietly.
+    assert.ok(chroma(theme.background) >= 80,
+      `${label}: ground ${theme.background} has chroma ${chroma(theme.background)}, too washed out`);
+    const [r, g, b] = chan(theme.background);
+    assert.ok(hueGap(hueOf(r, g, b), hueOf(...accent)) <= 22,
+      `${label}: ground ${theme.background} drifted off the accent's hue`);
+    // Premium, not neon: the ground must stay a tint, never a fully saturated
+    // signal colour, and the packshot must remain the brightest thing on it.
+    assert.ok(Math.max(r, g, b) >= 190,
+      `${label}: ${theme.background} is too dark to sit a cutout on`);
+    assert.ok(Math.min(r, g, b) >= 55,
+      `${label}: ${theme.background} has a channel at ${Math.min(r, g, b)} — that is a signal colour, not a ground`);
+    // And it must stay readable at every depth of its own gradient.
+    for (const stop of stopsOf(theme)) {
+      assert.ok(contrast(stop, INK_MUTE) >= 4.5,
+        `${label}: ${stop} gives muted text only ${contrast(stop, INK_MUTE).toFixed(2)}:1`);
+    }
+  }
+
+  // A green must not be allowed to go acid while the corals stay timid. This
+  // is what the hue-aware saturation ceiling exists for: with one flat ceiling
+  // the aloe accents resolved to #C1F677 and #0FC556 — lime and electric
+  // emerald — because apparent chroma is hue-dependent. Both of these accents
+  // are saturated enough to sit ON the ceiling, so if the ceiling stops
+  // varying by hue they land at the same HSL saturation as the corals and this
+  // fails.
+  const satOf = (hex) => {
+    const [r, g, b] = chan(hex).map((v) => v / 255);
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+    const l = (max + min) / 2;
+    return d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  };
+  const warm = satOf(groundThemeFromAccent(accents.serumCoral).background);
+  for (const key of ['aloeGreen', 'pomadeForest']) {
+    const green = groundThemeFromAccent(accents[key]).background;
+    assert.ok(satOf(green) <= warm - 0.08,
+      `${key}: ground ${green} sits at saturation ${satOf(green).toFixed(2)} against the coral's ${warm.toFixed(2)} — the green band is not being trimmed`);
+  }
+
+  // The gradient must add real vertical depth, not two near-identical stops.
+  const grad = groundThemeFromAccent(accents.aloeGreen).gradient;
+  const stops = grad.match(/#[0-9A-F]{6}/g);
+  assert.equal(stops.length, 2);
+  const lum = (hex) => { const [r, g, b] = chan(hex); return 0.299 * r + 0.587 * g + 0.114 * b; };
+  assert.ok(lum(stops[0]) - lum(stops[1]) >= 12, 'the gradient reads as one lit surface, not a flat fill');
+
+  // Reds sit on the luminance floor, so their gradient is the one that
+  // collapses if the stops are clamped independently instead of stacked above
+  // the darkest one. Check the flattest case, not just the roomiest.
+  const rose = groundThemeFromAccent(accents.cocoaRose).gradient.match(/#[0-9A-F]{6}/g);
+  assert.ok(lum(rose[0]) - lum(rose[1]) >= 12,
+    `the rose gradient collapsed to ${rose[0]} -> ${rose[1]}`);
+
+  // Two products from the same hue family must still be separable.
+  const a = groundThemeFromAccent(accents.aloeGreen).background;
+  const b = groundThemeFromAccent(accents.pomadeForest).background;
+  const spread = chan(a).reduce((n, v, i) => n + Math.abs(v - chan(b)[i]), 0);
+  assert.ok(spread >= 30, `two greens resolved to ${a} and ${b}, too close to tell apart`);
 });
 
 test('N5 removal follows the SAMPLED border colour, not "anything pale"', () => {
