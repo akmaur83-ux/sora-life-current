@@ -248,7 +248,11 @@ export function searchProducts(q) {
     const categoryText = (product.categories || [product.category])
       .flatMap((slug) => [slug, categoryBySlug[slug]?.name || ''])
       .join(' ');
-    const haystack = normalizeSearchText(`${product.name || ''} ${categoryText}`);
+    // Brand is searchable because Sora Life is a marketplace: a customer who
+    // taps the brand line on a PDP is asking "what else does this label make?",
+    // and that question has to have an answer without a dedicated brand route.
+    // /shop?q=<brand> is that answer.
+    const haystack = normalizeSearchText(`${product.name || ''} ${product.brand || ''} ${categoryText}`);
     return haystack.includes(query) || haystack.replace(/\s/g, '').includes(compactQuery);
   });
 }

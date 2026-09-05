@@ -96,6 +96,28 @@ export function deliveryEstimate() {
   };
 }
 
+/**
+ * The three delivery methods a customer can actually choose, with the fee
+ * each one actually costs.
+ *
+ * AUTHORITY: api/_lib/pricing.js — `DELIVERY_FEES = { std: 0, exp: 79, sched: 49 }`
+ * is the only thing that decides what is charged. This list is display copy for
+ * the PDP and must be kept in step with it; Checkout.jsx carries the same three
+ * rows for the picker itself.
+ *
+ * The fee is FLAT AT EVERY BASKET SIZE. There is no free-shipping threshold,
+ * and no surface may imply one — a `freeShippingThreshold` setting was removed
+ * for exactly this reason. Standard is free because Standard is free, not
+ * because the basket reached some amount.
+ */
+export function deliveryOptions() {
+  return [
+    { id: 'std', label: 'Standard', eta: '3–5 business days', price: 0 },
+    { id: 'exp', label: 'Express', eta: '1–2 business days', price: 79 },
+    { id: 'sched', label: 'Scheduled', eta: 'Choose your date', price: 49 },
+  ];
+}
+
 // ------------------------------------------------------------
 // BENEFITS — "Why you'll love it"
 // Real product.benefits[] ONLY. No store-wide / category filler — if the

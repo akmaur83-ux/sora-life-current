@@ -1,41 +1,47 @@
 import Icon from '../Icon.jsx';
-import { deliveryEstimate } from '../../data/pdpContent.js';
+import { deliveryEstimate, deliveryOptions } from '../../data/pdpContent.js';
+import { money } from '../../lib/format.js';
 
 // ============================================================
-// Compact delivery / service panel for the buying section.
+// Delivery panel for the buying section.
 //
-//   Delivery timing confirmed at checkout
-//   FREE standard shipping
-//   Available delivery methods shown at checkout
+// Shows the three methods the customer can actually pick, with the fee each
+// one actually costs. The previous version said only "Free standard shipping"
+// and "options shown at checkout", which left the customer to discover the
+// Express and Scheduled fees at the payment step.
 //
-// Presentation-safe: no carrier date or geographic scope is guessed. If real
-// PIN/SLA logic is added later, deliveryEstimate() is the single display seam.
+// The fee is FLAT at every basket size, so nothing here may imply a
+// free-shipping threshold — there isn't one. Standard is free because Standard
+// is free, not because a basket reached some amount. api/_lib/pricing.js
+// decides what is actually charged; deliveryOptions() is the display seam.
+//
+// Timing is still deferred to checkout: the PDP has no address and no carrier
+// response, so a date promised here would be invented.
 // ============================================================
 export default function ProductDeliveryInfo() {
   const est = deliveryEstimate();
+  const options = deliveryOptions();
+
   return (
     <div className="pdp-deliver" aria-label="Delivery information">
-      <div className="pdp-deliver__row">
-        <Icon name="truck" size={18} />
+      <div className="pdp-deliver__head">
+        <Icon name="truck" size={16} />
         <span>
-          <strong>Delivery timing</strong>
+          <strong>Delivery</strong>
           <em>{est.range} · {est.days}</em>
         </span>
       </div>
-      <div className="pdp-deliver__row">
-        <Icon name="gift" size={18} />
-        <span>
-          <strong>Free standard shipping</strong>
-          <em>Select Standard delivery at checkout</em>
-        </span>
-      </div>
-      <div className="pdp-deliver__row">
-        <Icon name="package" size={18} />
-        <span>
-          <strong>Delivery methods</strong>
-          <em>Available options are shown at checkout</em>
-        </span>
-      </div>
+      <ul className="pdp-deliver__methods">
+        {options.map((o) => (
+          <li key={o.id} className="pdp-deliver__method">
+            <span className="pdp-deliver__label">{o.label}</span>
+            <span className="pdp-deliver__eta">{o.eta}</span>
+            <span className={`pdp-deliver__fee ${o.price === 0 ? 'is-free' : ''}`}>
+              {o.price === 0 ? 'Free' : money(o.price)}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -17,25 +17,15 @@ export default function ProductReviewsTeaser({ product }) {
   const { rating, count, isPreview } = ratingSummaryFor(product);
   const { items } = previewReviewsFor(product);
 
-  if (isPreview) {
-    return (
-      <section className="section-sm" id="reviews">
-        <div className="container">
-          <div className="pdp-sec__head">
-            <h2 className="pdp-sec__title serif">Ratings &amp; reviews</h2>
-            <span className="pdp-preview-tag">Coming soon</span>
-          </div>
-          <div className="pdp-reviews-soon">
-            <span className="pdp-reviews-soon__ic"><Icon name="chat" size={22} /></span>
-            <p>
-              Verified customer reviews are on the way. Once shoppers have rated this product,
-              their ratings and notes will appear here.
-            </p>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  // No real review data means no section. The placeholder that used to stand
+  // here — a "Ratings & reviews" heading, a COMING SOON tag and a paragraph
+  // saying reviews were on the way — appeared on every product in the
+  // catalogue, because none of them has an aggregate yet. That is an orphaned
+  // heading over an empty card: it makes a sparse product look unfinished
+  // rather than deliberate, which is the one thing this page must not do.
+  // The real-data branch below is unchanged and lights up the moment an
+  // aggregate exists.
+  if (isPreview || rating == null) return null;
 
   const full = Math.round(rating);
   return (

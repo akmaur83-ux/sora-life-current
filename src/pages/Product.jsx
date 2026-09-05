@@ -7,7 +7,7 @@ import PriceTag from '../components/PriceTag.jsx';
 import NotFound from './NotFound.jsx';
 import { useStore } from '../lib/store.jsx';
 import { productBySlug, isCatalogHydrated, productRouteState, getRelated, isPurchasable, UNAVAILABLE_LABEL } from '../data/products.js';
-import { categoryBySlug } from '../data/categories.js';
+import { categoryBySlug, tones } from '../data/categories.js';
 import { canonicalProductSlug } from '../data/legacyProductSlugs.js';
 import { money } from '../lib/format.js';
 
@@ -22,6 +22,8 @@ import ProductTrustList from '../components/pdp/ProductTrustList.jsx';
 import ProductCatalogueGallery from '../components/pdp/ProductCatalogueGallery.jsx';
 import ProductReviewsTeaser from '../components/pdp/ProductReviewsTeaser.jsx';
 import ProductRecommendations from '../components/pdp/ProductRecommendations.jsx';
+import PdpCouponSlot from '../components/pdp/PdpCouponSlot.jsx';
+import PdpStorySlot from '../components/pdp/PdpStorySlot.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
 import { overviewFor, suitableForList, faqFor } from '../data/pdpContent.js';
 import { promotionsSource } from '../lib/promotions.js';
@@ -119,6 +121,11 @@ useEffect(() => {
   if (view === 'notfound') return <NotFound />;
 
   const cat = categoryBySlug[product.category];
+  // The media frame's ground, from the product's own category tone — the
+  // same idea as the spotlight giving each slide its own colour, sourced
+  // from data the catalogue already carries rather than from pixels. The
+  // storefront must never analyse image pixels at runtime.
+  const tone = tones[cat?.tone] || null;
   const related = getRelated(product);
   const wished = isWished(product.id);
   const out = product.stock === 0;
@@ -128,6 +135,9 @@ useEffect(() => {
   const buyable = isPurchasable(product, variant);
   const blocked = out || !buyable;
   const lowStock = product.stock > 0 && product.stock <= 5;
+  // Net quantity of the pack actually selected, so the row cannot keep
+  // saying "250 ml" after the customer switches to the 500 ml pack.
+  const size = variant?.label || product.form || null;
 
   const fbt = [product, ...related.slice(0, 2)];
   const fbtTotal = fbt.reduce((s, p) => s + p.price, 0);
@@ -213,7 +223,7 @@ useEffect(() => {
   ];
 
   return (
-    <div className="v2-pdp-root">
+    <div className="v2-pdp-root" style={tone ? { '--pdp-ground': tone.tint } : undefined}>
       <div className="v2-wrap pdp-top">
         <nav className="v2-crumbs" aria-label="Breadcrumb">
           <Link to="/">Home</Link><Icon name="chevronRight" size={14} />
@@ -246,43 +256,61 @@ useEffect(() => {
           </div>
         </ProductGallery>
 
-        {/* Buying section — mobile hierarchy: meta → title → size → rating →
-            price → offers → variants → stock → qty → add → delivery */}
+        {/* Buying block. Hierarchy is brand -> name -> price -> rating -> size:
+            Sora Life is a marketplace, so whose product this is comes before
+            what it is. The category/pack-size line that used to open this block
+            is now the size row further down, where it belongs — it was
+            competing with the title for the top of the page. */}
         <div className="pdp__info">
-          <span className="pcard__cat pdp__meta">
-            {cat.name}{product.form ? <span className="pdp__meta-sep"> · {product.form}</span> : ''}
-          </span>
-          <h1 className="pdp__title serif">{product.name}</h1>
-          {/* Only a real, authored description earns a lead paragraph — the
-              category/size fallback would just repeat the meta line above. */}
-          {product.description && (
-  <div className={`pdp__leadwrap ${leadExpanded ? 'is-open' : ''}`}>
-    <p className="pdp__lead">{product.description}</p>
+          {product.brand && (
+            <Link
+              to={`/shop?q=${encodeURIComponent(product.brand)}`}
+              className="pdp__brand"
+              aria-label={`See more from ${product.brand}`}
+            >
+              {product.brand}
+              <Icon name="chevronRight" size={13} />
+            </Link>
+          )}
+          <h1 className="pdp__title">{product.name}</h1>
 
-    <button
-      type="button"
-      className="pdp__leadmore"
-      onClick={() => setLeadExpanded((v) => !v)}
-      aria-expanded={leadExpanded}
-    >
-      {leadExpanded ? 'Show less' : 'See more'}
-    </button>
-  </div>
-)}
-
-          <ProductRatingTeaser product={product} />
-
+          {/* ONE price line. Price, struck MRP and the discount used to be
+              three competing sizes stacked with the tax note; PriceTag already
+              emits them as a single row, so the row just needs to stay a row. */}
           <div className="pdp__price">
             <PriceTag product={product} size="lg" variant={variant} v2 />
-            <span className="pdp__tax muted">Inclusive of all taxes</span>
+            <span className="pdp__tax">Inclusive of all taxes</span>
           </div>
+
+          <div className="pdp__facts">
+            <ProductRatingTeaser product={product} />
+            {size && <span className="pdp__size">{size}</span>}
+          </div>
+
+          {/* Only a real, authored description earns a lead paragraph. */}
+          {product.description && (
+            <div className={`pdp__leadwrap ${leadExpanded ? 'is-open' : ''}`}>
+              <p className="pdp__lead">{product.description}</p>
+              <button
+                type="button"
+                className="pdp__leadmore"
+                onClick={() => setLeadExpanded((v) => !v)}
+                aria-expanded={leadExpanded}
+              >
+                {leadExpanded ? 'Show less' : 'See more'}
+              </button>
+            </div>
+          )}
 
           <ProductOfferTeaser product={product} />
 
-          {pricedVariants.length > 0 && (
+          {/* A single pack size is not a choice. Rendering one lonely chip that
+              is already selected asks the customer to make a decision that does
+              not exist; the size row above already states what they are buying. */}
+          {pricedVariants.length > 1 && (
             <div className="pdp__block">
               <span className="label">Choose pack size</span>
-              <div className="variantlist" style={{ marginTop: 8 }} role="radiogroup" aria-label="Choose pack size">
+              <div className="variantlist" role="radiogroup" aria-label="Choose pack size">
                 {pricedVariants.map((v) => {
                   const selected = (variant?.id ?? variant?.label) === (v.id ?? v.label);
                   const soldOut = v.stock === 0;
@@ -317,6 +345,9 @@ useEffect(() => {
               : <span className="v2-badge v2-badge--soft"><Icon name="check" size={13} /> In stock</span>}
           </div>
 
+          {/* Run 2 mounts recommended coupon cards here. Renders nothing today. */}
+          <PdpCouponSlot product={product} />
+
           <div className="pdp__buy">
             <div className="qty">
               {/* The clamp already prevented 0; the button just stayed enabled and
@@ -348,6 +379,9 @@ useEffect(() => {
   sections={accordionSections}
 />
         </section>
+
+        {/* Run 3 (Admin PDP Experience) mounts story imagery here. */}
+        <PdpStorySlot product={product} />
 
         <ProductTrustList />
       </div>

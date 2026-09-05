@@ -655,3 +655,260 @@ body:has(.v2-pdp-root .buybar) .page-main {
   border-color:#9F742F;
   color:#fff;
 }
+
+/* ==========================================================================
+   RUN 1 — PREMIUM PDP
+   Carries the shipped CategorySpotlight's language onto the product page:
+   the same curved ground, the same display serif for a product's name, the
+   same flat surfaces. Overrides sit at the end of the sheet so the rules they
+   replace stay readable above rather than being deleted piecemeal.
+   ========================================================================== */
+
+.v2-pdp-root {
+  /* The media frame's ground. Set per product from its category tone in
+     Product.jsx, with the neutral cream as the fallback for a product whose
+     category has no tone. */
+  --pdp-ground: var(--slv2-cream);
+  /* Vertical radius of the frame's bottom edge, as a % of its height. The
+     spotlight gets its gentle arc by drawing the field wider than the screen
+     and showing only the shallow middle; a frame cannot exceed its own box, so
+     the same softness comes from a much smaller radius instead. */
+  --pdp-arc: 12%;
+  /* Purchase-bar reserve. Every rule that keeps content clear of the bar
+     measures from here, so the bar's height is stated once.
+
+     The bar sits at bottom:0 and the bottom navigation is not under it: an
+     existing rule in pages.css hides .tabbar on any page carrying a .buybar,
+     so the PDP deliberately swaps global navigation for buy actions while you
+     are looking at a product. Stacking the bar above a nav that is not there
+     was measured and only produced a 55px band of empty page. */
+  --pdp-buybar-h: 66px;
+}
+
+/* ----------------------------------------------------------- media frame */
+/* The product sits on its category's colour and the ground curves away
+   beneath it. The catalogue's photography is not cut out — most shots carry
+   their own white ground — so the curve is applied to the FRAME rather than
+   to a colour field behind a transparent packshot, which is what the
+   spotlight does with its processed art. Same shape, honest about the assets. */
+.v2-pdp-root .pdp__main {
+  background:var(--pdp-ground);
+  border-radius:0 0 50% 50% / 0 0 var(--pdp-arc) var(--pdp-arc);
+}
+.v2-pdp-root .pdp__main .v2-pimg { background:transparent; }
+/* Centred, not in the bottom-left corner.
+   The frame's bottom edge is an ellipse, so its LOWEST point is the horizontal
+   centre and its highest are the two corners — which is exactly where a
+   corner-anchored label ends up being clipped. At 768px the arc's vertical
+   radius is 92px and the label was cut in half. Centred, it sits in the one
+   place on that edge that never rises, at every width. */
+.v2-pdp-root .pdp__zoom-label {
+  left:50%;
+  bottom:10px;
+  transform:translateX(-50%);
+}
+
+/* -------------------------------------------------------------- brand line */
+/* First in the reading order because Sora Life is a marketplace: whose
+   product this is comes before what it is. It is a link, and it looks like
+   one — a customer who reads a brand name here will try to tap it. */
+.v2-pdp-root .pdp__brand {
+  display:inline-flex; align-items:center; gap:3px;
+  margin:0 0 6px; padding:0;
+  color:var(--slv2-accent-primary); text-decoration:none;
+  font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+}
+.v2-pdp-root .pdp__brand > svg { margin-top:1px; opacity:.7; }
+.v2-pdp-root .pdp__brand:hover { text-decoration:underline; text-underline-offset:3px; }
+.v2-pdp-root .pdp__brand:focus-visible {
+  outline:2px solid var(--slv2-accent-primary); outline-offset:3px;
+}
+
+/* ------------------------------------------------------------------ title */
+/* Fraunces, matching the shipped spotlight. This sheet previously argued for
+   sans, because at the time the serif made the PDP read as a different site
+   from the grid that opened it. That grid changed: CategorySpotlight now sets
+   the product's name in the display serif, so a customer arriving from the
+   category hero sees the same string twice — and sans here is now the
+   inconsistency the original note was trying to avoid. The PDP's own section
+   headings have been Fraunces all along. */
+.v2-pdp-root .pdp__title {
+  margin:0; max-width:20ch;
+  font-family:var(--slv2-disp);
+  font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+  font-size:clamp(25px, 7.2vw, 31px); font-weight:600;
+  line-height:1.14; letter-spacing:-.014em; text-wrap:balance;
+  color:var(--slv2-ink);
+}
+
+/* ------------------------------------------------------------- price line */
+/* One line. Price, struck MRP and the discount used to stack into three
+   competing weights with the tax note under them; they are one fact about
+   one product and they read as one row. */
+.v2-pdp-root .pdp__price {
+  display:flex; align-items:baseline; flex-wrap:wrap; gap:9px;
+  margin:13px 0 0; padding:0; border:0; background:none;
+}
+.v2-pdp-root .pdp__price .v2-price {
+  display:inline-flex; align-items:baseline; flex-wrap:wrap; gap:9px;
+}
+.v2-pdp-root .pdp__price .v2-price__now {
+  font-size:28px; font-weight:700; letter-spacing:-.02em; line-height:1.1;
+}
+.v2-pdp-root .pdp__price .v2-price__mrp { font-size:14px; }
+.v2-pdp-root .pdp__price .v2-price__off {
+  padding:2px 7px; border-radius:var(--slv2-r-ui);
+  background:var(--slv2-discount-bg); color:var(--slv2-discount-text);
+  font-size:11.5px; font-weight:700; letter-spacing:.01em;
+}
+.v2-pdp-root .pdp__tax {
+  flex:0 0 100%; margin:0; color:var(--slv2-ink-4); font-size:11px;
+}
+
+/* ------------------------------------------------------------- facts row */
+/* Rating and net quantity share one quiet line under the price. Both are
+   optional; the row collapses completely when neither exists, rather than
+   leaving the gap a missing rating used to leave. */
+.v2-pdp-root .pdp__facts {
+  display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px;
+  margin:11px 0 0;
+}
+.v2-pdp-root .pdp__facts:empty { display:none; }
+.v2-pdp-root .pdp__size {
+  padding:3px 9px;
+  border:1px solid var(--slv2-line); border-radius:var(--slv2-r-ui);
+  color:var(--slv2-ink-2); font-size:11.5px; font-weight:600;
+  letter-spacing:.03em;
+}
+.v2-pdp-root .pdp__facts .pdp-rating { margin:0; }
+.v2-pdp-root .pdp__leadwrap { margin-top:14px; }
+
+/* --------------------------------------------------------------- delivery */
+/* The three methods a customer can actually pick, each with the fee it
+   actually costs. Flat at every basket size — there is no threshold, and no
+   row here may imply one. */
+.v2-pdp-root .pdp-deliver {
+  margin:0; padding:0;
+  border:0; border-top:1px solid var(--slv2-line);
+  border-radius:0; background:transparent;
+}
+.v2-pdp-root .pdp-deliver__head {
+  display:flex; align-items:flex-start; gap:9px; padding:13px 0 10px;
+}
+.v2-pdp-root .pdp-deliver__head > svg { flex:0 0 auto; margin-top:2px; color:var(--slv2-accent-primary); }
+.v2-pdp-root .pdp-deliver__head strong {
+  display:block; color:var(--slv2-ink); font-size:12.5px; font-weight:700;
+}
+.v2-pdp-root .pdp-deliver__head em {
+  display:block; margin-top:2px;
+  color:var(--slv2-ink-4); font-size:11px; font-style:normal; line-height:1.45;
+}
+.v2-pdp-root .pdp-deliver__methods {
+  margin:0; padding:0 0 14px; list-style:none;
+  display:grid; gap:7px;
+}
+.v2-pdp-root .pdp-deliver__method {
+  display:grid; grid-template-columns:minmax(72px, auto) minmax(0, 1fr) auto;
+  align-items:baseline; gap:10px;
+}
+.v2-pdp-root .pdp-deliver__label { color:var(--slv2-ink); font-size:12px; font-weight:600; }
+.v2-pdp-root .pdp-deliver__eta { color:var(--slv2-ink-4); font-size:11px; }
+.v2-pdp-root .pdp-deliver__fee {
+  color:var(--slv2-ink-2); font-size:12px; font-weight:600;
+  font-variant-numeric:tabular-nums; white-space:nowrap;
+}
+.v2-pdp-root .pdp-deliver__fee.is-free {
+  color:var(--slv2-save); letter-spacing:.04em; text-transform:uppercase; font-size:11px;
+}
+
+/* --------------------------------------------------------- purchase bar */
+/* Above the bottom navigation, not on top of it. The tab bar owns the very
+   bottom of the screen and its own safe-area padding; this bar stacks on it. */
+@media (max-width:900px) {
+  .v2-pdp-root .buybar {
+    inset:auto 0 0 0;
+    min-height:var(--pdp-buybar-h);
+    padding:8px var(--slv2-gutter) calc(8px + env(safe-area-inset-bottom));
+    /* No blur. The bar is an opaque shelf; a translucent one over moving
+       product photography is the glassmorphism this design does not use. */
+    background:var(--slv2-paper);
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+    border-top:1px solid var(--slv2-line);
+    box-shadow:var(--slv2-sh-up);
+  }
+  /* Reserve the bar's full height so the last content block scrolls clear of
+     it rather than ending underneath.
+
+     The reserve sits on the PDP root itself, not on a body:has(...) rule
+     targeting .page-main. Three sheets already aim overlapping :has() rules at
+     that one shared element — layout.css, pdp.css and v2-mobile-cart.css each
+     set a different padding-bottom on it — and the measured result on this
+     page was 0px from all of them. The PDP owns its own bottom spacing here,
+     which is one rule, local, and verifiable by looking at the page. */
+  .v2-pdp-root {
+    padding-bottom:calc(var(--pdp-buybar-h) + env(safe-area-inset-bottom));
+  }
+  body:has(.v2-pdp-root .buybar) .ftr {
+    padding-bottom:calc(var(--pdp-buybar-h) + env(safe-area-inset-bottom) + var(--sp-4, 16px));
+    margin-bottom:0;
+  }
+  html:has(.v2-pdp-root .buybar) {
+    scroll-padding-bottom:calc(var(--pdp-buybar-h) + env(safe-area-inset-bottom));
+  }
+}
+
+/* ------------------------------------------------------------- desktop */
+@media (min-width:901px) {
+  .v2-pdp-root { --pdp-arc:8%; }
+  /* The gold rule over the buying column was the only thing separating it
+     from the gallery, and it read as a divider looking for a section. The
+     column is separated by space now. */
+  .v2-pdp-root .pdp__info { padding-top:6px; border-top:0; }
+  .v2-pdp-root .pdp__title { max-width:16ch; font-size:38px; }
+  .v2-pdp-root .pdp__price { margin-top:16px; padding-block:0; }
+  .v2-pdp-root .pdp__price .v2-price__now { font-size:33px; }
+  .v2-pdp-root .pdp__main { border:0; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .v2-pdp-root .pdp__frame-fade { animation:none; }
+}
+
+/* ---------------------------------------------------- buy-action hierarchy */
+/* Add to cart is the primary action and must look like it. "Buy it now" was
+   rendering as a filled gold block — the storefront theme maps the secondary
+   button background to the brand accent — so the secondary action was the
+   loudest thing in the buying column and the two read as equals competing.
+   Scoped to the PDP: the filled treatment is right elsewhere, where it is the
+   only button on screen. */
+.v2-pdp-root .pdp__buynow,
+.v2-pdp-root .pdp__buynow:hover {
+  background:transparent;
+  color:var(--slv2-accent-primary);
+  border:1px solid var(--slv2-accent-primary);
+  filter:none;
+}
+.v2-pdp-root .pdp__buynow:hover { background:var(--slv2-f50); }
+.v2-pdp-root .buybar__buy,
+.v2-pdp-root .buybar__buy:hover {
+  background:transparent;
+  color:var(--slv2-accent-primary);
+  border:1px solid var(--slv2-accent-primary);
+}
+
+/* -------------------------------------------------- cross-sell row at 390 */
+/* Three items plus their two separators came to ~389px inside a 358px content
+   width, so the first card was always cut off at the left edge and the row
+   read as broken rather than as scrollable. */
+@media (max-width:430px) {
+  .v2-pdp-root .fbt__item { flex:0 0 92px; width:92px; }
+  .v2-pdp-root .fbt__items { gap:7px; }
+}
+
+/* --------------------------------------------------------- desktop flow */
+@media (min-width:901px) {
+  /* The information column was centred in the 1240px wrap while the hero above
+     it started at the wrap's left edge, so the page stepped inwards halfway
+     down for no reason. Same left edge as the gallery. */
+  .v2-pdp-root .pdp-flow { margin-inline:0; }
+}
