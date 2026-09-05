@@ -35398,6 +35398,9 @@
 	    sortOrder: Number(row.sort_order) || 0,
 	    isActive: row.is_active !== false,
 	    biosashId: row.biosash_id || null,
+	    // The optimistic-concurrency token. The editor captures this on load and
+	    // sends it back with the save; the write is refused if it no longer matches.
+	    updatedAt: row.updated_at || null,
 	    // Content columns added by migration 0025. Absent until it is applied,
 	    // and null until the ingest or an admin fills them — in both cases the
 	    // PDP section that reads them hides itself rather than showing a shell.
@@ -35568,9 +35571,26 @@
 	  if (error) throw error;
 	  return (data || []).map(dbRowToProduct);
 	}
+
+	/**
+	 * Thrown when a save is refused because the row moved under the editor.
+	 * Typed so the form can tell "somebody else changed this" apart from a
+	 * genuine failure and say so, instead of showing a database message.
+	 */
+	class StaleWriteError extends Error {
+	  constructor(message) {
+	    super(message);
+	    this.name = 'StaleWriteError';
+	    this.isStaleWrite = true;
+	  }
+	}
 	async function adminCreateProduct(product) {
 	  const row = productToDbRow(product);
 	  if (!row.slug) row.slug = slugify(product.name);
+	  // Stamped explicitly rather than left to a column default: every write path
+	  // has to move updated_at or the optimistic-concurrency check below has
+	  // nothing dependable to compare against.
+	  row.updated_at = new Date().toISOString();
 	  const {
 	    data,
 	    error
@@ -35578,15 +35598,52 @@
 	  if (error) throw error;
 	  return dbRowToProduct(data);
 	}
-	async function adminUpdateProduct(dbId, product) {
+
+	/**
+	 * Update a product, refusing the write if the row changed since it was read.
+	 *
+	 * `expectedUpdatedAt` is the updated_at the editor loaded. It becomes an
+	 * equality filter on the UPDATE, so the write applies to zero rows when
+	 * anything has touched the product since — and zero rows is what tells us to
+	 * reject rather than clobber.
+	 *
+	 * The race this closes is real and has already happened here: a form opened
+	 * while a product had no description, saved after an import filled one in,
+	 * wrote its stale empty string straight back over the new copy, and did the
+	 * same to is_active and the validated gallery in the same request.
+	 *
+	 * Omitting `expectedUpdatedAt` keeps the old last-write-wins behaviour, so an
+	 * existing caller cannot be broken by this; ProductForm passes it.
+	 */
+	async function adminUpdateProduct(dbId, product, expectedUpdatedAt = null) {
 	  const row = productToDbRow(product);
 	  row.updated_at = new Date().toISOString();
+	  let q = supabase.from('products').update(row).eq('id', dbId);
+	  if (expectedUpdatedAt) q = q.eq('updated_at', expectedUpdatedAt);
+
+	  // `.select()` without `.single()`: zero rows is the expected outcome of a
+	  // lost race, and `.single()` would surface that as a generic PGRST116 error
+	  // indistinguishable from a genuine failure.
 	  const {
 	    data,
 	    error
-	  } = await supabase.from('products').update(row).eq('id', dbId).select().single();
+	  } = await q.select();
 	  if (error) throw error;
-	  return dbRowToProduct(data);
+	  if (!data || data.length === 0) {
+	    if (expectedUpdatedAt) {
+	      // Tell the two cases apart: a row that still exists but moved on is a
+	      // conflict, a row that is gone is a deletion.
+	      const {
+	        data: current
+	      } = await supabase.from('products').select('id').eq('id', dbId).maybeSingle();
+	      if (current) {
+	        throw new StaleWriteError('This product was modified elsewhere after you opened it. ' + 'Reload the page to see the current values, then reapply your changes.');
+	      }
+	      throw new StaleWriteError('This product no longer exists. It may have been deleted while you were editing.');
+	    }
+	    throw new Error('Product update affected no rows.');
+	  }
+	  return dbRowToProduct(data[0]);
 	}
 	async function adminSetProductActive(dbId, isActive) {
 	  const {
@@ -35604,8 +35661,13 @@
 	  if (error) throw error;
 	}
 	async function adminReorderProducts(dbIdsInOrder) {
-	  await Promise.all(dbIdsInOrder.map((dbId, i) => supabase.from('products').update({
-	    sort_order: i
+	  await Promise.all(dbIdsInOrder.map((dbId, i) =>
+	  // updated_at moves here too. A write that does not stamp it is a write
+	  // the staleness check cannot see, which would let a form saved after a
+	  // reorder silently win.
+	  supabase.from('products').update({
+	    sort_order: i,
+	    updated_at: new Date().toISOString()
 	  }).eq('id', dbId)));
 	}
 	function slugify(s) {
@@ -51974,6 +52036,10 @@
 	  const navigate = useNavigate();
 	  const location = useLocation();
 	  const isEdit = !!dbId;
+	  const loadedUpdatedAt = reactExports.useRef(null);
+	  // Set when a save is refused as stale, so the error can offer a reload
+	  // rather than just describing the problem.
+	  const [staleConflict, setStaleConflict] = reactExports.useState(false);
 	  const [values, setValues] = reactExports.useState(empty$2);
 	  const [loading, setLoading] = reactExports.useState(isEdit);
 	  const [saving, setSaving] = reactExports.useState(false);
@@ -52012,6 +52078,12 @@
 	        setLoading(false);
 	        return;
 	      }
+	      // The row's updated_at as it was when this editor opened. It goes back
+	      // with the save so the write can be refused if anything moved in the
+	      // meantime — an import, another admin, the active toggle on the list
+	      // page. Held in a ref because it is not rendered and must not cause a
+	      // re-render when it changes after a successful save.
+	      loadedUpdatedAt.current = p.updatedAt || null;
 	      setValues({
 	        name: p.name,
 	        slug: p.slug,
@@ -52084,7 +52156,10 @@
 	        isActive: values.isActive
 	      };
 	      if (isEdit) {
-	        await adminUpdateProduct(dbId, payload);
+	        const saved = await adminUpdateProduct(dbId, payload, loadedUpdatedAt.current);
+	        // Adopt the new token so a second save in the same session is not
+	        // rejected against the value this save just superseded.
+	        loadedUpdatedAt.current = saved.updatedAt || null;
 	      } else {
 	        const created = await adminCreateProduct(payload);
 	        // Commit any images staged during creation against the new product id.
@@ -52114,7 +52189,13 @@
 	      }
 	      navigate('/admin/products');
 	    } catch (ex) {
+	      // A stale write is not a failure to report as a database error — it means
+	      // somebody else's edit is currently in the row and this save would have
+	      // erased it. Say that, and offer the reload.
+	      if (ex?.isStaleWrite) setStaleConflict(true);
 	      setErr(ex.message || String(ex));
+	      setSaving(false);
+	      return;
 	    }
 	    setSaving(false);
 	  }
@@ -52137,9 +52218,17 @@
 	        className: "btn btn-outline btn-sm",
 	        children: "\u2190 Back to products"
 	      })]
-	    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    }), err && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "adm-banner err",
-	      children: err
+	      children: [err, staleConflict && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "button",
+	        className: "btn btn-sm btn-light",
+	        style: {
+	          marginLeft: 10
+	        },
+	        onClick: () => window.location.reload(),
+	        children: "Reload product"
+	      })]
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
 	      onSubmit: onSubmit,
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
