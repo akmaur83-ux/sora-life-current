@@ -63,6 +63,16 @@ export function dbRowToProduct(row) {
     sortOrder: Number(row.sort_order) || 0,
     isActive: row.is_active !== false,
     biosashId: row.biosash_id || null,
+    // Content columns added by migration 0025. Absent until it is applied,
+    // and null until the ingest or an admin fills them — in both cases the
+    // PDP section that reads them hides itself rather than showing a shell.
+    benefits: row.benefits || null,
+    ingredients: row.ingredients || null,
+    howToUse: row.how_to_use || null,
+    specifications: row.specifications || null,
+    keyClaims: row.key_claims || null,
+    netContent: row.net_content || null,
+    contentSource: row.content_source || null,
   };
 }
 

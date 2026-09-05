@@ -110,6 +110,36 @@ export function deliveryEstimate() {
  * for exactly this reason. Standard is free because Standard is free, not
  * because the basket reached some amount.
  */
+/**
+ * Per-unit price for a pack, e.g. "₹1.25/ml" for ₹312 of 250 ml.
+ *
+ * Comparing pack sizes is the one bit of arithmetic a customer should not have
+ * to do in their head, and it is the whole reason a two-pack selector exists.
+ *
+ * Returns null rather than guessing whenever the label is not a plain
+ * "<number> <unit>": "Combo of 2", "Family pack" and "60 tablets + 1 free" all
+ * produce no line at all. A per-unit figure derived from a misread label is
+ * worse than none, because it looks authoritative.
+ *
+ * The unit is echoed exactly as written, so "ml" stays "ml" and "tablets"
+ * becomes "tablet" only through the crude plural trim below — nothing is
+ * converted between units.
+ */
+export function perUnitPrice(price, label) {
+  const amount = Number(price);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  const m = String(label || '').trim().match(/^(\d+(?:\.\d+)?)\s*([a-z]+)$/i);
+  if (!m) return null;
+  const qty = Number(m[1]);
+  if (!Number.isFinite(qty) || qty <= 1) return null;   // "1 kg" tells nobody anything
+  const unit = m[2].toLowerCase().replace(/s$/, '');
+  const each = amount / qty;
+  // Two decimals below ₹10, none above: "₹0.42/ml" is useful, "₹31.00/tablet"
+  // is just noise with a decimal point in it.
+  const shown = each < 10 ? each.toFixed(2) : String(Math.round(each));
+  return `₹${shown}/${unit}`;
+}
+
 export function deliveryOptions() {
   return [
     { id: 'std', label: 'Standard', eta: '3–5 business days', price: 0 },
@@ -124,17 +154,32 @@ export function deliveryOptions() {
 // catalogue has no product-specific benefits the section hides itself.
 // ------------------------------------------------------------
 /**
+ * BENEFITS — "Why you'll love it"
+ *
+ * Accepts both shapes the catalogue can carry. Migration 0025 stores
+ * [{ title, description?, icon? }]; before it, the field was a bare string
+ * array, and a product edited by hand may still be one. Neither is invented:
+ * an empty or absent field returns real:false and the section hides.
+ *
  * @returns {{ items: {icon,label,text}[], real:boolean }}
  */
 export function benefitsFor(product) {
-  const real = product && Array.isArray(product.benefits)
-    ? product.benefits.filter((b) => typeof b === 'string' && b.trim())
-    : [];
-  if (!real.length) return { items: [], real: false };
-  return {
-    real: true,
-    items: real.slice(0, 4).map((b) => ({ icon: 'check', label: b.trim(), text: '' })),
-  };
+  const raw = Array.isArray(product?.benefits) ? product.benefits : [];
+  const items = raw.map((b) => {
+    if (typeof b === 'string') {
+      return b.trim() ? { icon: 'check', label: b.trim(), text: '' } : null;
+    }
+    if (b && typeof b === 'object') {
+      const label = String(b.title || '').trim();
+      const text = String(b.description || '').trim();
+      // A body with no heading is still a benefit; it just leads with itself.
+      if (!label && !text) return null;
+      return { icon: String(b.icon || 'check'), label: label || text, text: label ? text : '' };
+    }
+    return null;
+  }).filter(Boolean);
+  if (!items.length) return { items: [], real: false };
+  return { real: true, items };
 }
 
 // ------------------------------------------------------------
@@ -143,29 +188,87 @@ export function benefitsFor(product) {
 // if the catalogue has no ingredient data the section hides itself.
 // ------------------------------------------------------------
 /**
- * @returns {{ items: {name,note}[], real:boolean }}
+ * @returns {{ items: {name,note,image}[], real:boolean }}
  */
 export function ingredientsFor(product) {
-  const real = product && Array.isArray(product.ingredients)
-    ? product.ingredients.filter((s) => typeof s === 'string' && s.trim())
-    : [];
-  if (!real.length) return { items: [], real: false };
-  return { real: true, items: real.map((name) => ({ name: name.trim(), note: '' })) };
+  const raw = Array.isArray(product?.ingredients) ? product.ingredients : [];
+  const items = raw.map((i) => {
+    if (typeof i === 'string') {
+      return i.trim() ? { name: i.trim(), note: '', image: '' } : null;
+    }
+    if (i && typeof i === 'object') {
+      const name = String(i.name || '').trim();
+      if (!name) return null;
+      return {
+        name,
+        note: String(i.description || '').trim(),
+        // The ingest nulls any URL that did not serve an image, so anything
+        // still here has been checked. Never render an unchecked src.
+        image: String(i.image_url || '').trim(),
+      };
+    }
+    return null;
+  }).filter(Boolean);
+  if (!items.length) return { items: [], real: false };
+  return { real: true, items };
 }
 
 // ------------------------------------------------------------
 // HOW TO USE
-// Real product.usage ONLY. No generic "read the pack / storage / safety"
+// Real product data ONLY. No generic "read the pack / storage / safety"
 // filler — if there is no product-specific usage the section hides itself.
 // ------------------------------------------------------------
 /**
- * @returns {{ text:string, steps:string[], real:boolean }}
+ * @returns {{ text:string, steps:{step,text}[], real:boolean }}
  */
 export function howToUseFor(product) {
-  if (product && typeof product.usage === 'string' && product.usage.trim()) {
+  const raw = Array.isArray(product?.howToUse) ? product.howToUse : [];
+  const steps = raw.map((s, n) => {
+    if (typeof s === 'string') return s.trim() ? { step: n + 1, text: s.trim() } : null;
+    if (s && typeof s === 'object' && String(s.text || '').trim()) {
+      return { step: Number(s.step) || n + 1, text: String(s.text).trim() };
+    }
+    return null;
+  }).filter(Boolean);
+  if (steps.length) return { text: '', steps, real: true };
+  // Legacy single-string field, still the only source for hand-edited rows.
+  if (typeof product?.usage === 'string' && product.usage.trim()) {
     return { text: product.usage.trim(), steps: [], real: true };
   }
   return { text: '', steps: [], real: false };
+}
+
+// ------------------------------------------------------------
+// SPECIFICATIONS — a plain key/value table.
+// Object order is the author's order; keys with no value are dropped so a
+// half-filled record cannot render a row reading "Shelf life:".
+// ------------------------------------------------------------
+/**
+ * @returns {{ rows: {key,value}[], real:boolean }}
+ */
+export function specificationsFor(product) {
+  const spec = product?.specifications;
+  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return { rows: [], real: false };
+  const rows = Object.entries(spec)
+    .map(([key, value]) => ({ key: String(key).trim(), value: String(value ?? '').trim() }))
+    .filter((r) => r.key && r.value);
+  return { rows, real: rows.length > 0 };
+}
+
+// ------------------------------------------------------------
+// KEY CLAIMS — short badge strings ("Paraben Free"), never sentences.
+// Anything long enough to be a sentence is dropped rather than truncated: a
+// clipped claim is a changed claim.
+// ------------------------------------------------------------
+/**
+ * @returns {string[]}
+ */
+export function keyClaimsFor(product) {
+  const raw = Array.isArray(product?.keyClaims) ? product.keyClaims : [];
+  return raw
+    .map((c) => String(c ?? '').trim())
+    .filter((c) => c && c.length <= 32)
+    .slice(0, 6);
 }
 
 // ------------------------------------------------------------

@@ -2,7 +2,12 @@
    LAYOUT — header, nav, hero, footer, drawers, tabbar
    ============================================================ */
 .page-main { min-height: 60vh; animation: pagein 0.5s var(--ease-luxury); }
-@keyframes pagein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+/* Opacity only. The 8px rise was a transform on .page-main, and a transformed
+   ancestor becomes the containing block for every position:fixed descendant —
+   so for the first 500ms of every navigation the PDP purchase bar, the cart
+   dock and the toasts all resolved against .page-main instead of the viewport
+   and were drawn in the wrong place. The rise was worth less than that cost. */
+@keyframes pagein { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 900px) { .page-main { padding-bottom: 76px; } } /* room for tabbar */
 
 /* ---------- Announcement bar ---------- */

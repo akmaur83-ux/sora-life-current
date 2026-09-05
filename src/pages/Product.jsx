@@ -24,8 +24,10 @@ import ProductReviewsTeaser from '../components/pdp/ProductReviewsTeaser.jsx';
 import ProductRecommendations from '../components/pdp/ProductRecommendations.jsx';
 import PdpCouponSlot from '../components/pdp/PdpCouponSlot.jsx';
 import PdpStorySlot from '../components/pdp/PdpStorySlot.jsx';
+import ProductClaims from '../components/pdp/ProductClaims.jsx';
+import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
-import { overviewFor, suitableForList, faqFor } from '../data/pdpContent.js';
+import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
 import { promotionsSource } from '../lib/promotions.js';
 
 // Shown while the Supabase catalogue is still hydrating, so a direct load of a
@@ -135,9 +137,11 @@ useEffect(() => {
   const buyable = isPurchasable(product, variant);
   const blocked = out || !buyable;
   const lowStock = product.stock > 0 && product.stock <= 5;
-  // Net quantity of the pack actually selected, so the row cannot keep
-  // saying "250 ml" after the customer switches to the 500 ml pack.
-  const size = variant?.label || product.form || null;
+  // Net quantity of the pack actually SELECTED, so it cannot keep saying
+  // "250 ml" after the customer switches to the 500 ml pack. The stored
+  // net_content is the printed quantity for the base pack, so a chosen variant
+  // outranks it.
+  const netContent = variant?.label || product.netContent || product.form || null;
 
   const fbt = [product, ...related.slice(0, 2)];
   const fbtTotal = fbt.reduce((s, p) => s + p.price, 0);
@@ -170,26 +174,18 @@ useEffect(() => {
       title: 'Product overview', icon: 'leaf',
       content: <p className="pdp-acc__p">{overview.text}</p>,
     },
-    ...(product.ingredients?.length ? [{
-      title: 'Full ingredient list', icon: 'flask',
-      content: (
-        <div className="pdp-acc__tags">
-          {product.ingredients.map((ig) => <span key={ig} className="v2-chip">{ig}</span>)}
-        </div>
-      ),
-    }] : []),
-    ...(product.benefits?.length ? [{
-      title: 'All benefits', icon: 'sparkle',
-      content: (
-        <ul className="ticklist">
-          {product.benefits.map((b) => <li key={b}><Icon name="check" size={16} /> {b}</li>)}
-        </ul>
-      ),
-    }] : []),
-    ...(product.usage ? [{
-      title: 'Usage details', icon: 'droplet',
-      content: <p className="pdp-acc__p muted">{product.usage}</p>,
-    }] : []),
+    // Ingredients, benefits and usage used to have rows here. They are gone
+    // for two reasons.
+    //
+    // They are now duplicates: each has its own section further up the page,
+    // with room for the real content, and repeating them inside an accordion
+    // underneath said the same thing twice.
+    //
+    // And they were about to crash. Both rows mapped their field as an array
+    // of STRINGS — `{ig}` straight into JSX. Migration 0025 stores them as
+    // objects ({ name, description, image_url } and { title, description }),
+    // and rendering an object as a React child throws, so the first ingested
+    // product to load this page would have taken the whole PDP down.
     ...(suitable.length ? [{
       title: 'Suitable for', icon: 'users',
       content: (
@@ -256,11 +252,10 @@ useEffect(() => {
           </div>
         </ProductGallery>
 
-        {/* Buying block. Hierarchy is brand -> name -> price -> rating -> size:
+        {/* Buying block. Brand -> name -> net content -> rating -> price.
             Sora Life is a marketplace, so whose product this is comes before
-            what it is. The category/pack-size line that used to open this block
-            is now the size row further down, where it belongs — it was
-            competing with the title for the top of the page. */}
+            what it is; everything below that is what a customer checks in the
+            order they check it. */}
         <div className="pdp__info">
           {product.brand && (
             <Link
@@ -272,41 +267,32 @@ useEffect(() => {
               <Icon name="chevronRight" size={13} />
             </Link>
           )}
-          <h1 className="pdp__title">{product.name}</h1>
 
-          {/* ONE price line. Price, struck MRP and the discount used to be
-              three competing sizes stacked with the tax note; PriceTag already
-              emits them as a single row, so the row just needs to stay a row. */}
+          <h1 className="pdp__title">
+            {product.name}
+            {netContent && <span className="pdp__net"> ({netContent})</span>}
+          </h1>
+
+          <ProductRatingTeaser product={product} />
+
+          {/* ONE price line: struck MRP, the price the customer pays, the
+              saving, and the tax note. PriceTag already emits them as a row;
+              the row just has to stay a row. */}
           <div className="pdp__price">
             <PriceTag product={product} size="lg" variant={variant} v2 />
-            <span className="pdp__tax">Inclusive of all taxes</span>
+            <span className="pdp__tax">Incl. of all taxes</span>
           </div>
 
-          <div className="pdp__facts">
-            <ProductRatingTeaser product={product} />
-            {size && <span className="pdp__size">{size}</span>}
-          </div>
+          {/* Run 2 mounts recommended coupon cards here, directly under the
+              price. Renders nothing today, and leaves no gap while it does. */}
+          <PdpCouponSlot product={product} />
 
-          {/* Only a real, authored description earns a lead paragraph. */}
-          {product.description && (
-            <div className={`pdp__leadwrap ${leadExpanded ? 'is-open' : ''}`}>
-              <p className="pdp__lead">{product.description}</p>
-              <button
-                type="button"
-                className="pdp__leadmore"
-                onClick={() => setLeadExpanded((v) => !v)}
-                aria-expanded={leadExpanded}
-              >
-                {leadExpanded ? 'Show less' : 'See more'}
-              </button>
-            </div>
-          )}
+          <ProductClaims product={product} />
 
           <ProductOfferTeaser product={product} />
 
-          {/* A single pack size is not a choice. Rendering one lonely chip that
-              is already selected asks the customer to make a decision that does
-              not exist; the size row above already states what they are buying. */}
+          {/* A single pack size is not a choice: one card, already selected,
+              asks the customer to decide something that has no alternative. */}
           {pricedVariants.length > 1 && (
             <div className="pdp__block">
               <span className="label">Choose pack size</span>
@@ -314,6 +300,8 @@ useEffect(() => {
                 {pricedVariants.map((v) => {
                   const selected = (variant?.id ?? variant?.label) === (v.id ?? v.label);
                   const soldOut = v.stock === 0;
+                  const off = v.mrp > v.price ? Math.round(((v.mrp - v.price) / v.mrp) * 100) : 0;
+                  const unit = perUnitPrice(v.price, v.label);
                   return (
                     <button
                       key={v.id ?? v.label}
@@ -324,6 +312,9 @@ useEffect(() => {
                       className={`variantchip ${selected ? 'active' : ''} ${soldOut ? 'is-out' : ''}`}
                       onClick={() => setVariant(v)}
                     >
+                      <span className="variantchip__tick" aria-hidden="true">
+                        {selected && <Icon name="check" size={12} />}
+                      </span>
                       <span className="variantchip__label">{v.label}</span>
                       {v.price != null && (
                         <span className="variantchip__price">
@@ -331,6 +322,8 @@ useEffect(() => {
                           {v.mrp > v.price && <s>{money(v.mrp, product.currency)}</s>}
                         </span>
                       )}
+                      {off > 0 && <span className="variantchip__off">{off}% off</span>}
+                      {unit && <span className="variantchip__unit">{unit}</span>}
                       {soldOut && <span className="variantchip__out">Sold out</span>}
                     </button>
                   );
@@ -344,9 +337,6 @@ useEffect(() => {
               : lowStock ? <span className="v2-badge"><Icon name="clock" size={13} /> Only {product.stock} left</span>
               : <span className="v2-badge v2-badge--soft"><Icon name="check" size={13} /> In stock</span>}
           </div>
-
-          {/* Run 2 mounts recommended coupon cards here. Renders nothing today. */}
-          <PdpCouponSlot product={product} />
 
           <div className="pdp__buy">
             <div className="qty">
@@ -368,9 +358,19 @@ useEffect(() => {
 
       {/* Richer scroll: benefits → ingredients → usage → product information → trust */}
       <div className="v2-wrap pdp-flow">
+        {/* About <product> — the long description, set for reading rather
+            than squeezed into the buying column. Hidden when there is none. */}
+        {product.description && (
+          <section className="pdp-sec pdp-about" aria-labelledby="pdp-about-h">
+            <h2 id="pdp-about-h" className="pdp-sec__title serif">About {product.name}</h2>
+            <p className="pdp-about__text">{product.description}</p>
+          </section>
+        )}
+
         <ProductBenefits product={product} />
         <ProductIngredients product={product} />
         <ProductHowToUse product={product} />
+        <ProductSpecifications product={product} />
 
         <section className="pdp-sec" aria-labelledby="pdp-info-h">
           <h2 id="pdp-info-h" className="pdp-sec__title serif">Product information</h2>

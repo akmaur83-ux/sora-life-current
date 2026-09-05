@@ -76,6 +76,13 @@ function normalizeProduct(p) {
     ingredients: p.ingredients || [],
     benefits: p.benefits || [],
     usage: p.usage || '',
+    // Migration 0025. Kept null rather than defaulted to [] so "not authored"
+    // stays distinguishable from "authored as empty" all the way to the view.
+    howToUse: p.howToUse || null,
+    specifications: p.specifications || null,
+    keyClaims: p.keyClaims || null,
+    netContent: p.netContent || null,
+    contentSource: p.contentSource || null,
     isNew: !!p.isNew,
     isBestseller: !!p.isBestseller,
     isFeatured: !!p.isFeatured,

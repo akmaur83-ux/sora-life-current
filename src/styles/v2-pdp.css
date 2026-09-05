@@ -909,6 +909,245 @@ body:has(.v2-pdp-root .buybar) .page-main {
 @media (min-width:901px) {
   /* The information column was centred in the 1240px wrap while the hero above
      it started at the wrap's left edge, so the page stepped inwards halfway
-     down for no reason. Same left edge as the gallery. */
-  .v2-pdp-root .pdp-flow { margin-inline:0; }
+     down for no reason.
+
+     Zeroing the inline margin fixed the symptom and introduced a worse one:
+     .pdp-flow IS a .v2-wrap, so removing its auto margins dropped it to the
+     container's padding edge at x=24 while the hero stayed at x=100 — it now
+     stepped OUT instead of in. The right fix is to stop narrowing it at all
+     and let it be the same wrap the hero is; the reading measure is capped on
+     the text itself, which is where a measure belongs. */
+  .v2-pdp-root .pdp-flow { max-width:var(--slv2-container); margin-inline:auto; }
+}
+
+/* ==========================================================================
+   RUN A — content-led PDP
+   The page finally has benefits, ingredients, directions and specifications
+   to show. These rules are about making that content readable, and about
+   keeping it out of bordered boxes: spacing, rules and type weight do the
+   separating.
+   ========================================================================== */
+
+/* --------------------------------------------------------------- title */
+.v2-pdp-root .pdp__net {
+  color: var(--slv2-ink-4);
+  font-family: var(--slv2-sans);
+  font-size: .52em;
+  font-weight: 500;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+/* Stars, score, count — one quiet line under the name. Four of 164 products
+   have a rating, so this is absent far more often than present and must not
+   leave a gap behind. */
+.v2-pdp-root .pdp-rating {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin: 9px 0 0; padding: 0;
+  border: 0; background: none;
+  color: var(--slv2-ink-2); text-decoration: none; font-size: 12.5px;
+}
+.v2-pdp-root .pdp-rating__stars { display: inline-flex; gap: 1px; }
+.v2-pdp-root .pdp-rating__stars .s-full { color: var(--slv2-star); }
+.v2-pdp-root .pdp-rating__stars .s-empty { color: var(--slv2-line); }
+.v2-pdp-root .pdp-rating__score { color: var(--slv2-ink); font-weight: 700; }
+.v2-pdp-root .pdp-rating__score span { color: var(--slv2-ink-4); font-weight: 500; }
+.v2-pdp-root .pdp-rating__count { color: var(--slv2-ink-4); }
+.v2-pdp-root .pdp-rating__count::before { content: none; }
+.v2-pdp-root .pdp-rating:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* The discount reads as a saving, so it is the one green thing in the row. */
+.v2-pdp-root .pdp__price .v2-price__off {
+  background: var(--slv2-f100);
+  color: var(--slv2-save);
+}
+
+/* ------------------------------------------------------------- claims */
+.v2-pdp-root .pdp-claims {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin: 12px 0 0; padding: 0; list-style: none;
+}
+.v2-pdp-root .pdp-claims__pill {
+  padding: 4px 9px;
+  border: 1px solid var(--slv2-line);
+  border-radius: 999px;
+  background: var(--slv2-paper);
+  color: var(--slv2-ink-2);
+  font-size: 11px; font-weight: 600; letter-spacing: .02em;
+}
+
+/* ------------------------------------------------------ variant cards */
+.v2-pdp-root .variantlist {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+  margin-top: 8px;
+}
+.v2-pdp-root .variantchip {
+  position: relative;
+  display: grid; gap: 2px; justify-items: start;
+  padding: 10px 11px 10px 30px;
+  border: 1px solid var(--slv2-line);
+  border-radius: var(--slv2-r-art);
+  background: var(--slv2-paper);
+  text-align: left;
+  transition: border-color .16s ease, background .16s ease;
+}
+.v2-pdp-root .variantchip.active {
+  border-color: var(--slv2-accent-primary);
+  box-shadow: inset 0 0 0 1px var(--slv2-accent-primary);
+  background: var(--slv2-f50);
+}
+/* The tick is always in the layout, empty when unselected, so choosing a pack
+   cannot shift the card's text sideways. */
+.v2-pdp-root .variantchip__tick {
+  position: absolute; left: 10px; top: 11px;
+  display: grid; place-items: center;
+  width: 14px; height: 14px;
+  border: 1px solid var(--slv2-line-2); border-radius: 999px;
+  color: #FBF8F1;
+}
+.v2-pdp-root .variantchip.active .variantchip__tick {
+  border-color: var(--slv2-accent-primary);
+  background: var(--slv2-accent-primary);
+}
+.v2-pdp-root .variantchip__label { color: var(--slv2-ink); font-size: 12.5px; font-weight: 700; }
+.v2-pdp-root .variantchip__price {
+  display: flex; align-items: baseline; gap: 5px;
+  color: var(--slv2-price); font-size: 13px; font-weight: 600;
+}
+.v2-pdp-root .variantchip__price s { color: var(--slv2-price-mrp); font-size: 11px; font-weight: 500; }
+.v2-pdp-root .variantchip__off { color: var(--slv2-save); font-size: 10.5px; font-weight: 700; }
+.v2-pdp-root .variantchip__unit { color: var(--slv2-ink-4); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+/* Out of stock stays visible and readable — greying it into illegibility hides
+   the fact that the pack exists at all, which is information. */
+.v2-pdp-root .variantchip.is-out {
+  border-style: dashed; background: transparent; cursor: not-allowed;
+}
+.v2-pdp-root .variantchip.is-out .variantchip__label,
+.v2-pdp-root .variantchip.is-out .variantchip__price { color: var(--slv2-ink-4); }
+.v2-pdp-root .variantchip.is-out .variantchip__price s { text-decoration-color: var(--slv2-ink-4); }
+.v2-pdp-root .variantchip__out {
+  color: var(--slv2-alert); font-size: 10px; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------ pincode */
+.v2-pdp-root .pdp-deliver__pin { display: flex; gap: 8px; margin: 0 0 10px; }
+.v2-pdp-root .pdp-deliver__pininput {
+  flex: 1 1 auto; min-width: 0; height: 40px; padding: 0 11px;
+  border: 1px solid var(--slv2-line); border-radius: var(--slv2-r-ui);
+  background: var(--slv2-paper);
+  color: var(--slv2-ink); font-family: var(--slv2-sans); font-size: 13px;
+  letter-spacing: .06em;
+}
+.v2-pdp-root .pdp-deliver__pininput:focus-visible {
+  outline: 2px solid var(--slv2-accent-primary); outline-offset: 1px;
+}
+.v2-pdp-root .pdp-deliver__pinbtn {
+  flex: 0 0 auto; height: 40px; padding: 0 16px;
+  border: 1px solid var(--slv2-accent-primary); border-radius: var(--slv2-r-ui);
+  background: transparent; color: var(--slv2-accent-primary);
+  font-size: 12px; font-weight: 700; letter-spacing: .04em;
+  cursor: pointer;
+}
+.v2-pdp-root .pdp-deliver__pinbtn:disabled { opacity: .45; cursor: not-allowed; }
+.v2-pdp-root .pdp-deliver__pinmsg { margin: 0 0 10px; font-size: 11.5px; line-height: 1.5; }
+.v2-pdp-root .pdp-deliver__pinmsg.is-ok { color: var(--slv2-save); }
+.v2-pdp-root .pdp-deliver__pinmsg.is-bad { color: var(--slv2-alert); }
+
+/* -------------------------------------------------------------- about */
+.v2-pdp-root .pdp-about__text {
+  max-width: 68ch; margin: 0;
+  color: var(--slv2-ink-2); font-size: 14px; line-height: 1.72;
+  /* The ingest stores the description with its paragraph breaks intact as
+     blank lines. Without pre-line a thousand-character description arrives as
+     one unbroken slab. */
+  white-space: pre-line;
+}
+
+/* ----------------------------------------------------------- benefits */
+/* A list with hairlines, not a grid of bordered cards. */
+.v2-pdp-root .pdp-benefits__list { margin: 0; padding: 0; list-style: none; }
+.v2-pdp-root .pdp-benefits__row {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px;
+  padding: 12px 0;
+}
+.v2-pdp-root .pdp-benefits__row + .pdp-benefits__row { border-top: 1px solid var(--slv2-line-2); }
+.v2-pdp-root .pdp-benefits__ic {
+  display: grid; place-items: center;
+  width: 22px; height: 22px; margin-top: 1px;
+  border-radius: 999px; background: var(--slv2-f50); color: var(--slv2-accent-primary);
+}
+.v2-pdp-root .pdp-benefits__body strong {
+  display: block; color: var(--slv2-ink); font-size: 13px; font-weight: 700; line-height: 1.35;
+}
+.v2-pdp-root .pdp-benefits__body p {
+  margin: 3px 0 0; color: var(--slv2-ink-3); font-size: 12.5px; line-height: 1.6;
+}
+
+/* -------------------------------------------------------- ingredients */
+.v2-pdp-root .pdp-ingredients__list {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+  margin: 0; padding: 0; list-style: none;
+}
+.v2-pdp-root .pdp-ingredients__list.is-single { grid-template-columns: minmax(0, 1fr); }
+.v2-pdp-root .pdp-ingredients__card {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 9px; align-items: center;
+  padding: 9px 10px;
+  border: 1px solid var(--slv2-line-2); border-radius: var(--slv2-r-art);
+  background: var(--slv2-paper);
+}
+.v2-pdp-root .pdp-ingredients__ic {
+  display: grid; place-items: center; overflow: hidden;
+  width: 34px; height: 34px;
+  border-radius: 999px; background: var(--slv2-f50); color: var(--slv2-accent-primary);
+}
+.v2-pdp-root .pdp-ingredients__ic img { width: 100%; height: 100%; object-fit: cover; }
+.v2-pdp-root .pdp-ingredients__body strong {
+  display: block; color: var(--slv2-ink); font-size: 12px; font-weight: 600; line-height: 1.3;
+}
+.v2-pdp-root .pdp-ingredients__body p {
+  margin: 2px 0 0; color: var(--slv2-ink-4); font-size: 11px; line-height: 1.45;
+}
+
+/* --------------------------------------------------------- how to use */
+.v2-pdp-root .pdp-howto__steps {
+  margin: 0; padding: 0; list-style: none;
+  counter-reset: pdp-step;
+}
+.v2-pdp-root .pdp-howto__step {
+  display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 11px;
+  padding: 11px 0;
+}
+.v2-pdp-root .pdp-howto__step + .pdp-howto__step { border-top: 1px solid var(--slv2-line-2); }
+.v2-pdp-root .pdp-howto__num {
+  display: grid; place-items: center;
+  width: 24px; height: 24px;
+  border-radius: 999px;
+  background: var(--slv2-accent-primary); color: #FBF8F1;
+  font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.v2-pdp-root .pdp-howto__step p {
+  margin: 2px 0 0; color: var(--slv2-ink-2); font-size: 13px; line-height: 1.6;
+}
+
+/* ----------------------------------------------------- specifications */
+/* Two columns and a hairline. No panel, no border around the block. */
+.v2-pdp-root .pdp-specs__table { margin: 0; }
+.v2-pdp-root .pdp-specs__row {
+  display: grid; grid-template-columns: minmax(90px, 38%) minmax(0, 1fr); gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--slv2-line-2);
+}
+.v2-pdp-root .pdp-specs__row:first-child { border-top: 0; }
+.v2-pdp-root .pdp-specs__table dt { color: var(--slv2-ink-4); font-size: 12px; }
+.v2-pdp-root .pdp-specs__table dd {
+  margin: 0; color: var(--slv2-ink); font-size: 12.5px; font-weight: 600;
+}
+
+/* ------------------------------------------------------------ desktop */
+@media (min-width: 901px) {
+  .v2-pdp-root .pdp-about__text { font-size: 15px; }
+  .v2-pdp-root .pdp-ingredients__list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .v2-pdp-root .variantlist { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .v2-pdp-root .pdp-specs__row { grid-template-columns: minmax(140px, 26%) minmax(0, 1fr); }
 }

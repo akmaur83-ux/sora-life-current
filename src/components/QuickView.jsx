@@ -7,12 +7,19 @@ import PriceTag from './PriceTag.jsx';
 import { useStore } from '../lib/store.jsx';
 import { isPurchasable, UNAVAILABLE_LABEL } from '../data/products.js';
 import { categoryBySlug } from '../data/categories.js';
+import { benefitsFor } from '../data/pdpContent.js';
 
 export default function QuickView({ product, onClose }) {
   const { addToCart, toggleWish, isWished } = useStore();
   const [qty, setQty] = useState(1);
   const [variant, setVariant] = useState(product.variants?.[0]?.label || null);
   const cat = categoryBySlug[product.category];
+  // Through the shared helper, not off product.benefits directly. The field
+  // used to be an array of strings and the list below rendered `{b}` straight
+  // into JSX; migration 0025 stores objects, which React cannot render as a
+  // child — the quick view would have thrown on the first ingested product.
+  // benefitsFor() normalises both shapes.
+  const quickBenefits = benefitsFor(product).items;
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -59,10 +66,10 @@ export default function QuickView({ product, onClose }) {
               </button>
             </div>
 
-            {product.benefits?.length > 0 && (
+            {quickBenefits.length > 0 && (
               <ul className="qv__benefits">
-                {product.benefits.slice(0, 3).map((b) => (
-                  <li key={b}><Icon name="check" size={16} /> {b}</li>
+                {quickBenefits.slice(0, 3).map((b) => (
+                  <li key={b.label}><Icon name="check" size={16} /> {b.label}</li>
                 ))}
               </ul>
             )}
