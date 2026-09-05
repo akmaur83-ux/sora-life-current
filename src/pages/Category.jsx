@@ -10,11 +10,12 @@ import { getByCategory } from '../data/products.js';
 // sibling categories. All copy comes from the real category record (name,
 // tagline, blurb); nothing is authored here.
 //
-// The page opens with the CategorySpotlight stage, then the sibling rail,
-// then ProductBrowser unchanged — the browser still owns the category tabs,
+// The page opens with the CategorySpotlight stage, then ProductBrowser
+// unchanged — the browser still owns the category tabs,
 // the compact Filter | count | Sort row, the URL state and the grid, so none
 // of that is duplicated here. The spotlight removes itself when a category
-// has nothing eligible to show, leaving the original page exactly as it was.
+// has nothing eligible to show. Related categories follow the catalogue,
+// keeping the active category's filters directly below its spotlight.
 export default function Category() {
   const { slug } = useParams();
   const cat = categoryBySlug[slug];
@@ -42,8 +43,11 @@ export default function Category() {
 
       <CategorySpotlight category={cat} products={items} />
 
+      <ProductBrowser baseProducts={items} lockCategory showCategoryFilter={false} />
+
       {siblings.length > 0 && (
-        <div className="v2-wrap">
+        <div className="v2-wrap v2-shop__related">
+          <h2 className="v2-shop__related-title">Explore more categories</h2>
           <div className="v2-rail v2-shop__cats">
             <Link to="/shop" className="v2-chip">
               <Icon name="grid" size={14} stroke={1.5} /> All products
@@ -57,7 +61,6 @@ export default function Category() {
         </div>
       )}
 
-      <ProductBrowser baseProducts={items} lockCategory showCategoryFilter={false} />
     </div>
   );
 }

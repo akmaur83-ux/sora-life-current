@@ -14,9 +14,9 @@ import {
 // next product small on the right. Advancing slides them one seat along.
 //
 // GEOMETRY LIVES IN CSS. Every position, scale, offset, opacity, duration and
-// easing value is a custom property in styles/category-spotlight.css under
-// .cspot. This file decides WHICH product sits in which seat; the stylesheet
-// decides where the seats are. Art direction should not require touching JSX.
+// easing value is a custom property in styles/category-spotlight.css.
+// This file decides which product sits in each seat; container queries
+// choose the geometry for the storefront and the narrower Admin preview.
 //
 // ONLY THREE SLIDES EXIST. A hundred-product category mounts three nodes.
 // See visibleWindow() — that is the entire virtualization strategy.
@@ -50,12 +50,13 @@ function useReducedMotion() {
 /**
  * True only while the stage is meaningfully on screen. Auto-rotation off
  * screen is wasted work and a wasted product impression, so it stops.
+ * Reattach when async settings publish the DOM after the initial gated render.
  */
-function useOnScreen(ref, threshold = 0.45) {
+function useOnScreen(ref, mounted, threshold = 0.45) {
   const [onScreen, setOnScreen] = useState(false);
   useEffect(() => {
     const node = ref.current;
-    if (!node) return undefined;
+    if (!mounted || !node) return undefined;
     if (typeof IntersectionObserver !== 'function') { setOnScreen(true); return undefined; }
     const io = new IntersectionObserver(
       ([entry]) => setOnScreen(entry.isIntersecting && entry.intersectionRatio >= threshold),
@@ -63,7 +64,7 @@ function useOnScreen(ref, threshold = 0.45) {
     );
     io.observe(node);
     return () => io.disconnect();
-  }, [ref, threshold]);
+  }, [ref, mounted, threshold]);
   return onScreen;
 }
 
@@ -107,11 +108,15 @@ export default function CategorySpotlight({ category, products, configOverride =
   // the side it actually left towards rather than always the same way.
   const [dir, setDir] = useState(1);
   const [paused, setPaused] = useState(false);
+  const [rotationStopped, setRotationStopped] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const stageRef = useRef(null);
   const resumeTimer = useRef(null);
 
   const reducedMotion = useReducedMotion();
-  const onScreen = useOnScreen(stageRef);
+  const showSpotlight = preview ? items.length > 0 : spotlightVisible(slug, items, config);
+  const onScreen = useOnScreen(stageRef, showSpotlight);
   const pageVisible = usePageVisible();
 
   const count = items.length;
@@ -150,26 +155,62 @@ export default function CategorySpotlight({ category, products, configOverride =
   // there is one timer and no polling.
   useEffect(() => {
     if (!config.autoRotate || paused || reducedMotion) return undefined;
+    if (rotationStopped || focused || hovered) return undefined;
     if (!onScreen || !pageVisible || count < 2) return undefined;
     const t = setInterval(() => {
       setDir(1);
       setIndex((i) => wrapIndex(i + 1, count));
     }, config.intervalMs);
     return () => clearInterval(t);
-  }, [config.autoRotate, config.intervalMs, paused, reducedMotion, onScreen, pageVisible, count]);
+  }, [config.autoRotate, config.intervalMs, paused, reducedMotion, onScreen, pageVisible, count, rotationStopped, focused, hovered]);
 
   // Pointer swipe. Tracked on the stage so a horizontal drag anywhere across
   // it works, and so a vertical scroll is never hijacked.
   const drag = useRef(null);
-  const onPointerDown = (e) => { drag.current = { x: e.clientX, y: e.clientY }; };
-  const onPointerUp = (e) => {
-    const start = drag.current;
+  const suppressClickUntil = useRef(0);
+  const resetDrag = () => {
     drag.current = null;
+    stageRef.current?.style.removeProperty('--cspot-drag');
+    stageRef.current?.removeAttribute('data-dragging');
+  };
+  const onPointerDown = (e) => {
+    if (e.button !== 0 || count < 2) return;
+    drag.current = { x: e.clientX, y: e.clientY, horizontal: false };
+  };
+  const onPointerMove = (e) => {
+    const start = drag.current;
     if (!start) return;
     const dx = e.clientX - start.x;
     const dy = e.clientY - start.y;
+    if (!start.horizontal) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 10) return;
+      if (Math.abs(dx) <= Math.abs(dy)) { resetDrag(); return; }
+      start.horizontal = true;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      holdAutoRotate();
+    }
+    if (!reducedMotion) {
+      e.currentTarget.dataset.dragging = 'true';
+      e.currentTarget.style.setProperty('--cspot-drag', `${Math.max(-24, Math.min(24, dx * 0.16))}px`);
+    }
+  };
+  const onPointerUp = (e) => {
+    const start = drag.current;
+    resetDrag();
+    if (!start) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    if (start.horizontal) suppressClickUntil.current = Date.now() + 450;
     if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) <= Math.abs(dy)) return;
+    suppressClickUntil.current = Date.now() + 450;
     go(dx < 0 ? 1 : -1);
+  };
+  // A swipe starting on the active link must never open its product page.
+  const onStageClick = (e) => {
+    if (Date.now() < suppressClickUntil.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   };
 
   const onKeyDown = (e) => {
@@ -183,7 +224,7 @@ export default function CategorySpotlight({ category, products, configOverride =
   // The storefront gate. A category that the owner has not switched on shows
   // nothing at all, whatever products it happens to contain. Preview bypasses
   // only this check — everything above it is the same code path.
-  if (preview ? items.length === 0 : !spotlightVisible(slug, items, config)) return null;
+  if (!showSpotlight) return null;
 
   const seats = [win.prev, win.active, win.next].filter(Boolean);
 
@@ -198,13 +239,15 @@ export default function CategorySpotlight({ category, products, configOverride =
       }}
       aria-roledescription="carousel"
       aria-label={`${category.name} spotlight`}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => { clearTimeout(resumeTimer.current); setPaused(false); }}
+      onFocusCapture={() => setFocused(true)}
+      onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false); }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      <div className="cspot__bg" aria-hidden="true" />
+      <SpotlightBackdrop theme={active.theme} />
 
       <div className="cspot__inner">
-        <p className="cspot__eyebrow">{category.name}</p>
+        <p className="cspot__eyebrow"><span>SORA LIFE</span><span>{category.name} / The edit</span></p>
 
         {/* One live region for the whole stage: assistive tech hears the
             product change once, not three times as the seats reshuffle. */}
@@ -217,8 +260,10 @@ export default function CategorySpotlight({ category, products, configOverride =
           ref={stageRef}
           data-dir={dir > 0 ? 'fwd' : 'back'}
           onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          onPointerCancel={() => { drag.current = null; }}
+          onPointerCancel={resetDrag}
+          onClickCapture={onStageClick}
           onKeyDown={onKeyDown}
           tabIndex={count > 1 ? 0 : -1}
           role={count > 1 ? 'group' : undefined}
@@ -272,27 +317,36 @@ export default function CategorySpotlight({ category, products, configOverride =
           {active.headline && <p className="cspot__headline">{active.headline}</p>}
           <h2 className="cspot__name">{active.name}</h2>
           <p className="cspot__facts">
+            {Number.isFinite(active.price) && active.price > 0 && <span className="cspot__price">₹{active.price.toLocaleString('en-IN')}</span>}
             {active.form && <span className="cspot__form">{active.form}</span>}
             {active.rating != null && (
               <span className="cspot__rating">
                 <Icon name="star" size={13} /> {active.rating.toFixed(1)}
                 {active.reviewCount > 0 && (
-                  <span className="cspot__reviews"> ({active.reviewCount})</span>
+                  <span className="cspot__reviews"> · {active.reviewCount} reviews</span>
                 )}
               </span>
             )}
           </p>
           {active.subline && <p className="cspot__subline">{active.subline}</p>}
+
+        </div>
+
+        <div className="cspot__actions">
+          {count > 1 && <button type="button" className="cspot__arrow" onClick={() => go(-1)} aria-label="Previous product">
+            <Icon name="chevronLeft" size={18} />
+          </button>}
           <Link to={`/product/${active.productSlug}`} className="cspot__cta">
             View product <Icon name="arrowRight" size={16} />
           </Link>
+          {count > 1 && <button type="button" className="cspot__arrow" onClick={() => go(1)} aria-label="Next product">
+            <Icon name="chevronRight" size={18} />
+          </button>}
         </div>
 
         {count > 1 && (
           <div className="cspot__nav">
-            <button type="button" className="cspot__arrow" onClick={() => go(-1)} aria-label="Previous product">
-              <Icon name="chevronLeft" size={18} />
-            </button>
+            <span className="cspot__hint">Swipe to explore</span>
             {count <= MAX_PIPS ? (
               <span className="cspot__pips" aria-hidden="true">
                 {items.map((s, i) => (
@@ -304,9 +358,23 @@ export default function CategorySpotlight({ category, products, configOverride =
                 {win.active.index + 1} / {count}
               </span>
             )}
-            <button type="button" className="cspot__arrow" onClick={() => go(1)} aria-label="Next product">
-              <Icon name="chevronRight" size={18} />
-            </button>
+            {config.autoRotate && !reducedMotion && (
+              <button type="button" className="cspot__rotation" onClick={() => {
+                setRotationStopped((v) => !v);
+                if (rotationStopped) {
+                  clearTimeout(resumeTimer.current);
+                  setPaused(false);
+                  setFocused(false);
+                  setHovered(false);
+                }
+              }}
+                aria-label={rotationStopped ? 'Resume automatic rotation' : 'Pause automatic rotation'}
+                aria-pressed={rotationStopped}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+                  {rotationStopped ? <path d="M3 1.5 10 6 3 10.5Z" /> : <path d="M2.5 2h2v8h-2zM7.5 2h2v8h-2z" />}
+                </svg>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -341,4 +409,18 @@ function SpotlightImage({ slide, eager = false }) {
       fetchpriority={eager ? 'high' : undefined}
     />
   );
+}
+
+/** Two paint layers, zero extra product assets. CSS cannot interpolate gradient
+ * strings: fading the incoming layer preserves both manual and saved auto themes.
+ * The guarded update retains only the immediately previous theme, even on rapid taps. */
+function SpotlightBackdrop({ theme }) {
+  const key = theme.background + (theme.gradient || '');
+  const [layers, setLayers] = useState({ key, current: theme, previous: null });
+  if (layers.key !== key) setLayers({ key, current: theme, previous: layers.current });
+  const paint = (value) => ({ '--cspot-bg': value.background, '--cspot-grad': value.gradient || 'none' });
+  return <div className="cspot__backdrop" aria-hidden="true">
+    {layers.previous && <div className="cspot__bg" style={paint(layers.previous)} />}
+    <div key={layers.key} className={`cspot__bg${layers.previous ? ' cspot__bg--incoming' : ''}`} style={paint(layers.current)} />
+  </div>;
 }

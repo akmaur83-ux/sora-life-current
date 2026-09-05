@@ -1,174 +1,100 @@
-/* ============================================================
-   CATEGORY SPOTLIGHT
-
-   ART DIRECTION HAPPENS HERE. Every number the composition depends on is a
-   custom property in the :root-scoped block below — stage height, product
-   scale, side offsets, vertical lift, opacity, timing and easing. Tuning the
-   look should mean editing values in ONE place, never touching the JSX.
-
-   Only `transform` and `opacity` are animated, so transitions stay on the
-   compositor. No layout properties, no filters, no blur.
-   ============================================================ */
-
+/* SORA LIFE / Category edit. Three packshots cross an elliptical colour field;
+   product facts and controls sit on the page ground. Saved theme values remain
+   authoritative. Only transforms and opacity carry the carousel motion. */
 .cspot {
-  /* -- stage -------------------------------------------------- */
-  --cspot-h: 300px;              /* compact mobile product stage           */
-  /* Seat width, % of stage. MUST stay well under 100%: at 100% the active
-     seat covers the whole stage and the side products sit BEHIND it rather
-     than beside it, which is what the first pass did. */
-  --cspot-seat-w: 46%;
-  --cspot-shot-h: 86%;           /* 288px active visual at the base size   */
-  --cspot-side-scale: 0.56;      /* side products, relative to active      */
-  --cspot-side-x: 26.5vw;          /* side seat offset from centre           */
-  --cspot-side-op: 0.70;         /* side opacity — kept high on purpose:
-                                    the sides read as secondary through SCALE
-                                    and POSITION, not through fading out     */
-  --cspot-active-y: 0px;         /* centred; never intrudes into metadata  */
-  --cspot-side-y: 12px;           /* slight side drop                       */
-
-  /* Per-item adjustment, set inline from the item's saved values. Packshots
-     arrive with different amounts of blank canvas around the product, so the
-     owner nudges each one here. These ride on the IMAGE, never on the seat —
-     the seat's transform belongs to the reshuffle animation. */
+  --cspot-h: 240px;
+  --cspot-seat-w: 48%;
+  --cspot-shot-h: 88%;
+  --cspot-side-scale: 0.55;
+  --cspot-side-x: 32cqw;
+  --cspot-side-op: 0.88;
+  --cspot-active-y: 0px;
+  --cspot-side-y: -30px;
   --cspot-item-scale: 1;
   --cspot-item-y: 0px;
-
-  /* -- motion ------------------------------------------------- */
-  --cspot-dur: 560ms;
+  --cspot-dur: 520ms;
   --cspot-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --cspot-meta-dur: 420ms;
-
-  /* -- theme (set inline per active product, with a safe default) -- */
+  --cspot-meta-dur: 360ms;
   --cspot-bg: #F1EDE4;
   --cspot-grad: none;
-
-  /* -- curved hero backdrop ----------------------------------- */
-  /* The colour is a dome, not a block: one field that carries the whole hero
-     and ends on an elliptical bottom edge, so the join between the spotlight
-     and the catalogue below is a curve rather than a ruled line.
-
-     `--cspot-arc-w` draws the field WIDER than the viewport and pulls it back
-     to centre. That matters more than the radius does: at 100% width the
-     ellipse bows up almost vertically at the screen edges and reads as a
-     circle with its top cut off. Over-widening it means the visible slice is
-     the shallow middle of the arc — deepest at the centre, lifting away in the
-     two bottom corners, which is the shape a premium hero actually uses.
-
-     `--cspot-arc-h` is 100% on purpose. An earlier attempt ended the colour
-     part-way down so the bottles could cross its edge, but at every height
-     that cleared the product cluster the curve landed in the middle of the
-     title and the size chip and simply looked like a mistake. The whole
-     composition sits on the colour instead; the packshots are true cutouts
-     carrying their own drop-shadow, so they stay grounded on it.
-
-     `--cspot-arc-curve` is the ellipse's VERTICAL radius as a % of height —
-     how far the bottom corners lift. It is scaled down per breakpoint below,
-     because the same percentage across 1440px would bow far too deeply. */
-  --cspot-arc-w: 122%;
-  --cspot-arc-h: 100%;
-  --cspot-arc-curve: 28%;
-
-  /* -- type / spacing ----------------------------------------- */
-  --cspot-pad-top: 10px;
-  /* The nav row is the thing the curve can collide with: the two arrows sit
-     near the left and right ends of the row, which is exactly where the dome
-     lifts away. At 18px the arrows crossed the edge by a few pixels. This
-     keeps the whole row on the colour and leaves the curve some room to read
-     as a deliberate shape rather than a clipped one. */
-  --cspot-pad-bottom: 34px;
-  --cspot-name-size: 21px;
-
-  /* -- ink on the dome ---------------------------------------- */
-  /* The page greys are tuned for the ivory page ground and do not survive on a
-     mid-tone colour: --slv2-ink-4 (#6B7168) measures 2.6:1 there, and even a
-     dark grey-green (#39413A) only reached 4.4:1 once the grounds were pushed
-     to their final depth. So the muted label colour is near-ink, and the
-     hierarchy between the product name and its metadata is carried by size and
-     weight instead of by lightness — which is how it has to work on a coloured
-     field anyway; a mid grey on a saturated ground reads as faded, not quiet.
-     White was measured too and is worse: it peaks at 3.0:1 on the deepest
-     ground and falls further on the lighter ones.
-
-     This value is load-bearing. GROUND.lumFloor in spotlightPackshotProcessing
-     is the luminance at which THIS ink clears 4.5:1; changing one without
-     recomputing the other breaks the contrast guarantee. Local to the
-     spotlight — the global tokens are untouched. */
+  --cspot-arc-w: 114%;
+  --cspot-arc-h: 218px;
+  --cspot-arc-curve: 48%;
+  --cspot-name-size: 25px;
   --cspot-ink-mute: #232E26;
-
   position: relative;
+  container-type: inline-size;
   isolation: isolate;
-  /* Clips the over-wide arc back to the viewport. */
   overflow: hidden;
-  padding: var(--cspot-pad-top) 0 var(--cspot-pad-bottom);
-  /* The section itself is transparent: the page ground shows beneath the dome,
-     which is what gives the colour field an edge to curve against. The colour
-     lives on .cspot__bg below. */
+  padding: 0 0 6px;
   background: transparent;
 }
 
-/* THE DOME. Both the flat colour and the gradient ride on this one layer, so
-   the shape, the colour and the per-slide cross-fade stay together. */
+/* Fixed to the art stage, never the height of a wrapping title. The bottom
+   of the colour crosses the PACKSHOTS, leaving every metadata row on ivory. */
+.cspot__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
 .cspot__bg {
   position: absolute;
   top: 0;
   left: 50%;
-  z-index: 0;
   width: var(--cspot-arc-w);
   height: var(--cspot-arc-h);
   transform: translateX(-50%);
   border-radius: 0 0 50% 50% / 0 0 var(--cspot-arc-curve) var(--cspot-arc-curve);
   background-color: var(--cspot-bg);
   background-image: var(--cspot-grad);
-  transition: background var(--cspot-dur) var(--cspot-ease), opacity var(--cspot-dur) var(--cspot-ease);
   pointer-events: none;
 }
+.cspot__bg--incoming { animation: cspot-field-in var(--cspot-dur) ease-out both; }
+@keyframes cspot-field-in { from { opacity: 0; } to { opacity: 1; } }
 
 .cspot__inner {
   position: relative;
   z-index: 1;
   max-width: var(--wrap, 1200px);
   margin-inline: auto;
-  padding-inline: var(--sp-4, 16px);
+  padding-inline: 16px;
   text-align: center;
 }
-
-/* The eyebrow sits directly on the cluster. The stage centres its seats, so
-   any margin here pushed the whole composition down and left a band of empty
-   colour between the label and the product. */
 .cspot__eyebrow {
-  margin: 0 0 -14px;
-  position: relative;
-  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+  margin: 0;
   color: var(--cspot-ink-mute);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
-
-/* ---------------------------------------------------------------- stage */
-
+.cspot__eyebrow span:first-child { letter-spacing: 0.18em; }
+.cspot__eyebrow span:last-child { text-align: right; }
 .cspot__stage {
   position: relative;
-  /* Explicit width, not `margin: 0 auto`. Every seat inside is absolutely
-     positioned, so the stage has no content width of its own — and on desktop
-     it becomes a GRID ITEM, where an auto inline margin turns off stretch and
-     sizes the box to that (zero) content. The stage collapsed to 0px and the
-     whole spotlight disappeared above 1100px. */
   width: 100%;
   height: var(--cspot-h);
-  touch-action: pan-y;         /* horizontal swipe is ours, vertical is theirs */
+  touch-action: pan-y;
   -webkit-user-select: none;
   user-select: none;
+  transform: translate3d(var(--cspot-drag, 0px), 0, 0);
+  transition: transform 180ms var(--cspot-ease);
 }
-.cspot__stage:focus-visible {
+.cspot__stage[data-dragging] { transition: none; cursor: grabbing; }
+.cspot__stage:focus-visible,
+.cspot__shot:focus-visible,
+.cspot__cta:focus-visible,
+.cspot__arrow:focus-visible,
+.cspot__rotation:focus-visible {
   outline: 2px solid var(--slv2-accent-primary, #1E3A2F);
   outline-offset: 4px;
-  border-radius: var(--slv2-r-ui, 2px);
 }
-
-/* Every seat is the same box in the same place; only the transform differs.
-   That is what makes the reshuffle a pure compositor move. */
 .cspot__seat {
   position: absolute;
   top: 0;
@@ -179,13 +105,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   transition:
     transform var(--cspot-dur) var(--cspot-ease),
     opacity var(--cspot-dur) var(--cspot-ease);
   will-change: transform, opacity;
 }
-
 .cspot__seat--active {
   transform: translate3d(-50%, var(--cspot-active-y), 0) scale(1);
   opacity: 1;
@@ -201,21 +125,7 @@
   opacity: var(--cspot-side-op);
   z-index: 1;
 }
-
-/* An entry animation for the newly-mounted seat was tried with
-   @starting-style and removed: the seat is keyed by product, so it remounts on
-   every advance, and it kept settling back into the starting state instead of
-   transitioning out of it — the incoming product sat at scale(0.42), opacity 0
-   and never arrived. The motion that carries the interaction is the reshuffle
-   of the seats that PERSIST across an advance (next becomes active, active
-   becomes prev): those are the same DOM nodes with a changed class, so their
-   transform/opacity transition runs normally. Entry is left to the meta fade
-   until this can be done with an explicit enter class rather than a mount
-   hook. */
-
 .cspot__shot {
-  /* Positioning context for the image below, which is absolutely placed so it
-     can never exceed this box. */
   position: relative;
   display: grid;
   place-items: center;
@@ -227,328 +137,237 @@
   cursor: pointer;
 }
 .cspot__shot--link { text-decoration: none; }
-.cspot__shot:focus-visible {
-  outline: 2px solid var(--slv2-accent-primary, #1E3A2F);
-  outline-offset: 3px;
-}
-
-/* ISOLATED PACKSHOTS ONLY.
-   The stage shows the product and nothing else: no card, no panel, no second
-   background. The category theme is the only ground, and a single soft
-   drop-shadow grounds the product on it. drop-shadow() follows the alpha
-   outline of a true cutout, so a transparent PNG casts a shadow shaped like
-   the bottle rather than like a rectangle. It is a static filter — never
-   transitioned, so nothing moves off the compositor. */
-/* ONE VISUAL BASELINE FOR EVERY PACKSHOT.
-   The image fills its seat's shot box exactly and letterboxes inside it, so a
-   tall 347x851 bottle and a wide 747x511 jar occupy the same footprint and the
-   seat scale alone decides their size.
-
-   It is absolutely positioned on purpose. With `width:auto; height:100%` the
-   percentage height did not bind for portrait sources: a 347x851 packshot
-   resolved to 615px inside a 288px box and rendered 394px tall in a 184px
-   side seat — the side products came out LARGER than the active one and
-   spilled over the product title, the size chip and the CTA. Absolute
-   placement against a definite-height parent removes that whole class of
-   aspect-dependent sizing. */
 .cspot__img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 14px 18px rgba(24, 32, 26, 0.14));
-  /* The owner's per-packshot nudge. Deliberately on the IMAGE and not on the
-     seat: the seat's transform is the reshuffle animation, and composing both
-     on one element would make the two fight. This one is static — it never
-     transitions, so it costs nothing. */
+  filter: drop-shadow(0 12px 9px rgba(24, 32, 26, 0.17));
   transform: translateY(var(--cspot-item-y)) scale(var(--cspot-item-scale));
   transform-origin: center center;
 }
-
-/* A white-background packshot is a spotlight asset, not a lifestyle card, so
-   it gets the same floating treatment — this used to paint a white panel with
-   padding and a box-shadow behind it, which is exactly the boxed look the
-   stage is meant to avoid. The class is still emitted (the data still knows
-   which assets carry no alpha) so a future pass can treat them differently
-   without touching the component; today the only difference is a slightly
-   tighter shadow, since a rectangle needs less lift than a cutout. */
-.cspot__img--framed {
-  filter: drop-shadow(0 10px 14px rgba(24, 32, 26, 0.12));
-}
-
-/* Shown only when a product has no usable image at all. It inherits the
-   absolute placement above, so it is inset rather than sized, otherwise a
-   fixed width with `inset: 0` would pin it to the left edge. */
+.cspot__img--framed { filter: drop-shadow(0 6px 7px rgba(24, 32, 26, 0.1)); }
 .cspot__img--empty {
   display: block;
   inset: 0 20%;
   width: auto;
-  height: 100%;
-  border-radius: var(--slv2-r-ui, 2px);
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.15));
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.3);
 }
-
-/* The side product's name, small and quiet — enough to know what you are
-   about to tap, not enough to compete with the active item. */
 .cspot__sidename {
-  max-width: 44vw;
+  position: absolute;
+  top: calc(50% + var(--cspot-shot-h) / 2 + 10px);
+  width: 128%;
   color: var(--cspot-ink-mute);
-  font-size: 11px;
-  line-height: 1.3;
-  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.35;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
-
-/* Below 480px the side captions cost more than they give: they sit under
-   products that are half off-screen, and removing them lets the cluster sit
-   higher. The active product keeps all of its metadata, and the side seats
-   stay tappable and still announce themselves through aria-label. */
-@media (max-width: 479px) {
-  .cspot__sidename { display: none; }
-}
-
-/* ----------------------------------------------------------------- meta */
-
 .cspot__meta {
-  /* Imported packshots can occupy their full canvas. Keep metadata in normal
-     flow with a real gap so artwork can never cover the title or controls. */
-  margin-top: 8px;
+  position: relative;
+  margin: 0 auto;
+  max-width: 470px;
   animation: cspot-meta-in var(--cspot-meta-dur) var(--cspot-ease) both;
 }
 @keyframes cspot-meta-in {
-  from { opacity: 0; transform: translate3d(0, 8px, 0); }
-  to   { opacity: 1; transform: none; }
+  from { opacity: 0; transform: translate3d(0, 7px, 0); }
+  to { opacity: 1; transform: none; }
 }
-
 .cspot__headline {
-  margin: 0 0 1px;
+  margin: 0 0 5px;
   color: var(--cspot-ink-mute);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 .cspot__name {
   margin: 0;
   color: var(--slv2-ink, #16211B);
   font-family: var(--font-serif, Georgia, serif);
   font-size: var(--cspot-name-size);
-  font-weight: 600;
-  line-height: 1.2;
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 .cspot__facts {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin: 2px 0 0;
+  column-gap: 10px;
+  row-gap: 4px;
+  margin: 9px 0 0;
   color: var(--cspot-ink-mute);
   font-size: 12px;
+  line-height: 1.5;
 }
 .cspot__facts:empty { display: none; }
-.cspot__form {
-  padding: 2px 7px;
-  border: 1px solid rgba(24, 32, 26, 0.22);
-  border-radius: var(--slv2-r-ui, 2px);
-}
-.cspot__rating { display: inline-flex; align-items: center; gap: 4px; }
+.cspot__price { font-weight: 700; font-size: 14px; }
+.cspot__form { padding-left: 10px; border-left: 1px solid rgba(24, 32, 26, 0.24); }
+.cspot__form:first-child { padding-left: 0; border-left: 0; }
+.cspot__rating { display: inline-flex; align-items: center; gap: 3px; }
 .cspot__rating svg { color: var(--slv2-accent-primary, #1E3A2F); }
 .cspot__reviews { color: var(--cspot-ink-mute); }
 .cspot__subline {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   color: var(--cspot-ink-mute);
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
-
+.cspot__actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
 .cspot__cta {
   display: inline-flex;
+  justify-content: center;
   align-items: center;
-  gap: 7px;
+  gap: 24px;
   min-height: 44px;
-  margin-top: 6px;
-  padding: 0 20px;
+  padding: 0 24px;
   border-radius: var(--slv2-r-ui, 2px);
   background: var(--slv2-cta-primary-bg, #1E3A2F);
   color: var(--slv2-cta-primary-text, #FBF8F1);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   text-decoration: none;
 }
-.cspot__cta:hover { opacity: 0.92; }
-
-/* ------------------------------------------------------------------ nav */
-
-.cspot__nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin-top: 4px;
-}
+.cspot__cta svg { transition: transform 180ms ease-out; }
+.cspot__cta:hover svg { transform: translateX(3px); }
 .cspot__arrow {
   display: grid;
   place-items: center;
+  flex: 0 0 44px;
   width: 44px;
   height: 44px;
-  border: 1px solid rgba(24, 32, 26, 0.14);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.74);
+  padding: 0;
+  border: 1px solid rgba(24, 32, 26, 0.25);
+  border-radius: 50%;
+  background: transparent;
   color: var(--slv2-ink, #16211B);
   cursor: pointer;
+  transition: background-color 180ms ease-out;
 }
-.cspot__arrow:hover { background: rgba(255, 255, 255, 0.9); }
-.cspot__pips { display: inline-flex; gap: 5px; }
+.cspot__arrow:hover { background-color: rgba(24, 32, 26, 0.06); }
+.cspot__nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+  margin-top: 3px;
+  color: var(--cspot-ink-mute);
+}
+.cspot__hint { font-size: 9px; letter-spacing: 0.035em; }
+.cspot__pips { display: inline-flex; flex-wrap: nowrap; gap: 4px; max-width: 50%; }
 .cspot__pip {
-  width: 14px;
-  height: 2px;
-  background: rgba(24, 32, 26, 0.30);
-  transition: width var(--cspot-dur) var(--cspot-ease), background var(--cspot-dur) var(--cspot-ease);
+  flex: 0 1 5px;
+  width: 5px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(24, 32, 26, 0.24);
 }
-.cspot__pip.is-on { width: 24px; background: var(--slv2-accent-primary, #1E3A2F); }
+.cspot__pip.is-on { flex-basis: 18px; width: 18px; background: var(--slv2-accent-primary, #1E3A2F); }
+.cspot__position { font-size: 10px; font-variant-numeric: tabular-nums; }
+.cspot__rotation {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  margin-left: -7px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
 
-/* ---------------------------------------------------------- tablet 768 */
-
-@media (min-width: 768px) {
-  .cspot {
-    /* Same shape language, shallower: the field is proportionally less
-       over-wide and the radius smaller, so the corner lift stays around 55px
-       instead of scaling with the viewport. Geometry is otherwise untouched. */
-    --cspot-arc-w: 116%;
-    --cspot-arc-h: 100%;
-    --cspot-arc-curve: 16%;
-    --cspot-h: 528px;
-    /* Pinned so the tightened mobile values above cannot leak up. Neither this
-       pass nor the previous one re-art-directed tablet or desktop. */
+/* Container units keep neighbouring seats inside the Admin preview as well
+   as the storefront. Breakpoints retain independent art direction. */
+@container (min-width: 768px) {
+  .cspot__inner, .cspot__backdrop {
+    --cspot-h: 344px;
+    --cspot-shot-h: 88%;
+    --cspot-seat-w: 36%;
+    --cspot-side-x: 29cqw;
+    --cspot-side-scale: 0.6;
     --cspot-active-y: -12px;
-    --cspot-side-y: 20px;
-    --cspot-pad-top: 20px;
-    --cspot-pad-bottom: 22px;
-    --cspot-seat-w: 46%;
-    --cspot-shot-h: 64%;
-    --cspot-side-scale: 0.74;
-    --cspot-side-x: 30vw;
-    --cspot-side-op: 0.72;
-    --cspot-name-size: 26px;
-    --cspot-pad-top: 20px;
-    --cspot-pad-bottom: 22px;
-  }
-  .cspot__sidename { max-width: 26vw; font-size: 12px; }
-  .cspot__meta { margin-top: 0; }
-}
-
-/* --------------------------------------------------------- desktop 1440 */
-
-@media (min-width: 1100px) {
-  .cspot {
-    /* 420px stage + 30px section padding = a compact 450px composition. */
+    --cspot-side-y: -40px;
+    --cspot-arc-h: 294px;
     --cspot-arc-w: 110%;
-    --cspot-arc-h: 100%;
-    --cspot-arc-curve: 14%;
-    --cspot-h: 420px;
-    --cspot-active-y: -12px;   /* pinned — see the tablet block */
-    --cspot-side-y: 20px;
-    --cspot-seat-w: 42%;
-    --cspot-shot-h: 96%;
-    --cspot-side-scale: 0.64;
-    /* A compact fixed offset makes the three products read as one group. */
-    --cspot-side-x: 220px;
-    --cspot-side-op: 0.68;
+    --cspot-arc-curve: 46%;
     --cspot-name-size: 30px;
-    --cspot-pad-top: 15px;
-    --cspot-pad-bottom: 15px;
   }
-  /* Editorial: copy on the left, stage centre, so the catalogue below is not
-     pushed off the fold by a stacked hero. */
+  .cspot__inner { padding-inline: 32px; }
+  .cspot__eyebrow { min-height: 48px; font-size: 10px; }
+  .cspot__sidename { width: 110%; font-size: 17px; }
+}
+@container (min-width: 1100px) {
+  .cspot__inner, .cspot__backdrop {
+    --cspot-h: 386px;
+    --cspot-seat-w: 40%;
+    --cspot-shot-h: 88%;
+    --cspot-side-scale: 0.57;
+    --cspot-side-x: min(17cqw, 225px);
+    --cspot-active-y: -12px;
+    --cspot-side-y: -30px;
+    --cspot-arc-w: 74%;
+    --cspot-arc-h: 330px;
+    --cspot-arc-curve: 48%;
+    --cspot-name-size: 36px;
+  }
+  .cspot__backdrop { left: 44%; }
+  .cspot__bg { width: 120%; }
   .cspot__inner {
+    padding-block: 18px 24px;
     display: grid;
-    grid-template-columns: minmax(260px, 280px) minmax(0, 1fr);
-    align-items: center;
-    gap: 24px;
+    grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
+    grid-template-rows: 1fr auto auto 1fr;
+    column-gap: 42px;
     text-align: left;
   }
-  .cspot__eyebrow { grid-column: 1; margin-bottom: 8px; align-self: end; }
-  .cspot__meta { grid-column: 1; grid-row: 2; margin-top: 0; align-self: start; }
-  .cspot__nav { margin-top: 12px; }
-  .cspot__stage { grid-column: 2; grid-row: 1 / span 3; }
-  .cspot__nav { grid-column: 1; grid-row: 3; justify-content: flex-start; align-self: start; }
+  .cspot__eyebrow { grid-column: 1; grid-row: 1; align-self: end; justify-content: flex-start; gap: 14px; }
+  .cspot__meta { grid-column: 1; grid-row: 2; margin: 0; }
+  .cspot__stage { grid-column: 2; grid-row: 1 / span 4; }
+  .cspot__actions { grid-column: 1; grid-row: 3; justify-content: flex-start; margin-top: 22px; }
+  .cspot__nav { grid-column: 1; grid-row: 4; justify-content: flex-start; align-self: start; }
   .cspot__facts { justify-content: flex-start; }
-  .cspot__sidename { display: none; }
+  .cspot__sidename { font-size: 17px; }
+  .cspot__hint { display: none; }
 }
 
-/* ------------------------------------------------------- reduced motion */
-
-/* Movement is removed; the product still changes, just instantly. The stage
-   stays usable — this is a preference about motion, not about content. */
+/* Reduced motion is immediate, including background and text. */
 @media (prefers-reduced-motion: reduce) {
-  .cspot,
-  .cspot__bg,
-  .cspot__seat,
-  .cspot__pip {
-    transition: none !important;
-  }
-  .cspot__meta { animation: none !important; }
+  .cspot *, .cspot *::before, .cspot *::after { animation: none !important; transition: none !important; }
 }
-.cspot--still .cspot__seat,
-.cspot--still .cspot__bg,
-.cspot--still .cspot__pip { transition: none !important; }
-.cspot--still .cspot__meta { animation: cspot-fade-in var(--cspot-meta-dur) linear both; }
-@keyframes cspot-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.cspot--still * { animation: none !important; transition: none !important; }
 
-/* ============================================================
-   CATEGORY PAGE DENSITY
-
-   The category page used to open with a tall head, a big title, a blurb, a
-   chip rail and only then the grid. With a 470px stage in the middle of that,
-   the catalogue would start most of a second screen down. These rules tighten
-   the surrounding chrome so the stage earns its height and the grid still
-   arrives quickly. Scoped to .v2-shop--spotlit so Shop is untouched.
-   ============================================================ */
-
+/* Category-only density; ProductBrowser continues to own all catalogue logic. */
 .v2-shop--spotlit .v2-shop__head--tight { padding-top: 10px; padding-bottom: 8px; }
-.v2-shop--spotlit .v2-shop__head--tight .v2-shop__title {
-  font-size: 23px;
-  line-height: 1.15;
-  margin: 0;
-}
-.v2-shop--spotlit .v2-shop__head--tight .v2-shop__lede {
-  margin-top: 4px;
-  font-size: 12.5px;
-  line-height: 1.45;
-}
-/* The sibling rail sits right under the stage, and the browser right under
-   that — no decorative gaps between the three. */
-/* Spotlight -> chips -> search -> filter row -> grid. Each of these carried
-   its own comfortable margin, and stacked they put 114px of nothing between
-   the stage and the filter row. Trimmed to margins that still separate the
-   bands without a decorative void; the search box and the filter row are real
-   controls and keep their full height. All scoped to .v2-shop--spotlit, so
-   Shop and the un-spotlit pages are untouched. */
+.v2-shop--spotlit .v2-shop__head--tight .v2-shop__title { font-size: 23px; line-height: 1.15; margin: 0; }
+.v2-shop--spotlit .v2-shop__head--tight .v2-shop__lede { margin-top: 4px; font-size: 12.5px; line-height: 1.45; }
 .v2-shop--spotlit .v2-shop__cats { margin-top: 8px; margin-bottom: 0; }
 .v2-shop--spotlit .v2-shop__search { margin-top: 8px; }
 .v2-shop--spotlit .v2-flt { margin-top: 8px; }
 .v2-shop--spotlit .v2-pb { padding-top: 0; }
-
 @media (min-width: 768px) {
   .v2-shop--spotlit .v2-shop__head--tight { padding-top: 16px; }
   .v2-shop--spotlit .v2-shop__head--tight .v2-shop__title { font-size: 28px; }
-  .v2-shop--spotlit .v2-shop__head--tight .v2-shop__lede { font-size: 13.5px; margin-top: 5px; }
 }
 @media (min-width: 1100px) {
   .v2-shop--spotlit .v2-shop__head--tight .v2-shop__title { font-size: 32px; }
 }
 
-/* A deep pool shows its position as text rather than as pips. 43 pips came to
-   812px in a 358px row, clipping the strip and pushing both arrows off a
-   390px screen. This is an INDICATOR limit only — the rotation pool itself is
-   uncapped, and every product in the category still takes a turn. */
-.cspot__position {
-  min-width: 58px;
-  color: var(--cspot-ink-mute);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
+.v2-shop--spotlit .v2-shop__related { padding-top: 24px; padding-bottom: 28px; }
+.v2-shop__related-title { margin: 0 0 12px; font-size: 20px; font-weight: 500; font-family: var(--font-serif, Georgia, serif); }

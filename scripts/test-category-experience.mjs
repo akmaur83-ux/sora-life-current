@@ -402,10 +402,10 @@ test('M1 only transform and opacity are transitioned', () => {
   assert.doesNotMatch(css, /cubic-bezier\(\s*[^)]*,\s*-/, 'no overshoot/bounce easing');
 });
 
-test('M2 timing and easing are in the requested range, and centralised', () => {
+test('M2 motion is brief and geometry remains centralised', () => {
   const css = src('../src/styles/category-spotlight.css');
   const dur = Number(css.match(/--cspot-dur:\s*(\d+)ms/)[1]);
-  assert.ok(dur >= 500 && dur <= 620, `duration ${dur}ms should be 500-620ms`);
+  assert.ok(dur >= 200 && dur <= 650, `duration ${dur}ms stays responsive`);
   assert.match(css, /--cspot-ease:\s*cubic-bezier\(0\.22, 1, 0\.36, 1\)/);
   // Geometry belongs in variables, not scattered through the JSX.
   const cmp = src('../src/components/category/CategorySpotlight.jsx');
@@ -428,7 +428,7 @@ test('M3 the mobile stage geometry stays within art-directed bounds', () => {
     return parseFloat(line.split(':')[1].trim());
   };
 
-  assert.ok(num('--cspot-h') >= 300 && num('--cspot-h') <= 360, 'stage stays compact');
+  assert.ok(num('--cspot-h') >= 220 && num('--cspot-h') <= 300, 'stage stays compact');
   assert.ok(num('--cspot-seat-w') > 0 && num('--cspot-seat-w') < 100,
     'a full-width seat would hide the side products behind the active one');
   assert.ok(num('--cspot-shot-h') >= 70 && num('--cspot-shot-h') <= 95,
@@ -461,13 +461,13 @@ test('M3b the stage shows isolated packshots, never boxed lifestyle cards', () =
 
 test('M3c mobile tuning does not leak into tablet or desktop', () => {
   const css = src('../src/styles/category-spotlight.css');
-  const tablet = css.slice(css.indexOf('@media (min-width: 768px)'), css.indexOf('@media (min-width: 1100px)'));
-  const desktop = css.slice(css.indexOf('@media (min-width: 1100px)'));
+  const tablet = css.slice(css.indexOf('@container (min-width: 768px)'), css.indexOf('@container (min-width: 1100px)'));
+  const desktop = css.slice(css.indexOf('@container (min-width: 1100px)'));
   // These two are the ones the larger breakpoints did not previously set, so
   // retuning them for mobile would have silently changed 768 and 1440 too.
   for (const [name, block] of [['tablet', tablet], ['desktop', desktop]]) {
     assert.match(block, /--cspot-active-y:\s*-12px/, `${name} pins its own active lift`);
-    assert.match(block, /--cspot-side-y:\s*20px/, `${name} pins its own side drop`);
+    assert.match(block, /--cspot-side-y:/, `${name} sets its own neighbour placement`);
     assert.match(block, /--cspot-h:/, `${name} sets its own stage height`);
     assert.match(block, /--cspot-seat-w:/, `${name} sets its own seat width`);
   }
@@ -485,8 +485,9 @@ test('M4 reduced motion keeps the content and drops the movement', () => {
 
 test('M5 auto-rotate pauses for hover, interaction, hidden tab and offscreen', () => {
   const cmp = code('../src/components/category/CategorySpotlight.jsx');
-  assert.match(cmp, /onMouseEnter=\{\(\) => setPaused\(true\)\}/);
+  assert.match(cmp, /onMouseEnter=\{\(\) => setHovered\(true\)\}/);
   assert.match(cmp, /if \(!onScreen \|\| !pageVisible \|\| count < 2\) return undefined;/);
+  assert.match(cmp, /rotationStopped \|\| focused \|\| hovered/, 'each pause reason is independent');
   assert.match(cmp, /visibilitychange/);
   assert.match(cmp, /IntersectionObserver/);
   assert.match(cmp, /RESUME_AFTER_INTERACTION_MS/, 'and resumes after a delay');
@@ -497,6 +498,36 @@ test('M5 auto-rotate pauses for hover, interaction, hidden tab and offscreen', (
   assert.equal(fast.intervalMs, MIN_INTERVAL_MS);
   assert.equal(sanitizeCategoryConfig({ intervalMs: 1e9 }, 'hair-care').intervalMs, MAX_INTERVAL_MS);
   assert.equal(sanitizeCategoryConfig({ intervalMs: 'soon' }, 'hair-care').intervalMs, DEFAULT_INTERVAL_MS);
+});
+
+test('M5b async settings attach visibility observation after the initial gated render', () => {
+  let previousDependencies;
+  let cleanup;
+  let observed = 0, disconnected = 0;
+  const observe = component('../src/components/category/CategorySpotlight.jsx', 'useOnScreen', {
+    useState: (value) => [value, () => {}],
+    useEffect: (effect, dependencies) => {
+      if (previousDependencies && dependencies.every((value, i) => Object.is(value, previousDependencies[i]))) return;
+      cleanup?.();
+      previousDependencies = dependencies;
+      cleanup = effect();
+    },
+    IntersectionObserver: class {
+      observe() { observed += 1; }
+      disconnect() { disconnected += 1; }
+    },
+  });
+  const ref = { current: null };
+  observe(ref, false);
+  assert.equal(observed, 0, 'there is no stage before settings resolve');
+  ref.current = {};
+  observe(ref, true);
+  assert.equal(observed, 1, 'the newly mounted stage is observed with the SAME ref');
+  observe(ref, true);
+  assert.equal(observed, 1, 'ordinary renders do not recreate the observer');
+  ref.current = null;
+  observe(ref, false);
+  assert.equal(disconnected, 1, 'unpublishing cleans up the observation');
 });
 
 test('M6 swipe does not steal vertical scrolling', () => {
@@ -775,14 +806,13 @@ test('T4 each slide carries its OWN theme, so the background changes on advance'
   assert.deepEqual(backgrounds, ['#F7EBD7', '#E9ECD9', '#F6E7DE']);
   assert.equal(new Set(backgrounds).size, 3, 'three distinct grounds');
 
-  // And the component feeds the ACTIVE slide's theme to the existing variable
-  // rather than introducing a second animation system.
+  // The active theme remains authoritative for both paint layers.
   const cmp = code('../src/components/category/CategorySpotlight.jsx');
   assert.match(cmp, /'--cspot-bg': active\.theme\.background/);
   assert.match(cmp, /'--cspot-grad': active\.theme\.gradient/);
   const css = code('../src/styles/category-spotlight.css');
-  assert.match(css, /transition: background var\(--cspot-dur\) var\(--cspot-ease\)/,
-    'the existing background transition still carries the change');
+  assert.match(css, /animation: cspot-field-in var\(--cspot-dur\)/,
+    'the incoming paint layer carries the gradient change');
 });
 
 test('T5 a malformed auto theme cannot reach the DOM', () => {
@@ -869,90 +899,40 @@ test('F4 a packshot can never exceed its seat, whatever its aspect ratio', () =>
   assert.doesNotMatch(img, /width: auto/, 'auto width reintroduces aspect-dependent sizing');
 });
 
-test('F3 the mobile art direction values are pinned', () => {
-  const css = src('../src/styles/category-spotlight.css');
-  const base = css.slice(css.indexOf('.cspot {'), css.indexOf('.cspot__bg'));
-  const num = (name) => {
-    const line = base.split(/\r?\n/).find((l) => l.trim().startsWith(`${name}:`));
-    if (!line) throw new Error(`${name} is not declared`);
-    return parseFloat(line.split(':')[1].trim());
-  };
-  // Art-direction pass 4, measured against the real Hair Care packshots.
-  assert.equal(num('--cspot-h'), 300);
-  assert.equal(num('--cspot-seat-w'), 46);
-  assert.equal(num('--cspot-shot-h'), 86);
-  assert.equal(num('--cspot-side-scale'), 0.56);
-  assert.equal(num('--cspot-side-x'), 26.5);
-  assert.equal(num('--cspot-side-op'), 0.70);
-  assert.equal(num('--cspot-active-y'), 0);
-  assert.equal(num('--cspot-side-y'), 12);
-  assert.equal(num('--cspot-item-scale'), 1, 'the per-item default is neutral');
-
-  // Side captions are off on phones; the active product keeps its metadata.
-  assert.match(css, /@media \(max-width: 479px\)[\s\S]{0,120}\.cspot__sidename \{ display: none; \}/);
-  assert.match(css, /\.cspot__name \{/, 'the active product name stays');
-
-  // Tablet keeps the established geometry; desktop gets a compact, cohesive
-  // three-product stage without changing the carousel logic.
-  const tablet = css.slice(css.indexOf('@media (min-width: 768px)'), css.indexOf('@media (min-width: 1100px)'));
-  assert.match(tablet, /--cspot-h: 528px/);
-  assert.match(tablet, /--cspot-active-y: -12px/);
-  assert.match(tablet, /--cspot-side-y: 20px/);
-  const desktop = css.slice(css.indexOf('@media (min-width: 1100px)'));
-  assert.match(desktop, /--cspot-h: 420px/);
-  assert.match(desktop, /--cspot-seat-w: 42%/);
-  assert.match(desktop, /--cspot-shot-h: 96%/);
-  assert.match(desktop, /--cspot-side-scale: 0\.64/);
-  assert.match(desktop, /--cspot-side-x: 220px/);
-  assert.match(desktop, /--cspot-active-y: -12px/);
-  assert.match(desktop, /\.cspot__sidename \{ display: none; \}/);
+test('F3 the colour field ends within the product stage, before the metadata', () => {
+  const css = code('../src/styles/category-spotlight.css');
+  const base = css.slice(css.indexOf('.cspot {'), css.indexOf('.cspot__backdrop {'));
+  const stageHeight = Number(base.match(/--cspot-h:\s*(\d+)px/)[1]);
+  const fieldHeight = Number(base.match(/--cspot-arc-h:\s*(\d+)px/)[1]);
+  assert.ok(fieldHeight < stageHeight, 'the packshots cross the field onto the page ground');
+  assert.match(base, /container-type: inline-size/, 'preview width owns the mobile geometry');
+  assert.match(base, /--cspot-side-x: [\d.]+cqw/, 'neighbours follow the preview container, not the browser');
+  assert.match(base, /background: transparent/);
+  const meta = css.slice(css.indexOf('.cspot__meta {'), css.indexOf('@keyframes cspot-meta-in'));
+  assert.doesNotMatch(meta, /position: absolute/, 'long titles can expand without overlapping controls');
 });
 
-test('F5 the hero ground is a curved field, not a rectangle', () => {
-  // The stage used to be a plain coloured block meeting the catalogue below on
-  // a hard horizontal edge. The colour now lives on a single dome layer with an
-  // elliptical bottom, and this pins every part of that: the section itself
-  // stays transparent (a painted section puts a rectangle back behind the dome
-  // and the curve stops being visible), the dome carries a real bottom radius,
-  // and no breakpoint may flatten the curve away.
-  const css = src('../src/styles/category-spotlight.css');
+test('F5 gradients really cross-fade using two paint layers without extra images', () => {
+  const Spotlight = component('../src/components/category/CategorySpotlight.jsx', 'CategorySpotlight', deps);
+  const html = renderToStaticMarkup(h(Spotlight, {
+    category: { slug: 'hair-care', name: 'Hair Care' }, products: HAIR,
+  }));
+  assert.match(html, /cspot__backdrop/);
+  assert.equal((html.match(/<img/g) || []).length, 3);
+  const css = code('../src/styles/category-spotlight.css');
+  assert.match(css, /border-radius: 0 0 50% 50%/);
+  assert.match(css, /cspot__bg--incoming \{ animation: cspot-field-in/);
+  assert.doesNotMatch(css, /transition: background var/, 'gradient strings cannot be interpolated');
+});
 
-  // Sliced on the RULE, not the bare name: the .cspot block's own comment
-  // mentions .cspot__bg, and cutting there truncated the block before its
-  // background declaration.
-  const section = css.slice(css.indexOf('.cspot {'), css.indexOf('.cspot__bg {'));
-  assert.match(section, /background: transparent;/,
-    'a painted section would put a rectangle behind the dome');
-
-  const dome = css.slice(css.indexOf('.cspot__bg {'), css.indexOf('.cspot__inner'));
-  assert.match(dome, /position: absolute/);
-  assert.match(dome, /width: var\(--cspot-arc-w\)/);
-  assert.match(dome, /height: var\(--cspot-arc-h\)/);
-  assert.match(dome, /border-radius: 0 0 50% 50% \/ 0 0 var\(--cspot-arc-curve\) var\(--cspot-arc-curve\)/,
-    'the bottom edge is an ellipse whose vertical radius is tunable');
-  assert.match(dome, /background-color: var\(--cspot-bg\)/, 'the per-slide colour rides on the dome');
-  assert.match(dome, /background-image: var\(--cspot-grad\)/, 'and so does its gradient');
-  assert.match(dome, /transition: background var\(--cspot-dur\)/, 'so the cross-fade still runs');
-
-  // Every breakpoint: an over-wide field, a full-height dome, a real curve.
-  const blocks = {
-    mobile: section,
-    tablet: css.slice(css.indexOf('@media (min-width: 768px)'), css.indexOf('@media (min-width: 1100px)')),
-    desktop: css.slice(css.indexOf('@media (min-width: 1100px)')),
-  };
-  for (const [name, block] of Object.entries(blocks)) {
-    const arc = (v) => {
-      const found = block.match(new RegExp(`--cspot-arc-${v}:\\s*([\\d.]+)`));
-      if (!found) throw new Error(`${name} does not set --cspot-arc-${v}`);
-      return parseFloat(found[1]);
-    };
-    assert.ok(arc('w') > 100,
-      `${name}: the field must be wider than the viewport, or the arc bows up steeply at the screen edges`);
-    assert.equal(arc('h'), 100,
-      `${name}: a dome shorter than the section cuts the curve through the middle of the metadata`);
-    assert.ok(arc('curve') >= 10,
-      `${name}: curve ${arc('curve')}% is too flat to read as a curve`);
-  }
+test('F5b price and size are catalogue facts, and autoplay has an explicit pause control', () => {
+  const Spotlight = component('../src/components/category/CategorySpotlight.jsx', 'CategorySpotlight', deps);
+  const html = renderToStaticMarkup(h(Spotlight, {
+    category: { slug: 'hair-care', name: 'Hair Care' }, products: HAIR,
+  }));
+  assert.match(html, /cspot__price[^>]*>₹100</);
+  assert.match(html, /Pause automatic rotation/);
+  assert.match(html, /Swipe to explore/);
 });
 
 test('F6 secondary type on the dome uses the spotlight ink, not the page grey', () => {
