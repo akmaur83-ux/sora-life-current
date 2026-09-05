@@ -8,6 +8,7 @@
 // ============================================================
 import { supabase } from './supabase.js';
 import { BIOSASH_PRODUCTS } from '../data/biosash.js';
+import { normalizeContentPatch } from './productContent.js';
 import {
   MediaOperationError, persistUploadedMedia, removeMediaObject, settlePrimaryMedia, commitStagedMedia,
   IMAGE_UPLOAD_TYPES, IMAGE_UPLOAD_MAX_BYTES, validateImageMetadata, validateImageUpload, validateVideoUpload,
@@ -76,6 +77,7 @@ export function dbRowToProduct(row) {
     keyClaims: row.key_claims || null,
     netContent: row.net_content || null,
     contentSource: row.content_source || null,
+    contentUpdatedAt: row.content_updated_at || null,
   };
 }
 
@@ -117,14 +119,46 @@ function productToDbRow(p) {
   // DELIBERATELY EMPTIED (admin cleared the field -> write the empty value),
   // so '' and [] still go through when a caller actually supplies them.
   //
-  // SCOPE, so nobody reads more into this than it does: ProductForm always
-  // sends both keys, so this does NOT stop a form loaded before the ingest
-  // from saving its stale '' back over a fresh description. That is a
-  // read-modify-write race and it needs the form to refetch, or an
-  // updated_at precondition on the write — a bigger change than this one.
-  // What this closes is the whole class of caller that simply omits a field.
+  // SCOPE: ProductForm always sends both keys, so on its own this does not
+  // stop a form loaded before an import from saving its stale '' back over
+  // fresh copy. That read-modify-write race is closed separately, by the
+  // updated_at precondition in adminUpdateProduct — which covers the whole
+  // row, these content columns included. What this clause closes is the
+  // different, wider class of caller that simply omits a field.
   if (p.description !== undefined && p.description !== null) row.description = p.description;
   if (Array.isArray(p.gallery)) row.gallery_urls = p.gallery;
+
+  // ---- content columns (migration 0025) ----
+  //
+  // Same absent-or-present rule, and it matters more here than anywhere else:
+  // the Biosash ingest is FILL-ONLY and will never restore what an admin save
+  // destroys. A form that does not carry `benefits` must leave the column
+  // alone, not blank forty ingested rows.
+  //
+  // Shapes are normalised through the shared module rather than trusted from
+  // the caller. React cannot render an object as a child, so a malformed
+  // benefits row reaching the PDP is a white screen, and the admin editor is
+  // not the only caller — the CSV importer writes through here too.
+  const contentInput = {};
+  const carry = (formKey, dbKey) => {
+    if (p[formKey] !== undefined) contentInput[dbKey] = p[formKey];
+  };
+  carry('brand', 'brand');
+  carry('netContent', 'net_content');
+  carry('keyClaims', 'key_claims');
+  carry('benefits', 'benefits');
+  carry('ingredients', 'ingredients');
+  carry('howToUse', 'how_to_use');
+  carry('specifications', 'specifications');
+  Object.assign(row, normalizeContentPatch(contentInput));
+
+  // Provenance, so the coverage view can tell ingested content from authored
+  // content. Only stamped when the caller actually touched a content field —
+  // saving the Basics tab must not relabel ingested copy as hand-written.
+  if (Object.keys(contentInput).length > 0) {
+    row.content_source = p.contentSource || 'manual';
+    row.content_updated_at = new Date().toISOString();
+  }
 
   return row;
 }

@@ -5,12 +5,18 @@ import MediaGallery from '../components/MediaGallery.jsx';
 import { categories as staticCategories } from '../../data/categories.js';
 import { money } from '../../lib/format.js';
 import { mediaFailureMessage } from '../../lib/productMediaOperations.js';
+import ContentEditor from '../components/ContentEditor.jsx';
 
 const DISCOUNT_TIERS = [0, 10, 15, 18, 20];
 const empty = {
   name: '', slug: '', description: '', category: staticCategories[0]?.slug || '',
   image: '', gallery: [], originalPrice: '', discountPercent: 10, form: '', inStock: true,
   permalink: '', isNew: false, isBestseller: false, isFeatured: false, rating: 0, reviewCount: 0, isActive: true,
+  // Content columns (0025). null, not '' or [] — the save path treats an
+  // absent value as "leave the column alone", and a new product genuinely
+  // has no content rather than empty content.
+  brand: null, netContent: null, keyClaims: null, benefits: null,
+  ingredients: null, howToUse: null, specifications: null,
 };
 
 export default function ProductForm() {
@@ -22,6 +28,9 @@ export default function ProductForm() {
   // Set when a save is refused as stale, so the error can offer a reload
   // rather than just describing the problem.
   const [staleConflict, setStaleConflict] = useState(false);
+  const [tab, setTab] = useState('basics');
+  const [loadedProduct, setLoadedProduct] = useState(null);
+  const [brandOptions, setBrandOptions] = useState([]);
   const [values, setValues] = useState(empty);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -64,7 +73,15 @@ export default function ProductForm() {
         form: p.form || '', inStock: p.inStock !== undefined ? p.inStock : p.stock > 0, permalink: p.permalink || '',
         isNew: p.isNew, isBestseller: p.isBestseller, isFeatured: p.isFeatured,
         rating: p.rating, reviewCount: p.reviewCount, isActive: p.isActive,
+        brand: p.brand ?? null, netContent: p.netContent ?? null,
+        keyClaims: p.keyClaims ?? null, benefits: p.benefits ?? null,
+        ingredients: p.ingredients ?? null, howToUse: p.howToUse ?? null,
+        specifications: p.specifications ?? null,
       });
+      setLoadedProduct(p);
+      // Brand suggestions come from what the catalogue already uses, so the
+      // spelling stays consistent without a fixed list to maintain.
+      setBrandOptions([...new Set(list.map((x) => x.brand).filter(Boolean))].sort());
       if (!DISCOUNT_TIERS.includes(p.discountPercent)) setCustomDiscount(true);
       setLoading(false);
     }).catch((e) => { setErr(e.message || String(e)); setLoading(false); });
@@ -107,6 +124,16 @@ export default function ProductForm() {
         isNew: values.isNew, isBestseller: values.isBestseller, isFeatured: values.isFeatured,
         rating: Number(values.rating) || 0, reviewCount: Number(values.reviewCount) || 0,
         isActive: values.isActive,
+        // Always sent, so clearing a field in the editor genuinely clears it.
+        // Shapes are normalised in productToDbRow; this passes them straight
+        // through rather than reimplementing the rules a second time.
+        brand: values.brand,
+        netContent: values.netContent,
+        keyClaims: values.keyClaims,
+        benefits: values.benefits,
+        ingredients: values.ingredients,
+        howToUse: values.howToUse,
+        specifications: values.specifications,
       };
       if (isEdit) {
         const saved = await adminUpdateProduct(dbId, payload, loadedUpdatedAt.current);
@@ -178,6 +205,19 @@ export default function ProductForm() {
       )}
 
       <form onSubmit={onSubmit}>
+        <div className="adm-chipbar" role="tablist">
+          <button type="button" role="tab" aria-selected={tab === 'basics'}
+            className={`adm-chip ${tab === 'basics' ? 'active' : ''}`}
+            onClick={() => setTab('basics')}>Basics, pricing &amp; media</button>
+          <button type="button" role="tab" aria-selected={tab === 'content'}
+            className={`adm-chip ${tab === 'content' ? 'active' : ''}`}
+            onClick={() => setTab('content')}>Product page content</button>
+        </div>
+
+        {/* Both panels stay mounted and are hidden with the `hidden` attribute
+            rather than unmounted. Switching tabs mid-edit must not discard
+            half-filled benefit rows, and one submit button saves both. */}
+        <div hidden={tab !== 'basics'}>
         <div className="surface">
           <h2>Basics</h2>
           <div className="field">
@@ -277,6 +317,17 @@ export default function ProductForm() {
               <input className="input" type="number" min="0" value={values.reviewCount} onChange={(e) => set('reviewCount', e.target.value)} />
             </div>
           </div>
+        </div>
+
+        </div>
+
+        <div hidden={tab !== 'content'}>
+          <ContentEditor
+            values={values}
+            onChange={setValues}
+            product={loadedProduct}
+            brandOptions={brandOptions}
+          />
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>

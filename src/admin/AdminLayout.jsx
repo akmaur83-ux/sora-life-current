@@ -5,6 +5,7 @@ import { branding } from '../lib/settings.js';
 const NAV = [
   { to: '/admin', label: 'Dashboard', end: true },
   { to: '/admin/products', label: 'Products' },
+  { to: '/admin/content', label: 'Product Content' },
   { to: '/admin/orders', label: 'Orders' },
   { to: '/admin/pricing', label: 'Pricing' },
   { to: '/admin/variants', label: 'Variants' },

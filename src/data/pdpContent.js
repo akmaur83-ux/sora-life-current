@@ -174,7 +174,14 @@ export function benefitsFor(product) {
       const text = String(b.description || '').trim();
       // A body with no heading is still a benefit; it just leads with itself.
       if (!label && !text) return null;
-      return { icon: String(b.icon || 'check'), label: label || text, text: label ? text : '' };
+      // A description identical to its title is not a description — it renders
+      // as "ZERO PRESERVATIVES / ZERO PRESERVATIVES", the same words twice in
+      // two weights. Nine such rows exist today because the Biosash ingest
+      // split a badge list into {title, description} pairs, and copy-paste
+      // will keep producing them. Suppressed at the shared helper so the PDP
+      // and the quick view agree without either one knowing why.
+      const body = label && text.toLowerCase() === label.toLowerCase() ? '' : text;
+      return { icon: String(b.icon || 'check'), label: label || text, text: label ? body : '' };
     }
     return null;
   }).filter(Boolean);

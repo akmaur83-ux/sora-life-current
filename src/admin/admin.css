@@ -545,3 +545,58 @@
 .adm-cx__fit { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px; }
 .adm-cx__fit .field { flex: 1 1 180px; min-width: 0; margin-bottom: 0; }
 .adm-cx__fit .btn { flex: 0 0 auto; }
+
+/* ---------------- product content editor + coverage ---------------- */
+/* Uses the existing admin tokens throughout — no new palette, no new scale. */
+.adm-cov { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-cov__pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 9px; border: 1px solid var(--line); border-radius: 999px;
+  font-size: 11.5px; background: #fff;
+}
+/* Populated vs empty has to read at a glance — that is the whole point of the
+   strip, so it is colour AND a filled/hollow mark, not colour alone. */
+.adm-cov__pill.is-on { border-color: #2C5341; color: #2C5341; background: #F0F6F2; }
+.adm-cov__pill.is-off { color: #8A958C; border-style: dashed; }
+.adm-cov__meta { font-size: 11.5px; margin: 10px 0 0; }
+
+.adm-rep { display: grid; gap: 8px; }
+.adm-rep__empty { margin: 0 0 4px; font-size: 12px; }
+.adm-rep__row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px;
+  padding: 8px; border: 1px solid var(--line); border-radius: 3px; background: #fff;
+}
+.adm-rep__fields { display: grid; gap: 6px; min-width: 0; }
+.adm-rep__ctl { display: flex; flex-direction: column; gap: 4px; }
+.adm-rep__num {
+  display: inline-grid; place-items: center; width: 22px; height: 22px;
+  border-radius: 999px; background: #1E3A2F; color: #fff;
+  font-size: 11px; font-weight: 700;
+}
+
+.adm-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.adm-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px;
+  background: #fff; font-size: 12px;
+}
+.adm-tag button { border: 0; background: none; cursor: pointer; color: #8A958C; font-size: 12px; padding: 0; }
+.adm-tags__add { display: flex; gap: 8px; }
+.adm-tags__add .input { max-width: 280px; }
+
+.adm-import { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.adm-import__list { max-height: 420px; overflow-y: auto; margin-top: 10px; }
+.adm-import__item {
+  padding: 8px 0; border-top: 1px solid var(--line-soft, #F0E9DB); font-size: 12px;
+}
+.adm-import__diff { margin-top: 3px; padding-left: 10px; font-size: 11.5px; line-height: 1.5; }
+.adm-import__diff.is-skip { opacity: .7; }
+.adm-import__field { display: inline-block; min-width: 110px; font-weight: 600; }
+/* before/after are truncated rather than wrapped: a JSON benefits array is
+   hundreds of characters and a diff list has to stay scannable. */
+.adm-import__before, .adm-import__after {
+  display: inline-block; max-width: 260px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
+}
+.adm-import__before { color: #9A3F33; }
+.adm-import__after { color: #2C5341; }
