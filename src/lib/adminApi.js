@@ -82,10 +82,8 @@ function productToDbRow(p) {
   const row = {
     name: p.name,
     slug: p.slug,
-    description: p.description || '',
     category: p.category,
     image_url: p.image || null,
-    gallery_urls: p.gallery || [],
     original_price: originalPrice,
     discount_percent: discountPercent,
     sale_price: originalPrice > 0 ? Math.round(originalPrice * (1 - discountPercent / 100)) : 0,
@@ -101,6 +99,30 @@ function productToDbRow(p) {
     sort_order: Number(p.sortOrder) || 0,
   };
   if (p.biosashId) row.biosash_id = p.biosashId;
+
+  // description and gallery_urls are ABSENT-OR-PRESENT, never defaulted.
+  //
+  // They used to read `p.description || ''` and `p.gallery || []`. Because
+  // adminUpdateProduct sends this whole object as an .update(), any caller
+  // that did not carry those keys wrote an empty string and an empty array
+  // over whatever the row held — destroying an ingested description and the
+  // validated gallery (the URL set that stopped the PDP's thumbnail strip
+  // rendering dead tiles) without ever intending to.
+  //
+  // Omitting the key leaves the column alone; PostgREST writes only what it is
+  // given. The distinction is ABSENT (key missing -> don't touch) versus
+  // DELIBERATELY EMPTIED (admin cleared the field -> write the empty value),
+  // so '' and [] still go through when a caller actually supplies them.
+  //
+  // SCOPE, so nobody reads more into this than it does: ProductForm always
+  // sends both keys, so this does NOT stop a form loaded before the ingest
+  // from saving its stale '' back over a fresh description. That is a
+  // read-modify-write race and it needs the form to refetch, or an
+  // updated_at precondition on the write — a bigger change than this one.
+  // What this closes is the whole class of caller that simply omits a field.
+  if (p.description !== undefined && p.description !== null) row.description = p.description;
+  if (Array.isArray(p.gallery)) row.gallery_urls = p.gallery;
+
   return row;
 }
 
