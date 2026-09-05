@@ -37929,12 +37929,13 @@
 	/**
 	 * True only while the stage is meaningfully on screen. Auto-rotation off
 	 * screen is wasted work and a wasted product impression, so it stops.
+	 * Reattach when async settings publish the DOM after the initial gated render.
 	 */
-	function useOnScreen(ref, threshold = 0.45) {
+	function useOnScreen(ref, mounted, threshold = 0.45) {
 	  const [onScreen, setOnScreen] = reactExports.useState(false);
 	  reactExports.useEffect(() => {
 	    const node = ref.current;
-	    if (!node) return undefined;
+	    if (!mounted || !node) return undefined;
 	    if (typeof IntersectionObserver !== 'function') {
 	      setOnScreen(true);
 	      return undefined;
@@ -37944,7 +37945,7 @@
 	    });
 	    io.observe(node);
 	    return () => io.disconnect();
-	  }, [ref, threshold]);
+	  }, [ref, mounted, threshold]);
 	  return onScreen;
 	}
 
@@ -37988,10 +37989,14 @@
 	  // the side it actually left towards rather than always the same way.
 	  const [dir, setDir] = reactExports.useState(1);
 	  const [paused, setPaused] = reactExports.useState(false);
+	  const [rotationStopped, setRotationStopped] = reactExports.useState(false);
+	  const [focused, setFocused] = reactExports.useState(false);
+	  const [hovered, setHovered] = reactExports.useState(false);
 	  const stageRef = reactExports.useRef(null);
 	  const resumeTimer = reactExports.useRef(null);
 	  const reducedMotion = useReducedMotion();
-	  const onScreen = useOnScreen(stageRef);
+	  const showSpotlight = preview ? items.length > 0 : spotlightVisible(slug, items, config);
+	  const onScreen = useOnScreen(stageRef, showSpotlight);
 	  const pageVisible = usePageVisible();
 	  const count = items.length;
 
@@ -38029,31 +38034,69 @@
 	  // there is one timer and no polling.
 	  reactExports.useEffect(() => {
 	    if (!config.autoRotate || paused || reducedMotion) return undefined;
+	    if (rotationStopped || focused || hovered) return undefined;
 	    if (!onScreen || !pageVisible || count < 2) return undefined;
 	    const t = setInterval(() => {
 	      setDir(1);
 	      setIndex(i => wrapIndex(i + 1, count));
 	    }, config.intervalMs);
 	    return () => clearInterval(t);
-	  }, [config.autoRotate, config.intervalMs, paused, reducedMotion, onScreen, pageVisible, count]);
+	  }, [config.autoRotate, config.intervalMs, paused, reducedMotion, onScreen, pageVisible, count, rotationStopped, focused, hovered]);
 
 	  // Pointer swipe. Tracked on the stage so a horizontal drag anywhere across
 	  // it works, and so a vertical scroll is never hijacked.
 	  const drag = reactExports.useRef(null);
+	  const suppressClickUntil = reactExports.useRef(0);
+	  const resetDrag = () => {
+	    drag.current = null;
+	    stageRef.current?.style.removeProperty('--cspot-drag');
+	    stageRef.current?.removeAttribute('data-dragging');
+	  };
 	  const onPointerDown = e => {
+	    if (e.button !== 0 || count < 2) return;
 	    drag.current = {
 	      x: e.clientX,
-	      y: e.clientY
+	      y: e.clientY,
+	      horizontal: false
 	    };
 	  };
-	  const onPointerUp = e => {
+	  const onPointerMove = e => {
 	    const start = drag.current;
-	    drag.current = null;
 	    if (!start) return;
 	    const dx = e.clientX - start.x;
 	    const dy = e.clientY - start.y;
+	    if (!start.horizontal) {
+	      if (Math.max(Math.abs(dx), Math.abs(dy)) < 10) return;
+	      if (Math.abs(dx) <= Math.abs(dy)) {
+	        resetDrag();
+	        return;
+	      }
+	      start.horizontal = true;
+	      e.currentTarget.setPointerCapture?.(e.pointerId);
+	      holdAutoRotate();
+	    }
+	    if (!reducedMotion) {
+	      e.currentTarget.dataset.dragging = 'true';
+	      e.currentTarget.style.setProperty('--cspot-drag', `${Math.max(-24, Math.min(24, dx * 0.16))}px`);
+	    }
+	  };
+	  const onPointerUp = e => {
+	    const start = drag.current;
+	    resetDrag();
+	    if (!start) return;
+	    const dx = e.clientX - start.x;
+	    const dy = e.clientY - start.y;
+	    if (start.horizontal) suppressClickUntil.current = Date.now() + 450;
 	    if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) <= Math.abs(dy)) return;
+	    suppressClickUntil.current = Date.now() + 450;
 	    go(dx < 0 ? 1 : -1);
+	  };
+	  // A swipe starting on the active link must never open its product page.
+	  const onStageClick = e => {
+	    if (Date.now() < suppressClickUntil.current) {
+	      e.preventDefault();
+	      e.stopPropagation();
+	    }
 	  };
 	  const onKeyDown = e => {
 	    if (e.key === 'ArrowRight') {
@@ -38071,7 +38114,7 @@
 	  // The storefront gate. A category that the owner has not switched on shows
 	  // nothing at all, whatever products it happens to contain. Preview bypasses
 	  // only this check — everything above it is the same code path.
-	  if (preview ? items.length === 0 : !spotlightVisible(slug, items, config)) return null;
+	  if (!showSpotlight) return null;
 	  const seats = [win.prev, win.active, win.next].filter(Boolean);
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
 	    className: `cspot${reducedMotion ? ' cspot--still' : ''}${active.framed ? ' cspot--framed' : ''}`
@@ -38084,19 +38127,23 @@
 	    },
 	    "aria-roledescription": "carousel",
 	    "aria-label": `${category.name} spotlight`,
-	    onMouseEnter: () => setPaused(true),
-	    onMouseLeave: () => {
-	      clearTimeout(resumeTimer.current);
-	      setPaused(false);
+	    onFocusCapture: () => setFocused(true),
+	    onBlurCapture: e => {
+	      if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false);
 	    },
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "cspot__bg",
-	      "aria-hidden": "true"
+	    onMouseEnter: () => setHovered(true),
+	    onMouseLeave: () => setHovered(false),
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(SpotlightBackdrop, {
+	      theme: active.theme
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "cspot__inner",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
 	        className: "cspot__eyebrow",
-	        children: category.name
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          children: "SORA LIFE"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          children: [category.name, " / The edit"]
+	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "sr-only",
 	        "aria-live": "polite",
@@ -38107,10 +38154,10 @@
 	        ref: stageRef,
 	        "data-dir": dir > 0 ? 'fwd' : 'back',
 	        onPointerDown: onPointerDown,
+	        onPointerMove: onPointerMove,
 	        onPointerUp: onPointerUp,
-	        onPointerCancel: () => {
-	          drag.current = null;
-	        },
+	        onPointerCancel: resetDrag,
+	        onClickCapture: onStageClick,
 	        onKeyDown: onKeyDown,
 	        tabIndex: count > 1 ? 0 : -1,
 	        role: count > 1 ? 'group' : undefined,
@@ -38168,7 +38215,10 @@
 	          children: active.name
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
 	          className: "cspot__facts",
-	          children: [active.form && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          children: [Number.isFinite(active.price) && active.price > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            className: "cspot__price",
+	            children: ["\u20B9", active.price.toLocaleString('en-IN')]
+	          }), active.form && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	            className: "cspot__form",
 	            children: active.form
 	          }), active.rating != null && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
@@ -38178,23 +38228,16 @@
 	              size: 13
 	            }), " ", active.rating.toFixed(1), active.reviewCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	              className: "cspot__reviews",
-	              children: [" (", active.reviewCount, ")"]
+	              children: [" \xB7 ", active.reviewCount, " reviews"]
 	            })]
 	          })]
 	        }), active.subline && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	          className: "cspot__subline",
 	          children: active.subline
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-	          to: `/product/${active.productSlug}`,
-	          className: "cspot__cta",
-	          children: ["View product ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "arrowRight",
-	            size: 16
-	          })]
 	        })]
-	      }, active.id), count > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "cspot__nav",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	      }, active.id), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "cspot__actions",
+	        children: [count > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	          type: "button",
 	          className: "cspot__arrow",
 	          onClick: () => go(-1),
@@ -38203,6 +38246,28 @@
 	            name: "chevronLeft",
 	            size: 18
 	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: `/product/${active.productSlug}`,
+	          className: "cspot__cta",
+	          children: ["View product ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "arrowRight",
+	            size: 16
+	          })]
+	        }), count > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "cspot__arrow",
+	          onClick: () => go(1),
+	          "aria-label": "Next product",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "chevronRight",
+	            size: 18
+	          })
+	        })]
+	      }), count > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "cspot__nav",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "cspot__hint",
+	          children: "Swipe to explore"
 	        }), count <= MAX_PIPS ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          className: "cspot__pips",
 	          "aria-hidden": "true",
@@ -38213,14 +38278,31 @@
 	          className: "cspot__position",
 	          "aria-hidden": "true",
 	          children: [win.active.index + 1, " / ", count]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        }), config.autoRotate && !reducedMotion && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
 	          type: "button",
-	          className: "cspot__arrow",
-	          onClick: () => go(1),
-	          "aria-label": "Next product",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	            name: "chevronRight",
-	            size: 18
+	          className: "cspot__rotation",
+	          onClick: () => {
+	            setRotationStopped(v => !v);
+	            if (rotationStopped) {
+	              clearTimeout(resumeTimer.current);
+	              setPaused(false);
+	              setFocused(false);
+	              setHovered(false);
+	            }
+	          },
+	          "aria-label": rotationStopped ? 'Resume automatic rotation' : 'Pause automatic rotation',
+	          "aria-pressed": rotationStopped,
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx("svg", {
+	            width: "12",
+	            height: "12",
+	            viewBox: "0 0 12 12",
+	            fill: "currentColor",
+	            "aria-hidden": "true",
+	            children: rotationStopped ? /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	              d: "M3 1.5 10 6 3 10.5Z"
+	            }) : /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+	              d: "M2.5 2h2v8h-2zM7.5 2h2v8h-2z"
+	            })
 	          })
 	        })]
 	      })]
@@ -38250,6 +38332,40 @@
 	    loading: eager ? 'eager' : 'lazy',
 	    decoding: "async",
 	    fetchpriority: eager ? 'high' : undefined
+	  });
+	}
+
+	/** Two paint layers, zero extra product assets. CSS cannot interpolate gradient
+	 * strings: fading the incoming layer preserves both manual and saved auto themes.
+	 * The guarded update retains only the immediately previous theme, even on rapid taps. */
+	function SpotlightBackdrop({
+	  theme
+	}) {
+	  const key = theme.background + (theme.gradient || '');
+	  const [layers, setLayers] = reactExports.useState({
+	    key,
+	    current: theme,
+	    previous: null
+	  });
+	  if (layers.key !== key) setLayers({
+	    key,
+	    current: theme,
+	    previous: layers.current
+	  });
+	  const paint = value => ({
+	    '--cspot-bg': value.background,
+	    '--cspot-grad': value.gradient || 'none'
+	  });
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "cspot__backdrop",
+	    "aria-hidden": "true",
+	    children: [layers.previous && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "cspot__bg",
+	      style: paint(layers.previous)
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: `cspot__bg${layers.previous ? ' cspot__bg--incoming' : ''}`,
+	      style: paint(layers.current)
+	    }, layers.key)]
 	  });
 	}
 
@@ -38335,9 +38451,16 @@
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategorySpotlight, {
 	      category: cat,
 	      products: items
-	    }), siblings.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "v2-wrap",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductBrowser, {
+	      baseProducts: items,
+	      lockCategory: true,
+	      showCategoryFilter: false
+	    }), siblings.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap v2-shop__related",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        className: "v2-shop__related-title",
+	        children: "Explore more categories"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "v2-rail v2-shop__cats",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
 	          to: "/shop",
@@ -38356,11 +38479,7 @@
 	            stroke: 1.5
 	          }), " ", c.name]
 	        }, c.slug))]
-	      })
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductBrowser, {
-	      baseProducts: items,
-	      lockCategory: true,
-	      showCategoryFilter: false
+	      })]
 	    })]
 	  });
 	}
