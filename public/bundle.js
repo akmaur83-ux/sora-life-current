@@ -6666,6 +6666,13 @@
 	    ingredients: p.ingredients || [],
 	    benefits: p.benefits || [],
 	    usage: p.usage || '',
+	    // Migration 0025. Kept null rather than defaulted to [] so "not authored"
+	    // stays distinguishable from "authored as empty" all the way to the view.
+	    howToUse: p.howToUse || null,
+	    specifications: p.specifications || null,
+	    keyClaims: p.keyClaims || null,
+	    netContent: p.netContent || null,
+	    contentSource: p.contentSource || null,
 	    isNew: !!p.isNew,
 	    isBestseller: !!p.isBestseller,
 	    isFeatured: !!p.isFeatured,
@@ -35390,7 +35397,17 @@
 	    isFeatured: !!row.is_featured,
 	    sortOrder: Number(row.sort_order) || 0,
 	    isActive: row.is_active !== false,
-	    biosashId: row.biosash_id || null
+	    biosashId: row.biosash_id || null,
+	    // Content columns added by migration 0025. Absent until it is applied,
+	    // and null until the ingest or an admin fills them — in both cases the
+	    // PDP section that reads them hides itself rather than showing a shell.
+	    benefits: row.benefits || null,
+	    ingredients: row.ingredients || null,
+	    howToUse: row.how_to_use || null,
+	    specifications: row.specifications || null,
+	    keyClaims: row.key_claims || null,
+	    netContent: row.net_content || null,
+	    contentSource: row.content_source || null
 	  };
 	}
 	function productToDbRow(p) {
@@ -38963,6 +38980,35 @@
 	 * for exactly this reason. Standard is free because Standard is free, not
 	 * because the basket reached some amount.
 	 */
+	/**
+	 * Per-unit price for a pack, e.g. "₹1.25/ml" for ₹312 of 250 ml.
+	 *
+	 * Comparing pack sizes is the one bit of arithmetic a customer should not have
+	 * to do in their head, and it is the whole reason a two-pack selector exists.
+	 *
+	 * Returns null rather than guessing whenever the label is not a plain
+	 * "<number> <unit>": "Combo of 2", "Family pack" and "60 tablets + 1 free" all
+	 * produce no line at all. A per-unit figure derived from a misread label is
+	 * worse than none, because it looks authoritative.
+	 *
+	 * The unit is echoed exactly as written, so "ml" stays "ml" and "tablets"
+	 * becomes "tablet" only through the crude plural trim below — nothing is
+	 * converted between units.
+	 */
+	function perUnitPrice(price, label) {
+	  const amount = Number(price);
+	  if (!Number.isFinite(amount) || amount <= 0) return null;
+	  const m = String(label || '').trim().match(/^(\d+(?:\.\d+)?)\s*([a-z]+)$/i);
+	  if (!m) return null;
+	  const qty = Number(m[1]);
+	  if (!Number.isFinite(qty) || qty <= 1) return null; // "1 kg" tells nobody anything
+	  const unit = m[2].toLowerCase().replace(/s$/, '');
+	  const each = amount / qty;
+	  // Two decimals below ₹10, none above: "₹0.42/ml" is useful, "₹31.00/tablet"
+	  // is just noise with a decimal point in it.
+	  const shown = each < 10 ? each.toFixed(2) : String(Math.round(each));
+	  return `₹${shown}/${unit}`;
+	}
 	function deliveryOptions() {
 	  return [{
 	    id: 'std',
@@ -38988,21 +39034,45 @@
 	// catalogue has no product-specific benefits the section hides itself.
 	// ------------------------------------------------------------
 	/**
+	 * BENEFITS — "Why you'll love it"
+	 *
+	 * Accepts both shapes the catalogue can carry. Migration 0025 stores
+	 * [{ title, description?, icon? }]; before it, the field was a bare string
+	 * array, and a product edited by hand may still be one. Neither is invented:
+	 * an empty or absent field returns real:false and the section hides.
+	 *
 	 * @returns {{ items: {icon,label,text}[], real:boolean }}
 	 */
 	function benefitsFor(product) {
-	  const real = product && Array.isArray(product.benefits) ? product.benefits.filter(b => typeof b === 'string' && b.trim()) : [];
-	  if (!real.length) return {
+	  const raw = Array.isArray(product?.benefits) ? product.benefits : [];
+	  const items = raw.map(b => {
+	    if (typeof b === 'string') {
+	      return b.trim() ? {
+	        icon: 'check',
+	        label: b.trim(),
+	        text: ''
+	      } : null;
+	    }
+	    if (b && typeof b === 'object') {
+	      const label = String(b.title || '').trim();
+	      const text = String(b.description || '').trim();
+	      // A body with no heading is still a benefit; it just leads with itself.
+	      if (!label && !text) return null;
+	      return {
+	        icon: String(b.icon || 'check'),
+	        label: label || text,
+	        text: label ? text : ''
+	      };
+	    }
+	    return null;
+	  }).filter(Boolean);
+	  if (!items.length) return {
 	    items: [],
 	    real: false
 	  };
 	  return {
 	    real: true,
-	    items: real.slice(0, 4).map(b => ({
-	      icon: 'check',
-	      label: b.trim(),
-	      text: ''
-	    }))
+	    items
 	  };
 	}
 
@@ -39012,33 +39082,71 @@
 	// if the catalogue has no ingredient data the section hides itself.
 	// ------------------------------------------------------------
 	/**
-	 * @returns {{ items: {name,note}[], real:boolean }}
+	 * @returns {{ items: {name,note,image}[], real:boolean }}
 	 */
 	function ingredientsFor(product) {
-	  const real = product && Array.isArray(product.ingredients) ? product.ingredients.filter(s => typeof s === 'string' && s.trim()) : [];
-	  if (!real.length) return {
+	  const raw = Array.isArray(product?.ingredients) ? product.ingredients : [];
+	  const items = raw.map(i => {
+	    if (typeof i === 'string') {
+	      return i.trim() ? {
+	        name: i.trim(),
+	        note: '',
+	        image: ''
+	      } : null;
+	    }
+	    if (i && typeof i === 'object') {
+	      const name = String(i.name || '').trim();
+	      if (!name) return null;
+	      return {
+	        name,
+	        note: String(i.description || '').trim(),
+	        // The ingest nulls any URL that did not serve an image, so anything
+	        // still here has been checked. Never render an unchecked src.
+	        image: String(i.image_url || '').trim()
+	      };
+	    }
+	    return null;
+	  }).filter(Boolean);
+	  if (!items.length) return {
 	    items: [],
 	    real: false
 	  };
 	  return {
 	    real: true,
-	    items: real.map(name => ({
-	      name: name.trim(),
-	      note: ''
-	    }))
+	    items
 	  };
 	}
 
 	// ------------------------------------------------------------
 	// HOW TO USE
-	// Real product.usage ONLY. No generic "read the pack / storage / safety"
+	// Real product data ONLY. No generic "read the pack / storage / safety"
 	// filler — if there is no product-specific usage the section hides itself.
 	// ------------------------------------------------------------
 	/**
-	 * @returns {{ text:string, steps:string[], real:boolean }}
+	 * @returns {{ text:string, steps:{step,text}[], real:boolean }}
 	 */
 	function howToUseFor(product) {
-	  if (product && typeof product.usage === 'string' && product.usage.trim()) {
+	  const raw = Array.isArray(product?.howToUse) ? product.howToUse : [];
+	  const steps = raw.map((s, n) => {
+	    if (typeof s === 'string') return s.trim() ? {
+	      step: n + 1,
+	      text: s.trim()
+	    } : null;
+	    if (s && typeof s === 'object' && String(s.text || '').trim()) {
+	      return {
+	        step: Number(s.step) || n + 1,
+	        text: String(s.text).trim()
+	      };
+	    }
+	    return null;
+	  }).filter(Boolean);
+	  if (steps.length) return {
+	    text: '',
+	    steps,
+	    real: true
+	  };
+	  // Legacy single-string field, still the only source for hand-edited rows.
+	  if (typeof product?.usage === 'string' && product.usage.trim()) {
 	    return {
 	      text: product.usage.trim(),
 	      steps: [],
@@ -39050,6 +39158,43 @@
 	    steps: [],
 	    real: false
 	  };
+	}
+
+	// ------------------------------------------------------------
+	// SPECIFICATIONS — a plain key/value table.
+	// Object order is the author's order; keys with no value are dropped so a
+	// half-filled record cannot render a row reading "Shelf life:".
+	// ------------------------------------------------------------
+	/**
+	 * @returns {{ rows: {key,value}[], real:boolean }}
+	 */
+	function specificationsFor(product) {
+	  const spec = product?.specifications;
+	  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return {
+	    rows: [],
+	    real: false
+	  };
+	  const rows = Object.entries(spec).map(([key, value]) => ({
+	    key: String(key).trim(),
+	    value: String(value ?? '').trim()
+	  })).filter(r => r.key && r.value);
+	  return {
+	    rows,
+	    real: rows.length > 0
+	  };
+	}
+
+	// ------------------------------------------------------------
+	// KEY CLAIMS — short badge strings ("Paraben Free"), never sentences.
+	// Anything long enough to be a sentence is dropped rather than truncated: a
+	// clipped claim is a changed claim.
+	// ------------------------------------------------------------
+	/**
+	 * @returns {string[]}
+	 */
+	function keyClaimsFor(product) {
+	  const raw = Array.isArray(product?.keyClaims) ? product.keyClaims : [];
+	  return raw.map(c => String(c ?? '').trim()).filter(c => c && c.length <= 32).slice(0, 6);
 	}
 
 	// ------------------------------------------------------------
@@ -39115,22 +39260,24 @@
 	    href: href,
 	    className: `pdp-rating ${className}`,
 	    "aria-label": `Rated ${rating} out of 5 from ${count} ratings. Jump to reviews.`,
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	      className: "pdp-rating__score",
-	      children: rating.toFixed(1)
-	    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	      className: "pdp-rating__stars",
 	      "aria-hidden": "true",
 	      children: [1, 2, 3, 4, 5].map(i => /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	        name: "star",
-	        size: 13,
+	        size: 14,
 	        stroke: 1.4,
 	        fill: i <= full ? 'currentColor' : 'none',
 	        className: i <= full ? 's-full' : 's-empty'
 	      }, i))
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+	      className: "pdp-rating__score",
+	      children: [rating.toFixed(1), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        children: "/5"
+	      })]
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	      className: "pdp-rating__count",
-	      children: [count.toLocaleString('en-IN'), " ", count === 1 ? 'rating' : 'ratings']
+	      children: ["(", count.toLocaleString('en-IN'), ")"]
 	    })]
 	  });
 	}
@@ -39212,9 +39359,26 @@
 	  });
 	}
 
+	const PIN = /^[1-9][0-9]{5}$/;
 	function ProductDeliveryInfo() {
 	  const est = deliveryEstimate();
 	  const options = deliveryOptions();
+	  const [pin, setPin] = reactExports.useState('');
+	  const [checked, setChecked] = reactExports.useState(null);
+	  const check = e => {
+	    e.preventDefault();
+	    if (!PIN.test(pin)) {
+	      setChecked({
+	        ok: false,
+	        message: 'Enter a valid 6-digit pincode.'
+	      });
+	      return;
+	    }
+	    setChecked({
+	      ok: true,
+	      message: `Delivering to ${pin}. ${options[0].eta} on Standard; faster methods are shown at checkout.`
+	    });
+	  };
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	    className: "pdp-deliver",
 	    "aria-label": "Delivery information",
@@ -39230,6 +39394,35 @@
 	          children: [est.range, " \xB7 ", est.days]
 	        })]
 	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	      className: "pdp-deliver__pin",
+	      onSubmit: check,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	        className: "sr-only",
+	        htmlFor: "pdp-pin",
+	        children: "Delivery pincode"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	        id: "pdp-pin",
+	        className: "pdp-deliver__pininput",
+	        inputMode: "numeric",
+	        autoComplete: "postal-code",
+	        maxLength: 6,
+	        placeholder: "Enter pincode",
+	        value: pin,
+	        onChange: e => {
+	          setPin(e.target.value.replace(/\D/g, '').slice(0, 6));
+	          setChecked(null);
+	        }
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	        type: "submit",
+	        className: "pdp-deliver__pinbtn",
+	        disabled: pin.length !== 6,
+	        children: "Check"
+	      })]
+	    }), checked && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: `pdp-deliver__pinmsg ${checked.ok ? 'is-ok' : 'is-bad'}`,
+	      role: "status",
+	      children: checked.message
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
 	      className: "pdp-deliver__methods",
 	      children: options.map(o => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
@@ -39262,21 +39455,25 @@
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
 	      id: "pdp-benefits-h",
 	      className: "pdp-sec__title serif",
-	      children: "Why you\u2019ll love it"
+	      children: "What each ingredient does"
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-	      className: "pdp-benefits__grid",
-	      children: items.slice(0, 4).map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-	        className: "pdp-benefits__card",
+	      className: "pdp-benefits__list",
+	      children: items.map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        className: "pdp-benefits__row",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          className: "pdp-benefits__ic",
+	          "aria-hidden": "true",
 	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	            name: b.icon,
-	            size: 16
+	            size: 15
 	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	          children: b.label
-	        }), b.text && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          children: b.text
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "pdp-benefits__body",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	            children: b.label
+	          }), b.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	            children: b.text
+	          })]
 	        })]
 	      }, b.label))
 	    })]
@@ -39303,9 +39500,14 @@
 	        className: "pdp-ingredients__card",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          className: "pdp-ingredients__ic",
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          children: ing.image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+	            src: ing.image,
+	            alt: "",
+	            loading: "lazy",
+	            decoding: "async"
+	          }) : /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	            name: "leaf",
-	            size: 20
+	            size: 18
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "pdp-ingredients__body",
@@ -39324,9 +39526,10 @@
 	  product
 	}) {
 	  const {
-	    text
+	    text,
+	    steps
 	  } = howToUseFor(product);
-	  if (!text) return null;
+	  if (!text && !steps.length) return null;
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
 	    className: "pdp-sec pdp-howto",
 	    "aria-labelledby": "pdp-howto-h",
@@ -39334,7 +39537,19 @@
 	      id: "pdp-howto-h",
 	      className: "pdp-sec__title serif",
 	      children: "How to use"
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    }), steps.length ? /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+	      className: "pdp-howto__steps",
+	      children: steps.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        className: "pdp-howto__step",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "pdp-howto__num",
+	          "aria-hidden": "true",
+	          children: s.step
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          children: s.text
+	        })]
+	      }, s.step))
+	    }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "pdp-howto__body",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	        className: "pdp-howto__ic",
@@ -39734,6 +39949,49 @@
 	  return null;
 	}
 
+	function ProductClaims({
+	  product
+	}) {
+	  const claims = keyClaimsFor(product);
+	  if (!claims.length) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	    className: "pdp-claims",
+	    "aria-label": "Product claims",
+	    children: claims.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+	      className: "pdp-claims__pill",
+	      children: c
+	    }, c))
+	  });
+	}
+
+	function ProductSpecifications({
+	  product
+	}) {
+	  const {
+	    rows
+	  } = specificationsFor(product);
+	  if (!rows.length) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	    className: "pdp-sec pdp-specs",
+	    "aria-labelledby": "pdp-specs-h",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	      id: "pdp-specs-h",
+	      className: "pdp-sec__title serif",
+	      children: "Specifications"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("dl", {
+	      className: "pdp-specs__table",
+	      children: rows.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "pdp-specs__row",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	          children: r.key
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	          children: r.value
+	        })]
+	      }, r.key))
+	    })]
+	  });
+	}
+
 	function ProductLoading() {
 	  const bar = w => ({
 	    height: 12,
@@ -39875,9 +40133,11 @@
 	  const buyable = isPurchasable(product, variant);
 	  const blocked = out || !buyable;
 	  const lowStock = product.stock > 0 && product.stock <= 5;
-	  // Net quantity of the pack actually selected, so the row cannot keep
-	  // saying "250 ml" after the customer switches to the 500 ml pack.
-	  const size = variant?.label || product.form || null;
+	  // Net quantity of the pack actually SELECTED, so it cannot keep saying
+	  // "250 ml" after the customer switches to the 500 ml pack. The stored
+	  // net_content is the printed quantity for the base pack, so a chosen variant
+	  // outranks it.
+	  const netContent = variant?.label || product.netContent || product.form || null;
 	  const fbt = [product, ...related.slice(0, 2)];
 	  const fbtTotal = fbt.reduce((s, p) => s + p.price, 0);
 	  const buyNow = () => {
@@ -39918,36 +40178,20 @@
 	      className: "pdp-acc__p",
 	      children: overview.text
 	    })
-	  }, ...(product.ingredients?.length ? [{
-	    title: 'Full ingredient list',
-	    icon: 'flask',
-	    content: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-	      className: "pdp-acc__tags",
-	      children: product.ingredients.map(ig => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	        className: "v2-chip",
-	        children: ig
-	      }, ig))
-	    })
-	  }] : []), ...(product.benefits?.length ? [{
-	    title: 'All benefits',
-	    icon: 'sparkle',
-	    content: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-	      className: "ticklist",
-	      children: product.benefits.map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	          name: "check",
-	          size: 16
-	        }), " ", b]
-	      }, b))
-	    })
-	  }] : []), ...(product.usage ? [{
-	    title: 'Usage details',
-	    icon: 'droplet',
-	    content: /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	      className: "pdp-acc__p muted",
-	      children: product.usage
-	    })
-	  }] : []), ...(suitable.length ? [{
+	  },
+	  // Ingredients, benefits and usage used to have rows here. They are gone
+	  // for two reasons.
+	  //
+	  // They are now duplicates: each has its own section further up the page,
+	  // with room for the real content, and repeating them inside an accordion
+	  // underneath said the same thing twice.
+	  //
+	  // And they were about to crash. Both rows mapped their field as an array
+	  // of STRINGS — `{ig}` straight into JSX. Migration 0025 stores them as
+	  // objects ({ name, description, image_url } and { title, description }),
+	  // and rendering an object as a React child throws, so the first ingested
+	  // product to load this page would have taken the whole PDP down.
+	  ...(suitable.length ? [{
 	    title: 'Suitable for',
 	    icon: 'users',
 	    content: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -40060,9 +40304,14 @@
 	            name: "chevronRight",
 	            size: 13
 	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h1", {
 	          className: "pdp__title",
-	          children: product.name
+	          children: [product.name, netContent && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            className: "pdp__net",
+	            children: [" (", netContent, ")"]
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductRatingTeaser, {
+	          product: product
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "pdp__price",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
@@ -40072,28 +40321,12 @@
 	            v2: true
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	            className: "pdp__tax",
-	            children: "Inclusive of all taxes"
+	            children: "Incl. of all taxes"
 	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "pdp__facts",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductRatingTeaser, {
-	            product: product
-	          }), size && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "pdp__size",
-	            children: size
-	          })]
-	        }), product.description && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: `pdp__leadwrap ${leadExpanded ? 'is-open' : ''}`,
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            className: "pdp__lead",
-	            children: product.description
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-	            type: "button",
-	            className: "pdp__leadmore",
-	            onClick: () => setLeadExpanded(v => !v),
-	            "aria-expanded": leadExpanded,
-	            children: leadExpanded ? 'Show less' : 'See more'
-	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpCouponSlot, {
+	          product: product
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductClaims, {
+	          product: product
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductOfferTeaser, {
 	          product: product
 	        }), pricedVariants.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -40108,6 +40341,8 @@
 	            children: pricedVariants.map(v => {
 	              const selected = (variant?.id ?? variant?.label) === (v.id ?? v.label);
 	              const soldOut = v.stock === 0;
+	              const off = v.mrp > v.price ? Math.round((v.mrp - v.price) / v.mrp * 100) : 0;
+	              const unit = perUnitPrice(v.price, v.label);
 	              return /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
 	                type: "button",
 	                role: "radio",
@@ -40116,6 +40351,13 @@
 	                className: `variantchip ${selected ? 'active' : ''} ${soldOut ? 'is-out' : ''}`,
 	                onClick: () => setVariant(v),
 	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  className: "variantchip__tick",
+	                  "aria-hidden": "true",
+	                  children: selected && /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	                    name: "check",
+	                    size: 12
+	                  })
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	                  className: "variantchip__label",
 	                  children: v.label
 	                }), v.price != null && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
@@ -40123,6 +40365,12 @@
 	                  children: [money(v.price, product.currency), v.mrp > v.price && /*#__PURE__*/jsxRuntimeExports.jsx("s", {
 	                    children: money(v.mrp, product.currency)
 	                  })]
+	                }), off > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	                  className: "variantchip__off",
+	                  children: [off, "% off"]
+	                }), unit && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  className: "variantchip__unit",
+	                  children: unit
 	                }), soldOut && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	                  className: "variantchip__out",
 	                  children: "Sold out"
@@ -40148,8 +40396,6 @@
 	              size: 13
 	            }), " In stock"]
 	          })
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpCouponSlot, {
-	          product: product
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "pdp__buy",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -40201,11 +40447,24 @@
 	      })]
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "v2-wrap pdp-flow",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductBenefits, {
+	      children: [product.description && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+	        className: "pdp-sec pdp-about",
+	        "aria-labelledby": "pdp-about-h",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+	          id: "pdp-about-h",
+	          className: "pdp-sec__title serif",
+	          children: ["About ", product.name]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "pdp-about__text",
+	          children: product.description
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductBenefits, {
 	        product: product
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductIngredients, {
 	        product: product
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductHowToUse, {
+	        product: product
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductSpecifications, {
 	        product: product
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
 	        className: "pdp-sec",
