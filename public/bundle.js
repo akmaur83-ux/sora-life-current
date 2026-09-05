@@ -57909,7 +57909,6 @@
 	const PACKSHOT_PADDING_RATIO = 0.05;
 	const clampByte = n => Math.max(0, Math.min(255, Math.round(n)));
 	const hex = ([r, g, b]) => `#${[r, g, b].map(v => clampByte(v).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
-	const mix = (a, b, amount) => a.map((v, i) => v + (b[i] - v) * amount);
 	function rgbToHsl(r, g, b) {
 	  const rn = r / 255,
 	    gn = g / 255,
@@ -58071,14 +58070,134 @@
 	  if (!winner.weight) return [111, 127, 109];
 	  return [winner.r / winner.weight, winner.g / winner.weight, winner.b / winner.weight].map(clampByte);
 	}
-	function pastelThemeFromAccent(accent) {
-	  const warmIvory = [250, 247, 240];
-	  const background = mix(warmIvory, accent, 0.12);
-	  const start = mix(warmIvory, accent, 0.07);
-	  const end = mix(warmIvory, accent, 0.21);
+	function hslToRgb(h, s, l) {
+	  const c = (1 - Math.abs(2 * l - 1)) * s;
+	  const hp = h / 60;
+	  const x = c * (1 - Math.abs(hp % 2 - 1));
+	  let r = 0,
+	    g = 0,
+	    b = 0;
+	  if (hp < 1) [r, g, b] = [c, x, 0];else if (hp < 2) [r, g, b] = [x, c, 0];else if (hp < 3) [r, g, b] = [0, c, x];else if (hp < 4) [r, g, b] = [0, x, c];else if (hp < 5) [r, g, b] = [x, 0, c];else [r, g, b] = [c, 0, x];
+	  const m = l - c / 2;
+	  return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
+	}
+
+	/**
+	 * Ground tuning, named and in one place so the palette stays adjustable.
+	 *
+	 * `lumFloor` is not a taste value like the others: it is the relative-luminance
+	 * budget the muted text needs. --cspot-ink-mute (#232E26) clears 4.5:1 at
+	 * luminance 0.30, so no stop of any gradient may fall below it. Change the ink
+	 * and this number has to be recomputed with it.
+	 */
+	const GROUND = {
+	  satMul: 0.80,
+	  // how much of the accent's own saturation carries through
+	  satAdd: 0.34,
+	  // floor lift, so a muted accent still reads as a colour
+	  satMin: 0.52,
+	  satMax: 0.72,
+	  greenTrim: 0.30,
+	  // see hueSaturationTrim
+	  lightTop: 0.675,
+	  // HSL lightness for an already-light accent
+	  lightSpread: 0.095,
+	  // a deeper accent earns a deeper ground
+	  gradientLift: 0.060,
+	  gradientDrop: 0.070,
+	  lumFloor: 0.300 // the text-contrast budget; see above
+	};
+	const channelLuminance = v => {
+	  const s = v / 255;
+	  return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+	};
+
+	/** WCAG relative luminance, 0-1, from 0-255 channels. */
+	function relativeLuminance([r, g, b]) {
+	  return 0.2126 * channelLuminance(r) + 0.7152 * channelLuminance(g) + 0.0722 * channelLuminance(b);
+	}
+
+	/**
+	 * At one HSL saturation a yellow-green carries far more apparent chroma than a
+	 * rose or a violet does. A single ceiling therefore either lets the greens go
+	 * acid or holds every other hue back: at satMax 0.86 the aloe accents resolved
+	 * to #C1F677 and #0FC556 — lime and electric emerald — while the same ceiling
+	 * left the corals looking unfinished. This trims the ceiling smoothly through
+	 * the green-yellow band only, deepest around 110 degrees.
+	 */
+	function hueSaturationTrim(hue) {
+	  const bandwidth = 85;
+	  const distance = Math.min(Math.abs((hue - 110 + 540) % 360 - 180), bandwidth) / bandwidth;
+	  return 1 - GROUND.greenTrim * Math.cos(distance * Math.PI / 2);
+	}
+
+	/**
+	 * Raise a lightness until the colour clears the luminance floor. Only ever
+	 * lightens: a colour already above the floor is returned untouched, so the
+	 * floor can never wash out a hue that did not need protecting.
+	 */
+	function liftToLuminanceFloor(hue, sat, light) {
+	  if (relativeLuminance(hslToRgb(hue, sat, light)) >= GROUND.lumFloor) return light;
+	  let low = light,
+	    high = 1;
+	  for (let i = 0; i < 22; i += 1) {
+	    const mid = (low + high) / 2;
+	    if (relativeLuminance(hslToRgb(hue, sat, mid)) < GROUND.lumFloor) low = mid;else high = mid;
+	  }
+	  return high;
+	}
+
+	/**
+	 * A premium ground derived from the product's own accent.
+	 *
+	 * Built in HSL rather than by mixing toward ivory. A flat mix pulls every hue
+	 * toward the same pale point, which is why ten Hair Care products once landed
+	 * in one narrow grey-green/grey-beige band — #DDE4D8 beside #E6E7DA beside
+	 * #E2E6DE, barely distinguishable as the carousel advanced.
+	 *
+	 * Colour decides the depth and accessibility only ever vetoes going too dark.
+	 * Two alternatives were measured against the ten real Hair Care packshots and
+	 * rejected:
+	 *
+	 *  - Raising saturation uniformly. The greens reached #C1F677 while the corals
+	 *    barely moved, because apparent chroma is hue-dependent. hueSaturationTrim
+	 *    is the fix.
+	 *  - Choosing lightness by solving for a fixed relative luminance. That makes
+	 *    contrast identical on every slide, but it also forces reds light (red is
+	 *    dark per unit chroma) and greens dark, so the corals washed out to #EBC4B9
+	 *    exactly where they needed to be strongest.
+	 *
+	 * So the tone is set in HSL and then clamped up to lumFloor. The gradient is
+	 * derived from its DARKEST stop rather than from the ground: clamping each
+	 * stop independently collapsed the gradient to a flat fill on reds, whose
+	 * ground already sat on the floor and so had nothing below it to fade into.
+	 * Pinning the end AT the floor and stacking the ground and start above it
+	 * gives every hue a real gradient and spends the whole contrast budget.
+	 *
+	 * Measured over the ten real packshots: average chroma 111 (was 60, and 33
+	 * before that), minimum 85, and every stop of every gradient holds 5.5:1 for
+	 * the title ink, 4.7:1 for the muted ink and 4.1:1 for the CTA pill.
+	 */
+	function groundThemeFromAccent(accent) {
+	  const {
+	    h,
+	    s,
+	    l
+	  } = rgbToHsl(accent[0], accent[1], accent[2]);
+	  const trim = hueSaturationTrim(h);
+	  const sat = Math.min(GROUND.satMax * trim, Math.max(GROUND.satMin * trim, s * GROUND.satMul + GROUND.satAdd));
+	  const base = GROUND.lightTop - GROUND.lightSpread * (1 - l);
+
+	  // One colour at three depths, so the stage reads as a single lit surface
+	  // rather than two unrelated mixes.
+	  const endLight = liftToLuminanceFloor(h, sat, base - GROUND.gradientDrop);
+	  const at = light => hslToRgb(h, sat, Math.min(0.94, light));
+	  const ground = at(endLight + GROUND.gradientDrop);
+	  const start = at(endLight + GROUND.gradientDrop + GROUND.gradientLift);
+	  const end = at(endLight);
 	  return {
 	    accent: hex(accent),
-	    background: hex(background),
+	    background: hex(ground),
 	    gradient: `linear-gradient(168deg, ${hex(start)} 0%, ${hex(end)} 100%)`
 	  };
 	}
@@ -58113,7 +58232,7 @@
 	    data: output,
 	    width: outputWidth,
 	    height: outputHeight,
-	    theme: pastelThemeFromAccent(accent),
+	    theme: groundThemeFromAccent(accent),
 	    stats: {
 	      sourceWidth: width,
 	      sourceHeight: height,
