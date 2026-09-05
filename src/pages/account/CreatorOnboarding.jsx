@@ -3,7 +3,11 @@ import { Link } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import CopyButton from '../../components/CopyButton.jsx';
 import { useCustomerAuth } from '../../lib/customerAuth.jsx';
-import { getMyCreator, applyAsCreator, buildTrackingUrl } from '../../lib/creatorApi.js';
+import {
+  getMyCreator, applyAsCreator, buildTrackingUrl,
+  getCreatorTerms, termsArePublished, acceptCreatorTerms,
+} from '../../lib/creatorApi.js';
+import CreatorTermsPanel, { TermsUpdatedLine } from '../../components/creator/CreatorTermsPanel.jsx';
 
 // ============================================================
 // Account → "Become a SORA LIFE Creator"
@@ -45,6 +49,17 @@ export default function CreatorOnboarding() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The published terms, if any. Loaded separately from the creator record so
+  // a database without 0026 applied still shows a working application form —
+  // just without a terms document to read.
+  const [terms, setTerms] = useState(null);
+  useEffect(() => {
+    let live = true;
+    getCreatorTerms().then((t) => { if (live) setTerms(t); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
+  const hasTerms = termsArePublished(terms);
+
   const set = (k, v) => setForm((s) => ({ ...s, [k]: v }));
 
   async function submit(e) {
@@ -64,6 +79,17 @@ export default function CreatorOnboarding() {
         };
         setErr(map[res.reason] || 'We could not submit your application. Please try again.');
       } else {
+        // Record WHICH version was accepted. apply_as_creator already stores an
+        // agreed_at, but not the version — and a timestamp alone cannot answer
+        // "which terms did they agree to" once the document changes.
+        //
+        // Deliberately after a successful application and deliberately not
+        // fatal: the creator record exists either way, and the portal asks for
+        // acceptance again if this did not land. Failing the whole application
+        // because a follow-up write failed would be the worse outcome.
+        if (hasTerms) {
+          try { await acceptCreatorTerms(); } catch { /* portal re-prompts */ }
+        }
         await load();
       }
     } catch (e2) {
@@ -213,9 +239,26 @@ export default function CreatorOnboarding() {
           </select>
         </div>
 
+        {/* The terms themselves, so the checkbox refers to something the
+            applicant can actually read rather than to a document they have
+            never seen. Hidden entirely until an admin publishes one. */}
+        {hasTerms && (
+          <div className="crob__terms">
+            <h3 className="crob__terms-h">Creator terms</h3>
+            <TermsUpdatedLine terms={terms} />
+            <div className="crob__terms-body">
+              <CreatorTermsPanel terms={terms} />
+            </div>
+          </div>
+        )}
+
         <label className="crob__agree">
           <input type="checkbox" checked={form.agreed} onChange={(e) => set('agreed', e.target.checked)} />
-          <span>I agree to the SORA LIFE creator terms and understand my account remains a normal customer account.</span>
+          <span>
+            {hasTerms
+              ? `I have read and agree to the SORA LIFE creator terms (version ${terms.version}), and understand my account remains a normal customer account.`
+              : 'I agree to the SORA LIFE creator terms and understand my account remains a normal customer account.'}
+          </span>
         </label>
 
         <p className="crob__note">

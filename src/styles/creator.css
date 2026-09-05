@@ -373,3 +373,77 @@
    .css now owns every .crp-hiw rule, and two files fighting over the same
    component is exactly how this bug happened.
    Found in browser QA, not by tests. */
+
+/* ------------------------------------------------------------------
+   CREATOR TERMS (migration 0026)
+
+   The document is admin-authored prose of unknown length, so the panel is a
+   readable measure with a scroll ceiling rather than an unbounded slab: on the
+   application form the terms must not push the submit button so far down that
+   nobody finds it. Uses the existing creator tokens throughout — no new
+   palette, no new spacing scale.
+   ------------------------------------------------------------------ */
+.ck-terms { max-width: 68ch; }
+.ck-terms__h {
+  margin: var(--sp-4) 0 var(--sp-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.35;
+}
+.ck-terms__h:first-child { margin-top: 0; }
+.ck-terms__p {
+  margin: 0 0 var(--sp-3);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+}
+.ck-terms__list {
+  margin: 0 0 var(--sp-3);
+  padding-left: 1.2em;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+}
+.ck-terms__list li { margin-bottom: 4px; }
+.ck-terms__meta {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.ck-terms__accepted {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+/* Not styled as an error: an outdated acceptance is a routine prompt, not a
+   fault the creator caused. */
+.ck-terms__accept {
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--line-soft, var(--line));
+}
+.ck-terms__accept p {
+  margin: 0 0 var(--sp-3);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+/* On the application form the document is capped and scrolls, so the consent
+   checkbox and the submit button stay reachable however long the terms run. */
+.crob__terms { margin-bottom: var(--sp-4); }
+.crob__terms-h {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text);
+}
+.crob__terms-body {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 2px);
+  background: var(--color-surface, #fff);
+}

@@ -9,6 +9,7 @@ const NAV = [
   { to: '/admin/pricing', label: 'Pricing' },
   { to: '/admin/variants', label: 'Variants' },
   { to: '/admin/creators', label: 'Creator Program' },
+  { to: '/admin/creator-terms', label: 'Creator Terms' },
   { to: '/admin/attribution', label: 'Attribution' },
   { to: '/admin/kyc', label: 'Creator KYC' },
   { to: '/admin/payouts', label: 'Creator Payouts' },

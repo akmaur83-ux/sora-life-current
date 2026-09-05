@@ -462,3 +462,62 @@ export async function adminSetProgramSettings(settings) {
   if (error) throw error;
   return value;
 }
+
+// ------------------------------------------------------------
+// Creator terms (migration 0026)
+//
+// The document is a public-read site_settings key, so a prospective creator
+// can read what they are agreeing to before they have an account. Acceptances
+// are written only by the SECURITY DEFINER RPC — never by the client — so the
+// creator and the version both come from trusted sources.
+// ------------------------------------------------------------
+
+const TERMS_DEFAULTS = { body: '', version: 1, updated_at: null };
+
+/**
+ * The published terms. Returns the empty default when the migration has not
+ * been applied or nothing has been written yet, so every caller can treat
+ * "no terms" as an ordinary state rather than an error.
+ */
+export async function getCreatorTerms() {
+  const { data, error } = await supabase
+    .from('site_settings').select('value').eq('key', 'creator_terms').maybeSingle();
+  if (error || !data) return { ...TERMS_DEFAULTS };
+  return { ...TERMS_DEFAULTS, ...(data.value || {}) };
+}
+
+/** True when there is actually something for a creator to read and accept. */
+export function termsArePublished(terms) {
+  return !!terms && typeof terms.body === 'string' && terms.body.trim().length > 0;
+}
+
+/**
+ * The signed-in creator's acceptance of a specific version, or null.
+ * RLS scopes this to their own rows; an admin would see all of them, so the
+ * creator_id filter keeps the portal correct for an admin who is also a
+ * creator — the same reasoning as getMyCampaigns.
+ */
+export async function getMyTermsAcceptance(creatorId, version) {
+  if (!creatorId || !version) return null;
+  const { data, error } = await supabase
+    .from('creator_terms_acceptances')
+    .select('id, version, accepted_at, terms_updated_at')
+    .eq('creator_id', creatorId)
+    .eq('version', version)
+    .maybeSingle();
+  if (error) return null;
+  return data;
+}
+
+/**
+ * Record acceptance of the CURRENT published version.
+ *
+ * Takes no version argument on purpose: the RPC reads it from the stored
+ * document, so the client cannot claim to have accepted something that was
+ * never published. Idempotent — a unique index makes a second call a no-op.
+ */
+export async function acceptCreatorTerms() {
+  const { data, error } = await supabase.rpc('record_creator_terms_acceptance');
+  if (error) return { ok: false, reason: error.message };
+  return data || { ok: false, reason: 'no_response' };
+}

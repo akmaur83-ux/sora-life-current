@@ -29,6 +29,7 @@ import ProductForm from './admin/pages/ProductForm.jsx';
 import Pricing from './admin/pages/Pricing.jsx';
 import Variants from './admin/pages/Variants.jsx';
 import Creators from './admin/pages/Creators.jsx';
+import CreatorTerms from './admin/pages/CreatorTerms.jsx';
 import CreatorDetail from './admin/pages/CreatorDetail.jsx';
 import Attribution from './admin/pages/Attribution.jsx';
 import Kyc from './admin/pages/Kyc.jsx';
@@ -103,6 +104,7 @@ export default function App() {
         <Route path="variants" element={<Variants />} />
         <Route path="creators" element={<Creators />} />
         <Route path="creators/:id" element={<CreatorDetail />} />
+        <Route path="creator-terms" element={<CreatorTerms />} />
         <Route path="attribution" element={<Attribution />} />
         <Route path="kyc" element={<Kyc />} />
         <Route path="payouts" element={<Payouts />} />

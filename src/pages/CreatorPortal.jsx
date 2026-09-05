@@ -7,12 +7,14 @@ import {
   claimCreatorAccount, getMyCreator, getMyCampaigns, getMyLinks, buildTrackingUrl,
   getMyCreatorAnalytics,
   getMyCreatorEarnings, getMyKyc, submitKyc, requestPayout, getMyPayouts,
+  getCreatorTerms, termsArePublished, getMyTermsAcceptance, acceptCreatorTerms,
 } from '../lib/creatorApi.js';
 import { money2 } from '../lib/format.js';
 import CreatorEarnings from '../components/creator/CreatorEarnings.jsx';
 import CreatorHowItWorks from '../components/creator/CreatorHowItWorks.jsx';
 import { Section, Empty, Pill, Step, Band, Cell, Balance, IdBar } from '../components/creator/CreatorUI.jsx';
 import CreatorPayouts from '../components/creator/CreatorPayouts.jsx';
+import CreatorTermsPanel, { TermsUpdatedLine } from '../components/creator/CreatorTermsPanel.jsx';
 
 // ============================================================
 // SORA LIFE Creator Program — creator portal (Part 1 foundation)
@@ -121,6 +123,9 @@ export default function CreatorPortal() {
   const [earnings, setEarnings] = useState(null);
   const [kyc, setKyc] = useState(null);
   const [payouts, setPayouts] = useState([]);
+  const [terms, setTerms] = useState(null);
+  const [termsAccepted, setTermsAccepted] = useState(null);   // null = unknown
+  const [acceptingTerms, setAcceptingTerms] = useState(false);
   const navRef = useRef(null);
 
   // Reload just the money surfaces (earnings buckets, KYC, payout history)
@@ -130,6 +135,33 @@ export default function CreatorPortal() {
     setEarnings(en && en.ok ? en : null);
     setKyc(ky || null);
     setPayouts(Array.isArray(po) ? po : []);
+  }, []);
+
+  // Terms load separately from the portal's own data. They are public-read
+  // and optional, so a failure — or a database where 0026 has not been applied
+  // — must leave the portal working with the terms section simply absent.
+  useEffect(() => {
+    let live = true;
+    getCreatorTerms()
+      .then((t) => { if (live) setTerms(t); })
+      .catch(() => { if (live) setTerms(null); });
+    return () => { live = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!creator?.id || !terms || !termsArePublished(terms)) { setTermsAccepted(null); return; }
+    let live = true;
+    getMyTermsAcceptance(creator.id, terms.version)
+      .then((a) => { if (live) setTermsAccepted(!!a); })
+      .catch(() => { if (live) setTermsAccepted(null); });
+    return () => { live = false; };
+  }, [creator?.id, terms]);
+
+  const onAcceptTerms = useCallback(async () => {
+    setAcceptingTerms(true);
+    const res = await acceptCreatorTerms();
+    if (res?.ok) setTermsAccepted(true);
+    setAcceptingTerms(false);
   }, []);
 
   const load = useCallback(async () => {
@@ -531,6 +563,35 @@ export default function CreatorPortal() {
                   <Cell label="Creator since" value={fmtDate(creator.joined_at)} />
                 </Band>
               </Section>
+
+              {/* The terms the programme runs on. Absent entirely until an
+                  admin publishes something, so a blank document leaves no
+                  empty section behind. */}
+              {termsArePublished(terms) && (
+                <Section title="Terms &amp; conditions" sub="The terms your participation in the programme runs on.">
+                  <TermsUpdatedLine terms={terms} />
+                  <CreatorTermsPanel terms={terms} />
+                  {termsAccepted === true && (
+                    <p className="ck-terms__accepted">You accepted version {terms.version}.</p>
+                  )}
+                  {termsAccepted === false && (
+                    <div className="ck-terms__accept">
+                      <p>
+                        These terms have been updated since you last accepted them. Please read
+                        and accept the current version.
+                      </p>
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={onAcceptTerms}
+                        disabled={acceptingTerms}
+                      >
+                        {acceptingTerms ? 'Recording…' : `I accept version ${terms.version}`}
+                      </button>
+                    </div>
+                  )}
+                </Section>
+              )}
 
               <p className="crp__foot-note">
                 Your commission rate and status are managed by SORA LIFE. Contact your programme
