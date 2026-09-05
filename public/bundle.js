@@ -43544,6 +43544,227 @@
 	  return value;
 	}
 
+	// ------------------------------------------------------------
+	// Creator terms (migration 0026)
+	//
+	// The document is a public-read site_settings key, so a prospective creator
+	// can read what they are agreeing to before they have an account. Acceptances
+	// are written only by the SECURITY DEFINER RPC — never by the client — so the
+	// creator and the version both come from trusted sources.
+	// ------------------------------------------------------------
+
+	const TERMS_DEFAULTS = {
+	  body: '',
+	  version: 1,
+	  updated_at: null
+	};
+
+	/**
+	 * The published terms. Returns the empty default when the migration has not
+	 * been applied or nothing has been written yet, so every caller can treat
+	 * "no terms" as an ordinary state rather than an error.
+	 */
+	async function getCreatorTerms() {
+	  const {
+	    data,
+	    error
+	  } = await supabase.from('site_settings').select('value').eq('key', 'creator_terms').maybeSingle();
+	  if (error || !data) return {
+	    ...TERMS_DEFAULTS
+	  };
+	  return {
+	    ...TERMS_DEFAULTS,
+	    ...(data.value || {})
+	  };
+	}
+
+	/** True when there is actually something for a creator to read and accept. */
+	function termsArePublished(terms) {
+	  return !!terms && typeof terms.body === 'string' && terms.body.trim().length > 0;
+	}
+
+	/**
+	 * The signed-in creator's acceptance of a specific version, or null.
+	 * RLS scopes this to their own rows; an admin would see all of them, so the
+	 * creator_id filter keeps the portal correct for an admin who is also a
+	 * creator — the same reasoning as getMyCampaigns.
+	 */
+	async function getMyTermsAcceptance(creatorId, version) {
+	  if (!creatorId || !version) return null;
+	  const {
+	    data,
+	    error
+	  } = await supabase.from('creator_terms_acceptances').select('id, version, accepted_at, terms_updated_at').eq('creator_id', creatorId).eq('version', version).maybeSingle();
+	  if (error) return null;
+	  return data;
+	}
+
+	/**
+	 * Record acceptance of the CURRENT published version.
+	 *
+	 * Takes no version argument on purpose: the RPC reads it from the stored
+	 * document, so the client cannot claim to have accepted something that was
+	 * never published. Idempotent — a unique index makes a second call a no-op.
+	 */
+	async function acceptCreatorTerms() {
+	  const {
+	    data,
+	    error
+	  } = await supabase.rpc('record_creator_terms_acceptance');
+	  if (error) return {
+	    ok: false,
+	    reason: error.message
+	  };
+	  return data || {
+	    ok: false,
+	    reason: 'no_response'
+	  };
+	}
+
+	// ============================================================
+	// Renders the admin-authored creator terms.
+	//
+	// The document is markdown, but this deliberately does NOT use a markdown
+	// library or dangerouslySetInnerHTML. The text is admin-authored rather than
+	// user-generated, so it is not hostile — but it is still stored data rendered
+	// into a page that shows commission figures, and turning stored text into
+	// live HTML is a habit worth not starting. Everything below builds React
+	// elements, so nothing in the document can become markup.
+	//
+	// Supported, because it is what a terms document actually needs:
+	//   # / ## / ###   headings
+	//   - or *         bullets
+	//   1.             numbered items
+	//   blank line     paragraph break
+	// Anything else renders as a paragraph, verbatim.
+	// ============================================================
+
+	function renderBlocks(body) {
+	  const lines = String(body || '').replace(/\r\n/g, '\n').split('\n');
+	  const blocks = [];
+	  let para = [];
+	  let list = null; // { ordered: boolean, items: string[] }
+
+	  const flushPara = () => {
+	    if (para.length) {
+	      blocks.push({
+	        type: 'p',
+	        text: para.join(' ')
+	      });
+	      para = [];
+	    }
+	  };
+	  const flushList = () => {
+	    if (list) {
+	      blocks.push({
+	        type: 'list',
+	        ...list
+	      });
+	      list = null;
+	    }
+	  };
+	  for (const raw of lines) {
+	    const line = raw.trim();
+	    if (!line) {
+	      flushPara();
+	      flushList();
+	      continue;
+	    }
+	    const heading = line.match(/^(#{1,3})\s+(.*)$/);
+	    if (heading) {
+	      flushPara();
+	      flushList();
+	      blocks.push({
+	        type: 'h',
+	        level: heading[1].length,
+	        text: heading[2].trim()
+	      });
+	      continue;
+	    }
+	    const bullet = line.match(/^[-*]\s+(.*)$/);
+	    if (bullet) {
+	      flushPara();
+	      if (!list || list.ordered) {
+	        flushList();
+	        list = {
+	          ordered: false,
+	          items: []
+	        };
+	      }
+	      list.items.push(bullet[1].trim());
+	      continue;
+	    }
+	    const numbered = line.match(/^\d+[.)]\s+(.*)$/);
+	    if (numbered) {
+	      flushPara();
+	      if (!list || !list.ordered) {
+	        flushList();
+	        list = {
+	          ordered: true,
+	          items: []
+	        };
+	      }
+	      list.items.push(numbered[1].trim());
+	      continue;
+	    }
+	    flushList();
+	    para.push(line);
+	  }
+	  flushPara();
+	  flushList();
+	  return blocks;
+	}
+	function CreatorTermsPanel({
+	  terms,
+	  className = ''
+	}) {
+	  const body = terms?.body || '';
+	  if (!body.trim()) return null;
+	  const blocks = renderBlocks(body);
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    className: `ck-terms ${className}`.trim(),
+	    children: blocks.map((b, i) => {
+	      if (b.type === 'h') {
+	        const Tag = b.level === 1 ? 'h3' : b.level === 2 ? 'h4' : 'h5';
+	        // h1/h2 are the page's own; the document starts a level down so it
+	        // cannot outrank the heading it sits under.
+	        return /*#__PURE__*/jsxRuntimeExports.jsx(Tag, {
+	          className: "ck-terms__h",
+	          children: b.text
+	        }, i);
+	      }
+	      if (b.type === 'list') {
+	        const Tag = b.ordered ? 'ol' : 'ul';
+	        return /*#__PURE__*/jsxRuntimeExports.jsx(Tag, {
+	          className: "ck-terms__list",
+	          children: b.items.map((item, j) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+	            children: item
+	          }, j))
+	        }, i);
+	      }
+	      return /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "ck-terms__p",
+	        children: b.text
+	      }, i);
+	    })
+	  });
+	}
+
+	/** "Last updated" line, shown to creators beside the document. */
+	function TermsUpdatedLine({
+	  terms
+	}) {
+	  if (!terms?.updated_at) return null;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	    className: "ck-terms__meta",
+	    children: ["Version ", terms.version || 1, " \xB7 last updated", ' ', new Date(terms.updated_at).toLocaleDateString('en-IN', {
+	      day: 'numeric',
+	      month: 'long',
+	      year: 'numeric'
+	    })]
+	  });
+	}
+
 	const fmtDate$3 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
 	  day: 'numeric',
 	  month: 'short',
@@ -43582,6 +43803,21 @@
 	    load();
 	    // eslint-disable-next-line react-hooks/exhaustive-deps
 	  }, []);
+
+	  // The published terms, if any. Loaded separately from the creator record so
+	  // a database without 0026 applied still shows a working application form —
+	  // just without a terms document to read.
+	  const [terms, setTerms] = reactExports.useState(null);
+	  reactExports.useEffect(() => {
+	    let live = true;
+	    getCreatorTerms().then(t => {
+	      if (live) setTerms(t);
+	    }).catch(() => {});
+	    return () => {
+	      live = false;
+	    };
+	  }, []);
+	  const hasTerms = termsArePublished(terms);
 	  const set = (k, v) => setForm(s => ({
 	    ...s,
 	    [k]: v
@@ -43609,6 +43845,19 @@
 	        };
 	        setErr(map[res.reason] || 'We could not submit your application. Please try again.');
 	      } else {
+	        // Record WHICH version was accepted. apply_as_creator already stores an
+	        // agreed_at, but not the version — and a timestamp alone cannot answer
+	        // "which terms did they agree to" once the document changes.
+	        //
+	        // Deliberately after a successful application and deliberately not
+	        // fatal: the creator record exists either way, and the portal asks for
+	        // acceptance again if this did not land. Failing the whole application
+	        // because a follow-up write failed would be the worse outcome.
+	        if (hasTerms) {
+	          try {
+	            await acceptCreatorTerms();
+	          } catch {/* portal re-prompts */}
+	        }
 	        await load();
 	      }
 	    } catch (e2) {
@@ -43886,6 +44135,19 @@
 	            children: p
 	          }, p))]
 	        })]
+	      }), hasTerms && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "crob__terms",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+	          className: "crob__terms-h",
+	          children: "Creator terms"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(TermsUpdatedLine, {
+	          terms: terms
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "crob__terms-body",
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTermsPanel, {
+	            terms: terms
+	          })
+	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
 	        className: "crob__agree",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
@@ -43893,7 +44155,7 @@
 	          checked: form.agreed,
 	          onChange: e => set('agreed', e.target.checked)
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	          children: "I agree to the SORA LIFE creator terms and understand my account remains a normal customer account."
+	          children: hasTerms ? `I have read and agree to the SORA LIFE creator terms (version ${terms.version}), and understand my account remains a normal customer account.` : 'I agree to the SORA LIFE creator terms and understand my account remains a normal customer account.'
 	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	        className: "crob__note",
@@ -49199,6 +49461,9 @@
 	  const [earnings, setEarnings] = reactExports.useState(null);
 	  const [kyc, setKyc] = reactExports.useState(null);
 	  const [payouts, setPayouts] = reactExports.useState([]);
+	  const [terms, setTerms] = reactExports.useState(null);
+	  const [termsAccepted, setTermsAccepted] = reactExports.useState(null); // null = unknown
+	  const [acceptingTerms, setAcceptingTerms] = reactExports.useState(false);
 	  const navRef = reactExports.useRef(null);
 
 	  // Reload just the money surfaces (earnings buckets, KYC, payout history)
@@ -49208,6 +49473,42 @@
 	    setEarnings(en && en.ok ? en : null);
 	    setKyc(ky || null);
 	    setPayouts(Array.isArray(po) ? po : []);
+	  }, []);
+
+	  // Terms load separately from the portal's own data. They are public-read
+	  // and optional, so a failure — or a database where 0026 has not been applied
+	  // — must leave the portal working with the terms section simply absent.
+	  reactExports.useEffect(() => {
+	    let live = true;
+	    getCreatorTerms().then(t => {
+	      if (live) setTerms(t);
+	    }).catch(() => {
+	      if (live) setTerms(null);
+	    });
+	    return () => {
+	      live = false;
+	    };
+	  }, []);
+	  reactExports.useEffect(() => {
+	    if (!creator?.id || !terms || !termsArePublished(terms)) {
+	      setTermsAccepted(null);
+	      return;
+	    }
+	    let live = true;
+	    getMyTermsAcceptance(creator.id, terms.version).then(a => {
+	      if (live) setTermsAccepted(!!a);
+	    }).catch(() => {
+	      if (live) setTermsAccepted(null);
+	    });
+	    return () => {
+	      live = false;
+	    };
+	  }, [creator?.id, terms]);
+	  const onAcceptTerms = reactExports.useCallback(async () => {
+	    setAcceptingTerms(true);
+	    const res = await acceptCreatorTerms();
+	    if (res?.ok) setTermsAccepted(true);
+	    setAcceptingTerms(false);
 	  }, []);
 	  const load = reactExports.useCallback(async () => {
 	    // Try to link this signed-in account to a creator record (matched on the
@@ -49770,6 +50071,28 @@
 	                value: fmtDate$1(creator.joined_at)
 	              })]
 	            })
+	          }), termsArePublished(terms) && /*#__PURE__*/jsxRuntimeExports.jsxs(Section, {
+	            title: "Terms & conditions",
+	            sub: "The terms your participation in the programme runs on.",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(TermsUpdatedLine, {
+	              terms: terms
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTermsPanel, {
+	              terms: terms
+	            }), termsAccepted === true && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	              className: "ck-terms__accepted",
+	              children: ["You accepted version ", terms.version, "."]
+	            }), termsAccepted === false && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "ck-terms__accept",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	                children: "These terms have been updated since you last accepted them. Please read and accept the current version."
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                type: "button",
+	                className: "btn btn-sm",
+	                onClick: onAcceptTerms,
+	                disabled: acceptingTerms,
+	                children: acceptingTerms ? 'Recording…' : `I accept version ${terms.version}`
+	              })]
+	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	            className: "crp__foot-note",
 	            children: "Your commission rate and status are managed by SORA LIFE. Contact your programme manager if something here looks wrong."
@@ -50267,6 +50590,9 @@
 	}, {
 	  to: '/admin/creators',
 	  label: 'Creator Program'
+	}, {
+	  to: '/admin/creator-terms',
+	  label: 'Creator Terms'
 	}, {
 	  to: '/admin/attribution',
 	  label: 'Attribution'
@@ -53587,6 +53913,152 @@
 	          }, r.id))
 	        })]
 	      })
+	    })]
+	  });
+	}
+
+	const EMPTY$1 = {
+	  body: '',
+	  version: 1,
+	  updated_at: null
+	};
+	function CreatorTerms() {
+	  const [form, setForm] = reactExports.useState(EMPTY$1);
+	  const [loadedVersion, setLoadedVersion] = reactExports.useState(1);
+	  const [bumpVersion, setBumpVersion] = reactExports.useState(false);
+	  const [loading, setLoading] = reactExports.useState(true);
+	  const [saving, setSaving] = reactExports.useState(false);
+	  const [msg, setMsg] = reactExports.useState('');
+	  const [err, setErr] = reactExports.useState('');
+	  reactExports.useEffect(() => {
+	    adminGetSetting('creator_terms').then(v => {
+	      if (!v) return; // migration not applied yet
+	      setForm({
+	        ...EMPTY$1,
+	        ...v
+	      });
+	      setLoadedVersion(Number(v.version) || 1);
+	    }).catch(e => setErr(e.message || String(e))).finally(() => setLoading(false));
+	  }, []);
+	  async function save(e) {
+	    e.preventDefault();
+	    setSaving(true);
+	    setErr('');
+	    setMsg('');
+	    try {
+	      const version = bumpVersion ? loadedVersion + 1 : loadedVersion;
+	      const next = {
+	        body: form.body || '',
+	        version,
+	        updated_at: new Date().toISOString()
+	      };
+	      await adminSetSetting('creator_terms', next);
+	      setForm(next);
+	      setLoadedVersion(version);
+	      setBumpVersion(false);
+	      setMsg(bumpVersion ? `Saved as version ${version}. Creators who accepted an earlier version will be asked to accept again.` : `Saved. Still version ${version}, so existing acceptances stand.`);
+	    } catch (ex) {
+	      setErr(ex.message || String(ex));
+	    }
+	    setSaving(false);
+	  }
+	  if (loading) return /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	    className: "muted",
+	    children: "Loading\u2026"
+	  });
+	  const published = (form.body || '').trim().length > 0;
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "adm-form",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm__head",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          children: "Creator terms"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          children: "The terms creators read and accept. Markdown; shown on the Creator Programme page and at signup."
+	        })]
+	      })
+	    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm-banner err",
+	      children: err
+	    }), msg && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm-banner ok",
+	      children: msg
+	    }), !published && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm-banner",
+	      children: "No terms published yet. While this is empty, creators see no terms section and the signup checkbox is not shown."
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	      onSubmit: save,
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "surface",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	          children: "Terms & conditions"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            htmlFor: "creator-terms-body",
+	            children: "Terms (markdown)"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
+	            id: "creator-terms-body",
+	            className: "textarea",
+	            rows: 22,
+	            value: form.body || '',
+	            onChange: e => setForm(f => ({
+	              ...f,
+	              body: e.target.value
+	            })),
+	            placeholder: '## Creator Programme Terms\n\nWrite the terms here.'
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "surface",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	          children: "Version"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "muted",
+	          style: {
+	            marginTop: 0
+	          },
+	          children: ["Current version ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	            children: loadedVersion
+	          }), form.updated_at ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	            children: [" \xB7 last updated ", new Date(form.updated_at).toLocaleString('en-IN')]
+	          }) : /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
+	            children: " \xB7 never published"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	          className: "field",
+	          style: {
+	            display: 'flex',
+	            gap: 8,
+	            alignItems: 'flex-start'
+	          },
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            type: "checkbox",
+	            checked: bumpVersion,
+	            onChange: e => setBumpVersion(e.target.checked),
+	            style: {
+	              marginTop: 3
+	            }
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+	              children: ["This is a material change \u2014 publish as version ", loadedVersion + 1, "."]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "muted",
+	              children: "Every creator will be asked to accept the new version. Leave unticked for typos and formatting, which keep existing acceptances valid."
+	            })]
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "adm-actions",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          className: "btn",
+	          type: "submit",
+	          disabled: saving,
+	          children: saving ? 'Saving…' : 'Save terms'
+	        })
+	      })]
 	    })]
 	  });
 	}
@@ -60578,6 +61050,9 @@
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "creators/:id",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(CreatorDetail, {})
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "creator-terms",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTerms, {})
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "attribution",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Attribution, {})
