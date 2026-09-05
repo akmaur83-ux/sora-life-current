@@ -45,6 +45,17 @@ export const MAX_INTERVAL_MS = 15000;
 export const DEFAULT_INTERVAL_MS = 5200;
 
 /**
+ * Per-item visual adjustment. Packshots are not framed consistently — some
+ * sit tight in their canvas, others float in blank space — so the owner
+ * nudges each one rather than every product inheriting one compromise.
+ * Bounded so a stored value can never blow the product off the stage.
+ */
+export const MIN_ITEM_SCALE = 0.75;
+export const MAX_ITEM_SCALE = 1.35;
+export const DEFAULT_ITEM_SCALE = 1;
+export const ITEM_OFFSET_LIMIT = 60;
+
+/**
  * Category-level default backgrounds, keyed by the `tone` the categories
  * table already carries. Muted and warm on purpose — this is a wellness
  * marketplace, not a toy store. Admin can override per category and per item.
@@ -117,6 +128,20 @@ export function categoryToneTheme(slug) {
   return TONE_THEMES[tone] || NEUTRAL_THEME;
 }
 
+/**
+ * Clamp to a range, falling back when the stored value is not a usable number.
+ *
+ * null / undefined / '' are treated as ABSENT, not as zero. Number(null) is 0,
+ * which is finite — so without this guard a missing scale would clamp to the
+ * 0.75 minimum and silently shrink every un-tuned packshot.
+ */
+const clampNum = (v, min, max, fallback) => {
+  if (v === null || v === undefined || v === '') return fallback;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+};
+
 const clampInterval = (n) => {
   const v = Number(n);
   if (!Number.isFinite(v)) return DEFAULT_INTERVAL_MS;
@@ -156,6 +181,19 @@ export function sanitizeSpotlightItem(raw, taken = []) {
     subline: str(raw.subline, 90),
     background: safeColor(raw.background),
     gradient: safeGradient(raw.gradient),
+    // Generated once by the Admin packshot preprocessor. It is deliberately
+    // separate from the owner's fields above, so a later re-import can refresh
+    // the automatic suggestion without ever overwriting a manual decision.
+    autoTheme: {
+      background: safeColor(raw.autoTheme?.background),
+      gradient: safeGradient(raw.autoTheme?.gradient),
+    },
+    // Owner's per-packshot framing nudge. Rounded so the stored value stays
+    // tidy, and bounded so it can only ever adjust, never break, the shot.
+    visualScale: Math.round(
+      clampNum(raw.visualScale, MIN_ITEM_SCALE, MAX_ITEM_SCALE, DEFAULT_ITEM_SCALE) * 100,
+    ) / 100,
+    verticalOffset: Math.round(clampNum(raw.verticalOffset, -ITEM_OFFSET_LIMIT, ITEM_OFFSET_LIMIT, 0)),
     enabled: raw.enabled !== false,
   };
 }
@@ -292,10 +330,12 @@ function buildSlide(item, product, cfg, slug) {
   const productImage = product.image || product.gallery?.[0] || '';
   const image = configured || productImage;
   const cutout = Boolean(configured) || looksTransparent(configured || productImage);
-  const theme = {
-    background: item?.background || cfg.theme.background,
-    gradient: item?.background ? (item.gradient || '') : (item?.gradient || cfg.theme.gradient),
-  };
+  const autoBackground = item?.autoTheme?.background || '';
+  const autoGradient = item?.autoTheme?.gradient || '';
+  const background = item?.background || autoBackground || cfg.theme.background;
+  const gradient = item?.gradient
+    || (item?.background ? '' : (autoGradient || (autoBackground ? '' : cfg.theme.gradient)));
+  const theme = { background, gradient };
   return {
     id: item?.id || `auto-${product.slug}`,
     productSlug: product.slug,
@@ -311,6 +351,10 @@ function buildSlide(item, product, cfg, slug) {
     subline: item?.subline || '',
     image,
     framed: !cutout,
+    // Applied to the product visual only — never to the seat, whose transform
+    // is the reshuffle animation.
+    visualScale: item?.visualScale ?? DEFAULT_ITEM_SCALE,
+    verticalOffset: item?.verticalOffset ?? 0,
     theme,
     categorySlug: slug,
   };

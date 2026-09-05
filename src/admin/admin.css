@@ -539,3 +539,9 @@
   border-radius: 4px;
   overflow: hidden;
 }
+
+/* Per-packshot fit controls. Two sliders and a reset, kept on one row so a
+   40-item category does not grow two more form rows per product. */
+.adm-cx__fit { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px; }
+.adm-cx__fit .field { flex: 1 1 180px; min-width: 0; margin-bottom: 0; }
+.adm-cx__fit .btn { flex: 0 0 auto; }

@@ -22,7 +22,9 @@
 // ============================================================
 
 import { categoryBySlug } from '../data/categories.js';
-import { isSpotlightEligible, sanitizeCategoryConfig, makeSpotlightId } from './categoryExperience.js';
+import {
+  isSpotlightEligible, sanitizeCategoryConfig, makeSpotlightId, safeColor, safeGradient,
+} from './categoryExperience.js';
 
 /** Statuses a selected file can end in. Order is the reporting order. */
 export const IMPORT_STATUS = Object.freeze({
@@ -170,9 +172,9 @@ export function countByStatus(plan) {
  * Everything already configured is preserved: a category's enabled flag,
  * auto-rotate, interval, theme, and each item's headline, subline, background,
  * gradient, enabled flag and ORDER. An item that already exists for a product
- * has only its spotlightImage replaced. A product with no item yet gets one
- * appended carrying nothing but its slug and the new image, so the category's
- * own theme continues to supply the background.
+ * has its spotlightImage and generated autoTheme refreshed; manual background
+ * and gradient remain untouched and therefore continue to win. A product with
+ * no item yet gets one appended with the generated theme.
  *
  * @param existing  normalised { categories: { slug: config } }
  * @param uploads   [{ slug, url, categories: [slug] }]
@@ -200,13 +202,22 @@ export function applyUploads(existing, uploads = []) {
 
   for (const up of uploads) {
     if (!up?.slug || !up?.url) continue;
+    const autoTheme = {
+      background: safeColor(up.autoTheme?.background),
+      gradient: safeGradient(up.autoTheme?.gradient),
+    };
+    const hasAutoTheme = Boolean(autoTheme.background || autoTheme.gradient);
     for (const catSlug of up.categories || []) {
       if (!categoryBySlug[catSlug]) continue;
       const cfg = touch(catSlug);
       const idx = cfg.items.findIndex((it) => it.productSlug === up.slug);
       if (idx >= 0) {
-        // Update in place: order and every authored field survive.
-        cfg.items[idx] = { ...cfg.items[idx], spotlightImage: up.url };
+        // Update in place: order and every authored field survive. Automatic
+        // values are separate, so this cannot overwrite an owner's colours.
+        cfg.items[idx] = {
+          ...cfg.items[idx], spotlightImage: up.url,
+          ...(hasAutoTheme ? { autoTheme } : {}),
+        };
         report[catSlug].updated.push(up.slug);
         continue;
       }
@@ -218,6 +229,7 @@ export function applyUploads(existing, uploads = []) {
         subline: '',
         background: '',
         gradient: '',
+        autoTheme: hasAutoTheme ? autoTheme : { background: '', gradient: '' },
         enabled: true,
       });
       report[catSlug].created.push(up.slug);

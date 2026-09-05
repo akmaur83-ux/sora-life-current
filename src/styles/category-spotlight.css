@@ -12,19 +12,26 @@
 
 .cspot {
   /* -- stage -------------------------------------------------- */
-  --cspot-h: 420px;              /* total stage height, mobile first       */
+  --cspot-h: 320px;              /* compact mobile product stage           */
   /* Seat width, % of stage. MUST stay well under 100%: at 100% the active
      seat covers the whole stage and the side products sit BEHIND it rather
      than beside it, which is what the first pass did. */
-  --cspot-seat-w: 64%;
-  --cspot-shot-h: 74%;           /* active product visual, % of stage      */
-  --cspot-side-scale: 0.74;      /* side products, relative to active      */
-  --cspot-side-x: 34vw;          /* side seat offset from centre           */
-  --cspot-side-op: 0.78;         /* side opacity — kept high on purpose:
+  --cspot-seat-w: 70%;
+  --cspot-shot-h: 90%;           /* 288px active visual at the base size   */
+  --cspot-side-scale: 0.64;      /* side products, relative to active      */
+  --cspot-side-x: 27vw;          /* side seat offset from centre           */
+  --cspot-side-op: 0.70;         /* side opacity — kept high on purpose:
                                     the sides read as secondary through SCALE
                                     and POSITION, not through fading out     */
-  --cspot-active-y: -6px;        /* active lift                            */
-  --cspot-side-y: 16px;          /* side drop                              */
+  --cspot-active-y: 0px;         /* centred; never intrudes into metadata  */
+  --cspot-side-y: 8px;           /* slight side drop                       */
+
+  /* Per-item adjustment, set inline from the item's saved values. Packshots
+     arrive with different amounts of blank canvas around the product, so the
+     owner nudges each one here. These ride on the IMAGE, never on the seat —
+     the seat's transform belongs to the reshuffle animation. */
+  --cspot-item-scale: 1;
+  --cspot-item-y: 0px;
 
   /* -- motion ------------------------------------------------- */
   --cspot-dur: 560ms;
@@ -68,8 +75,13 @@
   text-align: center;
 }
 
+/* The eyebrow sits directly on the cluster. The stage centres its seats, so
+   any margin here pushed the whole composition down and left a band of empty
+   colour between the label and the product. */
 .cspot__eyebrow {
-  margin: 0 0 2px;
+  margin: 0 0 -14px;
+  position: relative;
+  z-index: 2;
   color: var(--slv2-ink-4, #6B7168);
   font-size: 10px;
   font-weight: 600;
@@ -174,6 +186,12 @@
   height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 14px 18px rgba(24, 32, 26, 0.14));
+  /* The owner's per-packshot nudge. Deliberately on the IMAGE and not on the
+     seat: the seat's transform is the reshuffle animation, and composing both
+     on one element would make the two fight. This one is static — it never
+     transitions, so it costs nothing. */
+  transform: translateY(var(--cspot-item-y)) scale(var(--cspot-item-scale));
+  transform-origin: center center;
 }
 
 /* A white-background packshot is a spotlight asset, not a lifestyle card, so
@@ -209,10 +227,20 @@
   -webkit-box-orient: vertical;
 }
 
+/* Below 480px the side captions cost more than they give: they sit under
+   products that are half off-screen, and removing them lets the cluster sit
+   higher. The active product keeps all of its metadata, and the side seats
+   stay tappable and still announce themselves through aria-label. */
+@media (max-width: 479px) {
+  .cspot__sidename { display: none; }
+}
+
 /* ----------------------------------------------------------------- meta */
 
 .cspot__meta {
-  margin-top: -2px;
+  /* Imported packshots can occupy their full canvas. Keep metadata in normal
+     flow with a real gap so artwork can never cover the title or controls. */
+  margin-top: 8px;
   animation: cspot-meta-in var(--cspot-meta-dur) var(--cspot-ease) both;
 }
 @keyframes cspot-meta-in {
@@ -240,7 +268,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin: 3px 0 0;
+  margin: 2px 0 0;
   color: var(--slv2-ink-4, #6B7168);
   font-size: 12px;
 }
@@ -265,7 +293,7 @@
   align-items: center;
   gap: 7px;
   min-height: 44px;
-  margin-top: 8px;
+  margin-top: 6px;
   padding: 0 20px;
   border-radius: var(--slv2-r-ui, 2px);
   background: var(--slv2-cta-primary-bg, #1E3A2F);
@@ -283,7 +311,7 @@
   align-items: center;
   justify-content: center;
   gap: 14px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 .cspot__arrow {
   display: grid;
@@ -311,8 +339,8 @@
 @media (min-width: 768px) {
   .cspot {
     --cspot-h: 528px;
-    /* Pinned so the tightened mobile values above cannot leak up. This pass
-       deliberately did not re-art-direct tablet or desktop. */
+    /* Pinned so the tightened mobile values above cannot leak up. Neither this
+       pass nor the previous one re-art-directed tablet or desktop. */
     --cspot-active-y: -12px;
     --cspot-side-y: 20px;
     --cspot-pad-top: 20px;
@@ -327,41 +355,43 @@
     --cspot-pad-bottom: 22px;
   }
   .cspot__sidename { max-width: 26vw; font-size: 12px; }
+  .cspot__meta { margin-top: 0; }
 }
 
 /* --------------------------------------------------------- desktop 1440 */
 
 @media (min-width: 1100px) {
   .cspot {
-    --cspot-h: 500px;
+    /* 420px stage + 30px section padding = a compact 450px composition. */
+    --cspot-h: 420px;
     --cspot-active-y: -12px;   /* pinned — see the tablet block */
     --cspot-side-y: 20px;
-    --cspot-seat-w: 34%;
-    --cspot-shot-h: 70%;
-    --cspot-side-scale: 0.62;
-    /* Fixed px rather than vw: past ~1100px a viewport-relative offset flings
-       the side products into the far corners of a very wide screen. */
-    --cspot-side-x: 340px;
-    --cspot-side-op: 0.7;
+    --cspot-seat-w: 42%;
+    --cspot-shot-h: 96%;
+    --cspot-side-scale: 0.64;
+    /* A compact fixed offset makes the three products read as one group. */
+    --cspot-side-x: 220px;
+    --cspot-side-op: 0.68;
     --cspot-name-size: 30px;
-    --cspot-pad-top: 26px;
-    --cspot-pad-bottom: 26px;
+    --cspot-pad-top: 15px;
+    --cspot-pad-bottom: 15px;
   }
   /* Editorial: copy on the left, stage centre, so the catalogue below is not
      pushed off the fold by a stacked hero. */
   .cspot__inner {
     display: grid;
-    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+    grid-template-columns: minmax(260px, 280px) minmax(0, 1fr);
     align-items: center;
-    gap: 28px;
+    gap: 24px;
     text-align: left;
   }
   .cspot__eyebrow { grid-column: 1; margin-bottom: 8px; align-self: end; }
   .cspot__meta { grid-column: 1; grid-row: 2; margin-top: 0; align-self: start; }
+  .cspot__nav { margin-top: 12px; }
   .cspot__stage { grid-column: 2; grid-row: 1 / span 3; }
   .cspot__nav { grid-column: 1; grid-row: 3; justify-content: flex-start; align-self: start; }
   .cspot__facts { justify-content: flex-start; }
-  .cspot__sidename { max-width: 200px; }
+  .cspot__sidename { display: none; }
 }
 
 /* ------------------------------------------------------- reduced motion */

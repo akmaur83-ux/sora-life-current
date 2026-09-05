@@ -9,6 +9,7 @@ import {
   categoryExperiencePayload, normalizeCategoryExperience, sanitizeCategoryConfig,
   categoryToneTheme, makeSpotlightId, isSpotlightEligible, safeColor, safeGradient,
   MIN_INTERVAL_MS, MAX_INTERVAL_MS, categoryIsReadyButOff,
+  MIN_ITEM_SCALE, MAX_ITEM_SCALE, DEFAULT_ITEM_SCALE, ITEM_OFFSET_LIMIT,
 } from '../../lib/categoryExperience.js';
 
 // ============================================================
@@ -261,6 +262,44 @@ export default function CategoryExperience() {
                   onBusy={(d) => setUploads((n) => n + d)}
                 />
 
+                {/* Packshots are not framed alike — some fill their canvas,
+                    others float in blank space. These two nudge one product's
+                    visual without disturbing any other, and without touching
+                    the stage geometry that every product shares. */}
+                <div className="adm-cx__fit">
+                  <div className="field">
+                    <label className="label" htmlFor={`cx-scale-${item.id}`}>
+                      Visual size — {Number(item.visualScale ?? DEFAULT_ITEM_SCALE).toFixed(2)}×
+                    </label>
+                    <input
+                      id={`cx-scale-${item.id}`} type="range" className="input"
+                      min={MIN_ITEM_SCALE} max={MAX_ITEM_SCALE} step={0.01}
+                      value={item.visualScale ?? DEFAULT_ITEM_SCALE}
+                      onChange={(e) => patchItem(i, { visualScale: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="field">
+                    <label className="label" htmlFor={`cx-offset-${item.id}`}>
+                      Nudge up / down — {item.verticalOffset ?? 0}px
+                    </label>
+                    <input
+                      id={`cx-offset-${item.id}`} type="range" className="input"
+                      min={-ITEM_OFFSET_LIMIT} max={ITEM_OFFSET_LIMIT} step={1}
+                      value={item.verticalOffset ?? 0}
+                      onChange={(e) => patchItem(i, { verticalOffset: Number(e.target.value) })}
+                    />
+                  </div>
+                  <button
+                    type="button" className="btn btn-sm btn-light"
+                    onClick={() => patchItem(i, { visualScale: DEFAULT_ITEM_SCALE, verticalOffset: 0 })}
+                    disabled={(item.visualScale ?? DEFAULT_ITEM_SCALE) === DEFAULT_ITEM_SCALE
+                      && (item.verticalOffset ?? 0) === 0}
+                  >
+                    Reset fit
+                  </button>
+                </div>
+                <p className="hint">Use the preview below to see the effect before you save.</p>
+
                 <div className="field">
                   <label className="label" htmlFor={`cx-h-${item.id}`}>Headline (optional)</label>
                   <input
@@ -286,11 +325,18 @@ export default function CategoryExperience() {
 
                 <ThemeFields
                   theme={{ background: item.background, gradient: item.gradient }}
-                  fallback={cfg.theme}
+                  fallback={{
+                    background: item.autoTheme?.background || cfg.theme.background,
+                    gradient: item.autoTheme?.gradient
+                      || (item.autoTheme?.background ? '' : cfg.theme.gradient),
+                  }}
                   optional
                   onChange={({ background, gradient }) => patchItem(i, { background, gradient })}
                   idPrefix={`cx-item-${item.id}`}
                 />
+                {item.autoTheme?.background && (
+                  <p className="hint">Automatic theme sampled from this imported packshot. Enter either field above to override it.</p>
+                )}
 
                 <div className="adm-dc__foot">
                   <button type="button" className="btn btn-sm btn-light" onClick={() => moveItem(i, -1)} disabled={i === 0}>

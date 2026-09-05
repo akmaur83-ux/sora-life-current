@@ -188,18 +188,46 @@ const existingCfg = normalizeCategoryExperience({
 
 test('P1 an existing item keeps its copy, colour, enabled flag and position', () => {
   const { categories } = applyUploads(existingCfg, [
-    { slug: 'hair-serum', url: 'https://cdn.test/new-serum.png', categories: ['hair-care'] },
+    {
+      slug: 'hair-serum', url: 'https://cdn.test/new-serum.png', categories: ['hair-care'],
+      autoTheme: { background: '#F8E3D6', gradient: 'linear-gradient(168deg, #F9EBE1 0%, #F6D4C2 100%)' },
+    },
   ]);
   const item = categories['hair-care'].items.find((i) => i.productSlug === 'hair-serum');
   assert.equal(item.spotlightImage, 'https://cdn.test/new-serum.png', 'only the image changes');
   assert.equal(item.headline, 'Our pick');
   assert.equal(item.subline, 'Cold pressed');
   assert.equal(item.background, '#112233');
+  assert.equal(item.autoTheme.background, '#F8E3D6', 'automatic theme is stored separately');
   assert.equal(item.id, 'a', 'the stable id survives');
   assert.equal(categories['hair-care'].items[0].productSlug, 'hair-serum', 'order is unchanged');
   // A disabled item stays disabled — the import does not re-enable anything.
   const other = categories['hair-care'].items.find((i) => i.productSlug === 'aloe-vera-protein-shampoo');
   assert.equal(other.enabled, false);
+});
+
+test('P1b re-import refreshes only generated presentation fields', () => {
+  const configured = normalizeCategoryExperience({
+    categories: { 'hair-care': { enabled: false, items: [{
+      id: 'stable', productSlug: 'hair-serum', headline: 'Owner copy', subline: 'Owner subline',
+      background: '#112233', gradient: '', visualScale: 1.17, verticalOffset: -9,
+      autoTheme: { background: '#EEEEEE', gradient: '' }, enabled: false,
+    }] } },
+  });
+  const { categories } = applyUploads(configured, [{
+    slug: 'hair-serum', url: 'https://cdn.test/normalized.png', categories: ['hair-care'],
+    autoTheme: { background: '#E4EFE2', gradient: 'linear-gradient(168deg, #EFF5EC 0%, #D7E7D3 100%)' },
+  }]);
+  const item = categories['hair-care'].items[0];
+  assert.equal(item.id, 'stable');
+  assert.equal(item.headline, 'Owner copy');
+  assert.equal(item.subline, 'Owner subline');
+  assert.equal(item.background, '#112233', 'manual theme survives');
+  assert.equal(item.visualScale, 1.17);
+  assert.equal(item.verticalOffset, -9);
+  assert.equal(item.enabled, false);
+  assert.equal(item.autoTheme.background, '#E4EFE2', 'automatic suggestion may safely refresh');
+  assert.equal(categories['hair-care'].enabled, false, 'category remains off');
 });
 
 test('P2 category settings and theme are untouched', () => {
@@ -215,7 +243,10 @@ test('P2 category settings and theme are untouched', () => {
 
 test('P3 a product with no item yet gets one appended, carrying no invented copy', () => {
   const { categories, report } = applyUploads(existingCfg, [
-    { slug: 'aloe-vera-protein-conditioner', url: 'https://cdn.test/cond.png', categories: ['hair-care'] },
+    {
+      slug: 'aloe-vera-protein-conditioner', url: 'https://cdn.test/cond.png', categories: ['hair-care'],
+      autoTheme: { background: '#E4EFE2', gradient: 'linear-gradient(168deg, #EFF5EC 0%, #D7E7D3 100%)' },
+    },
   ]);
   const items = categories['hair-care'].items;
   assert.equal(items.length, 3, 'appended, not replacing');
@@ -225,6 +256,7 @@ test('P3 a product with no item yet gets one appended, carrying no invented copy
   assert.equal(added.headline, '', 'no headline is invented');
   assert.equal(added.subline, '');
   assert.equal(added.background, '', 'the category theme still supplies the background');
+  assert.equal(added.autoTheme.background, '#E4EFE2', 'its generated theme is stored per item');
   assert.ok(added.id, 'it gets a stable id');
   assert.deepEqual(report[0].created, ['aloe-vera-protein-conditioner']);
 });
@@ -307,6 +339,81 @@ test('P8 unrelated homepage settings survive the write', () => {
   assert.deepEqual(mergeIntoHomepage(null, { categories: {} }).categoryExperience, { categories: {} });
 });
 
+test('P12 RE-IMPORT refreshes the image and auto theme, and nothing else', () => {
+  // The owner has already imported 131 packshots. Re-importing them through
+  // the new processor must replace the artwork and the generated colours while
+  // leaving every hand-made decision — and every id and position — alone.
+  const before = normalizeCategoryExperience({
+    categories: {
+      'hair-care': {
+        enabled: true, autoRotate: false, intervalMs: 6000,
+        theme: { background: '#EFE9F1', gradient: '' },
+        items: [
+          { id: 'keep-me', productSlug: 'hair-serum', spotlightImage: 'https://cdn.test/old-serum.png',
+            headline: 'Our pick', subline: 'Cold pressed',
+            background: '#ABCDEF', gradient: 'linear-gradient(168deg, #ABCDEF 0%, #123456 100%)',
+            autoTheme: { background: '#111111', gradient: '' },
+            visualScale: 1.2, verticalOffset: -18, enabled: false },
+          { id: 'second', productSlug: 'aloe-vera-protein-shampoo', spotlightImage: 'https://cdn.test/old-shampoo.png' },
+        ],
+      },
+    },
+  });
+
+  const { categories, report } = applyUploads(before, [
+    { slug: 'hair-serum', url: 'https://cdn.test/NEW-serum.png',
+      autoTheme: { background: '#F6E7DE', gradient: 'linear-gradient(168deg, #F8EEE5 0%, #F3DBD0 100%)' },
+      categories: ['hair-care'] },
+    { slug: 'aloe-vera-protein-shampoo', url: 'https://cdn.test/NEW-shampoo.png',
+      autoTheme: { background: '#E9ECD9', gradient: 'linear-gradient(168deg, #F0F0E2 0%, #DCE3C7 100%)' },
+      categories: ['hair-care'] },
+  ]);
+
+  const items = categories['hair-care'].items;
+  assert.equal(items.length, 2, 'no duplicate items are created');
+  assert.deepEqual(items.map((i) => i.productSlug), ['hair-serum', 'aloe-vera-protein-shampoo'],
+    'ordering is unchanged');
+
+  const serum = items[0];
+  assert.equal(serum.id, 'keep-me', 'the stable id survives');
+  assert.equal(serum.spotlightImage, 'https://cdn.test/NEW-serum.png', 'the artwork is refreshed');
+  assert.equal(serum.autoTheme.background, '#F6E7DE', 'and so is the generated theme');
+  // Everything the owner authored is untouched.
+  assert.equal(serum.headline, 'Our pick');
+  assert.equal(serum.subline, 'Cold pressed');
+  assert.equal(serum.background, '#ABCDEF', 'MANUAL background preserved');
+  assert.match(serum.gradient, /#ABCDEF/, 'MANUAL gradient preserved');
+  assert.equal(serum.visualScale, 1.2, 'Visual Scale preserved');
+  assert.equal(serum.verticalOffset, -18, 'Vertical Offset preserved');
+  assert.equal(serum.enabled, false, 'a hidden item stays hidden');
+
+  // Category settings survive, and the import publishes nothing.
+  const cfg = categories['hair-care'];
+  assert.equal(cfg.autoRotate, false);
+  assert.equal(cfg.intervalMs, 6000);
+  assert.equal(cfg.theme.background, '#EFE9F1');
+  assert.equal(report[0].updated.length, 2, 'both were updates, not additions');
+  assert.equal(report[0].created.length, 0);
+});
+
+test('P13 an upload with no generated theme leaves the stored one alone', () => {
+  // A source the processor could not read a colour from must not blank out a
+  // theme that a previous, successful import produced.
+  const before = normalizeCategoryExperience({
+    categories: {
+      'hair-care': {
+        items: [{ id: 'a', productSlug: 'hair-serum', autoTheme: { background: '#F6E7DE', gradient: '' } }],
+      },
+    },
+  });
+  const { categories } = applyUploads(before, [
+    { slug: 'hair-serum', url: 'https://cdn.test/new.png', categories: ['hair-care'] },
+  ]);
+  const item = categories['hair-care'].items[0];
+  assert.equal(item.spotlightImage, 'https://cdn.test/new.png', 'the image still updates');
+  assert.equal(item.autoTheme.background, '#F6E7DE', 'the previous generated theme is kept');
+});
+
 test('P9 the importer NEVER flips a category from off to on', () => {
   // Importing prepares a category; the owner publishes it. A disabled category
   // that receives packshots is still disabled afterwards.
@@ -357,7 +464,8 @@ console.log('\n— The importer component —');
 
 test('C1 it uploads through the existing admin path, with no service-role key', () => {
   const cmp = code('../src/admin/components/BulkPackshotImport.jsx');
-  assert.match(cmp, /uploadHomepageImage\(row\.file\)/, 'reuses the single-image admin upload');
+  assert.match(cmp, /processSpotlightPackshot\(row\.file\)/, 'normalizes locally before upload');
+  assert.match(cmp, /uploadHomepageImage\(processed\.file\)/, 'reuses the authenticated admin upload for the PNG');
   assert.doesNotMatch(cmp, /service_role|SERVICE_ROLE|serviceRole/i, 'no service-role key anywhere');
   assert.doesNotMatch(cmp, /biosash\.com/i, 'nothing is hotlinked from the source site');
   // The stored value is the URL storage returned, never a remote one.
@@ -393,6 +501,7 @@ test('C5 it renders the pickers, and declares every status bucket', () => {
   const Cmp = component('../src/admin/components/BulkPackshotImport.jsx', 'BulkPackshotImport', {
     adminGetSetting: async () => ({}), adminSetSetting: async () => {},
     uploadHomepageImage: async () => 'https://cdn.test/x.png',
+    processSpotlightPackshot: async (file) => ({ file, theme: { background: '#EEEEEE', gradient: '' } }),
     products: CATALOGUE,
     normalizeCategoryExperience, categoryExperiencePayload: (c) => ({ categories: c }),
     IMPORT_STATUS, planImport, parseMappingCsv, applyUploads, mergeIntoHomepage,

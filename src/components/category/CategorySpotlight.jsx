@@ -232,6 +232,14 @@ export default function CategorySpotlight({ category, products, configOverride =
                 key={s.id}
                 className={`cspot__seat cspot__seat--${seat.role}`}
                 data-role={seat.role}
+                // Custom properties, not a transform. The seat's own transform
+                // is the reshuffle animation; these are read further down by
+                // .cspot__img, so the owner's framing nudge and the animation
+                // live on two different elements and cannot fight.
+                style={{
+                  '--cspot-item-scale': s.visualScale,
+                  '--cspot-item-y': `${s.verticalOffset}px`,
+                }}
                 // A side product is decoration until it is chosen. It stays
                 // out of the tab order so the stage is not a keyboard trap;
                 // the arrow keys and the prev/next buttons reach it instead.

@@ -25,6 +25,7 @@ import {
   resolveSpotlightItems, visibleWindow, wrapIndex, spotlightVisible,
   looksTransparent, categoryToneTheme, makeSpotlightId, categoryIsReadyButOff,
   MAX_STORED_ITEMS, DEFAULT_INTERVAL_MS, MIN_INTERVAL_MS, MAX_INTERVAL_MS,
+  MIN_ITEM_SCALE, MAX_ITEM_SCALE, DEFAULT_ITEM_SCALE, ITEM_OFFSET_LIMIT,
 } from '../src/lib/categoryExperience.js';
 
 let passed = 0, failed = 0;
@@ -146,6 +147,25 @@ test('X4 the spotlight image obeys the existing visual-URL policy', () => {
   assert.equal(sanitizeSpotlightItem({ productSlug: 'x', spotlightImage: 'javascript:alert(1)' }).spotlightImage, '');
   assert.equal(sanitizeSpotlightItem({ productSlug: 'x', spotlightImage: 'http://evil.test/a.png' }).spotlightImage, '');
   assert.equal(sanitizeSpotlightItem({ productSlug: 'x', spotlightImage: '/img/a.png' }).spotlightImage, '/img/a.png');
+});
+
+test('X5 generated item themes are sanitized independently from manual overrides', () => {
+  const item = sanitizeSpotlightItem({
+    productSlug: 'x',
+    background: '#112233',
+    gradient: '',
+    autoTheme: {
+      background: '#F8E3D6',
+      gradient: 'linear-gradient(168deg, #F9EBE1 0%, #F6D4C2 100%)',
+    },
+  });
+  assert.equal(item.background, '#112233');
+  assert.equal(item.autoTheme.background, '#F8E3D6');
+  assert.match(item.autoTheme.gradient, /^linear-gradient/);
+  const bad = sanitizeSpotlightItem({
+    productSlug: 'x', autoTheme: { background: 'url(evil)', gradient: 'var(--x)' },
+  });
+  assert.deepEqual(bad.autoTheme, { background: '', gradient: '' });
 });
 
 // ====================================================================
@@ -275,6 +295,22 @@ test('E8 image priority: configured asset, then cutout, then product image', () 
   assert.equal(looksTransparent('/a.jpg'), false);
 });
 
+test('E9 each slide uses its stored auto theme, while manual item colours win', () => {
+  const cfg = sanitizeCategoryConfig({
+    theme: { background: '#EEEEEE', gradient: '' },
+    items: [
+      { productSlug: 'shampoo-a', autoTheme: { background: '#F8E3D6', gradient: 'linear-gradient(168deg, #F9EBE1 0%, #F6D4C2 100%)' } },
+      { productSlug: 'oil-b', autoTheme: { background: '#E4EFE2', gradient: 'linear-gradient(168deg, #EFF5EC 0%, #D7E7D3 100%)' } },
+      { productSlug: 'mask-c', background: '#ABCDEF', gradient: '', autoTheme: { background: '#F5E0EC', gradient: 'linear-gradient(168deg, #F8EAF2 0%, #ECD1E1 100%)' } },
+    ],
+  }, 'hair-care');
+  const slides = resolveSpotlightItems('hair-care', { config: cfg, productList: HAIR });
+  assert.equal(slides[0].theme.background, '#F8E3D6');
+  assert.equal(slides[1].theme.background, '#E4EFE2');
+  assert.notEqual(slides[0].theme.gradient, slides[1].theme.gradient);
+  assert.deepEqual(slides[2].theme, { background: '#ABCDEF', gradient: '' }, 'manual background suppresses auto theme');
+});
+
 // ====================================================================
 console.log('\n— Performance: three slides, whatever the catalogue size —');
 // ====================================================================
@@ -380,38 +416,28 @@ test('M2 timing and easing are in the requested range, and centralised', () => {
   }
 });
 
-test('M3 the art-directed mobile geometry is pinned', () => {
-  // Art-direction pass 1 replaced the first-pass numbers. These ranges guard
-  // the APPROVED composition: a taller-feeling, dominant active product on a
-  // filled stage, with sides kept legible. Tight on purpose — the point is to
-  // catch accidental drift, so a deliberate re-tune should update them here.
+test('M3 the mobile stage geometry stays within art-directed bounds', () => {
+  // Pass 2 replaced pass 1's numbers; F3 pins the exact current values, so
+  // this one guards the SHAPE of the composition rather than repeating them.
   const css = src('../src/styles/category-spotlight.css');
   const base = css.slice(css.indexOf('.cspot {'), css.indexOf('.cspot__bg'));
-  // Plain string parsing, deliberately: a regex here needs escaped classes,
-  // and those kept getting mangled on the way into this file.
   const num = (name) => {
-    const line = base.split('\n').find((l) => l.trim().startsWith(`${name}:`));
+    // src() has already normalised CRLF, so a plain newline split is enough.
+    const line = base.split("\n").find((l) => l.trim().startsWith(`${name}:`));
     if (!line) throw new Error(`${name} is not declared in the .cspot block`);
     return parseFloat(line.split(':')[1].trim());
   };
 
-  assert.ok(num('--cspot-h') >= 400 && num('--cspot-h') <= 440, 'stage ~420px');
-  assert.ok(num('--cspot-seat-w') >= 60 && num('--cspot-seat-w') <= 68, 'seat ~64% of stage');
-  assert.ok(num('--cspot-shot-h') >= 70 && num('--cspot-shot-h') <= 78,
-    'the product fills ~74% of the stage — the first pass left it floating in empty space');
-  assert.ok(num('--cspot-side-scale') >= 0.70 && num('--cspot-side-scale') <= 0.78, 'sides ~0.74');
-  assert.ok(num('--cspot-side-x') >= 32 && num('--cspot-side-x') <= 36, 'sides at ~34vw');
-  assert.ok(num('--cspot-active-y') <= -4 && num('--cspot-active-y') >= -10, 'active raised ~6px');
-  assert.ok(num('--cspot-side-y') >= 12 && num('--cspot-side-y') <= 20, 'sides dropped ~16px');
-
-  // Side products must stay clearly readable: they are secondary through
-  // SCALE and POSITION, not through being faded out.
-  assert.ok(num('--cspot-side-op') >= 0.72,
-    'heavy opacity fading is not how the sides are de-emphasised');
-
-  // The seat width must still leave room for the sides beside the active
-  // product rather than behind it.
-  assert.ok(num('--cspot-seat-w') < 100, 'a full-width seat hides the side products');
+  assert.ok(num('--cspot-h') >= 300 && num('--cspot-h') <= 360, 'stage stays compact');
+  assert.ok(num('--cspot-seat-w') > 0 && num('--cspot-seat-w') < 100,
+    'a full-width seat would hide the side products behind the active one');
+  assert.ok(num('--cspot-shot-h') >= 70 && num('--cspot-shot-h') <= 95,
+    'the product fills the stage rather than floating in empty space');
+  assert.ok(num('--cspot-side-scale') >= 0.6 && num('--cspot-side-scale') < 1,
+    'sides are smaller than the active product, but not tiny');
+  assert.ok(num('--cspot-side-op') >= 0.7,
+    'sides are secondary through scale and position, not through heavy fading');
+  assert.ok(num('--cspot-active-y') <= 0, 'the active product is raised, never dropped');
 });
 
 test('M3b the stage shows isolated packshots, never boxed lifestyle cards', () => {
@@ -669,6 +695,195 @@ test('G6 admin preview renders a disabled category without publishing it', () =>
   assert.match(page, /<CategorySpotlight/, 'admin mounts the real stage');
   assert.match(page, /configOverride=\{cfg\}/, 'with the configuration being edited');
   assert.match(page, /preview$/m, 'in preview mode');
+});
+
+test('T1 MANUAL theme beats the auto-generated one', () => {
+  // The owner's decision always wins. A re-import refreshes autoTheme, so if
+  // auto could override manual, every re-import would silently repaint colours
+  // somebody had chosen by hand.
+  const cfg = sanitizeCategoryConfig({
+    enabled: true,
+    theme: { background: '#111111', gradient: '' },
+    items: [{
+      productSlug: 'shampoo-a',
+      background: '#ABCDEF',
+      gradient: 'linear-gradient(168deg, #ABCDEF 0%, #123456 100%)',
+      autoTheme: { background: '#FFEEDD', gradient: 'linear-gradient(168deg, #FFEEDD 0%, #FFCCBB 100%)' },
+    }],
+  }, 'hair-care');
+  const [slide] = resolveSpotlightItems('hair-care', { config: cfg, productList: HAIR });
+  assert.equal(slide.theme.background, '#ABCDEF', 'manual background wins');
+  assert.match(slide.theme.gradient, /#ABCDEF/, 'and so does the manual gradient');
+
+  // A manual background with no manual gradient must not inherit the auto or
+  // category gradient underneath it — that would tint the owner's colour.
+  const bgOnly = sanitizeCategoryConfig({
+    enabled: true,
+    items: [{
+      productSlug: 'shampoo-a',
+      background: '#ABCDEF',
+      autoTheme: { background: '#FFEEDD', gradient: 'linear-gradient(168deg, #FFEEDD 0%, #FFCCBB 100%)' },
+    }],
+  }, 'hair-care');
+  const [plain] = resolveSpotlightItems('hair-care', { config: bgOnly, productList: HAIR });
+  assert.equal(plain.theme.background, '#ABCDEF');
+  assert.equal(plain.theme.gradient, '', 'a manual colour stands on its own');
+});
+
+test('T2 AUTO theme beats the category fallback', () => {
+  const cfg = sanitizeCategoryConfig({
+    enabled: true,
+    theme: { background: '#111111', gradient: 'linear-gradient(168deg, #111111 0%, #222222 100%)' },
+    items: [{
+      productSlug: 'shampoo-a',
+      autoTheme: { background: '#F7EBD7', gradient: 'linear-gradient(168deg, #F8F0E1 0%, #F4E2C4 100%)' },
+    }],
+  }, 'hair-care');
+  const [slide] = resolveSpotlightItems('hair-care', { config: cfg, productList: HAIR });
+  assert.equal(slide.theme.background, '#F7EBD7', 'the generated colour is used');
+  assert.match(slide.theme.gradient, /#F8F0E1/, 'with its own generated gradient');
+});
+
+test('T3 with neither, the category theme still supplies the background', () => {
+  const cfg = sanitizeCategoryConfig({
+    enabled: true,
+    theme: { background: '#EFE9F1', gradient: 'linear-gradient(168deg, #F4EFF5 0%, #E6DCEA 100%)' },
+    items: [{ productSlug: 'shampoo-a' }],
+  }, 'hair-care');
+  const [slide] = resolveSpotlightItems('hair-care', { config: cfg, productList: HAIR });
+  assert.equal(slide.theme.background, '#EFE9F1');
+  assert.match(slide.theme.gradient, /#F4EFF5/);
+  // An unconfigured product falls all the way back to the category tone.
+  const auto = sanitizeCategoryConfig({ enabled: true }, 'hair-care');
+  const [fallback] = resolveSpotlightItems('hair-care', { config: auto, productList: HAIR });
+  assert.equal(fallback.theme.background, categoryToneTheme('hair-care').background);
+});
+
+test('T4 each slide carries its OWN theme, so the background changes on advance', () => {
+  // The stage reads the active slide's theme into --cspot-bg. If every slide
+  // resolved to the same colour the transition would be invisible.
+  const cfg = sanitizeCategoryConfig({
+    enabled: true,
+    items: [
+      { productSlug: 'shampoo-a', autoTheme: { background: '#F7EBD7', gradient: '' } },
+      { productSlug: 'oil-b', autoTheme: { background: '#E9ECD9', gradient: '' } },
+      { productSlug: 'mask-c', autoTheme: { background: '#F6E7DE', gradient: '' } },
+    ],
+  }, 'hair-care');
+  const items = resolveSpotlightItems('hair-care', { config: cfg, productList: HAIR });
+  const backgrounds = items.map((i) => i.theme.background);
+  assert.deepEqual(backgrounds, ['#F7EBD7', '#E9ECD9', '#F6E7DE']);
+  assert.equal(new Set(backgrounds).size, 3, 'three distinct grounds');
+
+  // And the component feeds the ACTIVE slide's theme to the existing variable
+  // rather than introducing a second animation system.
+  const cmp = code('../src/components/category/CategorySpotlight.jsx');
+  assert.match(cmp, /'--cspot-bg': active\.theme\.background/);
+  assert.match(cmp, /'--cspot-grad': active\.theme\.gradient/);
+  const css = code('../src/styles/category-spotlight.css');
+  assert.match(css, /transition: background var\(--cspot-dur\) var\(--cspot-ease\)/,
+    'the existing background transition still carries the change');
+});
+
+test('T5 a malformed auto theme cannot reach the DOM', () => {
+  const item = sanitizeSpotlightItem({
+    productSlug: 'x',
+    autoTheme: { background: 'url(evil)', gradient: 'linear-gradient(#fff, url(x))' },
+  });
+  assert.equal(item.autoTheme.background, '', 'the same colour policy applies to generated values');
+  assert.equal(item.autoTheme.gradient, '');
+  // A missing autoTheme is normalised to empty strings, never undefined.
+  assert.deepEqual(sanitizeSpotlightItem({ productSlug: 'x' }).autoTheme, { background: '', gradient: '' });
+});
+
+test('F1 per-item fit is stored, bounded and defaulted', () => {
+  const of = (raw) => sanitizeSpotlightItem({ productSlug: 'x', ...raw });
+  assert.equal(of({}).visualScale, DEFAULT_ITEM_SCALE, 'defaults to 1x');
+  assert.equal(of({}).verticalOffset, 0);
+  assert.equal(of({ visualScale: 1.2, verticalOffset: -18 }).visualScale, 1.2);
+  assert.equal(of({ visualScale: 1.2, verticalOffset: -18 }).verticalOffset, -18);
+  // Bounded: a stored value can adjust the shot, never launch it off the stage.
+  assert.equal(of({ visualScale: 99 }).visualScale, MAX_ITEM_SCALE);
+  assert.equal(of({ visualScale: 0.01 }).visualScale, MIN_ITEM_SCALE);
+  assert.equal(of({ verticalOffset: 9999 }).verticalOffset, ITEM_OFFSET_LIMIT);
+  assert.equal(of({ verticalOffset: -9999 }).verticalOffset, -ITEM_OFFSET_LIMIT);
+  // Junk falls back rather than reaching a style attribute.
+  for (const bad of ['big', null, undefined, NaN, Infinity, {}]) {
+    assert.equal(of({ visualScale: bad }).visualScale, DEFAULT_ITEM_SCALE);
+    assert.equal(of({ verticalOffset: bad }).verticalOffset, 0);
+  }
+});
+
+test('F2 fit reaches the IMAGE, never the seat whose transform is the animation', () => {
+  const cfg = sanitizeCategoryConfig({
+    enabled: true,
+    items: [{ productSlug: 'shampoo-a', visualScale: 1.25, verticalOffset: -20 }],
+  }, 'hair-care');
+  const [slide] = resolveSpotlightItems('hair-care', { config: cfg, productList: HAIR });
+  assert.equal(slide.visualScale, 1.25);
+  assert.equal(slide.verticalOffset, -20);
+
+  const Spotlight = component('../src/components/category/CategorySpotlight.jsx', 'CategorySpotlight', {
+    ...deps, categoryConfig: () => cfg,
+  });
+  const html = renderToStaticMarkup(h(Spotlight, {
+    category: { slug: 'hair-care', name: 'Hair Care' }, products: HAIR,
+  }));
+  // Emitted as custom properties on the seat…
+  assert.match(html, /--cspot-item-scale:1\.25/);
+  assert.match(html, /--cspot-item-y:-20px/);
+  // …and the seat's own transform is untouched by them.
+  const cmp = code('../src/components/category/CategorySpotlight.jsx');
+  assert.doesNotMatch(cmp, /transform:\s*[`'"]/, 'the component sets no transform of its own');
+
+  // The CSS applies them to the image, and the seat rule still owns the
+  // animation transform.
+  const css = code('../src/styles/category-spotlight.css');
+  const img = css.slice(css.indexOf('.cspot__img {'), css.indexOf('.cspot__img--framed'));
+  assert.match(img, /transform: translateY\(var\(--cspot-item-y\)\) scale\(var\(--cspot-item-scale\)\)/);
+  const seat = css.slice(css.indexOf('.cspot__seat {'), css.indexOf('.cspot__seat--prev'));
+  assert.doesNotMatch(seat, /--cspot-item/, 'the seat never reads the per-item values');
+  assert.match(seat, /transition:[\s\S]*?transform var\(--cspot-dur\)/, 'and keeps its animation');
+  // The per-item transform must never be transitioned.
+  assert.doesNotMatch(img, /transition/);
+});
+
+test('F3 the mobile art direction values are pinned', () => {
+  const css = src('../src/styles/category-spotlight.css');
+  const base = css.slice(css.indexOf('.cspot {'), css.indexOf('.cspot__bg'));
+  const num = (name) => {
+    const line = base.split(/\r?\n/).find((l) => l.trim().startsWith(`${name}:`));
+    if (!line) throw new Error(`${name} is not declared`);
+    return parseFloat(line.split(':')[1].trim());
+  };
+  assert.equal(num('--cspot-h'), 320);
+  assert.equal(num('--cspot-seat-w'), 70);
+  assert.equal(num('--cspot-shot-h'), 90);
+  assert.equal(num('--cspot-side-scale'), 0.64);
+  assert.equal(num('--cspot-side-x'), 27);
+  assert.equal(num('--cspot-side-op'), 0.70);
+  assert.equal(num('--cspot-active-y'), 0);
+  assert.equal(num('--cspot-side-y'), 8);
+  assert.equal(num('--cspot-item-scale'), 1, 'the per-item default is neutral');
+
+  // Side captions are off on phones; the active product keeps its metadata.
+  assert.match(css, /@media \(max-width: 479px\)[\s\S]{0,120}\.cspot__sidename \{ display: none; \}/);
+  assert.match(css, /\.cspot__name \{/, 'the active product name stays');
+
+  // Tablet keeps the established geometry; desktop gets a compact, cohesive
+  // three-product stage without changing the carousel logic.
+  const tablet = css.slice(css.indexOf('@media (min-width: 768px)'), css.indexOf('@media (min-width: 1100px)'));
+  assert.match(tablet, /--cspot-h: 528px/);
+  assert.match(tablet, /--cspot-active-y: -12px/);
+  assert.match(tablet, /--cspot-side-y: 20px/);
+  const desktop = css.slice(css.indexOf('@media (min-width: 1100px)'));
+  assert.match(desktop, /--cspot-h: 420px/);
+  assert.match(desktop, /--cspot-seat-w: 42%/);
+  assert.match(desktop, /--cspot-shot-h: 96%/);
+  assert.match(desktop, /--cspot-side-scale: 0\.64/);
+  assert.match(desktop, /--cspot-side-x: 220px/);
+  assert.match(desktop, /--cspot-active-y: -12px/);
+  assert.match(desktop, /\.cspot__sidename \{ display: none; \}/);
 });
 
 test('R1 the stage renders three seats, one active, with real product copy', () => {

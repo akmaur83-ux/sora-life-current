@@ -7,6 +7,7 @@ import {
   IMPORT_STATUS, planImport, parseMappingCsv, applyUploads, mergeIntoHomepage,
   buildSummaryText, countByStatus,
 } from '../../lib/spotlightImport.js';
+import { processSpotlightPackshot } from '../../lib/spotlightPackshotProcessing.js';
 
 // ============================================================
 // BULK SPOTLIGHT PACKSHOT IMPORT
@@ -117,10 +118,20 @@ export default function BulkPackshotImport({ onImported }) {
       setRows([...live]);
 
       try {
-        // The existing single-image admin upload path, unchanged.
-        const url = await uploadHomepageImage(row.file);
+        // CPU-only browser preprocessing happens before the existing upload:
+        // edge-connected white is removed, transparent excess is cropped and
+        // the result is encoded as a SORA-hosted PNG. No storefront runtime
+        // performs pixel analysis.
+        const processed = await processSpotlightPackshot(row.file);
+        const url = await uploadHomepageImage(processed.file);
         urlsRef.current.set(row.slug, url);
-        uploads.push({ slug: row.slug, url, categories: row.categories });
+        uploads.push({
+          slug: row.slug, url, categories: row.categories,
+          autoTheme: {
+            background: processed.theme.background,
+            gradient: processed.theme.gradient,
+          },
+        });
         live[i] = { ...row, status: IMPORT_STATUS.UPLOADED, url };
       } catch (ex) {
         // One bad file must not end the batch.
