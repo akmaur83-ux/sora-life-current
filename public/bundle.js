@@ -37487,6 +37487,17 @@
 	const DEFAULT_INTERVAL_MS = 5200;
 
 	/**
+	 * Per-item visual adjustment. Packshots are not framed consistently — some
+	 * sit tight in their canvas, others float in blank space — so the owner
+	 * nudges each one rather than every product inheriting one compromise.
+	 * Bounded so a stored value can never blow the product off the stage.
+	 */
+	const MIN_ITEM_SCALE = 0.75;
+	const MAX_ITEM_SCALE = 1.35;
+	const DEFAULT_ITEM_SCALE = 1;
+	const ITEM_OFFSET_LIMIT = 60;
+
+	/**
 	 * Category-level default backgrounds, keyed by the `tone` the categories
 	 * table already carries. Muted and warm on purpose — this is a wellness
 	 * marketplace, not a toy store. Admin can override per category and per item.
@@ -37584,6 +37595,20 @@
 	  const tone = categoryBySlug[slug]?.tone;
 	  return TONE_THEMES[tone] || NEUTRAL_THEME;
 	}
+
+	/**
+	 * Clamp to a range, falling back when the stored value is not a usable number.
+	 *
+	 * null / undefined / '' are treated as ABSENT, not as zero. Number(null) is 0,
+	 * which is finite — so without this guard a missing scale would clamp to the
+	 * 0.75 minimum and silently shrink every un-tuned packshot.
+	 */
+	const clampNum = (v, min, max, fallback) => {
+	  if (v === null || v === undefined || v === '') return fallback;
+	  const n = Number(v);
+	  if (!Number.isFinite(n)) return fallback;
+	  return Math.min(max, Math.max(min, n));
+	};
 	const clampInterval = n => {
 	  const v = Number(n);
 	  if (!Number.isFinite(v)) return DEFAULT_INTERVAL_MS;
@@ -37623,6 +37648,17 @@
 	    subline: str$1(raw.subline, 90),
 	    background: safeColor(raw.background),
 	    gradient: safeGradient(raw.gradient),
+	    // Generated once by the Admin packshot preprocessor. It is deliberately
+	    // separate from the owner's fields above, so a later re-import can refresh
+	    // the automatic suggestion without ever overwriting a manual decision.
+	    autoTheme: {
+	      background: safeColor(raw.autoTheme?.background),
+	      gradient: safeGradient(raw.autoTheme?.gradient)
+	    },
+	    // Owner's per-packshot framing nudge. Rounded so the stored value stays
+	    // tidy, and bounded so it can only ever adjust, never break, the shot.
+	    visualScale: Math.round(clampNum(raw.visualScale, MIN_ITEM_SCALE, MAX_ITEM_SCALE, DEFAULT_ITEM_SCALE) * 100) / 100,
+	    verticalOffset: Math.round(clampNum(raw.verticalOffset, -ITEM_OFFSET_LIMIT, ITEM_OFFSET_LIMIT, 0)),
 	    enabled: raw.enabled !== false
 	  };
 	}
@@ -37756,9 +37792,13 @@
 	  const productImage = product.image || product.gallery?.[0] || '';
 	  const image = configured || productImage;
 	  const cutout = Boolean(configured) || looksTransparent(configured || productImage);
+	  const autoBackground = item?.autoTheme?.background || '';
+	  const autoGradient = item?.autoTheme?.gradient || '';
+	  const background = item?.background || autoBackground || cfg.theme.background;
+	  const gradient = item?.gradient || (item?.background ? '' : autoGradient || (autoBackground ? '' : cfg.theme.gradient));
 	  const theme = {
-	    background: item?.background || cfg.theme.background,
-	    gradient: item?.background ? item.gradient || '' : item?.gradient || cfg.theme.gradient
+	    background,
+	    gradient
 	  };
 	  return {
 	    id: item?.id || `auto-${product.slug}`,
@@ -37775,6 +37815,10 @@
 	    subline: item?.subline || '',
 	    image,
 	    framed: !cutout,
+	    // Applied to the product visual only — never to the seat, whose transform
+	    // is the reshuffle animation.
+	    visualScale: item?.visualScale ?? DEFAULT_ITEM_SCALE,
+	    verticalOffset: item?.verticalOffset ?? 0,
 	    theme,
 	    categorySlug: slug
 	  };
@@ -38077,6 +38121,15 @@
 	          return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: `cspot__seat cspot__seat--${seat.role}`,
 	            "data-role": seat.role
+	            // Custom properties, not a transform. The seat's own transform
+	            // is the reshuffle animation; these are read further down by
+	            // .cspot__img, so the owner's framing nudge and the animation
+	            // live on two different elements and cannot fight.
+	            ,
+	            style: {
+	              '--cspot-item-scale': s.visualScale,
+	              '--cspot-item-y': `${s.verticalOffset}px`
+	            }
 	            // A side product is decoration until it is chosen. It stays
 	            // out of the tab order so the stage is not a keyboard trap;
 	            // the arrow keys and the prev/next buttons reach it instead.
@@ -57735,9 +57788,9 @@
 	 * Everything already configured is preserved: a category's enabled flag,
 	 * auto-rotate, interval, theme, and each item's headline, subline, background,
 	 * gradient, enabled flag and ORDER. An item that already exists for a product
-	 * has only its spotlightImage replaced. A product with no item yet gets one
-	 * appended carrying nothing but its slug and the new image, so the category's
-	 * own theme continues to supply the background.
+	 * has its spotlightImage and generated autoTheme refreshed; manual background
+	 * and gradient remain untouched and therefore continue to win. A product with
+	 * no item yet gets one appended with the generated theme.
 	 *
 	 * @param existing  normalised { categories: { slug: config } }
 	 * @param uploads   [{ slug, url, categories: [slug] }]
@@ -57765,15 +57818,24 @@
 	  };
 	  for (const up of uploads) {
 	    if (!up?.slug || !up?.url) continue;
+	    const autoTheme = {
+	      background: safeColor(up.autoTheme?.background),
+	      gradient: safeGradient(up.autoTheme?.gradient)
+	    };
+	    const hasAutoTheme = Boolean(autoTheme.background || autoTheme.gradient);
 	    for (const catSlug of up.categories || []) {
 	      if (!categoryBySlug[catSlug]) continue;
 	      const cfg = touch(catSlug);
 	      const idx = cfg.items.findIndex(it => it.productSlug === up.slug);
 	      if (idx >= 0) {
-	        // Update in place: order and every authored field survive.
+	        // Update in place: order and every authored field survive. Automatic
+	        // values are separate, so this cannot overwrite an owner's colours.
 	        cfg.items[idx] = {
 	          ...cfg.items[idx],
-	          spotlightImage: up.url
+	          spotlightImage: up.url,
+	          ...(hasAutoTheme ? {
+	            autoTheme
+	          } : {})
 	        };
 	        report[catSlug].updated.push(up.slug);
 	        continue;
@@ -57786,6 +57848,10 @@
 	        subline: '',
 	        background: '',
 	        gradient: '',
+	        autoTheme: hasAutoTheme ? autoTheme : {
+	          background: '',
+	          gradient: ''
+	        },
 	        enabled: true
 	      });
 	      report[catSlug].created.push(up.slug);
@@ -57831,6 +57897,312 @@
 	  section('AMBIGUOUS (left for review, nothing assigned)', group(IMPORT_STATUS.AMBIGUOUS), r => `${r.filename}  — ${r.reason}`);
 	  section('UNMATCHED FILES', group(IMPORT_STATUS.UNMATCHED), r => `${r.filename}  — ${r.reason}`);
 	  return lines.join('\n');
+	}
+
+	const SOURCE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+	const MAX_SOURCE_BYTES = 6 * 1024 * 1024;
+	const MAX_SOURCE_PIXELS = 16 * 1000 * 1000;
+	const MAX_SOURCE_DIMENSION = 6000;
+	const MAX_OUTPUT_DIMENSION = 2400;
+	const VISIBLE_ALPHA = 12;
+	const ACCENT_ALPHA = 64;
+	const PACKSHOT_PADDING_RATIO = 0.05;
+	const clampByte = n => Math.max(0, Math.min(255, Math.round(n)));
+	const hex = ([r, g, b]) => `#${[r, g, b].map(v => clampByte(v).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+	const mix = (a, b, amount) => a.map((v, i) => v + (b[i] - v) * amount);
+	function rgbToHsl(r, g, b) {
+	  const rn = r / 255,
+	    gn = g / 255,
+	    bn = b / 255;
+	  const max = Math.max(rn, gn, bn),
+	    min = Math.min(rn, gn, bn);
+	  const d = max - min;
+	  let h = 0;
+	  if (d) {
+	    if (max === rn) h = (gn - bn) / d % 6;else if (max === gn) h = (bn - rn) / d + 2;else h = (rn - gn) / d + 4;
+	    h = (h * 60 + 360) % 360;
+	  }
+	  const l = (max + min) / 2;
+	  const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+	  return {
+	    h,
+	    s,
+	    l
+	  };
+	}
+	function nearWhite(r, g, b) {
+	  const max = Math.max(r, g, b),
+	    min = Math.min(r, g, b);
+	  return min >= 225 && max - min <= 32;
+	}
+	function edgeBackgroundReference(data, width, height) {
+	  let opaque = 0,
+	    white = 0,
+	    r = 0,
+	    g = 0,
+	    b = 0;
+	  const visit = (x, y) => {
+	    const i = (y * width + x) * 4;
+	    if (data[i + 3] < VISIBLE_ALPHA) return;
+	    opaque += 1;
+	    if (!nearWhite(data[i], data[i + 1], data[i + 2])) return;
+	    white += 1;
+	    r += data[i];
+	    g += data[i + 1];
+	    b += data[i + 2];
+	  };
+	  for (let x = 0; x < width; x += 1) {
+	    visit(x, 0);
+	    if (height > 1) visit(x, height - 1);
+	  }
+	  for (let y = 1; y < height - 1; y += 1) {
+	    visit(0, y);
+	    if (width > 1) visit(width - 1, y);
+	  }
+	  if (!opaque || white / opaque < 0.35) return null;
+	  return [r / white, g / white, b / white];
+	}
+	function removeEdgeConnectedWhite(data, width, height) {
+	  const reference = edgeBackgroundReference(data, width, height);
+	  if (!reference) return 0;
+	  const total = width * height;
+	  const seen = new Uint8Array(total);
+	  const queue = new Int32Array(total);
+	  let head = 0,
+	    tail = 0,
+	    removed = 0;
+	  const qualifies = p => {
+	    const i = p * 4;
+	    if (data[i + 3] < VISIBLE_ALPHA) return false;
+	    const r = data[i],
+	      g = data[i + 1],
+	      b = data[i + 2];
+	    // Being pale is not enough: white caps and labels are real product pixels.
+	    // A removable pixel must closely match the near-white colour sampled from
+	    // the OUTER edge. The deliberately conservative tolerance may retain a
+	    // faint antialias fringe, but cannot flood through into pale packaging.
+	    const close = Math.max(Math.abs(r - reference[0]), Math.abs(g - reference[1]), Math.abs(b - reference[2])) <= 10;
+	    return close && Math.min(r, g, b) >= 225;
+	  };
+	  const add = p => {
+	    if (seen[p] || !qualifies(p)) return;
+	    seen[p] = 1;
+	    queue[tail++] = p;
+	  };
+	  for (let x = 0; x < width; x += 1) {
+	    add(x);
+	    if (height > 1) add((height - 1) * width + x);
+	  }
+	  for (let y = 1; y < height - 1; y += 1) {
+	    add(y * width);
+	    if (width > 1) add(y * width + width - 1);
+	  }
+	  while (head < tail) {
+	    const p = queue[head++],
+	      x = p % width,
+	      y = Math.floor(p / width);
+	    data[p * 4 + 3] = 0;
+	    removed += 1;
+	    if (x > 0) add(p - 1);
+	    if (x + 1 < width) add(p + 1);
+	    if (y > 0) add(p - width);
+	    if (y + 1 < height) add(p + width);
+	  }
+	  return removed;
+	}
+	function visibleBounds(data, width, height) {
+	  let left = width,
+	    top = height,
+	    right = -1,
+	    bottom = -1;
+	  for (let y = 0; y < height; y += 1) {
+	    for (let x = 0; x < width; x += 1) {
+	      if (data[(y * width + x) * 4 + 3] < VISIBLE_ALPHA) continue;
+	      if (x < left) left = x;
+	      if (x > right) right = x;
+	      if (y < top) top = y;
+	      if (y > bottom) bottom = y;
+	    }
+	  }
+	  return right < left ? null : {
+	    left,
+	    top,
+	    right,
+	    bottom,
+	    width: right - left + 1,
+	    height: bottom - top + 1
+	  };
+	}
+	function representativeAccent(data, width, height) {
+	  const bins = Array.from({
+	    length: 24
+	  }, () => ({
+	    score: 0,
+	    r: 0,
+	    g: 0,
+	    b: 0,
+	    weight: 0
+	  }));
+	  const stride = Math.max(1, Math.floor(Math.sqrt(width * height / 150000)));
+	  for (let y = 0; y < height; y += stride) {
+	    for (let x = 0; x < width; x += stride) {
+	      const i = (y * width + x) * 4;
+	      if (data[i + 3] < ACCENT_ALPHA) continue;
+	      const r = data[i],
+	        g = data[i + 1],
+	        b = data[i + 2];
+	      if (nearWhite(r, g, b) || Math.max(r, g, b) < 38) continue;
+	      const {
+	        h,
+	        s,
+	        l
+	      } = rgbToHsl(r, g, b);
+	      if (s < 0.14 || l < 0.12 || l > 0.9) continue;
+	      const weight = Math.pow(s, 1.35) * (0.55 + 0.45 * (1 - Math.abs(l - 0.54)));
+	      const bin = bins[Math.min(23, Math.floor(h / 15))];
+	      bin.score += weight;
+	      bin.weight += weight;
+	      bin.r += r * weight;
+	      bin.g += g * weight;
+	      bin.b += b * weight;
+	    }
+	  }
+	  const winner = bins.reduce((best, bin) => bin.score > best.score ? bin : best, bins[0]);
+	  if (!winner.weight) return [111, 127, 109];
+	  return [winner.r / winner.weight, winner.g / winner.weight, winner.b / winner.weight].map(clampByte);
+	}
+	function pastelThemeFromAccent(accent) {
+	  const warmIvory = [250, 247, 240];
+	  const background = mix(warmIvory, accent, 0.12);
+	  const start = mix(warmIvory, accent, 0.07);
+	  const end = mix(warmIvory, accent, 0.21);
+	  return {
+	    accent: hex(accent),
+	    background: hex(background),
+	    gradient: `linear-gradient(168deg, ${hex(start)} 0%, ${hex(end)} 100%)`
+	  };
+	}
+
+	/**
+	 * Pure pixel core shared by the browser importer and offline regression/QA.
+	 * White is removed only when connected to a near-white outer edge. Internal
+	 * white packaging and label pixels therefore survive.
+	 */
+	function normalizePackshotPixels(input, width, height, {
+	  paddingRatio = PACKSHOT_PADDING_RATIO
+	} = {}) {
+	  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
+	    throw new Error('Packshot dimensions are invalid.');
+	  }
+	  if (!input || input.length !== width * height * 4) throw new Error('Packshot pixel data is invalid.');
+	  const data = new Uint8ClampedArray(input);
+	  const removedPixels = removeEdgeConnectedWhite(data, width, height);
+	  const bounds = visibleBounds(data, width, height);
+	  if (!bounds) throw new Error('No visible product remains after background cleanup.');
+	  const pad = Math.max(2, Math.ceil(Math.max(bounds.width, bounds.height) * Math.min(0.06, Math.max(0.04, paddingRatio))));
+	  const outputWidth = bounds.width + pad * 2;
+	  const outputHeight = bounds.height + pad * 2;
+	  const output = new Uint8ClampedArray(outputWidth * outputHeight * 4);
+	  for (let y = 0; y < bounds.height; y += 1) {
+	    const sourceStart = ((bounds.top + y) * width + bounds.left) * 4;
+	    const targetStart = ((y + pad) * outputWidth + pad) * 4;
+	    output.set(data.subarray(sourceStart, sourceStart + bounds.width * 4), targetStart);
+	  }
+	  const accent = representativeAccent(output, outputWidth, outputHeight);
+	  return {
+	    data: output,
+	    width: outputWidth,
+	    height: outputHeight,
+	    theme: pastelThemeFromAccent(accent),
+	    stats: {
+	      sourceWidth: width,
+	      sourceHeight: height,
+	      removedPixels,
+	      backgroundRemoved: removedPixels > 0,
+	      bounds,
+	      padding: pad,
+	      outputWidth,
+	      outputHeight,
+	      accent: hex(accent)
+	    }
+	  };
+	}
+	function canvas(width, height) {
+	  if (typeof document === 'undefined') throw new Error('Packshot processing requires a browser.');
+	  const el = document.createElement('canvas');
+	  el.width = width;
+	  el.height = height;
+	  return el;
+	}
+	async function decode(file) {
+	  if (typeof createImageBitmap === 'function') {
+	    const bitmap = await createImageBitmap(file);
+	    return {
+	      source: bitmap,
+	      width: bitmap.width,
+	      height: bitmap.height,
+	      close: () => bitmap.close?.()
+	    };
+	  }
+	  const url = URL.createObjectURL(file);
+	  const image = new Image();
+	  image.decoding = 'async';
+	  image.src = url;
+	  await new Promise((resolve, reject) => {
+	    image.onload = resolve;
+	    image.onerror = () => reject(new Error('This image could not be decoded.'));
+	  });
+	  return {
+	    source: image,
+	    width: image.naturalWidth,
+	    height: image.naturalHeight,
+	    close: () => URL.revokeObjectURL(url)
+	  };
+	}
+	const toPng = el => new Promise((resolve, reject) => {
+	  el.toBlob(blob => blob ? resolve(blob) : reject(new Error('The normalized PNG could not be created.')), 'image/png');
+	});
+	async function processSpotlightPackshot(file) {
+	  await validateImageUpload(file, {
+	    allowedTypes: SOURCE_TYPES,
+	    maxBytes: MAX_SOURCE_BYTES,
+	    maxPixels: MAX_SOURCE_PIXELS,
+	    maxDimension: MAX_SOURCE_DIMENSION
+	  });
+	  const decoded = await decode(file);
+	  try {
+	    const sourceCanvas = canvas(decoded.width, decoded.height);
+	    const sourceCtx = sourceCanvas.getContext('2d', {
+	      willReadFrequently: true
+	    });
+	    if (!sourceCtx) throw new Error('Image processing is not available in this browser.');
+	    sourceCtx.drawImage(decoded.source, 0, 0);
+	    const pixels = sourceCtx.getImageData(0, 0, decoded.width, decoded.height);
+	    const normalized = normalizePackshotPixels(pixels.data, decoded.width, decoded.height);
+	    const rawCanvas = canvas(normalized.width, normalized.height);
+	    const rawCtx = rawCanvas.getContext('2d');
+	    const out = rawCtx.createImageData(normalized.width, normalized.height);
+	    out.data.set(normalized.data);
+	    rawCtx.putImageData(out, 0, 0);
+	    const scale = Math.min(1, MAX_OUTPUT_DIMENSION / Math.max(normalized.width, normalized.height));
+	    const finalCanvas = scale < 1 ? canvas(Math.max(1, Math.round(normalized.width * scale)), Math.max(1, Math.round(normalized.height * scale))) : rawCanvas;
+	    if (scale < 1) finalCanvas.getContext('2d').drawImage(rawCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+	    const blob = await toPng(finalCanvas);
+	    const name = `${String(file.name || 'packshot').replace(/\.[^.]+$/, '').replace(/[^a-z0-9_-]+/gi, '-').slice(0, 100) || 'packshot'}.png`;
+	    const processedFile = typeof File === 'function' ? new File([blob], name, {
+	      type: 'image/png',
+	      lastModified: Date.now()
+	    }) : Object.assign(blob, {
+	      name
+	    });
+	    return {
+	      file: processedFile,
+	      theme: normalized.theme,
+	      stats: normalized.stats
+	    };
+	  } finally {
+	    decoded.close();
+	  }
 	}
 
 	function BulkPackshotImport({
@@ -57928,13 +58300,21 @@
 	      };
 	      setRows([...live]);
 	      try {
-	        // The existing single-image admin upload path, unchanged.
-	        const url = await uploadHomepageImage(row.file);
+	        // CPU-only browser preprocessing happens before the existing upload:
+	        // edge-connected white is removed, transparent excess is cropped and
+	        // the result is encoded as a SORA-hosted PNG. No storefront runtime
+	        // performs pixel analysis.
+	        const processed = await processSpotlightPackshot(row.file);
+	        const url = await uploadHomepageImage(processed.file);
 	        urlsRef.current.set(row.slug, url);
 	        uploads.push({
 	          slug: row.slug,
 	          url,
-	          categories: row.categories
+	          categories: row.categories,
+	          autoTheme: {
+	            background: processed.theme.background,
+	            gradient: processed.theme.gradient
+	          }
 	        });
 	        live[i] = {
 	          ...row,
@@ -58444,6 +58824,57 @@
 	              }),
 	              onBusy: d => setUploads(n => n + d)
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "adm-cx__fit",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                className: "field",
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	                  className: "label",
+	                  htmlFor: `cx-scale-${item.id}`,
+	                  children: ["Visual size \u2014 ", Number(item.visualScale ?? DEFAULT_ITEM_SCALE).toFixed(2), "\xD7"]
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                  id: `cx-scale-${item.id}`,
+	                  type: "range",
+	                  className: "input",
+	                  min: MIN_ITEM_SCALE,
+	                  max: MAX_ITEM_SCALE,
+	                  step: 0.01,
+	                  value: item.visualScale ?? DEFAULT_ITEM_SCALE,
+	                  onChange: e => patchItem(i, {
+	                    visualScale: Number(e.target.value)
+	                  })
+	                })]
+	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                className: "field",
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	                  className: "label",
+	                  htmlFor: `cx-offset-${item.id}`,
+	                  children: ["Nudge up / down \u2014 ", item.verticalOffset ?? 0, "px"]
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                  id: `cx-offset-${item.id}`,
+	                  type: "range",
+	                  className: "input",
+	                  min: -ITEM_OFFSET_LIMIT,
+	                  max: ITEM_OFFSET_LIMIT,
+	                  step: 1,
+	                  value: item.verticalOffset ?? 0,
+	                  onChange: e => patchItem(i, {
+	                    verticalOffset: Number(e.target.value)
+	                  })
+	                })]
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	                type: "button",
+	                className: "btn btn-sm btn-light",
+	                onClick: () => patchItem(i, {
+	                  visualScale: DEFAULT_ITEM_SCALE,
+	                  verticalOffset: 0
+	                }),
+	                disabled: (item.visualScale ?? DEFAULT_ITEM_SCALE) === DEFAULT_ITEM_SCALE && (item.verticalOffset ?? 0) === 0,
+	                children: "Reset fit"
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              className: "hint",
+	              children: "Use the preview below to see the effect before you save."
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	              className: "field",
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	                className: "label",
@@ -58483,7 +58914,10 @@
 	                background: item.background,
 	                gradient: item.gradient
 	              },
-	              fallback: cfg.theme,
+	              fallback: {
+	                background: item.autoTheme?.background || cfg.theme.background,
+	                gradient: item.autoTheme?.gradient || (item.autoTheme?.background ? '' : cfg.theme.gradient)
+	              },
 	              optional: true,
 	              onChange: ({
 	                background,
@@ -58493,6 +58927,9 @@
 	                gradient
 	              }),
 	              idPrefix: `cx-item-${item.id}`
+	            }), item.autoTheme?.background && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	              className: "hint",
+	              children: "Automatic theme sampled from this imported packshot. Enter either field above to override it."
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	              className: "adm-dc__foot",
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
