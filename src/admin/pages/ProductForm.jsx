@@ -18,6 +18,10 @@ export default function ProductForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const isEdit = !!dbId;
+  const loadedUpdatedAt = useRef(null);
+  // Set when a save is refused as stale, so the error can offer a reload
+  // rather than just describing the problem.
+  const [staleConflict, setStaleConflict] = useState(false);
   const [values, setValues] = useState(empty);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -48,6 +52,12 @@ export default function ProductForm() {
       // strings so this works whether dbId is numeric, text, or a UUID.
       const p = list.find((x) => String(x.dbId) === String(dbId));
       if (!p) { setErr('Product not found.'); setLoading(false); return; }
+      // The row's updated_at as it was when this editor opened. It goes back
+      // with the save so the write can be refused if anything moved in the
+      // meantime — an import, another admin, the active toggle on the list
+      // page. Held in a ref because it is not rendered and must not cause a
+      // re-render when it changes after a successful save.
+      loadedUpdatedAt.current = p.updatedAt || null;
       setValues({
         name: p.name, slug: p.slug, description: p.description, category: p.category,
         image: p.image || '', gallery: p.gallery || [], originalPrice: p.originalPrice, discountPercent: p.discountPercent,
@@ -99,7 +109,10 @@ export default function ProductForm() {
         isActive: values.isActive,
       };
       if (isEdit) {
-        await adminUpdateProduct(dbId, payload);
+        const saved = await adminUpdateProduct(dbId, payload, loadedUpdatedAt.current);
+        // Adopt the new token so a second save in the same session is not
+        // rejected against the value this save just superseded.
+        loadedUpdatedAt.current = saved.updatedAt || null;
       } else {
         const created = await adminCreateProduct(payload);
         // Commit any images staged during creation against the new product id.
@@ -120,7 +133,13 @@ export default function ProductForm() {
       }
       navigate('/admin/products');
     } catch (ex) {
+      // A stale write is not a failure to report as a database error — it means
+      // somebody else's edit is currently in the row and this save would have
+      // erased it. Say that, and offer the reload.
+      if (ex?.isStaleWrite) setStaleConflict(true);
       setErr(ex.message || String(ex));
+      setSaving(false);
+      return;
     }
     setSaving(false);
   }
@@ -137,7 +156,26 @@ export default function ProductForm() {
         <Link to="/admin/products" className="btn btn-outline btn-sm">← Back to products</Link>
       </div>
 
-      {err && <div className="adm-banner err">{err}</div>}
+      {err && (
+        <div className="adm-banner err">
+          {err}
+          {/* A stale write is recoverable and the recovery is a single action:
+              reload to see what is actually in the row. Offering it beside the
+              message is the difference between an error someone can act on and
+              one they can only stare at. Nothing was written, so reloading
+              cannot lose anything that reached the database. */}
+          {staleConflict && (
+            <button
+              type="button"
+              className="btn btn-sm btn-light"
+              style={{ marginLeft: 10 }}
+              onClick={() => window.location.reload()}
+            >
+              Reload product
+            </button>
+          )}
+        </div>
+      )}
 
       <form onSubmit={onSubmit}>
         <div className="surface">

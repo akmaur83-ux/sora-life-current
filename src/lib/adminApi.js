@@ -63,6 +63,9 @@ export function dbRowToProduct(row) {
     sortOrder: Number(row.sort_order) || 0,
     isActive: row.is_active !== false,
     biosashId: row.biosash_id || null,
+    // The optimistic-concurrency token. The editor captures this on load and
+    // sends it back with the save; the write is refused if it no longer matches.
+    updatedAt: row.updated_at || null,
     // Content columns added by migration 0025. Absent until it is applied,
     // and null until the ingest or an admin fills them — in both cases the
     // PDP section that reads them hides itself rather than showing a shell.
@@ -207,20 +210,78 @@ export async function adminListProducts() {
   return (data || []).map(dbRowToProduct);
 }
 
+/**
+ * Thrown when a save is refused because the row moved under the editor.
+ * Typed so the form can tell "somebody else changed this" apart from a
+ * genuine failure and say so, instead of showing a database message.
+ */
+export class StaleWriteError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'StaleWriteError';
+    this.isStaleWrite = true;
+  }
+}
+
 export async function adminCreateProduct(product) {
   const row = productToDbRow(product);
   if (!row.slug) row.slug = slugify(product.name);
+  // Stamped explicitly rather than left to a column default: every write path
+  // has to move updated_at or the optimistic-concurrency check below has
+  // nothing dependable to compare against.
+  row.updated_at = new Date().toISOString();
   const { data, error } = await supabase.from('products').insert(row).select().single();
   if (error) throw error;
   return dbRowToProduct(data);
 }
 
-export async function adminUpdateProduct(dbId, product) {
+/**
+ * Update a product, refusing the write if the row changed since it was read.
+ *
+ * `expectedUpdatedAt` is the updated_at the editor loaded. It becomes an
+ * equality filter on the UPDATE, so the write applies to zero rows when
+ * anything has touched the product since — and zero rows is what tells us to
+ * reject rather than clobber.
+ *
+ * The race this closes is real and has already happened here: a form opened
+ * while a product had no description, saved after an import filled one in,
+ * wrote its stale empty string straight back over the new copy, and did the
+ * same to is_active and the validated gallery in the same request.
+ *
+ * Omitting `expectedUpdatedAt` keeps the old last-write-wins behaviour, so an
+ * existing caller cannot be broken by this; ProductForm passes it.
+ */
+export async function adminUpdateProduct(dbId, product, expectedUpdatedAt = null) {
   const row = productToDbRow(product);
   row.updated_at = new Date().toISOString();
-  const { data, error } = await supabase.from('products').update(row).eq('id', dbId).select().single();
+
+  let q = supabase.from('products').update(row).eq('id', dbId);
+  if (expectedUpdatedAt) q = q.eq('updated_at', expectedUpdatedAt);
+
+  // `.select()` without `.single()`: zero rows is the expected outcome of a
+  // lost race, and `.single()` would surface that as a generic PGRST116 error
+  // indistinguishable from a genuine failure.
+  const { data, error } = await q.select();
   if (error) throw error;
-  return dbRowToProduct(data);
+
+  if (!data || data.length === 0) {
+    if (expectedUpdatedAt) {
+      // Tell the two cases apart: a row that still exists but moved on is a
+      // conflict, a row that is gone is a deletion.
+      const { data: current } = await supabase
+        .from('products').select('id').eq('id', dbId).maybeSingle();
+      if (current) {
+        throw new StaleWriteError(
+          'This product was modified elsewhere after you opened it. '
+          + 'Reload the page to see the current values, then reapply your changes.',
+        );
+      }
+      throw new StaleWriteError('This product no longer exists. It may have been deleted while you were editing.');
+    }
+    throw new Error('Product update affected no rows.');
+  }
+
+  return dbRowToProduct(data[0]);
 }
 
 export async function adminSetProductActive(dbId, isActive) {
@@ -235,7 +296,10 @@ export async function adminDeleteProduct(dbId) {
 
 export async function adminReorderProducts(dbIdsInOrder) {
   await Promise.all(dbIdsInOrder.map((dbId, i) =>
-    supabase.from('products').update({ sort_order: i }).eq('id', dbId)
+    // updated_at moves here too. A write that does not stamp it is a write
+    // the staleness check cannot see, which would let a form saved after a
+    // reorder silently win.
+    supabase.from('products').update({ sort_order: i, updated_at: new Date().toISOString() }).eq('id', dbId)
   ));
 }
 

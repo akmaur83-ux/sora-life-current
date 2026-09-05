@@ -96,7 +96,14 @@ if (LIVE && !WRITE_KEY) { console.error('--live needs SUPABASE_SERVICE_ROLE_KEY 
 const target = RESTORE ? true : false;
 
 (async () => {
-  const H = { apikey: READ_KEY, Authorization: `Bearer ${READ_KEY}` };
+  // Read with the WRITE key when there is one. The publishable key is subject
+  // to the public RLS policy and therefore cannot see is_active = false rows —
+  // so after a successful run every slug on the list came back as "NOT FOUND
+  // IN CATALOGUE", which reads as the list having drifted when in fact the
+  // script had just worked. The service role sees the whole table, so
+  // already-inactive rows report as already-inactive.
+  const key = WRITE_KEY || READ_KEY;
+  const H = { apikey: key, Authorization: `Bearer ${key}` };
   const r = await fetch(`${SUPABASE_URL}/rest/v1/products?select=id,slug,name,is_active&limit=1000`, { headers: H });
   if (!r.ok) { console.error(`products read failed: ${r.status}`); process.exit(1); }
   const all = await r.json();
@@ -149,7 +156,14 @@ const target = RESTORE ? true : false;
         'Content-Type': 'application/json',
         Prefer: 'return=minimal',
       },
-      body: JSON.stringify({ is_active: target }),
+      // updated_at is stamped on every write, including this one. The admin
+      // editor now refuses a save whose captured updated_at no longer matches
+      // the row, and that check is only as good as the writers around it: a
+      // script that changes content WITHOUT moving updated_at leaves a form
+      // opened beforehand holding a token that still matches, so its stale
+      // values overwrite this script's work and nobody sees it happen. That is
+      // exactly how the first ingest's descriptions were lost.
+      body: JSON.stringify({ is_active: target, updated_at: new Date().toISOString() }),
     });
     if (res.ok) ok += 1;
     else { failed += 1; console.log(`   FAILED ${p.slug}: ${res.status} ${(await res.text()).slice(0, 120)}`); }

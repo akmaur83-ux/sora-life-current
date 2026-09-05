@@ -107,7 +107,14 @@ const FIELDS = ['description', 'benefits', 'how_to_use', 'key_claims', 'specific
         'Content-Type': 'application/json',
         Prefer: 'return=minimal',
       },
-      body: JSON.stringify(j.patch),
+      // updated_at is stamped on every write, including this one. The admin
+      // editor now refuses a save whose captured updated_at no longer matches
+      // the row, and that check is only as good as the writers around it: a
+      // script that changes content WITHOUT moving updated_at leaves a form
+      // opened beforehand holding a token that still matches, so its stale
+      // values overwrite this script's work and nobody sees it happen. That is
+      // exactly how the first ingest's descriptions were lost.
+      body: JSON.stringify({ ...j.patch, updated_at: new Date().toISOString() }),
     });
     if (res.ok) ok += 1;
     else { failed += 1; console.log(`  FAILED ${j.p.slug}: ${res.status} ${(await res.text()).slice(0, 120)}`); }
