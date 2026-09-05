@@ -33075,7 +33075,7 @@
 	const PLACEMENTS = ['home', 'pdp', 'cart'];
 	const TYPES = ['poster', 'offer'];
 	const THEME_VARIANTS = ['forest', 'cream', 'orange', 'dark', 'minimal'];
-	function str$2(v, max = 400) {
+	function str$3(v, max = 400) {
 	  return typeof v === 'string' ? v.trim().slice(0, max) : '';
 	}
 
@@ -33086,17 +33086,17 @@
 	  const themeVariant = THEME_VARIANTS.includes(row.theme_variant ?? row.themeVariant) ? row.theme_variant ?? row.themeVariant : 'forest';
 	  const rawPlacements = row.placements ?? [];
 	  const placements = Array.isArray(rawPlacements) ? rawPlacements.filter(p => PLACEMENTS.includes(p)) : [];
-	  const ctaUrl = str$2(row.cta_url ?? row.ctaUrl, 500) || null;
+	  const ctaUrl = str$3(row.cta_url ?? row.ctaUrl, 500) || null;
 	  return {
 	    id: String(row.id ?? cryptoId()),
 	    type,
-	    title: str$2(row.title, 160),
-	    subtitle: str$2(row.subtitle, 320),
+	    title: str$3(row.title, 160),
+	    subtitle: str$3(row.subtitle, 320),
 	    couponCode: normalizeCode(row.coupon_code ?? row.couponCode),
-	    ctaText: str$2(row.cta_text ?? row.ctaText, 60),
+	    ctaText: str$3(row.cta_text ?? row.ctaText, 60),
 	    ctaUrl: safeCtaUrl(ctaUrl),
-	    badgeText: str$2(row.badge_text ?? row.badgeText, 40),
-	    imageUrl: str$2(row.image_url ?? row.imageUrl, 1000) || null,
+	    badgeText: str$3(row.badge_text ?? row.badgeText, 40),
+	    imageUrl: str$3(row.image_url ?? row.imageUrl, 1000) || null,
 	    themeVariant,
 	    textAlign: (row.text_align ?? row.textAlign) === 'center' ? 'center' : 'left',
 	    placements,
@@ -33107,7 +33107,7 @@
 	  };
 	}
 	function normalizeCode(v) {
-	  const s = str$2(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+	  const s = str$3(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
 	  return s || null;
 	}
 
@@ -35042,6 +35042,262 @@
 	  });
 	}
 
+	// ============================================================
+	// SORA LIFE — product content field shapes (migration 0025)
+	//
+	// One definition of what each content column may contain, shared by the admin
+	// editor, the CSV importer and the save path. Three callers agreeing on a
+	// shape by coincidence is how a malformed object reaches the PDP — and React
+	// throws on an object rendered as a child, which nearly white-screened the
+	// storefront during the Biosash ingest.
+	//
+	// Every normaliser is TOTAL: hand it anything and it returns a valid value of
+	// the right shape, or null. Nothing here throws, so a bad row degrades to
+	// empty rather than taking a page down.
+	//
+	// NULL vs EMPTY is load-bearing throughout:
+	//   null  -> "not authored" — the PDP section renders nothing
+	//   []/{} -> "authored as empty" — an admin deliberately cleared it
+	// The importer's fill-only mode only fills nulls; it never overwrites either.
+	// ============================================================
+
+	const CONTENT_FIELDS = ['brand', 'net_content', 'key_claims', 'benefits', 'ingredients', 'how_to_use', 'specifications'];
+
+	/** Human labels, used by the editor, the coverage view and import reports. */
+	const CONTENT_LABELS = {
+	  brand: 'Brand',
+	  net_content: 'Net content',
+	  key_claims: 'Key claims',
+	  benefits: 'Benefits',
+	  ingredients: 'Ingredients',
+	  how_to_use: 'How to use',
+	  specifications: 'Specifications'
+	};
+	const str$2 = v => (v === null || v === undefined ? '' : String(v)).trim();
+	const truthyStr = v => {
+	  const s = str$2(v);
+	  return s.length ? s : null;
+	};
+
+	/** An array field that came back empty is "authored as empty", not "absent". */
+	const arrayOrNull = rows => Array.isArray(rows) ? rows : null;
+
+	// ---------- normalisers ----------
+
+	function normalizeKeyClaims(value) {
+	  if (value === null || value === undefined) return null;
+	  const list = Array.isArray(value) ? value
+	  // A tag input or a CSV cell may hand us a comma-separated string.
+	  : String(value).split(',');
+	  const out = list.map(str$2).filter(Boolean);
+	  return arrayOrNull(out);
+	}
+	function normalizeBenefits(value) {
+	  if (value === null || value === undefined) return null;
+	  if (!Array.isArray(value)) return null;
+	  const out = [];
+	  for (const raw of value) {
+	    if (typeof raw === 'string') {
+	      // The legacy shape. Keep it readable rather than dropping the content.
+	      const t = str$2(raw);
+	      if (t) out.push({
+	        title: t,
+	        description: ''
+	      });
+	      continue;
+	    }
+	    if (!raw || typeof raw !== 'object') continue;
+	    const title = str$2(raw.title);
+	    const description = str$2(raw.description);
+	    // A row with neither is not a benefit, it is an empty row the admin has
+	    // not filled in yet — dropped on save rather than stored.
+	    if (!title && !description) continue;
+	    out.push({
+	      title: title || description,
+	      description: title ? description : ''
+	    });
+	  }
+	  return out;
+	}
+	function normalizeIngredients(value) {
+	  if (value === null || value === undefined) return null;
+	  if (!Array.isArray(value)) return null;
+	  const out = [];
+	  for (const raw of value) {
+	    if (typeof raw === 'string') {
+	      const n = str$2(raw);
+	      if (n) out.push({
+	        name: n,
+	        description: '',
+	        image_url: null
+	      });
+	      continue;
+	    }
+	    if (!raw || typeof raw !== 'object') continue;
+	    const name = str$2(raw.name);
+	    if (!name) continue; // an ingredient with no name is nothing
+	    out.push({
+	      name,
+	      description: str$2(raw.description),
+	      // Only http(s). A relative or javascript: value must never reach an
+	      // <img src> on a live page.
+	      image_url: /^https?:\/\//i.test(str$2(raw.image_url)) ? str$2(raw.image_url) : null
+	    });
+	  }
+	  return out;
+	}
+	function normalizeHowToUse(value) {
+	  if (value === null || value === undefined) return null;
+	  if (!Array.isArray(value)) return null;
+	  const out = [];
+	  for (const raw of value) {
+	    const text = typeof raw === 'string' ? str$2(raw) : str$2(raw?.text);
+	    if (!text) continue;
+	    out.push({
+	      step: out.length + 1,
+	      text
+	    }); // renumbered, so order is the truth
+	  }
+	  return out;
+	}
+	function normalizeSpecifications(value) {
+	  if (value === null || value === undefined) return null;
+	  // Accept both the stored object and the editor's row array.
+	  const pairs = Array.isArray(value) ? value.map(r => [str$2(r?.key), str$2(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$2(k), str$2(v)]) : [];
+	  const out = {};
+	  for (const [k, v] of pairs) {
+	    if (!k || !v) continue; // a label with no value renders as "Shelf life:"
+	    out[k] = v;
+	  }
+	  return out;
+	}
+
+	/**
+	 * Normalise a whole content patch.
+	 *
+	 * Only keys PRESENT in `input` appear in the result — absence means "leave
+	 * alone", exactly like description and gallery_urls in productToDbRow. The
+	 * caller decides what absence means; this function does not invent values.
+	 */
+	function normalizeContentPatch(input) {
+	  const out = {};
+	  const has = k => Object.prototype.hasOwnProperty.call(input || {}, k);
+	  if (has('brand')) out.brand = truthyStr(input.brand);
+	  if (has('net_content')) out.net_content = truthyStr(input.net_content);
+	  if (has('key_claims')) out.key_claims = normalizeKeyClaims(input.key_claims);
+	  if (has('benefits')) out.benefits = normalizeBenefits(input.benefits);
+	  if (has('ingredients')) out.ingredients = normalizeIngredients(input.ingredients);
+	  if (has('how_to_use')) out.how_to_use = normalizeHowToUse(input.how_to_use);
+	  if (has('specifications')) out.specifications = normalizeSpecifications(input.specifications);
+	  return out;
+	}
+
+	// ---------- validation ----------
+
+	/**
+	 * Problems that should stop a save, as human sentences.
+	 *
+	 * Normalisation already drops anything unrenderable, so this exists to TELL
+	 * the admin what was wrong rather than silently discarding their typing —
+	 * a row that vanishes on save with no explanation is worse than a refusal.
+	 */
+	function validateContent(input) {
+	  const errors = [];
+	  const check = (key, value) => {
+	    if (value === null || value === undefined) return;
+	    if (!Array.isArray(value)) {
+	      errors.push(`${CONTENT_LABELS[key]}: expected a list.`);
+	      return;
+	    }
+	  };
+	  check('key_claims', input.key_claims);
+	  check('benefits', input.benefits);
+	  check('ingredients', input.ingredients);
+	  check('how_to_use', input.how_to_use);
+	  for (const c of input.key_claims || []) {
+	    if (typeof c !== 'string') {
+	      errors.push('Key claims: every claim must be text.');
+	      break;
+	    }
+	    if (c.length > 60) {
+	      errors.push(`Key claim "${c.slice(0, 24)}…" is too long for a badge (60 characters max).`);
+	      break;
+	    }
+	  }
+	  for (const b of input.benefits || []) {
+	    if (!b || typeof b !== 'object' || Array.isArray(b)) {
+	      errors.push('Benefits: each row needs a title and description.');
+	      break;
+	    }
+	    if (!str$2(b.title) && !str$2(b.description)) {
+	      errors.push('Benefits: a row is completely empty.');
+	      break;
+	    }
+	  }
+	  for (const i of input.ingredients || []) {
+	    if (!i || typeof i !== 'object' || Array.isArray(i)) {
+	      errors.push('Ingredients: each row needs a name.');
+	      break;
+	    }
+	    if (!str$2(i.name)) {
+	      errors.push('Ingredients: a row has a description but no name.');
+	      break;
+	    }
+	    const url = str$2(i.image_url);
+	    if (url && !/^https?:\/\//i.test(url)) {
+	      errors.push(`Ingredients: "${url.slice(0, 30)}" is not an http(s) image URL.`);
+	      break;
+	    }
+	  }
+	  for (const s of input.how_to_use || []) {
+	    if (!s || typeof s !== 'object' || Array.isArray(s)) {
+	      errors.push('How to use: each step needs text.');
+	      break;
+	    }
+	    if (!str$2(s.text)) {
+	      errors.push('How to use: a step has no text.');
+	      break;
+	    }
+	  }
+	  const spec = input.specifications;
+	  if (spec !== null && spec !== undefined && (typeof spec !== 'object' || Array.isArray(spec))) {
+	    errors.push('Specifications: expected key/value pairs.');
+	  }
+	  return errors;
+	}
+
+	// ---------- coverage ----------
+
+	/** True when a content field actually has something in it. */
+	function fieldPopulated(product, field) {
+	  const v = {
+	    brand: product?.brand,
+	    net_content: product?.netContent ?? product?.net_content,
+	    key_claims: product?.keyClaims ?? product?.key_claims,
+	    benefits: product?.benefits,
+	    ingredients: product?.ingredients,
+	    how_to_use: product?.howToUse ?? product?.how_to_use,
+	    specifications: product?.specifications
+	  }[field];
+	  if (v === null || v === undefined || v === '') return false;
+	  if (Array.isArray(v)) return v.length > 0;
+	  if (typeof v === 'object') return Object.keys(v).length > 0;
+	  return true;
+	}
+
+	/** How many of the seven authored fields a product has. Description is counted
+	 *  separately because it predates 0025 and is filled far more often. */
+	function contentScore(product) {
+	  const populated = CONTENT_FIELDS.filter(f => fieldPopulated(product, f));
+	  return {
+	    populated,
+	    missing: CONTENT_FIELDS.filter(f => !populated.includes(f)),
+	    count: populated.length,
+	    total: CONTENT_FIELDS.length,
+	    hasDescription: !!str$2(product?.description)
+	  };
+	}
+
 	// Product Media orchestration and pure upload validation shared by the admin
 	// client and importer. Adapters perform I/O; this module has no credentials.
 	const IMAGE_UPLOAD_TYPES = Object.freeze({
@@ -35410,7 +35666,8 @@
 	    specifications: row.specifications || null,
 	    keyClaims: row.key_claims || null,
 	    netContent: row.net_content || null,
-	    contentSource: row.content_source || null
+	    contentSource: row.content_source || null,
+	    contentUpdatedAt: row.content_updated_at || null
 	  };
 	}
 	function productToDbRow(p) {
@@ -35451,14 +35708,46 @@
 	  // DELIBERATELY EMPTIED (admin cleared the field -> write the empty value),
 	  // so '' and [] still go through when a caller actually supplies them.
 	  //
-	  // SCOPE, so nobody reads more into this than it does: ProductForm always
-	  // sends both keys, so this does NOT stop a form loaded before the ingest
-	  // from saving its stale '' back over a fresh description. That is a
-	  // read-modify-write race and it needs the form to refetch, or an
-	  // updated_at precondition on the write — a bigger change than this one.
-	  // What this closes is the whole class of caller that simply omits a field.
+	  // SCOPE: ProductForm always sends both keys, so on its own this does not
+	  // stop a form loaded before an import from saving its stale '' back over
+	  // fresh copy. That read-modify-write race is closed separately, by the
+	  // updated_at precondition in adminUpdateProduct — which covers the whole
+	  // row, these content columns included. What this clause closes is the
+	  // different, wider class of caller that simply omits a field.
 	  if (p.description !== undefined && p.description !== null) row.description = p.description;
 	  if (Array.isArray(p.gallery)) row.gallery_urls = p.gallery;
+
+	  // ---- content columns (migration 0025) ----
+	  //
+	  // Same absent-or-present rule, and it matters more here than anywhere else:
+	  // the Biosash ingest is FILL-ONLY and will never restore what an admin save
+	  // destroys. A form that does not carry `benefits` must leave the column
+	  // alone, not blank forty ingested rows.
+	  //
+	  // Shapes are normalised through the shared module rather than trusted from
+	  // the caller. React cannot render an object as a child, so a malformed
+	  // benefits row reaching the PDP is a white screen, and the admin editor is
+	  // not the only caller — the CSV importer writes through here too.
+	  const contentInput = {};
+	  const carry = (formKey, dbKey) => {
+	    if (p[formKey] !== undefined) contentInput[dbKey] = p[formKey];
+	  };
+	  carry('brand', 'brand');
+	  carry('netContent', 'net_content');
+	  carry('keyClaims', 'key_claims');
+	  carry('benefits', 'benefits');
+	  carry('ingredients', 'ingredients');
+	  carry('howToUse', 'how_to_use');
+	  carry('specifications', 'specifications');
+	  Object.assign(row, normalizeContentPatch(contentInput));
+
+	  // Provenance, so the coverage view can tell ingested content from authored
+	  // content. Only stamped when the caller actually touched a content field —
+	  // saving the Basics tab must not relabel ingested copy as hand-written.
+	  if (Object.keys(contentInput).length > 0) {
+	    row.content_source = p.contentSource || 'manual';
+	    row.content_updated_at = new Date().toISOString();
+	  }
 	  return row;
 	}
 
@@ -39141,10 +39430,17 @@
 	      const text = String(b.description || '').trim();
 	      // A body with no heading is still a benefit; it just leads with itself.
 	      if (!label && !text) return null;
+	      // A description identical to its title is not a description — it renders
+	      // as "ZERO PRESERVATIVES / ZERO PRESERVATIVES", the same words twice in
+	      // two weights. Nine such rows exist today because the Biosash ingest
+	      // split a badge list into {title, description} pairs, and copy-paste
+	      // will keep producing them. Suppressed at the shared helper so the PDP
+	      // and the quick view agree without either one knowing why.
+	      const body = label && text.toLowerCase() === label.toLowerCase() ? '' : text;
 	      return {
 	        icon: String(b.icon || 'check'),
 	        label: label || text,
-	        text: label ? text : ''
+	        text: label ? body : ''
 	      };
 	    }
 	    return null;
@@ -50579,6 +50875,9 @@
 	  to: '/admin/products',
 	  label: 'Products'
 	}, {
+	  to: '/admin/content',
+	  label: 'Product Content'
+	}, {
 	  to: '/admin/orders',
 	  label: 'Orders'
 	}, {
@@ -52335,6 +52634,365 @@
 	  });
 	});
 
+	const rowsFromSpecs = specs => {
+	  if (!specs || typeof specs !== 'object' || Array.isArray(specs)) return [];
+	  return Object.entries(specs).map(([key, value]) => ({
+	    key,
+	    value: String(value ?? '')
+	  }));
+	};
+	function Repeatable({
+	  rows,
+	  onChange,
+	  addLabel,
+	  render,
+	  emptyHint
+	}) {
+	  const move = (i, delta) => {
+	    const j = i + delta;
+	    if (j < 0 || j >= rows.length) return;
+	    const next = rows.slice();
+	    [next[i], next[j]] = [next[j], next[i]];
+	    onChange(next);
+	  };
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "adm-rep",
+	    children: [rows.length === 0 && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "muted adm-rep__empty",
+	      children: emptyHint
+	    }), rows.map((row, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm-rep__row",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "adm-rep__fields",
+	        children: render(row, i)
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-rep__ctl",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "btn btn-xs btn-light",
+	          onClick: () => move(i, -1),
+	          disabled: i === 0,
+	          "aria-label": "Move up",
+	          children: "\u2191"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "btn btn-xs btn-light",
+	          onClick: () => move(i, 1),
+	          disabled: i === rows.length - 1,
+	          "aria-label": "Move down",
+	          children: "\u2193"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "btn btn-xs btn-light",
+	          onClick: () => onChange(rows.filter((_, j) => j !== i)),
+	          "aria-label": "Remove",
+	          children: "\u2715"
+	        })]
+	      })]
+	    }, i)), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	      type: "button",
+	      className: "btn btn-sm btn-light",
+	      onClick: () => onChange([...rows, {}]),
+	      children: addLabel
+	    })]
+	  });
+	}
+	function ContentEditor({
+	  values,
+	  onChange,
+	  product,
+	  brandOptions = []
+	}) {
+	  const [claimDraft, setClaimDraft] = reactExports.useState('');
+	  const set = (k, v) => onChange({
+	    ...values,
+	    [k]: v
+	  });
+	  const claims = Array.isArray(values.keyClaims) ? values.keyClaims : [];
+	  const benefits = Array.isArray(values.benefits) ? values.benefits : [];
+	  const ingredients = Array.isArray(values.ingredients) ? values.ingredients : [];
+	  const steps = Array.isArray(values.howToUse) ? values.howToUse : [];
+	  const specRows = reactExports.useMemo(() => rowsFromSpecs(values.specifications), [values.specifications]);
+
+	  // Coverage is computed from the FORM state, not the saved row, so ticking a
+	  // gap off updates as you type rather than after a save.
+	  const asProduct = {
+	    brand: values.brand,
+	    netContent: values.netContent,
+	    keyClaims: claims,
+	    benefits,
+	    ingredients,
+	    howToUse: steps,
+	    specifications: values.specifications
+	  };
+	  const errors = validateContent({
+	    key_claims: claims,
+	    benefits,
+	    ingredients,
+	    how_to_use: steps,
+	    specifications: values.specifications
+	  });
+	  const addClaim = () => {
+	    const t = claimDraft.trim();
+	    if (!t) return;
+	    if (!claims.includes(t)) set('keyClaims', [...claims, t]);
+	    setClaimDraft('');
+	  };
+	  const setSpecs = rows => {
+	    // Kept as rows in the editor so two blank rows can coexist while typing;
+	    // collapsed to an object on save by the shared normaliser.
+	    const obj = {};
+	    for (const r of rows) if (r.key?.trim()) obj[r.key.trim()] = String(r.value ?? '');
+	    set('specifications', obj);
+	  };
+	  const specAsRows = specRows.length ? specRows : [];
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "surface",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        children: "Content coverage"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "muted",
+	        style: {
+	          marginTop: 0
+	        },
+	        children: "Each of these renders a section of the product page. An empty field hides its section."
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "adm-cov",
+	        children: CONTENT_FIELDS.map(f => {
+	          const on = fieldPopulated(asProduct, f);
+	          return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	            className: `adm-cov__pill ${on ? 'is-on' : 'is-off'}`,
+	            children: [on ? '●' : '○', " ", CONTENT_LABELS[f]]
+	          }, f);
+	        })
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	        className: "muted adm-cov__meta",
+	        children: ["Source: ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: product?.contentSource || 'not set'
+	        }), product?.contentUpdatedAt ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: [" \xB7 content last updated ", new Date(product.contentUpdatedAt).toLocaleString('en-IN')]
+	        }) : /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
+	          children: " \xB7 never edited"
+	        }), product?.slug && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: [' · ', /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	            href: `/product/${product.slug}`,
+	            target: "_blank",
+	            rel: "noreferrer",
+	            children: "Open the product page \u2197"
+	          })]
+	        })]
+	      }), errors.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "adm-banner err",
+	        style: {
+	          marginTop: 10
+	        },
+	        children: errors.map(e => /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          children: e
+	        }, e))
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "surface",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        children: "Identity"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-grid2",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Brand"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            list: "adm-brand-options",
+	            value: values.brand || '',
+	            onChange: e => set('brand', e.target.value),
+	            placeholder: "e.g. Biosash"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("datalist", {
+	            id: "adm-brand-options",
+	            children: brandOptions.map(b => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	              value: b
+	            }, b))
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "field",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	            className: "label",
+	            children: "Net content"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            value: values.netContent || '',
+	            onChange: e => set('netContent', e.target.value),
+	            placeholder: "200ml \xB7 60 tablets \xB7 100 g"
+	          })]
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "surface",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        children: "Key claims"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "muted",
+	        style: {
+	          marginTop: 0
+	        },
+	        children: "Short badges shown under the title. Keep them factual and under 60 characters \u2014 a condition or disease name here reads as a treatment claim."
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "adm-tags",
+	        children: claims.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "adm-tag",
+	          children: [c, /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	            type: "button",
+	            onClick: () => set('keyClaims', claims.filter(x => x !== c)),
+	            "aria-label": `Remove ${c}`,
+	            children: "\u2715"
+	          })]
+	        }, c))
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-tags__add",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          className: "input",
+	          value: claimDraft,
+	          onChange: e => setClaimDraft(e.target.value),
+	          onKeyDown: e => {
+	            if (e.key === 'Enter') {
+	              e.preventDefault();
+	              addClaim();
+	            }
+	          },
+	          placeholder: "Paraben Free"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          className: "btn btn-sm btn-light",
+	          onClick: addClaim,
+	          children: "Add claim"
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "surface",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        children: "Benefits"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Repeatable, {
+	        rows: benefits,
+	        onChange: r => set('benefits', r),
+	        addLabel: "Add benefit",
+	        emptyHint: "No benefits yet \u2014 this section is hidden on the product page.",
+	        render: (row, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            placeholder: "Title",
+	            value: row.title || '',
+	            onChange: e => set('benefits', benefits.map((b, j) => j === i ? {
+	              ...b,
+	              title: e.target.value
+	            } : b))
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
+	            className: "textarea",
+	            rows: 2,
+	            placeholder: "Description (optional)",
+	            value: row.description || '',
+	            onChange: e => set('benefits', benefits.map((b, j) => j === i ? {
+	              ...b,
+	              description: e.target.value
+	            } : b))
+	          })]
+	        })
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "surface",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        children: "Ingredients"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Repeatable, {
+	        rows: ingredients,
+	        onChange: r => set('ingredients', r),
+	        addLabel: "Add ingredient",
+	        emptyHint: "No ingredients yet \u2014 this section is hidden on the product page.",
+	        render: (row, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            placeholder: "Name",
+	            value: row.name || '',
+	            onChange: e => set('ingredients', ingredients.map((x, j) => j === i ? {
+	              ...x,
+	              name: e.target.value
+	            } : x))
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            placeholder: "One line about it (optional)",
+	            value: row.description || '',
+	            onChange: e => set('ingredients', ingredients.map((x, j) => j === i ? {
+	              ...x,
+	              description: e.target.value
+	            } : x))
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            placeholder: "Image URL (optional, https only)",
+	            value: row.image_url || '',
+	            onChange: e => set('ingredients', ingredients.map((x, j) => j === i ? {
+	              ...x,
+	              image_url: e.target.value
+	            } : x))
+	          })]
+	        })
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "surface",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        children: "How to use"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Repeatable, {
+	        rows: steps,
+	        onChange: r => set('howToUse', r),
+	        addLabel: "Add step",
+	        emptyHint: "No directions yet \u2014 this section is hidden on the product page.",
+	        render: (row, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "adm-rep__num",
+	            children: i + 1
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
+	            className: "textarea",
+	            rows: 2,
+	            placeholder: "Step text",
+	            value: row.text || '',
+	            onChange: e => set('howToUse', steps.map((s, j) => j === i ? {
+	              ...s,
+	              text: e.target.value
+	            } : s))
+	          })]
+	        })
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "surface",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        children: "Specifications"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(Repeatable, {
+	        rows: specAsRows,
+	        onChange: setSpecs,
+	        addLabel: "Add specification",
+	        emptyHint: "No specifications yet \u2014 this section is hidden on the product page.",
+	        render: (row, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            placeholder: "Label \u2014 e.g. Shelf life",
+	            value: row.key || '',
+	            onChange: e => setSpecs(specAsRows.map((x, j) => j === i ? {
+	              ...x,
+	              key: e.target.value
+	            } : x))
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            className: "input",
+	            placeholder: "Value \u2014 e.g. 24 months",
+	            value: row.value || '',
+	            onChange: e => setSpecs(specAsRows.map((x, j) => j === i ? {
+	              ...x,
+	              value: e.target.value
+	            } : x))
+	          })]
+	        })
+	      })]
+	    })]
+	  });
+	}
+
 	const DISCOUNT_TIERS = [0, 10, 15, 18, 20];
 	const empty$2 = {
 	  name: '',
@@ -52353,7 +53011,17 @@
 	  isFeatured: false,
 	  rating: 0,
 	  reviewCount: 0,
-	  isActive: true
+	  isActive: true,
+	  // Content columns (0025). null, not '' or [] — the save path treats an
+	  // absent value as "leave the column alone", and a new product genuinely
+	  // has no content rather than empty content.
+	  brand: null,
+	  netContent: null,
+	  keyClaims: null,
+	  benefits: null,
+	  ingredients: null,
+	  howToUse: null,
+	  specifications: null
 	};
 	function ProductForm() {
 	  const {
@@ -52366,6 +53034,9 @@
 	  // Set when a save is refused as stale, so the error can offer a reload
 	  // rather than just describing the problem.
 	  const [staleConflict, setStaleConflict] = reactExports.useState(false);
+	  const [tab, setTab] = reactExports.useState('basics');
+	  const [loadedProduct, setLoadedProduct] = reactExports.useState(null);
+	  const [brandOptions, setBrandOptions] = reactExports.useState([]);
 	  const [values, setValues] = reactExports.useState(empty$2);
 	  const [loading, setLoading] = reactExports.useState(isEdit);
 	  const [saving, setSaving] = reactExports.useState(false);
@@ -52427,8 +53098,19 @@
 	        isFeatured: p.isFeatured,
 	        rating: p.rating,
 	        reviewCount: p.reviewCount,
-	        isActive: p.isActive
+	        isActive: p.isActive,
+	        brand: p.brand ?? null,
+	        netContent: p.netContent ?? null,
+	        keyClaims: p.keyClaims ?? null,
+	        benefits: p.benefits ?? null,
+	        ingredients: p.ingredients ?? null,
+	        howToUse: p.howToUse ?? null,
+	        specifications: p.specifications ?? null
 	      });
+	      setLoadedProduct(p);
+	      // Brand suggestions come from what the catalogue already uses, so the
+	      // spelling stays consistent without a fixed list to maintain.
+	      setBrandOptions([...new Set(list.map(x => x.brand).filter(Boolean))].sort());
 	      if (!DISCOUNT_TIERS.includes(p.discountPercent)) setCustomDiscount(true);
 	      setLoading(false);
 	    }).catch(e => {
@@ -52479,7 +53161,17 @@
 	        isFeatured: values.isFeatured,
 	        rating: Number(values.rating) || 0,
 	        reviewCount: Number(values.reviewCount) || 0,
-	        isActive: values.isActive
+	        isActive: values.isActive,
+	        // Always sent, so clearing a field in the editor genuinely clears it.
+	        // Shapes are normalised in productToDbRow; this passes them straight
+	        // through rather than reimplementing the rules a second time.
+	        brand: values.brand,
+	        netContent: values.netContent,
+	        keyClaims: values.keyClaims,
+	        benefits: values.benefits,
+	        ingredients: values.ingredients,
+	        howToUse: values.howToUse,
+	        specifications: values.specifications
 	      };
 	      if (isEdit) {
 	        const saved = await adminUpdateProduct(dbId, payload, loadedUpdatedAt.current);
@@ -52558,256 +53250,285 @@
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
 	      onSubmit: onSubmit,
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "surface",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	          children: "Basics"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "field",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	            className: "label",
-	            children: "Product name"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	            className: "input",
-	            required: true,
-	            value: values.name,
-	            onChange: e => set('name', e.target.value)
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "adm-grid2",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "field",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	              className: "label",
-	              children: "Slug (URL)"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	              className: "input",
-	              value: values.slug,
-	              onChange: e => set('slug', e.target.value),
-	              placeholder: "auto-generated from name"
-	            })]
+	        className: "adm-chipbar",
+	        role: "tablist",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          role: "tab",
+	          "aria-selected": tab === 'basics',
+	          className: `adm-chip ${tab === 'basics' ? 'active' : ''}`,
+	          onClick: () => setTab('basics'),
+	          children: "Basics, pricing & media"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	          type: "button",
+	          role: "tab",
+	          "aria-selected": tab === 'content',
+	          className: `adm-chip ${tab === 'content' ? 'active' : ''}`,
+	          onClick: () => setTab('content'),
+	          children: "Product page content"
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        hidden: tab !== 'basics',
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "surface",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            children: "Basics"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "field",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
-	              children: "Category"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("select", {
-	              className: "select",
-	              value: values.category,
-	              onChange: e => set('category', e.target.value),
-	              children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
-	                value: c.slug,
-	                children: c.name
-	              }, c.slug))
-	            })]
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "field",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	            className: "label",
-	            children: "Description"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
-	            className: "textarea",
-	            value: values.description,
-	            onChange: e => set('description', e.target.value)
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "field",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	            className: "label",
-	            children: "Size / form (e.g. \"100 ml\")"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	            className: "input",
-	            value: values.form,
-	            onChange: e => set('form', e.target.value)
-	          })]
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsx(MediaGallery, {
-	        ref: mediaRef,
-	        productId: isEdit ? Number(dbId) : null,
-	        productName: values.name,
-	        legacyGalleryUrls: values.gallery,
-	        initialCleanupPending: location.state?.mediaCleanupPending || [],
-	        onPrimaryChange: onPrimaryChange
-	      }, dbId || 'new'), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "surface",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	          children: "Pricing"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "adm-grid2",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "field",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	              className: "label",
-	              children: "Original price / MRP (\u20B9)"
+	              children: "Product name"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	              className: "input",
-	              type: "number",
-	              min: "1",
-	              step: "1",
 	              required: true,
-	              value: values.originalPrice,
-	              onChange: e => set('originalPrice', e.target.value)
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	              className: "hint",
-	              children: "Must be at least \u20B91. A product with no price cannot be purchased."
+	              value: values.name,
+	              onChange: e => set('name', e.target.value)
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "field",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	              className: "label",
-	              children: "Discount"
-	            }), !customDiscount ? /*#__PURE__*/jsxRuntimeExports.jsxs("select", {
-	              className: "select",
-	              value: values.discountPercent,
-	              onChange: e => e.target.value === 'custom' ? setCustomDiscount(true) : set('discountPercent', Number(e.target.value)),
-	              children: [DISCOUNT_TIERS.map(d => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
-	                value: d,
-	                children: d === 0 ? 'No discount' : `${d}%`
-	              }, d)), /*#__PURE__*/jsxRuntimeExports.jsx("option", {
-	                value: "custom",
-	                children: "Custom\u2026"
+	            className: "adm-grid2",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "field",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	                className: "label",
+	                children: "Slug (URL)"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                className: "input",
+	                value: values.slug,
+	                onChange: e => set('slug', e.target.value),
+	                placeholder: "auto-generated from name"
 	              })]
-	            }) : /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	              className: "input",
-	              type: "number",
-	              min: "0",
-	              max: "90",
-	              value: values.discountPercent,
-	              onChange: e => set('discountPercent', Number(e.target.value))
-	            })]
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "adm-preview-price",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "now",
-	            children: money(salePrice)
-	          }), discount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "was",
-	            children: money(original)
-	          }), discount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	            className: "off",
-	            children: [discount, "% OFF"]
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "hint",
-	            children: "\u2014 live preview, calculated automatically"
-	          })]
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "surface",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	          children: "Inventory & source"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "adm-grid2",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "field",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	              className: "label",
-	              children: "Availability"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	              className: "adm-checkrow",
-	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	                type: "checkbox",
-	                id: "f-instock",
-	                checked: values.inStock,
-	                onChange: e => set('inStock', e.target.checked)
-	              }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	                htmlFor: "f-instock",
-	                children: "In stock"
+	              className: "field",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	                className: "label",
+	                children: "Category"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("select", {
+	                className: "select",
+	                value: values.category,
+	                onChange: e => set('category', e.target.value),
+	                children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	                  value: c.slug,
+	                  children: c.name
+	                }, c.slug))
 	              })]
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "field",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
-	              children: "Official source URL"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	              className: "input",
-	              value: values.permalink,
-	              onChange: e => set('permalink', e.target.value)
-	            })]
-	          })]
-	        })]
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "surface",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	          children: "Flags & visibility"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "adm-checkrow",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	            type: "checkbox",
-	            id: "f-new",
-	            checked: values.isNew,
-	            onChange: e => set('isNew', e.target.checked)
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	            htmlFor: "f-new",
-	            children: "New arrival"
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "adm-checkrow",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	            type: "checkbox",
-	            id: "f-best",
-	            checked: values.isBestseller,
-	            onChange: e => set('isBestseller', e.target.checked)
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	            htmlFor: "f-best",
-	            children: "Bestseller"
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "adm-checkrow",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	            type: "checkbox",
-	            id: "f-feat",
-	            checked: values.isFeatured,
-	            onChange: e => set('isFeatured', e.target.checked)
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	            htmlFor: "f-feat",
-	            children: "Featured"
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "adm-checkrow",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	            type: "checkbox",
-	            id: "f-active",
-	            checked: values.isActive,
-	            onChange: e => set('isActive', e.target.checked)
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	            htmlFor: "f-active",
-	            children: "Active (visible on storefront)"
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "adm-grid2",
-	          style: {
-	            marginTop: 12
-	          },
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	            className: "field",
-	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-	              className: "label",
-	              children: "Rating (0\u20135, demo value)"
-	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-	              className: "input",
-	              type: "number",
-	              min: "0",
-	              max: "5",
-	              step: "0.1",
-	              value: values.rating,
-	              onChange: e => set('rating', e.target.value)
+	              children: "Description"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
+	              className: "textarea",
+	              value: values.description,
+	              onChange: e => set('description', e.target.value)
 	            })]
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "field",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
-	              children: "Review count (demo value)"
+	              children: "Size / form (e.g. \"100 ml\")"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	              className: "input",
-	              type: "number",
-	              min: "0",
-	              value: values.reviewCount,
-	              onChange: e => set('reviewCount', e.target.value)
+	              value: values.form,
+	              onChange: e => set('form', e.target.value)
+	            })]
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(MediaGallery, {
+	          ref: mediaRef,
+	          productId: isEdit ? Number(dbId) : null,
+	          productName: values.name,
+	          legacyGalleryUrls: values.gallery,
+	          initialCleanupPending: location.state?.mediaCleanupPending || [],
+	          onPrimaryChange: onPrimaryChange
+	        }, dbId || 'new'), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "surface",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            children: "Pricing"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-grid2",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "field",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	                className: "label",
+	                children: "Original price / MRP (\u20B9)"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                className: "input",
+	                type: "number",
+	                min: "1",
+	                step: "1",
+	                required: true,
+	                value: values.originalPrice,
+	                onChange: e => set('originalPrice', e.target.value)
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	                className: "hint",
+	                children: "Must be at least \u20B91. A product with no price cannot be purchased."
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "field",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	                className: "label",
+	                children: "Discount"
+	              }), !customDiscount ? /*#__PURE__*/jsxRuntimeExports.jsxs("select", {
+	                className: "select",
+	                value: values.discountPercent,
+	                onChange: e => e.target.value === 'custom' ? setCustomDiscount(true) : set('discountPercent', Number(e.target.value)),
+	                children: [DISCOUNT_TIERS.map(d => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	                  value: d,
+	                  children: d === 0 ? 'No discount' : `${d}%`
+	                }, d)), /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+	                  value: "custom",
+	                  children: "Custom\u2026"
+	                })]
+	              }) : /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                className: "input",
+	                type: "number",
+	                min: "0",
+	                max: "90",
+	                value: values.discountPercent,
+	                onChange: e => set('discountPercent', Number(e.target.value))
+	              })]
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-preview-price",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "now",
+	              children: money(salePrice)
+	            }), discount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "was",
+	              children: money(original)
+	            }), discount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              className: "off",
+	              children: [discount, "% OFF"]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	              className: "hint",
+	              children: "\u2014 live preview, calculated automatically"
+	            })]
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "surface",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            children: "Inventory & source"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-grid2",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "field",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	                className: "label",
+	                children: "Availability"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                className: "adm-checkrow",
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                  type: "checkbox",
+	                  id: "f-instock",
+	                  checked: values.inStock,
+	                  onChange: e => set('inStock', e.target.checked)
+	                }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	                  htmlFor: "f-instock",
+	                  children: "In stock"
+	                })]
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "field",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	                className: "label",
+	                children: "Official source URL"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                className: "input",
+	                value: values.permalink,
+	                onChange: e => set('permalink', e.target.value)
+	              })]
+	            })]
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "surface",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	            children: "Flags & visibility"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-checkrow",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              type: "checkbox",
+	              id: "f-new",
+	              checked: values.isNew,
+	              onChange: e => set('isNew', e.target.checked)
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	              htmlFor: "f-new",
+	              children: "New arrival"
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-checkrow",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              type: "checkbox",
+	              id: "f-best",
+	              checked: values.isBestseller,
+	              onChange: e => set('isBestseller', e.target.checked)
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	              htmlFor: "f-best",
+	              children: "Bestseller"
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-checkrow",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              type: "checkbox",
+	              id: "f-feat",
+	              checked: values.isFeatured,
+	              onChange: e => set('isFeatured', e.target.checked)
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	              htmlFor: "f-feat",
+	              children: "Featured"
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-checkrow",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              type: "checkbox",
+	              id: "f-active",
+	              checked: values.isActive,
+	              onChange: e => set('isActive', e.target.checked)
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	              htmlFor: "f-active",
+	              children: "Active (visible on storefront)"
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-grid2",
+	            style: {
+	              marginTop: 12
+	            },
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "field",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	                className: "label",
+	                children: "Rating (0\u20135, demo value)"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                className: "input",
+	                type: "number",
+	                min: "0",
+	                max: "5",
+	                step: "0.1",
+	                value: values.rating,
+	                onChange: e => set('rating', e.target.value)
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "field",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	                className: "label",
+	                children: "Review count (demo value)"
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                className: "input",
+	                type: "number",
+	                min: "0",
+	                value: values.reviewCount,
+	                onChange: e => set('reviewCount', e.target.value)
+	              })]
 	            })]
 	          })]
 	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        hidden: tab !== 'content',
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(ContentEditor, {
+	          values: values,
+	          onChange: setValues,
+	          product: loadedProduct,
+	          brandOptions: brandOptions
+	        })
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        style: {
 	          display: 'flex',
@@ -54058,6 +54779,579 @@
 	          disabled: saving,
 	          children: saving ? 'Saving…' : 'Save terms'
 	        })
+	      })]
+	    })]
+	  });
+	}
+
+	// ============================================================
+	// SORA LIFE — product content CSV round-trip
+	//
+	// Export every product's content fields, edit in a spreadsheet, import back.
+	// This is what makes filling in 124 products realistic; the per-product editor
+	// is for one at a time.
+	//
+	// The structured fields are JSON-encoded in their cells. That is uglier in a
+	// spreadsheet than one-column-per-benefit would be, but it round-trips
+	// exactly: a benefit whose description contains a comma, a newline or a quote
+	// survives, and there is no ambiguity about how many benefits a row has.
+	//
+	// Nothing here writes. Callers get a plan of what WOULD change and decide.
+	// ============================================================
+	const CSV_COLUMNS = ['id', 'slug', 'name', ...CONTENT_FIELDS];
+	const STRUCTURED = new Set(['key_claims', 'benefits', 'ingredients', 'how_to_use', 'specifications']);
+
+	// ---------- serialize ----------
+
+	const cell = v => {
+	  const s = v === null || v === undefined ? '' : String(v);
+	  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+	};
+	const valueFor = (p, field) => {
+	  const v = {
+	    brand: p.brand,
+	    net_content: p.netContent ?? p.net_content,
+	    key_claims: p.keyClaims ?? p.key_claims,
+	    benefits: p.benefits,
+	    ingredients: p.ingredients,
+	    how_to_use: p.howToUse ?? p.how_to_use,
+	    specifications: p.specifications
+	  }[field];
+	  if (v === null || v === undefined) return '';
+	  return STRUCTURED.has(field) ? JSON.stringify(v) : String(v);
+	};
+	function productsToCsv(products) {
+	  const rows = [CSV_COLUMNS.join(',')];
+	  for (const p of products) {
+	    rows.push([cell(p.dbId ?? p.id), cell(p.slug), cell(p.name), ...CONTENT_FIELDS.map(f => cell(valueFor(p, f)))].join(','));
+	  }
+	  return `${rows.join('\n')}\n`;
+	}
+
+	// ---------- parse ----------
+
+	/** RFC4180-ish: quoted fields, doubled quotes, newlines inside quotes. */
+	function parseCsv(text) {
+	  const src = String(text || '').replace(/^﻿/, ''); // strip a spreadsheet BOM
+	  const rows = [];
+	  let row = [],
+	    cur = '',
+	    quoted = false;
+	  for (let i = 0; i < src.length; i += 1) {
+	    const c = src[i];
+	    if (quoted) {
+	      if (c === '"') {
+	        if (src[i + 1] === '"') {
+	          cur += '"';
+	          i += 1;
+	        } else quoted = false;
+	      } else cur += c;
+	      continue;
+	    }
+	    if (c === '"') {
+	      quoted = true;
+	      continue;
+	    }
+	    if (c === ',') {
+	      row.push(cur);
+	      cur = '';
+	      continue;
+	    }
+	    if (c === '\r') continue;
+	    if (c === '\n') {
+	      row.push(cur);
+	      rows.push(row);
+	      row = [];
+	      cur = '';
+	      continue;
+	    }
+	    cur += c;
+	  }
+	  if (cur.length || row.length) {
+	    row.push(cur);
+	    rows.push(row);
+	  }
+	  return rows.filter(r => r.some(v => String(v).trim() !== ''));
+	}
+	const isEmptyCell = v => String(v ?? '').trim() === '';
+
+	/**
+	 * Turn a parsed CSV into a per-product plan.
+	 *
+	 * EVERY row is validated before ANY row is reported as writable, and the
+	 * caller is expected to refuse the whole file if `errors` is non-empty for a
+	 * row it cares about — a half-applied content import is worse than none,
+	 * because there is no way to tell which half landed.
+	 *
+	 * A BLANK cell means "no opinion, leave it alone" — never "clear this field".
+	 * Clearing is a deliberate act and belongs in the per-product editor, not in
+	 * a spreadsheet where an accidentally deleted column would wipe the catalogue.
+	 */
+	function planImport$1(rowsText, products, {
+	  overwrite = false
+	} = {}) {
+	  const rows = parseCsv(rowsText);
+	  if (!rows.length) return {
+	    ok: false,
+	    reason: 'The file is empty.',
+	    changes: [],
+	    skipped: []
+	  };
+	  const header = rows[0].map(h => h.trim().toLowerCase());
+	  const idx = name => header.indexOf(name);
+	  if (idx('slug') < 0 && idx('id') < 0) {
+	    return {
+	      ok: false,
+	      reason: 'The file needs a "slug" or "id" column to match products on.',
+	      changes: [],
+	      skipped: []
+	    };
+	  }
+	  const bySlug = new Map(products.map(p => [String(p.slug), p]));
+	  const byId = new Map(products.map(p => [String(p.dbId ?? p.id), p]));
+	  const present = CONTENT_FIELDS.filter(f => idx(f) >= 0);
+	  const changes = [],
+	    skipped = [];
+	  for (let r = 1; r < rows.length; r += 1) {
+	    const cells = rows[r];
+	    const line = r + 1;
+	    const slug = idx('slug') >= 0 ? String(cells[idx('slug')] ?? '').trim() : '';
+	    const id = idx('id') >= 0 ? String(cells[idx('id')] ?? '').trim() : '';
+	    const product = bySlug.get(slug) || byId.get(id);
+	    if (!product) {
+	      skipped.push({
+	        line,
+	        slug: slug || id,
+	        reason: 'No product matches this slug or id.'
+	      });
+	      continue;
+	    }
+	    const patch = {},
+	      diffs = [],
+	      rowErrors = [];
+	    for (const field of present) {
+	      const raw = cells[idx(field)];
+	      if (isEmptyCell(raw)) continue; // no opinion
+
+	      let parsed;
+	      if (STRUCTURED.has(field)) {
+	        try {
+	          parsed = JSON.parse(String(raw));
+	        } catch {
+	          rowErrors.push(`${CONTENT_LABELS[field]}: not valid JSON.`);
+	          continue;
+	        }
+	      } else {
+	        parsed = String(raw).trim();
+	      }
+	      patch[field] = parsed;
+	    }
+
+	    // Normalise once, then compare — so "same content, different key order"
+	    // is not reported as a change on a clean round-trip.
+	    const normalized = normalizeContentPatch(patch);
+	    for (const [field, next] of Object.entries(normalized)) {
+	      const currentRaw = valueFor(product, field);
+	      const nextRaw = STRUCTURED.has(field) ? JSON.stringify(next ?? null) : String(next ?? '');
+	      const currentCmp = currentRaw === '' && STRUCTURED.has(field) ? 'null' : currentRaw;
+	      if (nextRaw === currentCmp) continue; // identical, nothing to do
+
+	      const alreadyHas = currentRaw !== '';
+	      if (alreadyHas && !overwrite) {
+	        diffs.push({
+	          field,
+	          skipped: true,
+	          reason: 'already has a value (fill-only)',
+	          before: currentRaw,
+	          after: nextRaw
+	        });
+	        continue;
+	      }
+	      diffs.push({
+	        field,
+	        before: currentRaw,
+	        after: nextRaw
+	      });
+	    }
+	    if (rowErrors.length) {
+	      skipped.push({
+	        line,
+	        slug: product.slug,
+	        reason: rowErrors.join(' ')
+	      });
+	      continue;
+	    }
+	    const applying = diffs.filter(d => !d.skipped);
+	    if (!applying.length) continue;
+	    changes.push({
+	      line,
+	      dbId: product.dbId ?? product.id,
+	      slug: product.slug,
+	      name: product.name,
+	      diffs,
+	      patch: Object.fromEntries(applying.map(d => [d.field, normalized[d.field]]))
+	    });
+	  }
+	  return {
+	    ok: true,
+	    columns: present,
+	    changes,
+	    skipped
+	  };
+	}
+
+	const dbKeyToForm = {
+	  brand: 'brand',
+	  net_content: 'netContent',
+	  key_claims: 'keyClaims',
+	  benefits: 'benefits',
+	  ingredients: 'ingredients',
+	  how_to_use: 'howToUse',
+	  specifications: 'specifications'
+	};
+	function ContentCoverage() {
+	  const [products, setProducts] = reactExports.useState([]);
+	  const [loading, setLoading] = reactExports.useState(true);
+	  const [err, setErr] = reactExports.useState('');
+	  const [msg, setMsg] = reactExports.useState('');
+	  const [onlyActive, setOnlyActive] = reactExports.useState(true);
+	  const [plan, setPlan] = reactExports.useState(null);
+	  const [overwrite, setOverwrite] = reactExports.useState(false);
+	  const [fileText, setFileText] = reactExports.useState('');
+	  const [fileName, setFileName] = reactExports.useState('');
+	  const [applying, setApplying] = reactExports.useState(false);
+	  const load = reactExports.useCallback(async () => {
+	    setLoading(true);
+	    try {
+	      setProducts(await adminListProducts());
+	      setErr('');
+	    } catch (e) {
+	      setErr(e.message || String(e));
+	    } finally {
+	      setLoading(false);
+	    }
+	  }, []);
+	  reactExports.useEffect(() => {
+	    load();
+	  }, [load]);
+	  const scored = reactExports.useMemo(() => products.filter(p => onlyActive ? p.isActive : true).map(p => ({
+	    p,
+	    s: contentScore(p)
+	  })).sort((a, b) => a.s.count - b.s.count || a.p.name.localeCompare(b.p.name)), [products, onlyActive]);
+	  const totals = reactExports.useMemo(() => {
+	    const t = {};
+	    for (const f of CONTENT_FIELDS) t[f] = scored.filter(({
+	      p
+	    }) => contentScore(p).populated.includes(f)).length;
+	    return t;
+	  }, [scored]);
+	  function exportCsv() {
+	    const rows = scored.map(({
+	      p
+	    }) => p);
+	    const blob = new Blob([productsToCsv(rows)], {
+	      type: 'text/csv;charset=utf-8'
+	    });
+	    const url = URL.createObjectURL(blob);
+	    const a = document.createElement('a');
+	    a.href = url;
+	    a.download = `sora-product-content-${new Date().toISOString().slice(0, 10)}.csv`;
+	    a.click();
+	    URL.revokeObjectURL(url);
+	  }
+	  async function onFile(e) {
+	    const file = e.target.files?.[0];
+	    if (!file) return;
+	    const text = await file.text();
+	    setFileText(text);
+	    setFileName(file.name);
+	    setPlan(planImport$1(text, products, {
+	      overwrite
+	    }));
+	    setMsg('');
+	  }
+
+	  // Re-plan when the overwrite toggle changes, so the preview always matches
+	  // the switch the admin is looking at.
+	  reactExports.useEffect(() => {
+	    if (fileText) setPlan(planImport$1(fileText, products, {
+	      overwrite
+	    }));
+	  }, [overwrite, fileText, products]);
+	  async function applyPlan() {
+	    if (!plan?.changes?.length) return;
+	    if (!window.confirm(`Apply content changes to ${plan.changes.length} product(s)?\n\n` + `${overwrite ? 'EXISTING VALUES WILL BE OVERWRITTEN.' : 'Fill-only: existing values are kept.'}\n\n` + 'Prices, stock and active status are never touched.')) return;
+	    setApplying(true);
+	    let ok = 0;
+	    const failed = [];
+	    for (const c of plan.changes) {
+	      // Written through adminUpdateProduct so these rows go down exactly the
+	      // same path as the editor: same normalisation, same updated_at stamp,
+	      // same stale-write precondition. A second write path for bulk edits is
+	      // how the two drift apart.
+	      const current = products.find(p => String(p.dbId) === String(c.dbId));
+	      if (!current) {
+	        failed.push(`${c.slug}: no longer in the catalogue`);
+	        continue;
+	      }
+	      const payload = {
+	        ...current
+	      };
+	      for (const [dbKey, value] of Object.entries(c.patch)) payload[dbKeyToForm[dbKey]] = value;
+	      try {
+	        await adminUpdateProduct(c.dbId, payload, current.updatedAt);
+	        ok += 1;
+	      } catch (ex) {
+	        failed.push(`${c.slug}: ${ex.isStaleWrite ? 'changed since the file was planned — re-export and retry' : ex.message || String(ex)}`);
+	      }
+	    }
+	    setApplying(false);
+	    setPlan(null);
+	    setFileText('');
+	    setFileName('');
+	    setMsg(`Updated ${ok} product(s).${failed.length ? ` ${failed.length} failed.` : ''}`);
+	    if (failed.length) setErr(failed.join(' · '));
+	    await load();
+	  }
+	  if (loading) return /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	    className: "muted",
+	    children: "Loading\u2026"
+	  });
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm__head",
+	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          children: "Product content"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          children: [scored.length, " products \xB7 what each one is missing, worst first. Empty fields hide their section on the product page."]
+	        })]
+	      })
+	    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm-banner err",
+	      children: err
+	    }), msg && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	      className: "adm-banner ok",
+	      children: msg
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "surface",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        children: "Coverage"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "adm-cov",
+	        children: CONTENT_FIELDS.map(f => /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	          className: "adm-cov__pill",
+	          children: [CONTENT_LABELS[f], ": ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	            children: totals[f]
+	          }), " / ", scored.length]
+	        }, f))
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	        className: "adm-cov__meta",
+	        style: {
+	          display: 'inline-flex',
+	          gap: 6,
+	          alignItems: 'center',
+	          marginTop: 10
+	        },
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	          type: "checkbox",
+	          checked: onlyActive,
+	          onChange: e => setOnlyActive(e.target.checked)
+	        }), "Active products only"]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "surface",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        children: "Bulk edit"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "muted",
+	        style: {
+	          marginTop: 0
+	        },
+	        children: "Export, edit in a spreadsheet, import back. Structured fields are JSON in their cell \u2014 leave a cell blank to say \u201Cno opinion\u201D; blank never clears a field."
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-actions",
+	        style: {
+	          marginBottom: 12
+	        },
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	          type: "button",
+	          className: "btn btn-sm",
+	          onClick: exportCsv,
+	          children: ["Export CSV (", scored.length, ")"]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	          className: "btn btn-sm btn-light",
+	          style: {
+	            cursor: 'pointer'
+	          },
+	          children: ["Choose CSV to import", /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            type: "file",
+	            accept: ".csv,text/csv",
+	            onChange: onFile,
+	            style: {
+	              display: 'none'
+	            }
+	          })]
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	        className: "muted",
+	        style: {
+	          fontSize: 11
+	        },
+	        children: ["Columns: ", CSV_COLUMNS.join(', ')]
+	      }), plan && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        className: "adm-import",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
+	          children: ["Dry run \u2014 ", fileName]
+	        }), !plan.ok && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	          className: "adm-banner err",
+	          children: plan.reason
+	        }), plan.ok && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	            style: {
+	              display: 'flex',
+	              gap: 8,
+	              alignItems: 'flex-start',
+	              margin: '10px 0'
+	            },
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              type: "checkbox",
+	              checked: overwrite,
+	              onChange: e => setOverwrite(e.target.checked),
+	              style: {
+	                marginTop: 3
+	              }
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                children: "Overwrite existing values."
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "muted",
+	                children: "Off by default. With this off, a product that already has a value keeps it and the incoming value is skipped."
+	              })]
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	              children: plan.changes.length
+	            }), " product(s) would change", plan.skipped.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: [" \xB7 ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                children: plan.skipped.length
+	              }), " row(s) skipped"]
+	            })]
+	          }), plan.skipped.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-banner err",
+	            children: [plan.skipped.slice(0, 12).map(sk => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              children: ["Line ", sk.line, " (", sk.slug || '—', "): ", sk.reason]
+	            }, sk.line)), plan.skipped.length > 12 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              children: ["\u2026 and ", plan.skipped.length - 12, " more"]
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-import__list",
+	            children: [plan.changes.slice(0, 40).map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "adm-import__item",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                children: c.name
+	              }), " ", /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	                className: "muted",
+	                children: ["(", c.slug, ")"]
+	              }), c.diffs.map(d => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	                className: `adm-import__diff ${d.skipped ? 'is-skip' : ''}`,
+	                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                  className: "adm-import__field",
+	                  children: CONTENT_LABELS[d.field]
+	                }), d.skipped ? /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	                  className: "muted",
+	                  children: [" \u2014 kept, ", d.reason]
+	                }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                    className: "adm-import__before",
+	                    children: d.before || '(empty)'
+	                  }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                    "aria-hidden": "true",
+	                    children: " \u2192 "
+	                  }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                    className: "adm-import__after",
+	                    children: d.after
+	                  })]
+	                })]
+	              }, d.field))]
+	            }, c.dbId)), plan.changes.length > 40 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	              className: "muted",
+	              children: ["\u2026 and ", plan.changes.length - 40, " more products"]
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-actions",
+	            style: {
+	              marginTop: 12
+	            },
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	              type: "button",
+	              className: "btn btn-sm",
+	              onClick: applyPlan,
+	              disabled: applying || !plan.changes.length,
+	              children: applying ? 'Applying…' : `Apply to ${plan.changes.length} product(s)`
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	              type: "button",
+	              className: "btn btn-sm btn-light",
+	              onClick: () => {
+	                setPlan(null);
+	                setFileText('');
+	                setFileName('');
+	              },
+	              children: "Cancel"
+	            })]
+	          })]
+	        })]
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "surface",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	        children: "Work queue"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+	        className: "adm-table",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+	          children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+	              children: "Product"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+	              children: "Fields"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+	              children: "Missing"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+	              children: "Source"
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {})]
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+	          children: scored.map(({
+	            p,
+	            s
+	          }) => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+	              children: [p.name, !s.hasDescription && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	                className: "badge badge-out",
+	                style: {
+	                  marginLeft: 6
+	                },
+	                children: "no description"
+	              })]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	                children: s.count
+	              }), " / ", s.total]
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	              className: "muted",
+	              children: s.missing.map(f => CONTENT_LABELS[f]).join(', ') || '—'
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	              className: "muted",
+	              children: p.contentSource || '—'
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	                className: "btn btn-xs btn-light",
+	                to: `/admin/products/${p.dbId}/edit`,
+	                children: "Edit"
+	              })
+	            })]
+	          }, p.dbId))
+	        })]
 	      })]
 	    })]
 	  });
@@ -61035,6 +62329,9 @@
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "products/:dbId/edit",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(ProductForm, {})
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "content",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(ContentCoverage, {})
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "orders",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Orders, {})
