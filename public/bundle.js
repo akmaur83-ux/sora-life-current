@@ -6824,7 +6824,11 @@
 	  const compactQuery = query.replace(/\s/g, '');
 	  return products.filter(product => {
 	    const categoryText = (product.categories || [product.category]).flatMap(slug => [slug, categoryBySlug[slug]?.name || '']).join(' ');
-	    const haystack = normalizeSearchText(`${product.name || ''} ${categoryText}`);
+	    // Brand is searchable because Sora Life is a marketplace: a customer who
+	    // taps the brand line on a PDP is asking "what else does this label make?",
+	    // and that question has to have an answer without a dedicated brand route.
+	    // /shop?q=<brand> is that answer.
+	    const haystack = normalizeSearchText(`${product.name || ''} ${product.brand || ''} ${categoryText}`);
 	    return haystack.includes(query) || haystack.replace(/\s/g, '').includes(compactQuery);
 	  });
 	}
@@ -38945,6 +38949,39 @@
 	  };
 	}
 
+	/**
+	 * The three delivery methods a customer can actually choose, with the fee
+	 * each one actually costs.
+	 *
+	 * AUTHORITY: api/_lib/pricing.js — `DELIVERY_FEES = { std: 0, exp: 79, sched: 49 }`
+	 * is the only thing that decides what is charged. This list is display copy for
+	 * the PDP and must be kept in step with it; Checkout.jsx carries the same three
+	 * rows for the picker itself.
+	 *
+	 * The fee is FLAT AT EVERY BASKET SIZE. There is no free-shipping threshold,
+	 * and no surface may imply one — a `freeShippingThreshold` setting was removed
+	 * for exactly this reason. Standard is free because Standard is free, not
+	 * because the basket reached some amount.
+	 */
+	function deliveryOptions() {
+	  return [{
+	    id: 'std',
+	    label: 'Standard',
+	    eta: '3–5 business days',
+	    price: 0
+	  }, {
+	    id: 'exp',
+	    label: 'Express',
+	    eta: '1–2 business days',
+	    price: 79
+	  }, {
+	    id: 'sched',
+	    label: 'Scheduled',
+	    eta: 'Choose your date',
+	    price: 49
+	  }];
+	}
+
 	// ------------------------------------------------------------
 	// BENEFITS — "Why you'll love it"
 	// Real product.benefits[] ONLY. No store-wide / category filler — if the
@@ -39177,45 +39214,37 @@
 
 	function ProductDeliveryInfo() {
 	  const est = deliveryEstimate();
+	  const options = deliveryOptions();
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	    className: "pdp-deliver",
 	    "aria-label": "Delivery information",
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "pdp-deliver__row",
+	      className: "pdp-deliver__head",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
 	        name: "truck",
-	        size: 18
+	        size: 16
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	          children: "Delivery timing"
+	          children: "Delivery"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("em", {
 	          children: [est.range, " \xB7 ", est.days]
 	        })]
 	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "pdp-deliver__row",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "gift",
-	        size: 18
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	          children: "Free standard shipping"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-	          children: "Select Standard delivery at checkout"
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	      className: "pdp-deliver__methods",
+	      children: options.map(o => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	        className: "pdp-deliver__method",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "pdp-deliver__label",
+	          children: o.label
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: "pdp-deliver__eta",
+	          children: o.eta
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	          className: `pdp-deliver__fee ${o.price === 0 ? 'is-free' : ''}`,
+	          children: o.price === 0 ? 'Free' : money(o.price)
 	        })]
-	      })]
-	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	      className: "pdp-deliver__row",
-	      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	        name: "package",
-	        size: 18
-	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-	          children: "Delivery methods"
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-	          children: "Available options are shown at checkout"
-	        })]
-	      })]
+	      }, o.id))
 	    })]
 	  });
 	}
@@ -39512,36 +39541,16 @@
 	  const {
 	    items
 	  } = previewReviewsFor(product);
-	  if (isPreview) {
-	    return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-	      className: "section-sm",
-	      id: "reviews",
-	      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	        className: "container",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "pdp-sec__head",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-	            className: "pdp-sec__title serif",
-	            children: "Ratings & reviews"
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "pdp-preview-tag",
-	            children: "Coming soon"
-	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "pdp-reviews-soon",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "pdp-reviews-soon__ic",
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-	              name: "chat",
-	              size: 22
-	            })
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-	            children: "Verified customer reviews are on the way. Once shoppers have rated this product, their ratings and notes will appear here."
-	          })]
-	        })]
-	      })
-	    });
-	  }
+
+	  // No real review data means no section. The placeholder that used to stand
+	  // here — a "Ratings & reviews" heading, a COMING SOON tag and a paragraph
+	  // saying reviews were on the way — appeared on every product in the
+	  // catalogue, because none of them has an aggregate yet. That is an orphaned
+	  // heading over an empty card: it makes a sparse product look unfinished
+	  // rather than deliberate, which is the one thing this page must not do.
+	  // The real-data branch below is unchanged and lights up the moment an
+	  // aggregate exists.
+	  if (isPreview || rating == null) return null;
 	  const full = Math.round(rating);
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
 	    className: "section-sm",
@@ -39688,6 +39697,43 @@
 	  });
 	}
 
+	// ============================================================
+	// COUPON SLOT — reserved region, deliberately empty.
+	//
+	// Run 2 mounts recommended coupon cards here. Nothing in this run may put a
+	// discount on the PDP, and in particular nothing may CALCULATE one: the old
+	// client-only SORA10 / WELCOME codes were removed because checkout ignored
+	// them and the two totals disagreed in front of the customer. Any coupon that
+	// lands here must be priced by api/_lib/pricing.js and displayed, never
+	// computed in the browser.
+	//
+	// It renders null rather than an empty container so a sparse PDP has no
+	// orphaned gap where a card will eventually go. The named element is the
+	// contract; the markup arrives with the feature.
+	// ============================================================
+	function PdpCouponSlot() {
+	  return null;
+	}
+
+	// ============================================================
+	// STORY SLOT — reserved region, deliberately empty.
+	//
+	// Run 3 (Admin PDP Experience) mounts admin-authored story imagery here: the
+	// per-product editorial band that sits between the product information and the
+	// trust list. The admin system itself is not built in this run.
+	//
+	// It renders null rather than an empty container, because the whole PDP rule
+	// is that a section with no data leaves no trace — no heading, no card, no
+	// "coming soon". A product that never receives story imagery must look
+	// finished, not unfinished.
+	//
+	// The eventual contract: given a product, resolve its saved story blocks and
+	// render them; render nothing when there are none.
+	// ============================================================
+	function PdpStorySlot() {
+	  return null;
+	}
+
 	function ProductLoading() {
 	  const bar = w => ({
 	    height: 12,
@@ -39815,6 +39861,11 @@
 	  });
 	  if (view === 'notfound') return /*#__PURE__*/jsxRuntimeExports.jsx(NotFound, {});
 	  const cat = categoryBySlug[product.category];
+	  // The media frame's ground, from the product's own category tone — the
+	  // same idea as the spotlight giving each slide its own colour, sourced
+	  // from data the catalogue already carries rather than from pixels. The
+	  // storefront must never analyse image pixels at runtime.
+	  const tone = tones[cat?.tone] || null;
 	  const related = getRelated(product);
 	  const wished = isWished(product.id);
 	  const out = product.stock === 0;
@@ -39824,6 +39875,9 @@
 	  const buyable = isPurchasable(product, variant);
 	  const blocked = out || !buyable;
 	  const lowStock = product.stock > 0 && product.stock <= 5;
+	  // Net quantity of the pack actually selected, so the row cannot keep
+	  // saying "250 ml" after the customer switches to the 500 ml pack.
+	  const size = variant?.label || product.form || null;
 	  const fbt = [product, ...related.slice(0, 2)];
 	  const fbtTotal = fbt.reduce((s, p) => s + p.price, 0);
 	  const buyNow = () => {
@@ -39936,6 +39990,9 @@
 	  }] : [])];
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	    className: "v2-pdp-root",
+	    style: tone ? {
+	      '--pdp-ground': tone.tint
+	    } : undefined,
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	      className: "v2-wrap pdp-top",
 	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
@@ -39995,15 +40052,36 @@
 	        })
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	        className: "pdp__info",
-	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	          className: "pcard__cat pdp__meta",
-	          children: [cat.name, product.form ? /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-	            className: "pdp__meta-sep",
-	            children: [" \xB7 ", product.form]
-	          }) : '']
+	        children: [product.brand && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+	          to: `/shop?q=${encodeURIComponent(product.brand)}`,
+	          className: "pdp__brand",
+	          "aria-label": `See more from ${product.brand}`,
+	          children: [product.brand, /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	            name: "chevronRight",
+	            size: 13
+	          })]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-	          className: "pdp__title serif",
+	          className: "pdp__title",
 	          children: product.name
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "pdp__price",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
+	            product: product,
+	            size: "lg",
+	            variant: variant,
+	            v2: true
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "pdp__tax",
+	            children: "Inclusive of all taxes"
+	          })]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          className: "pdp__facts",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductRatingTeaser, {
+	            product: product
+	          }), size && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	            className: "pdp__size",
+	            children: size
+	          })]
 	        }), product.description && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: `pdp__leadwrap ${leadExpanded ? 'is-open' : ''}`,
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -40016,31 +40094,15 @@
 	            "aria-expanded": leadExpanded,
 	            children: leadExpanded ? 'Show less' : 'See more'
 	          })]
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductRatingTeaser, {
-	          product: product
-	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-	          className: "pdp__price",
-	          children: [/*#__PURE__*/jsxRuntimeExports.jsx(PriceTag, {
-	            product: product,
-	            size: "lg",
-	            variant: variant,
-	            v2: true
-	          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-	            className: "pdp__tax muted",
-	            children: "Inclusive of all taxes"
-	          })]
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductOfferTeaser, {
 	          product: product
-	        }), pricedVariants.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        }), pricedVariants.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "pdp__block",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	            className: "label",
 	            children: "Choose pack size"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	            className: "variantlist",
-	            style: {
-	              marginTop: 8
-	            },
 	            role: "radiogroup",
 	            "aria-label": "Choose pack size",
 	            children: pricedVariants.map(v => {
@@ -40086,6 +40148,8 @@
 	              size: 13
 	            }), " In stock"]
 	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpCouponSlot, {
+	          product: product
 	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "pdp__buy",
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -40153,6 +40217,8 @@
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductInfoAccordion, {
 	          sections: accordionSections
 	        }, product.id ?? product.slug)]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpStorySlot, {
+	        product: product
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductTrustList, {})]
 	    }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductCatalogueGallery, {
 	      product: product
