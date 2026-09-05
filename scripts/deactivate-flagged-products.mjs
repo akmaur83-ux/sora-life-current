@@ -55,6 +55,11 @@ const THERAPEUTIC = [
   'orthosash-pain-oil',
   'calsash-tablets',
   'liver-kidney-support',
+  // Not caught by the screen: no term for PCOS was in the list. Found by a
+  // second sweep of the live copy with a wider medical vocabulary, and it is
+  // the only genuine miss that sweep turned up. A reminder that the screen is
+  // a floor, not a guarantee.
+  'femsash-tablets',
 ];
 
 // Cosmetics caught by the screen's vocabulary rather than by a real claim.
