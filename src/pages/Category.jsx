@@ -34,14 +34,14 @@ export default function Category() {
           <Icon name="chevronRight" size={12} stroke={1.7} />
           <strong>{cat.name}</strong>
         </nav>
-        {/* The page keeps exactly one h1 and it stays the category name; the
-            spotlight's product heading is an h2 beneath it. The blurb moves
-            out of the way of the stage — the tagline alone carries the head. */}
+        {/* Mobile hides this header only when the spotlight renders its
+            integrated category heading. Exactly one category H1 is visible
+            at each breakpoint; disabled categories retain this fallback. */}
         <h1 className="v2-shop__title">{cat.name}</h1>
         {hasConfiguredCopy && cat.tagline && <p className="v2-shop__lede">{cat.tagline}</p>}
       </div>
 
-      <CategorySpotlight category={cat} products={items} />
+      <CategorySpotlight category={cat} products={items} categoryPage />
 
       <ProductBrowser baseProducts={items} lockCategory showCategoryFilter={false} />
 

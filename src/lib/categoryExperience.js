@@ -356,8 +356,52 @@ function buildSlide(item, product, cfg, slug) {
     visualScale: item?.visualScale ?? DEFAULT_ITEM_SCALE,
     verticalOffset: item?.verticalOffset ?? 0,
     theme,
+    mobileTheme: mobileSpotlightTheme(theme, Boolean(autoBackground) && !item?.background && !item?.gradient),
     categorySlug: slug,
   };
+}
+
+/** Mobile-only presentation derived from an already stored auto colour.
+ * No import, pixels or settings write is required. Manual themes are returned
+ * verbatim; the original desktop/tablet theme remains on slide.theme. */
+export function mobileSpotlightTheme(theme, automatic = false) {
+  let value = theme.background;
+  if (/^#[0-9a-f]{3}$/i.test(value)) value = '#' + [...value.slice(1)].map((c) => c + c).join('');
+  const rgb = /^#[0-9a-f]{6}$/i.test(value)
+    ? [1, 3, 5].map((i) => parseInt(value.slice(i, i + 2), 16) / 255) : null;
+  const luminance = (channels) => channels.map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+    .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const ink = rgb && luminance(rgb) < 0.18 ? '#FFFFFF' : '#16211B';
+  if (!automatic || !rgb) return { ...theme, ink };
+  const high = Math.max(...rgb), low = Math.min(...rgb), delta = high - low;
+  const light = (high + low) / 2;
+  let hue = 0;
+  if (delta) {
+    if (high === rgb[0]) hue = ((rgb[1] - rgb[2]) / delta) % 6;
+    else if (high === rgb[1]) hue = (rgb[2] - rgb[0]) / delta + 2;
+    else hue = (rgb[0] - rgb[1]) / delta + 4;
+  }
+  hue = (hue + 6) % 6;
+  const sourceSaturation = delta ? delta / (1 - Math.abs(2 * light - 1)) : 0;
+  // Neutral packaging keeps a neutral field; coloured packaging gets richer chroma.
+  const saturation = sourceSaturation < 0.08 ? sourceSaturation : Math.max(0.62, Math.min(0.82, sourceSaturation * 1.18));
+  const atLightness = (l) => {
+    const c = (1 - Math.abs(2 * l - 1)) * saturation;
+    const x = c * (1 - Math.abs((hue % 2) - 1));
+    const channels = hue < 1 ? [c, x, 0] : hue < 2 ? [x, c, 0] : hue < 3 ? [0, c, x]
+      : hue < 4 ? [0, x, c] : hue < 5 ? [x, 0, c] : [c, 0, x];
+    return channels.map((v) => v + l - c / 2);
+  };
+  const stop = (target) => {
+    let left = 0, right = 1;
+    for (let i = 0; i < 22; i += 1) {
+      const mid = (left + right) / 2;
+      if (luminance(atLightness(mid)) < target) left = mid; else right = mid;
+    }
+    return '#' + atLightness(left).map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+  };
+  const dark = stop(0.055), middle = stop(0.105), bright = stop(0.17);
+  return { background: middle, gradient: `linear-gradient(115deg, ${dark} 0%, ${middle} 52%, ${bright} 100%)`, ink: '#FFFFFF' };
 }
 
 /** A cheap, honest guess: only PNG/WebP/AVIF can carry an alpha channel. */

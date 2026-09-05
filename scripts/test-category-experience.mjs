@@ -23,7 +23,7 @@ import {
   safeColor, safeGradient, sanitizeTheme, sanitizeSpotlightItem, sanitizeCategoryConfig,
   normalizeCategoryExperience, categoryExperiencePayload, isSpotlightEligible,
   resolveSpotlightItems, visibleWindow, wrapIndex, spotlightVisible,
-  looksTransparent, categoryToneTheme, makeSpotlightId, categoryIsReadyButOff,
+  looksTransparent, categoryToneTheme, makeSpotlightId, categoryIsReadyButOff, mobileSpotlightTheme,
   MAX_STORED_ITEMS, DEFAULT_INTERVAL_MS, MIN_INTERVAL_MS, MAX_INTERVAL_MS,
   MIN_ITEM_SCALE, MAX_ITEM_SCALE, DEFAULT_ITEM_SCALE, ITEM_OFFSET_LIMIT,
 } from '../src/lib/categoryExperience.js';
@@ -997,7 +997,7 @@ test('R4 no eligible products means no stage at all', () => {
 test('R5 the category page keeps one h1 and still mounts ProductBrowser', () => {
   const page = code('../src/pages/Category.jsx');
   assert.equal((page.match(/<h1/g) || []).length, 1, 'the category name stays the only h1');
-  assert.match(page, /<CategorySpotlight category=\{cat\} products=\{items\} \/>/);
+  assert.match(page, /<CategorySpotlight category=\{cat\} products=\{items\} categoryPage \/>/);
   // ProductBrowser is mounted unchanged — the filter row, URL state and grid
   // are still entirely its business.
   assert.match(page, /<ProductBrowser baseProducts=\{items\} lockCategory showCategoryFilter=\{false\} \/>/);
@@ -1067,6 +1067,42 @@ test('AD4 stored config is bounded', () => {
   // Unknown categories are dropped on the way in as well as on the way out.
   const norm = normalizeCategoryExperience({ categories: { 'not-real': { enabled: false } } });
   assert.deepEqual(norm.categories, {});
+});
+
+test('MC1 mobile heading is generic, with a real navigation link and the gate intact', () => {
+  const Spotlight = component('../src/components/category/CategorySpotlight.jsx', 'CategorySpotlight', deps);
+  for (const name of ['Wellness', 'Juices & Drinks', 'Everyday Personal Care Essentials']) {
+    const html = renderToStaticMarkup(h(Spotlight, {
+      category: { slug: 'hair-care', name }, products: HAIR, categoryPage: true,
+    }));
+    assert.match(html, /cspot--category-page/);
+    assert.match(html, /<h1 class="cspot__category-name">/);
+    assert.ok(html.includes(name.replaceAll('&', '&amp;')), 'the heading uses category data');
+    assert.match(html, /href="\/shop"[^>]*|aria-label="Back to all products"/);
+    assert.equal((html.match(/<img/g) || []).length, 3);
+  }
+  const css = code('../src/styles/category-spotlight.css');
+  assert.match(css, /@media \(max-width: 767px\)[\s\S]*:has\(> \.cspot--category-page\)/,
+    'mobile header removal requires an actually rendered spotlight');
+  assert.match(css, /\.cspot__category-nav \{ display: none; \}/, 'larger layouts retain the original opening');
+});
+
+test('MC2 mobile auto themes are darker, readable and leave source/manual themes untouched', () => {
+  const lum = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+    .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+  for (const background of ['#ACD46B', '#EA849A', '#D49452', '#D1B3EF', '#80B9D0', '#C0C0C0']) {
+    const source = Object.freeze({ background, gradient: '' });
+    const mobile = mobileSpotlightTheme(source, true);
+    assert.ok(lum(mobile.background) < lum(background), 'stored auto colour is deepened for mobile');
+    assert.equal(mobile.ink, '#FFFFFF');
+    for (const stop of mobile.gradient.match(/#[0-9A-F]{6}/g)) {
+      assert.ok(1.05 / (lum(stop) + 0.05) >= 4.5, 'white heading clears AA at every gradient stop');
+    }
+    assert.equal(source.background, background, 'stored source is never rewritten');
+    assert.deepEqual(mobileSpotlightTheme(source, false), { ...source, ink: '#16211B' }, 'manual theme values are preserved');
+  }
+  assert.equal(mobileSpotlightTheme({ background: '#000000', gradient: '' }, false).ink, '#FFFFFF');
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

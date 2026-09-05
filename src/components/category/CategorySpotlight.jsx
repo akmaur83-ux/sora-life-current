@@ -88,7 +88,7 @@ function usePageVisible() {
  *   is not enabled. It NEVER changes what the storefront shows — the storefront
  *   passes neither prop, so it always goes through spotlightVisible().
  */
-export default function CategorySpotlight({ category, products, configOverride = null, preview = false }) {
+export default function CategorySpotlight({ category, products, configOverride = null, preview = false, categoryPage = false }) {
   const slug = category?.slug;
   // Read through the settings store so an admin save lands without a reload,
   // exactly as the homepage discovery rails do.
@@ -227,15 +227,17 @@ export default function CategorySpotlight({ category, products, configOverride =
   if (!showSpotlight) return null;
 
   const seats = [win.prev, win.active, win.next].filter(Boolean);
+  const CategoryHeading = preview ? 'h2' : 'h1';
 
   return (
     <section
-      className={`cspot${reducedMotion ? ' cspot--still' : ''}${active.framed ? ' cspot--framed' : ''}`}
+      className={`cspot${categoryPage || preview ? ' cspot--category-page' : ''}${reducedMotion ? ' cspot--still' : ''}${active.framed ? ' cspot--framed' : ''}`}
       // The active item's theme drives the whole stage. Both are already
       // validated by categoryExperience.js before reaching this attribute.
       style={{
         '--cspot-bg': active.theme.background,
         '--cspot-grad': active.theme.gradient || 'none',
+        '--cspot-mobile-ink': active.mobileTheme.ink,
       }}
       aria-roledescription="carousel"
       aria-label={`${category.name} spotlight`}
@@ -244,9 +246,16 @@ export default function CategorySpotlight({ category, products, configOverride =
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <SpotlightBackdrop theme={active.theme} />
+      <SpotlightBackdrop theme={active.theme} mobileTheme={active.mobileTheme} />
 
       <div className="cspot__inner">
+        {(categoryPage || preview) && <div className="cspot__category-nav">
+          <Link to="/shop" className="cspot__category-back" aria-label="Back to all products">
+            <Icon name="chevronLeft" size={22} />
+          </Link>
+          <CategoryHeading className="cspot__category-name">{category.name}</CategoryHeading>
+          <span className="cspot__category-label">The edit</span>
+        </div>}
         <p className="cspot__eyebrow"><span>SORA LIFE</span><span>{category.name} / The edit</span></p>
 
         {/* One live region for the whole stage: assistive tech hears the
@@ -414,11 +423,15 @@ function SpotlightImage({ slide, eager = false }) {
 /** Two paint layers, zero extra product assets. CSS cannot interpolate gradient
  * strings: fading the incoming layer preserves both manual and saved auto themes.
  * The guarded update retains only the immediately previous theme, even on rapid taps. */
-function SpotlightBackdrop({ theme }) {
-  const key = theme.background + (theme.gradient || '');
-  const [layers, setLayers] = useState({ key, current: theme, previous: null });
-  if (layers.key !== key) setLayers({ key, current: theme, previous: layers.current });
-  const paint = (value) => ({ '--cspot-bg': value.background, '--cspot-grad': value.gradient || 'none' });
+function SpotlightBackdrop({ theme, mobileTheme }) {
+  const key = theme.background + (theme.gradient || '') + mobileTheme.background + mobileTheme.gradient;
+  const current = { ...theme, mobile: mobileTheme };
+  const [layers, setLayers] = useState({ key, current, previous: null });
+  if (layers.key !== key) setLayers({ key, current, previous: layers.current });
+  const paint = (value) => ({
+    '--cspot-bg': value.background, '--cspot-grad': value.gradient || 'none',
+    '--cspot-mobile-bg': value.mobile.background, '--cspot-mobile-grad': value.mobile.gradient || 'none',
+  });
   return <div className="cspot__backdrop" aria-hidden="true">
     {layers.previous && <div className="cspot__bg" style={paint(layers.previous)} />}
     <div key={layers.key} className={`cspot__bg${layers.previous ? ' cspot__bg--incoming' : ''}`} style={paint(layers.current)} />
