@@ -231,3 +231,18 @@ a.info-channel:hover { background:var(--info-soft); }
 @media (prefers-reduced-motion:reduce) {
   .info-faq__q svg { transition:none; }
 }
+
+/* Shared editable legal documents and structured contact records. */
+.legal-markdown { max-width: none; }
+.legal-markdown .ck-terms__h { font-family: inherit; font-size: 21px; line-height: 1.35; color: var(--ink, #16211B); margin: 30px 0 12px; }
+.legal-markdown .ck-terms__p, .legal-markdown .ck-terms__list { font-size: 15px; line-height: 1.8; color: var(--ink, #16211B); overflow-wrap: anywhere; }
+.legal-updated { margin: 16px 0 0; color: #59625C; font-size: 12px; }
+.legal-details { margin: 0 0 32px; }
+.legal-details > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; padding: 16px 0; border-bottom: 1px solid #DDDCD4; }
+.legal-details dt { font-size: 13px; color: #59625C; }
+.legal-details dd { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.legal-help { display: flex; flex-wrap: wrap; gap: 16px 24px; border-top: 1px solid #DDDCD4; margin-top: 32px; padding-top: 24px; font-size: 13px; }
+.legal-preserve { white-space: pre-line; }
+@media(max-width: 767px) { .legal-details > div { grid-template-columns: 1fr; gap: 6px; } }
+
+.info-hero .legal-updated { color: inherit; opacity: .8; }

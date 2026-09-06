@@ -12,6 +12,8 @@ import Wishlist from './pages/Wishlist.jsx';
 import About from './pages/About.jsx';
 import Contact from './pages/Contact.jsx';
 import Legal from './pages/Legal.jsx';
+import EditableLegal from './pages/EditableLegal.jsx';
+import LegalPagesAdmin from './admin/pages/LegalPages.jsx';
 import Passport from './pages/Passport.jsx';
 import Invoice from './pages/Invoice.jsx';
 import CreatorPortal from './pages/CreatorPortal.jsx';
@@ -107,6 +109,7 @@ export default function App() {
         <Route path="creators" element={<Creators />} />
         <Route path="creators/:id" element={<CreatorDetail />} />
         <Route path="creator-terms" element={<CreatorTerms />} />
+        <Route path="legal-pages/:pageId?" element={<LegalPagesAdmin />} />
         <Route path="attribution" element={<Attribution />} />
         <Route path="kyc" element={<Kyc />} />
         <Route path="payouts" element={<Payouts />} />
@@ -138,10 +141,11 @@ export default function App() {
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
-        <Route path="/privacy" element={<Legal doc="privacy" />} />
-        <Route path="/terms" element={<Legal doc="terms" />} />
+        <Route path="/grievance" element={<EditableLegal doc="grievance" />} />
+        <Route path="/privacy" element={<EditableLegal doc="privacy" />} />
+        <Route path="/terms" element={<EditableLegal doc="terms" />} />
         <Route path="/shipping" element={<Legal doc="shipping" />} />
-        <Route path="/returns" element={<Legal doc="returns" />} />
+        <Route path="/returns" element={<EditableLegal doc="returns" />} />
         <Route path="*" element={<NotFound />} />
       </Route>
       </Routes>

@@ -97,7 +97,7 @@ check('shipping policy exactly matches server delivery fees', () => {
 
 check('Contact page has no fake submission flow', () => {
   assert.doesNotMatch(contact, /<form|onSubmit=|fetch\(|successfully sent|message sent/i);
-  assert.match(contact, /channels\s*\?/);
+  assert.match(contact, /useLegalPage\('contact'\)/);
 });
 
 check('public pages contain no internal readiness or placeholder wording', () => {

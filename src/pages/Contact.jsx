@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
-import { branding } from '../lib/settings.js';
+import { useLegalPage } from '../lib/legalPagesApi.js';
+import { hasLegalContent } from '../lib/legalPages.js';
+import { LegalUpdated } from '../components/LegalPageContent.jsx';
 import { companyInfo, hasContactChannel, telHref, socialLinks } from '../lib/company.js';
 
 // ============================================================
@@ -20,50 +22,6 @@ import { companyInfo, hasContactChannel, telHref, socialLinks } from '../lib/com
 // makes it true. None of them invents a policy, a timeline or a guarantee.
 // ============================================================
 
-const FAQS = [
-  {
-    q: 'How do I track my order?',
-    a: (
-      <>Open <Link to="/account/orders">your orders</Link> to see each order&apos;s verified
-        status. When the seller adds a tracking link, a “Track shipment” button appears there.
-        You can also look up a single order from the{' '}
-        <Link to="/passport">Purchase Passport</Link> page using its order number and email.</>
-    ),
-  },
-  {
-    q: 'Do I need an account to buy?',
-    a: (
-      <>You can check out as a guest. Creating an <Link to="/account">account</Link> keeps your
-        order history, saved addresses and <Link to="/wishlist">wishlist</Link> together and
-        lets you reorder more easily.</>
-    ),
-  },
-  {
-    q: 'What are the delivery options and charges?',
-    a: (
-      <>Standard, Express and Scheduled delivery are offered, each with its own charge. The
-        current options and any delivery estimate are shown at checkout before you pay. See the{' '}
-        <Link to="/shipping">Shipping page</Link> for the full breakdown.</>
-    ),
-  },
-  {
-    q: 'How is my payment handled?',
-    a: (
-      <>Your order total is recalculated on our server before payment, and online payments are
-        processed by Razorpay — Sora Life does not receive or store your full card details. Cash
-        on delivery is also presented as a payment option at checkout.</>
-    ),
-  },
-  {
-    q: 'What is the Creator Program?',
-    a: (
-      <>It lets you share products you believe in and follow your attribution and application
-        status from your account. Start from{' '}
-        <Link to="/account/creator">the Creator Program</Link>.</>
-    ),
-  },
-];
-
 function HelpLink({ to, title, note }) {
   return (
     <Link to={to} className="info-more__link">
@@ -74,10 +32,11 @@ function HelpLink({ to, title, note }) {
 }
 
 export default function Contact() {
-  const name = branding?.siteName || 'SORA LIFE';
-  const info = companyInfo();
+  const { page } = useLegalPage('contact');
+  const info = companyInfo({ ...page, social: companyInfo().social });
+  const populated = hasLegalContent('contact', page);
   const channels = hasContactChannel(info);
-  const publishedDetails = channels || Boolean(info.legalName);
+  const publishedDetails = channels || Boolean(info.legalName || info.hours);
   const socials = socialLinks(info);
 
   return (
@@ -91,12 +50,10 @@ export default function Contact() {
 
         <header className="info-hero">
           <p className="info-eyebrow">Contact &amp; help</p>
-          <h1 className="info-title">We&apos;re here to help.</h1>
-          <p className="info-lede">
-            {channels
-              ? <>Find quick answers below, track an order from your account, or reach {name} through the published contact channels.</>
-              : <>Find quick answers below, track an order, or use the available account and programme support tools.</>}
-          </p>
+          <h1 className="info-title">{page.title || 'Contact & help'}</h1>
+          {populated && page.intro && <p className="info-lede">{page.intro}</p>}
+          <LegalUpdated page={page}/>
+          {!populated && <p className="info-lede">Information for this page will be available soon.</p>}
         </header>
 
         {publishedDetails && (
@@ -141,7 +98,7 @@ export default function Contact() {
                   </span>
                 </div>
               )}
-              {info.hours && channels && (
+              {info.hours && (
                 <div className="info-channel info-channel--static">
                   <span className="info-channel__ic"><Icon name="clock" size={20} stroke={1.5} /></span>
                   <span className="info-channel__body">
@@ -184,7 +141,7 @@ export default function Contact() {
             <h2 id="contact-faq" className="info-h2">Common questions</h2>
           </div>
           <div className="info-faq">
-            {FAQS.map((item) => (
+            {(page.faqs || []).map((item) => (
               <details key={item.q} className="info-faq__item">
                 <summary className="info-faq__q">
                   <span>{item.q}</span>

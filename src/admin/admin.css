@@ -600,3 +600,11 @@
 }
 .adm-import__before { color: #9A3F33; }
 .adm-import__after { color: #2C5341; }
+
+.legal-admin-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.legal-admin-list { list-style: none; padding: 0; margin: 0; }
+.legal-admin-list li { padding: 18px 0; border-bottom: 1px solid #DDDCD4; }
+.legal-admin-list a { display: block; margin-bottom: 6px; font-weight: 600; }
+.legal-admin-list span { font-size: 13px; color: #59625C; }
+.legal-admin-faq { border-bottom: 1px solid #DDDCD4; margin-bottom: 24px; padding-bottom: 24px; }
+.legal-admin-faq .label { margin-top: 12px; }

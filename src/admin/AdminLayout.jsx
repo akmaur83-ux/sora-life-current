@@ -22,6 +22,8 @@ const NAV = [
   { to: '/admin/branding', label: 'Branding' },
   { to: '/admin/appearance', label: 'Storefront Appearance' },
   { to: '/admin/settings', label: 'Settings' },
+  { to: '/admin/legal-pages', label: 'Legal Pages', end: true },
+  ...[['privacy', 'Privacy Policy'], ['terms', 'Terms & Conditions'], ['returns', 'Returns & Refunds'], ['contact', 'Contact & help'], ['grievance', 'Grievance Redressal']].map(([id, label]) => ({ to: '/admin/legal-pages/' + id, label })),
 ];
 
 export default function AdminLayout() {

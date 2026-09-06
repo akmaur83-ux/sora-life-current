@@ -4,6 +4,7 @@ import Logo from './Logo.jsx';
 import { categories } from '../data/categories.js';
 import { branding } from '../lib/settings.js';
 import { companyInfo, socialLinks, telHref } from '../lib/company.js';
+import { useLegalPage } from '../lib/legalPagesApi.js';
 
 // ============================================================
 // Footer.
@@ -17,7 +18,8 @@ import { companyInfo, socialLinks, telHref } from '../lib/company.js';
 // server pricing, checkout and customer order history — not marketing claims.
 // ============================================================
 export default function Footer() {
-  const info = companyInfo();
+  const { page } = useLegalPage('contact');
+  const info = companyInfo({ ...page, social: companyInfo().social });
   const socials = socialLinks(info);
   const name = branding?.siteName || 'SORA LIFE';
 
@@ -74,6 +76,7 @@ export default function Footer() {
             <Link to="/terms">Terms</Link>
             <Link to="/shipping">Shipping</Link>
             <Link to="/returns">Returns &amp; refunds</Link>
+            <Link to="/grievance">Grievance Redressal</Link>
           </div>
         </div>
 
