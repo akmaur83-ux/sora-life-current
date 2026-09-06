@@ -31280,8 +31280,205 @@
 	  return text ? text.split(/\n{2,}/).map(p => p.trim()).filter(Boolean) : [];
 	}
 
+	// Current published copy, preserved as the migration seed and offline fallback.
+	// Explicitly saved empty records never fall back to this copy.
+	const LEGAL_DEFAULTS = {
+	  "privacy": {
+	    "title": "Privacy Policy",
+	    "intro": "How SORA LIFE handles the information you share when you use the store.",
+	    "body": "# What an account stores\n\nWhen you create an account, SORA LIFE keeps your email, any delivery addresses you save, your order history and your wishlist so they are available when you sign in.\n\n# What an order records\n\nTo fulfil an order we store the delivery details you enter at checkout — name, contact number, address — alongside the order itself. Your order total is calculated on our server.\n\n# Payments\n\nCard and online payments are processed by Razorpay. Sora Life never sees or stores your full card details — only the confirmation Razorpay returns for your order.\n\n# On this device\n\nYour cart and, for guests, your wishlist are kept in your browser so they persist between visits. A referral link may store a creator attribution identifier in your browser; it holds no personal information.",
+	    "updated_at": null
+	  },
+	  "terms": {
+	    "title": "Terms & Conditions",
+	    "intro": "The basis on which you use SORA LIFE and place orders.",
+	    "body": "# Prices and totals\n\nProduct prices, discounts, delivery charges and the final payable amount are recalculated on our server at checkout. The amount confirmed there is the amount you are charged.\n\n# Placing an order\n\nAn order is created once you submit it and is confirmed once payment is completed, or recorded when you choose cash on delivery. Availability is subject to stock at the time of purchase.\n\n# Your account\n\nYou are responsible for keeping your sign-in details secure. Products, prices and availability are managed by the store and may change.\n\n# Creator Program\n\nParticipation in the Creator Program is governed by the terms presented within the program itself.",
+	    "updated_at": null
+	  },
+	  "returns": {
+	    "title": "Returns, Refunds & Cancellation",
+	    "intro": "How to raise an issue with an order.",
+	    "body": "# Raising a request\n\nIf something is wrong with an order, contact the store with your order number — you can find it in your orders or on your Purchase Passport. The store will confirm how your request is handled.\n\n# Order status\n\nEvery order shows its current status in your account, so you can see where it stands before and after raising a request.",
+	    "updated_at": null
+	  },
+	  "contact": {
+	    "title": "We're here to help.",
+	    "intro": "Find quick answers below, track an order, or use the available account and programme support tools.",
+	    "legalName": "",
+	    "address": "",
+	    "email": "",
+	    "phone": "",
+	    "hours": "",
+	    "faqs": [{
+	      "q": "How do I track my order?",
+	      "a": "Open your orders to see each order's verified status. When the seller adds a tracking link, a “Track shipment” button appears there. You can also look up a single order from the Purchase Passport page using its order number and email."
+	    }, {
+	      "q": "Do I need an account to buy?",
+	      "a": "You can check out as a guest. Creating an account keeps your order history, saved addresses and wishlist together and lets you reorder more easily."
+	    }, {
+	      "q": "What are the delivery options and charges?",
+	      "a": "Standard, Express and Scheduled delivery are offered, each with its own charge. The current options and any delivery estimate are shown at checkout before you pay. See the Shipping page for the full breakdown."
+	    }, {
+	      "q": "How is my payment handled?",
+	      "a": "Your order total is recalculated on our server before payment, and online payments are processed by Razorpay — Sora Life does not receive or store your full card details. Cash on delivery is also presented as a payment option at checkout."
+	    }, {
+	      "q": "What is the Creator Program?",
+	      "a": "It lets you share products you believe in and follow your attribution and application status from your account. Start from the Creator Program."
+	    }],
+	    "updated_at": null
+	  },
+	  "grievance": {
+	    "title": "Grievance Redressal",
+	    "intro": "",
+	    "legalName": "",
+	    "address": "",
+	    "email": "",
+	    "phone": "",
+	    "hours": "",
+	    "officerName": "",
+	    "officerEmail": "",
+	    "officerPhone": "",
+	    "officerAddress": "",
+	    "acknowledgement": "",
+	    "resolution": "",
+	    "responseNote": "",
+	    "updated_at": null
+	  }
+	};
+
+	const LEGAL_PAGES = [{
+	  id: 'privacy',
+	  label: 'Privacy Policy',
+	  kind: 'markdown'
+	}, {
+	  id: 'terms',
+	  label: 'Terms & Conditions',
+	  kind: 'markdown'
+	}, {
+	  id: 'returns',
+	  label: 'Returns, Refunds & Cancellation',
+	  kind: 'markdown'
+	}, {
+	  id: 'contact',
+	  label: 'Contact & help',
+	  kind: 'contact'
+	}, {
+	  id: 'grievance',
+	  label: 'Grievance Redressal',
+	  kind: 'contact'
+	}];
+	const legalKey = id => 'legal_' + id;
+	const CONTACT_FIELDS = [['legalName', 'Business name', 'text'], ['address', 'Registered address', 'textarea'], ['email', 'Support email', 'email'], ['phone', 'Support phone', 'tel'], ['hours', 'Support hours', 'text']];
+	const GRIEVANCE_FIELDS = [['officerName', 'Grievance officer name', 'text'], ['officerEmail', 'Grievance officer email', 'email'], ['officerPhone', 'Grievance officer phone', 'tel'], ['officerAddress', 'Grievance officer address', 'textarea'], ['acknowledgement', 'Acknowledgement timeline', 'text'], ['resolution', 'Resolution timeline', 'text'], ['responseNote', 'How complaints are handled', 'textarea']];
+	const clean = (v, max = 2000) => typeof v === 'string' ? v.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim().slice(0, max) : '';
+	function normalizeLegalPage(id, raw = {}) {
+	  const page = {
+	    title: clean(raw?.title, 160),
+	    intro: clean(raw?.intro),
+	    updated_at: null
+	  };
+	  if (raw?.updated_at && Number.isFinite(Date.parse(raw.updated_at))) page.updated_at = new Date(raw.updated_at).toISOString();
+	  if (LEGAL_PAGES.find(p => p.id === id)?.kind === 'markdown') page.body = clean(raw?.body, 60000);else {
+	    for (const [key] of [...CONTACT_FIELDS, ...(id === 'grievance' ? GRIEVANCE_FIELDS : [])]) page[key] = clean(raw?.[key]);
+	    page.email = safeEmail(page.email);
+	    page.phone = safePhone(page.phone);
+	    if (id === 'grievance') {
+	      page.officerEmail = safeEmail(page.officerEmail);
+	      page.officerPhone = safePhone(page.officerPhone);
+	    }
+	    if (id === 'contact') page.faqs = (Array.isArray(raw?.faqs) ? raw.faqs : []).slice(0, 30).map(f => ({
+	      q: clean(f?.q, 300),
+	      a: clean(f?.a, 4000)
+	    })).filter(f => f.q && f.a);
+	  }
+	  return page;
+	}
+	function defaultLegalPage(id, legacy = {}, name = 'SORA LIFE') {
+	  const page = structuredClone(LEGAL_DEFAULTS[id]);
+	  if (!page) return null;
+	  if (page.body) {
+	    page.body = page.body.replaceAll('SORA LIFE', name);
+	    page.intro = page.intro.replaceAll('SORA LIFE', name);
+	    if (legacy.policies?.[id]?.trim()) page.body += '\n\n# Full policy\n\n' + legacy.policies[id];
+	    const info = sanitizeCompany(legacy);
+	    page.body += '\n\n# Questions about this?\n\n' + (info.email || info.phone || info.address ? "See the Contact & help page for the store's published contact channels and support hours, when available." : 'Visit Contact & help for available support and order-tracking options.');
+	    if (info.legalName) page.body += '\n\nBusiness: ' + info.legalName;
+	    if (info.address) page.body += '\n\nPublished address: ' + info.address;
+	    if (info.email) page.body += '\n\n' + info.email + (info.phone ? ' · ' + info.phone : '');
+	  }
+	  if (id === 'contact') {
+	    const info = sanitizeCompany(legacy);
+	    for (const [key] of CONTACT_FIELDS) page[key] = info[key] || '';
+	    if (info.email || info.phone || info.address) page.intro = 'Find quick answers below, track an order from your account, or reach ' + name + ' through the published contact channels.';
+	  }
+	  return normalizeLegalPage(id, page);
+	}
+	function hasLegalContent(id, page) {
+	  if (LEGAL_PAGES.find(p => p.id === id)?.kind === 'markdown') return Boolean(page?.body?.trim());
+	  return Boolean(page?.intro?.trim() || page?.faqs?.length || [...CONTACT_FIELDS, ...GRIEVANCE_FIELDS].some(([key]) => page?.[key]?.trim()));
+	}
+	function validateLegalPage(id, raw) {
+	  for (const [key, label, type] of [...CONTACT_FIELDS, ...GRIEVANCE_FIELDS]) {
+	    if (raw[key]?.trim() && (type === 'email' && !safeEmail(raw[key]) || type === 'tel' && !safePhone(raw[key]))) throw new Error('Enter a valid ' + label.toLowerCase() + ' or leave it blank.');
+	  }
+	  // Unresolved drafting placeholders must never be published as legal facts.
+	  if (/\[(?:[A-Z][A-Z _/–—.,:()'-]{2,}|e\.g\.[^\]]*)\]/.test(JSON.stringify(raw))) throw new Error('Fill or remove all square-bracket drafting placeholders before saving.');
+	  return normalizeLegalPage(id, raw);
+	}
+
+	async function fetchLegalPage(id) {
+	  const {
+	    data,
+	    error
+	  } = await supabase.from('site_settings').select('value').eq('key', legalKey(id)).maybeSingle();
+	  if (error) throw error;
+	  return data ? normalizeLegalPage(id, data.value) : null;
+	}
+	function useLegalPage(id) {
+	  const [state, setState] = reactExports.useState({
+	    id,
+	    page: defaultLegalPage(id, contact, branding.siteName),
+	    loading: true
+	  });
+	  reactExports.useEffect(() => {
+	    let live = true;
+	    setState({
+	      id,
+	      page: defaultLegalPage(id, contact, branding.siteName),
+	      loading: true
+	    });
+	    fetchLegalPage(id).then(page => {
+	      if (live) setState({
+	        id,
+	        page: page ?? defaultLegalPage(id, contact, branding.siteName),
+	        loading: false
+	      });
+	    }).catch(() => {
+	      if (live) setState({
+	        id,
+	        page: defaultLegalPage(id, contact, branding.siteName),
+	        loading: false
+	      });
+	    });
+	    return () => {
+	      live = false;
+	    };
+	  }, [id]);
+	  return state.id === id ? state : {
+	    id,
+	    page: defaultLegalPage(id, contact, branding.siteName),
+	    loading: true
+	  };
+	}
+
 	function Footer() {
-	  const info = companyInfo();
+	  const {
+	    page
+	  } = useLegalPage('contact');
+	  const info = companyInfo({
+	    ...page,
+	    social: companyInfo().social
+	  });
 	  const socials = socialLinks(info);
 	  const name = branding?.siteName || 'SORA LIFE';
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("footer", {
@@ -31377,6 +31574,9 @@
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
 	            to: "/returns",
 	            children: "Returns & refunds"
+	          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	            to: "/grievance",
+	            children: "Grievance Redressal"
 	          })]
 	        })]
 	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -46316,50 +46516,113 @@
 	  });
 	}
 
-	const FAQS = [{
-	  q: 'How do I track my order?',
-	  a: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: ["Open ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	      to: "/account/orders",
-	      children: "your orders"
-	    }), " to see each order's verified status. When the seller adds a tracking link, a \u201CTrack shipment\u201D button appears there. You can also look up a single order from the", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	      to: "/passport",
-	      children: "Purchase Passport"
-	    }), " page using its order number and email."]
-	  })
-	}, {
-	  q: 'Do I need an account to buy?',
-	  a: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: ["You can check out as a guest. Creating an ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	      to: "/account",
-	      children: "account"
-	    }), " keeps your order history, saved addresses and ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	      to: "/wishlist",
-	      children: "wishlist"
-	    }), " together and lets you reorder more easily."]
-	  })
-	}, {
-	  q: 'What are the delivery options and charges?',
-	  a: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: ["Standard, Express and Scheduled delivery are offered, each with its own charge. The current options and any delivery estimate are shown at checkout before you pay. See the", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	      to: "/shipping",
-	      children: "Shipping page"
-	    }), " for the full breakdown."]
-	  })
-	}, {
-	  q: 'How is my payment handled?',
-	  a: /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-	    children: "Your order total is recalculated on our server before payment, and online payments are processed by Razorpay \u2014 Sora Life does not receive or store your full card details. Cash on delivery is also presented as a payment option at checkout."
-	  })
-	}, {
-	  q: 'What is the Creator Program?',
-	  a: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: ["It lets you share products you believe in and follow your attribution and application status from your account. Start from", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	      to: "/account/creator",
-	      children: "the Creator Program"
-	    }), "."]
-	  })
-	}];
+	function LegalUpdated({
+	  page
+	}) {
+	  return page.updated_at ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	    className: "legal-updated",
+	    children: ["Last updated ", new Date(page.updated_at).toLocaleDateString('en-IN', {
+	      day: 'numeric',
+	      month: 'long',
+	      year: 'numeric'
+	    })]
+	  }) : null;
+	}
+	function LegalFields({
+	  page,
+	  officer = false
+	}) {
+	  const rows = officer ? [['Grievance officer', page.officerName], ['Email', page.officerEmail, 'email'], ['Phone', page.officerPhone, 'phone'], ['Address', page.officerAddress], ['Acknowledgement', page.acknowledgement], ['Resolution', page.resolution]] : [['Business name', page.legalName], ['Address', page.address], ['Email', page.email, 'email'], ['Phone', page.phone, 'phone'], ['Support hours', page.hours]];
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("dl", {
+	    className: "legal-details",
+	    children: rows.filter(([, value]) => value).map(([label, value, type]) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+	        children: label
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+	        children: type === 'email' ? /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	          href: 'mailto:' + value,
+	          children: value
+	        }) : type === 'phone' ? /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	          href: telHref(value),
+	          children: value
+	        }) : value
+	      })]
+	    }, label))
+	  });
+	}
+	function LegalPageContent({
+	  id,
+	  page
+	}) {
+	  const spec = LEGAL_PAGES.find(p => p.id === id);
+	  const populated = hasLegalContent(id, page);
+	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	    className: "info info--legal",
+	    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-wrap info-legal__wrap",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	        className: "v2-crumbs",
+	        "aria-label": "Breadcrumb",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: "/",
+	          children: "Home"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+	          name: "chevronRight",
+	          size: 12
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+	          children: spec.label
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+	        className: "info-hero info-hero--legal",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          className: "info-title info-title--legal",
+	          children: page.title || spec.label
+	        }), populated && page.intro && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "info-lede",
+	          children: page.intro
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(LegalUpdated, {
+	          page: page
+	        })]
+	      }), !populated ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	        className: "info-legal__p",
+	        children: "Information for this page will be available soon."
+	      }) : spec.kind === 'markdown' ? /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTermsPanel, {
+	        terms: page,
+	        className: "legal-markdown"
+	      }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(LegalFields, {
+	          page: page
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(LegalFields, {
+	          page: page,
+	          officer: true
+	        }), page.responseNote && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "info-legal__p legal-preserve",
+	          children: page.responseNote
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "info-legal__p",
+	          children: "When writing about an order, include its order number, the nature of your complaint, and any supporting photographs or documents."
+	        })]
+	      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+	        className: "legal-help",
+	        "aria-label": "Policy help",
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: "/contact",
+	          children: "Contact & help"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: "/account/orders",
+	          children: "Your orders"
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: "/passport",
+	          children: "Purchase Passport"
+	        }), id === 'terms' && /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	          to: "/account/creator",
+	          children: "Creator Program"
+	        })]
+	      })]
+	    })
+	  });
+	}
+
 	function HelpLink({
 	  to,
 	  title,
@@ -46382,10 +46645,16 @@
 	  });
 	}
 	function Contact() {
-	  const name = branding?.siteName || 'SORA LIFE';
-	  const info = companyInfo();
+	  const {
+	    page
+	  } = useLegalPage('contact');
+	  const info = companyInfo({
+	    ...page,
+	    social: companyInfo().social
+	  });
+	  const populated = hasLegalContent('contact', page);
 	  const channels = hasContactChannel(info);
-	  const publishedDetails = channels || Boolean(info.legalName);
+	  const publishedDetails = channels || Boolean(info.legalName || info.hours);
 	  const socials = socialLinks(info);
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	    className: "info info--contact",
@@ -46411,14 +46680,15 @@
 	          children: "Contact & help"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
 	          className: "info-title",
-	          children: "We're here to help."
-	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          children: page.title || 'Contact & help'
+	        }), populated && page.intro && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
 	          className: "info-lede",
-	          children: channels ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	            children: ["Find quick answers below, track an order from your account, or reach ", name, " through the published contact channels."]
-	          }) : /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-	            children: "Find quick answers below, track an order, or use the available account and programme support tools."
-	          })
+	          children: page.intro
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(LegalUpdated, {
+	          page: page
+	        }), !populated && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "info-lede",
+	          children: "Information for this page will be available soon."
 	        })]
 	      }), publishedDetails && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
 	        className: "info-sec",
@@ -46510,7 +46780,7 @@
 	                children: info.address
 	              })]
 	            })]
-	          }), info.hours && channels && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	          }), info.hours && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "info-channel info-channel--static",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	              className: "info-channel__ic",
@@ -46601,7 +46871,7 @@
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	          className: "info-faq",
-	          children: FAQS.map(item => /*#__PURE__*/jsxRuntimeExports.jsxs("details", {
+	          children: (page.faqs || []).map(item => /*#__PURE__*/jsxRuntimeExports.jsxs("details", {
 	            className: "info-faq__item",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("summary", {
 	              className: "info-faq__q",
@@ -46640,49 +46910,6 @@
 	// key -> { title, blurb, facts[], ownerLabel, showContact }
 	function documents(name) {
 	  return {
-	    privacy: {
-	      title: 'Privacy Policy',
-	      blurb: `How ${name} handles the information you share when you use the store.`,
-	      facts: [{
-	        heading: 'What an account stores',
-	        body: `When you create an account, ${name} keeps your email, any delivery addresses you save, your order history and your wishlist so they are available when you sign in.`
-	      }, {
-	        heading: 'What an order records',
-	        body: 'To fulfil an order we store the delivery details you enter at checkout — name, contact number, address — alongside the order itself. Your order total is calculated on our server.'
-	      }, {
-	        heading: 'Payments',
-	        body: 'Card and online payments are processed by Razorpay. Sora Life never sees or stores your full card details — only the confirmation Razorpay returns for your order.'
-	      }, {
-	        heading: 'On this device',
-	        body: 'Your cart and, for guests, your wishlist are kept in your browser so they persist between visits. A referral link may store a creator attribution identifier in your browser; it holds no personal information.'
-	      }],
-	      ownerLabel: 'privacy',
-	      showContact: true
-	    },
-	    terms: {
-	      title: 'Terms & Conditions',
-	      blurb: `The basis on which you use ${name} and place orders.`,
-	      facts: [{
-	        heading: 'Prices and totals',
-	        body: 'Product prices, discounts, delivery charges and the final payable amount are recalculated on our server at checkout. The amount confirmed there is the amount you are charged.'
-	      }, {
-	        heading: 'Placing an order',
-	        body: 'An order is created once you submit it and is confirmed once payment is completed, or recorded when you choose cash on delivery. Availability is subject to stock at the time of purchase.'
-	      }, {
-	        heading: 'Your account',
-	        body: 'You are responsible for keeping your sign-in details secure. Products, prices and availability are managed by the store and may change.'
-	      }, {
-	        heading: 'Creator Program',
-	        body: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	          children: ["Participation in the ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/account/creator",
-	            children: "Creator Program"
-	          }), " is governed by the terms presented within the program itself."]
-	        })
-	      }],
-	      ownerLabel: 'terms',
-	      showContact: true
-	    },
 	    shipping: {
 	      title: 'Shipping Policy',
 	      blurb: 'The delivery options offered at checkout, and what each costs.',
@@ -46707,38 +46934,15 @@
 	      }],
 	      ownerLabel: 'shipping',
 	      showContact: true
-	    },
-	    returns: {
-	      title: 'Returns, Refunds & Cancellation',
-	      blurb: 'How to raise an issue with an order.',
-	      facts: [{
-	        heading: 'Raising a request',
-	        body: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	          children: ["If something is wrong with an order, contact the store with your order number \u2014 you can find it in ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/account/orders",
-	            children: "your orders"
-	          }), " or on your", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-	            to: "/passport",
-	            children: "Purchase Passport"
-	          }), ". The store will confirm how your request is handled."]
-	        })
-	      }, {
-	        heading: 'Order status',
-	        body: 'Every order shows its current status in your account, so you can see where it stands before and after raising a request.'
-	      }],
-	      ownerLabel: 'returns',
-	      showContact: true
-	      // Formal return windows, refund timing and cancellation terms are the
-	      // store operator's to define. They remain absent until approved.
 	    }
 	  };
 	}
 	function Legal({
 	  doc
 	}) {
-	  const name = branding?.siteName || 'SORA LIFE';
+	  branding?.siteName || 'SORA LIFE';
 	  const info = companyInfo();
-	  const spec = documents(name)[doc];
+	  const spec = documents()[doc];
 	  if (!spec) return null;
 	  const ownerText = policyParagraphs(info, spec.ownerLabel);
 	  const canContact = hasContactChannel(info);
@@ -46874,6 +47078,260 @@
 	        })]
 	      })]
 	    })
+	  });
+	}
+
+	function EditableLegal({
+	  doc
+	}) {
+	  const {
+	    page
+	  } = useLegalPage(doc);
+	  return /*#__PURE__*/jsxRuntimeExports.jsx(LegalPageContent, {
+	    id: doc,
+	    page: page
+	  });
+	}
+
+	function LegalPagesAdmin() {
+	  const {
+	    pageId
+	  } = useParams();
+	  return /*#__PURE__*/jsxRuntimeExports.jsx(LegalPagesEditor, {
+	    pageId: pageId
+	  }, pageId || 'overview');
+	}
+	function LegalPagesEditor({
+	  pageId
+	}) {
+	  const spec = LEGAL_PAGES.find(p => p.id === pageId);
+	  const [records, setRecords] = reactExports.useState({});
+	  const [form, setForm] = reactExports.useState(null);
+	  const [loading, setLoading] = reactExports.useState(true);
+	  const [loadFailed, setLoadFailed] = reactExports.useState(false);
+	  const [saving, setSaving] = reactExports.useState(false);
+	  const [err, setErr] = reactExports.useState('');
+	  const [msg, setMsg] = reactExports.useState('');
+	  const [missing, setMissing] = reactExports.useState([]);
+	  reactExports.useEffect(() => {
+	    let live = true;
+	    Promise.all([adminGetSetting('contact'), adminGetSetting('branding'), ...LEGAL_PAGES.map(p => adminGetSetting(legalKey(p.id)))]).then(([contact, branding, ...values]) => {
+	      if (!live) return;
+	      const next = Object.fromEntries(LEGAL_PAGES.map((p, i) => [p.id, values[i] == null ? defaultLegalPage(p.id, contact || {}, branding?.siteName) : normalizeLegalPage(p.id, values[i])]));
+	      setRecords(next);
+	      setForm(spec ? next[spec.id] : null);
+	      setMissing(LEGAL_PAGES.filter((p, i) => values[i] == null).map(p => p.id));
+	    }).catch(e => {
+	      if (live) {
+	        setErr(e.message || String(e));
+	        setLoadFailed(true);
+	      }
+	    }).finally(() => {
+	      if (live) setLoading(false);
+	    });
+	    return () => {
+	      live = false;
+	    };
+	  }, []);
+	  async function save(e) {
+	    e.preventDefault();
+	    setSaving(true);
+	    setErr('');
+	    setMsg('');
+	    try {
+	      const next = {
+	        ...validateLegalPage(spec.id, form),
+	        updated_at: new Date().toISOString()
+	      };
+	      await adminSetSetting(legalKey(spec.id), next);
+	      // Confirm the stored value rather than marking a failed write as published.
+	      const stored = await adminGetSetting(legalKey(spec.id));
+	      if (!stored) throw new Error('The saved record could not be read back. Please reload before retrying.');
+	      const confirmed = normalizeLegalPage(spec.id, stored);
+	      setForm(confirmed);
+	      setRecords(r => ({
+	        ...r,
+	        [spec.id]: confirmed
+	      }));
+	      setMissing(m => m.filter(id => id !== spec.id));
+	      setMsg('Saved. The public page now uses this content.');
+	    } catch (ex) {
+	      setErr(ex.message || String(ex));
+	    }
+	    setSaving(false);
+	  }
+	  const field = (key, label, type = 'text') => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "field",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+	      className: "label",
+	      htmlFor: 'legal-' + key,
+	      children: label
+	    }), type === 'textarea' ? /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
+	      id: 'legal-' + key,
+	      className: "textarea",
+	      rows: key === 'body' ? 24 : 3,
+	      maxLength: key === 'body' ? 60000 : 2000,
+	      value: form[key] || '',
+	      onChange: e => setForm(f => ({
+	        ...f,
+	        [key]: e.target.value
+	      }))
+	    }) : /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	      id: 'legal-' + key,
+	      className: "input",
+	      type: type,
+	      maxLength: key === 'title' ? 160 : 2000,
+	      value: form[key] || '',
+	      onChange: e => setForm(f => ({
+	        ...f,
+	        [key]: e.target.value
+	      }))
+	    })]
+	  }, key);
+	  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	    className: "adm-form",
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "adm__head",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+	          children: spec ? spec.label : 'Legal Pages'
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          children: "Edit the public policies and contact information."
+	        })]
+	      }), spec && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+	        className: "btn btn-outline",
+	        href: '/' + spec.id,
+	        target: "_blank",
+	        rel: "noopener noreferrer",
+	        children: "Preview live page \u2197"
+	      })]
+	    }), loading ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	      className: "muted",
+	      children: "Loading\u2026"
+	    }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	      children: [err && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "adm-banner err",
+	        role: "alert",
+	        children: err
+	      }), msg && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "adm-banner ok",
+	        role: "status",
+	        children: msg
+	      }), !loadFailed && missing.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "adm-banner",
+	        children: "Some records have not been seeded. Current page content is preserved as a fallback. Apply the legal-pages SQL before publishing edits."
+	      }), !spec ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+	        className: "surface",
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+	          className: "legal-admin-list",
+	          children: LEGAL_PAGES.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: '/admin/legal-pages/' + p.id,
+	              children: p.label
+	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+	              children: [loadFailed ? 'Unavailable' : hasLegalContent(p.id, records[p.id]) ? 'Has content' : 'Empty', missing.includes(p.id) ? ' · fallback' : '']
+	            }), records[p.id] && /*#__PURE__*/jsxRuntimeExports.jsx(LegalUpdated, {
+	              page: records[p.id]
+	            })]
+	          }, p.id))
+	        })
+	      }) : form && /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+	        onSubmit: save,
+	        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+	          className: "muted",
+	          children: ["Saved status: ", hasLegalContent(spec.id, records[spec.id]) ? 'Has content' : 'Empty', ". Empty pages remain reachable and show a short message."]
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	          className: "muted",
+	          children: form.updated_at ? 'Last updated ' + new Date(form.updated_at).toLocaleString('en-IN') : 'Last updated: original content; no edits saved yet.'
+	        }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+	          disabled: saving || loadFailed || missing.includes(spec.id),
+	          className: "legal-admin-fields",
+	          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "surface",
+	            children: [field('title', 'Page heading'), field('intro', 'Introduction', 'textarea'), spec.kind === 'markdown' ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: [field('body', 'Page content (markdown)', 'textarea'), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+	                className: "hint",
+	                children: "Use #, ## or ### headings, - bullets, numbered lists and blank lines. Other formatting is displayed as plain text. HTML is never executed."
+	              })]
+	            }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+	              children: [CONTACT_FIELDS.map(args => field(...args)), spec.id === 'grievance' && GRIEVANCE_FIELDS.map(args => field(...args))]
+	            })]
+	          }), spec.id === 'contact' && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "surface",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+	              children: "Common questions"
+	            }), (form.faqs || []).map((faq, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	              className: "legal-admin-faq",
+	              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	                className: "label",
+	                htmlFor: 'faq-q-' + i,
+	                children: ["Question ", i + 1]
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                id: 'faq-q-' + i,
+	                className: "input",
+	                value: faq.q,
+	                maxLength: 300,
+	                onChange: e => setForm(f => ({
+	                  ...f,
+	                  faqs: f.faqs.map((v, j) => j === i ? {
+	                    ...v,
+	                    q: e.target.value
+	                  } : v)
+	                }))
+	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+	                className: "label",
+	                htmlFor: 'faq-a-' + i,
+	                children: ["Answer ", i + 1]
+	              }), /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
+	                id: 'faq-a-' + i,
+	                className: "textarea",
+	                rows: 4,
+	                value: faq.a,
+	                maxLength: 4000,
+	                onChange: e => setForm(f => ({
+	                  ...f,
+	                  faqs: f.faqs.map((v, j) => j === i ? {
+	                    ...v,
+	                    a: e.target.value
+	                  } : v)
+	                }))
+	              }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+	                type: "button",
+	                className: "btn btn-outline btn-sm",
+	                onClick: () => setForm(f => ({
+	                  ...f,
+	                  faqs: f.faqs.filter((_, j) => j !== i)
+	                })),
+	                children: ["Remove question ", i + 1]
+	              })]
+	            }, i)), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	              type: "button",
+	              className: "btn btn-outline",
+	              disabled: (form.faqs || []).length >= 30,
+	              onClick: () => setForm(f => ({
+	                ...f,
+	                faqs: [...(f.faqs || []), {
+	                  q: '',
+	                  a: ''
+	                }]
+	              })),
+	              children: "Add question"
+	            })]
+	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	            className: "adm-actions",
+	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+	              className: "btn",
+	              type: "submit",
+	              disabled: saving,
+	              children: saving ? 'Saving…' : 'Save page'
+	            }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+	              to: "/admin/legal-pages",
+	              children: "All legal pages"
+	            })]
+	          })]
+	        })]
+	      })]
+	    })]
 	  });
 	}
 
@@ -50925,7 +51383,14 @@
 	}, {
 	  to: '/admin/settings',
 	  label: 'Settings'
-	}];
+	}, {
+	  to: '/admin/legal-pages',
+	  label: 'Legal Pages',
+	  end: true
+	}, ...[['privacy', 'Privacy Policy'], ['terms', 'Terms & Conditions'], ['returns', 'Returns & Refunds'], ['contact', 'Contact & help'], ['grievance', 'Grievance Redressal']].map(([id, label]) => ({
+	  to: '/admin/legal-pages/' + id,
+	  label
+	}))];
 	function AdminLayout() {
 	  const {
 	    signOut,
@@ -62351,6 +62816,9 @@
 	          path: "creator-terms",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTerms, {})
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "legal-pages/:pageId?",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(LegalPagesAdmin, {})
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "attribution",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Attribution, {})
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
@@ -62429,13 +62897,18 @@
 	          path: "/contact",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Contact, {})
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "/grievance",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(EditableLegal, {
+	            doc: "grievance"
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "/privacy",
-	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Legal, {
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(EditableLegal, {
 	            doc: "privacy"
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "/terms",
-	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Legal, {
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(EditableLegal, {
 	            doc: "terms"
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
@@ -62445,7 +62918,7 @@
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "/returns",
-	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Legal, {
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(EditableLegal, {
 	            doc: "returns"
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
