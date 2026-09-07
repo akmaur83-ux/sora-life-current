@@ -3584,8 +3584,48 @@
 	const OPTIMIZED_IMAGES = new Set(["b108", "b110", "b114", "b1149", "b115", "b1152", "b1154", "b1156", "b1158", "b117", "b119", "b122", "b126", "b127", "b128", "b1280", "b129", "b1295", "b1313", "b1348", "b139", "b1395", "b1403", "b141", "b1420", "b1422", "b1424", "b1426", "b143", "b1432", "b1435", "b145", "b1461", "b1463", "b1465", "b1467", "b1469", "b147", "b1471", "b1473", "b149", "b151", "b153", "b155", "b157", "b159", "b1602", "b161", "b165", "b1661", "b1672", "b1680", "b169", "b171", "b173", "b175", "b179", "b1792", "b1795", "b1798", "b181", "b1822", "b1825", "b1828", "b183", "b1831", "b1833", "b1839", "b1842", "b185", "b1857", "b1882", "b190", "b193", "b195", "b197", "b205", "b209", "b211", "b213", "b215", "b217", "b219", "b224", "b226", "b239", "b241", "b243", "b247", "b249", "b254", "b257", "b259", "b2697", "b2698", "b2699", "b2700", "b2701", "b2702", "b2703", "b2704", "b2705", "b2706", "b2707", "b2708", "b296", "b298", "b300", "b302", "b306", "b310", "b313", "b315", "b317", "b319", "b321", "b325", "b327", "b333", "b335", "b337", "b342", "b344", "b347", "b349", "b351", "b353", "b372", "b374", "b382", "b383", "b385", "b386", "b388", "b389", "b390", "b391", "b392", "b393", "b394", "b395", "b396", "b397", "b398", "b399", "b400", "b401", "b82"]);
 	const OPTIMIZED_WIDTHS = [400, 800];
 
+	const PRODUCT_OBJECT_MARKER = '/storage/v1/object/public/product-images/products/';
+	const CARD_FOLDER = '/storage/v1/object/public/product-images/products-optimized/v1/';
+	const PRODUCT_CARD_PROFILE = Object.freeze({
+	  width: 700,
+	  quality: 86,
+	  version: 1
+	});
+	function productObjectFilename(src) {
+	  if (typeof src !== 'string' || !src) return null;
+	  try {
+	    const url = new URL(src);
+	    const at = url.pathname.indexOf(PRODUCT_OBJECT_MARKER);
+	    if (at < 0) return null;
+	    const filename = decodeURIComponent(url.pathname.slice(at + PRODUCT_OBJECT_MARKER.length));
+	    if (!filename || filename.includes('/') || !/\.(?:png|jpe?g|webp)$/i.test(filename)) return null;
+	    return filename;
+	  } catch {
+	    return null;
+	  }
+	}
+	function productCardObjectName(src, profile = PRODUCT_CARD_PROFILE) {
+	  const filename = productObjectFilename(src);
+	  if (!filename) return null;
+	  const key = filename.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/\./g, '-');
+	  return `${key}-card-${profile.width}-q${profile.quality}.webp`;
+	}
+
+	// Product uploads use random object names with upsert:false, so the source path
+	// is immutable. The versioned profile makes its derivative immutable too.
+	function productCardImageUrl(src, profile = PRODUCT_CARD_PROFILE) {
+	  const objectName = productCardObjectName(src, profile);
+	  if (!objectName) return null;
+	  const url = new URL(src);
+	  url.pathname = `${CARD_FOLDER}${objectName}`;
+	  url.search = '';
+	  url.hash = '';
+	  return url.toString();
+	}
+
 	const callbacks = new WeakMap();
 	let observer;
+	const NEVER_REVEALED = Symbol('never-revealed');
 	function sharedObserver() {
 	  if (typeof window === 'undefined' || typeof window.IntersectionObserver === 'undefined') return null;
 	  if (!observer) {
@@ -3598,17 +3638,18 @@
 	        reveal?.();
 	      }
 	    }, {
-	      rootMargin: '240px 160px'
+	      rootMargin: '600px 180px'
 	    });
 	  }
 	  return observer;
 	}
-	function useDeferredMedia(eager = false) {
+	function useDeferredMedia(eager = false, identity = null) {
 	  const ref = reactExports.useRef(null);
-	  const [ready, setReady] = reactExports.useState(eager);
+	  const [revealedIdentity, setRevealedIdentity] = reactExports.useState(eager ? identity : NEVER_REVEALED);
+	  const ready = eager || revealedIdentity === identity;
 	  reactExports.useEffect(() => {
 	    if (eager) {
-	      setReady(true);
+	      setRevealedIdentity(identity);
 	      return undefined;
 	    }
 	    if (ready) return undefined;
@@ -3616,16 +3657,16 @@
 	    const io = sharedObserver();
 	    if (!node || !io) {
 	      // Progressive fallback for older browsers: never strand an image.
-	      setReady(true);
+	      setRevealedIdentity(identity);
 	      return undefined;
 	    }
-	    callbacks.set(node, () => setReady(true));
+	    callbacks.set(node, () => setRevealedIdentity(identity));
 	    io.observe(node);
 	    return () => {
 	      io.unobserve(node);
 	      callbacks.delete(node);
 	    };
-	  }, [eager, ready]);
+	  }, [eager, identity, ready]);
 	  return {
 	    ref,
 	    ready
@@ -3642,7 +3683,7 @@
 	  const {
 	    ref,
 	    ready
-	  } = useDeferredMedia(eager);
+	  } = useDeferredMedia(eager, src);
 	  return /*#__PURE__*/jsxRuntimeExports.jsx("img", {
 	    ...props,
 	    ref: ref,
@@ -3683,14 +3724,22 @@
 	  onImageError = null,
 	  loading = 'lazy',
 	  decoding = 'async',
-	  fetchPriority
+	  fetchPriority,
+	  variant = 'original'
 	}) {
 	  const [failed, setFailed] = reactExports.useState(false);
+	  const [cardFailed, setCardFailed] = reactExports.useState(false);
 	  const eager = loading === 'eager' || fetchPriority === 'high';
+	  const originalSrc = mediaSrc || (product ? index === 0 ? product.image : product.gallery && product.gallery[index] || product.image : null);
+	  const cardSrc = variant === 'card' && product ? product.cardImage || productCardImageUrl(originalSrc) : null;
 	  const {
 	    ref: mediaRef,
 	    ready
-	  } = useDeferredMedia(eager);
+	  } = useDeferredMedia(eager, originalSrc);
+	  reactExports.useEffect(() => {
+	    setFailed(false);
+	    setCardFailed(false);
+	  }, [originalSrc, cardSrc]);
 	  const v2 = frame === 'v2';
 	  const hero = frame === 'hero';
 	  // V2 media frames are square and sharp. `contain` is deliberate for today's
@@ -3709,7 +3758,8 @@
 	    });
 	  }
 	  const cat = categoryBySlug[product.category];
-	  const src = mediaSrc || (index === 0 ? product.image : product.gallery && product.gallery[index] || product.image);
+	  const usingCard = Boolean(cardSrc && !cardFailed);
+	  const src = usingCard ? cardSrc : originalSrc;
 	  const alt = altOverride || product.name;
 	  if (src && !failed) {
 	    const base = optimizedBase(src);
@@ -3721,8 +3771,12 @@
 	      fetchPriority: fetchPriority,
 	      sizes: base ? sizes : undefined,
 	      onError: () => {
+	        if (usingCard) {
+	          setCardFailed(true);
+	          return;
+	        }
 	        setFailed(true);
-	        onImageError?.(src);
+	        onImageError?.(originalSrc);
 	      }
 	    });
 	    if (base) {
@@ -30741,6 +30795,7 @@
 	                  children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
 	                    product: p,
 	                    frame: "v2",
+	                    variant: "card",
 	                    sizes: "40px"
 	                  })
 	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -30901,7 +30956,8 @@
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	              className: "search-thumb",
 	              children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	                product: p
+	                product: p,
+	                variant: "card"
 	              })
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
 	              className: "search-meta",
@@ -31753,6 +31809,146 @@
 	  });
 	}
 
+	// Progressive enhancement: nothing is hidden while waiting for JavaScript,
+	// images, or an observer. Product loading has its own independent observer.
+	const REVEAL = '.v2-sechead, .hd-title, .hm-category-head, .hd-tile, .hm-brand, .hm-collection, .hm-mom__media, .hm-mom__body, .hm-trust__item, .v2-pc, .v2-hero';
+	const DEPTH = '.hd-tile__media, .hm-brand__media, .hm-mom__media, .hm-collection__images';
+	function StorefrontMotion() {
+	  const {
+	    pathname
+	  } = useLocation();
+	  reactExports.useEffect(() => {
+	    if (!(pathname === '/' || pathname === '/shop' || /^\/category\/[^/]+\/?$/.test(pathname))) return undefined;
+	    const root = document.querySelector('.page-main');
+	    if (!root || !window.matchMedia || !window.IntersectionObserver) return undefined;
+	    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+	    const fine = window.matchMedia('(hover: hover) and (pointer: fine)');
+	    const seen = new WeakSet();
+	    const running = new Set();
+	    let frame = 0;
+	    let tilted = null;
+	    let point = null;
+	    function clearTilt() {
+	      cancelAnimationFrame(frame);
+	      frame = 0;
+	      if (tilted) {
+	        tilted.classList.remove('sl-tilting');
+	        tilted.style.removeProperty('--sl-tilt-x');
+	        tilted.style.removeProperty('--sl-tilt-y');
+	      }
+	      tilted = null;
+	    }
+	    const observer = new IntersectionObserver(entries => {
+	      let stagger = 0;
+	      entries.forEach(({
+	        target,
+	        isIntersecting
+	      }) => {
+	        if (!isIntersecting) return;
+	        observer.unobserve(target);
+	        if (reduced.matches || typeof target.animate !== 'function') return;
+	        // Moving focused controls would interfere with keyboard navigation.
+	        if (target.contains(document.activeElement)) return;
+	        const card = target.matches('.v2-pc');
+	        const hero = target.matches('.v2-hero');
+	        const art = target.matches('.hd-tile, .hm-brand, .hm-collection, .hm-mom__media');
+	        const animation = target.animate([{
+	          opacity: card ? 0.8 : 0.35,
+	          transform: hero ? 'scale(.965)' : art ? 'perspective(1000px) translateY(42px) rotateX(12deg)' : `translateY(${card ? 18 : 36}px)`
+	        }, {
+	          opacity: 1,
+	          transform: 'none'
+	        }], {
+	          duration: card ? 420 : hero ? 1100 : 850,
+	          delay: Math.min(stagger++ * (card ? 35 : 65), 195),
+	          easing: 'cubic-bezier(.16,1,.3,1)'
+	          // No backwards fill: visible/LCP media never waits behind a delay.
+	        });
+	        running.add(animation);
+	        animation.finished.catch(() => {}).finally(() => running.delete(animation));
+	        target.classList.add('sl-arrived');
+	      });
+	    }, {
+	      threshold: 0,
+	      rootMargin: '0px 0px 24px 0px'
+	    });
+	    function discover(node) {
+	      if (!(node instanceof Element)) return;
+	      const targets = [...(node.matches(REVEAL) ? [node] : []), ...node.querySelectorAll(REVEAL)];
+	      targets.forEach(target => {
+	        if (seen.has(target)) return;
+	        seen.add(target);
+	        observer.observe(target);
+	      });
+	    }
+	    function pointerMove(event) {
+	      if (reduced.matches || !fine.matches || event.pointerType === 'touch') return;
+	      const target = event.target.closest?.(DEPTH);
+	      if (!target || !root.contains(target)) {
+	        clearTilt();
+	        return;
+	      }
+	      if (target !== tilted) {
+	        clearTilt();
+	        tilted = target;
+	      }
+	      point = {
+	        x: event.clientX,
+	        y: event.clientY
+	      };
+	      if (frame) return;
+	      frame = requestAnimationFrame(() => {
+	        frame = 0;
+	        if (!tilted || !point) return;
+	        const box = tilted.getBoundingClientRect();
+	        const x = Math.max(-1, Math.min(1, (point.x - box.left) / box.width * 2 - 1));
+	        const y = Math.max(-1, Math.min(1, (point.y - box.top) / box.height * 2 - 1));
+	        tilted.style.setProperty('--sl-tilt-x', `${(-y * 6).toFixed(2)}deg`);
+	        tilted.style.setProperty('--sl-tilt-y', `${(x * 8).toFixed(2)}deg`);
+	        tilted.classList.add('sl-tilting');
+	      });
+	    }
+	    function preferencesChanged() {
+	      clearTilt();
+	      root.classList.toggle('sl-motion', !reduced.matches);
+	      if (reduced.matches) running.forEach(animation => animation.cancel());
+	    }
+	    const mutations = new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(discover)));
+	    preferencesChanged();
+	    discover(root);
+	    mutations.observe(root, {
+	      childList: true,
+	      subtree: true
+	    });
+	    root.addEventListener('pointermove', pointerMove, {
+	      passive: true
+	    });
+	    root.addEventListener('pointerleave', clearTilt);
+	    root.addEventListener('focusin', clearTilt);
+	    // Stop decorative motion immediately if a shopper starts interacting.
+	    const settle = () => running.forEach(animation => animation.cancel());
+	    root.addEventListener('pointerdown', settle);
+	    root.addEventListener('focusin', settle);
+	    reduced.addEventListener('change', preferencesChanged);
+	    fine.addEventListener('change', clearTilt);
+	    return () => {
+	      mutations.disconnect();
+	      observer.disconnect();
+	      settle();
+	      clearTilt();
+	      root.classList.remove('sl-motion');
+	      root.removeEventListener('pointermove', pointerMove);
+	      root.removeEventListener('pointerleave', clearTilt);
+	      root.removeEventListener('pointerdown', settle);
+	      root.removeEventListener('focusin', clearTilt);
+	      root.removeEventListener('focusin', settle);
+	      reduced.removeEventListener('change', preferencesChanged);
+	      fine.removeEventListener('change', clearTilt);
+	    };
+	  }, [pathname]);
+	  return null;
+	}
+
 	function ScrollToTop() {
 	  const {
 	    pathname
@@ -31770,7 +31966,7 @@
 	    pathname
 	  } = useLocation();
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(ScrollToTop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Header, {}), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(ScrollToTop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(StorefrontMotion, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Header, {}), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
 	      className: "page-main",
 	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Outlet, {})
 	    }, pathname), /*#__PURE__*/jsxRuntimeExports.jsx(Footer, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MobileCartSummary, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
@@ -33944,7 +34140,9 @@
 	  return null;
 	}
 	function ProductCard({
-	  product
+	  product,
+	  mediaLoading = 'lazy',
+	  mediaFetchPriority
 	}) {
 	  const {
 	    addToCart,
@@ -33967,7 +34165,10 @@
 	        "aria-label": product.name,
 	        children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
 	          product: product,
-	          frame: "v2"
+	          frame: "v2",
+	          variant: "card",
+	          loading: mediaLoading,
+	          fetchPriority: mediaFetchPriority
 	        })
 	      }), badge && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        className: "v2-pc__badges",
@@ -34060,6 +34261,7 @@
 	      children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
 	        product: product,
 	        frame: "v2",
+	        variant: "card",
 	        sizes: "80px"
 	      })
 	    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -34180,6 +34382,7 @@
 	              children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
 	                product: product,
 	                frame: "v2",
+	                variant: "card",
 	                sizes: "(max-width: 767px) 48vw, 300px"
 	              })
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -34315,6 +34518,7 @@
 	            children: products.slice(0, 3).map(product => /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
 	              product: product,
 	              frame: "v2",
+	              variant: "card",
 	              sizes: "160px"
 	            }, product.id))
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -35193,6 +35397,7 @@
 	        }) : /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
 	          product: product,
 	          frame: "v2",
+	          variant: "card",
 	          sizes: "(max-width: 767px) 46vw, 300px"
 	        }), overlay && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          className: "hd-tile__overlay",
@@ -37848,8 +38053,10 @@
 	      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	        children: filtered.length ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
 	          className: "v2-shop__grid",
-	          children: filtered.map(p => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
-	            product: p
+	          children: filtered.map((p, index) => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
+	            product: p,
+	            mediaLoading: index < 6 ? 'eager' : 'lazy',
+	            mediaFetchPriority: index === 0 ? 'high' : undefined
 	          }, p.id))
 	        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	          className: "v2-shop__empty",
@@ -39366,6 +39573,7 @@
 	          alt: f.alt || product.name,
 	          sizes: "84px",
 	          frame: "v2",
+	          variant: "card",
 	          onImageError: rejectFrame
 	        })
 	      }, f.id || f.url || i))
@@ -41088,7 +41296,8 @@
 	                className: "fbt__item",
 	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
 	                  product: p,
-	                  frame: "v2"
+	                  frame: "v2",
+	                  variant: "card"
 	                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	                  className: "fbt__name",
 	                  children: p.name
@@ -41431,7 +41640,8 @@
 	                  className: "cartrow__media v2-cartrow__media",
 	                  children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
 	                    product: l.product,
-	                    frame: "v2"
+	                    frame: "v2",
+	                    variant: "card"
 	                  })
 	                }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	                  className: "cartrow__info",
@@ -41636,7 +41846,8 @@
 	            className: "savedcard__media",
 	            children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
 	              product: l.product,
-	              frame: "v2"
+	              frame: "v2",
+	              variant: "card"
 	            })
 	          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
 	            className: "savedcard__body",
@@ -43332,7 +43543,8 @@
 	                className: "checkout__thumb",
 	                children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
 	                  product: l.product,
-	                  frame: "v2"
+	                  frame: "v2",
+	                  variant: "card"
 	                }), /*#__PURE__*/jsxRuntimeExports.jsx("i", {
 	                  className: "checkout__qty",
 	                  children: l.qty
@@ -45555,7 +45767,8 @@
 	              children: items.slice(0, 4).map((l, i) => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	                className: "ordercard__thumb",
 	                children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	                  product: productForLine(l)
+	                  product: productForLine(l),
+	                  variant: "card"
 	                })
 	              }, `${o.order_number}-${i}`))
 	            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -45620,7 +45833,8 @@
 	        to: `/product/${p.slug}`,
 	        className: "acct__wishcard",
 	        children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-	          product: p
+	          product: p,
+	          variant: "card"
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
 	          className: "acct__wishname",
 	          children: p.name
