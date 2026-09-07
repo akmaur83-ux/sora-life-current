@@ -31809,6 +31809,14 @@
 	  });
 	}
 
+	// Public catalogue/settings hydrate together in main.jsx. Storefront routes
+	// that are shaped by that data use this signal to avoid painting the bundled
+	// fallback layout immediately before the live layout replaces it.
+	const BootstrapReadyContext = /*#__PURE__*/reactExports.createContext(true);
+	function useBootstrapReady() {
+	  return reactExports.useContext(BootstrapReadyContext);
+	}
+
 	// Progressive enhancement: nothing is hidden while waiting for JavaScript,
 	// images, or an observer. Product loading has its own independent observer.
 	const REVEAL = '.v2-sechead, .hd-title, .hm-category-head, .hd-tile, .hm-brand, .hm-collection, .hm-mom__media, .hm-mom__body, .hm-trust__item, .v2-pc, .v2-hero';
@@ -31817,7 +31825,9 @@
 	  const {
 	    pathname
 	  } = useLocation();
+	  const bootstrapReady = useBootstrapReady();
 	  reactExports.useEffect(() => {
+	    if (!bootstrapReady) return undefined;
 	    if (!(pathname === '/' || pathname === '/shop' || /^\/category\/[^/]+\/?$/.test(pathname))) return undefined;
 	    const root = document.querySelector('.page-main');
 	    if (!root || !window.matchMedia || !window.IntersectionObserver) return undefined;
@@ -31945,7 +31955,7 @@
 	      reduced.removeEventListener('change', preferencesChanged);
 	      fine.removeEventListener('change', clearTilt);
 	    };
-	  }, [pathname]);
+	  }, [pathname, bootstrapReady]);
 	  return null;
 	}
 
@@ -31965,11 +31975,24 @@
 	  const {
 	    pathname
 	  } = useLocation();
+	  const bootstrapReady = useBootstrapReady();
+	  const dataShapedRoute = pathname === '/' || pathname === '/shop' || /^\/category\/[^/]+\/?$/.test(pathname) || /^\/product\/[^/]+\/?$/.test(pathname);
+	  const settling = dataShapedRoute && !bootstrapReady;
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
 	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(ScrollToTop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(StorefrontMotion, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Header, {}), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
-	      className: "page-main",
+	      className: `page-main${settling ? ' page-main--settling' : ''}`,
+	      "aria-busy": settling || undefined,
 	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Outlet, {})
-	    }, pathname), /*#__PURE__*/jsxRuntimeExports.jsx(Footer, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MobileCartSummary, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
+	    }, pathname), settling && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+	      className: "v2-data-settle",
+	      role: "status",
+	      "aria-live": "polite",
+	      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+	        "aria-hidden": "true"
+	      }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+	        children: "Preparing the catalogue"
+	      })]
+	    }), /*#__PURE__*/jsxRuntimeExports.jsx(Footer, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MobileCartSummary, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
 	  });
 	}
 
@@ -63186,6 +63209,7 @@
 	 */
 	function Root() {
 	  const [, bump] = reactExports.useState(0);
+	  const [bootstrapReady, setBootstrapReady] = reactExports.useState(false);
 	  reactExports.useEffect(() => {
 	    let cancelled = false;
 	    (async () => {
@@ -63229,6 +63253,8 @@
 	      } catch {
 	        // Supabase unreachable/slow — the app already rendered with
 	        // defaults; nothing further to do.
+	      } finally {
+	        if (!cancelled) setBootstrapReady(true);
 	      }
 	    })();
 	    return () => {
@@ -63243,12 +63269,15 @@
 	       above it. StoreProvider still contains AdminAuthProvider, so their
 	       relative order — and every existing useStore/useAdminAuth call site —
 	       is unchanged. */
-	    jsxRuntimeExports.jsx(BrowserRouter, {
-	      children: /*#__PURE__*/jsxRuntimeExports.jsx(CustomerAuthProvider, {
-	        children: /*#__PURE__*/jsxRuntimeExports.jsx(StoreProvider, {
-	          children: /*#__PURE__*/jsxRuntimeExports.jsx(AdminAuthProvider, {
-	            children: /*#__PURE__*/jsxRuntimeExports.jsx(ErrorBoundary, {
-	              children: /*#__PURE__*/jsxRuntimeExports.jsx(App, {})
+	    jsxRuntimeExports.jsx(BootstrapReadyContext.Provider, {
+	      value: bootstrapReady,
+	      children: /*#__PURE__*/jsxRuntimeExports.jsx(BrowserRouter, {
+	        children: /*#__PURE__*/jsxRuntimeExports.jsx(CustomerAuthProvider, {
+	          children: /*#__PURE__*/jsxRuntimeExports.jsx(StoreProvider, {
+	            children: /*#__PURE__*/jsxRuntimeExports.jsx(AdminAuthProvider, {
+	              children: /*#__PURE__*/jsxRuntimeExports.jsx(ErrorBoundary, {
+	                children: /*#__PURE__*/jsxRuntimeExports.jsx(App, {})
+	              })
 	            })
 	          })
 	        })
