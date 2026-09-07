@@ -22,7 +22,7 @@ export default function CompactProductCard({ product }) {
   return (
     <div className="v2-cc">
       <Link to={`/product/${product.slug}`} className="v2-cc__m" aria-hidden="true" tabIndex={-1}>
-        <ProductImage product={product} frame="v2" sizes="80px" />
+        <ProductImage product={product} frame="v2" variant="card" sizes="80px" />
       </Link>
 
       <div className="v2-cc__b">

@@ -213,7 +213,14 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
         <div>
           {filtered.length ? (
             <div className="v2-shop__grid">
-              {filtered.map((p) => <ProductCard key={p.id} product={p} />)}
+              {filtered.map((p, index) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  mediaLoading={index < 6 ? 'eager' : 'lazy'}
+                  mediaFetchPriority={index === 0 ? 'high' : undefined}
+                />
+              ))}
             </div>
           ) : (
             <div className="v2-shop__empty">

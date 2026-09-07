@@ -109,7 +109,7 @@ function DiscoveryTile({ to, image, product, caption, overlay = false }) {
         <span className="hd-tile__media">
           {image
             ? <DeferredImage src={image} alt="" />
-            : <ProductImage product={product} frame="v2" sizes="(max-width: 767px) 46vw, 300px" />}
+            : <ProductImage product={product} frame="v2" variant="card" sizes="(max-width: 767px) 46vw, 300px" />}
           {overlay && <span className="hd-tile__overlay">{caption}</span>}
         </span>
         {/* The title is shown once: over the artwork for categories, beneath

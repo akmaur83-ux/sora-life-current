@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { categoryBySlug, tones } from '../data/categories.js';
 import { OPTIMIZED_IMAGES, OPTIMIZED_WIDTHS } from '../data/optimizedImages.js';
+import { productCardImageUrl } from '../lib/productImageVariants.js';
 import { useDeferredMedia } from './DeferredImage.jsx';
 
 // Default sizes hint tuned for the product grid (2-up on phones, up to ~240px
@@ -36,10 +37,24 @@ export default function ProductImage({
   loading = 'lazy',
   decoding = 'async',
   fetchPriority,
+  variant = 'original',
 }) {
   const [failed, setFailed] = useState(false);
+  const [cardFailed, setCardFailed] = useState(false);
   const eager = loading === 'eager' || fetchPriority === 'high';
-  const { ref: mediaRef, ready } = useDeferredMedia(eager);
+
+  const originalSrc = mediaSrc || (product
+    ? (index === 0 ? product.image : (product.gallery && product.gallery[index]) || product.image)
+    : null);
+  const cardSrc = variant === 'card' && product
+    ? (product.cardImage || productCardImageUrl(originalSrc))
+    : null;
+  const { ref: mediaRef, ready } = useDeferredMedia(eager, originalSrc);
+
+  useEffect(() => {
+    setFailed(false);
+    setCardFailed(false);
+  }, [originalSrc, cardSrc]);
 
   const v2 = frame === 'v2';
   const hero = frame === 'hero';
@@ -61,9 +76,8 @@ export default function ProductImage({
 
   const cat = categoryBySlug[product.category];
 
-  const src = mediaSrc || (index === 0
-    ? product.image
-    : (product.gallery && product.gallery[index]) || product.image);
+  const usingCard = Boolean(cardSrc && !cardFailed);
+  const src = usingCard ? cardSrc : originalSrc;
   const alt = altOverride || product.name;
 
   if (src && !failed) {
@@ -73,8 +87,12 @@ export default function ProductImage({
         fetchPriority={fetchPriority}
         sizes={base ? sizes : undefined}
         onError={() => {
+          if (usingCard) {
+            setCardFailed(true);
+            return;
+          }
           setFailed(true);
-          onImageError?.(src);
+          onImageError?.(originalSrc);
         }} />
     );
     if (base) {

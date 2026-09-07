@@ -4,6 +4,7 @@ import Header from './Header.jsx';
 import Footer from './Footer.jsx';
 import MobileCartSummary from './MobileCartSummary.jsx';
 import Toasts from './Toasts.jsx';
+import StorefrontMotion from './StorefrontMotion.jsx';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -16,6 +17,7 @@ export default function Layout() {
   return (
     <>
       <ScrollToTop />
+      <StorefrontMotion />
       <Header />
       <main key={pathname} className="page-main">
         <Outlet />

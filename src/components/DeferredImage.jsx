@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 // while still handing the final request to the browser before it scrolls in.
 const callbacks = new WeakMap();
 let observer;
+const NEVER_REVEALED = Symbol('never-revealed');
 
 function sharedObserver() {
   if (typeof window === 'undefined' || typeof window.IntersectionObserver === 'undefined') return null;
@@ -19,18 +20,19 @@ function sharedObserver() {
         callbacks.delete(entry.target);
         reveal?.();
       }
-    }, { rootMargin: '240px 160px' });
+    }, { rootMargin: '600px 180px' });
   }
   return observer;
 }
 
-export function useDeferredMedia(eager = false) {
+export function useDeferredMedia(eager = false, identity = null) {
   const ref = useRef(null);
-  const [ready, setReady] = useState(eager);
+  const [revealedIdentity, setRevealedIdentity] = useState(eager ? identity : NEVER_REVEALED);
+  const ready = eager || revealedIdentity === identity;
 
   useEffect(() => {
     if (eager) {
-      setReady(true);
+      setRevealedIdentity(identity);
       return undefined;
     }
     if (ready) return undefined;
@@ -38,16 +40,16 @@ export function useDeferredMedia(eager = false) {
     const io = sharedObserver();
     if (!node || !io) {
       // Progressive fallback for older browsers: never strand an image.
-      setReady(true);
+      setRevealedIdentity(identity);
       return undefined;
     }
-    callbacks.set(node, () => setReady(true));
+    callbacks.set(node, () => setRevealedIdentity(identity));
     io.observe(node);
     return () => {
       io.unobserve(node);
       callbacks.delete(node);
     };
-  }, [eager, ready]);
+  }, [eager, identity, ready]);
 
   return { ref, ready };
 }
@@ -60,7 +62,7 @@ export default function DeferredImage({
   ...props
 }) {
   const eager = loading === 'eager' || fetchPriority === 'high';
-  const { ref, ready } = useDeferredMedia(eager);
+  const { ref, ready } = useDeferredMedia(eager, src);
   return (
     <img
       {...props}

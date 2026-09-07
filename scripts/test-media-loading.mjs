@@ -17,10 +17,31 @@ const promoPoster = read('src/components/promo/PromoPoster.jsx');
 check('distant images receive no src before viewport proximity', () => {
   assert.match(deferred, /src=\{ready \? src : undefined\}/);
   assert.match(deferred, /IntersectionObserver/);
-  assert.match(deferred, /rootMargin: '240px 160px'/);
+  assert.match(deferred, /rootMargin: '600px 180px'/);
+  assert.match(deferred, /revealedIdentity === identity/);
+  assert.doesNotMatch(deferred, /setReady/);
   assert.match(deferred, /Progressive fallback/);
   assert.match(productImage, /src=\{ready \? src : undefined\}/);
   assert.match(productImage, /srcSet=\{ready \? srcSet : undefined\}/);
+});
+
+check('listing priority is limited to the first six cards and one high-priority image', () => {
+  const browser = read('src/components/ProductBrowser.jsx');
+  const card = read('src/components/ProductCard.jsx');
+  assert.match(browser, /index < 6 \? 'eager' : 'lazy'/);
+  assert.match(browser, /index === 0 \? 'high' : undefined/);
+  assert.match(card, /variant="card"/);
+  assert.match(card, /loading=\{mediaLoading\}/);
+  assert.match(card, /fetchPriority=\{mediaFetchPriority\}/);
+});
+
+check('card derivatives fall back to originals while PDP main and zoom stay original', () => {
+  assert.match(productImage, /productCardImageUrl\(originalSrc\)/);
+  assert.match(productImage, /if \(usingCard\)[\s\S]*?setCardFailed\(true\)/);
+  assert.match(productImage, /const src = usingCard \? cardSrc : originalSrc/);
+  assert.match(mainGallery, /frame="v2"\s*loading="eager"\s*fetchPriority="high"/);
+  assert.match(mainGallery, /sizes="84px" frame="v2" variant="card"/);
+  assert.doesNotMatch(lightbox, /variant="card"/);
 });
 
 check('configured hero prepares only active and justified adjacent media', () => {

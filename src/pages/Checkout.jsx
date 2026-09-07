@@ -559,7 +559,7 @@ export default function Checkout() {
             <div className="checkout__items">
               {cartDetailed.map((l) => (
                 <div key={l.key} className="checkout__item">
-                  <span className="checkout__thumb"><ProductImage product={l.product} frame="v2" /><i className="checkout__qty">{l.qty}</i></span>
+                  <span className="checkout__thumb"><ProductImage product={l.product} frame="v2" variant="card" /><i className="checkout__qty">{l.qty}</i></span>
                   <span className="checkout__meta">
                     <strong>{l.product.name}</strong>
                     {(l.variantLabel || l.product.form) && <em>{l.variantLabel || l.product.form}</em>}

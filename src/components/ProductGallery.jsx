@@ -119,7 +119,7 @@ export default function ProductGallery({ product, children }) {
               aria-label={`View image ${i + 1}${f.isPrimary ? ' (primary)' : ''}`}
               aria-pressed={i === idx}
             >
-              <ProductImage product={product} src={f.url} alt={f.alt || product.name} sizes="84px" frame="v2" onImageError={rejectFrame} />
+              <ProductImage product={product} src={f.url} alt={f.alt || product.name} sizes="84px" frame="v2" variant="card" onImageError={rejectFrame} />
             </button>
           ))}
         </div>

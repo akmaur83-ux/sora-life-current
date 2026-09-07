@@ -145,7 +145,7 @@ export default function Header() {
                 <div className="v2-hdr__suggest">
                   {results.length ? results.map((p) => (
                     <Link key={p.id} to={`/product/${p.slug}`} className="v2-hdr__suggest-item" onClick={() => setFocused(false)}>
-                      <span className="v2-hdr__suggest-thumb"><ProductImage product={p} frame="v2" sizes="40px" /></span>
+                      <span className="v2-hdr__suggest-thumb"><ProductImage product={p} frame="v2" variant="card" sizes="40px" /></span>
                       <span className="v2-hdr__suggest-name">{p.name}</span>
                       <span className="v2-hdr__suggest-price">{money(p.price)}</span>
                     </Link>
@@ -234,7 +234,7 @@ export default function Header() {
                 <div className="search-results">
                   {results.map((p) => (
                     <Link key={p.id} to={`/product/${p.slug}`} className="search-result" onClick={() => setMobileSearch(false)}>
-                      <span className="search-thumb"><ProductImage product={p} /></span>
+                      <span className="search-thumb"><ProductImage product={p} variant="card" /></span>
                       <span className="search-meta">
                         <span className="search-name">{p.name}</span>
                         <span className="hint">{money(p.price)}</span>

@@ -54,7 +54,7 @@ export function FeaturedBrands({ brands }) {
             const product = brand.products[0];
             return (
               <Link key={brand.name} to={`/product/${product.slug}`} className={`hm-brand hm-brand--${index + 1}`}>
-                <div className="hm-brand__media"><ProductImage product={product} frame="v2" sizes="(max-width: 767px) 48vw, 300px" /></div>
+                <div className="hm-brand__media"><ProductImage product={product} frame="v2" variant="card" sizes="(max-width: 767px) 48vw, 300px" /></div>
                 <div className="hm-brand__body">
                   {/* The raw count was truthful but made the marketplace read
                       as one dominant label beside a small one. Brand discovery
@@ -138,7 +138,7 @@ export function CuratedCollections({ collections }) {
           {collections.map(({ category, products }) => (
             <Link key={category.slug} to={`/category/${category.slug}`} className="hm-collection">
               <div className="hm-collection__images" aria-hidden="true">
-                {products.slice(0, 3).map((product) => <ProductImage key={product.id} product={product} frame="v2" sizes="160px" />)}
+                {products.slice(0, 3).map((product) => <ProductImage key={product.id} product={product} frame="v2" variant="card" sizes="160px" />)}
               </div>
               <div className="hm-collection__body">
                 <span>Curated category</span>

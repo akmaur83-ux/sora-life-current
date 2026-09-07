@@ -40,7 +40,7 @@ function pickBadge(product, out) {
   return null;
 }
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, mediaLoading = 'lazy', mediaFetchPriority }) {
   const { addToCart, toggleWish, isWished } = useStore();
   const buyable = isPurchasable(product);
   const wished = isWished(product.id);
@@ -55,7 +55,13 @@ export default function ProductCard({ product }) {
     <article className={`v2-pc ${out ? 'is-out' : ''}`}>
       <div className="v2-pc__media">
         <Link to={`/product/${product.slug}`} aria-label={product.name}>
-          <ProductImage product={product} frame="v2" />
+          <ProductImage
+            product={product}
+            frame="v2"
+            variant="card"
+            loading={mediaLoading}
+            fetchPriority={mediaFetchPriority}
+          />
         </Link>
 
         {badge && (

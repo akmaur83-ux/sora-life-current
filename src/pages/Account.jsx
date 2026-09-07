@@ -444,7 +444,7 @@ function Orders() {
               <div className="ordercard__body">
                 <div className="ordercard__thumbs">
                   {items.slice(0, 4).map((l, i) => (
-                    <span key={`${o.order_number}-${i}`} className="ordercard__thumb"><ProductImage product={productForLine(l)} /></span>
+                    <span key={`${o.order_number}-${i}`} className="ordercard__thumb"><ProductImage product={productForLine(l)} variant="card" /></span>
                   ))}
                 </div>
                 <div className="ordercard__meta">
@@ -483,7 +483,7 @@ function WishTab({ wishlist }) {
       <div className="acct__wishgrid">
         {items.map((p) => (
           <Link key={p.id} to={`/product/${p.slug}`} className="acct__wishcard">
-            <ProductImage product={p} />
+            <ProductImage product={p} variant="card" />
             <span className="acct__wishname">{p.name}</span>
             <span className="price"><span className="now" style={{ fontSize: 'var(--text-md)' }}>{money(p.price)}</span></span>
           </Link>

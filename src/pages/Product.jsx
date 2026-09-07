@@ -407,7 +407,7 @@ useEffect(() => {
                 {fbt.map((p, i) => (
                   <Fragment key={p.id}>
                     <Link to={`/product/${p.slug}`} className="fbt__item">
-                      <ProductImage product={p} frame="v2" />
+                      <ProductImage product={p} frame="v2" variant="card" />
                       <span className="fbt__name">{p.name}</span>
                       <span className="fbt__price">{money(p.price)}</span>
                     </Link>
