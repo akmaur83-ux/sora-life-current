@@ -235,3 +235,31 @@
   .v2-btn, .v2-iconbtn { transition:none; }
   .v2-btn:active { transform:none; }
 }
+
+/* The live catalogue, settings and campaign state land in one bootstrap pass.
+   Keep data-shaped routes in the layout but out of paint until that pass is
+   complete, so their bundled fallback geometry cannot shift the visible page.
+   The fixed status does not reserve or alter document flow. */
+.page-main--settling {
+  visibility:hidden;
+  min-height:calc(100vh - 88px);
+  min-height:calc(100svh - 88px);
+}
+.v2-data-settle {
+  position:fixed; inset:50% auto auto 50%; z-index:55;
+  display:flex; align-items:center; gap:9px;
+  transform:translate(-50%, -50%);
+  color:var(--slv2-ink-3); pointer-events:none;
+  font:600 11px/1 var(--slv2-sans); letter-spacing:.08em;
+  text-transform:uppercase; white-space:nowrap;
+}
+.v2-data-settle em { font:inherit; font-style:normal; }
+.v2-data-settle > span {
+  width:16px; height:16px; border:2px solid var(--slv2-line);
+  border-top-color:var(--slv2-f600); border-radius:50%;
+  animation:v2-data-settle-spin .7s linear infinite;
+}
+@keyframes v2-data-settle-spin { to { transform:rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) {
+  .v2-data-settle > span { animation:none; }
+}

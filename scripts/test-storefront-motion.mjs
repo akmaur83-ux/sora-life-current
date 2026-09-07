@@ -5,7 +5,7 @@ import vm from 'node:vm';
 const source = readFileSync(new URL('../src/components/StorefrontMotion.jsx', import.meta.url), 'utf8')
   .replace(/^import .*;\r?\n/gm, '').replace('export default function', 'function');
 
-function setup(pathname = '/', reducedInitially = false) {
+function setup(pathname = '/', reducedInitially = false, bootstrapReady = true) {
   const events = new Map();
   let callback, cleanup, disconnected = 0, cancelled = 0, animated = 0;
   const classes = new Set();
@@ -37,6 +37,7 @@ function setup(pathname = '/', reducedInitially = false) {
   }
   const context = {
     useLocation: () => ({ pathname }),
+    useBootstrapReady: () => bootstrapReady,
     useEffect: (fn) => { cleanup = fn(); },
     window: { matchMedia: (query) => query.includes('reduced') ? reduced : fine, IntersectionObserver: Observer },
     IntersectionObserver: Observer,
@@ -74,6 +75,9 @@ for (const route of ['/', '/shop', '/category/hair-care', '/category/long-catego
 const disabled = setup('/', true);
 disabled.show();
 assert.equal(disabled.state().animated, 0, 'reduced motion starts fully visible without animation');
+const settling = setup('/', false, false);
+assert.equal(settling.observed.length, 0, 'motion waits until the final hydrated layout is ready');
+assert.equal(settling.events.size, 0, 'settling layout has no premature motion listeners');
 const toggle = setup();
 toggle.show();
 toggle.reduce();

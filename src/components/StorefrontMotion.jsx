@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useBootstrapReady } from '../lib/bootstrapReady.js';
 
 // Progressive enhancement: nothing is hidden while waiting for JavaScript,
 // images, or an observer. Product loading has its own independent observer.
@@ -8,8 +9,10 @@ const DEPTH = '.hd-tile__media, .hm-brand__media, .hm-mom__media, .hm-collection
 
 export default function StorefrontMotion() {
   const { pathname } = useLocation();
+  const bootstrapReady = useBootstrapReady();
 
   useEffect(() => {
+    if (!bootstrapReady) return undefined;
     if (!(pathname === '/' || pathname === '/shop' || /^\/category\/[^/]+\/?$/.test(pathname))) return undefined;
     const root = document.querySelector('.page-main');
     if (!root || !window.matchMedia || !window.IntersectionObserver) return undefined;
@@ -119,7 +122,7 @@ export default function StorefrontMotion() {
       reduced.removeEventListener('change', preferencesChanged);
       fine.removeEventListener('change', clearTilt);
     };
-  }, [pathname]);
+  }, [pathname, bootstrapReady]);
 
   return null;
 }

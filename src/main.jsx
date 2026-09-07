@@ -9,6 +9,7 @@ import { applyCatalog, applyVariants, applyProductMedia } from './data/products.
 import { applyCategories } from './data/categories.js';
 import { applyBranding, applyAnnouncement, applyHomepage, applyContact, applyHeroSlides, applyStorefrontTheme } from './lib/settings.js';
 import { applyPromotions } from './lib/promotions.js';
+import { BootstrapReadyContext } from './lib/bootstrapReady.js';
 import {
   fetchPublicCatalog, fetchPublicCategories, fetchPublicHeroSlides, fetchPublicSettings,
   fetchPublicVariants, fetchPublicProductMedia, fetchPublicPromotions,
@@ -39,6 +40,7 @@ function withTimeout(promise, ms) {
  */
 function Root() {
   const [, bump] = useState(0);
+  const [bootstrapReady, setBootstrapReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +79,8 @@ function Root() {
       } catch {
         // Supabase unreachable/slow — the app already rendered with
         // defaults; nothing further to do.
+      } finally {
+        if (!cancelled) setBootstrapReady(true);
       }
     })();
     return () => { cancelled = true; };
@@ -89,17 +93,19 @@ function Root() {
        above it. StoreProvider still contains AdminAuthProvider, so their
        relative order — and every existing useStore/useAdminAuth call site —
        is unchanged. */
-    <BrowserRouter>
-      <CustomerAuthProvider>
-        <StoreProvider>
-          <AdminAuthProvider>
-            <ErrorBoundary>
-              <App />
-            </ErrorBoundary>
-          </AdminAuthProvider>
-        </StoreProvider>
-      </CustomerAuthProvider>
-    </BrowserRouter>
+    <BootstrapReadyContext.Provider value={bootstrapReady}>
+      <BrowserRouter>
+        <CustomerAuthProvider>
+          <StoreProvider>
+            <AdminAuthProvider>
+              <ErrorBoundary>
+                <App />
+              </ErrorBoundary>
+            </AdminAuthProvider>
+          </StoreProvider>
+        </CustomerAuthProvider>
+      </BrowserRouter>
+    </BootstrapReadyContext.Provider>
   );
 }
 
