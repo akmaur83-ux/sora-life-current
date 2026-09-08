@@ -322,14 +322,14 @@ function AuthView() {
 
           <form onSubmit={submit}>
             {mode === 'signup' && (
-              <div className="field"><label className="label">Full name</label>
-                <input className="input" placeholder="Your name" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required /></div>
+              <div className="field"><label className="label" htmlFor="account-full-name">Full name</label>
+                <input id="account-full-name" className="input" placeholder="Your name" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required /></div>
             )}
-            <div className="field"><label className="label">Email</label>
-              <input className="input" type="email" placeholder="you@email.com" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
+            <div className="field"><label className="label" htmlFor="account-email">Email</label>
+              <input id="account-email" className="input" type="email" placeholder="you@email.com" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
             {mode !== 'forgot' && (
-              <div className="field"><label className="label">Password</label>
-                <input className="input" type="password" placeholder="••••••••" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} /></div>
+              <div className="field"><label className="label" htmlFor="account-password">Password</label>
+                <input id="account-password" className="input" type="password" placeholder="••••••••" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} /></div>
             )}
             {mode === 'login' && (
               <button type="button" className="auth__forgot" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }} onClick={() => switchMode('forgot')}>Forgot password?</button>

@@ -268,7 +268,7 @@ export default function Header() {
           </div>
           <form className="searchbox" style={{ margin: '0 16px 8px' }} onSubmit={submit}>
             <Icon name="search" />
-            <input className="input" placeholder="Search for products..." value={q} onChange={(e) => setQ(e.target.value)} />
+            <input className="input" aria-label="Search for products" placeholder="Search for products..." value={q} onChange={(e) => setQ(e.target.value)} />
           </form>
           <nav className="drawer__nav">
             <Link to="/shop" className="drawer__link">All products</Link>

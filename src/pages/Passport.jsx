@@ -279,13 +279,13 @@ function LookupGate({ passportId, loading, error, onSubmit }) {
         <form className="surface pad-lg" onSubmit={submit}>
           {!passportId && (
             <div className="field" style={{ marginBottom: 16 }}>
-              <label className="label">Order number</label>
-              <input className="input" value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} placeholder="SORA-XXXXXXXXX" required autoFocus />
+              <label className="label" htmlFor="passport-order-number">Order number</label>
+              <input id="passport-order-number" className="input" value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} placeholder="SORA-XXXXXXXXX" required autoFocus />
             </div>
           )}
           <div className={`field ${error ? 'field-error' : ''}`} style={{ marginBottom: 16 }}>
-            <label className="label">Email used at checkout</label>
-            <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" required autoFocus={Boolean(passportId)} />
+            <label className="label" htmlFor="passport-email">Email used at checkout</label>
+            <input id="passport-email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" required autoFocus={Boolean(passportId)} />
             {error && <span className="error-text">{error}</span>}
           </div>
           <button className="btn btn-block" type="submit" disabled={loading}>
