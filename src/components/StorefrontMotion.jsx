@@ -46,12 +46,15 @@ export default function StorefrontMotion() {
         const card = target.matches('.v2-pc');
         const hero = target.matches('.v2-hero');
         const art = target.matches('.hd-tile, .hm-brand, .hm-collection, .hm-mom__media');
+        // Independent panels lift and turn into the existing grid. Never
+        // transform a page/section ancestor containing sticky or fixed UI.
+        const direction = stagger % 2 ? 1 : -1;
         const animation = target.animate([
-          { opacity: card ? 0.8 : 0.35, transform: hero ? 'scale(.965)' : art ? 'perspective(1000px) translateY(42px) rotateX(12deg)' : `translateY(${card ? 18 : 36}px)` },
+          { opacity: card ? 0.8 : 0.45, transform: hero ? 'scale(.965)' : art ? `perspective(1000px) translate3d(${direction * 18}px, 64px, -90px) rotateX(24deg) rotateY(${direction * 14}deg) scale(.92)` : card ? 'perspective(1000px) translateY(30px) rotateX(7deg) scale(.97)' : 'translateY(44px) scale(.94)' },
           { opacity: 1, transform: 'none' },
         ], {
-          duration: card ? 420 : hero ? 1100 : 850,
-          delay: Math.min(stagger++ * (card ? 35 : 65), 195),
+          duration: card ? 650 : hero ? 1100 : art ? 1250 : 1000,
+          delay: Math.min(stagger++ * (card ? 40 : 85), 255),
           easing: 'cubic-bezier(.16,1,.3,1)',
           // No backwards fill: visible/LCP media never waits behind a delay.
         });

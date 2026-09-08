@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="170" viewBox="0 0 200 170" fill="none">
+  <defs>
+    <radialGradient id="berry" cx=".3" cy=".25" r=".8"><stop stop-color="#ffe39a"/><stop offset=".25" stop-color="#f9b640"/><stop offset=".68" stop-color="#df791e"/><stop offset="1" stop-color="#a14a19"/></radialGradient>
+    <linearGradient id="leaf" x2="1" y2="1"><stop stop-color="#b8c681"/><stop offset=".5" stop-color="#73884b"/><stop offset="1" stop-color="#375437"/></linearGradient>
+    <g id="fruit"><ellipse rx="12" ry="15" fill="url(#berry)"/><ellipse cx="-3.5" cy="-6" rx="3" ry="4" fill="#fff5cd" opacity=".65"/><path d="M-2 14L2 14" stroke="#86461c" stroke-width="2" stroke-linecap="round"/></g>
+  </defs>
+  <path d="M28 159C61 119 113 83 176 28M78 114L61 61M114 83L142 111" stroke="#8a7147" stroke-width="3" stroke-linecap="round"/>
+  <path d="M66 101C31 93 20 57 26 30C50 47 65 70 66 101ZM91 101C93 60 119 38 144 35C135 64 114 89 91 101ZM122 70C125 39 147 20 175 15C163 41 141 61 122 70Z" fill="url(#leaf)"/>
+  <path d="M28 34L64 98M140 38L94 98M171 19L125 66" stroke="#d3dbaa" stroke-width="1.4" opacity=".7"/>
+  <use href="#fruit" x="82" y="120"/><use href="#fruit" x="105" y="110"/>
+  <use href="#fruit" x="123" y="98"/><use href="#fruit" x="143" y="81"/>
+  <use href="#fruit" x="159" y="62"/><use href="#fruit" x="99" y="137"/>
+  <use href="#fruit" x="126" y="125"/><use href="#fruit" x="147" y="110"/>
+</svg>

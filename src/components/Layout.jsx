@@ -5,6 +5,7 @@ import Footer from './Footer.jsx';
 import MobileCartSummary from './MobileCartSummary.jsx';
 import Toasts from './Toasts.jsx';
 import StorefrontMotion from './StorefrontMotion.jsx';
+import StorefrontBackground from './StorefrontBackground.jsx';
 import { useBootstrapReady } from '../lib/bootstrapReady.js';
 
 function ScrollToTop() {
@@ -25,6 +26,7 @@ export default function Layout() {
     <>
       <ScrollToTop />
       <StorefrontMotion />
+      <StorefrontBackground />
       <Header />
       <main
         key={pathname}

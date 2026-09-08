@@ -1,0 +1,174 @@
+/* Independent decorative scenes. Hosts reserve no new space; dialogs and
+   sticky purchase bars remain outside these local stacking contexts. */
+.sl-bg-host { position:relative; isolation:isolate; }
+.sl-bg {
+  --sl-bg-a:100 145 72; --sl-bg-b:210 166 77; --sl-bg-c:243 216 161;
+  position:absolute; inset:0 0 auto; height:min(100%, 100vh); z-index:-1;
+  transform:translateY(var(--sl-bg-y, 0px));
+  pointer-events:none; user-select:none; overflow:hidden; contain:strict;
+}
+.v2-shop__body > .sl-bg { inset-inline:calc(-1 * var(--slv2-gutter)); }
+.sl-bg > i { position:absolute; display:block; }
+.sl-bg__wash {
+  inset:0;
+  background:radial-gradient(ellipse at 0 48%, rgb(var(--sl-bg-a) / .58), transparent 56%),
+    radial-gradient(ellipse at 100% 68%, rgb(var(--sl-bg-b) / .48), transparent 72%);
+  animation:sl-bg-tide 9s ease-in-out infinite alternate paused;
+}
+.sl-bg > i:where(:not(.sl-bg__wash)) {
+  width:clamp(80px, 13vw, 200px); aspect-ratio:1; left:-2%; top:max(75px, 28%);
+  animation:sl-bg-float 7s ease-in-out infinite alternate paused;
+  animation-delay:calc(var(--sl-shape-index) * -1.1s);
+}
+.sl-bg > i:nth-child(3) { left:auto; right:-2%; top:48%; rotate:24deg; }
+.sl-bg > i:nth-child(4) { left:4%; top:79%; scale:.6; rotate:-28deg; }
+.sl-bg > i:nth-child(5) { left:auto; right:5%; top:max(80px, 30%); scale:.5; }
+.sl-bg > i:nth-child(6) { left:1%; top:60%; scale:.4; }
+/* Herbs: swaying leaves, no oil or pill decoration. */
+.sl-bg .sl-bg__sprig {
+  aspect-ratio:180 / 260;
+  background:url('/public/art/ingredient-sprig.svg') center / contain no-repeat;
+  filter:drop-shadow(5px 10px 8px #304e2929); transform-origin:50% 90%;
+  animation-name:sl-bg-sway; rotate:-24deg;
+}
+.sl-bg .sl-bg__leaf {
+  width:clamp(44px, 7vw, 90px); aspect-ratio:1.6; border-radius:0 90% 0 90%;
+  background:linear-gradient(32deg, #31583e, #75994d 48%, #d9e4a4 50%, #76954b 53%, #a8bd73);
+  box-shadow:4px 8px 14px #36573524;
+}
+/* Citrus: segmented fruit slices rotate around their own centres. */
+.sl-bg .sl-bg__citrus {
+  background:radial-gradient(circle, transparent 57%, #fff3be 58% 63%, #e9a02c 65% 72%, transparent 73%),
+    repeating-conic-gradient(from 12deg, #fff5c6 0deg 3deg, #f3b349 5deg 32deg, #e99125 34deg 36deg);
+  border-radius:50%; border:5px solid #efb13c;
+  box-shadow:inset 0 0 0 4px #fff4b9, 5px 12px 20px #c37d3229;
+  animation-name:sl-bg-turn;
+}
+/* Hydration: expanding water rings and clear serum pearls. */
+.sl-bg .sl-bg__ripple {
+  width:clamp(180px, 26vw, 390px); border-radius:50%;
+  background:repeating-radial-gradient(ellipse, transparent 0 19px, rgb(var(--sl-bg-a) / .65) 20px 22px, #fff9 23px 25px, transparent 26px 42px);
+  transform:perspective(600px) rotateX(52deg); animation-name:sl-bg-ripple;
+}
+.sl-bg .sl-bg__pearl {
+  width:clamp(32px, 6vw, 80px); border-radius:50%;
+  background:radial-gradient(circle at 28% 22%, #fffe 0 7%, #fff4 18%, transparent 40%), radial-gradient(circle at 65% 75%, rgb(var(--sl-bg-a) / .82), #ffffff60 60%, rgb(var(--sl-bg-b) / .65));
+  box-shadow:inset 2px 3px 5px #fffe, inset -3px -5px 10px rgb(var(--sl-bg-a) / .24), 5px 10px 18px #6b827021;
+}
+/* Editorial brands: light beams and gold dust, no ingredient arrangement. */
+.sl-bg .sl-bg__beam {
+  width:clamp(170px, 27vw, 410px); height:130%; top:-15%;
+  background:linear-gradient(100deg, transparent 15%, rgb(var(--sl-bg-b) / .34) 48%, #fff6 50%, transparent 75%);
+  rotate:25deg; animation-name:sl-bg-light;
+}
+.sl-bg .sl-bg__mote {
+  width:8px; aspect-ratio:1; border-radius:50%; background:rgb(var(--sl-bg-b));
+  box-shadow:20px -34px 0 -2px rgb(var(--sl-bg-a) / .5), 52px 28px 0 -1px rgb(var(--sl-bg-b) / .65), -18px 64px 0 -2px rgb(var(--sl-bg-a) / .4), 72px -70px 0 -2px rgb(var(--sl-bg-b) / .5);
+}
+/* Cosmetic silk: broad flowing cream folds. */
+.sl-bg .sl-bg__ribbon {
+  width:clamp(280px, 45vw, 700px); aspect-ratio:1.5; left:-20%; top:25%;
+  border-radius:48% 52% 35% 65%;
+  background:repeating-radial-gradient(ellipse at 10% 15%, transparent 0 24px, rgb(var(--sl-bg-b) / .27) 26px 40px, #ffffffa0 42px 46px, rgb(var(--sl-bg-c) / .5) 48px 64px);
+  rotate:-25deg; animation-name:sl-bg-ribbon;
+}
+.sl-bg .sl-bg__ribbon:nth-child(3) { left:auto; right:-22%; top:50%; rotate:155deg; }
+.sl-bg .sl-bg__berries {
+  aspect-ratio:200 / 170;
+  background:url('/public/art/ingredient-berries.svg') center / contain no-repeat;
+  filter:drop-shadow(4px 8px 5px #7c531d29); rotate:-16deg;
+}
+.sl-bg .sl-bg__droplet {
+  width:clamp(36px, 5vw, 72px); border-radius:65% 5% 65% 65%; rotate:-45deg;
+  background:radial-gradient(ellipse at 28% 30%, #fff9 0 8%, transparent 23%), radial-gradient(ellipse at 38% 35%, rgb(var(--sl-bg-c)), rgb(var(--sl-bg-b)) 65%, rgb(var(--sl-bg-a)));
+  box-shadow:inset 2px 3px 4px #fff8, inset -4px -5px 7px #72591630, 5px 12px 18px #93722a26;
+}
+/* Ayurveda brand spotlight: coconut halves and a soft oil sheen. */
+.sl-bg .sl-bg__coconut {
+  border-radius:48% 52% 46% 54%;
+  background:radial-gradient(ellipse at 48% 45%, #e2d7bb 0 24%, #fffaf0 28% 57%, #e9e0c8 62%, #735338 64% 72%, #aa8357 74% 82%, #594330 85%);
+  box-shadow:inset 3px 4px 5px #fff7, 6px 14px 18px #6851392b;
+  transform:perspective(700px) rotateX(35deg); animation-name:sl-bg-turn;
+}
+/* Collections: floating rose petals; no leaf/capsule motif. */
+.sl-bg .sl-bg__petal {
+  width:clamp(64px, 10vw, 145px); aspect-ratio:.86; border-radius:65% 40% 70% 25%;
+  background:radial-gradient(ellipse at 30% 20%, #fff2e8 0, #ecc6c6 25%, #cc8e9f 67%, #97576d);
+  box-shadow:inset 3px 4px 7px #fff9, inset -4px -6px 8px #8b3d591c, 7px 15px 18px #964b6624;
+  rotate:-25deg; animation-name:sl-bg-petal;
+}
+.sl-bg .sl-bg__capsule {
+  width:clamp(64px, 9vw, 120px); aspect-ratio:2.45; border-radius:999px;
+  background:linear-gradient(180deg, #fff8, transparent 45%, #393c251f), linear-gradient(90deg, rgb(var(--sl-bg-a)) 0 49%, rgb(var(--sl-bg-c)) 50% 100%);
+  border:1px solid #aca46e55; box-shadow:inset 0 2px 3px #fffa, inset 0 -3px 4px #555a2926, 5px 9px 12px #59613826;
+  rotate:-32deg;
+}
+.sl-bg .sl-bg__orbit {
+  width:clamp(130px, 22vw, 260px); border:1px solid rgb(var(--sl-bg-a) / .5); border-radius:50%;
+  box-shadow:inset 12px 0 0 -10px rgb(var(--sl-bg-b)); animation-name:sl-bg-turn;
+}
+.sl-bg .sl-bg__crystal {
+  width:clamp(65px, 11vw, 140px); aspect-ratio:.7;
+  clip-path:polygon(50% 0, 92% 25%, 85% 75%, 50% 100%, 8% 74%, 0 26%);
+  background:conic-gradient(from 35deg at 50% 40%, #d2e0df, #fff8, #92adae, #e1e9e3, #a6bcbd, #fff9, #d2e0df);
+  animation-name:sl-bg-turn;
+}
+.sl-bg--moving > i { animation-play-state:running; }
+@keyframes sl-bg-float { from { transform:perspective(800px) translateY(14px) rotateY(-12deg); } to { transform:perspective(800px) translateY(-20px) rotateY(18deg); } }
+@keyframes sl-bg-sway { from { transform:rotate(-7deg) translateY(8px); } to { transform:rotate(8deg) translateY(-12px); } }
+@keyframes sl-bg-turn { from { transform:perspective(800px) rotateX(25deg) rotate(-15deg); } to { transform:perspective(800px) rotateX(-10deg) rotate(30deg) translateY(-18px); } }
+@keyframes sl-bg-ripple { from { transform:perspective(600px) rotateX(52deg) scale(.8); opacity:.5; } to { transform:perspective(600px) rotateX(52deg) scale(1.2); opacity:1; } }
+@keyframes sl-bg-light { to { transform:translateX(45px) skewX(-8deg); opacity:.45; } }
+@keyframes sl-bg-ribbon { to { transform:translateY(-24px) rotate(14deg) scale(1.07); } }
+@keyframes sl-bg-petal { from { transform:perspective(700px) rotateY(-30deg) rotateX(15deg) translateY(18px); } to { transform:perspective(700px) rotateY(30deg) rotateX(-15deg) translateY(-24px); } }
+/* Saturated edge light stays behind the existing content. The wash is not
+   masked: only large ingredient motifs fade beneath the central reading area. */
+.sl-bg[data-placement="product"], .sl-bg[data-placement="story"] {
+  inset-inline:0;
+}
+.sl-bg[data-placement="product"] > i:not(.sl-bg__wash),
+.sl-bg[data-placement="story"] > i:not(.sl-bg__wash) { opacity:.8; }
+.sl-bg[data-placement="product"] > .sl-bg__wash,
+.sl-bg[data-placement="story"] > .sl-bg__wash {
+  background:radial-gradient(ellipse at 0 38%, rgb(var(--sl-bg-a) / .62), transparent 64%),
+    radial-gradient(ellipse at 100% 80%, rgb(var(--sl-bg-b) / .56), transparent 62%),
+    linear-gradient(135deg, rgb(var(--sl-bg-c) / .42), #fff8 48%, rgb(var(--sl-bg-c) / .32));
+}
+.sl-bg[data-placement="story"] > i:nth-child(2) { left:auto; right:0; }
+.sl-bg[data-placement="story"] > i:nth-child(3) { right:auto; left:0; }
+@keyframes sl-bg-tide {
+  from { transform:translate(-2%, 1%) scale(1); }
+  to { transform:translate(3%, -2%) scale(1.08); }
+}
+@media (min-width:1280px) {
+  .v2-pdp-root > :is(.pdp, .pdp-flow) > .sl-bg { inset-inline:calc((var(--slv2-container) - 100vw) / 2 + 12px); }
+}
+/* Preserve small-print contrast over the stronger animated colour field. */
+.pdp.sl-bg-host :is(.pdp__tax, .pdp-deliver__head em) { color:#405750; }
+/* Narrow screens need colour across the section, not just in desktop gutters.
+   Keep motifs in the background without resizing any content or image box. */
+@media (max-width:1023px) {
+  .sl-bg__wash {
+    background:radial-gradient(ellipse at 0 24%, rgb(var(--sl-bg-a) / .62), transparent 75%),
+      radial-gradient(ellipse at 100% 86%, rgb(var(--sl-bg-b) / .58), transparent 72%);
+  }
+  .sl-bg > i:nth-child(2) { top:12px; left:-24px; }
+  .sl-bg > i:nth-child(3) { top:55%; right:-24px; left:auto; }
+  .sl-bg > i:nth-child(4) { top:20%; left:auto; right:12%; scale:.85; }
+  .sl-bg > i:nth-child(5) { top:82%; right:4%; scale:.8; }
+  .sl-bg .sl-bg__sprig { width:140px; }
+  .sl-bg .sl-bg__berries { width:140px; }
+  .sl-bg .sl-bg__citrus, .sl-bg .sl-bg__coconut { width:125px; }
+  .sl-bg .sl-bg__pearl { width:62px; }
+  .sl-bg .sl-bg__ripple { width:260px; }
+  .sl-bg .sl-bg__capsule { width:105px; }
+  .sl-bg .sl-bg__ribbon { width:420px; }
+  .sl-bg .sl-bg__beam { width:240px; top:-15%; }
+  .sl-bg .sl-bg__mote { width:8px; }
+  .sl-bg[data-placement="product"] > i:nth-child(2),
+  .sl-bg[data-placement="story"] > i:nth-child(2) { top:8%; left:-35px; right:auto; }
+  .sl-bg[data-placement="product"] > i:nth-child(3),
+  .sl-bg[data-placement="story"] > i:nth-child(3) { top:65%; right:-35px; left:auto; }
+}
+@media (prefers-reduced-motion: reduce) { .sl-bg { display:none; } .sl-bg > i { animation:none; transition:none; } }
+@media print { .sl-bg { display:none; } }
