@@ -38,11 +38,11 @@
   /* ---- ink ---- */
   --slv2-ink:#16211B; --slv2-ink-2:#3B4A41; --slv2-ink-3:#5F6D64; --slv2-ink-4:#8A958C;
 
-  /* ---- commerce price system — LOCKED ----
-     Price is ink, MRP is a muted warm grey, discount is restrained gold.
-     MRP is deliberately darker than ink-4 (3.0:1, would fail AA at 11.5px). */
-  --slv2-price:#16211B;      /* 15.6:1 on ivory */
-  --slv2-price-mrp:#6F675C;  /* 5.25:1 ivory · 4.8:1 cream */
+  /* ---- commerce price system ----
+     Selling price is green, compare/original price is red, and the discount
+     remains restrained gold. Both price colors retain readable contrast. */
+  --slv2-price:#277249;      /* selling price: premium marketplace green */
+  --slv2-price-mrp:#B44343;  /* compare/original price: clear sale red */
   --slv2-price-off:#866419;  /* 5.1:1 on gold-100 */
   --slv2-save:#2C5341;       /* 7.4:1 on forest-50 */
   --slv2-alert:#9A3F33;
