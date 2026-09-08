@@ -31031,6 +31031,7 @@
 	            name: "search"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
 	            className: "input",
+	            "aria-label": "Search for products",
 	            placeholder: "Search for products...",
 	            value: q,
 	            onChange: e => setQ(e.target.value)
@@ -43468,8 +43469,10 @@
 	            className: `field ${errors.email ? 'field-error' : ''}`,
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
+	              htmlFor: "checkout-email",
 	              children: "Email address"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              id: "checkout-email",
 	              className: "input",
 	              type: "email",
 	              placeholder: "you@email.com",
@@ -43483,8 +43486,10 @@
 	            className: `field ${errors.phone ? 'field-error' : ''}`,
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
+	              htmlFor: "checkout-phone",
 	              children: "Phone number"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              id: "checkout-phone",
 	              className: "input",
 	              type: "tel",
 	              placeholder: "+91 98765 43210",
@@ -43513,8 +43518,10 @@
 	              className: `field ${errors.firstName ? 'field-error' : ''}`,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	                className: "label",
+	                htmlFor: "checkout-first-name",
 	                children: "First name"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                id: "checkout-first-name",
 	                className: "input",
 	                placeholder: "First name",
 	                value: form.firstName,
@@ -43527,8 +43534,10 @@
 	              className: `field ${errors.lastName ? 'field-error' : ''}`,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	                className: "label",
+	                htmlFor: "checkout-last-name",
 	                children: "Last name"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                id: "checkout-last-name",
 	                className: "input",
 	                placeholder: "Last name",
 	                value: form.lastName,
@@ -43542,8 +43551,10 @@
 	            className: `field ${errors.address ? 'field-error' : ''}`,
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
+	              htmlFor: "checkout-address",
 	              children: "Address"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              id: "checkout-address",
 	              className: "input",
 	              placeholder: "House no, street, area",
 	              value: form.address,
@@ -43556,8 +43567,10 @@
 	            className: "field",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
+	              htmlFor: "checkout-apartment",
 	              children: "Apartment, suite, etc. (optional)"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              id: "checkout-apartment",
 	              className: "input",
 	              placeholder: "Apartment, floor, unit",
 	              value: form.apartment,
@@ -43567,8 +43580,10 @@
 	            className: "field",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
+	              htmlFor: "checkout-landmark",
 	              children: "Landmark (optional)"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              id: "checkout-landmark",
 	              className: "input",
 	              placeholder: "Nearby landmark for the delivery agent",
 	              value: form.landmark,
@@ -43580,8 +43595,10 @@
 	              className: `field ${errors.city ? 'field-error' : ''}`,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	                className: "label",
+	                htmlFor: "checkout-city",
 	                children: "City"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                id: "checkout-city",
 	                className: "input",
 	                placeholder: "City",
 	                value: form.city,
@@ -43594,8 +43611,10 @@
 	              className: `field ${errors.state ? 'field-error' : ''}`,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	                className: "label",
+	                htmlFor: "checkout-state",
 	                children: "State"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                id: "checkout-state",
 	                className: "input",
 	                placeholder: "State",
 	                value: form.state,
@@ -43608,8 +43627,10 @@
 	              className: `field ${errors.pin ? 'field-error' : ''}`,
 	              children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	                className: "label",
+	                htmlFor: "checkout-pin",
 	                children: "PIN code"
 	              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	                id: "checkout-pin",
 	                className: "input",
 	                placeholder: "560001",
 	                inputMode: "numeric",
@@ -45805,8 +45826,10 @@
 	            className: "field",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
+	              htmlFor: "account-full-name",
 	              children: "Full name"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              id: "account-full-name",
 	              className: "input",
 	              placeholder: "Your name",
 	              autoComplete: "name",
@@ -45818,8 +45841,10 @@
 	            className: "field",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
+	              htmlFor: "account-email",
 	              children: "Email"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              id: "account-email",
 	              className: "input",
 	              type: "email",
 	              placeholder: "you@email.com",
@@ -45832,8 +45857,10 @@
 	            className: "field",
 	            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	              className: "label",
+	              htmlFor: "account-password",
 	              children: "Password"
 	            }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	              id: "account-password",
 	              className: "input",
 	              type: "password",
 	              placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
@@ -48562,8 +48589,10 @@
 	          },
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	            className: "label",
+	            htmlFor: "passport-order-number",
 	            children: "Order number"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            id: "passport-order-number",
 	            className: "input",
 	            value: orderNumber,
 	            onChange: e => setOrderNumber(e.target.value),
@@ -48578,8 +48607,10 @@
 	          },
 	          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
 	            className: "label",
+	            htmlFor: "passport-email",
 	            children: "Email used at checkout"
 	          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+	            id: "passport-email",
 	            className: "input",
 	            type: "email",
 	            value: email,
