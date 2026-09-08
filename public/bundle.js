@@ -31862,15 +31862,18 @@
 	        const card = target.matches('.v2-pc');
 	        const hero = target.matches('.v2-hero');
 	        const art = target.matches('.hd-tile, .hm-brand, .hm-collection, .hm-mom__media');
+	        // Independent panels lift and turn into the existing grid. Never
+	        // transform a page/section ancestor containing sticky or fixed UI.
+	        const direction = stagger % 2 ? 1 : -1;
 	        const animation = target.animate([{
-	          opacity: card ? 0.8 : 0.35,
-	          transform: hero ? 'scale(.965)' : art ? 'perspective(1000px) translateY(42px) rotateX(12deg)' : `translateY(${card ? 18 : 36}px)`
+	          opacity: card ? 0.8 : 0.45,
+	          transform: hero ? 'scale(.965)' : art ? `perspective(1000px) translate3d(${direction * 18}px, 64px, -90px) rotateX(24deg) rotateY(${direction * 14}deg) scale(.92)` : card ? 'perspective(1000px) translateY(30px) rotateX(7deg) scale(.97)' : 'translateY(44px) scale(.94)'
 	        }, {
 	          opacity: 1,
 	          transform: 'none'
 	        }], {
-	          duration: card ? 420 : hero ? 1100 : 850,
-	          delay: Math.min(stagger++ * (card ? 35 : 65), 195),
+	          duration: card ? 650 : hero ? 1100 : art ? 1250 : 1000,
+	          delay: Math.min(stagger++ * (card ? 40 : 85), 255),
 	          easing: 'cubic-bezier(.16,1,.3,1)'
 	          // No backwards fill: visible/LCP media never waits behind a delay.
 	        });
@@ -31959,6 +31962,250 @@
 	  return null;
 	}
 
+	// Decorative art direction uses explicit product/category text, never inferred
+	// health benefits or invented ingredient claims. Unknown products stay neutral.
+	const SECTION_THEMES = {
+	  trending: 'botanical',
+	  'shop-by-category': 'citrus',
+	  'shop-by-concerns': 'hydration',
+	  brands: 'gold',
+	  discover: 'silk',
+	  popular: 'berry',
+	  'mom-trust': 'coconut',
+	  collections: 'floral',
+	  'why-sora-life': 'mineral'
+	};
+	const BACKGROUND_THEMES = {
+	  botanical: {
+	    colors: ['30 154 93', '173 202 58', '223 235 201'],
+	    shapes: ['sprig', 'sprig', 'leaf', 'leaf', 'mote']
+	  },
+	  citrus: {
+	    colors: ['255 128 20', '255 192 42', '254 228 173'],
+	    shapes: ['citrus', 'citrus', 'droplet', 'mote', 'mote']
+	  },
+	  hydration: {
+	    colors: ['0 171 190', '65 133 230', '218 237 239'],
+	    shapes: ['ripple', 'ripple', 'pearl', 'pearl', 'droplet']
+	  },
+	  gold: {
+	    colors: ['195 133 25', '244 184 60', '248 232 195'],
+	    shapes: ['beam', 'beam', 'mote', 'mote', 'mote']
+	  },
+	  silk: {
+	    colors: ['215 114 128', '231 168 100', '247 227 211'],
+	    shapes: ['ribbon', 'ribbon', 'pearl', 'pearl', 'mote']
+	  },
+	  berry: {
+	    colors: ['239 120 26', '229 174 39', '249 226 182'],
+	    shapes: ['berries', 'berries', 'droplet', 'mote', 'mote']
+	  },
+	  coconut: {
+	    colors: ['160 174 110', '185 146 103', '239 230 205'],
+	    shapes: ['coconut', 'coconut', 'leaf', 'droplet', 'mote']
+	  },
+	  floral: {
+	    colors: ['217 76 124', '176 112 192', '246 219 219'],
+	    shapes: ['petal', 'petal', 'petal', 'pearl', 'mote']
+	  },
+	  nutrient: {
+	    colors: ['47 158 118', '216 178 58', '235 228 199'],
+	    shapes: ['capsule', 'capsule', 'orbit', 'mote', 'mote']
+	  },
+	  oil: {
+	    colors: ['182 135 48', '221 176 86', '249 231 191'],
+	    shapes: ['droplet', 'droplet', 'ribbon', 'mote', 'mote']
+	  },
+	  mineral: {
+	    colors: ['131 155 161', '174 180 175', '232 235 227'],
+	    shapes: ['crystal', 'crystal', 'beam', 'mote', 'mote']
+	  }
+	};
+	function productBackgroundTheme(product) {
+	  if (!product) return 'mineral';
+	  const name = String(product.name || '').toLowerCase();
+	  const category = String(product.category || '').toLowerCase();
+	  if (/device|apparatus|massager|purifier|bracelet/.test(name)) return 'mineral';
+	  // Named families take precedence over the broader category fallback.
+	  if (/\b(capsules?|tablets?|protein powder)\b/.test(name)) return 'nutrient';
+	  if (/\b(coconut)\b/.test(name)) return 'coconut';
+	  if (/\b(lemon|orange|citrus|vitamin[ -]?c|grape ?fruit)\b/.test(name)) return 'citrus';
+	  if (/\b(rose|lavender|jasmine|hibiscus)\b/.test(name)) return 'floral';
+	  if (/sea ?buckthorn|\bberr(y|ies)\b/.test(name)) return 'berry';
+	  if (/\b(peppermint|mint|neem|tulsi|aloe|herbal|rosemary)\b/.test(name)) return 'botanical';
+	  if (/\boil\b/.test(name)) return 'oil';
+	  if (/cream|lotion|butter|mask/.test(name)) return 'silk';
+	  if (/serum|wash|gel|toner|hydrat/.test(name)) return 'hydration';
+	  if (/supplement|body-building/.test(category)) return 'nutrient';
+	  if (/skin|bath|personal-care/.test(category)) return 'hydration';
+	  if (/hair/.test(category)) return 'silk';
+	  if (/juices|drinks/.test(category)) return 'citrus';
+	  return 'mineral';
+	}
+
+	const supportsScrollBackground = path => path === '/' || path === '/shop' || /^\/(category|product)\/[^/]+\/?$/.test(path);
+
+	// The listing body excludes its sibling filter dialog. Isolating the entire
+	// shop would incorrectly trap that dialog below the global sticky header.
+	const TARGETS = '.v2-home > .hm-section:not([data-home-section="creator"]), .v2-home > .hd-section, .v2-shop__body, .v2-pdp-root > .pdp, .v2-pdp-root > .pdp-flow, .pdp-recommendations';
+
+	// Small, bounded CSS scenes: no images, canvas, dependencies or scroll state in
+	// React. Only visible sections run, with one batched update per scroll frame.
+	function mountScrollBackground(root, context = {}) {
+	  if (!window.matchMedia || !window.IntersectionObserver) return;
+	  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+	  const scenes = new Map();
+	  const visible = new Set();
+	  let frame = 0;
+	  let active = false;
+	  function stop() {
+	    cancelAnimationFrame(frame);
+	    frame = 0;
+	    active = false;
+	    for (const scene of scenes.values()) scene.classList.remove('sl-bg--moving');
+	  }
+	  function paint() {
+	    frame = 0;
+	    // Read all layout before writing styles; decorations never affect layout.
+	    const boxes = [...visible].map(host => [host, host.getBoundingClientRect()]);
+	    for (const [host, box] of boxes) {
+	      const scene = scenes.get(host);
+	      const offset = Math.max(0, Math.min(-box.top, box.height - window.innerHeight));
+	      const progress = Math.max(0, Math.min(1, (window.innerHeight - box.top) / (window.innerHeight + box.height)));
+	      scene.style.setProperty('--sl-bg-y', `${offset.toFixed(1)}px`);
+	      scene.style.setProperty('--sl-bg-drift', `${((progress - .5) * 100).toFixed(1)}px`);
+	      scene.style.setProperty('--sl-bg-turn', `${(progress * 80).toFixed(1)}deg`);
+	      // Long catalogue pages also change scene with scroll depth.
+	      if (host.matches('.v2-shop__body') && !context.category) {
+	        const themes = ['botanical', 'hydration', 'nutrient'];
+	        setTheme(scene, themes[Math.floor(Math.max(0, -box.top) / (window.innerHeight * 1.2)) % themes.length]);
+	      }
+	      scene.classList.toggle('sl-bg--moving', active && !document.hidden && !reduced.matches);
+	    }
+	  }
+	  function wake() {
+	    if (reduced.matches || document.hidden) return;
+	    active = true;
+	    if (!frame) frame = requestAnimationFrame(paint);
+	    // CSS keeps visible scenes alive without a JavaScript animation loop.
+	    // Intersection, tab visibility and reduced-motion still pause all motion.
+	  }
+	  const observer = new IntersectionObserver(entries => {
+	    for (const {
+	      target,
+	      isIntersecting
+	    } of entries) {
+	      if (isIntersecting) visible.add(target);else {
+	        visible.delete(target);
+	        scenes.get(target)?.classList.remove('sl-bg--moving');
+	      }
+	    }
+	    wake();
+	  }, {
+	    rootMargin: '0px',
+	    threshold: 0
+	  });
+	  function setTheme(scene, name) {
+	    if (scene.dataset.theme === name) return;
+	    const theme = BACKGROUND_THEMES[name] || BACKGROUND_THEMES.mineral;
+	    scene.dataset.theme = name;
+	    theme.colors.forEach((color, index) => scene.style.setProperty(`--sl-bg-${['a', 'b', 'c'][index]}`, color));
+	    const shapes = ['wash', ...theme.shapes].map((kind, index) => {
+	      const shape = document.createElement('i');
+	      shape.className = `sl-bg__${kind}`;
+	      shape.style.setProperty('--sl-shape-index', index);
+	      return shape;
+	    });
+	    scene.replaceChildren(...shapes);
+	  }
+	  function discover() {
+	    for (const [host, scene] of scenes) {
+	      if (!root.contains(host)) {
+	        observer.unobserve(host);
+	        visible.delete(host);
+	        scene.remove();
+	        host.classList.remove('sl-bg-host');
+	        scenes.delete(host);
+	      }
+	    }
+	    for (const host of root.querySelectorAll(TARGETS)) {
+	      if (scenes.has(host)) continue;
+	      const scene = document.createElement('div');
+	      scene.className = 'sl-bg';
+	      scene.setAttribute('aria-hidden', 'true');
+	      const isPdp = host.matches('.pdp, .pdp-flow, .pdp-recommendations');
+	      const section = host.dataset.homeSection;
+	      const theme = isPdp ? productBackgroundTheme(context.product) : SECTION_THEMES[section] || (context.category ? productBackgroundTheme({
+	        category: context.category
+	      }) : 'botanical');
+	      scene.dataset.placement = host.matches('.pdp-flow') ? 'story' : isPdp ? 'product' : 'section';
+	      setTheme(scene, theme);
+	      scenes.set(host, scene);
+	      host.classList.add('sl-bg-host');
+	      host.appendChild(scene);
+	      observer.observe(host);
+	    }
+	  }
+	  function preference() {
+	    if (reduced.matches || document.hidden) stop();else wake();
+	  }
+	  discover();
+	  const mutation = new MutationObserver(discover);
+	  mutation.observe(root, {
+	    childList: true,
+	    subtree: true
+	  });
+	  window.addEventListener('scroll', wake, {
+	    passive: true
+	  });
+	  window.addEventListener('resize', wake, {
+	    passive: true
+	  });
+	  document.addEventListener('visibilitychange', preference);
+	  reduced.addEventListener('change', preference);
+	  return () => {
+	    stop();
+	    observer.disconnect();
+	    mutation.disconnect();
+	    window.removeEventListener('scroll', wake);
+	    window.removeEventListener('resize', wake);
+	    document.removeEventListener('visibilitychange', preference);
+	    reduced.removeEventListener('change', preference);
+	    for (const [host, scene] of scenes) {
+	      host.classList.remove('sl-bg-host');
+	      scene.remove();
+	    }
+	    scenes.clear();
+	    visible.clear();
+	  };
+	}
+
+	// Decoration is independent of content, image loading and entrance animations.
+	function StorefrontBackground() {
+	  const {
+	    pathname
+	  } = useLocation();
+	  const ready = useBootstrapReady();
+	  reactExports.useEffect(() => {
+	    if (!ready || !supportsScrollBackground(pathname)) return;
+	    const root = document.querySelector('.page-main');
+	    if (root) {
+	      const segment = pathname.split('/')[2] || '';
+	      let slug;
+	      try {
+	        slug = decodeURIComponent(segment);
+	      } catch {
+	        slug = segment;
+	      }
+	      return mountScrollBackground(root, {
+	        product: pathname.startsWith('/product/') ? productBySlug[slug] : undefined,
+	        category: pathname.startsWith('/category/') ? slug : undefined
+	      });
+	    }
+	  }, [pathname, ready]);
+	  return null;
+	}
+
 	function ScrollToTop() {
 	  const {
 	    pathname
@@ -31979,7 +32226,7 @@
 	  const dataShapedRoute = pathname === '/' || pathname === '/shop' || /^\/category\/[^/]+\/?$/.test(pathname) || /^\/product\/[^/]+\/?$/.test(pathname);
 	  const settling = dataShapedRoute && !bootstrapReady;
 	  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(ScrollToTop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(StorefrontMotion, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Header, {}), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
+	    children: [/*#__PURE__*/jsxRuntimeExports.jsx(ScrollToTop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(StorefrontMotion, {}), /*#__PURE__*/jsxRuntimeExports.jsx(StorefrontBackground, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Header, {}), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
 	      className: `page-main${settling ? ' page-main--settling' : ''}`,
 	      "aria-busy": settling || undefined,
 	      children: /*#__PURE__*/jsxRuntimeExports.jsx(Outlet, {})
