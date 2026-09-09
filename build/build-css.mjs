@@ -1,13 +1,17 @@
 // ============================================================
 // SORA LIFE — stylesheet bundler
 //
-//   node scripts/build-css.mjs
+//   node build/build-css.mjs        (rollup.config.mjs also calls buildCss())
 //
 // The storefront used to link 30 separate stylesheets from index.html. Every
 // one of them is render-blocking, so on a mid-range Android over Slow 4G the
 // browser opened 30 requests and could not paint until the last of them
 // landed — and, because the assets are unhashed and served
 // `max-age=0, must-revalidate`, a repeat visit re-validated all 30 again.
+//
+// It lives in build/ rather than scripts/ because .vercelignore excludes
+// scripts/ from the deployment — a build step in there is not uploaded, and
+// `npm run build` fails on Vercel while succeeding locally.
 //
 // This concatenates them, IN THE EXACT ORDER index.html declared them, into
 // two files:
@@ -89,8 +93,13 @@ function bundle(files, outFile, label) {
   return out.length;
 }
 
-const a = bundle(STOREFRONT, 'public/app.css', 'storefront');
-const b = bundle(DEFERRED, 'public/app-deferred.css', 'admin / passport / creator');
+export function buildCss() {
+  const a = bundle(STOREFRONT, 'public/app.css', 'storefront');
+  const b = bundle(DEFERRED, 'public/app-deferred.css', 'admin / passport / creator');
+  console.log(`  css: public/app.css          ${STOREFRONT.length} sheets, ${(a / 1024).toFixed(0)} KB raw`);
+  console.log(`  css: public/app-deferred.css ${DEFERRED.length} sheets, ${(b / 1024).toFixed(0)} KB raw (not render-blocking)`);
+  return { storefront: a, deferred: b };
+}
 
-console.log(`  css: public/app.css          ${STOREFRONT.length} sheets, ${(a / 1024).toFixed(0)} KB raw`);
-console.log(`  css: public/app-deferred.css ${DEFERRED.length} sheets, ${(b / 1024).toFixed(0)} KB raw (not render-blocking)`);
+// Runnable on its own for a CSS-only rebuild during design work.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) buildCss();

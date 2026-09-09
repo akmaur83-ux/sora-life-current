@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import dotenv from 'dotenv';
+import { buildCss } from './build/build-css.mjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import replace from '@rollup/plugin-replace';
@@ -234,6 +235,15 @@ export default {
     inlineDynamicImports: true,
   },
   plugins: [
+    // The storefront stylesheet is generated, not hand-linked: index.html
+    // loads one public/app.css instead of the 30 render-blocking <link>s it
+    // used to. Running it here rather than as a separate npm script keeps the
+    // CSS and the JS in lockstep, and keeps the build working on Vercel,
+    // whose .vercelignore excludes scripts/ from the upload.
+    {
+      name: 'build-storefront-css',
+      buildStart() { buildCss(); },
+    },
     replace({
       preventAssignment: true,
       'process.env.NODE_ENV': JSON.stringify('production'),

@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-css.mjs && rollup -c",
+    "build": "rollup -c",
     "watch": "rollup -c -w",
     "serve": "python server.py",
-    "build:css": "node scripts/build-css.mjs"
+    "build:css": "node build/build-css.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
