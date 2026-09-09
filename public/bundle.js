@@ -36643,8 +36643,11 @@
 	 * One-time (idempotent) import of the 149 real Biosash products from the
 	 * bundled biosash.js into Supabase. Runs as the logged-in admin, so it is
 	 * subject to the same RLS as any other admin write. Upserts on biosash_id,
-	 * so it's safe to run more than once. Preserves the exact discount-tier
-	 * assignment already live on the storefront so nothing visibly changes.
+	 * so it's safe to run more than once.
+	 *
+	 * `is_active` and `description` are deliberately NOT in the payload — see the
+	 * comment on the row below. Every other column here is still authoritative
+	 * and will overwrite what the row holds.
 	 */
 	async function adminImportBiosashCatalog(onProgress) {
 	  const rows = BIOSASH_PRODUCTS.map((p, i) => {
@@ -36652,18 +36655,38 @@
 	    const idNum = parseInt(String(p.id).replace(/\D/g, ''), 10) || i;
 	    const discountPercent = originalPrice > 0 ? DISCOUNT_TIERS$1[idNum % DISCOUNT_TIERS$1.length] : 0;
 	    const salePrice = originalPrice > 0 ? Math.round(originalPrice * (1 - discountPercent / 100)) : 0;
+	    // is_active and description are ABSENT, never defaulted — the same rule
+	    // productToDbRow applies, and for the same reason: PostgREST's
+	    // ON CONFLICT DO UPDATE only assigns the columns it is given, so a key
+	    // that is missing leaves the live value alone.
+	    //
+	    // Both used to be written on every row, which made this button — sitting
+	    // on the admin Dashboard, the first page an admin lands on — a one-click
+	    // way to undo two decisions the bundled data knows nothing about:
+	    //
+	    //   is_active: true   reactivated all 30 products delisted for making
+	    //                     disease and treatment claims, putting them back on
+	    //                     sale. That set is a compliance decision; a catalogue
+	    //                     refresh has no business overruling it.
+	    //   description: ''   blanked all 148 ingested descriptions. The Biosash
+	    //                     ingest is fill-only and will never rewrite a row it
+	    //                     has already populated, so that copy does not come
+	    //                     back on its own.
+	    //
+	    // Omitting them costs nothing on a genuinely new product: is_active is
+	    // NOT NULL DEFAULT true, so an inserted row is active exactly as before,
+	    // and description is nullable, so it inserts empty and waits for the
+	    // ingest or an author. Only the UPDATE half of the upsert changes.
 	    return {
 	      biosash_id: p.id,
 	      name: p.name,
 	      slug: p.slug,
-	      description: '',
 	      category: p.category,
 	      image_url: p.image,
 	      gallery_urls: p.gallery || [],
 	      original_price: originalPrice,
 	      discount_percent: discountPercent,
 	      sale_price: salePrice,
-	      is_active: true,
 	      form: p.form || null,
 	      stock: !!p.inStock,
 	      // boolean "in stock" flag — the DB column is boolean, not a quantity
