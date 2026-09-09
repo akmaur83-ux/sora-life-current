@@ -34,11 +34,25 @@ export function loadDeferredStyles() {
 /** Called once at startup, before the app renders. */
 export function scheduleDeferredStyles() {
   if (typeof window === 'undefined') return;
+
   if (DEFERRED_ROUTES.test(window.location.pathname)) {
     loadDeferredStyles();
-  } else if (typeof window.requestIdleCallback === 'function') {
-    window.requestIdleCallback(loadDeferredStyles, { timeout: 4000 });
-  } else {
-    window.addEventListener('load', () => setTimeout(loadDeferredStyles, 1200), { once: true });
+    return;
   }
+
+  // Storefront. Wait for `load` BEFORE going idle: on Slow 4G an idle
+  // callback fires while the bundle and fonts are still arriving, so a
+  // 54 KB stylesheet for routes nobody is on ends up competing for the
+  // very bandwidth first paint is waiting on. Measured: it was showing up
+  // as the fifth-heaviest resource on the homepage. After `load` there is
+  // nothing left to starve.
+  const afterLoad = () => {
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(loadDeferredStyles, { timeout: 10000 });
+    } else {
+      setTimeout(loadDeferredStyles, 1500);
+    }
+  };
+  if (document.readyState === 'complete') afterLoad();
+  else window.addEventListener('load', afterLoad, { once: true });
 }
