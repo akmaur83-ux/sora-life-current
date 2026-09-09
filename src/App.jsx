@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import Home from './pages/Home.jsx';
 import Shop from './pages/Shop.jsx';
@@ -22,6 +22,7 @@ import NotFound from './pages/NotFound.jsx';
 import AdminLogin from './pages/AdminLogin.jsx';
 import { useAdminAuth } from './lib/adminAuth.jsx';
 import { branding } from './lib/settings.js';
+import { DEFERRED_ROUTES, loadDeferredStyles } from './lib/deferredStyles.js';
 
 import AdminLayout from './admin/AdminLayout.jsx';
 import Dashboard from './admin/pages/Dashboard.jsx';
@@ -91,6 +92,11 @@ function useBrandingEffects() {
 
 export default function App() {
   useBrandingEffects();
+  // Admin / passport / creator CSS is not in index.html. Startup already
+  // fetches it on idle, so it is normally cached long before anyone navigates;
+  // this covers the case where someone gets there first. Idempotent.
+  const { pathname } = useLocation();
+  useEffect(() => { if (DEFERRED_ROUTES.test(pathname)) loadDeferredStyles(); }, [pathname]);
   return (
     <>
       {/* Records ?ref= / &trk= landings for the Creator Program. Renders nothing. */}

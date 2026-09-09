@@ -10,10 +10,15 @@ import { applyCategories } from './data/categories.js';
 import { applyBranding, applyAnnouncement, applyHomepage, applyContact, applyHeroSlides, applyStorefrontTheme } from './lib/settings.js';
 import { applyPromotions } from './lib/promotions.js';
 import { BootstrapReadyContext } from './lib/bootstrapReady.js';
+import { scheduleDeferredStyles } from './lib/deferredStyles.js';
 import {
   fetchPublicCatalog, fetchPublicCategories, fetchPublicHeroSlides, fetchPublicSettings,
   fetchPublicVariants, fetchPublicProductMedia, fetchPublicPromotions,
 } from './lib/adminApi.js';
+
+// Admin / passport / creator styles are no longer linked from index.html.
+// See src/lib/deferredStyles.js for what this loads and when.
+scheduleDeferredStyles();
 
 class ErrorBoundary extends React.Component {
   constructor(p) { super(p); this.state = { err: null }; }

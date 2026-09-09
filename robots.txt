@@ -1,0 +1,11 @@
+# SORA LIFE — https://www.soralife.shop
+User-agent: *
+Allow: /
+
+# Nothing here is useful to a search engine, and some of it is private.
+Disallow: /admin
+Disallow: /admin/
+Disallow: /checkout
+Disallow: /account
+Disallow: /invoice/
+Disallow: /passport/

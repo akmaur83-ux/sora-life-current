@@ -406,3 +406,42 @@
     animation: none !important;
   }
 }
+
+/* ------------------------------------------------------------------
+   Touch targets — hit area only, never the painted size.
+
+   A pre-launch audit hit-tested every interactive control at 360/390/430.
+   The header's menu / search / cart already clear 44x44 through
+   .v2-iconbtn::after, and the drawer links are 43px, so this covers the
+   three that genuinely fell short on a phone. Each grows the tappable
+   region with a transparent pseudo-element; no control changes size,
+   colour or position, so the card grid and hero art direction are
+   untouched.
+   ------------------------------------------------------------------ */
+
+/* Carousel dots paint as 2px rules — a 2px-tall tap target. The dots sit
+   12px from the bottom of the hero, which has overflow:hidden, so a centred
+   expander loses its lower half; this one is anchored to the hero's bottom
+   edge and grows upward over the artwork, where there is room. Height only —
+   the 5px gap between dots is preserved, so neighbouring regions cannot
+   overlap and steal each other's taps. */
+.v2-hero__dots > button { position:relative; }
+.v2-hero__dots > button::after {
+  content:""; position:absolute;
+  bottom:-12px; top:auto; left:0; right:0; height:46px;
+}
+
+/* "Add to cart" is 34px tall on phones (42/46 at the larger breakpoints, which
+   already pass). The card body's own bottom padding absorbs the 5px, so
+   nothing is clipped by .v2-pc's overflow:hidden. */
+.v2-pc__cta { position:relative; }
+.v2-pc__cta::after { content:""; position:absolute; inset:-6px 0; }
+
+/* The wishlist heart already had a centred 44x44 expander from .v2-iconbtn,
+   but the button sits 8px from the card corner, so .v2-pc { overflow:hidden }
+   clipped the half that fell outside. Re-anchoring the same 44x44 region to
+   the card corner puts all of it inside the card. */
+.v2-pc__wish::after {
+  top:-8px; right:-8px; left:auto; bottom:auto;
+  transform:none; width:44px; height:44px;
+}
