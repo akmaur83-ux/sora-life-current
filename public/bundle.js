@@ -32046,6 +32046,29 @@
 
 	const supportsScrollBackground = path => path === '/' || path === '/shop' || /^\/(category|product)\/[^/]+\/?$/.test(path);
 
+	// The homepage is the one route where this effect is expensive, and it is
+	// expensive because of how MANY scenes it mounts rather than because of the
+	// effect itself: one per section, nine of them carrying 54 shapes, where a
+	// category page mounts one and a product page three.
+	//
+	// Measured on a Moto-G-class profile over Slow 4G with a 4x CPU throttle,
+	// scrolling the homepage serviced 33.8 frames per second with the scenes
+	// mounted against 135.7 with them off, and produced six long tasks (worst
+	// 89 ms). Category and product pages measured flat in the same run — 130.6
+	// vs 134.0 and 134.6 vs 140.4 — so they keep their scenes at every width.
+	//
+	// 1024px is this codebase's own desktop boundary, the widest breakpoint the
+	// v2 sheets use. The gate is on width rather than pointer type because a
+	// narrow desktop window pays the same cost a phone does.
+	const HOME_SCENES_MIN_WIDTH = 1024;
+	const HOME_SCENES_MEDIA = `(min-width: ${HOME_SCENES_MIN_WIDTH}px)`;
+
+	/**
+	 * Whether decorative scenes should mount for this route at this viewport.
+	 * Only the homepage consults the width; every other route ignores it.
+	 */
+	const scenesAllowedAt = (path, wideViewport) => supportsScrollBackground(path) && (path !== '/' || !!wideViewport);
+
 	// The listing body excludes its sibling filter dialog. Isolating the entire
 	// shop would incorrectly trap that dialog below the global sticky header.
 	const TARGETS = '.v2-home > .hm-section:not([data-home-section="creator"]), .v2-home > .hd-section, .v2-shop__body, .v2-pdp-root > .pdp, .v2-pdp-root > .pdp-flow, .pdp-recommendations';
@@ -32181,14 +32204,51 @@
 	  };
 	}
 
+	// Tracks the desktop breakpoint so that crossing it mounts or unmounts the
+	// homepage's scenes, instead of leaving whatever width the first render
+	// happened to see. Rotating a tablet and dragging a desktop window narrow
+	// both come through here.
+	function useWideViewport() {
+	  const [wide, setWide] = reactExports.useState(() => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(HOME_SCENES_MEDIA).matches);
+	  reactExports.useEffect(() => {
+	    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+	    const query = window.matchMedia(HOME_SCENES_MEDIA);
+	    const sync = () => setWide(query.matches);
+	    // The viewport may have changed between first render and this effect.
+	    sync();
+	    // Both signals, deliberately. matchMedia's change event is the right one
+	    // and fires on a real window drag or a rotation, but some environments
+	    // resize the viewport without dispatching it (Chrome's device-metrics
+	    // emulation is one — query.matches flips while change never fires), which
+	    // would strand the scenes in whatever state the last navigation left.
+	    // resize is dispatched much more widely, and re-reading query.matches
+	    // makes the extra listener idempotent: React drops the update when the
+	    // boolean has not actually changed, so a scroll-driven resize storm costs
+	    // one media-query read per event and no re-render.
+	    query.addEventListener('change', sync);
+	    window.addEventListener('resize', sync, {
+	      passive: true
+	    });
+	    return () => {
+	      query.removeEventListener('change', sync);
+	      window.removeEventListener('resize', sync);
+	    };
+	  }, []);
+	  return wide;
+	}
+
 	// Decoration is independent of content, image loading and entrance animations.
 	function StorefrontBackground() {
 	  const {
 	    pathname
 	  } = useLocation();
 	  const ready = useBootstrapReady();
+	  const wide = useWideViewport();
 	  reactExports.useEffect(() => {
-	    if (!ready || !supportsScrollBackground(pathname)) return;
+	    // Below the desktop breakpoint the homepage mounts nothing at all — not
+	    // hidden with CSS, never created — so the per-frame custom-property
+	    // writes in mountScrollBackground never run either.
+	    if (!ready || !scenesAllowedAt(pathname, wide)) return;
 	    const root = document.querySelector('.page-main');
 	    if (root) {
 	      const segment = pathname.split('/')[2] || '';
@@ -32203,7 +32263,7 @@
 	        category: pathname.startsWith('/category/') ? slug : undefined
 	      });
 	    }
-	  }, [pathname, ready]);
+	  }, [pathname, ready, wide]);
 	  return null;
 	}
 
@@ -63527,6 +63587,16 @@
 	          path: "/returns",
 	          element: /*#__PURE__*/jsxRuntimeExports.jsx(EditableLegal, {
 	            doc: "returns"
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "/refund-policy",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(EditableLegal, {
+	            doc: "returns"
+	          })
+	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+	          path: "/shipping-policy",
+	          element: /*#__PURE__*/jsxRuntimeExports.jsx(Legal, {
+	            doc: "shipping"
 	          })
 	        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
 	          path: "*",
