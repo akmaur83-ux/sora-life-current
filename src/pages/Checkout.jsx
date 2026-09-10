@@ -9,6 +9,7 @@ import { useCustomerAuth } from '../lib/customerAuth.jsx';
 import { getProfile, listAddresses, createAddress, updateAddress, setDefaultAddress } from '../lib/customerData.js';
 import { money } from '../lib/format.js';
 import { loadRazorpayScript, createPaymentOrder, verifyPayment, newIdempotencyKey } from '../lib/payments.js';
+import { useCartQuote } from '../lib/cartQuote.js';
 
 // Fields that come from a saved address. Editing any of these by hand clears
 // the "selected saved address" highlight so the form reads as custom.
@@ -27,7 +28,9 @@ const EMPTY_FORM = {
 };
 
 export default function Checkout() {
-  const { cart, cartDetailed, subtotal, mrpTotal, savings, dispatch, blockedCartLines } = useStore();
+  const {
+    cart, cartDetailed, subtotal, mrpTotal, savings, dispatch, blockedCartLines, couponCode,
+  } = useStore();
   const [step, setStep] = useState(0);
   const [delivery, setDelivery] = useState('std');
   const [pay, setPay] = useState('online');
@@ -235,6 +238,12 @@ export default function Checkout() {
   const shipBase = deliveryFee;
   const total = Math.max(0, subtotal + shipBase);
 
+  // Live server pricing for the CHOSEN delivery method, including the coupon
+  // carried over from the cart. Switching Express to Standard re-quotes, so
+  // the summary always reflects the option actually selected rather than
+  // waiting for create-order to correct it.
+  const quote = useCartQuote(cartDetailed, couponCode, delivery);
+
   if (placed) {
     return (
       <div className="v2-checkout-root v2-checkout-confirm-root">
@@ -319,6 +328,13 @@ export default function Checkout() {
         customer: form,
         paymentMethod: pay === 'cod' ? 'cod' : 'online',
         idempotencyKey: submitKey.current,
+        // The code only. create-order revalidates it against this buyer and
+        // this basket and computes the discount itself.
+        couponCode,
+        // What the customer was last shown, so a drift is logged server-side.
+        quotedTotals: quote.breakdown
+          ? { grandTotal: quote.breakdown.grandTotal, couponDiscount: quote.breakdown.couponDiscount }
+          : null,
       });
 
       if (created.breakdown) setServerBreakdown(created.breakdown);
@@ -392,6 +408,20 @@ export default function Checkout() {
       rzp.open();
     } catch (err) {
       inFlight.current = false; setProcessing(false);
+
+      // The coupon stopped applying between the quote and this submit — it
+      // expired, ran out, or the basket changed. Nothing has been charged and
+      // no order exists. Drop the code and say so, rather than leaving the
+      // customer to press Pay again against a total that will not be honoured.
+      if (err.data?.couponRejected) {
+        dispatch({ type: 'CLEAR_COUPON' });
+        // A fresh key: the next attempt is a genuinely different order, priced
+        // without the coupon, and must not collapse into this one.
+        submitKey.current = null;
+        setPayError(`${err.message} Your total has been updated — please review it and try again.`);
+        return;
+      }
+
       setPayError(err.message || 'We could not start your payment. Please try again.');
     }
   };
@@ -569,10 +599,12 @@ export default function Checkout() {
                 </div>
               ))}
             </div>
-            {/* Server breakdown once the order has been priced; the local
-                estimate only until then. The client never invents tax. */}
+            {/* Three sources, in order of authority: the breakdown the order
+                was actually priced with, then the live quote for the selected
+                delivery method, then the local estimate. The client never
+                invents tax, and never a discount. */}
             <PriceSummary
-              breakdown={serverBreakdown}
+              breakdown={serverBreakdown || quote.breakdown}
               fallback={{ itemTotal: subtotal, mrpTotal, shipping: shipBase }}
             />
             <Link to="/cart" className="summary__continue">Edit cart</Link>

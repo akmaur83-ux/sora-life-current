@@ -613,6 +613,74 @@
 .legal-admin-faq { border-bottom: 1px solid #DDDCD4; margin-bottom: 24px; padding-bottom: 24px; }
 .legal-admin-faq .label { margin-top: 12px; }
 
+/* ---- Coupons ------------------------------------------------
+   The ticket preview reuses the storefront's .pdp-coupon rules, which live in
+   the STOREFRONT bundle. Admin CSS is deferred and loads after it, so these
+   only need to correct the surroundings — the ticket itself already looks
+   exactly as it will on a product page, which is the point of the preview. */
+
+.adm-coupon-form { margin-bottom: 20px; max-width: 760px; }
+
+.adm-coupon-sub {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  margin: var(--sp-5) 0 4px;
+}
+.adm-coupon-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--sp-3);
+  max-width: 62ch;
+}
+.adm-coupon-sm { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+.adm-coupon-msgs { margin: 0; padding-left: 18px; }
+.adm-coupon-msgs li + li { margin-top: 4px; }
+
+/* The preview sits on the admin's own card, so the notch cut-outs have to be
+   painted in THAT colour rather than the storefront surface they default to. */
+.adm-coupon-preview {
+  list-style: none;
+  margin: 0 0 var(--sp-4);
+  padding: 0;
+  max-width: 420px;
+  border: 0;
+}
+.adm-coupon-preview .pdp-coupon {
+  background-image:
+    radial-gradient(circle at left  50%, var(--paper) 11px, transparent 11.5px),
+    radial-gradient(circle at right 50%, var(--paper) 11px, transparent 11.5px);
+}
+
+.adm-coupon-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.adm-coupon-badge.is-live      { background: var(--forest-100); color: var(--forest-700); }
+.adm-coupon-badge.is-scheduled { background: var(--honey-100);  color: var(--honey-700); }
+.adm-coupon-badge.is-expired   { background: var(--sand);       color: var(--ink-500); }
+.adm-coupon-badge.is-exhausted { background: var(--clay-100);   color: var(--clay-600); }
+.adm-coupon-badge.is-inactive  { background: var(--line-soft);  color: var(--ink-500); }
+
+.adm-coupon-ledger { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.adm-coupon-ledger li {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: baseline;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.adm-coupon-ledger strong { color: var(--color-text); font-size: var(--text-sm); }
+
+@media (max-width: 720px) {
+  .adm-coupon-form .adm-grid2 { grid-template-columns: 1fr; }
+}
+
 /* ═══ src/styles/passport.css ═══ */
 /* ============================================================
    PURCHASE PASSPORT

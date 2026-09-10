@@ -283,9 +283,16 @@ useEffect(() => {
             <span className="pdp__tax">Incl. of all taxes</span>
           </div>
 
-          {/* Run 2 mounts recommended coupon cards here, directly under the
-              price. Renders nothing today, and leaves no gap while it does. */}
-          <PdpCouponSlot product={product} />
+          {/* Offers on this product, directly under the price. Tickets carry
+              the terms and the code — never a discounted price, because what a
+              coupon is worth depends on the whole basket. Renders nothing when
+              no coupon applies, leaving no gap. The variant is passed so the
+              offer is judged against the pack the customer actually selected;
+              only a priced variant has a server-side row to judge against. */}
+          <PdpCouponSlot
+            product={product}
+            variantId={variant?.price != null ? (variant.id ?? null) : null}
+          />
 
           <ProductClaims product={product} />
 

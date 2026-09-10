@@ -174,8 +174,10 @@ test('publicCouponView renders a legacy row without inventing copy', () => {
   const legacy = { ...base() };
   delete legacy.title; delete legacy.description;
   const view = publicCouponView(legacy, 200);
+  // Grouped the way the storefront groups money, because these strings render
+  // directly beside figures the browser formatted with money().
   assert.equal(view.title, '₹200 off', 'title falls back to the coupon\'s own terms');
-  assert.equal(view.description, 'On orders above ₹1000');
+  assert.equal(view.description, 'On orders above ₹1,000');
   assert.equal(view.code, 'SAVE200');
 });
 

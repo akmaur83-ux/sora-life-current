@@ -4,43 +4,49 @@ import ProductImage from '../components/ProductImage.jsx';
 import ProductRail from '../components/ProductRail.jsx';
 import { useStore } from '../lib/store.jsx';
 import PriceSummary from '../components/PriceSummary.jsx';
+import CartCoupons from '../components/CartCoupons.jsx';
+import { useCartQuote } from '../lib/cartQuote.js';
 import PromoRail from '../components/promo/PromoRail.jsx';
 import { money } from '../lib/format.js';
 import { getBestsellers } from '../data/products.js';
 import { promotionsSource } from '../lib/promotions.js';
 
 // ============================================================
-// WHY THERE IS NO COUPON FIELD HERE
+// THE COUPON FIELD, AND WHY IT IS BACK
 //
-// There used to be one, backed by a hard-coded map:
+// There used to be one backed by a hard-coded map:
 //   const COUPONS = { SORA10: 0.1, WELCOME: 0.15 }
 // Neither code existed in the coupons table, the API, or any migration. The
 // cart subtracted the percentage locally, so a ₹51,429 basket displayed
 // ₹43,715 with WELCOME and then charged ₹51,429 at checkout — the discount
-// was never real and was never sent anywhere.
+// was never real and was never sent anywhere. It was removed, and this note
+// recorded exactly what would have to exist before it could return:
 //
-// Coupons ARE implemented, correctly, on the server: create-order accepts a
-// `couponCode`, resolves it with the service-role key, applies the discount,
-// and consumes it (api/razorpay/create-order.js). None of that is touched.
+//   "What is missing is a way to VALIDATE a code before the customer
+//    commits ... There is no quote step to show a validated total in."
 //
-// What is missing is a way to VALIDATE a code before the customer commits.
-// migration 0006 is deliberate about this: "No public read: a customer must
-// not be able to enumerate every coupon." So the browser cannot price a code,
-// and the only server call that can is create-order — which already creates
-// the order row, and for COD completes the purchase outright. There is no
-// quote step to show a validated total in.
-//
-// Rather than ship a second, fake pricing engine in the client, the entry
-// point is removed until a real pre-order validation path exists. The cart
-// now shows only totals it can prove. See PromoRail for the matching copy.
+// POST /api/coupons/quote is that step. It prices the cart server-side with
+// api/_lib/pricing.js — the same function create-order uses — and returns a
+// breakdown. The field below sends a code and renders the answer; it does not
+// contain a single arithmetic operation, and migration 0006's "no public
+// read" rule is untouched, because the browser still cannot read the coupons
+// table. It asks the server about one basket and gets one answer.
 // ============================================================
 
 export default function Cart() {
-  const { cartDetailed, savedDetailed, dispatch, subtotal, mrpTotal, cartCount, blockedCartLines } = useStore();
+  const {
+    cartDetailed, savedDetailed, dispatch, subtotal, mrpTotal, cartCount,
+    blockedCartLines, couponCode,
+  } = useStore();
 
   // Cart has no delivery-method selector; its estimate mirrors the default
   // Standard option used by Checkout and the server (free shipping).
   const shipping = 0;
+
+  // Re-quoted on every cart mutation and every code change, with the previous
+  // request aborted — see the note in lib/cartQuote.js. A discount must never
+  // survive a change to the basket it was calculated against.
+  const quote = useCartQuote(cartDetailed, couponCode, 'std');
 
   if (!cartDetailed.length) {
     return (
@@ -168,13 +174,26 @@ export default function Cart() {
                   checkout pricing. Nothing here auto-applies. */}
               {promotionsSource === 'supabase' && <PromoRail place="cart" variant="compact" />}
 
-              {/* Cart shows the client-side estimate; checkout replaces it with
-                  the server-computed breakdown (taxes/fees included). Every
-                  figure here is derived from the live catalogue — the cart no
-                  longer subtracts anything it cannot prove. */}
-              <PriceSummary
-                fallback={{ itemTotal: subtotal, mrpTotal, shipping }}
+              <CartCoupons
+                items={cartDetailed}
+                code={couponCode}
+                quote={quote}
+                onApply={(code) => dispatch({ type: 'APPLY_COUPON', code })}
+                onRemove={() => dispatch({ type: 'CLEAR_COUPON' })}
               />
+
+              {/* The server's breakdown once /api/coupons/quote has answered,
+                  with the local estimate as the fallback until it does (and if
+                  it cannot be reached, so a network failure leaves a working
+                  cart rather than a blank one). The cart now shows the same
+                  taxes and fees checkout does, instead of a rougher figure
+                  that checkout then corrected. */}
+              <div className={quote.stale ? 'is-requoting' : undefined}>
+                <PriceSummary
+                  breakdown={quote.breakdown}
+                  fallback={{ itemTotal: subtotal, mrpTotal, shipping }}
+                />
+              </div>
               {blockedCartLines.length > 0 ? (
                   /* A retired pack size, a deactivated or sold-out product, or
                      a line stored before purchase gating existed. Each row

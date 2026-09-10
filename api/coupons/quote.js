@@ -14,13 +14,19 @@
 // coupon for an abandoned cart takes it away from someone who would have
 // completed.
 //
-// Request  { items, delivery, couponCode, customer? }
+// With no couponCode it simply prices the cart, which is how the cart page
+// gets real shipping, fees and tax instead of a local estimate.
+//
+// Request  { items, delivery, couponCode?, customer? }
 // Response { ok, coupon, breakdown, reason?, message? }
+//   ok:true  + coupon:null    priced, no coupon applied
+//   ok:true  + coupon:{...}   priced with the coupon
+//   ok:false + reason         the code was refused; breakdown is the cart
+//                             without it, so a total is still renderable
 // ============================================================
 import { getSupabaseConfig, getUserIdFromToken } from '../_lib/supabaseAdmin.js';
 import { enforceRateLimit } from '../_lib/rateLimit.js';
 import { priceCart, loadBuyerContext, quoteCoupon } from '../_lib/couponQuote.js';
-import { COUPON_REASONS, reasonMessage } from '../_lib/coupons.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -51,11 +57,11 @@ export default async function handler(req, res) {
 
     const code = typeof body.couponCode === 'string' ? body.couponCode : '';
     if (!code.trim()) {
-      return res.status(400).json({
-        ok: false,
-        reason: COUPON_REASONS.NOT_FOUND,
-        message: reasonMessage(COUPON_REASONS.NOT_FOUND),
-      });
+      // No code is not an error — it is a cart with no coupon on it, and the
+      // cart still needs a total. Answering it here is what lets the cart page
+      // show real shipping, fees and tax instead of the rough local estimate
+      // it used to render until checkout corrected it.
+      return res.status(200).json({ ok: true, coupon: null, breakdown: priced.base.breakdown });
     }
 
     const userId = await getUserIdFromToken(req.headers?.authorization, sb);

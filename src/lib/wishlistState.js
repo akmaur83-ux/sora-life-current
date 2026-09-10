@@ -19,7 +19,12 @@ export const MAX_KEY_LENGTH = 64;
 
 // The only fields written to localStorage. accountWish and syncedUserId are
 // deliberately absent.
-export const PERSISTED_KEYS = ['cart', 'saved', 'guestWish'];
+// couponCode is a code the customer typed, so it belongs to this browser and
+// survives a reload alongside the cart it applies to. Storing it commits to
+// nothing: the cart re-quotes it against the server on every mount and every
+// mutation, so a code that has since expired shows its reason rather than a
+// stale discount.
+export const PERSISTED_KEYS = ['cart', 'saved', 'couponCode', 'guestWish'];
 
 export const initialWishlistState = {
   guestWish: [],

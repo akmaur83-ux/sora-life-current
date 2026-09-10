@@ -92,11 +92,55 @@ test('C2 the cart summary is fed the real subtotal, unmodified', () => {
     'itemTotal must be the catalogue subtotal itself');
 });
 
-test('C3 no coupon entry UI remains in the cart', () => {
+test('C3 the cart\'s coupon UI displays figures, it never derives them', () => {
+  // This used to assert there was NO coupon UI in the cart, because there was
+  // no way to validate a code before the customer committed. /api/coupons/quote
+  // is that way, so the field is back — and the invariant it must satisfy is
+  // no longer "does not exist" but "does no arithmetic".
+  const panel = code('../src/components/CartCoupons.jsx');
+
+  // Every operator that could turn a server figure into an invented one. The
+  // old bug was exactly one of these: subtotal * rate.
+  assert.doesNotMatch(panel, /[a-zA-Z_$][\w$]*\s*[*/]\s*\d/, 'no multiplying or dividing a figure');
+  assert.doesNotMatch(panel, /\d+\s*\/\s*100/, 'no percentage maths');
+  assert.doesNotMatch(panel, /(subtotal|total|itemTotal)\s*[-+*/]/i, 'no adjusting a total');
+  assert.doesNotMatch(panel, /const COUPONS/, 'no local coupon table');
+
+  // The figures it renders must be read straight off the server payload.
+  assert.match(panel, /breakdown\?\.couponDiscount/, 'the applied saving is the server\'s');
+  assert.match(panel, /coupon\.discount/, 'each offer\'s saving is the server\'s');
+  assert.match(panel, /coupon\.addMore/, '"add X more" is the server\'s, not a subtraction here');
+});
+
+test('C3.1 the cart re-quotes on every mutation instead of holding a discount', () => {
+  // A discount that survives a change to the basket it was computed against is
+  // the same lie as one computed locally, so the quote is keyed on the cart.
+  const hook = code('../src/lib/cartQuote.js');
+  assert.match(hook, /cartToPayload\(lines\)/, 'the request signature includes the cart lines');
+  assert.match(hook, /useEffect\(\(\) => \{[\s\S]*?\}, \[signature\]\)/,
+    'the refetch is driven by that signature');
+  assert.match(hook, /controller\.abort\(\)/, 'the previous request is aborted, so it cannot land late');
+
   const cart = code('../src/pages/Cart.jsx');
-  assert.doesNotMatch(cart, /Coupon code/i, 'the coupon input is removed');
-  assert.doesNotMatch(cart, /applyCoupon/, 'the apply handler is removed');
-  assert.doesNotMatch(cart, /summary__applied/, 'the applied-coupon badge is removed');
+  assert.match(cart, /useCartQuote\(cartDetailed, couponCode/,
+    'the cart passes its live lines, not a snapshot');
+});
+
+test('C3.2 nothing client-side decides whether a coupon is valid', () => {
+  for (const f of ['../src/components/CartCoupons.jsx', '../src/lib/cartQuote.js',
+    '../src/lib/couponApi.js', '../src/components/pdp/PdpCouponSlot.jsx']) {
+    const src = code(f);
+    assert.doesNotMatch(src, /expires_at|starts_at|usage_limit|per_user_limit|used_count/,
+      `${f} must not inspect a coupon's rules — the server judges them`);
+  }
+});
+
+test('C3.3 the PDP shows terms and a code, never a computed discount', () => {
+  const ticket = code('../src/components/pdp/CouponTicket.jsx');
+  assert.doesNotMatch(ticket, /discount/, 'the ticket has no discount field at all');
+  assert.doesNotMatch(ticket, /money\(/, 'and no money formatting, so it cannot render one');
+  assert.match(ticket, /coupon\.title/);
+  assert.match(ticket, /coupon\.code/);
 });
 
 test('C4 the server coupon path is left completely intact', () => {

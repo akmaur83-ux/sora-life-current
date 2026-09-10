@@ -44,6 +44,9 @@ const NAV = [{
   to: '/admin/promotions',
   label: 'Promotions'
 }, {
+  to: '/admin/coupons',
+  label: 'Coupons'
+}, {
   to: '/admin/homepage',
   label: 'Homepage'
 }, {

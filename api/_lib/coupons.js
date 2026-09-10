@@ -31,15 +31,24 @@ export const COUPON_REASONS = {
   FIRST_ORDER_ONLY: 'first_order_only',
 };
 
+/**
+ * Rupees, grouped the way the storefront groups them.
+ *
+ * These strings sit directly beside figures the browser formatted with
+ * money(), so an ungrouped "₹60000" next to a grouped "₹19,500" reads as a
+ * different kind of number rather than the same one.
+ */
+const rupees = (n) => `₹${Math.round(Number(n) || 0).toLocaleString('en-IN')}`;
+
 /** Customer-facing wording. The UI shows these; it never composes its own. */
 export function reasonMessage(reason, coupon) {
-  const min = Math.round(Number(coupon?.min_order_value) || 0);
+  const min = Number(coupon?.min_order_value) || 0;
   switch (reason) {
     case COUPON_REASONS.NOT_FOUND: return 'That code is not valid.';
     case COUPON_REASONS.INACTIVE: return 'That code is no longer available.';
     case COUPON_REASONS.NOT_STARTED: return 'That code is not active yet.';
     case COUPON_REASONS.EXPIRED: return 'That code has expired.';
-    case COUPON_REASONS.BELOW_MIN: return `Spend ₹${min} or more to use this code.`;
+    case COUPON_REASONS.BELOW_MIN: return `Spend ${rupees(min)} or more to use this code.`;
     case COUPON_REASONS.EXHAUSTED: return 'That code has been fully claimed.';
     case COUPON_REASONS.USER_LIMIT: return 'You have already used this code.';
     case COUPON_REASONS.FIRST_ORDER_ONLY: return 'That code is for first orders only.';
@@ -123,8 +132,8 @@ export function publicCouponView(coupon, discount) {
     title: flags.title
       || (coupon.type === 'percent'
         ? `${Math.round(Number(coupon.value) || 0)}% off`
-        : `₹${Math.round(Number(coupon.value) || 0)} off`),
-    description: flags.description || (min > 0 ? `On orders above ₹${min}` : 'On any order'),
+        : `${rupees(coupon.value)} off`),
+    description: flags.description || (min > 0 ? `On orders above ${rupees(min)}` : 'On any order'),
     discount: Math.round(Number(discount) || 0),
     minOrderValue: min,
   };

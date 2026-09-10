@@ -1,4 +1,4 @@
-import { f as useAdminAuth, r as reactExports, a as adminGetSetting, j as jsxRuntimeExports, bJ as SOCIAL_NETWORKS, bK as POLICY_KEYS, bL as validateCompanyForSave, e as adminSetSetting, bI as supabase } from '../bundle.js';
+import { f as useAdminAuth, r as reactExports, a as adminGetSetting, j as jsxRuntimeExports, bK as SOCIAL_NETWORKS, bL as POLICY_KEYS, bM as validateCompanyForSave, e as adminSetSetting, be as supabase } from '../bundle.js';
 
 const POLICY_LABELS = {
   privacy: 'Privacy policy',

@@ -16780,7 +16780,7 @@ function createFetchApi(namespace = "storage") {
 	};
 }
 const defaultApi = createFetchApi("storage");
-const { get, post: post$1, put, head, remove } = defaultApi;
+const { get, post: post$2, put, head, remove } = defaultApi;
 const vectorsApi = createFetchApi("vectors");
 
 //#endregion
@@ -17012,7 +17012,7 @@ var StorageFileApi = class extends BaseApiClient {
 			if (fileOptions === null || fileOptions === void 0 ? void 0 : fileOptions.headers) for (const [key, value] of Object.entries(fileOptions.headers)) headers = setHeader(headers, key, value);
 			const cleanPath = _this._removeEmptyFolders(path);
 			const _path = _this._getFinalPath(cleanPath);
-			const data = await (method == "PUT" ? put : post$1)(_this.fetch, `${_this.url}/object/${_path}`, body, _objectSpread2$1({ headers }, (options === null || options === void 0 ? void 0 : options.duplex) ? { duplex: options.duplex } : {}));
+			const data = await (method == "PUT" ? put : post$2)(_this.fetch, `${_this.url}/object/${_path}`, body, _objectSpread2$1({ headers }, (options === null || options === void 0 ? void 0 : options.duplex) ? { duplex: options.duplex } : {}));
 			return {
 				path: cleanPath,
 				id: data.Id,
@@ -17205,7 +17205,7 @@ var StorageFileApi = class extends BaseApiClient {
 			let _path = _this4._getFinalPath(path);
 			const headers = _objectSpread2$1({}, _this4.headers);
 			if (options === null || options === void 0 ? void 0 : options.upsert) headers["x-upsert"] = "true";
-			const data = await post$1(_this4.fetch, `${_this4.url}/object/upload/sign/${_path}`, {}, { headers });
+			const data = await post$2(_this4.fetch, `${_this4.url}/object/upload/sign/${_path}`, {}, { headers });
 			const url = new URL(_this4.url + data.url);
 			const token = url.searchParams.get("token");
 			if (!token) throw new StorageError("No token returned by API");
@@ -17311,7 +17311,7 @@ var StorageFileApi = class extends BaseApiClient {
 	async move(fromPath, toPath, options) {
 		var _this6 = this;
 		return _this6.handleOperation(async () => {
-			return await post$1(_this6.fetch, `${_this6.url}/object/move`, {
+			return await post$2(_this6.fetch, `${_this6.url}/object/move`, {
 				bucketId: _this6.bucketId,
 				sourceKey: fromPath,
 				destinationKey: toPath,
@@ -17356,7 +17356,7 @@ var StorageFileApi = class extends BaseApiClient {
 	async copy(fromPath, toPath, options) {
 		var _this7 = this;
 		return _this7.handleOperation(async () => {
-			return { path: (await post$1(_this7.fetch, `${_this7.url}/object/copy`, {
+			return { path: (await post$2(_this7.fetch, `${_this7.url}/object/copy`, {
 				bucketId: _this7.bucketId,
 				sourceKey: fromPath,
 				destinationKey: toPath,
@@ -17428,7 +17428,7 @@ var StorageFileApi = class extends BaseApiClient {
 		return _this8.handleOperation(async () => {
 			let _path = _this8._getFinalPath(path);
 			const hasTransform = typeof (options === null || options === void 0 ? void 0 : options.transform) === "object" && options.transform !== null && Object.keys(options.transform).length > 0;
-			let data = await post$1(_this8.fetch, `${_this8.url}/object/sign/${_path}`, _objectSpread2$1({ expiresIn }, hasTransform ? { transform: options.transform } : {}), { headers: _this8.headers });
+			let data = await post$2(_this8.fetch, `${_this8.url}/object/sign/${_path}`, _objectSpread2$1({ expiresIn }, hasTransform ? { transform: options.transform } : {}), { headers: _this8.headers });
 			const query = new URLSearchParams();
 			if (options === null || options === void 0 ? void 0 : options.download) query.set("download", options.download === true ? "" : options.download);
 			if ((options === null || options === void 0 ? void 0 : options.cacheNonce) != null) query.set("cacheNonce", String(options.cacheNonce));
@@ -17485,7 +17485,7 @@ var StorageFileApi = class extends BaseApiClient {
 	async createSignedUrls(paths, expiresIn, options) {
 		var _this9 = this;
 		return _this9.handleOperation(async () => {
-			const data = await post$1(_this9.fetch, `${_this9.url}/object/sign/${_this9.bucketId}`, {
+			const data = await post$2(_this9.fetch, `${_this9.url}/object/sign/${_this9.bucketId}`, {
 				expiresIn,
 				paths
 			}, { headers: _this9.headers });
@@ -17901,7 +17901,7 @@ var StorageFileApi = class extends BaseApiClient {
 				sortBy,
 				prefix: path || ""
 			});
-			return await post$1(_this14.fetch, `${_this14.url}/object/list/${_this14.bucketId}`, body, { headers: _this14.headers }, parameters);
+			return await post$2(_this14.fetch, `${_this14.url}/object/list/${_this14.bucketId}`, body, { headers: _this14.headers }, parameters);
 		});
 	}
 	/**
@@ -17955,7 +17955,7 @@ var StorageFileApi = class extends BaseApiClient {
 		var _this15 = this;
 		return _this15.handleOperation(async () => {
 			const body = _objectSpread2$1({}, options);
-			return await post$1(_this15.fetch, `${_this15.url}/object/list-v2/${_this15.bucketId}`, body, { headers: _this15.headers }, parameters);
+			return await post$2(_this15.fetch, `${_this15.url}/object/list-v2/${_this15.bucketId}`, body, { headers: _this15.headers }, parameters);
 		});
 	}
 	encodeMetadata(metadata) {
@@ -18141,7 +18141,7 @@ var StorageBucketApi = class extends BaseApiClient {
 	async createBucket(id, options = { public: false }) {
 		var _this3 = this;
 		return _this3.handleOperation(async () => {
-			return await post$1(_this3.fetch, `${_this3.url}/bucket`, {
+			return await post$2(_this3.fetch, `${_this3.url}/bucket`, {
 				id,
 				name: id,
 				type: options.type,
@@ -18239,7 +18239,7 @@ var StorageBucketApi = class extends BaseApiClient {
 	async emptyBucket(id) {
 		var _this5 = this;
 		return _this5.handleOperation(async () => {
-			return await post$1(_this5.fetch, `${_this5.url}/bucket/${id}/empty`, {}, { headers: _this5.headers });
+			return await post$2(_this5.fetch, `${_this5.url}/bucket/${id}/empty`, {}, { headers: _this5.headers });
 		});
 	}
 	/**
@@ -18420,7 +18420,7 @@ var StorageAnalyticsClient = class extends BaseApiClient {
 	async createBucket(name) {
 		var _this = this;
 		return _this.handleOperation(async () => {
-			return await post$1(_this.fetch, `${_this.url}/bucket`, { name }, { headers: _this.headers });
+			return await post$2(_this.fetch, `${_this.url}/bucket`, { name }, { headers: _this.headers });
 		});
 	}
 	/**
@@ -29876,7 +29876,12 @@ const MAX_KEY_LENGTH = 64;
 
 // The only fields written to localStorage. accountWish and syncedUserId are
 // deliberately absent.
-const PERSISTED_KEYS = ['cart', 'saved', 'guestWish'];
+// couponCode is a code the customer typed, so it belongs to this browser and
+// survives a reload alongside the cart it applies to. Storing it commits to
+// nothing: the cart re-quotes it against the server on every mount and every
+// mutation, so a code that has since expired shows its reason rather than a
+// stale discount.
+const PERSISTED_KEYS = ['cart', 'saved', 'couponCode', 'guestWish'];
 const initialWishlistState = {
   guestWish: [],
   accountWish: [],
@@ -30168,6 +30173,7 @@ const KEY = 'sora.store.v1';
 const initial = {
   cart: [],
   saved: [],
+  couponCode: '',
   ...initialWishlistState
 };
 function load() {
@@ -30184,6 +30190,9 @@ function load() {
       ...initial,
       cart: Array.isArray(saved.cart) ? saved.cart : [],
       saved: Array.isArray(saved.saved) ? saved.saved : [],
+      // A code only, never a discount. Whatever is restored here is re-quoted
+      // against the server before a single rupee is shown against it.
+      couponCode: typeof saved.couponCode === 'string' ? saved.couponCode.slice(0, 40) : '',
       guestWish: guest
     };
   } catch {}
@@ -30293,10 +30302,27 @@ function reducer(state, action) {
     case 'WISH_SYNCED':
     case 'WISH_SESSION_CLEARED':
       return wishlistReducer(state, action);
-    case 'CLEAR_CART':
+    // ---- Coupon --------------------------------------------------
+    // The code the customer is trying, and nothing else. No discount, no
+    // total, no validity flag: those are the server's answers and live in the
+    // quote, which is refetched rather than remembered.
+    case 'APPLY_COUPON':
       return {
         ...state,
-        cart: []
+        couponCode: action.code || ''
+      };
+    case 'CLEAR_COUPON':
+      return state.couponCode ? {
+        ...state,
+        couponCode: ''
+      } : state;
+    case 'CLEAR_CART':
+      // An emptied cart drops its coupon too. Leaving the code behind would
+      // silently re-apply it to whatever the customer bought next.
+      return {
+        ...state,
+        cart: [],
+        couponCode: ''
       };
     default:
       return state;
@@ -30318,7 +30344,7 @@ function StoreProvider({
     try {
       localStorage.setItem(KEY, JSON.stringify(pickPersisted(state)));
     } catch {}
-  }, [state.cart, state.saved, state.guestWish]);
+  }, [state.cart, state.saved, state.couponCode, state.guestWish]);
   const toast = reactExports.useCallback((message, opts = {}) => {
     const id = Math.random().toString(36).slice(2);
     setToasts(t => [...t, {
@@ -41130,21 +41156,307 @@ function ProductRecommendations({
 }
 
 // ============================================================
-// COUPON SLOT — reserved region, deliberately empty.
+// COUPON TICKET
 //
-// Run 2 mounts recommended coupon cards here. Nothing in this run may put a
-// discount on the PDP, and in particular nothing may CALCULATE one: the old
-// client-only SORA10 / WELCOME codes were removed because checkout ignored
-// them and the two totals disagreed in front of the customer. Any coupon that
-// lands here must be priced by api/_lib/pricing.js and displayed, never
-// computed in the browser.
+// The card a customer sees on a product page. Extracted from PdpCouponSlot so
+// the admin editor's preview renders THIS component rather than a lookalike —
+// a preview built from copied markup drifts from the real thing, and then it
+// is not a preview, it is a mock-up that happens to be nearby.
 //
-// It renders null rather than an empty container so a sparse PDP has no
-// orphaned gap where a card will eventually go. The named element is the
-// contract; the markup arrives with the feature.
+// It renders no rupee figure, ever. The "cart" behind a product page is one
+// unit of one product, so any discount derived from it would be wrong the
+// moment a second item entered the basket. What a coupon is worth depends on
+// the whole basket, so the amount belongs in the cart, where the basket is.
+//
+// The ticket shape — notched sides, dashed perforation — is entirely CSS.
+// See src/styles/coupons.css.
 // ============================================================
-function PdpCouponSlot() {
-  return null;
+
+/**
+ * @param coupon    a publicCouponView shape: { code, title, description }
+ * @param applied   already applied to the cart
+ * @param onApply   (code) => void; omitted in the admin preview, which makes
+ *                  the button inert rather than rendering a different one
+ */
+function CouponTicket({
+  coupon,
+  applied = false,
+  onApply = null
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+    className: `pdp-coupon ${applied ? 'is-applied' : ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "pdp-coupon__body",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "pdp-coupon__title",
+        children: coupon.title
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "pdp-coupon__desc",
+        children: coupon.description
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "pdp-coupon__stub",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "pdp-coupon__code",
+        children: coupon.code
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "pdp-coupon__apply",
+        onClick: onApply ? () => onApply(coupon.code) : undefined,
+        disabled: applied || !onApply
+        // The code sits in a span beside it, but a screen reader landing on
+        // the button alone would otherwise hear only "Apply".
+        ,
+        "aria-label": applied ? `${coupon.code} applied` : `Apply ${coupon.code}`,
+        children: applied ? 'Applied' : 'Apply'
+      })]
+    })]
+  });
+}
+
+// ============================================================
+// COUPON CLIENT — asks the server, renders the answer
+//
+// There is deliberately no arithmetic in this file, and there must never be.
+// The bug this whole feature replaces was a client that priced a coupon
+// itself: `const COUPONS = { SORA10: 0.1 }` subtracted 10% from the display
+// while checkout charged the full amount. Every rupee below arrives from
+// /api/coupons/quote already computed by api/_lib/pricing.js.
+//
+// If you find yourself wanting a multiply or a subtract here, the figure you
+// want belongs in the server's breakdown instead.
+// ============================================================
+
+/**
+ * The customer's own access token, when they are signed in.
+ *
+ * Two coupon rules depend on WHO is asking — per_user_limit and
+ * first_order_only — and the server derives the identity from this token
+ * rather than anything the browser claims. A guest simply sends nothing and
+ * is judged as an unidentified buyer, which never refuses on those two.
+ */
+async function authHeader() {
+  try {
+    const {
+      data
+    } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    return token ? {
+      Authorization: `Bearer ${token}`
+    } : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Identifiers and quantities only — the same contract create-order uses. */
+function cartToPayload(lines) {
+  return (lines || []).map(l => ({
+    id: l.id,
+    qty: l.qty,
+    variantId: l.variantId || null,
+    variant: l.variant || null
+  }));
+}
+async function post$1(url, payload, signal) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(await authHeader())
+    },
+    body: JSON.stringify(payload),
+    signal
+  });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {/* non-JSON error page */}
+  if (!res.ok && !data) throw new Error('Something went wrong. Please try again.');
+  return {
+    status: res.status,
+    data: data || {}
+  };
+}
+
+/**
+ * Offers that apply to this basket.
+ *
+ * Returns { applicable, unlockable }. `unlockable` are coupons the customer
+ * is short of the minimum for; each carries `addMore`, computed server-side,
+ * because "how much further" is still a discount calculation.
+ *
+ * Never throws for a business reason — an empty result is the honest answer
+ * when there are no offers, and a failure hides the strip rather than
+ * breaking the page around it.
+ */
+async function fetchEligibleCoupons({
+  items,
+  delivery = 'std',
+  signal
+} = {}) {
+  const payload = cartToPayload(items);
+  if (!payload.length) return {
+    applicable: [],
+    unlockable: []
+  };
+  try {
+    const {
+      data
+    } = await post$1('/api/coupons/eligible', {
+      items: payload,
+      delivery
+    }, signal);
+    return {
+      applicable: Array.isArray(data.applicable) ? data.applicable : [],
+      unlockable: Array.isArray(data.unlockable) ? data.unlockable : []
+    };
+  } catch (err) {
+    if (err?.name === 'AbortError') throw err;
+    return {
+      applicable: [],
+      unlockable: []
+    };
+  }
+}
+
+/**
+ * Price this cart, with a coupon code if one is supplied.
+ *
+ * Returns { ok, coupon, breakdown, reason, message, error }. A refused code
+ * is `ok: false` WITH a breakdown — the cart still has to show a total while
+ * it explains why the code did not apply.
+ */
+async function quoteCart({
+  items,
+  delivery = 'std',
+  couponCode = '',
+  signal
+} = {}) {
+  const payload = cartToPayload(items);
+  if (!payload.length) return {
+    ok: false,
+    error: 'Your cart is empty.'
+  };
+  const {
+    data
+  } = await post$1('/api/coupons/quote', {
+    items: payload,
+    delivery,
+    couponCode
+  }, signal);
+  return data;
+}
+
+/**
+ * House format for a code: upper case, no spaces, bounded.
+ *
+ * Presentation only — the server normalises independently before it looks
+ * anything up, so a code typed in lower case still resolves even if this
+ * never ran.
+ */
+function normalizeCouponCode(raw) {
+  return typeof raw === 'string' ? raw.trim().toUpperCase().replace(/\s+/g, '').slice(0, 40) : '';
+}
+
+function PdpCouponSlot({
+  product,
+  variantId = null
+}) {
+  const {
+    couponCode,
+    dispatch,
+    toast
+  } = useStore();
+  const [offers, setOffers] = reactExports.useState([]);
+  const [open, setOpen] = reactExports.useState(false);
+  const productId = product?.id ?? null;
+  reactExports.useEffect(() => {
+    if (!productId) {
+      setOffers([]);
+      return undefined;
+    }
+    const controller = new AbortController();
+    (async () => {
+      try {
+        // One unit is the right question here: "is there an offer on this
+        // product at all", not "what would it save on this basket".
+        const {
+          applicable,
+          unlockable
+        } = await fetchEligibleCoupons({
+          items: [{
+            id: productId,
+            qty: 1,
+            variantId
+          }],
+          signal: controller.signal
+        });
+        if (controller.signal.aborted) return;
+        // Both lists are shown. An unlockable coupon is a genuine offer with a
+        // spend condition, and its own description already states the
+        // condition — hiding it would keep a real offer secret from the person
+        // most likely to reach it.
+        setOffers([...applicable, ...unlockable]);
+      } catch {
+        if (!controller.signal.aborted) setOffers([]);
+      }
+    })();
+    return () => controller.abort();
+  }, [productId, variantId]);
+  if (!offers.length) return null;
+  function apply(code) {
+    dispatch({
+      type: 'APPLY_COUPON',
+      code
+    });
+    // Deliberately does not claim a saving. The cart quotes the code against
+    // the real basket and reports what it is actually worth; promising a
+    // number here would be the same guess this component exists to avoid.
+    toast(`${code} will be applied in your cart`, {
+      kind: 'cart'
+    });
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "pdp-coupons",
+    "aria-labelledby": "pdp-coupons-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      type: "button",
+      className: "pdp-coupons__head",
+      onClick: () => setOpen(o => !o),
+      "aria-expanded": open,
+      "aria-controls": "pdp-coupons-list",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "pdp-coupons__icon",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "tag",
+          size: 18
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        id: "pdp-coupons-h",
+        className: "pdp-coupons__label",
+        children: ["Offers", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "pdp-coupons__count",
+          children: offers.length
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: `pdp-coupons__chev ${open ? 'is-open' : ''}`,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronDown",
+          size: 18
+        })
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      id: "pdp-coupons-list",
+      className: "pdp-coupons__list",
+      hidden: !open,
+      children: offers.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(CouponTicket, {
+        coupon: c,
+        applied: couponCode === c.code,
+        onApply: apply
+      }, c.code))
+    })]
+  });
 }
 
 // ============================================================
@@ -41541,7 +41853,8 @@ function Product() {
             children: "Incl. of all taxes"
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpCouponSlot, {
-          product: product
+          product: product,
+          variantId: variant?.price != null ? variant.id ?? null : null
         }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductClaims, {
           product: product
         }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductOfferTeaser, {
@@ -41976,6 +42289,329 @@ function PriceSummary({
   });
 }
 
+function AppliedRow({
+  coupon,
+  discount,
+  onRemove
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "cartcoupon__applied",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "cartcoupon__tick",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "check",
+        size: 14
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cartcoupon__appliedbody",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "cartcoupon__appliedcode",
+        children: coupon.code
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "cartcoupon__appliedtitle",
+        children: coupon.title
+      })]
+    }), discount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+      className: "cartcoupon__saved",
+      children: ["\u2212", money(discount)]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: "cartcoupon__remove",
+      onClick: onRemove,
+      "aria-label": `Remove coupon ${coupon.code}`,
+      children: "Remove"
+    })]
+  });
+}
+
+/** One offer the customer has not applied yet. */
+function OfferRow({
+  coupon,
+  onApply,
+  applying
+}) {
+  const locked = coupon.addMore > 0;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+    className: `cartcoupon__offer ${locked ? 'is-locked' : ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cartcoupon__offerbody",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "cartcoupon__offertitle",
+        children: coupon.title
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "cartcoupon__offerdesc",
+        children: locked ? `Add ${money(coupon.addMore)} more to use this` : coupon.description
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cartcoupon__offerside",
+      children: [coupon.discount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "cartcoupon__offersave",
+        children: ["Save ", money(coupon.discount)]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "cartcoupon__offerapply",
+        onClick: () => onApply(coupon.code),
+        disabled: locked || applying,
+        "aria-label": `Apply ${coupon.code}`,
+        children: coupon.code
+      })]
+    })]
+  });
+}
+
+/**
+ * @param items     hydrated cart lines, for the eligible lookup
+ * @param code      the code currently applied (may be refused)
+ * @param quote     the result of useCartQuote — the only source of figures
+ * @param onApply   (code) => void
+ * @param onRemove  () => void
+ */
+function CartCoupons({
+  items,
+  code,
+  quote,
+  onApply,
+  onRemove
+}) {
+  const [offers, setOffers] = reactExports.useState({
+    applicable: [],
+    unlockable: []
+  });
+  const [input, setInput] = reactExports.useState('');
+  const applied = quote.status === 'ok' && quote.coupon ? quote.coupon : null;
+  const refused = quote.status === 'rejected' && code ? quote.message : '';
+
+  // Refetched whenever the basket changes, for the same reason the quote is:
+  // an offer's worth depends on the basket, so a stale list would advertise a
+  // saving that no longer holds.
+  const signature = JSON.stringify(items.map(l => [l.id, l.qty, l.variantId || null]));
+  reactExports.useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const next = await fetchEligibleCoupons({
+          items: JSON.parse(signature).map(([id, qty, variantId]) => ({
+            id,
+            qty,
+            variantId
+          })),
+          signal: controller.signal
+        });
+        if (!controller.signal.aborted) setOffers(next);
+      } catch {
+        if (!controller.signal.aborted) setOffers({
+          applicable: [],
+          unlockable: []
+        });
+      }
+    })();
+    return () => controller.abort();
+  }, [signature]);
+  function submit(e) {
+    e.preventDefault();
+    const clean = normalizeCouponCode(input);
+    if (!clean) return;
+    onApply(clean);
+    setInput('');
+  }
+
+  // The applied code is not repeated in the list below it.
+  const listed = [...offers.applicable, ...offers.unlockable].filter(c => c.code !== applied?.code);
+
+  // Nothing to offer and nothing being tried: no empty panel. An entry field
+  // with no coupons behind it is how the old cart invited customers to type
+  // codes that did nothing.
+  if (!listed.length && !applied && !refused) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "cartcoupon",
+    "aria-labelledby": "cartcoupon-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h4", {
+      id: "cartcoupon-h",
+      className: "cartcoupon__h",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "tag",
+        size: 15
+      }), " Coupons and offers"]
+    }), applied && /*#__PURE__*/jsxRuntimeExports.jsx(AppliedRow, {
+      coupon: applied,
+      discount: quote.breakdown?.couponDiscount ?? 0,
+      onRemove: onRemove
+    }), refused && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cartcoupon__refused",
+      role: "alert",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cartcoupon__refusedcode",
+        children: code
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cartcoupon__refusedmsg",
+        children: refused
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "cartcoupon__remove",
+        onClick: onRemove,
+        children: "Remove"
+      })]
+    }), !applied && /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+      className: "cartcoupon__form",
+      onSubmit: submit,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+        className: "sr-only",
+        htmlFor: "cart-coupon-input",
+        children: "Coupon code"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+        id: "cart-coupon-input",
+        className: "cartcoupon__input",
+        value: input,
+        onChange: e => setInput(e.target.value),
+        placeholder: "Enter coupon code",
+        autoComplete: "off",
+        spellCheck: "false",
+        maxLength: 40
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "submit",
+        className: "cartcoupon__submit",
+        disabled: !input.trim(),
+        children: "Apply"
+      })]
+    }), listed.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "cartcoupon__offers",
+      children: listed.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(OfferRow, {
+        coupon: c,
+        onApply: onApply,
+        applying: quote.stale
+      }, c.code))
+    })]
+  });
+}
+
+// ============================================================
+// CART QUOTE — one server answer, refetched whenever the cart changes
+//
+// The cart must never hold a discount across a mutation. A ₹200 coupon on a
+// ₹1,200 basket can become invalid the moment a line is removed, and showing
+// the old figure for even one render is the same class of lie as computing it
+// locally. So every quantity change, removal, save-for-later and code change
+// refetches, and the previous request is aborted rather than allowed to land
+// late over a newer one.
+//
+// While a refetch is in flight the last breakdown is kept on screen but
+// `stale` is true, so the summary can dim rather than flicker between a
+// number and a spinner on every keypress of the quantity stepper.
+// ============================================================
+
+/** Debounce for cart edits. Long enough to coalesce a held-down stepper. */
+const QUOTE_DEBOUNCE_MS = 250;
+const EMPTY = {
+  breakdown: null,
+  coupon: null,
+  status: 'idle',
+  message: '',
+  stale: false
+};
+
+/**
+ * @param lines     hydrated cart lines (cartDetailed)
+ * @param code      the coupon code being tried; '' for none
+ * @param delivery  delivery method id, for a total that matches checkout
+ *
+ * Returns { breakdown, coupon, status, message, stale }.
+ *   status  'idle' | 'loading' | 'ok' | 'rejected' | 'error'
+ *   coupon  the server's public view of the applied coupon, or null
+ *   message the server's wording for a refusal — never composed here
+ */
+function useCartQuote(lines, code, delivery = 'std') {
+  const [state, setState] = reactExports.useState(EMPTY);
+  const abortRef = reactExports.useRef(null);
+
+  // The exact request that would be sent. Serialising it means a re-render
+  // that does not change the cart does not refetch, while any real change to
+  // an id, a quantity or a variant does.
+  const signature = reactExports.useMemo(() => JSON.stringify({
+    items: cartToPayload(lines),
+    code,
+    delivery
+  }), [lines, code, delivery]);
+  reactExports.useEffect(() => {
+    const {
+      items,
+      code: reqCode,
+      delivery: reqDelivery
+    } = JSON.parse(signature);
+
+    // Nothing to price. Reset rather than leaving the last cart's total up.
+    if (!items.length) {
+      setState(EMPTY);
+      return undefined;
+    }
+
+    // Keep the current figures visible, marked stale, so the summary does not
+    // collapse to a spinner on every edit.
+    setState(s => ({
+      ...s,
+      status: s.breakdown ? s.status : 'loading',
+      stale: true
+    }));
+    const controller = new AbortController();
+    abortRef.current?.abort();
+    abortRef.current = controller;
+    const timer = setTimeout(async () => {
+      try {
+        const data = await quoteCart({
+          items,
+          delivery: reqDelivery,
+          couponCode: reqCode,
+          signal: controller.signal
+        });
+        if (controller.signal.aborted) return;
+        if (data?.ok) {
+          setState({
+            breakdown: data.breakdown || null,
+            coupon: data.coupon || null,
+            status: 'ok',
+            message: '',
+            stale: false
+          });
+        } else if (data?.reason) {
+          // A real verdict about the code. The breakdown that comes with it is
+          // the cart WITHOUT the coupon, which is exactly what should be shown
+          // beside the explanation.
+          setState({
+            breakdown: data.breakdown || null,
+            coupon: null,
+            status: 'rejected',
+            message: data.message || '',
+            stale: false
+          });
+        } else {
+          // No code was being tried, or the cart itself is the problem.
+          setState({
+            breakdown: data?.breakdown || null,
+            coupon: null,
+            status: data?.error ? 'error' : 'idle',
+            message: data?.error || '',
+            stale: false
+          });
+        }
+      } catch (err) {
+        if (controller.signal.aborted || err?.name === 'AbortError') return;
+        // A network failure must not blank the cart. The locally-known
+        // subtotal keeps rendering through PriceSummary's fallback.
+        setState(s => ({
+          ...s,
+          status: 'error',
+          message: '',
+          stale: false
+        }));
+      }
+    }, QUOTE_DEBOUNCE_MS);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [signature]);
+  return state;
+}
+
 function Cart() {
   const {
     cartDetailed,
@@ -41984,12 +42620,18 @@ function Cart() {
     subtotal,
     mrpTotal,
     cartCount,
-    blockedCartLines
+    blockedCartLines,
+    couponCode
   } = useStore();
 
   // Cart has no delivery-method selector; its estimate mirrors the default
   // Standard option used by Checkout and the server (free shipping).
   const shipping = 0;
+
+  // Re-quoted on every cart mutation and every code change, with the previous
+  // request aborted — see the note in lib/cartQuote.js. A discount must never
+  // survive a change to the basket it was calculated against.
+  const quote = useCartQuote(cartDetailed, couponCode, 'std');
   if (!cartDetailed.length) {
     return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "v2-cart-root",
@@ -42186,12 +42828,27 @@ function Cart() {
             }), promotionsSource === 'supabase' && /*#__PURE__*/jsxRuntimeExports.jsx(PromoRail, {
               place: "cart",
               variant: "compact"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceSummary, {
-              fallback: {
-                itemTotal: subtotal,
-                mrpTotal,
-                shipping
-              }
+            }), /*#__PURE__*/jsxRuntimeExports.jsx(CartCoupons, {
+              items: cartDetailed,
+              code: couponCode,
+              quote: quote,
+              onApply: code => dispatch({
+                type: 'APPLY_COUPON',
+                code
+              }),
+              onRemove: () => dispatch({
+                type: 'CLEAR_COUPON'
+              })
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+              className: quote.stale ? 'is-requoting' : undefined,
+              children: /*#__PURE__*/jsxRuntimeExports.jsx(PriceSummary, {
+                breakdown: quote.breakdown,
+                fallback: {
+                  itemTotal: subtotal,
+                  mrpTotal,
+                  shipping
+                }
+              })
             }), blockedCartLines.length > 0 ?
             /*#__PURE__*/
             /* A retired pack size, a deactivated or sold-out product, or
@@ -42955,6 +43612,10 @@ async function postJson(url, payload, extraHeaders = {}) {
   if (!res.ok) {
     const err = new Error(data?.error || 'Something went wrong. Please try again.');
     err.status = res.status;
+    // The whole body, so a caller can act on a structured refusal rather than
+    // pattern-matching the message. create-order's 409 for a coupon that
+    // stopped applying between quote and submit is the case that needs this.
+    err.data = data || null;
     throw err;
   }
   return data;
@@ -42981,7 +43642,9 @@ async function createPaymentOrder({
   delivery,
   customer,
   paymentMethod,
-  idempotencyKey
+  idempotencyKey,
+  couponCode,
+  quotedTotals
 }) {
   const authHeaders = await customerAuthHeader();
   return postJson('/api/razorpay/create-order', {
@@ -42996,6 +43659,15 @@ async function createPaymentOrder({
     delivery,
     customer,
     paymentMethod,
+    // A code, never a discount. The server resolves it, revalidates it against
+    // this buyer and this basket, and computes the rupee figure itself — a
+    // discount sent from here would be ignored, so none is sent.
+    couponCode: couponCode || null,
+    // The totals the cart last QUOTED, for comparison only. The server prices
+    // the order regardless and charges its own figure; this exists so a drift
+    // between what the customer was shown and what they are charged appears in
+    // the logs instead of only in their bank statement.
+    quotedTotals: quotedTotals || null,
     // Opaque, self-assigned browser id used ONLY to resolve creator attribution
     // server-side. Carries no internal creator/campaign/link id and no PII.
     visitorId: getVisitorId()
@@ -43057,7 +43729,8 @@ function Checkout() {
     mrpTotal,
     savings,
     dispatch,
-    blockedCartLines
+    blockedCartLines,
+    couponCode
   } = useStore();
   const [step, setStep] = reactExports.useState(0);
   const [delivery, setDelivery] = reactExports.useState('std');
@@ -43310,6 +43983,12 @@ function Checkout() {
   const deliveryFee = DELIVERY.find(d => d.id === delivery)?.price || 0;
   const shipBase = deliveryFee;
   const total = Math.max(0, subtotal + shipBase);
+
+  // Live server pricing for the CHOSEN delivery method, including the coupon
+  // carried over from the cart. Switching Express to Standard re-quotes, so
+  // the summary always reflects the option actually selected rather than
+  // waiting for create-order to correct it.
+  const quote = useCartQuote(cartDetailed, couponCode, delivery);
   if (placed) {
     return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "v2-checkout-root v2-checkout-confirm-root",
@@ -43455,7 +44134,15 @@ function Checkout() {
         delivery,
         customer: form,
         paymentMethod: pay === 'cod' ? 'cod' : 'online',
-        idempotencyKey: submitKey.current
+        idempotencyKey: submitKey.current,
+        // The code only. create-order revalidates it against this buyer and
+        // this basket and computes the discount itself.
+        couponCode,
+        // What the customer was last shown, so a drift is logged server-side.
+        quotedTotals: quote.breakdown ? {
+          grandTotal: quote.breakdown.grandTotal,
+          couponDiscount: quote.breakdown.couponDiscount
+        } : null
       });
       if (created.breakdown) setServerBreakdown(created.breakdown);
       if (created.paymentMethod === 'cod') {
@@ -43526,6 +44213,21 @@ function Checkout() {
     } catch (err) {
       inFlight.current = false;
       setProcessing(false);
+
+      // The coupon stopped applying between the quote and this submit — it
+      // expired, ran out, or the basket changed. Nothing has been charged and
+      // no order exists. Drop the code and say so, rather than leaving the
+      // customer to press Pay again against a total that will not be honoured.
+      if (err.data?.couponRejected) {
+        dispatch({
+          type: 'CLEAR_COUPON'
+        });
+        // A fresh key: the next attempt is a genuinely different order, priced
+        // without the coupon, and must not collapse into this one.
+        submitKey.current = null;
+        setPayError(`${err.message} Your total has been updated — please review it and try again.`);
+        return;
+      }
       setPayError(err.message || 'We could not start your payment. Please try again.');
     }
   };
@@ -44015,7 +44717,7 @@ function Checkout() {
               })]
             }, l.key))
           }), /*#__PURE__*/jsxRuntimeExports.jsx(PriceSummary, {
-            breakdown: serverBreakdown,
+            breakdown: serverBreakdown || quote.breakdown,
             fallback: {
               itemTotal: subtotal,
               mrpTotal,
@@ -51836,6 +52538,7 @@ const Appearance = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Appeara
 const Categories = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Categories.js'));
 const HeroSlides = /*#__PURE__*/reactExports.lazy(() => import('./chunks/HeroSlides.js'));
 const Promotions = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Promotions.js'));
+const Coupons = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Coupons.js'));
 const HomepageSettings = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Homepage.js'));
 const CategoryExperience = /*#__PURE__*/reactExports.lazy(() => import('./chunks/CategoryExperience.js'));
 const Branding = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Branding.js'));
@@ -52020,6 +52723,9 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "promotions",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(Promotions, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "coupons",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(Coupons, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "homepage",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(HomepageSettings, {})
@@ -52247,5 +52953,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { adminUpdateProduct as $, fulfillmentStatusLabel as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, mergeHeroCta as a$, adminCreateProduct as a0, adminListVariants as a1, adminCreateVariant as a2, adminUpdateVariant as a3, adminSetVariantActive as a4, adminDeleteVariant as a5, adminGetProgramSettings as a6, CREATOR_STATUSES as a7, adminListCreators as a8, adminSetProgramSettings as a9, adminRefundConversion as aA, adminListKyc as aB, KYC_STATUSES as aC, adminSetKycStatus as aD, adminListPayouts as aE, PAYOUT_STATUSES as aF, adminGetPayoutLedger as aG, adminGetPayoutAudit as aH, adminGetKycForCreator as aI, adminReviewPayout as aJ, adminMarkPayoutPaid as aK, adminGetTheme as aL, sanitizeTheme$1 as aM, TOKENS as aN, PRESET_LIST as aO, GROUPS as aP, DEFAULT_THEME as aQ, OVERLAY_SCALES as aR, TYPE_SCALES as aS, HEX_RE as aT, adminSetTheme as aU, overlayRgba as aV, adminUpsertCategory as aW, adminDeleteCategory as aX, sanitizeHeroCta as aY, HERO_CTA_FIELDS as aZ, adminUpsertHeroSlide as a_, adminCreateCreator as aa, adminSetCreatorStatus as ab, normalizeContentPatch as ac, contentScore as ad, adminGetCreator as ae, adminListCodeAliases as af, adminListCampaigns as ag, adminListLinks as ah, adminListAudit as ai, adminListAttributionEvents as aj, adminUpdateCampaign as ak, adminCreateCampaign as al, CAMPAIGN_STATUSES as am, buildTrackingUrl as an, normalizeDestination as ao, DESTINATION_TYPES as ap, CopyButton as aq, adminChangeCreatorCode as ar, adminUpdateCreator as as, adminCreateLink as at, adminSetLinkStatus as au, adminListConversions as av, money2 as aw, CONVERSION_STATUSES as ax, adminGetConversionItems as ay, adminGetConversionAudit as az, Link as b, announceHomepageSaved as b0, adminDeleteHeroSlide as b1, adminReorderHeroSlides as b2, uploadImage as b3, uploadHeroVideo as b4, normalizePromo as b5, PromoPoster as b6, PromoOfferCard as b7, adminListPromotions as b8, adminUpsertPromotion as b9, categoryToneTheme as bA, MIN_INTERVAL_MS as bB, MAX_INTERVAL_MS as bC, DEFAULT_ITEM_SCALE as bD, MIN_ITEM_SCALE as bE, MAX_ITEM_SCALE as bF, ITEM_OFFSET_LIMIT as bG, CategorySpotlight as bH, supabase as bI, SOCIAL_NETWORKS as bJ, POLICY_KEYS as bK, validateCompanyForSave as bL, adminDeletePromotion as ba, adminSetPromotionActive as bb, adminReorderPromotions as bc, uploadPromoImage as bd, HOMEPAGE_VISUAL_FIELDS as be, safeVisualUrl as bf, MAX_CONCERN_PRODUCTS as bg, searchCatalogueForPicker as bh, productGallery as bi, MAX_DISCOVERY_CARDS as bj, makeDiscoveryId as bk, sanitizeHomepageVisuals as bl, normalizeDiscovery as bm, products as bn, discoveryPayload as bo, mergeHomepageVisuals as bp, isSpotlightEligible as bq, categoryBySlug as br, sanitizeCategoryConfig as bs, safeColor as bt, safeGradient as bu, makeSpotlightId as bv, validateImageUpload as bw, normalizeCategoryExperience as bx, categoryExperiencePayload as by, categoryIsReadyButOff as bz, LegalUpdated as c, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminListHeroSlides as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminSeedDefaultHeroSlides as p, adminImportBiosashCatalog as q, reactExports as r, money as s, adminSetProductActive as t, useParams as u, validateLegalPage as v, adminDeleteProduct as w, adminReorderProducts as x, categories as y, adminListOrders as z };
+export { adminUpdateProduct as $, fulfillmentStatusLabel as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, mergeHeroCta as a$, adminCreateProduct as a0, adminListVariants as a1, adminCreateVariant as a2, adminUpdateVariant as a3, adminSetVariantActive as a4, adminDeleteVariant as a5, adminGetProgramSettings as a6, CREATOR_STATUSES as a7, adminListCreators as a8, adminSetProgramSettings as a9, adminRefundConversion as aA, adminListKyc as aB, KYC_STATUSES as aC, adminSetKycStatus as aD, adminListPayouts as aE, PAYOUT_STATUSES as aF, adminGetPayoutLedger as aG, adminGetPayoutAudit as aH, adminGetKycForCreator as aI, adminReviewPayout as aJ, adminMarkPayoutPaid as aK, adminGetTheme as aL, sanitizeTheme$1 as aM, TOKENS as aN, PRESET_LIST as aO, GROUPS as aP, DEFAULT_THEME as aQ, OVERLAY_SCALES as aR, TYPE_SCALES as aS, HEX_RE as aT, adminSetTheme as aU, overlayRgba as aV, adminUpsertCategory as aW, adminDeleteCategory as aX, sanitizeHeroCta as aY, HERO_CTA_FIELDS as aZ, adminUpsertHeroSlide as a_, adminCreateCreator as aa, adminSetCreatorStatus as ab, normalizeContentPatch as ac, contentScore as ad, adminGetCreator as ae, adminListCodeAliases as af, adminListCampaigns as ag, adminListLinks as ah, adminListAudit as ai, adminListAttributionEvents as aj, adminUpdateCampaign as ak, adminCreateCampaign as al, CAMPAIGN_STATUSES as am, buildTrackingUrl as an, normalizeDestination as ao, DESTINATION_TYPES as ap, CopyButton as aq, adminChangeCreatorCode as ar, adminUpdateCreator as as, adminCreateLink as at, adminSetLinkStatus as au, adminListConversions as av, money2 as aw, CONVERSION_STATUSES as ax, adminGetConversionItems as ay, adminGetConversionAudit as az, Link as b, announceHomepageSaved as b0, adminDeleteHeroSlide as b1, adminReorderHeroSlides as b2, uploadImage as b3, uploadHeroVideo as b4, normalizePromo as b5, PromoPoster as b6, PromoOfferCard as b7, adminListPromotions as b8, adminUpsertPromotion as b9, categoryExperiencePayload as bA, categoryIsReadyButOff as bB, categoryToneTheme as bC, MIN_INTERVAL_MS as bD, MAX_INTERVAL_MS as bE, DEFAULT_ITEM_SCALE as bF, MIN_ITEM_SCALE as bG, MAX_ITEM_SCALE as bH, ITEM_OFFSET_LIMIT as bI, CategorySpotlight as bJ, SOCIAL_NETWORKS as bK, POLICY_KEYS as bL, validateCompanyForSave as bM, adminDeletePromotion as ba, adminSetPromotionActive as bb, adminReorderPromotions as bc, uploadPromoImage as bd, supabase as be, CouponTicket as bf, HOMEPAGE_VISUAL_FIELDS as bg, safeVisualUrl as bh, MAX_CONCERN_PRODUCTS as bi, searchCatalogueForPicker as bj, productGallery as bk, MAX_DISCOVERY_CARDS as bl, makeDiscoveryId as bm, sanitizeHomepageVisuals as bn, normalizeDiscovery as bo, products as bp, discoveryPayload as bq, mergeHomepageVisuals as br, isSpotlightEligible as bs, categoryBySlug as bt, sanitizeCategoryConfig as bu, safeColor as bv, safeGradient as bw, makeSpotlightId as bx, validateImageUpload as by, normalizeCategoryExperience as bz, LegalUpdated as c, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminListHeroSlides as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminSeedDefaultHeroSlides as p, adminImportBiosashCatalog as q, reactExports as r, money as s, adminSetProductActive as t, useParams as u, validateLegalPage as v, adminDeleteProduct as w, adminReorderProducts as x, categories as y, adminListOrders as z };
 //# sourceMappingURL=bundle.js.map

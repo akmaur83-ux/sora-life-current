@@ -42,7 +42,7 @@ const KEY = 'sora.store.v1';
 
 // PERSISTED_KEYS, the ownership rules and every wishlist reducer case live
 // in wishlistState.js so they can be executed directly in tests.
-const initial = { cart: [], saved: [], ...initialWishlistState };
+const initial = { cart: [], saved: [], couponCode: '', ...initialWishlistState };
 
 export function load() {
   try {
@@ -58,6 +58,9 @@ export function load() {
       ...initial,
       cart: Array.isArray(saved.cart) ? saved.cart : [],
       saved: Array.isArray(saved.saved) ? saved.saved : [],
+      // A code only, never a discount. Whatever is restored here is re-quoted
+      // against the server before a single rupee is shown against it.
+      couponCode: typeof saved.couponCode === 'string' ? saved.couponCode.slice(0, 40) : '',
       guestWish: guest,
     };
   } catch {}
@@ -124,8 +127,18 @@ function reducer(state, action) {
     case 'WISH_SYNCED':
     case 'WISH_SESSION_CLEARED':
       return wishlistReducer(state, action);
+    // ---- Coupon --------------------------------------------------
+    // The code the customer is trying, and nothing else. No discount, no
+    // total, no validity flag: those are the server's answers and live in the
+    // quote, which is refetched rather than remembered.
+    case 'APPLY_COUPON':
+      return { ...state, couponCode: action.code || '' };
+    case 'CLEAR_COUPON':
+      return state.couponCode ? { ...state, couponCode: '' } : state;
     case 'CLEAR_CART':
-      return { ...state, cart: [] };
+      // An emptied cart drops its coupon too. Leaving the code behind would
+      // silently re-apply it to whatever the customer bought next.
+      return { ...state, cart: [], couponCode: '' };
     default:
       return state;
   }
@@ -143,7 +156,7 @@ export function StoreProvider({ children }) {
     try {
       localStorage.setItem(KEY, JSON.stringify(pickPersisted(state)));
     } catch {}
-  }, [state.cart, state.saved, state.guestWish]);
+  }, [state.cart, state.saved, state.couponCode, state.guestWish]);
 
   const toast = useCallback((message, opts = {}) => {
     const id = Math.random().toString(36).slice(2);

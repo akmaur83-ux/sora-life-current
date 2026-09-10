@@ -59,6 +59,7 @@ const Appearance = lazy(() => import('./admin/pages/Appearance.jsx'));
 const Categories = lazy(() => import('./admin/pages/Categories.jsx'));
 const HeroSlides = lazy(() => import('./admin/pages/HeroSlides.jsx'));
 const Promotions = lazy(() => import('./admin/pages/Promotions.jsx'));
+const Coupons = lazy(() => import('./admin/pages/Coupons.jsx'));
 const HomepageSettings = lazy(() => import('./admin/pages/Homepage.jsx'));
 const CategoryExperience = lazy(() => import('./admin/pages/CategoryExperience.jsx'));
 const Branding = lazy(() => import('./admin/pages/Branding.jsx'));
@@ -160,6 +161,7 @@ export default function App() {
         <Route path="categories" element={<Categories />} />
         <Route path="hero-slides" element={<HeroSlides />} />
         <Route path="promotions" element={<Promotions />} />
+        <Route path="coupons" element={<Coupons />} />
         <Route path="homepage" element={<HomepageSettings />} />
         <Route path="category-experience" element={<CategoryExperience />} />
         <Route path="branding" element={<Branding />} />

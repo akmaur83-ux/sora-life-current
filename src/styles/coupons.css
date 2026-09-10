@@ -1,0 +1,347 @@
+/* ============================================================
+   COUPONS — PDP ticket cards and the cart's offers panel
+
+   The ticket shape is drawn entirely here: the notches are radial-gradient
+   cut-outs painted in the page background colour, and the perforation is a
+   repeating-linear-gradient. No images, no extra elements, no clip-path
+   (which would take the box-shadow with it).
+
+   Everything is built from existing tokens. Honey is the accent the rest of
+   the storefront already uses for "offer"; forest carries the applied state.
+   ============================================================ */
+
+/* ---- PDP: collapsible offers ------------------------------- */
+
+.pdp-coupons {
+  margin: var(--sp-4) 0 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.pdp-coupons__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  color: var(--color-text);
+  text-align: left;
+  /* A 44px row on phones, where this is the first thing under the price. */
+  min-height: 44px;
+}
+.pdp-coupons__head:hover { background: var(--honey-100); }
+.pdp-coupons__head:focus-visible { outline: none; box-shadow: inset var(--shadow-focus); }
+
+.pdp-coupons__icon { display: inline-flex; color: var(--color-accent-strong); }
+
+.pdp-coupons__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 1;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+/* The count chip: how many offers, without opening the panel. */
+.pdp-coupons__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--color-accent-strong);
+  color: #fff;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdp-coupons__chev { display: inline-flex; color: var(--ink-400); transition: transform 180ms ease; }
+.pdp-coupons__chev.is-open { transform: rotate(180deg); }
+
+.pdp-coupons__list {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0 var(--sp-4) var(--sp-4);
+  list-style: none;
+  border-top: 1px solid var(--line-soft);
+  padding-top: var(--sp-3);
+}
+
+/* ---- The ticket -------------------------------------------- */
+
+.pdp-coupon {
+  --notch: 11px;
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--r-sm);
+  background: var(--honey-100);
+  box-shadow: var(--shadow-xs);
+  /* The notches are painted in the SURFACE colour behind the ticket, so this
+     has to match .pdp-coupons' background rather than the page. */
+  background-image:
+    radial-gradient(circle at left  50%, var(--color-surface) var(--notch), transparent calc(var(--notch) + 0.5px)),
+    radial-gradient(circle at right 50%, var(--color-surface) var(--notch), transparent calc(var(--notch) + 0.5px));
+  background-repeat: no-repeat;
+  background-size: var(--notch) 100%, var(--notch) 100%;
+  background-position: left center, right center;
+}
+
+.pdp-coupon__body {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) calc(var(--notch) + var(--sp-2));
+}
+
+.pdp-coupon__title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--forest-800);
+}
+.pdp-coupon__desc {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+
+/* The stub, separated by a perforation rather than a plain border. */
+.pdp-coupon__stub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--sp-3) calc(var(--notch) + var(--sp-2)) var(--sp-3) var(--sp-3);
+  border-left: 1px dashed var(--honey-400);
+}
+
+.pdp-coupon__code {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-accent-text);
+  font-family: var(--font-sans);
+}
+
+.pdp-coupon__apply {
+  border: 0;
+  background: none;
+  padding: 4px 2px;
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--forest-700);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  min-height: 24px;
+}
+.pdp-coupon__apply:disabled { color: var(--color-success); text-decoration: none; cursor: default; }
+.pdp-coupon.is-applied { background-color: var(--forest-100); }
+.pdp-coupon.is-applied .pdp-coupon__stub { border-left-color: var(--forest-300); }
+
+/* ---- Cart: coupons and offers ------------------------------ */
+
+.cartcoupon {
+  margin: var(--sp-4) 0;
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line-soft);
+}
+
+.cartcoupon__h {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-3);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-500);
+}
+.cartcoupon__h svg { color: var(--color-accent-strong); }
+
+/* Applied */
+.cartcoupon__applied {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--forest-200);
+  border-radius: var(--r-sm);
+  background: var(--forest-50);
+}
+.cartcoupon__tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: var(--r-pill);
+  background: var(--color-success);
+  color: #fff;
+}
+.cartcoupon__appliedbody { flex: 1; min-width: 0; }
+.cartcoupon__appliedcode {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--forest-800);
+}
+.cartcoupon__appliedtitle {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+.cartcoupon__saved {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--price-save);
+  font-variant-numeric: tabular-nums;
+}
+
+.cartcoupon__remove {
+  border: 0;
+  background: none;
+  padding: var(--sp-1) var(--sp-2);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-danger);
+  cursor: pointer;
+  min-height: 32px;
+}
+.cartcoupon__remove:hover { text-decoration: underline; }
+
+/* Refused */
+.cartcoupon__refused {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-3);
+  border: 1px solid var(--clay-500);
+  border-radius: var(--r-sm);
+  background: var(--clay-100);
+}
+.cartcoupon__refusedcode {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--clay-600);
+}
+.cartcoupon__refusedmsg { flex: 1; min-width: 0; font-size: var(--text-xs); color: var(--ink-700); }
+
+/* Entry */
+.cartcoupon__form { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+
+.cartcoupon__input {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: var(--text-sm);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+.cartcoupon__input::placeholder { text-transform: none; letter-spacing: 0; color: var(--ink-400); }
+.cartcoupon__input:focus-visible { outline: none; border-color: var(--color-ring); box-shadow: var(--shadow-focus); }
+
+.cartcoupon__submit {
+  flex: none;
+  height: 42px;
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--r-xs);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.cartcoupon__submit:disabled { opacity: 0.45; cursor: default; }
+
+/* Offer list */
+.cartcoupon__offers { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.cartcoupon__offer {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px dashed var(--honey-400);
+  border-radius: var(--r-xs);
+  background: var(--honey-100);
+}
+.cartcoupon__offer.is-locked { background: var(--color-surface-2); border-color: var(--line); }
+
+.cartcoupon__offerbody { flex: 1; min-width: 0; }
+.cartcoupon__offertitle { margin: 0; font-size: var(--text-sm); font-weight: 700; color: var(--forest-800); }
+.cartcoupon__offerdesc { margin: 1px 0 0; font-size: var(--text-xs); color: var(--ink-500); }
+
+.cartcoupon__offerside { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
+.cartcoupon__offersave {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--price-save);
+  font-variant-numeric: tabular-nums;
+}
+
+.cartcoupon__offerapply {
+  border: 0;
+  background: none;
+  padding: 2px;
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--forest-700);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  min-height: 24px;
+}
+.cartcoupon__offerapply:disabled { color: var(--ink-400); text-decoration: none; cursor: default; }
+
+/* While a re-quote is in flight the figures stay put and dim, rather than
+   flickering to a spinner on every tap of the quantity stepper. */
+.is-requoting { opacity: 0.55; transition: opacity 120ms ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pdp-coupons__chev { transition: none; }
+  .is-requoting { transition: none; }
+}
+
+/* ---- Phones ------------------------------------------------ */
+@media (max-width: 640px) {
+  /* Every tap target reaches the 44px the rest of the cart uses on phones —
+     the same rule v2-mobile-cart.css applies to the stepper and row actions. */
+  .cartcoupon__remove { min-height: 44px; }
+  .cartcoupon__input,
+  .cartcoupon__submit { height: 44px; }
+  .pdp-coupon__apply,
+  .cartcoupon__offerapply { min-height: 44px; display: inline-flex; align-items: center; }
+
+  .cartcoupon__offer { flex-wrap: wrap; }
+  .cartcoupon__offerside { flex-direction: row; align-items: center; gap: var(--sp-3); }
+}

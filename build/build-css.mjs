@@ -59,6 +59,9 @@ const STOREFRONT = [
   'src/styles/v2-pdp.css',
   'src/styles/v2-cart-checkout.css',
   'src/styles/v2-mobile-cart.css',
+  // After both v2-pdp and the cart sheets, because the ticket cards and the
+  // offers panel live inside surfaces those two style.
+  'src/styles/coupons.css',
   'src/styles/info.css',
   'src/styles/homepage-appearance.css',
   'src/styles/hero-cta.css',

@@ -61,6 +61,10 @@ async function postJson(url, payload, extraHeaders = {}) {
   if (!res.ok) {
     const err = new Error(data?.error || 'Something went wrong. Please try again.');
     err.status = res.status;
+    // The whole body, so a caller can act on a structured refusal rather than
+    // pattern-matching the message. create-order's 409 for a coupon that
+    // stopped applying between quote and submit is the case that needs this.
+    err.data = data || null;
     throw err;
   }
   return data;
@@ -82,7 +86,9 @@ export function newIdempotencyKey() {
  * Ask the server to price the cart and open a payable order.
  * Only ids + quantities are sent — never prices or totals.
  */
-export async function createPaymentOrder({ items, delivery, customer, paymentMethod, idempotencyKey }) {
+export async function createPaymentOrder({
+  items, delivery, customer, paymentMethod, idempotencyKey, couponCode, quotedTotals,
+}) {
   const authHeaders = await customerAuthHeader();
   return postJson('/api/razorpay/create-order', {
     // Identifiers and quantities only. No price is sent: the server looks up
@@ -96,6 +102,15 @@ export async function createPaymentOrder({ items, delivery, customer, paymentMet
     delivery,
     customer,
     paymentMethod,
+    // A code, never a discount. The server resolves it, revalidates it against
+    // this buyer and this basket, and computes the rupee figure itself — a
+    // discount sent from here would be ignored, so none is sent.
+    couponCode: couponCode || null,
+    // The totals the cart last QUOTED, for comparison only. The server prices
+    // the order regardless and charges its own figure; this exists so a drift
+    // between what the customer was shown and what they are charged appears in
+    // the logs instead of only in their bank statement.
+    quotedTotals: quotedTotals || null,
     // Opaque, self-assigned browser id used ONLY to resolve creator attribution
     // server-side. Carries no internal creator/campaign/link id and no PII.
     visitorId: getVisitorId(),

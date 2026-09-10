@@ -102,12 +102,12 @@ await test('an anonymous toggle works with no session and no network', () => {
 });
 
 await test('the guest list is persisted; account state never is', () => {
-  assert.deepEqual(PERSISTED_KEYS, ['cart', 'saved', 'guestWish']);
+  assert.deepEqual(PERSISTED_KEYS, ['cart', 'saved', 'couponCode', 'guestWish']);
   const s = makeStore();
   s.dispatch({ type: 'WISH_GUEST_TOGGLE', key: 'b1' });
   s.dispatch({ type: 'WISH_SYNCED', userId: 'user-A', keys: ['secret-A'] });
   const p = s.persisted;
-  assert.deepEqual(Object.keys(p).sort(), ['cart', 'guestWish', 'saved']);
+  assert.deepEqual(Object.keys(p).sort(), ['cart', 'couponCode', 'guestWish', 'saved']);
   assert.equal('accountWish' in p, false, 'accountWish must never be written to localStorage');
   assert.equal('syncedUserId' in p, false);
   assert.equal(JSON.stringify(p).includes('secret-A'), false, "an account item leaked into storage");
