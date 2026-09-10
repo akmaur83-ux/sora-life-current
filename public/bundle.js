@@ -36783,6 +36783,11 @@ async function adminImportBiosashCatalog(onProgress) {
     //                     id modulo four.
     //   sort_order        reset merchandising order to the bundle's array
     //                     index, which is not catalogue data either.
+    //   is_new            cleared every merchandising flag, because all
+    //   is_bestseller     three were hardcoded false here. The bundle has no
+    //   is_featured       opinion about them at all — it carries no such
+    //                     field — so writing false was inventing an answer
+    //                     rather than restoring one.
     //   description: ''   blanked all 148 ingested descriptions. The Biosash
     //                     ingest is fill-only and will never rewrite a row it
     //                     has already populated, so that copy does not come
@@ -36796,11 +36801,16 @@ async function adminImportBiosashCatalog(onProgress) {
     // and that is worth being clear about rather than glossing: is_active is
     // NOT NULL DEFAULT true so the row inserts active exactly as before, and
     // description is nullable so it inserts empty and waits for the ingest.
-    // The four here are different — original_price and sale_price insert
-    // NULL, discount_percent 0, sort_order 0 — so a newly bundled product
-    // arrives UNPRICED and has to be priced in the admin before it can sell.
-    // That is the intended trade: a human setting a price beats a tier table
-    // keyed on an id, and it fails visibly rather than shipping a wrong one.
+    // is_new, is_bestseller and is_featured are NOT NULL DEFAULT false, so an
+    // inserted row gets exactly what the hardcoded false used to give it —
+    // omitting them costs nothing in either direction.
+    //
+    // The price columns are the one place where that is not true:
+    // original_price and sale_price insert NULL, discount_percent 0,
+    // sort_order 0, so a newly bundled product arrives UNPRICED and has to be
+    // priced in the admin before it can sell. That is the intended trade — a
+    // human setting a price beats a tier table keyed on an id, and it fails
+    // visibly rather than shipping a wrong one.
     return {
       biosash_id: p.id,
       name: p.name,
@@ -36821,9 +36831,6 @@ async function adminImportBiosashCatalog(onProgress) {
       stock: !!p.inStock,
       // boolean "in stock" flag — the DB column is boolean, not a quantity
       source_url: p.permalink || null,
-      is_new: false,
-      is_bestseller: false,
-      is_featured: false,
       rating: p.rating || 0,
       review_count: p.reviewCount || 0
     };
