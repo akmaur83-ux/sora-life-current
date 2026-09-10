@@ -7393,7 +7393,15 @@ body:has(.v2-home) .ftr { margin-top: 0; }
    five on a desktop. Scoped to .hd-* so no other homepage section is touched.
    ============================================================ */
 
-.hd-section { background: #fff; padding-block: 20px 16px; }
+/* Phone rhythm. Every homepage section butts against the next at 0px — they
+   carry padding, not margins — so on a phone these two rails had only
+   16px + 20px between one rail's control row and the next rail's title, and
+   the control row sat 14px below the cards against 16px below itself. Equal
+   gaps above and below made the controls read as floating between the two
+   rails instead of belonging to the one above. Widened to 24/24 so the
+   boundary is 48px, and the controls now sit closer to their own cards than
+   to the next section. */
+.hd-section { background: #fff; padding-block: 24px; }
 /* The two rails are a pair and read as one block, so the generic .v2-sec
    margin between them is collapsed — it was showing a band of page ground. */
 .hd-section + .hd-section { margin-top: 0; }
@@ -7402,7 +7410,7 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 .hd-section > .v2-wrap { padding-inline: 16px; }
 
 .hd-title {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   font-family: var(--slv2-sans, var(--font-sans));
   font-size: clamp(26px, 6.4vw, 34px);
   line-height: 1.12;
@@ -7493,7 +7501,7 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 /* One quiet line under the tile. Nothing else. */
 .hd-tile__caption {
   display: block;
-  margin-top: 8px;
+  margin-top: 10px;
   text-align: center;
   font-family: var(--slv2-sans, var(--font-sans));
   font-size: 14px;
@@ -7508,9 +7516,10 @@ body:has(.v2-home) .ftr { margin-top: 0; }
   align-items: center;
   justify-content: center;
   gap: 14px;
-  /* cards -> controls, and the row is the last thing in the section: its own
-     height plus the 20px section padding is all that follows it. */
-  margin-top: 14px;
+  /* Cards -> controls. Deliberately smaller than the 24px section padding
+     below it, so the row belongs to the rail it controls rather than sitting
+     midway between two rails. */
+  margin-top: 18px;
 }
 .hd-nav__btn {
   display: inline-flex;
@@ -7553,6 +7562,9 @@ body:has(.v2-home) .ftr { margin-top: 0; }
   .hd-title { margin-bottom: 18px; }
   .hd-rail { grid-auto-columns: calc((100% - 3 * 16px) / 3.4); }
   .hd-tile__caption { font-size: 15px; margin-top: 12px; }
+  /* Desktop rhythm is unchanged: the wider padding above already separates
+     the rails there, so the control row keeps its original gap. */
+  .hd-nav { margin-top: 14px; }
   .hd-nav__track { flex-basis: 240px; }
 }
 
