@@ -3,21 +3,21 @@ import { useLocation } from 'react-router-dom';
 import { productBySlug } from '../data/products.js';
 import { useBootstrapReady } from '../lib/bootstrapReady.js';
 import {
-  mountScrollBackground, scenesAllowedAt, HOME_SCENES_MEDIA,
+  mountScrollBackground, supportsScrollBackground, scenesAreStaticAt, SCENE_MOTION_MEDIA,
 } from '../lib/scrollBackground.js';
 
-// Tracks the desktop breakpoint so that crossing it mounts or unmounts the
-// homepage's scenes, instead of leaving whatever width the first render
-// happened to see. Rotating a tablet and dragging a desktop window narrow
-// both come through here.
+// Tracks the desktop breakpoint so that crossing it re-mounts the scenes in
+// the right mode — drifting above it, static below — instead of leaving
+// whatever width the first render happened to see. Rotating a tablet and
+// dragging a desktop window narrow both come through here.
 function useWideViewport() {
   const [wide, setWide] = useState(() => (
     typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-      && window.matchMedia(HOME_SCENES_MEDIA).matches
+      && window.matchMedia(SCENE_MOTION_MEDIA).matches
   ));
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
-    const query = window.matchMedia(HOME_SCENES_MEDIA);
+    const query = window.matchMedia(SCENE_MOTION_MEDIA);
     const sync = () => setWide(query.matches);
     // The viewport may have changed between first render and this effect.
     sync();
@@ -46,10 +46,7 @@ export default function StorefrontBackground() {
   const ready = useBootstrapReady();
   const wide = useWideViewport();
   useEffect(() => {
-    // Below the desktop breakpoint the homepage mounts nothing at all — not
-    // hidden with CSS, never created — so the per-frame custom-property
-    // writes in mountScrollBackground never run either.
-    if (!ready || !scenesAllowedAt(pathname, wide)) return;
+    if (!ready || !supportsScrollBackground(pathname)) return;
     const root = document.querySelector('.page-main');
     if (root) {
       const segment = pathname.split('/')[2] || '';
@@ -58,6 +55,10 @@ export default function StorefrontBackground() {
       return mountScrollBackground(root, {
         product: pathname.startsWith('/product/') ? productBySlug[slug] : undefined,
         category: pathname.startsWith('/category/') ? slug : undefined,
+        // Below the desktop breakpoint every scene is built but never written
+        // to again, so scrolling composites a cached layer instead of
+        // re-rastering one that changes every frame.
+        staticScenes: scenesAreStaticAt(wide),
       });
     }
   }, [pathname, ready, wide]);

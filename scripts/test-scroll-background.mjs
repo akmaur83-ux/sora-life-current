@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  mountScrollBackground, supportsScrollBackground, scenesAllowedAt, HOME_SCENES_MIN_WIDTH,
+  mountScrollBackground, supportsScrollBackground, scenesAreStaticAt, SCENE_MOTION_MIN_WIDTH,
 } from '../src/lib/scrollBackground.js';
 
 const browser = readFileSync(new URL('../src/components/ProductBrowser.jsx', import.meta.url), 'utf8');
@@ -10,20 +10,11 @@ assert.ok(browser.indexOf('className={`v2-fd') > browser.indexOf('{/* Mobile fil
 for (const path of ['/', '/shop', '/category/hair-care', '/category/skin-care/', '/product/example']) assert.ok(supportsScrollBackground(path));
 for (const path of ['/cart', '/checkout', '/account', '/admin', '/creator', '/privacy']) assert.ok(!supportsScrollBackground(path));
 
-// The homepage mounts nine scenes where other routes mount one to three, and
-// that scene count is what costs a phone ~4x its scrolling headroom. So the
-// homepage — and ONLY the homepage — is gated on the desktop breakpoint.
-assert.equal(HOME_SCENES_MIN_WIDTH, 1024);
-assert.ok(!scenesAllowedAt('/', false), 'no homepage scenes below the desktop breakpoint');
-assert.ok(scenesAllowedAt('/', true), 'homepage scenes stay on desktop');
-for (const path of ['/shop', '/category/hair-care', '/category/skin-care/', '/product/example']) {
-  assert.ok(scenesAllowedAt(path, false), `${path} keeps its scenes at every width`);
-  assert.ok(scenesAllowedAt(path, true), `${path} keeps its scenes at every width`);
-}
-// The width gate widens nothing: a route that never had scenes still has none.
-for (const path of ['/cart', '/checkout', '/account', '/admin', '/creator', '/privacy']) {
-  assert.ok(!scenesAllowedAt(path, true) && !scenesAllowedAt(path, false));
-}
+// Scenes mount at every width now; below the desktop breakpoint they hold
+// still instead of drifting.
+assert.equal(SCENE_MOTION_MIN_WIDTH, 1024);
+assert.equal(scenesAreStaticAt(false), true, 'narrow viewports get static scenes');
+assert.equal(scenesAreStaticAt(true), false, 'desktop keeps the drift');
 
 const listeners = new Map(), frames = new Map(), timers = new Map();
 let serial = 0, intersect, mutate, disconnects = 0;
@@ -100,4 +91,34 @@ assert.equal(listeners.size, 0);
 assert.equal(frames.size, 0);
 assert.equal(timers.size, 0);
 assert.ok(!host.classList.contains('sl-bg-host'));
-console.log('PASS background route isolation, homepage width gate, bounded scenes, live CSS motion, scroll batching, offscreen/reduced-motion pause and cleanup');
+
+// Static mode: scenes are still built and themed, but nothing is wired up to
+// write to them afterwards. This is the whole point of the mode — the layer's
+// content stops changing, so scrolling composites a cached paint.
+{
+  const staticHost = { ...element(), dataset: {}, matches: () => false };
+  const staticRoot = { querySelectorAll: () => [staticHost], contains: () => true };
+  const before = listeners.size;
+  const cleanupStatic = mountScrollBackground(staticRoot, { staticScenes: true });
+
+  assert.equal(staticHost.children.length, 1, 'a static scene is still built');
+  assert.equal(staticHost.children[0].children.length, 6, 'and still carries its shapes');
+  assert.ok(staticHost.classList.contains('sl-bg-host'));
+  assert.equal(listeners.has('scroll'), false, 'no scroll listener in static mode');
+  assert.equal(listeners.has('resize'), false, 'no resize listener in static mode');
+  assert.equal(listeners.has('visibilitychange'), false, 'nothing to pause, nothing to watch');
+  assert.equal(listeners.size, before, 'static mode registers no window listeners at all');
+
+  // Even if something calls the waker, no frame is scheduled and no scene is
+  // marked as moving, so the CSS keyframes stay paused.
+  assert.equal(frames.size, 0);
+  assert.ok(!staticHost.children[0].classList.contains('sl-bg--moving'));
+  assert.equal(staticHost.children[0].style['--sl-bg-y'], undefined, 'no parallax write');
+
+  cleanupStatic();
+  assert.ok(!staticHost.classList.contains('sl-bg-host'), 'static mode still cleans up');
+  assert.equal(listeners.size, 0);
+  assert.equal(frames.size, 0);
+}
+
+console.log('PASS background route isolation, static-below-desktop scenes, bounded scenes, live CSS motion, scroll batching, offscreen/reduced-motion pause and cleanup');

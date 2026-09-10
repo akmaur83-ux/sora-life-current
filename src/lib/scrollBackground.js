@@ -2,29 +2,47 @@ import { BACKGROUND_THEMES, SECTION_THEMES, productBackgroundTheme } from './bac
 export const supportsScrollBackground = (path) => path === '/' || path === '/shop'
   || /^\/(category|product)\/[^/]+\/?$/.test(path);
 
-// The homepage is the one route where this effect is expensive, and it is
-// expensive because of how MANY scenes it mounts rather than because of the
-// effect itself: one per section, nine of them carrying 54 shapes, where a
-// category page mounts one and a product page three.
+// Every route that supports scenes mounts them at every width. What changes
+// below the desktop breakpoint is that they stop MOVING.
 //
-// Measured on a Moto-G-class profile over Slow 4G with a 4x CPU throttle,
-// scrolling the homepage serviced 33.8 frames per second with the scenes
-// mounted against 135.7 with them off, and produced six long tasks (worst
-// 89 ms). Category and product pages measured flat in the same run — 130.6
-// vs 134.0 and 134.6 vs 140.4 — so they keep their scenes at every width.
+// Measured at 390px under a 4x CPU throttle, fresh browser per run, the
+// decoration cost about 56% of the available scrolling headroom: ~41 frames
+// per second against a ~97 ceiling with no decoration at all. Cutting the
+// homepage from nine scenes to three did not recover it (82.6 vs 85.5 fps on
+// a settled page, inside run-to-run noise) — the IntersectionObserver below
+// already limits work to the one or two scenes actually on screen, so the
+// total count was never what cost anything.
+//
+// The fix, measured the same way, took it to ~64 fps with long tasks per
+// scroll falling from 4-9 (worst 101 ms) to 1 (worst 55 ms):
+//
+//   9 animated scenes, original CSS   41.4 fps   4-9 long tasks   <- before
+//   9 static scenes, simplified CSS   64.3 fps   1 long task      <- after
+//   no decoration at all             131.2 fps   0
+//
+// Attribution, because it is not what it looks like: the win is in the CSS
+// half — storefront-background.css drops `transform` and the drop-shadow
+// filters and blurred box-shadows below 1024px, so each scene rasterises once
+// into a layer that never changes. Turning the JavaScript back on with that
+// CSS in place measured 64.5 fps, i.e. identical. The per-frame property
+// writes are NOT what cost the frames.
+//
+// This static mode is kept anyway, and it is the honest thing to keep: with
+// `transform: none` applied below the breakpoint, writing --sl-bg-y every
+// scroll frame moves nothing anyone can see. Static mode stops computing a
+// parallax that cannot render — and takes the scroll listener, the rAF loop
+// and the per-section IntersectionObserver callbacks out with it. The scenes
+// are still there, still coloured, still carrying their motifs; they just do
+// not drift.
 //
 // 1024px is this codebase's own desktop boundary, the widest breakpoint the
-// v2 sheets use. The gate is on width rather than pointer type because a
-// narrow desktop window pays the same cost a phone does.
-export const HOME_SCENES_MIN_WIDTH = 1024;
-export const HOME_SCENES_MEDIA = `(min-width: ${HOME_SCENES_MIN_WIDTH}px)`;
+// v2 sheets use. The split is on width rather than pointer type because a
+// narrow desktop window rasterises the same way a phone does.
+export const SCENE_MOTION_MIN_WIDTH = 1024;
+export const SCENE_MOTION_MEDIA = `(min-width: ${SCENE_MOTION_MIN_WIDTH}px)`;
 
-/**
- * Whether decorative scenes should mount for this route at this viewport.
- * Only the homepage consults the width; every other route ignores it.
- */
-export const scenesAllowedAt = (path, wideViewport) => supportsScrollBackground(path)
-  && (path !== '/' || !!wideViewport);
+/** Scenes drift on desktop and hold still below the breakpoint. */
+export const scenesAreStaticAt = (wideViewport) => !wideViewport;
 
 // The listing body excludes its sibling filter dialog. Isolating the entire
 // shop would incorrectly trap that dialog below the global sticky header.
@@ -35,6 +53,11 @@ const TARGETS = '.v2-home > .hm-section:not([data-home-section="creator"]), .v2-
 export function mountScrollBackground(root, context = {}) {
   if (!window.matchMedia || !window.IntersectionObserver) return;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  // Static scenes are built and themed exactly as animated ones, but nothing
+  // ever writes to them after that: no scroll listener, no rAF, no
+  // IntersectionObserver, and .sl-bg--moving is never applied so the CSS
+  // keyframes stay paused. The layer is painted once and then only composited.
+  const staticScenes = !!context.staticScenes;
   const scenes = new Map();
   const visible = new Set();
   let frame = 0;
@@ -68,7 +91,7 @@ export function mountScrollBackground(root, context = {}) {
   }
 
   function wake() {
-    if (reduced.matches || document.hidden) return;
+    if (staticScenes || reduced.matches || document.hidden) return;
     active = true;
     if (!frame) frame = requestAnimationFrame(paint);
     // CSS keeps visible scenes alive without a JavaScript animation loop.
@@ -125,7 +148,10 @@ export function mountScrollBackground(root, context = {}) {
       scenes.set(host, scene);
       host.classList.add('sl-bg-host');
       host.appendChild(scene);
-      observer.observe(host);
+      // Nothing observes a static scene: it has no visible/hidden behaviour to
+      // drive, and an observer callback per section per scroll is exactly the
+      // main-thread work this mode exists to remove.
+      if (!staticScenes) observer.observe(host);
     }
   }
 
@@ -134,20 +160,25 @@ export function mountScrollBackground(root, context = {}) {
     else wake();
   }
   discover();
+  // Sections still arrive asynchronously in both modes, so this stays.
   const mutation = new MutationObserver(discover);
   mutation.observe(root, { childList: true, subtree: true });
-  window.addEventListener('scroll', wake, { passive: true });
-  window.addEventListener('resize', wake, { passive: true });
-  document.addEventListener('visibilitychange', preference);
-  reduced.addEventListener('change', preference);
+  if (!staticScenes) {
+    window.addEventListener('scroll', wake, { passive: true });
+    window.addEventListener('resize', wake, { passive: true });
+    document.addEventListener('visibilitychange', preference);
+    reduced.addEventListener('change', preference);
+  }
   return () => {
     stop();
     observer.disconnect();
     mutation.disconnect();
-    window.removeEventListener('scroll', wake);
-    window.removeEventListener('resize', wake);
-    document.removeEventListener('visibilitychange', preference);
-    reduced.removeEventListener('change', preference);
+    if (!staticScenes) {
+      window.removeEventListener('scroll', wake);
+      window.removeEventListener('resize', wake);
+      document.removeEventListener('visibilitychange', preference);
+      reduced.removeEventListener('change', preference);
+    }
     for (const [host, scene] of scenes) {
       host.classList.remove('sl-bg-host');
       scene.remove();
