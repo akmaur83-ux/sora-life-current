@@ -17,11 +17,37 @@ import { getTaxConfig } from '../_lib/tax.js';
 import { getRazorpayCredentials, createRazorpayOrder } from '../_lib/razorpay.js';
 import {
   getSupabaseConfig, fetchProductsForCart, insertOrder, getUserIdFromToken,
-  fetchVariantsForCart, fetchCouponByCode, recordConversion,
+  fetchVariantsForCart, fetchCouponRowByCode, recordConversion,
   findOrderByIdempotencyKey, consumeCouponForOrder, updateOrderById,
 } from '../_lib/supabaseAdmin.js';
 import { enforceRateLimit } from '../_lib/rateLimit.js';
 import { computeConversionBase, readVisitorId } from '../_lib/attribution.js';
+import { loadBuyerContext, judgeCoupon } from '../_lib/couponQuote.js';
+
+/**
+ * Warn when the total the browser was last quoted differs from the total
+ * being charged.
+ *
+ * Purely observational — the server figure wins either way. The point is that
+ * a drift between quote and charge is invisible in production otherwise: the
+ * customer sees it, we do not. Rounded to whole rupees so floating-point
+ * noise does not fill the log.
+ */
+function logQuoteDiscrepancy(body, bd) {
+  const quoted = body?.quotedTotals;
+  if (!quoted || typeof quoted !== 'object') return;
+  const diffs = [];
+  for (const [key, actual] of [['grandTotal', bd.grandTotal], ['couponDiscount', bd.couponDiscount]]) {
+    const claimed = Number(quoted[key]);
+    if (Number.isFinite(claimed) && Math.round(claimed) !== Math.round(actual)) {
+      diffs.push(`${key}: quoted ${Math.round(claimed)}, charging ${Math.round(actual)}`);
+    }
+  }
+  if (diffs.length) {
+    console.warn('[create-order] quote/charge discrepancy —', diffs.join('; '),
+      `| coupon=${bd.coupon?.code ?? 'none'}`);
+  }
+}
 
 // Record creator-attribution for a just-created order. Best-effort and fully
 // isolated: attribution must never break or delay a legitimate order, so any
@@ -270,28 +296,80 @@ export default async function handler(req, res) {
     const products = await fetchProductsForCart(parsed.items.map((i) => i.id), sb);
     const variantRows = await fetchVariantsForCart(parsed.items.map((i) => i.variantId), sb);
 
-    // A coupon CODE is accepted from the browser; the discount it grants is
-    // resolved server-side and re-validated (active/window/limit/min-value).
-    const coupon = couponCode ? await fetchCouponByCode(couponCode, sb) : null;
-
-    const totals = computeOrderTotal(parsed.items, products, delivery, {
-      variantRows,
-      coupon,
-      taxConfig: getTaxConfig(),
-      buyerState: typeof customer?.state === 'string' ? customer.state : null,
-    });
-    if (!totals.ok) return fail(res, 400, totals.error);
-    const bd = totals.breakdown;
-
-    const method = paymentMethod === 'cod' ? 'cod' : 'razorpay';
-
     // Link this order to a signed-in customer, if any. The id is derived
     // server-side from the validated access token in the Authorization
     // header — a client-supplied user_id is never read or trusted. No
     // token / guest / invalid token => null => a guest order, exactly as
     // before. `userId` is only ever attached to the insert when non-null,
     // so guest inserts are byte-for-byte unchanged.
+    //
+    // Resolved BEFORE the coupon now, because the per-user limit and the
+    // first-order-only rule are both questions about this buyer.
+    const buyerState = typeof customer?.state === 'string' ? customer.state : null;
     const userId = await getUserIdFromToken(req.headers?.authorization, sb);
+
+    // ------------------------------------------------------------
+    // COUPON REVALIDATION
+    //
+    // A coupon CODE is accepted from the browser; the discount it grants is
+    // resolved here and revalidated from scratch. This deliberately does NOT
+    // trust the quote the cart was shown: minutes can pass between quoting
+    // and submitting, and in that time a coupon can expire, be exhausted, or
+    // stop applying because the customer edited the basket.
+    //
+    // It runs the same validateCoupon() the quote endpoint ran, so the two
+    // can never drift apart. It is also where the date window, min_order_value
+    // and first_order_only are actually enforced — consume_coupon() checks
+    // none of those three (see the note at the end of 0028).
+    // ------------------------------------------------------------
+    let coupon = null;
+    if (couponCode) {
+      // Priced with no coupon first: the eligible amount a coupon is judged
+      // against is the goods value, and that must not be computed from a
+      // total the coupon has already reduced.
+      const dryRun = computeOrderTotal(parsed.items, products, delivery, {
+        variantRows, taxConfig: getTaxConfig(), buyerState,
+      });
+      if (!dryRun.ok) return fail(res, 400, dryRun.error);
+
+      const buyer = await loadBuyerContext(userId, sb);
+      const row = await fetchCouponRowByCode(couponCode, sb);
+      const judged = await judgeCoupon(row, dryRun.breakdown.itemTotal, buyer, sb);
+
+      if (!judged.ok) {
+        // Refused rather than silently dropped. Dropping the coupon would
+        // charge the customer more than the total they just agreed to, on a
+        // screen they have already left — so the cart is told to re-quote and
+        // show the new figure before anyone pays.
+        console.warn('[create-order] coupon rejected at order time:', {
+          code: String(couponCode).slice(0, 40), reason: judged.reason,
+        });
+        return res.status(409).json({
+          error: judged.message,
+          couponRejected: true,
+          reason: judged.reason,
+          breakdown: dryRun.breakdown,
+        });
+      }
+      coupon = row;
+    }
+
+    const totals = computeOrderTotal(parsed.items, products, delivery, {
+      variantRows,
+      coupon,
+      taxConfig: getTaxConfig(),
+      buyerState,
+    });
+    if (!totals.ok) return fail(res, 400, totals.error);
+    const bd = totals.breakdown;
+
+    // The browser may send back the figures it was last quoted. They are
+    // never used for anything — the order is priced above regardless — but a
+    // mismatch means the customer saw a number we are not about to charge,
+    // and that is worth knowing about before it becomes a support ticket.
+    logQuoteDiscrepancy(body, bd);
+
+    const method = paymentMethod === 'cod' ? 'cod' : 'razorpay';
 
     // Razorpay is only required for the online-payment branch below — COD
     // must work independently of whether Razorpay is configured. Checking

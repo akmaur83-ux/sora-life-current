@@ -280,25 +280,87 @@ export async function fetchVariantsForProducts(productIds, cfg) {
 }
 
 /**
- * Resolve a coupon code to its trusted record. Returns null for unknown,
- * inactive, not-yet-started, expired or exhausted coupons — the browser
- * never decides whether a coupon is valid.
+ * Look up a coupon by code WITHOUT judging it.
+ *
+ * This replaced fetchCouponByCode, which folded the active/window/limit
+ * checks into its SQL and returned null for every kind of failure. That was
+ * fine while create-order was the only caller — it just needed "usable or
+ * not" — but it cannot tell a customer WHICH rule they fell foul of, and a
+ * second copy of the rules living in a PostgREST query string is exactly the
+ * drift this build exists to remove.
+ *
+ * The row comes back unjudged; validateCoupon() in coupons.js is now the
+ * single place that decides, for the quote and for the order alike.
  */
-export async function fetchCouponByCode(code, cfg) {
+export async function fetchCouponRowByCode(code, cfg) {
   const clean = typeof code === 'string' ? code.trim().toUpperCase().slice(0, 40) : '';
   if (!clean) return null;
   try {
     const rows = await rest(
-      `coupons?select=*&code=eq.${encodeURIComponent(clean)}&is_active=eq.true&limit=1`,
-      cfg
+      `coupons?select=*&code=eq.${encodeURIComponent(clean)}&limit=1`,
+      cfg,
     );
-    const c = rows?.[0];
-    if (!c) return null;
-    const now = Date.now();
-    if (c.starts_at && new Date(c.starts_at).getTime() > now) return null;
-    if (c.expires_at && new Date(c.expires_at).getTime() < now) return null;
-    if (c.usage_limit != null && Number(c.used_count) >= Number(c.usage_limit)) return null;
-    return c;
+    return rows?.[0] ?? null;
+  } catch (err) {
+    if (isMissingRelation(err)) return null;
+    throw err;
+  }
+}
+
+/**
+ * Every coupon that is switched on. The date window, minimum order value and
+ * the limits are applied by validateCoupon() against the cart in hand, so
+ * this deliberately filters on nothing but is_active.
+ *
+ * Service-role only. coupons has no public read policy — the storefront
+ * reaches these through /api/coupons/eligible rather than reading the table,
+ * so a customer still cannot enumerate codes.
+ */
+export async function fetchActiveCoupons(cfg) {
+  try {
+    return (await rest('coupons?select=*&is_active=eq.true&limit=200', cfg)) || [];
+  } catch (err) {
+    if (isMissingRelation(err)) return [];
+    throw err;
+  }
+}
+
+/** How many times this buyer has already redeemed this coupon. */
+export async function countCouponUsesForUser(couponId, userId, cfg) {
+  if (!couponId || !userId) return null;
+  try {
+    const rows = await rest(
+      `coupon_redemptions?select=id&coupon_id=eq.${encodeURIComponent(couponId)}`
+      + `&user_id=eq.${encodeURIComponent(userId)}&limit=100`,
+      cfg,
+    );
+    return Array.isArray(rows) ? rows.length : null;
+  } catch (err) {
+    if (isMissingRelation(err)) return null;
+    throw err;
+  }
+}
+
+/**
+ * Has this buyer paid for an order before? Drives first_order_only.
+ *
+ * Returns null when the buyer is not identified, and null is NOT "no" —
+ * validateCoupon only refuses on a definite true, so an anonymous checkout is
+ * never wrongly told it is a returning customer.
+ */
+export async function hasPriorPaidOrder(userId, cfg) {
+  if (!userId) return null;
+  try {
+    // payment_status, not status: status also moves on through the
+    // fulfilment lifecycle (shipped, delivered, cancelled), so matching it
+    // against 'paid' would stop recognising a customer's first order the
+    // moment it shipped.
+    const rows = await rest(
+      `orders?select=id&user_id=eq.${encodeURIComponent(userId)}`
+      + '&payment_status=eq.paid&limit=1',
+      cfg,
+    );
+    return Array.isArray(rows) && rows.length > 0;
   } catch (err) {
     if (isMissingRelation(err)) return null;
     throw err;

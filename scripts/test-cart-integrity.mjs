@@ -103,11 +103,15 @@ test('C4 the server coupon path is left completely intact', () => {
   // Removing the fake UI must not have touched the real implementation.
   const createOrder = src('../api/razorpay/create-order.js');
   assert.match(createOrder, /couponCode/, 'create-order still accepts a coupon code');
-  assert.match(createOrder, /fetchCouponByCode/, 'create-order still resolves it server-side');
+  assert.match(createOrder, /fetchCouponRowByCode/, 'create-order still resolves it server-side');
   const pricing = src('../api/_lib/pricing.js');
   assert.match(pricing, /computeCouponDiscount/, 'server coupon maths is untouched');
   const admin = src('../api/_lib/supabaseAdmin.js');
-  assert.match(admin, /export async function fetchCouponByCode/, 'the resolver is untouched');
+  assert.match(admin, /export async function fetchCouponRowByCode/, 'the resolver is untouched');
+  // The old resolver folded the rules into its SQL. It is gone, and it must
+  // not come back: two resolvers means two sets of rules to drift apart.
+  assert.doesNotMatch(admin, /function fetchCouponByCode/,
+    'the superseded resolver must not be reintroduced');
 });
 
 test('C5 promo copy no longer sends customers to a field that does not exist', () => {
