@@ -8226,6 +8226,53 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .sl-bg { display:none; } .sl-bg > i { animation:none; transition:none; } }
 @media print { .sl-bg { display:none; } }
+/* ------------------------------------------------------------------
+   Below the desktop breakpoint the scenes are STATIC.
+
+   src/lib/scrollBackground.js stops writing --sl-bg-y on every scroll frame
+   and never applies .sl-bg--moving, so nothing here animates and the scene
+   layer's content stops changing — the browser can paint each scene once and
+   then only composite it while the user scrolls.
+
+   What is left is that one-time paint, and on a phone it is dominated by two
+   things: drop-shadow filters, which force the element through its own filter
+   pass, and large blurred box-shadows, which do the same. Both were depth
+   cues on decoration sitting behind content at 390px wide, where nobody can
+   see them. The colour and the silhouette are what actually read, and those
+   are kept exactly as they are.
+
+   Inset shadows stay: they are what give the pearl, droplet, coconut and
+   petal their form rather than reading as flat blobs, and they are cheap at
+   these sizes. Unblurred offset shadows stay too — .sl-bg__mote DRAWS its
+   four extra dots with them.
+   ------------------------------------------------------------------ */
+@media (max-width: 1023px) {
+  /* No parallax to carry, so do not promote a layer for a transform that
+     never changes. */
+  .sl-bg { transform: none; }
+  .sl-bg > i, .sl-bg__wash { animation: none; }
+
+  /* Filters: the two SVG-backed motifs. */
+  .sl-bg .sl-bg__sprig,
+  .sl-bg .sl-bg__berries { filter: none; }
+
+  /* Outer blurred shadows dropped; inset modelling kept. */
+  .sl-bg .sl-bg__leaf { box-shadow: none; }
+  .sl-bg .sl-bg__citrus { box-shadow: inset 0 0 0 4px #fff4b9; }
+  .sl-bg .sl-bg__pearl {
+    box-shadow: inset 2px 3px 5px #fffe, inset -3px -5px 10px rgb(var(--sl-bg-a) / .24);
+  }
+  .sl-bg .sl-bg__droplet {
+    box-shadow: inset 2px 3px 4px #fff8, inset -4px -5px 7px #72591630;
+  }
+  .sl-bg .sl-bg__coconut { box-shadow: inset 3px 4px 5px #fff7; }
+  .sl-bg .sl-bg__petal {
+    box-shadow: inset 3px 4px 7px #fff9, inset -4px -6px 8px #8b3d591c;
+  }
+  .sl-bg .sl-bg__capsule {
+    box-shadow: inset 0 2px 3px #fffa, inset 0 -3px 4px #555a2926;
+  }
+}
 
 /* ═══ src/styles/storefront-refinements.css ═══ */
 /* Storefront legibility and brand refinements. Kept separate from commerce logic. */
