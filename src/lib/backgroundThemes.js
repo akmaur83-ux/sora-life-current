@@ -1,7 +1,7 @@
 // Decorative art direction uses explicit product/category text, never inferred
 // health benefits or invented ingredient claims. Unknown products stay neutral.
 export const SECTION_THEMES = {
-  trending: 'botanical', 'shop-by-category': 'citrus', 'shop-by-concerns': 'hydration',
+  trending: 'botanical', 'shop-by-category': 'rose', 'shop-by-concerns': 'hydration',
   brands: 'gold', discover: 'silk', popular: 'berry', 'mom-trust': 'coconut',
   collections: 'floral', 'why-sora-life': 'mineral',
 };
@@ -14,6 +14,19 @@ export const BACKGROUND_THEMES = {
   berry: { colors: ['239 120 26', '229 174 39', '249 226 182'], shapes: ['berries', 'berries', 'droplet', 'mote', 'mote'] },
   coconut: { colors: ['160 174 110', '185 146 103', '239 230 205'], shapes: ['coconut', 'coconut', 'leaf', 'droplet', 'mote'] },
   floral: { colors: ['217 76 124', '176 112 192', '246 219 219'], shapes: ['petal', 'petal', 'petal', 'pearl', 'mote'] },
+  // Shop by Category. Every value here is already in this palette — the rose
+  // is silk's, the pink and the pale tint are floral's — so this adds a theme,
+  // not a colour system. Deliberately lighter on motif than floral: one petal
+  // and two pearls rather than three petals, because the section is only
+  // ~260px tall on a phone and larger shapes crowd it, which is exactly what
+  // the citrus theme it replaces was doing.
+  //
+  // The order matters on a short section. The wash draws its two radial
+  // gradients from a and b, and on a 260px band those gradients cannot fade
+  // out the way they do over a 600px one — two saturated stops read as a hot
+  // pink slab next to its calmer neighbours. So b is floral's pale tint and
+  // the saturated pink sits at c, where only the wash's edge picks it up.
+  rose: { colors: ['215 114 128', '246 219 219', '217 76 124'], shapes: ['petal', 'pearl', 'pearl', 'mote', 'mote'] },
   nutrient: { colors: ['47 158 118', '216 178 58', '235 228 199'], shapes: ['capsule', 'capsule', 'orbit', 'mote', 'mote'] },
   oil: { colors: ['182 135 48', '221 176 86', '249 231 191'], shapes: ['droplet', 'droplet', 'ribbon', 'mote', 'mote'] },
   mineral: { colors: ['131 155 161', '174 180 175', '232 235 227'], shapes: ['crystal', 'crystal', 'beam', 'mote', 'mote'] },
