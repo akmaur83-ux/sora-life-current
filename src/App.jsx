@@ -152,6 +152,16 @@ export default function App() {
         <Route path="/terms" element={<EditableLegal doc="terms" />} />
         <Route path="/shipping" element={<Legal doc="shipping" />} />
         <Route path="/returns" element={<EditableLegal doc="returns" />} />
+        {/* Razorpay's merchant checklist asks for the refund and shipping
+            policies at these exact paths, and both were serving the 404 page.
+            Nothing in the app linked to them — the documents themselves have
+            existed all along at /shipping and /returns. So these are extra
+            routes onto the same two documents rather than a rename: the old
+            paths are linked from the footer and may already be indexed, and
+            moving them would break live URLs to fix missing ones. Editing the
+            returns document in admin updates both of its paths. */}
+        <Route path="/refund-policy" element={<EditableLegal doc="returns" />} />
+        <Route path="/shipping-policy" element={<Legal doc="shipping" />} />
         <Route path="*" element={<NotFound />} />
       </Route>
       </Routes>
