@@ -7402,9 +7402,14 @@ body:has(.v2-home) .ftr { margin-top: 0; }
    boundary is 48px, and the controls now sit closer to their own cards than
    to the next section. */
 .hd-section { background: #fff; padding-block: 24px; }
-/* The two rails are a pair and read as one block, so the generic .v2-sec
-   margin between them is collapsed — it was showing a band of page ground. */
-.hd-section + .hd-section { margin-top: 0; }
+/* .v2-sec carries a 32px top margin, and .v2-home zeroes it for .hm-section
+   but not for these rails — so the FIRST rail was opening with 32px of page
+   ground above it, a flat band between the section above and this one. The
+   previous rule here only collapsed the margin BETWEEN the two rails, which
+   removed the band nobody had noticed and left the one they had.
+   Both are zeroed now: sections butt, and storefront-background.css fades
+   each scene out at its own top and bottom so nothing collides. */
+.v2-home .v2-sec.hd-section { margin-top: 0; }
 /* The shared .v2-wrap gutter is wider than these rails want on a phone; this
    keeps the tiles close to the screen edge like the reference. */
 .hd-section > .v2-wrap { padding-inline: 16px; }
@@ -8261,7 +8266,20 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 @media (max-width: 1023px) {
   /* No parallax to carry, so do not promote a layer for a transform that
      never changes. */
-  .sl-bg { transform: none; }
+  .sl-bg {
+    transform: none;
+    /* Sections butt against each other at 0px, so two scened sections used to
+       meet on a razor edge — Shop by Category's pink ended and Shop by
+       Concerns' blue began on the same pixel row. Each scene now dissolves
+       into its section's own white at top and bottom, so neighbouring colours
+       never touch. A fixed length rather than a percentage: these sections
+       run from 240px to 670px tall and a percentage would swallow the short
+       ones. */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 26px,
+      #000 calc(100% - 26px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 26px,
+      #000 calc(100% - 26px), transparent 100%);
+  }
   .sl-bg > i, .sl-bg__wash { animation: none; }
 
   /* Filters: the two SVG-backed motifs. */

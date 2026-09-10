@@ -35754,8 +35754,13 @@
 	 *
 	 * `image` is an admin-assigned or committed asset URL. `product` is only the
 	 * last-resort visual, used when neither exists (see homeDiscovery.js).
-	 * `overlay` sets the title over the artwork, which categories use and
-	 * concerns do not.
+	 * `overlay` sets the title over the artwork instead of under the tile.
+	 * Neither rail uses it now: categories did, which left the two rails with
+	 * different vertical rhythms — one label inside the tile, one below it — so
+	 * the same spacing rules produced visibly different sections. It also meant
+	 * a dark scrim over every piece of category artwork. The prop stays because
+	 * the treatment is still worth having for a rail with photography that can
+	 * carry it.
 	 */
 	function DiscoveryTile({
 	  to,
@@ -35803,8 +35808,7 @@
 	      to: card.to,
 	      image: card.image,
 	      product: card.fallbackProduct,
-	      caption: card.name,
-	      overlay: true
+	      caption: card.name
 	    }, card.slug))
 	  });
 	}
