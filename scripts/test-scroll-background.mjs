@@ -1,12 +1,29 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { mountScrollBackground, supportsScrollBackground } from '../src/lib/scrollBackground.js';
+import {
+  mountScrollBackground, supportsScrollBackground, scenesAllowedAt, HOME_SCENES_MIN_WIDTH,
+} from '../src/lib/scrollBackground.js';
 
 const browser = readFileSync(new URL('../src/components/ProductBrowser.jsx', import.meta.url), 'utf8');
 assert.ok(browser.indexOf('className={`v2-fd') > browser.indexOf('{/* Mobile filter drawer */}'));
 
 for (const path of ['/', '/shop', '/category/hair-care', '/category/skin-care/', '/product/example']) assert.ok(supportsScrollBackground(path));
 for (const path of ['/cart', '/checkout', '/account', '/admin', '/creator', '/privacy']) assert.ok(!supportsScrollBackground(path));
+
+// The homepage mounts nine scenes where other routes mount one to three, and
+// that scene count is what costs a phone ~4x its scrolling headroom. So the
+// homepage — and ONLY the homepage — is gated on the desktop breakpoint.
+assert.equal(HOME_SCENES_MIN_WIDTH, 1024);
+assert.ok(!scenesAllowedAt('/', false), 'no homepage scenes below the desktop breakpoint');
+assert.ok(scenesAllowedAt('/', true), 'homepage scenes stay on desktop');
+for (const path of ['/shop', '/category/hair-care', '/category/skin-care/', '/product/example']) {
+  assert.ok(scenesAllowedAt(path, false), `${path} keeps its scenes at every width`);
+  assert.ok(scenesAllowedAt(path, true), `${path} keeps its scenes at every width`);
+}
+// The width gate widens nothing: a route that never had scenes still has none.
+for (const path of ['/cart', '/checkout', '/account', '/admin', '/creator', '/privacy']) {
+  assert.ok(!scenesAllowedAt(path, true) && !scenesAllowedAt(path, false));
+}
 
 const listeners = new Map(), frames = new Map(), timers = new Map();
 let serial = 0, intersect, mutate, disconnects = 0;
@@ -83,4 +100,4 @@ assert.equal(listeners.size, 0);
 assert.equal(frames.size, 0);
 assert.equal(timers.size, 0);
 assert.ok(!host.classList.contains('sl-bg-host'));
-console.log('PASS background route isolation, bounded scenes, live CSS motion, scroll batching, offscreen/reduced-motion pause and cleanup');
+console.log('PASS background route isolation, homepage width gate, bounded scenes, live CSS motion, scroll batching, offscreen/reduced-motion pause and cleanup');
