@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import dotenv from 'dotenv';
 import { buildCss } from './build/build-css.mjs';
+import { readShippedBundle } from './build/shipped-bundle.mjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import replace from '@rollup/plugin-replace';
@@ -191,7 +192,12 @@ if (droppedProviders.length) {
 // existed can carry an empty provider list; shipping it would be exactly the
 // silent regression this guard exists to stop.
 if (verifyOnly) {
-  const committed = fs.readFileSync('public/bundle.js', 'utf8');
+  // Entry AND chunks: the call site lives in src/lib/oauth.js, which the
+  // storefront uses, but rollup is free to hoist a shared module into a
+  // chunk. Reading only the entry would land in the "marker absent" branch
+  // below and quietly stop enforcing — the exact silent regression this
+  // guard exists to prevent.
+  const committed = readShippedBundle('public');
   // The build inlines the list at the parseEnabledProviders() call site. If
   // the marker is absent the artifact predates this contract or was reshaped
   // by a refactor — report it rather than failing a deploy on a regex.
@@ -224,17 +230,36 @@ if (verifyOnly) {
 
 // Where the compiled output lands. In verify-only mode it goes to a scratch
 // path (gitignored, not deployed) purely so compilation is actually exercised.
-const OUTPUT_FILE = verifyOnly ? '.build-check/bundle.js' : 'public/bundle.js';
+const OUTPUT_DIR = verifyOnly ? '.build-check' : 'public';
 
 export default {
   input: 'src/main.jsx',
   output: {
-    file: OUTPUT_FILE,
-    format: 'iife',
+    dir: OUTPUT_DIR,
+    // ES rather than IIFE because an IIFE cannot be split. index.html loads
+    // the entry with type="module".
+    format: 'es',
+    // The entry keeps its name and its path. public/bundle.js is still THE
+    // committed, deployed artifact — the release convention is unchanged
+    // except that public/chunks/ is committed alongside it.
+    entryFileNames: 'bundle.js',
+    // Stable names, not content hashes. Hashed names would add a new file per
+    // build, leave orphans to reap, and churn git on every release; these
+    // assets are already served max-age=0, must-revalidate, so a hash buys
+    // nothing here.
+    chunkFileNames: 'chunks/[name].js',
     sourcemap: !verifyOnly,
-    inlineDynamicImports: true,
   },
   plugins: [
+    {
+      // Rollup does not clean output.dir. Without this, renaming or removing
+      // a lazy route leaves its chunk behind in public/chunks/ — committed,
+      // deployed, and served forever.
+      name: 'clean-chunks',
+      buildStart() {
+        fs.rmSync(`${OUTPUT_DIR}/chunks`, { recursive: true, force: true });
+      },
+    },
     // The storefront stylesheet is generated, not hand-linked: index.html
     // loads one public/app.css instead of the 30 render-blocking <link>s it
     // used to. Running it here rather than as a separate npm script keeps the

@@ -10,8 +10,11 @@
 // No writes. Uses the public publishable key from the bundle.
 // ============================================================
 import { readFileSync } from 'node:fs';
+import { readShippedBundle } from '../build/shipped-bundle.mjs';
 
-const bundle = readFileSync('public/bundle.js', 'utf8');
+// Entry plus chunks: admin routes are split out of the entry now, so a
+// value that used to sit in one file may live in any of them.
+const bundle = readShippedBundle();
 const URL_ = (bundle.match(/https:\/\/[a-z0-9]{15,}\.supabase\.co/) || [])[0];
 const KEY = (bundle.match(/sb_publishable_[A-Za-z0-9_\-]+/) || [])[0];
 if (!URL_ || !KEY) { console.error('No Supabase config in bundle.'); process.exit(1); }

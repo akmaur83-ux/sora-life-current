@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs';
 import { runMediaFailureTests } from './product-media-failure-cases.mjs';
 import { products, applyProductMedia, productGallery } from '../src/data/products.js';
 import {
+import { readShippedBundle } from '../build/shipped-bundle.mjs';
   assertSafeUrl, sniffImageType, discoverImageUrls, IMPORT_ALLOWED_MIME, extForMime,
 } from '../api/_lib/ssrf.js';
 
@@ -160,7 +161,9 @@ await runMediaFailureTests(t);
 if (process.argv.includes('--live')) {
 console.log('\n— Live posture (anon; explicitly opted in) —');
 try {
-  const bundle = readFileSync('public/bundle.js', 'utf8');
+  // Entry plus chunks: admin routes are split out of the entry now, so a
+// value that used to sit in one file may live in any of them.
+const bundle = readShippedBundle();
   const URL = (bundle.match(/https:\/\/[a-z0-9]{15,}\.supabase\.co/) || [])[0];
   const KEY = (bundle.match(/sb_publishable_[A-Za-z0-9_\-]+/) || [])[0];
   const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' };

@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 import {
   INTENDED_PROVIDERS, parseEnabledProviders, missingIntendedProviders,
 } from '../src/lib/oauthProviders.js';
+import { readShippedBundle, shippedBundleFiles } from '../build/shipped-bundle.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SANDBOX = path.join(REPO, '.build-check', 'selftest');
@@ -51,7 +52,8 @@ const STALE_BUNDLE = '/* the good bundle already committed to the repo */\n';
  */
 function runBuild({
   source, withEnv, withCommittedBundle = true,
-  committedBundle = STALE_BUNDLE, oauthProviders, vercelEnv, supabaseUrl,
+  committedBundle = STALE_BUNDLE, committedChunks, oauthProviders, vercelEnv,
+  supabaseUrl,
 }) {
   fs.rmSync(SANDBOX, { recursive: true, force: true });
   fs.mkdirSync(path.join(SANDBOX, 'src'), { recursive: true });
@@ -59,6 +61,14 @@ function runBuild({
   fs.writeFileSync(path.join(SANDBOX, 'src', 'main.jsx'), source);
   if (withCommittedBundle) {
     fs.writeFileSync(path.join(SANDBOX, 'public', 'bundle.js'), committedBundle);
+  }
+  // The shipped artifact is an entry plus chunks. A case can put content in a
+  // chunk to prove the guards read past the entry.
+  if (committedChunks) {
+    fs.mkdirSync(path.join(SANDBOX, 'public', 'chunks'), { recursive: true });
+    for (const [name, body] of Object.entries(committedChunks)) {
+      fs.writeFileSync(path.join(SANDBOX, 'public', 'chunks', name), body);
+    }
   }
 
   const env = { ...process.env };
@@ -124,7 +134,11 @@ test('an unconfigured build STILL COMPILES the source, to a scratch output', () 
   // Rollup announces its input -> output. Seeing the scratch path proves the
   // compile ran instead of the old exit-before-building short circuit.
   ok(/src[\\/]main\.jsx/.test(r.output), `no compile was reported:\n${r.output}`);
-  ok(/\.build-check[\\/]bundle\.js/.test(r.output), `compile did not target the scratch path:\n${r.output}`);
+  // Output is a directory now that admin routes are split into chunks, so
+  // rollup reports "-> .build-check" rather than "-> .build-check/bundle.js".
+  // The scratch path appearing at all is what proves the compile ran
+  // rather than short-circuiting; cleanup is asserted just below.
+  ok(/\.build-check/.test(r.output), `compile did not target the scratch path:\n${r.output}`);
   // And the scratch artifact must not survive into deployable output.
   eq(r.scratch, null, 'the verify-only artifact must be cleaned up after the build');
 });
@@ -244,10 +258,62 @@ test('M1.8 the preserve path ACCEPTS a committed bundle that already carries goo
   eq(r.bundle, committedWith('google'), 'and must be preserved untouched');
 });
 
+// ------------------------------------------------------------
+// M1.13-M1.15 pin the OAuth guard against the code-splitting change.
+//
+// The provider list is inlined at the parseEnabledProviders() call site in
+// src/lib/oauth.js. That is storefront code, so it normally lands in the
+// entry — but rollup is free to hoist a shared module into a chunk. A guard
+// that only read public/bundle.js would then take its "marker absent" branch
+// and stop enforcing: green build, nothing checked. These cases put the
+// marker ONLY in a chunk.
+// ------------------------------------------------------------
+const chunkWith = (list) => ({ 'admin.js': `parseEnabledProviders("${list}");\n` });
+const ENTRY_WITHOUT_MARKER = '/* entry with no provider marker */\n';
+
+test('M1.13 the preserve path REFUSES when a CHUNK carries a google-less list', () => {
+  const r = runBuild({
+    source: VALID_SOURCE, withEnv: false,
+    committedBundle: ENTRY_WITHOUT_MARKER, committedChunks: chunkWith(''),
+    vercelEnv: 'production',
+  });
+  ok(r.code !== 0, `a google-less list in a chunk must still fail production\n${r.output}`);
+  ok(/Refusing to ship a committed bundle missing: google/.test(r.output),
+    `expected the refusal, got:\n${r.output}`);
+});
+
+test('M1.14 and ACCEPTS when that same chunk carries google', () => {
+  const r = runBuild({
+    source: VALID_SOURCE, withEnv: false,
+    committedBundle: ENTRY_WITHOUT_MARKER, committedChunks: chunkWith('google'),
+    vercelEnv: 'production',
+  });
+  eq(r.code, 0, `a chunk carrying google must deploy\n${r.output}`);
+  eq(r.bundle, ENTRY_WITHOUT_MARKER, 'and the committed entry is preserved untouched');
+});
+
+test('M1.15 with no chunk at all the marker is genuinely unreadable', () => {
+  // The control for M1.13: same entry, no chunk. If the guard were still
+  // entry-only, M1.13 would behave like THIS — a note and a green build —
+  // which is what makes M1.13 a real test rather than a passing assertion.
+  const r = runBuild({
+    source: VALID_SOURCE, withEnv: false,
+    committedBundle: ENTRY_WITHOUT_MARKER, vercelEnv: 'production',
+  });
+  eq(r.code, 0, 'an unreadable marker must not fail the build');
+  ok(/could not read the provider list/.test(r.output),
+    `expected the fail-open note, got:\n${r.output}`);
+});
+
 test('M1.9 no secret material is emitted into the shipped bundle', () => {
-  const shipped = fs.readFileSync(path.join(REPO, 'public', 'bundle.js'), 'utf8');
+  // Entry AND every chunk. Reading only the entry would have let a secret
+  // emitted into an admin chunk pass this test silently — the assertion would
+  // still be green while checking a fraction of what ships.
+  const files = shippedBundleFiles(path.join(REPO, 'public'));
+  ok(files.length > 1, `expected an entry plus chunks, saw ${files.length} file(s)`);
+  const shipped = readShippedBundle(path.join(REPO, 'public'));
   for (const name of ['SUPABASE_SERVICE_ROLE_KEY', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET']) {
-    ok(!shipped.includes(name), `${name} must never appear in the client bundle`);
+    ok(!shipped.includes(name), `${name} must never appear in the client artifact`);
   }
   // Any non-public value the local environment holds must not have leaked in.
   const envFile = path.join(REPO, '.env.local');
@@ -260,7 +326,7 @@ test('M1.9 no secret material is emitted into the shipped bundle', () => {
       const value = rawValue.trim().replace(/^["']|["']$/g, '');
       if (value.length < 12) continue; // too short to be a meaningful secret
       // Report the KEY only — never the value.
-      ok(!shipped.includes(value), `the value of ${key} must not appear in public/bundle.js`);
+      ok(!shipped.includes(value), `the value of ${key} must not appear in the client artifact`);
     }
   }
 });

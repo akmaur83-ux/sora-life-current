@@ -10,6 +10,7 @@
 // ============================================================
 import { readFileSync } from 'node:fs';
 import {
+import { readShippedBundle } from '../build/shipped-bundle.mjs';
   TOKENS, DEFAULT_THEME, PRESETS, PRESET_LIST, HEX_RE,
   validateThemeValue, sanitizeTheme, themeToCssVars, overlayRgba,
 } from '../src/lib/theme.js';
@@ -100,7 +101,8 @@ t(/on conflict \(key\) do nothing/.test(SQL), 'seed will not clobber an existing
 if (process.argv.includes('--live')) {
 console.log('\n— Live posture (anon; explicitly opted in) —');
 try {
-  const bundle = readFileSync('public/bundle.js', 'utf8');
+  // Entry plus chunks — the admin routes are split out of the entry now.
+const bundle = readShippedBundle();
   const URL = (bundle.match(/https:\/\/[a-z0-9]{15,}\.supabase\.co/) || [])[0];
   const KEY = (bundle.match(/sb_publishable_[A-Za-z0-9_\-]+/) || [])[0];
   const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' };

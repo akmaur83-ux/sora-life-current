@@ -9,8 +9,10 @@
 // ============================================================
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import { readShippedBundle } from '../build/shipped-bundle.mjs';
 
-const bundle = readFileSync('public/bundle.js', 'utf8');
+// Entry plus chunks — the admin routes are split out of the entry now.
+const bundle = readShippedBundle();
 const URL_ = (bundle.match(/https:\/\/[a-z0-9]{15,}\.supabase\.co/) || [])[0];
 const KEY = (bundle.match(/sb_publishable_[A-Za-z0-9_\-]+/) || [])[0];
 const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' };

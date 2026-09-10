@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import Home from './pages/Home.jsx';
@@ -13,7 +13,6 @@ import About from './pages/About.jsx';
 import Contact from './pages/Contact.jsx';
 import Legal from './pages/Legal.jsx';
 import EditableLegal from './pages/EditableLegal.jsx';
-import LegalPagesAdmin from './admin/pages/LegalPages.jsx';
 import Passport from './pages/Passport.jsx';
 import Invoice from './pages/Invoice.jsx';
 import CreatorPortal from './pages/CreatorPortal.jsx';
@@ -24,28 +23,57 @@ import { useAdminAuth } from './lib/adminAuth.jsx';
 import { branding } from './lib/settings.js';
 import { DEFERRED_ROUTES, loadDeferredStyles } from './lib/deferredStyles.js';
 
-import AdminLayout from './admin/AdminLayout.jsx';
-import Dashboard from './admin/pages/Dashboard.jsx';
-import Products from './admin/pages/Products.jsx';
-import Orders from './admin/pages/Orders.jsx';
-import ProductForm from './admin/pages/ProductForm.jsx';
-import Pricing from './admin/pages/Pricing.jsx';
-import Variants from './admin/pages/Variants.jsx';
-import Creators from './admin/pages/Creators.jsx';
-import CreatorTerms from './admin/pages/CreatorTerms.jsx';
-import ContentCoverage from './admin/pages/ContentCoverage.jsx';
-import CreatorDetail from './admin/pages/CreatorDetail.jsx';
-import Attribution from './admin/pages/Attribution.jsx';
-import Kyc from './admin/pages/Kyc.jsx';
-import Payouts from './admin/pages/Payouts.jsx';
-import Appearance from './admin/pages/Appearance.jsx';
-import Categories from './admin/pages/Categories.jsx';
-import HeroSlides from './admin/pages/HeroSlides.jsx';
-import Promotions from './admin/pages/Promotions.jsx';
-import HomepageSettings from './admin/pages/Homepage.jsx';
-import CategoryExperience from './admin/pages/CategoryExperience.jsx';
-import Branding from './admin/pages/Branding.jsx';
-import Settings from './admin/pages/Settings.jsx';
+
+
+// ------------------------------------------------------------
+// The admin app is loaded on demand.
+//
+// These 23 route components and everything only they reach were 17% of the
+// bundle — measured at 73.5 KB brotli and 567 KB of parse work — and a
+// shopper downloaded and parsed every byte of it to look at a product page.
+// Parsing is where the homepage's blocking time goes, so this is the single
+// biggest thing the storefront was carrying that it never used.
+//
+// Split rather than deleted: rollup emits them into public/chunks/ and the
+// browser fetches a chunk when someone actually opens /admin. Nothing about
+// admin behaviour changes; it just arrives when it is asked for.
+//
+// Admin is imported from nowhere else in the tree, so this is the whole cut.
+// ------------------------------------------------------------
+const LegalPagesAdmin = lazy(() => import('./admin/pages/LegalPages.jsx'));
+const AdminLayout = lazy(() => import('./admin/AdminLayout.jsx'));
+const Dashboard = lazy(() => import('./admin/pages/Dashboard.jsx'));
+const Products = lazy(() => import('./admin/pages/Products.jsx'));
+const Orders = lazy(() => import('./admin/pages/Orders.jsx'));
+const ProductForm = lazy(() => import('./admin/pages/ProductForm.jsx'));
+const Pricing = lazy(() => import('./admin/pages/Pricing.jsx'));
+const Variants = lazy(() => import('./admin/pages/Variants.jsx'));
+const Creators = lazy(() => import('./admin/pages/Creators.jsx'));
+const CreatorTerms = lazy(() => import('./admin/pages/CreatorTerms.jsx'));
+const ContentCoverage = lazy(() => import('./admin/pages/ContentCoverage.jsx'));
+const CreatorDetail = lazy(() => import('./admin/pages/CreatorDetail.jsx'));
+const Attribution = lazy(() => import('./admin/pages/Attribution.jsx'));
+const Kyc = lazy(() => import('./admin/pages/Kyc.jsx'));
+const Payouts = lazy(() => import('./admin/pages/Payouts.jsx'));
+const Appearance = lazy(() => import('./admin/pages/Appearance.jsx'));
+const Categories = lazy(() => import('./admin/pages/Categories.jsx'));
+const HeroSlides = lazy(() => import('./admin/pages/HeroSlides.jsx'));
+const Promotions = lazy(() => import('./admin/pages/Promotions.jsx'));
+const HomepageSettings = lazy(() => import('./admin/pages/Homepage.jsx'));
+const CategoryExperience = lazy(() => import('./admin/pages/CategoryExperience.jsx'));
+const Branding = lazy(() => import('./admin/pages/Branding.jsx'));
+const Settings = lazy(() => import('./admin/pages/Settings.jsx'));
+
+// Shown while an admin chunk is in flight. Deliberately the same plain
+// centred line as the session check above it, so a slow network reads as the
+// admin app still opening rather than as a different kind of wait.
+function AdminChunkLoading() {
+  return (
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#55655B' }}>
+      Loading…
+    </div>
+  );
+}
 
 function ProtectedAdminRoute({ children }) {
   const { isAdmin, loading, session, verificationFailed, retryVerification } = useAdminAuth();
@@ -103,7 +131,17 @@ export default function App() {
       <CreatorAttribution />
       <Routes>
       <Route path="/admin/login" element={<AdminLogin />} />
-      <Route path="/admin" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
+      {/* One boundary for the whole admin app: the child routes render into
+          AdminLayout's <Outlet/>, which sits inside it, so every lazy admin
+          page suspends here. It is inside ProtectedAdminRoute so an
+          unauthorised visitor is redirected without fetching a chunk. */}
+      <Route path="/admin" element={(
+        <ProtectedAdminRoute>
+          <Suspense fallback={<AdminChunkLoading />}>
+            <AdminLayout />
+          </Suspense>
+        </ProtectedAdminRoute>
+      )}>
         <Route index element={<Dashboard />} />
         <Route path="products" element={<Products />} />
         <Route path="products/new" element={<ProductForm />} />

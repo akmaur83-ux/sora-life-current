@@ -23,11 +23,12 @@
          longer here at all — src/main.jsx injects app-deferred.css after
          paint. Edit the sources in src/styles, then `npm run build`. -->
     <link rel="stylesheet" href="/public/app.css" />
-    <!-- The app is a single <script> at the end of <body>. Preloading it here
-         lets the download start alongside the stylesheet rather than after
-         it, which is most of the gap between first paint and interactive on
-         a throttled connection. -->
-    <link rel="preload" as="script" href="/public/bundle.js" />
+    <!-- The app entry, preloaded here so its download starts alongside the
+         stylesheet rather than after it — most of the gap between first paint
+         and interactive on a throttled connection. modulepreload rather than
+         preload because the entry is an ES module now: admin routes are split
+         into /public/chunks/ and only fetched when someone opens /admin. -->
+    <link rel="modulepreload" href="/public/bundle.js" />
   </head>
   <body>
     <div id="root">
@@ -39,6 +40,6 @@
       </div>
     </div>
     <style>@keyframes sl-spin{to{transform:rotate(360deg)}}</style>
-    <script src="/public/bundle.js"></script>
+    <script type="module" src="/public/bundle.js"></script>
   </body>
 </html>
