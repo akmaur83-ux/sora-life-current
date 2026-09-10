@@ -6653,7 +6653,7 @@ const BIOSASH_PRODUCTS = [{
 // products. Facts (name/price/image) are never fabricated; discounts
 // are an explicit Sora Life promo layered on a verified original price.
 // ============================================================
-const DISCOUNT_TIERS$1 = [10, 15, 18, 20];
+const DISCOUNT_TIERS = [10, 15, 18, 20];
 
 // ---- turn one "resolved" raw record into the full product shape ----
 function normalizeProduct(p) {
@@ -6737,7 +6737,7 @@ function seedFromBiosash() {
   return BIOSASH_PRODUCTS.map((p, i) => {
     const originalPrice = Number(p.price) > 0 ? Number(p.price) : 0;
     const idNum = parseInt(String(p.id).replace(/\D/g, ''), 10) || i;
-    const discountPercent = originalPrice > 0 ? DISCOUNT_TIERS$1[idNum % DISCOUNT_TIERS$1.length] : 0;
+    const discountPercent = originalPrice > 0 ? DISCOUNT_TIERS[idNum % DISCOUNT_TIERS.length] : 0;
     return {
       id: p.id,
       slug: p.slug,
@@ -36390,7 +36390,6 @@ function mediaFailureMessage(result) {
 // write to products/categories/hero_slides/site_settings/storage.
 // This file does not "trust" the client — it's a thin wrapper.
 // ============================================================
-const DISCOUNT_TIERS = [10, 15, 18, 20];
 
 // The pre-existing `products.stock` column (created before this admin
 // system existed) is a boolean "in stock" flag, NOT a quantity — confirmed
@@ -36760,11 +36759,7 @@ function slugify(s) {
  * and will overwrite what the row holds.
  */
 async function adminImportBiosashCatalog(onProgress) {
-  const rows = BIOSASH_PRODUCTS.map((p, i) => {
-    const originalPrice = Number(p.price) > 0 ? Number(p.price) : 0;
-    const idNum = parseInt(String(p.id).replace(/\D/g, ''), 10) || i;
-    const discountPercent = originalPrice > 0 ? DISCOUNT_TIERS[idNum % DISCOUNT_TIERS.length] : 0;
-    const salePrice = originalPrice > 0 ? Math.round(originalPrice * (1 - discountPercent / 100)) : 0;
+  const rows = BIOSASH_PRODUCTS.map(p => {
     // is_active and description are ABSENT, never defaulted — the same rule
     // productToDbRow applies, and for the same reason: PostgREST's
     // ON CONFLICT DO UPDATE only assigns the columns it is given, so a key
@@ -36778,15 +36773,34 @@ async function adminImportBiosashCatalog(onProgress) {
     //                     disease and treatment claims, putting them back on
     //                     sale. That set is a compliance decision; a catalogue
     //                     refresh has no business overruling it.
+    //   original_price    reset a hand-adjusted price back to the bundle's
+    //   discount_percent  stale snapshot, and took the discount and sale
+    //   sale_price        price with it. Neither of those is even bundle
+    //                     data: the discount came from
+    //                     DISCOUNT_TIERS[id % 4], a deterministic tier
+    //                     table, and the sale price was derived from it.
+    //                     Commercial terms belong in the admin, not in an
+    //                     id modulo four.
+    //   sort_order        reset merchandising order to the bundle's array
+    //                     index, which is not catalogue data either.
     //   description: ''   blanked all 148 ingested descriptions. The Biosash
     //                     ingest is fill-only and will never rewrite a row it
     //                     has already populated, so that copy does not come
     //                     back on its own.
     //
-    // Omitting them costs nothing on a genuinely new product: is_active is
-    // NOT NULL DEFAULT true, so an inserted row is active exactly as before,
-    // and description is nullable, so it inserts empty and waits for the
-    // ingest or an author. Only the UPDATE half of the upsert changes.
+    // For an EXISTING row — which is all 148 of them — omitting a key leaves
+    // the column exactly as it is, so this button can no longer undo any of
+    // those decisions.
+    //
+    // For a genuinely new product the columns fall back to their defaults,
+    // and that is worth being clear about rather than glossing: is_active is
+    // NOT NULL DEFAULT true so the row inserts active exactly as before, and
+    // description is nullable so it inserts empty and waits for the ingest.
+    // The four here are different — original_price and sale_price insert
+    // NULL, discount_percent 0, sort_order 0 — so a newly bundled product
+    // arrives UNPRICED and has to be priced in the admin before it can sell.
+    // That is the intended trade: a human setting a price beats a tier table
+    // keyed on an id, and it fails visibly rather than shipping a wrong one.
     return {
       biosash_id: p.id,
       name: p.name,
@@ -36803,9 +36817,6 @@ async function adminImportBiosashCatalog(onProgress) {
       ...(p.gallery && p.gallery.length ? {
         gallery_urls: p.gallery
       } : {}),
-      original_price: originalPrice,
-      discount_percent: discountPercent,
-      sale_price: salePrice,
       form: p.form || null,
       stock: !!p.inStock,
       // boolean "in stock" flag — the DB column is boolean, not a quantity
@@ -36814,8 +36825,7 @@ async function adminImportBiosashCatalog(onProgress) {
       is_bestseller: false,
       is_featured: false,
       rating: p.rating || 0,
-      review_count: p.reviewCount || 0,
-      sort_order: i
+      review_count: p.reviewCount || 0
     };
   });
   const chunkSize = 25;
