@@ -50,9 +50,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b171.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-After-Shave-Lotion-For-Men.png"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -73,12 +71,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b183.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Beard-Cream.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-15.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-15.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-15.jpg"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -99,12 +92,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b185.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-Beard-Wash.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-17.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-17.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-17.jpg"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -125,12 +113,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b181.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-BEARD-AND-MOOCH-OIL.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-16.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-16.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-16.jpg"
-    ],
+    "gallery": [],
     "form": "50ml",
     "variants": null,
     "rating": 0,
@@ -152,9 +135,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b400.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Hair-Pomed.png"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -176,9 +157,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b401.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-Liquid-Wash-Intimate-Men.png"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -199,9 +178,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b224.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/mouch-wax.png"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -223,9 +200,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1348.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2021/10/BioFlex-Flexseed-Oil.png"
-    ],
+    "gallery": [],
     "form": "500ml",
     "variants": null,
     "rating": 0,
@@ -247,9 +222,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b126.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Black-Seed-oil.png"
-    ],
+    "gallery": [],
     "form": "60 Capsules",
     "variants": null,
     "rating": 0,
@@ -271,9 +244,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b372.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Calsah.png"
-    ],
+    "gallery": [],
     "form": "60 Tablets",
     "variants": null,
     "rating": 0,
@@ -295,9 +266,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b129.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Cocosash.png"
-    ],
+    "gallery": [],
     "form": "60 Tablets",
     "variants": null,
     "rating": 0,
@@ -319,9 +288,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1420.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2022/12/Biosash-Collagan-Builder.png"
-    ],
+    "gallery": [],
     "form": "60 Tablets",
     "variants": null,
     "rating": 0,
@@ -343,12 +310,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b197.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Biosash-Diabosash.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-14.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-14.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-14.jpg"
-    ],
+    "gallery": [],
     "form": "60 Capsules",
     "variants": null,
     "rating": 0,
@@ -370,9 +332,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1422.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2022/12/Biosash-Empower-Tablets.png"
-    ],
+    "gallery": [],
     "form": "60 Tablets",
     "variants": null,
     "rating": 0,
@@ -394,11 +354,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1432.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2023/01/Biosash-Empower-X.png",
-      "https://biosash.com/wp-content/uploads/2023/01/01.jpg",
-      "https://biosash.com/wp-content/uploads/2023/01/02.jpg"
-    ],
+    "gallery": [],
     "form": "30Tablets",
     "variants": null,
     "rating": 0,
@@ -420,9 +376,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1424.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2022/12/Biosash-Femsash-tablets.png"
-    ],
+    "gallery": [],
     "form": "60 Tablets",
     "variants": null,
     "rating": 0,
@@ -444,9 +398,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1602.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/02/Immunosash.png"
-    ],
+    "gallery": [],
     "form": "30Capsules",
     "variants": null,
     "rating": 0,
@@ -468,12 +420,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b127.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Biosash-Leucosash-2.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-34.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-34.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-34.jpg"
-    ],
+    "gallery": [],
     "form": "60 Capsules",
     "variants": null,
     "rating": 0,
@@ -495,12 +442,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1313.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2021/04/Biosash-Liver-Kidney-Support.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-28.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-28.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-28.jpg"
-    ],
+    "gallery": [],
     "form": "60 Capsules",
     "variants": null,
     "rating": 0,
@@ -522,9 +464,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b110.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Biosash-Noni.png"
-    ],
+    "gallery": [],
     "form": "60 Capsules",
     "variants": null,
     "rating": 0,
@@ -546,12 +486,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1473.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2023/05/01.jpg",
-      "https://biosash.com/wp-content/uploads/2023/05/ORTHOSASH-PAIN-OIL.webp",
-      "https://biosash.com/wp-content/uploads/2023/05/02.jpg",
-      "https://biosash.com/wp-content/uploads/2023/05/03.jpg"
-    ],
+    "gallery": [],
     "form": "60ml",
     "variants": null,
     "rating": 0,
@@ -573,12 +508,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b128.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Biosash-Orthosash.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-35.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-35.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-35.jpg"
-    ],
+    "gallery": [],
     "form": "60 Tablets",
     "variants": null,
     "rating": 0,
@@ -600,12 +530,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b165.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Panch-Tulsi.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-31.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-31.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-31.jpg"
-    ],
+    "gallery": [],
     "form": "20ml",
     "variants": null,
     "rating": 0,
@@ -627,12 +552,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b249.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Seabuckthorn-Berry-Oil.png",
-      "https://biosash.com/wp-content/uploads/2023/10/01-4.jpg",
-      "https://biosash.com/wp-content/uploads/2023/10/02-4.jpg",
-      "https://biosash.com/wp-content/uploads/2023/10/03-4.jpg"
-    ],
+    "gallery": [],
     "form": "30 Capsules",
     "variants": null,
     "rating": 0,
@@ -654,12 +574,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1680.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/08/SBT-Powder-Front.jpg",
-      "https://biosash.com/wp-content/uploads/2025/08/01.jpg",
-      "https://biosash.com/wp-content/uploads/2025/08/02.jpg",
-      "https://biosash.com/wp-content/uploads/2025/08/03.jpg"
-    ],
+    "gallery": [],
     "form": "100 GMS",
     "variants": null,
     "rating": 0,
@@ -681,12 +596,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1672.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/08/SBT-Berry-Front.jpg",
-      "https://biosash.com/wp-content/uploads/2025/08/01-2.jpg",
-      "https://biosash.com/wp-content/uploads/2025/08/02-2.jpg",
-      "https://biosash.com/wp-content/uploads/2025/08/03-2.jpg"
-    ],
+    "gallery": [],
     "form": "100 GMS",
     "variants": null,
     "rating": 0,
@@ -708,12 +618,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1661.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/08/SBT-Leaves-Front.jpg",
-      "https://biosash.com/wp-content/uploads/2025/08/01-1.jpg",
-      "https://biosash.com/wp-content/uploads/2025/08/02-1.jpg",
-      "https://biosash.com/wp-content/uploads/2025/08/03-1.jpg"
-    ],
+    "gallery": [],
     "form": "50 GMS",
     "variants": null,
     "rating": 0,
@@ -735,12 +640,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b333.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Seabuckthorn-Seed-oil.png",
-      "https://biosash.com/wp-content/uploads/2023/10/01-5.jpg",
-      "https://biosash.com/wp-content/uploads/2023/10/02-5.jpg",
-      "https://biosash.com/wp-content/uploads/2023/10/03-5.jpg"
-    ],
+    "gallery": [],
     "form": "30 Capsules",
     "variants": null,
     "rating": 0,
@@ -762,9 +662,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b108.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Biosash-Spirulina.png"
-    ],
+    "gallery": [],
     "form": "60 Capsule",
     "variants": null,
     "rating": 0,
@@ -786,9 +684,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1426.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2022/12/Biosash-Trimfit-Tablets.png"
-    ],
+    "gallery": [],
     "form": "60 Tablets",
     "variants": null,
     "rating": 0,
@@ -810,9 +706,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1435.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2023/01/Biosash-Urisash.png"
-    ],
+    "gallery": [],
     "form": "60 Tablets",
     "variants": null,
     "rating": 0,
@@ -834,9 +728,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b374.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Biosash-Wheatgrass.png"
-    ],
+    "gallery": [],
     "form": "60 Capsules",
     "variants": null,
     "rating": 0,
@@ -858,9 +750,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b139.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Fresh-Turmeric-Rhizome-with-Guggul-250-ML.png"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -882,12 +772,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b151.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-buckthorn-Bioradiance-Juice.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-1.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-1.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-1.jpg"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -909,9 +794,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1403.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2022/07/Biosip-Drink.png"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -933,12 +816,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b157.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-buckthorn-Cardiosash-Juice.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-2.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-2.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-2.jpg"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -960,12 +838,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b141.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-buckthorn-Detoxo-Juice.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-3.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-3.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-3.jpg"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -987,12 +860,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b115.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Sea-Buckthorn-Diabo-Juice.png",
-      "https://biosash.com/wp-content/uploads/2023/10/01.jpg",
-      "https://biosash.com/wp-content/uploads/2023/10/02.jpg",
-      "https://biosash.com/wp-content/uploads/2023/10/03.jpg"
-    ],
+    "gallery": [],
     "form": "250 ml",
     "variants": [
       {
@@ -1023,12 +891,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b147.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-buckthorn-Digestosash.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-33.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-33.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-33.jpg"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -1050,12 +913,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b119.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Sea-Buckthorn-Empower-Juice.png",
-      "https://biosash.com/wp-content/uploads/2023/10/01-1.jpg",
-      "https://biosash.com/wp-content/uploads/2023/10/02-1.jpg",
-      "https://biosash.com/wp-content/uploads/2023/10/03-1.jpg"
-    ],
+    "gallery": [],
     "form": "250 ml",
     "variants": [
       {
@@ -1086,12 +944,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b159.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-buckthorn-Empower-x-Juice.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-4.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-4.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-4.jpg"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -1113,12 +966,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b153.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-buckthorn-Femsash-Juice.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-5.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-5.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-5.jpg"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -1140,12 +988,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b145.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-buckthorn-Ferrosash-Juice.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-6.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-6.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-6.jpg"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -1167,12 +1010,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b143.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-buckthorn-Giloysash-Juice.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-7.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-7.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-7.jpg"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -1194,12 +1032,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b114.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Immunosash.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-10.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-10.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-10.jpg"
-    ],
+    "gallery": [],
     "form": "250 ml",
     "variants": [
       {
@@ -1230,9 +1063,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b319.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Jam.png"
-    ],
+    "gallery": [],
     "form": "400g",
     "variants": null,
     "rating": 0,
@@ -1254,12 +1085,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b82.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Seabuckthorn.png",
-      "https://biosash.com/wp-content/uploads/2025/11/01.jpg",
-      "https://biosash.com/wp-content/uploads/2025/11/02.jpg",
-      "https://biosash.com/wp-content/uploads/2025/11/03.jpg"
-    ],
+    "gallery": [],
     "form": "250 ml",
     "variants": [
       {
@@ -1290,12 +1116,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1395.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2022/06/Sbt-Moringa-Juice.png",
-      "https://biosash.com/wp-content/uploads/2022/06/01.jpg",
-      "https://biosash.com/wp-content/uploads/2022/06/02.jpg",
-      "https://biosash.com/wp-content/uploads/2022/06/03.jpg"
-    ],
+    "gallery": [],
     "form": "250 ml",
     "variants": [
       {
@@ -1326,12 +1147,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b155.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-buckthorn-Livosash-Juice.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-8.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-8.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-8.jpg"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -1353,12 +1169,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b149.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-buckthorn-Memorysash-Juice.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-9.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-9.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-9.jpg"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -1380,12 +1191,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b161.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-buckthorn-Stressaid-Juice.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03.jpg"
-    ],
+    "gallery": [],
     "form": "250ml",
     "variants": null,
     "rating": 0,
@@ -1407,12 +1213,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b117.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Sea-Buckthorn-Trimfit-Juice-1.png",
-      "https://biosash.com/wp-content/uploads/2023/10/01-2.jpg",
-      "https://biosash.com/wp-content/uploads/2023/10/02-2.jpg",
-      "https://biosash.com/wp-content/uploads/2023/10/03-2.jpg"
-    ],
+    "gallery": [],
     "form": "250 ml",
     "variants": [
       {
@@ -1443,12 +1244,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b122.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Sea-Buckthorn-with-Turmeric-Oil-1.png",
-      "https://biosash.com/wp-content/uploads/2023/10/01-3.jpg",
-      "https://biosash.com/wp-content/uploads/2023/10/02-3.jpg",
-      "https://biosash.com/wp-content/uploads/2023/10/03-3.jpg"
-    ],
+    "gallery": [],
     "form": "250 ml",
     "variants": [
       {
@@ -1479,9 +1275,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1280.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2021/04/Biosash-Seabuck-Tea.png"
-    ],
+    "gallery": [],
     "form": "250g",
     "variants": null,
     "rating": 0,
@@ -1503,9 +1297,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1792.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/10/Wellsash-Capsule.png"
-    ],
+    "gallery": [],
     "form": "60 CAPSULES",
     "variants": null,
     "rating": 0,
@@ -1527,12 +1319,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b353.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Wellsach.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-41.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-41.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-41.jpg"
-    ],
+    "gallery": [],
     "form": "250 ml",
     "variants": [
       {
@@ -1562,9 +1349,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b169.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-Aelo-Vera-Protein-Conditioner.png"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -1585,12 +1370,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b175.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/ALOEVERA-PROTEIN-SHAMPOO.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-29.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-29.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-29.jpg"
-    ],
+    "gallery": [],
     "form": "200ml",
     "variants": null,
     "rating": 0,
@@ -1611,9 +1391,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b179.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Avocado.png"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -1634,12 +1412,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b2708.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/08/01-11.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/02-11.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/03-11.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/04-11.jpg"
-    ],
+    "gallery": [],
     "form": "50 ML",
     "variants": null,
     "rating": 0,
@@ -1660,12 +1433,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b205.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-HAIR-SERUM.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-20.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-20.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-20.jpg"
-    ],
+    "gallery": [],
     "form": "50ml",
     "variants": null,
     "rating": 0,
@@ -1686,12 +1454,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b2700.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/08/01-3.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/02-3.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/03-3.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/04-3.jpg"
-    ],
+    "gallery": [],
     "form": "50 ML",
     "variants": null,
     "rating": 0,
@@ -1712,12 +1475,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b2699.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/08/01-2.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/02-2.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/03-2.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/04-2.jpg"
-    ],
+    "gallery": [],
     "form": "50 ML",
     "variants": null,
     "rating": 0,
@@ -1738,9 +1496,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1833.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/10/Detangle-shampoo-scaled.png"
-    ],
+    "gallery": [],
     "form": "200ML",
     "variants": null,
     "rating": 0,
@@ -1761,9 +1517,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b382.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Natural-Seab-buckthorn-Conditionar.png"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -1784,12 +1538,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b317.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-Sea-Buckthorn-Hair-Oil.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-23.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-23.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-23.jpg"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -1810,12 +1559,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b337.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/SBT-SHAMPOO.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-39.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-39.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-39.jpg"
-    ],
+    "gallery": [],
     "form": "200ml",
     "variants": null,
     "rating": 0,
@@ -1836,12 +1580,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b342.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sesame-Hair-Oil.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-25.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-25.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-25.jpg"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -1862,9 +1601,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b173.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Aloe-Vera-Neem-face-Wash.png"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -1885,12 +1622,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1795.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/10/Coconut-Face-Wash.png",
-      "https://biosash.com/wp-content/uploads/2025/10/01-1.jpg",
-      "https://biosash.com/wp-content/uploads/2025/10/02-1.jpg",
-      "https://biosash.com/wp-content/uploads/2025/10/03-1.jpg"
-    ],
+    "gallery": [],
     "form": "100ML",
     "variants": null,
     "rating": 0,
@@ -1911,12 +1643,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b2702.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/08/07-5.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/01-5.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/02-5.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/03-5.jpg"
-    ],
+    "gallery": [],
     "form": "50 GMS",
     "variants": null,
     "rating": 0,
@@ -1937,12 +1664,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b2703.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/08/01-6.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/02-6.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/03-6.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/04-6.jpg"
-    ],
+    "gallery": [],
     "form": "50 ML",
     "variants": null,
     "rating": 0,
@@ -1963,12 +1685,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b397.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/lemon-face-gel.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-11.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-11.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-11.jpg"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -1989,12 +1706,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b395.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Luxury-Night.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-12.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-12.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-12.jpg"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2015,12 +1727,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1831.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/10/Natural-Sea-buckthorn-Face-Scrub.png",
-      "https://biosash.com/wp-content/uploads/2025/10/01-5.jpg",
-      "https://biosash.com/wp-content/uploads/2025/10/02-5.jpg",
-      "https://biosash.com/wp-content/uploads/2025/10/03-5.jpg"
-    ],
+    "gallery": [],
     "form": "50GMS",
     "variants": null,
     "rating": 0,
@@ -2041,9 +1748,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b300.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/natural-sea-bkt-massag-cream.png"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2064,12 +1769,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1825.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/10/Natural-Sea-buckthorn-Night-Cream.png",
-      "https://biosash.com/wp-content/uploads/2025/10/01-3.jpg",
-      "https://biosash.com/wp-content/uploads/2025/10/02-3.jpg",
-      "https://biosash.com/wp-content/uploads/2025/10/03-3.jpg"
-    ],
+    "gallery": [],
     "form": "50GMS",
     "variants": null,
     "rating": 0,
@@ -2090,12 +1790,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1828.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/10/Natural-Sea-buckthorn-Nourishing-Cream.png",
-      "https://biosash.com/wp-content/uploads/2025/10/01-4.jpg",
-      "https://biosash.com/wp-content/uploads/2025/10/02-4.jpg",
-      "https://biosash.com/wp-content/uploads/2025/10/03-4.jpg"
-    ],
+    "gallery": [],
     "form": "50GMS",
     "variants": null,
     "rating": 0,
@@ -2116,12 +1811,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b243.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Neem-Tulsi-Face-Wash.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-21.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-21.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-21.jpg"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -2142,9 +1832,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1149.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/12/Neem-Tulsi-Skin-Tonner.png"
-    ],
+    "gallery": [],
     "form": "200ml",
     "variants": null,
     "rating": 0,
@@ -2165,12 +1853,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b394.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Pomegranate.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-30.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-30.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-30.jpg"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2192,9 +1875,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b398.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Facepack-for-Men.png"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2216,9 +1897,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b399.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Revitalising-Ginseng.png"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2239,12 +1918,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1152.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/12/Rose-Water.png",
-      "https://biosash.com/wp-content/uploads/2020/12/01.jpg",
-      "https://biosash.com/wp-content/uploads/2020/12/02.jpg",
-      "https://biosash.com/wp-content/uploads/2020/12/03.jpg"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -2265,12 +1939,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b296.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-Buckthorn-Face-Serum-Anti-Wrinkle-Serum.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-37.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-37.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-37.jpg"
-    ],
+    "gallery": [],
     "form": "30ml",
     "variants": null,
     "rating": 0,
@@ -2291,9 +1960,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b310.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-SEA-BUCKTHORN-CLEANSER.png"
-    ],
+    "gallery": [],
     "form": "50ml",
     "variants": null,
     "rating": 0,
@@ -2314,12 +1981,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b298.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Seabuckthorn-face-pack.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-13.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-13.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-13.jpg"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2340,9 +2002,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b313.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/face-scrub.png"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2363,12 +2023,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b315.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Seabuckthorn-Facewash.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-22.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-22.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-22.jpg"
-    ],
+    "gallery": [],
     "form": "75ml",
     "variants": null,
     "rating": 0,
@@ -2389,12 +2044,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1798.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/10/Seabuckthorn-Massage-Cream.png",
-      "https://biosash.com/wp-content/uploads/2025/10/01-2.jpg",
-      "https://biosash.com/wp-content/uploads/2025/10/02-2.jpg",
-      "https://biosash.com/wp-content/uploads/2025/10/03-2.jpg"
-    ],
+    "gallery": [],
     "form": "50GMS",
     "variants": null,
     "rating": 0,
@@ -2415,9 +2065,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1822.jpeg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/10/sea-buckthorn-natural-under-eye-gel.jpeg"
-    ],
+    "gallery": [],
     "form": "25 Grams",
     "variants": null,
     "rating": 0,
@@ -2438,9 +2086,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b325.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Seabuckthorn-Nourishing.png"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2461,12 +2107,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b2698.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/08/07-1.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/01-1.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/02-1.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/03-1.jpg"
-    ],
+    "gallery": [],
     "form": "30 ML",
     "variants": null,
     "rating": 0,
@@ -2487,12 +2128,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b2707.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/08/01-10.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/02-10.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/03-10.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/04-10.jpg"
-    ],
+    "gallery": [],
     "form": "200 ML",
     "variants": null,
     "rating": 0,
@@ -2513,9 +2149,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b302.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Beauty.png"
-    ],
+    "gallery": [],
     "form": "1 Unit",
     "variants": null,
     "rating": 0,
@@ -2536,12 +2170,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b349.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Tulsi-Haldi-Face-Wash.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-26.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-26.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-26.jpg"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -2562,12 +2191,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b2701.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/08/07-4.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/01-4.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/02-4.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/03-4.jpg"
-    ],
+    "gallery": [],
     "form": "50 GMS",
     "variants": null,
     "rating": 0,
@@ -2588,12 +2212,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b2697.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/08/01.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/02.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/03.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/04.jpg"
-    ],
+    "gallery": [],
     "form": "30 ML",
     "variants": null,
     "rating": 0,
@@ -2614,9 +2233,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b259.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/vitamin-e-daily-cream.png"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2637,12 +2254,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b396.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/vitamin-E-skin-hydrating.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-27.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-27.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-27.jpg"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2663,12 +2275,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b351.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/vitamen-E-sunscreem.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-42.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-42.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-42.jpg"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2689,12 +2296,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1156.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/12/vitamin-c-face-cream.png",
-      "https://biosash.com/wp-content/uploads/2020/12/01-2.jpg",
-      "https://biosash.com/wp-content/uploads/2020/12/02-2.jpg",
-      "https://biosash.com/wp-content/uploads/2020/12/03-2.jpg"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2715,12 +2317,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1154.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/12/vitamin-c-face-pack.png",
-      "https://biosash.com/wp-content/uploads/2020/12/01-3.jpg",
-      "https://biosash.com/wp-content/uploads/2020/12/02-3.jpg",
-      "https://biosash.com/wp-content/uploads/2020/12/03-3.jpg"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2741,12 +2338,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1158.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/12/Vitamin-C.png",
-      "https://biosash.com/wp-content/uploads/2020/12/01-1.jpg",
-      "https://biosash.com/wp-content/uploads/2020/12/02-1.jpg",
-      "https://biosash.com/wp-content/uploads/2020/12/03-1.jpg"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -2767,9 +2359,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b389.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Bees-Wax-And-Honey.png"
-    ],
+    "gallery": [],
     "form": "75g",
     "variants": null,
     "rating": 0,
@@ -2790,9 +2380,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b190.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Body-Wash-Men.png"
-    ],
+    "gallery": [],
     "form": "200ml",
     "variants": null,
     "rating": 0,
@@ -2813,12 +2401,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b2706.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/08/07-9.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/01-9.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/02-9.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/03-9.jpg"
-    ],
+    "gallery": [],
     "form": "150 GMS",
     "variants": null,
     "rating": 0,
@@ -2839,9 +2422,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1461.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2023/05/Choclate-Soap.png"
-    ],
+    "gallery": [],
     "form": "50gm",
     "variants": null,
     "rating": 0,
@@ -2862,12 +2443,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b193.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Citrus-Lemon-Body-Wash.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-18.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-18.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-18.jpg"
-    ],
+    "gallery": [],
     "form": "200ml",
     "variants": null,
     "rating": 0,
@@ -2888,9 +2464,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1523.webp",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2024/04/GERANIUM-AFTER-BATH-OI.webp"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,
@@ -2911,9 +2485,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1463.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2023/05/Grape-Fruit.png"
-    ],
+    "gallery": [],
     "form": "50gm",
     "variants": null,
     "rating": 0,
@@ -2934,9 +2506,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1839.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/10/Biosash-Green-Apple-Bathing-Bar-scaled.png"
-    ],
+    "gallery": [],
     "form": "50GMS",
     "variants": null,
     "rating": 0,
@@ -2957,9 +2527,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b391.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Herbal.png"
-    ],
+    "gallery": [],
     "form": "75g",
     "variants": null,
     "rating": 0,
@@ -2980,9 +2548,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b209.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Honey-And-Almonds-scaled.png"
-    ],
+    "gallery": [],
     "form": "100g",
     "variants": null,
     "rating": 0,
@@ -3003,12 +2569,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b211.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Honey-Foot-butter-1.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-32.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-32.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-32.jpg"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -3029,12 +2590,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b213.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sea-minral-Body-Wash.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-38.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-38.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-38.jpg"
-    ],
+    "gallery": [],
     "form": "200ml",
     "variants": null,
     "rating": 0,
@@ -3055,9 +2611,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b390.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Jasmine.png"
-    ],
+    "gallery": [],
     "form": "75g",
     "variants": null,
     "rating": 0,
@@ -3078,12 +2632,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b2705.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/08/07-8.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/01-8.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/02-8.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/03-8.jpg"
-    ],
+    "gallery": [],
     "form": "150 GMS",
     "variants": null,
     "rating": 0,
@@ -3104,9 +2653,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b388.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Lavender.png"
-    ],
+    "gallery": [],
     "form": "75g",
     "variants": null,
     "rating": 0,
@@ -3127,9 +2674,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1842.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/10/Lemon.png"
-    ],
+    "gallery": [],
     "form": "50GMS",
     "variants": null,
     "rating": 0,
@@ -3150,9 +2695,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b215.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Lemon-Grass.png"
-    ],
+    "gallery": [],
     "form": "100g",
     "variants": null,
     "rating": 0,
@@ -3173,9 +2716,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1465.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2023/05/Lemon-Grass-With-Loofah.png"
-    ],
+    "gallery": [],
     "form": "100gm",
     "variants": null,
     "rating": 0,
@@ -3196,9 +2737,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b392.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Lemongrass-Foot-Scrub-5.png"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -3219,9 +2758,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1467.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2023/05/Litchi.png"
-    ],
+    "gallery": [],
     "form": "50gm",
     "variants": null,
     "rating": 0,
@@ -3242,9 +2779,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b219.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-MASSAGE-OIL.png"
-    ],
+    "gallery": [],
     "form": "50ml",
     "variants": null,
     "rating": 0,
@@ -3265,9 +2800,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b226.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Multani-Mitti.png"
-    ],
+    "gallery": [],
     "form": "100g",
     "variants": null,
     "rating": 0,
@@ -3288,9 +2821,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b383.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Musk.png"
-    ],
+    "gallery": [],
     "form": "100g",
     "variants": null,
     "rating": 0,
@@ -3311,9 +2842,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1469.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2023/05/HOney-Valilla.png"
-    ],
+    "gallery": [],
     "form": "100gm",
     "variants": null,
     "rating": 0,
@@ -3334,10 +2863,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b393.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Rosemary-Shea-Butter.png",
-      "https://biosash.com/wp-content/uploads/2020/10/Rosemary-Shea-Butter.png"
-    ],
+    "gallery": [],
     "form": "125g",
     "variants": null,
     "rating": 0,
@@ -3358,9 +2884,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b239.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/natural-Sea-Buckthorn.png"
-    ],
+    "gallery": [],
     "form": "100g",
     "variants": null,
     "rating": 0,
@@ -3381,12 +2905,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1857.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2025/12/Natural-Sea-buckthorn-Lotion.png",
-      "https://biosash.com/wp-content/uploads/2025/12/01.jpg",
-      "https://biosash.com/wp-content/uploads/2025/12/02.jpg",
-      "https://biosash.com/wp-content/uploads/2025/12/03.jpg"
-    ],
+    "gallery": [],
     "form": "30g",
     "variants": null,
     "rating": 0,
@@ -3407,12 +2926,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b2704.jpg",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/08/07-7.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/01-7.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/02-7.jpg",
-      "https://biosash.com/wp-content/uploads/2026/08/03-7.jpg"
-    ],
+    "gallery": [],
     "form": "150 GMS",
     "variants": null,
     "rating": 0,
@@ -3433,9 +2947,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b241.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Neem-And-Tulsi.png"
-    ],
+    "gallery": [],
     "form": "100g",
     "variants": null,
     "rating": 0,
@@ -3456,9 +2968,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1882.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2026/04/PeachSoap.png"
-    ],
+    "gallery": [],
     "form": "50g",
     "variants": null,
     "rating": 0,
@@ -3479,9 +2989,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b385.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/paper-Mint.png"
-    ],
+    "gallery": [],
     "form": "75g",
     "variants": null,
     "rating": 0,
@@ -3502,9 +3010,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1471.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2023/05/Rose-And-Gerenium.png"
-    ],
+    "gallery": [],
     "form": "100gm",
     "variants": null,
     "rating": 0,
@@ -3525,9 +3031,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b247.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Rose.png"
-    ],
+    "gallery": [],
     "form": "100g",
     "variants": null,
     "rating": 0,
@@ -3548,9 +3052,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b306.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Sandel-And-Turmeric.png"
-    ],
+    "gallery": [],
     "form": "100g",
     "variants": null,
     "rating": 0,
@@ -3571,12 +3073,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b257.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-Sea-Buckthron-Body-Lotion.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-43.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-43.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-43.jpg"
-    ],
+    "gallery": [],
     "form": "200ml",
     "variants": null,
     "rating": 0,
@@ -3597,12 +3094,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b254.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-SEABUCKTHORN-NATURAL-AFTER-BATH-OIL.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-36.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-36.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-36.jpg"
-    ],
+    "gallery": [],
     "form": "200ml",
     "variants": null,
     "rating": 0,
@@ -3623,12 +3115,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b321.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-SEABUCKTHORN-NATURAL-MASSAGE-OIL.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-24.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-24.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-24.jpg"
-    ],
+    "gallery": [],
     "form": "200ml",
     "variants": null,
     "rating": 0,
@@ -3649,9 +3136,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b327.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-SEABUCKTHORN-OIL.png"
-    ],
+    "gallery": [],
     "form": "10ml",
     "variants": null,
     "rating": 0,
@@ -3672,9 +3157,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b335.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Seabuckthorn-Bathing-Soap.png"
-    ],
+    "gallery": [],
     "form": "100g",
     "variants": null,
     "rating": 0,
@@ -3695,9 +3178,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b344.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Strawberrry.png"
-    ],
+    "gallery": [],
     "form": "100g",
     "variants": null,
     "rating": 0,
@@ -3718,9 +3199,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b347.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Strawberry-Shower-Gel.png"
-    ],
+    "gallery": [],
     "form": "200ml",
     "variants": null,
     "rating": 0,
@@ -3741,12 +3220,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b1295.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2021/04/Biosash-Talcum-Powder.png",
-      "https://biosash.com/wp-content/uploads/2021/04/01.jpg",
-      "https://biosash.com/wp-content/uploads/2021/04/02.jpg",
-      "https://biosash.com/wp-content/uploads/2021/04/03.jpg"
-    ],
+    "gallery": [],
     "form": "200g",
     "variants": null,
     "rating": 0,
@@ -3767,9 +3241,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b386.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Tea-Tree.png"
-    ],
+    "gallery": [],
     "form": "75g",
     "variants": null,
     "rating": 0,
@@ -3790,12 +3262,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b195.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/10/Dentosash.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-19.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-19.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-19.jpg"
-    ],
+    "gallery": [],
     "form": "150g",
     "variants": null,
     "rating": 0,
@@ -3816,12 +3283,7 @@ export const BIOSASH_PRODUCTS = [
     "onSale": false,
     "discountPct": 0,
     "image": "/img/b217.png",
-    "gallery": [
-      "https://biosash.com/wp-content/uploads/2020/09/Biosash-LIQUID-WASH-INTIMATE-WOMEN.png",
-      "https://biosash.com/wp-content/uploads/2020/10/01-40.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/02-40.jpg",
-      "https://biosash.com/wp-content/uploads/2020/10/03-40.jpg"
-    ],
+    "gallery": [],
     "form": "100ml",
     "variants": null,
     "rating": 0,

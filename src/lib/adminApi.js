@@ -385,7 +385,14 @@ export async function adminImportBiosashCatalog(onProgress) {
       slug: p.slug,
       category: p.category,
       image_url: p.image,
-      gallery_urls: p.gallery || [],
+      // ABSENT when the bundle has nothing to say, for the same reason
+      // is_active and description are absent above: PostgREST assigns only
+      // the columns it is given, so an omitted key leaves the live value
+      // alone. The bundled galleries are empty now — every image they held
+      // pointed at biosash.com and 389 of those were dead — and the live
+      // galleries have been migrated onto our own storage. Sending [] here
+      // would wipe all 608 of them on one click of the Dashboard button.
+      ...(p.gallery && p.gallery.length ? { gallery_urls: p.gallery } : {}),
       original_price: originalPrice,
       discount_percent: discountPercent,
       sale_price: salePrice,
