@@ -195,7 +195,20 @@
 @media (max-width: 1023px) {
   /* No parallax to carry, so do not promote a layer for a transform that
      never changes. */
-  .sl-bg { transform: none; }
+  .sl-bg {
+    transform: none;
+    /* Sections butt against each other at 0px, so two scened sections used to
+       meet on a razor edge — Shop by Category's pink ended and Shop by
+       Concerns' blue began on the same pixel row. Each scene now dissolves
+       into its section's own white at top and bottom, so neighbouring colours
+       never touch. A fixed length rather than a percentage: these sections
+       run from 240px to 670px tall and a percentage would swallow the short
+       ones. */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 26px,
+      #000 calc(100% - 26px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 26px,
+      #000 calc(100% - 26px), transparent 100%);
+  }
   .sl-bg > i, .sl-bg__wash { animation: none; }
 
   /* Filters: the two SVG-backed motifs. */

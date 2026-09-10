@@ -11,9 +11,8 @@ import { selectCategoryCards, selectConcernCards } from '../lib/homeDiscovery.js
 // Editorial discovery, deliberately NOT a product card:
 //
 //   tile      a wide landscape image, edge to edge, sharp corners, no border
-//   title     set over the artwork for categories; concerns carry no overlay
-//   caption   one quiet line under the tile, and nothing else — no price, no
-//             count, no badge, no per-card arrow
+//   caption   one quiet line under the tile, the same for both rails, and
+//             nothing else — no price, no count, no badge, no per-card arrow
 //   controls  one row under the rail: chevron, centred progress, chevron
 //
 // Two tiles are in view on a phone and four to five on a desktop, on a
@@ -99,8 +98,13 @@ function DiscoveryRail({ id, title, label, children }) {
  *
  * `image` is an admin-assigned or committed asset URL. `product` is only the
  * last-resort visual, used when neither exists (see homeDiscovery.js).
- * `overlay` sets the title over the artwork, which categories use and
- * concerns do not.
+ * `overlay` sets the title over the artwork instead of under the tile.
+ * Neither rail uses it now: categories did, which left the two rails with
+ * different vertical rhythms — one label inside the tile, one below it — so
+ * the same spacing rules produced visibly different sections. It also meant
+ * a dark scrim over every piece of category artwork. The prop stays because
+ * the treatment is still worth having for a rail with photography that can
+ * carry it.
  */
 function DiscoveryTile({ to, image, product, caption, overlay = false }) {
   return (
@@ -132,7 +136,6 @@ export function ShopByCategory({ cards }) {
           image={card.image}
           product={card.fallbackProduct}
           caption={card.name}
-          overlay
         />
       ))}
     </DiscoveryRail>
