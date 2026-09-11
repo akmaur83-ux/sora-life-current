@@ -33146,6 +33146,25 @@ function ConfiguredHero() {
     setActive(target);
   }, [SLIDES.length, prepareSlide]);
   const next = reactExports.useCallback(() => go(active + 1), [active, go]);
+  // Intrinsic ratio of each artwork-only image slide, read once it loads.
+  //
+  // The desktop stage is a 1192:470 frame with the copy laid over the
+  // artwork, and `cover` crops whatever does not fit — correct when the
+  // artwork is a background. An ARTWORK-ONLY slide is different: the creative
+  // carries its own typography, so a crop cuts words. The 1440×846 festival
+  // banner lost "Festival Season" off the top at 1440px. For those slides the
+  // desktop frame takes the artwork's own ratio (bounded, so an odd upload
+  // cannot make the hero absurdly tall) and the parallax oversize is dropped,
+  // so the whole creative is shown. Below 1024px nothing reads this.
+  const [artworkRatios, setArtworkRatios] = reactExports.useState({});
+  const noteArtworkRatio = reactExports.useCallback((id, img) => {
+    if (!img?.naturalWidth || !img?.naturalHeight) return;
+    const ratio = Math.min(2.6, Math.max(1.6, img.naturalWidth / img.naturalHeight));
+    setArtworkRatios(r => r[id] === ratio ? r : {
+      ...r,
+      [id]: ratio
+    });
+  }, []);
   const mediaReady = reactExports.useCallback((id, index) => {
     loadedSlides.current.add(id);
     if (index === active) prepareSlide(index + 1);
@@ -33184,8 +33203,16 @@ function ConfiguredHero() {
         const rect = el.getBoundingClientRect();
         if (rect.bottom < 0 || rect.top > window.innerHeight) return; // out of view, skip
         const offset = Math.max(-40, Math.min(40, rect.top * -0.06));
+        // An artwork-only slide shown at its own ratio (desktop) has no
+        // oversize to move within; a translate would expose the frame edge.
+        const artworkAtOwnRatio = window.matchMedia('(min-width: 1024px)').matches;
         parallaxRefs.current.forEach(node => {
-          if (node) node.style.transform = `translate3d(0, ${offset}px, 0)`;
+          if (!node) return;
+          if (artworkAtOwnRatio && node.parentElement?.classList.contains('v2-hero__media--artwork')) {
+            node.style.transform = '';
+            return;
+          }
+          node.style.transform = `translate3d(0, ${offset}px, 0)`;
         });
       });
     };
@@ -33214,7 +33241,10 @@ function ConfiguredHero() {
         className: `v2-hero__slide ${i === active ? 'is-active' : ''}`,
         "aria-hidden": i !== active,
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-          className: "v2-hero__media",
+          className: `v2-hero__media${artworkOnly && s.kind !== 'video' ? ' v2-hero__media--artwork' : ''}`,
+          style: artworkRatios[s.id] ? {
+            '--hero-ratio': String(artworkRatios[s.id])
+          } : undefined,
           children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
             className: "v2-hero__par",
             ref: el => {
@@ -33268,8 +33298,17 @@ function ConfiguredHero() {
               },
               loading: i === active ? 'eager' : 'lazy',
               fetchPriority: i === active ? 'high' : undefined,
-              decoding: "async",
-              onLoad: () => mediaReady(s.id, i)
+              decoding: "async"
+              // A cached image can be complete before React attaches
+              // onLoad; the ref callback covers that case.
+              ,
+              ref: el => {
+                if (el && artworkOnly && el.complete) noteArtworkRatio(s.id, el);
+              },
+              onLoad: e => {
+                if (artworkOnly) noteArtworkRatio(s.id, e.currentTarget);
+                mediaReady(s.id, i);
+              }
             }))
           })
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -34459,9 +34498,10 @@ function HomeOffers({
       behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
     });
   };
-  // `hp-offers--single` lets the desktop stylesheet lay ONE poster out as a
-  // heading-beside-artwork composition instead of a 620px column centred in
-  // a 1240px frame. Two or more posters keep the admin's column grid.
+  // `hp-offers--single` lets the desktop stylesheet give ONE poster a proper
+  // width under the heading, with the frame hugging it, instead of a 620px
+  // column lost in a 1240px frame. Two or more posters keep the admin's
+  // column grid.
   //
   // Padding is a custom property, not inline padding, for the reason given in
   // HomeCategoryStrip: an inline value tuned for the phone must not also be
@@ -34489,15 +34529,6 @@ function HomeOffers({
             className: "v2-h2",
             id: "homepage-offers-title",
             children: "Current offers"
-          }), items.length === 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            className: "hp-offers__lead",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-              className: "hp-offers__lead-title",
-              children: items[0].title
-            }), items[0].subtitle && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-              className: "hp-offers__lead-sub",
-              children: items[0].subtitle
-            })]
           })]
         }), items.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
           className: "hp-offers__hint",

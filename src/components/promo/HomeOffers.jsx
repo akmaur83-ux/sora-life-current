@@ -65,9 +65,10 @@ useEffect(() => {
     const card = el?.children[index];
     if (card) el.scrollTo({ left: card.offsetLeft - el.firstElementChild.offsetLeft, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   };
-  // `hp-offers--single` lets the desktop stylesheet lay ONE poster out as a
-  // heading-beside-artwork composition instead of a 620px column centred in
-  // a 1240px frame. Two or more posters keep the admin's column grid.
+  // `hp-offers--single` lets the desktop stylesheet give ONE poster a proper
+  // width under the heading, with the frame hugging it, instead of a 620px
+  // column lost in a 1240px frame. Two or more posters keep the admin's
+  // column grid.
   //
   // Padding is a custom property, not inline padding, for the reason given in
   // HomeCategoryStrip: an inline value tuned for the phone must not also be
@@ -79,21 +80,7 @@ useEffect(() => {
   }}>
     <div className="v2-wrap">
       <div className="hp-offers__heading">
-        <div>
-          <p className="v2-eyebrow">Offers</p>
-          <h2 className="v2-h2" id="homepage-offers-title">Current offers</h2>
-          {/* One poster on desktop: the promotion's own title and subtitle
-              sit beside the artwork as the composition's text column. This
-              is the admin's copy for THIS promotion, not invented filler, and
-              it stays off the image — the same rule PromoArtwork keeps. Below
-              1024px it is not displayed; the poster carries itself there. */}
-          {items.length === 1 && (
-            <div className="hp-offers__lead">
-              <p className="hp-offers__lead-title">{items[0].title}</p>
-              {items[0].subtitle && <p className="hp-offers__lead-sub">{items[0].subtitle}</p>}
-            </div>
-          )}
-        </div>
+        <div><p className="v2-eyebrow">Offers</p><h2 className="v2-h2" id="homepage-offers-title">Current offers</h2></div>
         {items.length > 1 && <span className="hp-offers__hint">Swipe to explore <span aria-hidden="true">→</span></span>}
       </div>
       <div className="hp-offers__frame" style={{ backgroundColor: a.frameColor,

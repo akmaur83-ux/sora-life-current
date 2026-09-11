@@ -128,6 +128,13 @@
 }
 @media (min-width: 1024px) {
   .v2-hero__media { aspect-ratio:1192 / 470; }
+  /* An artwork-only slide — one whose creative carries its own typography —
+     is framed at the artwork's own ratio (Hero.jsx sets --hero-ratio from the
+     loaded image, bounded to 1.6–2.6) with no parallax oversize, so nothing
+     of the designed banner is cropped. Slides with overlay copy keep the
+     stage above; for them the artwork is a background and cover is right. */
+  .v2-hero__media--artwork { aspect-ratio:var(--hero-ratio, 1192 / 470); }
+  .v2-hero__media--artwork .v2-hero__par { inset:0; }
   .v2-hero__ui { width:52%; padding:0 64px; }
   .v2-hero__title { font-size:52px; line-height:1.04; letter-spacing:-.022em; margin-bottom:14px; }
   .v2-hero__sub { font-size:16px; margin-bottom:26px; }

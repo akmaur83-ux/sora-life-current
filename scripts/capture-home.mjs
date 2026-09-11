@@ -49,10 +49,17 @@ const SECTIONS = `(() => {
       padTop: cs.paddingTop, padBot: cs.paddingBottom, marginTop: cs.marginTop,
     });
   }
+  const heroImg = [...document.querySelectorAll('.v2-hero__slide.is-active img')].find((i) => i.getBoundingClientRect().width > 300);
+  const heroMedia = document.querySelector('.v2-hero__slide.is-active .v2-hero__media');
+  const hero = heroImg && heroMedia ? (() => {
+    const m = heroMedia.getBoundingClientRect(); const i = heroImg.getBoundingClientRect();
+    const shownH = Math.min(i.height, m.height); const fullH = heroImg.naturalHeight * (i.width / heroImg.naturalWidth);
+    return { natural: [heroImg.naturalWidth, heroImg.naturalHeight], frame: [Math.round(m.width), Math.round(m.height)], croppedPct: Math.round((1 - shownH / fullH) * 100) };
+  })() : null;
   const poster = document.querySelector('.hp-offers__poster img');
   const cat = document.querySelector('.v2-cat__photo, .v2-cat__tile');
   return JSON.stringify({
-    width: innerWidth, docHeight: se.scrollHeight,
+    width: innerWidth, docHeight: se.scrollHeight, hero,
     poster: poster ? Math.round(poster.getBoundingClientRect().width) : null,
     categoryTile: cat ? Math.round(cat.getBoundingClientRect().width) : null,
     sections: out,
@@ -94,6 +101,12 @@ async function capture(width, height, dpr) {
     await sleep(6000);
 
     const meta = JSON.parse((await cdp.send('Runtime.evaluate', { expression: SECTIONS, returnByValue: true }, sessionId)).result.value);
+
+    // The hero, at the top of the page.
+    await cdp.send('Runtime.evaluate', { expression: 'document.scrollingElement.scrollTo(0, 0)' }, sessionId);
+    await sleep(800);
+    const heroShot = await cdp.send('Page.captureScreenshot', { format: 'png' }, sessionId);
+    writeFileSync(join(OUT, `${LABEL}-${width}-hero.png`), Buffer.from(heroShot.data, 'base64'));
 
     // Top region: from the hero's bottom third through the first product rail.
     const strip = meta.sections.find((s) => /Browse by/i.test(s.h2));

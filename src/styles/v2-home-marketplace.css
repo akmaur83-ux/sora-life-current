@@ -217,8 +217,6 @@
 .v2-home .hp-offers .promo-poster,
 .v2-home .hp-offers .promo-offer { border-radius:2px; }
 .v2-home .hp-offers + .v2-sec { margin-top:0; }
-/* The single-poster text column exists only in the desktop composition. */
-.v2-home .hp-offers__lead { display:none; }
 
 /* ----------------------------------------------------------- brand directory */
 .v2-home .hm-section--brands {
@@ -547,45 +545,20 @@
   .v2-home .v2-cat__lb { font-size:13px; }
   .v2-home .hm-category-head { margin-bottom:26px; }
 
-  /* ---- CURRENT OFFERS, one poster: heading beside artwork -------------
+  /* ---- CURRENT OFFERS, one poster: a proper width under the heading ----
      A single portrait poster used to sit as a 620px column in the middle of
-     a 1240px frame. Now the heading takes the left column and the artwork
-     the right, so the composition spans the container. The poster is held
-     to 700px — the height the section already had — so the footprint is
-     unchanged while its width is now composed rather than framed. The frame no
-     longer stretches behind empty space — it hugs the artwork. With two or
-     more posters the admin's column grid applies, unchanged. */
-  .v2-home .hp-offers--single > .v2-wrap {
-    display:grid;
-    grid-template-columns:minmax(0, 1fr) auto;
-    column-gap:64px;
-    /* Centred on the artwork's midline, so the text column reads as its
-       caption rather than as a heading that ran out of things to say. */
-    align-items:center;
-  }
-  .v2-home .hp-offers--single .hp-offers__heading { margin:0; }
-  /* The promotion's own title in display type, as the section's statement.
-     It is the admin's text for this promotion; nothing here is composed. */
-  .v2-home .hp-offers--single .hp-offers__lead { display:block; margin-top:32px; max-width:18ch; }
-  .v2-home .hp-offers--single .hp-offers__lead-title {
-    margin:0;
-    font:400 56px/1.04 var(--slv2-disp, Georgia, serif);
-    color:var(--hm-ink);
-    text-wrap:balance;
-  }
-  .v2-home .hp-offers--single .hp-offers__lead-title::first-letter { text-transform:uppercase; }
-  .v2-home .hp-offers--single .hp-offers__lead-sub {
-    margin:14px 0 0;
-    max-width:44ch;
-    font:450 15px/1.55 var(--slv2-sans);
-    color:var(--hm-muted);
-  }
-  .v2-home .hp-offers--single .hp-offers__frame { max-width:none; margin:0; width:auto; }
+     a 1240px frame, so the frame — not the poster — was the section's shape,
+     and it was mostly empty. Now the heading keeps the section's normal
+     position and the artwork is centred beneath it at two thirds of the
+     container. The frame hugs the artwork rather than stretching behind it.
+     A portrait creative is tall at this width; that is the asset, and it is
+     shown whole rather than cropped or padded. With two or more posters the
+     admin's column grid applies, unchanged. */
+  .v2-home .hp-offers--single .hp-offers__heading { margin-bottom:28px; }
+  .v2-home .hp-offers--single .hp-offers__frame { width:min(66.66%, 880px); max-width:none; margin-inline:auto; }
   .v2-home .hp-offers--single .hp-offers__gallery { display:block; max-width:none; margin:0; }
-  .v2-home .hp-offers--single .hp-offers__item { width:auto; }
-  /* Portrait artwork sets its own width from the height; a landscape upload
-     is held to 760px and letterboxed by object-fit rather than running wide. */
-  .v2-home .hp-offers--single .hp-offers__poster img { width:auto; height:700px; max-width:880px; object-fit:contain; }
+  .v2-home .hp-offers--single .hp-offers__item { width:100%; }
+  .v2-home .hp-offers--single .hp-offers__poster img { width:100%; height:auto; max-width:none; }
 
   .v2-home .hm-brands { grid-template-columns:1.4fr repeat(3, 1fr); }
   .v2-home .hm-brand:first-child .hm-brand__media { min-height:275px; }
