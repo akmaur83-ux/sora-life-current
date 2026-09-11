@@ -634,7 +634,8 @@
 .adm-coupon-msgs li + li { margin-top: 4px; }
 
 /* The preview sits on the admin's own card, so the notch cut-outs have to be
-   painted in THAT colour rather than the storefront surface they default to. */
+   painted in THAT colour rather than the storefront surface they default to.
+   .ticket exposes exactly this as --ticket-cut. */
 .adm-coupon-preview {
   list-style: none;
   margin: 0 0 var(--sp-4);
@@ -642,11 +643,7 @@
   max-width: 420px;
   border: 0;
 }
-.adm-coupon-preview .pdp-coupon {
-  background-image:
-    radial-gradient(circle at left  50%, var(--paper) 11px, transparent 11.5px),
-    radial-gradient(circle at right 50%, var(--paper) 11px, transparent 11.5px);
-}
+.adm-coupon-preview .ticket { --ticket-cut: var(--paper); }
 
 .adm-coupon-badge {
   display: inline-block;

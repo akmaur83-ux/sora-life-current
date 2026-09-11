@@ -1,7 +1,18 @@
 // General currency formatter for storefront/catalogue prices. Locale grouping,
 // no forced decimals (so whole-rupee prices read as ₹1,968, not ₹1,968.00).
+//
+// A fractional value renders with exactly two places, never one. Left to
+// toLocaleString alone, 558.4 came out as "₹558.4" — a figure that reads as a
+// typo beside "₹3,723" — and the tax lines, which are legitimately in paise,
+// could show one decimal or two depending on the amount. Whole values are
+// unchanged: ₹1,968 is still ₹1,968.
 export function money(n, currency = '₹') {
-  return currency + Number(n).toLocaleString('en-IN');
+  const v = Number(n);
+  if (!Number.isFinite(v)) return currency + '0';
+  return currency + v.toLocaleString('en-IN', {
+    minimumFractionDigits: Number.isInteger(v) ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 // Canonical formatter for creator-program FINANCIAL amounts — earnings,

@@ -7,6 +7,7 @@ import {
   normalizeKey, normalizeKeys, visibleWishlist, wishlistReducer,
   planWishlistSync, loadPersistedWishlist, pickPersisted, PERSISTED_KEYS, initialWishlistState,
 } from './wishlistState.js';
+import { couponReducer, initialCouponState } from './couponState.js';
 
 // ============================================================
 // Global store — cart, wishlist, saved-for-later, toasts.
@@ -42,7 +43,9 @@ const KEY = 'sora.store.v1';
 
 // PERSISTED_KEYS, the ownership rules and every wishlist reducer case live
 // in wishlistState.js so they can be executed directly in tests.
-const initial = { cart: [], saved: [], couponCode: '', ...initialWishlistState };
+// couponCode is persisted; the celebration bookkeeping beside it is not (see
+// PERSISTED_KEYS and the note in couponState.js).
+const initial = { cart: [], saved: [], ...initialCouponState, ...initialWishlistState };
 
 export function load() {
   try {
@@ -130,15 +133,17 @@ function reducer(state, action) {
     // ---- Coupon --------------------------------------------------
     // The code the customer is trying, and nothing else. No discount, no
     // total, no validity flag: those are the server's answers and live in the
-    // quote, which is refetched rather than remembered.
+    // quote, which is refetched rather than remembered. Delegated so the
+    // rules — including when a celebration may fire — have ONE implementation,
+    // executable in tests (see src/lib/couponState.js).
     case 'APPLY_COUPON':
-      return { ...state, couponCode: action.code || '' };
     case 'CLEAR_COUPON':
-      return state.couponCode ? { ...state, couponCode: '' } : state;
+    case 'COUPON_CELEBRATED':
+      return couponReducer(state, action);
     case 'CLEAR_CART':
       // An emptied cart drops its coupon too. Leaving the code behind would
       // silently re-apply it to whatever the customer bought next.
-      return { ...state, cart: [], couponCode: '' };
+      return { ...state, cart: [], couponCode: '', celebratePending: '' };
     default:
       return state;
   }

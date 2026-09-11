@@ -150,6 +150,20 @@ test('coupon below minimum order value does not apply', () => {
   eq(computeCouponDiscount({ type: 'flat', value: 50, min_order_value: 2000 }, 1599), 0);
 });
 
+test('a coupon discount is always a whole rupee, like every other payable figure', () => {
+  // 15% of 3723 is 558.45; of 3722 it is 558.3; of 1347 it is 202.05. Every
+  // unit price in this cart is Math.round-ed, so the discount that sits next
+  // to them must be too — otherwise the summary shows "−₹558.4" beside
+  // "₹3,723" and Razorpay's window shows paise for a whole-rupee cart.
+  for (const [amount, want] of [[3723, 558], [3722, 558], [1347, 202], [40500, 6075]]) {
+    const got = computeCouponDiscount({ type: 'percent', value: 15 }, amount);
+    eq(got, want, `15% of ${amount} → ${want}`);
+    eq(Number.isInteger(got), true, `${got} is a whole rupee`);
+  }
+  // The cap is applied BEFORE rounding, so a fractional cap still rounds.
+  eq(computeCouponDiscount({ type: 'percent', value: 50, max_discount: 99.5 }, 1000), 100);
+});
+
 test('coupon can never exceed the order or go negative', () => {
   eq(computeCouponDiscount({ type: 'flat', value: 99999 }, 500), 500);
   eq(computeCouponDiscount({ type: 'flat', value: -50 }, 500), 0);

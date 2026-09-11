@@ -164,7 +164,20 @@ export function resolveStock(value) {
 
 /**
  * Validate and apply a coupon. Coupons are resolved from trusted data passed
- * in by the caller (never from the browser). Returns the discount in rupees.
+ * in by the caller (never from the browser). Returns the discount in WHOLE
+ * rupees.
+ *
+ * Whole, not round2: every payable figure in this cart is a whole rupee —
+ * trustedUnitPrice and trustedVariantPrice both Math.round — and the coupon
+ * discount sits between them in the same column. This used to return paise
+ * (15% of ₹3,723 was 558.45), which put "−₹558.4" beside "₹3,723" in the
+ * summary and would have had Razorpay's own window show ₹3,164.55 for a cart
+ * that showed whole rupees everywhere else. The customer loses at most 49
+ * paise to the rounding; the alternative was a cart that could not agree
+ * with itself.
+ *
+ * round2 is still right for the tax lines, which are apportioned from these
+ * figures and are informational rather than payable.
  */
 export function computeCouponDiscount(coupon, eligibleAmount) {
   if (!coupon || coupon.is_active === false) return 0;
@@ -179,7 +192,7 @@ export function computeCouponDiscount(coupon, eligibleAmount) {
     off = Number(coupon.value) || 0;
   }
   // Never discount below zero or beyond the eligible amount.
-  return round2(Math.max(0, Math.min(off, eligibleAmount)));
+  return Math.round(Math.max(0, Math.min(off, eligibleAmount)));
 }
 
 /**

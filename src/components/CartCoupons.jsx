@@ -17,37 +17,47 @@ import { fetchEligibleCoupons, normalizeCouponCode } from '../lib/couponApi.js';
 // checkout charged full price — a ₹51,429 basket showed ₹43,715 and was
 // billed ₹51,429. The figures below cannot drift from the charge because they
 // are the same figures, from the same function, as create-order uses.
+//
+// VISUAL LANGUAGE — the same ticket the PDP uses: notched sides and a dashed
+// perforation between the offer and its stub. An applied coupon is the same
+// ticket in the brand's ink-green with a honey ribbon, so "applied" reads as
+// a thing that happened rather than a checkbox that got ticked.
 // ============================================================
 
 /** The applied coupon, as the server currently judges it. */
-function AppliedRow({ coupon, discount, onRemove }) {
+function AppliedTicket({ coupon, discount, onRemove }) {
   return (
-    <div className="cartcoupon__applied">
-      <span className="cartcoupon__tick"><Icon name="check" size={14} /></span>
+    <div className="ticket cartcoupon__applied" aria-live="polite">
       <div className="cartcoupon__appliedbody">
+        <span className="cartcoupon__ribbon">
+          <Icon name="check" size={12} /> Applied
+        </span>
         <p className="cartcoupon__appliedcode">{coupon.code}</p>
         <p className="cartcoupon__appliedtitle">{coupon.title}</p>
       </div>
-      {/* Straight from breakdown.couponDiscount — the same number the order
-          will be created with. */}
-      {discount > 0 && <span className="cartcoupon__saved">−{money(discount)}</span>}
-      <button
-        type="button"
-        className="cartcoupon__remove"
-        onClick={onRemove}
-        aria-label={`Remove coupon ${coupon.code}`}
-      >
-        Remove
-      </button>
+      <div className="cartcoupon__appliedstub">
+        {/* Straight from breakdown.couponDiscount — the same number the order
+            will be created with. */}
+        <span className="cartcoupon__savedlabel">You save</span>
+        <span className="cartcoupon__saved">{money(discount)}</span>
+        <button
+          type="button"
+          className="cartcoupon__remove"
+          onClick={onRemove}
+          aria-label={`Remove coupon ${coupon.code}`}
+        >
+          Remove
+        </button>
+      </div>
     </div>
   );
 }
 
 /** One offer the customer has not applied yet. */
-function OfferRow({ coupon, onApply, applying }) {
+function OfferTicket({ coupon, onApply, applying }) {
   const locked = coupon.addMore > 0;
   return (
-    <li className={`cartcoupon__offer ${locked ? 'is-locked' : ''}`}>
+    <li className={`ticket cartcoupon__offer ${locked ? 'is-locked' : ''}`}>
       <div className="cartcoupon__offerbody">
         <p className="cartcoupon__offertitle">{coupon.title}</p>
         <p className="cartcoupon__offerdesc">
@@ -56,14 +66,16 @@ function OfferRow({ coupon, onApply, applying }) {
           {locked ? `Add ${money(coupon.addMore)} more to use this` : coupon.description}
         </p>
       </div>
-      <div className="cartcoupon__offerside">
-        {coupon.discount > 0 && <span className="cartcoupon__offersave">Save {money(coupon.discount)}</span>}
+      <div className="cartcoupon__offerstub">
+        {coupon.discount > 0 && (
+          <span className="cartcoupon__offersave">Save {money(coupon.discount)}</span>
+        )}
         <button
           type="button"
           className="cartcoupon__offerapply"
           onClick={() => onApply(coupon.code)}
           disabled={locked || applying}
-          aria-label={`Apply ${coupon.code}`}
+          aria-label={locked ? `${coupon.code} — add more to unlock` : `Apply ${coupon.code}`}
         >
           {coupon.code}
         </button>
@@ -129,7 +141,7 @@ export default function CartCoupons({ items, code, quote, onApply, onRemove }) {
       </h4>
 
       {applied && (
-        <AppliedRow
+        <AppliedTicket
           coupon={applied}
           discount={quote.breakdown?.couponDiscount ?? 0}
           onRemove={onRemove}
@@ -169,7 +181,7 @@ export default function CartCoupons({ items, code, quote, onApply, onRemove }) {
       {listed.length > 0 && (
         <ul className="cartcoupon__offers">
           {listed.map((c) => (
-            <OfferRow key={c.code} coupon={c} onApply={onApply} applying={quote.stale} />
+            <OfferTicket key={c.code} coupon={c} onApply={onApply} applying={quote.stale} />
           ))}
         </ul>
       )}

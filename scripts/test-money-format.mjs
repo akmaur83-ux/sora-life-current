@@ -40,10 +40,26 @@ for (const v of [0, 5, 393.6, 393.605, 1000, 3936, 12345.678, 100000.1]) {
   (/\.\d{2}$/.test(s) ? pass++ : fail++, console.log(`  ${/\.\d{2}$/.test(s) ? 'PASS' : 'FAIL'}  ${v} → ${s} ends in 2 decimals`));
 }
 
-console.log('\n— money (storefront) unchanged: NO forced decimals —');
+console.log('\n— money (storefront): whole values have NO forced decimals —');
 eq(money(1968), '₹1,968', 'whole price stays ₹1,968 (not ₹1,968.00)');
 eq(money(0), '₹0', 'storefront 0 → ₹0');
 eq(money(100000), '₹1,00,000', 'storefront lakh grouping, no decimals');
+
+console.log('\n— money (storefront): a fractional value is never one decimal —');
+// The cart bug: a 15% coupon on ₹3,723 is 558.45, on ₹3,722 it is 558.3, and
+// the applied-coupon row rendered "−₹558.4". One decimal reads as a typo
+// beside whole-rupee prices; two reads as money.
+eq(money(558.4), '₹558.40', '558.4 → ₹558.40, not ₹558.4');
+eq(money(558.45), '₹558.45', 'two decimals stay two');
+eq(money(1234.5), '₹1,234.50', 'grouped AND padded');
+eq(money(0.5), '₹0.50', 'sub-rupee value is padded too');
+eq(money(558.405), '₹558.41', 'more than two places rounds to two');
+eq(money(NaN), '₹0', 'NaN → ₹0, never "₹NaN"');
+for (const v of [558.4, 12.1, 0.3, 99999.9]) {
+  const s = money(v);
+  const ok = !/\.\d$/.test(s);
+  (ok ? pass++ : fail++, console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${v} → ${s} does not end in a single decimal`));
+}
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

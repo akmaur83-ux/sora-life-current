@@ -5,7 +5,10 @@ import ProductRail from '../components/ProductRail.jsx';
 import { useStore } from '../lib/store.jsx';
 import PriceSummary from '../components/PriceSummary.jsx';
 import CartCoupons from '../components/CartCoupons.jsx';
+import CouponCelebration from '../components/CouponCelebration.jsx';
 import { useCartQuote } from '../lib/cartQuote.js';
+import { shouldCelebrate } from '../lib/couponState.js';
+import { useEffect, useState } from 'react';
 import PromoRail from '../components/promo/PromoRail.jsx';
 import { money } from '../lib/format.js';
 import { getBestsellers } from '../data/products.js';
@@ -36,7 +39,7 @@ import { promotionsSource } from '../lib/promotions.js';
 export default function Cart() {
   const {
     cartDetailed, savedDetailed, dispatch, subtotal, mrpTotal, cartCount,
-    blockedCartLines, couponCode,
+    blockedCartLines, couponCode, celebratePending,
   } = useStore();
 
   // Cart has no delivery-method selector; its estimate mirrors the default
@@ -47,6 +50,25 @@ export default function Cart() {
   // request aborted — see the note in lib/cartQuote.js. A discount must never
   // survive a change to the basket it was calculated against.
   const quote = useCartQuote(cartDetailed, couponCode, 'std');
+
+  // ---- Celebration ---------------------------------------------------
+  //
+  // Fires on exactly one event: the server confirming a coupon the customer
+  // JUST applied. Three things therefore cannot trigger it —
+  //   * a refused code, because the quote never reaches status 'ok'
+  //   * a code restored from storage on reload, because restoring is not an
+  //     apply and sets no celebratePending
+  //   * the same code applied a second time this session, because
+  //     APPLY_COUPON checks celebratedCodes before setting the intent
+  // The snapshot holds the quote at the moment of confirmation, so the modal
+  // keeps showing the figures it opened with even if the cart changes under
+  // it during the three seconds it is up.
+  const [celebration, setCelebration] = useState(null);
+  useEffect(() => {
+    if (!shouldCelebrate({ celebratePending }, quote)) return;
+    setCelebration({ coupon: quote.coupon, breakdown: quote.breakdown });
+    dispatch({ type: 'COUPON_CELEBRATED', code: quote.coupon.code });
+  }, [celebratePending, quote, dispatch]);
 
   if (!cartDetailed.length) {
     return (
@@ -225,6 +247,14 @@ export default function Cart() {
       </div>
 
       <ProductRail eyebrow="Add a little extra" title="Recommended for you" products={getBestsellers()} link="/shop" />
+
+      {celebration && (
+        <CouponCelebration
+          coupon={celebration.coupon}
+          breakdown={celebration.breakdown}
+          onClose={() => setCelebration(null)}
+        />
+      )}
     </div>
   );
 }

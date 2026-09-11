@@ -6440,18 +6440,44 @@ body:has(.v2-pdp-root .buybar) .page-main {
 
 /* ═══ src/styles/coupons.css ═══ */
 /* ============================================================
-   COUPONS — PDP ticket cards and the cart's offers panel
+   COUPONS — tickets, the cart's offers panel, and the celebration
 
-   The ticket shape is drawn entirely here: the notches are radial-gradient
-   cut-outs painted in the page background colour, and the perforation is a
-   repeating-linear-gradient. No images, no extra elements, no clip-path
-   (which would take the box-shadow with it).
+   ONE TICKET SHAPE. `.ticket` draws the notched sides; a `__stub` child
+   draws the dashed perforation. The notches are radial-gradient cut-outs
+   painted in the colour of whatever the ticket sits on, which is why each
+   context sets --ticket-cut: the PDP panel is --color-surface, the cart
+   summary is --v2-surface, the admin card is --paper. No images, no extra
+   elements, no clip-path (which would take the box-shadow with it).
 
-   Everything is built from existing tokens. Honey is the accent the rest of
-   the storefront already uses for "offer"; forest carries the applied state.
+   Every colour is an existing token. The one derived tint — the diagonal
+   texture on an applied ticket — is honey at low alpha via color-mix, which
+   this stylesheet set already uses (components.css, pages.css).
+
+   MOTION RULES for the celebration: transform and opacity only. Nothing
+   here animates a layout property, a filter, or a shadow, and the scrim has
+   no backdrop-filter — at 4× CPU on a phone, blurring the whole page behind
+   thirty-six moving particles is exactly the cost that drops frames.
    ============================================================ */
 
-/* ---- PDP: collapsible offers ------------------------------- */
+/* ---- The ticket ------------------------------------------------ */
+
+.ticket {
+  --notch: 11px;
+  --ticket-cut: var(--color-surface);
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-xs);
+  background-image:
+    radial-gradient(circle at left  50%, var(--ticket-cut) var(--notch), transparent calc(var(--notch) + 0.5px)),
+    radial-gradient(circle at right 50%, var(--ticket-cut) var(--notch), transparent calc(var(--notch) + 0.5px));
+  background-repeat: no-repeat;
+  background-size: var(--notch) 100%, var(--notch) 100%;
+  background-position: left center, right center;
+}
+
+/* ---- PDP: collapsible offers ----------------------------------- */
 
 .pdp-coupons {
   margin: var(--sp-4) 0 0;
@@ -6473,7 +6499,6 @@ body:has(.v2-pdp-root .buybar) .page-main {
   font: inherit;
   color: var(--color-text);
   text-align: left;
-  /* A 44px row on phones, where this is the first thing under the price. */
   min-height: 44px;
 }
 .pdp-coupons__head:hover { background: var(--honey-100); }
@@ -6490,7 +6515,6 @@ body:has(.v2-pdp-root .buybar) .page-main {
   font-weight: 600;
 }
 
-/* The count chip: how many offers, without opening the panel. */
 .pdp-coupons__count {
   display: inline-flex;
   align-items: center;
@@ -6513,51 +6537,21 @@ body:has(.v2-pdp-root .buybar) .page-main {
   display: grid;
   gap: var(--sp-3);
   margin: 0;
-  padding: 0 var(--sp-4) var(--sp-4);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
   list-style: none;
   border-top: 1px solid var(--line-soft);
-  padding-top: var(--sp-3);
 }
 
-/* ---- The ticket -------------------------------------------- */
-
-.pdp-coupon {
-  --notch: 11px;
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  border-radius: var(--r-sm);
-  background: var(--honey-100);
-  box-shadow: var(--shadow-xs);
-  /* The notches are painted in the SURFACE colour behind the ticket, so this
-     has to match .pdp-coupons' background rather than the page. */
-  background-image:
-    radial-gradient(circle at left  50%, var(--color-surface) var(--notch), transparent calc(var(--notch) + 0.5px)),
-    radial-gradient(circle at right 50%, var(--color-surface) var(--notch), transparent calc(var(--notch) + 0.5px));
-  background-repeat: no-repeat;
-  background-size: var(--notch) 100%, var(--notch) 100%;
-  background-position: left center, right center;
-}
+.pdp-coupon { background-color: var(--honey-100); }
 
 .pdp-coupon__body {
   flex: 1;
   min-width: 0;
   padding: var(--sp-3) var(--sp-3) var(--sp-3) calc(var(--notch) + var(--sp-2));
 }
+.pdp-coupon__title { margin: 0; font-size: var(--text-base); font-weight: 700; color: var(--forest-800); }
+.pdp-coupon__desc { margin: 2px 0 0; font-size: var(--text-xs); color: var(--ink-500); }
 
-.pdp-coupon__title {
-  margin: 0;
-  font-size: var(--text-base);
-  font-weight: 700;
-  color: var(--forest-800);
-}
-.pdp-coupon__desc {
-  margin: 2px 0 0;
-  font-size: var(--text-xs);
-  color: var(--ink-500);
-}
-
-/* The stub, separated by a perforation rather than a plain border. */
 .pdp-coupon__stub {
   display: flex;
   flex-direction: column;
@@ -6567,15 +6561,12 @@ body:has(.v2-pdp-root .buybar) .page-main {
   padding: var(--sp-3) calc(var(--notch) + var(--sp-2)) var(--sp-3) var(--sp-3);
   border-left: 1px dashed var(--honey-400);
 }
-
 .pdp-coupon__code {
   font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--color-accent-text);
-  font-family: var(--font-sans);
 }
-
 .pdp-coupon__apply {
   border: 0;
   background: none;
@@ -6593,13 +6584,14 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdp-coupon.is-applied { background-color: var(--forest-100); }
 .pdp-coupon.is-applied .pdp-coupon__stub { border-left-color: var(--forest-300); }
 
-/* ---- Cart: coupons and offers ------------------------------ */
+/* ---- Cart: coupons and offers ---------------------------------- */
 
 .cartcoupon {
   margin: var(--sp-4) 0;
   padding-top: var(--sp-4);
   border-top: 1px solid var(--line-soft);
 }
+.cartcoupon .ticket { --ticket-cut: var(--v2-surface, var(--paper)); }
 
 .cartcoupon__h {
   display: flex;
@@ -6614,59 +6606,103 @@ body:has(.v2-pdp-root .buybar) .page-main {
 }
 .cartcoupon__h svg { color: var(--color-accent-strong); }
 
-/* Applied */
+/* Applied — the ticket in ink-green with a honey ribbon. The diagonal
+   texture is honey at 7% over the gradient, so it reads as paper grain
+   rather than a stripe. */
 .cartcoupon__applied {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-3);
-  border: 1px solid var(--forest-200);
-  border-radius: var(--r-sm);
-  background: var(--forest-50);
+  color: var(--color-on-primary);
+  background-color: var(--forest-700);
+  background-image:
+    radial-gradient(circle at left  50%, var(--ticket-cut) var(--notch), transparent calc(var(--notch) + 0.5px)),
+    radial-gradient(circle at right 50%, var(--ticket-cut) var(--notch), transparent calc(var(--notch) + 0.5px)),
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--honey-500) 7%, transparent) 0 6px,
+      transparent 6px 14px
+    ),
+    linear-gradient(135deg, var(--forest-600), var(--forest-800));
+  background-size: var(--notch) 100%, var(--notch) 100%, auto, auto;
+  background-position: left center, right center, 0 0, 0 0;
+  box-shadow: var(--shadow-sm);
 }
-.cartcoupon__tick {
+
+.cartcoupon__appliedbody {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) calc(var(--notch) + var(--sp-3));
+}
+
+.cartcoupon__ribbon {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  flex: none;
+  gap: 4px;
+  margin-bottom: 6px;
+  padding: 3px 9px 3px 7px;
   border-radius: var(--r-pill);
-  background: var(--color-success);
-  color: #fff;
+  background: var(--honey-500);
+  color: var(--forest-900);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
-.cartcoupon__appliedbody { flex: 1; min-width: 0; }
+
 .cartcoupon__appliedcode {
   margin: 0;
-  font-size: var(--text-sm);
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--forest-800);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #fff;
+  line-height: 1.1;
 }
 .cartcoupon__appliedtitle {
-  margin: 0;
+  margin: 3px 0 0;
   font-size: var(--text-xs);
-  color: var(--ink-500);
+  color: var(--forest-200);
+}
+
+.cartcoupon__appliedstub {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--sp-3) calc(var(--notch) + var(--sp-3)) var(--sp-3) var(--sp-3);
+  border-left: 1px dashed var(--forest-300);
+}
+.cartcoupon__savedlabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--forest-200);
 }
 .cartcoupon__saved {
-  font-size: var(--text-base);
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
   font-weight: 700;
-  color: var(--price-save);
+  color: var(--honey-400);
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .cartcoupon__remove {
   border: 0;
   background: none;
-  padding: var(--sp-1) var(--sp-2);
+  padding: var(--sp-1) 0;
   font: inherit;
   font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--color-danger);
+  color: inherit;
+  opacity: 0.8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
   min-height: 32px;
 }
-.cartcoupon__remove:hover { text-decoration: underline; }
+.cartcoupon__remove:hover { opacity: 1; }
+.cartcoupon__refused .cartcoupon__remove { color: var(--color-danger); opacity: 1; text-decoration: none; padding: var(--sp-1) var(--sp-2); }
+.cartcoupon__refused .cartcoupon__remove:hover { text-decoration: underline; }
 
 /* Refused */
 .cartcoupon__refused {
@@ -6679,17 +6715,11 @@ body:has(.v2-pdp-root .buybar) .page-main {
   border-radius: var(--r-sm);
   background: var(--clay-100);
 }
-.cartcoupon__refusedcode {
-  font-size: var(--text-sm);
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--clay-600);
-}
+.cartcoupon__refusedcode { font-size: var(--text-sm); font-weight: 700; letter-spacing: 0.05em; color: var(--clay-600); }
 .cartcoupon__refusedmsg { flex: 1; min-width: 0; font-size: var(--text-xs); color: var(--ink-700); }
 
 /* Entry */
 .cartcoupon__form { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
-
 .cartcoupon__input {
   flex: 1;
   min-width: 0;
@@ -6706,7 +6736,6 @@ body:has(.v2-pdp-root .buybar) .page-main {
 }
 .cartcoupon__input::placeholder { text-transform: none; letter-spacing: 0; color: var(--ink-400); }
 .cartcoupon__input:focus-visible { outline: none; border-color: var(--color-ring); box-shadow: var(--shadow-focus); }
-
 .cartcoupon__submit {
   flex: none;
   height: 42px;
@@ -6722,32 +6751,37 @@ body:has(.v2-pdp-root .buybar) .page-main {
 }
 .cartcoupon__submit:disabled { opacity: 0.45; cursor: default; }
 
-/* Offer list */
+/* Offers — the honey ticket, same as the PDP */
 .cartcoupon__offers { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: grid; gap: var(--sp-2); }
 
-.cartcoupon__offer {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-3);
-  border: 1px dashed var(--honey-400);
-  border-radius: var(--r-xs);
-  background: var(--honey-100);
-}
-.cartcoupon__offer.is-locked { background: var(--color-surface-2); border-color: var(--line); }
+.cartcoupon__offer { background-color: var(--honey-100); }
+.cartcoupon__offer.is-locked { background-color: var(--color-surface-2); box-shadow: none; }
 
-.cartcoupon__offerbody { flex: 1; min-width: 0; }
+.cartcoupon__offerbody {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) calc(var(--notch) + var(--sp-2));
+}
 .cartcoupon__offertitle { margin: 0; font-size: var(--text-sm); font-weight: 700; color: var(--forest-800); }
 .cartcoupon__offerdesc { margin: 1px 0 0; font-size: var(--text-xs); color: var(--ink-500); }
 
-.cartcoupon__offerside { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
+.cartcoupon__offerstub {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  flex: none;
+  padding: var(--sp-2) calc(var(--notch) + var(--sp-2)) var(--sp-2) var(--sp-3);
+  border-left: 1px dashed var(--honey-400);
+}
+.cartcoupon__offer.is-locked .cartcoupon__offerstub { border-left-color: var(--line); }
 .cartcoupon__offersave {
   font-size: var(--text-xs);
   font-weight: 700;
   color: var(--price-save);
   font-variant-numeric: tabular-nums;
 }
-
 .cartcoupon__offerapply {
   border: 0;
   background: none;
@@ -6764,27 +6798,252 @@ body:has(.v2-pdp-root .buybar) .page-main {
 }
 .cartcoupon__offerapply:disabled { color: var(--ink-400); text-decoration: none; cursor: default; }
 
-/* While a re-quote is in flight the figures stay put and dim, rather than
-   flickering to a spinner on every tap of the quantity stepper. */
+/* While a re-quote is in flight the figures stay put and dim. */
 .is-requoting { opacity: 0.55; transition: opacity 120ms ease; }
 
+/* ---- Celebration ------------------------------------------------ */
+
+.celebrate {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-5);
+  /* Flat. No backdrop-filter — see the note at the top. */
+  background: rgba(20, 38, 28, 0.55);
+  animation: celebrate-fade 200ms ease-out both;
+}
+
+.celebrate__card {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  padding: var(--sp-8) var(--sp-6) var(--sp-6);
+  border-radius: var(--r-xl);
+  background: var(--paper);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  /* Clips the shower to the card. Particles never paint over the page. */
+  overflow: hidden;
+  animation: celebrate-pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.celebrate__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink-400);
+  cursor: pointer;
+}
+.celebrate__close:hover { color: var(--ink-700); background: var(--cream); }
+
+.celebrate__badge {
+  position: relative;
+  z-index: 2;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--sp-4);
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-pill);
+  background: var(--color-primary);
+  color: var(--honey-400);
+  box-shadow: 0 0 0 8px var(--forest-100);
+  animation: celebrate-badge 520ms cubic-bezier(0.2, 0.9, 0.3, 1.3) 120ms both;
+}
+
+.celebrate__eyebrow {
+  position: relative;
+  z-index: 2;
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent-text);
+}
+.celebrate__code {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  letter-spacing: 0.04em;
+  color: var(--forest-800);
+}
+.celebrate__title {
+  position: relative;
+  z-index: 2;
+  margin: 4px 0 0;
+  font-size: var(--text-sm);
+  color: var(--ink-500);
+}
+
+.celebrate__saved {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: var(--sp-5) 0 var(--sp-3);
+}
+.celebrate__savedlabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+.celebrate__savedamt {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--price-save);
+  font-variant-numeric: tabular-nums;
+}
+.celebrate__total {
+  position: relative;
+  z-index: 2;
+  margin: 0 0 var(--sp-5);
+  font-size: var(--text-sm);
+  color: var(--ink-500);
+}
+.celebrate__total strong { color: var(--forest-800); font-variant-numeric: tabular-nums; }
+
+.celebrate__ok {
+  position: relative;
+  z-index: 2;
+  min-height: 44px;
+  padding: 0 var(--sp-6);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+.celebrate__ok:hover { background: var(--color-primary-hover); }
+
+/* The shower. Each bit is positioned by its own custom properties, set once
+   at mount; the keyframes are shared and the compositor does the rest. */
+.celebrate__confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.celebrate__bit {
+  position: absolute;
+  top: -12px;
+  left: var(--x);
+  display: block;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0) rotate(0) scale(var(--s));
+  animation: celebrate-fall var(--dur) cubic-bezier(0.25, 0.1, 0.5, 1) var(--delay) both;
+}
+.celebrate__bit.is-dot { width: 8px; height: 8px; border-radius: 50%; }
+.celebrate__bit.is-honey       { background: var(--honey-500); }
+.celebrate__bit.is-honey-light { background: var(--honey-300); }
+.celebrate__bit.is-forest      { background: var(--forest-300); }
+.celebrate__bit.is-clay        { background: var(--clay-500); }
+.celebrate__bit.is-cream       { background: var(--sand); }
+
+/* Two ribbon curls that unfurl behind the badge. */
+.celebrate__ribbons {
+  position: absolute;
+  top: 46px;
+  left: 50%;
+  z-index: 1;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.celebrate__ribbon {
+  position: absolute;
+  top: 0;
+  width: 14px;
+  height: 92px;
+  border-radius: 7px;
+  background: linear-gradient(180deg, var(--honey-400), var(--honey-600));
+  opacity: 0;
+  will-change: transform, opacity;
+  transform-origin: 50% 0;
+}
+.celebrate__ribbon.is-left  { left: -70px; animation: celebrate-ribbon-l 900ms cubic-bezier(0.2, 0.8, 0.3, 1) 80ms both; }
+.celebrate__ribbon.is-right { left:  56px; animation: celebrate-ribbon-r 900ms cubic-bezier(0.2, 0.8, 0.3, 1) 80ms both; }
+
+@keyframes celebrate-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes celebrate-pop {
+  from { opacity: 0; transform: translate3d(0, 24px, 0) scale(0.94); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes celebrate-badge {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes celebrate-fall {
+  0%   { opacity: 0; transform: translate3d(0, 0, 0) rotate(0) scale(var(--s)); }
+  8%   { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(var(--dx), var(--dy), 0) rotate(var(--spin)) scale(var(--s)); }
+}
+@keyframes celebrate-ribbon-l {
+  0%   { opacity: 0; transform: rotate(-70deg) scaleY(0.2); }
+  35%  { opacity: 1; }
+  100% { opacity: 0; transform: rotate(-34deg) translate3d(-40px, 120px, 0) scaleY(1); }
+}
+@keyframes celebrate-ribbon-r {
+  0%   { opacity: 0; transform: rotate(70deg) scaleY(0.2); }
+  35%  { opacity: 1; }
+  100% { opacity: 0; transform: rotate(34deg) translate3d(40px, 120px, 0) scaleY(1); }
+}
+
+/* ---- Reduced motion --------------------------------------------
+   Particles and ribbons are not rendered at all (the component checks the
+   media query), so these rules only need to calm what remains. */
 @media (prefers-reduced-motion: reduce) {
   .pdp-coupons__chev { transition: none; }
   .is-requoting { transition: none; }
+  .celebrate { animation: celebrate-fade 150ms ease-out both; }
+  .celebrate__card { animation: celebrate-fade 150ms ease-out both; }
+  .celebrate__badge { animation: none; }
+  .celebrate__bit, .celebrate__ribbon { animation: none; opacity: 0; }
 }
+.celebrate.is-reduced .celebrate__card { animation: celebrate-fade 150ms ease-out both; }
+.celebrate.is-reduced .celebrate__badge { animation: none; }
 
-/* ---- Phones ------------------------------------------------ */
+/* ---- Phones ---------------------------------------------------- */
 @media (max-width: 640px) {
-  /* Every tap target reaches the 44px the rest of the cart uses on phones —
-     the same rule v2-mobile-cart.css applies to the stepper and row actions. */
   .cartcoupon__remove { min-height: 44px; }
   .cartcoupon__input,
   .cartcoupon__submit { height: 44px; }
   .pdp-coupon__apply,
   .cartcoupon__offerapply { min-height: 44px; display: inline-flex; align-items: center; }
 
-  .cartcoupon__offer { flex-wrap: wrap; }
-  .cartcoupon__offerside { flex-direction: row; align-items: center; gap: var(--sp-3); }
+  /* Stubs get a fixed footprint on narrow screens so a long title cannot
+     squeeze the code into a wrap. */
+  .cartcoupon__offerstub,
+  .cartcoupon__appliedstub { min-width: 108px; }
+  .cartcoupon__appliedcode { font-size: var(--text-md); }
+  .cartcoupon__saved { font-size: var(--text-lg); }
 }
 
 /* ═══ src/styles/info.css ═══ */

@@ -23,7 +23,7 @@
  */
 export default function CouponTicket({ coupon, applied = false, onApply = null }) {
   return (
-    <li className={`pdp-coupon ${applied ? 'is-applied' : ''}`}>
+    <li className={`ticket pdp-coupon ${applied ? 'is-applied' : ''}`}>
       <div className="pdp-coupon__body">
         <p className="pdp-coupon__title">{coupon.title}</p>
         <p className="pdp-coupon__desc">{coupon.description}</p>

@@ -30165,15 +30165,89 @@ async function mergeWishlist(productKeys) {
   }
 }
 
+// ============================================================
+// COUPON STATE — the cart's coupon code and the celebration bookkeeping
+//
+// Pure, so the rules run directly in tests — the same arrangement as
+// wishlistState.js, and for the same reason. store.jsx delegates the coupon
+// actions here and adds nothing of its own.
+//
+// Nothing in this file is a discount, a total or a validity flag. The state
+// is a CODE the customer is trying, plus two facts about celebrating it:
+//
+//   couponCode        what is on the cart; persisted, so it survives reload
+//   celebratePending  the code the customer JUST applied, awaiting the
+//                     server's yes; NOT persisted, because a code restored
+//                     on reload was not just applied
+//   celebratedCodes   codes already celebrated this session, so removing and
+//                     re-applying the same one does not repeat the modal;
+//                     NOT persisted, so it is per session by construction
+// ============================================================
+
+const initialCouponState = {
+  couponCode: '',
+  celebratePending: '',
+  celebratedCodes: []
+};
+function couponReducer(state, action) {
+  switch (action.type) {
+    case 'APPLY_COUPON':
+      {
+        const code = action.code || '';
+        return {
+          ...state,
+          couponCode: code,
+          // An apply is an intent to celebrate — once per code per session, and
+          // only once the server has said yes. The cart resolves the intent
+          // when the quote lands; a refused code never reaches it.
+          celebratePending: code && !state.celebratedCodes.includes(code) ? code : ''
+        };
+      }
+    case 'CLEAR_COUPON':
+      // Removing a coupon withdraws any pending celebration with it, so a
+      // remove-then-quote race cannot celebrate a code no longer on the cart.
+      return state.couponCode || state.celebratePending ? {
+        ...state,
+        couponCode: '',
+        celebratePending: ''
+      } : state;
+    case 'COUPON_CELEBRATED':
+      return {
+        ...state,
+        celebratePending: '',
+        celebratedCodes: state.celebratedCodes.includes(action.code) ? state.celebratedCodes : [...state.celebratedCodes, action.code]
+      };
+    default:
+      return state;
+  }
+}
+
+/**
+ * Should the cart open the celebration right now?
+ *
+ * Exactly one situation: the customer just applied a code, and the server's
+ * settled quote confirms THAT code. A refused code never has quote.coupon; a
+ * restored code never sets celebratePending; a repeated code was filtered by
+ * APPLY_COUPON. Kept as a function so those three "never"s are testable
+ * without React.
+ */
+function shouldCelebrate(state, quote) {
+  if (!state.celebratePending) return false;
+  if (!quote || quote.status !== 'ok' || quote.stale || !quote.coupon) return false;
+  return quote.coupon.code === state.celebratePending;
+}
+
 const StoreCtx = /*#__PURE__*/reactExports.createContext(null);
 const KEY = 'sora.store.v1';
 
 // PERSISTED_KEYS, the ownership rules and every wishlist reducer case live
 // in wishlistState.js so they can be executed directly in tests.
+// couponCode is persisted; the celebration bookkeeping beside it is not (see
+// PERSISTED_KEYS and the note in couponState.js).
 const initial = {
   cart: [],
   saved: [],
-  couponCode: '',
+  ...initialCouponState,
   ...initialWishlistState
 };
 function load() {
@@ -30305,24 +30379,21 @@ function reducer(state, action) {
     // ---- Coupon --------------------------------------------------
     // The code the customer is trying, and nothing else. No discount, no
     // total, no validity flag: those are the server's answers and live in the
-    // quote, which is refetched rather than remembered.
+    // quote, which is refetched rather than remembered. Delegated so the
+    // rules — including when a celebration may fire — have ONE implementation,
+    // executable in tests (see src/lib/couponState.js).
     case 'APPLY_COUPON':
-      return {
-        ...state,
-        couponCode: action.code || ''
-      };
     case 'CLEAR_COUPON':
-      return state.couponCode ? {
-        ...state,
-        couponCode: ''
-      } : state;
+    case 'COUPON_CELEBRATED':
+      return couponReducer(state, action);
     case 'CLEAR_CART':
       // An emptied cart drops its coupon too. Leaving the code behind would
       // silently re-apply it to whatever the customer bought next.
       return {
         ...state,
         cart: [],
-        couponCode: ''
+        couponCode: '',
+        celebratePending: ''
       };
     default:
       return state;
@@ -30589,8 +30660,19 @@ function useStore() {
 
 // General currency formatter for storefront/catalogue prices. Locale grouping,
 // no forced decimals (so whole-rupee prices read as ₹1,968, not ₹1,968.00).
+//
+// A fractional value renders with exactly two places, never one. Left to
+// toLocaleString alone, 558.4 came out as "₹558.4" — a figure that reads as a
+// typo beside "₹3,723" — and the tax lines, which are legitimately in paise,
+// could show one decimal or two depending on the amount. Whole values are
+// unchanged: ₹1,968 is still ₹1,968.
 function money(n, currency = '₹') {
-  return currency + Number(n).toLocaleString('en-IN');
+  const v = Number(n);
+  if (!Number.isFinite(v)) return currency + '0';
+  return currency + v.toLocaleString('en-IN', {
+    minimumFractionDigits: Number.isInteger(v) ? 0 : 2,
+    maximumFractionDigits: 2
+  });
 }
 
 // Canonical formatter for creator-program FINANCIAL amounts — earnings,
@@ -41184,7 +41266,7 @@ function CouponTicket({
   onApply = null
 }) {
   return /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-    className: `pdp-coupon ${applied ? 'is-applied' : ''}`,
+    className: `ticket pdp-coupon ${applied ? 'is-applied' : ''}`,
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "pdp-coupon__body",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -42289,50 +42371,57 @@ function PriceSummary({
   });
 }
 
-function AppliedRow({
+function AppliedTicket({
   coupon,
   discount,
   onRemove
 }) {
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "cartcoupon__applied",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "cartcoupon__tick",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "check",
-        size: 14
-      })
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "ticket cartcoupon__applied",
+    "aria-live": "polite",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "cartcoupon__appliedbody",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "cartcoupon__ribbon",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "check",
+          size: 12
+        }), " Applied"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "cartcoupon__appliedcode",
         children: coupon.code
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "cartcoupon__appliedtitle",
         children: coupon.title
       })]
-    }), discount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-      className: "cartcoupon__saved",
-      children: ["\u2212", money(discount)]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-      type: "button",
-      className: "cartcoupon__remove",
-      onClick: onRemove,
-      "aria-label": `Remove coupon ${coupon.code}`,
-      children: "Remove"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cartcoupon__appliedstub",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cartcoupon__savedlabel",
+        children: "You save"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cartcoupon__saved",
+        children: money(discount)
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "cartcoupon__remove",
+        onClick: onRemove,
+        "aria-label": `Remove coupon ${coupon.code}`,
+        children: "Remove"
+      })]
     })]
   });
 }
 
 /** One offer the customer has not applied yet. */
-function OfferRow({
+function OfferTicket({
   coupon,
   onApply,
   applying
 }) {
   const locked = coupon.addMore > 0;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-    className: `cartcoupon__offer ${locked ? 'is-locked' : ''}`,
+    className: `ticket cartcoupon__offer ${locked ? 'is-locked' : ''}`,
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "cartcoupon__offerbody",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -42343,7 +42432,7 @@ function OfferRow({
         children: locked ? `Add ${money(coupon.addMore)} more to use this` : coupon.description
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "cartcoupon__offerside",
+      className: "cartcoupon__offerstub",
       children: [coupon.discount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
         className: "cartcoupon__offersave",
         children: ["Save ", money(coupon.discount)]
@@ -42352,7 +42441,7 @@ function OfferRow({
         className: "cartcoupon__offerapply",
         onClick: () => onApply(coupon.code),
         disabled: locked || applying,
-        "aria-label": `Apply ${coupon.code}`,
+        "aria-label": locked ? `${coupon.code} — add more to unlock` : `Apply ${coupon.code}`,
         children: coupon.code
       })]
     })]
@@ -42432,7 +42521,7 @@ function CartCoupons({
         name: "tag",
         size: 15
       }), " Coupons and offers"]
-    }), applied && /*#__PURE__*/jsxRuntimeExports.jsx(AppliedRow, {
+    }), applied && /*#__PURE__*/jsxRuntimeExports.jsx(AppliedTicket, {
       coupon: applied,
       discount: quote.breakdown?.couponDiscount ?? 0,
       onRemove: onRemove
@@ -42475,12 +42564,169 @@ function CartCoupons({
       })]
     }), listed.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
       className: "cartcoupon__offers",
-      children: listed.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(OfferRow, {
+      children: listed.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(OfferTicket, {
         coupon: c,
         onApply: onApply,
         applying: quote.stale
       }, c.code))
     })]
+  });
+}
+
+const PARTICLES$1 = 36;
+const AUTO_CLOSE_MS = 3000;
+
+// Brand tokens only. The palette is the storefront's, not a party shop's.
+const TONES$1 = ['honey', 'honey-light', 'forest', 'clay', 'cream'];
+
+/**
+ * A stable, deterministic scatter. Seeded from the code so two celebrations
+ * of different coupons differ, but the same coupon (which cannot be
+ * celebrated twice anyway) would look the same in a screenshot.
+ */
+function scatter(seed) {
+  let s = 0;
+  for (const ch of seed) s = s * 31 + ch.charCodeAt(0) >>> 0;
+  const rnd = () => {
+    s = s * 1664525 + 1013904223 >>> 0;
+    return s / 0xffffffff;
+  };
+  return Array.from({
+    length: PARTICLES$1
+  }, (_, i) => ({
+    id: i,
+    tone: TONES$1[i % TONES$1.length],
+    // Where it starts across the card, and how far it drifts sideways.
+    x: Math.round(rnd() * 100),
+    dx: Math.round((rnd() - 0.5) * 160),
+    // How far it falls and how many turns it makes on the way.
+    dy: Math.round(220 + rnd() * 260),
+    spin: Math.round((rnd() - 0.5) * 900),
+    // Staggered so the burst reads as a shower rather than a curtain.
+    delay: Math.round(rnd() * 320),
+    duration: Math.round(1400 + rnd() * 700),
+    // Two shapes — a slip and a dot — so the shower has some texture.
+    shape: rnd() > 0.35 ? 'slip' : 'dot',
+    scale: (0.7 + rnd() * 0.6).toFixed(2)
+  }));
+}
+
+/**
+ * @param coupon     the server's public view: { code, title }
+ * @param breakdown  the server's breakdown for the cart WITH the coupon
+ * @param onClose    () => void
+ */
+function CouponCelebration({
+  coupon,
+  breakdown,
+  onClose
+}) {
+  const closeRef = reactExports.useRef(onClose);
+  closeRef.current = onClose;
+  const reduced = reactExports.useMemo(() => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches, []);
+  const particles = reactExports.useMemo(() => reduced ? [] : scatter(coupon?.code || ''), [coupon?.code, reduced]);
+
+  // Auto-close, Escape, and scroll lock for the three seconds it is up.
+  reactExports.useEffect(() => {
+    const timer = setTimeout(() => closeRef.current?.(), AUTO_CLOSE_MS);
+    const onKey = e => {
+      if (e.key === 'Escape') closeRef.current?.();
+    };
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, []);
+  if (!coupon || !breakdown) return null;
+
+  // Read, never computed. These are the server's figures for this exact cart.
+  const saved = breakdown.couponDiscount;
+  const total = breakdown.grandTotal;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: `celebrate ${reduced ? 'is-reduced' : ''}`,
+    onClick: onClose,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-labelledby": "celebrate-h",
+    "aria-describedby": "celebrate-d",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "celebrate__card",
+      onClick: e => e.stopPropagation(),
+      children: [particles.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "celebrate__confetti",
+        "aria-hidden": "true",
+        children: particles.map(p => /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: `celebrate__bit is-${p.tone} is-${p.shape}`,
+          style: {
+            '--x': `${p.x}%`,
+            '--dx': `${p.dx}px`,
+            '--dy': `${p.dy}px`,
+            '--spin': `${p.spin}deg`,
+            '--delay': `${p.delay}ms`,
+            '--dur': `${p.duration}ms`,
+            '--s': p.scale
+          }
+        }, p.id))
+      }), !reduced && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "celebrate__ribbons",
+        "aria-hidden": "true",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "celebrate__ribbon is-left"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "celebrate__ribbon is-right"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "celebrate__close",
+        onClick: onClose,
+        "aria-label": "Close",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "x",
+          size: 18
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "celebrate__badge",
+        "aria-hidden": "true",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "check",
+          size: 26
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "celebrate__eyebrow",
+        children: "Coupon applied"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        id: "celebrate-h",
+        className: "celebrate__code",
+        children: coupon.code
+      }), coupon.title && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "celebrate__title",
+        children: coupon.title
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        id: "celebrate-d",
+        className: "celebrate__saved",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "celebrate__savedlabel",
+          children: "You save"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "celebrate__savedamt",
+          children: money(saved)
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "celebrate__total",
+        children: ["New total ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+          children: money(total)
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "celebrate__ok",
+        onClick: onClose,
+        children: "Continue"
+      })]
+    })
   });
 }
 
@@ -42621,7 +42867,8 @@ function Cart() {
     mrpTotal,
     cartCount,
     blockedCartLines,
-    couponCode
+    couponCode,
+    celebratePending
   } = useStore();
 
   // Cart has no delivery-method selector; its estimate mirrors the default
@@ -42632,6 +42879,33 @@ function Cart() {
   // request aborted — see the note in lib/cartQuote.js. A discount must never
   // survive a change to the basket it was calculated against.
   const quote = useCartQuote(cartDetailed, couponCode, 'std');
+
+  // ---- Celebration ---------------------------------------------------
+  //
+  // Fires on exactly one event: the server confirming a coupon the customer
+  // JUST applied. Three things therefore cannot trigger it —
+  //   * a refused code, because the quote never reaches status 'ok'
+  //   * a code restored from storage on reload, because restoring is not an
+  //     apply and sets no celebratePending
+  //   * the same code applied a second time this session, because
+  //     APPLY_COUPON checks celebratedCodes before setting the intent
+  // The snapshot holds the quote at the moment of confirmation, so the modal
+  // keeps showing the figures it opened with even if the cart changes under
+  // it during the three seconds it is up.
+  const [celebration, setCelebration] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    if (!shouldCelebrate({
+      celebratePending
+    }, quote)) return;
+    setCelebration({
+      coupon: quote.coupon,
+      breakdown: quote.breakdown
+    });
+    dispatch({
+      type: 'COUPON_CELEBRATED',
+      code: quote.coupon.code
+    });
+  }, [celebratePending, quote, dispatch]);
   if (!cartDetailed.length) {
     return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "v2-cart-root",
@@ -42905,6 +43179,10 @@ function Cart() {
       title: "Recommended for you",
       products: getBestsellers(),
       link: "/shop"
+    }), celebration && /*#__PURE__*/jsxRuntimeExports.jsx(CouponCelebration, {
+      coupon: celebration.coupon,
+      breakdown: celebration.breakdown,
+      onClose: () => setCelebration(null)
     })]
   });
 }

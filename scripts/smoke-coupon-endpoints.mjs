@@ -76,12 +76,18 @@ const CODE = `ZZSMOKE${randomBytes(8).toString('hex').toUpperCase()}`;
 let couponId = null;
 
 try {
-  // ---------- 1. no coupons in the table ----------
-  console.log('\n— With an empty coupons table —\n');
+  // ---------- 1. the table as it is ----------
+  // This used to assert an EMPTY table. Real coupons exist now, so the test
+  // asserts only about the endpoint's shape here, and about its own probe row
+  // below. It never judges, touches or lists the live coupons.
+  console.log('\n— The eligible endpoint, whatever the table holds —\n');
   const empty = await invoke(eligibleHandler, { items: [{ id: cartId, qty: 1 }] });
-  check('eligible returns 200 with two empty lists', empty.status === 200
-    && Array.isArray(empty.payload.applicable) && empty.payload.applicable.length === 0
-    && Array.isArray(empty.payload.unlockable), JSON.stringify(empty.payload));
+  check('eligible returns 200 with two lists', empty.status === 200
+    && Array.isArray(empty.payload.applicable) && Array.isArray(empty.payload.unlockable),
+  `applicable=${empty.payload.applicable?.length} unlockable=${empty.payload.unlockable?.length}`);
+  check('every offered discount is a whole rupee',
+    empty.payload.applicable.every((c) => Number.isInteger(c.discount)),
+    empty.payload.applicable.map((c) => `${c.code}=${c.discount}`).join(', ') || '(none offered)');
 
   const noCode = await invoke(quoteHandler, { items: [{ id: cartId, qty: 1 }], couponCode: 'DEFINITELYNOTREAL' });
   check('quote refuses an unknown code with not_found',
@@ -115,9 +121,10 @@ try {
     typeof inactive.payload.message === 'string' && inactive.payload.message.length > 0,
     `"${inactive.payload.message}"`);
 
-  const stillEmpty = await invoke(eligibleHandler, { items: [{ id: cartId, qty: 1 }] });
-  check('an inactive coupon is offered to nobody',
-    stillEmpty.payload.applicable.length === 0 && stillEmpty.payload.unlockable.length === 0);
+  const withProbe = await invoke(eligibleHandler, { items: [{ id: cartId, qty: 1 }] });
+  const offered = [...withProbe.payload.applicable, ...withProbe.payload.unlockable].map((c) => c.code);
+  check('an inactive coupon is offered to nobody', !offered.includes(CODE),
+    `offered: ${offered.join(', ') || '(none)'}`);
 
   // ---------- 3. cart-level failures are the cart's, not the coupon's ----------
   console.log('\n— Cart problems report as cart problems —\n');
@@ -150,10 +157,13 @@ try {
     await fetch(`${sb.url}/rest/v1/coupons?id=eq.${couponId}`, { method: 'DELETE', headers: h });
     console.log(`\n  deleted ${CODE}`);
   }
+  // The only thing this script may leave behind is nothing OF ITS OWN. Other
+  // coupons are the merchant's and are reported, not judged.
   const left = await (await fetch(`${sb.url}/rest/v1/coupons?select=code,is_active`, { headers: h })).json();
+  const mine = left.filter((c) => c.code === CODE);
   const active = left.filter((c) => c.is_active);
-  console.log(`  coupons table: ${left.length} row(s), ${active.length} active`);
-  if (left.length !== 0) { console.log(`  LEFTOVER: ${left.map((c) => c.code).join(', ')}`); failed++; }
+  console.log(`  coupons table: ${left.length} row(s), ${active.length} active${active.length ? ' (' + active.map((c) => c.code).join(', ') + ')' : ''}`);
+  if (mine.length) { console.log(`  LEFTOVER PROBE: ${CODE}`); failed++; }
 }
 
 console.log(`\n${failed === 0 ? 'ALL PASS' : `${failed} FAILURE(S)`}`);
