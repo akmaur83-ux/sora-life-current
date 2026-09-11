@@ -11,6 +11,7 @@ const EMPTY = {
   cta_url: '',
   badge_text: '',
   image_url: '',
+  desktop_image_url: '',
   theme_variant: 'forest',
   text_align: 'left',
   placements: ['home'],
@@ -74,6 +75,7 @@ function Promotions() {
         cta_url: row.cta_url || '',
         badge_text: row.badge_text || '',
         image_url: row.image_url || '',
+        desktop_image_url: row.desktop_image_url || '',
         placements: Array.isArray(row.placements) ? row.placements : [],
         starts_at: toLocalInput(row.starts_at),
         ends_at: toLocalInput(row.ends_at)
@@ -144,13 +146,15 @@ function Promotions() {
       setErr(ex.message || String(ex));
     }
   }
-  async function onImage(e) {
+
+  // One handler for both artwork fields; `field` names the column it fills.
+  async function onImage(e, field = 'image_url') {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     setErr('');
     try {
-      set('image_url', await uploadPromoImage(file));
+      set(field, await uploadPromoImage(file));
     } catch (ex) {
       setErr('Upload failed: ' + (ex.message || String(ex)));
     }
@@ -346,11 +350,11 @@ function Promotions() {
         className: "field",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
           className: "label",
-          children: "Image (optional \u2014 poster art or offer icon)"
+          children: "Image (optional \u2014 poster art or offer icon; mobile and default)"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
           type: "file",
           accept: "image/jpeg,image/png,image/webp,image/gif,image/avif",
-          onChange: onImage,
+          onChange: e => onImage(e, 'image_url'),
           disabled: uploading
         }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
           className: "input",
@@ -360,9 +364,36 @@ function Promotions() {
           value: form.image_url,
           onChange: e => set('image_url', e.target.value),
           placeholder: "or paste an image URL"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "adm-hint",
+          children: "Shown on phones and tablets, and on every screen when no desktop image is set."
         }), uploading && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "hint",
           children: "Uploading\u2026"
+        })]
+      }), form.type === 'poster' && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "field",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+          className: "label",
+          children: "Desktop image (1024px and wider) \u2014 optional"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          type: "file",
+          accept: "image/jpeg,image/png,image/webp,image/gif,image/avif",
+          onChange: e => onImage(e, 'desktop_image_url'),
+          disabled: uploading
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          className: "input",
+          style: {
+            marginTop: 8
+          },
+          value: form.desktop_image_url,
+          onChange: e => set('desktop_image_url', e.target.value),
+          placeholder: "or paste an image URL \u2014 leave empty to use the mobile image"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "adm-hint",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: "Recommended 1200 \xD7 500."
+          }), " A landscape crop for wide screens; the browser downloads only the image it needs for the screen it is on."]
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "field",

@@ -200,6 +200,9 @@ export async function fetchPublicHeroSlides() {
     id: s.id,
     kind: s.kind,
     src: s.kind === 'video' ? s.video_url : s.image_url,
+    // Optional artwork for >= 1024px (0029). Image slides only; null means
+    // every viewport shows image_url, exactly as before the column existed.
+    desktopSrc: s.kind === 'video' ? null : (s.desktop_image_url || null),
     poster: s.poster_url || undefined,
     kicker: s.kicker || '',
     title: s.title || '',
@@ -526,6 +529,7 @@ export async function adminUpsertHeroSlide(slide) {
   const row = {
     kind: slide.kind || 'image',
     image_url: slide.image_url || null,
+    desktop_image_url: slide.desktop_image_url || null,
     video_url: slide.video_url || null,
     poster_url: slide.poster_url || null,
     kicker: slide.kicker || '',
@@ -1097,6 +1101,8 @@ function promotionRow(p) {
     cta_url: safeAdminCtaUrl(p.cta_url),
     badge_text: clean(p.badge_text, 40),
     image_url: nullable(p.image_url, 1000),
+    // Optional artwork for >= 1024px (0029). Same URL rules as image_url.
+    desktop_image_url: nullable(p.desktop_image_url, 1000),
     theme_variant: PROMO_THEMES.includes(p.theme_variant) ? p.theme_variant : 'forest',
     text_align: p.text_align === 'center' ? 'center' : 'left',
     placements,
@@ -1127,14 +1133,19 @@ export function promoImageStoragePath(imageUrl) {
 }
 
 async function readPromotionImage(id) {
-  const { data, error } = await supabase.from('promotions').select('id,image_url').eq('id', id).single();
+  const { data, error } = await supabase.from('promotions').select('id,image_url,desktop_image_url').eq('id', id).single();
   if (error) throw error;
   if (!data) throw new Error('Promotion could not be read. Reload before retrying.');
   return data;
 }
 
-function matchingPromotionImage(query, imageUrl) {
-  return imageUrl == null ? query.is('image_url', null) : query.eq('image_url', imageUrl);
+// The compare-and-set guards BOTH artwork columns: the write lands only if
+// neither image changed under us between the read and the write, so a
+// concurrent edit can never make this one delete an object it just chose.
+function matchingPromotionImages(query, previous) {
+  let q = previous.image_url == null ? query.is('image_url', null) : query.eq('image_url', previous.image_url);
+  q = previous.desktop_image_url == null ? q.is('desktop_image_url', null) : q.eq('desktop_image_url', previous.desktop_image_url);
+  return q;
 }
 
 function referencesSamePromoImage(previousUrl, nextUrl) {
@@ -1147,16 +1158,29 @@ function referencesSamePromoImage(previousUrl, nextUrl) {
   } catch { return false; }
 }
 
-async function removePromotionImage(imageUrl, promotionId) {
+/**
+ * Remove a storage object that a promotion has stopped referencing.
+ *
+ * @param stillHeld  URLs this same promotion still references in its OTHER
+ *                   column after the write. The reference query below excludes
+ *                   this promotion's own row, so without this a single upload
+ *                   used as both the mobile and the desktop image would be
+ *                   deleted the moment one of the two was changed.
+ */
+async function removePromotionImage(imageUrl, promotionId, stillHeld = []) {
   const path = promoImageStoragePath(imageUrl);
   if (!path) return false; // External / other-bucket / unproven URLs are never deleted.
+  if (stillHeld.some((u) => u && referencesSamePromoImage(u, imageUrl))) return false;
   try {
-    // An admin may reuse a URL. Preserve an object still used by another promotion.
-    const { data: references, error: referenceError } = await supabase.from('promotions')
-      .select('id').eq('image_url', imageUrl).neq('id', promotionId).limit(1);
-    if (referenceError) throw referenceError;
-    if (!Array.isArray(references)) throw new Error('Could not confirm other image references.');
-    if (references.length) return false;
+    // An admin may reuse a URL, in either column of any other promotion.
+    // Preserve an object still used anywhere.
+    for (const column of ['image_url', 'desktop_image_url']) {
+      const { data: references, error: referenceError } = await supabase.from('promotions')
+        .select('id').eq(column, imageUrl).neq('id', promotionId).limit(1);
+      if (referenceError) throw referenceError;
+      if (!Array.isArray(references)) throw new Error('Could not confirm other image references.');
+      if (references.length) return false;
+    }
     const bucket = supabase.storage.from('promo-media');
     const { error } = await bucket.remove([path]);
     if (error) throw error;
@@ -1182,13 +1206,20 @@ export async function adminUpsertPromotion(p) {
   try {
     if (p.id) {
       const previous = await readPromotionImage(p.id);
-      const { data, error } = await matchingPromotionImage(
-        supabase.from('promotions').update(row).eq('id', p.id), previous.image_url,
+      const { data, error } = await matchingPromotionImages(
+        supabase.from('promotions').update(row).eq('id', p.id), previous,
       ).select().single();
       if (error) throw error;
-      if (!data || data.image_url !== row.image_url) throw new Error('Promotion update could not be confirmed. Reload before retrying; the previous image was not removed.');
-      if (previous.image_url !== data.image_url && !referencesSamePromoImage(previous.image_url, data.image_url)) {
-        try { await removePromotionImage(previous.image_url, p.id); }
+      if (!data || data.image_url !== row.image_url || (data.desktop_image_url ?? null) !== row.desktop_image_url) {
+        throw new Error('Promotion update could not be confirmed. Reload before retrying; the previous image was not removed.');
+      }
+      // Each column that changed gets its old object cleaned up, unless the
+      // promotion still holds that URL in its other column.
+      const held = [data.image_url, data.desktop_image_url];
+      for (const column of ['image_url', 'desktop_image_url']) {
+        const was = previous[column]; const now = data[column];
+        if (was == null || was === now || referencesSamePromoImage(was, now)) continue;
+        try { await removePromotionImage(was, p.id, held); }
         catch (cleanupError) {
           // The new image has already been saved. Keep that success distinct
           // from the unresolved old-object cleanup; never imply a rolled-back save.
@@ -1217,9 +1248,14 @@ export async function adminDeletePromotion(id) {
   let imageRemoved = false;
   try {
     const previous = await readPromotionImage(id);
+    // Both objects go, unless something else still references them. A URL
+    // used in both columns of this promotion is one object, removed once.
     imageRemoved = await removePromotionImage(previous.image_url, id);
-    const { data, error } = await matchingPromotionImage(
-      supabase.from('promotions').delete().eq('id', id), previous.image_url,
+    if (previous.desktop_image_url && !referencesSamePromoImage(previous.desktop_image_url, previous.image_url || '')) {
+      imageRemoved = (await removePromotionImage(previous.desktop_image_url, id)) || imageRemoved;
+    }
+    const { data, error } = await matchingPromotionImages(
+      supabase.from('promotions').delete().eq('id', id), previous,
     ).select('id').single();
     if (error) throw error;
     if (!data) throw new Error('Promotion row deletion could not be confirmed.');

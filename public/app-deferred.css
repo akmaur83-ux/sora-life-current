@@ -678,6 +678,10 @@
   .adm-coupon-form .adm-grid2 { grid-template-columns: 1fr; }
 }
 
+/* Guidance under a form field — recommended sizes, what a field is for. */
+.adm-hint { margin:6px 0 0; font-size:12px; line-height:1.45; color:var(--color-text-muted); }
+.adm-hint strong { color:var(--color-text); }
+
 /* ═══ src/styles/passport.css ═══ */
 /* ============================================================
    PURCHASE PASSPORT

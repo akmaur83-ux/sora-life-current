@@ -9,6 +9,8 @@ import PromoArtwork from './PromoArtwork.jsx';
 export function HomeOfferArtwork({ promo }) {
   const [failed, setFailed] = useState(false);
   const url = safeVisualUrl(promo.imageUrl);
+  // Same URL policy for the desktop artwork as for the default.
+  const desktopUrl = safeVisualUrl(promo.desktopImageUrl);
   // Rendered through the shared PromoArtwork so the rail honours the same
   // CTA/coupon contract as PromoPoster: the image becomes the click target
   // when a ctaUrl exists, and a coupon code stays reachable below the art.
@@ -17,6 +19,7 @@ export function HomeOfferArtwork({ promo }) {
       <PromoArtwork
         promo={promo}
         src={url}
+        desktopSrc={desktopUrl || null}
         className="hp-offers__poster"
         onError={() => setFailed(true)}
       />

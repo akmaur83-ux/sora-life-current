@@ -51,6 +51,9 @@ export function normalizePromo(row) {
     ctaUrl: safeCtaUrl(ctaUrl),
     badgeText: str(row.badge_text ?? row.badgeText, 40),
     imageUrl: str(row.image_url ?? row.imageUrl, 1000) || null,
+    // Optional artwork for >= 1024px (0029). Null means every viewport shows
+    // imageUrl, exactly as before the column existed.
+    desktopImageUrl: str(row.desktop_image_url ?? row.desktopImageUrl, 1000) || null,
     themeVariant,
     textAlign: (row.text_align ?? row.textAlign) === 'center' ? 'center' : 'left',
     placements,

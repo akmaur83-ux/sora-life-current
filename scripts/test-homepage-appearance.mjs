@@ -33,7 +33,17 @@ const Icon = () => h('span');
 // The production component delays `src` until an IntersectionObserver reveals
 // the image. This server-render harness has no viewport, so use an ordinary
 // image while retaining the same props for appearance assertions.
-const DeferredImage = (props) => h('img', props);
+// Mirrors the real DeferredImage's READY output: a bare <img>, or, when
+// `sources` is given, a <picture> whose <source>s carry a media query. The
+// deferral itself is tested against the real component below.
+const DeferredImage = ({ sources, ...props }) => {
+  const list = Array.isArray(sources) ? sources.filter((s) => s && s.media && s.srcSet) : [];
+  const img = h('img', props);
+  return list.length
+    ? h('picture', null, ...list.map((s) => h('source', { key: s.media, media: s.media, srcSet: s.srcSet })), img)
+    : img;
+};
+const RealDeferredImage = component('../src/components/DeferredImage.jsx', 'DeferredImage', {});
 // Mirrors the real ticket's shape (visible code + a real copy button) so the
 // tests below can see whether a coupon actually reached the customer.
 const PromoCopyCode = ({ code, className = '' }) => (code
@@ -85,6 +95,80 @@ await check('uploaded artwork carries no generated overlay copy', () => {
   assert.doesNotMatch(html, />[^<]*ShopTheEdit[^<]*</);
 });
 await check('no-image poster retains existing generated presentation', () => assert.match(offers([promo('a', { image_url: null })]), /promo-poster__body/));
+
+// ---- Desktop artwork (0029): <picture> with a media query, browser-chosen ----
+const DESKTOP = '(min-width: 1024px)';
+await check('P1 without a desktop image the poster is the bare <img> it always was', () => {
+  const html = offers([promo('a')]);
+  assert.doesNotMatch(html, /<picture|<source/, 'no wrapper when there is no choice to offer');
+  assert.match(html, /<img[^>]*src="\/public\/a\.png"/);
+});
+await check('P2 with a desktop image the poster is a <picture>: desktop <source> by media query, mobile <img> as default', () => {
+  const html = offers([promo('a', { desktop_image_url: '/public/a-desktop.png' })]);
+  const pic = html.match(/<picture>[\s\S]*?<\/picture>/)?.[0];
+  assert.ok(pic, 'a <picture> is rendered');
+  assert.match(pic, new RegExp(`<source[^>]*media="${DESKTOP.replace(/[()]/g, '\\$&')}"[^>]*srcSet="/public/a-desktop\\.png"`), 'the desktop file is the media-queried source');
+  assert.match(pic, /<img[^>]*src="\/public\/a\.png"/, 'image_url stays the <img> — the default and the sub-1024 file');
+  assert.ok(pic.indexOf('<source') < pic.indexOf('<img'), 'source precedes img, as <picture> requires');
+  assert.doesNotMatch(html, /a-desktop\.png"[^>]*>[\s\S]*a-desktop\.png/, 'the desktop URL appears once — never also as a fallback the phone would fetch');
+});
+await check('P3 the desktop URL goes through the same safety policy as the default', () => {
+  const html = offers([promo('a', { desktop_image_url: 'javascript:alert(1)' })]);
+  assert.doesNotMatch(html, /javascript:/);
+  assert.doesNotMatch(html, /<picture/, 'a rejected desktop URL means no choice, so no wrapper');
+});
+await check('P4 the PDP poster honours the desktop image through the same renderer', () => {
+  const html = renderToStaticMarkup(h(PromoPoster, { promo: normalizePromo(promo('a', { desktop_image_url: '/public/a-desktop.png' })) }));
+  assert.match(html, /<picture>[\s\S]*<source[^>]*srcSet="\/public\/a-desktop\.png"[\s\S]*<img[^>]*src="\/public\/a\.png"/);
+});
+await check('P5 the real DeferredImage defers the sources too: nothing is fetched on any viewport until revealed', () => {
+  // Lazy (the default): before the observer reveals it, neither the <img>
+  // nor the <source> carries a URL, so a distant <picture> costs nothing.
+  const lazy = renderToStaticMarkup(h(RealDeferredImage, { src: '/m.png', sources: [{ media: DESKTOP, srcSet: '/d.png' }], alt: '' }));
+  assert.match(lazy, /<picture>/);
+  assert.doesNotMatch(lazy, /srcSet="|src="/i, 'no URL before reveal');
+  // Eager: both are present, source first.
+  const eager = renderToStaticMarkup(h(RealDeferredImage, { src: '/m.png', sources: [{ media: DESKTOP, srcSet: '/d.png' }], alt: '', loading: 'eager' }));
+  assert.match(eager, /<source[^>]*media="[^"]+"[^>]*srcSet="\/d\.png"/i);
+  assert.match(eager, /<img[^>]*src="\/m\.png"/);
+  // No sources: exactly the bare <img> as before this prop existed.
+  const bare = renderToStaticMarkup(h(RealDeferredImage, { src: '/m.png', alt: '', loading: 'eager' }));
+  assert.doesNotMatch(bare, /<picture/);
+});
+await check('P7 the hero offers the desktop artwork the same way, with its rendition srcset', () => {
+  // The real helper from Hero.jsx, with the module's other dependencies
+  // stubbed — none of them is involved in choosing an image.
+  const noop = () => null;
+  const withDesktopSource = component('../src/components/Hero.jsx', 'withDesktopSource', {
+    Link, Icon, ProductImage: noop, HeroCta: noop, branding: {}, heroSlides: [], heroSlidesConfigured: false,
+    homepage: {}, products: [], categories: [], selectMarketplaceHeroProducts: () => [],
+  });
+  const img = h('img', { className: 'v2-hero__img', src: '/m.png', alt: '' });
+  const sb = 'https://gbcnvrymoarcqrvdnnvb.supabase.co/storage/v1/object/public/product-images/hero/d.png';
+
+  const bare = renderToStaticMarkup(withDesktopSource(null, img));
+  assert.doesNotMatch(bare, /<picture/, 'no desktop image → the bare <img>, byte for byte');
+  assert.match(bare, /<img class="v2-hero__img" src="\/m\.png"/);
+
+  const pic = renderToStaticMarkup(withDesktopSource(sb, img));
+  assert.match(pic, /^<picture><source media="\(min-width: 1024px\)"/, 'the source leads, keyed on the desktop boundary');
+  // A Supabase object gets the same width renditions the mobile image gets.
+  assert.match(pic, /render\/image\/public\/product-images\/hero\/d\.png\?width=1600&amp;quality=72 1600w/);
+  assert.match(pic, /sizes="100vw"/);
+  assert.match(pic, /<img class="v2-hero__img" src="\/m\.png"/, 'image_url stays the <img>');
+
+  const local = renderToStaticMarkup(withDesktopSource('/media/wide.jpg', img));
+  assert.match(local, /<source media="\(min-width: 1024px\)" srcSet="\/media\/wide\.jpg"/, 'a non-Supabase path is used as-is');
+});
+await check('P6 the media query is the ONE boundary, and it is the stylesheet\'s desktop boundary', () => {
+  // Both artwork renderers name the same query, and it is min-width 1024 —
+  // the breakpoint every desktop rule in this project uses.
+  for (const f of ['../src/components/promo/PromoArtwork.jsx', '../src/components/Hero.jsx']) {
+    assert.match(read(f), /DESKTOP_MEDIA = '\(min-width: 1024px\)'/, `${f} declares the boundary`);
+  }
+  assert.doesNotMatch(read('../src/components/promo/PromoArtwork.jsx'), /matchMedia|innerWidth/, 'no JavaScript chooses the artwork');
+  assert.doesNotMatch(read('../src/components/DeferredImage.jsx'), /matchMedia|innerWidth/, 'the browser chooses, via the media attribute');
+});
 await check('unsafe poster URL falls back to configured copy', () => assert.doesNotMatch(offers([promo('a', { image_url: 'javascript:alert(1)' })]), /javascript:/));
 await check('maximum columns clamp to actual item count', () => assert.match(offers([promo('a'), promo('b')], { ...defaults.offers, desktopColumns: 3 }), /--hp-offers-columns:2/));
 await check('mobile extra posters expose discoverable controls', () => assert.match(offers([promo('a'), promo('b')]), /Show promotion 2: Promotion b/));

@@ -3669,11 +3669,25 @@ function useDeferredMedia(eager = false, identity = null) {
     ready
   };
 }
+
+/**
+ * @param sources  optional [{ media, srcSet }] — rendered as <source> elements
+ *                 inside a <picture>, so the BROWSER picks the file by media
+ *                 query and downloads only that one. No JavaScript decides.
+ *                 With no sources the output is exactly the bare <img> it has
+ *                 always been; the wrapper exists only when there is a choice
+ *                 to offer.
+ *
+ * The deferral applies to the sources too: until the image is revealed no
+ * srcset is set on any <source>, so a distant <picture> downloads nothing on
+ * any viewport, the same as a distant <img>.
+ */
 function DeferredImage({
   src,
   loading = 'lazy',
   decoding = 'async',
   fetchPriority,
+  sources,
   ...props
 }) {
   const eager = loading === 'eager' || fetchPriority === 'high';
@@ -3681,13 +3695,21 @@ function DeferredImage({
     ref,
     ready
   } = useDeferredMedia(eager, src);
-  return /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+  const img = /*#__PURE__*/jsxRuntimeExports.jsx("img", {
     ...props,
     ref: ref,
     src: ready ? src : undefined,
     loading: loading,
     decoding: decoding,
     fetchPriority: fetchPriority
+  });
+  const list = Array.isArray(sources) ? sources.filter(s => s && s.media && s.srcSet) : [];
+  if (!list.length) return img;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
+    children: [list.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("source", {
+      media: s.media,
+      srcSet: ready ? s.srcSet : undefined
+    }, s.media)), img]
   });
 }
 
@@ -32983,6 +33005,26 @@ function heroSrcSet(src) {
   return HERO_WIDTHS.map(w => `${heroSrc(src, w)} ${w}w`).join(', ');
 }
 
+// Desktop artwork is offered through <picture>, so the BROWSER chooses by
+// media query: below 1024px the <source> never matches and only image_url is
+// fetched; at 1024px and above only the desktop file is. No JavaScript
+// decides, and no viewport downloads both. Without a desktop image the slide
+// stays the bare <img> it always was — the wrapper exists only when there is
+// a choice to offer. naturalWidth/Height on the <img> report whichever source
+// the browser chose, so the artwork-only framing follows the desktop image's
+// own ratio when one is set.
+const DESKTOP_MEDIA$1 = '(min-width: 1024px)';
+function withDesktopSource(desktopSrc, img) {
+  if (!desktopSrc) return img;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("source", {
+      media: DESKTOP_MEDIA$1,
+      srcSet: heroSrcSet(desktopSrc) || heroSrc(desktopSrc, 1600),
+      sizes: "100vw"
+    }), img]
+  });
+}
+
 // The still we can show for a slide, if any. A video slide whose poster is
 // missing used to fall through to a bare coloured <div> — that is how the
 // duplicate "Mom's Trust" slide (poster_url null, video_url returns 400)
@@ -33159,7 +33201,8 @@ function ConfiguredHero() {
   const [artworkRatios, setArtworkRatios] = reactExports.useState({});
   const noteArtworkRatio = reactExports.useCallback((id, img) => {
     if (!img?.naturalWidth || !img?.naturalHeight) return;
-    const ratio = Math.min(2.6, Math.max(1.6, img.naturalWidth / img.naturalHeight));
+    // 1.6–2.7: wide enough for the recommended 1600×600 desktop upload (2.67).
+    const ratio = Math.min(2.7, Math.max(1.6, img.naturalWidth / img.naturalHeight));
     setArtworkRatios(r => r[id] === ratio ? r : {
       ...r,
       [id]: ratio
@@ -33287,7 +33330,16 @@ function ConfiguredHero() {
               fetchPriority: i === active ? 'high' : undefined,
               decoding: "async",
               onLoad: () => mediaReady(s.id, i)
-            }) : /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            }) :
+            // A <picture> only when the slide has a desktop image. The
+            // <source> carries a media query, so the browser — not
+            // JavaScript — chooses: below 1024px the source never
+            // matches and only image_url is fetched; at 1024px and above
+            // only the desktop file is. With no desktop image this is the
+            // same bare <img> as before. naturalWidth/Height on the <img>
+            // report whichever source was chosen, so the artwork-only
+            // framing above follows the desktop image's own ratio.
+            withDesktopSource(s.desktopSrc, /*#__PURE__*/jsxRuntimeExports.jsx("img", {
               className: "v2-hero__img",
               src: heroSrc(s.src, 1600),
               srcSet: heroSrcSet(s.src),
@@ -33309,7 +33361,7 @@ function ConfiguredHero() {
                 if (artworkOnly) noteArtworkRatio(s.id, e.currentTarget);
                 mediaReady(s.id, i);
               }
-            }))
+            })))
           })
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "v2-hero__ui",
@@ -34023,6 +34075,9 @@ function normalizePromo(row) {
     ctaUrl: safeCtaUrl(ctaUrl),
     badgeText: str$3(row.badge_text ?? row.badgeText, 40),
     imageUrl: str$3(row.image_url ?? row.imageUrl, 1000) || null,
+    // Optional artwork for >= 1024px (0029). Null means every viewport shows
+    // imageUrl, exactly as before the column existed.
+    desktopImageUrl: str$3(row.desktop_image_url ?? row.desktopImageUrl, 1000) || null,
     themeVariant,
     textAlign: (row.text_align ?? row.textAlign) === 'center' ? 'center' : 'left',
     placements,
@@ -34203,9 +34258,22 @@ function artworkLinkLabel(promo) {
   const name = [promo?.ctaText, promo?.title, promo?.badgeText].map(v => typeof v === 'string' ? v.trim() : '').find(Boolean);
   return name || null;
 }
+
+/** The viewport from which desktop artwork applies. One definition, one query. */
+const DESKTOP_MEDIA = '(min-width: 1024px)';
+
+/**
+ * @param src         the mobile/default image (image_url) — always rendered
+ * @param desktopSrc  optional artwork for >= 1024px (desktop_image_url). Offered
+ *                    through <picture> with a media query, so the BROWSER
+ *                    chooses and downloads only the file it needs; below
+ *                    1024px the source never matches. With none, the markup
+ *                    is the bare <img> it has always been.
+ */
 function PromoArtwork({
   promo,
   src,
+  desktopSrc = null,
   className = '',
   imgClassName = '',
   onError
@@ -34222,6 +34290,10 @@ function PromoArtwork({
   const image = /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
     className: imgClassName,
     src: src,
+    sources: desktopSrc ? [{
+      media: DESKTOP_MEDIA,
+      srcSet: desktopSrc
+    }] : undefined,
     alt: title || 'Promotion',
     width: 1500,
     height: 1000,
@@ -34293,6 +34365,7 @@ function PromoPoster({
     ctaText,
     ctaUrl,
     imageUrl,
+    desktopImageUrl,
     themeVariant,
     textAlign
   } = promo;
@@ -34304,6 +34377,7 @@ function PromoPoster({
     return /*#__PURE__*/jsxRuntimeExports.jsx(PromoArtwork, {
       promo: promo,
       src: imageUrl,
+      desktopSrc: desktopImageUrl,
       className: "promo-poster promo-poster--image-only",
       imgClassName: "promo-poster__fullimg"
     });
@@ -34439,6 +34513,8 @@ function HomeOfferArtwork({
 }) {
   const [failed, setFailed] = reactExports.useState(false);
   const url = safeVisualUrl(promo.imageUrl);
+  // Same URL policy for the desktop artwork as for the default.
+  const desktopUrl = safeVisualUrl(promo.desktopImageUrl);
   // Rendered through the shared PromoArtwork so the rail honours the same
   // CTA/coupon contract as PromoPoster: the image becomes the click target
   // when a ctaUrl exists, and a coupon code stays reachable below the art.
@@ -34446,6 +34522,7 @@ function HomeOfferArtwork({
     return /*#__PURE__*/jsxRuntimeExports.jsx(PromoArtwork, {
       promo: promo,
       src: url,
+      desktopSrc: desktopUrl || null,
       className: "hp-offers__poster",
       onError: () => setFailed(true)
     });
@@ -37281,6 +37358,9 @@ async function fetchPublicHeroSlides() {
     id: s.id,
     kind: s.kind,
     src: s.kind === 'video' ? s.video_url : s.image_url,
+    // Optional artwork for >= 1024px (0029). Image slides only; null means
+    // every viewport shows image_url, exactly as before the column existed.
+    desktopSrc: s.kind === 'video' ? null : s.desktop_image_url || null,
     poster: s.poster_url || undefined,
     kicker: s.kicker || '',
     title: s.title || '',
@@ -37709,6 +37789,7 @@ async function adminUpsertHeroSlide(slide) {
   const row = {
     kind: slide.kind || 'image',
     image_url: slide.image_url || null,
+    desktop_image_url: slide.desktop_image_url || null,
     video_url: slide.video_url || null,
     poster_url: slide.poster_url || null,
     kicker: slide.kicker || '',
@@ -38425,6 +38506,8 @@ function promotionRow(p) {
     cta_url: safeAdminCtaUrl(p.cta_url),
     badge_text: clean(p.badge_text, 40),
     image_url: nullable(p.image_url, 1000),
+    // Optional artwork for >= 1024px (0029). Same URL rules as image_url.
+    desktop_image_url: nullable(p.desktop_image_url, 1000),
     theme_variant: PROMO_THEMES.includes(p.theme_variant) ? p.theme_variant : 'forest',
     text_align: p.text_align === 'center' ? 'center' : 'left',
     placements,
@@ -38457,13 +38540,19 @@ async function readPromotionImage(id) {
   const {
     data,
     error
-  } = await supabase.from('promotions').select('id,image_url').eq('id', id).single();
+  } = await supabase.from('promotions').select('id,image_url,desktop_image_url').eq('id', id).single();
   if (error) throw error;
   if (!data) throw new Error('Promotion could not be read. Reload before retrying.');
   return data;
 }
-function matchingPromotionImage(query, imageUrl) {
-  return imageUrl == null ? query.is('image_url', null) : query.eq('image_url', imageUrl);
+
+// The compare-and-set guards BOTH artwork columns: the write lands only if
+// neither image changed under us between the read and the write, so a
+// concurrent edit can never make this one delete an object it just chose.
+function matchingPromotionImages(query, previous) {
+  let q = previous.image_url == null ? query.is('image_url', null) : query.eq('image_url', previous.image_url);
+  q = previous.desktop_image_url == null ? q.is('desktop_image_url', null) : q.eq('desktop_image_url', previous.desktop_image_url);
+  return q;
 }
 function referencesSamePromoImage(previousUrl, nextUrl) {
   // Comparison only: URL aliases may preserve a reference, but NEVER authorize
@@ -38476,18 +38565,32 @@ function referencesSamePromoImage(previousUrl, nextUrl) {
     return false;
   }
 }
-async function removePromotionImage(imageUrl, promotionId) {
+
+/**
+ * Remove a storage object that a promotion has stopped referencing.
+ *
+ * @param stillHeld  URLs this same promotion still references in its OTHER
+ *                   column after the write. The reference query below excludes
+ *                   this promotion's own row, so without this a single upload
+ *                   used as both the mobile and the desktop image would be
+ *                   deleted the moment one of the two was changed.
+ */
+async function removePromotionImage(imageUrl, promotionId, stillHeld = []) {
   const path = promoImageStoragePath(imageUrl);
   if (!path) return false; // External / other-bucket / unproven URLs are never deleted.
+  if (stillHeld.some(u => u && referencesSamePromoImage(u, imageUrl))) return false;
   try {
-    // An admin may reuse a URL. Preserve an object still used by another promotion.
-    const {
-      data: references,
-      error: referenceError
-    } = await supabase.from('promotions').select('id').eq('image_url', imageUrl).neq('id', promotionId).limit(1);
-    if (referenceError) throw referenceError;
-    if (!Array.isArray(references)) throw new Error('Could not confirm other image references.');
-    if (references.length) return false;
+    // An admin may reuse a URL, in either column of any other promotion.
+    // Preserve an object still used anywhere.
+    for (const column of ['image_url', 'desktop_image_url']) {
+      const {
+        data: references,
+        error: referenceError
+      } = await supabase.from('promotions').select('id').eq(column, imageUrl).neq('id', promotionId).limit(1);
+      if (referenceError) throw referenceError;
+      if (!Array.isArray(references)) throw new Error('Could not confirm other image references.');
+      if (references.length) return false;
+    }
     const bucket = supabase.storage.from('promo-media');
     const {
       error
@@ -38518,12 +38621,20 @@ async function adminUpsertPromotion(p) {
       const {
         data,
         error
-      } = await matchingPromotionImage(supabase.from('promotions').update(row).eq('id', p.id), previous.image_url).select().single();
+      } = await matchingPromotionImages(supabase.from('promotions').update(row).eq('id', p.id), previous).select().single();
       if (error) throw error;
-      if (!data || data.image_url !== row.image_url) throw new Error('Promotion update could not be confirmed. Reload before retrying; the previous image was not removed.');
-      if (previous.image_url !== data.image_url && !referencesSamePromoImage(previous.image_url, data.image_url)) {
+      if (!data || data.image_url !== row.image_url || (data.desktop_image_url ?? null) !== row.desktop_image_url) {
+        throw new Error('Promotion update could not be confirmed. Reload before retrying; the previous image was not removed.');
+      }
+      // Each column that changed gets its old object cleaned up, unless the
+      // promotion still holds that URL in its other column.
+      const held = [data.image_url, data.desktop_image_url];
+      for (const column of ['image_url', 'desktop_image_url']) {
+        const was = previous[column];
+        const now = data[column];
+        if (was == null || was === now || referencesSamePromoImage(was, now)) continue;
         try {
-          await removePromotionImage(previous.image_url, p.id);
+          await removePromotionImage(was, p.id, held);
         } catch (cleanupError) {
           // The new image has already been saved. Keep that success distinct
           // from the unresolved old-object cleanup; never imply a rolled-back save.
@@ -38560,11 +38671,16 @@ async function adminDeletePromotion(id) {
   let imageRemoved = false;
   try {
     const previous = await readPromotionImage(id);
+    // Both objects go, unless something else still references them. A URL
+    // used in both columns of this promotion is one object, removed once.
     imageRemoved = await removePromotionImage(previous.image_url, id);
+    if (previous.desktop_image_url && !referencesSamePromoImage(previous.desktop_image_url, previous.image_url || '')) {
+      imageRemoved = (await removePromotionImage(previous.desktop_image_url, id)) || imageRemoved;
+    }
     const {
       data,
       error
-    } = await matchingPromotionImage(supabase.from('promotions').delete().eq('id', id), previous.image_url).select('id').single();
+    } = await matchingPromotionImages(supabase.from('promotions').delete().eq('id', id), previous).select('id').single();
     if (error) throw error;
     if (!data) throw new Error('Promotion row deletion could not be confirmed.');
   } catch (cause) {

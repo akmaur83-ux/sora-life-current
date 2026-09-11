@@ -22,7 +22,7 @@ const PLACEMENT_OPTIONS = [
 
 const EMPTY = {
   type: 'poster', title: '', subtitle: '', coupon_code: '', cta_text: '', cta_url: '',
-  badge_text: '', image_url: '', theme_variant: 'forest', text_align: 'left',
+  badge_text: '', image_url: '', desktop_image_url: '', theme_variant: 'forest', text_align: 'left',
   placements: ['home'], is_active: true, starts_at: '', ends_at: '', sort_order: 0,
 };
 
@@ -72,7 +72,7 @@ export default function Promotions() {
       setForm({
         ...EMPTY, ...row,
         coupon_code: row.coupon_code || '', cta_text: row.cta_text || '', cta_url: row.cta_url || '',
-        badge_text: row.badge_text || '', image_url: row.image_url || '',
+        badge_text: row.badge_text || '', image_url: row.image_url || '', desktop_image_url: row.desktop_image_url || '',
         placements: Array.isArray(row.placements) ? row.placements : [],
         starts_at: toLocalInput(row.starts_at), ends_at: toLocalInput(row.ends_at),
       });
@@ -129,11 +129,12 @@ export default function Promotions() {
     try { await adminReorderPromotions(next.map((x) => x.id)); } catch (ex) { setErr(ex.message || String(ex)); }
   }
 
-  async function onImage(e) {
+  // One handler for both artwork fields; `field` names the column it fills.
+  async function onImage(e, field = 'image_url') {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true); setErr('');
-    try { set('image_url', await uploadPromoImage(file)); }
+    try { set(field, await uploadPromoImage(file)); }
     catch (ex) { setErr('Upload failed: ' + (ex.message || String(ex))); }
     setUploading(false);
   }
@@ -213,12 +214,22 @@ export default function Promotions() {
           </div>
 
           <div className="field">
-            <label className="label">Image (optional — poster art or offer icon)</label>
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={onImage} disabled={uploading} />
+            <label className="label">Image (optional — poster art or offer icon; mobile and default)</label>
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => onImage(e, 'image_url')} disabled={uploading} />
             <input className="input" style={{ marginTop: 8 }} value={form.image_url}
               onChange={(e) => set('image_url', e.target.value)} placeholder="or paste an image URL" />
+            <p className="adm-hint">Shown on phones and tablets, and on every screen when no desktop image is set.</p>
             {uploading && <p className="hint">Uploading…</p>}
           </div>
+          {form.type === 'poster' && (
+            <div className="field">
+              <label className="label">Desktop image (1024px and wider) — optional</label>
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => onImage(e, 'desktop_image_url')} disabled={uploading} />
+              <input className="input" style={{ marginTop: 8 }} value={form.desktop_image_url}
+                onChange={(e) => set('desktop_image_url', e.target.value)} placeholder="or paste an image URL — leave empty to use the mobile image" />
+              <p className="adm-hint"><strong>Recommended 1200 × 500.</strong> A landscape crop for wide screens; the browser downloads only the image it needs for the screen it is on.</p>
+            </div>
+          )}
 
           <div className="field">
             <label className="label">Show on</label>

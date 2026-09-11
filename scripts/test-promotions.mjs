@@ -251,7 +251,13 @@ console.log('\n— promo-media cleanup (real admin API, mocked Supabase; no netw
   };
   function fixture(options = {}) {
     const state = {
-      rows: [{ id: 1, title: 'QA', image_url: oldUrl, is_active: false }, ...(options.shared ? [{ id: 2, image_url: oldUrl }] : [])],
+      // desktop_image_url is present on every row, as it is in the database
+      // after 0029; a shared row may reference the old object in EITHER column.
+      rows: [
+        { id: 1, title: 'QA', image_url: oldUrl, desktop_image_url: options.desktopUrl ?? null, is_active: false },
+        ...(options.shared ? [{ id: 2, image_url: oldUrl, desktop_image_url: null }] : []),
+        ...(options.sharedAsDesktop ? [{ id: 2, image_url: null, desktop_image_url: oldUrl }] : []),
+      ],
       objects: new Set(options.objects || [oldPath, newPath]), calls: [], buckets: [],
     };
     if ('imageUrl' in options) state.rows[0].image_url = options.imageUrl;
@@ -276,6 +282,7 @@ console.log('\n— promo-media cleanup (real admin API, mocked Supabase; no netw
             if (errorFor(action)) return { data: null, error: errorFor(action) };
             if (options[`${action}Empty`]) return { data: null, error: null };
             if (options.concurrent === action) state.rows[0].image_url = base + 'promo/concurrent.png';
+            if (options.concurrentDesktop === action) state.rows[0].desktop_image_url = base + 'promo/concurrent-desktop.png';
             let rows = state.rows.filter((row) => filters.every((filter) => filter(row)));
             if (action === 'insert') { rows = [{ ...payload, id: 3 }]; state.rows.push(...rows); }
             if (single && rows.length !== 1) return { data: null, error: { code: 'PGRST116', message: 'Expected one visible row' } };
@@ -303,15 +310,17 @@ console.log('\n— promo-media cleanup (real admin API, mocked Supabase; no netw
             },
             async remove(paths) {
               state.calls.push('remove');
-              assert.deepEqual(paths, [oldPath], 'only the exact old object may be removed');
+              const removable = options.removable || [oldPath];
+              assert.equal(paths.length, 1, 'one object per removal');
+              assert.ok(removable.includes(paths[0]), `only an object this promotion stopped referencing may be removed (got ${paths[0]})`);
               if (options.removeThrow) throw options.removeThrow;
               if (options.removeError) return { data: null, error: options.removeError };
-              if (!options.removeNoop) state.objects.delete(oldPath);
+              if (!options.removeNoop) state.objects.delete(paths[0]);
               return { data: [], error: null }; // Storage can return an empty 200 response.
             },
             async info(path) {
               state.calls.push('info');
-              assert.equal(path, oldPath);
+              assert.ok((options.removable || [oldPath]).includes(path));
               if (options.infoError) return { data: null, error: options.infoError };
               if (options.infoEmpty) return { data: null, error: null };
               if (state.objects.has(path)) return { data: { name: path }, error: null };
@@ -336,11 +345,16 @@ console.log('\n— promo-media cleanup (real admin API, mocked Supabase; no netw
       from: (...args) => current.client.from(...args),
       storage: { from: (...args) => current.client.storage.from(...args) },
     };
-    const operationsUrl = new URL('../src/lib/productMediaOperations.js', import.meta.url).href;
+    // A data: module cannot resolve relative specifiers, so EVERY remaining
+    // relative import is rewritten to an absolute file URL. The previous
+    // version named the imports one by one and broke the day adminApi.js
+    // gained a fourth (./productContent.js) — this suite then failed to load
+    // at all, and the lifecycle it guards ran unguarded for several changes.
+    const adminApiUrl = new URL('../src/lib/adminApi.js', import.meta.url);
     const source = readFileSync('src/lib/adminApi.js', 'utf8')
       .replace("import { supabase } from './supabase.js';", 'const supabase = globalThis.__promotionCleanupTestClient;')
       .replace("import { BIOSASH_PRODUCTS } from '../data/biosash.js';", 'const BIOSASH_PRODUCTS = [];')
-      .replace("'./productMediaOperations.js'", JSON.stringify(operationsUrl));
+      .replace(/from\s+'(\.{1,2}\/[^']+)'/g, (m, spec) => `from ${JSON.stringify(new URL(spec, adminApiUrl).href)}`);
     const api = await import('data:text/javascript;base64,' + Buffer.from(source + '\n//# sourceURL=adminApi.promotion-test.js').toString('base64'));
     fixture();
     await check('own canonical promo-media URL yields the exact object path', () => {
@@ -382,7 +396,7 @@ console.log('\n— promo-media cleanup (real admin API, mocked Supabase; no netw
     await check('delete reads current image, removes/verifies Storage, then deletes row', async () => {
       const state = fixture();
       await api.adminDeletePromotion(1);
-      assert.deepEqual(state.calls, ['read', 'references', 'remove', 'info', 'delete']);
+      assert.deepEqual(state.calls, ['read', 'references', 'references', 'remove', 'info', 'delete']);
       assert.equal(state.rows.length, 0);
       assert.deepEqual([...state.objects], [newPath]);
     });
@@ -466,7 +480,7 @@ console.log('\n— promo-media cleanup (real admin API, mocked Supabase; no netw
       await api.adminDeletePromotion(1);
       assert.deepEqual(state.rows.map((row) => row.id), [2]);
       assert.ok(state.objects.has(oldPath));
-      assert.deepEqual(state.calls, ['read', 'references', 'delete']);
+      assert.deepEqual(state.calls, ['read', 'references', 'delete']); // first column already referenced → stop
     });
     const update = (imageUrl = newUrl) => api.adminUpsertPromotion({ id: 1, title: 'QA edited', image_url: imageUrl, is_active: false });
     await check('replacement uploads, saves new URL, then removes/verifies only the old object', async () => {
@@ -475,7 +489,7 @@ console.log('\n— promo-media cleanup (real admin API, mocked Supabase; no netw
       const saved = await update(uploaded);
       assert.equal(uploaded, newUrl);
       assert.equal(saved.image_url, newUrl);
-      assert.deepEqual(state.calls, ['upload', 'read', 'update', 'references', 'remove', 'info']);
+      assert.deepEqual(state.calls, ['upload', 'read', 'update', 'references', 'references', 'remove', 'info']);
       assert.deepEqual([...state.objects], [newPath]);
     });
     await check('failed replacement upload never removes the current image or updates its row', async () => {
@@ -536,6 +550,78 @@ console.log('\n— promo-media cleanup (real admin API, mocked Supabase; no netw
         assert.ok(state.calls.indexOf('update') < state.calls.indexOf('references'));
       });
     }
+    // ---- desktop_image_url (0029): the second artwork column ----
+    const desktopUrl = base + 'promo/desktop_1.png';
+    const desktopPath = 'promo/desktop_1.png';
+    const desktopUrl2 = base + 'promo/desktop_2.png';
+    const desktopPath2 = 'promo/desktop_2.png';
+    const updateBoth = (imageUrl, desktop) => api.adminUpsertPromotion({ id: 1, title: 'QA edited', image_url: imageUrl, desktop_image_url: desktop, is_active: false });
+
+    await check('D1 the row carries desktop_image_url, null when the field is empty', async () => {
+      const state = fixture();
+      const saved = await updateBoth(oldUrl, '');
+      assert.equal(saved.desktop_image_url, null);
+      assert.deepEqual(state.calls, ['read', 'update'], 'nothing changed, nothing removed');
+    });
+
+    await check('D2 replacing the desktop image removes ONLY the old desktop object', async () => {
+      const state = fixture({ desktopUrl, objects: [oldPath, desktopPath, desktopPath2], removable: [desktopPath] });
+      const saved = await updateBoth(oldUrl, desktopUrl2);
+      assert.equal(saved.desktop_image_url, desktopUrl2);
+      assert.deepEqual([...state.objects].sort(), [desktopPath2, oldPath].sort(), 'the mobile image is untouched');
+      assert.deepEqual(state.calls, ['read', 'update', 'references', 'references', 'remove', 'info']);
+    });
+
+    await check('D3 clearing the desktop image removes its object and keeps the mobile one', async () => {
+      const state = fixture({ desktopUrl, objects: [oldPath, desktopPath], removable: [desktopPath] });
+      const saved = await updateBoth(oldUrl, null);
+      assert.equal(saved.desktop_image_url, null);
+      assert.deepEqual([...state.objects], [oldPath]);
+    });
+
+    await check('D4 one upload used in BOTH columns survives changing one of them', async () => {
+      // Without the still-held guard the reference query (which excludes this
+      // row) finds nothing and deletes an object the row still shows.
+      const state = fixture({ desktopUrl: oldUrl, objects: [oldPath, newPath], removable: [] });
+      const saved = await updateBoth(newUrl, oldUrl);
+      assert.equal(saved.image_url, newUrl);
+      assert.equal(saved.desktop_image_url, oldUrl);
+      assert.ok(state.objects.has(oldPath), 'still the desktop image — must not be removed');
+      assert.ok(!state.calls.includes('remove'));
+    });
+
+    await check('D5 a desktop image another promotion uses as its MOBILE image is retained', async () => {
+      const state = fixture({ desktopUrl, shared: false, objects: [oldPath, desktopPath, desktopPath2], removable: [] });
+      state.rows.push({ id: 7, image_url: desktopUrl, desktop_image_url: null });
+      await updateBoth(oldUrl, desktopUrl2);
+      assert.ok(state.objects.has(desktopPath), 'referenced from image_url elsewhere');
+      assert.ok(!state.calls.includes('remove'));
+    });
+
+    await check('D6 a mobile image another promotion uses as its DESKTOP image is retained', async () => {
+      const state = fixture({ sharedAsDesktop: true, objects: [oldPath, newPath], removable: [] });
+      await update(newUrl);
+      assert.ok(state.objects.has(oldPath), 'referenced from desktop_image_url elsewhere');
+      assert.ok(!state.calls.includes('remove'));
+      assert.deepEqual(state.calls, ['read', 'update', 'references', 'references'], 'both columns were checked');
+    });
+
+    await check('D7 deleting a promotion removes both objects', async () => {
+      const state = fixture({ desktopUrl, objects: [oldPath, desktopPath], removable: [oldPath, desktopPath] });
+      await api.adminDeletePromotion(1);
+      assert.equal(state.rows.length, 0);
+      assert.deepEqual([...state.objects], []);
+    });
+
+    await check('D8 a concurrent change to the desktop image aborts the save, nothing removed', async () => {
+      const state = fixture({ desktopUrl, objects: [oldPath, desktopPath, desktopPath2], concurrentDesktop: 'update' });
+      // The compare-and-set filter excludes the changed row, so the update finds
+      // nothing: PGRST116, the same outcome the image_url case above produces.
+      await rejection(() => updateBoth(oldUrl, desktopUrl2), /could not be confirmed|Expected one visible row/);
+      assert.ok(state.objects.has(desktopPath));
+      assert.ok(!state.calls.includes('remove'));
+    });
+
     await check('shared old image is retained after a successful replacement', async () => {
       const state = fixture({ shared: true });
       await update();

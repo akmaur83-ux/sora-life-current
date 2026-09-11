@@ -47,9 +47,21 @@ export function artworkLinkLabel(promo) {
   return name || null;
 }
 
+/** The viewport from which desktop artwork applies. One definition, one query. */
+export const DESKTOP_MEDIA = '(min-width: 1024px)';
+
+/**
+ * @param src         the mobile/default image (image_url) — always rendered
+ * @param desktopSrc  optional artwork for >= 1024px (desktop_image_url). Offered
+ *                    through <picture> with a media query, so the BROWSER
+ *                    chooses and downloads only the file it needs; below
+ *                    1024px the source never matches. With none, the markup
+ *                    is the bare <img> it has always been.
+ */
 export default function PromoArtwork({
   promo,
   src,
+  desktopSrc = null,
   className = '',
   imgClassName = '',
   onError,
@@ -64,6 +76,7 @@ export default function PromoArtwork({
     <DeferredImage
       className={imgClassName}
       src={src}
+      sources={desktopSrc ? [{ media: DESKTOP_MEDIA, srcSet: desktopSrc }] : undefined}
       alt={title || 'Promotion'}
       width={1500}
       height={1000}

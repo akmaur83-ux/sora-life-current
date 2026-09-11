@@ -4,7 +4,7 @@ import HeroCtaAppearanceControls from '../components/HeroCtaAppearanceControls.j
 import { mergeHeroCta, sanitizeHeroCta } from '../../lib/heroCtaAppearance.js';
 import { announceHomepageSaved } from '../../lib/homepageVisualSync.js';
 
-const empty = { kind: 'image', image_url: '', video_url: '', poster_url: '', kicker: '', title: '', subtitle: '', lede: '', cta_label: 'SHOP NOW', cta_link: '/shop', is_active: true };
+const empty = { kind: 'image', image_url: '', desktop_image_url: '', video_url: '', poster_url: '', kicker: '', title: '', subtitle: '', lede: '', cta_label: 'SHOP NOW', cta_link: '/shop', is_active: true };
 
 export default function HeroSlides() {
   const [list, setList] = useState([]);
@@ -121,11 +121,20 @@ export default function HeroSlides() {
             </select>
           </div>
           {form.kind === 'image' ? (
-            <div className="field">
-              <label className="label">Slide image</label>
-              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => onFile(e, 'image_url')} disabled={uploading} />
-              <input className="input" style={{ marginTop: 8 }} value={form.image_url || ''} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} placeholder="or paste an image URL" />
-            </div>
+            <>
+              <div className="field">
+                <label className="label">Slide image (mobile and default)</label>
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => onFile(e, 'image_url')} disabled={uploading} />
+                <input className="input" style={{ marginTop: 8 }} value={form.image_url || ''} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} placeholder="or paste an image URL" />
+                <p className="adm-hint">Shown on phones and tablets, and on every screen when no desktop image is set.</p>
+              </div>
+              <div className="field">
+                <label className="label">Desktop image (1024px and wider) — optional</label>
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => onFile(e, 'desktop_image_url')} disabled={uploading} />
+                <input className="input" style={{ marginTop: 8 }} value={form.desktop_image_url || ''} onChange={(e) => setForm((f) => ({ ...f, desktop_image_url: e.target.value }))} placeholder="or paste an image URL — leave empty to use the mobile image" />
+                <p className="adm-hint"><strong>Recommended 1600 × 600.</strong> A wide crop for the desktop stage; the browser downloads only the image it needs for the screen it is on.</p>
+              </div>
+            </>
           ) : (
             <>
               <div className="field">

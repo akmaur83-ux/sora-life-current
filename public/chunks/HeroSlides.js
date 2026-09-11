@@ -207,6 +207,7 @@ function HeroCtaAppearanceControls({
 const empty = {
   kind: 'image',
   image_url: '',
+  desktop_image_url: '',
   video_url: '',
   poster_url: '',
   kicker: '',
@@ -409,27 +410,59 @@ function HeroSlides() {
             children: "Video"
           })]
         })]
-      }), form.kind === 'image' ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "field",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-          className: "label",
-          children: "Slide image"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-          type: "file",
-          accept: "image/jpeg,image/png,image/webp,image/gif,image/avif",
-          onChange: e => onFile(e, 'image_url'),
-          disabled: uploading
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-          className: "input",
-          style: {
-            marginTop: 8
-          },
-          value: form.image_url || '',
-          onChange: e => setForm(f => ({
-            ...f,
-            image_url: e.target.value
-          })),
-          placeholder: "or paste an image URL"
+      }), form.kind === 'image' ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "field",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+            className: "label",
+            children: "Slide image (mobile and default)"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+            type: "file",
+            accept: "image/jpeg,image/png,image/webp,image/gif,image/avif",
+            onChange: e => onFile(e, 'image_url'),
+            disabled: uploading
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+            className: "input",
+            style: {
+              marginTop: 8
+            },
+            value: form.image_url || '',
+            onChange: e => setForm(f => ({
+              ...f,
+              image_url: e.target.value
+            })),
+            placeholder: "or paste an image URL"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "adm-hint",
+            children: "Shown on phones and tablets, and on every screen when no desktop image is set."
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "field",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+            className: "label",
+            children: "Desktop image (1024px and wider) \u2014 optional"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+            type: "file",
+            accept: "image/jpeg,image/png,image/webp,image/gif,image/avif",
+            onChange: e => onFile(e, 'desktop_image_url'),
+            disabled: uploading
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+            className: "input",
+            style: {
+              marginTop: 8
+            },
+            value: form.desktop_image_url || '',
+            onChange: e => setForm(f => ({
+              ...f,
+              desktop_image_url: e.target.value
+            })),
+            placeholder: "or paste an image URL \u2014 leave empty to use the mobile image"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            className: "adm-hint",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+              children: "Recommended 1600 \xD7 600."
+            }), " A wide crop for the desktop stage; the browser downloads only the image it needs for the screen it is on."]
+          })]
         })]
       }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
         children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {

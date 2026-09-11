@@ -33,7 +33,7 @@ function PromoCta({ to, children }) {
 
 export default function PromoPoster({ promo }) {
   if (!promo) return null;
-  const { title, subtitle, badgeText, couponCode, ctaText, ctaUrl, imageUrl, themeVariant, textAlign } = promo;
+  const { title, subtitle, badgeText, couponCode, ctaText, ctaUrl, imageUrl, desktopImageUrl, themeVariant, textAlign } = promo;
   const callout = offerCalloutFrom(promo);
 // Uploaded artwork stands on its own — no scrim, no overlaid copy. The
 // admin's CTA and coupon still function: PromoArtwork makes the image itself
@@ -43,6 +43,7 @@ if (imageUrl) {
     <PromoArtwork
       promo={promo}
       src={imageUrl}
+      desktopSrc={desktopImageUrl}
       className="promo-poster promo-poster--image-only"
       imgClassName="promo-poster__fullimg"
     />

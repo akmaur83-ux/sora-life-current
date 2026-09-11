@@ -99,6 +99,25 @@ function heroSrcSet(src) {
   return HERO_WIDTHS.map((w) => `${heroSrc(src, w)} ${w}w`).join(', ');
 }
 
+// Desktop artwork is offered through <picture>, so the BROWSER chooses by
+// media query: below 1024px the <source> never matches and only image_url is
+// fetched; at 1024px and above only the desktop file is. No JavaScript
+// decides, and no viewport downloads both. Without a desktop image the slide
+// stays the bare <img> it always was — the wrapper exists only when there is
+// a choice to offer. naturalWidth/Height on the <img> report whichever source
+// the browser chose, so the artwork-only framing follows the desktop image's
+// own ratio when one is set.
+export const DESKTOP_MEDIA = '(min-width: 1024px)';
+export function withDesktopSource(desktopSrc, img) {
+  if (!desktopSrc) return img;
+  return (
+    <picture>
+      <source media={DESKTOP_MEDIA} srcSet={heroSrcSet(desktopSrc) || heroSrc(desktopSrc, 1600)} sizes="100vw" />
+      {img}
+    </picture>
+  );
+}
+
 // The still we can show for a slide, if any. A video slide whose poster is
 // missing used to fall through to a bare coloured <div> — that is how the
 // duplicate "Mom's Trust" slide (poster_url null, video_url returns 400)
@@ -268,7 +287,8 @@ function ConfiguredHero() {
   const [artworkRatios, setArtworkRatios] = useState({});
   const noteArtworkRatio = useCallback((id, img) => {
     if (!img?.naturalWidth || !img?.naturalHeight) return;
-    const ratio = Math.min(2.6, Math.max(1.6, img.naturalWidth / img.naturalHeight));
+    // 1.6–2.7: wide enough for the recommended 1600×600 desktop upload (2.67).
+    const ratio = Math.min(2.7, Math.max(1.6, img.naturalWidth / img.naturalHeight));
     setArtworkRatios((r) => (r[id] === ratio ? r : { ...r, [id]: ratio }));
   }, []);
 
@@ -373,15 +393,25 @@ function ConfiguredHero() {
                   fetchPriority={i === active ? 'high' : undefined} decoding="async"
                   onLoad={() => mediaReady(s.id, i)} />
               ) : (
-                <img className="v2-hero__img" src={heroSrc(s.src, 1600)}
-                  srcSet={heroSrcSet(s.src)} sizes="100vw"
-                  alt={headingText(s.title) || headingText(s.kicker) || ''} style={{ objectPosition: s.position }}
-                  loading={i === active ? 'eager' : 'lazy'}
-                  fetchPriority={i === active ? 'high' : undefined} decoding="async"
-                  // A cached image can be complete before React attaches
-                  // onLoad; the ref callback covers that case.
-                  ref={(el) => { if (el && artworkOnly && el.complete) noteArtworkRatio(s.id, el); }}
-                  onLoad={(e) => { if (artworkOnly) noteArtworkRatio(s.id, e.currentTarget); mediaReady(s.id, i); }} />
+                // A <picture> only when the slide has a desktop image. The
+                // <source> carries a media query, so the browser — not
+                // JavaScript — chooses: below 1024px the source never
+                // matches and only image_url is fetched; at 1024px and above
+                // only the desktop file is. With no desktop image this is the
+                // same bare <img> as before. naturalWidth/Height on the <img>
+                // report whichever source was chosen, so the artwork-only
+                // framing above follows the desktop image's own ratio.
+                withDesktopSource(s.desktopSrc, (
+                  <img className="v2-hero__img" src={heroSrc(s.src, 1600)}
+                    srcSet={heroSrcSet(s.src)} sizes="100vw"
+                    alt={headingText(s.title) || headingText(s.kicker) || ''} style={{ objectPosition: s.position }}
+                    loading={i === active ? 'eager' : 'lazy'}
+                    fetchPriority={i === active ? 'high' : undefined} decoding="async"
+                    // A cached image can be complete before React attaches
+                    // onLoad; the ref callback covers that case.
+                    ref={(el) => { if (el && artworkOnly && el.complete) noteArtworkRatio(s.id, el); }}
+                    onLoad={(e) => { if (artworkOnly) noteArtworkRatio(s.id, e.currentTarget); mediaReady(s.id, i); }} />
+                ))
               ))}
             </div>
           </div>

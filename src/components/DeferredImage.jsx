@@ -54,16 +54,29 @@ export function useDeferredMedia(eager = false, identity = null) {
   return { ref, ready };
 }
 
+/**
+ * @param sources  optional [{ media, srcSet }] — rendered as <source> elements
+ *                 inside a <picture>, so the BROWSER picks the file by media
+ *                 query and downloads only that one. No JavaScript decides.
+ *                 With no sources the output is exactly the bare <img> it has
+ *                 always been; the wrapper exists only when there is a choice
+ *                 to offer.
+ *
+ * The deferral applies to the sources too: until the image is revealed no
+ * srcset is set on any <source>, so a distant <picture> downloads nothing on
+ * any viewport, the same as a distant <img>.
+ */
 export default function DeferredImage({
   src,
   loading = 'lazy',
   decoding = 'async',
   fetchPriority,
+  sources,
   ...props
 }) {
   const eager = loading === 'eager' || fetchPriority === 'high';
   const { ref, ready } = useDeferredMedia(eager, src);
-  return (
+  const img = (
     <img
       {...props}
       ref={ref}
@@ -72,5 +85,15 @@ export default function DeferredImage({
       decoding={decoding}
       fetchPriority={fetchPriority}
     />
+  );
+  const list = Array.isArray(sources) ? sources.filter((s) => s && s.media && s.srcSet) : [];
+  if (!list.length) return img;
+  return (
+    <picture>
+      {list.map((s) => (
+        <source key={s.media} media={s.media} srcSet={ready ? s.srcSet : undefined} />
+      ))}
+      {img}
+    </picture>
   );
 }
