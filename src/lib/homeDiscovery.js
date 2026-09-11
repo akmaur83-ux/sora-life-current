@@ -2,6 +2,7 @@ import { categories } from '../data/categories.js';
 import { products, getByCategory, searchProducts, productGallery } from '../data/products.js';
 import { homepage } from './settings.js';
 import { safeVisualUrl } from './homepageAppearance.js';
+import { resolveSpotlightItems, spotlightVisible } from './categoryExperience.js';
 
 // ============================================================
 // HOMEPAGE DISCOVERY — "Shop by category" and "Shop by concerns".
@@ -377,6 +378,22 @@ export function findCollectionCard(param, cards) {
 }
 
 /**
+ * Does this category's page open with a published spotlight?
+ *
+ * The SAME two-part test the Category page applies before it renders the
+ * stage — the owner switched it on, and something eligible resolves — so a
+ * tile can never promise a stage the page will not draw. Exposed so the
+ * tests can hand in a config and a catalogue rather than the live settings.
+ */
+export function categoryHasSpotlight(slug, { config = null, productList = null } = {}) {
+  const items = resolveSpotlightItems(slug, {
+    config: config || undefined,
+    productList: productList || undefined,
+  });
+  return spotlightVisible(slug, items, config || undefined);
+}
+
+/**
  * Category cards for the "Shop by category" rail, in the admin's order.
  *
  * A card is dropped when nothing stands behind it, so an empty or misconfigured
@@ -387,6 +404,7 @@ export function selectCategoryCards(
   productList = products,
   images = discoveryImages(),
   savedCards = undefined,
+  spotlightFor = (slug) => categoryHasSpotlight(slug),
 ) {
   const saved = sanitizeDiscoveryCards(
     savedCards === undefined ? homepage?.discovery?.categoryCards : savedCards,
@@ -398,11 +416,18 @@ export function selectCategoryCards(
       const backing = collectionProducts(card, productList, categoryList);
       const curated = resolveConcernProducts(card.productSlugs, productList).length > 0;
       const category = catalogueCategoryFor(card.id, categoryList);
-      // An uncurated card still carrying its category's own name opens the
-      // real category page. Curate it, or rename it, and it opens the curated
-      // listing instead — so the heading a customer lands on is always the
-      // name they clicked.
-      const usesCategoryRoute = !curated && category && category.name === card.name;
+      // The tile opens the category page when — and only when — that page has
+      // a PUBLISHED spotlight. Otherwise it opens the collection grid.
+      //
+      // This replaced a rule keyed on curation: a card with hand-picked
+      // products opened /shop?collection= so the click showed exactly those
+      // products. That kept three tiles (hair-care, mens-care, skin-care) on
+      // the plain grid while their categories had live stages — the curation
+      // was silently the reason the spotlight never appeared. The curation
+      // still drives the tile's image and count; it no longer decides where
+      // the click goes. A category whose spotlight is off, or not yet
+      // configured, stays on the grid, so no tile can open an empty hero.
+      const usesCategoryRoute = Boolean(category) && spotlightFor(card.id) === true;
       const asset = categoryImage(card.id);
       return {
         id: card.id,

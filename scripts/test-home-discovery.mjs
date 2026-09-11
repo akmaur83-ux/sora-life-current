@@ -24,9 +24,10 @@ import {
   searchCatalogueForPicker, sanitizeDiscoveryCards, makeDiscoveryId,
   normalizeDiscovery, discoveryPayload, defaultCategoryCards, defaultConcernCards,
   findCollectionCard, findConcernCard, collectionProducts, concernCardProducts,
-  MAX_DISCOVERY_CARDS,
+  MAX_DISCOVERY_CARDS, categoryHasSpotlight,
 } from '../src/lib/homeDiscovery.js';
 import { applyHomepage, getHomepageSnapshot, subscribeHomepage } from '../src/lib/settings.js';
+import { sanitizeCategoryConfig } from '../src/lib/categoryExperience.js';
 
 let passed = 0, failed = 0;
 const test = (name, fn) => {
@@ -49,11 +50,60 @@ test('D1 category cards come from the real catalogue, never invented', () => {
   }
 });
 
-test('D2 every category card links to its existing category route', () => {
-  for (const card of selectCategoryCards()) {
-    assert.equal(card.to, `/category/${card.slug}`);
+test('D2 a category card opens /category/ only when that page has a published spotlight', () => {
+  // The rule used to be keyed on curation, and it sent three tiles whose
+  // categories had LIVE stages to the plain grid. Now the tile asks the same
+  // question the Category page asks — is the spotlight published? — and the
+  // answer decides the route. Both branches, with the answer injected so the
+  // test does not depend on what happens to be configured.
+  const published = selectCategoryCards(undefined, undefined, undefined, undefined, () => true);
+  assert.ok(published.length >= 3);
+  for (const card of published) {
+    assert.equal(card.to, `/category/${card.slug}`, `${card.slug}: spotlight published → category page`);
     assert.ok(getByCategory(card.slug).length > 0, `${card.to} must resolve to products`);
   }
+  const unpublished = selectCategoryCards(undefined, undefined, undefined, undefined, () => false);
+  for (const card of unpublished) {
+    assert.equal(card.to, `/shop?collection=${encodeURIComponent(card.slug)}`,
+      `${card.slug}: no spotlight → collection grid, never an empty hero`);
+  }
+  // Per-category, not all-or-nothing.
+  const mixed = selectCategoryCards(undefined, undefined, undefined, undefined, (slug) => slug === 'wellness');
+  const w = mixed.find((c) => c.slug === 'wellness');
+  const other = mixed.find((c) => c.slug !== 'wellness');
+  assert.equal(w.to, '/category/wellness');
+  assert.match(other.to, /^\/shop\?collection=/);
+});
+
+test('D2.1 the tile\'s spotlight test IS the Category page\'s test', () => {
+  // categoryHasSpotlight must be built from the page's own two functions, so
+  // a tile can never promise a stage the page will not draw.
+  const lib = src('../src/lib/homeDiscovery.js');
+  assert.match(lib, /import \{ resolveSpotlightItems, spotlightVisible \} from '\.\/categoryExperience\.js'/);
+  assert.match(lib, /export function categoryHasSpotlight/);
+  assert.match(lib, /spotlightVisible\(slug, items, config \|\| undefined\)/);
+  // An enabled config with items resolves true; the same config switched off
+  // resolves false; enabled with nothing eligible resolves false.
+  const catalogue = products.filter((p) => (p.categories || [p.category]).includes('wellness')).slice(0, 3);
+  const on = sanitizeCategoryConfig({ enabled: true, items: catalogue.map((p) => ({ productSlug: p.slug })) }, 'wellness');
+  assert.equal(categoryHasSpotlight('wellness', { config: on, productList: catalogue }), true);
+  assert.equal(categoryHasSpotlight('wellness', { config: { ...on, enabled: false }, productList: catalogue }), false);
+  assert.equal(categoryHasSpotlight('wellness', { config: { ...on, items: [] }, productList: [] }), false);
+});
+
+test('D2.2 curation no longer decides the route — a curated card with a live spotlight opens the category', () => {
+  // This is the exact live situation: hair-care, mens-care and skin-care had
+  // hand-picked products AND published spotlights, and the old rule chose
+  // the grid. The catalogue below has a wellness product, so a curated
+  // wellness card is a real card.
+  const wellness = products.filter((p) => (p.categories || [p.category]).includes('wellness') && p.slug).slice(0, 2);
+  assert.ok(wellness.length >= 1, 'the fixture needs a wellness product');
+  const cards = [{ id: 'wellness', name: 'Wellness', image: '', productSlugs: wellness.map((p) => p.slug), enabled: true }];
+  const [curatedLive] = selectCategoryCards(categories, products, { categories: {} }, cards, () => true);
+  assert.equal(curatedLive.source, 'admin', 'the card is genuinely curated');
+  assert.equal(curatedLive.to, '/category/wellness', 'and still opens the category, because the stage is live');
+  const [curatedOff] = selectCategoryCards(categories, products, { categories: {} }, cards, () => false);
+  assert.equal(curatedOff.to, '/shop?collection=wellness', 'with the stage off it opens the curated grid');
 });
 
 test('D3 a card always has real artwork — an asset or a real product', () => {
@@ -595,9 +645,15 @@ test('D46 with nothing saved at all the rails are byte-for-byte what they were',
   const fresh = normalizeDiscovery({});
   assert.deepEqual(fresh.categoryCards, defaultCategoryCards(categories, { categories: {} }));
   assert.deepEqual(fresh.concernCards, defaultConcernCards(CONCERN_REGISTRY, { concerns: {} }, {}));
-  // The rendered rail is identical to the pre-card selector output.
-  const rail = selectCategoryCards(categories, products, { categories: {} }, undefined);
-  for (const c of rail) assert.equal(c.to, `/category/${c.slug}`, 'an uncurated card still opens its real category');
+  // The rendered rail's cards are identical to the pre-card selector output.
+  // Where they LINK is decided by spotlight publication, not by whether a
+  // card was saved — with no spotlight configured anywhere, every one of
+  // them opens the collection grid rather than a page with an empty hero.
+  const rail = selectCategoryCards(categories, products, { categories: {} }, undefined, () => false);
+  assert.ok(rail.length >= 3);
+  for (const c of rail) assert.equal(c.to, `/shop?collection=${c.slug}`, 'no spotlight → the grid');
+  const lit = selectCategoryCards(categories, products, { categories: {} }, undefined, () => true);
+  for (const c of lit) assert.equal(c.to, `/category/${c.slug}`, 'spotlight → the category page');
 });
 
 test('D47 a new card gets a readable, unique, stable id without anyone typing one', () => {
