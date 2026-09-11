@@ -78,7 +78,14 @@ await check('uploaded artwork carries no generated overlay copy', () => {
   const html = offers([promo('a', { subtitle: 'SubtitleOverArt', badge_text: 'BadgeOverArt', coupon_code: 'ARTCODE10', cta_text: 'ShopTheEdit', cta_url: '/shop' })]);
   assert.match(html, /src="\/public\/a.png"/);
   assert.doesNotMatch(html, /promo-poster__scrim|promo-poster__body/);
-  assert.doesNotMatch(html, /SubtitleOverArt|BadgeOverArt/);
+  // "Over the art" means inside the artwork element. The desktop composition
+  // for a single poster sets the promotion's title and subtitle in a text
+  // column BESIDE the picture (hp-offers__lead, a sibling of the frame), which
+  // is the same rule kept, not broken: the creative still carries nothing.
+  const artwork = html.match(/<article[^>]*hp-offers__poster[\s\S]*?<\/article>/)[0];
+  assert.doesNotMatch(artwork, /SubtitleOverArt|BadgeOverArt|Promotion a<\/p>/);
+  assert.doesNotMatch(html, /BadgeOverArt/, 'the badge is not rendered anywhere');
+  assert.match(html, /hp-offers__lead[\s\S]*SubtitleOverArt/, 'the subtitle lives in the text column');
   // CTA wording is allowed ONLY as the link's accessible name, never as
   // visible text drawn on the artwork.
   assert.match(html, /aria-label="ShopTheEdit"/);

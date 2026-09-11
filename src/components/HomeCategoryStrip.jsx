@@ -5,8 +5,14 @@ import HomeVisualLayers from './HomeVisualLayers.jsx';
 export default function HomeCategoryStrip({ appearance: a }) {
   // Match CategoryRail's existing empty-state rule, without changing its links.
   if (categories.filter((c) => c?.slug && c?.name).length < 3) return null;
+  // The admin's padding arrives as custom properties rather than inline
+  // padding. An inline `padding` beats every stylesheet rule at every width,
+  // which is how a 12px value tuned for the phone's full-bleed strip was also
+  // the desktop section's padding. As a variable the stylesheet decides where
+  // it applies: below 1024px it is used as-is (identical result), and at
+  // desktop the page's section rhythm takes over.
   return <section className="v2-home-categories hp-category-strip" style={{
-    paddingTop: a.paddingTop, paddingBottom: a.paddingBottom,
+    '--hp-strip-pt': `${a.paddingTop}px`, '--hp-strip-pb': `${a.paddingBottom}px`,
     backgroundColor: a.enabled ? a.backgroundColor : 'transparent',
     borderTop: a.borderTop ? `${a.borderWidth}px solid ${a.borderColor}` : undefined,
     borderBottom: a.borderBottom ? `${a.borderWidth}px solid ${a.borderColor}` : undefined,

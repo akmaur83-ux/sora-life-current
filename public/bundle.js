@@ -33529,11 +33529,17 @@ function HomeCategoryStrip({
 }) {
   // Match CategoryRail's existing empty-state rule, without changing its links.
   if (categories.filter(c => c?.slug && c?.name).length < 3) return null;
+  // The admin's padding arrives as custom properties rather than inline
+  // padding. An inline `padding` beats every stylesheet rule at every width,
+  // which is how a 12px value tuned for the phone's full-bleed strip was also
+  // the desktop section's padding. As a variable the stylesheet decides where
+  // it applies: below 1024px it is used as-is (identical result), and at
+  // desktop the page's section rhythm takes over.
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "v2-home-categories hp-category-strip",
     style: {
-      paddingTop: a.paddingTop,
-      paddingBottom: a.paddingBottom,
+      '--hp-strip-pt': `${a.paddingTop}px`,
+      '--hp-strip-pb': `${a.paddingBottom}px`,
       backgroundColor: a.enabled ? a.backgroundColor : 'transparent',
       borderTop: a.borderTop ? `${a.borderWidth}px solid ${a.borderColor}` : undefined,
       borderBottom: a.borderBottom ? `${a.borderWidth}px solid ${a.borderColor}` : undefined,
@@ -34453,12 +34459,19 @@ function HomeOffers({
       behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
     });
   };
+  // `hp-offers--single` lets the desktop stylesheet lay ONE poster out as a
+  // heading-beside-artwork composition instead of a 620px column centred in
+  // a 1240px frame. Two or more posters keep the admin's column grid.
+  //
+  // Padding is a custom property, not inline padding, for the reason given in
+  // HomeCategoryStrip: an inline value tuned for the phone must not also be
+  // the desktop section's padding. Below 1024px the result is identical.
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "hp-offers",
+    className: `hp-offers${items.length === 1 ? ' hp-offers--single' : ''}`,
     "aria-labelledby": "homepage-offers-title",
     style: {
       backgroundColor: a.backgroundColor,
-      paddingBlock: a.padding,
+      '--hp-offers-pad': `${a.padding}px`,
       '--hp-offers-accent': a.accentColor,
       '--hp-offers-gap': `${a.gap}px`,
       '--hp-offers-columns': columns,
@@ -34476,6 +34489,15 @@ function HomeOffers({
             className: "v2-h2",
             id: "homepage-offers-title",
             children: "Current offers"
+          }), items.length === 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: "hp-offers__lead",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "hp-offers__lead-title",
+              children: items[0].title
+            }), items[0].subtitle && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "hp-offers__lead-sub",
+              children: items[0].subtitle
+            })]
           })]
         }), items.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
           className: "hp-offers__hint",
