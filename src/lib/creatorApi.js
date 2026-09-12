@@ -14,6 +14,7 @@
 // ============================================================
 import { supabase } from './supabase.js';
 import { normalizeDestination } from './creatorLinkUtils.js';
+import { KYC_BUCKET, KYC_KIND_SET, kycDocumentPath, validateKycDocument } from './kycDocuments.js';
 
 // Pure link helpers live in creatorLinkUtils.js so they can be unit-tested
 // without a browser/Supabase import. Re-exported here for existing callers.
@@ -333,7 +334,7 @@ export async function getPayoutConfig() {
 }
 
 // ---- Creator KYC ----
-const KYC_SELF = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,submitted_at,verified_at';
+const KYC_SELF = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,submitted_at,verified_at,verification_notes,pan_document_path,bank_document_path,documents_updated_at';
 export async function getMyKyc() {
   const { data, error } = await supabase.from('creator_kyc_profiles').select(KYC_SELF).maybeSingle();
   if (error) return null;
@@ -346,6 +347,49 @@ export async function submitKyc({ legalName, pan, method, accountHolder, account
     p_ifsc: ifsc || '', p_upi: upi || '',
   });
   if (error) return { ok: false, reason: error.message };
+  return data;
+}
+
+// ---- Creator KYC documents ----
+// Bucket kyc-documents is private (0030): the creator can only write under
+// their own folder, and the RPC only registers a path that exists there.
+// Order matters — validate, upload, then register; the old object is removed
+// only after the row points at the new one, so a failed upload never leaves
+// the profile pointing at nothing.
+const randomId = () => {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+};
+export async function uploadKycDocument({ creatorId, kind, file }) {
+  if (!creatorId) return { ok: false, reason: 'not_a_creator' };
+  if (!KYC_KIND_SET.has(kind)) return { ok: false, reason: 'bad_kind' };
+  let checked;
+  try { checked = await validateKycDocument(file); }
+  catch (e) { return { ok: false, reason: 'invalid_file', message: e.message }; }
+
+  const path = kycDocumentPath(creatorId, kind, checked.extension, randomId());
+  const { error: upErr } = await supabase.storage.from(KYC_BUCKET).upload(path, file, {
+    cacheControl: '0',
+    upsert: false,
+    contentType: checked.mime,
+  });
+  if (upErr) return { ok: false, reason: 'upload_failed', message: upErr.message };
+
+  const { data, error } = await supabase.rpc('set_kyc_document', { p_kind: kind, p_path: path });
+  if (error) {
+    // The row was not updated; do not leave an orphan the creator can't see.
+    await supabase.storage.from(KYC_BUCKET).remove([path]).catch(() => {});
+    return { ok: false, reason: error.message };
+  }
+  if (!data || data.ok === false) {
+    await supabase.storage.from(KYC_BUCKET).remove([path]).catch(() => {});
+    return data || { ok: false, reason: 'unknown' };
+  }
+  if (data.previous_path && data.previous_path !== path) {
+    // Best effort: the replaced document is dead weight, but its removal is
+    // not what the creator is waiting on.
+    await supabase.storage.from(KYC_BUCKET).remove([data.previous_path]).catch(() => {});
+  }
   return data;
 }
 
@@ -364,7 +408,7 @@ export async function getMyPayouts() {
 }
 
 // ---- Admin: KYC ----
-const KYC_ADMIN = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,verification_notes,submitted_at,verified_at,verified_by,creator:creator_partners(display_name,creator_code)';
+const KYC_ADMIN = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,verification_notes,submitted_at,verified_at,verified_by,pan_document_path,bank_document_path,documents_updated_at,creator:creator_partners(display_name,creator_code)';
 export async function adminListKyc() {
   const { data, error } = await supabase.from('creator_kyc_profiles').select(KYC_ADMIN).order('submitted_at', { ascending: false });
   if (error) throw error;
@@ -374,6 +418,24 @@ export async function adminSetKycStatus(creatorId, status, notes) {
   const { data, error } = await supabase.rpc('admin_set_kyc_status', { p_creator_id: creatorId, p_status: status, p_notes: notes || null });
   if (error) throw error;
   return data;
+}
+// A KYC document is only ever reached through a signed URL that dies in
+// KYC_SIGNED_URL_SECONDS. The bucket is private, so there is no public URL to
+// leak — getPublicUrl() would return a link that 400s, and must not be used.
+export const KYC_SIGNED_URL_SECONDS = 60;
+export async function adminKycDocumentUrl(path) {
+  if (!path || typeof path !== 'string') throw new Error('No document on file.');
+  const { data, error } = await supabase.storage.from(KYC_BUCKET).createSignedUrl(path, KYC_SIGNED_URL_SECONDS);
+  if (error) throw error;
+  if (!data?.signedUrl) throw new Error('Could not sign the document link.');
+  return data.signedUrl;
+}
+export async function adminListKycAudit(creatorId) {
+  const { data, error } = await supabase.from('creator_kyc_audit')
+    .select('id,actor,from_status,to_status,from_notes,to_notes,metadata,created_at')
+    .eq('creator_id', creatorId).order('created_at', { ascending: false }).limit(50);
+  if (error) throw error;
+  return data || [];
 }
 
 // ---- Admin: payouts ----

@@ -256,6 +256,7 @@ function mapErr(reason, row) {
     reservation_mismatch: 'The reserved ledger amount does not match this payout. Reject it to release the balance; do not record payment.',
     already_paid_mismatch: 'This payout is already paid with different settlement details.',
     not_approved: 'A payout must be approved before it can be marked paid.',
+    kyc_required: 'This creator’s KYC is no longer verified. Re-verify it under Creator KYC before approving or paying.',
     duplicate_reference: 'That transaction reference is already used on another payout.',
     bad_action: 'Unknown action.',
     bad_transition: 'That status change isn’t allowed from the current state.',

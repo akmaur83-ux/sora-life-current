@@ -1,4 +1,4 @@
-import { r as reactExports, aE as adminListPayouts, j as jsxRuntimeExports, aw as money2, aF as PAYOUT_STATUSES, aG as adminGetPayoutLedger, aH as adminGetPayoutAudit, aI as adminGetKycForCreator, aJ as adminReviewPayout, aK as adminMarkPayoutPaid } from '../bundle.js';
+import { r as reactExports, aJ as adminListPayouts, j as jsxRuntimeExports, aw as money2, aK as PAYOUT_STATUSES, aL as adminGetPayoutLedger, aM as adminGetPayoutAudit, aN as adminGetKycForCreator, aO as adminReviewPayout, aP as adminMarkPayoutPaid } from '../bundle.js';
 
 const fmtDateTime = iso => iso ? new Date(iso).toLocaleString('en-IN') : '—';
 const STATUS_BADGE = {
@@ -402,6 +402,7 @@ function mapErr(reason, row) {
     reservation_mismatch: 'The reserved ledger amount does not match this payout. Reject it to release the balance; do not record payment.',
     already_paid_mismatch: 'This payout is already paid with different settlement details.',
     not_approved: 'A payout must be approved before it can be marked paid.',
+    kyc_required: 'This creator’s KYC is no longer verified. Re-verify it under Creator KYC before approving or paying.',
     duplicate_reference: 'That transaction reference is already used on another payout.',
     bad_action: 'Unknown action.',
     bad_transition: 'That status change isn’t allowed from the current state.',

@@ -6,7 +6,7 @@ import { useCustomerAuth } from '../lib/customerAuth.jsx';
 import {
   claimCreatorAccount, getMyCreator, getMyCampaigns, getMyLinks, buildTrackingUrl,
   getMyCreatorAnalytics,
-  getMyCreatorEarnings, getMyKyc, submitKyc, requestPayout, getMyPayouts,
+  getMyCreatorEarnings, getMyKyc, submitKyc, uploadKycDocument, requestPayout, getMyPayouts,
   getCreatorTerms, termsArePublished, getMyTermsAcceptance, acceptCreatorTerms,
 } from '../lib/creatorApi.js';
 import { money2 } from '../lib/format.js';
@@ -530,6 +530,7 @@ export default function CreatorPortal() {
               kyc={kyc}
               payouts={payouts}
               onSubmitKyc={submitKyc}
+              onUploadKycDocument={({ kind, file }) => uploadKycDocument({ creatorId: creator.id, kind, file })}
               onRequestPayout={requestPayout}
               onChanged={reloadMoney}
             />

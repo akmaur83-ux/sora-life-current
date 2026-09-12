@@ -685,3 +685,52 @@
 .crp .crp__hist-amt.is-bad { color: var(--c-coral); }
 .crp .crp__big { font-weight: 800; letter-spacing: -.04em; }
 .crp .crp__lc-campaign { font-weight: 700; letter-spacing: -.01em; }
+
+/* ---- KYC: reviewer's reason + documents --------------------------------
+   The reason is the one line a rejected creator must read, so it is set as a
+   quotation under the status line, not folded into it. Document rows are
+   ruled like every other list in the portal; the file input is visually
+   hidden but stays keyboard-reachable through its label. */
+.crp .crp__kyc-reason {
+  margin: 10px 0 0; padding: 12px 0 12px 12px; border-left: 2px solid var(--c-coral);
+}
+.crp .crp__kyc-reason-l {
+  display: block; margin-bottom: 4px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--c-ink-3);
+}
+.crp .crp__kyc-reason p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--c-ink); white-space: pre-line; }
+
+.crp .crp__docs { margin-top: 26px; border-top: 1px solid var(--c-ink); }
+.crp .crp__docs-h {
+  margin: 0; padding: 14px 0 0; font-size: 11px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--c-ink);
+}
+.crp .crp__docs-hint { margin: 7px 0 4px; font-size: 12.5px; line-height: 1.5; color: var(--c-ink-3); }
+.crp .crp__doc {
+  display: grid; grid-template-columns: 1fr; gap: 10px 16px; align-items: start;
+  padding: 16px 0; border-bottom: 1px solid var(--c-rule);
+}
+.crp .crp__doc:last-child { border-bottom: 0; }
+.crp .crp__doc-label { font-size: 14px; font-weight: 700; color: var(--c-ink); }
+.crp .crp__doc-hint { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--c-ink-3); }
+.crp .crp__doc-state { margin: 6px 0 0; font-size: 12.5px; font-weight: 600; color: var(--c-ink-3); }
+.crp .crp__doc.is-uploaded .crp__doc-state { color: #00795A; }
+.crp .crp__doc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.crp .crp__doc-input {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.crp .crp__doc-input:focus-visible ~ .crp__doc-file { outline: 2px solid var(--c-violet); outline-offset: 2px; }
+.crp .crp__doc-pick { cursor: pointer; }
+.crp .crp__doc-pick:has(+ .crp__doc-input:focus-visible) { outline: 2px solid var(--c-violet); outline-offset: 2px; }
+.crp .crp__doc-pick.is-disabled { pointer-events: none; opacity: .55; }
+.crp .crp__doc-file {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12.5px; color: var(--c-ink-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.crp .crp__doc-err, .crp .crp__doc-ok { grid-column: 1 / -1; margin: 0; }
+@media (min-width: 640px) {
+  .crp .crp__doc { grid-template-columns: minmax(0, 1fr) auto; }
+  .crp .crp__doc-actions { justify-content: flex-end; max-width: 320px; }
+}

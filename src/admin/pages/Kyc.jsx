@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   adminListKyc, adminSetKycStatus, adminListCreators, KYC_STATUSES,
+  adminKycDocumentUrl, adminListKycAudit, KYC_SIGNED_URL_SECONDS,
 } from '../../lib/creatorApi.js';
+import { KYC_DOCUMENT_KINDS, kycDocumentState } from '../../lib/kycDocuments.js';
 
 // ============================================================
 // ADMIN — Creator Program › KYC review
@@ -10,6 +12,11 @@ import {
 // this page shows raw PAN / bank / UPI — the database only ever stored masks,
 // so masks are all there is to show. A creator can never self-verify: that path
 // exists solely through admin_set_kyc_status (admin-gated, SECURITY DEFINER).
+//
+// Documents (0030) live in the private kyc-documents bucket. This page never
+// renders a document inline and never holds a public URL: "View" asks storage
+// for a signed link that expires in KYC_SIGNED_URL_SECONDS, and the link is
+// dropped from the page when it does.
 // ============================================================
 
 const fmtDateTime = (iso) => (iso ? new Date(iso).toLocaleString('en-IN') : '—');
@@ -118,7 +125,9 @@ export default function Kyc() {
                   {r.verification_notes && <div><dt>Notes</dt><dd>{r.verification_notes}</dd></div>}
                 </dl>
 
-                <p className="adm-kyc-card__priv hint"><span aria-hidden>🔒</span> Only masked values are stored. Verify identity through your secure back-office, not from this page.</p>
+                <KycDocuments row={r} onError={setErr} />
+
+                <p className="adm-kyc-card__priv hint"><span aria-hidden>🔒</span> Only masked values are stored. Document links are signed and expire in {KYC_SIGNED_URL_SECONDS} seconds.</p>
 
                 <div className="adm-kyc-card__acts">
                   {r.identity_status !== 'verified' && (
@@ -134,10 +143,120 @@ export default function Kyc() {
                     <button className="btn btn-sm btn-light" disabled={busy} onClick={() => setStatus(r, 'needs_update')}>Revoke (needs update)</button>
                   )}
                 </div>
+
+                <KycHistory creatorId={r.creator_id} onError={setErr} />
               </article>
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------
+// Documents — one row per kind; a signed link only while it is valid.
+// ---------------------------------------------------------------
+function KycDocuments({ row, onError }) {
+  const [links, setLinks] = useState({}); // kind → { url, expiresAt }
+  const [busy, setBusy] = useState(null);
+
+  useEffect(() => {
+    // Drop each link the moment it would stop working.
+    const live = Object.entries(links).filter(([, l]) => l.expiresAt > Date.now());
+    if (live.length === 0) return undefined;
+    const next = Math.min(...live.map(([, l]) => l.expiresAt)) - Date.now();
+    const t = setTimeout(() => {
+      setLinks((cur) => Object.fromEntries(Object.entries(cur).filter(([, l]) => l.expiresAt > Date.now())));
+    }, Math.max(0, next));
+    return () => clearTimeout(t);
+  }, [links]);
+
+  async function sign(doc) {
+    setBusy(doc.kind);
+    try {
+      const url = await adminKycDocumentUrl(doc.path);
+      setLinks((cur) => ({ ...cur, [doc.kind]: { url, expiresAt: Date.now() + KYC_SIGNED_URL_SECONDS * 1000 } }));
+    } catch (e) { onError(e.message || String(e)); }
+    finally { setBusy(null); }
+  }
+
+  return (
+    <div className="adm-kyc-docs">
+      <div className="adm-kyc-docs__h">Documents{row.documents_updated_at ? <span className="hint"> · updated {fmtDateTime(row.documents_updated_at)}</span> : null}</div>
+      {KYC_DOCUMENT_KINDS.map((k) => {
+        const doc = kycDocumentState(row, k.kind);
+        const link = links[k.kind];
+        return (
+          <div key={k.kind} className="adm-kyc-doc" data-kind={k.kind}>
+            <span className="adm-kyc-doc__label">{doc.label}</span>
+            {!doc.uploaded ? (
+              <span className="hint">Not uploaded</span>
+            ) : link ? (
+              <a className="btn btn-sm" href={link.url} target="_blank" rel="noopener noreferrer">
+                Open {doc.fileType.toUpperCase()} ↗
+              </a>
+            ) : (
+              <button type="button" className="btn btn-sm btn-light" disabled={busy === k.kind} onClick={() => sign(doc)}>
+                {busy === k.kind ? 'Signing…' : `View ${doc.label.toLowerCase()}`}
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------
+// History — creator_kyc_audit, written by trigger on every status / notes /
+// document change. Loaded on demand; the list is the reviewer's record.
+// ---------------------------------------------------------------
+const shortId = (id) => (id ? String(id).slice(0, 8) : '—');
+
+function KycHistory({ creatorId, onError }) {
+  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && rows == null) {
+      setLoading(true);
+      try { setRows(await adminListKycAudit(creatorId)); }
+      catch (e) { onError(e.message || String(e)); setRows([]); }
+      finally { setLoading(false); }
+    }
+  }
+
+  return (
+    <div className="adm-kyc-history">
+      <button type="button" className="adm-kyc-history__toggle" onClick={toggle} aria-expanded={open}>
+        {open ? 'Hide history' : 'History'}
+      </button>
+      {open && (
+        loading ? <p className="hint">Loading…</p>
+        : !rows || rows.length === 0 ? <p className="hint">No changes recorded yet.</p>
+        : (
+          <ol className="adm-kyc-history__list">
+            {rows.map((a) => (
+              <li key={a.id}>
+                <span className="adm-kyc-history__when">{fmtDateTime(a.created_at)}</span>
+                <span className="adm-kyc-history__what">
+                  {a.from_status && a.from_status !== a.to_status
+                    ? `${STATUS_LABEL[a.from_status] || a.from_status} → ${STATUS_LABEL[a.to_status] || a.to_status}`
+                    : a.metadata?.documents_changed ? 'Document updated'
+                    : a.from_notes !== a.to_notes ? 'Notes changed'
+                    : (STATUS_LABEL[a.to_status] || a.to_status)}
+                  {a.metadata?.documents_changed && a.from_status && a.from_status !== a.to_status ? ' · document updated' : ''}
+                </span>
+                {a.to_notes && a.to_notes !== a.from_notes && <span className="adm-kyc-history__note">“{a.to_notes}”</span>}
+                <span className="hint adm-mono">by {shortId(a.actor)}</span>
+              </li>
+            ))}
+          </ol>
+        )
       )}
     </div>
   );

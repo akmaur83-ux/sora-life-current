@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import Icon from '../Icon.jsx';
 import { money2 } from '../../lib/format.js';
+import {
+  KYC_DOCUMENT_ACCEPT, KYC_DOCUMENT_KINDS, KYC_DOCUMENT_MAX_BYTES,
+  friendlyKycDocumentError, kycDocumentState, validateKycDocumentMetadata,
+} from '../../lib/kycDocuments.js';
 
 // ============================================================
 // Creator payouts + KYC (Part 3)
@@ -37,7 +41,7 @@ const KYC_BADGE = {
   needs_update: { tone: 'bad', label: 'Needs update' },
 };
 
-export default function CreatorPayouts({ creator, earnings, kyc, payouts, onSubmitKyc, onRequestPayout, onChanged }) {
+export default function CreatorPayouts({ creator, earnings, kyc, payouts, onSubmitKyc, onUploadKycDocument, onRequestPayout, onChanged }) {
   const status = kyc?.identity_status || 'not_started';
   const kycVerified = status === 'verified';
 
@@ -49,7 +53,7 @@ export default function CreatorPayouts({ creator, earnings, kyc, payouts, onSubm
         reviews and pays every request manually — money is never released automatically.
       </p>
 
-      <KycSection creator={creator} kyc={kyc} status={status} onSubmitKyc={onSubmitKyc} onChanged={onChanged} />
+      <KycSection creator={creator} kyc={kyc} status={status} onSubmitKyc={onSubmitKyc} onUploadKycDocument={onUploadKycDocument} onChanged={onChanged} />
 
       <PayoutSection
         earnings={earnings}
@@ -67,7 +71,7 @@ export default function CreatorPayouts({ creator, earnings, kyc, payouts, onSubm
 // ---------------------------------------------------------------
 // KYC — submit / status / resubmit
 // ---------------------------------------------------------------
-function KycSection({ kyc, status, onSubmitKyc, onChanged }) {
+function KycSection({ kyc, status, onSubmitKyc, onUploadKycDocument, onChanged }) {
   const badge = KYC_BADGE[status] || KYC_BADGE.not_started;
   const canEdit = status === 'not_started' || status === 'rejected' || status === 'needs_update';
   const [editing, setEditing] = useState(false);
@@ -100,6 +104,13 @@ function KycSection({ kyc, status, onSubmitKyc, onChanged }) {
         <p className="crp__kyc-msg is-bad">
           <Icon name="circleAlert" size={14} /> We need updated details before we can pay you. Please resubmit below.
         </p>
+      )}
+      {/* The reviewer's note is the one thing a rejected creator needs to read. */}
+      {(status === 'rejected' || status === 'needs_update') && kyc?.verification_notes && (
+        <blockquote className="crp__kyc-reason">
+          <span className="crp__kyc-reason-l">Reason from our team</span>
+          <p>{kyc.verification_notes}</p>
+        </blockquote>
       )}
 
       {/* Masked summary of what's on file (never raw). */}
@@ -135,7 +146,106 @@ function KycSection({ kyc, status, onSubmitKyc, onChanged }) {
       {editing && status === 'verified' && (
         <p className="crp__foot-note">Note: editing your details sends them back for re-verification, which pauses payouts until re-approved.</p>
       )}
+
+      <KycDocuments kyc={kyc} status={status} onUploadKycDocument={onUploadKycDocument} onChanged={onChanged} />
     </section>
+  );
+}
+
+// ---------------------------------------------------------------
+// KYC documents — PAN card and bank proof
+//
+// Files go to the private kyc-documents bucket under the creator's own
+// folder (RLS), then set_kyc_document() records the path. The creator never
+// sees a URL: what is shown is whether a document is on file and when.
+// ---------------------------------------------------------------
+const MAX_MB = Math.floor(KYC_DOCUMENT_MAX_BYTES / 1024 / 1024);
+
+function KycDocuments({ kyc, status, onUploadKycDocument, onChanged }) {
+  return (
+    <div className="crp__docs">
+      <h3 className="crp__docs-h">Documents</h3>
+      <p className="crp__docs-hint">
+        We verify your details against these. JPEG, PNG, WebP or PDF, up to {MAX_MB} MB each.
+        {status === 'verified' && ' Replacing a document sends your verification back for review.'}
+      </p>
+      {KYC_DOCUMENT_KINDS.map((k) => (
+        <KycDocumentRow
+          key={k.kind}
+          doc={kycDocumentState(kyc, k.kind)}
+          onUpload={onUploadKycDocument}
+          onChanged={onChanged}
+        />
+      ))}
+    </div>
+  );
+}
+
+function KycDocumentRow({ doc, onUpload, onChanged }) {
+  const [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState(false);
+  const inputId = `kyc-doc-${doc.kind}`;
+
+  const pick = (e) => {
+    const f = e.target.files?.[0] || null;
+    setErr(''); setDone(false);
+    if (!f) { setFile(null); return; }
+    try { validateKycDocumentMetadata(f); setFile(f); }
+    catch (e2) { setFile(null); setErr(e2.message); e.target.value = ''; }
+  };
+
+  const upload = async () => {
+    if (!file || !onUpload) return;
+    setBusy(true); setErr('');
+    try {
+      const res = await onUpload({ kind: doc.kind, file });
+      if (!res || res.ok === false) {
+        setErr(res?.message || friendlyKycDocumentError(res?.reason));
+      } else {
+        setFile(null); setDone(true);
+        await onChanged();
+      }
+    } catch {
+      setErr('Something went wrong. Please try again.');
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className={`crp__doc${doc.uploaded ? ' is-uploaded' : ''}`} data-kind={doc.kind}>
+      <div className="crp__doc-main">
+        <div className="crp__doc-label">{doc.label}</div>
+        <p className="crp__doc-hint">{doc.hint}</p>
+        <p className="crp__doc-state">
+          {doc.uploaded
+            ? <>On file · {doc.fileType.toUpperCase()} · uploaded {fmtDate(doc.uploadedAt)}</>
+            : 'Not uploaded yet'}
+        </p>
+      </div>
+      <div className="crp__doc-actions">
+        <label htmlFor={inputId} className={`btn btn-sm btn-light crp__doc-pick${busy ? ' is-disabled' : ''}`}>
+          {doc.uploaded ? 'Replace' : 'Choose file'}
+        </label>
+        <input
+          id={inputId}
+          type="file"
+          accept={KYC_DOCUMENT_ACCEPT}
+          onChange={pick}
+          disabled={busy}
+          className="crp__doc-input"
+        />
+        {file && <span className="crp__doc-file" title={file.name}>{file.name}</span>}
+        {file && (
+          <button type="button" className="btn btn-sm" onClick={upload} disabled={busy}>
+            {busy ? 'Uploading…' : 'Upload'}
+          </button>
+        )}
+      </div>
+      {err && <p className="crp__form-err crp__doc-err">{err}</p>}
+      {done && !err && <p className="crp__kyc-msg is-ok crp__doc-ok">Uploaded. Our team will check it during review.</p>}
+    </div>
   );
 }
 

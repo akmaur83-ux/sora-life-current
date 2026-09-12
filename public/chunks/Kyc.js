@@ -1,4 +1,4 @@
-import { r as reactExports, aB as adminListKyc, aC as KYC_STATUSES, j as jsxRuntimeExports, aD as adminSetKycStatus } from '../bundle.js';
+import { r as reactExports, aB as adminListKyc, aC as KYC_STATUSES, j as jsxRuntimeExports, aD as KYC_SIGNED_URL_SECONDS, aE as adminSetKycStatus, aF as KYC_DOCUMENT_KINDS, aG as kycDocumentState, aH as adminKycDocumentUrl, aI as adminListKycAudit } from '../bundle.js';
 
 const fmtDateTime = iso => iso ? new Date(iso).toLocaleString('en-IN') : '—';
 const STATUS_BADGE = {
@@ -185,12 +185,15 @@ function Kyc() {
                 children: r.verification_notes
               })]
             })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(KycDocuments, {
+            row: r,
+            onError: setErr
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
             className: "adm-kyc-card__priv hint",
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
               "aria-hidden": true,
               children: "\uD83D\uDD12"
-            }), " Only masked values are stored. Verify identity through your secure back-office, not from this page."]
+            }), " Only masked values are stored. Document links are signed and expire in ", KYC_SIGNED_URL_SECONDS, " seconds."]
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
             className: "adm-kyc-card__acts",
             children: [r.identity_status !== 'verified' && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
@@ -216,10 +219,149 @@ function Kyc() {
               onClick: () => setStatus(r, 'needs_update'),
               children: "Revoke (needs update)"
             })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(KycHistory, {
+            creatorId: r.creator_id,
+            onError: setErr
           })]
         }, r.creator_id);
       })
     })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Documents — one row per kind; a signed link only while it is valid.
+// ---------------------------------------------------------------
+function KycDocuments({
+  row,
+  onError
+}) {
+  const [links, setLinks] = reactExports.useState({}); // kind → { url, expiresAt }
+  const [busy, setBusy] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    // Drop each link the moment it would stop working.
+    const live = Object.entries(links).filter(([, l]) => l.expiresAt > Date.now());
+    if (live.length === 0) return undefined;
+    const next = Math.min(...live.map(([, l]) => l.expiresAt)) - Date.now();
+    const t = setTimeout(() => {
+      setLinks(cur => Object.fromEntries(Object.entries(cur).filter(([, l]) => l.expiresAt > Date.now())));
+    }, Math.max(0, next));
+    return () => clearTimeout(t);
+  }, [links]);
+  async function sign(doc) {
+    setBusy(doc.kind);
+    try {
+      const url = await adminKycDocumentUrl(doc.path);
+      setLinks(cur => ({
+        ...cur,
+        [doc.kind]: {
+          url,
+          expiresAt: Date.now() + KYC_SIGNED_URL_SECONDS * 1000
+        }
+      }));
+    } catch (e) {
+      onError(e.message || String(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "adm-kyc-docs",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "adm-kyc-docs__h",
+      children: ["Documents", row.documents_updated_at ? /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hint",
+        children: [" \xB7 updated ", fmtDateTime(row.documents_updated_at)]
+      }) : null]
+    }), KYC_DOCUMENT_KINDS.map(k => {
+      const doc = kycDocumentState(row, k.kind);
+      const link = links[k.kind];
+      return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "adm-kyc-doc",
+        "data-kind": k.kind,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "adm-kyc-doc__label",
+          children: doc.label
+        }), !doc.uploaded ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "hint",
+          children: "Not uploaded"
+        }) : link ? /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+          className: "btn btn-sm",
+          href: link.url,
+          target: "_blank",
+          rel: "noopener noreferrer",
+          children: ["Open ", doc.fileType.toUpperCase(), " \u2197"]
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "btn btn-sm btn-light",
+          disabled: busy === k.kind,
+          onClick: () => sign(doc),
+          children: busy === k.kind ? 'Signing…' : `View ${doc.label.toLowerCase()}`
+        })]
+      }, k.kind);
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// History — creator_kyc_audit, written by trigger on every status / notes /
+// document change. Loaded on demand; the list is the reviewer's record.
+// ---------------------------------------------------------------
+const shortId = id => id ? String(id).slice(0, 8) : '—';
+function KycHistory({
+  creatorId,
+  onError
+}) {
+  const [open, setOpen] = reactExports.useState(false);
+  const [rows, setRows] = reactExports.useState(null);
+  const [loading, setLoading] = reactExports.useState(false);
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && rows == null) {
+      setLoading(true);
+      try {
+        setRows(await adminListKycAudit(creatorId));
+      } catch (e) {
+        onError(e.message || String(e));
+        setRows([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "adm-kyc-history",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: "adm-kyc-history__toggle",
+      onClick: toggle,
+      "aria-expanded": open,
+      children: open ? 'Hide history' : 'History'
+    }), open && (loading ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hint",
+      children: "Loading\u2026"
+    }) : !rows || rows.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hint",
+      children: "No changes recorded yet."
+    }) : /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+      className: "adm-kyc-history__list",
+      children: rows.map(a => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "adm-kyc-history__when",
+          children: fmtDateTime(a.created_at)
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "adm-kyc-history__what",
+          children: [a.from_status && a.from_status !== a.to_status ? `${STATUS_LABEL[a.from_status] || a.from_status} → ${STATUS_LABEL[a.to_status] || a.to_status}` : a.metadata?.documents_changed ? 'Document updated' : a.from_notes !== a.to_notes ? 'Notes changed' : STATUS_LABEL[a.to_status] || a.to_status, a.metadata?.documents_changed && a.from_status && a.from_status !== a.to_status ? ' · document updated' : '']
+        }), a.to_notes && a.to_notes !== a.from_notes && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "adm-kyc-history__note",
+          children: ["\u201C", a.to_notes, "\u201D"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "hint adm-mono",
+          children: ["by ", shortId(a.actor)]
+        })]
+      }, a.id))
+    }))]
   });
 }
 

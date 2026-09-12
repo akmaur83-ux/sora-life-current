@@ -45291,6 +45291,129 @@ function buildTrackingUrl(link, creator, campaign, origin) {
 }
 
 // ============================================================
+// KYC documents — the pure rules, shared by the creator portal and the tests.
+//
+// No I/O here. The bucket, its RLS and the set_kyc_document() RPC (migration
+// 0030) are the real gate; this module exists so the client refuses the same
+// things the server would, with a message a person can act on, before a
+// single byte is uploaded.
+//
+// Mirrors 0030 exactly:
+//   bucket      kyc-documents, private, 5 MB, {jpeg, png, webp, pdf}
+//   object path <creator_id>/<kind>/<id>.<ext>   kind ∈ {pan, bank}
+// ============================================================
+const KYC_BUCKET = 'kyc-documents';
+const KYC_DOCUMENT_MAX_BYTES = 5 * 1024 * 1024;
+
+// MIME → extension. The order is what the <input accept> lists.
+const KYC_DOCUMENT_TYPES = Object.freeze({
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'application/pdf': 'pdf'
+});
+const KYC_DOCUMENT_ACCEPT = Object.keys(KYC_DOCUMENT_TYPES).join(',');
+const KYC_DOCUMENT_KINDS = Object.freeze([{
+  kind: 'pan',
+  label: 'PAN card',
+  field: 'pan_document_path',
+  hint: 'A clear photo or scan of the PAN card, showing the number and name.'
+}, {
+  kind: 'bank',
+  label: 'Bank proof',
+  field: 'bank_document_path',
+  hint: 'A cancelled cheque, passbook page or bank statement header showing the account holder, account number and IFSC.'
+}]);
+const KYC_KIND_SET = new Set(KYC_DOCUMENT_KINDS.map(k => k.kind));
+
+// The same expression set_kyc_document() applies (0030 §5), so a path the
+// client builds is a path the server accepts, and nothing else is.
+const PATH_RE = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/(pan|bank)\/([A-Za-z0-9-]+)\.(jpg|jpeg|png|webp|pdf)$/;
+function kycDocumentPath(creatorId, kind, extension, id) {
+  const path = `${String(creatorId).toLowerCase()}/${kind}/${id}.${extension}`;
+  if (!isKycDocumentPath(path, creatorId, kind)) throw new Error('Invalid document destination.');
+  return path;
+}
+function isKycDocumentPath(path, creatorId, kind) {
+  if (typeof path !== 'string') return false;
+  const m = PATH_RE.exec(path);
+  if (!m) return false;
+  if (creatorId != null && m[1] !== String(creatorId).toLowerCase()) return false;
+  if (kind != null && m[2] !== kind) return false;
+  return true;
+}
+
+// PDFs are the one non-image type the bucket takes; sniff them the same way.
+function sniffKycDocumentType(bytes) {
+  if (!(bytes instanceof Uint8Array) || bytes.length < 5) return null;
+  if (String.fromCharCode(...bytes.slice(0, 5)) === '%PDF-') return 'application/pdf';
+  const image = sniffUploadImageType(bytes);
+  return image && KYC_DOCUMENT_TYPES[image] ? image : null;
+}
+
+// Metadata-only checks: synchronous, so a form can refuse before reading.
+function validateKycDocumentMetadata(file) {
+  if (!file) throw new Error('Choose a file first.');
+  if (!KYC_DOCUMENT_TYPES[file.type]) {
+    throw new Error(`Unsupported file type${file.type ? ` (${file.type})` : ''}. Upload a JPEG, PNG, WebP or PDF.`);
+  }
+  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected file is empty.');
+  if (file.size > KYC_DOCUMENT_MAX_BYTES) {
+    throw new Error(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Keep it under ${Math.floor(KYC_DOCUMENT_MAX_BYTES / 1024 / 1024)} MB.`);
+  }
+  if (typeof file.slice !== 'function') throw new Error('The selected file cannot be read.');
+}
+
+// Full check: metadata, then the first bytes must agree with the declared type.
+async function validateKycDocument(file) {
+  validateKycDocumentMetadata(file);
+  let bytes;
+  try {
+    bytes = new Uint8Array(await file.slice(0, 512).arrayBuffer());
+  } catch {
+    throw new Error('The selected file could not be read.');
+  }
+  const detected = sniffKycDocumentType(bytes);
+  if (!detected || detected !== file.type) {
+    throw new Error('The file contents do not match its type. Export it again as a JPEG, PNG, WebP or PDF.');
+  }
+  return {
+    mime: detected,
+    extension: KYC_DOCUMENT_TYPES[detected]
+  };
+}
+
+// set_kyc_document() reasons → copy. Unknown reasons fall back, never leak.
+function friendlyKycDocumentError(reason) {
+  switch (reason) {
+    case 'not_a_creator':
+      return 'Only an approved creator account can upload verification documents.';
+    case 'bad_kind':
+      return 'Unknown document type.';
+    case 'bad_path':
+      return 'The upload landed somewhere unexpected. Please try again.';
+    case 'not_uploaded':
+      return 'The upload did not complete. Please try again.';
+    default:
+      return 'The document could not be saved. Please try again.';
+  }
+}
+
+// What the portal shows for a document slot, from the profile row alone.
+function kycDocumentState(kyc, kind) {
+  const def = KYC_DOCUMENT_KINDS.find(k => k.kind === kind);
+  if (!def) throw new Error(`Unknown KYC document kind: ${kind}`);
+  const path = kyc?.[def.field] || null;
+  return {
+    ...def,
+    path,
+    uploaded: Boolean(path),
+    uploadedAt: path ? kyc?.documents_updated_at || null : null,
+    fileType: path ? (path.split('.').pop() || '').toLowerCase() : null
+  };
+}
+
+// ============================================================
 // SORA LIFE Creator Program — data access
 //
 // Every call here goes through the normal Supabase client, so RLS is the
@@ -45645,7 +45768,7 @@ async function getMyCreatorEarnings() {
 }
 
 // ---- Creator KYC ----
-const KYC_SELF = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,submitted_at,verified_at';
+const KYC_SELF = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,submitted_at,verified_at,verification_notes,pan_document_path,bank_document_path,documents_updated_at';
 async function getMyKyc() {
   const {
     data,
@@ -45682,6 +45805,82 @@ async function submitKyc({
   return data;
 }
 
+// ---- Creator KYC documents ----
+// Bucket kyc-documents is private (0030): the creator can only write under
+// their own folder, and the RPC only registers a path that exists there.
+// Order matters — validate, upload, then register; the old object is removed
+// only after the row points at the new one, so a failed upload never leaves
+// the profile pointing at nothing.
+const randomId = () => {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+};
+async function uploadKycDocument({
+  creatorId,
+  kind,
+  file
+}) {
+  if (!creatorId) return {
+    ok: false,
+    reason: 'not_a_creator'
+  };
+  if (!KYC_KIND_SET.has(kind)) return {
+    ok: false,
+    reason: 'bad_kind'
+  };
+  let checked;
+  try {
+    checked = await validateKycDocument(file);
+  } catch (e) {
+    return {
+      ok: false,
+      reason: 'invalid_file',
+      message: e.message
+    };
+  }
+  const path = kycDocumentPath(creatorId, kind, checked.extension, randomId());
+  const {
+    error: upErr
+  } = await supabase.storage.from(KYC_BUCKET).upload(path, file, {
+    cacheControl: '0',
+    upsert: false,
+    contentType: checked.mime
+  });
+  if (upErr) return {
+    ok: false,
+    reason: 'upload_failed',
+    message: upErr.message
+  };
+  const {
+    data,
+    error
+  } = await supabase.rpc('set_kyc_document', {
+    p_kind: kind,
+    p_path: path
+  });
+  if (error) {
+    // The row was not updated; do not leave an orphan the creator can't see.
+    await supabase.storage.from(KYC_BUCKET).remove([path]).catch(() => {});
+    return {
+      ok: false,
+      reason: error.message
+    };
+  }
+  if (!data || data.ok === false) {
+    await supabase.storage.from(KYC_BUCKET).remove([path]).catch(() => {});
+    return data || {
+      ok: false,
+      reason: 'unknown'
+    };
+  }
+  if (data.previous_path && data.previous_path !== path) {
+    // Best effort: the replaced document is dead weight, but its removal is
+    // not what the creator is waiting on.
+    await supabase.storage.from(KYC_BUCKET).remove([data.previous_path]).catch(() => {});
+  }
+  return data;
+}
+
 // ---- Creator payouts ----
 async function requestPayout(amount) {
   const {
@@ -45708,7 +45907,7 @@ async function getMyPayouts() {
 }
 
 // ---- Admin: KYC ----
-const KYC_ADMIN = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,verification_notes,submitted_at,verified_at,verified_by,creator:creator_partners(display_name,creator_code)';
+const KYC_ADMIN = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,verification_notes,submitted_at,verified_at,verified_by,pan_document_path,bank_document_path,documents_updated_at,creator:creator_partners(display_name,creator_code)';
 async function adminListKyc() {
   const {
     data,
@@ -45730,6 +45929,30 @@ async function adminSetKycStatus(creatorId, status, notes) {
   });
   if (error) throw error;
   return data;
+}
+// A KYC document is only ever reached through a signed URL that dies in
+// KYC_SIGNED_URL_SECONDS. The bucket is private, so there is no public URL to
+// leak — getPublicUrl() would return a link that 400s, and must not be used.
+const KYC_SIGNED_URL_SECONDS = 60;
+async function adminKycDocumentUrl(path) {
+  if (!path || typeof path !== 'string') throw new Error('No document on file.');
+  const {
+    data,
+    error
+  } = await supabase.storage.from(KYC_BUCKET).createSignedUrl(path, KYC_SIGNED_URL_SECONDS);
+  if (error) throw error;
+  if (!data?.signedUrl) throw new Error('Could not sign the document link.');
+  return data.signedUrl;
+}
+async function adminListKycAudit(creatorId) {
+  const {
+    data,
+    error
+  } = await supabase.from('creator_kyc_audit').select('id,actor,from_status,to_status,from_notes,to_notes,metadata,created_at').eq('creator_id', creatorId).order('created_at', {
+    ascending: false
+  }).limit(50);
+  if (error) throw error;
+  return data || [];
 }
 
 // ---- Admin: payouts ----
@@ -51114,6 +51337,7 @@ function CreatorPayouts({
   kyc,
   payouts,
   onSubmitKyc,
+  onUploadKycDocument,
   onRequestPayout,
   onChanged
 }) {
@@ -51131,6 +51355,7 @@ function CreatorPayouts({
       kyc: kyc,
       status: status,
       onSubmitKyc: onSubmitKyc,
+      onUploadKycDocument: onUploadKycDocument,
       onChanged: onChanged
     }), /*#__PURE__*/jsxRuntimeExports.jsx(PayoutSection, {
       earnings: earnings,
@@ -51151,6 +51376,7 @@ function KycSection({
   kyc,
   status,
   onSubmitKyc,
+  onUploadKycDocument,
   onChanged
 }) {
   const badge = KYC_BADGE[status] || KYC_BADGE.not_started;
@@ -51195,6 +51421,14 @@ function KycSection({
         name: "circleAlert",
         size: 14
       }), " We need updated details before we can pay you. Please resubmit below."]
+    }), (status === 'rejected' || status === 'needs_update') && kyc?.verification_notes && /*#__PURE__*/jsxRuntimeExports.jsxs("blockquote", {
+      className: "crp__kyc-reason",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "crp__kyc-reason-l",
+        children: "Reason from our team"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        children: kyc.verification_notes
+      })]
     }), kyc && (kyc.legal_name || kyc.pan_masked || kyc.payout_account_masked || kyc.upi_masked) && /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
       className: "crp__kv crp__kv--2 crp__kyc-onfile",
       children: [kyc.legal_name && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -51258,6 +51492,139 @@ function KycSection({
     }), editing && status === 'verified' && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
       className: "crp__foot-note",
       children: "Note: editing your details sends them back for re-verification, which pauses payouts until re-approved."
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(KycDocuments, {
+      kyc: kyc,
+      status: status,
+      onUploadKycDocument: onUploadKycDocument,
+      onChanged: onChanged
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// KYC documents — PAN card and bank proof
+//
+// Files go to the private kyc-documents bucket under the creator's own
+// folder (RLS), then set_kyc_document() records the path. The creator never
+// sees a URL: what is shown is whether a document is on file and when.
+// ---------------------------------------------------------------
+const MAX_MB = Math.floor(KYC_DOCUMENT_MAX_BYTES / 1024 / 1024);
+function KycDocuments({
+  kyc,
+  status,
+  onUploadKycDocument,
+  onChanged
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "crp__docs",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+      className: "crp__docs-h",
+      children: "Documents"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "crp__docs-hint",
+      children: ["We verify your details against these. JPEG, PNG, WebP or PDF, up to ", MAX_MB, " MB each.", status === 'verified' && ' Replacing a document sends your verification back for review.']
+    }), KYC_DOCUMENT_KINDS.map(k => /*#__PURE__*/jsxRuntimeExports.jsx(KycDocumentRow, {
+      doc: kycDocumentState(kyc, k.kind),
+      onUpload: onUploadKycDocument,
+      onChanged: onChanged
+    }, k.kind))]
+  });
+}
+function KycDocumentRow({
+  doc,
+  onUpload,
+  onChanged
+}) {
+  const [file, setFile] = reactExports.useState(null);
+  const [busy, setBusy] = reactExports.useState(false);
+  const [err, setErr] = reactExports.useState('');
+  const [done, setDone] = reactExports.useState(false);
+  const inputId = `kyc-doc-${doc.kind}`;
+  const pick = e => {
+    const f = e.target.files?.[0] || null;
+    setErr('');
+    setDone(false);
+    if (!f) {
+      setFile(null);
+      return;
+    }
+    try {
+      validateKycDocumentMetadata(f);
+      setFile(f);
+    } catch (e2) {
+      setFile(null);
+      setErr(e2.message);
+      e.target.value = '';
+    }
+  };
+  const upload = async () => {
+    if (!file || !onUpload) return;
+    setBusy(true);
+    setErr('');
+    try {
+      const res = await onUpload({
+        kind: doc.kind,
+        file
+      });
+      if (!res || res.ok === false) {
+        setErr(res?.message || friendlyKycDocumentError(res?.reason));
+      } else {
+        setFile(null);
+        setDone(true);
+        await onChanged();
+      }
+    } catch {
+      setErr('Something went wrong. Please try again.');
+    }
+    setBusy(false);
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `crp__doc${doc.uploaded ? ' is-uploaded' : ''}`,
+    "data-kind": doc.kind,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "crp__doc-main",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "crp__doc-label",
+        children: doc.label
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "crp__doc-hint",
+        children: doc.hint
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "crp__doc-state",
+        children: doc.uploaded ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: ["On file \xB7 ", doc.fileType.toUpperCase(), " \xB7 uploaded ", fmtDate$1(doc.uploadedAt)]
+        }) : 'Not uploaded yet'
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "crp__doc-actions",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+        htmlFor: inputId,
+        className: `btn btn-sm btn-light crp__doc-pick${busy ? ' is-disabled' : ''}`,
+        children: doc.uploaded ? 'Replace' : 'Choose file'
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+        id: inputId,
+        type: "file",
+        accept: KYC_DOCUMENT_ACCEPT,
+        onChange: pick,
+        disabled: busy,
+        className: "crp__doc-input"
+      }), file && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "crp__doc-file",
+        title: file.name,
+        children: file.name
+      }), file && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "btn btn-sm",
+        onClick: upload,
+        disabled: busy,
+        children: busy ? 'Uploading…' : 'Upload'
+      })]
+    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "crp__form-err crp__doc-err",
+      children: err
+    }), done && !err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "crp__kyc-msg is-ok crp__doc-ok",
+      children: "Uploaded. Our team will check it during review."
     })]
   });
 }
@@ -52371,6 +52738,14 @@ function CreatorPortal() {
           kyc: kyc,
           payouts: payouts,
           onSubmitKyc: submitKyc,
+          onUploadKycDocument: ({
+            kind,
+            file
+          }) => uploadKycDocument({
+            creatorId: creator.id,
+            kind,
+            file
+          }),
           onRequestPayout: requestPayout,
           onChanged: reloadMoney
         }), tab === 'profile' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
@@ -53426,5 +53801,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { adminUpdateProduct as $, fulfillmentStatusLabel as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, mergeHeroCta as a$, adminCreateProduct as a0, adminListVariants as a1, adminCreateVariant as a2, adminUpdateVariant as a3, adminSetVariantActive as a4, adminDeleteVariant as a5, adminGetProgramSettings as a6, CREATOR_STATUSES as a7, adminListCreators as a8, adminSetProgramSettings as a9, adminRefundConversion as aA, adminListKyc as aB, KYC_STATUSES as aC, adminSetKycStatus as aD, adminListPayouts as aE, PAYOUT_STATUSES as aF, adminGetPayoutLedger as aG, adminGetPayoutAudit as aH, adminGetKycForCreator as aI, adminReviewPayout as aJ, adminMarkPayoutPaid as aK, adminGetTheme as aL, sanitizeTheme$1 as aM, TOKENS as aN, PRESET_LIST as aO, GROUPS as aP, DEFAULT_THEME as aQ, OVERLAY_SCALES as aR, TYPE_SCALES as aS, HEX_RE as aT, adminSetTheme as aU, overlayRgba as aV, adminUpsertCategory as aW, adminDeleteCategory as aX, sanitizeHeroCta as aY, HERO_CTA_FIELDS as aZ, adminUpsertHeroSlide as a_, adminCreateCreator as aa, adminSetCreatorStatus as ab, normalizeContentPatch as ac, contentScore as ad, adminGetCreator as ae, adminListCodeAliases as af, adminListCampaigns as ag, adminListLinks as ah, adminListAudit as ai, adminListAttributionEvents as aj, adminUpdateCampaign as ak, adminCreateCampaign as al, CAMPAIGN_STATUSES as am, buildTrackingUrl as an, normalizeDestination as ao, DESTINATION_TYPES as ap, CopyButton as aq, adminChangeCreatorCode as ar, adminUpdateCreator as as, adminCreateLink as at, adminSetLinkStatus as au, adminListConversions as av, money2 as aw, CONVERSION_STATUSES as ax, adminGetConversionItems as ay, adminGetConversionAudit as az, Link as b, announceHomepageSaved as b0, adminDeleteHeroSlide as b1, adminReorderHeroSlides as b2, uploadImage as b3, uploadHeroVideo as b4, normalizePromo as b5, PromoPoster as b6, PromoOfferCard as b7, adminListPromotions as b8, adminUpsertPromotion as b9, categoryExperiencePayload as bA, categoryIsReadyButOff as bB, categoryToneTheme as bC, MIN_INTERVAL_MS as bD, MAX_INTERVAL_MS as bE, DEFAULT_ITEM_SCALE as bF, MIN_ITEM_SCALE as bG, MAX_ITEM_SCALE as bH, ITEM_OFFSET_LIMIT as bI, CategorySpotlight as bJ, SOCIAL_NETWORKS as bK, POLICY_KEYS as bL, validateCompanyForSave as bM, adminDeletePromotion as ba, adminSetPromotionActive as bb, adminReorderPromotions as bc, uploadPromoImage as bd, supabase as be, CouponTicket as bf, HOMEPAGE_VISUAL_FIELDS as bg, safeVisualUrl as bh, MAX_CONCERN_PRODUCTS as bi, searchCatalogueForPicker as bj, productGallery as bk, MAX_DISCOVERY_CARDS as bl, makeDiscoveryId as bm, sanitizeHomepageVisuals as bn, normalizeDiscovery as bo, products as bp, discoveryPayload as bq, mergeHomepageVisuals as br, isSpotlightEligible as bs, categoryBySlug as bt, sanitizeCategoryConfig as bu, safeColor as bv, safeGradient as bw, makeSpotlightId as bx, validateImageUpload as by, normalizeCategoryExperience as bz, LegalUpdated as c, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminListHeroSlides as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminSeedDefaultHeroSlides as p, adminImportBiosashCatalog as q, reactExports as r, money as s, adminSetProductActive as t, useParams as u, validateLegalPage as v, adminDeleteProduct as w, adminReorderProducts as x, categories as y, adminListOrders as z };
+export { adminUpdateProduct as $, fulfillmentStatusLabel as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, adminUpsertCategory as a$, adminCreateProduct as a0, adminListVariants as a1, adminCreateVariant as a2, adminUpdateVariant as a3, adminSetVariantActive as a4, adminDeleteVariant as a5, adminGetProgramSettings as a6, CREATOR_STATUSES as a7, adminListCreators as a8, adminSetProgramSettings as a9, adminRefundConversion as aA, adminListKyc as aB, KYC_STATUSES as aC, KYC_SIGNED_URL_SECONDS as aD, adminSetKycStatus as aE, KYC_DOCUMENT_KINDS as aF, kycDocumentState as aG, adminKycDocumentUrl as aH, adminListKycAudit as aI, adminListPayouts as aJ, PAYOUT_STATUSES as aK, adminGetPayoutLedger as aL, adminGetPayoutAudit as aM, adminGetKycForCreator as aN, adminReviewPayout as aO, adminMarkPayoutPaid as aP, adminGetTheme as aQ, sanitizeTheme$1 as aR, TOKENS as aS, PRESET_LIST as aT, GROUPS as aU, DEFAULT_THEME as aV, OVERLAY_SCALES as aW, TYPE_SCALES as aX, HEX_RE as aY, adminSetTheme as aZ, overlayRgba as a_, adminCreateCreator as aa, adminSetCreatorStatus as ab, normalizeContentPatch as ac, contentScore as ad, adminGetCreator as ae, adminListCodeAliases as af, adminListCampaigns as ag, adminListLinks as ah, adminListAudit as ai, adminListAttributionEvents as aj, adminUpdateCampaign as ak, adminCreateCampaign as al, CAMPAIGN_STATUSES as am, buildTrackingUrl as an, normalizeDestination as ao, DESTINATION_TYPES as ap, CopyButton as aq, adminChangeCreatorCode as ar, adminUpdateCreator as as, adminCreateLink as at, adminSetLinkStatus as au, adminListConversions as av, money2 as aw, CONVERSION_STATUSES as ax, adminGetConversionItems as ay, adminGetConversionAudit as az, Link as b, adminDeleteCategory as b0, sanitizeHeroCta as b1, HERO_CTA_FIELDS as b2, adminUpsertHeroSlide as b3, mergeHeroCta as b4, announceHomepageSaved as b5, adminDeleteHeroSlide as b6, adminReorderHeroSlides as b7, uploadImage as b8, uploadHeroVideo as b9, safeColor as bA, safeGradient as bB, makeSpotlightId as bC, validateImageUpload as bD, normalizeCategoryExperience as bE, categoryExperiencePayload as bF, categoryIsReadyButOff as bG, categoryToneTheme as bH, MIN_INTERVAL_MS as bI, MAX_INTERVAL_MS as bJ, DEFAULT_ITEM_SCALE as bK, MIN_ITEM_SCALE as bL, MAX_ITEM_SCALE as bM, ITEM_OFFSET_LIMIT as bN, CategorySpotlight as bO, SOCIAL_NETWORKS as bP, POLICY_KEYS as bQ, validateCompanyForSave as bR, normalizePromo as ba, PromoPoster as bb, PromoOfferCard as bc, adminListPromotions as bd, adminUpsertPromotion as be, adminDeletePromotion as bf, adminSetPromotionActive as bg, adminReorderPromotions as bh, uploadPromoImage as bi, supabase as bj, CouponTicket as bk, HOMEPAGE_VISUAL_FIELDS as bl, safeVisualUrl as bm, MAX_CONCERN_PRODUCTS as bn, searchCatalogueForPicker as bo, productGallery as bp, MAX_DISCOVERY_CARDS as bq, makeDiscoveryId as br, sanitizeHomepageVisuals as bs, normalizeDiscovery as bt, products as bu, discoveryPayload as bv, mergeHomepageVisuals as bw, isSpotlightEligible as bx, categoryBySlug as by, sanitizeCategoryConfig as bz, LegalUpdated as c, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminListHeroSlides as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminSeedDefaultHeroSlides as p, adminImportBiosashCatalog as q, reactExports as r, money as s, adminSetProductActive as t, useParams as u, validateLegalPage as v, adminDeleteProduct as w, adminReorderProducts as x, categories as y, adminListOrders as z };
 //# sourceMappingURL=bundle.js.map
