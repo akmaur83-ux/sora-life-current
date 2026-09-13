@@ -40,7 +40,8 @@ function component(rel, name, deps = {}) {
     } })],
   });
   const scope = { React, ...React, ...deps };
-  return new Function(...Object.keys(scope), `${code}; return ${name};`)(...Object.values(scope));
+  return new Function(...Object.keys(scope), `${code}
+; return ${name};`)(...Object.values(scope));
 }
 const h = React.createElement;
 const Link = ({ to, children, ...props }) => h('a', { ...props, href: to }, children);

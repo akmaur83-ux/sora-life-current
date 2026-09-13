@@ -32,8 +32,9 @@ const ordinal = (n) => {
   return `${v}${s[(k - 20) % 10] || s[k] || s[0]}`;
 };
 
-export default function CreatorHowItWorks({ creator, earnings }) {
-  const rate = Number(earnings?.commission_rate ?? creator?.default_commission_rate);
+export default function CreatorHowItWorks({ creator, earnings, standing = null }) {
+  // The tier rate is the live one; the earnings RPC still quotes the floor.
+  const rate = Number(standing?.rate ?? earnings?.commission_rate ?? creator?.default_commission_rate);
   const holdDays = Number(earnings?.settlement_hold_days);
   const minPayout = Number(earnings?.min_payout);
   const payoutDay = Number(earnings?.payout_day);
@@ -61,16 +62,16 @@ export default function CreatorHowItWorks({ creator, earnings }) {
       tone: 'ok',
       title: 'The sale qualifies',
       body: has(rate)
-        ? `Once the order is paid, commission is calculated at ${rate}% of the eligible sale value and locked in at that rate. A campaign link can carry its own rate, and later rate changes never alter commission you have already earned.`
-        : 'Once the order is paid, commission is calculated on the eligible sale value at your agreed rate and locked in — later rate changes never alter commission you have already earned.',
+        ? `Once the order is paid, commission is calculated at ${rate}% of the eligible sale value — your current tier rate — and locked in at that rate. A campaign link can carry its own rate, and a later tier change never alters commission you have already earned.`
+        : 'Once the order is paid, commission is calculated on the eligible sale value at your tier rate and locked in — a later tier change never alters commission you have already earned.',
     },
     {
       icon: 'clock',
       tone: 'warn',
       title: 'It waits out the hold period',
       body: has(holdDays)
-        ? `Commission sits as Held for ${holdDays} days after the sale qualifies. This covers returns and cancellations — if an order is refunded in that time, the commission is reversed at the same rate it was earned.`
-        : 'Commission sits as Held for a settlement period after the sale qualifies, covering returns and cancellations.',
+        ? `Commission sits as Held until ${holdDays} days after the order is delivered. This covers returns and cancellations — if an order is refunded or cancelled in that time, the commission is reversed at the same rate it was earned.`
+        : 'Commission sits as Held until a settlement period after delivery has passed, covering returns and cancellations.',
     },
     {
       icon: 'card',

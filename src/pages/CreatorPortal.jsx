@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
+import { SparrowMark } from '../components/Logo.jsx';
 import CopyButton from '../components/CopyButton.jsx';
 import { useCustomerAuth } from '../lib/customerAuth.jsx';
 import {
@@ -13,9 +14,10 @@ import {
 import { money2 } from '../lib/format.js';
 import CreatorEarnings from '../components/creator/CreatorEarnings.jsx';
 import CreatorHowItWorks from '../components/creator/CreatorHowItWorks.jsx';
-import { Section, Empty, Pill, Step, Band, Cell, Balance, IdBar } from '../components/creator/CreatorUI.jsx';
+import { Section, Empty, Pill, Step, Band, Cell, Balance, IdBar, CountUp } from '../components/creator/CreatorUI.jsx';
 import CreatorPayouts from '../components/creator/CreatorPayouts.jsx';
-import CreatorTier, { TierStanding, WithdrawalsNotice } from '../components/creator/CreatorTier.jsx';
+import CreatorTier, { TierStanding, WithdrawalsNotice, RankBadge } from '../components/creator/CreatorTier.jsx';
+import { rankSlot } from '../lib/creatorTiers.js';
 import CreatorTermsPanel, { TermsUpdatedLine } from '../components/creator/CreatorTermsPanel.jsx';
 
 // ============================================================
@@ -30,6 +32,10 @@ import CreatorTermsPanel, { TermsUpdatedLine } from '../components/creator/Creat
 // Earnings, withdrawals and payouts are deliberately absent — they belong to
 // Parts 2 and 3, and showing a zero here would be inventing data.
 // ============================================================
+
+// Blocks that fade up on entry. Sections and panels — never rows, rules,
+// nav or the header. Mirrored in creator-dark.css.
+const REVEAL_SELECTOR = '.ck-idbar, .ck-share, .ck-section, .ck-balance, .ctier, .ctier-rewards, .ctier-history, .ctier-board, .ctier-ladder, .ctier-notice, .crp__panel, .crp__payout, .crp-hiw';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: 'grid' },
@@ -113,23 +119,24 @@ const STATUS_TONE = {
   draft: 'warn', ended: 'bad',
 };
 
-export default function CreatorPortal() {
+export default function CreatorPortal({ initial = null }) {
   const { tab = 'dashboard' } = useParams();
   const navigate = useNavigate();
   const { session, loading: authLoading, signOut } = useCustomerAuth();
 
-  const [state, setState] = useState('loading'); // loading | none | ready
-  const [creator, setCreator] = useState(null);
-  const [campaigns, setCampaigns] = useState([]);
-  const [links, setLinks] = useState([]);
-  const [analytics, setAnalytics] = useState(null);
-  const [earnings, setEarnings] = useState(null);
-  const [kyc, setKyc] = useState(null);
-  const [payouts, setPayouts] = useState([]);
-  const [standing, setStanding] = useState(null);
-  const [rewards, setRewards] = useState(null);
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [terms, setTerms] = useState(null);
+  const [state, setState] = useState(initial ? 'ready' : 'loading'); // loading | none | ready
+  const [creator, setCreator] = useState(initial?.creator || null);
+  const [campaigns, setCampaigns] = useState(initial?.campaigns || []);
+  const [links, setLinks] = useState(initial?.links || []);
+  const [analytics, setAnalytics] = useState(initial?.analytics || null);
+  const [earnings, setEarnings] = useState(initial?.earnings || null);
+  const [kyc, setKyc] = useState(initial?.kyc || null);
+  const [payouts, setPayouts] = useState(initial?.payouts || []);
+  const [standing, setStanding] = useState(initial?.standing || null);
+  const [rewards, setRewards] = useState(initial?.rewards || null);
+  const [leaderboard, setLeaderboard] = useState(initial?.leaderboard || []);
+  const [terms, setTerms] = useState(initial?.terms || null);
+  const rootRef = useRef(null);
   const [termsAccepted, setTermsAccepted] = useState(null);   // null = unknown
   const [acceptingTerms, setAcceptingTerms] = useState(false);
   const navRef = useRef(null);
@@ -200,10 +207,36 @@ export default function CreatorPortal() {
   }, []);
 
   useEffect(() => {
+    if (initial) return;
     if (authLoading) return;
     if (!session) { setState('none'); return; }
     load();
-  }, [authLoading, session, load]);
+  }, [authLoading, session, load, initial]);
+
+  // Staggered fade-up as sections enter view. Everything renders VISIBLE
+  // first — the hiding class is only added here, in a browser, and never
+  // when the reader has asked for reduced motion — so server output and a
+  // no-script page read exactly as they should. Transform and opacity only.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || typeof IntersectionObserver === 'undefined') return undefined;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+    }, { rootMargin: '0px 0px -6% 0px', threshold: 0.05 });
+    let n = 0;
+    const arm = () => {
+      root.querySelectorAll(REVEAL_SELECTOR).forEach((el) => {
+        if (el.dataset.rv) return;
+        el.dataset.rv = '1'; el.style.setProperty('--rv-i', String(n++ % 6)); io.observe(el);
+      });
+    };
+    root.classList.add('js-reveal');
+    arm();
+    const mo = new MutationObserver(arm);
+    mo.observe(root, { childList: true, subtree: true });
+    return () => { io.disconnect(); mo.disconnect(); root.classList.remove('js-reveal'); };
+  }, [state, tab]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -256,18 +289,22 @@ export default function CreatorPortal() {
   const isLive = creator.status === 'active';
   const defaultLink = buildTrackingUrl({ destination_path: '/' }, creator, null);
 
+  const rank = rankSlot(standing?.rank);
+
   return (
-    <div className="crp">
+    <div className="crp crp--dark" data-rank={rank} ref={rootRef}>
+      <span className="crp__ambient" aria-hidden="true" />
       <header className="crp__top">
         <div className="container crp__top-in">
-          <Link to="/" className="crp__brand">
-            <span className="crp__brand-mark">SL</span>
+          <Link to="/" className="crp__brand" aria-label="SORA LIFE home">
+            <span className="crp__brand-mark"><SparrowMark size={34} light /></span>
             <span>
               <strong>SORA LIFE</strong>
               <em>Creator Program</em>
             </span>
           </Link>
           <div className="crp__top-right">
+            {standing?.rank && <RankBadge rank={standing.rank} level={standing.level} size="sm" />}
             <span className="crp__who">{creator.display_name}</span>
             <button className="btn btn-sm btn-light" onClick={() => { signOut(); navigate('/'); }}>Log out</button>
           </div>
@@ -301,9 +338,10 @@ export default function CreatorPortal() {
                 eyebrow="SORA LIFE Creator"
                 name={creator.display_name}
                 items={[
+                  ...(standing?.rank ? [{ k: 'Rank', v: <RankBadge rank={standing.rank} level={standing.level} current size="md" /> }] : []),
                   { k: 'Status', v: creator.status },
                   { k: 'Creator code', v: <code>{creator.creator_code}</code> },
-                  { k: 'Commission', v: ratePct(creator) },
+                  { k: 'Commission', v: standing?.rate != null ? `${Number(standing.rate)}%` : ratePct(creator) },
                   { k: 'Attribution', v: windowLabel(creator) },
                 ]}
               />
@@ -334,10 +372,10 @@ export default function CreatorPortal() {
                 action={<Link to="/creator/analytics" className="ck-section__link">Analytics</Link>}
               >
                 <Band>
-                  <Cell label="Link clicks" value={String(analytics?.clicks ?? 0)} tone="info" />
-                  <Cell label="Orders" value={String(analytics?.attributed_orders ?? 0)} tone="brand" />
-                  <Cell label="Products sold" value={String(analytics?.products_sold ?? 0)} tone="hold" />
-                  <Cell label="Attributed sales" value={money2(analytics?.attributed_sales ?? 0)} tone="ok" />
+                  <Cell label="Link clicks" value={<CountUp value={analytics?.clicks ?? 0} format={(n) => String(Math.round(n))} />} tone="info" />
+                  <Cell label="Orders" value={<CountUp value={analytics?.attributed_orders ?? 0} format={(n) => String(Math.round(n))} />} tone="brand" />
+                  <Cell label="Products sold" value={<CountUp value={analytics?.products_sold ?? 0} format={(n) => String(Math.round(n))} />} tone="hold" />
+                  <Cell label="Attributed sales" value={<CountUp value={analytics?.attributed_sales ?? 0} format={money2} />} tone="ok" />
                 </Band>
               </Section>
 
@@ -347,12 +385,12 @@ export default function CreatorPortal() {
               >
                 <Balance
                   label="Available to withdraw"
-                  value={money2(earnings?.available ?? 0)}
+                  value={<CountUp value={earnings?.available ?? 0} format={money2} />}
                   hint="Cleared commission. A payout request withdraws this full amount."
                 >
-                  <Cell label="Held" value={money2(earnings?.held ?? 0)} tone="hold" />
-                  <Cell label="In payout" value={money2(earnings?.reserved ?? 0)} tone="brand" />
-                  <Cell label="Paid out" value={money2(earnings?.paid ?? 0)} tone="ok" />
+                  <Cell label="Held" value={<CountUp value={earnings?.held ?? 0} format={money2} />} tone="hold" />
+                  <Cell label="In payout" value={<CountUp value={earnings?.reserved ?? 0} format={money2} />} tone="brand" />
+                  <Cell label="Paid out" value={<CountUp value={earnings?.paid ?? 0} format={money2} />} tone="ok" />
                 </Balance>
               </Section>
 
@@ -529,9 +567,9 @@ export default function CreatorPortal() {
           {tab === 'earnings' && (
             <>
               <WithdrawalsNotice open={!!standing?.withdrawals_open} />
-              <CreatorEarnings creator={creator} earnings={earnings} />
+              <CreatorEarnings creator={creator} earnings={earnings} standing={standing} />
               <TierStanding standing={standing} compact holdDays={Number(earnings?.settlement_hold_days ?? 7)} />
-              <CreatorHowItWorks creator={creator} earnings={earnings} />
+              <CreatorHowItWorks creator={creator} earnings={earnings} standing={standing} />
             </>
           )}
 
@@ -547,7 +585,7 @@ export default function CreatorPortal() {
           )}
 
           {tab === 'how-it-works' && (
-            <CreatorHowItWorks creator={creator} earnings={earnings} />
+            <CreatorHowItWorks creator={creator} earnings={earnings} standing={standing} />
           )}
 
           {tab === 'payouts' && (
@@ -693,7 +731,7 @@ function Stat({ label, value, mono, tone, copy }) {
 
 function Shell({ children }) {
   return (
-    <div className="crp crp--plain">
+    <div className="crp crp--plain crp--dark" data-rank="neutral">
       <div className="container" style={{ padding: 'var(--sp-10) 0', maxWidth: 560 }}>{children}</div>
     </div>
   );

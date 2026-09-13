@@ -495,7 +495,8 @@ const jsx = (file, name, deps = {}) => {
     } })],
   });
   const scope = { React, ...React, ...deps };
-  return new Function(...Object.keys(scope), `${code}; return ${name};`)(...Object.values(scope));
+  return new Function(...Object.keys(scope), `${code}
+; return ${name};`)(...Object.values(scope));
 };
 const h = React.createElement;
 const Link = ({ to, children, ...rest }) => h('a', { ...rest, href: to }, children);

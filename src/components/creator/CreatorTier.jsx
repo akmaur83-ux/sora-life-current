@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Icon from '../Icon.jsx';
 import LeaderboardList from '../LeaderboardList.jsx';
 import { money2 } from '../../lib/format.js';
+import { CountUp } from './CreatorUI.jsx';
 import { rankSlot, rupees, tierProgress } from '../../lib/creatorTiers.js';
 import {
   CLAIM_STATUS_LABEL, REWARD_TYPE_LABEL, claimHistory, claimableLevels, friendlyClaimError,
@@ -39,6 +40,21 @@ export function WithdrawalsNotice({ open, compact = false }) {
 }
 
 // ---------------------------------------------------------------
+// Rank badge — the rank name in its own colour, with a soft glow behind it.
+// `current` adds the shimmer: only the creator's OWN present rank shimmers.
+// ---------------------------------------------------------------
+export function RankBadge({ rank, level, current = false, size = 'md' }) {
+  if (!rank) return null;
+  return (
+    <span className={`ck-rank is-${size}${current ? ' is-current' : ''}`} data-rank={rankSlot(rank)}>
+      <span className="ck-rank__glow" aria-hidden="true" />
+      <span className="ck-rank__label">{rank}</span>
+      {level != null && <span className="ck-rank__lv">L{level}</span>}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------
 // Standing — rank, level, rate, progress, the four figures.
 // ---------------------------------------------------------------
 export function TierStanding({ standing, compact = false, holdDays = 7 }) {
@@ -49,11 +65,15 @@ export function TierStanding({ standing, compact = false, holdDays = 7 }) {
 
   return (
     <section className={`ctier sl-dark${compact ? ' is-compact' : ''}`} data-rank={slot} aria-label="Your tier">
+      <span className="ctier__glow" aria-hidden="true" />
       <div className="ctier__head">
         <div>
           <p className="ctier__eyebrow">Your rank</p>
           <h2 className="ctier__rank">{standing.rank}</h2>
-          <p className="ctier__level">Level {standing.level} · <strong>{Number(standing.rate)}%</strong> commission on new sales</p>
+          <p className="ctier__level">
+            <RankBadge rank={standing.rank} level={standing.level} current size="sm" />
+            <span><strong>{Number(standing.rate)}%</strong> commission on new sales</span>
+          </p>
         </div>
         {!compact && (
           <div className="ctier__pos">
@@ -77,10 +97,10 @@ export function TierStanding({ standing, compact = false, holdDays = 7 }) {
 
       {!compact && (
         <dl className="ctier__stats">
-          <div><dt>Lifetime confirmed sales</dt><dd>{money2(standing.lifetime_confirmed_sales)}</dd></div>
-          <div><dt>Pending commission</dt><dd>{money2(standing.pending_commission)}</dd><dd className="ctier__hint">Confirms {holdDays} days after delivery</dd></div>
-          <div><dt>Confirmed commission</dt><dd>{money2(standing.confirmed_commission)}</dd></div>
-          <div><dt>Awaiting confirmation</dt><dd>{money2(standing.pending_sales)}</dd><dd className="ctier__hint">Sales not yet counted</dd></div>
+          <div><dt>Lifetime confirmed sales</dt><dd><CountUp value={standing.lifetime_confirmed_sales} format={money2} /></dd></div>
+          <div><dt>Pending commission</dt><dd><CountUp value={standing.pending_commission} format={money2} /></dd><dd className="ctier__hint">Confirms {holdDays} days after delivery</dd></div>
+          <div><dt>Confirmed commission</dt><dd><CountUp value={standing.confirmed_commission} format={money2} /></dd></div>
+          <div><dt>Awaiting confirmation</dt><dd><CountUp value={standing.pending_sales} format={money2} /></dd><dd className="ctier__hint">Sales not yet counted</dd></div>
         </dl>
       )}
     </section>
@@ -106,7 +126,7 @@ export function TierLadder({ standing }) {
           return (
             <li key={lv} className={`ctier-ladder__row ${state}`} data-rank={rankSlot(l.rank)}>
               <span className="ctier-ladder__lv">L{lv}</span>
-              <span className="ctier-ladder__rank">{l.rank}</span>
+              <span className="ctier-ladder__rank"><span className="ctier-ladder__dot" aria-hidden="true" />{l.rank}</span>
               <span className="ctier-ladder__th">{rupees(l.threshold)}</span>
               <span className="ctier-ladder__rate">{Number(l.rate)}%</span>
             </li>

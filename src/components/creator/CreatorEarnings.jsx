@@ -1,5 +1,5 @@
 import Icon from '../Icon.jsx';
-import { Balance, Cell } from './CreatorUI.jsx';
+import { Balance, Cell, CountUp } from './CreatorUI.jsx';
 import { money2 } from '../../lib/format.js';
 
 // ============================================================
@@ -17,7 +17,7 @@ const monthLabel = (ym) => {
   return new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric' }).format(new Date(y, m - 1, 1));
 };
 
-export default function CreatorEarnings({ creator, earnings }) {
+export default function CreatorEarnings({ creator, earnings, standing = null }) {
   if (!earnings) {
     return (
       <>
@@ -35,7 +35,8 @@ export default function CreatorEarnings({ creator, earnings }) {
   }
 
   const tm = earnings.this_month || {};
-  const rate = Number(earnings.commission_rate ?? creator?.default_commission_rate ?? 0);
+  // The tier rate (0031) is the live one; earnings.commission_rate is the floor.
+  const rate = Number(standing?.rate ?? earnings.commission_rate ?? creator?.default_commission_rate ?? 0);
   const hold = Number(earnings.settlement_hold_days ?? 7);
   const top = Array.isArray(earnings.top_products) ? earnings.top_products : [];
   const history = Array.isArray(earnings.monthly_history) ? earnings.monthly_history : [];
@@ -52,13 +53,13 @@ export default function CreatorEarnings({ creator, earnings }) {
           hero: it is the only figure here the creator can act on. */}
       <Balance
         label="Available to withdraw"
-        value={money2(earnings.available ?? 0)}
+        value={<CountUp value={earnings.available ?? 0} format={money2} />}
         hint="Cleared commission. A payout request withdraws this full amount."
       >
-        <Cell label="Held" value={money2(earnings.held ?? 0)} tone="hold"
+        <Cell label="Held" value={<CountUp value={earnings.held ?? 0} format={money2} />} tone="hold"
           hint={`In the ${hold}-day settlement hold.`} />
-        <Cell label="Paid out" value={money2(earnings.paid ?? 0)} tone="ok" hint="All time." />
-        <Cell label="Reversed" value={money2(earnings.reversed ?? 0)}
+        <Cell label="Paid out" value={<CountUp value={earnings.paid ?? 0} format={money2} />} tone="ok" hint="All time." />
+        <Cell label="Reversed" value={<CountUp value={earnings.reversed ?? 0} format={money2} />}
           tone={Number(earnings.reversed ?? 0) > 0 ? 'bad' : undefined}
           hint="Refunds and adjustments." />
       </Balance>
@@ -85,13 +86,13 @@ export default function CreatorEarnings({ creator, earnings }) {
         <section className="crp__panel">
           <h2 className="crp__panel-h">Your terms</h2>
           <dl className="crp__kv">
-            <div><dt>Commission rate</dt><dd>{rate}%</dd></div>
-            <div><dt>Settlement hold</dt><dd>{hold} days after an order is paid</dd></div>
+            <div><dt>Commission rate</dt><dd>{rate}%{standing?.rank ? <span className="muted"> · {standing.rank} L{standing.level}</span> : null}</dd></div>
+            <div><dt>Settlement hold</dt><dd>{hold} days after an order is delivered</dd></div>
             <div><dt>Minimum payout</dt><dd>{money2(earnings.min_payout ?? 500)}</dd></div>
           </dl>
           <p className="crp__foot-note" style={{ marginTop: 'var(--sp-3)' }}>
-            Your rate is set by SORA LIFE. A rate change only affects <em>future</em> orders —
-            commission already earned keeps the rate it was earned at.
+            Your rate is set by your tier — confirmed lifetime sales through your links. A rate change only
+            affects <em>future</em> orders; commission already earned keeps the rate it was earned at.
           </p>
         </section>
       </div>

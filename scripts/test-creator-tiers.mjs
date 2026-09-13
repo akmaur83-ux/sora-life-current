@@ -44,7 +44,8 @@ function component(rel, name, deps = {}) {
     } })],
   });
   const scope = { React, ...React, ...deps };
-  return new Function(...Object.keys(scope), `${code}; return ${name};`)(...Object.values(scope));
+  return new Function(...Object.keys(scope), `${code}
+; return ${name};`)(...Object.values(scope));
 }
 const h = React.createElement;
 const Link = ({ to, children, ...props }) => h('a', { ...props, href: to }, children);
@@ -427,11 +428,12 @@ const standingFixture = {
 await test('TierStanding shows rank, level, rate, the four figures, position and the distance to the next level', async () => {
   const tiers = await mod('src/lib/creatorTiers.js');
   const rules = await mod('src/lib/creatorRewards.js');
-  const Standing = component('src/components/creator/CreatorTier.jsx', 'TierStanding', { Link, Icon, LeaderboardList: () => null, money2, ...tiers, ...rules });
+  const Standing = component('src/components/creator/CreatorTier.jsx', 'TierStanding', { Link, Icon, LeaderboardList: () => null, money2, CountUp: ({ value, format }) => h('span', { className: 'ck-count' }, format(value)), ...tiers, ...rules });
   const html = renderToStaticMarkup(h(Standing, { standing: standingFixture }));
   const t = text(html);
   assert.match(html, /class="ctier sl-dark" data-rank="premium"/);
-  assert.match(t, /Premium/); assert.match(t, /Level 3 · 12% commission on new sales/);
+  assert.match(t, /Premium/); assert.match(t, /Premium L3 12% commission on new sales/, 'rank badge + rate line');
+  assert.match(html, /class="ck-rank is-sm is-current" data-rank="premium"/);
   assert.match(t, /₹18,750 more in confirmed sales to Level 4 · unlocks 13%/);
   assert.match(html, /transform:scaleX\(0\.25\)/, 'progress bar is a transform');
   assert.match(t, /Lifetime confirmed sales ₹31,250\.00/); assert.match(t, /Pending commission ₹480\.00/);
@@ -444,7 +446,7 @@ await test('TierStanding shows rank, level, rate, the four figures, position and
 await test('at the top of the ladder the bar is full and the copy says so; no position before the first confirmed sale', async () => {
   const tiers = await mod('src/lib/creatorTiers.js');
   const rules = await mod('src/lib/creatorRewards.js');
-  const Standing = component('src/components/creator/CreatorTier.jsx', 'TierStanding', { Link, Icon, LeaderboardList: () => null, money2, ...tiers, ...rules });
+  const Standing = component('src/components/creator/CreatorTier.jsx', 'TierStanding', { Link, Icon, LeaderboardList: () => null, money2, CountUp: ({ value, format }) => h('span', { className: 'ck-count' }, format(value)), ...tiers, ...rules });
   const top = renderToStaticMarkup(h(Standing, { standing: { ...standingFixture, level: 14, rank: 'Crown', rate: 25, threshold: 500000, next_level: null, next_threshold: null, next_rate: null, lifetime_confirmed_sales: 612000 } }));
   assert.match(text(top), /Top of the ladder — 25% on every new sale/); assert.match(top, /scaleX\(1\)/);
   const fresh = renderToStaticMarkup(h(Standing, { standing: { ...standingFixture, level: 1, rank: 'Rise', rate: 10, threshold: 0, next_level: 2, next_threshold: 10000, next_rate: 11, lifetime_confirmed_sales: 0, leaderboard_position: null, leaderboard_total: 0 } }));

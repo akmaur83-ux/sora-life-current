@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import Icon from '../Icon.jsx';
 
 // ============================================================
@@ -167,4 +168,36 @@ export function Step({ done, next = false, index, tone = 'neutral', title, body 
       <span className="ck-step__state">{label}</span>
     </li>
   );
+}
+
+/**
+ * A figure that counts up from zero the first time it is on screen.
+ *
+ * Server-rendered and first-painted with the FINAL value, so nothing depends
+ * on JavaScript to read correctly; the count only runs in a browser that has
+ * not asked for reduced motion. Later value changes (a payout, a claim) snap
+ * straight to the new figure — the theatre is for arrival, not for updates.
+ * `format` is the same formatter the static figure would have used.
+ */
+export function CountUp({ value, format = (n) => String(n), duration = 900 }) {
+  const target = Number(value) || 0;
+  const [shown, setShown] = useState(target);
+  const ran = useRef(false);
+  useEffect(() => {
+    if (ran.current) { setShown(target); return undefined; }
+    ran.current = true;
+    if (typeof window === 'undefined' || !target) return undefined;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    let raf = 0; const t0 = performance.now();
+    const tick = (now) => {
+      const p = Math.min(1, (now - t0) / duration);
+      const eased = 1 - (1 - p) ** 3;
+      setShown(p < 1 ? target * eased : target);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    setShown(0);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return <span className="ck-count" data-count={target}>{format(shown)}</span>;
 }

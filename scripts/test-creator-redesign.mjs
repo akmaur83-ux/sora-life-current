@@ -139,7 +139,7 @@ await test('the old one-off Bucket component was removed, not left dead', () => 
 
 await test('the portal actually uses the shared primitives', () => {
   const c = js(portal);
-  assert.match(c, /import \{ Section, Empty, Pill, Step, Band, Cell, Balance, IdBar \} from/);
+  assert.match(c, /import \{ Section, Empty, Pill, Step, Band, Cell, Balance, IdBar, CountUp \} from/);
   for (const el of ['<Section', '<Empty', '<Step', '<Band', '<Cell', '<Balance', '<IdBar']) {
     assert.ok(c.includes(el), `portal should use ${el}`);
   }
