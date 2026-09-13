@@ -51617,6 +51617,50 @@ function Step({
   });
 }
 
+/**
+ * A figure that counts up from zero the first time it is on screen.
+ *
+ * Server-rendered and first-painted with the FINAL value, so nothing depends
+ * on JavaScript to read correctly; the count only runs in a browser that has
+ * not asked for reduced motion. Later value changes (a payout, a claim) snap
+ * straight to the new figure — the theatre is for arrival, not for updates.
+ * `format` is the same formatter the static figure would have used.
+ */
+function CountUp({
+  value,
+  format = n => String(n),
+  duration = 900
+}) {
+  const target = Number(value) || 0;
+  const [shown, setShown] = reactExports.useState(target);
+  const ran = reactExports.useRef(false);
+  reactExports.useEffect(() => {
+    if (ran.current) {
+      setShown(target);
+      return undefined;
+    }
+    ran.current = true;
+    if (typeof window === 'undefined' || !target) return undefined;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = now => {
+      const p = Math.min(1, (now - t0) / duration);
+      const eased = 1 - (1 - p) ** 3;
+      setShown(p < 1 ? target * eased : target);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    setShown(0);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+    className: "ck-count",
+    "data-count": target,
+    children: format(shown)
+  });
+}
+
 const monthLabel = ym => {
   if (!ym) return '—';
   const [y, m] = ym.split('-').map(Number);
@@ -51627,7 +51671,8 @@ const monthLabel = ym => {
 };
 function CreatorEarnings({
   creator,
-  earnings
+  earnings,
+  standing = null
 }) {
   if (!earnings) {
     return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
@@ -51649,7 +51694,8 @@ function CreatorEarnings({
     });
   }
   const tm = earnings.this_month || {};
-  const rate = Number(earnings.commission_rate ?? creator?.default_commission_rate ?? 0);
+  // The tier rate (0031) is the live one; earnings.commission_rate is the floor.
+  const rate = Number(standing?.rate ?? earnings.commission_rate ?? creator?.default_commission_rate ?? 0);
   const hold = Number(earnings.settlement_hold_days ?? 7);
   const top = Array.isArray(earnings.top_products) ? earnings.top_products : [];
   const history = Array.isArray(earnings.monthly_history) ? earnings.monthly_history : [];
@@ -51662,21 +51708,33 @@ function CreatorEarnings({
       children: "Commission on the orders your links generated. Figures are derived from your settled ledger \u2014 nothing here can be edited from this page."
     }), /*#__PURE__*/jsxRuntimeExports.jsxs(Balance, {
       label: "Available to withdraw",
-      value: money2(earnings.available ?? 0),
+      value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+        value: earnings.available ?? 0,
+        format: money2
+      }),
       hint: "Cleared commission. A payout request withdraws this full amount.",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
         label: "Held",
-        value: money2(earnings.held ?? 0),
+        value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+          value: earnings.held ?? 0,
+          format: money2
+        }),
         tone: "hold",
         hint: `In the ${hold}-day settlement hold.`
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
         label: "Paid out",
-        value: money2(earnings.paid ?? 0),
+        value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+          value: earnings.paid ?? 0,
+          format: money2
+        }),
         tone: "ok",
         hint: "All time."
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
         label: "Reversed",
-        value: money2(earnings.reversed ?? 0),
+        value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+          value: earnings.reversed ?? 0,
+          format: money2
+        }),
         tone: Number(earnings.reversed ?? 0) > 0 ? 'bad' : undefined,
         hint: "Refunds and adjustments."
       })]
@@ -51733,13 +51791,16 @@ function CreatorEarnings({
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
               children: "Commission rate"
             }), /*#__PURE__*/jsxRuntimeExports.jsxs("dd", {
-              children: [rate, "%"]
+              children: [rate, "%", standing?.rank ? /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                className: "muted",
+                children: [" \xB7 ", standing.rank, " L", standing.level]
+              }) : null]
             })]
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
               children: "Settlement hold"
             }), /*#__PURE__*/jsxRuntimeExports.jsxs("dd", {
-              children: [hold, " days after an order is paid"]
+              children: [hold, " days after an order is delivered"]
             })]
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
@@ -51753,9 +51814,9 @@ function CreatorEarnings({
           style: {
             marginTop: 'var(--sp-3)'
           },
-          children: ["Your rate is set by SORA LIFE. A rate change only affects ", /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: ["Your rate is set by your tier \u2014 confirmed lifetime sales through your links. A rate change only affects ", /*#__PURE__*/jsxRuntimeExports.jsx("em", {
             children: "future"
-          }), " orders \u2014 commission already earned keeps the rate it was earned at."]
+          }), " orders; commission already earned keeps the rate it was earned at."]
         })]
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
@@ -51858,9 +51919,11 @@ const ordinal$1 = n => {
 };
 function CreatorHowItWorks({
   creator,
-  earnings
+  earnings,
+  standing = null
 }) {
-  const rate = Number(earnings?.commission_rate ?? creator?.default_commission_rate);
+  // The tier rate is the live one; the earnings RPC still quotes the floor.
+  const rate = Number(standing?.rate ?? earnings?.commission_rate ?? creator?.default_commission_rate);
   const holdDays = Number(earnings?.settlement_hold_days);
   const minPayout = Number(earnings?.min_payout);
   const payoutDay = Number(earnings?.payout_day);
@@ -51880,12 +51943,12 @@ function CreatorHowItWorks({
     icon: 'check',
     tone: 'ok',
     title: 'The sale qualifies',
-    body: has(rate) ? `Once the order is paid, commission is calculated at ${rate}% of the eligible sale value and locked in at that rate. A campaign link can carry its own rate, and later rate changes never alter commission you have already earned.` : 'Once the order is paid, commission is calculated on the eligible sale value at your agreed rate and locked in — later rate changes never alter commission you have already earned.'
+    body: has(rate) ? `Once the order is paid, commission is calculated at ${rate}% of the eligible sale value — your current tier rate — and locked in at that rate. A campaign link can carry its own rate, and a later tier change never alters commission you have already earned.` : 'Once the order is paid, commission is calculated on the eligible sale value at your tier rate and locked in — a later tier change never alters commission you have already earned.'
   }, {
     icon: 'clock',
     tone: 'warn',
     title: 'It waits out the hold period',
-    body: has(holdDays) ? `Commission sits as Held for ${holdDays} days after the sale qualifies. This covers returns and cancellations — if an order is refunded in that time, the commission is reversed at the same rate it was earned.` : 'Commission sits as Held for a settlement period after the sale qualifies, covering returns and cancellations.'
+    body: has(holdDays) ? `Commission sits as Held until ${holdDays} days after the order is delivered. This covers returns and cancellations — if an order is refunded or cancelled in that time, the commission is reversed at the same rate it was earned.` : 'Commission sits as Held until a settlement period after delivery has passed, covering returns and cancellations.'
   }, {
     icon: 'card',
     tone: 'ok',
@@ -51988,6 +52051,33 @@ function WithdrawalsNotice({
 }
 
 // ---------------------------------------------------------------
+// Rank badge — the rank name in its own colour, with a soft glow behind it.
+// `current` adds the shimmer: only the creator's OWN present rank shimmers.
+// ---------------------------------------------------------------
+function RankBadge({
+  rank,
+  level,
+  current = false,
+  size = 'md'
+}) {
+  if (!rank) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+    className: `ck-rank is-${size}${current ? ' is-current' : ''}`,
+    "data-rank": rankSlot(rank),
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "ck-rank__glow",
+      "aria-hidden": "true"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "ck-rank__label",
+      children: rank
+    }), level != null && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+      className: "ck-rank__lv",
+      children: ["L", level]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
 // Standing — rank, level, rate, progress, the four figures.
 // ---------------------------------------------------------------
 function TierStanding({
@@ -52003,7 +52093,10 @@ function TierStanding({
     className: `ctier sl-dark${compact ? ' is-compact' : ''}`,
     "data-rank": slot,
     "aria-label": "Your tier",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "ctier__glow",
+      "aria-hidden": "true"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "ctier__head",
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -52014,9 +52107,16 @@ function TierStanding({
           children: standing.rank
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
           className: "ctier__level",
-          children: ["Level ", standing.level, " \xB7 ", /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
-            children: [Number(standing.rate), "%"]
-          }), " commission on new sales"]
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(RankBadge, {
+            rank: standing.rank,
+            level: standing.level,
+            current: true,
+            size: "sm"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+              children: [Number(standing.rate), "%"]
+            }), " commission on new sales"]
+          })]
         })]
       }), !compact && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "ctier__pos",
@@ -52066,13 +52166,19 @@ function TierStanding({
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
           children: "Lifetime confirmed sales"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          children: money2(standing.lifetime_confirmed_sales)
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+            value: standing.lifetime_confirmed_sales,
+            format: money2
+          })
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
           children: "Pending commission"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          children: money2(standing.pending_commission)
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+            value: standing.pending_commission,
+            format: money2
+          })
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("dd", {
           className: "ctier__hint",
           children: ["Confirms ", holdDays, " days after delivery"]
@@ -52081,13 +52187,19 @@ function TierStanding({
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
           children: "Confirmed commission"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          children: money2(standing.confirmed_commission)
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+            value: standing.confirmed_commission,
+            format: money2
+          })
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
           children: "Awaiting confirmation"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          children: money2(standing.pending_sales)
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+            value: standing.pending_sales,
+            format: money2
+          })
         }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
           className: "ctier__hint",
           children: "Sales not yet counted"
@@ -52127,9 +52239,12 @@ function TierLadder({
           children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             className: "ctier-ladder__lv",
             children: ["L", lv]
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             className: "ctier-ladder__rank",
-            children: l.rank
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "ctier-ladder__dot",
+              "aria-hidden": "true"
+            }), l.rank]
           }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
             className: "ctier-ladder__th",
             children: rupees(l.threshold)
@@ -53194,6 +53309,7 @@ function friendlyPayoutError(reason, {
   }[reason] || 'Couldn’t submit your payout request. Please try again.';
 }
 
+const REVEAL_SELECTOR = '.ck-idbar, .ck-share, .ck-section, .ck-balance, .ctier, .ctier-rewards, .ctier-history, .ctier-board, .ctier-ladder, .ctier-notice, .crp__panel, .crp__payout, .crp-hiw';
 const NAV = [{
   id: 'dashboard',
   label: 'Dashboard',
@@ -53284,7 +53400,9 @@ const STATUS_TONE = {
   draft: 'warn',
   ended: 'bad'
 };
-function CreatorPortal() {
+function CreatorPortal({
+  initial = null
+}) {
   const {
     tab = 'dashboard'
   } = useParams();
@@ -53294,18 +53412,19 @@ function CreatorPortal() {
     loading: authLoading,
     signOut
   } = useCustomerAuth();
-  const [state, setState] = reactExports.useState('loading'); // loading | none | ready
-  const [creator, setCreator] = reactExports.useState(null);
-  const [campaigns, setCampaigns] = reactExports.useState([]);
-  const [links, setLinks] = reactExports.useState([]);
-  const [analytics, setAnalytics] = reactExports.useState(null);
-  const [earnings, setEarnings] = reactExports.useState(null);
-  const [kyc, setKyc] = reactExports.useState(null);
-  const [payouts, setPayouts] = reactExports.useState([]);
-  const [standing, setStanding] = reactExports.useState(null);
-  const [rewards, setRewards] = reactExports.useState(null);
-  const [leaderboard, setLeaderboard] = reactExports.useState([]);
-  const [terms, setTerms] = reactExports.useState(null);
+  const [state, setState] = reactExports.useState(initial ? 'ready' : 'loading'); // loading | none | ready
+  const [creator, setCreator] = reactExports.useState(initial?.creator || null);
+  const [campaigns, setCampaigns] = reactExports.useState(initial?.campaigns || []);
+  const [links, setLinks] = reactExports.useState(initial?.links || []);
+  const [analytics, setAnalytics] = reactExports.useState(initial?.analytics || null);
+  const [earnings, setEarnings] = reactExports.useState(initial?.earnings || null);
+  const [kyc, setKyc] = reactExports.useState(initial?.kyc || null);
+  const [payouts, setPayouts] = reactExports.useState(initial?.payouts || []);
+  const [standing, setStanding] = reactExports.useState(initial?.standing || null);
+  const [rewards, setRewards] = reactExports.useState(initial?.rewards || null);
+  const [leaderboard, setLeaderboard] = reactExports.useState(initial?.leaderboard || []);
+  const [terms, setTerms] = reactExports.useState(initial?.terms || null);
+  const rootRef = reactExports.useRef(null);
   const [termsAccepted, setTermsAccepted] = reactExports.useState(null); // null = unknown
   const [acceptingTerms, setAcceptingTerms] = reactExports.useState(false);
   const navRef = reactExports.useRef(null);
@@ -53380,13 +53499,54 @@ function CreatorPortal() {
     setState('ready');
   }, []);
   reactExports.useEffect(() => {
+    if (initial) return;
     if (authLoading) return;
     if (!session) {
       setState('none');
       return;
     }
     load();
-  }, [authLoading, session, load]);
+  }, [authLoading, session, load, initial]);
+
+  // Staggered fade-up as sections enter view. Everything renders VISIBLE
+  // first — the hiding class is only added here, in a browser, and never
+  // when the reader has asked for reduced motion — so server output and a
+  // no-script page read exactly as they should. Transform and opacity only.
+  reactExports.useEffect(() => {
+    const root = rootRef.current;
+    if (!root || typeof IntersectionObserver === 'undefined') return undefined;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const io = new IntersectionObserver(entries => {
+      for (const e of entries) if (e.isIntersecting) {
+        e.target.classList.add('is-in');
+        io.unobserve(e.target);
+      }
+    }, {
+      rootMargin: '0px 0px -6% 0px',
+      threshold: 0.05
+    });
+    let n = 0;
+    const arm = () => {
+      root.querySelectorAll(REVEAL_SELECTOR).forEach(el => {
+        if (el.dataset.rv) return;
+        el.dataset.rv = '1';
+        el.style.setProperty('--rv-i', String(n++ % 6));
+        io.observe(el);
+      });
+    };
+    root.classList.add('js-reveal');
+    arm();
+    const mo = new MutationObserver(arm);
+    mo.observe(root, {
+      childList: true,
+      subtree: true
+    });
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+      root.classList.remove('js-reveal');
+    };
+  }, [state, tab]);
   reactExports.useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const nav = navRef.current;
@@ -53456,18 +53616,28 @@ function CreatorPortal() {
   const defaultLink = buildTrackingUrl({
     destination_path: '/'
   }, creator, null);
+  const rank = rankSlot(standing?.rank);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "crp",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+    className: "crp crp--dark",
+    "data-rank": rank,
+    ref: rootRef,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "crp__ambient",
+      "aria-hidden": "true"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("header", {
       className: "crp__top",
       children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "container crp__top-in",
         children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
           to: "/",
           className: "crp__brand",
+          "aria-label": "SORA LIFE home",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
             className: "crp__brand-mark",
-            children: "SL"
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(SparrowMark, {
+              size: 34,
+              light: true
+            })
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
               children: "SORA LIFE"
@@ -53477,7 +53647,11 @@ function CreatorPortal() {
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "crp__top-right",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: [standing?.rank && /*#__PURE__*/jsxRuntimeExports.jsx(RankBadge, {
+            rank: standing.rank,
+            level: standing.level,
+            size: "sm"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
             className: "crp__who",
             children: creator.display_name
           }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
@@ -53522,7 +53696,15 @@ function CreatorPortal() {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(IdBar, {
             eyebrow: "SORA LIFE Creator",
             name: creator.display_name,
-            items: [{
+            items: [...(standing?.rank ? [{
+              k: 'Rank',
+              v: /*#__PURE__*/jsxRuntimeExports.jsx(RankBadge, {
+                rank: standing.rank,
+                level: standing.level,
+                current: true,
+                size: "md"
+              })
+            }] : []), {
               k: 'Status',
               v: creator.status
             }, {
@@ -53532,7 +53714,7 @@ function CreatorPortal() {
               })
             }, {
               k: 'Commission',
-              v: ratePct(creator)
+              v: standing?.rate != null ? `${Number(standing.rate)}%` : ratePct(creator)
             }, {
               k: 'Attribution',
               v: windowLabel(creator)
@@ -53585,19 +53767,31 @@ function CreatorPortal() {
             children: /*#__PURE__*/jsxRuntimeExports.jsxs(Band, {
               children: [/*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "Link clicks",
-                value: String(analytics?.clicks ?? 0),
+                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+                  value: analytics?.clicks ?? 0,
+                  format: n => String(Math.round(n))
+                }),
                 tone: "info"
               }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "Orders",
-                value: String(analytics?.attributed_orders ?? 0),
+                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+                  value: analytics?.attributed_orders ?? 0,
+                  format: n => String(Math.round(n))
+                }),
                 tone: "brand"
               }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "Products sold",
-                value: String(analytics?.products_sold ?? 0),
+                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+                  value: analytics?.products_sold ?? 0,
+                  format: n => String(Math.round(n))
+                }),
                 tone: "hold"
               }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "Attributed sales",
-                value: money2(analytics?.attributed_sales ?? 0),
+                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+                  value: analytics?.attributed_sales ?? 0,
+                  format: money2
+                }),
                 tone: "ok"
               })]
             })
@@ -53610,19 +53804,31 @@ function CreatorPortal() {
             }),
             children: /*#__PURE__*/jsxRuntimeExports.jsxs(Balance, {
               label: "Available to withdraw",
-              value: money2(earnings?.available ?? 0),
+              value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+                value: earnings?.available ?? 0,
+                format: money2
+              }),
               hint: "Cleared commission. A payout request withdraws this full amount.",
               children: [/*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "Held",
-                value: money2(earnings?.held ?? 0),
+                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+                  value: earnings?.held ?? 0,
+                  format: money2
+                }),
                 tone: "hold"
               }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "In payout",
-                value: money2(earnings?.reserved ?? 0),
+                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+                  value: earnings?.reserved ?? 0,
+                  format: money2
+                }),
                 tone: "brand"
               }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "Paid out",
-                value: money2(earnings?.paid ?? 0),
+                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+                  value: earnings?.paid ?? 0,
+                  format: money2
+                }),
                 tone: "ok"
               })]
             })
@@ -53847,14 +54053,16 @@ function CreatorPortal() {
             open: !!standing?.withdrawals_open
           }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorEarnings, {
             creator: creator,
-            earnings: earnings
+            earnings: earnings,
+            standing: standing
           }), /*#__PURE__*/jsxRuntimeExports.jsx(TierStanding, {
             standing: standing,
             compact: true,
             holdDays: Number(earnings?.settlement_hold_days ?? 7)
           }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorHowItWorks, {
             creator: creator,
-            earnings: earnings
+            earnings: earnings,
+            standing: standing
           })]
         }), tab === 'tier' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTier, {
           standing: standing,
@@ -53865,7 +54073,8 @@ function CreatorPortal() {
           onChanged: reloadMoney
         }), tab === 'how-it-works' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorHowItWorks, {
           creator: creator,
-          earnings: earnings
+          earnings: earnings,
+          standing: standing
         }), tab === 'payouts' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorPayouts, {
           creator: creator,
           earnings: earnings,
@@ -54079,7 +54288,8 @@ function Shell({
   children
 }) {
   return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-    className: "crp crp--plain",
+    className: "crp crp--plain crp--dark",
+    "data-rank": "neutral",
     children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "container",
       style: {
