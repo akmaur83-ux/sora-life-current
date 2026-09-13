@@ -26,6 +26,7 @@ import * as rewardRules from '../src/lib/creatorRewards.js';
 import * as kycRules from '../src/lib/kycDocuments.js';
 import { money2 } from '../src/lib/format.js';
 import { buildTrackingUrl } from '../src/lib/creatorLinkUtils.js';
+import * as seriesRules from '../src/lib/creatorSeries.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const OUT = resolve(ROOT, 'reports/creator-portal-dark');
@@ -56,14 +57,14 @@ const Icon = component('src/components/Icon.jsx', 'Icon', {});
 const SparrowMark = component('src/components/Logo.jsx', 'SparrowMark', { Link, branding: { siteName: 'SORA LIFE', tagline: 'Wellness marketplace' } });
 const CopyButton = component('src/components/CopyButton.jsx', 'CopyButton', { Icon });
 const UI = {};
-for (const n of ['Section', 'Empty', 'Pill', 'Step', 'Band', 'Cell', 'Balance', 'IdBar', 'CountUp', 'Metric']) UI[n] = component('src/components/creator/CreatorUI.jsx', n, { Icon });
+for (const n of ['Section', 'Empty', 'Pill', 'Step', 'Band', 'Cell', 'Balance', 'IdBar', 'CountUp', 'Metric', 'Sparkline']) UI[n] = component('src/components/creator/CreatorUI.jsx', n, { Icon, sparkGeometry: seriesRules.sparkGeometry });
 const LeaderboardList = component('src/components/LeaderboardList.jsx', 'LeaderboardList', { ...tiers });
 const tierDeps = { Link, Icon, LeaderboardList, money2, CountUp: UI.CountUp, ...tiers, ...rewardRules };
 const CreatorTier = component('src/components/creator/CreatorTier.jsx', 'CreatorTier', tierDeps);
 const TierStanding = component('src/components/creator/CreatorTier.jsx', 'TierStanding', tierDeps);
 const WithdrawalsNotice = component('src/components/creator/CreatorTier.jsx', 'WithdrawalsNotice', tierDeps);
 const RankBadge = component('src/components/creator/CreatorTier.jsx', 'RankBadge', tierDeps);
-const CreatorEarnings = component('src/components/creator/CreatorEarnings.jsx', 'CreatorEarnings', { Icon, money2, Balance: UI.Balance, Cell: UI.Cell, CountUp: UI.CountUp });
+const CreatorEarnings = component('src/components/creator/CreatorEarnings.jsx', 'CreatorEarnings', { Icon, money2, Balance: UI.Balance, Cell: UI.Cell, CountUp: UI.CountUp, cumulative: seriesRules.cumulative });
 const CreatorHowItWorks = component('src/components/creator/CreatorHowItWorks.jsx', 'CreatorHowItWorks', { Icon, money2 });
 const CreatorPayouts = component('src/components/creator/CreatorPayouts.jsx', 'CreatorPayouts', { Icon, money2, WithdrawalsNotice, ...kycRules });
 const CreatorTermsPanel = component('src/components/creator/CreatorTermsPanel.jsx', 'CreatorTermsPanel', {});
@@ -75,10 +76,10 @@ const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPort
   useCustomerAuth: () => ({ session: { user: { id: 'u' } }, loading: false, signOut: () => {} }),
   claimCreatorAccount: noop, getMyCreator: noop, getMyCampaigns: async () => [], getMyLinks: async () => [], buildTrackingUrl,
   getMyCreatorAnalytics: noop, getMyCreatorEarnings: noop, getMyKyc: noop, submitKyc: noop, uploadKycDocument: noop, requestPayout: noop,
-  getMyPayouts: async () => [], getMyCreatorStanding: noop, getMyCreatorRewards: noop, claimLevelReward: noop, getCreatorLeaderboard: async () => [],
+  getMyPayouts: async () => [], getMyCreatorStanding: noop, getMyCreatorRewards: noop, claimLevelReward: noop, getCreatorLeaderboard: async () => [], getMyActivitySeries: noop,
   getCreatorTerms: async () => null, termsArePublished: () => false, getMyTermsAcceptance: async () => null, acceptCreatorTerms: noop,
   money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, CreatorTier, TierStanding, WithdrawalsNotice, RankBadge,
-  rankSlot: tiers.rankSlot, CreatorTermsPanel, TermsUpdatedLine,
+  rankSlot: tiers.rankSlot, CreatorTermsPanel, TermsUpdatedLine, ...seriesRules,
 });
 
 // ---- fixtures ---------------------------------------------------------------
@@ -120,10 +121,22 @@ const earnings = {
   monthly_history: [{ month: '2026-07', commission: 4120.5 }, { month: '2026-08', commission: 6210.75 }, { month: '2026-09', commission: 3868.8 }],
 };
 const analytics = { ok: true, clicks: 1240, attributed_orders: 58, products_sold: 131, attributed_sales: 138420 + 9640, eligible_orders: 55 };
+const WEEKS = ['2026-06-29', '2026-07-06', '2026-07-13', '2026-07-20', '2026-07-27', '2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31', '2026-09-07', '2026-09-14'];
+const series = { ok: true, weeks: 12, series: WEEKS.map((week, i) => ({
+  week, clicks: [62, 80, 74, 91, 120, 98, 134, 150, 121, 168, 142, 100][i], orders: [2, 4, 3, 5, 6, 4, 7, 8, 6, 9, 7, 3][i],
+  products: [5, 9, 7, 11, 14, 9, 16, 18, 13, 20, 15, 6][i], sales: [4200, 8100, 6400, 10800, 12900, 9100, 15300, 17800, 12100, 19600, 14900, 5900][i],
+  commission: [420, 810, 640, 1080, 1290, 910, 1530, 1780, 1210, 1960, 1490, 590][i] })) };
+const emptyEarnings = { ok: true, available: 0, held: 0, reserved: 0, paid: 0, reversed: 0, commission_rate: 10, settlement_hold_days: 7, min_payout: 500, payout_day: 1, this_month: {}, clicks: 0, top_products: [], monthly_history: [] };
+const emptyAnalytics = { ok: true, clicks: 0, attributed_orders: 0, products_sold: 0, attributed_sales: 0, eligible_orders: 0, top_products: [] };
+const emptyStanding = { ...standing, level: 1, rank: 'Rise', rate: 10, threshold: 0, next_level: 2, next_threshold: 10000, next_rate: 11, lifetime_confirmed_sales: 0, pending_sales: 0, pending_commission: 0, confirmed_commission: 0, leaderboard_position: null, leaderboard_total: 0 };
 const initial = {
   creator, campaigns: [{ id: 'cp1', name: 'Diwali edit', campaign_code: 'DIWALI', status: 'active', commission_rate_override: null, start_at: '2026-10-01', end_at: '2026-11-15' }],
   links: [{ id: 'l1', public_code: 'AARAV', label: 'Default', destination_type: 'home', destination_path: '/', status: 'active', created_at: '2026-03-02T00:00:00Z' }],
-  analytics, earnings, kyc: { identity_status: 'verified' }, payouts: [], standing, rewards, leaderboard, terms: null,
+  analytics, earnings, kyc: { identity_status: 'verified' }, payouts: [], standing, rewards, leaderboard, terms: null, series,
+};
+const emptyInitial = {
+  creator: { ...creator, display_name: 'Priya Nair', creator_code: 'PRIYA', joined_at: '2026-09-10T00:00:00Z' }, campaigns: [], links: [], analytics: emptyAnalytics, earnings: emptyEarnings,
+  kyc: { identity_status: 'not_started' }, payouts: [], standing: emptyStanding, rewards: { ok: true, level: 1, claims: [], claimable: [] }, leaderboard, terms: null, series: null,
 };
 
 // ---- render -----------------------------------------------------------------
@@ -137,7 +150,10 @@ mkdirSync(OUT, { recursive: true });
 const pages = {
   'portal-dashboard': page('SSR — portal dashboard', renderToStaticMarkup(h(portalFor('dashboard'), { initial })), deferredCss),
   'portal-earnings': page('SSR — portal earnings', renderToStaticMarkup(h(portalFor('earnings'), { initial })), deferredCss),
+  'portal-analytics': page('SSR — portal analytics', renderToStaticMarkup(h(portalFor('analytics'), { initial })), deferredCss),
   'portal-tier': page('SSR — portal tier', renderToStaticMarkup(h(portalFor('tier'), { initial })), deferredCss),
+  'portal-dashboard-empty': page('SSR — portal dashboard, empty', renderToStaticMarkup(h(portalFor('dashboard'), { initial: emptyInitial })), deferredCss),
+  'portal-earnings-empty': page('SSR — portal earnings, empty', renderToStaticMarkup(h(portalFor('earnings'), { initial: emptyInitial })), deferredCss),
   'home-leaderboard': page('SSR — creator leaderboard',
     `<main class="page-main"><div class="v2-home" style="background:#FBF8F1">
        <section class="v2-sec" style="padding:32px 0"><div class="v2-wrap"><p class="v2-eyebrow">…preceding section (stub)</p><h2 class="v2-h2">Why shop SORA LIFE</h2></div></section>

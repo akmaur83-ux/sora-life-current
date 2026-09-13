@@ -343,6 +343,13 @@ export async function getMyCreatorStanding() {
   if (error) return { ok: false, reason: error.message };
   return data || { ok: false };
 }
+// Weekly activity for the portal charts (0032). Absent RPC → { ok:false },
+// and the charts fall back to a level baseline rather than disappearing.
+export async function getMyActivitySeries(weeks = 12) {
+  const { data, error } = await supabase.rpc('my_creator_activity_series', { p_weeks: weeks });
+  if (error) return { ok: false, reason: error.message };
+  return data || { ok: false };
+}
 export async function getMyCreatorRewards() {
   const { data, error } = await supabase.rpc('my_creator_rewards');
   if (error) return { ok: false, reason: error.message };

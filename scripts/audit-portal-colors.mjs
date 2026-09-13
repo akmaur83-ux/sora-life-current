@@ -85,17 +85,17 @@ async function audit(file) {
 }
 
 let failed = 0;
-for (const name of ['portal-dashboard', 'portal-earnings', 'portal-tier', 'home-leaderboard']) {
+for (const name of ['portal-dashboard', 'portal-earnings', 'portal-analytics', 'portal-tier', 'portal-dashboard-empty', 'portal-earnings-empty', 'home-leaderboard']) {
   const file = join(DIR, `${name}.html`);
   if (!existsSync(file)) { console.log(`  SKIP  ${name} — run scripts/ssr-portal-shots.mjs first`); failed++; continue; }
   const r = await audit(file);
   const portal = name.startsWith('portal-');
-  const groundOk = portal ? /rgb\(11, 21, 16\)/.test(r.ground) : true;
+  const groundOk = portal ? /rgb\(22, 35, 28\)/.test(r.ground) : true;
   const ok = r.violationCount === 0 && r.gradientViolet.length === 0 && groundOk && (!portal || r.hasGlass) && !r.storefrontLeak;
   console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name}: ${r.checked} colours checked, ${r.violationCount} violet, ${r.gradientViolet.length} violet gradients, ground ${r.ground}${portal ? `, glass ${r.hasGlass}` : `, portal token leak: ${r.storefrontLeak || 'none'}`}`);
   for (const v of r.violations) console.log(`        ${v.tag}.${v.cls}${v.pseudo || ''} ${v.prop}: ${v.value}`);
   for (const v of r.gradientViolet) console.log(`        ${v.tag}.${v.cls}${v.pseudo || ''} background-image: ${v.bg}`);
   if (!ok) failed++;
 }
-console.log(failed ? `\n${failed} page(s) failed` : '\nALL PASS — no violet anywhere in the portal, ground is #0B1510, glass present, storefront untouched');
+console.log(failed ? `\n${failed} page(s) failed` : '\nALL PASS — no violet anywhere in the portal, ground is #16231C, glass present, storefront untouched');
 process.exit(failed ? 1 : 0);

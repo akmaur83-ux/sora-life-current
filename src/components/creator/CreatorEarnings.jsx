@@ -1,6 +1,7 @@
 import Icon from '../Icon.jsx';
 import { Balance, Cell, CountUp } from './CreatorUI.jsx';
 import { money2 } from '../../lib/format.js';
+import { cumulative } from '../../lib/creatorSeries.js';
 
 // ============================================================
 // Creator earnings dashboard (Part 3)
@@ -17,7 +18,8 @@ const monthLabel = (ym) => {
   return new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric' }).format(new Date(y, m - 1, 1));
 };
 
-export default function CreatorEarnings({ creator, earnings, standing = null }) {
+export default function CreatorEarnings({ creator, earnings, standing = null, weekly = null, monthly = null }) {
+  const isZero = (v) => !(Number(v) > 0);
   if (!earnings) {
     return (
       <>
@@ -54,13 +56,14 @@ export default function CreatorEarnings({ creator, earnings, standing = null }) 
       <Balance
         label="Available to withdraw"
         value={<CountUp value={earnings.available ?? 0} format={money2} />}
-        hint="Cleared commission. A payout request withdraws this full amount."
+        hint={isZero(earnings.available) ? 'Nothing has cleared yet. Commission lands here after delivery and the settlement hold.' : 'Cleared commission. A payout request withdraws this full amount.'}
+        spark={monthly ? cumulative(monthly.values) : null} sparkLabel="Commission, last 12 months" zero={isZero(earnings.available)}
       >
-        <Cell label="Held" value={<CountUp value={earnings.held ?? 0} format={money2} />} tone="hold"
+        <Cell label="Held" value={<CountUp value={earnings.held ?? 0} format={money2} />} tone="hold" zero={isZero(earnings.held)} spark={weekly ? weekly.commission : null}
           hint={`In the ${hold}-day settlement hold.`} />
-        <Cell label="Paid out" value={<CountUp value={earnings.paid ?? 0} format={money2} />} tone="ok" hint="All time." />
+        <Cell label="Paid out" value={<CountUp value={earnings.paid ?? 0} format={money2} />} tone="ok" hint="All time." zero={isZero(earnings.paid)} />
         <Cell label="Reversed" value={<CountUp value={earnings.reversed ?? 0} format={money2} />}
-          tone={Number(earnings.reversed ?? 0) > 0 ? 'bad' : undefined}
+          tone={Number(earnings.reversed ?? 0) > 0 ? 'bad' : undefined} zero={isZero(earnings.reversed)}
           hint="Refunds and adjustments." />
       </Balance>
 

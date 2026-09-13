@@ -8,7 +8,7 @@ import {
   claimCreatorAccount, getMyCreator, getMyCampaigns, getMyLinks, buildTrackingUrl,
   getMyCreatorAnalytics,
   getMyCreatorEarnings, getMyKyc, submitKyc, uploadKycDocument, requestPayout, getMyPayouts,
-  getMyCreatorStanding, getMyCreatorRewards, claimLevelReward, getCreatorLeaderboard,
+  getMyCreatorStanding, getMyCreatorRewards, claimLevelReward, getCreatorLeaderboard, getMyActivitySeries,
   getCreatorTerms, termsArePublished, getMyTermsAcceptance, acceptCreatorTerms,
 } from '../lib/creatorApi.js';
 import { money2 } from '../lib/format.js';
@@ -18,6 +18,7 @@ import { Section, Empty, Pill, Step, Band, Cell, Balance, IdBar, CountUp } from 
 import CreatorPayouts from '../components/creator/CreatorPayouts.jsx';
 import CreatorTier, { TierStanding, WithdrawalsNotice, RankBadge } from '../components/creator/CreatorTier.jsx';
 import { rankSlot } from '../lib/creatorTiers.js';
+import { weeklySeries, monthlySeries, cumulative } from '../lib/creatorSeries.js';
 import CreatorTermsPanel, { TermsUpdatedLine } from '../components/creator/CreatorTermsPanel.jsx';
 
 // ============================================================
@@ -135,6 +136,7 @@ export default function CreatorPortal({ initial = null }) {
   const [standing, setStanding] = useState(initial?.standing || null);
   const [rewards, setRewards] = useState(initial?.rewards || null);
   const [leaderboard, setLeaderboard] = useState(initial?.leaderboard || []);
+  const [series, setSeries] = useState(initial?.series || null);
   const [terms, setTerms] = useState(initial?.terms || null);
   const rootRef = useRef(null);
   const [termsAccepted, setTermsAccepted] = useState(null);   // null = unknown
@@ -194,6 +196,7 @@ export default function CreatorPortal({ initial = null }) {
       getMyCreatorEarnings(), getMyKyc(), getMyPayouts(),
       getMyCreatorStanding(), getMyCreatorRewards(), getCreatorLeaderboard(),
     ]);
+    getMyActivitySeries().then((sr) => setSeries(sr && sr.ok ? sr : null)).catch(() => setSeries(null));
     setCampaigns(cs);
     setLinks(ls);
     setAnalytics(an && an.ok ? an : null);
@@ -290,10 +293,14 @@ export default function CreatorPortal({ initial = null }) {
   const defaultLink = buildTrackingUrl({ destination_path: '/' }, creator, null);
 
   const rank = rankSlot(standing?.rank);
+  const weekly = weeklySeries(series);
+  const monthly = monthlySeries(earnings?.monthly_history);
+  const isZero = (v) => !(Number(v) > 0);
 
   return (
     <div className="crp crp--dark" data-rank={rank} ref={rootRef}>
       <span className="crp__ambient" aria-hidden="true" />
+      <span className="crp__grain" aria-hidden="true" />
       <header className="crp__top">
         <div className="container crp__top-in">
           <Link to="/" className="crp__brand" aria-label="SORA LIFE home">
@@ -372,10 +379,10 @@ export default function CreatorPortal({ initial = null }) {
                 action={<Link to="/creator/analytics" className="ck-section__link">Analytics</Link>}
               >
                 <Band>
-                  <Cell label="Link clicks" value={<CountUp value={analytics?.clicks ?? 0} format={(n) => String(Math.round(n))} />} tone="info" />
-                  <Cell label="Orders" value={<CountUp value={analytics?.attributed_orders ?? 0} format={(n) => String(Math.round(n))} />} tone="brand" />
-                  <Cell label="Products sold" value={<CountUp value={analytics?.products_sold ?? 0} format={(n) => String(Math.round(n))} />} tone="hold" />
-                  <Cell label="Attributed sales" value={<CountUp value={analytics?.attributed_sales ?? 0} format={money2} />} tone="ok" />
+                  <Cell label="Link clicks" value={<CountUp value={analytics?.clicks ?? 0} format={(n) => String(Math.round(n))} />} tone="info" spark={weekly.clicks} zero={isZero(analytics?.clicks)} />
+                  <Cell label="Orders" value={<CountUp value={analytics?.attributed_orders ?? 0} format={(n) => String(Math.round(n))} />} tone="info" spark={weekly.orders} zero={isZero(analytics?.attributed_orders)} />
+                  <Cell label="Products sold" value={<CountUp value={analytics?.products_sold ?? 0} format={(n) => String(Math.round(n))} />} tone="info" spark={weekly.products} zero={isZero(analytics?.products_sold)} />
+                  <Cell label="Attributed sales" value={<CountUp value={analytics?.attributed_sales ?? 0} format={money2} />} tone="ok" spark={weekly.sales} zero={isZero(analytics?.attributed_sales)} />
                 </Band>
               </Section>
 
@@ -386,11 +393,12 @@ export default function CreatorPortal({ initial = null }) {
                 <Balance
                   label="Available to withdraw"
                   value={<CountUp value={earnings?.available ?? 0} format={money2} />}
-                  hint="Cleared commission. A payout request withdraws this full amount."
+                  hint={isZero(earnings?.available) ? 'Nothing has cleared yet. Commission lands here after delivery and the settlement hold.' : 'Cleared commission. A payout request withdraws this full amount.'}
+                  spark={cumulative(monthly.values)} sparkLabel="Commission, last 12 months" zero={isZero(earnings?.available)}
                 >
-                  <Cell label="Held" value={<CountUp value={earnings?.held ?? 0} format={money2} />} tone="hold" />
-                  <Cell label="In payout" value={<CountUp value={earnings?.reserved ?? 0} format={money2} />} tone="brand" />
-                  <Cell label="Paid out" value={<CountUp value={earnings?.paid ?? 0} format={money2} />} tone="ok" />
+                  <Cell label="Held" value={<CountUp value={earnings?.held ?? 0} format={money2} />} tone="hold" zero={isZero(earnings?.held)} />
+                  <Cell label="In payout" value={<CountUp value={earnings?.reserved ?? 0} format={money2} />} tone="info" zero={isZero(earnings?.reserved)} />
+                  <Cell label="Paid out" value={<CountUp value={earnings?.paid ?? 0} format={money2} />} tone="ok" zero={isZero(earnings?.paid)} />
                 </Balance>
               </Section>
 
@@ -515,15 +523,16 @@ export default function CreatorPortal({ initial = null }) {
               <h1 className="serif crp__h1">My analytics</h1>
               <p className="crp__lede">Attributed activity from your links. Figures update as orders qualify.</p>
               <Band>
-                <Cell label="Link clicks" value={String(analytics?.clicks ?? 0)} tone="info"
+                <Cell label="Link clicks" value={<CountUp value={analytics?.clicks ?? 0} format={(n) => String(Math.round(n))} />} tone="info" spark={weekly.clicks} zero={isZero(analytics?.clicks)}
                   hint="Visits that arrived through one of your links." />
-                <Cell label="Attributed orders" value={String(analytics?.attributed_orders ?? 0)} tone="brand"
+                <Cell label="Attributed orders" value={<CountUp value={analytics?.attributed_orders ?? 0} format={(n) => String(Math.round(n))} />} tone="info" spark={weekly.orders} zero={isZero(analytics?.attributed_orders)}
                   hint="Orders matched to you inside your attribution window." />
-                <Cell label="Products sold" value={String(analytics?.products_sold ?? 0)} tone="hold"
+                <Cell label="Products sold" value={<CountUp value={analytics?.products_sold ?? 0} format={(n) => String(Math.round(n))} />} tone="info" spark={weekly.products} zero={isZero(analytics?.products_sold)}
                   hint="Individual units across your attributed orders." />
-                <Cell label="Attributed sales" value={money2(analytics?.attributed_sales ?? 0)} tone="ok"
+                <Cell label="Attributed sales" value={<CountUp value={analytics?.attributed_sales ?? 0} format={money2} />} tone="ok" spark={weekly.sales} zero={isZero(analytics?.attributed_sales)}
                   hint="Eligible sale value, before commission." />
               </Band>
+              <p className="ck-band__caption">{weekly.available ? 'Sparklines show the last 12 weeks.' : 'Sparklines fill in week by week as activity is recorded.'}</p>
 
               {Array.isArray(analytics?.top_products) && analytics.top_products.length > 0 ? (
                 <div className="crp__panel" style={{ marginTop: 'var(--sp-5)' }}>
@@ -567,7 +576,7 @@ export default function CreatorPortal({ initial = null }) {
           {tab === 'earnings' && (
             <>
               <WithdrawalsNotice open={!!standing?.withdrawals_open} />
-              <CreatorEarnings creator={creator} earnings={earnings} standing={standing} />
+              <CreatorEarnings creator={creator} earnings={earnings} standing={standing} weekly={weekly} monthly={monthly} />
               <TierStanding standing={standing} compact holdDays={Number(earnings?.settlement_hold_days ?? 7)} />
               <CreatorHowItWorks creator={creator} earnings={earnings} standing={standing} />
             </>

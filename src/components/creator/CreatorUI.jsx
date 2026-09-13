@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '../Icon.jsx';
+import { sparkGeometry } from '../../lib/creatorSeries.js';
 
 // ============================================================
 // Creator Program shared UI primitives.
@@ -68,9 +69,9 @@ export function Section({ title, sub, action, children, className = '' }) {
  */
 export function Empty({ icon = 'sparkle', tone = 'neutral', eyebrow, title, body, points, children }) {
   return (
-    <div className={`ck-empty ${toneClass(tone)}`}>
+    <div className={`ck-empty ${toneClass(tone)}`} data-state="waiting">
       <span className="ck-empty__ic" aria-hidden="true"><Icon name={icon} size={21} /></span>
-      {eyebrow && <span className="ck-empty__eyebrow">{eyebrow}</span>}
+      {eyebrow && <span className="ck-empty__eyebrow"><span className="ck-empty__dot" aria-hidden="true" />{eyebrow}</span>}
       <h3 className="ck-empty__title">{title}</h3>
       {body && <p className="ck-empty__body">{body}</p>}
       {Array.isArray(points) && points.length > 0 && (
@@ -94,11 +95,12 @@ export function Band({ cols, children }) {
 }
 
 /** One figure inside a Band. `tone` draws a short rule above the label. */
-export function Cell({ label, value, tone, hint, mono = false }) {
+export function Cell({ label, value, tone, hint, mono = false, spark = null, zero = false }) {
   return (
-    <div className="ck-band__cell" data-tone={TONES.includes(tone) && tone !== 'neutral' ? tone : undefined}>
+    <div className={`ck-band__cell${zero ? ' is-zero' : ''}`} data-tone={TONES.includes(tone) && tone !== 'neutral' ? tone : undefined}>
       <span className="ck-band__label">{label}</span>
       <div className={`ck-band__fig ${mono ? 'is-mono' : ''}`}>{value}</div>
+      {spark && <Sparkline points={spark} tone={tone} />}
       {hint && <p className="ck-band__hint">{hint}</p>}
     </div>
   );
@@ -109,16 +111,50 @@ export function Cell({ label, value, tone, hint, mono = false }) {
  * supporting states. The balance a creator can act on should not be one of
  * four equal tiles.
  */
-export function Balance({ label, value, hint, children }) {
+export function Balance({ label, value, hint, children, spark = null, sparkLabel = null, zero = false }) {
   return (
-    <div className="ck-balance">
+    <div className={`ck-balance${zero ? ' is-zero' : ''}`}>
       <div className="ck-balance__main">
-        <span className="ck-band__label">{label}</span>
-        <div className="ck-balance__fig">{value}</div>
-        {hint && <p className="ck-balance__hint">{hint}</p>}
+        <div className="ck-balance__figwrap">
+          <div>
+            <span className="ck-band__label">{label}</span>
+            <div className="ck-balance__fig">{value}</div>
+            {hint && <p className="ck-balance__hint">{hint}</p>}
+          </div>
+          {spark && (
+            <div className="ck-balance__spark">
+              <Sparkline points={spark} tone="ok" width={160} height={44} />
+              {sparkLabel && <span className="ck-balance__spark-l">{sparkLabel}</span>}
+            </div>
+          )}
+        </div>
       </div>
       <div className="ck-balance__row">{children}</div>
     </div>
+  );
+}
+
+/**
+ * A sparkline: one polyline and its filled area, hand-built SVG.
+ *
+ * A series of zeros still draws — as a level baseline with the end marker —
+ * so the chart is present on an account that has not earned yet and reads as
+ * "waiting for data" rather than a missing element. `tone` colours the stroke
+ * through the same five meanings the rest of the system uses.
+ */
+export function Sparkline({ points, tone = 'neutral', width = 96, height = 28, label = null }) {
+  const g = sparkGeometry(points, { width, height });
+  if (!g.line) return null;
+  return (
+    <svg
+      className={`ck-spark ${toneClass(tone)}${g.empty ? ' is-empty' : ''}${g.flat ? ' is-flat' : ''}`}
+      viewBox={`0 0 ${width} ${height}`} width={width} height={height}
+      role="img" aria-label={label || (g.empty ? 'No activity yet' : 'Recent trend')} focusable="false"
+    >
+      <path className="ck-spark__area" d={g.area} />
+      <path className="ck-spark__line" d={g.line} />
+      {g.last && <circle className="ck-spark__dot" cx={g.last[0]} cy={g.last[1]} r="2.2" />}
+    </svg>
   );
 }
 
@@ -199,5 +235,20 @@ export function CountUp({ value, format = (n) => String(n), duration = 900 }) {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [target, duration]);
-  return <span className="ck-count" data-count={target}>{format(shown)}</span>;
+  return <span className="ck-count" data-count={target}>{moneyParts(format(shown))}</span>;
+}
+
+// "₹12,640.50" → symbol / integer / decimals, so the currency mark and the
+// paise can sit lighter than the rupees. Anything that is not money passes
+// through untouched.
+export function moneyParts(str) {
+  const m = /^(₹)([\d,]+)(\.\d{2})?$/.exec(String(str));
+  if (!m) return str;
+  return (
+    <>
+      <span className="ck-cur">{m[1]}</span>
+      <span className="ck-int">{m[2]}</span>
+      {m[3] && <span className="ck-dec">{m[3]}</span>}
+    </>
+  );
 }
