@@ -34751,7 +34751,7 @@ const DEFAULT_LADDER = Object.freeze([{
   rate: 25
 }]);
 const DEFAULT_BEYOND_STEP = 25000;
-const num$2 = v => {
+const num$3 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
@@ -34763,8 +34763,8 @@ function normalizeLadder(rows) {
   return rows.map((r, i) => ({
     level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
     rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
-    threshold: num$2(r?.threshold),
-    rate: num$2(r?.rate)
+    threshold: num$3(r?.threshold),
+    rate: num$3(r?.rate)
   })).sort((a, b) => a.level - b.level);
 }
 
@@ -51453,7 +51453,7 @@ function Shell$1({
 // ============================================================
 
 const METRICS = Object.freeze(['clicks', 'orders', 'products', 'sales', 'commission']);
-const num$1 = v => {
+const num$2 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -51461,7 +51461,7 @@ const num$1 = v => {
 // Running total of a series — the shape of "lifetime so far".
 function cumulative(points) {
   let acc = 0;
-  return (Array.isArray(points) ? points : []).map(p => acc += num$1(p));
+  return (Array.isArray(points) ? points : []).map(p => acc += num$2(p));
 }
 
 // SVG geometry. `pad` keeps the stroke inside the box; a flat series sits on
@@ -51471,7 +51471,7 @@ function sparkGeometry(points, {
   height = 28,
   pad = 2
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$1);
+  const vals = (Array.isArray(points) ? points : []).map(num$2);
   const n = vals.length;
   if (n === 0) return {
     line: '',
@@ -51542,20 +51542,20 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
   };
   for (const m of METRICS) out[m] = Array.from({
     length: n
-  }, (_, i) => num$1(rows[i]?.[m]));
+  }, (_, i) => num$2(rows[i]?.[m]));
   out.labels = Array.from({
     length: n
   }, (_, i) => String(rows[i]?.at || ''));
   out.totals = Object.fromEntries(METRICS.map(m => [m, out[m].reduce((a, b) => a + b, 0)]));
-  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$1(raw.previous[m])])) : null;
+  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$2(raw.previous[m])])) : null;
   out.links = Array.isArray(raw?.links) ? raw.links.map(l => ({
     link_id: l?.link_id ?? null,
     label: String(l?.label || 'Link'),
     campaign: l?.campaign || null,
-    clicks: num$1(l?.clicks),
-    orders: num$1(l?.orders),
-    sales: num$1(l?.sales),
-    commission: num$1(l?.commission)
+    clicks: num$2(l?.clicks),
+    orders: num$2(l?.orders),
+    sales: num$2(l?.sales),
+    commission: num$2(l?.commission)
   })) : [];
   return out;
 }
@@ -51563,8 +51563,8 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
 // Trend versus the previous period. No previous period, or a previous of
 // zero, is "—" (not "+100%": there is nothing to be 100% of).
 function trend(current, previous) {
-  const c = num$1(current);
-  const p = previous == null ? null : num$1(previous);
+  const c = num$2(current);
+  const p = previous == null ? null : num$2(previous);
   if (p == null) return {
     pct: null,
     dir: 'none',
@@ -51614,15 +51614,15 @@ function areaChartGeometry({
   padT = 14,
   padB = 26
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num$1);
-  const b = (Array.isArray(orders) ? orders : []).map(num$1);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$2);
+  const b = (Array.isArray(orders) ? orders : []).map(num$2);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
   const rawMax = Math.max(0, ...a, ...b);
   // Never an axis shorter than 4: a week with two clicks still gets room, and
   // small axes use whole-number ticks so no label repeats.
-  const yMax = Math.max(4, niceMax(rawMax));
+  const yMax = Math.max(4, niceMax$1(rawMax));
   const step = yMax <= 4 ? 1 : yMax % 2 === 0 ? 2 : 1;
   const ticks = yMax <= 8 ? Array.from({
     length: yMax / step + 1
@@ -51630,10 +51630,10 @@ function areaChartGeometry({
   const x = i => n <= 1 ? padL + innerW / 2 : padL + i * innerW / (n - 1);
   const y = v => padT + innerH - (yMax === 0 ? 0 : v / yMax * innerH);
   const baseY = padT + innerH;
-  const path = vals => vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${r1(x(i))} ${r1(y(v))}`).join(' ');
+  const path = vals => vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${r1$1(x(i))} ${r1$1(y(v))}`).join(' ');
   const line = path(a);
   const orderLine = path(b);
-  const area = n > 0 ? `${line} L${r1(x(n - 1))} ${baseY} L${r1(x(0))} ${baseY} Z` : '';
+  const area = n > 0 ? `${line} L${r1$1(x(n - 1))} ${baseY} L${r1$1(x(0))} ${baseY} Z` : '';
   return {
     width,
     height,
@@ -51648,26 +51648,26 @@ function areaChartGeometry({
     empty: rawMax === 0,
     ticks: ticks.map(v => ({
       v,
-      y: r1(y(v))
+      y: r1$1(y(v))
     })),
     xs: Array.from({
       length: n
-    }, (_, i) => r1(x(i))),
-    clicksPts: a.map((v, i) => [r1(x(i)), r1(y(v))]),
-    ordersPts: b.map((v, i) => [r1(x(i)), r1(y(v))]),
+    }, (_, i) => r1$1(x(i))),
+    clicksPts: a.map((v, i) => [r1$1(x(i)), r1$1(y(v))]),
+    ordersPts: b.map((v, i) => [r1$1(x(i)), r1$1(y(v))]),
     line,
     area,
     orderLine,
     baseY
   };
 }
-function niceMax(v) {
+function niceMax$1(v) {
   if (v <= 0) return 4;
   const p = 10 ** Math.floor(Math.log10(v));
   for (const m of [1, 2, 2.5, 5, 10]) if (v <= m * p) return m * p;
   return 10 * p;
 }
-const r1 = v => Math.round(v * 10) / 10;
+const r1$1 = v => Math.round(v * 10) / 10;
 
 // ---- Donut geometry ---------------------------------------------------------------
 // Segments as stroke-dasharray offsets on one circle. All-zero → one muted
@@ -51680,7 +51680,7 @@ function donutGeometry(parts, {
   const c = 2 * Math.PI * r;
   const list = (Array.isArray(parts) ? parts : []).map(p => ({
     ...p,
-    value: Math.max(0, num$1(p?.value))
+    value: Math.max(0, num$2(p?.value))
   }));
   const total = list.reduce((s, p) => s + p.value, 0);
   let offset = 0;
@@ -51689,8 +51689,8 @@ function donutGeometry(parts, {
     const seg = {
       ...p,
       frac,
-      dash: `${r1(frac * c)} ${r1(c - frac * c)}`,
-      offset: r1(-offset)
+      dash: `${r1$1(frac * c)} ${r1$1(c - frac * c)}`,
+      offset: r1$1(-offset)
     };
     offset += frac * c;
     return seg;
@@ -51699,7 +51699,7 @@ function donutGeometry(parts, {
     size,
     stroke,
     r,
-    c: r1(c),
+    c: r1$1(c),
     cx: size / 2,
     cy: size / 2,
     total,
@@ -51722,12 +51722,12 @@ function barChartGeometry(points, {
   gap = 0.35,
   minMax = 4
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$1);
+  const vals = (Array.isArray(points) ? points : []).map(num$2);
   const n = vals.length;
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
   const rawMax = Math.max(0, ...vals);
-  const yMax = Math.max(minMax, niceMax(rawMax));
+  const yMax = Math.max(minMax, niceMax$1(rawMax));
   const baseY = padT + innerH;
   const slot = n > 0 ? innerW / n : innerW;
   const w = Math.max(2, slot * (1 - gap));
@@ -51735,15 +51735,15 @@ function barChartGeometry(points, {
     const hgt = yMax === 0 ? 0 : v / yMax * innerH;
     return {
       v,
-      x: r1(padL + i * slot + (slot - w) / 2),
-      y: r1(baseY - hgt),
-      w: r1(w),
-      h: r1(hgt)
+      x: r1$1(padL + i * slot + (slot - w) / 2),
+      y: r1$1(baseY - hgt),
+      w: r1$1(w),
+      h: r1$1(hgt)
     };
   });
   const ticks = [0, 0.5, 1].map(f => ({
     v: yMax * f,
-    y: r1(baseY - f * innerH),
+    y: r1$1(baseY - f * innerH),
     label: compactRupees(yMax * f)
   }));
   return {
@@ -51762,7 +51762,7 @@ function barChartGeometry(points, {
   };
 }
 function compactRupees(v) {
-  const n = Math.max(0, num$1(v));
+  const n = Math.max(0, num$2(v));
   if (n >= 10000000) return `₹${trim(n / 10000000)}Cr`;
   if (n >= 100000) return `₹${trim(n / 100000)}L`;
   if (n >= 1000) return `₹${trim(n / 1000)}k`;
@@ -51825,20 +51825,6 @@ function Empty({
       className: "ck-empty__foot",
       children: children
     })]
-  });
-}
-
-// ---- Data band -------------------------------------------------------
-// Replaces one-card-per-number. A single rectangular panel whose cells are
-// separated by 1px rules, so four figures read as one object on a shared
-// baseline instead of four stacked boxes.
-function Band({
-  cols,
-  children
-}) {
-  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-    className: `ck-band ${cols === 3 ? 'ck-band--3' : ''}`,
-    children: children
   });
 }
 
@@ -52531,7 +52517,7 @@ function buildActivity({
   }));
 }
 
-const isZero$1 = v => !(Number(v) > 0);
+const isZero$2 = v => !(Number(v) > 0);
 const countFmt = n => String(Math.round(n));
 
 // ---------------------------------------------------------------
@@ -52615,9 +52601,11 @@ function StatCard({
   trendOf = null,
   spark = null,
   tone = 'info',
-  money = false
+  money = false,
+  sub = null
 }) {
-  const zero = isZero$1(value);
+  // null is a figure that cannot be derived (a ratio over zero): a dash, never 0.
+  const zero = value == null || isZero$2(value);
   const t = trendOf || {
     dir: 'none',
     label: '—'
@@ -52642,7 +52630,7 @@ function StatCard({
         children: label
       }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: `cd-stat__fig${money ? ' is-money' : ''}`,
-        children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+        children: value == null ? '—' : /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
           value: value,
           format: money ? money2 : format
         })
@@ -52654,7 +52642,10 @@ function StatCard({
         }), t.dir === 'down' && /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "chevronDown",
           size: 12
-        }), t.label]
+        }), t.label, sub && (t.dir === 'up' || t.dir === 'down' || t.dir === 'new') ? /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          className: "cd-stat__vs",
+          children: sub
+        }) : null]
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "cd-stat__spark",
@@ -52769,7 +52760,7 @@ function PerformanceOverview({
         const v = series.totals?.[c.key] ?? 0;
         const t = trend(v, series.previous ? series.previous[c.key] : null);
         return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: `cd-metric${isZero$1(v) ? ' is-zero' : ''}`,
+          className: `cd-metric${isZero$2(v) ? ' is-zero' : ''}`,
           "data-tone": c.tone,
           children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             className: "cd-metric__label",
@@ -53041,7 +53032,7 @@ function EarningsBreakdown({
       }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
         className: "cd-earn__legend",
         children: parts.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-          className: isZero$1(p.value) ? 'is-zero' : '',
+          className: isZero$2(p.value) ? 'is-zero' : '',
           children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
               className: `cd-dot is-${p.tone}`,
@@ -53311,7 +53302,7 @@ function TopCampaigns({
               children: available ? 'No link activity yet.' : 'Campaign figures appear here once activity is recorded.'
             })
           }) : rows.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
-            className: isZero$1(r.clicks) && isZero$1(r.sales) ? 'is-zero' : '',
+            className: isZero$2(r.clicks) && isZero$2(r.sales) ? 'is-zero' : '',
             children: [/*#__PURE__*/jsxRuntimeExports.jsxs("td", {
               children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
                 children: r.label
@@ -54629,7 +54620,7 @@ function friendlyPayoutError(reason, {
   }[reason] || 'Couldn’t submit your payout request. Please try again.';
 }
 
-const isZero = v => !(Number(v) > 0);
+const isZero$1 = v => !(Number(v) > 0);
 const DISMISS_KEY = 'crp.withdrawals-notice.dismissed';
 
 // ---------------------------------------------------------------
@@ -54921,7 +54912,7 @@ function TierStats({
     children: cards.map(c => {
       const v = Number(standing?.[c.key] ?? 0);
       return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
-        className: `ct-stat${isZero(v) ? ' is-zero' : ''}`,
+        className: `ct-stat${isZero$1(v) ? ' is-zero' : ''}`,
         "data-tone": c.tone,
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "ct-stat__tile",
@@ -55336,7 +55327,7 @@ const fmtDate$1 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   year: 'numeric'
 }).format(new Date(iso)) : '—';
 // null is "not set", never 0 — Number(null) would print a 0% rate.
-const num = v => v == null || v === '' ? NaN : Number(v);
+const num$1 = v => v == null || v === '' ? NaN : Number(v);
 const initialsOf = name => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
 const STATUS = {
   active: {
@@ -55407,8 +55398,8 @@ function CreatorProfilePage({
   termsPublished = false
 }) {
   const st = STATUS[creator?.status] || STATUS.pending;
-  const rate = standing?.rate != null ? num(standing.rate) : num(creator?.default_commission_rate);
-  const windowDays = num(creator?.default_attribution_window_days);
+  const rate = standing?.rate != null ? num$1(standing.rate) : num$1(creator?.default_commission_rate);
+  const windowDays = num$1(creator?.default_attribution_window_days);
   const since = creator?.joined_at || creator?.created_at || null;
   const acct = standingFor(creator, kyc);
   const open = !!standing?.withdrawals_open;
@@ -55701,6 +55692,1241 @@ function CreatorProfilePage({
   });
 }
 
+// ============================================================
+// Creator analytics — the pure rules behind the analytics page.
+//
+// Everything here reshapes figures the portal already holds: the all-time
+// analytics RPC, the range series (my_creator_activity_series) and the
+// creator's tracking links. Nothing is estimated. Where a figure cannot be
+// derived (a ratio over zero, a period with no previous period) the value
+// is null and the page shows "—".
+// ============================================================
+const num = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const r1 = v => Math.round(v * 10) / 10;
+const r2 = v => Math.round(v * 100) / 100;
+
+// A ratio, or null when there is nothing to divide by.
+const ratio = (n, d) => num(d) > 0 ? num(n) / num(d) : null;
+
+// ---- Stat cards -------------------------------------------------------------
+// When the range series is available the cards follow the toggle (with the
+// trend against the previous period); until then they read all time, and
+// the trend is "—" rather than a guess.
+function analyticsStats(analytics, series) {
+  const range = !!series?.available;
+  const tot = range ? series.totals : {
+    clicks: num(analytics?.clicks),
+    orders: num(analytics?.attributed_orders),
+    products: num(analytics?.products_sold),
+    sales: num(analytics?.attributed_sales),
+    commission: 0
+  };
+  const prev = range && series.previous ? series.previous : null;
+  const conv = ratio(tot.orders, tot.clicks);
+  const aov = ratio(tot.sales, tot.orders);
+  const prevConv = prev ? ratio(prev.orders, prev.clicks) : null;
+  const prevAov = prev ? ratio(prev.sales, prev.orders) : null;
+  const per = (a, b) => range ? series[a].map((v, i) => {
+    const r = ratio(v, series[b][i]);
+    return r == null ? 0 : r;
+  }) : [];
+  return {
+    scope: range ? 'range' : 'all',
+    clicks: num(tot.clicks),
+    orders: num(tot.orders),
+    products: num(tot.products),
+    sales: num(tot.sales),
+    conversion: conv == null ? null : r1(conv * 100),
+    aov: aov == null ? null : r2(aov),
+    trends: {
+      clicks: trend(tot.clicks, prev?.clicks),
+      orders: trend(tot.orders, prev?.orders),
+      products: trend(tot.products, prev?.products),
+      sales: trend(tot.sales, prev?.sales),
+      conversion: conv == null || prevConv == null ? trend(0, null) : trend(r1(conv * 100), r1(prevConv * 100)),
+      aov: aov == null || prevAov == null ? trend(0, null) : trend(r2(aov), r2(prevAov))
+    },
+    sparks: {
+      clicks: range ? series.clicks : [],
+      orders: range ? series.orders : [],
+      products: range ? series.products : [],
+      sales: range ? series.sales : [],
+      conversion: per('orders', 'clicks').map(v => r1(v * 100)),
+      aov: per('sales', 'orders').map(r2)
+    }
+  };
+}
+
+// "vs previous 7 days" / "vs previous 13 weeks" — only when there is one.
+function previousLabel(series) {
+  if (!series?.available || !series.previous) return null;
+  const n = series.labels?.length || 0;
+  const unit = series.unit === 'week' ? 'week' : series.unit === 'month' ? 'month' : 'day';
+  return `vs previous ${n} ${unit}${n === 1 ? '' : 's'}`;
+}
+
+// The span the toggle resolved to, from the first and last bucket.
+function periodLabel(series) {
+  if (!series?.available || !series.labels?.length) return null;
+  const first = series.labels[0];
+  const last = series.labels[series.labels.length - 1];
+  const d = iso => new Date(`${iso}T00:00:00`);
+  const a = d(first);
+  let b = d(last);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return null;
+  if (series.unit === 'week') b = new Date(b.getTime() + 6 * 86400000);
+  if (series.unit === 'month') b = new Date(b.getFullYear(), b.getMonth() + 1, 0);
+  const fmt = (x, withYear) => x.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    ...(withYear ? {
+      year: 'numeric'
+    } : {})
+  });
+  if (series.unit === 'month') {
+    const m = x => x.toLocaleDateString('en-IN', {
+      month: 'short',
+      year: 'numeric'
+    });
+    return `${m(a)} – ${m(b)}`;
+  }
+  return `${fmt(a, a.getFullYear() !== b.getFullYear())} – ${fmt(b, true)}`;
+}
+
+// ---- Funnel: click → attributed order → eligible order (all time) -------------
+function funnelFor(analytics) {
+  const clicks = num(analytics?.clicks);
+  const orders = num(analytics?.attributed_orders);
+  const eligible = num(analytics?.eligible_orders);
+  const pct = v => clicks > 0 ? r1(v / clicks * 100) : null;
+  return {
+    empty: clicks === 0,
+    steps: [{
+      key: 'clicks',
+      label: 'Link clicks',
+      value: clicks,
+      pct: clicks > 0 ? 100 : null,
+      tone: 'ok'
+    }, {
+      key: 'orders',
+      label: 'Attributed orders',
+      value: orders,
+      pct: pct(orders),
+      tone: 'ok'
+    }, {
+      key: 'eligible',
+      label: 'Qualified orders',
+      value: eligible,
+      pct: pct(eligible),
+      tone: 'hold'
+    }]
+  };
+}
+
+// ---- Product share: top products by attributed sales, the rest as "Others" ----
+const SHARE_TONES = ['forest', 'green', 'gold', 'amber', 'neutral'];
+function productShare(topProducts, max = 4) {
+  const rows = (Array.isArray(topProducts) ? topProducts : []).map(p => ({
+    name: String(p?.name || 'Product'),
+    qty: num(p?.qty),
+    sales: num(p?.sales)
+  })).filter(p => p.sales > 0).sort((a, b) => b.sales - a.sales);
+  const total = rows.reduce((s, p) => s + p.sales, 0);
+  const head = rows.slice(0, max);
+  const rest = rows.slice(max);
+  const parts = head.map((p, i) => ({
+    key: `p${i}`,
+    label: p.name,
+    value: p.sales,
+    qty: p.qty,
+    tone: SHARE_TONES[i]
+  }));
+  if (rest.length > 0) parts.push({
+    key: 'others',
+    label: `Others (${rest.length})`,
+    value: rest.reduce((s, p) => s + p.sales, 0),
+    qty: rest.reduce((s, p) => s + p.qty, 0),
+    tone: 'neutral'
+  });
+  return {
+    total,
+    empty: total === 0,
+    parts: parts.map(p => ({
+      ...p,
+      pct: total > 0 ? Math.round(p.value / total * 100) : 0
+    }))
+  };
+}
+
+// ---- Top links: the per-link rows with a conversion column and a URL ----------
+function topLinks(seriesLinks, {
+  links = [],
+  creator = null,
+  campaigns = [],
+  buildUrl = null,
+  limit = 6
+} = {}) {
+  const byId = Object.fromEntries((Array.isArray(links) ? links : []).map(l => [l.id, l]));
+  const campaignById = Object.fromEntries((Array.isArray(campaigns) ? campaigns : []).map(c => [c.id, c]));
+  const rows = (Array.isArray(seriesLinks) ? seriesLinks : []).map(r => {
+    const link = r.link_id ? byId[r.link_id] : null;
+    const url = buildUrl ? buildUrl(link || {
+      destination_path: '/'
+    }, creator, link ? campaignById[link.campaign_id] : null) : '';
+    return {
+      link_id: r.link_id ?? null,
+      label: r.label,
+      campaign: r.campaign || null,
+      url: String(url || '').replace(/^https?:\/\//, ''),
+      clicks: num(r.clicks),
+      orders: num(r.orders),
+      sales: num(r.sales),
+      commission: num(r.commission),
+      conversion: ratio(r.orders, r.clicks) == null ? null : r1(ratio(r.orders, r.clicks) * 100)
+    };
+  });
+  rows.sort((a, b) => b.sales - a.sales || b.clicks - a.clicks);
+  return rows.slice(0, limit);
+}
+
+// ---- Insights: sentences the figures support, never more ------------------------
+// Each one names its source figure. None → the page says so instead.
+function insightsFor({
+  series,
+  stats,
+  links = [],
+  money = v => `₹${Math.round(v)}`
+} = {}) {
+  const out = [];
+  const unit = series?.unit === 'week' ? 'week' : series?.unit === 'month' ? 'month' : 'day';
+  if (series?.available) {
+    const iSales = argMax(series.sales);
+    const iClicks = argMax(series.clicks);
+    if (iSales >= 0 && series.sales[iSales] > 0) {
+      out.push({
+        key: 'best',
+        icon: 'award',
+        title: `Your best ${unit}`,
+        body: `${bucketLabel(series.labels[iSales], series.unit)} brought in ${money(series.sales[iSales])} of attributed sales.`
+      });
+    } else if (iClicks >= 0 && series.clicks[iClicks] > 0) {
+      out.push({
+        key: 'best',
+        icon: 'externalLink',
+        title: `Your busiest ${unit}`,
+        body: `${bucketLabel(series.labels[iClicks], series.unit)} had ${series.clicks[iClicks]} ${series.clicks[iClicks] === 1 ? 'visit' : 'visits'} through your links.`
+      });
+    }
+    const t = stats?.trends?.sales?.dir && stats.trends.sales.dir !== 'none' && stats.trends.sales.dir !== 'flat' ? ['sales', stats.trends.sales] : stats?.trends?.clicks?.dir && stats.trends.clicks.dir !== 'none' && stats.trends.clicks.dir !== 'flat' ? ['clicks', stats.trends.clicks] : null;
+    if (t) {
+      const [what, tr] = t;
+      const noun = what === 'sales' ? 'Attributed sales' : 'Link clicks';
+      out.push(tr.dir === 'new' ? {
+        key: 'trend',
+        icon: 'sparkle',
+        title: `First ${what} this period`,
+        body: `${noun} went from nothing in the previous period to ${what === 'sales' ? money(stats.sales) : stats.clicks} now.`
+      } : {
+        key: 'trend',
+        icon: tr.dir === 'up' ? 'chevronUp' : 'chevronDown',
+        title: `${noun} ${tr.dir === 'up' ? 'up' : 'down'} ${Math.abs(tr.pct)}%`,
+        body: `Compared with the previous period of the same length.`,
+        tone: tr.dir === 'up' ? 'ok' : 'hold'
+      });
+    }
+  }
+  const best = (Array.isArray(links) ? links : []).find(l => l.sales > 0 || l.clicks > 0);
+  if (best) {
+    out.push({
+      key: 'link',
+      icon: 'users',
+      title: `${best.label} performs best`,
+      body: best.sales > 0 ? `${best.clicks} ${best.clicks === 1 ? 'click' : 'clicks'}, ${best.orders} ${best.orders === 1 ? 'order' : 'orders'} and ${money(best.sales)} of sales, all time.` : `${best.clicks} ${best.clicks === 1 ? 'click' : 'clicks'} so far and no orders yet — the first sale through it will show here.`
+    });
+  }
+  return out.slice(0, 3);
+}
+function argMax(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) return -1;
+  let best = 0;
+  for (let i = 1; i < arr.length; i += 1) if (num(arr[i]) > num(arr[best])) best = i;
+  return best;
+}
+
+// ---- CSV export of what is on screen ------------------------------------------
+function analyticsCsv(series, links = []) {
+  const esc = v => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = [['period', ...METRICS].join(',')];
+  const n = series?.labels?.length || 0;
+  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num(series[m]?.[i]))].map(esc).join(','));
+  if (Array.isArray(links) && links.length > 0) {
+    lines.push('');
+    lines.push(['link', 'campaign', 'clicks', 'orders', 'sales', 'commission'].join(','));
+    for (const l of links) lines.push([l.label, l.campaign || '', num(l.clicks), num(l.orders), num(l.sales), num(l.commission)].map(esc).join(','));
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+// ---- Dual-axis geometry: counts left, money right -------------------------------
+function dualAxisGeometry({
+  clicks = [],
+  orders = [],
+  sales = []
+}, {
+  width = 720,
+  height = 240,
+  padL = 34,
+  padR = 44,
+  padT = 14,
+  padB = 30
+} = {}) {
+  const a = (Array.isArray(clicks) ? clicks : []).map(num);
+  const b = (Array.isArray(orders) ? orders : []).map(num);
+  const c = (Array.isArray(sales) ? sales : []).map(num);
+  const n = Math.max(a.length, b.length, c.length);
+  const innerW = width - padL - padR;
+  const innerH = height - padT - padB;
+  const leftMax = Math.max(4, niceMax(Math.max(0, ...a, ...b)));
+  const rightMax = Math.max(1000, niceMax(Math.max(0, ...c)));
+  const x = i => n <= 1 ? padL + innerW / 2 : padL + i * innerW / (n - 1);
+  const yl = v => padT + innerH - v / leftMax * innerH;
+  const yr = v => padT + innerH - v / rightMax * innerH;
+  const baseY = padT + innerH;
+  const path = (vals, y) => vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${r1(x(i))} ${r1(y(v))}`).join(' ');
+  const line = path(a, yl);
+  const orderLine = path(b, yl);
+  const salesLine = path(c, yr);
+  const area = n > 0 ? `${line} L${r1(x(n - 1))} ${baseY} L${r1(x(0))} ${baseY} Z` : '';
+  // Small count axes use whole-number ticks so no label repeats (as the
+  // dashboard's chart does); larger ones take quarters.
+  const step = leftMax <= 4 ? 1 : leftMax % 2 === 0 ? 2 : 1;
+  const leftTicks = leftMax <= 8 ? Array.from({
+    length: leftMax / step + 1
+  }, (_, i) => i * step) : [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(leftMax * f));
+  const rightTicks = [0, 0.25, 0.5, 0.75, 1].map(f => rightMax * f);
+  return {
+    width,
+    height,
+    padL,
+    padR,
+    padT,
+    padB,
+    innerW,
+    innerH,
+    n,
+    leftMax,
+    rightMax,
+    baseY,
+    empty: Math.max(0, ...a, ...b, ...c) === 0,
+    leftTicks: leftTicks.map(v => ({
+      v,
+      y: r1(yl(v))
+    })),
+    rightTicks: rightTicks.map(v => ({
+      v,
+      y: r1(yr(v))
+    })),
+    xs: Array.from({
+      length: n
+    }, (_, i) => r1(x(i))),
+    clicksPts: a.map((v, i) => [r1(x(i)), r1(yl(v))]),
+    salesPts: c.map((v, i) => [r1(x(i)), r1(yr(v))]),
+    line,
+    area,
+    orderLine,
+    salesLine
+  };
+}
+
+// ---- Grouped bars: two money series per bucket ---------------------------------
+function groupedBarGeometry(seriesA, seriesB, {
+  width = 360,
+  height = 170,
+  padL = 36,
+  padR = 6,
+  padT = 10,
+  padB = 24,
+  gap = 0.3,
+  minMax = 1000
+} = {}) {
+  const a = (Array.isArray(seriesA) ? seriesA : []).map(num);
+  const b = (Array.isArray(seriesB) ? seriesB : []).map(num);
+  const n = Math.max(a.length, b.length);
+  const innerW = width - padL - padR;
+  const innerH = height - padT - padB;
+  const rawMax = Math.max(0, ...a, ...b);
+  const yMax = Math.max(minMax, niceMax(rawMax));
+  const baseY = padT + innerH;
+  const slot = n > 0 ? innerW / n : innerW;
+  const w = Math.max(2, slot * (1 - gap) / 2);
+  const bar = (v, i, k) => {
+    const hgt = v / yMax * innerH;
+    return {
+      v,
+      x: r1(padL + i * slot + (slot - 2 * w) / 2 + k * w),
+      y: r1(baseY - hgt),
+      w: r1(w),
+      h: r1(hgt)
+    };
+  };
+  return {
+    width,
+    height,
+    padL,
+    padR,
+    padT,
+    padB,
+    n,
+    yMax,
+    baseY,
+    empty: rawMax === 0,
+    pairs: Array.from({
+      length: n
+    }, (_, i) => ({
+      a: bar(a[i] || 0, i, 0),
+      b: bar(b[i] || 0, i, 1),
+      cx: r1(padL + i * slot + slot / 2)
+    })),
+    ticks: [0, 0.5, 1].map(f => ({
+      v: yMax * f,
+      y: r1(baseY - f * innerH)
+    }))
+  };
+}
+function niceMax(v) {
+  if (v <= 0) return 4;
+  const p = 10 ** Math.floor(Math.log10(v));
+  for (const m of [1, 2, 2.5, 5, 10]) if (v <= m * p) return m * p;
+  return 10 * p;
+}
+
+const isZero = v => !(Number(v) > 0);
+const pctFmt = n => `${(Math.round(n * 10) / 10).toFixed(1)}%`;
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+// ---------------------------------------------------------------
+// Header: title, the range toggle, the resolved period, export
+// ---------------------------------------------------------------
+function AnalyticsHead({
+  series,
+  range,
+  onRange,
+  links
+}) {
+  const period = periodLabel(series);
+  const download = () => {
+    if (typeof window === 'undefined' || typeof Blob === 'undefined') return;
+    const blob = new Blob([analyticsCsv(series, links)], {
+      type: 'text/csv;charset=utf-8'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sora-analytics-${series.range}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+    className: "ca-head",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ca-head__txt",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "crp__h1 serif",
+        children: "My analytics"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "crp__lede",
+        children: "Attributed activity from your links. Figures update as orders qualify."
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ca-tools",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "cd-range",
+        role: "tablist",
+        "aria-label": "Range",
+        children: RANGES.map(r => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          role: "tab",
+          "aria-selected": range === r.id,
+          className: `cd-range__btn${range === r.id ? ' is-on' : ''}`,
+          onClick: () => onRange?.(r.id),
+          children: r.label
+        }, r.id))
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: `ca-period${period ? '' : ' is-muted'}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "clock",
+          size: 15
+        }), period || 'All-time figures · period breakdown appears as activity is recorded']
+      }), series.available && /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+        type: "button",
+        className: "ca-export",
+        onClick: download,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "download",
+          size: 15
+        }), " Export CSV"]
+      })]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Performance over time — counts on the left axis, rupees on the right
+// ---------------------------------------------------------------
+function DualAxisChart({
+  series,
+  width = 560,
+  height = 230,
+  loading = false
+}) {
+  const g = dualAxisGeometry({
+    clicks: series.clicks,
+    orders: series.orders,
+    sales: series.sales
+  }, {
+    width,
+    height
+  });
+  const [active, setActive] = reactExports.useState(g.n > 0 ? g.n - 1 : null);
+  const [hover, setHover] = reactExports.useState(false);
+  const idx = active != null && active < g.n ? active : g.n > 0 ? g.n - 1 : null;
+  const move = e => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width * width;
+    let best = 0;
+    let bestD = Infinity;
+    g.xs.forEach((x, i) => {
+      const d = Math.abs(x - px);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    });
+    setActive(best);
+    setHover(true);
+  };
+  const labelEvery = Math.max(1, Math.ceil(g.n / 7));
+  const tipX = idx != null ? g.xs[idx] : 0;
+  const tipRight = tipX > width * 0.6;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `cd-chart ca-chart${g.empty ? ' is-empty' : ''}${loading ? ' is-loading' : ''}${hover ? ' is-hover' : ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-legend",
+      "aria-hidden": "true",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-ok"
+        }), " Link clicks"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-hold"
+        }), " Orders"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-brand"
+        }), " Attributed sales (\u20B9)"]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-chart__frame",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+        className: "cd-chart__svg",
+        viewBox: `0 0 ${width} ${height}`,
+        role: "img",
+        "aria-label": g.empty ? 'No activity in this period yet' : 'Link clicks, orders and attributed sales over the selected period',
+        onPointerMove: move,
+        onPointerLeave: () => {
+          setActive(g.n > 0 ? g.n - 1 : null);
+          setHover(false);
+        },
+        children: [g.leftTicks.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("g", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("line", {
+            className: "cd-chart__grid",
+            x1: g.padL,
+            x2: width - g.padR,
+            y1: t.y,
+            y2: t.y
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("text", {
+            className: "cd-chart__ytick",
+            x: g.padL - 8,
+            y: t.y + 3.5,
+            textAnchor: "end",
+            children: t.v
+          })]
+        }, `l${t.v}`)), g.rightTicks.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("text", {
+          className: "cd-chart__ytick ca-chart__rtick",
+          x: width - g.padR + 8,
+          y: t.y + 3.5,
+          textAnchor: "start",
+          children: compactRupees(t.v)
+        }, `r${t.v}`)), g.area && /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+          className: "cd-chart__area",
+          d: g.area
+        }), g.line && /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+          className: "cd-chart__line",
+          d: g.line
+        }), g.orderLine && /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+          className: "cd-chart__orders",
+          d: g.orderLine
+        }), g.salesLine && /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+          className: "ca-chart__sales",
+          d: g.salesLine
+        }), idx != null && /*#__PURE__*/jsxRuntimeExports.jsx("line", {
+          className: "cd-chart__cursor",
+          x1: g.xs[idx],
+          x2: g.xs[idx],
+          y1: g.padT,
+          y2: g.baseY
+        }), g.clicksPts.map(([x, y], i) => /*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+          className: `cd-chart__pt${i === idx ? ' is-on' : ''}`,
+          cx: x,
+          cy: y,
+          r: i === idx ? 4.5 : 3
+        }, `c${i}`)), !g.empty && g.salesPts.map(([x, y], i) => /*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+          className: `ca-chart__spt${i === idx ? ' is-on' : ''}`,
+          cx: x,
+          cy: y,
+          r: i === idx ? 4 : 2.5
+        }, `s${i}`)), series.labels.map((l, i) => (i % labelEvery === 0 || i === g.n - 1) && /*#__PURE__*/jsxRuntimeExports.jsx("text", {
+          className: "cd-chart__xtick",
+          x: g.xs[i],
+          y: height - 8,
+          textAnchor: i === 0 ? 'start' : i === g.n - 1 ? 'end' : 'middle',
+          children: bucketLabel(l, series.unit)
+        }, i))]
+      }), idx != null && hover && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: `cd-tip${tipRight ? ' is-right' : ''}`,
+        style: {
+          left: `${Math.round(tipX / width * 1000) / 10}%`
+        },
+        role: "status",
+        "aria-live": "polite",
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "cd-tip__in",
+          style: {
+            transform: tipRight ? 'translateX(-100%)' : 'translateX(12px)'
+          },
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: bucketLabel(series.labels[idx], series.unit) || '—'
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              className: "cd-dot is-ok"
+            }), "Link clicks ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: series.clicks[idx] ?? 0
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              className: "cd-dot is-hold"
+            }), "Orders ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: series.orders[idx] ?? 0
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              className: "cd-dot is-neutral"
+            }), "Products ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: series.products[idx] ?? 0
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              className: "cd-dot is-brand"
+            }), "Sales ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: money2(series.sales[idx] ?? 0)
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              className: "cd-dot is-ok"
+            }), "Commission ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: money2(series.commission[idx] ?? 0)
+            })]
+          })]
+        })
+      })]
+    }), idx != null && !g.empty && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "ca-readout",
+      "aria-live": "polite",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+        children: bucketLabel(series.labels[idx], series.unit) || '—'
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-ok"
+        }), plural(series.clicks[idx] ?? 0, 'click')]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-hold"
+        }), plural(series.orders[idx] ?? 0, 'order')]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-neutral"
+        }), plural(series.products[idx] ?? 0, 'product')]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-brand"
+        }), money2(series.sales[idx] ?? 0), " sales"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-ok"
+        }), money2(series.commission[idx] ?? 0), " commission"]
+      })]
+    }), g.empty && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "cd-chart__empty",
+      children: "No activity in this period yet \u2014 the chart fills in as visits arrive through your links."
+    })]
+  });
+}
+function PerformancePanel({
+  series,
+  loading
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "cd-panel ca-perf",
+    "aria-labelledby": "ca-perf-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+      className: "cd-panel__head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cd-panel__h serif",
+          id: "ca-perf-h",
+          children: "Performance over time"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cd-panel__sub",
+          children: series.available ? `Clicks, orders and sales by ${series.unit}.` : 'Fills in as activity is recorded.'
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(DualAxisChart, {
+      series: series,
+      loading: loading
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Sales by product — share of attributed sales, all time
+// ---------------------------------------------------------------
+function ProductSharePanel({
+  analytics
+}) {
+  const share = productShare(analytics?.top_products);
+  const d = donutGeometry(share.parts, {
+    size: 150,
+    stroke: 16
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `cd-panel cd-earn ca-share${share.empty ? ' is-zero' : ''}`,
+    "aria-labelledby": "ca-share-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+      className: "cd-panel__head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cd-panel__h serif",
+          id: "ca-share-h",
+          children: "Sales by product"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cd-panel__sub",
+          children: "Share of attributed sales, all time."
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ca-share__body",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cd-donut",
+        role: "img",
+        "aria-label": share.empty ? 'No attributed sales yet' : `Attributed sales ${money2(share.total)} across ${share.parts.length} products`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+          viewBox: `0 0 ${d.size} ${d.size}`,
+          width: d.size,
+          height: d.size,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+            className: "cd-donut__track",
+            cx: d.cx,
+            cy: d.cy,
+            r: d.r,
+            strokeWidth: d.stroke
+          }), !d.empty && d.segments.filter(s => s.frac > 0).map(s => /*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+            className: `cd-donut__seg ca-seg--${s.tone}`,
+            cx: d.cx,
+            cy: d.cy,
+            r: d.r,
+            strokeWidth: d.stroke,
+            strokeDasharray: s.dash,
+            strokeDashoffset: s.offset,
+            transform: `rotate(-90 ${d.cx} ${d.cy})`
+          }, s.key))]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "cd-donut__centre",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "cd-donut__fig",
+            children: money2(share.total)
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "cd-donut__l",
+            children: "Total sales"
+          })]
+        })]
+      }), share.empty ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "ca-share__empty",
+        children: "Each product's share appears here once an order through your link qualifies."
+      }) : /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "ca-share__legend",
+        children: share.parts.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              className: `cd-dot ca-dot--${p.tone}`,
+              "aria-hidden": "true"
+            }), p.label]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+            children: [p.pct, "%"]
+          })]
+        }, p.key))
+      })]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Conversion funnel — click → attributed order → qualified order
+// ---------------------------------------------------------------
+function FunnelPanel({
+  analytics
+}) {
+  const f = funnelFor(analytics);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `cd-panel ca-funnel${f.empty ? ' is-zero' : ''}`,
+    "aria-labelledby": "ca-funnel-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+      className: "cd-panel__head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cd-panel__h serif",
+          id: "ca-funnel-h",
+          children: "Conversion funnel"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cd-panel__sub",
+          children: "From click to qualified sale, all time."
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+      className: "ca-funnel__list",
+      children: f.steps.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        className: `ca-funnel__step${isZero(s.value) ? ' is-zero' : ''}`,
+        "data-tone": s.tone,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ca-funnel__label",
+          children: s.label
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          className: "ca-funnel__val",
+          children: s.value
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ca-funnel__track",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "ca-funnel__fill",
+            style: {
+              transform: `scaleX(${s.pct == null ? 0 : Number((s.pct / 100).toFixed(3))})`
+            }
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ca-funnel__pct",
+          children: s.pct == null ? '—' : `${s.pct}%`
+        })]
+      }, s.key))
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "ca-funnel__foot",
+      children: f.empty ? 'The funnel fills in from your first visit onward.' : 'Qualified orders are attributed orders that have been paid.'
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Top performing links — per link, all time
+// ---------------------------------------------------------------
+function TopLinksPanel({
+  rows,
+  available
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "cd-panel ca-links",
+    "aria-labelledby": "ca-links-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "cd-panel__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cd-panel__h serif",
+          id: "ca-links-h",
+          children: "Top performing links"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cd-panel__sub",
+          children: "Your links and campaigns, all time."
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/creator/links",
+        className: "cd-panel__link",
+        children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 13
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "cd-table-wrap",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+        className: "cd-table ca-table",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Link / campaign"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Clicks"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Orders"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: /*#__PURE__*/jsxRuntimeExports.jsx("abbr", {
+                title: "Conversion rate",
+                children: "Conv."
+              })
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Sales"
+            })]
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+          children: rows.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("tr", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "cd-table__empty",
+              colSpan: 5,
+              children: available ? 'No link activity yet.' : 'Link figures appear here once activity is recorded.'
+            })
+          }) : rows.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            className: isZero(r.clicks) && isZero(r.sales) ? 'is-zero' : '',
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                className: "ca-table__link",
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  className: "ca-table__ic",
+                  "aria-hidden": "true",
+                  children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                    name: "externalLink",
+                    size: 14
+                  })
+                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+                    children: r.label
+                  }), r.url && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                    className: "cd-table__sub",
+                    children: r.url
+                  })]
+                })]
+              })
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "ta-r",
+              children: r.clicks
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "ta-r",
+              children: r.orders
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "ta-r",
+              children: r.conversion == null ? '—' : pctFmt(r.conversion)
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "ta-r is-earn",
+              children: money2(r.sales)
+            })]
+          }, r.link_id || 'default'))
+        })]
+      })
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Sales against commission by period — grouped bars on one money axis
+// ---------------------------------------------------------------
+function SalesCommissionPanel({
+  series
+}) {
+  const g = groupedBarGeometry(series.sales, series.commission, {
+    width: 360,
+    height: 170
+  });
+  const every = Math.max(1, Math.ceil(g.n / 6));
+  const unit = series.unit === 'week' ? 'week' : series.unit === 'month' ? 'month' : 'day';
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `cd-panel ca-bars${g.empty ? ' is-zero' : ''}`,
+    "aria-labelledby": "ca-bars-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+      className: "cd-panel__head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cd-panel__h serif",
+          id: "ca-bars-h",
+          children: "Sales and commission"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cd-panel__sub",
+          children: series.available ? `Attributed sales against your commission, by ${unit}.` : 'Fills in as sales arrive.'
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-legend",
+      "aria-hidden": "true",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-brand"
+        }), " Sales (\u20B9)"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-ok"
+        }), " Commission (\u20B9)"]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+      className: "ct-bars ca-bars__svg",
+      viewBox: `0 0 ${g.width} ${g.height}`,
+      role: "img",
+      "aria-label": g.empty ? 'No sales in this period yet' : `Attributed sales and commission by ${unit}`,
+      children: [g.ticks.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("line", {
+        className: "ct-bars__grid",
+        x1: g.padL,
+        x2: g.width - g.padR,
+        y1: t.y,
+        y2: t.y
+      }, t.v)), g.ticks.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("text", {
+        className: "ct-bars__ytick",
+        x: g.padL - 6,
+        y: t.y + 3.5,
+        textAnchor: "end",
+        children: compactRupees(t.v)
+      }, `t${t.v}`)), g.pairs.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("g", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("rect", {
+          className: `ca-bars__sales${p.a.h === 0 ? ' is-zero' : ''}`,
+          x: p.a.x,
+          y: p.a.y,
+          width: p.a.w,
+          height: Math.max(p.a.h, 2),
+          rx: "2"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("rect", {
+          className: `ca-bars__comm${p.b.h === 0 ? ' is-zero' : ''}`,
+          x: p.b.x,
+          y: p.b.y,
+          width: p.b.w,
+          height: Math.max(p.b.h, 2),
+          rx: "2"
+        }), (i % every === 0 || i === g.n - 1) && /*#__PURE__*/jsxRuntimeExports.jsx("text", {
+          className: "ct-bars__xtick",
+          x: p.cx,
+          y: g.height - 6,
+          textAnchor: "middle",
+          children: bucketLabel(series.labels[i], series.unit)
+        })]
+      }, i))]
+    }), g.empty && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "cd-chart__empty",
+      children: "No attributed sales in this period yet \u2014 bars fill in as orders qualify."
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Insights — sentences the figures support
+// ---------------------------------------------------------------
+function InsightsPanel({
+  items
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "cd-panel ca-insights",
+    "aria-labelledby": "ca-ins-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+      className: "cd-panel__head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+        className: "cd-panel__h serif",
+        id: "ca-ins-h",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "sparkle",
+          size: 18
+        }), " Insights"]
+      })
+    }), items.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "ca-insights__empty",
+      children: "Insights appear once activity is recorded \u2014 each one is drawn from your own figures, never estimated."
+    }) : /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "ca-insights__list",
+      children: items.map(it => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        className: "ca-insight",
+        "data-tone": it.tone || 'neutral',
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ca-insight__ic",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: it.icon,
+            size: 18
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: it.title
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            children: it.body
+          })]
+        })]
+      }, it.key))
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Keep going — the closing banner
+// ---------------------------------------------------------------
+function KeepGoingBanner() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "ca-banner",
+    "aria-label": "Keep going",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "ca-banner__leaf",
+      "aria-hidden": "true"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ca-banner__txt",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "serif",
+        children: "Keep going, you\u2019re making an impact."
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        children: "Every click helps more people discover a healthier, brighter tomorrow."
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: "/creator/campaigns",
+      className: "ca-banner__btn",
+      children: ["View campaigns ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "arrowRight",
+        size: 15
+      })]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// The page
+// ---------------------------------------------------------------
+function CreatorAnalyticsPage({
+  creator,
+  analytics,
+  series,
+  range,
+  onRange,
+  seriesLoading = false,
+  links = [],
+  campaigns = [],
+  buildUrl = null
+}) {
+  const stats = analyticsStats(analytics, series);
+  const vs = previousLabel(series);
+  const rows = topLinks(series.links, {
+    links,
+    creator,
+    campaigns,
+    buildUrl
+  });
+  const insights = insightsFor({
+    series,
+    stats,
+    links: rows,
+    money: money2
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `ca${stats.scope === 'all' ? ' is-all-time' : ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(AnalyticsHead, {
+      series: series,
+      range: range,
+      onRange: onRange,
+      links: series.links
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ca-stats",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        icon: "externalLink",
+        label: "Link clicks",
+        value: stats.clicks,
+        trendOf: stats.trends.clicks,
+        sub: vs,
+        spark: stats.sparks.clicks,
+        tone: "ok"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        icon: "bag",
+        label: "Attributed orders",
+        value: stats.orders,
+        trendOf: stats.trends.orders,
+        sub: vs,
+        spark: stats.sparks.orders,
+        tone: "info"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        icon: "package",
+        label: "Products sold",
+        value: stats.products,
+        trendOf: stats.trends.products,
+        sub: vs,
+        spark: stats.sparks.products,
+        tone: "info"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        glyph: "\u20B9",
+        label: "Attributed sales",
+        value: stats.sales,
+        money: true,
+        trendOf: stats.trends.sales,
+        sub: vs,
+        spark: stats.sparks.sales,
+        tone: "ok"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        glyph: "%",
+        label: "Conversion rate",
+        value: stats.conversion,
+        format: pctFmt,
+        trendOf: stats.trends.conversion,
+        sub: vs,
+        spark: stats.sparks.conversion,
+        tone: "info"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        glyph: "\u20B9",
+        label: "Avg order value",
+        value: stats.aov,
+        money: true,
+        trendOf: stats.trends.aov,
+        sub: vs,
+        spark: stats.sparks.aov,
+        tone: "info"
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ca-row ca-row--charts",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(PerformancePanel, {
+        series: series,
+        loading: seriesLoading
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductSharePanel, {
+        analytics: analytics
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(FunnelPanel, {
+        analytics: analytics
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ca-row ca-row--depth",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(TopLinksPanel, {
+        rows: rows,
+        available: series.available
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(SalesCommissionPanel, {
+        series: series
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(InsightsPanel, {
+        items: insights
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(KeepGoingBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "ca-note",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+        children: "These figures are attributed sales, not commission."
+      }), " Your commission is in", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/creator/earnings",
+        children: "My earnings"
+      }), ", and you can request a payout from", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/creator/payouts",
+        children: "Payouts"
+      }), " once it clears. We never share your shoppers\u2019 personal details with you."]
+    })]
+  });
+}
+
 const NAV = [{
   id: 'dashboard',
   label: 'Dashboard',
@@ -55970,7 +57196,6 @@ function CreatorPortal({
   const rank = rankSlot(standing?.rank);
   const weekly = rangeSeries(seriesByRange['90d'], '90d');
   const dash = rangeSeries(seriesByRange[range], range);
-  const isZero = v => !(Number(v) > 0);
   const withdrawalsOpen = !!standing?.withdrawals_open;
   const activity = buildActivity({
     creator,
@@ -56195,114 +57420,16 @@ function CreatorPortal({
             title: "No campaign links yet",
             body: "Campaign links are created alongside a campaign by your SORA LIFE programme manager. You don\u2019t need one to start \u2014 your default link above is always ready and always attributes."
           })]
-        }), tab === 'analytics' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-            className: "serif crp__h1",
-            children: "My analytics"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "crp__lede",
-            children: "Attributed activity from your links. Figures update as orders qualify."
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Band, {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-              label: "Link clicks",
-              value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-                value: analytics?.clicks ?? 0,
-                format: n => String(Math.round(n))
-              }),
-              tone: "info",
-              spark: weekly.clicks,
-              zero: isZero(analytics?.clicks),
-              hint: "Visits that arrived through one of your links."
-            }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-              label: "Attributed orders",
-              value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-                value: analytics?.attributed_orders ?? 0,
-                format: n => String(Math.round(n))
-              }),
-              tone: "info",
-              spark: weekly.orders,
-              zero: isZero(analytics?.attributed_orders),
-              hint: "Orders matched to you inside your attribution window."
-            }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-              label: "Products sold",
-              value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-                value: analytics?.products_sold ?? 0,
-                format: n => String(Math.round(n))
-              }),
-              tone: "info",
-              spark: weekly.products,
-              zero: isZero(analytics?.products_sold),
-              hint: "Individual units across your attributed orders."
-            }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-              label: "Attributed sales",
-              value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-                value: analytics?.attributed_sales ?? 0,
-                format: money2
-              }),
-              tone: "ok",
-              spark: weekly.sales,
-              zero: isZero(analytics?.attributed_sales),
-              hint: "Eligible sale value, before commission."
-            })]
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "ck-band__caption",
-            children: weekly.available ? 'Sparklines show the last 12 weeks.' : 'Sparklines fill in week by week as activity is recorded.'
-          }), Array.isArray(analytics?.top_products) && analytics.top_products.length > 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            className: "crp__panel",
-            style: {
-              marginTop: 'var(--sp-5)'
-            },
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-              style: {
-                marginTop: 0,
-                fontSize: 15
-              },
-              children: "Top products"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-              className: "crp__list",
-              children: analytics.top_products.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
-                className: "crp__item",
-                children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-                  className: "crp__item-main",
-                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-                    children: p.name || 'Product'
-                  }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-                    className: "crp__meta",
-                    children: [p.qty, " sold"]
-                  })]
-                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                  className: "crp__stat-v is-ok",
-                  children: money2(p.sales)
-                })]
-              }, i))
-            })]
-          }) : /*#__PURE__*/jsxRuntimeExports.jsx(Empty, {
-            tone: "info",
-            icon: "award",
-            eyebrow: "Analytics status",
-            title: "No attributed orders yet",
-            body: "These figures fill in on their own once someone shops through your link. Nothing here is estimated \u2014 every number is a real, matched order.",
-            points: ['A visit through your link is recorded immediately', 'It stays attributed to you for your full attribution window', 'Once that order is paid, it appears here and commission is created'],
-            children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-              to: "/creator/how-it-works",
-              className: "btn btn-light",
-              children: "How earning works"
-            })
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            className: "crp__notice",
-            style: {
-              marginTop: 'var(--sp-5)'
-            },
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-              children: "These figures are attributed sales, not commission."
-            }), " Your commission is in", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-              to: "/creator/earnings",
-              children: "My earnings"
-            }), ", and you can request a payout from", ' ', /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-              to: "/creator/payouts",
-              children: "Payouts"
-            }), " once it clears. We never share your shoppers\u2019 personal details with you."]
-          })]
+        }), tab === 'analytics' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorAnalyticsPage, {
+          creator: creator,
+          analytics: analytics,
+          series: dash,
+          range: range,
+          onRange: onRange,
+          seriesLoading: seriesLoading,
+          links: links,
+          campaigns: campaigns,
+          buildUrl: buildTrackingUrl
         }), tab === 'earnings' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(WithdrawalsNotice, {
             open: !!standing?.withdrawals_open
