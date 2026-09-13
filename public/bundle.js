@@ -34751,7 +34751,7 @@ const DEFAULT_LADDER = Object.freeze([{
   rate: 25
 }]);
 const DEFAULT_BEYOND_STEP = 25000;
-const num$1 = v => {
+const num$2 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
@@ -34763,8 +34763,8 @@ function normalizeLadder(rows) {
   return rows.map((r, i) => ({
     level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
     rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
-    threshold: num$1(r?.threshold),
-    rate: num$1(r?.rate)
+    threshold: num$2(r?.threshold),
+    rate: num$2(r?.rate)
   })).sort((a, b) => a.level - b.level);
 }
 
@@ -47034,7 +47034,7 @@ function TermsUpdatedLine({
   });
 }
 
-const fmtDate$3 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
+const fmtDate$4 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
   month: 'short',
   year: 'numeric'
@@ -47282,7 +47282,7 @@ function CreatorOnboarding() {
             style: {
               fontSize: 18
             },
-            children: fmtDate$3(creator.joined_at)
+            children: fmtDate$4(creator.joined_at)
           })]
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -51453,7 +51453,7 @@ function Shell$1({
 // ============================================================
 
 const METRICS = Object.freeze(['clicks', 'orders', 'products', 'sales', 'commission']);
-const num = v => {
+const num$1 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -51461,7 +51461,7 @@ const num = v => {
 // Running total of a series — the shape of "lifetime so far".
 function cumulative(points) {
   let acc = 0;
-  return (Array.isArray(points) ? points : []).map(p => acc += num(p));
+  return (Array.isArray(points) ? points : []).map(p => acc += num$1(p));
 }
 
 // SVG geometry. `pad` keeps the stroke inside the box; a flat series sits on
@@ -51471,7 +51471,7 @@ function sparkGeometry(points, {
   height = 28,
   pad = 2
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num);
+  const vals = (Array.isArray(points) ? points : []).map(num$1);
   const n = vals.length;
   if (n === 0) return {
     line: '',
@@ -51542,20 +51542,20 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
   };
   for (const m of METRICS) out[m] = Array.from({
     length: n
-  }, (_, i) => num(rows[i]?.[m]));
+  }, (_, i) => num$1(rows[i]?.[m]));
   out.labels = Array.from({
     length: n
   }, (_, i) => String(rows[i]?.at || ''));
   out.totals = Object.fromEntries(METRICS.map(m => [m, out[m].reduce((a, b) => a + b, 0)]));
-  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num(raw.previous[m])])) : null;
+  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$1(raw.previous[m])])) : null;
   out.links = Array.isArray(raw?.links) ? raw.links.map(l => ({
     link_id: l?.link_id ?? null,
     label: String(l?.label || 'Link'),
     campaign: l?.campaign || null,
-    clicks: num(l?.clicks),
-    orders: num(l?.orders),
-    sales: num(l?.sales),
-    commission: num(l?.commission)
+    clicks: num$1(l?.clicks),
+    orders: num$1(l?.orders),
+    sales: num$1(l?.sales),
+    commission: num$1(l?.commission)
   })) : [];
   return out;
 }
@@ -51563,8 +51563,8 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
 // Trend versus the previous period. No previous period, or a previous of
 // zero, is "—" (not "+100%": there is nothing to be 100% of).
 function trend(current, previous) {
-  const c = num(current);
-  const p = previous == null ? null : num(previous);
+  const c = num$1(current);
+  const p = previous == null ? null : num$1(previous);
   if (p == null) return {
     pct: null,
     dir: 'none',
@@ -51614,8 +51614,8 @@ function areaChartGeometry({
   padT = 14,
   padB = 26
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num);
-  const b = (Array.isArray(orders) ? orders : []).map(num);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$1);
+  const b = (Array.isArray(orders) ? orders : []).map(num$1);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -51680,7 +51680,7 @@ function donutGeometry(parts, {
   const c = 2 * Math.PI * r;
   const list = (Array.isArray(parts) ? parts : []).map(p => ({
     ...p,
-    value: Math.max(0, num(p?.value))
+    value: Math.max(0, num$1(p?.value))
   }));
   const total = list.reduce((s, p) => s + p.value, 0);
   let offset = 0;
@@ -51722,7 +51722,7 @@ function barChartGeometry(points, {
   gap = 0.35,
   minMax = 4
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num);
+  const vals = (Array.isArray(points) ? points : []).map(num$1);
   const n = vals.length;
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -51762,7 +51762,7 @@ function barChartGeometry(points, {
   };
 }
 function compactRupees(v) {
-  const n = Math.max(0, num(v));
+  const n = Math.max(0, num$1(v));
   if (n >= 10000000) return `₹${trim(n / 10000000)}Cr`;
   if (n >= 100000) return `₹${trim(n / 100000)}L`;
   if (n >= 1000) return `₹${trim(n / 1000)}k`;
@@ -51772,31 +51772,6 @@ const trim = x => (Math.round(x * 10) / 10).toString().replace(/\.0$/, '');
 
 const TONES = ['ok', 'hold', 'info', 'brand', 'bad', 'neutral'];
 const toneClass = tone => `ck-tone-${TONES.includes(tone) ? tone : 'neutral'}`;
-
-/** Section heading with an optional right-hand link. */
-function Section({
-  title,
-  sub,
-  action,
-  children,
-  className = ''
-}) {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: `ck-section ${className}`,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
-      className: "ck-section__head",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-          className: "ck-section__title",
-          children: title
-        }), sub && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "ck-section__sub",
-          children: sub
-        })]
-      }), action]
-    }), children]
-  });
-}
 
 /**
  * Empty state.
@@ -51987,21 +51962,6 @@ function Sparkline({
       cy: g.last[1],
       r: "2.2"
     })]
-  });
-}
-
-/** Status chip. */
-function Pill({
-  tone = 'neutral',
-  children,
-  dot = true
-}) {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-    className: `ck-pill ${toneClass(tone)}`,
-    children: [dot && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "ck-pill__dot",
-      "aria-hidden": "true"
-    }), children]
   });
 }
 
@@ -53511,7 +53471,7 @@ function CreatorDashboard({
   });
 }
 
-const fmtDate$2 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
+const fmtDate$3 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
   month: 'short',
   year: 'numeric'
@@ -53852,7 +53812,7 @@ function RewardHistory({
           }) : null]
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "ctier-history__when",
-          children: fmtDate$2(c.claimed_at)
+          children: fmtDate$3(c.claimed_at)
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: `crp__pill is-${c.status === 'fulfilled' ? 'ok' : c.status === 'cancelled' ? 'bad' : 'warn'}`,
           children: CLAIM_STATUS_LABEL[c.status]
@@ -53862,7 +53822,7 @@ function RewardHistory({
   });
 }
 
-const fmtDate$1 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
+const fmtDate$2 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
   month: 'short',
   year: 'numeric'
@@ -54167,7 +54127,7 @@ function KycDocumentRow({
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "crp__doc-state",
         children: doc.uploaded ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-          children: ["On file \xB7 ", doc.fileType.toUpperCase(), " \xB7 uploaded ", fmtDate$1(doc.uploadedAt)]
+          children: ["On file \xB7 ", doc.fileType.toUpperCase(), " \xB7 uploaded ", fmtDate$2(doc.uploadedAt)]
         }) : 'Not uploaded yet'
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -54471,13 +54431,13 @@ function PayoutSection({
       tone: "ok",
       icon: "card",
       title: "This month\u2019s payout is done",
-      body: `${money2(paidThisPeriod.paid_amount ?? paidThisPeriod.requested_amount)} was paid on ${fmtDate$1(paidThisPeriod.paid_at)}. Next window: ${fmtDate$1(nextWindowDate(payoutDay))}.`
+      body: `${money2(paidThisPeriod.paid_amount ?? paidThisPeriod.requested_amount)} was paid on ${fmtDate$2(paidThisPeriod.paid_at)}. Next window: ${fmtDate$2(nextWindowDate(payoutDay))}.`
     });
   } else if (!isWindowDay) {
     banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
       tone: "muted",
       icon: "clock",
-      title: `Next payout window: ${fmtDate$1(nextWindowDate(payoutDay))}`,
+      title: `Next payout window: ${fmtDate$2(nextWindowDate(payoutDay))}`,
       body: `Requests can be made on the ${ordinal(payoutDay)} of each month. Your cleared balance keeps growing until then.`
     });
   } else if (requestedThisPeriod) {
@@ -54603,7 +54563,7 @@ function PayoutHistory({
               children: p.payout_period
             }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
               className: "muted",
-              children: fmtDate$1(p.requested_at)
+              children: fmtDate$2(p.requested_at)
             }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
               className: "ta-r",
               children: money2(p.status === 'paid' ? p.paid_amount ?? p.requested_amount : p.requested_amount)
@@ -54614,7 +54574,7 @@ function PayoutHistory({
               })
             }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
               className: "muted",
-              children: p.paid_at ? fmtDate$1(p.paid_at) : '—'
+              children: p.paid_at ? fmtDate$2(p.paid_at) : '—'
             }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
               className: "muted is-mono",
               children: p.payment_reference || '—'
@@ -55370,6 +55330,377 @@ function CreatorTierPage({
   });
 }
 
+const fmtDate$1 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric'
+}).format(new Date(iso)) : '—';
+// null is "not set", never 0 — Number(null) would print a 0% rate.
+const num = v => v == null || v === '' ? NaN : Number(v);
+const initialsOf = name => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+const STATUS = {
+  active: {
+    tone: 'ok',
+    label: 'Active'
+  },
+  pending: {
+    tone: 'hold',
+    label: 'Pending'
+  },
+  paused: {
+    tone: 'hold',
+    label: 'Paused'
+  },
+  suspended: {
+    tone: 'bad',
+    label: 'Suspended'
+  },
+  archived: {
+    tone: 'neutral',
+    label: 'Archived'
+  }
+};
+
+// Account standing: what the status and the KYC state add up to, in words.
+function standingFor(creator, kyc) {
+  const status = creator?.status || 'pending';
+  const verified = kyc?.identity_status === 'verified';
+  if (status === 'active' && verified) return {
+    tone: 'ok',
+    title: 'Profile verified',
+    body: 'Your account is active and in good standing. Keep creating and sharing wellness!'
+  };
+  if (status === 'active') return {
+    tone: 'ok',
+    title: 'Account active',
+    body: 'Your links attribute visits. Verify your payout details under Payouts before your first withdrawal.'
+  };
+  if (status === 'pending') return {
+    tone: 'hold',
+    title: 'Awaiting activation',
+    body: 'An admin activates your account before your links attribute visits.'
+  };
+  if (status === 'paused') return {
+    tone: 'hold',
+    title: 'Account paused',
+    body: 'Your links are not attributing visits right now. Contact your programme manager.'
+  };
+  if (status === 'suspended') return {
+    tone: 'bad',
+    title: 'Account suspended',
+    body: 'Contact your programme manager about the standing of your account.'
+  };
+  return {
+    tone: 'neutral',
+    title: 'Account archived',
+    body: 'This account is no longer part of the programme.'
+  };
+}
+function CreatorProfilePage({
+  creator,
+  standing = null,
+  kyc = null,
+  terms = null,
+  termsAccepted = null,
+  acceptingTerms = false,
+  onAcceptTerms = null,
+  termsPublished = false
+}) {
+  const st = STATUS[creator?.status] || STATUS.pending;
+  const rate = standing?.rate != null ? num(standing.rate) : num(creator?.default_commission_rate);
+  const windowDays = num(creator?.default_attribution_window_days);
+  const since = creator?.joined_at || creator?.created_at || null;
+  const acct = standingFor(creator, kyc);
+  const open = !!standing?.withdrawals_open;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "cp",
+    "data-rank": rankSlot(standing?.rank),
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "cp-leaf cp-leaf--tr",
+      "aria-hidden": "true"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cp-head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cp-head__txt",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cp-eyebrow",
+          children: "Creator Program"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "crp__h1 serif",
+          children: "My profile"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "crp__lede",
+          children: "Your creator identity and the terms your commission runs on."
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "cp-script serif",
+        "aria-hidden": "true",
+        children: ["More Wellness", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "More Goodness", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cp-rule"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "cp-caps",
+        "aria-hidden": "true",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "People"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Wellness"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "A brighter"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Tomorrow"
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "cp-id",
+      "aria-label": "Your identity",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cp-id__leaf",
+        "aria-hidden": "true"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cp-id__avatar-wrap",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cp-id__avatar",
+          "aria-hidden": "true",
+          children: initialsOf(creator?.display_name)
+        }), standing?.rank && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cp-id__badge",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(RankMedallion, {
+            rank: standing.rank,
+            size: 44
+          })
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cp-id__main",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cp-id__name serif",
+          children: creator?.display_name
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cp-id__email",
+          children: creator?.email
+        }), creator?.phone && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cp-id__email",
+          children: creator.phone
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "cp-id__tags",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: `cp-pill is-${st.tone}`,
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              "aria-hidden": "true"
+            }), st.label]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "cp-id__sep",
+            "aria-hidden": "true"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+            className: "cp-id__code",
+            children: creator?.creator_code
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(CopyButton, {
+            value: creator?.creator_code || '',
+            className: "cp-copy",
+            label: "Copy"
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cp-id__aside",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "serif",
+          children: ["Creators today.", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "A healthier tomorrow."]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cp-rule",
+          "aria-hidden": "true"
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cp-sec",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "cp-sec__h serif",
+        children: "Programme terms"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "cp-sec__sub",
+        children: "Set by SORA LIFE \u2014 not editable here."
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cp-terms",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+        className: "cp-term",
+        "data-tone": "ok",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cp-term__tile",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "cp-term__glyph",
+            children: "%"
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "cp-term__label",
+            children: "Commission rate"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "cp-term__fig serif",
+            children: Number.isFinite(rate) ? `${rate}%` : '—'
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            className: "cp-term__line",
+            children: [Number.isFinite(rate) ? `You earn ${rate}% commission on eligible sales.` : 'Your commission rate is set by your tier.', standing?.rank ? ` ${standing.rank} · Level ${standing.level}.` : '']
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+        className: "cp-term",
+        "data-tone": "hold",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cp-term__tile",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "clock",
+            size: 22
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "cp-term__label",
+            children: "Attribution window"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "cp-term__fig serif",
+            children: Number.isFinite(windowDays) && windowDays > 0 ? `${windowDays} days` : '—'
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "cp-term__line",
+            children: Number.isFinite(windowDays) && windowDays > 0 ? `Sales are attributed to you for ${windowDays} days after someone clicks your link.` : 'Sales are attributed to you for your attribution window after a click.'
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+        className: "cp-term",
+        "data-tone": "ok",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cp-term__tile",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "leaf",
+            size: 22
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "cp-term__label",
+            children: "Creator since"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "cp-term__fig serif",
+            children: fmtDate$1(since)
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "cp-term__line",
+            children: since ? `You’ve been part of SORA LIFE since ${fmtDate$1(since)}.` : 'Your join date will appear once your account is activated.'
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "cp-standing",
+      "aria-label": "Account standing and payouts",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cp-standing__half",
+        "data-tone": acct.tone,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cp-term__tile",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "shield",
+            size: 22
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "cp-term__label",
+            children: "Account standing"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+            className: "cp-standing__h serif",
+            children: acct.title
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "cp-term__line",
+            children: acct.body
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cp-standing__half",
+        "data-tone": open ? 'ok' : 'hold',
+        "data-withdrawals": open ? 'open' : 'closed',
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cp-term__tile",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "card",
+            size: 22
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "cp-term__label",
+            children: "Payouts"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+            className: "cp-standing__h serif",
+            children: open ? 'Payouts open' : 'Payouts currently closed'
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "cp-term__line",
+            children: open ? 'Request a payout on the window day once your KYC is verified and your balance has cleared.' : 'Payouts will be available after tax registration completes. Your commission keeps accruing.'
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/creator/payouts",
+          className: "cp-btn is-ghost",
+          children: [open ? 'Go to payouts' : 'Learn more', " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "externalLink",
+            size: 15
+          })]
+        })]
+      })]
+    }), termsPublished && terms && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "cp-panel cp-tc",
+      "aria-labelledby": "cp-tc-h",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "cp-sec__h serif",
+        id: "cp-tc-h",
+        children: "Terms & conditions"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "cp-sec__sub",
+        children: "The terms your participation in the programme runs on."
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(TermsUpdatedLine, {
+        terms: terms
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTermsPanel, {
+        terms: terms
+      }), termsAccepted === true && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "ck-terms__accepted",
+        children: ["You accepted version ", terms.version, "."]
+      }), termsAccepted === false && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "ck-terms__accept",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: "These terms have been updated since you last accepted them. Please read and accept the current version."
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "btn btn-sm",
+          onClick: onAcceptTerms,
+          disabled: acceptingTerms,
+          children: acceptingTerms ? 'Recording…' : `I accept version ${terms.version}`
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("footer", {
+      className: "cp-help",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cp-help__ic",
+        "aria-hidden": "true",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chat",
+          size: 26
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cp-help__txt",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+          children: "Need help?"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Your commission rate and status are managed by SORA LIFE. Contact your programme manager if something here looks wrong."
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/contact",
+        className: "cp-btn is-ghost",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "mail",
+          size: 16
+        }), " Contact support"]
+      })]
+    })]
+  });
+}
+
 const NAV = [{
   id: 'dashboard',
   label: 'Dashboard',
@@ -55412,15 +55743,6 @@ const NAV = [{
 // ---- Copy helpers -------------------------------------------------------
 // Every sentence that quotes a live figure is a plain function; none of
 // these invent a value — each falls back to wording that makes no claim.
-const initialsOf = name => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
-const ratePct = creator => {
-  const r = Number(creator?.default_commission_rate);
-  return Number.isFinite(r) ? `${r}%` : '—';
-};
-const windowLabel = creator => {
-  const d = Number(creator?.default_attribution_window_days);
-  return Number.isFinite(d) && d > 0 ? `${d} days` : '—';
-};
 const fmtDate = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
   month: 'short',
@@ -56029,91 +56351,15 @@ function CreatorPortal({
           }),
           onRequestPayout: requestPayout,
           onChanged: reloadMoney
-        }), tab === 'profile' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-            className: "serif crp__h1",
-            children: "My profile"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "crp__lede",
-            children: "Your creator identity and the terms your commission runs on."
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-            className: "ck-idcard",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              className: "ck-idcard__avatar",
-              "aria-hidden": "true",
-              children: initialsOf(creator.display_name)
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-              className: "ck-idcard__main",
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-                className: "ck-idcard__name",
-                children: creator.display_name
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-                className: "ck-idcard__email",
-                children: creator.email
-              }), creator.phone && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-                className: "ck-idcard__email",
-                children: creator.phone
-              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-                className: "ck-idcard__tags",
-                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Pill, {
-                  tone: isLive ? 'ok' : 'hold',
-                  children: creator.status
-                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-                  className: "ck-idcard__code",
-                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("code", {
-                    children: creator.creator_code
-                  }), /*#__PURE__*/jsxRuntimeExports.jsx(CopyButton, {
-                    value: creator.creator_code,
-                    className: "btn btn-xs btn-light",
-                    label: "Copy"
-                  })]
-                })]
-              })]
-            })]
-          }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
-            title: "Programme terms",
-            sub: "Set by SORA LIFE \u2014 not editable here.",
-            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Band, {
-              cols: 3,
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "Commission rate",
-                value: ratePct(creator),
-                tone: "brand"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "Attribution window",
-                value: windowLabel(creator),
-                tone: "brand"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "Creator since",
-                value: fmtDate(creator.joined_at)
-              })]
-            })
-          }), termsArePublished(terms) && /*#__PURE__*/jsxRuntimeExports.jsxs(Section, {
-            title: "Terms & conditions",
-            sub: "The terms your participation in the programme runs on.",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx(TermsUpdatedLine, {
-              terms: terms
-            }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTermsPanel, {
-              terms: terms
-            }), termsAccepted === true && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-              className: "ck-terms__accepted",
-              children: ["You accepted version ", terms.version, "."]
-            }), termsAccepted === false && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-              className: "ck-terms__accept",
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-                children: "These terms have been updated since you last accepted them. Please read and accept the current version."
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-                type: "button",
-                className: "btn btn-sm",
-                onClick: onAcceptTerms,
-                disabled: acceptingTerms,
-                children: acceptingTerms ? 'Recording…' : `I accept version ${terms.version}`
-              })]
-            })]
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "crp__foot-note",
-            children: "Your commission rate and status are managed by SORA LIFE. Contact your programme manager if something here looks wrong."
-          })]
+        }), tab === 'profile' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorProfilePage, {
+          creator: creator,
+          standing: standing,
+          kyc: kyc,
+          terms: terms,
+          termsAccepted: termsAccepted,
+          acceptingTerms: acceptingTerms,
+          onAcceptTerms: onAcceptTerms,
+          termsPublished: termsArePublished(terms)
         })]
       })]
     })]
