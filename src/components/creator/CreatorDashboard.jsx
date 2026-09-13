@@ -57,7 +57,7 @@ export function MantraCard() {
 // ---------------------------------------------------------------
 // Stat card: icon tile, label, figure, trend, sparkline
 // ---------------------------------------------------------------
-export function StatCard({ icon, glyph, label, value, format = countFmt, trendOf = null, spark = null, tone = 'info', money = false, sub = null }) {
+export function StatCard({ icon, glyph, label, value, format = countFmt, trendOf = null, spark = null, tone = 'info', money = false, sub = null, hint = null }) {
   // null is a figure that cannot be derived (a ratio over zero): a dash, never 0.
   const zero = value == null || isZero(value);
   const t = trendOf || { dir: 'none', label: '—' };
@@ -67,12 +67,14 @@ export function StatCard({ icon, glyph, label, value, format = countFmt, trendOf
       <div className="cd-stat__body">
         <span className="cd-stat__label">{label}</span>
         <div className={`cd-stat__fig${money ? ' is-money' : ''}`}>{value == null ? '—' : <CountUp value={value} format={money ? money2 : format} />}</div>
-        <span className={`cd-stat__trend is-${t.dir}`}>
-          {t.dir === 'up' && <Icon name="chevronUp" size={12} />}
-          {t.dir === 'down' && <Icon name="chevronDown" size={12} />}
-          {t.label}
-          {sub && (t.dir === 'up' || t.dir === 'down' || t.dir === 'new') ? <em className="cd-stat__vs">{sub}</em> : null}
-        </span>
+        {trendOf == null && hint ? <span className="cd-stat__hint">{hint}</span> : (
+          <span className={`cd-stat__trend is-${t.dir}`}>
+            {t.dir === 'up' && <Icon name="chevronUp" size={12} />}
+            {t.dir === 'down' && <Icon name="chevronDown" size={12} />}
+            {t.label}
+            {sub && (t.dir === 'up' || t.dir === 'down' || t.dir === 'new') ? <em className="cd-stat__vs">{sub}</em> : null}
+          </span>
+        )}
       </div>
       <div className="cd-stat__spark">{spark && <Sparkline points={spark} tone={zero ? 'neutral' : tone} width={90} height={34} />}</div>
     </article>

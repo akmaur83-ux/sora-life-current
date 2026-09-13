@@ -207,17 +207,19 @@ const UI = {};
 for (const n of ['Section', 'Empty', 'Pill', 'Step', 'Band', 'Cell', 'Balance', 'IdBar', 'CountUp', 'Metric', 'Sparkline']) UI[n] = component('src/components/creator/CreatorUI.jsx', n, { Icon, sparkGeometry: seriesRules.sparkGeometry });
 const LeaderboardList = component('src/components/LeaderboardList.jsx', 'LeaderboardList', { ...tiers });
 const tierDeps = { Link, Icon, LeaderboardList, money2, CountUp: UI.CountUp, ...tiers, ...rewardRules };
-const T = {};
-for (const n of ['CreatorTier', 'TierStanding', 'WithdrawalsNotice', 'RankBadge']) T[n] = component('src/components/creator/CreatorTier.jsx', n, tierDeps);
+const WithdrawalsNotice = component('src/components/creator/CreatorTier.jsx', 'WithdrawalsNotice', tierDeps);
 const CreatorDashboard = component('src/components/creator/CreatorDashboard.jsx', 'CreatorDashboard', { Link, Icon, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...tiers, ...seriesRules, ...activityRules });
 const StatCard = component('src/components/creator/CreatorDashboard.jsx', 'StatCard', { Link, Icon, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...tiers, ...seriesRules, ...activityRules });
 const CreatorAnalyticsPage = component('src/components/creator/CreatorAnalyticsPage.jsx', 'CreatorAnalyticsPage', { Link, Icon, StatCard, money2, ...seriesRules, ...analyticsRules });
 const RewardChooser = component('src/components/creator/CreatorTier.jsx', 'RewardChooser', tierDeps);
 const RewardHistory = component('src/components/creator/CreatorTier.jsx', 'RewardHistory', tierDeps);
 const CreatorTierPage = component('src/components/creator/CreatorTierPage.jsx', 'CreatorTierPage', { Link, Icon, LeaderboardList, CountUp: UI.CountUp, RewardChooser, RewardHistory, money2, ...tiers, ...rewardRules, ...seriesRules });
-const CreatorEarnings = component('src/components/creator/CreatorEarnings.jsx', 'CreatorEarnings', { Icon, money2, Balance: UI.Balance, Cell: UI.Cell, CountUp: UI.CountUp, cumulative: seriesRules.cumulative });
+const WithdrawalsBar = component('src/components/creator/CreatorTierPage.jsx', 'WithdrawalsBar', { Link, Icon, LeaderboardList, CountUp: UI.CountUp, RewardChooser, RewardHistory, money2, ...tiers, ...rewardRules, ...seriesRules });
+const CreatorEarningsPage = component('src/components/creator/CreatorEarningsPage.jsx', 'CreatorEarningsPage', { Link, Icon, StatCard, WithdrawalsBar, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...seriesRules });
+const CreatorLinksPage = component('src/components/creator/CreatorLinksPage.jsx', 'CreatorLinksPage', { Link, Icon, CopyButton });
+const CreatorCampaignsPage = component('src/components/creator/CreatorCampaignsPage.jsx', 'CreatorCampaignsPage', { Link, Icon, CopyButton });
 const CreatorHowItWorks = component('src/components/creator/CreatorHowItWorks.jsx', 'CreatorHowItWorks', { Icon, money2 });
-const CreatorPayouts = component('src/components/creator/CreatorPayouts.jsx', 'CreatorPayouts', { Icon, money2, WithdrawalsNotice: T.WithdrawalsNotice, ...kycRules });
+const CreatorPayouts = component('src/components/creator/CreatorPayouts.jsx', 'CreatorPayouts', { Icon, money2, WithdrawalsNotice, ...kycRules });
 const CreatorTermsPanel = component('src/components/creator/CreatorTermsPanel.jsx', 'CreatorTermsPanel', {});
 const TermsUpdatedLine = component('src/components/creator/CreatorTermsPanel.jsx', 'TermsUpdatedLine', {});
 const RankMedallion = component('src/components/creator/CreatorTierPage.jsx', 'RankMedallion', { Link, Icon, LeaderboardList, CountUp: UI.CountUp, RewardChooser, RewardHistory, money2, ...tiers, ...rewardRules, ...seriesRules });
@@ -231,7 +233,7 @@ const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPort
   getMyCreatorAnalytics: noop, getMyCreatorEarnings: noop, getMyKyc: noop, submitKyc: noop, uploadKycDocument: noop, requestPayout: noop,
   getMyPayouts: async () => [], getMyCreatorStanding: noop, getMyCreatorRewards: noop, claimLevelReward: noop, getCreatorLeaderboard: async () => [], getMyActivitySeries: noop, getMyRecentClicks: async () => [],
   getCreatorTerms: async () => null, termsArePublished: () => false, getMyTermsAcceptance: async () => null, acceptCreatorTerms: noop,
-  money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, ...T, rankSlot: tiers.rankSlot, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, CreatorProfilePage, initialsOf, CreatorAnalyticsPage, getLevelRewardsCatalog: async () => [],
+  money2, CreatorEarningsPage, CreatorLinksPage, CreatorCampaignsPage, CreatorHowItWorks, ...UI, CreatorPayouts, rankSlot: tiers.rankSlot, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, CreatorProfilePage, initialsOf, CreatorAnalyticsPage, getLevelRewardsCatalog: async () => [],
 });
 
 const NOW = '2026-09-13T10:30:00+05:30';

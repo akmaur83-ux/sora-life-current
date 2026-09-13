@@ -302,8 +302,10 @@ await test('the analytics styles are scoped, reuse the dashboard card language, 
   assert.match(block, /\.ca-funnel__fill \{[^}]*transform-origin: left center; transition: transform/);
   const rm = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
   const rmBlock = rm.slice(0, rm.indexOf('\n}'));
-  assert.match(rmBlock, /\.ca-funnel__fill \{ transition: none; \}/);
-  assert.match(rmBlock, /\.ca-export:hover, \.crp\.crp--studio \.ca-banner__btn:hover \{ transform: none; \}/);
+  const stilledFills = rmBlock.match(/^[^\n]*\{ transition: none; \}/m)?.[0] || '';
+  assert.ok(stilledFills.includes('.crp.crp--studio .ca-funnel__fill'), 'the funnel fill is stilled under reduced motion');
+  const stilledHovers = rmBlock.match(/^[^\n]*\{ transform: none; \}/m)?.[0] || '';
+  for (const sel of ['.crp.crp--studio .ca-export:hover', '.crp.crp--studio .ca-banner__btn:hover']) assert.ok(stilledHovers.includes(sel), `${sel} stilled under reduced motion`);
   assert.doesNotMatch(block, /violet|purple|#6437FF|#4A24CC/i);
 });
 

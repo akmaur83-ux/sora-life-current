@@ -387,7 +387,10 @@ await test('the portal says it up front: notice on earnings and payouts, no requ
   assert.equal(renderToStaticMarkup(h(Notice, { open: true })), '');
 
   const portal = read('src/pages/CreatorPortal.jsx');
-  assert.match(portal, /\{tab === 'earnings' && \(\s*<>\s*<WithdrawalsNotice open=\{!!standing\?\.withdrawals_open\} \/>/, 'first thing on the earnings screen');
+  // The earnings tab is its own studio page; the bar is the first thing after its heading.
+  const earningsPage = read('src/components/creator/CreatorEarningsPage.jsx');
+  assert.match(earningsPage, /<\/header>\s*<WithdrawalsBar open=\{withdrawalsOpen\} initiallyDismissed=\{noticeDismissed\} \/>/, 'first thing on the earnings screen');
+  assert.match(earningsPage, /const withdrawalsOpen = !!standing\?\.withdrawals_open;/);
   assert.match(portal, /withdrawalsOpen=\{!!standing\?\.withdrawals_open\}/);
 
   const kycRules = await mod('src/lib/kycDocuments.js');

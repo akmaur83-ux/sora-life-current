@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { SparrowMark } from '../components/Logo.jsx';
-import CopyButton from '../components/CopyButton.jsx';
 import { useCustomerAuth } from '../lib/customerAuth.jsx';
 import {
   claimCreatorAccount, getMyCreator, getMyCampaigns, getMyLinks, buildTrackingUrl,
@@ -11,12 +10,12 @@ import {
   getMyCreatorStanding, getMyCreatorRewards, claimLevelReward, getCreatorLeaderboard, getMyActivitySeries, getMyRecentClicks, getLevelRewardsCatalog,
   getCreatorTerms, termsArePublished, getMyTermsAcceptance, acceptCreatorTerms,
 } from '../lib/creatorApi.js';
-import CreatorEarnings from '../components/creator/CreatorEarnings.jsx';
+import CreatorEarningsPage from '../components/creator/CreatorEarningsPage.jsx';
+import CreatorLinksPage from '../components/creator/CreatorLinksPage.jsx';
+import CreatorCampaignsPage from '../components/creator/CreatorCampaignsPage.jsx';
 import CreatorHowItWorks from '../components/creator/CreatorHowItWorks.jsx';
-import { Empty } from '../components/creator/CreatorUI.jsx';
 import CreatorDashboard from '../components/creator/CreatorDashboard.jsx';
 import CreatorPayouts from '../components/creator/CreatorPayouts.jsx';
-import { TierStanding, WithdrawalsNotice } from '../components/creator/CreatorTier.jsx';
 import CreatorTierPage from '../components/creator/CreatorTierPage.jsx';
 import CreatorProfilePage, { initialsOf } from '../components/creator/CreatorProfilePage.jsx';
 import CreatorAnalyticsPage from '../components/creator/CreatorAnalyticsPage.jsx';
@@ -53,15 +52,6 @@ const NAV = [
 // ---- Copy helpers -------------------------------------------------------
 // Every sentence that quotes a live figure is a plain function; none of
 // these invent a value — each falls back to wording that makes no claim.
-const fmtDate = (iso) => (iso
-  ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso))
-  : '—');
-
-const STATUS_TONE = {
-  active: 'ok', pending: 'warn', paused: 'warn', suspended: 'bad', archived: 'bad',
-  draft: 'warn', ended: 'bad',
-};
-
 export default function CreatorPortal({ initial = null }) {
   const { tab = 'dashboard' } = useParams();
   const navigate = useNavigate();
@@ -224,11 +214,7 @@ export default function CreatorPortal({ initial = null }) {
     );
   }
 
-  const campaignById = Object.fromEntries(campaigns.map((c) => [c.id, c]));
-  const activeLinks = links.filter((l) => l.status === 'active');
-  const activeCampaigns = campaigns.filter((c) => c.status === 'active');
   const isLive = creator.status === 'active';
-  const defaultLink = buildTrackingUrl({ destination_path: '/' }, creator, null);
 
   const rank = rankSlot(standing?.rank);
   const weekly = rangeSeries(seriesByRange['90d'], '90d');
@@ -308,83 +294,11 @@ export default function CreatorPortal({ initial = null }) {
           )}
 
           {tab === 'campaigns' && (
-            <>
-              <h1 className="serif crp__h1">My campaigns</h1>
-              {campaigns.length === 0 ? (
-                <Empty
-                  tone="brand"
-                  icon="sparkle"
-                  eyebrow="Campaign status"
-                  title="No campaigns running yet"
-                  body="Campaigns are seasonal pushes SORA LIFE builds for creators — a launch, a festive edit, a category focus. Your programme manager sets them up; you don’t create them yourself."
-                  points={[
-                    'A campaign link of your own, tracked separately from your default link',
-                    'Its own commission rate when the campaign carries one',
-                    'Performance you can see split out in Analytics',
-                  ]}
-                >
-                  <Link to="/creator/links" className="btn btn-light">Use my default link</Link>
-                </Empty>
-              ) : (
-                <div className="crp__list">
-                  {campaigns.map((c) => (
-                    <article key={c.id} className="crp__item">
-                      <div className="crp__item-main">
-                        <h3>{c.name}</h3>
-                        <p className="crp__meta">
-                          <code>{c.campaign_code}</code> · {fmtDate(c.start_at)} → {c.end_at ? fmtDate(c.end_at) : 'open'}
-                        </p>
-                        {c.description && <p className="crp__desc">{c.description}</p>}
-                      </div>
-                      <span className={`crp__pill is-${STATUS_TONE[c.status] || 'warn'}`}>{c.status}</span>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </>
+            <CreatorCampaignsPage creator={creator} campaigns={campaigns} links={links} buildUrl={buildTrackingUrl} />
           )}
 
           {tab === 'links' && (
-            <>
-              <h1 className="serif crp__h1">My tracking links</h1>
-              <p className="crp__lede">Share these anywhere. Every visit through them is recorded against your account.</p>
-
-              <div className="crp__list">
-                {/* Default creator link — always available from the code, even
-                    before any campaign link exists. */}
-                <LinkCard
-                  campaignLabel="Default creator link"
-                  destination="Homepage"
-                  status="active"
-                  statusText="always on"
-                  code={creator.creator_code}
-                  createdLabel={null}
-                  url={defaultLink}
-                  isDefault
-                />
-
-                {links.map((l) => (
-                  <LinkCard
-                    key={l.id}
-                    campaignLabel={campaignById[l.campaign_id]?.name || 'Creator link'}
-                    destination={destinationLabel(l)}
-                    status={l.status}
-                    code={l.public_code}
-                    createdLabel={fmtDate(l.created_at)}
-                    url={buildTrackingUrl(l, creator, campaignById[l.campaign_id])}
-                  />
-                ))}
-              </div>
-
-              {links.length === 0 && (
-                <Empty
-                  tone="brand"
-                  icon="externalLink"
-                  title="No campaign links yet"
-                  body="Campaign links are created alongside a campaign by your SORA LIFE programme manager. You don’t need one to start — your default link above is always ready and always attributes."
-                />
-              )}
-            </>
+            <CreatorLinksPage creator={creator} links={links} campaigns={campaigns} buildUrl={buildTrackingUrl} />
           )}
 
           {tab === 'analytics' && (
@@ -402,12 +316,13 @@ export default function CreatorPortal({ initial = null }) {
           )}
 
           {tab === 'earnings' && (
-            <>
-              <WithdrawalsNotice open={!!standing?.withdrawals_open} />
-              <CreatorEarnings creator={creator} earnings={earnings} standing={standing} weekly={weekly} />
-              <TierStanding standing={standing} compact holdDays={Number(earnings?.settlement_hold_days ?? 7)} />
-              <CreatorHowItWorks creator={creator} earnings={earnings} standing={standing} />
-            </>
+            <CreatorEarningsPage
+              creator={creator}
+              earnings={earnings}
+              standing={standing}
+              weekly={weekly}
+              noticeDismissed={!!initial?.noticeDismissed}
+            />
           )}
 
           {tab === 'tier' && (
@@ -482,63 +397,6 @@ function PortalSearch({ campaigns = [], links = [], onGo }) {
         </ul>
       )}
     </form>
-  );
-}
-
-// A human label for where a tracking link points.
-function destinationLabel(l) {
-  const type = l?.destination_type || 'homepage';
-  if (type === 'homepage') return 'Homepage';
-  const path = l?.destination_path || '/';
-  const noun = type === 'product' ? 'Product' : type === 'category' ? 'Category' : 'Page';
-  return `${noun} · ${path}`;
-}
-
-// One tracking-link card with a clear information hierarchy:
-// campaign → destination → status/created → tracking code → url → copy.
-function LinkCard({ campaignLabel, destination, status, statusText, code, createdLabel, url, isDefault }) {
-  const tone = status === 'active' ? 'ok' : 'bad';
-  return (
-    <article className={`crp__lc ${isDefault ? 'crp__lc--default' : ''} ${status !== 'active' ? 'is-off' : ''}`}>
-      <div className="crp__lc-head">
-        <h3 className="crp__lc-campaign">{campaignLabel}</h3>
-        <span className={`crp__pill is-${tone}`}>{statusText || status}</span>
-      </div>
-      <dl className="crp__lc-meta">
-        <div><dt>Destination</dt><dd>{destination}</dd></div>
-        {createdLabel && <div><dt>Created</dt><dd>{createdLabel}</dd></div>}
-        <div><dt>Tracking code</dt><dd><code>{code}</code></dd></div>
-      </dl>
-      <code className="crp__url">{url}</code>
-      <div className="crp__lc-actions">
-        <CopyButton value={url} className="btn btn-sm" label="Copy link" />
-        <ShareButton url={url} title="Shop SORA LIFE" small />
-      </div>
-    </article>
-  );
-}
-
-// Web Share API where available (mobile), otherwise renders nothing (Copy stays).
-function ShareButton({ url, title, small }) {
-  const [shared, setShared] = useState(false);
-  const canShare = typeof navigator !== 'undefined' && !!navigator.share;
-  if (!canShare) return null;
-  return (
-    <button type="button" className={`btn ${small ? 'btn-sm' : ''} btn-light`} onClick={async () => {
-      try { await navigator.share({ title, url }); setShared(true); } catch { /* cancelled */ }
-    }}>
-      <Icon name="externalLink" size={small ? 15 : 16} /> {shared ? 'Shared' : 'Share'}
-    </button>
-  );
-}
-
-function Stat({ label, value, mono, tone, copy }) {
-  return (
-    <div className="crp__stat">
-      <span className="crp__stat-l">{label}</span>
-      <span className={`crp__stat-v ${mono ? 'is-mono' : ''} ${tone ? `is-${tone}` : ''}`}>{value}</span>
-      {copy && <CopyButton value={value} className="btn btn-xs btn-light" label="Copy" />}
-    </div>
   );
 }
 

@@ -62,17 +62,17 @@ const UI = {};
 for (const n of ['Section', 'Empty', 'Pill', 'Step', 'Band', 'Cell', 'Balance', 'IdBar', 'CountUp', 'Metric', 'Sparkline']) UI[n] = component('src/components/creator/CreatorUI.jsx', n, { Icon, sparkGeometry: seriesRules.sparkGeometry });
 const LeaderboardList = component('src/components/LeaderboardList.jsx', 'LeaderboardList', { ...tiers });
 const tierDeps = { Link, Icon, LeaderboardList, money2, CountUp: UI.CountUp, ...tiers, ...rewardRules };
-const CreatorTier = component('src/components/creator/CreatorTier.jsx', 'CreatorTier', tierDeps);
-const TierStanding = component('src/components/creator/CreatorTier.jsx', 'TierStanding', tierDeps);
 const WithdrawalsNotice = component('src/components/creator/CreatorTier.jsx', 'WithdrawalsNotice', tierDeps);
-const RankBadge = component('src/components/creator/CreatorTier.jsx', 'RankBadge', tierDeps);
 const CreatorDashboard = component('src/components/creator/CreatorDashboard.jsx', 'CreatorDashboard', { Link, Icon, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...tiers, ...seriesRules, ...activityRules });
 const StatCard = component('src/components/creator/CreatorDashboard.jsx', 'StatCard', { Link, Icon, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...tiers, ...seriesRules, ...activityRules });
 const CreatorAnalyticsPage = component('src/components/creator/CreatorAnalyticsPage.jsx', 'CreatorAnalyticsPage', { Link, Icon, StatCard, money2, ...seriesRules, ...analyticsRules });
 const RewardChooser = component('src/components/creator/CreatorTier.jsx', 'RewardChooser', tierDeps);
 const RewardHistory = component('src/components/creator/CreatorTier.jsx', 'RewardHistory', tierDeps);
 const CreatorTierPage = component('src/components/creator/CreatorTierPage.jsx', 'CreatorTierPage', { Link, Icon, LeaderboardList, CountUp: UI.CountUp, RewardChooser, RewardHistory, money2, ...tiers, ...rewardRules, ...seriesRules });
-const CreatorEarnings = component('src/components/creator/CreatorEarnings.jsx', 'CreatorEarnings', { Icon, money2, Balance: UI.Balance, Cell: UI.Cell, CountUp: UI.CountUp, cumulative: seriesRules.cumulative });
+const WithdrawalsBar = component('src/components/creator/CreatorTierPage.jsx', 'WithdrawalsBar', { Link, Icon, LeaderboardList, CountUp: UI.CountUp, RewardChooser, RewardHistory, money2, ...tiers, ...rewardRules, ...seriesRules });
+const CreatorEarningsPage = component('src/components/creator/CreatorEarningsPage.jsx', 'CreatorEarningsPage', { Link, Icon, StatCard, WithdrawalsBar, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...seriesRules });
+const CreatorLinksPage = component('src/components/creator/CreatorLinksPage.jsx', 'CreatorLinksPage', { Link, Icon, CopyButton });
+const CreatorCampaignsPage = component('src/components/creator/CreatorCampaignsPage.jsx', 'CreatorCampaignsPage', { Link, Icon, CopyButton });
 const CreatorHowItWorks = component('src/components/creator/CreatorHowItWorks.jsx', 'CreatorHowItWorks', { Icon, money2 });
 const CreatorPayouts = component('src/components/creator/CreatorPayouts.jsx', 'CreatorPayouts', { Icon, money2, WithdrawalsNotice, ...kycRules });
 const CreatorTermsPanel = component('src/components/creator/CreatorTermsPanel.jsx', 'CreatorTermsPanel', {});
@@ -89,7 +89,7 @@ const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPort
   getMyCreatorAnalytics: noop, getMyCreatorEarnings: noop, getMyKyc: noop, submitKyc: noop, uploadKycDocument: noop, requestPayout: noop,
   getMyPayouts: async () => [], getMyCreatorStanding: noop, getMyCreatorRewards: noop, claimLevelReward: noop, getCreatorLeaderboard: async () => [], getMyActivitySeries: noop, getMyRecentClicks: async () => [],
   getCreatorTerms: async () => null, termsArePublished: () => false, getMyTermsAcceptance: async () => null, acceptCreatorTerms: noop,
-  money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, CreatorTier, TierStanding, WithdrawalsNotice, RankBadge,
+  money2, CreatorEarningsPage, CreatorLinksPage, CreatorCampaignsPage, CreatorHowItWorks, ...UI, CreatorPayouts,
   rankSlot: tiers.rankSlot, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, CreatorProfilePage, initialsOf, CreatorAnalyticsPage, getLevelRewardsCatalog: async () => [],
 });
 
@@ -156,7 +156,10 @@ const emptyStanding = { ...standing, level: 1, rank: 'Rise', rate: 10, threshold
 const NOW = '2026-09-13T10:30:00+05:30';
 const recentClicks = ['2026-09-13T08:20:00+05:30', '2026-09-13T07:05:00+05:30', '2026-09-12T19:40:00+05:30'];
 const initial = {
-  creator, campaigns: [{ id: 'cp1', name: 'Diwali edit', campaign_code: 'DIWALI', status: 'active', commission_rate_override: null, start_at: '2026-10-01', end_at: '2026-11-15' }],
+  creator, campaigns: [
+    { id: 'cp1', name: 'Diwali edit', campaign_code: 'DIWALI', status: 'active', commission_rate_override: 18, attribution_window_days: 45, start_at: '2026-10-01', end_at: '2026-11-15', description: 'A festive gifting edit — hampers, teas and the sleep range, with a raised rate for the season.' },
+    { id: 'cp2', name: 'Monsoon immunity', campaign_code: 'MONSOON', status: 'ended', commission_rate_override: null, start_at: '2026-06-15', end_at: '2026-08-31' },
+  ],
   links: [{ id: 'l1', public_code: 'AARAV', label: 'Default', destination_type: 'home', destination_path: '/', status: 'active', created_at: '2026-03-02T00:00:00Z' },
     { id: 'l2', public_code: 'DIW7K', label: 'Diwali edit', campaign_id: 'cp1', destination_type: 'collection', destination_path: '/collections/diwali', status: 'active', created_at: '2026-09-28T00:00:00Z' }],
   analytics, earnings, kyc: { identity_status: 'verified', verified_at: '2026-04-02T00:00:00Z', submitted_at: '2026-03-30T00:00:00Z' }, payouts: [], standing, rewards, leaderboard, terms: null,
@@ -198,6 +201,10 @@ const pages = {
   'portal-dashboard': page('SSR — portal dashboard', renderToStaticMarkup(h(portalFor('dashboard'), { initial })), deferredCss),
   'portal-dashboard-reference': page('SSR — portal dashboard (the mockup account)', renderToStaticMarkup(h(portalFor('dashboard'), { initial: refInitial })), deferredCss),
   'portal-earnings': page('SSR — portal earnings', renderToStaticMarkup(h(portalFor('earnings'), { initial })), deferredCss),
+  'portal-links': page('SSR — portal links', renderToStaticMarkup(h(portalFor('links'), { initial })), deferredCss),
+  'portal-links-reference': page('SSR — portal links (the mockup account, no campaign links)', renderToStaticMarkup(h(portalFor('links'), { initial: refInitial })), deferredCss),
+  'portal-campaigns': page('SSR — portal campaigns', renderToStaticMarkup(h(portalFor('campaigns'), { initial })), deferredCss),
+  'portal-campaigns-reference': page('SSR — portal campaigns (the mockup account, none yet)', renderToStaticMarkup(h(portalFor('campaigns'), { initial: refInitial })), deferredCss),
   'portal-analytics': page('SSR — portal analytics', renderToStaticMarkup(h(portalFor('analytics'), { initial })), deferredCss),
   'portal-analytics-reference': page('SSR — portal analytics (the mockup account)', renderToStaticMarkup(h(portalFor('analytics'), { initial: refInitial })), deferredCss),
   'portal-analytics-empty': page('SSR — portal analytics, empty', renderToStaticMarkup(h(portalFor('analytics'), { initial: emptyInitial })), deferredCss),

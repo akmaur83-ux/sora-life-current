@@ -19,7 +19,9 @@ const js = (src) => src.replace(/\r\n/g, '\n').replace(/\/\*[\s\S]*?\*\//g, '')
 const portal = read('../src/pages/CreatorPortal.jsx');
 const onboarding = read('../src/pages/account/CreatorOnboarding.jsx');
 const ui = read('../src/components/creator/CreatorUI.jsx');
-const earnings = read('../src/components/creator/CreatorEarnings.jsx');
+const earnings = read('../src/components/creator/CreatorEarningsPage.jsx');
+const linksPage = read('../src/components/creator/CreatorLinksPage.jsx');
+const campaignsPage = read('../src/components/creator/CreatorCampaignsPage.jsx');
 const payouts = read('../src/components/creator/CreatorPayouts.jsx');
 const hiw = read('../src/components/creator/CreatorHowItWorks.jsx');
 const dashboard = read('../src/components/creator/CreatorDashboard.jsx');
@@ -42,7 +44,7 @@ async function test(name, fn) {
   catch (e) { console.log(`  FAIL  ${name}\n        ${e.message}`); failed++; }
 }
 
-const ALL_CREATOR_SOURCES = { portal, onboarding, ui, earnings, payouts, hiw, dashboard, profile };
+const ALL_CREATOR_SOURCES = { portal, onboarding, ui, earnings, payouts, hiw, dashboard, profile, linksPage, campaignsPage };
 
 // ============================================================
 console.log('\n— Stale copy is gone —');
@@ -144,8 +146,8 @@ await test('the old one-off Bucket component was removed, not left dead', () => 
 
 await test('the portal and the dashboard use the shared primitives', () => {
   const c = js(portal);
-  assert.match(c, /import \{ Empty \} from/);
-  for (const el of ['<Empty', '<CreatorDashboard', '<CreatorTierPage', '<CreatorProfilePage', '<CreatorAnalyticsPage']) {
+  assert.doesNotMatch(c, /from '\.\.\/components\/creator\/CreatorUI\.jsx'/, 'every tab is its own studio page now');
+  for (const el of ['<CreatorDashboard', '<CreatorTierPage', '<CreatorProfilePage', '<CreatorAnalyticsPage', '<CreatorEarningsPage', '<CreatorLinksPage', '<CreatorCampaignsPage']) {
     assert.ok(c.includes(el), `portal should use ${el}`);
   }
   const d = js(dashboard);
@@ -214,7 +216,7 @@ await test('the sidebar collapses to a scrolling icon+label strip on mobile, and
 
 await test('campaign and analytics empty states carry factual editorial labels and ruled rows', () => {
   assert.match(ui, /ck-empty__eyebrow/);
-  assert.match(portal, /eyebrow="Campaign status"/);
+  assert.match(campaignsPage, /<p className="cp-eyebrow">Campaign status<\/p>/);
   // Analytics moved to its own studio page; every panel designs its own zero.
   const analyticsPage = read('../src/components/creator/CreatorAnalyticsPage.jsx');
   for (const empty of ['cd-chart__empty', 'ca-share__empty', 'ca-funnel__foot', 'cd-table__empty', 'ca-insights__empty']) {
@@ -225,10 +227,9 @@ await test('campaign and analytics empty states carry factual editorial labels a
   assert.match(css, /\.ck-empty__points li \{[\s\S]*?border-top: 1px solid var\(--c-rule\)/);
 });
 
-await test('earnings terms use one ruled financial composition instead of another card grid', () => {
-  assert.match(css, /\.crp \.crp__earn-grid \{[\s\S]*?border-top: 1px solid var\(--c-ink\)/);
-  assert.match(css, /\.crp \.crp__earn-grid > \.crp__panel \{[\s\S]*?border: 0; border-radius: 0; background: transparent/);
-  assert.match(earnings, /<Balance[\s\S]*label="Held"[\s\S]*label="Paid out"[\s\S]*label="Reversed"/);
+await test('earnings leads with the one figure a creator can act on, then the ledger buckets', () => {
+  assert.match(earnings, /<AvailableHero[\s\S]*<StatCard[^>]*label="Held"[\s\S]*label="Paid out"[\s\S]*label="Reversed"/);
+  assert.match(studioCss, /\.crp\.crp--studio \.ce-hero \{/);
 });
 
 await test('motion is disabled for reduced-motion users', () => {
