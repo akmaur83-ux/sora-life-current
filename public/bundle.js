@@ -35919,14 +35919,15 @@ async function getMyCreatorStanding() {
     ok: false
   };
 }
-// Weekly activity for the portal charts (0032). Absent RPC → { ok:false },
-// and the charts fall back to a level baseline rather than disappearing.
-async function getMyActivitySeries(weeks = 12) {
+// Activity for the dashboard charts (0032): buckets for a range, the previous
+// period's totals, and per-link performance. Absent RPC → { ok:false }, and
+// the charts fall back to a level baseline rather than disappearing.
+async function getMyActivitySeries(range = '7d') {
   const {
     data,
     error
   } = await supabase.rpc('my_creator_activity_series', {
-    p_weeks: weeks
+    p_range: String(range)
   });
   if (error) return {
     ok: false,
@@ -35935,6 +35936,18 @@ async function getMyActivitySeries(weeks = 12) {
   return data || {
     ok: false
   };
+}
+// The creator's own recent click timestamps (RLS-scoped, 0010), newest first.
+// Feeds the "New link clicks" line of the activity feed; nothing else.
+async function getMyRecentClicks(limit = 200) {
+  const {
+    data,
+    error
+  } = await supabase.from('creator_attribution_events').select('occurred_at').in('event_type', ['click', 'landing']).order('occurred_at', {
+    ascending: false
+  }).limit(limit);
+  if (error) return [];
+  return (data || []).map(r => r.occurred_at).filter(Boolean);
 }
 async function getMyCreatorRewards() {
   const {
@@ -51419,48 +51432,11 @@ function Shell$1({
 // ("waiting for data") rather than missing.
 // ============================================================
 
-const SERIES_WEEKS = 12;
-const SERIES_MONTHS = 12;
 const METRICS = Object.freeze(['clicks', 'orders', 'products', 'sales', 'commission']);
 const num = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
-
-// my_creator_activity_series() → { clicks: number[12], orders: …, … }.
-// Absent, failed or short input still yields full-length arrays of zeros, so
-// every figure gets a chart whether or not 0032 is applied.
-function weeklySeries(raw, weeks = SERIES_WEEKS) {
-  const rows = Array.isArray(raw?.series) ? raw.series : [];
-  const out = {};
-  for (const m of METRICS) {
-    const vals = rows.map(r => num(r?.[m]));
-    const tail = vals.slice(-weeks);
-    out[m] = Array.from({
-      length: weeks
-    }, (_, i) => tail[i - (weeks - tail.length)] ?? 0);
-  }
-  out.weeks = rows.slice(-weeks).map(r => String(r?.week || ''));
-  out.available = rows.length > 0;
-  return out;
-}
-
-// my_creator_earnings().monthly_history ([{month:'YYYY-MM', commission}]) →
-// the last `months` calendar months, oldest first, zeros where absent.
-function monthlySeries(history, months = SERIES_MONTHS, now = new Date()) {
-  const byMonth = new Map();
-  for (const h of Array.isArray(history) ? history : []) if (h?.month) byMonth.set(String(h.month), num(h.commission));
-  const keys = [];
-  for (let i = months - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-  }
-  return {
-    keys,
-    values: keys.map(k => byMonth.get(k) ?? 0),
-    available: byMonth.size > 0
-  };
-}
 
 // Running total of a series — the shape of "lifetime so far".
 function cumulative(points) {
@@ -51508,6 +51484,209 @@ function sparkGeometry(points, {
   };
 }
 const round = v => Math.round(v * 10) / 10;
+
+// ---- Range series (0032, range-based) ----------------------------------------
+// my_creator_activity_series(range) → fixed-length arrays per metric, bucket
+// labels, and the previous-period totals for the trend arrows. Absent RPC →
+// zeros of the range's natural length, and `available: false`.
+const RANGES = Object.freeze([{
+  id: '7d',
+  label: '7D',
+  buckets: 7
+}, {
+  id: '30d',
+  label: '30D',
+  buckets: 30
+}, {
+  id: '90d',
+  label: '90D',
+  buckets: 13
+}, {
+  id: '1y',
+  label: '1Y',
+  buckets: 12
+}, {
+  id: 'all',
+  label: 'All Time',
+  buckets: 12
+}]);
+const DEFAULT_RANGE = '7d';
+function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
+  const def = RANGES.find(r => r.id === rangeId) || RANGES[0];
+  const rows = Array.isArray(raw?.series) ? raw.series : [];
+  const n = rows.length > 0 ? rows.length : def.buckets;
+  const out = {
+    range: def.id,
+    unit: raw?.unit || (def.id === '7d' || def.id === '30d' ? 'day' : def.id === '90d' ? 'week' : 'month'),
+    available: rows.length > 0
+  };
+  for (const m of METRICS) out[m] = Array.from({
+    length: n
+  }, (_, i) => num(rows[i]?.[m]));
+  out.labels = Array.from({
+    length: n
+  }, (_, i) => String(rows[i]?.at || ''));
+  out.totals = Object.fromEntries(METRICS.map(m => [m, out[m].reduce((a, b) => a + b, 0)]));
+  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num(raw.previous[m])])) : null;
+  out.links = Array.isArray(raw?.links) ? raw.links.map(l => ({
+    link_id: l?.link_id ?? null,
+    label: String(l?.label || 'Link'),
+    campaign: l?.campaign || null,
+    clicks: num(l?.clicks),
+    orders: num(l?.orders),
+    sales: num(l?.sales),
+    commission: num(l?.commission)
+  })) : [];
+  return out;
+}
+
+// Trend versus the previous period. No previous period, or a previous of
+// zero, is "—" (not "+100%": there is nothing to be 100% of).
+function trend(current, previous) {
+  const c = num(current);
+  const p = previous == null ? null : num(previous);
+  if (p == null) return {
+    pct: null,
+    dir: 'none',
+    label: '—'
+  };
+  if (p === 0) return c > 0 ? {
+    pct: null,
+    dir: 'new',
+    label: 'New'
+  } : {
+    pct: 0,
+    dir: 'flat',
+    label: '—'
+  };
+  const pct = Math.round((c - p) / p * 100);
+  return {
+    pct,
+    dir: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat',
+    label: `${pct > 0 ? '+' : ''}${pct}%`
+  };
+}
+
+// Bucket labels for the chart axis: day → "5 Sep", month → "Sep 26".
+function bucketLabel(iso, unit) {
+  if (!iso) return '';
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  const mon = d.toLocaleString('en-IN', {
+    month: 'short'
+  });
+  if (unit === 'month') return `${mon} ${String(d.getFullYear()).slice(-2)}`;
+  return `${d.getDate()} ${mon}`;
+}
+
+// ---- Area chart geometry --------------------------------------------------------
+// Two count series on one axis (clicks as an area, orders as a line), a
+// nice-number y scale, and x positions for the tooltip. All-zero → a level
+// baseline with a 0–4 axis so the frame still reads as a chart.
+function areaChartGeometry({
+  clicks = [],
+  orders = []
+}, {
+  width = 720,
+  height = 180,
+  padL = 30,
+  padR = 12,
+  padT = 14,
+  padB = 26
+} = {}) {
+  const a = (Array.isArray(clicks) ? clicks : []).map(num);
+  const b = (Array.isArray(orders) ? orders : []).map(num);
+  const n = Math.max(a.length, b.length);
+  const innerW = width - padL - padR;
+  const innerH = height - padT - padB;
+  const rawMax = Math.max(0, ...a, ...b);
+  // Never an axis shorter than 4: a week with two clicks still gets room, and
+  // small axes use whole-number ticks so no label repeats.
+  const yMax = Math.max(4, niceMax(rawMax));
+  const step = yMax <= 4 ? 1 : yMax % 2 === 0 ? 2 : 1;
+  const ticks = yMax <= 8 ? Array.from({
+    length: yMax / step + 1
+  }, (_, i) => i * step) : [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(yMax * f));
+  const x = i => n <= 1 ? padL + innerW / 2 : padL + i * innerW / (n - 1);
+  const y = v => padT + innerH - (yMax === 0 ? 0 : v / yMax * innerH);
+  const baseY = padT + innerH;
+  const path = vals => vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${r1(x(i))} ${r1(y(v))}`).join(' ');
+  const line = path(a);
+  const orderLine = path(b);
+  const area = n > 0 ? `${line} L${r1(x(n - 1))} ${baseY} L${r1(x(0))} ${baseY} Z` : '';
+  return {
+    width,
+    height,
+    padL,
+    padR,
+    padT,
+    padB,
+    innerW,
+    innerH,
+    n,
+    yMax,
+    empty: rawMax === 0,
+    ticks: ticks.map(v => ({
+      v,
+      y: r1(y(v))
+    })),
+    xs: Array.from({
+      length: n
+    }, (_, i) => r1(x(i))),
+    clicksPts: a.map((v, i) => [r1(x(i)), r1(y(v))]),
+    ordersPts: b.map((v, i) => [r1(x(i)), r1(y(v))]),
+    line,
+    area,
+    orderLine,
+    baseY
+  };
+}
+function niceMax(v) {
+  if (v <= 0) return 4;
+  const p = 10 ** Math.floor(Math.log10(v));
+  for (const m of [1, 2, 2.5, 5, 10]) if (v <= m * p) return m * p;
+  return 10 * p;
+}
+const r1 = v => Math.round(v * 10) / 10;
+
+// ---- Donut geometry ---------------------------------------------------------------
+// Segments as stroke-dasharray offsets on one circle. All-zero → one muted
+// full ring, so the donut is present and reads as "nothing yet".
+function donutGeometry(parts, {
+  size = 150,
+  stroke = 16
+} = {}) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const list = (Array.isArray(parts) ? parts : []).map(p => ({
+    ...p,
+    value: Math.max(0, num(p?.value))
+  }));
+  const total = list.reduce((s, p) => s + p.value, 0);
+  let offset = 0;
+  const segments = list.map(p => {
+    const frac = total > 0 ? p.value / total : 0;
+    const seg = {
+      ...p,
+      frac,
+      dash: `${r1(frac * c)} ${r1(c - frac * c)}`,
+      offset: r1(-offset)
+    };
+    offset += frac * c;
+    return seg;
+  });
+  return {
+    size,
+    stroke,
+    r,
+    c: r1(c),
+    cx: size / 2,
+    cy: size / 2,
+    total,
+    empty: total === 0,
+    segments
+  };
+}
 
 const TONES = ['ok', 'hold', 'info', 'brand', 'bad', 'neutral'];
 const toneClass = tone => `ck-tone-${TONES.includes(tone) ? tone : 'neutral'}`;
@@ -51729,36 +51908,6 @@ function Sparkline({
   });
 }
 
-/** Identity + key terms header. Replaces a row of stat cards. */
-function IdBar({
-  eyebrow,
-  name,
-  items = []
-}) {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
-    className: "ck-idbar",
-    children: [eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "ck-idbar__eyebrow",
-      children: eyebrow
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-      className: "ck-idbar__name",
-      children: name
-    }), items.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "ck-idbar__meta",
-      children: items.map(it => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "ck-idbar__item",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "ck-idbar__k",
-          children: it.k
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "ck-idbar__v",
-          children: it.v
-        })]
-      }, it.k))
-    })]
-  });
-}
-
 /** Status chip. */
 function Pill({
   tone = 'neutral',
@@ -51771,39 +51920,6 @@ function Pill({
       className: "ck-pill__dot",
       "aria-hidden": "true"
     }), children]
-  });
-}
-
-/**
- * One item in a "what to do next" checklist.
- * `done` is driven by real account state — never optimistic.
- */
-function Step({
-  done,
-  next = false,
-  index,
-  tone = 'neutral',
-  title,
-  body
-}) {
-  const label = done ? 'Done' : next ? 'Next' : '';
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-    className: `ck-step ${done ? 'is-done' : ''} ${next ? 'is-next' : ''} ${toneClass(done ? 'ok' : tone)}`,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "ck-step__mark",
-      "aria-hidden": "true",
-      children: String(index).padStart(2, '0')
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "ck-step__body",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-        children: title
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        children: body
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "ck-step__state",
-      children: label
-    })]
   });
 }
 
@@ -52232,6 +52348,1082 @@ function CreatorHowItWorks({
         size: 15
       }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
         children: "Commission is earned on eligible sale value, not on shipping or fees. Self-referred orders don\u2019t qualify. Payouts are made manually by our team \u2014 SORA LIFE never moves money automatically."
+      })]
+    })]
+  });
+}
+
+// ============================================================
+// Creator dashboard — greeting and the activity feed, as pure functions.
+//
+// The feed is assembled only from things that actually happened: click
+// events the creator can read, their own payout requests, reward claims, KYC
+// state and the account's own dates. Nothing here is invented.
+// ============================================================
+
+function greetingFor(hour) {
+  const h = Number(hour);
+  if (!Number.isFinite(h)) return 'Hello';
+  if (h >= 5 && h < 12) return 'Good morning';
+  if (h >= 12 && h < 17) return 'Good afternoon';
+  if (h >= 17 && h < 22) return 'Good evening';
+  return 'Good night';
+}
+function relativeTime(iso, now = new Date()) {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return '';
+  const s = Math.max(0, Math.round((now.getTime() - t) / 1000));
+  if (s < 60) return 'just now';
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} minute${m === 1 ? '' : 's'} ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} hour${h === 1 ? '' : 's'} ago`;
+  const d = Math.round(h / 24);
+  if (d < 30) return `${d} day${d === 1 ? '' : 's'} ago`;
+  const mo = Math.round(d / 30);
+  if (mo < 12) return `${mo} month${mo === 1 ? '' : 's'} ago`;
+  const y = Math.round(mo / 12);
+  return `${y} year${y === 1 ? '' : 's'} ago`;
+}
+const PAYOUT_COPY = {
+  requested: 'Payout requested',
+  under_review: 'Payout under review',
+  approved: 'Payout approved',
+  paid: 'Payout paid',
+  rejected: 'Payout returned to balance',
+  cancelled: 'Payout cancelled'
+};
+const KYC_COPY = {
+  pending: ['Verification submitted', 'Our team is checking your details'],
+  verified: ['Verified by SORA LIFE', 'Payout details approved'],
+  rejected: ['Verification needs attention', 'See Payouts for the reason'],
+  needs_update: ['Verification needs an update', 'See Payouts for what to change']
+};
+
+// `clicks` is a list of ISO timestamps, newest first (what getMyRecentClicks
+// returns). Everything else is the state the portal already holds.
+function buildActivity({
+  creator,
+  clicks = [],
+  payouts = [],
+  rewards = null,
+  kyc = null,
+  now = new Date(),
+  limit = 6
+} = {}) {
+  const items = [];
+  const dayAgo = now.getTime() - 24 * 3600 * 1000;
+  const recent = (Array.isArray(clicks) ? clicks : []).map(c => new Date(c).getTime()).filter(t => Number.isFinite(t));
+  if (recent.length > 0) {
+    const inDay = recent.filter(t => t >= dayAgo).length;
+    const n = inDay > 0 ? inDay : Math.min(recent.length, 1);
+    items.push({
+      id: 'clicks',
+      icon: 'externalLink',
+      tone: 'brand',
+      title: 'New link clicks',
+      body: `${n} click${n === 1 ? '' : 's'} on your links${inDay > 0 ? ' in the last day' : ''}`,
+      at: new Date(Math.max(...recent)).toISOString()
+    });
+  }
+  for (const p of Array.isArray(payouts) ? payouts : []) {
+    const at = p.paid_at || p.approved_at || p.requested_at;
+    if (!at) continue;
+    items.push({
+      id: `payout-${p.id}`,
+      icon: 'card',
+      tone: p.status === 'paid' || p.status === 'approved' ? 'ok' : p.status === 'rejected' || p.status === 'cancelled' ? 'bad' : 'hold',
+      title: PAYOUT_COPY[p.status] || 'Payout updated',
+      body: p.requested_amount != null ? `₹${Number(p.requested_amount).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}` : '',
+      at
+    });
+  }
+  for (const c of Array.isArray(rewards?.claims) ? rewards.claims : []) {
+    if (!c.claimed_at) continue;
+    items.push({
+      id: `claim-${c.id || c.level}`,
+      icon: 'gift',
+      tone: 'brand',
+      title: `Level ${c.level} reward claimed`,
+      body: c.label || '',
+      at: c.claimed_at
+    });
+  }
+  if (kyc?.identity_status && KYC_COPY[kyc.identity_status] && (kyc.verified_at || kyc.submitted_at)) {
+    const [title, body] = KYC_COPY[kyc.identity_status];
+    items.push({
+      id: 'kyc',
+      icon: 'shield',
+      tone: kyc.identity_status === 'verified' ? 'ok' : 'hold',
+      title,
+      body,
+      at: kyc.verified_at || kyc.submitted_at
+    });
+  }
+  if (creator?.status === 'active' && creator?.joined_at) {
+    items.push({
+      id: 'active',
+      icon: 'user',
+      tone: 'ok',
+      title: 'Account activated',
+      body: 'Your creator account is now active',
+      at: creator.joined_at
+    });
+  }
+  if (creator?.created_at || creator?.joined_at) {
+    items.push({
+      id: 'welcome',
+      icon: 'star',
+      tone: 'brand',
+      title: 'Welcome to SORA LIFE',
+      body: 'Start sharing and earn',
+      at: creator.created_at || creator.joined_at
+    });
+  }
+  return items.filter(i => Number.isFinite(new Date(i.at).getTime())).sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, limit).map(i => ({
+    ...i,
+    when: relativeTime(i.at, now)
+  }));
+}
+
+const isZero = v => !(Number(v) > 0);
+const countFmt = n => String(Math.round(n));
+
+// ---------------------------------------------------------------
+// Greeting + quote + mantra
+// ---------------------------------------------------------------
+function Greeting({
+  creator,
+  hour = new Date().getHours()
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "cd-hello",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "cd-hello__hi",
+      children: [greetingFor(hour), ","]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("h1", {
+      className: "cd-hello__name serif",
+      children: [creator?.display_name, " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cd-hello__spark",
+        "aria-hidden": "true",
+        children: "\u2726"
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "cd-hello__line",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "sparkle",
+        size: 15
+      }), " Create. Inspire. Earn. Build a Healthier India."]
+    })]
+  });
+}
+function QuotePanel() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("figure", {
+    className: "cd-quote",
+    role: "img",
+    "aria-label": "Small creators make a big difference. \u2014 SORA LIFE",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("blockquote", {
+      className: "cd-quote__q serif",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cd-quote__mark",
+        "aria-hidden": "true",
+        children: "\u201C"
+      }), "Small creators ", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "make a big difference.\u201D"]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("figcaption", {
+      className: "cd-quote__by",
+      children: "\u2014 SORA LIFE"
+    })]
+  });
+}
+function MantraCard() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("aside", {
+    className: "cd-mantra",
+    "aria-label": "Create, inspire, earn",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "cd-mantra__words",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "Create"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "Inspire"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "Earn"
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "cd-mantra__sub",
+      children: "For a healthier India"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "cd-mantra__rule",
+      "aria-hidden": "true"
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Stat card: icon tile, label, figure, trend, sparkline
+// ---------------------------------------------------------------
+function StatCard({
+  icon,
+  glyph,
+  label,
+  value,
+  format = countFmt,
+  trendOf = null,
+  spark = null,
+  tone = 'info',
+  money = false
+}) {
+  const zero = isZero(value);
+  const t = trendOf || {
+    dir: 'none',
+    label: '—'
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+    className: `cd-stat${zero ? ' is-zero' : ''}`,
+    "data-tone": tone,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "cd-stat__tile",
+      "aria-hidden": "true",
+      children: glyph ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cd-stat__glyph",
+        children: glyph
+      }) : /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: icon,
+        size: 20
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-stat__body",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cd-stat__label",
+        children: label
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: `cd-stat__fig${money ? ' is-money' : ''}`,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+          value: value,
+          format: money ? money2 : format
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: `cd-stat__trend is-${t.dir}`,
+        children: [t.dir === 'up' && /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronUp",
+          size: 12
+        }), t.dir === 'down' && /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronDown",
+          size: 12
+        }), t.label]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "cd-stat__spark",
+      children: spark && /*#__PURE__*/jsxRuntimeExports.jsx(Sparkline, {
+        points: spark,
+        tone: zero ? 'neutral' : tone,
+        width: 90,
+        height: 34
+      })
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Share Your Link — the dark green CTA
+// ---------------------------------------------------------------
+function ShareCta() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "cd-share",
+    "aria-label": "Share your link",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "cd-share__ic",
+      "aria-hidden": "true",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "externalLink",
+        size: 20
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-share__txt",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+        children: "Share Your Link"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "Start earning today"
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+      to: "/creator/links",
+      className: "cd-share__go",
+      "aria-label": "Open your links",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "arrowRight",
+        size: 18
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "cd-share__ribbon",
+      "aria-hidden": "true"
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Performance overview: range toggle, four metrics, the area chart
+// ---------------------------------------------------------------
+function PerformanceOverview({
+  series,
+  range,
+  onRange,
+  loading = false
+}) {
+  const cards = [{
+    key: 'clicks',
+    label: 'Link Clicks',
+    tone: 'ok',
+    dot: 'ok'
+  }, {
+    key: 'orders',
+    label: 'Orders',
+    tone: 'info',
+    dot: 'neutral'
+  }, {
+    key: 'sales',
+    label: 'Sales (₹)',
+    tone: 'hold',
+    dot: 'hold',
+    money: true
+  }, {
+    key: 'commission',
+    label: 'Commission (₹)',
+    tone: 'brand',
+    dot: 'brand',
+    money: true
+  }];
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "cd-panel cd-perf",
+    "aria-labelledby": "cd-perf-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "cd-panel__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cd-panel__h serif",
+          id: "cd-perf-h",
+          children: "Performance Overview"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cd-panel__sub",
+          children: "Track your growth, engagement and earnings over time."
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "cd-range",
+        role: "tablist",
+        "aria-label": "Range",
+        children: RANGES.map(r => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          role: "tab",
+          "aria-selected": range === r.id,
+          className: `cd-range__btn${range === r.id ? ' is-on' : ''}`,
+          onClick: () => onRange?.(r.id),
+          children: r.label
+        }, r.id))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "cd-metrics",
+      children: cards.map(c => {
+        const v = series.totals?.[c.key] ?? 0;
+        const t = trend(v, series.previous ? series.previous[c.key] : null);
+        return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: `cd-metric${isZero(v) ? ' is-zero' : ''}`,
+          "data-tone": c.tone,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "cd-metric__label",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: `cd-dot is-${c.dot}`,
+              "aria-hidden": "true"
+            }), c.label]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "cd-metric__fig",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+              value: v,
+              format: c.money ? money2 : countFmt
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: `cd-metric__trend is-${t.dir}`,
+            children: [t.dir === 'up' && /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronUp",
+              size: 11
+            }), t.dir === 'down' && /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronDown",
+              size: 11
+            }), t.label, t.dir === 'flat' && t.label === '—' ? ' 0%' : '']
+          })]
+        }, c.key);
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(AreaChart, {
+      series: series,
+      loading: loading
+    })]
+  });
+}
+function AreaChart({
+  series,
+  width = 720,
+  height = 240,
+  loading = false
+}) {
+  const g = areaChartGeometry({
+    clicks: series.clicks,
+    orders: series.orders
+  }, {
+    width,
+    height,
+    padB: 30
+  });
+  const [active, setActive] = reactExports.useState(g.n > 0 ? g.n - 1 : null);
+  const [hover, setHover] = reactExports.useState(false);
+  const idx = active != null && active < g.n ? active : g.n > 0 ? g.n - 1 : null;
+  const move = e => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width * width;
+    let best = 0;
+    let bestD = Infinity;
+    g.xs.forEach((x, i) => {
+      const d = Math.abs(x - px);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    });
+    setActive(best);
+    setHover(true);
+  };
+  const labelEvery = Math.max(1, Math.ceil(g.n / 7));
+  const tipX = idx != null ? g.xs[idx] : 0;
+  const tipRight = tipX > width * 0.6;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `cd-chart${g.empty ? ' is-empty' : ''}${loading ? ' is-loading' : ''}${hover ? ' is-hover' : ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-legend",
+      "aria-hidden": "true",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-ok"
+        }), " Link Clicks"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-hold"
+        }), " Orders"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "is-muted",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: "cd-dot is-neutral"
+        }), " Sales (\u20B9) ", /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: "on hover"
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-chart__frame",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+        className: "cd-chart__svg",
+        viewBox: `0 0 ${width} ${height}`,
+        role: "img",
+        "aria-label": g.empty ? 'No activity in this period yet' : 'Link clicks and orders over the selected period',
+        onPointerMove: move,
+        onPointerLeave: () => {
+          setActive(g.n > 0 ? g.n - 1 : null);
+          setHover(false);
+        },
+        children: [g.ticks.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("g", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("line", {
+            className: "cd-chart__grid",
+            x1: g.padL,
+            x2: width - g.padR,
+            y1: t.y,
+            y2: t.y
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("text", {
+            className: "cd-chart__ytick",
+            x: g.padL - 8,
+            y: t.y + 3.5,
+            textAnchor: "end",
+            children: t.v
+          })]
+        }, t.v)), g.area && /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+          className: "cd-chart__area",
+          d: g.area
+        }), g.line && /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+          className: "cd-chart__line",
+          d: g.line
+        }), g.orderLine && /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+          className: "cd-chart__orders",
+          d: g.orderLine
+        }), idx != null && /*#__PURE__*/jsxRuntimeExports.jsx("line", {
+          className: "cd-chart__cursor",
+          x1: g.xs[idx],
+          x2: g.xs[idx],
+          y1: g.padT,
+          y2: g.baseY
+        }), g.clicksPts.map(([x, y], i) => /*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+          className: `cd-chart__pt${i === idx ? ' is-on' : ''}`,
+          cx: x,
+          cy: y,
+          r: i === idx ? 4.5 : 3
+        }, i)), series.labels.map((l, i) => (i % labelEvery === 0 || i === g.n - 1) && /*#__PURE__*/jsxRuntimeExports.jsx("text", {
+          className: "cd-chart__xtick",
+          x: g.xs[i],
+          y: height - 8,
+          textAnchor: i === 0 ? 'start' : i === g.n - 1 ? 'end' : 'middle',
+          children: bucketLabel(l, series.unit)
+        }, i))]
+      }), idx != null && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: `cd-tip${tipRight ? ' is-right' : ''}`,
+        style: {
+          left: `${Math.round(tipX / width * 1000) / 10}%`
+        },
+        role: "status",
+        "aria-live": "polite",
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "cd-tip__in",
+          style: {
+            transform: tipRight ? 'translateX(-100%)' : 'translateX(12px)'
+          },
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: bucketLabel(series.labels[idx], series.unit) || '—'
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              className: "cd-dot is-ok"
+            }), "Link Clicks ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: series.clicks[idx] ?? 0
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              className: "cd-dot is-hold"
+            }), "Orders ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: series.orders[idx] ?? 0
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              className: "cd-dot is-neutral"
+            }), "Sales ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: money2(series.sales[idx] ?? 0)
+            })]
+          })]
+        })
+      })]
+    }), g.empty && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "cd-chart__empty",
+      children: "No activity in this period yet \u2014 the chart fills in as visits arrive through your links."
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Earnings breakdown donut
+// ---------------------------------------------------------------
+const PARTS = [{
+  key: 'available',
+  label: 'Available',
+  tone: 'ok'
+}, {
+  key: 'held',
+  label: 'On Hold',
+  tone: 'hold'
+}, {
+  key: 'reversed',
+  label: 'Reversed',
+  tone: 'bad'
+}, {
+  key: 'paid',
+  label: 'Paid Out',
+  tone: 'neutral'
+}];
+function EarningsBreakdown({
+  earnings
+}) {
+  const parts = PARTS.map(p => ({
+    ...p,
+    value: Number(earnings?.[p.key] ?? 0)
+  }));
+  const d = donutGeometry(parts, {
+    size: 150,
+    stroke: 16
+  });
+  const total = parts.reduce((s, p) => s + p.value, 0);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `cd-panel cd-earn${d.empty ? ' is-zero' : ''}`,
+    "aria-labelledby": "cd-earn-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+      className: "cd-panel__head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cd-panel__h serif",
+          id: "cd-earn-h",
+          children: "Earnings Breakdown"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cd-panel__sub",
+          children: "See how your earnings are distributed."
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-earn__body",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cd-donut",
+        role: "img",
+        "aria-label": d.empty ? 'No earnings yet' : `Total earnings ${money2(total)}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+          viewBox: `0 0 ${d.size} ${d.size}`,
+          width: d.size,
+          height: d.size,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+            className: "cd-donut__track",
+            cx: d.cx,
+            cy: d.cy,
+            r: d.r,
+            strokeWidth: d.stroke
+          }), !d.empty && d.segments.filter(s => s.frac > 0).map(s => /*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+            className: `cd-donut__seg is-${s.tone}`,
+            cx: d.cx,
+            cy: d.cy,
+            r: d.r,
+            strokeWidth: d.stroke,
+            strokeDasharray: s.dash,
+            strokeDashoffset: s.offset,
+            transform: `rotate(-90 ${d.cx} ${d.cy})`
+          }, s.key))]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "cd-donut__centre",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "cd-donut__fig",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+              value: total,
+              format: money2
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "cd-donut__l",
+            children: "Total Earnings"
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "cd-earn__legend",
+        children: parts.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          className: isZero(p.value) ? 'is-zero' : '',
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              className: `cd-dot is-${p.tone}`,
+              "aria-hidden": "true"
+            }), p.label]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+            children: money2(p.value)
+          })]
+        }, p.key))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: "/creator/earnings",
+      className: "cd-panel__foot-btn",
+      children: ["View Earnings Details ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "arrowRight",
+        size: 15
+      })]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Recent activity
+// ---------------------------------------------------------------
+function RecentActivity({
+  items
+}) {
+  const list = Array.isArray(items) ? items : [];
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "cd-panel cd-feed",
+    "aria-labelledby": "cd-feed-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "cd-panel__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "cd-panel__h serif",
+        id: "cd-feed-h",
+        children: "Recent Activity"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/creator/analytics",
+        className: "cd-panel__link",
+        children: ["View All ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 13
+        })]
+      })]
+    }), list.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "cd-feed__empty",
+      children: "Your activity will show here \u2014 the first click on your link starts the feed."
+    }) : /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+      className: "cd-feed__list",
+      children: list.map(it => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        className: "cd-feed__item",
+        "data-tone": it.tone,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cd-feed__ic",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: it.icon,
+            size: 16
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "cd-feed__txt",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: it.title
+          }), it.body && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: it.body
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("time", {
+          className: "cd-feed__when",
+          dateTime: it.at,
+          children: it.when
+        })]
+      }, it.id))
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Tier progress
+// ---------------------------------------------------------------
+function RankMedallion({
+  rank,
+  size = 80
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+    className: "cd-medal",
+    "data-rank": rankSlot(rank),
+    style: {
+      width: size,
+      height: size
+    },
+    "aria-hidden": "true",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+      viewBox: "0 0 80 80",
+      width: size,
+      height: size,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+        className: "cd-medal__halo",
+        cx: "40",
+        cy: "40",
+        r: "38"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+        className: "cd-medal__rosette",
+        d: "M40 10l6.5 5.4 8.3-1.6 3.4 7.8 7.8 3.4-1.6 8.3L70 40l-5.6 6.7 1.6 8.3-7.8 3.4-3.4 7.8-8.3-1.6L40 70l-6.5-5.4-8.3 1.6-3.4-7.8-7.8-3.4 1.6-8.3L10 40l5.6-6.7-1.6-8.3 7.8-3.4 3.4-7.8 8.3 1.6z"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+        className: "cd-medal__inner",
+        cx: "40",
+        cy: "40",
+        r: "17"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+        className: "cd-medal__mark",
+        d: "M40 29l3.2 6.6 7.3 1-5.3 5.1 1.3 7.3-6.5-3.5-6.5 3.5 1.3-7.3-5.3-5.1 7.3-1z"
+      })]
+    })
+  });
+}
+function TierProgress({
+  standing
+}) {
+  if (!standing || standing.ok === false) return null;
+  const p = tierProgress(standing);
+  const pct = Math.round(p.fraction * 100);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "cd-panel cd-tier",
+    "aria-labelledby": "cd-tier-h",
+    "data-rank": rankSlot(standing.rank),
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "cd-panel__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "cd-panel__h serif",
+        id: "cd-tier-h",
+        children: "Your Tier Progress"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/creator/tier",
+        className: "cd-panel__link",
+        children: ["View Full Ladder ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 13
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-tier__now",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(RankMedallion, {
+        rank: standing.rank
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
+          className: "cd-tier__rank serif",
+          children: [standing.rank, " \u2014 Level ", standing.level]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "cd-tier__rate",
+          children: ["Commission Rate ", Number(standing.rate), "%"]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-tier__prog",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cd-tier__prog-l",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: p.atTop ? `${rupees(standing.lifetime_confirmed_sales)} confirmed` : `${rupees(standing.lifetime_confirmed_sales)} of ${rupees(p.to)}`
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+          children: [pct, "%"]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "cd-bar",
+        role: "progressbar",
+        "aria-valuemin": 0,
+        "aria-valuemax": 100,
+        "aria-valuenow": pct,
+        "aria-label": p.atTop ? 'Top level reached' : `Progress to level ${standing.next_level}`,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cd-bar__fill",
+          style: {
+            transform: `scaleX(${p.fraction})`
+          }
+        })
+      })]
+    }), !p.atTop ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-tier__next",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cd-tier__lock",
+        "aria-hidden": "true",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "lock",
+          size: 16
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+          children: ["Next Level: ", standing.rank, " \u2014 Level ", standing.next_level]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: ["Reach ", rupees(standing.next_threshold), " in confirmed sales"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [Number(standing.next_rate), "% commission on future sales"]
+        })]
+      })]
+    }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-tier__next is-top",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cd-tier__lock",
+        "aria-hidden": "true",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "crown",
+          size: 16
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+          children: "Top of the ladder"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [Number(standing.rate), "% on every new sale"]
+        })]
+      })]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Top performing campaigns
+// ---------------------------------------------------------------
+function TopCampaigns({
+  links,
+  available
+}) {
+  const rows = (Array.isArray(links) ? links : []).slice(0, 5);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "cd-panel cd-camps",
+    "aria-labelledby": "cd-camps-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "cd-panel__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "cd-panel__h serif",
+        id: "cd-camps-h",
+        children: "Top Performing Campaigns"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/creator/campaigns",
+        className: "cd-panel__link",
+        children: ["View All ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 13
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "cd-table-wrap",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+        className: "cd-table",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Campaign"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Clicks"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Orders"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Sales"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Earnings"
+            })]
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+          children: rows.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("tr", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "cd-table__empty",
+              colSpan: 5,
+              children: available ? 'No link activity yet.' : 'Campaign figures appear here once activity is recorded.'
+            })
+          }) : rows.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            className: isZero(r.clicks) && isZero(r.sales) ? 'is-zero' : '',
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+                children: r.label
+              }), r.campaign && r.campaign !== r.label ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "cd-table__sub",
+                children: r.campaign
+              }) : null]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "ta-r",
+              children: r.clicks
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "ta-r",
+              children: r.orders
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "ta-r",
+              children: money2(r.sales)
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "ta-r is-earn",
+              children: money2(r.commission)
+            })]
+          }, r.link_id || 'default'))
+        })]
+      })
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Gold editorial promo
+// ---------------------------------------------------------------
+function PromoCard() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "cd-promo",
+    "aria-labelledby": "cd-promo-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-promo__txt",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+        className: "cd-promo__h serif",
+        id: "cd-promo-h",
+        children: ["Turn Your Influence ", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "Into Impact"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        children: "Share wellness. Earn rewards. Be part of a healthier India."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/creator/campaigns",
+        className: "cd-promo__btn",
+        children: ["Explore Campaigns ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 15
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "cd-promo__words",
+      "aria-hidden": "true",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "People"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "Wellness"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "Progress"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "Together"
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "cd-promo__wave",
+      "aria-hidden": "true"
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// The page
+// ---------------------------------------------------------------
+function CreatorDashboard({
+  creator,
+  analytics,
+  earnings,
+  standing,
+  series,
+  range,
+  onRange,
+  seriesLoading = false,
+  activity = [],
+  hour
+}) {
+  const clicks = Number(analytics?.clicks ?? 0);
+  const orders = Number(analytics?.attributed_orders ?? 0);
+  const products = Number(analytics?.products_sold ?? 0);
+  const sales = Number(analytics?.attributed_sales ?? 0);
+  const prev = series.previous;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "cd",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-row cd-row--hero",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Greeting, {
+        creator: creator,
+        hour: hour
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(QuotePanel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MantraCard, {})]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-row cd-row--stats",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        icon: "externalLink",
+        label: "Total Link Clicks",
+        value: clicks,
+        trendOf: trend(series.totals?.clicks ?? 0, prev?.clicks),
+        spark: series.clicks,
+        tone: "ok"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        icon: "bag",
+        label: "Total Orders",
+        value: orders,
+        trendOf: trend(series.totals?.orders ?? 0, prev?.orders),
+        spark: series.orders,
+        tone: "info"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        icon: "package",
+        label: "Products Sold",
+        value: products,
+        trendOf: trend(series.totals?.products ?? 0, prev?.products),
+        spark: series.products,
+        tone: "info"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        glyph: "\u20B9",
+        label: "Attributed Sales",
+        value: sales,
+        money: true,
+        trendOf: trend(series.totals?.sales ?? 0, prev?.sales),
+        spark: series.sales,
+        tone: "ok"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(ShareCta, {})]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cd-grid",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cd-col cd-col--main",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(PerformanceOverview, {
+          series: series,
+          range: range,
+          onRange: onRange,
+          loading: seriesLoading
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "cd-row cd-row--split",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(EarningsBreakdown, {
+            earnings: earnings
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentActivity, {
+            items: activity
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cd-col cd-col--rail",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(TierProgress, {
+          standing: standing
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(TopCampaigns, {
+          links: series.links,
+          available: series.available
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(PromoCard, {})]
       })]
     })]
   });
@@ -53529,11 +54721,10 @@ function friendlyPayoutError(reason, {
   }[reason] || 'Couldn’t submit your payout request. Please try again.';
 }
 
-const REVEAL_SELECTOR = '.ck-idbar, .ck-share, .ck-section, .ck-balance, .ctier, .ctier-rewards, .ctier-history, .ctier-board, .ctier-ladder, .ctier-notice, .crp__panel, .crp__payout, .crp-hiw';
 const NAV = [{
   id: 'dashboard',
   label: 'Dashboard',
-  icon: 'grid'
+  icon: 'home'
 }, {
   id: 'campaigns',
   label: 'Campaigns',
@@ -53549,15 +54740,16 @@ const NAV = [{
 }, {
   id: 'earnings',
   label: 'Earnings',
-  icon: 'crown'
+  icon: 'card'
 }, {
   id: 'tier',
-  label: 'My tier',
-  icon: 'star'
+  label: 'My Tier',
+  icon: 'crown'
 }, {
   id: 'payouts',
   label: 'Payouts',
-  icon: 'card'
+  icon: 'package',
+  soon: true
 }, {
   id: 'how-it-works',
   label: 'How you earn',
@@ -53568,19 +54760,10 @@ const NAV = [{
   icon: 'user'
 }];
 
-// ---- Dashboard copy helpers -------------------------------------------
-// Extracted so the JSX stays legible and so every sentence that quotes a
-// live figure is a plain function that can be asserted in tests. None of
-// these invent a value: each falls back to wording that makes no claim.
+// ---- Copy helpers -------------------------------------------------------
+// Every sentence that quotes a live figure is a plain function; none of
+// these invent a value — each falls back to wording that makes no claim.
 const initialsOf = name => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
-const SHARE_TITLE = creator => `Shop SORA LIFE with ${creator.display_name}`;
-const ordinalDay = n => {
-  const v = Number(n);
-  if (!Number.isFinite(v) || v <= 0) return '';
-  const suffix = ['th', 'st', 'nd', 'rd'];
-  const k = v % 100;
-  return `${v}${suffix[(k - 20) % 10] || suffix[k] || suffix[0]}`;
-};
 const ratePct = creator => {
   const r = Number(creator?.default_commission_rate);
   return Number.isFinite(r) ? `${r}%` : '—';
@@ -53589,23 +54772,6 @@ const windowLabel = creator => {
   const d = Number(creator?.default_attribution_window_days);
   return Number.isFinite(d) && d > 0 ? `${d} days` : '—';
 };
-const hasAnyCommission = earnings => Number(earnings?.paid ?? 0) > 0 || Number(earnings?.available ?? 0) > 0 || Number(earnings?.held ?? 0) > 0 || Number(earnings?.reserved ?? 0) > 0;
-const activationHint = creator => `Your account is ${creator?.status || 'pending'}. Links won’t attribute visits until an admin activates it.`;
-const clicksHint = analytics => {
-  const c = Number(analytics?.clicks ?? 0);
-  if (c > 0) return `${c} visit${c === 1 ? '' : 's'} have arrived through your links.`;
-  return 'Post your link or code where your audience already is. Visits show up here automatically.';
-};
-const payoutHint = earnings => {
-  const min = Number(earnings?.min_payout);
-  const day = ordinalDay(earnings?.payout_day);
-  if (Number.isFinite(min) && min > 0 && day) {
-    return `Requests open on the ${day} of each month, once your available balance reaches ${money2(min)}.`;
-  }
-  return 'Requests open on the configured payout day each month, once your available balance reaches the minimum.';
-};
-const totalLabel = (n, tail) => `${n} ${tail}`;
-const linksHint = n => `${n} campaign link${n === 1 ? '' : 's'}, plus your default link.`;
 const fmtDate = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
   month: 'short',
@@ -53643,9 +54809,14 @@ function CreatorPortal({
   const [standing, setStanding] = reactExports.useState(initial?.standing || null);
   const [rewards, setRewards] = reactExports.useState(initial?.rewards || null);
   const [leaderboard, setLeaderboard] = reactExports.useState(initial?.leaderboard || []);
-  const [series, setSeries] = reactExports.useState(initial?.series || null);
+  // Activity series by range ('7d' drives the dashboard, '90d' the sparklines
+  // on the other tabs). Fetched on demand and kept for the session.
+  const [seriesByRange, setSeriesByRange] = reactExports.useState(initial?.seriesByRange || {});
+  const [range, setRange] = reactExports.useState(initial?.range || DEFAULT_RANGE);
+  const [seriesLoading, setSeriesLoading] = reactExports.useState(false);
+  const [recentClicks, setRecentClicks] = reactExports.useState(initial?.recentClicks || []);
+  const [menuOpen, setMenuOpen] = reactExports.useState(false);
   const [terms, setTerms] = reactExports.useState(initial?.terms || null);
-  const rootRef = reactExports.useRef(null);
   const [termsAccepted, setTermsAccepted] = reactExports.useState(null); // null = unknown
   const [acceptingTerms, setAcceptingTerms] = reactExports.useState(false);
   const navRef = reactExports.useRef(null);
@@ -53696,6 +54867,30 @@ function CreatorPortal({
     if (res?.ok) setTermsAccepted(true);
     setAcceptingTerms(false);
   }, []);
+  const loadRange = reactExports.useCallback(async r => {
+    setSeriesLoading(true);
+    try {
+      const sr = await getMyActivitySeries(r);
+      setSeriesByRange(cur => ({
+        ...cur,
+        [r]: sr && sr.ok ? sr : null
+      }));
+    } catch {
+      setSeriesByRange(cur => ({
+        ...cur,
+        [r]: null
+      }));
+    } finally {
+      setSeriesLoading(false);
+    }
+  }, []);
+  const onRange = reactExports.useCallback(r => {
+    setRange(r);
+    setSeriesByRange(cur => {
+      if (!(r in cur)) loadRange(r);
+      return cur;
+    });
+  }, [loadRange]);
   const load = reactExports.useCallback(async () => {
     // Try to link this signed-in account to a creator record (matched on the
     // verified email, server-side). A customer with no creator record simply
@@ -53708,7 +54903,8 @@ function CreatorPortal({
     }
     setCreator(me);
     const [cs, ls, an, en, ky, po, st, rw, lb] = await Promise.all([getMyCampaigns(me.id), getMyLinks(me.id), getMyCreatorAnalytics(), getMyCreatorEarnings(), getMyKyc(), getMyPayouts(), getMyCreatorStanding(), getMyCreatorRewards(), getCreatorLeaderboard()]);
-    getMyActivitySeries().then(sr => setSeries(sr && sr.ok ? sr : null)).catch(() => setSeries(null));
+    for (const r of [DEFAULT_RANGE, '90d']) loadRange(r);
+    getMyRecentClicks().then(c => setRecentClicks(Array.isArray(c) ? c : [])).catch(() => setRecentClicks([]));
     setCampaigns(cs);
     setLinks(ls);
     setAnalytics(an && an.ok ? an : null);
@@ -53729,50 +54925,10 @@ function CreatorPortal({
     }
     load();
   }, [authLoading, session, load, initial]);
-
-  // Staggered fade-up as sections enter view. Everything renders VISIBLE
-  // first — the hiding class is only added here, in a browser, and never
-  // when the reader has asked for reduced motion — so server output and a
-  // no-script page read exactly as they should. Transform and opacity only.
-  reactExports.useEffect(() => {
-    const root = rootRef.current;
-    if (!root || typeof IntersectionObserver === 'undefined') return undefined;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
-    const io = new IntersectionObserver(entries => {
-      for (const e of entries) if (e.isIntersecting) {
-        e.target.classList.add('is-in');
-        io.unobserve(e.target);
-      }
-    }, {
-      rootMargin: '0px 0px -6% 0px',
-      threshold: 0.05
-    });
-    let n = 0;
-    const arm = () => {
-      root.querySelectorAll(REVEAL_SELECTOR).forEach(el => {
-        if (el.dataset.rv) return;
-        el.dataset.rv = '1';
-        el.style.setProperty('--rv-i', String(n++ % 6));
-        io.observe(el);
-      });
-    };
-    root.classList.add('js-reveal');
-    arm();
-    const mo = new MutationObserver(arm);
-    mo.observe(root, {
-      childList: true,
-      subtree: true
-    });
-    return () => {
-      io.disconnect();
-      mo.disconnect();
-      root.classList.remove('js-reveal');
-    };
-  }, [state, tab]);
   reactExports.useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const nav = navRef.current;
-      const active = nav?.querySelector('.crp__navitem.active');
+      const active = nav?.querySelector('.cs-nav__item.is-on');
       if (!nav || !active || nav.scrollWidth <= nav.clientWidth) return;
       const inset = 12;
       const visibleLeft = nav.scrollLeft + inset;
@@ -53832,308 +54988,169 @@ function CreatorPortal({
     });
   }
   const campaignById = Object.fromEntries(campaigns.map(c => [c.id, c]));
-  const activeLinks = links.filter(l => l.status === 'active');
-  const activeCampaigns = campaigns.filter(c => c.status === 'active');
+  links.filter(l => l.status === 'active');
+  campaigns.filter(c => c.status === 'active');
   const isLive = creator.status === 'active';
   const defaultLink = buildTrackingUrl({
     destination_path: '/'
   }, creator, null);
   const rank = rankSlot(standing?.rank);
-  const weekly = weeklySeries(series);
-  const monthly = monthlySeries(earnings?.monthly_history);
+  const weekly = rangeSeries(seriesByRange['90d'], '90d');
+  const dash = rangeSeries(seriesByRange[range], range);
   const isZero = v => !(Number(v) > 0);
+  const withdrawalsOpen = !!standing?.withdrawals_open;
+  const activity = buildActivity({
+    creator,
+    clicks: recentClicks,
+    payouts,
+    rewards,
+    kyc,
+    now: initial?.now ? new Date(initial.now) : new Date()
+  });
+  const initials = initialsOf(creator.display_name);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "crp crp--dark",
+    className: "crp crp--studio",
     "data-rank": rank,
-    ref: rootRef,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "crp__ambient",
-      "aria-hidden": "true"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "crp__grain",
-      "aria-hidden": "true"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("header", {
-      className: "crp__top",
-      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "container crp__top-in",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: "/",
-          className: "crp__brand",
-          "aria-label": "SORA LIFE home",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            className: "crp__brand-mark",
-            children: /*#__PURE__*/jsxRuntimeExports.jsx(SparrowMark, {
-              size: 34,
-              light: true
-            })
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-              children: "SORA LIFE"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-              children: "Creator Program"
-            })]
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "crp__top-right",
-          children: [standing?.rank && /*#__PURE__*/jsxRuntimeExports.jsx(RankBadge, {
-            rank: standing.rank,
-            level: standing.level,
-            size: "sm"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            className: "crp__who",
-            children: creator.display_name
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-            className: "btn btn-sm btn-light",
-            onClick: () => {
-              signOut();
-              navigate('/');
-            },
-            children: "Log out"
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("aside", {
+      className: "cs-side",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/",
+        className: "cs-brand",
+        "aria-label": "SORA LIFE home",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cs-brand__mark",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(SparrowMark, {
+            size: 34,
+            light: true
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "cs-brand__txt",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: "SORA LIFE"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+            children: "Creator Program"
           })]
         })]
-      })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+        ref: navRef,
+        className: "cs-nav",
+        "aria-label": "Creator portal",
+        children: NAV.map(n => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: `/creator/${n.id}`,
+          className: `cs-nav__item${tab === n.id ? ' is-on' : ''}`,
+          "aria-current": tab === n.id ? 'page' : undefined,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: n.icon,
+            size: 17
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: n.label
+          }), n.soon && !withdrawalsOpen && /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+            className: "cs-nav__soon",
+            children: "Soon"
+          })]
+        }, n.id))
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cs-side__foot",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cs-side__eyebrow",
+          children: "SORA LIFE"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "cs-side__tag serif",
+          children: ["Wellness ", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "for a Brighter ", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "Tomorrow"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/creator/tier",
+          className: "cs-side__chip",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "sparkle",
+            size: 15
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: ["You\u2019re creating ", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "real impact"]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "chevronRight",
+            size: 15
+          })]
+        })]
+      })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "container crp__body",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "crp__nav-wrap",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("nav", {
-          ref: navRef,
-          className: "crp__nav",
-          "aria-label": "Creator portal",
-          children: NAV.map(n => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: `/creator/${n.id}`,
-            className: `crp__navitem ${tab === n.id ? 'active' : ''}`,
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-              name: n.icon,
-              size: 16
-            }), " ", n.label]
-          }, n.id))
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "crp__nav-cue",
-          "aria-hidden": "true",
-          children: "\u203A"
+      className: "cs-main",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "cs-top",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(PortalSearch, {
+          campaigns: campaigns,
+          links: links,
+          onGo: to => navigate(to)
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+          className: "cs-top__right",
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: "cs-user",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "cs-user__avatar",
+              "aria-hidden": "true",
+              children: initials
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "cs-user__txt",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+                children: creator.display_name
+              }), standing?.rank ? /*#__PURE__*/jsxRuntimeExports.jsxs("em", {
+                children: [standing.rank, " \xB7 Level ", standing.level]
+              }) : /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+                children: creator.status
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+              type: "button",
+              className: "cs-user__more",
+              "aria-expanded": menuOpen,
+              "aria-haspopup": "menu",
+              "aria-label": "Account menu",
+              onClick: () => setMenuOpen(v => !v),
+              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "chevronDown",
+                size: 16
+              })
+            }), menuOpen && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              className: "cs-user__menu",
+              role: "menu",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+                to: "/creator/profile",
+                role: "menuitem",
+                onClick: () => setMenuOpen(false),
+                children: "Profile"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+                to: "/creator/tier",
+                role: "menuitem",
+                onClick: () => setMenuOpen(false),
+                children: "My Tier"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+                type: "button",
+                role: "menuitem",
+                onClick: () => {
+                  setMenuOpen(false);
+                  signOut();
+                  navigate('/');
+                },
+                children: "Log out"
+              })]
+            })]
+          })
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("main", {
-        className: "crp__main",
+        className: "crp__main cs-content",
         children: [!isLive && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "crp__notice",
           children: ["Your creator account is ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
             children: creator.status
           }), ". Your links won\u2019t attribute visits until an admin activates it."]
-        }), tab === 'dashboard' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx(IdBar, {
-            eyebrow: "SORA LIFE Creator",
-            name: creator.display_name,
-            items: [...(standing?.rank ? [{
-              k: 'Rank',
-              v: /*#__PURE__*/jsxRuntimeExports.jsx(RankBadge, {
-                rank: standing.rank,
-                level: standing.level,
-                current: true,
-                size: "md"
-              })
-            }] : []), {
-              k: 'Status',
-              v: creator.status
-            }, {
-              k: 'Creator code',
-              v: /*#__PURE__*/jsxRuntimeExports.jsx("code", {
-                children: creator.creator_code
-              })
-            }, {
-              k: 'Commission',
-              v: standing?.rate != null ? `${Number(standing.rate)}%` : ratePct(creator)
-            }, {
-              k: 'Attribution',
-              v: windowLabel(creator)
-            }]
-          }), isLive && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-            className: "ck-share",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              className: "ck-share__eyebrow",
-              children: "Your creator link"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-              className: "ck-share__title",
-              children: "Share it anywhere."
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-              className: "ck-share__sub",
-              children: ["Every visit through this link is recorded against your account for", ' ', creator.default_attribution_window_days, " days. Any order in that window earns commission."]
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("code", {
-              className: "ck-share__url",
-              children: defaultLink
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-              className: "ck-share__actions",
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx(CopyButton, {
-                value: defaultLink,
-                className: "btn",
-                label: "Copy link"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(ShareButton, {
-                url: defaultLink,
-                title: SHARE_TITLE(creator)
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-                to: "/creator/links",
-                className: "btn btn-light",
-                children: "All links"
-              })]
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              className: "ck-share__code",
-              children: ["Code ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
-                children: creator.creator_code
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(CopyButton, {
-                value: creator.creator_code,
-                className: "btn btn-xs",
-                label: "Copy"
-              })]
-            })]
-          }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
-            title: "Performance",
-            action: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-              to: "/creator/analytics",
-              className: "ck-section__link",
-              children: "Analytics"
-            }),
-            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Band, {
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "Link clicks",
-                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-                  value: analytics?.clicks ?? 0,
-                  format: n => String(Math.round(n))
-                }),
-                tone: "info",
-                spark: weekly.clicks,
-                zero: isZero(analytics?.clicks)
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "Orders",
-                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-                  value: analytics?.attributed_orders ?? 0,
-                  format: n => String(Math.round(n))
-                }),
-                tone: "info",
-                spark: weekly.orders,
-                zero: isZero(analytics?.attributed_orders)
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "Products sold",
-                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-                  value: analytics?.products_sold ?? 0,
-                  format: n => String(Math.round(n))
-                }),
-                tone: "info",
-                spark: weekly.products,
-                zero: isZero(analytics?.products_sold)
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "Attributed sales",
-                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-                  value: analytics?.attributed_sales ?? 0,
-                  format: money2
-                }),
-                tone: "ok",
-                spark: weekly.sales,
-                zero: isZero(analytics?.attributed_sales)
-              })]
-            })
-          }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
-            title: "Earnings",
-            action: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-              to: "/creator/earnings",
-              className: "ck-section__link",
-              children: "Earnings"
-            }),
-            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Balance, {
-              label: "Available to withdraw",
-              value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-                value: earnings?.available ?? 0,
-                format: money2
-              }),
-              hint: isZero(earnings?.available) ? 'Nothing has cleared yet. Commission lands here after delivery and the settlement hold.' : 'Cleared commission. A payout request withdraws this full amount.',
-              spark: cumulative(monthly.values),
-              sparkLabel: "Commission, last 12 months",
-              zero: isZero(earnings?.available),
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "Held",
-                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-                  value: earnings?.held ?? 0,
-                  format: money2
-                }),
-                tone: "hold",
-                zero: isZero(earnings?.held)
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "In payout",
-                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-                  value: earnings?.reserved ?? 0,
-                  format: money2
-                }),
-                tone: "info",
-                zero: isZero(earnings?.reserved)
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "Paid out",
-                value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-                  value: earnings?.paid ?? 0,
-                  format: money2
-                }),
-                tone: "ok",
-                zero: isZero(earnings?.paid)
-              })]
-            })
-          }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
-            title: "Next steps",
-            children: /*#__PURE__*/jsxRuntimeExports.jsxs("ol", {
-              className: "ck-steps",
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Step, {
-                index: 1,
-                done: isLive,
-                title: "Account active",
-                body: isLive ? 'Your links attribute visits.' : activationHint(creator)
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Step, {
-                index: 2,
-                done: Number(analytics?.clicks ?? 0) > 0,
-                next: isLive && Number(analytics?.clicks ?? 0) === 0,
-                title: "Share your first link",
-                body: clicksHint(analytics)
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Step, {
-                index: 3,
-                done: hasAnyCommission(earnings),
-                next: Number(analytics?.clicks ?? 0) > 0 && !hasAnyCommission(earnings),
-                title: "Earn first commission",
-                body: "When an attributed order is paid, commission is created and enters the hold period."
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Step, {
-                index: 4,
-                done: kyc?.identity_status === 'verified',
-                next: hasAnyCommission(earnings) && kyc?.identity_status !== 'verified',
-                title: "Verify payout details",
-                body: kyc?.identity_status === 'verified' ? 'Verified. You can request a payout when your balance clears.' : 'Submit KYC once. An admin verifies it before your first withdrawal.'
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Step, {
-                index: 5,
-                done: Number(earnings?.paid ?? 0) > 0,
-                next: kyc?.identity_status === 'verified' && Number(earnings?.available ?? 0) > 0 && Number(earnings?.paid ?? 0) === 0,
-                title: "Request a payout",
-                body: payoutHint(earnings)
-              })]
-            })
-          }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
-            title: "Campaigns and links",
-            action: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-              to: "/creator/campaigns",
-              className: "ck-section__link",
-              children: "Campaigns"
-            }),
-            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Band, {
-              cols: 3,
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "Active campaigns",
-                value: String(activeCampaigns.length),
-                tone: "brand",
-                hint: totalLabel(campaigns.length, 'on your account')
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "Active links",
-                value: String(activeLinks.length),
-                tone: "brand",
-                hint: linksHint(links.length)
-              }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-                label: "Attribution window",
-                value: windowLabel(creator)
-              })]
-            })
-          })]
+        }), tab === 'dashboard' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorDashboard, {
+          creator: creator,
+          analytics: analytics,
+          earnings: earnings,
+          standing: standing,
+          series: dash,
+          range: range,
+          onRange: onRange,
+          seriesLoading: seriesLoading,
+          activity: activity,
+          hour: initial?.hour
         }), tab === 'campaigns' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
             className: "serif crp__h1",
@@ -54320,8 +55337,7 @@ function CreatorPortal({
             creator: creator,
             earnings: earnings,
             standing: standing,
-            weekly: weekly,
-            monthly: monthly
+            weekly: weekly
           }), /*#__PURE__*/jsxRuntimeExports.jsx(TierStanding, {
             standing: standing,
             compact: true,
@@ -54450,6 +55466,60 @@ function CreatorPortal({
   });
 }
 
+// The top-bar search: a quick jump. Enter goes to the best match among the
+// portal's sections, campaigns and links. It searches nothing it cannot open.
+function PortalSearch({
+  campaigns = [],
+  links = [],
+  onGo
+}) {
+  const [q, setQ] = reactExports.useState('');
+  const targets = [...NAV.map(n => ({
+    label: n.label,
+    to: `/creator/${n.id}`
+  })), ...campaigns.map(c => ({
+    label: c.name,
+    to: '/creator/campaigns'
+  })), ...links.map(l => ({
+    label: l.label || l.public_code,
+    to: '/creator/links'
+  }))];
+  const needle = q.trim().toLowerCase();
+  const hits = needle ? targets.filter(t => String(t.label || '').toLowerCase().includes(needle)).slice(0, 5) : [];
+  const go = e => {
+    e.preventDefault();
+    if (hits[0]) {
+      onGo(hits[0].to);
+      setQ('');
+    }
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+    className: "cs-search",
+    role: "search",
+    onSubmit: go,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+      name: "search",
+      size: 16
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+      type: "search",
+      value: q,
+      onChange: e => setQ(e.target.value),
+      placeholder: "Search campaigns, links, resources\u2026",
+      "aria-label": "Search the portal"
+    }), hits.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "cs-search__hits",
+      role: "listbox",
+      children: hits.map((h, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: h.to,
+          onClick: () => setQ(''),
+          children: h.label
+        })
+      }, i))
+    })]
+  });
+}
+
 // A human label for where a tracking link points.
 function destinationLabel(l) {
   const type = l?.destination_type || 'homepage';
@@ -54555,7 +55625,7 @@ function Shell({
   children
 }) {
   return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-    className: "crp crp--plain crp--dark",
+    className: "crp crp--plain crp--studio",
     "data-rank": "neutral",
     children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "container",
