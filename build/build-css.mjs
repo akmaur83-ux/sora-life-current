@@ -35,7 +35,7 @@
 // Every url() in these files is absolute (/public/...) or a data: URI, so
 // concatenation cannot break a relative reference.
 // ============================================================
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -88,13 +88,7 @@ const DEFERRED = [
 ];
 
 function bundle(files, outFile, label) {
-  // A listed sheet that is not on disk yet (a sibling branch's work in
-  // progress) is skipped with a warning rather than failing the whole build.
-  const parts = files.filter((rel) => {
-    if (existsSync(resolve(ROOT, rel))) return true;
-    console.warn(`  css: SKIP ${rel} (not found)`);
-    return false;
-  }).map((rel) => {
+  const parts = files.map((rel) => {
     const css = readFileSync(resolve(ROOT, rel), 'utf8');
     return `/* ═══ ${rel} ═══ */\n${css.trim()}\n`;
   });

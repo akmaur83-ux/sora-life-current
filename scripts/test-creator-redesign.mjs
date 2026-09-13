@@ -23,7 +23,6 @@ const earnings = read('../src/components/creator/CreatorEarnings.jsx');
 const payouts = read('../src/components/creator/CreatorPayouts.jsx');
 const hiw = read('../src/components/creator/CreatorHowItWorks.jsx');
 const css = read('../src/styles/creator-expressive.css');
-const indexHtml = read('../index.html');
 
 let passed = 0, failed = 0, current = '(startup)';
 function fatal(kind, err) {
@@ -162,11 +161,18 @@ await test('all five meanings have a tone class', () => {
   }
 });
 
-await test('the stylesheet is loaded after creator.css so it layers', () => {
-  const base = indexHtml.indexOf('styles/creator.css');
-  const layer = indexHtml.indexOf('styles/creator-expressive.css');
-  assert.ok(base > -1 && layer > -1, 'both stylesheets must be linked');
-  assert.ok(layer > base, 'the expressive layer must load second');
+await test('the stylesheet is bundled after creator.css so it layers', () => {
+  // The portal sheets no longer ship as <link>s in index.html: build-css.mjs
+  // concatenates them into public/app-deferred.css in list order, and order
+  // is the whole point — each layer overrides the one before it.
+  const build = read('../build/build-css.mjs');
+  const deferred = build.slice(build.indexOf('const DEFERRED'), build.indexOf('];', build.indexOf('const DEFERRED')));
+  const order = ['styles/creator.css', 'styles/creator-expressive.css', 'styles/creator-tier.css', 'styles/creator-dark.css']
+    .map((f) => deferred.indexOf(f));
+  assert.ok(order.every((i) => i > -1), `every portal sheet must be in the deferred bundle (${order})`);
+  assert.ok(order.every((i, n) => n === 0 || i > order[n - 1]), `the layers must load in order (${order})`);
+  const storefrontEntries = [...build.slice(build.indexOf('const STOREFRONT'), build.indexOf('const DEFERRED')).matchAll(/'([^']+\.css)'/g)].map((m) => m[1]);
+  assert.ok(storefrontEntries.length > 10 && storefrontEntries.every((f) => !/\/creator/.test(f)), 'no portal sheet on the storefront path');
 });
 
 await test('cards, empty states and share surfaces all exist', () => {
