@@ -1,4 +1,4 @@
-import { r as reactExports, aJ as adminListPayouts, j as jsxRuntimeExports, aw as money2, aK as PAYOUT_STATUSES, aL as adminGetPayoutLedger, aM as adminGetPayoutAudit, aN as adminGetKycForCreator, aO as adminReviewPayout, aP as adminMarkPayoutPaid } from '../bundle.js';
+import { r as reactExports, aK as getPayoutConfig, aL as adminListPayouts, j as jsxRuntimeExports, a8 as money2, aM as PAYOUT_STATUSES, aN as adminSetWithdrawalsOpen, aO as adminGetPayoutLedger, aP as adminGetPayoutAudit, aQ as adminGetKycForCreator, aR as adminReviewPayout, aS as adminMarkPayoutPaid } from '../bundle.js';
 
 const fmtDateTime = iso => iso ? new Date(iso).toLocaleString('en-IN') : '—';
 const STATUS_BADGE = {
@@ -37,6 +37,26 @@ function Payouts() {
     kyc: null
   });
   const [busy, setBusy] = reactExports.useState(false);
+  // null = unknown (config not loaded yet); the toggle is disabled until then.
+  const [withdrawalsOpen, setWithdrawalsOpen] = reactExports.useState(null);
+  const [savingGate, setSavingGate] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    getPayoutConfig().then(c => setWithdrawalsOpen(!!c?.withdrawals_open)).catch(() => setWithdrawalsOpen(false));
+  }, []);
+  async function setGate(open) {
+    const verb = open ? 'OPEN' : 'CLOSE';
+    if (!window.confirm(`${verb} creator withdrawals?\n\n${open ? 'Creators with verified KYC will be able to request payouts on the window day.' : 'Every payout request will be refused with a clear "withdrawals closed" reason. Commission keeps accruing.'}`)) return;
+    setSavingGate(true);
+    try {
+      const res = await adminSetWithdrawalsOpen(open);
+      setWithdrawalsOpen(!!res?.withdrawals_open);
+      flash(open ? 'Withdrawals are OPEN.' : 'Withdrawals are CLOSED.');
+    } catch (e) {
+      setErr(e.message || String(e));
+    } finally {
+      setSavingGate(false);
+    }
+  }
   const load = reactExports.useCallback(async () => {
     setLoading(true);
     try {
@@ -164,6 +184,31 @@ function Payouts() {
     }), msg && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm-banner ok",
       children: msg
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: `surface adm-gate ${withdrawalsOpen ? 'is-open' : 'is-closed'}`,
+      "data-withdrawals": withdrawalsOpen == null ? 'unknown' : withdrawalsOpen ? 'open' : 'closed',
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+          style: {
+            margin: 0
+          },
+          children: ["Creator withdrawals: ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: withdrawalsOpen == null ? '…' : withdrawalsOpen ? 'OPEN' : 'CLOSED'
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hint",
+          style: {
+            margin: '4px 0 0'
+          },
+          children: withdrawalsOpen ? 'Creators with verified KYC can request a payout on the window day.' : 'Payout requests are refused (reason: withdrawals closed). Commission keeps accruing and creators see a notice on their earnings screen. Open this once tax registration is complete.'
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: `btn ${withdrawalsOpen ? 'btn-light' : ''}`,
+        disabled: withdrawalsOpen == null || savingGate,
+        onClick: () => setGate(!withdrawalsOpen),
+        children: savingGate ? 'Saving…' : withdrawalsOpen ? 'Close withdrawals' : 'Open withdrawals'
+      })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm-chipbar",
       children: ['all', ...PAYOUT_STATUSES].map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {

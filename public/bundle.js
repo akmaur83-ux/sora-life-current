@@ -34665,6 +34665,1896 @@ function HomeOffers({
   });
 }
 
+// ============================================================
+// Creator tiers — the pure rules, mirroring migration 0031.
+//
+// The database is the authority: creator_tier_for_sales() resolves the rate a
+// commission row snapshots, and admin_set_creator_tier_levels() validates the
+// ladder. This module exists so the portal can explain a standing it was
+// handed, the admin editor can refuse a bad ladder before the round trip with
+// the same reason the RPC would give, and both can be tested without a
+// database. Nothing here computes commission.
+// ============================================================
+
+
+// The brief's ladder — used as the editor's "restore defaults" and by tests.
+// The live ladder is creator_tier_levels; this is never read at runtime.
+const DEFAULT_LADDER = Object.freeze([{
+  level: 1,
+  rank: 'Rise',
+  threshold: 0,
+  rate: 10
+}, {
+  level: 2,
+  rank: 'Rise',
+  threshold: 10000,
+  rate: 11
+}, {
+  level: 3,
+  rank: 'Premium',
+  threshold: 25000,
+  rate: 12
+}, {
+  level: 4,
+  rank: 'Premium',
+  threshold: 50000,
+  rate: 13
+}, {
+  level: 5,
+  rank: 'Elite',
+  threshold: 75000,
+  rate: 14
+}, {
+  level: 6,
+  rank: 'Elite',
+  threshold: 100000,
+  rate: 15
+}, {
+  level: 7,
+  rank: 'Royale',
+  threshold: 125000,
+  rate: 16
+}, {
+  level: 8,
+  rank: 'Royale',
+  threshold: 150000,
+  rate: 17
+}, {
+  level: 9,
+  rank: 'Prime',
+  threshold: 200000,
+  rate: 18
+}, {
+  level: 10,
+  rank: 'Prime',
+  threshold: 250000,
+  rate: 19
+}, {
+  level: 11,
+  rank: 'Supreme',
+  threshold: 300000,
+  rate: 21
+}, {
+  level: 12,
+  rank: 'Supreme',
+  threshold: 350000,
+  rate: 22
+}, {
+  level: 13,
+  rank: 'Crown',
+  threshold: 400000,
+  rate: 23
+}, {
+  level: 14,
+  rank: 'Crown',
+  threshold: 500000,
+  rate: 25
+}]);
+const DEFAULT_BEYOND_STEP = 25000;
+const num = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : NaN;
+};
+
+// Normalise whatever shape a ladder arrives in (RPC jsonb, table rows, editor
+// state) into sorted {level, rank, threshold, rate} numbers.
+function normalizeLadder(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((r, i) => ({
+    level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
+    rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
+    threshold: num(r?.threshold),
+    rate: num(r?.rate)
+  })).sort((a, b) => a.level - b.level);
+}
+
+// Progress toward the next level, from a standing (RPC output or tierForSales).
+function tierProgress(standing) {
+  const sales = Math.max(0, Number(standing?.lifetime_confirmed_sales ?? standing?.sales ?? 0) || 0);
+  const from = Number(standing?.threshold) || 0;
+  const to = standing?.next_threshold == null ? null : Number(standing.next_threshold);
+  if (to == null || !Number.isFinite(to) || to <= from) {
+    return {
+      fraction: 1,
+      remaining: 0,
+      from,
+      to: null,
+      atTop: true
+    };
+  }
+  const fraction = Math.min(1, Math.max(0, (sales - from) / (to - from)));
+  return {
+    fraction,
+    remaining: Math.max(0, to - sales),
+    from,
+    to,
+    atTop: false
+  };
+}
+
+// The reasons admin_set_creator_tier_levels() returns, produced client-side
+// from the same rules so the editor can refuse before the round trip.
+function validateLadder(rows, beyondStep) {
+  const levels = normalizeLadder(rows);
+  if (levels.length === 0) return {
+    ok: false,
+    reason: 'empty'
+  };
+  if (beyondStep != null && beyondStep !== '' && (!Number.isFinite(Number(beyondStep)) || Number(beyondStep) < 0)) {
+    return {
+      ok: false,
+      reason: 'bad_beyond_step'
+    };
+  }
+  let prevThreshold = -1;
+  let prevRate = -1;
+  for (let i = 0; i < levels.length; i++) {
+    const l = levels[i];
+    const at = i + 1;
+    if (l.level !== at) return {
+      ok: false,
+      reason: 'levels_not_contiguous',
+      at
+    };
+    if (!l.rank || l.rank.length > 40) return {
+      ok: false,
+      reason: 'bad_rank',
+      at
+    };
+    if (!Number.isFinite(l.threshold) || l.threshold < 0) return {
+      ok: false,
+      reason: 'bad_threshold',
+      at
+    };
+    if (at === 1 && l.threshold !== 0) return {
+      ok: false,
+      reason: 'first_threshold_not_zero',
+      at
+    };
+    if (l.threshold <= prevThreshold) return {
+      ok: false,
+      reason: 'thresholds_not_ascending',
+      at
+    };
+    if (!Number.isFinite(l.rate) || l.rate < 0 || l.rate > 100) return {
+      ok: false,
+      reason: 'bad_rate',
+      at
+    };
+    if (l.rate < prevRate) return {
+      ok: false,
+      reason: 'rates_not_ascending',
+      at
+    };
+    prevThreshold = l.threshold;
+    prevRate = l.rate;
+  }
+  return {
+    ok: true,
+    levels
+  };
+}
+function ladderErrorMessage(res) {
+  if (!res || res.ok) return '';
+  const at = res.at ? ` (level ${res.at})` : '';
+  return {
+    empty: 'The ladder needs at least one level.',
+    bad_beyond_step: 'The "beyond" step must be a positive amount.',
+    levels_not_contiguous: `Levels must run 1, 2, 3… without gaps${at}.`,
+    bad_rank: `Each level needs a rank name of up to 40 characters${at}.`,
+    bad_threshold: `Thresholds must be amounts of ₹0 or more${at}.`,
+    first_threshold_not_zero: 'Level 1 must start at ₹0.',
+    thresholds_not_ascending: `Each threshold must be higher than the one before${at}.`,
+    bad_rate: `Rates must be between 0% and 100%${at}.`,
+    rates_not_ascending: `A higher level cannot pay a lower rate${at}.`
+  }[res.reason] || 'The ladder could not be saved.';
+}
+const LEADERBOARD_LIMIT = 100;
+function sanitizeLeaderboard(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.map(r => ({
+    rank_position: Number(r?.rank_position),
+    display_name: String(r?.display_name ?? '').trim(),
+    rank_name: String(r?.rank_name ?? '').trim(),
+    level: Number(r?.level)
+  })).filter(r => Number.isInteger(r.rank_position) && r.rank_position >= 1 && r.display_name && Number.isInteger(r.level) && r.level >= 1).sort((a, b) => a.rank_position - b.rank_position).slice(0, LEADERBOARD_LIMIT);
+}
+
+// Rank → accent slot. The section's CSS maps slots to colours; unknown or
+// admin-renamed ranks fall to a neutral slot rather than breaking the look.
+const RANK_SLOTS = {
+  rise: 'rise',
+  premium: 'premium',
+  elite: 'elite',
+  royale: 'royale',
+  prime: 'prime',
+  supreme: 'supreme',
+  crown: 'crown'
+};
+function rankSlot(rankName) {
+  const key = String(rankName || '').trim().toLowerCase();
+  return RANK_SLOTS[key] || 'neutral';
+}
+
+// Rupee amounts on the tier surfaces read in Indian grouping with no paise:
+// thresholds are round numbers and progress copy should not look like a bill.
+function rupees(n) {
+  const v = Math.max(0, Math.round(Number(n) || 0));
+  return '₹' + v.toLocaleString('en-IN');
+}
+
+function LeaderboardList({
+  rows,
+  initial = 20,
+  highlightPosition = null,
+  emptyText = null
+}) {
+  const list = sanitizeLeaderboard(rows);
+  const [open, setOpen] = reactExports.useState(false);
+  if (list.length === 0) return emptyText ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+    className: "lb__empty",
+    children: emptyText
+  }) : null;
+  const shown = open ? list : list.slice(0, initial);
+  const half = Math.ceil(shown.length / 2);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+      className: `lb${open ? ' is-open' : ''}`,
+      style: {
+        '--lb-rows': half
+      },
+      "data-count": list.length,
+      children: shown.map(r => {
+        const me = highlightPosition != null && Number(highlightPosition) === r.rank_position;
+        return /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          className: `lb__row${r.rank_position <= 3 ? ' is-podium' : ''}${me ? ' is-me' : ''}`,
+          "data-rank": rankSlot(r.rank_name),
+          "aria-current": me ? 'true' : undefined,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "lb__pos",
+            children: String(r.rank_position).padStart(2, '0')
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "lb__name",
+            children: r.display_name
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "lb__tier",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "lb__rank",
+              children: r.rank_name
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "lb__level",
+              children: ["L", r.level]
+            })]
+          })]
+        }, r.rank_position);
+      })
+    }), list.length > initial && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: "lb__more",
+      onClick: () => setOpen(v => !v),
+      "aria-expanded": open,
+      children: open ? `Show top ${initial}` : `Show all ${list.length}`
+    })]
+  });
+}
+
+// ============================================================
+// Creator Program — pure link helpers.
+//
+// Deliberately free of any Supabase/browser import so the rules below can be
+// unit-tested directly (scripts/test-creator-program.mjs). These are
+// convenience guards: the database repeats the destination rule as a CHECK
+// constraint, so a bypass here still cannot store a malicious destination.
+// ============================================================
+
+const CREATOR_STATUSES = ['pending', 'active', 'paused', 'suspended', 'archived'];
+const CAMPAIGN_STATUSES = ['draft', 'active', 'paused', 'ended'];
+const DESTINATION_TYPES = ['homepage', 'product', 'category', 'custom'];
+
+/**
+ * Force a destination to an INTERNAL root-relative path.
+ * Anything resembling an external, protocol-relative or script URL collapses
+ * to '/', so a tracking link can never become an open redirect.
+ */
+function normalizeDestination(path, type) {
+  let p = String(path || '').trim();
+  if (type === 'homepage' || !p) return '/';
+  if (/^[a-z][a-z0-9+.-]*:/i.test(p)) return '/'; // http:, javascript:, data:
+  if (p.startsWith('//')) return '/'; // protocol-relative
+  if (!p.startsWith('/')) p = `/${p}`;
+  return p.slice(0, 300);
+}
+
+/**
+ * The public tracking URL for a link.
+ * `ref` carries the human-readable creator code; `trk` carries the link's own
+ * unique code so the server can resolve this exact link (and its campaign).
+ */
+function buildTrackingUrl(link, creator, campaign, origin) {
+  const base = origin || (typeof window !== 'undefined' ? window.location.origin : '');
+  const path = link?.destination_path || '/';
+  const params = new URLSearchParams();
+  params.set('ref', creator?.creator_code || link?.public_code || '');
+  if (campaign?.campaign_code) params.set('campaign', campaign.campaign_code);
+  if (link?.public_code) params.set('trk', link.public_code);
+  return `${base}${path}${path.includes('?') ? '&' : '?'}${params.toString()}`;
+}
+
+// Product Media orchestration and pure upload validation shared by the admin
+// client and importer. Adapters perform I/O; this module has no credentials.
+const IMAGE_UPLOAD_TYPES = Object.freeze({
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/avif': 'avif'
+});
+Object.keys(IMAGE_UPLOAD_TYPES).join(',');
+const IMAGE_UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+const VIDEO_UPLOAD_TYPES = Object.freeze({
+  'video/mp4': 'mp4',
+  'video/webm': 'webm'
+});
+const ascii = (bytes, start, length) => String.fromCharCode(...bytes.slice(start, start + length));
+const startsWith = (bytes, signature, offset = 0) => signature.every((value, index) => bytes[offset + index] === value);
+function sniffUploadImageType(bytes) {
+  if (!(bytes instanceof Uint8Array) || bytes.length < 12) return null;
+  if (startsWith(bytes, [0xff, 0xd8, 0xff])) return 'image/jpeg';
+  if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10])) return 'image/png';
+  if (['GIF87a', 'GIF89a'].includes(ascii(bytes, 0, 6))) return 'image/gif';
+  if (ascii(bytes, 0, 4) === 'RIFF' && ascii(bytes, 8, 4) === 'WEBP') return 'image/webp';
+  if (ascii(bytes, 4, 4) === 'ftyp') {
+    const brand = ascii(bytes, 8, 4).toLowerCase();
+    if (brand === 'avif' || brand === 'avis') return 'image/avif';
+    if (brand === 'mif1') {
+      const boxSize = (bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3]) >>> 0;
+      const end = Math.min(bytes.length, boxSize || bytes.length);
+      for (let offset = 16; offset + 4 <= end; offset += 4) {
+        if (['avif', 'avis'].includes(ascii(bytes, offset, 4).toLowerCase())) return 'image/avif';
+      }
+    }
+  }
+  return null;
+}
+function validateImageMetadata(file, {
+  allowedTypes = Object.keys(IMAGE_UPLOAD_TYPES),
+  maxBytes = IMAGE_UPLOAD_MAX_BYTES
+} = {}) {
+  if (!file) throw new Error('No file selected.');
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error(`Unsupported image type${file.type ? ` (${file.type})` : ''}. Use JPEG, PNG, WebP, GIF or AVIF. SVG is not allowed.`);
+  }
+  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected image is empty.');
+  if (file.size > maxBytes) {
+    throw new Error(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Keep it under ${Math.floor(maxBytes / 1024 / 1024)} MB.`);
+  }
+  if (typeof file.slice !== 'function') throw new Error('The selected image cannot be read.');
+}
+async function verifyImageDecode(file, {
+  maxPixels,
+  maxDimension
+}) {
+  if (typeof globalThis.createImageBitmap !== 'function') return;
+  let bitmap;
+  try {
+    bitmap = await globalThis.createImageBitmap(file);
+  } catch {
+    throw new Error('This image is malformed or could not be decoded.');
+  }
+  try {
+    const width = Number(bitmap.width),
+      height = Number(bitmap.height);
+    if (!width || !height) throw new Error('This image has invalid dimensions.');
+    if (width > maxDimension || height > maxDimension || width * height > maxPixels) {
+      throw new Error(`Use an image under ${Math.floor(maxPixels / 1000000)} megapixels and ${maxDimension.toLocaleString()} pixels per side.`);
+    }
+  } finally {
+    bitmap.close?.();
+  }
+}
+async function validateImageUpload(file, {
+  allowedTypes = Object.keys(IMAGE_UPLOAD_TYPES),
+  maxBytes = IMAGE_UPLOAD_MAX_BYTES,
+  maxPixels = 24 * 1000 * 1000,
+  maxDimension = 10000
+} = {}) {
+  validateImageMetadata(file, {
+    allowedTypes,
+    maxBytes
+  });
+  let bytes;
+  try {
+    bytes = new Uint8Array(await file.slice(0, 512).arrayBuffer());
+  } catch {
+    throw new Error('The selected image could not be read.');
+  }
+  const detectedType = sniffUploadImageType(bytes);
+  if (!detectedType || detectedType !== file.type || !allowedTypes.includes(detectedType)) {
+    throw new Error('The image contents do not match its declared file type.');
+  }
+  await verifyImageDecode(file, {
+    maxPixels,
+    maxDimension
+  });
+  return {
+    mime: detectedType,
+    extension: IMAGE_UPLOAD_TYPES[detectedType]
+  };
+}
+async function validateVideoUpload(file, {
+  maxBytes = 100 * 1024 * 1024
+} = {}) {
+  if (!file || !VIDEO_UPLOAD_TYPES[file.type]) throw new Error('Please choose an MP4 or WebM video.');
+  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected video is empty.');
+  if (file.size > maxBytes) throw new Error(`Video is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Keep it under ${Math.floor(maxBytes / 1024 / 1024)} MB.`);
+  if (typeof file.slice !== 'function') throw new Error('The selected video cannot be read.');
+  let bytes;
+  try {
+    bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  } catch {
+    throw new Error('The selected video could not be read.');
+  }
+  const mp4 = bytes.length >= 12 && ascii(bytes, 4, 4) === 'ftyp';
+  const webm = bytes.length >= 4 && startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3]);
+  if (file.type === 'video/mp4' && !mp4 || file.type === 'video/webm' && !webm) {
+    throw new Error('The video contents do not match its declared file type.');
+  }
+  return {
+    mime: file.type,
+    extension: VIDEO_UPLOAD_TYPES[file.type]
+  };
+}
+class MediaOperationError extends Error {
+  constructor(phase, message, details = {}) {
+    super(message);
+    this.name = 'MediaOperationError';
+    this.phase = phase;
+    Object.assign(this, details);
+  }
+}
+async function removeMediaObject(storagePath, remove) {
+  let cause;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await remove(storagePath);
+      return;
+    } catch (error) {
+      cause = error;
+    }
+  }
+  // Storage and Postgres cannot commit atomically. Never call an unresolved
+  // compensating delete a success: retain the exact path for recovery.
+  throw new MediaOperationError('cleanup', 'Storage cleanup could not be confirmed: ' + storagePath, {
+    cleanupPending: [storagePath],
+    cause
+  });
+}
+async function persistUploadedMedia(uploaded, create, findByPath, remove) {
+  try {
+    return await create();
+  } catch (error) {
+    // An insert can commit while its response is lost. Reconcile before
+    // deleting, otherwise cleanup could break a successfully persisted row.
+    let saved;
+    try {
+      saved = await findByPath(uploaded.storagePath);
+    } catch (cause) {
+      throw new MediaOperationError('reconcile', 'Could not confirm media persistence; do not retry this upload until checked.', {
+        cleanupPending: [uploaded.storagePath],
+        cause
+      });
+    }
+    if (saved) return saved;
+    await removeMediaObject(uploaded.storagePath, remove);
+    throw new MediaOperationError('insert', error.message || 'Could not save media.', {
+      cleaned: uploaded.storagePath
+    });
+  }
+}
+
+// Always read back the authoritative rows. A preferred selection may fail
+// while the previous primary remains valid; report the failure and sync that
+// actual primary, never the optimistic UI choice. Empty galleries clear the
+// denormalised image_url (needed when the last uploaded image is deleted).
+async function settlePrimaryMedia(ops, preferredId = null) {
+  let rows = [],
+    primary = null,
+    primaryCount = null;
+  let primaryError = null,
+    syncError = null;
+  try {
+    rows = await ops.list();
+    let primaries = rows.filter(row => row.isPrimary);
+    const preferred = preferredId == null ? null : rows.find(row => String(row.id) === String(preferredId));
+    if (preferredId != null && !preferred) throw new Error('The selected primary no longer belongs to this product.');
+    if (rows.length && (primaries.length !== 1 || preferred && preferred.id !== primaries[0]?.id)) {
+      const chosen = preferred || primaries[0] || rows[0];
+      try {
+        await ops.select(chosen.id);
+      } catch (error) {
+        primaryError = error.message || 'Primary selection failed.';
+      }
+      rows = await ops.list();
+      primaries = rows.filter(row => row.isPrimary);
+    }
+    primaryCount = primaries.length;
+    if (rows.length && primaryCount !== 1) throw new Error('Media must have exactly one primary; found ' + primaryCount + '.');
+    primary = primaries[0] || null;
+    if (preferred && primary?.id !== preferred.id) primaryError ||= 'The requested primary selection was not confirmed.';
+  } catch (error) {
+    primaryError ||= error.message || 'Could not verify primary media.';
+  }
+
+  // Never clear image_url when a failed read made the gallery look empty.
+  if (primary || primaryCount === 0 && rows.length === 0 && !primaryError) {
+    try {
+      await ops.sync(primary?.url || null);
+    } catch (error) {
+      syncError = error.message || 'Product image synchronization failed.';
+    }
+  }
+  return {
+    ok: !primaryError && !syncError,
+    rows,
+    primary,
+    primaryCount,
+    primaryError,
+    syncError
+  };
+}
+async function commitStagedMedia(items, ops) {
+  const created = [],
+    failed = [],
+    cleanupPending = [];
+  let initial;
+  try {
+    initial = await ops.list();
+  } catch (error) {
+    return {
+      ok: false,
+      created,
+      failed,
+      cleanupPending,
+      primaryCount: null,
+      primaryError: error.message,
+      syncError: null
+    };
+  }
+  let madePrimary = initial.filter(row => row.isPrimary).length === 1;
+  const baseOrder = initial.reduce((max, row) => Math.max(max, row.sortOrder + 1), 0);
+  for (const [index, item] of items.entries()) {
+    try {
+      const uploaded = await ops.upload(item.file);
+      const row = await persistUploadedMedia(uploaded, () => ops.add({
+        ...uploaded,
+        altText: item.alt || '',
+        sortOrder: baseOrder + created.length,
+        isPrimary: !madePrimary
+      }), ops.find, ops.remove);
+      created.push({
+        ...row,
+        wantedPrimary: !!item.isPrimary
+      });
+      // Only a successful, confirmed row can advance the primary state.
+      if (row.isPrimary) madePrimary = true;
+    } catch (error) {
+      failed.push({
+        name: item.file?.name || 'image ' + (index + 1),
+        phase: error.phase || 'upload',
+        error: error.message
+      });
+      if (error.cleanupPending?.length) {
+        cleanupPending.push(...error.cleanupPending);
+        failed.push(...items.slice(index + 1).map(pending => ({
+          name: pending.file?.name || 'image',
+          phase: 'not-attempted',
+          error: 'Not attempted while cleanup is unresolved.'
+        })));
+        break;
+      }
+    }
+  }
+  const preferred = created.find(row => row.wantedPrimary) || (initial.some(row => row.isPrimary) ? null : created[0]);
+  const state = created.length ? await settlePrimaryMedia(ops, preferred?.id) : {
+    ok: true,
+    primary: null,
+    primaryCount: initial.filter(row => row.isPrimary).length,
+    primaryError: null,
+    syncError: null,
+    rows: initial
+  };
+  return {
+    ok: state.ok && !failed.length && !cleanupPending.length,
+    created: created.map(row => state.rows.find(saved => saved.id === row.id) || row),
+    failed,
+    cleanupPending,
+    primary: state.primary,
+    primaryCount: state.primaryCount,
+    primaryError: state.primaryError,
+    syncError: state.syncError
+  };
+}
+function mediaFailureMessage(result) {
+  return [...(result.failed || []).map(item => `${item.name}: ${item.error}`), result.primaryError && `Primary: ${result.primaryError}`, result.syncError && `Image sync: ${result.syncError}`, result.cleanupPending?.length && `Cleanup unresolved — do not re-upload until checked: ${result.cleanupPending.join(', ')}`].filter(Boolean).join(' ');
+}
+
+// ============================================================
+// KYC documents — the pure rules, shared by the creator portal and the tests.
+//
+// No I/O here. The bucket, its RLS and the set_kyc_document() RPC (migration
+// 0030) are the real gate; this module exists so the client refuses the same
+// things the server would, with a message a person can act on, before a
+// single byte is uploaded.
+//
+// Mirrors 0030 exactly:
+//   bucket      kyc-documents, private, 5 MB, {jpeg, png, webp, pdf}
+//   object path <creator_id>/<kind>/<id>.<ext>   kind ∈ {pan, bank}
+// ============================================================
+const KYC_BUCKET = 'kyc-documents';
+const KYC_DOCUMENT_MAX_BYTES = 5 * 1024 * 1024;
+
+// MIME → extension. The order is what the <input accept> lists.
+const KYC_DOCUMENT_TYPES = Object.freeze({
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'application/pdf': 'pdf'
+});
+const KYC_DOCUMENT_ACCEPT = Object.keys(KYC_DOCUMENT_TYPES).join(',');
+const KYC_DOCUMENT_KINDS = Object.freeze([{
+  kind: 'pan',
+  label: 'PAN card',
+  field: 'pan_document_path',
+  hint: 'A clear photo or scan of the PAN card, showing the number and name.'
+}, {
+  kind: 'bank',
+  label: 'Bank proof',
+  field: 'bank_document_path',
+  hint: 'A cancelled cheque, passbook page or bank statement header showing the account holder, account number and IFSC.'
+}]);
+const KYC_KIND_SET = new Set(KYC_DOCUMENT_KINDS.map(k => k.kind));
+
+// The same expression set_kyc_document() applies (0030 §5), so a path the
+// client builds is a path the server accepts, and nothing else is.
+const PATH_RE = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/(pan|bank)\/([A-Za-z0-9-]+)\.(jpg|jpeg|png|webp|pdf)$/;
+function kycDocumentPath(creatorId, kind, extension, id) {
+  const path = `${String(creatorId).toLowerCase()}/${kind}/${id}.${extension}`;
+  if (!isKycDocumentPath(path, creatorId, kind)) throw new Error('Invalid document destination.');
+  return path;
+}
+function isKycDocumentPath(path, creatorId, kind) {
+  if (typeof path !== 'string') return false;
+  const m = PATH_RE.exec(path);
+  if (!m) return false;
+  if (creatorId != null && m[1] !== String(creatorId).toLowerCase()) return false;
+  if (kind != null && m[2] !== kind) return false;
+  return true;
+}
+
+// PDFs are the one non-image type the bucket takes; sniff them the same way.
+function sniffKycDocumentType(bytes) {
+  if (!(bytes instanceof Uint8Array) || bytes.length < 5) return null;
+  if (String.fromCharCode(...bytes.slice(0, 5)) === '%PDF-') return 'application/pdf';
+  const image = sniffUploadImageType(bytes);
+  return image && KYC_DOCUMENT_TYPES[image] ? image : null;
+}
+
+// Metadata-only checks: synchronous, so a form can refuse before reading.
+function validateKycDocumentMetadata(file) {
+  if (!file) throw new Error('Choose a file first.');
+  if (!KYC_DOCUMENT_TYPES[file.type]) {
+    throw new Error(`Unsupported file type${file.type ? ` (${file.type})` : ''}. Upload a JPEG, PNG, WebP or PDF.`);
+  }
+  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected file is empty.');
+  if (file.size > KYC_DOCUMENT_MAX_BYTES) {
+    throw new Error(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Keep it under ${Math.floor(KYC_DOCUMENT_MAX_BYTES / 1024 / 1024)} MB.`);
+  }
+  if (typeof file.slice !== 'function') throw new Error('The selected file cannot be read.');
+}
+
+// Full check: metadata, then the first bytes must agree with the declared type.
+async function validateKycDocument(file) {
+  validateKycDocumentMetadata(file);
+  let bytes;
+  try {
+    bytes = new Uint8Array(await file.slice(0, 512).arrayBuffer());
+  } catch {
+    throw new Error('The selected file could not be read.');
+  }
+  const detected = sniffKycDocumentType(bytes);
+  if (!detected || detected !== file.type) {
+    throw new Error('The file contents do not match its type. Export it again as a JPEG, PNG, WebP or PDF.');
+  }
+  return {
+    mime: detected,
+    extension: KYC_DOCUMENT_TYPES[detected]
+  };
+}
+
+// set_kyc_document() reasons → copy. Unknown reasons fall back, never leak.
+function friendlyKycDocumentError(reason) {
+  switch (reason) {
+    case 'not_a_creator':
+      return 'Only an approved creator account can upload verification documents.';
+    case 'bad_kind':
+      return 'Unknown document type.';
+    case 'bad_path':
+      return 'The upload landed somewhere unexpected. Please try again.';
+    case 'not_uploaded':
+      return 'The upload did not complete. Please try again.';
+    default:
+      return 'The document could not be saved. Please try again.';
+  }
+}
+
+// What the portal shows for a document slot, from the profile row alone.
+function kycDocumentState(kyc, kind) {
+  const def = KYC_DOCUMENT_KINDS.find(k => k.kind === kind);
+  if (!def) throw new Error(`Unknown KYC document kind: ${kind}`);
+  const path = kyc?.[def.field] || null;
+  return {
+    ...def,
+    path,
+    uploaded: Boolean(path),
+    uploadedAt: path ? kyc?.documents_updated_at || null : null,
+    fileType: path ? (path.split('.').pop() || '').toLowerCase() : null
+  };
+}
+
+// ============================================================
+// Level rewards — pure helpers shared by the portal chooser, the admin
+// editor and the tests. The claim itself is claim_level_reward() (0031);
+// nothing here writes.
+// ============================================================
+
+const REWARD_TYPES = Object.freeze(['product', 'cash', 'other']);
+const REWARD_TYPE_LABEL = Object.freeze({
+  product: 'Product',
+  cash: 'Cash',
+  other: 'Other'
+});
+const REWARD_OPTION_SLOTS = Object.freeze([1, 2, 3]);
+const CLAIM_STATUSES = Object.freeze(['pending', 'fulfilled', 'cancelled']);
+const CLAIM_STATUS_LABEL = Object.freeze({
+  pending: 'Pending',
+  fulfilled: 'Fulfilled',
+  cancelled: 'Cancelled'
+});
+
+// Levels the creator can act on, from my_creator_rewards(). Only a level
+// with at least one option is offered — a level with none configured shows
+// no prompt at all, never an empty card.
+function claimableLevels(rewards) {
+  const list = Array.isArray(rewards?.claimable) ? rewards.claimable : [];
+  return list.map(lv => ({
+    level: Number(lv?.level),
+    rank: lv?.rank || null,
+    options: (Array.isArray(lv?.options) ? lv.options : []).filter(o => o && o.id && String(o.label || '').trim()).sort((a, b) => Number(a.option_index) - Number(b.option_index)).slice(0, 3)
+  })).filter(lv => Number.isInteger(lv.level) && lv.level >= 1 && lv.options.length > 0).sort((a, b) => a.level - b.level);
+}
+function claimHistory(rewards) {
+  const list = Array.isArray(rewards?.claims) ? rewards.claims : [];
+  return list.filter(c => c && Number.isInteger(Number(c.level))).map(c => ({
+    ...c,
+    level: Number(c.level),
+    status: CLAIM_STATUSES.includes(c.status) ? c.status : 'pending'
+  })).sort((a, b) => b.level - a.level);
+}
+
+// claim_level_reward() reasons → copy. Unknown reasons never leak.
+function friendlyClaimError(reason) {
+  return {
+    not_a_creator: 'Only an approved creator account can claim a reward.',
+    bad_level: 'That level does not exist.',
+    level_locked: 'You have not reached that level yet.',
+    bad_reward: 'That option is no longer available. Refresh and choose again.',
+    already_claimed: 'You have already chosen a reward for this level.'
+  }[reason] || 'The reward could not be claimed. Please try again.';
+}
+
+// ---- Admin editor -------------------------------------------------------
+// Validate one option slot before it is written. Mirrors the table's checks
+// (label 1–120 chars, type in the set, slot 1–3, level ≥ 1).
+function validateRewardOption(o) {
+  const level = Number(o?.level);
+  const slot = Number(o?.option_index);
+  const label = String(o?.label ?? '').trim();
+  if (!Number.isInteger(level) || level < 1) return {
+    ok: false,
+    reason: 'bad_level'
+  };
+  if (!REWARD_OPTION_SLOTS.includes(slot)) return {
+    ok: false,
+    reason: 'bad_slot'
+  };
+  if (!label || label.length > 120) return {
+    ok: false,
+    reason: 'bad_label'
+  };
+  if (!REWARD_TYPES.includes(o?.reward_type)) return {
+    ok: false,
+    reason: 'bad_type'
+  };
+  return {
+    ok: true
+  };
+}
+function rewardOptionErrorMessage(res) {
+  if (!res || res.ok) return '';
+  return {
+    bad_level: 'Choose a level of 1 or more.',
+    bad_slot: 'An option must sit in slot 1, 2 or 3.',
+    bad_label: 'Give the option a label of up to 120 characters.',
+    bad_type: 'Choose a reward type: product, cash or other.'
+  }[res.reason] || 'The option could not be saved.';
+}
+
+// The row an upsert sends. ABSENT when the editor has nothing to say —
+// the same omit-when-absent rule adminImportBiosashCatalog applies: PostgREST
+// assigns only the columns it is given, so an omitted key leaves the live
+// value alone. `id` is included only for an existing row.
+function rewardOptionRow(o) {
+  const row = {
+    level: Number(o.level),
+    option_index: Number(o.option_index),
+    label: String(o.label).trim(),
+    reward_type: o.reward_type
+  };
+  if (o.id) row.id = o.id;
+  if (o.description !== undefined) row.description = String(o.description ?? '').trim() || null;
+  if (o.value !== undefined) row.value = String(o.value ?? '').trim() || null;
+  if (typeof o.is_active === 'boolean') row.is_active = o.is_active;
+  return row;
+}
+
+// Group definitions by level → slot for the editor grid.
+function groupRewardsByLevel(rows) {
+  const byLevel = new Map();
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const level = Number(r?.level);
+    const slot = Number(r?.option_index);
+    if (!Number.isInteger(level) || !REWARD_OPTION_SLOTS.includes(slot)) continue;
+    if (!byLevel.has(level)) byLevel.set(level, {});
+    byLevel.get(level)[slot] = r;
+  }
+  return [...byLevel.entries()].sort((a, b) => a[0] - b[0]).map(([level, slots]) => ({
+    level,
+    slots
+  }));
+}
+
+// ============================================================
+// SORA LIFE Creator Program — data access
+//
+// Every call here goes through the normal Supabase client, so RLS is the
+// enforcement boundary, not this file:
+//   * admin*  functions succeed only for an admin_users member.
+//   * my*     functions return ONLY the signed-in creator's own rows
+//             (policies scope them to current_creator_id()).
+// Hiding a button in the UI is never the protection — the database refuses
+// the query for anyone else.
+//
+// Nothing here can change a commission rate or status from the creator side:
+// there is no update policy for creators at all.
+// ============================================================
+const CREATOR_COLS = 'id,user_id,creator_code,display_name,legal_name,email,phone,avatar_url,status,' + 'default_commission_rate,default_attribution_window_days,payout_eligible,notes,joined_at,created_at,updated_at';
+
+// Fields a creator may safely see about themselves — deliberately excludes
+// internal notes (admin-only commentary).
+const CREATOR_SELF_COLS = 'id,creator_code,display_name,email,phone,avatar_url,status,' + 'default_commission_rate,default_attribution_window_days,payout_eligible,joined_at';
+const CAMPAIGN_COLS = 'id,creator_id,name,campaign_code,description,status,start_at,end_at,' + 'commission_rate_override,attribution_window_days,created_at,updated_at';
+const LINK_COLS = 'id,creator_id,campaign_id,public_code,label,destination_type,destination_path,status,metadata,created_at,updated_at';
+function unwrap({
+  data,
+  error
+}) {
+  if (error) throw error;
+  return data;
+}
+
+// ---------------------------------------------------------------
+// ADMIN — creators
+// ---------------------------------------------------------------
+async function adminListCreators() {
+  return unwrap(await supabase.from('creator_partners').select(CREATOR_COLS).order('created_at', {
+    ascending: false
+  })) || [];
+}
+async function adminGetCreator(id) {
+  return unwrap(await supabase.from('creator_partners').select(CREATOR_COLS).eq('id', id).maybeSingle());
+}
+
+/**
+ * Create a creator. `creator_code` is deliberately NOT sent: a database
+ * trigger generates a unique, collision-safe, non-sequential code server-side.
+ */
+async function adminCreateCreator(fields) {
+  const row = {
+    display_name: String(fields.display_name || '').trim(),
+    legal_name: fields.legal_name?.trim() || null,
+    email: String(fields.email || '').trim().toLowerCase(),
+    phone: fields.phone?.trim() || null,
+    avatar_url: fields.avatar_url?.trim() || null,
+    status: fields.status || 'pending',
+    default_commission_rate: Number(fields.default_commission_rate) || 0,
+    default_attribution_window_days: Number(fields.default_attribution_window_days) || 30,
+    payout_eligible: !!fields.payout_eligible,
+    notes: fields.notes?.trim() || null
+  };
+  return unwrap(await supabase.from('creator_partners').insert(row).select(CREATOR_COLS).single());
+}
+
+/** Update a creator. creator_code is never included — see changeCreatorCode. */
+async function adminUpdateCreator(id, fields) {
+  const row = {};
+  for (const k of ['display_name', 'legal_name', 'email', 'phone', 'avatar_url', 'status', 'notes']) {
+    if (k in fields) row[k] = typeof fields[k] === 'string' ? fields[k].trim() || null : fields[k];
+  }
+  if ('default_commission_rate' in fields) row.default_commission_rate = Number(fields.default_commission_rate) || 0;
+  if ('default_attribution_window_days' in fields) row.default_attribution_window_days = Number(fields.default_attribution_window_days) || 30;
+  if ('payout_eligible' in fields) row.payout_eligible = !!fields.payout_eligible;
+  if (row.email) row.email = row.email.toLowerCase();
+  return unwrap(await supabase.from('creator_partners').update(row).eq('id', id).select(CREATOR_COLS).single());
+}
+async function adminSetCreatorStatus(id, status) {
+  return unwrap(await supabase.from('creator_partners').update({
+    status
+  }).eq('id', id).select(CREATOR_COLS).single());
+}
+
+/**
+ * Change the public code through the audited RPC, which archives the previous
+ * code as an alias so historical tracking links keep resolving.
+ */
+async function adminChangeCreatorCode(id, newCode) {
+  return unwrap(await supabase.rpc('change_creator_code', {
+    p_creator_id: id,
+    p_new_code: newCode
+  }));
+}
+async function adminListCodeAliases(creatorId) {
+  return unwrap(await supabase.from('creator_code_aliases').select('id,code,retired_at').eq('creator_id', creatorId).order('retired_at', {
+    ascending: false
+  })) || [];
+}
+
+// ---------------------------------------------------------------
+// ADMIN — campaigns
+// ---------------------------------------------------------------
+async function adminListCampaigns(creatorId) {
+  let q = supabase.from('creator_campaigns').select(CAMPAIGN_COLS).order('created_at', {
+    ascending: false
+  });
+  if (creatorId) q = q.eq('creator_id', creatorId);
+  return unwrap(await q) || [];
+}
+async function adminCreateCampaign(creatorId, fields) {
+  const row = {
+    creator_id: creatorId,
+    name: String(fields.name || '').trim(),
+    campaign_code: (fields.campaign_code || '').trim(),
+    description: fields.description?.trim() || null,
+    status: fields.status || 'draft',
+    start_at: fields.start_at || null,
+    end_at: fields.end_at || null,
+    commission_rate_override: fields.commission_rate_override === '' || fields.commission_rate_override == null ? null : Number(fields.commission_rate_override),
+    attribution_window_days: fields.attribution_window_days === '' || fields.attribution_window_days == null ? null : Number(fields.attribution_window_days)
+  };
+  return unwrap(await supabase.from('creator_campaigns').insert(row).select(CAMPAIGN_COLS).single());
+}
+async function adminUpdateCampaign(id, fields) {
+  const row = {};
+  for (const k of ['name', 'description', 'status', 'start_at', 'end_at']) {
+    if (k in fields) row[k] = typeof fields[k] === 'string' ? fields[k].trim() || null : fields[k];
+  }
+  if ('commission_rate_override' in fields) {
+    row.commission_rate_override = fields.commission_rate_override === '' || fields.commission_rate_override == null ? null : Number(fields.commission_rate_override);
+  }
+  if ('attribution_window_days' in fields) {
+    row.attribution_window_days = fields.attribution_window_days === '' || fields.attribution_window_days == null ? null : Number(fields.attribution_window_days);
+  }
+  return unwrap(await supabase.from('creator_campaigns').update(row).eq('id', id).select(CAMPAIGN_COLS).single());
+}
+
+// ---------------------------------------------------------------
+// ADMIN — tracking links
+// ---------------------------------------------------------------
+async function adminListLinks(creatorId) {
+  let q = supabase.from('creator_tracking_links').select(LINK_COLS).order('created_at', {
+    ascending: false
+  });
+  if (creatorId) q = q.eq('creator_id', creatorId);
+  return unwrap(await q) || [];
+}
+async function adminCreateLink(creatorId, fields) {
+  const row = {
+    creator_id: creatorId,
+    campaign_id: fields.campaign_id || null,
+    label: fields.label?.trim() || null,
+    destination_type: fields.destination_type || 'homepage',
+    destination_path: normalizeDestination(fields.destination_path, fields.destination_type),
+    status: fields.status || 'active'
+  };
+  return unwrap(await supabase.from('creator_tracking_links').insert(row).select(LINK_COLS).single());
+}
+async function adminSetLinkStatus(id, status) {
+  return unwrap(await supabase.from('creator_tracking_links').update({
+    status
+  }).eq('id', id).select(LINK_COLS).single());
+}
+
+// ---------------------------------------------------------------
+// ADMIN — audit trail
+// ---------------------------------------------------------------
+async function adminListAudit({
+  entityId,
+  limit = 50
+} = {}) {
+  let q = supabase.from('creator_admin_audit').select('id,admin_user_id,action,entity_type,entity_id,metadata,created_at').order('created_at', {
+    ascending: false
+  }).limit(limit);
+  if (entityId) q = q.eq('entity_id', entityId);
+  return unwrap(await q) || [];
+}
+
+/** Attribution events for one creator (counts only — no commission in Part 1). */
+async function adminListAttributionEvents(creatorId, limit = 25) {
+  return unwrap(await supabase.from('creator_attribution_events').select('id,event_type,campaign_id,tracking_link_id,matched_code,landing_path,occurred_at,expires_at').eq('creator_id', creatorId).order('occurred_at', {
+    ascending: false
+  }).limit(limit)) || [];
+}
+
+// ---------------------------------------------------------------
+// CREATOR — self-service reads (RLS-scoped to the caller)
+// ---------------------------------------------------------------
+
+/** Link this auth account to a matching creator record. Server-side by email. */
+async function claimCreatorAccount() {
+  const {
+    data,
+    error
+  } = await supabase.rpc('claim_creator_account');
+  if (error) return 'error';
+  return data;
+}
+
+/** The authenticated user's own id, or null. Read from the persisted session
+ *  (no network round-trip). */
+async function currentUserId$1() {
+  const {
+    data
+  } = await supabase.auth.getSession();
+  return data?.session?.user?.id ?? null;
+}
+
+/**
+ * The signed-in user's OWN creator record, or null.
+ *
+ * Explicitly scoped to `user_id = auth.uid()` rather than relying on RLS to
+ * narrow the result. This matters for ADMIN accounts: the "admin all" read
+ * policy would otherwise return every creator, and `.maybeSingle()` would hand
+ * back a creator the admin does not own (and error once more than one exists).
+ * With the filter:
+ *   - a customer with no creator gets null (onboarding state)
+ *   - a creator gets only their own row
+ *   - an admin who owns no creator gets null (never another creator's record)
+ *   - an admin who is also a creator gets only their own row
+ * `user_id` is UNIQUE, so at most one row ever matches.
+ */
+async function getMyCreator() {
+  const uid = await currentUserId$1();
+  if (!uid) return null;
+  const {
+    data,
+    error
+  } = await supabase.from('creator_partners').select(CREATOR_SELF_COLS).eq('user_id', uid).maybeSingle();
+  if (error) return null;
+  return data;
+}
+
+// Campaigns/links are RLS-scoped for a normal creator, but an admin's
+// "admin all" policy would return everyone's. Passing the resolved creatorId
+// keeps the portal correct for an admin who is also a creator, without
+// touching RLS. For a normal creator the filter is simply redundant.
+async function getMyCampaigns(creatorId) {
+  let q = supabase.from('creator_campaigns').select(CAMPAIGN_COLS).order('created_at', {
+    ascending: false
+  });
+  if (creatorId) q = q.eq('creator_id', creatorId);
+  const {
+    data,
+    error
+  } = await q;
+  if (error) return [];
+  return data || [];
+}
+async function getMyLinks(creatorId) {
+  let q = supabase.from('creator_tracking_links').select(LINK_COLS).order('created_at', {
+    ascending: false
+  });
+  if (creatorId) q = q.eq('creator_id', creatorId);
+  const {
+    data,
+    error
+  } = await q;
+  if (error) return [];
+  return data || [];
+}
+
+// ---------------------------------------------------------------
+// PART 2 — ATTRIBUTION / CONVERSIONS
+// Admin reads conversions (admin RLS); creators get safe aggregates only
+// (via the my_creator_analytics RPC — never row-level customer data).
+// ---------------------------------------------------------------
+const CONV_SELECT = 'id,order_id,order_number,creator_id,campaign_id,tracking_link_id,customer_user_id,matched_code,' + 'status,currency,gross_item_sales,discounts,tax,shipping,refunded_amount,eligible_sales,eligible_sales_original,' + 'attributed_at,qualified_at,cancelled_at,refunded_at,' + 'creator:creator_partners(display_name,creator_code),' + 'campaign:creator_campaigns(name,campaign_code),' + 'link:creator_tracking_links(public_code,destination_path)';
+async function adminListConversions({
+  creatorId,
+  status,
+  limit = 100
+} = {}) {
+  let q = supabase.from('creator_conversions').select(CONV_SELECT).order('attributed_at', {
+    ascending: false
+  }).limit(limit);
+  if (creatorId) q = q.eq('creator_id', creatorId);
+  if (status && status !== 'all') q = q.eq('status', status);
+  const {
+    data,
+    error
+  } = await q;
+  if (error) throw error;
+  return data || [];
+}
+async function adminGetConversionItems(conversionId) {
+  const {
+    data,
+    error
+  } = await supabase.from('creator_conversion_items').select('id,order_item_index,product_id,variant_id,product_name_snapshot,variant_label_snapshot,quantity,unit_price,line_amount,eligible_amount').eq('conversion_id', conversionId).order('order_item_index', {
+    ascending: true
+  });
+  if (error) throw error;
+  return data || [];
+}
+async function adminGetConversionAudit(conversionId) {
+  const {
+    data,
+    error
+  } = await supabase.from('creator_conversion_audit').select('id,from_status,to_status,eligible_delta,reason,created_at').eq('conversion_id', conversionId).order('created_at', {
+    ascending: false
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+/** Record a refund/return against an order's conversion (admin only, audited). */
+async function adminRefundConversion(orderId, amount, reason) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('admin_refund_conversion', {
+    p_order_id: orderId,
+    p_refund_amount: Number(amount) || 0,
+    p_reason: reason || 'refund'
+  });
+  if (error) throw error;
+  return data;
+}
+
+/** Safe, non-monetary creator analytics (aggregates only, no customer PII). */
+async function getMyCreatorAnalytics() {
+  const {
+    data,
+    error
+  } = await supabase.rpc('my_creator_analytics');
+  if (error) return {
+    ok: false,
+    reason: error.message
+  };
+  return data || {
+    ok: false
+  };
+}
+const CONVERSION_STATUSES = ['pending', 'eligible', 'cancelled', 'refunded', 'reversed', 'self_referral'];
+
+// ---------------------------------------------------------------
+// PART 3 — EARNINGS / KYC / PAYOUTS
+// All financial writes go through SECURITY DEFINER RPCs; reads are RLS-scoped
+// (creators see only their own). No raw PAN/bank/UPI is ever sent back — the
+// DB stores masks only.
+// ---------------------------------------------------------------
+
+// ---- Creator earnings ----
+async function getMyCreatorEarnings() {
+  const {
+    data,
+    error
+  } = await supabase.rpc('my_creator_earnings');
+  if (error) return {
+    ok: false,
+    reason: error.message
+  };
+  return data || {
+    ok: false
+  };
+}
+async function getPayoutConfig() {
+  const {
+    data
+  } = await supabase.rpc('creator_payout_config');
+  return data || {};
+}
+
+// ---- Creator tiers, rewards, leaderboard (0031) ----
+// Standing is DERIVED by my_creator_standing() from the ledger every call;
+// nothing here is cached or computed client-side.
+async function getMyCreatorStanding() {
+  const {
+    data,
+    error
+  } = await supabase.rpc('my_creator_standing');
+  if (error) return {
+    ok: false,
+    reason: error.message
+  };
+  return data || {
+    ok: false
+  };
+}
+async function getMyCreatorRewards() {
+  const {
+    data,
+    error
+  } = await supabase.rpc('my_creator_rewards');
+  if (error) return {
+    ok: false,
+    reason: error.message
+  };
+  return data || {
+    ok: false
+  };
+}
+async function claimLevelReward(level, rewardId) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('claim_level_reward', {
+    p_level: Number(level),
+    p_reward_id: rewardId
+  });
+  if (error) return {
+    ok: false,
+    reason: error.message
+  };
+  return data || {
+    ok: false
+  };
+}
+// PUBLIC: name, rank, level, position — the function returns nothing else,
+// and the client re-projects to those four fields regardless.
+async function getCreatorLeaderboard(limit = LEADERBOARD_LIMIT) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('creator_leaderboard', {
+    p_limit: Math.min(LEADERBOARD_LIMIT, Math.max(1, Number(limit) || LEADERBOARD_LIMIT))
+  });
+  if (error) return [];
+  return sanitizeLeaderboard(data);
+}
+
+// ---- Creator KYC ----
+const KYC_SELF = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,submitted_at,verified_at,verification_notes,pan_document_path,bank_document_path,documents_updated_at';
+async function getMyKyc() {
+  const {
+    data,
+    error
+  } = await supabase.from('creator_kyc_profiles').select(KYC_SELF).maybeSingle();
+  if (error) return null;
+  return data;
+}
+async function submitKyc({
+  legalName,
+  pan,
+  method,
+  accountHolder,
+  accountNumber,
+  ifsc,
+  upi
+}) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('submit_kyc', {
+    p_legal_name: legalName || '',
+    p_pan: pan || '',
+    p_method: method || '',
+    p_account_holder: accountHolder || '',
+    p_account_number: accountNumber || '',
+    p_ifsc: ifsc || '',
+    p_upi: upi || ''
+  });
+  if (error) return {
+    ok: false,
+    reason: error.message
+  };
+  return data;
+}
+
+// ---- Creator KYC documents ----
+// Bucket kyc-documents is private (0030): the creator can only write under
+// their own folder, and the RPC only registers a path that exists there.
+// Order matters — validate, upload, then register; the old object is removed
+// only after the row points at the new one, so a failed upload never leaves
+// the profile pointing at nothing.
+const randomId = () => {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+};
+async function uploadKycDocument({
+  creatorId,
+  kind,
+  file
+}) {
+  if (!creatorId) return {
+    ok: false,
+    reason: 'not_a_creator'
+  };
+  if (!KYC_KIND_SET.has(kind)) return {
+    ok: false,
+    reason: 'bad_kind'
+  };
+  let checked;
+  try {
+    checked = await validateKycDocument(file);
+  } catch (e) {
+    return {
+      ok: false,
+      reason: 'invalid_file',
+      message: e.message
+    };
+  }
+  const path = kycDocumentPath(creatorId, kind, checked.extension, randomId());
+  const {
+    error: upErr
+  } = await supabase.storage.from(KYC_BUCKET).upload(path, file, {
+    cacheControl: '0',
+    upsert: false,
+    contentType: checked.mime
+  });
+  if (upErr) return {
+    ok: false,
+    reason: 'upload_failed',
+    message: upErr.message
+  };
+  const {
+    data,
+    error
+  } = await supabase.rpc('set_kyc_document', {
+    p_kind: kind,
+    p_path: path
+  });
+  if (error) {
+    // The row was not updated; do not leave an orphan the creator can't see.
+    await supabase.storage.from(KYC_BUCKET).remove([path]).catch(() => {});
+    return {
+      ok: false,
+      reason: error.message
+    };
+  }
+  if (!data || data.ok === false) {
+    await supabase.storage.from(KYC_BUCKET).remove([path]).catch(() => {});
+    return data || {
+      ok: false,
+      reason: 'unknown'
+    };
+  }
+  if (data.previous_path && data.previous_path !== path) {
+    // Best effort: the replaced document is dead weight, but its removal is
+    // not what the creator is waiting on.
+    await supabase.storage.from(KYC_BUCKET).remove([data.previous_path]).catch(() => {});
+  }
+  return data;
+}
+
+// ---- Creator payouts ----
+async function requestPayout(amount) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('request_payout', {
+    p_amount: amount == null ? null : Number(amount)
+  });
+  if (error) return {
+    ok: false,
+    reason: error.message
+  };
+  return data;
+}
+async function getMyPayouts() {
+  const {
+    data,
+    error
+  } = await supabase.from('creator_payout_requests').select('id,payout_period,requested_amount,paid_amount,status,requested_at,approved_at,paid_at,payment_reference,rejection_reason').order('requested_at', {
+    ascending: false
+  });
+  if (error) return [];
+  return data || [];
+}
+
+// ---- Admin: KYC ----
+const KYC_ADMIN = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,verification_notes,submitted_at,verified_at,verified_by,pan_document_path,bank_document_path,documents_updated_at,creator:creator_partners(display_name,creator_code)';
+async function adminListKyc() {
+  const {
+    data,
+    error
+  } = await supabase.from('creator_kyc_profiles').select(KYC_ADMIN).order('submitted_at', {
+    ascending: false
+  });
+  if (error) throw error;
+  return data || [];
+}
+async function adminSetKycStatus(creatorId, status, notes) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('admin_set_kyc_status', {
+    p_creator_id: creatorId,
+    p_status: status,
+    p_notes: notes || null
+  });
+  if (error) throw error;
+  return data;
+}
+// A KYC document is only ever reached through a signed URL that dies in
+// KYC_SIGNED_URL_SECONDS. The bucket is private, so there is no public URL to
+// leak — getPublicUrl() would return a link that 400s, and must not be used.
+const KYC_SIGNED_URL_SECONDS = 60;
+async function adminKycDocumentUrl(path) {
+  if (!path || typeof path !== 'string') throw new Error('No document on file.');
+  const {
+    data,
+    error
+  } = await supabase.storage.from(KYC_BUCKET).createSignedUrl(path, KYC_SIGNED_URL_SECONDS);
+  if (error) throw error;
+  if (!data?.signedUrl) throw new Error('Could not sign the document link.');
+  return data.signedUrl;
+}
+async function adminListKycAudit(creatorId) {
+  const {
+    data,
+    error
+  } = await supabase.from('creator_kyc_audit').select('id,actor,from_status,to_status,from_notes,to_notes,metadata,created_at').eq('creator_id', creatorId).order('created_at', {
+    ascending: false
+  }).limit(50);
+  if (error) throw error;
+  return data || [];
+}
+
+// ---- Admin: payouts ----
+const PAYOUT_ADMIN = 'id,creator_id,payout_period,requested_amount,reserved_amount,paid_amount,status,requested_at,reviewed_at,approved_at,paid_at,payment_reference,payout_method_snapshot,rejection_reason,admin_notes,creator:creator_partners(display_name,creator_code)';
+async function adminListPayouts({
+  status,
+  creatorId
+} = {}) {
+  let q = supabase.from('creator_payout_requests').select(PAYOUT_ADMIN).order('requested_at', {
+    ascending: false
+  });
+  if (status && status !== 'all') q = q.eq('status', status);
+  if (creatorId) q = q.eq('creator_id', creatorId);
+  const {
+    data,
+    error
+  } = await q;
+  if (error) throw error;
+  return data || [];
+}
+async function adminGetPayoutLedger(payoutId) {
+  const {
+    data,
+    error
+  } = await supabase.from('creator_commission_ledger').select('id,type,status,amount,commission_rate,eligible_sales,order_id,created_at').eq('payout_id', payoutId).order('created_at', {
+    ascending: true
+  });
+  if (error) throw error;
+  return data || [];
+}
+async function adminGetPayoutAudit(payoutId) {
+  const {
+    data,
+    error
+  } = await supabase.from('creator_payout_audit').select('from_status,to_status,amount,reference,note,created_at').eq('payout_id', payoutId).order('created_at', {
+    ascending: false
+  });
+  if (error) throw error;
+  return data || [];
+}
+async function adminGetKycForCreator(creatorId) {
+  const {
+    data
+  } = await supabase.from('creator_kyc_profiles').select(KYC_ADMIN).eq('creator_id', creatorId).maybeSingle();
+  return data;
+}
+async function adminReviewPayout(payoutId, action, notes) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('admin_review_payout', {
+    p_payout_id: payoutId,
+    p_action: action,
+    p_notes: notes || null
+  });
+  if (error) throw error;
+  return data;
+}
+async function adminMarkPayoutPaid(payoutId, paidAmount, reference, note) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('admin_mark_payout_paid', {
+    p_payout_id: payoutId,
+    p_paid_amount: Number(paidAmount),
+    p_reference: reference,
+    p_note: note || null
+  });
+  if (error) throw error;
+  return data;
+}
+const KYC_STATUSES = ['not_started', 'pending', 'verified', 'rejected', 'needs_update'];
+const PAYOUT_STATUSES = ['requested', 'under_review', 'approved', 'rejected', 'paid', 'cancelled'];
+
+// ---------------------------------------------------------------
+// CUSTOMER SELF-ONBOARDING
+//
+// The application goes through the apply_as_creator RPC, which derives the
+// owner from the verified JWT and sets status/rate server-side. The client
+// can only pass display name, an optional link, an optional platform, and the
+// terms flag — everything sensitive is decided by the database.
+// ---------------------------------------------------------------
+async function applyAsCreator({
+  displayName,
+  socialUrl,
+  platform,
+  agreed
+}) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('apply_as_creator', {
+    p_display_name: displayName || '',
+    p_social_url: socialUrl || null,
+    p_platform: platform || null,
+    p_agreed: !!agreed
+  });
+  if (error) return {
+    ok: false,
+    reason: error.message || 'error'
+  };
+  return data || {
+    ok: false,
+    reason: 'error'
+  };
+}
+
+// ---------------------------------------------------------------
+// ADMIN — creator program approval policy (site_settings 'creator_program')
+// Admin-only via the site_settings admin policy; not publicly readable.
+// ---------------------------------------------------------------
+const PROGRAM_DEFAULTS = {
+  auto_approve: false,
+  default_commission_rate: 10,
+  default_attribution_window_days: 30
+};
+async function adminGetProgramSettings() {
+  const {
+    data,
+    error
+  } = await supabase.from('site_settings').select('value').eq('key', 'creator_program').maybeSingle();
+  if (error || !data) return {
+    ...PROGRAM_DEFAULTS
+  };
+  return {
+    ...PROGRAM_DEFAULTS,
+    ...(data.value || {})
+  };
+}
+async function adminSetProgramSettings(settings) {
+  const value = {
+    auto_approve: !!settings.auto_approve,
+    default_commission_rate: Number(settings.default_commission_rate) || 0,
+    default_attribution_window_days: Number(settings.default_attribution_window_days) || 30
+  };
+  const {
+    error
+  } = await supabase.from('site_settings').upsert({
+    key: 'creator_program',
+    value
+  }, {
+    onConflict: 'key'
+  });
+  if (error) throw error;
+  return value;
+}
+
+// ------------------------------------------------------------
+// ADMIN — tiers, rewards, claims, standings, withdrawals (0031)
+// ------------------------------------------------------------
+const TIER_COLS = 'level,rank_name,threshold,rate,updated_at';
+async function adminGetTierLadder() {
+  const [{
+    data: levels,
+    error
+  }, {
+    data: cfg
+  }] = await Promise.all([supabase.from('creator_tier_levels').select(TIER_COLS).order('level', {
+    ascending: true
+  }), supabase.rpc('creator_tier_config')]);
+  if (error) throw error;
+  return {
+    levels: levels || [],
+    beyond_step: Number(cfg?.beyond_step ?? 25000)
+  };
+}
+// The ladder is replaced atomically by the RPC, which re-validates; the
+// client check is only so a bad ladder is refused with the same reason
+// before the round trip.
+async function adminSetTierLadder(levels, beyondStep) {
+  const check = validateLadder(levels, beyondStep);
+  if (!check.ok) return check;
+  const payload = check.levels.map(l => ({
+    level: l.level,
+    rank: l.rank,
+    threshold: l.threshold,
+    rate: l.rate
+  }));
+  const {
+    data,
+    error
+  } = await supabase.rpc('admin_set_creator_tier_levels', {
+    p_levels: payload,
+    p_beyond_step: beyondStep == null || beyondStep === '' ? null : Number(beyondStep)
+  });
+  if (error) throw error;
+  return data;
+}
+const REWARD_COLS = 'id,level,option_index,label,description,reward_type,value,is_active,created_at,updated_at';
+async function adminListLevelRewards() {
+  const {
+    data,
+    error
+  } = await supabase.from('creator_level_rewards').select(REWARD_COLS).order('level', {
+    ascending: true
+  }).order('option_index', {
+    ascending: true
+  });
+  if (error) throw error;
+  return data || [];
+}
+// Upsert on the (level, option_index) slot. Keys the editor did not touch are
+// ABSENT from the row, so an existing slot keeps them (omit-when-absent).
+async function adminUpsertLevelReward(option) {
+  const check = validateRewardOption(option);
+  if (!check.ok) return check;
+  const row = rewardOptionRow(option);
+  const {
+    data,
+    error
+  } = await supabase.from('creator_level_rewards').upsert(row, {
+    onConflict: 'level,option_index'
+  }).select(REWARD_COLS).single();
+  if (error) throw error;
+  return {
+    ok: true,
+    row: data
+  };
+}
+async function adminDeleteLevelReward(id) {
+  const {
+    error
+  } = await supabase.from('creator_level_rewards').delete().eq('id', id);
+  if (error) throw error;
+  return {
+    ok: true
+  };
+}
+const CLAIM_COLS = 'id,creator_id,level,reward_id,option_index,label,reward_type,value,status,claimed_at,fulfilled_at,cancelled_at,admin_notes,creator:creator_partners(display_name,creator_code)';
+async function adminListRewardClaims({
+  status
+} = {}) {
+  let q = supabase.from('creator_reward_claims').select(CLAIM_COLS).order('claimed_at', {
+    ascending: false
+  });
+  if (status && status !== 'all') q = q.eq('status', status);
+  const {
+    data,
+    error
+  } = await q;
+  if (error) throw error;
+  return data || [];
+}
+async function adminSetRewardClaimStatus(claimId, status, notes) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('admin_set_reward_claim_status', {
+    p_claim_id: claimId,
+    p_status: status,
+    p_notes: notes || null
+  });
+  if (error) throw error;
+  return data;
+}
+
+// Every creator's rank, level, lifetime confirmed sales and commission
+// buckets, keyed by creator_id. Admin-only by the function's own check.
+async function adminCreatorStandings() {
+  const {
+    data,
+    error
+  } = await supabase.rpc('admin_creator_standings');
+  if (error) throw error;
+  const map = {};
+  for (const r of data || []) if (r?.creator_id) map[r.creator_id] = r;
+  return map;
+}
+async function adminSetWithdrawalsOpen(open) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('admin_set_withdrawals_open', {
+    p_open: !!open
+  });
+  if (error) throw error;
+  return data;
+}
+
+// ------------------------------------------------------------
+// Creator terms (migration 0026)
+//
+// The document is a public-read site_settings key, so a prospective creator
+// can read what they are agreeing to before they have an account. Acceptances
+// are written only by the SECURITY DEFINER RPC — never by the client — so the
+// creator and the version both come from trusted sources.
+// ------------------------------------------------------------
+
+const TERMS_DEFAULTS = {
+  body: '',
+  version: 1,
+  updated_at: null
+};
+
+/**
+ * The published terms. Returns the empty default when the migration has not
+ * been applied or nothing has been written yet, so every caller can treat
+ * "no terms" as an ordinary state rather than an error.
+ */
+async function getCreatorTerms() {
+  const {
+    data,
+    error
+  } = await supabase.from('site_settings').select('value').eq('key', 'creator_terms').maybeSingle();
+  if (error || !data) return {
+    ...TERMS_DEFAULTS
+  };
+  return {
+    ...TERMS_DEFAULTS,
+    ...(data.value || {})
+  };
+}
+
+/** True when there is actually something for a creator to read and accept. */
+function termsArePublished(terms) {
+  return !!terms && typeof terms.body === 'string' && terms.body.trim().length > 0;
+}
+
+/**
+ * The signed-in creator's acceptance of a specific version, or null.
+ * RLS scopes this to their own rows; an admin would see all of them, so the
+ * creator_id filter keeps the portal correct for an admin who is also a
+ * creator — the same reasoning as getMyCampaigns.
+ */
+async function getMyTermsAcceptance(creatorId, version) {
+  if (!creatorId || !version) return null;
+  const {
+    data,
+    error
+  } = await supabase.from('creator_terms_acceptances').select('id, version, accepted_at, terms_updated_at').eq('creator_id', creatorId).eq('version', version).maybeSingle();
+  if (error) return null;
+  return data;
+}
+
+/**
+ * Record acceptance of the CURRENT published version.
+ *
+ * Takes no version argument on purpose: the RPC reads it from the stored
+ * document, so the client cannot claim to have accepted something that was
+ * never published. Idempotent — a unique index makes a second call a no-op.
+ */
+async function acceptCreatorTerms() {
+  const {
+    data,
+    error
+  } = await supabase.rpc('record_creator_terms_acceptance');
+  if (error) return {
+    ok: false,
+    reason: error.message
+  };
+  return data || {
+    ok: false,
+    reason: 'no_response'
+  };
+}
+
+function HomeLeaderboard({
+  rows: preloaded = null
+}) {
+  const [rows, setRows] = reactExports.useState(preloaded);
+  reactExports.useEffect(() => {
+    if (preloaded) return undefined;
+    let live = true;
+    getCreatorLeaderboard().then(r => {
+      if (live) setRows(r);
+    }).catch(() => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, [preloaded]);
+  if (!rows || rows.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "v2-sec hm-section hm-leaderboard sl-dark",
+    "data-home-section": "leaderboard",
+    "aria-labelledby": "hm-leaderboard-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "v2-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hm-leaderboard__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "v2-eyebrow",
+          children: "SORA LIFE Creator Program"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "v2-h2",
+          id: "hm-leaderboard-h",
+          children: "Creator leaderboard"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "hm-leaderboard__copy",
+          children: ["The top ", Math.min(rows.length, 100), " creators, ranked by confirmed sales through their own links. Names, ranks and levels only \u2014 never anyone\u2019s earnings."]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(LeaderboardList, {
+        rows: rows,
+        initial: 20
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hm-leaderboard__foot",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Ranks rise with confirmed lifetime sales. Ties go to whoever reached the level first."
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/account/creator",
+          children: "Join the programme \u2192"
+        })]
+      })]
+    })
+  });
+}
+
 function PriceTag({
   product,
   showOff = true,
@@ -36862,304 +38752,6 @@ function contentScore(product) {
   };
 }
 
-// Product Media orchestration and pure upload validation shared by the admin
-// client and importer. Adapters perform I/O; this module has no credentials.
-const IMAGE_UPLOAD_TYPES = Object.freeze({
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-  'image/avif': 'avif'
-});
-Object.keys(IMAGE_UPLOAD_TYPES).join(',');
-const IMAGE_UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
-const VIDEO_UPLOAD_TYPES = Object.freeze({
-  'video/mp4': 'mp4',
-  'video/webm': 'webm'
-});
-const ascii = (bytes, start, length) => String.fromCharCode(...bytes.slice(start, start + length));
-const startsWith = (bytes, signature, offset = 0) => signature.every((value, index) => bytes[offset + index] === value);
-function sniffUploadImageType(bytes) {
-  if (!(bytes instanceof Uint8Array) || bytes.length < 12) return null;
-  if (startsWith(bytes, [0xff, 0xd8, 0xff])) return 'image/jpeg';
-  if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10])) return 'image/png';
-  if (['GIF87a', 'GIF89a'].includes(ascii(bytes, 0, 6))) return 'image/gif';
-  if (ascii(bytes, 0, 4) === 'RIFF' && ascii(bytes, 8, 4) === 'WEBP') return 'image/webp';
-  if (ascii(bytes, 4, 4) === 'ftyp') {
-    const brand = ascii(bytes, 8, 4).toLowerCase();
-    if (brand === 'avif' || brand === 'avis') return 'image/avif';
-    if (brand === 'mif1') {
-      const boxSize = (bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3]) >>> 0;
-      const end = Math.min(bytes.length, boxSize || bytes.length);
-      for (let offset = 16; offset + 4 <= end; offset += 4) {
-        if (['avif', 'avis'].includes(ascii(bytes, offset, 4).toLowerCase())) return 'image/avif';
-      }
-    }
-  }
-  return null;
-}
-function validateImageMetadata(file, {
-  allowedTypes = Object.keys(IMAGE_UPLOAD_TYPES),
-  maxBytes = IMAGE_UPLOAD_MAX_BYTES
-} = {}) {
-  if (!file) throw new Error('No file selected.');
-  if (!allowedTypes.includes(file.type)) {
-    throw new Error(`Unsupported image type${file.type ? ` (${file.type})` : ''}. Use JPEG, PNG, WebP, GIF or AVIF. SVG is not allowed.`);
-  }
-  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected image is empty.');
-  if (file.size > maxBytes) {
-    throw new Error(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Keep it under ${Math.floor(maxBytes / 1024 / 1024)} MB.`);
-  }
-  if (typeof file.slice !== 'function') throw new Error('The selected image cannot be read.');
-}
-async function verifyImageDecode(file, {
-  maxPixels,
-  maxDimension
-}) {
-  if (typeof globalThis.createImageBitmap !== 'function') return;
-  let bitmap;
-  try {
-    bitmap = await globalThis.createImageBitmap(file);
-  } catch {
-    throw new Error('This image is malformed or could not be decoded.');
-  }
-  try {
-    const width = Number(bitmap.width),
-      height = Number(bitmap.height);
-    if (!width || !height) throw new Error('This image has invalid dimensions.');
-    if (width > maxDimension || height > maxDimension || width * height > maxPixels) {
-      throw new Error(`Use an image under ${Math.floor(maxPixels / 1000000)} megapixels and ${maxDimension.toLocaleString()} pixels per side.`);
-    }
-  } finally {
-    bitmap.close?.();
-  }
-}
-async function validateImageUpload(file, {
-  allowedTypes = Object.keys(IMAGE_UPLOAD_TYPES),
-  maxBytes = IMAGE_UPLOAD_MAX_BYTES,
-  maxPixels = 24 * 1000 * 1000,
-  maxDimension = 10000
-} = {}) {
-  validateImageMetadata(file, {
-    allowedTypes,
-    maxBytes
-  });
-  let bytes;
-  try {
-    bytes = new Uint8Array(await file.slice(0, 512).arrayBuffer());
-  } catch {
-    throw new Error('The selected image could not be read.');
-  }
-  const detectedType = sniffUploadImageType(bytes);
-  if (!detectedType || detectedType !== file.type || !allowedTypes.includes(detectedType)) {
-    throw new Error('The image contents do not match its declared file type.');
-  }
-  await verifyImageDecode(file, {
-    maxPixels,
-    maxDimension
-  });
-  return {
-    mime: detectedType,
-    extension: IMAGE_UPLOAD_TYPES[detectedType]
-  };
-}
-async function validateVideoUpload(file, {
-  maxBytes = 100 * 1024 * 1024
-} = {}) {
-  if (!file || !VIDEO_UPLOAD_TYPES[file.type]) throw new Error('Please choose an MP4 or WebM video.');
-  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected video is empty.');
-  if (file.size > maxBytes) throw new Error(`Video is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Keep it under ${Math.floor(maxBytes / 1024 / 1024)} MB.`);
-  if (typeof file.slice !== 'function') throw new Error('The selected video cannot be read.');
-  let bytes;
-  try {
-    bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
-  } catch {
-    throw new Error('The selected video could not be read.');
-  }
-  const mp4 = bytes.length >= 12 && ascii(bytes, 4, 4) === 'ftyp';
-  const webm = bytes.length >= 4 && startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3]);
-  if (file.type === 'video/mp4' && !mp4 || file.type === 'video/webm' && !webm) {
-    throw new Error('The video contents do not match its declared file type.');
-  }
-  return {
-    mime: file.type,
-    extension: VIDEO_UPLOAD_TYPES[file.type]
-  };
-}
-class MediaOperationError extends Error {
-  constructor(phase, message, details = {}) {
-    super(message);
-    this.name = 'MediaOperationError';
-    this.phase = phase;
-    Object.assign(this, details);
-  }
-}
-async function removeMediaObject(storagePath, remove) {
-  let cause;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      await remove(storagePath);
-      return;
-    } catch (error) {
-      cause = error;
-    }
-  }
-  // Storage and Postgres cannot commit atomically. Never call an unresolved
-  // compensating delete a success: retain the exact path for recovery.
-  throw new MediaOperationError('cleanup', 'Storage cleanup could not be confirmed: ' + storagePath, {
-    cleanupPending: [storagePath],
-    cause
-  });
-}
-async function persistUploadedMedia(uploaded, create, findByPath, remove) {
-  try {
-    return await create();
-  } catch (error) {
-    // An insert can commit while its response is lost. Reconcile before
-    // deleting, otherwise cleanup could break a successfully persisted row.
-    let saved;
-    try {
-      saved = await findByPath(uploaded.storagePath);
-    } catch (cause) {
-      throw new MediaOperationError('reconcile', 'Could not confirm media persistence; do not retry this upload until checked.', {
-        cleanupPending: [uploaded.storagePath],
-        cause
-      });
-    }
-    if (saved) return saved;
-    await removeMediaObject(uploaded.storagePath, remove);
-    throw new MediaOperationError('insert', error.message || 'Could not save media.', {
-      cleaned: uploaded.storagePath
-    });
-  }
-}
-
-// Always read back the authoritative rows. A preferred selection may fail
-// while the previous primary remains valid; report the failure and sync that
-// actual primary, never the optimistic UI choice. Empty galleries clear the
-// denormalised image_url (needed when the last uploaded image is deleted).
-async function settlePrimaryMedia(ops, preferredId = null) {
-  let rows = [],
-    primary = null,
-    primaryCount = null;
-  let primaryError = null,
-    syncError = null;
-  try {
-    rows = await ops.list();
-    let primaries = rows.filter(row => row.isPrimary);
-    const preferred = preferredId == null ? null : rows.find(row => String(row.id) === String(preferredId));
-    if (preferredId != null && !preferred) throw new Error('The selected primary no longer belongs to this product.');
-    if (rows.length && (primaries.length !== 1 || preferred && preferred.id !== primaries[0]?.id)) {
-      const chosen = preferred || primaries[0] || rows[0];
-      try {
-        await ops.select(chosen.id);
-      } catch (error) {
-        primaryError = error.message || 'Primary selection failed.';
-      }
-      rows = await ops.list();
-      primaries = rows.filter(row => row.isPrimary);
-    }
-    primaryCount = primaries.length;
-    if (rows.length && primaryCount !== 1) throw new Error('Media must have exactly one primary; found ' + primaryCount + '.');
-    primary = primaries[0] || null;
-    if (preferred && primary?.id !== preferred.id) primaryError ||= 'The requested primary selection was not confirmed.';
-  } catch (error) {
-    primaryError ||= error.message || 'Could not verify primary media.';
-  }
-
-  // Never clear image_url when a failed read made the gallery look empty.
-  if (primary || primaryCount === 0 && rows.length === 0 && !primaryError) {
-    try {
-      await ops.sync(primary?.url || null);
-    } catch (error) {
-      syncError = error.message || 'Product image synchronization failed.';
-    }
-  }
-  return {
-    ok: !primaryError && !syncError,
-    rows,
-    primary,
-    primaryCount,
-    primaryError,
-    syncError
-  };
-}
-async function commitStagedMedia(items, ops) {
-  const created = [],
-    failed = [],
-    cleanupPending = [];
-  let initial;
-  try {
-    initial = await ops.list();
-  } catch (error) {
-    return {
-      ok: false,
-      created,
-      failed,
-      cleanupPending,
-      primaryCount: null,
-      primaryError: error.message,
-      syncError: null
-    };
-  }
-  let madePrimary = initial.filter(row => row.isPrimary).length === 1;
-  const baseOrder = initial.reduce((max, row) => Math.max(max, row.sortOrder + 1), 0);
-  for (const [index, item] of items.entries()) {
-    try {
-      const uploaded = await ops.upload(item.file);
-      const row = await persistUploadedMedia(uploaded, () => ops.add({
-        ...uploaded,
-        altText: item.alt || '',
-        sortOrder: baseOrder + created.length,
-        isPrimary: !madePrimary
-      }), ops.find, ops.remove);
-      created.push({
-        ...row,
-        wantedPrimary: !!item.isPrimary
-      });
-      // Only a successful, confirmed row can advance the primary state.
-      if (row.isPrimary) madePrimary = true;
-    } catch (error) {
-      failed.push({
-        name: item.file?.name || 'image ' + (index + 1),
-        phase: error.phase || 'upload',
-        error: error.message
-      });
-      if (error.cleanupPending?.length) {
-        cleanupPending.push(...error.cleanupPending);
-        failed.push(...items.slice(index + 1).map(pending => ({
-          name: pending.file?.name || 'image',
-          phase: 'not-attempted',
-          error: 'Not attempted while cleanup is unresolved.'
-        })));
-        break;
-      }
-    }
-  }
-  const preferred = created.find(row => row.wantedPrimary) || (initial.some(row => row.isPrimary) ? null : created[0]);
-  const state = created.length ? await settlePrimaryMedia(ops, preferred?.id) : {
-    ok: true,
-    primary: null,
-    primaryCount: initial.filter(row => row.isPrimary).length,
-    primaryError: null,
-    syncError: null,
-    rows: initial
-  };
-  return {
-    ok: state.ok && !failed.length && !cleanupPending.length,
-    created: created.map(row => state.rows.find(saved => saved.id === row.id) || row),
-    failed,
-    cleanupPending,
-    primary: state.primary,
-    primaryCount: state.primaryCount,
-    primaryError: state.primaryError,
-    syncError: state.syncError
-  };
-}
-function mediaFailureMessage(result) {
-  return [...(result.failed || []).map(item => `${item.name}: ${item.error}`), result.primaryError && `Primary: ${result.primaryError}`, result.syncError && `Image sync: ${result.syncError}`, result.cleanupPending?.length && `Cleanup unresolved — do not re-upload until checked: ${result.cleanupPending.join(', ')}`].filter(Boolean).join(' ');
-}
-
 // ============================================================
 // Supabase data access — public storefront reads + authenticated
 // admin CRUD. Every write here is also enforced server-side by
@@ -38822,7 +40414,7 @@ function Home() {
           story: story
         })
       })
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorCommunity, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WhySoraLife, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Newsletter, {})]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorCommunity, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WhySoraLife, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Newsletter, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeLeaderboard, {})]
   });
 }
 
@@ -43683,14 +45275,14 @@ const badRequest = m => err('BAD_REQUEST', m);
 const notFound = m => err('NOT_FOUND', m);
 
 // ---------- session helpers (local, no network) ----------
-async function currentUserId$1() {
+async function currentUserId() {
   const {
     data
   } = await supabase.auth.getSession();
   return data?.session?.user?.id ?? null;
 }
 async function requireUserId() {
-  const uid = await currentUserId$1();
+  const uid = await currentUserId();
   if (!uid) throw authRequired();
   return uid;
 }
@@ -43733,7 +45325,7 @@ const nowIso = () => new Date().toISOString();
  * created. RLS returns only the caller's own row (id = auth.uid()).
  */
 async function getProfile() {
-  const uid = await currentUserId$1();
+  const uid = await currentUserId();
   if (!uid) return null;
   const {
     data,
@@ -43753,7 +45345,7 @@ async function getProfile() {
  * needed and none is trusted for security.
  */
 async function listAddresses() {
-  const uid = await currentUserId$1();
+  const uid = await currentUserId();
   if (!uid) return [];
   const {
     data,
@@ -45249,935 +46841,6 @@ function CopyButton({
 }
 
 // ============================================================
-// Creator Program — pure link helpers.
-//
-// Deliberately free of any Supabase/browser import so the rules below can be
-// unit-tested directly (scripts/test-creator-program.mjs). These are
-// convenience guards: the database repeats the destination rule as a CHECK
-// constraint, so a bypass here still cannot store a malicious destination.
-// ============================================================
-
-const CREATOR_STATUSES = ['pending', 'active', 'paused', 'suspended', 'archived'];
-const CAMPAIGN_STATUSES = ['draft', 'active', 'paused', 'ended'];
-const DESTINATION_TYPES = ['homepage', 'product', 'category', 'custom'];
-
-/**
- * Force a destination to an INTERNAL root-relative path.
- * Anything resembling an external, protocol-relative or script URL collapses
- * to '/', so a tracking link can never become an open redirect.
- */
-function normalizeDestination(path, type) {
-  let p = String(path || '').trim();
-  if (type === 'homepage' || !p) return '/';
-  if (/^[a-z][a-z0-9+.-]*:/i.test(p)) return '/'; // http:, javascript:, data:
-  if (p.startsWith('//')) return '/'; // protocol-relative
-  if (!p.startsWith('/')) p = `/${p}`;
-  return p.slice(0, 300);
-}
-
-/**
- * The public tracking URL for a link.
- * `ref` carries the human-readable creator code; `trk` carries the link's own
- * unique code so the server can resolve this exact link (and its campaign).
- */
-function buildTrackingUrl(link, creator, campaign, origin) {
-  const base = origin || (typeof window !== 'undefined' ? window.location.origin : '');
-  const path = link?.destination_path || '/';
-  const params = new URLSearchParams();
-  params.set('ref', creator?.creator_code || link?.public_code || '');
-  if (campaign?.campaign_code) params.set('campaign', campaign.campaign_code);
-  if (link?.public_code) params.set('trk', link.public_code);
-  return `${base}${path}${path.includes('?') ? '&' : '?'}${params.toString()}`;
-}
-
-// ============================================================
-// KYC documents — the pure rules, shared by the creator portal and the tests.
-//
-// No I/O here. The bucket, its RLS and the set_kyc_document() RPC (migration
-// 0030) are the real gate; this module exists so the client refuses the same
-// things the server would, with a message a person can act on, before a
-// single byte is uploaded.
-//
-// Mirrors 0030 exactly:
-//   bucket      kyc-documents, private, 5 MB, {jpeg, png, webp, pdf}
-//   object path <creator_id>/<kind>/<id>.<ext>   kind ∈ {pan, bank}
-// ============================================================
-const KYC_BUCKET = 'kyc-documents';
-const KYC_DOCUMENT_MAX_BYTES = 5 * 1024 * 1024;
-
-// MIME → extension. The order is what the <input accept> lists.
-const KYC_DOCUMENT_TYPES = Object.freeze({
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'application/pdf': 'pdf'
-});
-const KYC_DOCUMENT_ACCEPT = Object.keys(KYC_DOCUMENT_TYPES).join(',');
-const KYC_DOCUMENT_KINDS = Object.freeze([{
-  kind: 'pan',
-  label: 'PAN card',
-  field: 'pan_document_path',
-  hint: 'A clear photo or scan of the PAN card, showing the number and name.'
-}, {
-  kind: 'bank',
-  label: 'Bank proof',
-  field: 'bank_document_path',
-  hint: 'A cancelled cheque, passbook page or bank statement header showing the account holder, account number and IFSC.'
-}]);
-const KYC_KIND_SET = new Set(KYC_DOCUMENT_KINDS.map(k => k.kind));
-
-// The same expression set_kyc_document() applies (0030 §5), so a path the
-// client builds is a path the server accepts, and nothing else is.
-const PATH_RE = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/(pan|bank)\/([A-Za-z0-9-]+)\.(jpg|jpeg|png|webp|pdf)$/;
-function kycDocumentPath(creatorId, kind, extension, id) {
-  const path = `${String(creatorId).toLowerCase()}/${kind}/${id}.${extension}`;
-  if (!isKycDocumentPath(path, creatorId, kind)) throw new Error('Invalid document destination.');
-  return path;
-}
-function isKycDocumentPath(path, creatorId, kind) {
-  if (typeof path !== 'string') return false;
-  const m = PATH_RE.exec(path);
-  if (!m) return false;
-  if (creatorId != null && m[1] !== String(creatorId).toLowerCase()) return false;
-  if (kind != null && m[2] !== kind) return false;
-  return true;
-}
-
-// PDFs are the one non-image type the bucket takes; sniff them the same way.
-function sniffKycDocumentType(bytes) {
-  if (!(bytes instanceof Uint8Array) || bytes.length < 5) return null;
-  if (String.fromCharCode(...bytes.slice(0, 5)) === '%PDF-') return 'application/pdf';
-  const image = sniffUploadImageType(bytes);
-  return image && KYC_DOCUMENT_TYPES[image] ? image : null;
-}
-
-// Metadata-only checks: synchronous, so a form can refuse before reading.
-function validateKycDocumentMetadata(file) {
-  if (!file) throw new Error('Choose a file first.');
-  if (!KYC_DOCUMENT_TYPES[file.type]) {
-    throw new Error(`Unsupported file type${file.type ? ` (${file.type})` : ''}. Upload a JPEG, PNG, WebP or PDF.`);
-  }
-  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected file is empty.');
-  if (file.size > KYC_DOCUMENT_MAX_BYTES) {
-    throw new Error(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Keep it under ${Math.floor(KYC_DOCUMENT_MAX_BYTES / 1024 / 1024)} MB.`);
-  }
-  if (typeof file.slice !== 'function') throw new Error('The selected file cannot be read.');
-}
-
-// Full check: metadata, then the first bytes must agree with the declared type.
-async function validateKycDocument(file) {
-  validateKycDocumentMetadata(file);
-  let bytes;
-  try {
-    bytes = new Uint8Array(await file.slice(0, 512).arrayBuffer());
-  } catch {
-    throw new Error('The selected file could not be read.');
-  }
-  const detected = sniffKycDocumentType(bytes);
-  if (!detected || detected !== file.type) {
-    throw new Error('The file contents do not match its type. Export it again as a JPEG, PNG, WebP or PDF.');
-  }
-  return {
-    mime: detected,
-    extension: KYC_DOCUMENT_TYPES[detected]
-  };
-}
-
-// set_kyc_document() reasons → copy. Unknown reasons fall back, never leak.
-function friendlyKycDocumentError(reason) {
-  switch (reason) {
-    case 'not_a_creator':
-      return 'Only an approved creator account can upload verification documents.';
-    case 'bad_kind':
-      return 'Unknown document type.';
-    case 'bad_path':
-      return 'The upload landed somewhere unexpected. Please try again.';
-    case 'not_uploaded':
-      return 'The upload did not complete. Please try again.';
-    default:
-      return 'The document could not be saved. Please try again.';
-  }
-}
-
-// What the portal shows for a document slot, from the profile row alone.
-function kycDocumentState(kyc, kind) {
-  const def = KYC_DOCUMENT_KINDS.find(k => k.kind === kind);
-  if (!def) throw new Error(`Unknown KYC document kind: ${kind}`);
-  const path = kyc?.[def.field] || null;
-  return {
-    ...def,
-    path,
-    uploaded: Boolean(path),
-    uploadedAt: path ? kyc?.documents_updated_at || null : null,
-    fileType: path ? (path.split('.').pop() || '').toLowerCase() : null
-  };
-}
-
-// ============================================================
-// SORA LIFE Creator Program — data access
-//
-// Every call here goes through the normal Supabase client, so RLS is the
-// enforcement boundary, not this file:
-//   * admin*  functions succeed only for an admin_users member.
-//   * my*     functions return ONLY the signed-in creator's own rows
-//             (policies scope them to current_creator_id()).
-// Hiding a button in the UI is never the protection — the database refuses
-// the query for anyone else.
-//
-// Nothing here can change a commission rate or status from the creator side:
-// there is no update policy for creators at all.
-// ============================================================
-const CREATOR_COLS = 'id,user_id,creator_code,display_name,legal_name,email,phone,avatar_url,status,' + 'default_commission_rate,default_attribution_window_days,payout_eligible,notes,joined_at,created_at,updated_at';
-
-// Fields a creator may safely see about themselves — deliberately excludes
-// internal notes (admin-only commentary).
-const CREATOR_SELF_COLS = 'id,creator_code,display_name,email,phone,avatar_url,status,' + 'default_commission_rate,default_attribution_window_days,payout_eligible,joined_at';
-const CAMPAIGN_COLS = 'id,creator_id,name,campaign_code,description,status,start_at,end_at,' + 'commission_rate_override,attribution_window_days,created_at,updated_at';
-const LINK_COLS = 'id,creator_id,campaign_id,public_code,label,destination_type,destination_path,status,metadata,created_at,updated_at';
-function unwrap({
-  data,
-  error
-}) {
-  if (error) throw error;
-  return data;
-}
-
-// ---------------------------------------------------------------
-// ADMIN — creators
-// ---------------------------------------------------------------
-async function adminListCreators() {
-  return unwrap(await supabase.from('creator_partners').select(CREATOR_COLS).order('created_at', {
-    ascending: false
-  })) || [];
-}
-async function adminGetCreator(id) {
-  return unwrap(await supabase.from('creator_partners').select(CREATOR_COLS).eq('id', id).maybeSingle());
-}
-
-/**
- * Create a creator. `creator_code` is deliberately NOT sent: a database
- * trigger generates a unique, collision-safe, non-sequential code server-side.
- */
-async function adminCreateCreator(fields) {
-  const row = {
-    display_name: String(fields.display_name || '').trim(),
-    legal_name: fields.legal_name?.trim() || null,
-    email: String(fields.email || '').trim().toLowerCase(),
-    phone: fields.phone?.trim() || null,
-    avatar_url: fields.avatar_url?.trim() || null,
-    status: fields.status || 'pending',
-    default_commission_rate: Number(fields.default_commission_rate) || 0,
-    default_attribution_window_days: Number(fields.default_attribution_window_days) || 30,
-    payout_eligible: !!fields.payout_eligible,
-    notes: fields.notes?.trim() || null
-  };
-  return unwrap(await supabase.from('creator_partners').insert(row).select(CREATOR_COLS).single());
-}
-
-/** Update a creator. creator_code is never included — see changeCreatorCode. */
-async function adminUpdateCreator(id, fields) {
-  const row = {};
-  for (const k of ['display_name', 'legal_name', 'email', 'phone', 'avatar_url', 'status', 'notes']) {
-    if (k in fields) row[k] = typeof fields[k] === 'string' ? fields[k].trim() || null : fields[k];
-  }
-  if ('default_commission_rate' in fields) row.default_commission_rate = Number(fields.default_commission_rate) || 0;
-  if ('default_attribution_window_days' in fields) row.default_attribution_window_days = Number(fields.default_attribution_window_days) || 30;
-  if ('payout_eligible' in fields) row.payout_eligible = !!fields.payout_eligible;
-  if (row.email) row.email = row.email.toLowerCase();
-  return unwrap(await supabase.from('creator_partners').update(row).eq('id', id).select(CREATOR_COLS).single());
-}
-async function adminSetCreatorStatus(id, status) {
-  return unwrap(await supabase.from('creator_partners').update({
-    status
-  }).eq('id', id).select(CREATOR_COLS).single());
-}
-
-/**
- * Change the public code through the audited RPC, which archives the previous
- * code as an alias so historical tracking links keep resolving.
- */
-async function adminChangeCreatorCode(id, newCode) {
-  return unwrap(await supabase.rpc('change_creator_code', {
-    p_creator_id: id,
-    p_new_code: newCode
-  }));
-}
-async function adminListCodeAliases(creatorId) {
-  return unwrap(await supabase.from('creator_code_aliases').select('id,code,retired_at').eq('creator_id', creatorId).order('retired_at', {
-    ascending: false
-  })) || [];
-}
-
-// ---------------------------------------------------------------
-// ADMIN — campaigns
-// ---------------------------------------------------------------
-async function adminListCampaigns(creatorId) {
-  let q = supabase.from('creator_campaigns').select(CAMPAIGN_COLS).order('created_at', {
-    ascending: false
-  });
-  if (creatorId) q = q.eq('creator_id', creatorId);
-  return unwrap(await q) || [];
-}
-async function adminCreateCampaign(creatorId, fields) {
-  const row = {
-    creator_id: creatorId,
-    name: String(fields.name || '').trim(),
-    campaign_code: (fields.campaign_code || '').trim(),
-    description: fields.description?.trim() || null,
-    status: fields.status || 'draft',
-    start_at: fields.start_at || null,
-    end_at: fields.end_at || null,
-    commission_rate_override: fields.commission_rate_override === '' || fields.commission_rate_override == null ? null : Number(fields.commission_rate_override),
-    attribution_window_days: fields.attribution_window_days === '' || fields.attribution_window_days == null ? null : Number(fields.attribution_window_days)
-  };
-  return unwrap(await supabase.from('creator_campaigns').insert(row).select(CAMPAIGN_COLS).single());
-}
-async function adminUpdateCampaign(id, fields) {
-  const row = {};
-  for (const k of ['name', 'description', 'status', 'start_at', 'end_at']) {
-    if (k in fields) row[k] = typeof fields[k] === 'string' ? fields[k].trim() || null : fields[k];
-  }
-  if ('commission_rate_override' in fields) {
-    row.commission_rate_override = fields.commission_rate_override === '' || fields.commission_rate_override == null ? null : Number(fields.commission_rate_override);
-  }
-  if ('attribution_window_days' in fields) {
-    row.attribution_window_days = fields.attribution_window_days === '' || fields.attribution_window_days == null ? null : Number(fields.attribution_window_days);
-  }
-  return unwrap(await supabase.from('creator_campaigns').update(row).eq('id', id).select(CAMPAIGN_COLS).single());
-}
-
-// ---------------------------------------------------------------
-// ADMIN — tracking links
-// ---------------------------------------------------------------
-async function adminListLinks(creatorId) {
-  let q = supabase.from('creator_tracking_links').select(LINK_COLS).order('created_at', {
-    ascending: false
-  });
-  if (creatorId) q = q.eq('creator_id', creatorId);
-  return unwrap(await q) || [];
-}
-async function adminCreateLink(creatorId, fields) {
-  const row = {
-    creator_id: creatorId,
-    campaign_id: fields.campaign_id || null,
-    label: fields.label?.trim() || null,
-    destination_type: fields.destination_type || 'homepage',
-    destination_path: normalizeDestination(fields.destination_path, fields.destination_type),
-    status: fields.status || 'active'
-  };
-  return unwrap(await supabase.from('creator_tracking_links').insert(row).select(LINK_COLS).single());
-}
-async function adminSetLinkStatus(id, status) {
-  return unwrap(await supabase.from('creator_tracking_links').update({
-    status
-  }).eq('id', id).select(LINK_COLS).single());
-}
-
-// ---------------------------------------------------------------
-// ADMIN — audit trail
-// ---------------------------------------------------------------
-async function adminListAudit({
-  entityId,
-  limit = 50
-} = {}) {
-  let q = supabase.from('creator_admin_audit').select('id,admin_user_id,action,entity_type,entity_id,metadata,created_at').order('created_at', {
-    ascending: false
-  }).limit(limit);
-  if (entityId) q = q.eq('entity_id', entityId);
-  return unwrap(await q) || [];
-}
-
-/** Attribution events for one creator (counts only — no commission in Part 1). */
-async function adminListAttributionEvents(creatorId, limit = 25) {
-  return unwrap(await supabase.from('creator_attribution_events').select('id,event_type,campaign_id,tracking_link_id,matched_code,landing_path,occurred_at,expires_at').eq('creator_id', creatorId).order('occurred_at', {
-    ascending: false
-  }).limit(limit)) || [];
-}
-
-// ---------------------------------------------------------------
-// CREATOR — self-service reads (RLS-scoped to the caller)
-// ---------------------------------------------------------------
-
-/** Link this auth account to a matching creator record. Server-side by email. */
-async function claimCreatorAccount() {
-  const {
-    data,
-    error
-  } = await supabase.rpc('claim_creator_account');
-  if (error) return 'error';
-  return data;
-}
-
-/** The authenticated user's own id, or null. Read from the persisted session
- *  (no network round-trip). */
-async function currentUserId() {
-  const {
-    data
-  } = await supabase.auth.getSession();
-  return data?.session?.user?.id ?? null;
-}
-
-/**
- * The signed-in user's OWN creator record, or null.
- *
- * Explicitly scoped to `user_id = auth.uid()` rather than relying on RLS to
- * narrow the result. This matters for ADMIN accounts: the "admin all" read
- * policy would otherwise return every creator, and `.maybeSingle()` would hand
- * back a creator the admin does not own (and error once more than one exists).
- * With the filter:
- *   - a customer with no creator gets null (onboarding state)
- *   - a creator gets only their own row
- *   - an admin who owns no creator gets null (never another creator's record)
- *   - an admin who is also a creator gets only their own row
- * `user_id` is UNIQUE, so at most one row ever matches.
- */
-async function getMyCreator() {
-  const uid = await currentUserId();
-  if (!uid) return null;
-  const {
-    data,
-    error
-  } = await supabase.from('creator_partners').select(CREATOR_SELF_COLS).eq('user_id', uid).maybeSingle();
-  if (error) return null;
-  return data;
-}
-
-// Campaigns/links are RLS-scoped for a normal creator, but an admin's
-// "admin all" policy would return everyone's. Passing the resolved creatorId
-// keeps the portal correct for an admin who is also a creator, without
-// touching RLS. For a normal creator the filter is simply redundant.
-async function getMyCampaigns(creatorId) {
-  let q = supabase.from('creator_campaigns').select(CAMPAIGN_COLS).order('created_at', {
-    ascending: false
-  });
-  if (creatorId) q = q.eq('creator_id', creatorId);
-  const {
-    data,
-    error
-  } = await q;
-  if (error) return [];
-  return data || [];
-}
-async function getMyLinks(creatorId) {
-  let q = supabase.from('creator_tracking_links').select(LINK_COLS).order('created_at', {
-    ascending: false
-  });
-  if (creatorId) q = q.eq('creator_id', creatorId);
-  const {
-    data,
-    error
-  } = await q;
-  if (error) return [];
-  return data || [];
-}
-
-// ---------------------------------------------------------------
-// PART 2 — ATTRIBUTION / CONVERSIONS
-// Admin reads conversions (admin RLS); creators get safe aggregates only
-// (via the my_creator_analytics RPC — never row-level customer data).
-// ---------------------------------------------------------------
-const CONV_SELECT = 'id,order_id,order_number,creator_id,campaign_id,tracking_link_id,customer_user_id,matched_code,' + 'status,currency,gross_item_sales,discounts,tax,shipping,refunded_amount,eligible_sales,eligible_sales_original,' + 'attributed_at,qualified_at,cancelled_at,refunded_at,' + 'creator:creator_partners(display_name,creator_code),' + 'campaign:creator_campaigns(name,campaign_code),' + 'link:creator_tracking_links(public_code,destination_path)';
-async function adminListConversions({
-  creatorId,
-  status,
-  limit = 100
-} = {}) {
-  let q = supabase.from('creator_conversions').select(CONV_SELECT).order('attributed_at', {
-    ascending: false
-  }).limit(limit);
-  if (creatorId) q = q.eq('creator_id', creatorId);
-  if (status && status !== 'all') q = q.eq('status', status);
-  const {
-    data,
-    error
-  } = await q;
-  if (error) throw error;
-  return data || [];
-}
-async function adminGetConversionItems(conversionId) {
-  const {
-    data,
-    error
-  } = await supabase.from('creator_conversion_items').select('id,order_item_index,product_id,variant_id,product_name_snapshot,variant_label_snapshot,quantity,unit_price,line_amount,eligible_amount').eq('conversion_id', conversionId).order('order_item_index', {
-    ascending: true
-  });
-  if (error) throw error;
-  return data || [];
-}
-async function adminGetConversionAudit(conversionId) {
-  const {
-    data,
-    error
-  } = await supabase.from('creator_conversion_audit').select('id,from_status,to_status,eligible_delta,reason,created_at').eq('conversion_id', conversionId).order('created_at', {
-    ascending: false
-  });
-  if (error) throw error;
-  return data || [];
-}
-
-/** Record a refund/return against an order's conversion (admin only, audited). */
-async function adminRefundConversion(orderId, amount, reason) {
-  const {
-    data,
-    error
-  } = await supabase.rpc('admin_refund_conversion', {
-    p_order_id: orderId,
-    p_refund_amount: Number(amount) || 0,
-    p_reason: reason || 'refund'
-  });
-  if (error) throw error;
-  return data;
-}
-
-/** Safe, non-monetary creator analytics (aggregates only, no customer PII). */
-async function getMyCreatorAnalytics() {
-  const {
-    data,
-    error
-  } = await supabase.rpc('my_creator_analytics');
-  if (error) return {
-    ok: false,
-    reason: error.message
-  };
-  return data || {
-    ok: false
-  };
-}
-const CONVERSION_STATUSES = ['pending', 'eligible', 'cancelled', 'refunded', 'reversed', 'self_referral'];
-
-// ---------------------------------------------------------------
-// PART 3 — EARNINGS / KYC / PAYOUTS
-// All financial writes go through SECURITY DEFINER RPCs; reads are RLS-scoped
-// (creators see only their own). No raw PAN/bank/UPI is ever sent back — the
-// DB stores masks only.
-// ---------------------------------------------------------------
-
-// ---- Creator earnings ----
-async function getMyCreatorEarnings() {
-  const {
-    data,
-    error
-  } = await supabase.rpc('my_creator_earnings');
-  if (error) return {
-    ok: false,
-    reason: error.message
-  };
-  return data || {
-    ok: false
-  };
-}
-
-// ---- Creator KYC ----
-const KYC_SELF = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,submitted_at,verified_at,verification_notes,pan_document_path,bank_document_path,documents_updated_at';
-async function getMyKyc() {
-  const {
-    data,
-    error
-  } = await supabase.from('creator_kyc_profiles').select(KYC_SELF).maybeSingle();
-  if (error) return null;
-  return data;
-}
-async function submitKyc({
-  legalName,
-  pan,
-  method,
-  accountHolder,
-  accountNumber,
-  ifsc,
-  upi
-}) {
-  const {
-    data,
-    error
-  } = await supabase.rpc('submit_kyc', {
-    p_legal_name: legalName || '',
-    p_pan: pan || '',
-    p_method: method || '',
-    p_account_holder: accountHolder || '',
-    p_account_number: accountNumber || '',
-    p_ifsc: ifsc || '',
-    p_upi: upi || ''
-  });
-  if (error) return {
-    ok: false,
-    reason: error.message
-  };
-  return data;
-}
-
-// ---- Creator KYC documents ----
-// Bucket kyc-documents is private (0030): the creator can only write under
-// their own folder, and the RPC only registers a path that exists there.
-// Order matters — validate, upload, then register; the old object is removed
-// only after the row points at the new one, so a failed upload never leaves
-// the profile pointing at nothing.
-const randomId = () => {
-  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
-};
-async function uploadKycDocument({
-  creatorId,
-  kind,
-  file
-}) {
-  if (!creatorId) return {
-    ok: false,
-    reason: 'not_a_creator'
-  };
-  if (!KYC_KIND_SET.has(kind)) return {
-    ok: false,
-    reason: 'bad_kind'
-  };
-  let checked;
-  try {
-    checked = await validateKycDocument(file);
-  } catch (e) {
-    return {
-      ok: false,
-      reason: 'invalid_file',
-      message: e.message
-    };
-  }
-  const path = kycDocumentPath(creatorId, kind, checked.extension, randomId());
-  const {
-    error: upErr
-  } = await supabase.storage.from(KYC_BUCKET).upload(path, file, {
-    cacheControl: '0',
-    upsert: false,
-    contentType: checked.mime
-  });
-  if (upErr) return {
-    ok: false,
-    reason: 'upload_failed',
-    message: upErr.message
-  };
-  const {
-    data,
-    error
-  } = await supabase.rpc('set_kyc_document', {
-    p_kind: kind,
-    p_path: path
-  });
-  if (error) {
-    // The row was not updated; do not leave an orphan the creator can't see.
-    await supabase.storage.from(KYC_BUCKET).remove([path]).catch(() => {});
-    return {
-      ok: false,
-      reason: error.message
-    };
-  }
-  if (!data || data.ok === false) {
-    await supabase.storage.from(KYC_BUCKET).remove([path]).catch(() => {});
-    return data || {
-      ok: false,
-      reason: 'unknown'
-    };
-  }
-  if (data.previous_path && data.previous_path !== path) {
-    // Best effort: the replaced document is dead weight, but its removal is
-    // not what the creator is waiting on.
-    await supabase.storage.from(KYC_BUCKET).remove([data.previous_path]).catch(() => {});
-  }
-  return data;
-}
-
-// ---- Creator payouts ----
-async function requestPayout(amount) {
-  const {
-    data,
-    error
-  } = await supabase.rpc('request_payout', {
-    p_amount: amount == null ? null : Number(amount)
-  });
-  if (error) return {
-    ok: false,
-    reason: error.message
-  };
-  return data;
-}
-async function getMyPayouts() {
-  const {
-    data,
-    error
-  } = await supabase.from('creator_payout_requests').select('id,payout_period,requested_amount,paid_amount,status,requested_at,approved_at,paid_at,payment_reference,rejection_reason').order('requested_at', {
-    ascending: false
-  });
-  if (error) return [];
-  return data || [];
-}
-
-// ---- Admin: KYC ----
-const KYC_ADMIN = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,verification_notes,submitted_at,verified_at,verified_by,pan_document_path,bank_document_path,documents_updated_at,creator:creator_partners(display_name,creator_code)';
-async function adminListKyc() {
-  const {
-    data,
-    error
-  } = await supabase.from('creator_kyc_profiles').select(KYC_ADMIN).order('submitted_at', {
-    ascending: false
-  });
-  if (error) throw error;
-  return data || [];
-}
-async function adminSetKycStatus(creatorId, status, notes) {
-  const {
-    data,
-    error
-  } = await supabase.rpc('admin_set_kyc_status', {
-    p_creator_id: creatorId,
-    p_status: status,
-    p_notes: notes || null
-  });
-  if (error) throw error;
-  return data;
-}
-// A KYC document is only ever reached through a signed URL that dies in
-// KYC_SIGNED_URL_SECONDS. The bucket is private, so there is no public URL to
-// leak — getPublicUrl() would return a link that 400s, and must not be used.
-const KYC_SIGNED_URL_SECONDS = 60;
-async function adminKycDocumentUrl(path) {
-  if (!path || typeof path !== 'string') throw new Error('No document on file.');
-  const {
-    data,
-    error
-  } = await supabase.storage.from(KYC_BUCKET).createSignedUrl(path, KYC_SIGNED_URL_SECONDS);
-  if (error) throw error;
-  if (!data?.signedUrl) throw new Error('Could not sign the document link.');
-  return data.signedUrl;
-}
-async function adminListKycAudit(creatorId) {
-  const {
-    data,
-    error
-  } = await supabase.from('creator_kyc_audit').select('id,actor,from_status,to_status,from_notes,to_notes,metadata,created_at').eq('creator_id', creatorId).order('created_at', {
-    ascending: false
-  }).limit(50);
-  if (error) throw error;
-  return data || [];
-}
-
-// ---- Admin: payouts ----
-const PAYOUT_ADMIN = 'id,creator_id,payout_period,requested_amount,reserved_amount,paid_amount,status,requested_at,reviewed_at,approved_at,paid_at,payment_reference,payout_method_snapshot,rejection_reason,admin_notes,creator:creator_partners(display_name,creator_code)';
-async function adminListPayouts({
-  status,
-  creatorId
-} = {}) {
-  let q = supabase.from('creator_payout_requests').select(PAYOUT_ADMIN).order('requested_at', {
-    ascending: false
-  });
-  if (status && status !== 'all') q = q.eq('status', status);
-  if (creatorId) q = q.eq('creator_id', creatorId);
-  const {
-    data,
-    error
-  } = await q;
-  if (error) throw error;
-  return data || [];
-}
-async function adminGetPayoutLedger(payoutId) {
-  const {
-    data,
-    error
-  } = await supabase.from('creator_commission_ledger').select('id,type,status,amount,commission_rate,eligible_sales,order_id,created_at').eq('payout_id', payoutId).order('created_at', {
-    ascending: true
-  });
-  if (error) throw error;
-  return data || [];
-}
-async function adminGetPayoutAudit(payoutId) {
-  const {
-    data,
-    error
-  } = await supabase.from('creator_payout_audit').select('from_status,to_status,amount,reference,note,created_at').eq('payout_id', payoutId).order('created_at', {
-    ascending: false
-  });
-  if (error) throw error;
-  return data || [];
-}
-async function adminGetKycForCreator(creatorId) {
-  const {
-    data
-  } = await supabase.from('creator_kyc_profiles').select(KYC_ADMIN).eq('creator_id', creatorId).maybeSingle();
-  return data;
-}
-async function adminReviewPayout(payoutId, action, notes) {
-  const {
-    data,
-    error
-  } = await supabase.rpc('admin_review_payout', {
-    p_payout_id: payoutId,
-    p_action: action,
-    p_notes: notes || null
-  });
-  if (error) throw error;
-  return data;
-}
-async function adminMarkPayoutPaid(payoutId, paidAmount, reference, note) {
-  const {
-    data,
-    error
-  } = await supabase.rpc('admin_mark_payout_paid', {
-    p_payout_id: payoutId,
-    p_paid_amount: Number(paidAmount),
-    p_reference: reference,
-    p_note: note || null
-  });
-  if (error) throw error;
-  return data;
-}
-const KYC_STATUSES = ['not_started', 'pending', 'verified', 'rejected', 'needs_update'];
-const PAYOUT_STATUSES = ['requested', 'under_review', 'approved', 'rejected', 'paid', 'cancelled'];
-
-// ---------------------------------------------------------------
-// CUSTOMER SELF-ONBOARDING
-//
-// The application goes through the apply_as_creator RPC, which derives the
-// owner from the verified JWT and sets status/rate server-side. The client
-// can only pass display name, an optional link, an optional platform, and the
-// terms flag — everything sensitive is decided by the database.
-// ---------------------------------------------------------------
-async function applyAsCreator({
-  displayName,
-  socialUrl,
-  platform,
-  agreed
-}) {
-  const {
-    data,
-    error
-  } = await supabase.rpc('apply_as_creator', {
-    p_display_name: displayName || '',
-    p_social_url: socialUrl || null,
-    p_platform: platform || null,
-    p_agreed: !!agreed
-  });
-  if (error) return {
-    ok: false,
-    reason: error.message || 'error'
-  };
-  return data || {
-    ok: false,
-    reason: 'error'
-  };
-}
-
-// ---------------------------------------------------------------
-// ADMIN — creator program approval policy (site_settings 'creator_program')
-// Admin-only via the site_settings admin policy; not publicly readable.
-// ---------------------------------------------------------------
-const PROGRAM_DEFAULTS = {
-  auto_approve: false,
-  default_commission_rate: 10,
-  default_attribution_window_days: 30
-};
-async function adminGetProgramSettings() {
-  const {
-    data,
-    error
-  } = await supabase.from('site_settings').select('value').eq('key', 'creator_program').maybeSingle();
-  if (error || !data) return {
-    ...PROGRAM_DEFAULTS
-  };
-  return {
-    ...PROGRAM_DEFAULTS,
-    ...(data.value || {})
-  };
-}
-async function adminSetProgramSettings(settings) {
-  const value = {
-    auto_approve: !!settings.auto_approve,
-    default_commission_rate: Number(settings.default_commission_rate) || 0,
-    default_attribution_window_days: Number(settings.default_attribution_window_days) || 30
-  };
-  const {
-    error
-  } = await supabase.from('site_settings').upsert({
-    key: 'creator_program',
-    value
-  }, {
-    onConflict: 'key'
-  });
-  if (error) throw error;
-  return value;
-}
-
-// ------------------------------------------------------------
-// Creator terms (migration 0026)
-//
-// The document is a public-read site_settings key, so a prospective creator
-// can read what they are agreeing to before they have an account. Acceptances
-// are written only by the SECURITY DEFINER RPC — never by the client — so the
-// creator and the version both come from trusted sources.
-// ------------------------------------------------------------
-
-const TERMS_DEFAULTS = {
-  body: '',
-  version: 1,
-  updated_at: null
-};
-
-/**
- * The published terms. Returns the empty default when the migration has not
- * been applied or nothing has been written yet, so every caller can treat
- * "no terms" as an ordinary state rather than an error.
- */
-async function getCreatorTerms() {
-  const {
-    data,
-    error
-  } = await supabase.from('site_settings').select('value').eq('key', 'creator_terms').maybeSingle();
-  if (error || !data) return {
-    ...TERMS_DEFAULTS
-  };
-  return {
-    ...TERMS_DEFAULTS,
-    ...(data.value || {})
-  };
-}
-
-/** True when there is actually something for a creator to read and accept. */
-function termsArePublished(terms) {
-  return !!terms && typeof terms.body === 'string' && terms.body.trim().length > 0;
-}
-
-/**
- * The signed-in creator's acceptance of a specific version, or null.
- * RLS scopes this to their own rows; an admin would see all of them, so the
- * creator_id filter keeps the portal correct for an admin who is also a
- * creator — the same reasoning as getMyCampaigns.
- */
-async function getMyTermsAcceptance(creatorId, version) {
-  if (!creatorId || !version) return null;
-  const {
-    data,
-    error
-  } = await supabase.from('creator_terms_acceptances').select('id, version, accepted_at, terms_updated_at').eq('creator_id', creatorId).eq('version', version).maybeSingle();
-  if (error) return null;
-  return data;
-}
-
-/**
- * Record acceptance of the CURRENT published version.
- *
- * Takes no version argument on purpose: the RPC reads it from the stored
- * document, so the client cannot claim to have accepted something that was
- * never published. Idempotent — a unique index makes a second call a no-op.
- */
-async function acceptCreatorTerms() {
-  const {
-    data,
-    error
-  } = await supabase.rpc('record_creator_terms_acceptance');
-  if (error) return {
-    ok: false,
-    reason: error.message
-  };
-  return data || {
-    ok: false,
-    reason: 'no_response'
-  };
-}
-
-// ============================================================
 // Renders the admin-authored creator terms.
 //
 // The document is markdown, but this deliberately does NOT use a markdown
@@ -46321,7 +46984,7 @@ function TermsUpdatedLine({
   });
 }
 
-const fmtDate$2 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
+const fmtDate$3 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
   month: 'short',
   year: 'numeric'
@@ -46569,7 +47232,7 @@ function CreatorOnboarding() {
             style: {
               fontSize: 18
             },
-            children: fmtDate$2(creator.joined_at)
+            children: fmtDate$3(creator.joined_at)
           })]
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -51291,6 +51954,439 @@ function CreatorHowItWorks({
   });
 }
 
+const fmtDate$2 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric'
+}).format(new Date(iso)) : '—';
+
+// ---------------------------------------------------------------
+// Withdrawals closed — said up front, wherever money is shown.
+// ---------------------------------------------------------------
+function WithdrawalsNotice({
+  open,
+  compact = false
+}) {
+  if (open) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `ctier-notice${compact ? ' is-compact' : ''}`,
+    role: "status",
+    "data-withdrawals": "closed",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "ctier-notice__mark",
+      "aria-hidden": "true",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "lock",
+        size: 14
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+        children: "Withdrawals aren\u2019t open yet."
+      }), ' ', "Your commission is accruing and stays yours \u2014 every confirmed sale is recorded against your account. Payout requests open once SORA LIFE\u2019s tax registration is complete; we\u2019ll tell you here the day they do."]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Standing — rank, level, rate, progress, the four figures.
+// ---------------------------------------------------------------
+function TierStanding({
+  standing,
+  compact = false,
+  holdDays = 7
+}) {
+  if (!standing || standing.ok === false) return null;
+  const progress = tierProgress(standing);
+  const slot = rankSlot(standing.rank);
+  const pos = standing.leaderboard_position;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `ctier sl-dark${compact ? ' is-compact' : ''}`,
+    "data-rank": slot,
+    "aria-label": "Your tier",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ctier__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "ctier__eyebrow",
+          children: "Your rank"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "ctier__rank",
+          children: standing.rank
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "ctier__level",
+          children: ["Level ", standing.level, " \xB7 ", /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+            children: [Number(standing.rate), "%"]
+          }), " commission on new sales"]
+        })]
+      }), !compact && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "ctier__pos",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ctier__pos-l",
+          children: "Leaderboard"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ctier__pos-v",
+          children: pos ? `#${pos}` : '—'
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ctier__pos-h",
+          children: pos ? `of ${standing.leaderboard_total}` : 'after your first confirmed sale'
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ctier__progress",
+      role: "progressbar",
+      "aria-valuemin": 0,
+      "aria-valuemax": 100,
+      "aria-valuenow": Math.round(progress.fraction * 100),
+      "aria-label": progress.atTop ? 'Top level reached' : `Progress to level ${standing.next_level}`,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "ctier__bar",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ctier__fill",
+          style: {
+            transform: `scaleX(${progress.fraction})`
+          }
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "ctier__progress-copy",
+        children: progress.atTop ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: ["Top of the ladder \u2014 ", Number(standing.rate), "% on every new sale."]
+        }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: rupees(progress.remaining)
+          }), " more in confirmed sales to Level ", standing.next_level, standing.next_rate != null && Number(standing.next_rate) !== Number(standing.rate) ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+            children: [" \xB7 unlocks ", /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+              children: [Number(standing.next_rate), "%"]
+            })]
+          }) : null]
+        })
+      })]
+    }), !compact && /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+      className: "ctier__stats",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Lifetime confirmed sales"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: money2(standing.lifetime_confirmed_sales)
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Pending commission"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: money2(standing.pending_commission)
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("dd", {
+          className: "ctier__hint",
+          children: ["Confirms ", holdDays, " days after delivery"]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Confirmed commission"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: money2(standing.confirmed_commission)
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Awaiting confirmation"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: money2(standing.pending_sales)
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          className: "ctier__hint",
+          children: "Sales not yet counted"
+        })]
+      })]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Ladder — every level, the current one marked.
+// ---------------------------------------------------------------
+function TierLadder({
+  standing
+}) {
+  const ladder = Array.isArray(standing?.ladder) ? standing.ladder : [];
+  if (ladder.length === 0) return null;
+  const current = Number(standing.level);
+  const top = ladder[ladder.length - 1];
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "crp__panel ctier-ladder",
+    "aria-label": "Tier ladder",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      className: "crp__panel-h",
+      children: "How the ladder works"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "crp__meta",
+      children: "Your rate is set by confirmed lifetime sales through your links. It applies to every sale after you cross a threshold \u2014 earlier sales keep the rate they were recorded at."
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+      className: "ctier-ladder__list",
+      children: ladder.map(l => {
+        const lv = Number(l.level);
+        const state = lv === current ? 'is-current' : lv < current ? 'is-done' : '';
+        return /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          className: `ctier-ladder__row ${state}`,
+          "data-rank": rankSlot(l.rank),
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "ctier-ladder__lv",
+            children: ["L", lv]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "ctier-ladder__rank",
+            children: l.rank
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "ctier-ladder__th",
+            children: rupees(l.threshold)
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "ctier-ladder__rate",
+            children: [Number(l.rate), "%"]
+          })]
+        }, lv);
+      })
+    }), top && standing.beyond_step > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "crp__foot-note",
+      children: ["Beyond Level ", top.level, ": a new level every ", rupees(standing.beyond_step), " in confirmed sales, at ", Number(top.rate), "%."]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Rewards — the three-option chooser for each unlocked level, and history.
+// A level with no options configured is simply not here.
+// ---------------------------------------------------------------
+function RewardChooser({
+  rewards,
+  onClaim,
+  onChanged
+}) {
+  const levels = claimableLevels(rewards);
+  const [busy, setBusy] = reactExports.useState(null); // `${level}:${id}`
+  const [confirm, setConfirm] = reactExports.useState(null); // { level, option }
+  const [err, setErr] = reactExports.useState('');
+  const [done, setDone] = reactExports.useState(null);
+  if (levels.length === 0) return null;
+  const claim = async (level, option) => {
+    setBusy(`${level}:${option.id}`);
+    setErr('');
+    try {
+      const res = await onClaim(level, option.id);
+      if (!res || res.ok === false) {
+        setErr(friendlyClaimError(res?.reason));
+      } else {
+        setDone({
+          level,
+          label: option.label
+        });
+        setConfirm(null);
+        await onChanged();
+      }
+    } catch {
+      setErr('Something went wrong. Please try again.');
+    }
+    setBusy(null);
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "ctier-rewards sl-dark",
+    "aria-label": "Rewards to claim",
+    children: [levels.map(lv => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ctier-rewards__level",
+      "data-rank": rankSlot(lv.rank),
+      "data-level": lv.level,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "ctier-rewards__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "ctier__eyebrow",
+          children: ["Level ", lv.level, " reward", lv.rank ? ` · ${lv.rank}` : '']
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+          className: "ctier-rewards__h",
+          children: "Choose one"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "ctier-rewards__copy",
+          children: "You unlocked this level. Pick the reward you want \u2014 the choice is final once made."
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "ctier-rewards__options",
+        role: "list",
+        children: lv.options.map(o => {
+          const pending = confirm && confirm.level === lv.level && confirm.option.id === o.id;
+          const key = `${lv.level}:${o.id}`;
+          return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: `ctier-option${pending ? ' is-pending' : ''}`,
+            role: "listitem",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "ctier-option__type",
+              children: REWARD_TYPE_LABEL[o.reward_type] || 'Reward'
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("h4", {
+              className: "ctier-option__label",
+              children: o.label
+            }), o.value && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "ctier-option__value",
+              children: o.value
+            }), o.description && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "ctier-option__desc",
+              children: o.description
+            }), pending ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              className: "ctier-option__confirm",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+                children: ["Confirm ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+                  children: o.label
+                }), " for Level ", lv.level, "? You can\u2019t change it later."]
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+                className: "ctier-option__acts",
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+                  type: "button",
+                  className: "ctier-btn",
+                  disabled: busy === key,
+                  onClick: () => claim(lv.level, o),
+                  children: busy === key ? 'Claiming…' : 'Yes, claim it'
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+                  type: "button",
+                  className: "ctier-btn is-ghost",
+                  disabled: busy === key,
+                  onClick: () => setConfirm(null),
+                  children: "Back"
+                })]
+              })]
+            }) : /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+              type: "button",
+              className: "ctier-btn is-ghost",
+              disabled: !!busy,
+              onClick: () => {
+                setErr('');
+                setConfirm({
+                  level: lv.level,
+                  option: o
+                });
+              },
+              children: "Choose"
+            })]
+          }, o.id);
+        })
+      })]
+    }, lv.level)), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "ctier-rewards__err",
+      role: "alert",
+      children: err
+    }), done && !err && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "ctier-rewards__ok",
+      role: "status",
+      children: ["Claimed: ", done.label, " for Level ", done.level, ". Our team will be in touch to fulfil it."]
+    })]
+  });
+}
+function RewardHistory({
+  rewards
+}) {
+  const claims = claimHistory(rewards);
+  if (claims.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "crp__panel ctier-history",
+    "aria-label": "Reward history",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      className: "crp__panel-h",
+      children: "Your rewards"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "ctier-history__list",
+      children: claims.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        className: `ctier-history__row is-${c.status}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "ctier-history__lv",
+          children: ["Level ", c.level]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "ctier-history__label",
+          children: [c.label, c.value ? /*#__PURE__*/jsxRuntimeExports.jsxs("em", {
+            children: [" \xB7 ", c.value]
+          }) : null]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ctier-history__when",
+          children: fmtDate$2(c.claimed_at)
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: `crp__pill is-${c.status === 'fulfilled' ? 'ok' : c.status === 'cancelled' ? 'bad' : 'warn'}`,
+          children: CLAIM_STATUS_LABEL[c.status]
+        })]
+      }, c.id || c.level))
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Portal leaderboard — the public list, with the creator's own row marked.
+// ---------------------------------------------------------------
+function PortalLeaderboard({
+  rows,
+  standing
+}) {
+  const pos = standing?.leaderboard_position || null;
+  const total = standing?.leaderboard_total || 0;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "ctier-board sl-dark",
+    "aria-labelledby": "ctier-board-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ctier-board__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "ctier__eyebrow",
+        children: "Creator leaderboard"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "ctier-board__h",
+        id: "ctier-board-h",
+        children: pos ? `You’re #${pos} of ${total}` : 'Top creators'
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "ctier-board__copy",
+        children: "Ranked by confirmed sales. The board shows names, ranks and levels only \u2014 your figures stay private."
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(LeaderboardList, {
+      rows: rows,
+      initial: 10,
+      highlightPosition: pos,
+      emptyText: "The board opens with the first confirmed sale."
+    }), pos && pos > 100 && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "ctier-board__foot",
+      children: "You\u2019re outside the top 100 \u2014 every confirmed sale moves you up."
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// The whole tab.
+// ---------------------------------------------------------------
+function CreatorTier({
+  standing,
+  rewards,
+  leaderboard,
+  holdDays = 7,
+  onClaim,
+  onChanged
+}) {
+  const open = !!standing?.withdrawals_open;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+      className: "serif crp__h1",
+      children: "My tier"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "crp__lede",
+      children: "Your rank is earned on confirmed sales through your own links \u2014 no teams, no referrals. Every level raises your commission on the sales that follow."
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(WithdrawalsNotice, {
+      open: open
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(TierStanding, {
+      standing: standing,
+      holdDays: holdDays
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(RewardChooser, {
+      rewards: rewards,
+      onClaim: onClaim,
+      onChanged: onChanged
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(RewardHistory, {
+      rewards: rewards
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(PortalLeaderboard, {
+      rows: leaderboard,
+      standing: standing
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(TierLadder, {
+      standing: standing
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "crp__foot-note",
+      children: ["Sales count once the order is delivered and the ", holdDays, "-day return window has passed. See ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/creator/how-it-works",
+        children: "how you earn"
+      }), "."]
+    })]
+  });
+}
+
 const fmtDate$1 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
   month: 'short',
@@ -51336,6 +52432,7 @@ function CreatorPayouts({
   earnings,
   kyc,
   payouts,
+  withdrawalsOpen = false,
   onSubmitKyc,
   onUploadKycDocument,
   onRequestPayout,
@@ -51350,6 +52447,8 @@ function CreatorPayouts({
     }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
       className: "crp__lede",
       children: "Verify your details once, then request a payout during the monthly window. SORA LIFE reviews and pays every request manually \u2014 money is never released automatically."
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(WithdrawalsNotice, {
+      open: withdrawalsOpen
     }), /*#__PURE__*/jsxRuntimeExports.jsx(KycSection, {
       creator: creator,
       kyc: kyc,
@@ -51361,6 +52460,7 @@ function CreatorPayouts({
       earnings: earnings,
       payouts: payouts,
       kycVerified: kycVerified,
+      withdrawalsOpen: withdrawalsOpen,
       onRequestPayout: onRequestPayout,
       onChanged: onChanged
     }), /*#__PURE__*/jsxRuntimeExports.jsx(PayoutHistory, {
@@ -51823,6 +52923,7 @@ function PayoutSection({
   earnings,
   payouts,
   kycVerified,
+  withdrawalsOpen = false,
   onRequestPayout,
   onChanged
 }) {
@@ -51869,7 +52970,14 @@ function PayoutSection({
 
   // ---- Banner state machine ----
   let banner;
-  if (!kycVerified) {
+  if (!withdrawalsOpen) {
+    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
+      tone: "warn",
+      icon: "lock",
+      title: "Withdrawals open later",
+      body: "Your commission keeps accruing. Payout requests open once SORA LIFE\u2019s tax registration is complete \u2014 you\u2019ll see the request button here the day they do."
+    });
+  } else if (!kycVerified) {
     banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
       tone: "warn",
       icon: "shield",
@@ -52071,6 +53179,7 @@ function friendlyPayoutError(reason, {
   payoutDay
 }) {
   return {
+    withdrawals_closed: 'Withdrawals aren’t open yet. Your commission is safe and accruing; requests open once our tax registration is complete.',
     kyc_required: 'Your KYC needs to be verified before you can withdraw.',
     window_closed: `Payouts can only be requested on the ${ordinal(payoutDay)} of the month.`,
     already_requested: 'You’ve already requested a payout this month.',
@@ -52105,6 +53214,10 @@ const NAV = [{
   id: 'earnings',
   label: 'Earnings',
   icon: 'crown'
+}, {
+  id: 'tier',
+  label: 'My tier',
+  icon: 'star'
 }, {
   id: 'payouts',
   label: 'Payouts',
@@ -52189,6 +53302,9 @@ function CreatorPortal() {
   const [earnings, setEarnings] = reactExports.useState(null);
   const [kyc, setKyc] = reactExports.useState(null);
   const [payouts, setPayouts] = reactExports.useState([]);
+  const [standing, setStanding] = reactExports.useState(null);
+  const [rewards, setRewards] = reactExports.useState(null);
+  const [leaderboard, setLeaderboard] = reactExports.useState([]);
   const [terms, setTerms] = reactExports.useState(null);
   const [termsAccepted, setTermsAccepted] = reactExports.useState(null); // null = unknown
   const [acceptingTerms, setAcceptingTerms] = reactExports.useState(false);
@@ -52197,10 +53313,12 @@ function CreatorPortal() {
   // Reload just the money surfaces (earnings buckets, KYC, payout history)
   // after an action, without re-fetching the whole portal.
   const reloadMoney = reactExports.useCallback(async () => {
-    const [en, ky, po] = await Promise.all([getMyCreatorEarnings(), getMyKyc(), getMyPayouts()]);
+    const [en, ky, po, st, rw] = await Promise.all([getMyCreatorEarnings(), getMyKyc(), getMyPayouts(), getMyCreatorStanding(), getMyCreatorRewards()]);
     setEarnings(en && en.ok ? en : null);
     setKyc(ky || null);
     setPayouts(Array.isArray(po) ? po : []);
+    setStanding(st && st.ok ? st : null);
+    setRewards(rw && rw.ok ? rw : null);
   }, []);
 
   // Terms load separately from the portal's own data. They are public-read
@@ -52249,13 +53367,16 @@ function CreatorPortal() {
       return;
     }
     setCreator(me);
-    const [cs, ls, an, en, ky, po] = await Promise.all([getMyCampaigns(me.id), getMyLinks(me.id), getMyCreatorAnalytics(), getMyCreatorEarnings(), getMyKyc(), getMyPayouts()]);
+    const [cs, ls, an, en, ky, po, st, rw, lb] = await Promise.all([getMyCampaigns(me.id), getMyLinks(me.id), getMyCreatorAnalytics(), getMyCreatorEarnings(), getMyKyc(), getMyPayouts(), getMyCreatorStanding(), getMyCreatorRewards(), getCreatorLeaderboard()]);
     setCampaigns(cs);
     setLinks(ls);
     setAnalytics(an && an.ok ? an : null);
     setEarnings(en && en.ok ? en : null);
     setKyc(ky || null);
     setPayouts(Array.isArray(po) ? po : []);
+    setStanding(st && st.ok ? st : null);
+    setRewards(rw && rw.ok ? rw : null);
+    setLeaderboard(Array.isArray(lb) ? lb : []);
     setState('ready');
   }, []);
   reactExports.useEffect(() => {
@@ -52722,13 +53843,26 @@ function CreatorPortal() {
             }), " once it clears. We never share your shoppers\u2019 personal details with you."]
           })]
         }), tab === 'earnings' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx(CreatorEarnings, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(WithdrawalsNotice, {
+            open: !!standing?.withdrawals_open
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorEarnings, {
             creator: creator,
             earnings: earnings
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(TierStanding, {
+            standing: standing,
+            compact: true,
+            holdDays: Number(earnings?.settlement_hold_days ?? 7)
           }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorHowItWorks, {
             creator: creator,
             earnings: earnings
           })]
+        }), tab === 'tier' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTier, {
+          standing: standing,
+          rewards: rewards,
+          leaderboard: leaderboard,
+          holdDays: Number(earnings?.settlement_hold_days ?? 7),
+          onClaim: claimLevelReward,
+          onChanged: reloadMoney
         }), tab === 'how-it-works' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorHowItWorks, {
           creator: creator,
           earnings: earnings
@@ -52737,6 +53871,7 @@ function CreatorPortal() {
           earnings: earnings,
           kyc: kyc,
           payouts: payouts,
+          withdrawalsOpen: !!standing?.withdrawals_open,
           onSubmitKyc: submitKyc,
           onUploadKycDocument: ({
             kind,
@@ -53382,6 +54517,7 @@ const CreatorDetail = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Crea
 const Attribution = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Attribution.js'));
 const Kyc = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Kyc.js'));
 const Payouts = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Payouts.js'));
+const CreatorTiers = /*#__PURE__*/reactExports.lazy(() => import('./chunks/CreatorTiers.js'));
 const Appearance = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Appearance.js'));
 const Categories = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Categories.js'));
 const HeroSlides = /*#__PURE__*/reactExports.lazy(() => import('./chunks/HeroSlides.js'));
@@ -53562,6 +54698,9 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "payouts",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(Payouts, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "creator-tiers",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTiers, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "categories",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(Categories, {})
@@ -53801,5 +54940,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { adminUpdateProduct as $, fulfillmentStatusLabel as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, adminUpsertCategory as a$, adminCreateProduct as a0, adminListVariants as a1, adminCreateVariant as a2, adminUpdateVariant as a3, adminSetVariantActive as a4, adminDeleteVariant as a5, adminGetProgramSettings as a6, CREATOR_STATUSES as a7, adminListCreators as a8, adminSetProgramSettings as a9, adminRefundConversion as aA, adminListKyc as aB, KYC_STATUSES as aC, KYC_SIGNED_URL_SECONDS as aD, adminSetKycStatus as aE, KYC_DOCUMENT_KINDS as aF, kycDocumentState as aG, adminKycDocumentUrl as aH, adminListKycAudit as aI, adminListPayouts as aJ, PAYOUT_STATUSES as aK, adminGetPayoutLedger as aL, adminGetPayoutAudit as aM, adminGetKycForCreator as aN, adminReviewPayout as aO, adminMarkPayoutPaid as aP, adminGetTheme as aQ, sanitizeTheme$1 as aR, TOKENS as aS, PRESET_LIST as aT, GROUPS as aU, DEFAULT_THEME as aV, OVERLAY_SCALES as aW, TYPE_SCALES as aX, HEX_RE as aY, adminSetTheme as aZ, overlayRgba as a_, adminCreateCreator as aa, adminSetCreatorStatus as ab, normalizeContentPatch as ac, contentScore as ad, adminGetCreator as ae, adminListCodeAliases as af, adminListCampaigns as ag, adminListLinks as ah, adminListAudit as ai, adminListAttributionEvents as aj, adminUpdateCampaign as ak, adminCreateCampaign as al, CAMPAIGN_STATUSES as am, buildTrackingUrl as an, normalizeDestination as ao, DESTINATION_TYPES as ap, CopyButton as aq, adminChangeCreatorCode as ar, adminUpdateCreator as as, adminCreateLink as at, adminSetLinkStatus as au, adminListConversions as av, money2 as aw, CONVERSION_STATUSES as ax, adminGetConversionItems as ay, adminGetConversionAudit as az, Link as b, adminDeleteCategory as b0, sanitizeHeroCta as b1, HERO_CTA_FIELDS as b2, adminUpsertHeroSlide as b3, mergeHeroCta as b4, announceHomepageSaved as b5, adminDeleteHeroSlide as b6, adminReorderHeroSlides as b7, uploadImage as b8, uploadHeroVideo as b9, safeColor as bA, safeGradient as bB, makeSpotlightId as bC, validateImageUpload as bD, normalizeCategoryExperience as bE, categoryExperiencePayload as bF, categoryIsReadyButOff as bG, categoryToneTheme as bH, MIN_INTERVAL_MS as bI, MAX_INTERVAL_MS as bJ, DEFAULT_ITEM_SCALE as bK, MIN_ITEM_SCALE as bL, MAX_ITEM_SCALE as bM, ITEM_OFFSET_LIMIT as bN, CategorySpotlight as bO, SOCIAL_NETWORKS as bP, POLICY_KEYS as bQ, validateCompanyForSave as bR, normalizePromo as ba, PromoPoster as bb, PromoOfferCard as bc, adminListPromotions as bd, adminUpsertPromotion as be, adminDeletePromotion as bf, adminSetPromotionActive as bg, adminReorderPromotions as bh, uploadPromoImage as bi, supabase as bj, CouponTicket as bk, HOMEPAGE_VISUAL_FIELDS as bl, safeVisualUrl as bm, MAX_CONCERN_PRODUCTS as bn, searchCatalogueForPicker as bo, productGallery as bp, MAX_DISCOVERY_CARDS as bq, makeDiscoveryId as br, sanitizeHomepageVisuals as bs, normalizeDiscovery as bt, products as bu, discoveryPayload as bv, mergeHomepageVisuals as bw, isSpotlightEligible as bx, categoryBySlug as by, sanitizeCategoryConfig as bz, LegalUpdated as c, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminListHeroSlides as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminSeedDefaultHeroSlides as p, adminImportBiosashCatalog as q, reactExports as r, money as s, adminSetProductActive as t, useParams as u, validateLegalPage as v, adminDeleteProduct as w, adminReorderProducts as x, categories as y, adminListOrders as z };
+export { adminUpdateProduct as $, fulfillmentStatusLabel as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, REWARD_OPTION_SLOTS as a$, adminCreateProduct as a0, adminListVariants as a1, adminCreateVariant as a2, adminUpdateVariant as a3, adminSetVariantActive as a4, adminDeleteVariant as a5, adminGetProgramSettings as a6, CREATOR_STATUSES as a7, money2 as a8, adminListCreators as a9, adminGetConversionAudit as aA, adminRefundConversion as aB, adminListKyc as aC, KYC_STATUSES as aD, KYC_SIGNED_URL_SECONDS as aE, adminSetKycStatus as aF, KYC_DOCUMENT_KINDS as aG, kycDocumentState as aH, adminKycDocumentUrl as aI, adminListKycAudit as aJ, getPayoutConfig as aK, adminListPayouts as aL, PAYOUT_STATUSES as aM, adminSetWithdrawalsOpen as aN, adminGetPayoutLedger as aO, adminGetPayoutAudit as aP, adminGetKycForCreator as aQ, adminReviewPayout as aR, adminMarkPayoutPaid as aS, normalizeLadder as aT, DEFAULT_BEYOND_STEP as aU, adminGetTierLadder as aV, validateLadder as aW, ladderErrorMessage as aX, rupees as aY, adminListLevelRewards as aZ, groupRewardsByLevel as a_, adminCreatorStandings as aa, adminSetProgramSettings as ab, adminCreateCreator as ac, adminSetCreatorStatus as ad, normalizeContentPatch as ae, contentScore as af, adminGetCreator as ag, adminListCodeAliases as ah, adminListCampaigns as ai, adminListLinks as aj, adminListAudit as ak, adminListAttributionEvents as al, adminUpdateCampaign as am, adminCreateCampaign as an, CAMPAIGN_STATUSES as ao, buildTrackingUrl as ap, normalizeDestination as aq, DESTINATION_TYPES as ar, CopyButton as as, adminChangeCreatorCode as at, adminUpdateCreator as au, adminCreateLink as av, adminSetLinkStatus as aw, adminListConversions as ax, CONVERSION_STATUSES as ay, adminGetConversionItems as az, Link as b, validateImageUpload as b$, validateRewardOption as b0, REWARD_TYPES as b1, REWARD_TYPE_LABEL as b2, adminListRewardClaims as b3, CLAIM_STATUSES as b4, CLAIM_STATUS_LABEL as b5, DEFAULT_LADDER as b6, adminSetTierLadder as b7, rewardOptionErrorMessage as b8, adminUpsertLevelReward as b9, PromoOfferCard as bA, adminListPromotions as bB, adminUpsertPromotion as bC, adminDeletePromotion as bD, adminSetPromotionActive as bE, adminReorderPromotions as bF, uploadPromoImage as bG, supabase as bH, CouponTicket as bI, HOMEPAGE_VISUAL_FIELDS as bJ, safeVisualUrl as bK, MAX_CONCERN_PRODUCTS as bL, searchCatalogueForPicker as bM, productGallery as bN, MAX_DISCOVERY_CARDS as bO, makeDiscoveryId as bP, sanitizeHomepageVisuals as bQ, normalizeDiscovery as bR, products as bS, discoveryPayload as bT, mergeHomepageVisuals as bU, isSpotlightEligible as bV, categoryBySlug as bW, sanitizeCategoryConfig as bX, safeColor as bY, safeGradient as bZ, makeSpotlightId as b_, adminDeleteLevelReward as ba, adminSetRewardClaimStatus as bb, adminGetTheme as bc, sanitizeTheme$1 as bd, TOKENS as be, PRESET_LIST as bf, GROUPS as bg, DEFAULT_THEME as bh, OVERLAY_SCALES as bi, TYPE_SCALES as bj, HEX_RE as bk, adminSetTheme as bl, overlayRgba as bm, adminUpsertCategory as bn, adminDeleteCategory as bo, sanitizeHeroCta as bp, HERO_CTA_FIELDS as bq, adminUpsertHeroSlide as br, mergeHeroCta as bs, announceHomepageSaved as bt, adminDeleteHeroSlide as bu, adminReorderHeroSlides as bv, uploadImage as bw, uploadHeroVideo as bx, normalizePromo as by, PromoPoster as bz, LegalUpdated as c, normalizeCategoryExperience as c0, categoryExperiencePayload as c1, categoryIsReadyButOff as c2, categoryToneTheme as c3, MIN_INTERVAL_MS as c4, MAX_INTERVAL_MS as c5, DEFAULT_ITEM_SCALE as c6, MIN_ITEM_SCALE as c7, MAX_ITEM_SCALE as c8, ITEM_OFFSET_LIMIT as c9, CategorySpotlight as ca, SOCIAL_NETWORKS as cb, POLICY_KEYS as cc, validateCompanyForSave as cd, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminListHeroSlides as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminSeedDefaultHeroSlides as p, adminImportBiosashCatalog as q, reactExports as r, money as s, adminSetProductActive as t, useParams as u, validateLegalPage as v, adminDeleteProduct as w, adminReorderProducts as x, categories as y, adminListOrders as z };
 //# sourceMappingURL=bundle.js.map

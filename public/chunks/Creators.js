@@ -1,4 +1,4 @@
-import { r as reactExports, a6 as adminGetProgramSettings, j as jsxRuntimeExports, a7 as CREATOR_STATUSES, b as Link, a8 as adminListCreators, a9 as adminSetProgramSettings, aa as adminCreateCreator, ab as adminSetCreatorStatus } from '../bundle.js';
+import { r as reactExports, a6 as adminGetProgramSettings, j as jsxRuntimeExports, a7 as CREATOR_STATUSES, b as Link, a8 as money2, a9 as adminListCreators, aa as adminCreatorStandings, ab as adminSetProgramSettings, ac as adminCreateCreator, ad as adminSetCreatorStatus } from '../bundle.js';
 
 const STATUS_BADGE = {
   active: 'badge-best',
@@ -29,10 +29,15 @@ function Creators() {
   const [filter, setFilter] = reactExports.useState('all');
   const [program, setProgram] = reactExports.useState(null);
   const [savingProgram, setSavingProgram] = reactExports.useState(false);
+  // creator_id → { level, rank_name, rate, lifetime_confirmed_sales, pending_commission, confirmed_commission }
+  const [standings, setStandings] = reactExports.useState({});
   async function load() {
     try {
       setRows(await adminListCreators());
       setErr('');
+      // Standings are derived by the database on every call; a failure here
+      // (0031 not applied) leaves the columns blank rather than the page broken.
+      adminCreatorStandings().then(setStandings).catch(() => setStandings({}));
     } catch (e) {
       setErr(e.message || String(e));
     } finally {
@@ -163,7 +168,7 @@ function Creators() {
             })
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
             className: "hint",
-            children: "Applied to new applicants. Stored for Part 2 \u2014 no commission is calculated yet."
+            children: "Applied to new applicants as their floor rate. The tier ladder (Creator Tiers & Rewards) raises the rate as confirmed sales grow."
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "field",
@@ -265,7 +270,7 @@ function Creators() {
             onChange: e => set('default_commission_rate', e.target.value)
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
             className: "hint",
-            children: "Stored for Part 2. No commission is calculated yet."
+            children: "A floor. The tier ladder raises it as confirmed sales grow; a campaign override still wins."
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "field",
@@ -374,11 +379,19 @@ function Creators() {
             }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
               children: "Code"
             }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-              className: "adm-items__amt",
-              children: "Commission"
+              children: "Tier"
             }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-              className: "adm-items__qty",
-              children: "Window"
+              className: "adm-items__amt",
+              children: "Lifetime confirmed"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "adm-items__amt",
+              children: "Pending"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "adm-items__amt",
+              children: "Confirmed"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "adm-items__amt",
+              children: "Rate"
             }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
               children: "Status"
             }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {})]
@@ -403,12 +416,39 @@ function Creators() {
             }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
               className: "adm-mono",
               children: r.creator_code
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: standings[r.id] ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+                  children: standings[r.id].rank_name
+                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                  className: "hint",
+                  style: {
+                    display: 'block'
+                  },
+                  children: ["Level ", standings[r.id].level]
+                })]
+              }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hint",
+                children: "\u2014"
+              })
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "adm-items__amt",
+              children: standings[r.id] ? money2(standings[r.id].lifetime_confirmed_sales) : '—'
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "adm-items__amt",
+              children: standings[r.id] ? money2(standings[r.id].pending_commission) : '—'
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "adm-items__amt",
+              children: standings[r.id] ? money2(standings[r.id].confirmed_commission) : '—'
             }), /*#__PURE__*/jsxRuntimeExports.jsxs("td", {
               className: "adm-items__amt",
-              children: [Number(r.default_commission_rate), "%"]
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("td", {
-              className: "adm-items__qty",
-              children: [r.default_attribution_window_days, "d"]
+              children: [standings[r.id] ? `${Number(standings[r.id].rate)}%` : `${Number(r.default_commission_rate)}%`, /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                className: "hint",
+                style: {
+                  display: 'block'
+                },
+                children: ["floor ", Number(r.default_commission_rate), "%"]
+              })]
             }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
               children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
                 className: `badge ${STATUS_BADGE[r.status] || 'badge-soft'}`,
