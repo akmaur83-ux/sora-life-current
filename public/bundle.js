@@ -34751,7 +34751,7 @@ const DEFAULT_LADDER = Object.freeze([{
   rate: 25
 }]);
 const DEFAULT_BEYOND_STEP = 25000;
-const num$3 = v => {
+const num$4 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
@@ -34763,8 +34763,8 @@ function normalizeLadder(rows) {
   return rows.map((r, i) => ({
     level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
     rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
-    threshold: num$3(r?.threshold),
-    rate: num$3(r?.rate)
+    threshold: num$4(r?.threshold),
+    rate: num$4(r?.rate)
   })).sort((a, b) => a.level - b.level);
 }
 
@@ -47034,7 +47034,7 @@ function TermsUpdatedLine({
   });
 }
 
-const fmtDate$4 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
+const fmtDate$5 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
   month: 'short',
   year: 'numeric'
@@ -47282,7 +47282,7 @@ function CreatorOnboarding() {
             style: {
               fontSize: 18
             },
-            children: fmtDate$4(creator.joined_at)
+            children: fmtDate$5(creator.joined_at)
           })]
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -51453,7 +51453,7 @@ function Shell$1({
 // ============================================================
 
 const METRICS = Object.freeze(['clicks', 'orders', 'products', 'sales', 'commission']);
-const num$2 = v => {
+const num$3 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -51461,7 +51461,7 @@ const num$2 = v => {
 // Running total of a series — the shape of "lifetime so far".
 function cumulative(points) {
   let acc = 0;
-  return (Array.isArray(points) ? points : []).map(p => acc += num$2(p));
+  return (Array.isArray(points) ? points : []).map(p => acc += num$3(p));
 }
 
 // SVG geometry. `pad` keeps the stroke inside the box; a flat series sits on
@@ -51471,7 +51471,7 @@ function sparkGeometry(points, {
   height = 28,
   pad = 2
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$2);
+  const vals = (Array.isArray(points) ? points : []).map(num$3);
   const n = vals.length;
   if (n === 0) return {
     line: '',
@@ -51542,20 +51542,20 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
   };
   for (const m of METRICS) out[m] = Array.from({
     length: n
-  }, (_, i) => num$2(rows[i]?.[m]));
+  }, (_, i) => num$3(rows[i]?.[m]));
   out.labels = Array.from({
     length: n
   }, (_, i) => String(rows[i]?.at || ''));
   out.totals = Object.fromEntries(METRICS.map(m => [m, out[m].reduce((a, b) => a + b, 0)]));
-  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$2(raw.previous[m])])) : null;
+  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$3(raw.previous[m])])) : null;
   out.links = Array.isArray(raw?.links) ? raw.links.map(l => ({
     link_id: l?.link_id ?? null,
     label: String(l?.label || 'Link'),
     campaign: l?.campaign || null,
-    clicks: num$2(l?.clicks),
-    orders: num$2(l?.orders),
-    sales: num$2(l?.sales),
-    commission: num$2(l?.commission)
+    clicks: num$3(l?.clicks),
+    orders: num$3(l?.orders),
+    sales: num$3(l?.sales),
+    commission: num$3(l?.commission)
   })) : [];
   return out;
 }
@@ -51563,8 +51563,8 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
 // Trend versus the previous period. No previous period, or a previous of
 // zero, is "—" (not "+100%": there is nothing to be 100% of).
 function trend(current, previous) {
-  const c = num$2(current);
-  const p = previous == null ? null : num$2(previous);
+  const c = num$3(current);
+  const p = previous == null ? null : num$3(previous);
   if (p == null) return {
     pct: null,
     dir: 'none',
@@ -51614,8 +51614,8 @@ function areaChartGeometry({
   padT = 14,
   padB = 26
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num$2);
-  const b = (Array.isArray(orders) ? orders : []).map(num$2);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$3);
+  const b = (Array.isArray(orders) ? orders : []).map(num$3);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -51680,7 +51680,7 @@ function donutGeometry(parts, {
   const c = 2 * Math.PI * r;
   const list = (Array.isArray(parts) ? parts : []).map(p => ({
     ...p,
-    value: Math.max(0, num$2(p?.value))
+    value: Math.max(0, num$3(p?.value))
   }));
   const total = list.reduce((s, p) => s + p.value, 0);
   let offset = 0;
@@ -51722,7 +51722,7 @@ function barChartGeometry(points, {
   gap = 0.35,
   minMax = 4
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$2);
+  const vals = (Array.isArray(points) ? points : []).map(num$3);
   const n = vals.length;
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -51762,7 +51762,7 @@ function barChartGeometry(points, {
   };
 }
 function compactRupees(v) {
-  const n = Math.max(0, num$2(v));
+  const n = Math.max(0, num$3(v));
   if (n >= 10000000) return `₹${trim(n / 10000000)}Cr`;
   if (n >= 100000) return `₹${trim(n / 100000)}L`;
   if (n >= 1000) return `₹${trim(n / 1000)}k`;
@@ -51772,141 +51772,6 @@ const trim = x => (Math.round(x * 10) / 10).toString().replace(/\.0$/, '');
 
 const TONES = ['ok', 'hold', 'info', 'brand', 'bad', 'neutral'];
 const toneClass = tone => `ck-tone-${TONES.includes(tone) ? tone : 'neutral'}`;
-
-/**
- * Empty state.
- *
- * An empty creator account is the FIRST thing a new creator sees, and a bare
- * white box reads as broken. `points` is for explaining what will fill this
- * space — never for implying data that does not exist.
- */
-function Empty({
-  icon = 'sparkle',
-  tone = 'neutral',
-  eyebrow,
-  title,
-  body,
-  points,
-  children
-}) {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: `ck-empty ${toneClass(tone)}`,
-    "data-state": "waiting",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "ck-empty__ic",
-      "aria-hidden": "true",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: icon,
-        size: 21
-      })
-    }), eyebrow && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-      className: "ck-empty__eyebrow",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "ck-empty__dot",
-        "aria-hidden": "true"
-      }), eyebrow]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-      className: "ck-empty__title",
-      children: title
-    }), body && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: "ck-empty__body",
-      children: body
-    }), Array.isArray(points) && points.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-      className: "ck-empty__points",
-      children: points.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "check",
-          size: 14
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          children: p
-        })]
-      }, p))
-    }), children && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "ck-empty__foot",
-      children: children
-    })]
-  });
-}
-
-/** One figure inside a Band. `tone` draws a short rule above the label. */
-function Cell({
-  label,
-  value,
-  tone,
-  hint,
-  mono = false,
-  spark = null,
-  zero = false
-}) {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: `ck-band__cell${zero ? ' is-zero' : ''}`,
-    "data-tone": TONES.includes(tone) && tone !== 'neutral' ? tone : undefined,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "ck-band__label",
-      children: label
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: `ck-band__fig ${mono ? 'is-mono' : ''}`,
-      children: value
-    }), spark && /*#__PURE__*/jsxRuntimeExports.jsx(Sparkline, {
-      points: spark,
-      tone: tone
-    }), hint && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: "ck-band__hint",
-      children: hint
-    })]
-  });
-}
-
-/**
- * Financial composition: one dominant figure, then a ruled row of the
- * supporting states. The balance a creator can act on should not be one of
- * four equal tiles.
- */
-function Balance({
-  label,
-  value,
-  hint,
-  children,
-  spark = null,
-  sparkLabel = null,
-  zero = false
-}) {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: `ck-balance${zero ? ' is-zero' : ''}`,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "ck-balance__main",
-      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "ck-balance__figwrap",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            className: "ck-band__label",
-            children: label
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-            className: "ck-balance__fig",
-            children: value
-          }), hint && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "ck-balance__hint",
-            children: hint
-          })]
-        }), spark && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "ck-balance__spark",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Sparkline, {
-            points: spark,
-            tone: "ok",
-            width: 160,
-            height: 44
-          }), sparkLabel && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            className: "ck-balance__spark-l",
-            children: sparkLabel
-          })]
-        })]
-      })
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "ck-balance__row",
-      children: children
-    })]
-  });
-}
 
 /**
  * A sparkline: one polyline and its filled area, hand-built SVG.
@@ -52011,372 +51876,6 @@ function moneyParts(str) {
     }), m[3] && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
       className: "ck-dec",
       children: m[3]
-    })]
-  });
-}
-
-const monthLabel = ym => {
-  if (!ym) return '—';
-  const [y, m] = ym.split('-').map(Number);
-  return new Intl.DateTimeFormat('en-IN', {
-    month: 'short',
-    year: 'numeric'
-  }).format(new Date(y, m - 1, 1));
-};
-function CreatorEarnings({
-  creator,
-  earnings,
-  standing = null,
-  weekly = null,
-  monthly = null
-}) {
-  const isZero = v => !(Number(v) > 0);
-  if (!earnings) {
-    return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-        className: "serif crp__h1",
-        children: "My earnings"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "crp__empty",
-        style: {
-          marginTop: 'var(--sp-5)'
-        },
-        children: "No commission yet. Once an attributed order is paid and clears its settlement hold, your earnings will appear here. Share your links to get started."
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-        className: "crp__foot-note",
-        children: ["Earnings are commission on ", /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-          children: "qualifying"
-        }), " sales \u2014 not gross order value. We never share your shoppers\u2019 personal details with you."]
-      })]
-    });
-  }
-  const tm = earnings.this_month || {};
-  // The tier rate (0031) is the live one; earnings.commission_rate is the floor.
-  const rate = Number(standing?.rate ?? earnings.commission_rate ?? creator?.default_commission_rate ?? 0);
-  const hold = Number(earnings.settlement_hold_days ?? 7);
-  const top = Array.isArray(earnings.top_products) ? earnings.top_products : [];
-  const history = Array.isArray(earnings.monthly_history) ? earnings.monthly_history : [];
-  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-      className: "serif crp__h1",
-      children: "My earnings"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: "crp__lede",
-      children: "Commission on the orders your links generated. Figures are derived from your settled ledger \u2014 nothing here can be edited from this page."
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs(Balance, {
-      label: "Available to withdraw",
-      value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-        value: earnings.available ?? 0,
-        format: money2
-      }),
-      hint: isZero(earnings.available) ? 'Nothing has cleared yet. Commission lands here after delivery and the settlement hold.' : 'Cleared commission. A payout request withdraws this full amount.',
-      spark: monthly ? cumulative(monthly.values) : null,
-      sparkLabel: "Commission, last 12 months",
-      zero: isZero(earnings.available),
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-        label: "Held",
-        value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-          value: earnings.held ?? 0,
-          format: money2
-        }),
-        tone: "hold",
-        zero: isZero(earnings.held),
-        spark: weekly ? weekly.commission : null,
-        hint: `In the ${hold}-day settlement hold.`
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-        label: "Paid out",
-        value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-          value: earnings.paid ?? 0,
-          format: money2
-        }),
-        tone: "ok",
-        hint: "All time.",
-        zero: isZero(earnings.paid)
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
-        label: "Reversed",
-        value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-          value: earnings.reversed ?? 0,
-          format: money2
-        }),
-        tone: Number(earnings.reversed ?? 0) > 0 ? 'bad' : undefined,
-        zero: isZero(earnings.reversed),
-        hint: "Refunds and adjustments."
-      })]
-    }), earnings.reserved > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "crp__reserve-note",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "lock",
-        size: 13
-      }), " ", money2(earnings.reserved), " is reserved against an open payout request and can\u2019t be requested again until that request is settled."]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "crp__earn-grid",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-        className: "crp__panel",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-          className: "crp__panel-h",
-          children: "This month"
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
-          className: "crp__kv crp__kv--2",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-              children: "Attributed orders"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-              children: tm.orders ?? 0
-            })]
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-              children: "Products sold"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-              children: tm.products_sold ?? 0
-            })]
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-              children: "Qualifying sales"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-              children: money2(tm.attributed_sales ?? 0)
-            })]
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-              children: "Commission earned"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-              className: "is-ok",
-              children: money2(tm.commission_earned ?? 0)
-            })]
-          })]
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-        className: "crp__panel",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-          className: "crp__panel-h",
-          children: "Your terms"
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
-          className: "crp__kv",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-              children: "Commission rate"
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("dd", {
-              children: [rate, "%", standing?.rank ? /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-                className: "muted",
-                children: [" \xB7 ", standing.rank, " L", standing.level]
-              }) : null]
-            })]
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-              children: "Settlement hold"
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("dd", {
-              children: [hold, " days after an order is delivered"]
-            })]
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-              children: "Minimum payout"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-              children: money2(earnings.min_payout ?? 500)
-            })]
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-          className: "crp__foot-note",
-          style: {
-            marginTop: 'var(--sp-3)'
-          },
-          children: ["Your rate is set by your tier \u2014 confirmed lifetime sales through your links. A rate change only affects ", /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-            children: "future"
-          }), " orders; commission already earned keeps the rate it was earned at."]
-        })]
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-      className: "crp__panel",
-      style: {
-        marginTop: 'var(--sp-5)'
-      },
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        className: "crp__panel-h",
-        children: "Product performance"
-      }), top.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "muted",
-        style: {
-          margin: 0
-        },
-        children: "No qualifying products yet."
-      }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "crp__table-wrap",
-        children: /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
-          className: "crp__table",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
-            children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
-                children: "Product"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-                children: "Variant"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-                className: "ta-r",
-                children: "Qty"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-                className: "ta-r",
-                children: "Qualifying sales"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-                className: "ta-r",
-                children: "Commission"
-              })]
-            })
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
-            children: top.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("td", {
-                children: p.name || 'Product'
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-                className: "muted",
-                children: p.variant || '—'
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-                className: "ta-r",
-                children: p.qty
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-                className: "ta-r",
-                children: money2(p.sales)
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-                className: "ta-r is-ok",
-                children: money2(p.commission)
-              })]
-            }, i))
-          })]
-        })
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-      className: "crp__panel",
-      style: {
-        marginTop: 'var(--sp-5)'
-      },
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        className: "crp__panel-h",
-        children: "Monthly history"
-      }), history.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "muted",
-        style: {
-          margin: 0
-        },
-        children: "No history yet."
-      }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "crp__hist",
-        children: history.map((h, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "crp__hist-row",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            className: "crp__hist-month",
-            children: monthLabel(h.month)
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            className: `crp__hist-amt ${Number(h.commission) < 0 ? 'is-bad' : ''}`,
-            children: money2(h.commission)
-          })]
-        }, i))
-      })]
-    })]
-  });
-}
-
-// `Bucket` lived here until the balance tiles moved to the shared <Metric>
-// primitive in CreatorUI.jsx. Removed rather than left behind, so there is
-// exactly one way to render a creator figure.
-
-const ordinal$1 = n => {
-  const v = Number(n);
-  if (!Number.isFinite(v)) return '';
-  const s = ['th', 'st', 'nd', 'rd'];
-  const k = v % 100;
-  return `${v}${s[(k - 20) % 10] || s[k] || s[0]}`;
-};
-function CreatorHowItWorks({
-  creator,
-  earnings,
-  standing = null
-}) {
-  // The tier rate is the live one; the earnings RPC still quotes the floor.
-  const rate = Number(standing?.rate ?? earnings?.commission_rate ?? creator?.default_commission_rate);
-  const holdDays = Number(earnings?.settlement_hold_days);
-  const minPayout = Number(earnings?.min_payout);
-  const payoutDay = Number(earnings?.payout_day);
-  const windowDays = Number(creator?.default_attribution_window_days);
-  const has = n => Number.isFinite(n) && n > 0;
-  const steps = [{
-    icon: 'externalLink',
-    tone: 'brand',
-    title: 'Share your link or code',
-    body: has(windowDays) ? `Every visit through your link is recorded against your account for ${windowDays} days. If that shopper buys within the window, the sale is attributed to you.` : 'Every visit through your link is recorded against your account, and a purchase within your attribution window is attributed to you.'
-  }, {
-    icon: 'bag',
-    tone: 'brand',
-    title: 'They shop as normal',
-    body: 'Nothing changes for the customer — same price, same checkout. You never see their personal details.'
-  }, {
-    icon: 'check',
-    tone: 'ok',
-    title: 'The sale qualifies',
-    body: has(rate) ? `Once the order is paid, commission is calculated at ${rate}% of the eligible sale value — your current tier rate — and locked in at that rate. A campaign link can carry its own rate, and a later tier change never alters commission you have already earned.` : 'Once the order is paid, commission is calculated on the eligible sale value at your tier rate and locked in — a later tier change never alters commission you have already earned.'
-  }, {
-    icon: 'clock',
-    tone: 'warn',
-    title: 'It waits out the hold period',
-    body: has(holdDays) ? `Commission sits as Held until ${holdDays} days after the order is delivered. This covers returns and cancellations — if an order is refunded or cancelled in that time, the commission is reversed at the same rate it was earned.` : 'Commission sits as Held until a settlement period after delivery has passed, covering returns and cancellations.'
-  }, {
-    icon: 'card',
-    tone: 'ok',
-    title: 'It clears to Available',
-    body: 'When the hold period passes, the commission moves to your available balance. That is the money you can withdraw.'
-  }, {
-    icon: 'shield',
-    tone: 'brand',
-    title: 'Verify your details once',
-    body: 'Submit your KYC and payout details. We store them masked, and an admin verifies them before your first withdrawal.'
-  }, {
-    icon: 'arrowRight',
-    tone: 'brand',
-    title: 'Request your payout',
-    body: [has(payoutDay) ? `Requests open on the ${ordinal$1(payoutDay)} of each month` : 'Requests open on the configured payout day each month', has(minPayout) ? `once your available balance reaches ${money2(minPayout)}` : 'once your available balance reaches the minimum'].join(', ') + '. A request withdraws your full cleared balance, and that exact amount is reserved against your ledger.'
-  }, {
-    icon: 'award',
-    tone: 'ok',
-    title: 'We verify and pay you',
-    body: 'An admin reviews the request and transfers the money to your verified account. The transfer is made manually and then recorded here with its reference — the amount paid always matches the amount approved.'
-  }];
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: "crp-hiw",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
-      className: "crp-hiw__head",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        className: "crp-hiw__title",
-        children: "How you earn"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "crp-hiw__lede",
-        children: "From a shared link to money in your account \u2014 this is exactly what happens, and nothing else."
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
-      className: "crp-hiw__steps",
-      children: steps.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-        className: `crp-hiw__step is-${s.tone}`,
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "crp-hiw__num",
-          "aria-hidden": "true",
-          children: i + 1
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "crp-hiw__ic",
-          "aria-hidden": "true",
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: s.icon,
-            size: 17
-          })
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "crp-hiw__body",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-            children: s.title
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            children: s.body
-          })]
-        })]
-      }, s.title))
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "crp-hiw__foot",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "circleAlert",
-        size: 15
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        children: "Commission is earned on eligible sale value, not on shipping or fees. Self-referred orders don\u2019t qualify. Payouts are made manually by our team \u2014 SORA LIFE never moves money automatically."
-      })]
     })]
   });
 }
@@ -52517,7 +52016,7 @@ function buildActivity({
   }));
 }
 
-const isZero$2 = v => !(Number(v) > 0);
+const isZero$3 = v => !(Number(v) > 0);
 const countFmt = n => String(Math.round(n));
 
 // ---------------------------------------------------------------
@@ -52602,10 +52101,11 @@ function StatCard({
   spark = null,
   tone = 'info',
   money = false,
-  sub = null
+  sub = null,
+  hint = null
 }) {
   // null is a figure that cannot be derived (a ratio over zero): a dash, never 0.
-  const zero = value == null || isZero$2(value);
+  const zero = value == null || isZero$3(value);
   const t = trendOf || {
     dir: 'none',
     label: '—'
@@ -52634,7 +52134,10 @@ function StatCard({
           value: value,
           format: money ? money2 : format
         })
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+      }), trendOf == null && hint ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cd-stat__hint",
+        children: hint
+      }) : /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
         className: `cd-stat__trend is-${t.dir}`,
         children: [t.dir === 'up' && /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "chevronUp",
@@ -52760,7 +52263,7 @@ function PerformanceOverview({
         const v = series.totals?.[c.key] ?? 0;
         const t = trend(v, series.previous ? series.previous[c.key] : null);
         return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: `cd-metric${isZero$2(v) ? ' is-zero' : ''}`,
+          className: `cd-metric${isZero$3(v) ? ' is-zero' : ''}`,
           "data-tone": c.tone,
           children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             className: "cd-metric__label",
@@ -53032,7 +52535,7 @@ function EarningsBreakdown({
       }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
         className: "cd-earn__legend",
         children: parts.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-          className: isZero$2(p.value) ? 'is-zero' : '',
+          className: isZero$3(p.value) ? 'is-zero' : '',
           children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
               className: `cd-dot is-${p.tone}`,
@@ -53302,7 +52805,7 @@ function TopCampaigns({
               children: available ? 'No link activity yet.' : 'Campaign figures appear here once activity is recorded.'
             })
           }) : rows.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
-            className: isZero$2(r.clicks) && isZero$2(r.sales) ? 'is-zero' : '',
+            className: isZero$3(r.clicks) && isZero$3(r.sales) ? 'is-zero' : '',
             children: [/*#__PURE__*/jsxRuntimeExports.jsxs("td", {
               children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
                 children: r.label
@@ -53462,7 +52965,7 @@ function CreatorDashboard({
   });
 }
 
-const fmtDate$3 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
+const fmtDate$4 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
   month: 'short',
   year: 'numeric'
@@ -53491,165 +52994,6 @@ function WithdrawalsNotice({
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
         children: "Withdrawals aren\u2019t open yet."
       }), ' ', "Your commission is accruing and stays yours \u2014 every confirmed sale is recorded against your account. Payout requests open once SORA LIFE\u2019s tax registration is complete; we\u2019ll tell you here the day they do."]
-    })]
-  });
-}
-
-// ---------------------------------------------------------------
-// Rank badge — the rank name in its own colour, with a soft glow behind it.
-// `current` adds the shimmer: only the creator's OWN present rank shimmers.
-// ---------------------------------------------------------------
-function RankBadge({
-  rank,
-  level,
-  current = false,
-  size = 'md'
-}) {
-  if (!rank) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-    className: `ck-rank is-${size}${current ? ' is-current' : ''}`,
-    "data-rank": rankSlot(rank),
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "ck-rank__glow",
-      "aria-hidden": "true"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "ck-rank__label",
-      children: rank
-    }), level != null && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-      className: "ck-rank__lv",
-      children: ["L", level]
-    })]
-  });
-}
-
-// ---------------------------------------------------------------
-// Standing — rank, level, rate, progress, the four figures.
-// ---------------------------------------------------------------
-function TierStanding({
-  standing,
-  compact = false,
-  holdDays = 7
-}) {
-  if (!standing || standing.ok === false) return null;
-  const progress = tierProgress(standing);
-  const slot = rankSlot(standing.rank);
-  const pos = standing.leaderboard_position;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: `ctier sl-dark${compact ? ' is-compact' : ''}`,
-    "data-rank": slot,
-    "aria-label": "Your tier",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "ctier__glow",
-      "aria-hidden": "true"
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "ctier__head",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "ctier__eyebrow",
-          children: "Your rank"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-          className: "ctier__rank",
-          children: standing.rank
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-          className: "ctier__level",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx(RankBadge, {
-            rank: standing.rank,
-            level: standing.level,
-            current: true,
-            size: "sm"
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
-              children: [Number(standing.rate), "%"]
-            }), " commission on new sales"]
-          })]
-        })]
-      }), !compact && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "ctier__pos",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "ctier__pos-l",
-          children: "Leaderboard"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "ctier__pos-v",
-          children: pos ? `#${pos}` : '—'
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "ctier__pos-h",
-          children: pos ? `of ${standing.leaderboard_total}` : 'after your first confirmed sale'
-        })]
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "ctier__progress",
-      role: "progressbar",
-      "aria-valuemin": 0,
-      "aria-valuemax": 100,
-      "aria-valuenow": Math.round(progress.fraction * 100),
-      "aria-label": progress.atTop ? 'Top level reached' : `Progress to level ${standing.next_level}`,
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "ctier__bar",
-        children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "ctier__fill",
-          style: {
-            transform: `scaleX(${progress.fraction})`
-          }
-        })
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "ctier__progress-copy",
-        children: progress.atTop ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-          children: ["Top of the ladder \u2014 ", Number(standing.rate), "% on every new sale."]
-        }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-            children: rupees(progress.remaining)
-          }), " more in confirmed sales to Level ", standing.next_level, standing.next_rate != null && Number(standing.next_rate) !== Number(standing.rate) ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-            children: [" \xB7 unlocks ", /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
-              children: [Number(standing.next_rate), "%"]
-            })]
-          }) : null]
-        })
-      })]
-    }), !compact && /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
-      className: "ctier__stats",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-          children: "Lifetime confirmed sales"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-            value: standing.lifetime_confirmed_sales,
-            format: money2
-          })
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-          children: "Pending commission"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-            value: standing.pending_commission,
-            format: money2
-          })
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("dd", {
-          className: "ctier__hint",
-          children: ["Confirms ", holdDays, " days after delivery"]
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-          children: "Confirmed commission"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-            value: standing.confirmed_commission,
-            format: money2
-          })
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-          children: "Awaiting confirmation"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
-            value: standing.pending_sales,
-            format: money2
-          })
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          className: "ctier__hint",
-          children: "Sales not yet counted"
-        })]
-      })]
     })]
   });
 }
@@ -53803,7 +53147,7 @@ function RewardHistory({
           }) : null]
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "ctier-history__when",
-          children: fmtDate$3(c.claimed_at)
+          children: fmtDate$4(c.claimed_at)
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: `crp__pill is-${c.status === 'fulfilled' ? 'ok' : c.status === 'cancelled' ? 'bad' : 'warn'}`,
           children: CLAIM_STATUS_LABEL[c.status]
@@ -53813,814 +53157,7 @@ function RewardHistory({
   });
 }
 
-const fmtDate$2 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric'
-}).format(new Date(iso)) : '—';
-const nextWindowDate = payoutDay => {
-  const t = new Date();
-  const thisMonth = new Date(t.getFullYear(), t.getMonth(), payoutDay);
-  return t.getDate() >= payoutDay ? new Date(t.getFullYear(), t.getMonth() + 1, payoutDay) : thisMonth;
-};
-const PAYOUT_TONE = {
-  requested: 'warn',
-  under_review: 'warn',
-  approved: 'ok',
-  paid: 'ok',
-  rejected: 'bad',
-  cancelled: 'bad'
-};
-const KYC_BADGE = {
-  not_started: {
-    tone: 'warn',
-    label: 'Not started'
-  },
-  pending: {
-    tone: 'warn',
-    label: 'Under review'
-  },
-  verified: {
-    tone: 'ok',
-    label: 'Verified'
-  },
-  rejected: {
-    tone: 'bad',
-    label: 'Rejected'
-  },
-  needs_update: {
-    tone: 'bad',
-    label: 'Needs update'
-  }
-};
-function CreatorPayouts({
-  creator,
-  earnings,
-  kyc,
-  payouts,
-  withdrawalsOpen = false,
-  onSubmitKyc,
-  onUploadKycDocument,
-  onRequestPayout,
-  onChanged
-}) {
-  const status = kyc?.identity_status || 'not_started';
-  const kycVerified = status === 'verified';
-  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-      className: "serif crp__h1",
-      children: "Payouts"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: "crp__lede",
-      children: "Verify your details once, then request a payout during the monthly window. SORA LIFE reviews and pays every request manually \u2014 money is never released automatically."
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(WithdrawalsNotice, {
-      open: withdrawalsOpen
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(KycSection, {
-      creator: creator,
-      kyc: kyc,
-      status: status,
-      onSubmitKyc: onSubmitKyc,
-      onUploadKycDocument: onUploadKycDocument,
-      onChanged: onChanged
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(PayoutSection, {
-      earnings: earnings,
-      payouts: payouts,
-      kycVerified: kycVerified,
-      withdrawalsOpen: withdrawalsOpen,
-      onRequestPayout: onRequestPayout,
-      onChanged: onChanged
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(PayoutHistory, {
-      payouts: payouts
-    })]
-  });
-}
-
-// ---------------------------------------------------------------
-// KYC — submit / status / resubmit
-// ---------------------------------------------------------------
-function KycSection({
-  kyc,
-  status,
-  onSubmitKyc,
-  onUploadKycDocument,
-  onChanged
-}) {
-  const badge = KYC_BADGE[status] || KYC_BADGE.not_started;
-  const canEdit = status === 'not_started' || status === 'rejected' || status === 'needs_update';
-  const [editing, setEditing] = reactExports.useState(false);
-  const showForm = canEdit || editing;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: "crp__panel crp__kyc",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "crp__kyc-head",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        className: "crp__panel-h",
-        style: {
-          margin: 0
-        },
-        children: "Verification & payout details"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: `crp__pill is-${badge.tone}`,
-        children: badge.label
-      })]
-    }), status === 'pending' && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "crp__kyc-msg",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "clock",
-        size: 14
-      }), " Your details are with our team for review. You\u2019ll be able to request a payout once they\u2019re verified. You can\u2019t withdraw before then."]
-    }), status === 'verified' && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "crp__kyc-msg is-ok",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "checkCircle",
-        size: 14
-      }), " Verified by SORA LIFE. You\u2019re all set to request payouts."]
-    }), status === 'rejected' && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "crp__kyc-msg is-bad",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "circleAlert",
-        size: 14
-      }), " Your details couldn\u2019t be verified. Please check and resubmit."]
-    }), status === 'needs_update' && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "crp__kyc-msg is-bad",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "circleAlert",
-        size: 14
-      }), " We need updated details before we can pay you. Please resubmit below."]
-    }), (status === 'rejected' || status === 'needs_update') && kyc?.verification_notes && /*#__PURE__*/jsxRuntimeExports.jsxs("blockquote", {
-      className: "crp__kyc-reason",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "crp__kyc-reason-l",
-        children: "Reason from our team"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        children: kyc.verification_notes
-      })]
-    }), kyc && (kyc.legal_name || kyc.pan_masked || kyc.payout_account_masked || kyc.upi_masked) && /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
-      className: "crp__kv crp__kv--2 crp__kyc-onfile",
-      children: [kyc.legal_name && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-          children: "Legal name"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          children: kyc.legal_name
-        })]
-      }), kyc.pan_masked && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-          children: "PAN"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          className: "is-mono",
-          children: kyc.pan_masked
-        })]
-      }), kyc.payout_method === 'bank' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-            children: "Account holder"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-            children: kyc.payout_account_holder || '—'
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-            children: "Bank account"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-            className: "is-mono",
-            children: kyc.payout_account_masked || '—'
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-            children: "IFSC"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-            className: "is-mono",
-            children: kyc.ifsc_masked || '—'
-          })]
-        })]
-      }), kyc.payout_method === 'upi' && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-          children: "UPI"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          className: "is-mono",
-          children: kyc.upi_masked || '—'
-        })]
-      })]
-    }), showForm ? /*#__PURE__*/jsxRuntimeExports.jsx(KycForm, {
-      kyc: kyc,
-      onSubmitKyc: onSubmitKyc,
-      onDone: async () => {
-        setEditing(false);
-        await onChanged();
-      },
-      onCancel: editing ? () => setEditing(false) : null
-    }) : status === 'verified' && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-      className: "btn btn-sm btn-light",
-      onClick: () => setEditing(true),
-      style: {
-        marginTop: 'var(--sp-4)'
-      },
-      children: "Update details"
-    }), editing && status === 'verified' && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: "crp__foot-note",
-      children: "Note: editing your details sends them back for re-verification, which pauses payouts until re-approved."
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(KycDocuments, {
-      kyc: kyc,
-      status: status,
-      onUploadKycDocument: onUploadKycDocument,
-      onChanged: onChanged
-    })]
-  });
-}
-
-// ---------------------------------------------------------------
-// KYC documents — PAN card and bank proof
-//
-// Files go to the private kyc-documents bucket under the creator's own
-// folder (RLS), then set_kyc_document() records the path. The creator never
-// sees a URL: what is shown is whether a document is on file and when.
-// ---------------------------------------------------------------
-const MAX_MB = Math.floor(KYC_DOCUMENT_MAX_BYTES / 1024 / 1024);
-function KycDocuments({
-  kyc,
-  status,
-  onUploadKycDocument,
-  onChanged
-}) {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "crp__docs",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-      className: "crp__docs-h",
-      children: "Documents"
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "crp__docs-hint",
-      children: ["We verify your details against these. JPEG, PNG, WebP or PDF, up to ", MAX_MB, " MB each.", status === 'verified' && ' Replacing a document sends your verification back for review.']
-    }), KYC_DOCUMENT_KINDS.map(k => /*#__PURE__*/jsxRuntimeExports.jsx(KycDocumentRow, {
-      doc: kycDocumentState(kyc, k.kind),
-      onUpload: onUploadKycDocument,
-      onChanged: onChanged
-    }, k.kind))]
-  });
-}
-function KycDocumentRow({
-  doc,
-  onUpload,
-  onChanged
-}) {
-  const [file, setFile] = reactExports.useState(null);
-  const [busy, setBusy] = reactExports.useState(false);
-  const [err, setErr] = reactExports.useState('');
-  const [done, setDone] = reactExports.useState(false);
-  const inputId = `kyc-doc-${doc.kind}`;
-  const pick = e => {
-    const f = e.target.files?.[0] || null;
-    setErr('');
-    setDone(false);
-    if (!f) {
-      setFile(null);
-      return;
-    }
-    try {
-      validateKycDocumentMetadata(f);
-      setFile(f);
-    } catch (e2) {
-      setFile(null);
-      setErr(e2.message);
-      e.target.value = '';
-    }
-  };
-  const upload = async () => {
-    if (!file || !onUpload) return;
-    setBusy(true);
-    setErr('');
-    try {
-      const res = await onUpload({
-        kind: doc.kind,
-        file
-      });
-      if (!res || res.ok === false) {
-        setErr(res?.message || friendlyKycDocumentError(res?.reason));
-      } else {
-        setFile(null);
-        setDone(true);
-        await onChanged();
-      }
-    } catch {
-      setErr('Something went wrong. Please try again.');
-    }
-    setBusy(false);
-  };
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: `crp__doc${doc.uploaded ? ' is-uploaded' : ''}`,
-    "data-kind": doc.kind,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "crp__doc-main",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "crp__doc-label",
-        children: doc.label
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "crp__doc-hint",
-        children: doc.hint
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "crp__doc-state",
-        children: doc.uploaded ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-          children: ["On file \xB7 ", doc.fileType.toUpperCase(), " \xB7 uploaded ", fmtDate$2(doc.uploadedAt)]
-        }) : 'Not uploaded yet'
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "crp__doc-actions",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-        htmlFor: inputId,
-        className: `btn btn-sm btn-light crp__doc-pick${busy ? ' is-disabled' : ''}`,
-        children: doc.uploaded ? 'Replace' : 'Choose file'
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-        id: inputId,
-        type: "file",
-        accept: KYC_DOCUMENT_ACCEPT,
-        onChange: pick,
-        disabled: busy,
-        className: "crp__doc-input"
-      }), file && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "crp__doc-file",
-        title: file.name,
-        children: file.name
-      }), file && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-        type: "button",
-        className: "btn btn-sm",
-        onClick: upload,
-        disabled: busy,
-        children: busy ? 'Uploading…' : 'Upload'
-      })]
-    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: "crp__form-err crp__doc-err",
-      children: err
-    }), done && !err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: "crp__kyc-msg is-ok crp__doc-ok",
-      children: "Uploaded. Our team will check it during review."
-    })]
-  });
-}
-function KycForm({
-  kyc,
-  onSubmitKyc,
-  onDone,
-  onCancel
-}) {
-  const [legalName, setLegalName] = reactExports.useState(kyc?.legal_name || '');
-  const [pan, setPan] = reactExports.useState('');
-  const [method, setMethod] = reactExports.useState(kyc?.payout_method || 'bank');
-  const [accountHolder, setAccountHolder] = reactExports.useState(kyc?.payout_account_holder || '');
-  const [accountNumber, setAccountNumber] = reactExports.useState('');
-  const [ifsc, setIfsc] = reactExports.useState('');
-  const [upi, setUpi] = reactExports.useState('');
-  const [busy, setBusy] = reactExports.useState(false);
-  const [err, setErr] = reactExports.useState('');
-  const submit = async e => {
-    e.preventDefault();
-    setErr('');
-    if (!legalName.trim()) return setErr('Enter your legal name.');
-    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/i.test(pan.trim())) return setErr('Enter a valid 10-character PAN (e.g. ABCDE1234F).');
-    if (method === 'bank') {
-      if (!accountHolder.trim()) return setErr('Enter the account holder name.');
-      if (!/^\d{6,18}$/.test(accountNumber.trim())) return setErr('Enter a valid bank account number.');
-      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(ifsc.trim())) return setErr('Enter a valid IFSC code.');
-    } else if (!/^[\w.\-]{2,}@[a-z]{2,}$/i.test(upi.trim())) {
-      return setErr('Enter a valid UPI ID (e.g. name@bank).');
-    }
-    setBusy(true);
-    try {
-      const res = await onSubmitKyc({
-        legalName: legalName.trim(),
-        pan: pan.trim(),
-        method,
-        accountHolder: accountHolder.trim(),
-        accountNumber: accountNumber.trim(),
-        ifsc: ifsc.trim(),
-        upi: upi.trim()
-      });
-      if (!res || res.ok === false) {
-        setErr(friendlyKycError(res?.reason));
-        setBusy(false);
-        return;
-      }
-      // Never keep the raw values around once submitted.
-      setPan('');
-      setAccountNumber('');
-      setIfsc('');
-      setUpi('');
-      await onDone();
-    } catch (e2) {
-      setErr('Something went wrong. Please try again.');
-      setBusy(false);
-    }
-  };
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
-    className: "crp__form",
-    onSubmit: submit,
-    autoComplete: "off",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "crp__form-note",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "lock",
-        size: 13
-      }), " These details are encrypted and masked. Even SORA LIFE staff only ever see a masked version (e.g. ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
-        children: "ABCDE****F"
-      }), ")."]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
-      className: "ck-fieldset ck-tone-brand",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
-        className: "ck-fieldset__legend",
-        "data-step": "01",
-        children: "Identity"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "ck-fieldset__hint",
-        children: "Must match your PAN exactly \u2014 a mismatch is the most common reason verification is sent back."
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-        className: "crp__field",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          children: "Legal name (as on PAN)"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-          value: legalName,
-          onChange: e => setLegalName(e.target.value),
-          placeholder: "Full legal name"
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-        className: "crp__field",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          children: "PAN"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-          value: pan,
-          onChange: e => setPan(e.target.value.toUpperCase()),
-          maxLength: 10,
-          placeholder: "ABCDE1234F",
-          className: "is-mono"
-        })]
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
-      className: "ck-fieldset ck-tone-info",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
-        className: "ck-fieldset__legend",
-        "data-step": "02",
-        children: "Payout method"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "ck-fieldset__hint",
-        children: "Where we send your payout. You can change this later by resubmitting your details."
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "crp__field",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          children: "Payout method"
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "crp__seg",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-            type: "button",
-            className: method === 'bank' ? 'active' : '',
-            onClick: () => setMethod('bank'),
-            children: "Bank transfer"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-            type: "button",
-            className: method === 'upi' ? 'active' : '',
-            onClick: () => setMethod('upi'),
-            children: "UPI"
-          })]
-        })]
-      }), method === 'bank' ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-          className: "crp__field",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: "Account holder name"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-            value: accountHolder,
-            onChange: e => setAccountHolder(e.target.value),
-            placeholder: "Name on the bank account"
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-          className: "crp__field",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: "Bank account number"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-            value: accountNumber,
-            onChange: e => setAccountNumber(e.target.value.replace(/\D/g, '')),
-            inputMode: "numeric",
-            placeholder: "Account number",
-            className: "is-mono"
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-          className: "crp__field",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: "IFSC code"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-            value: ifsc,
-            onChange: e => setIfsc(e.target.value.toUpperCase()),
-            maxLength: 11,
-            placeholder: "ABCD0123456",
-            className: "is-mono"
-          })]
-        })]
-      }) : /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-        className: "crp__field",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          children: "UPI ID"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-          value: upi,
-          onChange: e => setUpi(e.target.value),
-          placeholder: "name@bank",
-          className: "is-mono"
-        })]
-      })]
-    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: "crp__form-err",
-      children: err
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "crp__form-actions",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-        type: "submit",
-        className: "btn",
-        disabled: busy,
-        children: busy ? 'Submitting…' : 'Submit for verification'
-      }), onCancel && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-        type: "button",
-        className: "btn btn-light",
-        onClick: onCancel,
-        disabled: busy,
-        children: "Cancel"
-      })]
-    })]
-  });
-}
-
-// ---------------------------------------------------------------
-// Payout window + request
-// ---------------------------------------------------------------
-function PayoutSection({
-  earnings,
-  payouts,
-  kycVerified,
-  withdrawalsOpen = false,
-  onRequestPayout,
-  onChanged
-}) {
-  const [busy, setBusy] = reactExports.useState(false);
-  const [msg, setMsg] = reactExports.useState(null); // {tone, text}
-
-  const payoutDay = Number(earnings?.payout_day ?? 1);
-  const minPayout = Number(earnings?.min_payout ?? 500);
-  const available = Number(earnings?.available ?? 0);
-  const today = new Date();
-  const isWindowDay = today.getDate() === payoutDay;
-  const period = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-  const activeReq = (payouts || []).find(p => ['requested', 'under_review', 'approved'].includes(p.status));
-  const paidThisPeriod = (payouts || []).find(p => p.payout_period === period && p.status === 'paid');
-  const requestedThisPeriod = (payouts || []).find(p => p.payout_period === period && ['requested', 'under_review', 'approved', 'paid'].includes(p.status));
-  const doRequest = async () => {
-    setBusy(true);
-    setMsg(null);
-    try {
-      const res = await onRequestPayout(null); // null → full cleared balance (partial off by default)
-      if (!res || res.ok === false) {
-        setMsg({
-          tone: 'bad',
-          text: friendlyPayoutError(res?.reason, {
-            minPayout,
-            payoutDay
-          })
-        });
-      } else {
-        setMsg({
-          tone: 'ok',
-          text: `Payout request for ${money2(res.amount)} submitted. Our team will review and pay it manually.`
-        });
-        await onChanged();
-      }
-    } catch {
-      setMsg({
-        tone: 'bad',
-        text: 'Something went wrong. Please try again.'
-      });
-    }
-    setBusy(false);
-  };
-
-  // ---- Banner state machine ----
-  let banner;
-  if (!withdrawalsOpen) {
-    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
-      tone: "warn",
-      icon: "lock",
-      title: "Withdrawals open later",
-      body: "Your commission keeps accruing. Payout requests open once SORA LIFE\u2019s tax registration is complete \u2014 you\u2019ll see the request button here the day they do."
-    });
-  } else if (!kycVerified) {
-    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
-      tone: "warn",
-      icon: "shield",
-      title: "Verify your details to withdraw",
-      body: "Complete verification above. Payouts open once SORA LIFE has verified your KYC."
-    });
-  } else if (activeReq) {
-    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
-      tone: "ok",
-      icon: "checkCircle",
-      title: "Payout request submitted",
-      body: `Your request for ${money2(activeReq.requested_amount)} is ${labelStatus(activeReq.status)}. We’ll pay it manually after review — you’ll see it move to “Paid” here.`
-    });
-  } else if (paidThisPeriod && !isWindowDay) {
-    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
-      tone: "ok",
-      icon: "card",
-      title: "This month\u2019s payout is done",
-      body: `${money2(paidThisPeriod.paid_amount ?? paidThisPeriod.requested_amount)} was paid on ${fmtDate$2(paidThisPeriod.paid_at)}. Next window: ${fmtDate$2(nextWindowDate(payoutDay))}.`
-    });
-  } else if (!isWindowDay) {
-    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
-      tone: "muted",
-      icon: "clock",
-      title: `Next payout window: ${fmtDate$2(nextWindowDate(payoutDay))}`,
-      body: `Requests can be made on the ${ordinal(payoutDay)} of each month. Your cleared balance keeps growing until then.`
-    });
-  } else if (requestedThisPeriod) {
-    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
-      tone: "ok",
-      icon: "checkCircle",
-      title: "Payout already requested this month",
-      body: "You\u2019ve used this month\u2019s request. The next window opens next month."
-    });
-  } else if (available < minPayout) {
-    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
-      tone: "muted",
-      icon: "clock",
-      title: "Window is open \u2014 but below the minimum",
-      body: `You need at least ${money2(minPayout)} cleared to request a payout. You currently have ${money2(available)} available.`
-    });
-  } else {
-    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
-      tone: "live",
-      icon: "sparkle",
-      title: "Your payout window is open",
-      body: `You can request a payout of your cleared balance today.`,
-      action: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-        className: "btn",
-        onClick: doRequest,
-        disabled: busy,
-        children: busy ? 'Requesting…' : `Request payout · ${money2(available)}`
-      })
-    });
-  }
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: "crp__payout",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "crp__payout-bal",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "crp__payout-bal-l",
-          children: "Available to withdraw"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "crp__payout-bal-v",
-          children: money2(available)
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "crp__payout-bal-meta",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-          children: ["Minimum ", money2(minPayout)]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          children: "\xB7"
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-          children: ["Window: ", ordinal(payoutDay), " of each month"]
-        })]
-      })]
-    }), banner, msg && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: `crp__form-${msg.tone === 'ok' ? 'ok' : 'err'}`,
-      children: msg.text
-    })]
-  });
-}
-function Banner({
-  tone,
-  icon,
-  title,
-  body,
-  action
-}) {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: `crp__banner is-${tone}`,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "crp__banner-icon",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: icon,
-        size: 20
-      })
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "crp__banner-txt",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-        children: title
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        children: body
-      })]
-    }), action && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "crp__banner-action",
-      children: action
-    })]
-  });
-}
-function PayoutHistory({
-  payouts
-}) {
-  if (!payouts || payouts.length === 0) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: "crp__panel",
-    style: {
-      marginTop: 'var(--sp-5)'
-    },
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-      className: "crp__panel-h",
-      children: "Payout history"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "crp__table-wrap",
-      children: /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
-        className: "crp__table",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
-          children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
-              children: "Period"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-              children: "Requested"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-              className: "ta-r",
-              children: "Amount"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-              children: "Status"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-              children: "Paid"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-              children: "Reference"
-            })]
-          })
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
-          children: payouts.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("td", {
-              children: p.payout_period
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-              className: "muted",
-              children: fmtDate$2(p.requested_at)
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-              className: "ta-r",
-              children: money2(p.status === 'paid' ? p.paid_amount ?? p.requested_amount : p.requested_amount)
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-              children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                className: `crp__pill is-${PAYOUT_TONE[p.status] || 'warn'}`,
-                children: labelStatus(p.status)
-              })
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-              className: "muted",
-              children: p.paid_at ? fmtDate$2(p.paid_at) : '—'
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-              className: "muted is-mono",
-              children: p.payment_reference || '—'
-            })]
-          }, p.id))
-        })]
-      })
-    }), payouts.some(p => p.status === 'rejected' && p.rejection_reason) && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "crp__foot-note",
-      children: ["A rejected request releases the reserved balance back to \u201CAvailable\u201D. Reason(s):", ' ', payouts.filter(p => p.status === 'rejected' && p.rejection_reason).map(p => p.rejection_reason).join('; '), "."]
-    })]
-  });
-}
-
-// ---- helpers ----
-const ordinal = n => {
-  const s = ['th', 'st', 'nd', 'rd'],
-    v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-};
-const labelStatus = s => ({
-  requested: 'Requested',
-  under_review: 'Under review',
-  approved: 'Approved',
-  paid: 'Paid',
-  rejected: 'Rejected',
-  cancelled: 'Cancelled'
-})[s] || s;
-function friendlyKycError(reason) {
-  return {
-    not_a_creator: 'This account isn’t a creator account.',
-    bad_status: 'Something went wrong with your submission.'
-  }[reason] || 'Couldn’t submit your details. Please check them and try again.';
-}
-function friendlyPayoutError(reason, {
-  minPayout,
-  payoutDay
-}) {
-  return {
-    withdrawals_closed: 'Withdrawals aren’t open yet. Your commission is safe and accruing; requests open once our tax registration is complete.',
-    kyc_required: 'Your KYC needs to be verified before you can withdraw.',
-    window_closed: `Payouts can only be requested on the ${ordinal(payoutDay)} of the month.`,
-    already_requested: 'You’ve already requested a payout this month.',
-    below_minimum: `You need at least ${money2(minPayout)} cleared to request a payout.`,
-    no_balance: 'You don’t have any cleared earnings to withdraw yet.',
-    exceeds_available: 'That’s more than your cleared balance.',
-    // Until amount-level ledger allocations exist, a payout settles the whole
-    // cleared balance — a partial request cannot be backed exactly.
-    full_balance_required: 'Payouts currently withdraw your full cleared balance.',
-    invalid_amount: 'That payout amount isn’t valid.',
-    not_a_creator: 'This account isn’t a creator account.'
-  }[reason] || 'Couldn’t submit your payout request. Please try again.';
-}
-
-const isZero$1 = v => !(Number(v) > 0);
+const isZero$2 = v => !(Number(v) > 0);
 const DISMISS_KEY = 'crp.withdrawals-notice.dismissed';
 
 // ---------------------------------------------------------------
@@ -54912,7 +53449,7 @@ function TierStats({
     children: cards.map(c => {
       const v = Number(standing?.[c.key] ?? 0);
       return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
-        className: `ct-stat${isZero$1(v) ? ' is-zero' : ''}`,
+        className: `ct-stat${isZero$2(v) ? ' is-zero' : ''}`,
         "data-tone": c.tone,
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "ct-stat__tile",
@@ -55321,7 +53858,1906 @@ function CreatorTierPage({
   });
 }
 
+const isZero$1 = v => !(Number(v) > 0);
+const num$2 = v => v == null || v === '' ? NaN : Number(v);
+const monthLabel = ym => {
+  if (!ym) return '—';
+  const [y, m] = String(ym).split('-').map(Number);
+  if (!y || !m) return String(ym);
+  return new Intl.DateTimeFormat('en-IN', {
+    month: 'short',
+    year: 'numeric'
+  }).format(new Date(y, m - 1, 1));
+};
+const ordinal$2 = n => {
+  const v = num$2(n);
+  if (!Number.isFinite(v)) return '—';
+  const s = ['th', 'st', 'nd', 'rd'];
+  const r = v % 100;
+  return `${v}${s[(r - 20) % 10] || s[r] || s[0]}`;
+};
+
+// The terms the page quotes. The tier rate (0031) is the live one; the
+// earnings RPC's commission_rate is the floor, the creator row the fallback.
+function earningsTerms(earnings, standing, creator) {
+  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$2).find(v => Number.isFinite(v));
+  const hold = num$2(earnings?.settlement_hold_days);
+  const minPayout = num$2(earnings?.min_payout);
+  const payoutDay = num$2(earnings?.payout_day);
+  return {
+    rate: Number.isFinite(rate) ? rate : null,
+    hold: Number.isFinite(hold) && hold >= 0 ? hold : null,
+    minPayout: Number.isFinite(minPayout) ? minPayout : null,
+    payoutDay: Number.isFinite(payoutDay) && payoutDay >= 1 && payoutDay <= 31 ? payoutDay : null
+  };
+}
+
+// Monthly history, oldest first, each month as a fraction of the largest.
+function historyBars(history, months = 12) {
+  const rows = (Array.isArray(history) ? history : []).map(h => ({
+    month: String(h?.month || ''),
+    commission: Number(h?.commission) || 0
+  })).filter(h => h.month).sort((a, b) => a.month < b.month ? -1 : a.month > b.month ? 1 : 0).slice(-months);
+  const max = Math.max(0, ...rows.map(r => Math.abs(r.commission)));
+  return {
+    max,
+    empty: rows.length === 0,
+    rows: rows.map(r => ({
+      ...r,
+      label: monthLabel(r.month),
+      fraction: max > 0 ? Math.abs(r.commission) / max : 0
+    }))
+  };
+}
+
+// ---------------------------------------------------------------
+// Hero: available to withdraw, on forest
+// ---------------------------------------------------------------
+function AvailableHero({
+  earnings,
+  history,
+  withdrawalsOpen
+}) {
+  const available = Number(earnings?.available ?? 0);
+  const zero = isZero$1(available);
+  const spark = history.empty ? null : cumulative(history.rows.map(r => r.commission));
+  const canRequest = withdrawalsOpen && !zero;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `ce-hero${zero ? ' is-zero' : ''}`,
+    "aria-labelledby": "ce-hero-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "ce-hero__ribbon",
+      "aria-hidden": "true"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ce-hero__main",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "ce-hero__label",
+        id: "ce-hero-h",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "checkCircle",
+          size: 15
+        }), " Available to withdraw"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "ce-hero__fig",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+          value: available,
+          format: money2
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "ce-hero__line",
+        children: zero ? 'Nothing has cleared yet. Commission lands here after delivery and the settlement hold.' : 'Cleared commission. A payout request withdraws this full amount.'
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ce-hero__side",
+      children: [spark && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "ce-hero__spark",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Sparkline, {
+          points: spark,
+          tone: "brand",
+          width: 150,
+          height: 40,
+          label: "Commission earned, cumulative over the last months"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Commission, cumulative"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/creator/payouts",
+        className: `ce-hero__btn${canRequest ? ' is-primary' : ''}`,
+        children: [canRequest ? 'Request a payout' : 'About payouts', " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 15
+        })]
+      })]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// This month + terms
+// ---------------------------------------------------------------
+function ThisMonthPanel({
+  earnings
+}) {
+  const tm = earnings?.this_month || {};
+  const rows = [{
+    label: 'Attributed orders',
+    value: String(Number(tm.orders ?? 0))
+  }, {
+    label: 'Products sold',
+    value: String(Number(tm.products_sold ?? 0))
+  }, {
+    label: 'Qualifying sales',
+    value: money2(tm.attributed_sales ?? 0)
+  }, {
+    label: 'Commission earned',
+    value: money2(tm.commission_earned ?? 0),
+    tone: 'ok',
+    zero: isZero$1(tm.commission_earned)
+  }];
+  const quiet = [tm.orders, tm.products_sold, tm.attributed_sales, tm.commission_earned].every(isZero$1);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `cd-panel ce-month${quiet ? ' is-zero' : ''}`,
+    "aria-labelledby": "ce-month-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+      className: "cd-panel__head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cd-panel__h serif",
+          id: "ce-month-h",
+          children: "This month"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "cd-panel__sub",
+          children: [new Intl.DateTimeFormat('en-IN', {
+            month: 'long',
+            year: 'numeric'
+          }).format(new Date()), ", so far."]
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("dl", {
+      className: "ce-kv",
+      children: rows.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: r.zero ? 'is-zero' : '',
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: r.label
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          className: r.tone && !r.zero ? `is-${r.tone}` : undefined,
+          children: r.value
+        })]
+      }, r.label))
+    }), quiet && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "ce-panel__empty",
+      children: "Nothing attributed this month yet \u2014 figures appear as orders through your links are paid."
+    })]
+  });
+}
+function TermsPanel({
+  terms,
+  standing
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "cd-panel ce-terms",
+    "aria-labelledby": "ce-terms-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "cd-panel__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cd-panel__h serif",
+          id: "ce-terms-h",
+          children: "Your terms"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cd-panel__sub",
+          children: "Set by SORA LIFE and your tier."
+        })]
+      }), standing?.rank && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/creator/tier",
+        className: "cd-panel__link",
+        children: [standing.rank, " \xB7 L", standing.level, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 13
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+      className: "ce-kv",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Commission rate"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          className: "is-ok",
+          children: terms.rate == null ? '—' : `${terms.rate}%`
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Settlement hold"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: terms.hold == null ? '—' : `${terms.hold} days after delivery`
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Minimum payout"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: terms.minPayout == null ? '—' : money2(terms.minPayout)
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Payout window"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: terms.payoutDay == null ? '—' : `${ordinal$2(terms.payoutDay)} of each month`
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "ce-panel__note",
+      children: ["Your rate is set by your tier \u2014 confirmed lifetime sales through your links. A rate change only affects ", /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+        children: "future"
+      }), " orders; commission already earned keeps the rate it was earned at."]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Commission by week — bars, the latest in gold
+// ---------------------------------------------------------------
+function CommissionByWeek({
+  series
+}) {
+  const points = Array.isArray(series?.commission) ? series.commission : [];
+  const g = barChartGeometry(points, {
+    width: 360,
+    height: 160,
+    minMax: 1000
+  });
+  const labels = Array.isArray(series?.labels) ? series.labels : [];
+  const every = Math.max(1, Math.ceil(g.n / 6));
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `cd-panel ce-weeks${g.empty ? ' is-zero' : ''}`,
+    "aria-labelledby": "ce-weeks-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+      className: "cd-panel__head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cd-panel__h serif",
+          id: "ce-weeks-h",
+          children: "Commission by week"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cd-panel__sub",
+          children: series?.available ? 'Recorded to your ledger, by week.' : 'Fills in as commission is recorded.'
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+      className: "ct-bars",
+      viewBox: `0 0 ${g.width} ${g.height}`,
+      role: "img",
+      "aria-label": g.empty ? 'No commission in this period yet' : 'Commission recorded by week, latest week highlighted',
+      children: [g.ticks.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("line", {
+        className: "ct-bars__grid",
+        x1: g.padL,
+        x2: g.width - g.padR,
+        y1: t.y,
+        y2: t.y
+      }, t.v)), g.ticks.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("text", {
+        className: "ct-bars__ytick",
+        x: g.padL - 6,
+        y: t.y + 3.5,
+        textAnchor: "end",
+        children: t.label
+      }, `t${t.v}`)), g.bars.map((b, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("g", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("rect", {
+          className: `ct-bars__bar${i === g.n - 1 ? ' is-now' : ''}${b.h === 0 ? ' is-zero' : ''}`,
+          x: b.x,
+          y: b.y,
+          width: b.w,
+          height: Math.max(b.h, 2),
+          rx: "3"
+        }), (i % every === 0 || i === g.n - 1) && /*#__PURE__*/jsxRuntimeExports.jsx("text", {
+          className: "ct-bars__xtick",
+          x: b.x + b.w / 2,
+          y: g.height - 6,
+          textAnchor: "middle",
+          children: bucketLabel(labels[i], series?.unit)
+        })]
+      }, i))]
+    }), g.empty && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "cd-chart__empty",
+      children: "No commission recorded yet \u2014 each bar fills in as orders through your links are paid."
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Product performance + monthly history
+// ---------------------------------------------------------------
+function ProductPerformance({
+  products
+}) {
+  const rows = Array.isArray(products) ? products : [];
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "cd-panel ce-products",
+    "aria-labelledby": "ce-prod-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+      className: "cd-panel__head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cd-panel__h serif",
+          id: "ce-prod-h",
+          children: "Product performance"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cd-panel__sub",
+          children: "Qualifying sales and the commission they earned."
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "cd-table-wrap",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+        className: "cd-table ce-table",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Product"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Qty"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Sales"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Commission"
+            })]
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+          children: rows.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("tr", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "cd-table__empty",
+              colSpan: 4,
+              children: "No qualifying products yet \u2014 the first paid order through your link starts this table."
+            })
+          }) : rows.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+                children: p.name || 'Product'
+              }), p.variant ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "cd-table__sub",
+                children: p.variant
+              }) : null]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "ta-r",
+              children: Number(p.qty ?? 0)
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "ta-r",
+              children: money2(p.sales ?? 0)
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "ta-r is-earn",
+              children: money2(p.commission ?? 0)
+            })]
+          }, i))
+        })]
+      })
+    })]
+  });
+}
+function MonthlyHistory({
+  history
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `cd-panel ce-history${history.empty ? ' is-zero' : ''}`,
+    "aria-labelledby": "ce-hist-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+      className: "cd-panel__head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cd-panel__h serif",
+          id: "ce-hist-h",
+          children: "Monthly history"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cd-panel__sub",
+          children: "Commission recorded each month."
+        })]
+      })
+    }), history.empty ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "ce-panel__empty",
+      children: "No history yet \u2014 each month appears here once commission is recorded in it."
+    }) : /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+      className: "ce-hist",
+      children: history.rows.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        className: `ce-hist__row${r.commission < 0 ? ' is-bad' : ''}${r.commission === 0 ? ' is-zero' : ''}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ce-hist__month",
+          children: r.label
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ce-hist__track",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "ce-hist__fill",
+            style: {
+              transform: `scaleX(${Number(r.fraction.toFixed(3))})`
+            }
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          className: "ce-hist__amt",
+          children: money2(r.commission)
+        })]
+      }, r.month))
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// The page
+// ---------------------------------------------------------------
+function CreatorEarningsPage({
+  creator,
+  earnings,
+  standing = null,
+  weekly = null,
+  noticeDismissed = false
+}) {
+  const e = earnings || {};
+  const terms = earningsTerms(e, standing, creator);
+  const history = historyBars(e.monthly_history);
+  const withdrawalsOpen = !!standing?.withdrawals_open;
+  const reversed = Number(e.reversed ?? 0);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "ce",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+      className: "ce-head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "crp__h1 serif",
+          children: "My earnings"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "crp__lede",
+          children: "Commission on the orders your links generated \u2014 derived from your settled ledger, nothing here is edited from this page."
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(WithdrawalsBar, {
+      open: withdrawalsOpen,
+      initiallyDismissed: noticeDismissed
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(AvailableHero, {
+      earnings: e,
+      history: history,
+      withdrawalsOpen: withdrawalsOpen
+    }), Number(e.reserved ?? 0) > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "ce-reserve",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "lock",
+        size: 14
+      }), " ", money2(e.reserved), " is reserved against an open payout request and can\u2019t be requested again until that request is settled."]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ce-stats",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        icon: "clock",
+        label: "Held",
+        value: Number(e.held ?? 0),
+        money: true,
+        tone: "hold",
+        spark: weekly?.available ? weekly.commission : null,
+        hint: terms.hold == null ? 'In the settlement hold.' : `In the ${terms.hold}-day settlement hold.`
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        icon: "checkCircle",
+        label: "Paid out",
+        value: Number(e.paid ?? 0),
+        money: true,
+        tone: "ok",
+        hint: "All time."
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        icon: "return",
+        label: "Reversed",
+        value: reversed,
+        money: true,
+        tone: reversed > 0 ? 'bad' : 'info',
+        hint: "Refunds and adjustments."
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(StatCard, {
+        glyph: "\u20B9",
+        label: "This month",
+        value: Number(e.this_month?.commission_earned ?? 0),
+        money: true,
+        tone: "ok",
+        hint: "Commission earned so far."
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ce-row ce-row--mid",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(CommissionByWeek, {
+        series: weekly
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(ThisMonthPanel, {
+        earnings: e
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(TermsPanel, {
+        terms: terms,
+        standing: standing
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ce-row ce-row--low",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ProductPerformance, {
+        products: e.top_products
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(MonthlyHistory, {
+        history: history
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "ca-note",
+      children: ["Earnings are commission on ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+        children: "qualifying"
+      }), " sales \u2014 not gross order value. We never share your shoppers\u2019 personal details with you."]
+    })]
+  });
+}
+
+const fmtDate$3 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric'
+}).format(new Date(iso)) : null;
+
+// A human label for where a tracking link points.
+function destinationLabel(l) {
+  const type = l?.destination_type || 'homepage';
+  if (type === 'homepage' || type === 'home') return 'Homepage';
+  const path = l?.destination_path || '/';
+  const noun = type === 'product' ? 'Product' : type === 'category' || type === 'collection' ? 'Category' : 'Page';
+  return `${noun} · ${path}`;
+}
+
+// Web Share API where available (mobile); otherwise nothing — Copy stays.
+function ShareButton({
+  url,
+  title
+}) {
+  const [shared, setShared] = reactExports.useState(false);
+  const canShare = typeof navigator !== 'undefined' && !!navigator.share;
+  if (!canShare) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+    type: "button",
+    className: "cp-btn",
+    onClick: async () => {
+      try {
+        await navigator.share({
+          title,
+          url
+        });
+        setShared(true);
+      } catch {/* cancelled */}
+    },
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+      name: "externalLink",
+      size: 15
+    }), " ", shared ? 'Shared' : 'Share']
+  });
+}
+
+// One link card: campaign → status → destination / created / code → url → actions.
+function LinkCard({
+  title,
+  destination,
+  status,
+  statusText,
+  code,
+  createdLabel,
+  url,
+  isDefault = false
+}) {
+  const on = status === 'active';
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+    className: `cl-card${isDefault ? ' cl-card--default' : ''}${on ? '' : ' is-off'}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "cl-card__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cl-card__ic",
+        "aria-hidden": "true",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: isDefault ? 'home' : 'sparkle',
+          size: 18
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cl-card__title",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "serif",
+          children: title
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cl-card__dest",
+          children: destination
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: `cp-pill is-${on ? 'ok' : 'bad'}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          "aria-hidden": "true"
+        }), statusText || status]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+      className: "cl-card__meta",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Tracking code"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+            children: code
+          })
+        })]
+      }), createdLabel && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Created"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: createdLabel
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+      className: "cl-card__url",
+      children: url
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cl-card__actions",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(CopyButton, {
+        value: url,
+        className: "cp-btn is-primary",
+        label: "Copy link"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(ShareButton, {
+        url: url,
+        title: "Shop SORA LIFE"
+      })]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// The page
+// ---------------------------------------------------------------
+function CreatorLinksPage({
+  creator,
+  links = [],
+  campaigns = [],
+  buildUrl
+}) {
+  const campaignById = Object.fromEntries((Array.isArray(campaigns) ? campaigns : []).map(c => [c.id, c]));
+  const rows = Array.isArray(links) ? links : [];
+  const defaultUrl = buildUrl ? buildUrl({
+    destination_path: '/'
+  }, creator, null) : '';
+  const windowDays = Number(creator?.default_attribution_window_days);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "cl",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+      className: "cl-head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "crp__h1 serif",
+          children: "My tracking links"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "crp__lede",
+          children: "Share these anywhere. Every visit through them is recorded against your account."
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(LinkCard, {
+      title: "Default creator link",
+      destination: "Homepage",
+      status: "active",
+      statusText: "Always on",
+      code: creator?.creator_code,
+      createdLabel: null,
+      url: defaultUrl,
+      isDefault: true
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "cl-sec",
+      "aria-labelledby": "cl-camps-h",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cp-sec",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "cp-sec__h serif",
+          id: "cl-camps-h",
+          children: "Campaign links"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "cp-sec__sub",
+          children: rows.length > 0 ? `${rows.length} ${rows.length === 1 ? 'link' : 'links'}, each tracked separately from your default link.` : 'Created alongside a campaign by your programme manager.'
+        })]
+      }), rows.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cl-empty",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cl-empty__ic",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "externalLink",
+            size: 22
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+            className: "serif",
+            children: "No campaign links yet"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            children: "Campaign links are created alongside a campaign by your SORA LIFE programme manager. You don\u2019t need one to start \u2014 your default link above is always ready and always attributes."
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/creator/campaigns",
+            className: "cp-btn",
+            children: ["See campaigns ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 14
+            })]
+          })]
+        })]
+      }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "cl-grid",
+        children: rows.map(l => /*#__PURE__*/jsxRuntimeExports.jsx(LinkCard, {
+          title: campaignById[l.campaign_id]?.name || 'Creator link',
+          destination: destinationLabel(l),
+          status: l.status,
+          code: l.public_code,
+          createdLabel: fmtDate$3(l.created_at),
+          url: buildUrl ? buildUrl(l, creator, campaignById[l.campaign_id]) : ''
+        }, l.id))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
+      className: "cl-tips",
+      "aria-label": "How your links work",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "checkCircle",
+          size: 16
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "A visit through your link is recorded immediately."
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "clock",
+          size: 16
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: Number.isFinite(windowDays) && windowDays > 0 ? `It stays attributed to you for ${windowDays} days.` : 'It stays attributed to you for your attribution window.'
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "award",
+          size: 16
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: ["Orders through it appear in ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/creator/analytics",
+            children: "Analytics"
+          }), "; commission in ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/creator/earnings",
+            children: "Earnings"
+          }), "."]
+        })]
+      })]
+    })]
+  });
+}
+
+const fmtDate$2 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric'
+}).format(new Date(iso)) : null;
+const CAMPAIGN_STATUS = {
+  active: {
+    tone: 'ok',
+    label: 'Active'
+  },
+  draft: {
+    tone: 'hold',
+    label: 'Draft'
+  },
+  paused: {
+    tone: 'hold',
+    label: 'Paused'
+  },
+  ended: {
+    tone: 'neutral',
+    label: 'Ended'
+  }
+};
+
+// "1 Oct – 15 Nov 2026", "From 1 Oct 2026", "Open-ended".
+function campaignWindow(c) {
+  const a = fmtDate$2(c?.start_at);
+  const b = fmtDate$2(c?.end_at);
+  if (a && b) return `${a} – ${b}`;
+  if (a) return `From ${a}`;
+  if (b) return `Until ${b}`;
+  return 'Open-ended';
+}
+function CampaignCard({
+  campaign,
+  link,
+  creator,
+  buildUrl
+}) {
+  const st = CAMPAIGN_STATUS[campaign?.status] || {
+    tone: 'neutral',
+    label: campaign?.status || '—'
+  };
+  const rate = campaign?.commission_rate_override;
+  const windowDays = campaign?.attribution_window_days;
+  const url = link && buildUrl ? buildUrl(link, creator, campaign) : null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+    className: `cc-card${campaign?.status === 'active' ? '' : ' is-off'}`,
+    "data-status": campaign?.status || 'unknown',
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "cc-card__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cc-card__ic",
+        "aria-hidden": "true",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "sparkle",
+          size: 18
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "cc-card__title",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "serif",
+          children: campaign?.name
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "cc-card__when",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "clock",
+            size: 13
+          }), " ", campaignWindow(campaign)]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: `cp-pill is-${st.tone}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          "aria-hidden": "true"
+        }), st.label]
+      })]
+    }), campaign?.description && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "cc-card__desc",
+      children: campaign.description
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+      className: "cc-card__meta",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Campaign code"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+            children: campaign?.campaign_code
+          })
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Commission"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: rate != null && rate !== '' ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+              className: "is-ok",
+              children: [Number(rate), "%"]
+            }), " for this campaign"]
+          }) : 'Your tier rate'
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Attribution"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: windowDays ? `${Number(windowDays)} days` : 'Your usual window'
+        })]
+      })]
+    }), url ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "cc-card__link",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("code", {
+        className: "cl-card__url",
+        children: url
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(CopyButton, {
+        value: url,
+        className: "cp-btn is-primary",
+        label: "Copy link"
+      })]
+    }) : /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "cc-card__nolink",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "circleAlert",
+        size: 14
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: ["No link for this campaign yet \u2014 your programme manager creates it. Your ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/creator/links",
+          children: "default link"
+        }), " still attributes."]
+      })]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// The page
+// ---------------------------------------------------------------
+function CreatorCampaignsPage({
+  creator,
+  campaigns = [],
+  links = [],
+  buildUrl
+}) {
+  const rows = Array.isArray(campaigns) ? campaigns : [];
+  const linkByCampaign = {};
+  for (const l of Array.isArray(links) ? links : []) if (l?.campaign_id && !linkByCampaign[l.campaign_id]) linkByCampaign[l.campaign_id] = l;
+  const live = rows.filter(c => c.status === 'active').length;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "cc",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "cc-head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "crp__h1 serif",
+          children: "My campaigns"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "crp__lede",
+          children: "Seasonal pushes SORA LIFE builds for creators \u2014 a launch, a festive edit, a category focus. Your programme manager sets them up."
+        })]
+      }), rows.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "ca-period",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "sparkle",
+          size: 15
+        }), " ", live, " active of ", rows.length]
+      })]
+    }), rows.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "cc-empty",
+      "aria-label": "No campaigns yet",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cc-empty__leaf",
+        "aria-hidden": "true"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cc-empty__ic",
+        "aria-hidden": "true",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "sparkle",
+          size: 24
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "cp-eyebrow",
+        children: "Campaign status"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "serif",
+        children: "No campaigns running yet"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "cc-empty__body",
+        children: "Campaigns are seasonal pushes SORA LIFE builds for creators \u2014 a launch, a festive edit, a category focus. Your programme manager sets them up; you don\u2019t create them yourself."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
+        className: "cc-empty__points",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "externalLink",
+            size: 15
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "A campaign link of your own, tracked separately from your default link"
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "award",
+            size: 15
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Its own commission rate when the campaign carries one"
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "sparkle",
+            size: 15
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Performance you can see split out in Analytics"
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/creator/links",
+        className: "cp-btn is-primary",
+        children: ["Use my default link ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 14
+        })]
+      })]
+    }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "cc-grid",
+      children: rows.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(CampaignCard, {
+        campaign: c,
+        link: linkByCampaign[c.id] || null,
+        creator: creator,
+        buildUrl: buildUrl
+      }, c.id))
+    })]
+  });
+}
+
+const ordinal$1 = n => {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '';
+  const s = ['th', 'st', 'nd', 'rd'];
+  const k = v % 100;
+  return `${v}${s[(k - 20) % 10] || s[k] || s[0]}`;
+};
+function CreatorHowItWorks({
+  creator,
+  earnings,
+  standing = null
+}) {
+  // The tier rate is the live one; the earnings RPC still quotes the floor.
+  const rate = Number(standing?.rate ?? earnings?.commission_rate ?? creator?.default_commission_rate);
+  const holdDays = Number(earnings?.settlement_hold_days);
+  const minPayout = Number(earnings?.min_payout);
+  const payoutDay = Number(earnings?.payout_day);
+  const windowDays = Number(creator?.default_attribution_window_days);
+  const has = n => Number.isFinite(n) && n > 0;
+  const steps = [{
+    icon: 'externalLink',
+    tone: 'brand',
+    title: 'Share your link or code',
+    body: has(windowDays) ? `Every visit through your link is recorded against your account for ${windowDays} days. If that shopper buys within the window, the sale is attributed to you.` : 'Every visit through your link is recorded against your account, and a purchase within your attribution window is attributed to you.'
+  }, {
+    icon: 'bag',
+    tone: 'brand',
+    title: 'They shop as normal',
+    body: 'Nothing changes for the customer — same price, same checkout. You never see their personal details.'
+  }, {
+    icon: 'check',
+    tone: 'ok',
+    title: 'The sale qualifies',
+    body: has(rate) ? `Once the order is paid, commission is calculated at ${rate}% of the eligible sale value — your current tier rate — and locked in at that rate. A campaign link can carry its own rate, and a later tier change never alters commission you have already earned.` : 'Once the order is paid, commission is calculated on the eligible sale value at your tier rate and locked in — a later tier change never alters commission you have already earned.'
+  }, {
+    icon: 'clock',
+    tone: 'warn',
+    title: 'It waits out the hold period',
+    body: has(holdDays) ? `Commission sits as Held until ${holdDays} days after the order is delivered. This covers returns and cancellations — if an order is refunded or cancelled in that time, the commission is reversed at the same rate it was earned.` : 'Commission sits as Held until a settlement period after delivery has passed, covering returns and cancellations.'
+  }, {
+    icon: 'card',
+    tone: 'ok',
+    title: 'It clears to Available',
+    body: 'When the hold period passes, the commission moves to your available balance. That is the money you can withdraw.'
+  }, {
+    icon: 'shield',
+    tone: 'brand',
+    title: 'Verify your details once',
+    body: 'Submit your KYC and payout details. We store them masked, and an admin verifies them before your first withdrawal.'
+  }, {
+    icon: 'arrowRight',
+    tone: 'brand',
+    title: 'Request your payout',
+    body: [has(payoutDay) ? `Requests open on the ${ordinal$1(payoutDay)} of each month` : 'Requests open on the configured payout day each month', has(minPayout) ? `once your available balance reaches ${money2(minPayout)}` : 'once your available balance reaches the minimum'].join(', ') + '. A request withdraws your full cleared balance, and that exact amount is reserved against your ledger.'
+  }, {
+    icon: 'award',
+    tone: 'ok',
+    title: 'We verify and pay you',
+    body: 'An admin reviews the request and transfers the money to your verified account. The transfer is made manually and then recorded here with its reference — the amount paid always matches the amount approved.'
+  }];
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "crp-hiw",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "crp-hiw__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "crp-hiw__title",
+        children: "How you earn"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "crp-hiw__lede",
+        children: "From a shared link to money in your account \u2014 this is exactly what happens, and nothing else."
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+      className: "crp-hiw__steps",
+      children: steps.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        className: `crp-hiw__step is-${s.tone}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "crp-hiw__num",
+          "aria-hidden": "true",
+          children: i + 1
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "crp-hiw__ic",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: s.icon,
+            size: 17
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "crp-hiw__body",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+            children: s.title
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            children: s.body
+          })]
+        })]
+      }, s.title))
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "crp-hiw__foot",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "circleAlert",
+        size: 15
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "Commission is earned on eligible sale value, not on shipping or fees. Self-referred orders don\u2019t qualify. Payouts are made manually by our team \u2014 SORA LIFE never moves money automatically."
+      })]
+    })]
+  });
+}
+
 const fmtDate$1 = iso => iso ? new Intl.DateTimeFormat('en-IN', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric'
+}).format(new Date(iso)) : '—';
+const nextWindowDate = payoutDay => {
+  const t = new Date();
+  const thisMonth = new Date(t.getFullYear(), t.getMonth(), payoutDay);
+  return t.getDate() >= payoutDay ? new Date(t.getFullYear(), t.getMonth() + 1, payoutDay) : thisMonth;
+};
+const PAYOUT_TONE = {
+  requested: 'warn',
+  under_review: 'warn',
+  approved: 'ok',
+  paid: 'ok',
+  rejected: 'bad',
+  cancelled: 'bad'
+};
+const KYC_BADGE = {
+  not_started: {
+    tone: 'warn',
+    label: 'Not started'
+  },
+  pending: {
+    tone: 'warn',
+    label: 'Under review'
+  },
+  verified: {
+    tone: 'ok',
+    label: 'Verified'
+  },
+  rejected: {
+    tone: 'bad',
+    label: 'Rejected'
+  },
+  needs_update: {
+    tone: 'bad',
+    label: 'Needs update'
+  }
+};
+function CreatorPayouts({
+  creator,
+  earnings,
+  kyc,
+  payouts,
+  withdrawalsOpen = false,
+  onSubmitKyc,
+  onUploadKycDocument,
+  onRequestPayout,
+  onChanged
+}) {
+  const status = kyc?.identity_status || 'not_started';
+  const kycVerified = status === 'verified';
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+      className: "serif crp__h1",
+      children: "Payouts"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "crp__lede",
+      children: "Verify your details once, then request a payout during the monthly window. SORA LIFE reviews and pays every request manually \u2014 money is never released automatically."
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(WithdrawalsNotice, {
+      open: withdrawalsOpen
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(KycSection, {
+      creator: creator,
+      kyc: kyc,
+      status: status,
+      onSubmitKyc: onSubmitKyc,
+      onUploadKycDocument: onUploadKycDocument,
+      onChanged: onChanged
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(PayoutSection, {
+      earnings: earnings,
+      payouts: payouts,
+      kycVerified: kycVerified,
+      withdrawalsOpen: withdrawalsOpen,
+      onRequestPayout: onRequestPayout,
+      onChanged: onChanged
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(PayoutHistory, {
+      payouts: payouts
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// KYC — submit / status / resubmit
+// ---------------------------------------------------------------
+function KycSection({
+  kyc,
+  status,
+  onSubmitKyc,
+  onUploadKycDocument,
+  onChanged
+}) {
+  const badge = KYC_BADGE[status] || KYC_BADGE.not_started;
+  const canEdit = status === 'not_started' || status === 'rejected' || status === 'needs_update';
+  const [editing, setEditing] = reactExports.useState(false);
+  const showForm = canEdit || editing;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "crp__panel crp__kyc",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "crp__kyc-head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "crp__panel-h",
+        style: {
+          margin: 0
+        },
+        children: "Verification & payout details"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: `crp__pill is-${badge.tone}`,
+        children: badge.label
+      })]
+    }), status === 'pending' && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "crp__kyc-msg",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "clock",
+        size: 14
+      }), " Your details are with our team for review. You\u2019ll be able to request a payout once they\u2019re verified. You can\u2019t withdraw before then."]
+    }), status === 'verified' && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "crp__kyc-msg is-ok",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "checkCircle",
+        size: 14
+      }), " Verified by SORA LIFE. You\u2019re all set to request payouts."]
+    }), status === 'rejected' && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "crp__kyc-msg is-bad",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "circleAlert",
+        size: 14
+      }), " Your details couldn\u2019t be verified. Please check and resubmit."]
+    }), status === 'needs_update' && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "crp__kyc-msg is-bad",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "circleAlert",
+        size: 14
+      }), " We need updated details before we can pay you. Please resubmit below."]
+    }), (status === 'rejected' || status === 'needs_update') && kyc?.verification_notes && /*#__PURE__*/jsxRuntimeExports.jsxs("blockquote", {
+      className: "crp__kyc-reason",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "crp__kyc-reason-l",
+        children: "Reason from our team"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        children: kyc.verification_notes
+      })]
+    }), kyc && (kyc.legal_name || kyc.pan_masked || kyc.payout_account_masked || kyc.upi_masked) && /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+      className: "crp__kv crp__kv--2 crp__kyc-onfile",
+      children: [kyc.legal_name && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Legal name"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: kyc.legal_name
+        })]
+      }), kyc.pan_masked && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "PAN"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          className: "is-mono",
+          children: kyc.pan_masked
+        })]
+      }), kyc.payout_method === 'bank' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+            children: "Account holder"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+            children: kyc.payout_account_holder || '—'
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+            children: "Bank account"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+            className: "is-mono",
+            children: kyc.payout_account_masked || '—'
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+            children: "IFSC"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+            className: "is-mono",
+            children: kyc.ifsc_masked || '—'
+          })]
+        })]
+      }), kyc.payout_method === 'upi' && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "UPI"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          className: "is-mono",
+          children: kyc.upi_masked || '—'
+        })]
+      })]
+    }), showForm ? /*#__PURE__*/jsxRuntimeExports.jsx(KycForm, {
+      kyc: kyc,
+      onSubmitKyc: onSubmitKyc,
+      onDone: async () => {
+        setEditing(false);
+        await onChanged();
+      },
+      onCancel: editing ? () => setEditing(false) : null
+    }) : status === 'verified' && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      className: "btn btn-sm btn-light",
+      onClick: () => setEditing(true),
+      style: {
+        marginTop: 'var(--sp-4)'
+      },
+      children: "Update details"
+    }), editing && status === 'verified' && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "crp__foot-note",
+      children: "Note: editing your details sends them back for re-verification, which pauses payouts until re-approved."
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(KycDocuments, {
+      kyc: kyc,
+      status: status,
+      onUploadKycDocument: onUploadKycDocument,
+      onChanged: onChanged
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// KYC documents — PAN card and bank proof
+//
+// Files go to the private kyc-documents bucket under the creator's own
+// folder (RLS), then set_kyc_document() records the path. The creator never
+// sees a URL: what is shown is whether a document is on file and when.
+// ---------------------------------------------------------------
+const MAX_MB = Math.floor(KYC_DOCUMENT_MAX_BYTES / 1024 / 1024);
+function KycDocuments({
+  kyc,
+  status,
+  onUploadKycDocument,
+  onChanged
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "crp__docs",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+      className: "crp__docs-h",
+      children: "Documents"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "crp__docs-hint",
+      children: ["We verify your details against these. JPEG, PNG, WebP or PDF, up to ", MAX_MB, " MB each.", status === 'verified' && ' Replacing a document sends your verification back for review.']
+    }), KYC_DOCUMENT_KINDS.map(k => /*#__PURE__*/jsxRuntimeExports.jsx(KycDocumentRow, {
+      doc: kycDocumentState(kyc, k.kind),
+      onUpload: onUploadKycDocument,
+      onChanged: onChanged
+    }, k.kind))]
+  });
+}
+function KycDocumentRow({
+  doc,
+  onUpload,
+  onChanged
+}) {
+  const [file, setFile] = reactExports.useState(null);
+  const [busy, setBusy] = reactExports.useState(false);
+  const [err, setErr] = reactExports.useState('');
+  const [done, setDone] = reactExports.useState(false);
+  const inputId = `kyc-doc-${doc.kind}`;
+  const pick = e => {
+    const f = e.target.files?.[0] || null;
+    setErr('');
+    setDone(false);
+    if (!f) {
+      setFile(null);
+      return;
+    }
+    try {
+      validateKycDocumentMetadata(f);
+      setFile(f);
+    } catch (e2) {
+      setFile(null);
+      setErr(e2.message);
+      e.target.value = '';
+    }
+  };
+  const upload = async () => {
+    if (!file || !onUpload) return;
+    setBusy(true);
+    setErr('');
+    try {
+      const res = await onUpload({
+        kind: doc.kind,
+        file
+      });
+      if (!res || res.ok === false) {
+        setErr(res?.message || friendlyKycDocumentError(res?.reason));
+      } else {
+        setFile(null);
+        setDone(true);
+        await onChanged();
+      }
+    } catch {
+      setErr('Something went wrong. Please try again.');
+    }
+    setBusy(false);
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `crp__doc${doc.uploaded ? ' is-uploaded' : ''}`,
+    "data-kind": doc.kind,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "crp__doc-main",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "crp__doc-label",
+        children: doc.label
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "crp__doc-hint",
+        children: doc.hint
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "crp__doc-state",
+        children: doc.uploaded ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: ["On file \xB7 ", doc.fileType.toUpperCase(), " \xB7 uploaded ", fmtDate$1(doc.uploadedAt)]
+        }) : 'Not uploaded yet'
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "crp__doc-actions",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+        htmlFor: inputId,
+        className: `btn btn-sm btn-light crp__doc-pick${busy ? ' is-disabled' : ''}`,
+        children: doc.uploaded ? 'Replace' : 'Choose file'
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+        id: inputId,
+        type: "file",
+        accept: KYC_DOCUMENT_ACCEPT,
+        onChange: pick,
+        disabled: busy,
+        className: "crp__doc-input"
+      }), file && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "crp__doc-file",
+        title: file.name,
+        children: file.name
+      }), file && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "btn btn-sm",
+        onClick: upload,
+        disabled: busy,
+        children: busy ? 'Uploading…' : 'Upload'
+      })]
+    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "crp__form-err crp__doc-err",
+      children: err
+    }), done && !err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "crp__kyc-msg is-ok crp__doc-ok",
+      children: "Uploaded. Our team will check it during review."
+    })]
+  });
+}
+function KycForm({
+  kyc,
+  onSubmitKyc,
+  onDone,
+  onCancel
+}) {
+  const [legalName, setLegalName] = reactExports.useState(kyc?.legal_name || '');
+  const [pan, setPan] = reactExports.useState('');
+  const [method, setMethod] = reactExports.useState(kyc?.payout_method || 'bank');
+  const [accountHolder, setAccountHolder] = reactExports.useState(kyc?.payout_account_holder || '');
+  const [accountNumber, setAccountNumber] = reactExports.useState('');
+  const [ifsc, setIfsc] = reactExports.useState('');
+  const [upi, setUpi] = reactExports.useState('');
+  const [busy, setBusy] = reactExports.useState(false);
+  const [err, setErr] = reactExports.useState('');
+  const submit = async e => {
+    e.preventDefault();
+    setErr('');
+    if (!legalName.trim()) return setErr('Enter your legal name.');
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/i.test(pan.trim())) return setErr('Enter a valid 10-character PAN (e.g. ABCDE1234F).');
+    if (method === 'bank') {
+      if (!accountHolder.trim()) return setErr('Enter the account holder name.');
+      if (!/^\d{6,18}$/.test(accountNumber.trim())) return setErr('Enter a valid bank account number.');
+      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(ifsc.trim())) return setErr('Enter a valid IFSC code.');
+    } else if (!/^[\w.\-]{2,}@[a-z]{2,}$/i.test(upi.trim())) {
+      return setErr('Enter a valid UPI ID (e.g. name@bank).');
+    }
+    setBusy(true);
+    try {
+      const res = await onSubmitKyc({
+        legalName: legalName.trim(),
+        pan: pan.trim(),
+        method,
+        accountHolder: accountHolder.trim(),
+        accountNumber: accountNumber.trim(),
+        ifsc: ifsc.trim(),
+        upi: upi.trim()
+      });
+      if (!res || res.ok === false) {
+        setErr(friendlyKycError(res?.reason));
+        setBusy(false);
+        return;
+      }
+      // Never keep the raw values around once submitted.
+      setPan('');
+      setAccountNumber('');
+      setIfsc('');
+      setUpi('');
+      await onDone();
+    } catch (e2) {
+      setErr('Something went wrong. Please try again.');
+      setBusy(false);
+    }
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+    className: "crp__form",
+    onSubmit: submit,
+    autoComplete: "off",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "crp__form-note",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "lock",
+        size: 13
+      }), " These details are encrypted and masked. Even SORA LIFE staff only ever see a masked version (e.g. ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+        children: "ABCDE****F"
+      }), ")."]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "ck-fieldset ck-tone-brand",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        className: "ck-fieldset__legend",
+        "data-step": "01",
+        children: "Identity"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "ck-fieldset__hint",
+        children: "Must match your PAN exactly \u2014 a mismatch is the most common reason verification is sent back."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        className: "crp__field",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Legal name (as on PAN)"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          value: legalName,
+          onChange: e => setLegalName(e.target.value),
+          placeholder: "Full legal name"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        className: "crp__field",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "PAN"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          value: pan,
+          onChange: e => setPan(e.target.value.toUpperCase()),
+          maxLength: 10,
+          placeholder: "ABCDE1234F",
+          className: "is-mono"
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "ck-fieldset ck-tone-info",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        className: "ck-fieldset__legend",
+        "data-step": "02",
+        children: "Payout method"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "ck-fieldset__hint",
+        children: "Where we send your payout. You can change this later by resubmitting your details."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "crp__field",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Payout method"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "crp__seg",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: method === 'bank' ? 'active' : '',
+            onClick: () => setMethod('bank'),
+            children: "Bank transfer"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: method === 'upi' ? 'active' : '',
+            onClick: () => setMethod('upi'),
+            children: "UPI"
+          })]
+        })]
+      }), method === 'bank' ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+          className: "crp__field",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Account holder name"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+            value: accountHolder,
+            onChange: e => setAccountHolder(e.target.value),
+            placeholder: "Name on the bank account"
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+          className: "crp__field",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Bank account number"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+            value: accountNumber,
+            onChange: e => setAccountNumber(e.target.value.replace(/\D/g, '')),
+            inputMode: "numeric",
+            placeholder: "Account number",
+            className: "is-mono"
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+          className: "crp__field",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "IFSC code"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+            value: ifsc,
+            onChange: e => setIfsc(e.target.value.toUpperCase()),
+            maxLength: 11,
+            placeholder: "ABCD0123456",
+            className: "is-mono"
+          })]
+        })]
+      }) : /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        className: "crp__field",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "UPI ID"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          value: upi,
+          onChange: e => setUpi(e.target.value),
+          placeholder: "name@bank",
+          className: "is-mono"
+        })]
+      })]
+    }), err && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "crp__form-err",
+      children: err
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "crp__form-actions",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "submit",
+        className: "btn",
+        disabled: busy,
+        children: busy ? 'Submitting…' : 'Submit for verification'
+      }), onCancel && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "btn btn-light",
+        onClick: onCancel,
+        disabled: busy,
+        children: "Cancel"
+      })]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Payout window + request
+// ---------------------------------------------------------------
+function PayoutSection({
+  earnings,
+  payouts,
+  kycVerified,
+  withdrawalsOpen = false,
+  onRequestPayout,
+  onChanged
+}) {
+  const [busy, setBusy] = reactExports.useState(false);
+  const [msg, setMsg] = reactExports.useState(null); // {tone, text}
+
+  const payoutDay = Number(earnings?.payout_day ?? 1);
+  const minPayout = Number(earnings?.min_payout ?? 500);
+  const available = Number(earnings?.available ?? 0);
+  const today = new Date();
+  const isWindowDay = today.getDate() === payoutDay;
+  const period = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const activeReq = (payouts || []).find(p => ['requested', 'under_review', 'approved'].includes(p.status));
+  const paidThisPeriod = (payouts || []).find(p => p.payout_period === period && p.status === 'paid');
+  const requestedThisPeriod = (payouts || []).find(p => p.payout_period === period && ['requested', 'under_review', 'approved', 'paid'].includes(p.status));
+  const doRequest = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await onRequestPayout(null); // null → full cleared balance (partial off by default)
+      if (!res || res.ok === false) {
+        setMsg({
+          tone: 'bad',
+          text: friendlyPayoutError(res?.reason, {
+            minPayout,
+            payoutDay
+          })
+        });
+      } else {
+        setMsg({
+          tone: 'ok',
+          text: `Payout request for ${money2(res.amount)} submitted. Our team will review and pay it manually.`
+        });
+        await onChanged();
+      }
+    } catch {
+      setMsg({
+        tone: 'bad',
+        text: 'Something went wrong. Please try again.'
+      });
+    }
+    setBusy(false);
+  };
+
+  // ---- Banner state machine ----
+  let banner;
+  if (!withdrawalsOpen) {
+    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
+      tone: "warn",
+      icon: "lock",
+      title: "Withdrawals open later",
+      body: "Your commission keeps accruing. Payout requests open once SORA LIFE\u2019s tax registration is complete \u2014 you\u2019ll see the request button here the day they do."
+    });
+  } else if (!kycVerified) {
+    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
+      tone: "warn",
+      icon: "shield",
+      title: "Verify your details to withdraw",
+      body: "Complete verification above. Payouts open once SORA LIFE has verified your KYC."
+    });
+  } else if (activeReq) {
+    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
+      tone: "ok",
+      icon: "checkCircle",
+      title: "Payout request submitted",
+      body: `Your request for ${money2(activeReq.requested_amount)} is ${labelStatus(activeReq.status)}. We’ll pay it manually after review — you’ll see it move to “Paid” here.`
+    });
+  } else if (paidThisPeriod && !isWindowDay) {
+    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
+      tone: "ok",
+      icon: "card",
+      title: "This month\u2019s payout is done",
+      body: `${money2(paidThisPeriod.paid_amount ?? paidThisPeriod.requested_amount)} was paid on ${fmtDate$1(paidThisPeriod.paid_at)}. Next window: ${fmtDate$1(nextWindowDate(payoutDay))}.`
+    });
+  } else if (!isWindowDay) {
+    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
+      tone: "muted",
+      icon: "clock",
+      title: `Next payout window: ${fmtDate$1(nextWindowDate(payoutDay))}`,
+      body: `Requests can be made on the ${ordinal(payoutDay)} of each month. Your cleared balance keeps growing until then.`
+    });
+  } else if (requestedThisPeriod) {
+    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
+      tone: "ok",
+      icon: "checkCircle",
+      title: "Payout already requested this month",
+      body: "You\u2019ve used this month\u2019s request. The next window opens next month."
+    });
+  } else if (available < minPayout) {
+    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
+      tone: "muted",
+      icon: "clock",
+      title: "Window is open \u2014 but below the minimum",
+      body: `You need at least ${money2(minPayout)} cleared to request a payout. You currently have ${money2(available)} available.`
+    });
+  } else {
+    banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
+      tone: "live",
+      icon: "sparkle",
+      title: "Your payout window is open",
+      body: `You can request a payout of your cleared balance today.`,
+      action: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        className: "btn",
+        onClick: doRequest,
+        disabled: busy,
+        children: busy ? 'Requesting…' : `Request payout · ${money2(available)}`
+      })
+    });
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "crp__payout",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "crp__payout-bal",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "crp__payout-bal-l",
+          children: "Available to withdraw"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "crp__payout-bal-v",
+          children: money2(available)
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "crp__payout-bal-meta",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: ["Minimum ", money2(minPayout)]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "\xB7"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: ["Window: ", ordinal(payoutDay), " of each month"]
+        })]
+      })]
+    }), banner, msg && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: `crp__form-${msg.tone === 'ok' ? 'ok' : 'err'}`,
+      children: msg.text
+    })]
+  });
+}
+function Banner({
+  tone,
+  icon,
+  title,
+  body,
+  action
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `crp__banner is-${tone}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "crp__banner-icon",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: icon,
+        size: 20
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "crp__banner-txt",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+        children: title
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        children: body
+      })]
+    }), action && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "crp__banner-action",
+      children: action
+    })]
+  });
+}
+function PayoutHistory({
+  payouts
+}) {
+  if (!payouts || payouts.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "crp__panel",
+    style: {
+      marginTop: 'var(--sp-5)'
+    },
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      className: "crp__panel-h",
+      children: "Payout history"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "crp__table-wrap",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+        className: "crp__table",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Period"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Requested"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Amount"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Status"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Paid"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Reference"
+            })]
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+          children: payouts.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: p.payout_period
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "muted",
+              children: fmtDate$1(p.requested_at)
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "ta-r",
+              children: money2(p.status === 'paid' ? p.paid_amount ?? p.requested_amount : p.requested_amount)
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: `crp__pill is-${PAYOUT_TONE[p.status] || 'warn'}`,
+                children: labelStatus(p.status)
+              })
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "muted",
+              children: p.paid_at ? fmtDate$1(p.paid_at) : '—'
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              className: "muted is-mono",
+              children: p.payment_reference || '—'
+            })]
+          }, p.id))
+        })]
+      })
+    }), payouts.some(p => p.status === 'rejected' && p.rejection_reason) && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "crp__foot-note",
+      children: ["A rejected request releases the reserved balance back to \u201CAvailable\u201D. Reason(s):", ' ', payouts.filter(p => p.status === 'rejected' && p.rejection_reason).map(p => p.rejection_reason).join('; '), "."]
+    })]
+  });
+}
+
+// ---- helpers ----
+const ordinal = n => {
+  const s = ['th', 'st', 'nd', 'rd'],
+    v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+const labelStatus = s => ({
+  requested: 'Requested',
+  under_review: 'Under review',
+  approved: 'Approved',
+  paid: 'Paid',
+  rejected: 'Rejected',
+  cancelled: 'Cancelled'
+})[s] || s;
+function friendlyKycError(reason) {
+  return {
+    not_a_creator: 'This account isn’t a creator account.',
+    bad_status: 'Something went wrong with your submission.'
+  }[reason] || 'Couldn’t submit your details. Please check them and try again.';
+}
+function friendlyPayoutError(reason, {
+  minPayout,
+  payoutDay
+}) {
+  return {
+    withdrawals_closed: 'Withdrawals aren’t open yet. Your commission is safe and accruing; requests open once our tax registration is complete.',
+    kyc_required: 'Your KYC needs to be verified before you can withdraw.',
+    window_closed: `Payouts can only be requested on the ${ordinal(payoutDay)} of the month.`,
+    already_requested: 'You’ve already requested a payout this month.',
+    below_minimum: `You need at least ${money2(minPayout)} cleared to request a payout.`,
+    no_balance: 'You don’t have any cleared earnings to withdraw yet.',
+    exceeds_available: 'That’s more than your cleared balance.',
+    // Until amount-level ledger allocations exist, a payout settles the whole
+    // cleared balance — a partial request cannot be backed exactly.
+    full_balance_required: 'Payouts currently withdraw your full cleared balance.',
+    invalid_amount: 'That payout amount isn’t valid.',
+    not_a_creator: 'This account isn’t a creator account.'
+  }[reason] || 'Couldn’t submit your payout request. Please try again.';
+}
+
+const fmtDate = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
   month: 'short',
   year: 'numeric'
@@ -55572,10 +56008,10 @@ function CreatorProfilePage({
             children: "Creator since"
           }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
             className: "cp-term__fig serif",
-            children: fmtDate$1(since)
+            children: fmtDate(since)
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
             className: "cp-term__line",
-            children: since ? `You’ve been part of SORA LIFE since ${fmtDate$1(since)}.` : 'Your join date will appear once your account is activated.'
+            children: since ? `You’ve been part of SORA LIFE since ${fmtDate(since)}.` : 'Your join date will appear once your account is activated.'
           })]
         })]
       })]
@@ -56969,20 +57405,6 @@ const NAV = [{
 // ---- Copy helpers -------------------------------------------------------
 // Every sentence that quotes a live figure is a plain function; none of
 // these invent a value — each falls back to wording that makes no claim.
-const fmtDate = iso => iso ? new Intl.DateTimeFormat('en-IN', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric'
-}).format(new Date(iso)) : '—';
-const STATUS_TONE = {
-  active: 'ok',
-  pending: 'warn',
-  paused: 'warn',
-  suspended: 'bad',
-  archived: 'bad',
-  draft: 'warn',
-  ended: 'bad'
-};
 function CreatorPortal({
   initial = null
 }) {
@@ -57186,13 +57608,7 @@ function CreatorPortal({
       })]
     });
   }
-  const campaignById = Object.fromEntries(campaigns.map(c => [c.id, c]));
-  links.filter(l => l.status === 'active');
-  campaigns.filter(c => c.status === 'active');
   const isLive = creator.status === 'active';
-  const defaultLink = buildTrackingUrl({
-    destination_path: '/'
-  }, creator, null);
   const rank = rankSlot(standing?.rank);
   const weekly = rangeSeries(seriesByRange['90d'], '90d');
   const dash = rangeSeries(seriesByRange[range], range);
@@ -57349,77 +57765,16 @@ function CreatorPortal({
           seriesLoading: seriesLoading,
           activity: activity,
           hour: initial?.hour
-        }), tab === 'campaigns' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-            className: "serif crp__h1",
-            children: "My campaigns"
-          }), campaigns.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx(Empty, {
-            tone: "brand",
-            icon: "sparkle",
-            eyebrow: "Campaign status",
-            title: "No campaigns running yet",
-            body: "Campaigns are seasonal pushes SORA LIFE builds for creators \u2014 a launch, a festive edit, a category focus. Your programme manager sets them up; you don\u2019t create them yourself.",
-            points: ['A campaign link of your own, tracked separately from your default link', 'Its own commission rate when the campaign carries one', 'Performance you can see split out in Analytics'],
-            children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-              to: "/creator/links",
-              className: "btn btn-light",
-              children: "Use my default link"
-            })
-          }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-            className: "crp__list",
-            children: campaigns.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
-              className: "crp__item",
-              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-                className: "crp__item-main",
-                children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-                  children: c.name
-                }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-                  className: "crp__meta",
-                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("code", {
-                    children: c.campaign_code
-                  }), " \xB7 ", fmtDate(c.start_at), " \u2192 ", c.end_at ? fmtDate(c.end_at) : 'open']
-                }), c.description && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-                  className: "crp__desc",
-                  children: c.description
-                })]
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                className: `crp__pill is-${STATUS_TONE[c.status] || 'warn'}`,
-                children: c.status
-              })]
-            }, c.id))
-          })]
-        }), tab === 'links' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-            className: "serif crp__h1",
-            children: "My tracking links"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "crp__lede",
-            children: "Share these anywhere. Every visit through them is recorded against your account."
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            className: "crp__list",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx(LinkCard, {
-              campaignLabel: "Default creator link",
-              destination: "Homepage",
-              status: "active",
-              statusText: "always on",
-              code: creator.creator_code,
-              createdLabel: null,
-              url: defaultLink,
-              isDefault: true
-            }), links.map(l => /*#__PURE__*/jsxRuntimeExports.jsx(LinkCard, {
-              campaignLabel: campaignById[l.campaign_id]?.name || 'Creator link',
-              destination: destinationLabel(l),
-              status: l.status,
-              code: l.public_code,
-              createdLabel: fmtDate(l.created_at),
-              url: buildTrackingUrl(l, creator, campaignById[l.campaign_id])
-            }, l.id))]
-          }), links.length === 0 && /*#__PURE__*/jsxRuntimeExports.jsx(Empty, {
-            tone: "brand",
-            icon: "externalLink",
-            title: "No campaign links yet",
-            body: "Campaign links are created alongside a campaign by your SORA LIFE programme manager. You don\u2019t need one to start \u2014 your default link above is always ready and always attributes."
-          })]
+        }), tab === 'campaigns' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorCampaignsPage, {
+          creator: creator,
+          campaigns: campaigns,
+          links: links,
+          buildUrl: buildTrackingUrl
+        }), tab === 'links' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorLinksPage, {
+          creator: creator,
+          links: links,
+          campaigns: campaigns,
+          buildUrl: buildTrackingUrl
         }), tab === 'analytics' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorAnalyticsPage, {
           creator: creator,
           analytics: analytics,
@@ -57430,23 +57785,12 @@ function CreatorPortal({
           links: links,
           campaigns: campaigns,
           buildUrl: buildTrackingUrl
-        }), tab === 'earnings' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx(WithdrawalsNotice, {
-            open: !!standing?.withdrawals_open
-          }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorEarnings, {
-            creator: creator,
-            earnings: earnings,
-            standing: standing,
-            weekly: weekly
-          }), /*#__PURE__*/jsxRuntimeExports.jsx(TierStanding, {
-            standing: standing,
-            compact: true,
-            holdDays: Number(earnings?.settlement_hold_days ?? 7)
-          }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorHowItWorks, {
-            creator: creator,
-            earnings: earnings,
-            standing: standing
-          })]
+        }), tab === 'earnings' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorEarningsPage, {
+          creator: creator,
+          earnings: earnings,
+          standing: standing,
+          weekly: weekly,
+          noticeDismissed: !!initial?.noticeDismissed
         }), tab === 'tier' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTierPage, {
           standing: standing,
           rewards: rewards,
@@ -57544,108 +57888,6 @@ function PortalSearch({
         })
       }, i))
     })]
-  });
-}
-
-// A human label for where a tracking link points.
-function destinationLabel(l) {
-  const type = l?.destination_type || 'homepage';
-  if (type === 'homepage') return 'Homepage';
-  const path = l?.destination_path || '/';
-  const noun = type === 'product' ? 'Product' : type === 'category' ? 'Category' : 'Page';
-  return `${noun} · ${path}`;
-}
-
-// One tracking-link card with a clear information hierarchy:
-// campaign → destination → status/created → tracking code → url → copy.
-function LinkCard({
-  campaignLabel,
-  destination,
-  status,
-  statusText,
-  code,
-  createdLabel,
-  url,
-  isDefault
-}) {
-  const tone = status === 'active' ? 'ok' : 'bad';
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
-    className: `crp__lc ${isDefault ? 'crp__lc--default' : ''} ${status !== 'active' ? 'is-off' : ''}`,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "crp__lc-head",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-        className: "crp__lc-campaign",
-        children: campaignLabel
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: `crp__pill is-${tone}`,
-        children: statusText || status
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
-      className: "crp__lc-meta",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-          children: "Destination"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          children: destination
-        })]
-      }), createdLabel && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-          children: "Created"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          children: createdLabel
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-          children: "Tracking code"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-          children: /*#__PURE__*/jsxRuntimeExports.jsx("code", {
-            children: code
-          })
-        })]
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("code", {
-      className: "crp__url",
-      children: url
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "crp__lc-actions",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(CopyButton, {
-        value: url,
-        className: "btn btn-sm",
-        label: "Copy link"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(ShareButton, {
-        url: url,
-        title: "Shop SORA LIFE",
-        small: true
-      })]
-    })]
-  });
-}
-
-// Web Share API where available (mobile), otherwise renders nothing (Copy stays).
-function ShareButton({
-  url,
-  title,
-  small
-}) {
-  const [shared, setShared] = reactExports.useState(false);
-  const canShare = typeof navigator !== 'undefined' && !!navigator.share;
-  if (!canShare) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-    type: "button",
-    className: `btn ${small ? 'btn-sm' : ''} btn-light`,
-    onClick: async () => {
-      try {
-        await navigator.share({
-          title,
-          url
-        });
-        setShared(true);
-      } catch {/* cancelled */}
-    },
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-      name: "externalLink",
-      size: small ? 15 : 16
-    }), " ", shared ? 'Shared' : 'Share']
   });
 }
 function Shell({
