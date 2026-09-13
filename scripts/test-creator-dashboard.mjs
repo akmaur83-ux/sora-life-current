@@ -217,6 +217,10 @@ const CreatorHowItWorks = component('src/components/creator/CreatorHowItWorks.js
 const CreatorPayouts = component('src/components/creator/CreatorPayouts.jsx', 'CreatorPayouts', { Icon, money2, WithdrawalsNotice: T.WithdrawalsNotice, ...kycRules });
 const CreatorTermsPanel = component('src/components/creator/CreatorTermsPanel.jsx', 'CreatorTermsPanel', {});
 const TermsUpdatedLine = component('src/components/creator/CreatorTermsPanel.jsx', 'TermsUpdatedLine', {});
+const RankMedallion = component('src/components/creator/CreatorTierPage.jsx', 'RankMedallion', { Link, Icon, LeaderboardList, CountUp: UI.CountUp, RewardChooser, RewardHistory, money2, ...tiers, ...rewardRules, ...seriesRules });
+const profileDeps = { Link, Icon, CopyButton, CreatorTermsPanel, TermsUpdatedLine, RankMedallion, rankSlot: tiers.rankSlot };
+const CreatorProfilePage = component('src/components/creator/CreatorProfilePage.jsx', 'CreatorProfilePage', profileDeps);
+const initialsOf = component('src/components/creator/CreatorProfilePage.jsx', 'initialsOf', profileDeps);
 const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPortal', {
   Link, useNavigate: () => () => {}, useParams: () => ({ tab }), Icon, SparrowMark, CopyButton,
   useCustomerAuth: () => ({ session: { user: { id: 'u' } }, loading: false, signOut: () => {} }),
@@ -224,7 +228,7 @@ const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPort
   getMyCreatorAnalytics: noop, getMyCreatorEarnings: noop, getMyKyc: noop, submitKyc: noop, uploadKycDocument: noop, requestPayout: noop,
   getMyPayouts: async () => [], getMyCreatorStanding: noop, getMyCreatorRewards: noop, claimLevelReward: noop, getCreatorLeaderboard: async () => [], getMyActivitySeries: noop, getMyRecentClicks: async () => [],
   getCreatorTerms: async () => null, termsArePublished: () => false, getMyTermsAcceptance: async () => null, acceptCreatorTerms: noop,
-  money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, ...T, rankSlot: tiers.rankSlot, CreatorTermsPanel, TermsUpdatedLine, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, getLevelRewardsCatalog: async () => [],
+  money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, ...T, rankSlot: tiers.rankSlot, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, CreatorProfilePage, initialsOf, getLevelRewardsCatalog: async () => [],
 });
 
 const NOW = '2026-09-13T10:30:00+05:30';

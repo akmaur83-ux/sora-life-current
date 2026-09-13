@@ -14,15 +14,15 @@ import {
 import { money2 } from '../lib/format.js';
 import CreatorEarnings from '../components/creator/CreatorEarnings.jsx';
 import CreatorHowItWorks from '../components/creator/CreatorHowItWorks.jsx';
-import { Section, Empty, Pill, Band, Cell, CountUp } from '../components/creator/CreatorUI.jsx';
+import { Empty, Band, Cell, CountUp } from '../components/creator/CreatorUI.jsx';
 import CreatorDashboard from '../components/creator/CreatorDashboard.jsx';
 import CreatorPayouts from '../components/creator/CreatorPayouts.jsx';
 import { TierStanding, WithdrawalsNotice } from '../components/creator/CreatorTier.jsx';
 import CreatorTierPage from '../components/creator/CreatorTierPage.jsx';
+import CreatorProfilePage, { initialsOf } from '../components/creator/CreatorProfilePage.jsx';
 import { rankSlot } from '../lib/creatorTiers.js';
 import { rangeSeries, DEFAULT_RANGE } from '../lib/creatorSeries.js';
 import { buildActivity } from '../lib/creatorActivity.js';
-import CreatorTermsPanel, { TermsUpdatedLine } from '../components/creator/CreatorTermsPanel.jsx';
 
 // ============================================================
 // SORA LIFE Creator Program — creator portal (Part 1 foundation)
@@ -53,19 +53,6 @@ const NAV = [
 // ---- Copy helpers -------------------------------------------------------
 // Every sentence that quotes a live figure is a plain function; none of
 // these invent a value — each falls back to wording that makes no claim.
-const initialsOf = (name) => String(name || '')
-  .split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
-
-const ratePct = (creator) => {
-  const r = Number(creator?.default_commission_rate);
-  return Number.isFinite(r) ? `${r}%` : '—';
-};
-
-const windowLabel = (creator) => {
-  const d = Number(creator?.default_attribution_window_days);
-  return Number.isFinite(d) && d > 0 ? `${d} days` : '—';
-};
-
 const fmtDate = (iso) => (iso
   ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso))
   : '—');
@@ -498,68 +485,16 @@ export default function CreatorPortal({ initial = null }) {
           )}
 
           {tab === 'profile' && (
-            <>
-              <h1 className="serif crp__h1">My profile</h1>
-              <p className="crp__lede">Your creator identity and the terms your commission runs on.</p>
-
-              <section className="ck-idcard">
-                <span className="ck-idcard__avatar" aria-hidden="true">{initialsOf(creator.display_name)}</span>
-                <div className="ck-idcard__main">
-                  <h2 className="ck-idcard__name">{creator.display_name}</h2>
-                  <p className="ck-idcard__email">{creator.email}</p>
-                  {creator.phone && <p className="ck-idcard__email">{creator.phone}</p>}
-                  <div className="ck-idcard__tags">
-                    <Pill tone={isLive ? 'ok' : 'hold'}>{creator.status}</Pill>
-                    <span className="ck-idcard__code">
-                      <code>{creator.creator_code}</code>
-                      <CopyButton value={creator.creator_code} className="btn btn-xs btn-light" label="Copy" />
-                    </span>
-                  </div>
-                </div>
-              </section>
-
-              <Section title="Programme terms" sub="Set by SORA LIFE — not editable here.">
-                <Band cols={3}>
-                  <Cell label="Commission rate" value={ratePct(creator)} tone="brand" />
-                  <Cell label="Attribution window" value={windowLabel(creator)} tone="brand" />
-                  <Cell label="Creator since" value={fmtDate(creator.joined_at)} />
-                </Band>
-              </Section>
-
-              {/* The terms the programme runs on. Absent entirely until an
-                  admin publishes something, so a blank document leaves no
-                  empty section behind. */}
-              {termsArePublished(terms) && (
-                <Section title="Terms &amp; conditions" sub="The terms your participation in the programme runs on.">
-                  <TermsUpdatedLine terms={terms} />
-                  <CreatorTermsPanel terms={terms} />
-                  {termsAccepted === true && (
-                    <p className="ck-terms__accepted">You accepted version {terms.version}.</p>
-                  )}
-                  {termsAccepted === false && (
-                    <div className="ck-terms__accept">
-                      <p>
-                        These terms have been updated since you last accepted them. Please read
-                        and accept the current version.
-                      </p>
-                      <button
-                        type="button"
-                        className="btn btn-sm"
-                        onClick={onAcceptTerms}
-                        disabled={acceptingTerms}
-                      >
-                        {acceptingTerms ? 'Recording…' : `I accept version ${terms.version}`}
-                      </button>
-                    </div>
-                  )}
-                </Section>
-              )}
-
-              <p className="crp__foot-note">
-                Your commission rate and status are managed by SORA LIFE. Contact your programme
-                manager if something here looks wrong.
-              </p>
-            </>
+            <CreatorProfilePage
+              creator={creator}
+              standing={standing}
+              kyc={kyc}
+              terms={terms}
+              termsAccepted={termsAccepted}
+              acceptingTerms={acceptingTerms}
+              onAcceptTerms={onAcceptTerms}
+              termsPublished={termsArePublished(terms)}
+            />
           )}
         </main>
       </div>

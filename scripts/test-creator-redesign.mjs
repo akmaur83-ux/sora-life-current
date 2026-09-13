@@ -23,6 +23,7 @@ const earnings = read('../src/components/creator/CreatorEarnings.jsx');
 const payouts = read('../src/components/creator/CreatorPayouts.jsx');
 const hiw = read('../src/components/creator/CreatorHowItWorks.jsx');
 const dashboard = read('../src/components/creator/CreatorDashboard.jsx');
+const profile = read('../src/components/creator/CreatorProfilePage.jsx');
 const studioCss = read('../src/styles/creator-dashboard.css');
 const css = read('../src/styles/creator-expressive.css');
 
@@ -41,7 +42,7 @@ async function test(name, fn) {
   catch (e) { console.log(`  FAIL  ${name}\n        ${e.message}`); failed++; }
 }
 
-const ALL_CREATOR_SOURCES = { portal, onboarding, ui, earnings, payouts, hiw, dashboard };
+const ALL_CREATOR_SOURCES = { portal, onboarding, ui, earnings, payouts, hiw, dashboard, profile };
 
 // ============================================================
 console.log('\n— Stale copy is gone —');
@@ -85,7 +86,7 @@ await test('no invented metrics anywhere in the creator UI', () => {
 await test('no hardcoded commission rate, hold window, or payout minimum', () => {
   // Every business figure must come from live config. A literal here would
   // silently disagree with the database the moment an admin changes it.
-  for (const [name, src] of Object.entries({ portal, hiw, earnings, dashboard })) {
+  for (const [name, src] of Object.entries({ portal, hiw, earnings, dashboard, profile })) {
     const c = js(src);
     assert.doesNotMatch(c, /\b(?:5|10|12|15|20|25|30)\s*%/, `${name} hardcodes a percentage`);
     assert.doesNotMatch(c, /₹\s*\d/, `${name} hardcodes a rupee figure`);
@@ -143,8 +144,8 @@ await test('the old one-off Bucket component was removed, not left dead', () => 
 
 await test('the portal and the dashboard use the shared primitives', () => {
   const c = js(portal);
-  assert.match(c, /import \{ Section, Empty, Pill, Band, Cell, CountUp \} from/);
-  for (const el of ['<Section', '<Empty', '<Band', '<Cell', '<Pill', '<CreatorDashboard']) {
+  assert.match(c, /import \{ Empty, Band, Cell, CountUp \} from/);
+  for (const el of ['<Empty', '<Band', '<Cell', '<CreatorDashboard', '<CreatorTierPage', '<CreatorProfilePage']) {
     assert.ok(c.includes(el), `portal should use ${el}`);
   }
   const d = js(dashboard);
@@ -270,9 +271,8 @@ await test('no href="#" or no-op click handlers were introduced', () => {
 await test('creators are not offered controls the backend refuses', () => {
   // creator_partners is admin-write only, so an editable rate or status
   // field on the profile would be a control that always fails.
-  const profile = js(portal).slice(js(portal).indexOf("tab === 'profile'"));
-  assert.doesNotMatch(profile.slice(0, 2500), /<input|<textarea|<select/,
-    'profile must stay read-only');
+  assert.doesNotMatch(js(profile), /<input|<textarea|<select/, 'profile must stay read-only');
+  assert.match(js(profile), /Set by SORA LIFE — not editable here\./);
 });
 
 // ============================================================

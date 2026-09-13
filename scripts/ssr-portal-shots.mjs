@@ -74,6 +74,9 @@ const CreatorHowItWorks = component('src/components/creator/CreatorHowItWorks.js
 const CreatorPayouts = component('src/components/creator/CreatorPayouts.jsx', 'CreatorPayouts', { Icon, money2, WithdrawalsNotice, ...kycRules });
 const CreatorTermsPanel = component('src/components/creator/CreatorTermsPanel.jsx', 'CreatorTermsPanel', {});
 const TermsUpdatedLine = component('src/components/creator/CreatorTermsPanel.jsx', 'TermsUpdatedLine', {});
+const RankMedallion = component('src/components/creator/CreatorTierPage.jsx', 'RankMedallion', { Link, Icon, LeaderboardList, CountUp: UI.CountUp, RewardChooser, RewardHistory, money2, ...tiers, ...rewardRules, ...seriesRules });
+const CreatorProfilePage = component('src/components/creator/CreatorProfilePage.jsx', 'CreatorProfilePage', { Link, Icon, CopyButton, CreatorTermsPanel, TermsUpdatedLine, RankMedallion, rankSlot: tiers.rankSlot });
+const initialsOf = component('src/components/creator/CreatorProfilePage.jsx', 'initialsOf', { Link, Icon, CopyButton, CreatorTermsPanel, TermsUpdatedLine, RankMedallion, rankSlot: tiers.rankSlot });
 
 const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPortal', {
   Link, useNavigate: () => () => {}, useParams: () => ({ tab }),
@@ -84,7 +87,7 @@ const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPort
   getMyPayouts: async () => [], getMyCreatorStanding: noop, getMyCreatorRewards: noop, claimLevelReward: noop, getCreatorLeaderboard: async () => [], getMyActivitySeries: noop, getMyRecentClicks: async () => [],
   getCreatorTerms: async () => null, termsArePublished: () => false, getMyTermsAcceptance: async () => null, acceptCreatorTerms: noop,
   money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, CreatorTier, TierStanding, WithdrawalsNotice, RankBadge,
-  rankSlot: tiers.rankSlot, CreatorTermsPanel, TermsUpdatedLine, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, getLevelRewardsCatalog: async () => [],
+  rankSlot: tiers.rankSlot, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, CreatorProfilePage, initialsOf, getLevelRewardsCatalog: async () => [],
 });
 
 // ---- fixtures ---------------------------------------------------------------
@@ -190,6 +193,8 @@ const pages = {
   'portal-analytics': page('SSR — portal analytics', renderToStaticMarkup(h(portalFor('analytics'), { initial })), deferredCss),
   'portal-tier': page('SSR — portal tier', renderToStaticMarkup(h(portalFor('tier'), { initial })), deferredCss),
   'portal-tier-reference': page('SSR — portal tier (the mockup account)', renderToStaticMarkup(h(portalFor('tier'), { initial: refInitial })), deferredCss),
+  'portal-profile': page('SSR — portal profile', renderToStaticMarkup(h(portalFor('profile'), { initial })), deferredCss),
+  'portal-profile-reference': page('SSR — portal profile (the mockup account)', renderToStaticMarkup(h(portalFor('profile'), { initial: refInitial })), deferredCss),
   'portal-dashboard-empty': page('SSR — portal dashboard, empty', renderToStaticMarkup(h(portalFor('dashboard'), { initial: emptyInitial })), deferredCss),
   'portal-earnings-empty': page('SSR — portal earnings, empty', renderToStaticMarkup(h(portalFor('earnings'), { initial: emptyInitial })), deferredCss),
   'home-leaderboard': page('SSR — creator leaderboard',
