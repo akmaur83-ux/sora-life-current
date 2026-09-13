@@ -22,6 +22,8 @@ const ui = read('../src/components/creator/CreatorUI.jsx');
 const earnings = read('../src/components/creator/CreatorEarnings.jsx');
 const payouts = read('../src/components/creator/CreatorPayouts.jsx');
 const hiw = read('../src/components/creator/CreatorHowItWorks.jsx');
+const dashboard = read('../src/components/creator/CreatorDashboard.jsx');
+const studioCss = read('../src/styles/creator-dashboard.css');
 const css = read('../src/styles/creator-expressive.css');
 
 let passed = 0, failed = 0, current = '(startup)';
@@ -39,7 +41,7 @@ async function test(name, fn) {
   catch (e) { console.log(`  FAIL  ${name}\n        ${e.message}`); failed++; }
 }
 
-const ALL_CREATOR_SOURCES = { portal, onboarding, ui, earnings, payouts, hiw };
+const ALL_CREATOR_SOURCES = { portal, onboarding, ui, earnings, payouts, hiw, dashboard };
 
 // ============================================================
 console.log('\n— Stale copy is gone —');
@@ -83,7 +85,7 @@ await test('no invented metrics anywhere in the creator UI', () => {
 await test('no hardcoded commission rate, hold window, or payout minimum', () => {
   // Every business figure must come from live config. A literal here would
   // silently disagree with the database the moment an admin changes it.
-  for (const [name, src] of Object.entries({ portal, hiw, earnings })) {
+  for (const [name, src] of Object.entries({ portal, hiw, earnings, dashboard })) {
     const c = js(src);
     assert.doesNotMatch(c, /\b(?:5|10|12|15|20|25|30)\s*%/, `${name} hardcodes a percentage`);
     assert.doesNotMatch(c, /₹\s*\d/, `${name} hardcodes a rupee figure`);
@@ -91,21 +93,24 @@ await test('no hardcoded commission rate, hold window, or payout minimum', () =>
 });
 
 await test('dashboard figures read from real loaded state only', () => {
-  const c = js(portal);
-  for (const src of ['analytics?.clicks', 'analytics?.attributed_orders', 'analytics?.products_sold',
-                     'earnings?.available', 'earnings?.held', 'earnings?.reserved', 'earnings?.paid',
-                     'kyc?.identity_status']) {
+  const c = js(dashboard);
+  for (const src of ['analytics?.clicks', 'analytics?.attributed_orders', 'analytics?.products_sold', 'analytics?.attributed_sales',
+                     "earnings?.[p.key]", 'standing.lifetime_confirmed_sales', 'series.totals']) {
     assert.ok(c.includes(src), `dashboard must read ${src}`);
   }
+  assert.match(js(portal), /buildActivity\(\{ creator, clicks: recentClicks, payouts, rewards, kyc,/, 'the feed is built from real state');
+  assert.match(js(read('../src/lib/creatorActivity.js')), /kyc\?\.identity_status/, 'KYC state reaches the feed');
 });
 
-await test('copy helpers fall back to claim-free wording when config is missing', () => {
-  const c = js(portal);
-  assert.match(c, /const payoutHint =/);
-  assert.match(c, /once your available balance reaches the minimum/,
-    'must degrade instead of inventing a minimum');
-  assert.match(c, /Clears once each sale passes the settlement hold/,
-    'must degrade instead of inventing a hold period');
+await test('the dashboard never invents a figure: trends and progress degrade to "—", not to a made-up number', () => {
+  const series = read('../src/lib/creatorSeries.js');
+  // No previous period → "—"; a previous of zero → "New" (never "+100%" of nothing).
+  assert.match(series, /if \(p == null\) return \{ pct: null, dir: 'none', label: '—' \}/);
+  assert.match(series, /if \(p === 0\) return c > 0 \? \{ pct: null, dir: 'new', label: 'New' \} : \{ pct: 0, dir: 'flat', label: '—' \}/);
+  const c = js(dashboard);
+  assert.match(c, /trend\(series\.totals\?\.clicks \?\? 0, prev\?\.clicks\)/, 'stat trends come from the series, not a literal');
+  assert.match(c, /rupees\(standing\.next_threshold\)/, 'the next threshold is the ladder\'s, not a literal');
+  assert.doesNotMatch(c, /₹\s*\d/, 'no rupee literal in the dashboard');
 });
 
 await test('no unsupported earning promises', () => {
@@ -136,12 +141,15 @@ await test('the old one-off Bucket component was removed, not left dead', () => 
   assert.doesNotMatch(js(earnings), /<Bucket/);
 });
 
-await test('the portal actually uses the shared primitives', () => {
+await test('the portal and the dashboard use the shared primitives', () => {
   const c = js(portal);
-  assert.match(c, /import \{ Section, Empty, Pill, Step, Band, Cell, Balance, IdBar, CountUp \} from/);
-  for (const el of ['<Section', '<Empty', '<Step', '<Band', '<Cell', '<Balance', '<IdBar']) {
+  assert.match(c, /import \{ Section, Empty, Pill, Band, Cell, CountUp \} from/);
+  for (const el of ['<Section', '<Empty', '<Band', '<Cell', '<Pill', '<CreatorDashboard']) {
     assert.ok(c.includes(el), `portal should use ${el}`);
   }
+  const d = js(dashboard);
+  assert.match(d, /import \{ CountUp, Sparkline \} from '\.\/CreatorUI\.jsx'/);
+  for (const el of ['<CountUp', '<Sparkline']) assert.ok(d.includes(el), `dashboard should use ${el}`);
 });
 
 // ============================================================
@@ -167,7 +175,7 @@ await test('the stylesheet is bundled after creator.css so it layers', () => {
   // is the whole point — each layer overrides the one before it.
   const build = read('../build/build-css.mjs');
   const deferred = build.slice(build.indexOf('const DEFERRED'), build.indexOf('];', build.indexOf('const DEFERRED')));
-  const order = ['styles/creator.css', 'styles/creator-expressive.css', 'styles/creator-tier.css', 'styles/creator-dark.css']
+  const order = ['styles/creator.css', 'styles/creator-expressive.css', 'styles/creator-tier.css', 'styles/creator-dashboard.css']
     .map((f) => deferred.indexOf(f));
   assert.ok(order.every((i) => i > -1), `every portal sheet must be in the deferred bundle (${order})`);
   assert.ok(order.every((i, n) => n === 0 || i > order[n - 1]), `the layers must load in order (${order})`);
@@ -190,18 +198,17 @@ await test('mobile header removes only the crowded username and keeps a real log
   assert.match(css, /\.crp \.crp__top-right \.btn \{ min-height: 44px; \}/);
 });
 
-await test('mobile navigation cue is separate from the scroll rail and never a gradient or button', () => {
-  assert.match(portal, /className="crp__nav-wrap"/);
-  assert.match(portal, /className="crp__nav-cue" aria-hidden="true">›<\/span>/);
-  assert.match(css, /grid-template-columns: minmax\(0, 1fr\) 26px/);
-  assert.match(css, /flex: 0 0 auto/);
-  assert.match(css, /padding-inline-end: 26px; scroll-padding-inline-end: 26px/);
+await test('the sidebar collapses to a scrolling icon+label strip on mobile, and the active item is scrolled into view', () => {
+  assert.match(portal, /<nav ref=\{navRef\} className="cs-nav" aria-label="Creator portal">/);
   assert.match(portal, /navRef\?\.current|navRef\.current/);
+  assert.match(portal, /querySelector\('\.cs-nav__item\.is-on'\)/);
   assert.match(portal, /itemRight - nav\.clientWidth \+ inset/);
-  const cue = css.match(/\.crp \.crp__nav-cue \{[\s\S]*?\n  \}/);
-  assert.ok(cue, 'mobile continuation cue styling missing');
-  assert.doesNotMatch(cue[0], /gradient|position:\s*(absolute|fixed)|border-radius/);
-  assert.match(cue[0], /pointer-events: none/);
+  const mobile = studioCss.match(/@media \(max-width: 1019px\) \{[\s\S]*?\n\}/);
+  assert.ok(mobile, 'mobile studio breakpoint missing');
+  assert.match(mobile[0], /\.cs-nav \{ flex-direction: row;[^}]*overflow-x: auto/);
+  assert.match(mobile[0], /\.cs-nav__item \{ flex: 0 0 auto;/);
+  assert.match(mobile[0], /\.cs-side__foot \{ display: none; \}/);
+  assert.doesNotMatch(mobile[0], /gradient/, 'no gradient fade on the rail');
 });
 
 await test('campaign and analytics empty states carry factual editorial labels and ruled rows', () => {

@@ -83,8 +83,8 @@ const DEFERRED = [
   'src/styles/creator.css',
   'src/styles/creator-expressive.css',
   'src/styles/creator-tier.css',
-  // The dark room: re-points every token above and overrides the literals. Last on purpose.
-  'src/styles/creator-dark.css',
+  // The studio shell + dashboard: re-points the tokens above to the light palette. Last on purpose.
+  'src/styles/creator-dashboard.css',
 ];
 
 function bundle(files, outFile, label) {

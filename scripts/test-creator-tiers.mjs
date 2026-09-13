@@ -471,7 +471,7 @@ await test('the portal board marks the creator\'s own row by position and never 
 
 await test('the portal has a tier tab and loads standing, rewards and the board with everything else', () => {
   const portal = read('src/pages/CreatorPortal.jsx');
-  assert.match(portal, /\{ id: 'tier', label: 'My tier', icon: 'star' \}/);
+  assert.match(portal, /\{ id: 'tier', label: 'My Tier', icon: 'crown' \}/);
   assert.match(portal, /getMyCreatorStanding\(\), getMyCreatorRewards\(\), getCreatorLeaderboard\(\)/);
   assert.match(portal, /\{tab === 'tier' && \(\s*<CreatorTier/);
   assert.match(portal, /onClaim=\{claimLevelReward\}/);

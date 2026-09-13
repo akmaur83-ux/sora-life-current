@@ -8,17 +8,19 @@ import {
   claimCreatorAccount, getMyCreator, getMyCampaigns, getMyLinks, buildTrackingUrl,
   getMyCreatorAnalytics,
   getMyCreatorEarnings, getMyKyc, submitKyc, uploadKycDocument, requestPayout, getMyPayouts,
-  getMyCreatorStanding, getMyCreatorRewards, claimLevelReward, getCreatorLeaderboard, getMyActivitySeries,
+  getMyCreatorStanding, getMyCreatorRewards, claimLevelReward, getCreatorLeaderboard, getMyActivitySeries, getMyRecentClicks,
   getCreatorTerms, termsArePublished, getMyTermsAcceptance, acceptCreatorTerms,
 } from '../lib/creatorApi.js';
 import { money2 } from '../lib/format.js';
 import CreatorEarnings from '../components/creator/CreatorEarnings.jsx';
 import CreatorHowItWorks from '../components/creator/CreatorHowItWorks.jsx';
-import { Section, Empty, Pill, Step, Band, Cell, Balance, IdBar, CountUp } from '../components/creator/CreatorUI.jsx';
+import { Section, Empty, Pill, Band, Cell, CountUp } from '../components/creator/CreatorUI.jsx';
+import CreatorDashboard from '../components/creator/CreatorDashboard.jsx';
 import CreatorPayouts from '../components/creator/CreatorPayouts.jsx';
-import CreatorTier, { TierStanding, WithdrawalsNotice, RankBadge } from '../components/creator/CreatorTier.jsx';
+import CreatorTier, { TierStanding, WithdrawalsNotice } from '../components/creator/CreatorTier.jsx';
 import { rankSlot } from '../lib/creatorTiers.js';
-import { weeklySeries, monthlySeries, cumulative } from '../lib/creatorSeries.js';
+import { rangeSeries, DEFAULT_RANGE } from '../lib/creatorSeries.js';
+import { buildActivity } from '../lib/creatorActivity.js';
 import CreatorTermsPanel, { TermsUpdatedLine } from '../components/creator/CreatorTermsPanel.jsx';
 
 // ============================================================
@@ -34,38 +36,24 @@ import CreatorTermsPanel, { TermsUpdatedLine } from '../components/creator/Creat
 // Parts 2 and 3, and showing a zero here would be inventing data.
 // ============================================================
 
-// Blocks that fade up on entry. Sections and panels — never rows, rules,
-// nav or the header. Mirrored in creator-dark.css.
-const REVEAL_SELECTOR = '.ck-idbar, .ck-share, .ck-section, .ck-balance, .ctier, .ctier-rewards, .ctier-history, .ctier-board, .ctier-ladder, .ctier-notice, .crp__panel, .crp__payout, .crp-hiw';
-
+// `soon` marks the item with a badge while withdrawals are closed.
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'grid' },
+  { id: 'dashboard', label: 'Dashboard', icon: 'home' },
   { id: 'campaigns', label: 'Campaigns', icon: 'sparkle' },
   { id: 'links', label: 'Links', icon: 'externalLink' },
   { id: 'analytics', label: 'Analytics', icon: 'award' },
-  { id: 'earnings', label: 'Earnings', icon: 'crown' },
-  { id: 'tier', label: 'My tier', icon: 'star' },
-  { id: 'payouts', label: 'Payouts', icon: 'card' },
+  { id: 'earnings', label: 'Earnings', icon: 'card' },
+  { id: 'tier', label: 'My Tier', icon: 'crown' },
+  { id: 'payouts', label: 'Payouts', icon: 'package', soon: true },
   { id: 'how-it-works', label: 'How you earn', icon: 'circleAlert' },
   { id: 'profile', label: 'Profile', icon: 'user' },
 ];
 
-// ---- Dashboard copy helpers -------------------------------------------
-// Extracted so the JSX stays legible and so every sentence that quotes a
-// live figure is a plain function that can be asserted in tests. None of
-// these invent a value: each falls back to wording that makes no claim.
+// ---- Copy helpers -------------------------------------------------------
+// Every sentence that quotes a live figure is a plain function; none of
+// these invent a value — each falls back to wording that makes no claim.
 const initialsOf = (name) => String(name || '')
   .split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
-
-const SHARE_TITLE = (creator) => `Shop SORA LIFE with ${creator.display_name}`;
-
-const ordinalDay = (n) => {
-  const v = Number(n);
-  if (!Number.isFinite(v) || v <= 0) return '';
-  const suffix = ['th', 'st', 'nd', 'rd'];
-  const k = v % 100;
-  return `${v}${suffix[(k - 20) % 10] || suffix[k] || suffix[0]}`;
-};
 
 const ratePct = (creator) => {
   const r = Number(creator?.default_commission_rate);
@@ -76,40 +64,6 @@ const windowLabel = (creator) => {
   const d = Number(creator?.default_attribution_window_days);
   return Number.isFinite(d) && d > 0 ? `${d} days` : '—';
 };
-
-const holdHint = (earnings) => {
-  const d = Number(earnings?.settlement_hold_days);
-  return Number.isFinite(d) && d > 0
-    ? `Clears ${d} days after each sale qualifies.`
-    : 'Clears once each sale passes the settlement hold.';
-};
-
-const hasAnyCommission = (earnings) =>
-  Number(earnings?.paid ?? 0) > 0
-  || Number(earnings?.available ?? 0) > 0
-  || Number(earnings?.held ?? 0) > 0
-  || Number(earnings?.reserved ?? 0) > 0;
-
-const activationHint = (creator) =>
-  `Your account is ${creator?.status || 'pending'}. Links won’t attribute visits until an admin activates it.`;
-
-const clicksHint = (analytics) => {
-  const c = Number(analytics?.clicks ?? 0);
-  if (c > 0) return `${c} visit${c === 1 ? '' : 's'} have arrived through your links.`;
-  return 'Post your link or code where your audience already is. Visits show up here automatically.';
-};
-
-const payoutHint = (earnings) => {
-  const min = Number(earnings?.min_payout);
-  const day = ordinalDay(earnings?.payout_day);
-  if (Number.isFinite(min) && min > 0 && day) {
-    return `Requests open on the ${day} of each month, once your available balance reaches ${money2(min)}.`;
-  }
-  return 'Requests open on the configured payout day each month, once your available balance reaches the minimum.';
-};
-
-const totalLabel = (n, tail) => `${n} ${tail}`;
-const linksHint = (n) => `${n} campaign link${n === 1 ? '' : 's'}, plus your default link.`;
 
 const fmtDate = (iso) => (iso
   ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso))
@@ -136,9 +90,14 @@ export default function CreatorPortal({ initial = null }) {
   const [standing, setStanding] = useState(initial?.standing || null);
   const [rewards, setRewards] = useState(initial?.rewards || null);
   const [leaderboard, setLeaderboard] = useState(initial?.leaderboard || []);
-  const [series, setSeries] = useState(initial?.series || null);
+  // Activity series by range ('7d' drives the dashboard, '90d' the sparklines
+  // on the other tabs). Fetched on demand and kept for the session.
+  const [seriesByRange, setSeriesByRange] = useState(initial?.seriesByRange || {});
+  const [range, setRange] = useState(initial?.range || DEFAULT_RANGE);
+  const [seriesLoading, setSeriesLoading] = useState(false);
+  const [recentClicks, setRecentClicks] = useState(initial?.recentClicks || []);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [terms, setTerms] = useState(initial?.terms || null);
-  const rootRef = useRef(null);
   const [termsAccepted, setTermsAccepted] = useState(null);   // null = unknown
   const [acceptingTerms, setAcceptingTerms] = useState(false);
   const navRef = useRef(null);
@@ -183,6 +142,19 @@ export default function CreatorPortal({ initial = null }) {
     setAcceptingTerms(false);
   }, []);
 
+  const loadRange = useCallback(async (r) => {
+    setSeriesLoading(true);
+    try {
+      const sr = await getMyActivitySeries(r);
+      setSeriesByRange((cur) => ({ ...cur, [r]: sr && sr.ok ? sr : null }));
+    } catch { setSeriesByRange((cur) => ({ ...cur, [r]: null })); }
+    finally { setSeriesLoading(false); }
+  }, []);
+  const onRange = useCallback((r) => {
+    setRange(r);
+    setSeriesByRange((cur) => { if (!(r in cur)) loadRange(r); return cur; });
+  }, [loadRange]);
+
   const load = useCallback(async () => {
     // Try to link this signed-in account to a creator record (matched on the
     // verified email, server-side). A customer with no creator record simply
@@ -196,7 +168,8 @@ export default function CreatorPortal({ initial = null }) {
       getMyCreatorEarnings(), getMyKyc(), getMyPayouts(),
       getMyCreatorStanding(), getMyCreatorRewards(), getCreatorLeaderboard(),
     ]);
-    getMyActivitySeries().then((sr) => setSeries(sr && sr.ok ? sr : null)).catch(() => setSeries(null));
+    for (const r of [DEFAULT_RANGE, '90d']) loadRange(r);
+    getMyRecentClicks().then((c) => setRecentClicks(Array.isArray(c) ? c : [])).catch(() => setRecentClicks([]));
     setCampaigns(cs);
     setLinks(ls);
     setAnalytics(an && an.ok ? an : null);
@@ -216,35 +189,10 @@ export default function CreatorPortal({ initial = null }) {
     load();
   }, [authLoading, session, load, initial]);
 
-  // Staggered fade-up as sections enter view. Everything renders VISIBLE
-  // first — the hiding class is only added here, in a browser, and never
-  // when the reader has asked for reduced motion — so server output and a
-  // no-script page read exactly as they should. Transform and opacity only.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root || typeof IntersectionObserver === 'undefined') return undefined;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
-    }, { rootMargin: '0px 0px -6% 0px', threshold: 0.05 });
-    let n = 0;
-    const arm = () => {
-      root.querySelectorAll(REVEAL_SELECTOR).forEach((el) => {
-        if (el.dataset.rv) return;
-        el.dataset.rv = '1'; el.style.setProperty('--rv-i', String(n++ % 6)); io.observe(el);
-      });
-    };
-    root.classList.add('js-reveal');
-    arm();
-    const mo = new MutationObserver(arm);
-    mo.observe(root, { childList: true, subtree: true });
-    return () => { io.disconnect(); mo.disconnect(); root.classList.remove('js-reveal'); };
-  }, [state, tab]);
-
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const nav = navRef.current;
-      const active = nav?.querySelector('.crp__navitem.active');
+      const active = nav?.querySelector('.cs-nav__item.is-on');
       if (!nav || !active || nav.scrollWidth <= nav.clientWidth) return;
 
       const inset = 12;
@@ -293,45 +241,61 @@ export default function CreatorPortal({ initial = null }) {
   const defaultLink = buildTrackingUrl({ destination_path: '/' }, creator, null);
 
   const rank = rankSlot(standing?.rank);
-  const weekly = weeklySeries(series);
-  const monthly = monthlySeries(earnings?.monthly_history);
+  const weekly = rangeSeries(seriesByRange['90d'], '90d');
+  const dash = rangeSeries(seriesByRange[range], range);
   const isZero = (v) => !(Number(v) > 0);
+  const withdrawalsOpen = !!standing?.withdrawals_open;
+  const activity = buildActivity({ creator, clicks: recentClicks, payouts, rewards, kyc, now: initial?.now ? new Date(initial.now) : new Date() });
+  const initials = initialsOf(creator.display_name);
 
   return (
-    <div className="crp crp--dark" data-rank={rank} ref={rootRef}>
-      <span className="crp__ambient" aria-hidden="true" />
-      <span className="crp__grain" aria-hidden="true" />
-      <header className="crp__top">
-        <div className="container crp__top-in">
-          <Link to="/" className="crp__brand" aria-label="SORA LIFE home">
-            <span className="crp__brand-mark"><SparrowMark size={34} light /></span>
-            <span>
-              <strong>SORA LIFE</strong>
-              <em>Creator Program</em>
-            </span>
-          </Link>
-          <div className="crp__top-right">
-            {standing?.rank && <RankBadge rank={standing.rank} level={standing.level} size="sm" />}
-            <span className="crp__who">{creator.display_name}</span>
-            <button className="btn btn-sm btn-light" onClick={() => { signOut(); navigate('/'); }}>Log out</button>
+    <div className="crp crp--studio" data-rank={rank}>
+      <aside className="cs-side">
+        <Link to="/" className="cs-brand" aria-label="SORA LIFE home">
+          <span className="cs-brand__mark"><SparrowMark size={34} light /></span>
+          <span className="cs-brand__txt"><strong>SORA LIFE</strong><em>Creator Program</em></span>
+        </Link>
+        <nav ref={navRef} className="cs-nav" aria-label="Creator portal">
+          {NAV.map((n) => (
+            <Link key={n.id} to={`/creator/${n.id}`} className={`cs-nav__item${tab === n.id ? ' is-on' : ''}`} aria-current={tab === n.id ? 'page' : undefined}>
+              <Icon name={n.icon} size={17} />
+              <span>{n.label}</span>
+              {n.soon && !withdrawalsOpen && <em className="cs-nav__soon">Soon</em>}
+            </Link>
+          ))}
+        </nav>
+        <div className="cs-side__foot">
+          <p className="cs-side__eyebrow">SORA LIFE</p>
+          <p className="cs-side__tag serif">Wellness <br />for a Brighter <br />Tomorrow</p>
+          <Link to="/creator/tier" className="cs-side__chip"><Icon name="sparkle" size={15} /><span>You’re creating <br />real impact</span><Icon name="chevronRight" size={15} /></Link>
+        </div>
+      </aside>
+
+      <div className="cs-main">
+        <header className="cs-top">
+          <PortalSearch campaigns={campaigns} links={links} onGo={(to) => navigate(to)} />
+          <div className="cs-top__right">
+            <div className="cs-user">
+              <span className="cs-user__avatar" aria-hidden="true">{initials}</span>
+              <span className="cs-user__txt">
+                <strong>{creator.display_name}</strong>
+                {standing?.rank ? <em>{standing.rank} · Level {standing.level}</em> : <em>{creator.status}</em>}
+              </span>
+              <button type="button" className="cs-user__more" aria-expanded={menuOpen} aria-haspopup="menu" aria-label="Account menu" onClick={() => setMenuOpen((v) => !v)}>
+                <Icon name="chevronDown" size={16} />
+              </button>
+              {menuOpen && (
+                <div className="cs-user__menu" role="menu">
+                  <Link to="/creator/profile" role="menuitem" onClick={() => setMenuOpen(false)}>Profile</Link>
+                  <Link to="/creator/tier" role="menuitem" onClick={() => setMenuOpen(false)}>My Tier</Link>
+                  <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); signOut(); navigate('/'); }}>Log out</button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="container crp__body">
-        <div className="crp__nav-wrap">
-          <nav ref={navRef} className="crp__nav" aria-label="Creator portal">
-            {NAV.map((n) => (
-              <Link key={n.id} to={`/creator/${n.id}`}
-                className={`crp__navitem ${tab === n.id ? 'active' : ''}`}>
-                <Icon name={n.icon} size={16} /> {n.label}
-              </Link>
-            ))}
-          </nav>
-          <span className="crp__nav-cue" aria-hidden="true">›</span>
-        </div>
-
-        <main className="crp__main">
+        <main className="crp__main cs-content">
           {!isLive && (
             <div className="crp__notice">
               Your creator account is <strong>{creator.status}</strong>. Your links won’t attribute
@@ -340,103 +304,19 @@ export default function CreatorPortal({ initial = null }) {
           )}
 
           {tab === 'dashboard' && (
-            <>
-              <IdBar
-                eyebrow="SORA LIFE Creator"
-                name={creator.display_name}
-                items={[
-                  ...(standing?.rank ? [{ k: 'Rank', v: <RankBadge rank={standing.rank} level={standing.level} current size="md" /> }] : []),
-                  { k: 'Status', v: creator.status },
-                  { k: 'Creator code', v: <code>{creator.creator_code}</code> },
-                  { k: 'Commission', v: standing?.rate != null ? `${Number(standing.rate)}%` : ratePct(creator) },
-                  { k: 'Attribution', v: windowLabel(creator) },
-                ]}
-              />
-
-              {isLive && (
-                <section className="ck-share">
-                  <span className="ck-share__eyebrow">Your creator link</span>
-                  <h2 className="ck-share__title">Share it anywhere.</h2>
-                  <p className="ck-share__sub">
-                    Every visit through this link is recorded against your account for{' '}
-                    {creator.default_attribution_window_days} days. Any order in that window earns commission.
-                  </p>
-                  <code className="ck-share__url">{defaultLink}</code>
-                  <div className="ck-share__actions">
-                    <CopyButton value={defaultLink} className="btn" label="Copy link" />
-                    <ShareButton url={defaultLink} title={SHARE_TITLE(creator)} />
-                    <Link to="/creator/links" className="btn btn-light">All links</Link>
-                  </div>
-                  <span className="ck-share__code">
-                    Code <code>{creator.creator_code}</code>
-                    <CopyButton value={creator.creator_code} className="btn btn-xs" label="Copy" />
-                  </span>
-                </section>
-              )}
-
-              <Section
-                title="Performance"
-                action={<Link to="/creator/analytics" className="ck-section__link">Analytics</Link>}
-              >
-                <Band>
-                  <Cell label="Link clicks" value={<CountUp value={analytics?.clicks ?? 0} format={(n) => String(Math.round(n))} />} tone="info" spark={weekly.clicks} zero={isZero(analytics?.clicks)} />
-                  <Cell label="Orders" value={<CountUp value={analytics?.attributed_orders ?? 0} format={(n) => String(Math.round(n))} />} tone="info" spark={weekly.orders} zero={isZero(analytics?.attributed_orders)} />
-                  <Cell label="Products sold" value={<CountUp value={analytics?.products_sold ?? 0} format={(n) => String(Math.round(n))} />} tone="info" spark={weekly.products} zero={isZero(analytics?.products_sold)} />
-                  <Cell label="Attributed sales" value={<CountUp value={analytics?.attributed_sales ?? 0} format={money2} />} tone="ok" spark={weekly.sales} zero={isZero(analytics?.attributed_sales)} />
-                </Band>
-              </Section>
-
-              <Section
-                title="Earnings"
-                action={<Link to="/creator/earnings" className="ck-section__link">Earnings</Link>}
-              >
-                <Balance
-                  label="Available to withdraw"
-                  value={<CountUp value={earnings?.available ?? 0} format={money2} />}
-                  hint={isZero(earnings?.available) ? 'Nothing has cleared yet. Commission lands here after delivery and the settlement hold.' : 'Cleared commission. A payout request withdraws this full amount.'}
-                  spark={cumulative(monthly.values)} sparkLabel="Commission, last 12 months" zero={isZero(earnings?.available)}
-                >
-                  <Cell label="Held" value={<CountUp value={earnings?.held ?? 0} format={money2} />} tone="hold" zero={isZero(earnings?.held)} />
-                  <Cell label="In payout" value={<CountUp value={earnings?.reserved ?? 0} format={money2} />} tone="info" zero={isZero(earnings?.reserved)} />
-                  <Cell label="Paid out" value={<CountUp value={earnings?.paid ?? 0} format={money2} />} tone="ok" zero={isZero(earnings?.paid)} />
-                </Balance>
-              </Section>
-
-              <Section title="Next steps">
-                <ol className="ck-steps">
-                  <Step index={1} done={isLive} title="Account active"
-                    body={isLive ? 'Your links attribute visits.' : activationHint(creator)} />
-                  <Step index={2} done={Number(analytics?.clicks ?? 0) > 0} next={isLive && Number(analytics?.clicks ?? 0) === 0}
-                    title="Share your first link" body={clicksHint(analytics)} />
-                  <Step index={3} done={hasAnyCommission(earnings)} next={Number(analytics?.clicks ?? 0) > 0 && !hasAnyCommission(earnings)}
-                    title="Earn first commission"
-                    body="When an attributed order is paid, commission is created and enters the hold period." />
-                  <Step index={4} done={kyc?.identity_status === 'verified'} next={hasAnyCommission(earnings) && kyc?.identity_status !== 'verified'}
-                    title="Verify payout details"
-                    body={kyc?.identity_status === 'verified'
-                      ? 'Verified. You can request a payout when your balance clears.'
-                      : 'Submit KYC once. An admin verifies it before your first withdrawal.'} />
-                  <Step index={5} done={Number(earnings?.paid ?? 0) > 0}
-                    next={kyc?.identity_status === 'verified' && Number(earnings?.available ?? 0) > 0 && Number(earnings?.paid ?? 0) === 0}
-                    title="Request a payout" body={payoutHint(earnings)} />
-                </ol>
-              </Section>
-
-              <Section
-                title="Campaigns and links"
-                action={<Link to="/creator/campaigns" className="ck-section__link">Campaigns</Link>}
-              >
-                <Band cols={3}>
-                  <Cell label="Active campaigns" value={String(activeCampaigns.length)} tone="brand"
-                    hint={totalLabel(campaigns.length, 'on your account')} />
-                  <Cell label="Active links" value={String(activeLinks.length)} tone="brand"
-                    hint={linksHint(links.length)} />
-                  <Cell label="Attribution window" value={windowLabel(creator)} />
-                </Band>
-              </Section>
-            </>
+            <CreatorDashboard
+              creator={creator}
+              analytics={analytics}
+              earnings={earnings}
+              standing={standing}
+              series={dash}
+              range={range}
+              onRange={onRange}
+              seriesLoading={seriesLoading}
+              activity={activity}
+              hour={initial?.hour}
+            />
           )}
-
 
           {tab === 'campaigns' && (
             <>
@@ -576,7 +456,7 @@ export default function CreatorPortal({ initial = null }) {
           {tab === 'earnings' && (
             <>
               <WithdrawalsNotice open={!!standing?.withdrawals_open} />
-              <CreatorEarnings creator={creator} earnings={earnings} standing={standing} weekly={weekly} monthly={monthly} />
+              <CreatorEarnings creator={creator} earnings={earnings} standing={standing} weekly={weekly} />
               <TierStanding standing={standing} compact holdDays={Number(earnings?.settlement_hold_days ?? 7)} />
               <CreatorHowItWorks creator={creator} earnings={earnings} standing={standing} />
             </>
@@ -681,6 +561,31 @@ export default function CreatorPortal({ initial = null }) {
   );
 }
 
+// The top-bar search: a quick jump. Enter goes to the best match among the
+// portal's sections, campaigns and links. It searches nothing it cannot open.
+function PortalSearch({ campaigns = [], links = [], onGo }) {
+  const [q, setQ] = useState('');
+  const targets = [
+    ...NAV.map((n) => ({ label: n.label, to: `/creator/${n.id}` })),
+    ...campaigns.map((c) => ({ label: c.name, to: '/creator/campaigns' })),
+    ...links.map((l) => ({ label: l.label || l.public_code, to: '/creator/links' })),
+  ];
+  const needle = q.trim().toLowerCase();
+  const hits = needle ? targets.filter((t) => String(t.label || '').toLowerCase().includes(needle)).slice(0, 5) : [];
+  const go = (e) => { e.preventDefault(); if (hits[0]) { onGo(hits[0].to); setQ(''); } };
+  return (
+    <form className="cs-search" role="search" onSubmit={go}>
+      <Icon name="search" size={16} />
+      <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search campaigns, links, resources…" aria-label="Search the portal" />
+      {hits.length > 0 && (
+        <ul className="cs-search__hits" role="listbox">
+          {hits.map((h, i) => <li key={i}><Link to={h.to} onClick={() => setQ('')}>{h.label}</Link></li>)}
+        </ul>
+      )}
+    </form>
+  );
+}
+
 // A human label for where a tracking link points.
 function destinationLabel(l) {
   const type = l?.destination_type || 'homepage';
@@ -740,7 +645,7 @@ function Stat({ label, value, mono, tone, copy }) {
 
 function Shell({ children }) {
   return (
-    <div className="crp crp--plain crp--dark" data-rank="neutral">
+    <div className="crp crp--plain crp--studio" data-rank="neutral">
       <div className="container" style={{ padding: 'var(--sp-10) 0', maxWidth: 560 }}>{children}</div>
     </div>
   );

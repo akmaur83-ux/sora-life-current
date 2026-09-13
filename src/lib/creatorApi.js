@@ -343,12 +343,22 @@ export async function getMyCreatorStanding() {
   if (error) return { ok: false, reason: error.message };
   return data || { ok: false };
 }
-// Weekly activity for the portal charts (0032). Absent RPC → { ok:false },
-// and the charts fall back to a level baseline rather than disappearing.
-export async function getMyActivitySeries(weeks = 12) {
-  const { data, error } = await supabase.rpc('my_creator_activity_series', { p_weeks: weeks });
+// Activity for the dashboard charts (0032): buckets for a range, the previous
+// period's totals, and per-link performance. Absent RPC → { ok:false }, and
+// the charts fall back to a level baseline rather than disappearing.
+export async function getMyActivitySeries(range = '7d') {
+  const { data, error } = await supabase.rpc('my_creator_activity_series', { p_range: String(range) });
   if (error) return { ok: false, reason: error.message };
   return data || { ok: false };
+}
+// The creator's own recent click timestamps (RLS-scoped, 0010), newest first.
+// Feeds the "New link clicks" line of the activity feed; nothing else.
+export async function getMyRecentClicks(limit = 200) {
+  const { data, error } = await supabase.from('creator_attribution_events')
+    .select('occurred_at').in('event_type', ['click', 'landing'])
+    .order('occurred_at', { ascending: false }).limit(limit);
+  if (error) return [];
+  return (data || []).map((r) => r.occurred_at).filter(Boolean);
 }
 export async function getMyCreatorRewards() {
   const { data, error } = await supabase.rpc('my_creator_rewards');

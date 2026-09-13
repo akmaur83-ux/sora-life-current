@@ -1,5 +1,5 @@
 // ============================================================
-// SSR SCREENSHOTS — creator portal (dashboard, earnings, tier) + homepage board
+// SSR SCREENSHOTS — creator portal (dashboard, earnings, analytics, tier) + homepage board
 //
 //   node scripts/ssr-portal-shots.mjs
 //
@@ -27,9 +27,10 @@ import * as kycRules from '../src/lib/kycDocuments.js';
 import { money2 } from '../src/lib/format.js';
 import { buildTrackingUrl } from '../src/lib/creatorLinkUtils.js';
 import * as seriesRules from '../src/lib/creatorSeries.js';
+import * as activityRules from '../src/lib/creatorActivity.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const OUT = resolve(ROOT, 'reports/creator-portal-dark');
+const OUT = resolve(ROOT, 'reports/creator-portal');
 const CHROME = process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const read = (rel) => readFileSync(resolve(ROOT, rel), 'utf8').replace(/\r\n/g, '\n');
@@ -64,6 +65,7 @@ const CreatorTier = component('src/components/creator/CreatorTier.jsx', 'Creator
 const TierStanding = component('src/components/creator/CreatorTier.jsx', 'TierStanding', tierDeps);
 const WithdrawalsNotice = component('src/components/creator/CreatorTier.jsx', 'WithdrawalsNotice', tierDeps);
 const RankBadge = component('src/components/creator/CreatorTier.jsx', 'RankBadge', tierDeps);
+const CreatorDashboard = component('src/components/creator/CreatorDashboard.jsx', 'CreatorDashboard', { Link, Icon, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...tiers, ...seriesRules, ...activityRules });
 const CreatorEarnings = component('src/components/creator/CreatorEarnings.jsx', 'CreatorEarnings', { Icon, money2, Balance: UI.Balance, Cell: UI.Cell, CountUp: UI.CountUp, cumulative: seriesRules.cumulative });
 const CreatorHowItWorks = component('src/components/creator/CreatorHowItWorks.jsx', 'CreatorHowItWorks', { Icon, money2 });
 const CreatorPayouts = component('src/components/creator/CreatorPayouts.jsx', 'CreatorPayouts', { Icon, money2, WithdrawalsNotice, ...kycRules });
@@ -76,10 +78,10 @@ const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPort
   useCustomerAuth: () => ({ session: { user: { id: 'u' } }, loading: false, signOut: () => {} }),
   claimCreatorAccount: noop, getMyCreator: noop, getMyCampaigns: async () => [], getMyLinks: async () => [], buildTrackingUrl,
   getMyCreatorAnalytics: noop, getMyCreatorEarnings: noop, getMyKyc: noop, submitKyc: noop, uploadKycDocument: noop, requestPayout: noop,
-  getMyPayouts: async () => [], getMyCreatorStanding: noop, getMyCreatorRewards: noop, claimLevelReward: noop, getCreatorLeaderboard: async () => [], getMyActivitySeries: noop,
+  getMyPayouts: async () => [], getMyCreatorStanding: noop, getMyCreatorRewards: noop, claimLevelReward: noop, getCreatorLeaderboard: async () => [], getMyActivitySeries: noop, getMyRecentClicks: async () => [],
   getCreatorTerms: async () => null, termsArePublished: () => false, getMyTermsAcceptance: async () => null, acceptCreatorTerms: noop,
   money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, CreatorTier, TierStanding, WithdrawalsNotice, RankBadge,
-  rankSlot: tiers.rankSlot, CreatorTermsPanel, TermsUpdatedLine, ...seriesRules,
+  rankSlot: tiers.rankSlot, CreatorTermsPanel, TermsUpdatedLine, ...seriesRules, ...activityRules, CreatorDashboard,
 });
 
 // ---- fixtures ---------------------------------------------------------------
@@ -121,34 +123,58 @@ const earnings = {
   monthly_history: [{ month: '2026-07', commission: 4120.5 }, { month: '2026-08', commission: 6210.75 }, { month: '2026-09', commission: 3868.8 }],
 };
 const analytics = { ok: true, clicks: 1240, attributed_orders: 58, products_sold: 131, attributed_sales: 138420 + 9640, eligible_orders: 55 };
-const WEEKS = ['2026-06-29', '2026-07-06', '2026-07-13', '2026-07-20', '2026-07-27', '2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31', '2026-09-07', '2026-09-14'];
-const series = { ok: true, weeks: 12, series: WEEKS.map((week, i) => ({
-  week, clicks: [62, 80, 74, 91, 120, 98, 134, 150, 121, 168, 142, 100][i], orders: [2, 4, 3, 5, 6, 4, 7, 8, 6, 9, 7, 3][i],
-  products: [5, 9, 7, 11, 14, 9, 16, 18, 13, 20, 15, 6][i], sales: [4200, 8100, 6400, 10800, 12900, 9100, 15300, 17800, 12100, 19600, 14900, 5900][i],
-  commission: [420, 810, 640, 1080, 1290, 910, 1530, 1780, 1210, 1960, 1490, 590][i] })) };
+const WEEKS = ['2026-06-15', '2026-06-22', '2026-06-29', '2026-07-06', '2026-07-13', '2026-07-20', '2026-07-27', '2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31', '2026-09-07'];
+const series90 = { ok: true, range: '90d', unit: 'week', series: WEEKS.map((at, i) => ({
+  at, clicks: [40, 62, 80, 74, 91, 120, 98, 134, 150, 121, 168, 142, 100][i], orders: [1, 2, 4, 3, 5, 6, 4, 7, 8, 6, 9, 7, 3][i],
+  products: [3, 5, 9, 7, 11, 14, 9, 16, 18, 13, 20, 15, 6][i], sales: [2100, 4200, 8100, 6400, 10800, 12900, 9100, 15300, 17800, 12100, 19600, 14900, 5900][i],
+  commission: [210, 420, 810, 640, 1080, 1290, 910, 1530, 1780, 1210, 1960, 1490, 590][i] })),
+  previous: { clicks: 640, orders: 30, products: 70, sales: 61000, commission: 6100 },
+  links: [{ link_id: null, label: 'Default link', campaign: null, clicks: 1100, orders: 48, sales: 121000, commission: 12100 }, { link_id: 'l2', label: 'Diwali edit', campaign: 'Diwali edit', clicks: 140, orders: 10, sales: 27060, commission: 2706 }] };
+const DAYS = ['2026-09-07', '2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11', '2026-09-12', '2026-09-13'];
+const series7 = { ok: true, range: '7d', unit: 'day', series: DAYS.map((at, i) => ({ at, clicks: [14, 22, 19, 31, 27, 35, 24][i], orders: [1, 1, 0, 2, 1, 3, 1][i], products: [2, 3, 0, 5, 2, 7, 2][i], sales: [1200, 1900, 0, 3900, 1600, 6200, 1900][i], commission: [192, 304, 0, 624, 256, 992, 304][i] })),
+  previous: { clicks: 120, orders: 6, products: 14, sales: 11000, commission: 1760 }, links: series90.links };
+// The reference's own account: five clicks this week, nothing else yet.
+const ref7 = { ok: true, range: '7d', unit: 'day', series: DAYS.map((at, i) => ({ at, clicks: [0, 0, 1, 1, 2, 0, 1][i], orders: 0, products: 0, sales: 0, commission: 0 })),
+  previous: { clicks: 0, orders: 0, products: 0, sales: 0, commission: 0 }, links: [{ link_id: null, label: 'Default link', campaign: null, clicks: 5, orders: 0, sales: 0, commission: 0 }] };
+const series = series90;
 const emptyEarnings = { ok: true, available: 0, held: 0, reserved: 0, paid: 0, reversed: 0, commission_rate: 10, settlement_hold_days: 7, min_payout: 500, payout_day: 1, this_month: {}, clicks: 0, top_products: [], monthly_history: [] };
 const emptyAnalytics = { ok: true, clicks: 0, attributed_orders: 0, products_sold: 0, attributed_sales: 0, eligible_orders: 0, top_products: [] };
 const emptyStanding = { ...standing, level: 1, rank: 'Rise', rate: 10, threshold: 0, next_level: 2, next_threshold: 10000, next_rate: 11, lifetime_confirmed_sales: 0, pending_sales: 0, pending_commission: 0, confirmed_commission: 0, leaderboard_position: null, leaderboard_total: 0 };
+const NOW = '2026-09-13T10:30:00+05:30';
+const recentClicks = ['2026-09-13T08:20:00+05:30', '2026-09-13T07:05:00+05:30', '2026-09-12T19:40:00+05:30'];
 const initial = {
   creator, campaigns: [{ id: 'cp1', name: 'Diwali edit', campaign_code: 'DIWALI', status: 'active', commission_rate_override: null, start_at: '2026-10-01', end_at: '2026-11-15' }],
   links: [{ id: 'l1', public_code: 'AARAV', label: 'Default', destination_type: 'home', destination_path: '/', status: 'active', created_at: '2026-03-02T00:00:00Z' }],
-  analytics, earnings, kyc: { identity_status: 'verified' }, payouts: [], standing, rewards, leaderboard, terms: null, series,
+  analytics, earnings, kyc: { identity_status: 'verified', verified_at: '2026-04-02T00:00:00Z', submitted_at: '2026-03-30T00:00:00Z' }, payouts: [], standing, rewards, leaderboard, terms: null,
+  seriesByRange: { '7d': series7, '90d': series90 }, range: '7d', recentClicks, now: NOW, hour: 10,
+};
+// The reference mockup's account: Vikas, Rise L1, five clicks, nothing earned.
+const refInitial = {
+  creator: { ...creator, display_name: 'Vikas Shamra', creator_code: 'VIKAS', joined_at: '2026-09-12T09:00:00+05:30', created_at: '2026-09-12T08:30:00+05:30' }, campaigns: [], links: [],
+  analytics: { ok: true, clicks: 5, attributed_orders: 0, products_sold: 0, attributed_sales: 0, top_products: [] }, earnings: emptyEarnings,
+  kyc: { identity_status: 'not_started' }, payouts: [], standing: emptyStanding, rewards: { ok: true, level: 1, claims: [], claimable: [] }, leaderboard, terms: null,
+  seriesByRange: { '7d': ref7, '90d': null }, range: '7d', recentClicks: ['2026-09-13T08:20:00+05:30', '2026-09-13T07:05:00+05:30', '2026-09-13T06:10:00+05:30', '2026-09-12T19:40:00+05:30', '2026-09-11T12:00:00+05:30'], now: NOW, hour: 9,
 };
 const emptyInitial = {
   creator: { ...creator, display_name: 'Priya Nair', creator_code: 'PRIYA', joined_at: '2026-09-10T00:00:00Z' }, campaigns: [], links: [], analytics: emptyAnalytics, earnings: emptyEarnings,
-  kyc: { identity_status: 'not_started' }, payouts: [], standing: emptyStanding, rewards: { ok: true, level: 1, claims: [], claimable: [] }, leaderboard, terms: null, series: null,
+  kyc: { identity_status: 'not_started' }, payouts: [], standing: emptyStanding, rewards: { ok: true, level: 1, claims: [], claimable: [] }, leaderboard, terms: null,
+  seriesByRange: {}, range: '7d', recentClicks: [], now: NOW, hour: 14,
 };
 
 // ---- render -----------------------------------------------------------------
 const HomeLeaderboard = component('src/components/HomeLeaderboard.jsx', 'HomeLeaderboard', { Link, LeaderboardList, getCreatorLeaderboard: async () => [] });
-const appCss = read('public/app.css');
-const deferredCss = read('public/app-deferred.css');
+// The two backgrounds live at /img/ on the site; a file:// capture with the
+// network blocked cannot fetch them, so they are inlined here as data URIs.
+const inlineImages = (css) => css.replace(/url\('\/img\/([^']+\.webp)'\)/g, (_, f) => `url('data:image/webp;base64,${readFileSync(resolve(ROOT, 'img', f)).toString('base64')}')`);
+const appCss = inlineImages(read('public/app.css'));
+const deferredCss = inlineImages(read('public/app-deferred.css'));
 const page = (title, body, extraCss = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title}</title><style>${appCss}</style><style>${extraCss}</style><style>body{margin:0;background:#0B1510}</style></head><body>${body}</body></html>`;
+<title>${title}</title><style>${appCss}</style><style>${extraCss}</style><style>body{margin:0;background:#F6F3EB}</style></head><body>${body}</body></html>`;
 
 mkdirSync(OUT, { recursive: true });
 const pages = {
   'portal-dashboard': page('SSR — portal dashboard', renderToStaticMarkup(h(portalFor('dashboard'), { initial })), deferredCss),
+  'portal-dashboard-reference': page('SSR — portal dashboard (the mockup account)', renderToStaticMarkup(h(portalFor('dashboard'), { initial: refInitial })), deferredCss),
   'portal-earnings': page('SSR — portal earnings', renderToStaticMarkup(h(portalFor('earnings'), { initial })), deferredCss),
   'portal-analytics': page('SSR — portal analytics', renderToStaticMarkup(h(portalFor('analytics'), { initial })), deferredCss),
   'portal-tier': page('SSR — portal tier', renderToStaticMarkup(h(portalFor('tier'), { initial })), deferredCss),
