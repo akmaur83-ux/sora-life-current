@@ -34751,7 +34751,7 @@ const DEFAULT_LADDER = Object.freeze([{
   rate: 25
 }]);
 const DEFAULT_BEYOND_STEP = 25000;
-const num = v => {
+const num$1 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
@@ -34763,8 +34763,8 @@ function normalizeLadder(rows) {
   return rows.map((r, i) => ({
     level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
     rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
-    threshold: num(r?.threshold),
-    rate: num(r?.rate)
+    threshold: num$1(r?.threshold),
+    rate: num$1(r?.rate)
   })).sort((a, b) => a.level - b.level);
 }
 
@@ -35911,6 +35911,23 @@ async function getMyCreatorStanding() {
     data,
     error
   } = await supabase.rpc('my_creator_standing');
+  if (error) return {
+    ok: false,
+    reason: error.message
+  };
+  return data || {
+    ok: false
+  };
+}
+// Weekly activity for the portal charts (0032). Absent RPC → { ok:false },
+// and the charts fall back to a level baseline rather than disappearing.
+async function getMyActivitySeries(weeks = 12) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('my_creator_activity_series', {
+    p_weeks: weeks
+  });
   if (error) return {
     ok: false,
     reason: error.message
@@ -51390,6 +51407,108 @@ function Shell$1({
   });
 }
 
+// ============================================================
+// Creator portal charts — the pure part.
+//
+// Turns what the RPCs return into fixed-length number arrays, and turns those
+// into SVG path data. No DOM, no React, no library: the sparkline is a
+// polyline and a filled area, hand-built so the portal ships nothing extra.
+//
+// The empty case is designed, not tolerated: a series of zeros is still a
+// series, and draws as a level baseline so the chart is present and honest
+// ("waiting for data") rather than missing.
+// ============================================================
+
+const SERIES_WEEKS = 12;
+const SERIES_MONTHS = 12;
+const METRICS = Object.freeze(['clicks', 'orders', 'products', 'sales', 'commission']);
+const num = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+// my_creator_activity_series() → { clicks: number[12], orders: …, … }.
+// Absent, failed or short input still yields full-length arrays of zeros, so
+// every figure gets a chart whether or not 0032 is applied.
+function weeklySeries(raw, weeks = SERIES_WEEKS) {
+  const rows = Array.isArray(raw?.series) ? raw.series : [];
+  const out = {};
+  for (const m of METRICS) {
+    const vals = rows.map(r => num(r?.[m]));
+    const tail = vals.slice(-weeks);
+    out[m] = Array.from({
+      length: weeks
+    }, (_, i) => tail[i - (weeks - tail.length)] ?? 0);
+  }
+  out.weeks = rows.slice(-weeks).map(r => String(r?.week || ''));
+  out.available = rows.length > 0;
+  return out;
+}
+
+// my_creator_earnings().monthly_history ([{month:'YYYY-MM', commission}]) →
+// the last `months` calendar months, oldest first, zeros where absent.
+function monthlySeries(history, months = SERIES_MONTHS, now = new Date()) {
+  const byMonth = new Map();
+  for (const h of Array.isArray(history) ? history : []) if (h?.month) byMonth.set(String(h.month), num(h.commission));
+  const keys = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  return {
+    keys,
+    values: keys.map(k => byMonth.get(k) ?? 0),
+    available: byMonth.size > 0
+  };
+}
+
+// Running total of a series — the shape of "lifetime so far".
+function cumulative(points) {
+  let acc = 0;
+  return (Array.isArray(points) ? points : []).map(p => acc += num(p));
+}
+
+// SVG geometry. `pad` keeps the stroke inside the box; a flat series sits on
+// a baseline near the bottom instead of collapsing to the middle.
+function sparkGeometry(points, {
+  width = 96,
+  height = 28,
+  pad = 2
+} = {}) {
+  const vals = (Array.isArray(points) ? points : []).map(num);
+  const n = vals.length;
+  if (n === 0) return {
+    line: '',
+    area: '',
+    last: null,
+    flat: true,
+    empty: true,
+    width,
+    height
+  };
+  const max = Math.max(...vals, 0);
+  const min = Math.min(...vals, 0);
+  const span = max - min;
+  const innerH = height - pad * 2;
+  const baseline = height - pad;
+  const x = i => n === 1 ? width / 2 : pad + i * (width - pad * 2) / (n - 1);
+  const y = v => span === 0 ? baseline : baseline - (v - min) / span * innerH;
+  const pts = vals.map((v, i) => [round(x(i)), round(y(v))]);
+  const line = pts.map(([px, py], i) => `${i === 0 ? 'M' : 'L'}${px} ${py}`).join(' ');
+  const area = `${line} L${pts[n - 1][0]} ${baseline} L${pts[0][0]} ${baseline} Z`;
+  return {
+    line,
+    area,
+    last: pts[n - 1],
+    flat: span === 0,
+    empty: vals.every(v => v === 0),
+    width,
+    height,
+    points: pts
+  };
+}
+const round = v => Math.round(v * 10) / 10;
+
 const TONES = ['ok', 'hold', 'info', 'brand', 'bad', 'neutral'];
 const toneClass = tone => `ck-tone-${TONES.includes(tone) ? tone : 'neutral'}`;
 
@@ -51436,6 +51555,7 @@ function Empty({
 }) {
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: `ck-empty ${toneClass(tone)}`,
+    "data-state": "waiting",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
       className: "ck-empty__ic",
       "aria-hidden": "true",
@@ -51443,9 +51563,12 @@ function Empty({
         name: icon,
         size: 21
       })
-    }), eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+    }), eyebrow && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
       className: "ck-empty__eyebrow",
-      children: eyebrow
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "ck-empty__dot",
+        "aria-hidden": "true"
+      }), eyebrow]
     }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
       className: "ck-empty__title",
       children: title
@@ -51489,10 +51612,12 @@ function Cell({
   value,
   tone,
   hint,
-  mono = false
+  mono = false,
+  spark = null,
+  zero = false
 }) {
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "ck-band__cell",
+    className: `ck-band__cell${zero ? ' is-zero' : ''}`,
     "data-tone": TONES.includes(tone) && tone !== 'neutral' ? tone : undefined,
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
       className: "ck-band__label",
@@ -51500,6 +51625,9 @@ function Cell({
     }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: `ck-band__fig ${mono ? 'is-mono' : ''}`,
       children: value
+    }), spark && /*#__PURE__*/jsxRuntimeExports.jsx(Sparkline, {
+      points: spark,
+      tone: tone
     }), hint && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
       className: "ck-band__hint",
       children: hint
@@ -51516,25 +51644,87 @@ function Balance({
   label,
   value,
   hint,
-  children
+  children,
+  spark = null,
+  sparkLabel = null,
+  zero = false
 }) {
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "ck-balance",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `ck-balance${zero ? ' is-zero' : ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "ck-balance__main",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "ck-band__label",
-        children: label
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "ck-balance__fig",
-        children: value
-      }), hint && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "ck-balance__hint",
-        children: hint
-      })]
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "ck-balance__figwrap",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "ck-band__label",
+            children: label
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "ck-balance__fig",
+            children: value
+          }), hint && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "ck-balance__hint",
+            children: hint
+          })]
+        }), spark && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "ck-balance__spark",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Sparkline, {
+            points: spark,
+            tone: "ok",
+            width: 160,
+            height: 44
+          }), sparkLabel && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "ck-balance__spark-l",
+            children: sparkLabel
+          })]
+        })]
+      })
     }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "ck-balance__row",
       children: children
+    })]
+  });
+}
+
+/**
+ * A sparkline: one polyline and its filled area, hand-built SVG.
+ *
+ * A series of zeros still draws — as a level baseline with the end marker —
+ * so the chart is present on an account that has not earned yet and reads as
+ * "waiting for data" rather than a missing element. `tone` colours the stroke
+ * through the same five meanings the rest of the system uses.
+ */
+function Sparkline({
+  points,
+  tone = 'neutral',
+  width = 96,
+  height = 28,
+  label = null
+}) {
+  const g = sparkGeometry(points, {
+    width,
+    height
+  });
+  if (!g.line) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+    className: `ck-spark ${toneClass(tone)}${g.empty ? ' is-empty' : ''}${g.flat ? ' is-flat' : ''}`,
+    viewBox: `0 0 ${width} ${height}`,
+    width: width,
+    height: height,
+    role: "img",
+    "aria-label": label || (g.empty ? 'No activity yet' : 'Recent trend'),
+    focusable: "false",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("path", {
+      className: "ck-spark__area",
+      d: g.area
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+      className: "ck-spark__line",
+      d: g.line
+    }), g.last && /*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+      className: "ck-spark__dot",
+      cx: g.last[0],
+      cy: g.last[1],
+      r: "2.2"
     })]
   });
 }
@@ -51657,7 +51847,27 @@ function CountUp({
   return /*#__PURE__*/jsxRuntimeExports.jsx("span", {
     className: "ck-count",
     "data-count": target,
-    children: format(shown)
+    children: moneyParts(format(shown))
+  });
+}
+
+// "₹12,640.50" → symbol / integer / decimals, so the currency mark and the
+// paise can sit lighter than the rupees. Anything that is not money passes
+// through untouched.
+function moneyParts(str) {
+  const m = /^(₹)([\d,]+)(\.\d{2})?$/.exec(String(str));
+  if (!m) return str;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "ck-cur",
+      children: m[1]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "ck-int",
+      children: m[2]
+    }), m[3] && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "ck-dec",
+      children: m[3]
+    })]
   });
 }
 
@@ -51672,8 +51882,11 @@ const monthLabel = ym => {
 function CreatorEarnings({
   creator,
   earnings,
-  standing = null
+  standing = null,
+  weekly = null,
+  monthly = null
 }) {
+  const isZero = v => !(Number(v) > 0);
   if (!earnings) {
     return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
@@ -51712,7 +51925,10 @@ function CreatorEarnings({
         value: earnings.available ?? 0,
         format: money2
       }),
-      hint: "Cleared commission. A payout request withdraws this full amount.",
+      hint: isZero(earnings.available) ? 'Nothing has cleared yet. Commission lands here after delivery and the settlement hold.' : 'Cleared commission. A payout request withdraws this full amount.',
+      spark: monthly ? cumulative(monthly.values) : null,
+      sparkLabel: "Commission, last 12 months",
+      zero: isZero(earnings.available),
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
         label: "Held",
         value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
@@ -51720,6 +51936,8 @@ function CreatorEarnings({
           format: money2
         }),
         tone: "hold",
+        zero: isZero(earnings.held),
+        spark: weekly ? weekly.commission : null,
         hint: `In the ${hold}-day settlement hold.`
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
         label: "Paid out",
@@ -51728,7 +51946,8 @@ function CreatorEarnings({
           format: money2
         }),
         tone: "ok",
-        hint: "All time."
+        hint: "All time.",
+        zero: isZero(earnings.paid)
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
         label: "Reversed",
         value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
@@ -51736,6 +51955,7 @@ function CreatorEarnings({
           format: money2
         }),
         tone: Number(earnings.reversed ?? 0) > 0 ? 'bad' : undefined,
+        zero: isZero(earnings.reversed),
         hint: "Refunds and adjustments."
       })]
     }), earnings.reserved > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
@@ -53423,6 +53643,7 @@ function CreatorPortal({
   const [standing, setStanding] = reactExports.useState(initial?.standing || null);
   const [rewards, setRewards] = reactExports.useState(initial?.rewards || null);
   const [leaderboard, setLeaderboard] = reactExports.useState(initial?.leaderboard || []);
+  const [series, setSeries] = reactExports.useState(initial?.series || null);
   const [terms, setTerms] = reactExports.useState(initial?.terms || null);
   const rootRef = reactExports.useRef(null);
   const [termsAccepted, setTermsAccepted] = reactExports.useState(null); // null = unknown
@@ -53487,6 +53708,7 @@ function CreatorPortal({
     }
     setCreator(me);
     const [cs, ls, an, en, ky, po, st, rw, lb] = await Promise.all([getMyCampaigns(me.id), getMyLinks(me.id), getMyCreatorAnalytics(), getMyCreatorEarnings(), getMyKyc(), getMyPayouts(), getMyCreatorStanding(), getMyCreatorRewards(), getCreatorLeaderboard()]);
+    getMyActivitySeries().then(sr => setSeries(sr && sr.ok ? sr : null)).catch(() => setSeries(null));
     setCampaigns(cs);
     setLinks(ls);
     setAnalytics(an && an.ok ? an : null);
@@ -53617,12 +53839,18 @@ function CreatorPortal({
     destination_path: '/'
   }, creator, null);
   const rank = rankSlot(standing?.rank);
+  const weekly = weeklySeries(series);
+  const monthly = monthlySeries(earnings?.monthly_history);
+  const isZero = v => !(Number(v) > 0);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "crp crp--dark",
     "data-rank": rank,
     ref: rootRef,
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
       className: "crp__ambient",
+      "aria-hidden": "true"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "crp__grain",
       "aria-hidden": "true"
     }), /*#__PURE__*/jsxRuntimeExports.jsx("header", {
       className: "crp__top",
@@ -53771,28 +53999,36 @@ function CreatorPortal({
                   value: analytics?.clicks ?? 0,
                   format: n => String(Math.round(n))
                 }),
-                tone: "info"
+                tone: "info",
+                spark: weekly.clicks,
+                zero: isZero(analytics?.clicks)
               }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "Orders",
                 value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
                   value: analytics?.attributed_orders ?? 0,
                   format: n => String(Math.round(n))
                 }),
-                tone: "brand"
+                tone: "info",
+                spark: weekly.orders,
+                zero: isZero(analytics?.attributed_orders)
               }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "Products sold",
                 value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
                   value: analytics?.products_sold ?? 0,
                   format: n => String(Math.round(n))
                 }),
-                tone: "hold"
+                tone: "info",
+                spark: weekly.products,
+                zero: isZero(analytics?.products_sold)
               }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "Attributed sales",
                 value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
                   value: analytics?.attributed_sales ?? 0,
                   format: money2
                 }),
-                tone: "ok"
+                tone: "ok",
+                spark: weekly.sales,
+                zero: isZero(analytics?.attributed_sales)
               })]
             })
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
@@ -53808,28 +54044,34 @@ function CreatorPortal({
                 value: earnings?.available ?? 0,
                 format: money2
               }),
-              hint: "Cleared commission. A payout request withdraws this full amount.",
+              hint: isZero(earnings?.available) ? 'Nothing has cleared yet. Commission lands here after delivery and the settlement hold.' : 'Cleared commission. A payout request withdraws this full amount.',
+              spark: cumulative(monthly.values),
+              sparkLabel: "Commission, last 12 months",
+              zero: isZero(earnings?.available),
               children: [/*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "Held",
                 value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
                   value: earnings?.held ?? 0,
                   format: money2
                 }),
-                tone: "hold"
+                tone: "hold",
+                zero: isZero(earnings?.held)
               }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "In payout",
                 value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
                   value: earnings?.reserved ?? 0,
                   format: money2
                 }),
-                tone: "brand"
+                tone: "info",
+                zero: isZero(earnings?.reserved)
               }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
                 label: "Paid out",
                 value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
                   value: earnings?.paid ?? 0,
                   format: money2
                 }),
-                tone: "ok"
+                tone: "ok",
+                zero: isZero(earnings?.paid)
               })]
             })
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Section, {
@@ -53973,25 +54215,48 @@ function CreatorPortal({
           }), /*#__PURE__*/jsxRuntimeExports.jsxs(Band, {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
               label: "Link clicks",
-              value: String(analytics?.clicks ?? 0),
+              value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+                value: analytics?.clicks ?? 0,
+                format: n => String(Math.round(n))
+              }),
               tone: "info",
+              spark: weekly.clicks,
+              zero: isZero(analytics?.clicks),
               hint: "Visits that arrived through one of your links."
             }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
               label: "Attributed orders",
-              value: String(analytics?.attributed_orders ?? 0),
-              tone: "brand",
+              value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+                value: analytics?.attributed_orders ?? 0,
+                format: n => String(Math.round(n))
+              }),
+              tone: "info",
+              spark: weekly.orders,
+              zero: isZero(analytics?.attributed_orders),
               hint: "Orders matched to you inside your attribution window."
             }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
               label: "Products sold",
-              value: String(analytics?.products_sold ?? 0),
-              tone: "hold",
+              value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+                value: analytics?.products_sold ?? 0,
+                format: n => String(Math.round(n))
+              }),
+              tone: "info",
+              spark: weekly.products,
+              zero: isZero(analytics?.products_sold),
               hint: "Individual units across your attributed orders."
             }), /*#__PURE__*/jsxRuntimeExports.jsx(Cell, {
               label: "Attributed sales",
-              value: money2(analytics?.attributed_sales ?? 0),
+              value: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+                value: analytics?.attributed_sales ?? 0,
+                format: money2
+              }),
               tone: "ok",
+              spark: weekly.sales,
+              zero: isZero(analytics?.attributed_sales),
               hint: "Eligible sale value, before commission."
             })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "ck-band__caption",
+            children: weekly.available ? 'Sparklines show the last 12 weeks.' : 'Sparklines fill in week by week as activity is recorded.'
           }), Array.isArray(analytics?.top_products) && analytics.top_products.length > 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
             className: "crp__panel",
             style: {
@@ -54054,7 +54319,9 @@ function CreatorPortal({
           }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorEarnings, {
             creator: creator,
             earnings: earnings,
-            standing: standing
+            standing: standing,
+            weekly: weekly,
+            monthly: monthly
           }), /*#__PURE__*/jsxRuntimeExports.jsx(TierStanding, {
             standing: standing,
             compact: true,
