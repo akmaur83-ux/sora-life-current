@@ -104,14 +104,14 @@ await test('motion: transform and opacity only; reduced motion turns it all off'
 });
 
 await test('the mobile collapse is designed: one column, top strip nav, footer art gone, search hidden, tooltip on touch only', () => {
-  const m1019 = /@media \(max-width: 1019px\)\s*\{([\s\S]*?)\n\}/.exec(css)[1];
+  const m1019 = [...css.matchAll(/@media \(max-width: 1019px\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]).join('\n');
   assert.match(m1019, /\.crp\.crp--studio \{ grid-template-columns: minmax\(0, 1fr\); \}/);
   assert.match(m1019, /\.cs-nav \{ flex-direction: row;[^}]*overflow-x: auto/);
   assert.match(m1019, /\.cs-side__foot \{ display: none; \}/);
   assert.match(m1019, /\.cs-search \{ display: none; \}/);
   assert.match(m1019, /\.cd-row--hero \{ grid-template-columns: minmax\(0, 1fr\); \}/);
   assert.match(m1019, /\.cd-row--split \{ grid-template-columns: minmax\(0, 1fr\); \}/);
-  const m599 = /@media \(max-width: 599px\)\s*\{([\s\S]*?)\n\}/.exec(css)[1];
+  const m599 = [...css.matchAll(/@media \(max-width: 599px\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]).join('\n');
   assert.match(m599, /\.cd-row--stats \{ grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(m599, /\.cd-chart:not\(\.is-hover\) \.cd-tip \{ display: none; \}/);
   assert.match(read('src/pages/CreatorPortal.jsx'), /querySelector\('\.cs-nav__item\.is-on'\)/, 'the active item is scrolled into view');
@@ -209,6 +209,9 @@ const tierDeps = { Link, Icon, LeaderboardList, money2, CountUp: UI.CountUp, ...
 const T = {};
 for (const n of ['CreatorTier', 'TierStanding', 'WithdrawalsNotice', 'RankBadge']) T[n] = component('src/components/creator/CreatorTier.jsx', n, tierDeps);
 const CreatorDashboard = component('src/components/creator/CreatorDashboard.jsx', 'CreatorDashboard', { Link, Icon, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...tiers, ...seriesRules, ...activityRules });
+const RewardChooser = component('src/components/creator/CreatorTier.jsx', 'RewardChooser', tierDeps);
+const RewardHistory = component('src/components/creator/CreatorTier.jsx', 'RewardHistory', tierDeps);
+const CreatorTierPage = component('src/components/creator/CreatorTierPage.jsx', 'CreatorTierPage', { Link, Icon, LeaderboardList, CountUp: UI.CountUp, RewardChooser, RewardHistory, money2, ...tiers, ...rewardRules, ...seriesRules });
 const CreatorEarnings = component('src/components/creator/CreatorEarnings.jsx', 'CreatorEarnings', { Icon, money2, Balance: UI.Balance, Cell: UI.Cell, CountUp: UI.CountUp, cumulative: seriesRules.cumulative });
 const CreatorHowItWorks = component('src/components/creator/CreatorHowItWorks.jsx', 'CreatorHowItWorks', { Icon, money2 });
 const CreatorPayouts = component('src/components/creator/CreatorPayouts.jsx', 'CreatorPayouts', { Icon, money2, WithdrawalsNotice: T.WithdrawalsNotice, ...kycRules });
@@ -221,7 +224,7 @@ const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPort
   getMyCreatorAnalytics: noop, getMyCreatorEarnings: noop, getMyKyc: noop, submitKyc: noop, uploadKycDocument: noop, requestPayout: noop,
   getMyPayouts: async () => [], getMyCreatorStanding: noop, getMyCreatorRewards: noop, claimLevelReward: noop, getCreatorLeaderboard: async () => [], getMyActivitySeries: noop, getMyRecentClicks: async () => [],
   getCreatorTerms: async () => null, termsArePublished: () => false, getMyTermsAcceptance: async () => null, acceptCreatorTerms: noop,
-  money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, ...T, rankSlot: tiers.rankSlot, CreatorTermsPanel, TermsUpdatedLine, ...seriesRules, ...activityRules, CreatorDashboard,
+  money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, ...T, rankSlot: tiers.rankSlot, CreatorTermsPanel, TermsUpdatedLine, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, getLevelRewardsCatalog: async () => [],
 });
 
 const NOW = '2026-09-13T10:30:00+05:30';

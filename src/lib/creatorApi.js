@@ -365,6 +365,15 @@ export async function getMyCreatorRewards() {
   if (error) return { ok: false, reason: error.message };
   return data || { ok: false };
 }
+// The active reward options at every level — what is on offer at the
+// milestones ahead. Readable by any creator (RLS, 0031); nothing personal.
+export async function getLevelRewardsCatalog() {
+  const { data, error } = await supabase.from('creator_level_rewards')
+    .select('id,level,option_index,label,description,reward_type,value')
+    .eq('is_active', true).order('level', { ascending: true }).order('option_index', { ascending: true });
+  if (error) return [];
+  return data || [];
+}
 export async function claimLevelReward(level, rewardId) {
   const { data, error } = await supabase.rpc('claim_level_reward', { p_level: Number(level), p_reward_id: rewardId });
   if (error) return { ok: false, reason: error.message };

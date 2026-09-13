@@ -203,12 +203,12 @@ await test('the sidebar collapses to a scrolling icon+label strip on mobile, and
   assert.match(portal, /navRef\?\.current|navRef\.current/);
   assert.match(portal, /querySelector\('\.cs-nav__item\.is-on'\)/);
   assert.match(portal, /itemRight - nav\.clientWidth \+ inset/);
-  const mobile = studioCss.match(/@media \(max-width: 1019px\) \{[\s\S]*?\n\}/);
+  const mobile = [...studioCss.matchAll(/@media \(max-width: 1019px\) \{[\s\S]*?\n\}/g)].map((m) => m[0]).join('\n');
   assert.ok(mobile, 'mobile studio breakpoint missing');
-  assert.match(mobile[0], /\.cs-nav \{ flex-direction: row;[^}]*overflow-x: auto/);
-  assert.match(mobile[0], /\.cs-nav__item \{ flex: 0 0 auto;/);
-  assert.match(mobile[0], /\.cs-side__foot \{ display: none; \}/);
-  assert.doesNotMatch(mobile[0], /gradient/, 'no gradient fade on the rail');
+  assert.match(mobile, /\.cs-nav \{ flex-direction: row;[^}]*overflow-x: auto/);
+  assert.match(mobile, /\.cs-nav__item \{ flex: 0 0 auto;/);
+  assert.match(mobile, /\.cs-side__foot \{ display: none; \}/);
+  assert.doesNotMatch(mobile, /gradient/, 'no gradient fade on the rail');
 });
 
 await test('campaign and analytics empty states carry factual editorial labels and ruled rows', () => {

@@ -181,3 +181,32 @@ export function donutGeometry(parts, { size = 150, stroke = 16 } = {}) {
   });
   return { size, stroke, r, c: r1(c), cx: size / 2, cy: size / 2, total, empty: total === 0, segments };
 }
+
+// ---- Bar chart geometry ------------------------------------------------------------
+// One bar per bucket, a nice-number axis with compact ₹ labels, the last bar
+// flagged as "now". All-zero → every bar at zero height (drawn 2px tall by
+// the component so the rhythm still reads), axis 0–4.
+export function barChartGeometry(points, { width = 360, height = 160, padL = 34, padR = 6, padT = 10, padB = 24, gap = 0.35, minMax = 4 } = {}) {
+  const vals = (Array.isArray(points) ? points : []).map(num);
+  const n = vals.length;
+  const innerW = width - padL - padR; const innerH = height - padT - padB;
+  const rawMax = Math.max(0, ...vals);
+  const yMax = Math.max(minMax, niceMax(rawMax));
+  const baseY = padT + innerH;
+  const slot = n > 0 ? innerW / n : innerW;
+  const w = Math.max(2, slot * (1 - gap));
+  const bars = vals.map((v, i) => {
+    const hgt = yMax === 0 ? 0 : (v / yMax) * innerH;
+    return { v, x: r1(padL + i * slot + (slot - w) / 2), y: r1(baseY - hgt), w: r1(w), h: r1(hgt) };
+  });
+  const ticks = [0, 0.5, 1].map((f) => ({ v: yMax * f, y: r1(baseY - f * innerH), label: compactRupees(yMax * f) }));
+  return { width, height, padL, padR, padT, padB, n, yMax, baseY, bars, ticks, empty: rawMax === 0 };
+}
+export function compactRupees(v) {
+  const n = Math.max(0, num(v));
+  if (n >= 10000000) return `₹${trim(n / 10000000)}Cr`;
+  if (n >= 100000) return `₹${trim(n / 100000)}L`;
+  if (n >= 1000) return `₹${trim(n / 1000)}k`;
+  return `₹${Math.round(n)}`;
+}
+const trim = (x) => (Math.round(x * 10) / 10).toString().replace(/\.0$/, '');

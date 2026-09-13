@@ -161,6 +161,12 @@ export function rankSlot(rankName) {
   return RANK_SLOTS[key] || 'neutral';
 }
 
+// Supplied rank badges, one per rank, at /img/rank-<slug>.webp. A rank with no
+// entry renders the CSS rosette. Add the file and the line here to light it up.
+export const RANK_BADGES = Object.freeze({
+  rise: '/img/rank-rise.webp',
+});
+
 // Rupee amounts on the tier surfaces read in Indian grouping with no paise:
 // thresholds are round numbers and progress copy should not look like a bill.
 export function rupees(n) {

@@ -8,7 +8,7 @@ import {
   claimCreatorAccount, getMyCreator, getMyCampaigns, getMyLinks, buildTrackingUrl,
   getMyCreatorAnalytics,
   getMyCreatorEarnings, getMyKyc, submitKyc, uploadKycDocument, requestPayout, getMyPayouts,
-  getMyCreatorStanding, getMyCreatorRewards, claimLevelReward, getCreatorLeaderboard, getMyActivitySeries, getMyRecentClicks,
+  getMyCreatorStanding, getMyCreatorRewards, claimLevelReward, getCreatorLeaderboard, getMyActivitySeries, getMyRecentClicks, getLevelRewardsCatalog,
   getCreatorTerms, termsArePublished, getMyTermsAcceptance, acceptCreatorTerms,
 } from '../lib/creatorApi.js';
 import { money2 } from '../lib/format.js';
@@ -17,7 +17,8 @@ import CreatorHowItWorks from '../components/creator/CreatorHowItWorks.jsx';
 import { Section, Empty, Pill, Band, Cell, CountUp } from '../components/creator/CreatorUI.jsx';
 import CreatorDashboard from '../components/creator/CreatorDashboard.jsx';
 import CreatorPayouts from '../components/creator/CreatorPayouts.jsx';
-import CreatorTier, { TierStanding, WithdrawalsNotice } from '../components/creator/CreatorTier.jsx';
+import { TierStanding, WithdrawalsNotice } from '../components/creator/CreatorTier.jsx';
+import CreatorTierPage from '../components/creator/CreatorTierPage.jsx';
 import { rankSlot } from '../lib/creatorTiers.js';
 import { rangeSeries, DEFAULT_RANGE } from '../lib/creatorSeries.js';
 import { buildActivity } from '../lib/creatorActivity.js';
@@ -96,6 +97,7 @@ export default function CreatorPortal({ initial = null }) {
   const [range, setRange] = useState(initial?.range || DEFAULT_RANGE);
   const [seriesLoading, setSeriesLoading] = useState(false);
   const [recentClicks, setRecentClicks] = useState(initial?.recentClicks || []);
+  const [catalog, setCatalog] = useState(initial?.catalog || []);
   const [menuOpen, setMenuOpen] = useState(false);
   const [terms, setTerms] = useState(initial?.terms || null);
   const [termsAccepted, setTermsAccepted] = useState(null);   // null = unknown
@@ -170,6 +172,7 @@ export default function CreatorPortal({ initial = null }) {
     ]);
     for (const r of [DEFAULT_RANGE, '90d']) loadRange(r);
     getMyRecentClicks().then((c) => setRecentClicks(Array.isArray(c) ? c : [])).catch(() => setRecentClicks([]));
+    getLevelRewardsCatalog().then((c) => setCatalog(Array.isArray(c) ? c : [])).catch(() => setCatalog([]));
     setCampaigns(cs);
     setLinks(ls);
     setAnalytics(an && an.ok ? an : null);
@@ -463,13 +466,16 @@ export default function CreatorPortal({ initial = null }) {
           )}
 
           {tab === 'tier' && (
-            <CreatorTier
+            <CreatorTierPage
               standing={standing}
               rewards={rewards}
+              catalog={catalog}
               leaderboard={leaderboard}
+              series={weekly}
               holdDays={Number(earnings?.settlement_hold_days ?? 7)}
               onClaim={claimLevelReward}
               onChanged={reloadMoney}
+              noticeDismissed={!!initial?.noticeDismissed}
             />
           )}
 

@@ -66,6 +66,9 @@ const TierStanding = component('src/components/creator/CreatorTier.jsx', 'TierSt
 const WithdrawalsNotice = component('src/components/creator/CreatorTier.jsx', 'WithdrawalsNotice', tierDeps);
 const RankBadge = component('src/components/creator/CreatorTier.jsx', 'RankBadge', tierDeps);
 const CreatorDashboard = component('src/components/creator/CreatorDashboard.jsx', 'CreatorDashboard', { Link, Icon, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...tiers, ...seriesRules, ...activityRules });
+const RewardChooser = component('src/components/creator/CreatorTier.jsx', 'RewardChooser', tierDeps);
+const RewardHistory = component('src/components/creator/CreatorTier.jsx', 'RewardHistory', tierDeps);
+const CreatorTierPage = component('src/components/creator/CreatorTierPage.jsx', 'CreatorTierPage', { Link, Icon, LeaderboardList, CountUp: UI.CountUp, RewardChooser, RewardHistory, money2, ...tiers, ...rewardRules, ...seriesRules });
 const CreatorEarnings = component('src/components/creator/CreatorEarnings.jsx', 'CreatorEarnings', { Icon, money2, Balance: UI.Balance, Cell: UI.Cell, CountUp: UI.CountUp, cumulative: seriesRules.cumulative });
 const CreatorHowItWorks = component('src/components/creator/CreatorHowItWorks.jsx', 'CreatorHowItWorks', { Icon, money2 });
 const CreatorPayouts = component('src/components/creator/CreatorPayouts.jsx', 'CreatorPayouts', { Icon, money2, WithdrawalsNotice, ...kycRules });
@@ -81,7 +84,7 @@ const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPort
   getMyPayouts: async () => [], getMyCreatorStanding: noop, getMyCreatorRewards: noop, claimLevelReward: noop, getCreatorLeaderboard: async () => [], getMyActivitySeries: noop, getMyRecentClicks: async () => [],
   getCreatorTerms: async () => null, termsArePublished: () => false, getMyTermsAcceptance: async () => null, acceptCreatorTerms: noop,
   money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, CreatorTier, TierStanding, WithdrawalsNotice, RankBadge,
-  rankSlot: tiers.rankSlot, CreatorTermsPanel, TermsUpdatedLine, ...seriesRules, ...activityRules, CreatorDashboard,
+  rankSlot: tiers.rankSlot, CreatorTermsPanel, TermsUpdatedLine, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, getLevelRewardsCatalog: async () => [],
 });
 
 // ---- fixtures ---------------------------------------------------------------
@@ -147,6 +150,12 @@ const initial = {
   links: [{ id: 'l1', public_code: 'AARAV', label: 'Default', destination_type: 'home', destination_path: '/', status: 'active', created_at: '2026-03-02T00:00:00Z' }],
   analytics, earnings, kyc: { identity_status: 'verified', verified_at: '2026-04-02T00:00:00Z', submitted_at: '2026-03-30T00:00:00Z' }, payouts: [], standing, rewards, leaderboard, terms: null,
   seriesByRange: { '7d': series7, '90d': series90 }, range: '7d', recentClicks, now: NOW, hour: 10,
+  catalog: [
+    { id: 'r8a', level: 8, option_index: 1, label: 'Royale product bundle', reward_type: 'product', value: 'Six full-size products' },
+    { id: 'r8b', level: 8, option_index: 2, label: 'Cash reward', reward_type: 'cash', value: '₹5,000' },
+    { id: 'r8c', level: 8, option_index: 3, label: 'Homepage feature', reward_type: 'other', value: 'One week' },
+    { id: 'r9a', level: 9, option_index: 1, label: 'Prime hamper', reward_type: 'product', value: 'Curated box' },
+  ],
 };
 // The reference mockup's account: Vikas, Rise L1, five clicks, nothing earned.
 const refInitial = {
@@ -165,11 +174,13 @@ const emptyInitial = {
 const HomeLeaderboard = component('src/components/HomeLeaderboard.jsx', 'HomeLeaderboard', { Link, LeaderboardList, getCreatorLeaderboard: async () => [] });
 // The two backgrounds live at /img/ on the site; a file:// capture with the
 // network blocked cannot fetch them, so they are inlined here as data URIs.
-const inlineImages = (css) => css.replace(/url\('\/img\/([^']+\.webp)'\)/g, (_, f) => `url('data:image/webp;base64,${readFileSync(resolve(ROOT, 'img', f)).toString('base64')}')`);
+const dataUri = (f) => `data:image/webp;base64,${readFileSync(resolve(ROOT, 'img', f)).toString('base64')}`;
+const inlineImages = (css) => css.replace(/url\('\/img\/([^']+\.webp)'\)/g, (_, f) => `url('${dataUri(f)}')`);
+const inlineMarkup = (html) => html.replace(/src="\/img\/([^"]+\.webp)"/g, (_, f) => `src="${dataUri(f)}"`);
 const appCss = inlineImages(read('public/app.css'));
 const deferredCss = inlineImages(read('public/app-deferred.css'));
 const page = (title, body, extraCss = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title}</title><style>${appCss}</style><style>${extraCss}</style><style>body{margin:0;background:#F6F3EB}</style></head><body>${body}</body></html>`;
+<title>${title}</title><style>${appCss}</style><style>${extraCss}</style><style>body{margin:0;background:#F6F3EB}</style></head><body>${inlineMarkup(body)}</body></html>`;
 
 mkdirSync(OUT, { recursive: true });
 const pages = {
@@ -178,6 +189,7 @@ const pages = {
   'portal-earnings': page('SSR — portal earnings', renderToStaticMarkup(h(portalFor('earnings'), { initial })), deferredCss),
   'portal-analytics': page('SSR — portal analytics', renderToStaticMarkup(h(portalFor('analytics'), { initial })), deferredCss),
   'portal-tier': page('SSR — portal tier', renderToStaticMarkup(h(portalFor('tier'), { initial })), deferredCss),
+  'portal-tier-reference': page('SSR — portal tier (the mockup account)', renderToStaticMarkup(h(portalFor('tier'), { initial: refInitial })), deferredCss),
   'portal-dashboard-empty': page('SSR — portal dashboard, empty', renderToStaticMarkup(h(portalFor('dashboard'), { initial: emptyInitial })), deferredCss),
   'portal-earnings-empty': page('SSR — portal earnings, empty', renderToStaticMarkup(h(portalFor('earnings'), { initial: emptyInitial })), deferredCss),
   'home-leaderboard': page('SSR — creator leaderboard',
