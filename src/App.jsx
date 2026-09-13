@@ -55,6 +55,7 @@ const CreatorDetail = lazy(() => import('./admin/pages/CreatorDetail.jsx'));
 const Attribution = lazy(() => import('./admin/pages/Attribution.jsx'));
 const Kyc = lazy(() => import('./admin/pages/Kyc.jsx'));
 const Payouts = lazy(() => import('./admin/pages/Payouts.jsx'));
+const CreatorTiers = lazy(() => import('./admin/pages/CreatorTiers.jsx'));
 const Appearance = lazy(() => import('./admin/pages/Appearance.jsx'));
 const Categories = lazy(() => import('./admin/pages/Categories.jsx'));
 const HeroSlides = lazy(() => import('./admin/pages/HeroSlides.jsx'));
@@ -158,6 +159,7 @@ export default function App() {
         <Route path="attribution" element={<Attribution />} />
         <Route path="kyc" element={<Kyc />} />
         <Route path="payouts" element={<Payouts />} />
+        <Route path="creator-tiers" element={<CreatorTiers />} />
         <Route path="categories" element={<Categories />} />
         <Route path="hero-slides" element={<HeroSlides />} />
         <Route path="promotions" element={<Promotions />} />

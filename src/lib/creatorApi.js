@@ -15,6 +15,8 @@
 import { supabase } from './supabase.js';
 import { normalizeDestination } from './creatorLinkUtils.js';
 import { KYC_BUCKET, KYC_KIND_SET, kycDocumentPath, validateKycDocument } from './kycDocuments.js';
+import { LEADERBOARD_LIMIT, sanitizeLeaderboard, validateLadder } from './creatorTiers.js';
+import { rewardOptionRow, validateRewardOption } from './creatorRewards.js';
 
 // Pure link helpers live in creatorLinkUtils.js so they can be unit-tested
 // without a browser/Supabase import. Re-exported here for existing callers.
@@ -333,6 +335,32 @@ export async function getPayoutConfig() {
   return data || {};
 }
 
+// ---- Creator tiers, rewards, leaderboard (0031) ----
+// Standing is DERIVED by my_creator_standing() from the ledger every call;
+// nothing here is cached or computed client-side.
+export async function getMyCreatorStanding() {
+  const { data, error } = await supabase.rpc('my_creator_standing');
+  if (error) return { ok: false, reason: error.message };
+  return data || { ok: false };
+}
+export async function getMyCreatorRewards() {
+  const { data, error } = await supabase.rpc('my_creator_rewards');
+  if (error) return { ok: false, reason: error.message };
+  return data || { ok: false };
+}
+export async function claimLevelReward(level, rewardId) {
+  const { data, error } = await supabase.rpc('claim_level_reward', { p_level: Number(level), p_reward_id: rewardId });
+  if (error) return { ok: false, reason: error.message };
+  return data || { ok: false };
+}
+// PUBLIC: name, rank, level, position — the function returns nothing else,
+// and the client re-projects to those four fields regardless.
+export async function getCreatorLeaderboard(limit = LEADERBOARD_LIMIT) {
+  const { data, error } = await supabase.rpc('creator_leaderboard', { p_limit: Math.min(LEADERBOARD_LIMIT, Math.max(1, Number(limit) || LEADERBOARD_LIMIT)) });
+  if (error) return [];
+  return sanitizeLeaderboard(data);
+}
+
 // ---- Creator KYC ----
 const KYC_SELF = 'creator_id,legal_name,pan_masked,identity_status,payout_method,payout_account_holder,payout_account_masked,ifsc_masked,upi_masked,submitted_at,verified_at,verification_notes,pan_document_path,bank_document_path,documents_updated_at';
 export async function getMyKyc() {
@@ -523,6 +551,86 @@ export async function adminSetProgramSettings(settings) {
     .upsert({ key: 'creator_program', value }, { onConflict: 'key' });
   if (error) throw error;
   return value;
+}
+
+// ------------------------------------------------------------
+// ADMIN — tiers, rewards, claims, standings, withdrawals (0031)
+// ------------------------------------------------------------
+const TIER_COLS = 'level,rank_name,threshold,rate,updated_at';
+export async function adminGetTierLadder() {
+  const [{ data: levels, error }, { data: cfg }] = await Promise.all([
+    supabase.from('creator_tier_levels').select(TIER_COLS).order('level', { ascending: true }),
+    supabase.rpc('creator_tier_config'),
+  ]);
+  if (error) throw error;
+  return { levels: levels || [], beyond_step: Number(cfg?.beyond_step ?? 25000) };
+}
+// The ladder is replaced atomically by the RPC, which re-validates; the
+// client check is only so a bad ladder is refused with the same reason
+// before the round trip.
+export async function adminSetTierLadder(levels, beyondStep) {
+  const check = validateLadder(levels, beyondStep);
+  if (!check.ok) return check;
+  const payload = check.levels.map((l) => ({ level: l.level, rank: l.rank, threshold: l.threshold, rate: l.rate }));
+  const { data, error } = await supabase.rpc('admin_set_creator_tier_levels', {
+    p_levels: payload, p_beyond_step: beyondStep == null || beyondStep === '' ? null : Number(beyondStep),
+  });
+  if (error) throw error;
+  return data;
+}
+
+const REWARD_COLS = 'id,level,option_index,label,description,reward_type,value,is_active,created_at,updated_at';
+export async function adminListLevelRewards() {
+  const { data, error } = await supabase.from('creator_level_rewards').select(REWARD_COLS)
+    .order('level', { ascending: true }).order('option_index', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+// Upsert on the (level, option_index) slot. Keys the editor did not touch are
+// ABSENT from the row, so an existing slot keeps them (omit-when-absent).
+export async function adminUpsertLevelReward(option) {
+  const check = validateRewardOption(option);
+  if (!check.ok) return check;
+  const row = rewardOptionRow(option);
+  const { data, error } = await supabase.from('creator_level_rewards')
+    .upsert(row, { onConflict: 'level,option_index' }).select(REWARD_COLS).single();
+  if (error) throw error;
+  return { ok: true, row: data };
+}
+export async function adminDeleteLevelReward(id) {
+  const { error } = await supabase.from('creator_level_rewards').delete().eq('id', id);
+  if (error) throw error;
+  return { ok: true };
+}
+
+const CLAIM_COLS = 'id,creator_id,level,reward_id,option_index,label,reward_type,value,status,claimed_at,fulfilled_at,cancelled_at,admin_notes,creator:creator_partners(display_name,creator_code)';
+export async function adminListRewardClaims({ status } = {}) {
+  let q = supabase.from('creator_reward_claims').select(CLAIM_COLS).order('claimed_at', { ascending: false });
+  if (status && status !== 'all') q = q.eq('status', status);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+export async function adminSetRewardClaimStatus(claimId, status, notes) {
+  const { data, error } = await supabase.rpc('admin_set_reward_claim_status', { p_claim_id: claimId, p_status: status, p_notes: notes || null });
+  if (error) throw error;
+  return data;
+}
+
+// Every creator's rank, level, lifetime confirmed sales and commission
+// buckets, keyed by creator_id. Admin-only by the function's own check.
+export async function adminCreatorStandings() {
+  const { data, error } = await supabase.rpc('admin_creator_standings');
+  if (error) throw error;
+  const map = {};
+  for (const r of data || []) if (r?.creator_id) map[r.creator_id] = r;
+  return map;
+}
+
+export async function adminSetWithdrawalsOpen(open) {
+  const { data, error } = await supabase.rpc('admin_set_withdrawals_open', { p_open: !!open });
+  if (error) throw error;
+  return data;
 }
 
 // ------------------------------------------------------------

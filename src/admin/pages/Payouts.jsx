@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { money2 } from '../../lib/format.js';
 import {
   adminListPayouts, adminGetPayoutLedger, adminGetPayoutAudit, adminGetKycForCreator,
-  adminReviewPayout, adminMarkPayoutPaid, PAYOUT_STATUSES,
+  adminReviewPayout, adminMarkPayoutPaid, PAYOUT_STATUSES, getPayoutConfig, adminSetWithdrawalsOpen,
 } from '../../lib/creatorApi.js';
 
 // ============================================================
@@ -39,6 +39,25 @@ export default function Payouts() {
   const [expanded, setExpanded] = useState(null);
   const [detail, setDetail] = useState({ ledger: [], audit: [], kyc: null });
   const [busy, setBusy] = useState(false);
+  // null = unknown (config not loaded yet); the toggle is disabled until then.
+  const [withdrawalsOpen, setWithdrawalsOpen] = useState(null);
+  const [savingGate, setSavingGate] = useState(false);
+
+  useEffect(() => {
+    getPayoutConfig().then((c) => setWithdrawalsOpen(!!c?.withdrawals_open)).catch(() => setWithdrawalsOpen(false));
+  }, []);
+
+  async function setGate(open) {
+    const verb = open ? 'OPEN' : 'CLOSE';
+    if (!window.confirm(`${verb} creator withdrawals?\n\n${open ? 'Creators with verified KYC will be able to request payouts on the window day.' : 'Every payout request will be refused with a clear "withdrawals closed" reason. Commission keeps accruing.'}`)) return;
+    setSavingGate(true);
+    try {
+      const res = await adminSetWithdrawalsOpen(open);
+      setWithdrawalsOpen(!!res?.withdrawals_open);
+      flash(open ? 'Withdrawals are OPEN.' : 'Withdrawals are CLOSED.');
+    } catch (e) { setErr(e.message || String(e)); }
+    finally { setSavingGate(false); }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -124,6 +143,21 @@ export default function Payouts() {
 
       {err && <div className="adm-banner err">{err}</div>}
       {msg && <div className="adm-banner ok">{msg}</div>}
+
+      {/* THE gate. One control. request_payout() refuses while closed. */}
+      <div className={`surface adm-gate ${withdrawalsOpen ? 'is-open' : 'is-closed'}`} data-withdrawals={withdrawalsOpen == null ? 'unknown' : withdrawalsOpen ? 'open' : 'closed'}>
+        <div>
+          <h2 style={{ margin: 0 }}>Creator withdrawals: <strong>{withdrawalsOpen == null ? '…' : withdrawalsOpen ? 'OPEN' : 'CLOSED'}</strong></h2>
+          <p className="hint" style={{ margin: '4px 0 0' }}>
+            {withdrawalsOpen
+              ? 'Creators with verified KYC can request a payout on the window day.'
+              : 'Payout requests are refused (reason: withdrawals closed). Commission keeps accruing and creators see a notice on their earnings screen. Open this once tax registration is complete.'}
+          </p>
+        </div>
+        <button type="button" className={`btn ${withdrawalsOpen ? 'btn-light' : ''}`} disabled={withdrawalsOpen == null || savingGate} onClick={() => setGate(!withdrawalsOpen)}>
+          {savingGate ? 'Saving…' : withdrawalsOpen ? 'Close withdrawals' : 'Open withdrawals'}
+        </button>
+      </div>
 
       <div className="adm-chipbar">
         {['all', ...PAYOUT_STATUSES].map((s) => (

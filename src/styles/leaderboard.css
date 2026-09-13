@@ -1,0 +1,121 @@
+/* ============================================================
+   SORA LIFE — the dark surface: creator leaderboard + tier tokens
+   ------------------------------------------------------------
+   The one place the storefront leaves cream. Every colour below is scoped to
+   `.sl-dark`, so nothing here leaks into the rest of the page, and the creator
+   portal's tier cards (creator-tier.css, deferred bundle) reuse the same root
+   so both surfaces read as one system.
+
+   Rank accents are restrained: one colour per rank, used for the position
+   numeral, the pill hairline and nothing else. No gradients, no glass,
+   no shadows. Motion is transform/opacity only.
+   ============================================================ */
+.sl-dark {
+  --sld-bg: #14261C;                    /* forest-900 */
+  --sld-bg-2: #0F1D15;                  /* a shade under it, for the head band */
+  --sld-surface: rgba(251, 248, 241, 0.045);
+  --sld-surface-2: rgba(251, 248, 241, 0.08);
+  --sld-ink: #FBF8F1;                   /* ivory */
+  --sld-ink-2: rgba(251, 248, 241, 0.72);
+  --sld-ink-3: rgba(251, 248, 241, 0.52);
+  --sld-line: rgba(251, 248, 241, 0.10);
+  --sld-line-2: rgba(251, 248, 241, 0.18);
+  --sld-gold: #C79A45;                  /* slv2-gold */
+  --sld-gold-2: #E4C482;
+  --sld-r: 2px;
+
+  /* rank accents */
+  --rank-rise: #85B49F;      /* forest-300 */
+  --rank-premium: #A9B892;
+  --rank-elite: #C9D1CC;
+  --rank-royale: #D9937A;
+  --rank-prime: #E4C482;
+  --rank-supreme: #E8B04B;   /* honey-500 */
+  --rank-crown: #F0C169;     /* honey-400 */
+  --rank-neutral: rgba(251, 248, 241, 0.6);
+
+  background: var(--sld-bg);
+  color: var(--sld-ink);
+}
+.sl-dark [data-rank="rise"]    { --rank: var(--rank-rise); }
+.sl-dark [data-rank="premium"] { --rank: var(--rank-premium); }
+.sl-dark [data-rank="elite"]   { --rank: var(--rank-elite); }
+.sl-dark [data-rank="royale"]  { --rank: var(--rank-royale); }
+.sl-dark [data-rank="prime"]   { --rank: var(--rank-prime); }
+.sl-dark [data-rank="supreme"] { --rank: var(--rank-supreme); }
+.sl-dark [data-rank="crown"]   { --rank: var(--rank-crown); }
+.sl-dark [data-rank="neutral"] { --rank: var(--rank-neutral); }
+
+/* ---- Homepage section ----------------------------------------------------
+   Last block before the footer. The page's ivory tail and the footer's top
+   margin are removed so the dark base runs straight into the dark footer. */
+.v2-home .hm-leaderboard { margin: 0; padding-block: 64px 72px; border-top: 1px solid var(--sld-line); }
+.v2-home:has(.hm-leaderboard) { padding-bottom: 0; }
+.page-main:has(.hm-leaderboard) + .ftr { margin-top: 0; border-top: 1px solid rgba(251, 248, 241, 0.08); }
+
+.hm-leaderboard .v2-eyebrow { color: var(--sld-gold-2); }
+.hm-leaderboard .v2-h2 { color: var(--sld-ink); }
+.hm-leaderboard__head { display: grid; gap: 10px; margin-bottom: 28px; }
+.hm-leaderboard__copy { margin: 0; max-width: 52ch; font-size: 14px; line-height: 1.6; color: var(--sld-ink-2); }
+.hm-leaderboard__foot {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 24px;
+  margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--sld-line);
+  font-size: 12.5px; color: var(--sld-ink-3);
+}
+.hm-leaderboard__foot a { color: var(--sld-gold-2); text-decoration: none; border-bottom: 1px solid transparent; }
+.hm-leaderboard__foot a:hover { border-bottom-color: currentColor; }
+
+/* ---- The list (shared with the portal) ----------------------------------- */
+.lb { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--sld-line-2); }
+.lb__row {
+  display: grid; grid-template-columns: 3.2ch minmax(0, 1fr) auto; align-items: center; gap: 14px;
+  min-height: 52px; padding: 10px 8px 10px 0; border-bottom: 1px solid var(--sld-line);
+  transition: transform .16s ease, opacity .16s ease;
+}
+.lb__row:hover { transform: translateX(4px); }
+.lb__pos {
+  font-family: var(--font-sans, 'Inter', system-ui, sans-serif); font-variant-numeric: tabular-nums;
+  font-size: 13px; font-weight: 600; letter-spacing: .02em; color: var(--sld-ink-3);
+}
+.lb__row.is-podium .lb__pos { color: var(--rank); font-size: 15px; font-weight: 700; }
+.lb__name {
+  font-family: var(--font-display, 'Fraunces', Georgia, serif); font-size: 17px; font-weight: 500;
+  letter-spacing: -.005em; color: var(--sld-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.lb__row.is-podium .lb__name { font-size: 19px; }
+.lb__tier { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.lb__rank {
+  display: inline-block; padding: 3px 9px; border: 1px solid var(--rank); border-radius: var(--sld-r);
+  color: var(--rank); font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+}
+.lb__level { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--sld-ink-2); }
+.lb__row.is-me { background: var(--sld-surface-2); border-left: 3px solid var(--sld-gold); padding-left: 10px; }
+.lb__row.is-me .lb__name::after { content: 'You'; margin-left: 10px; font-family: var(--font-sans, sans-serif); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--sld-gold-2); }
+
+/* Two columns from tablet up, filled column-first so #1–#10 sit left. The
+   component sets --lb-rows to half the visible count. */
+.lb { display: grid; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px) {
+  .lb { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-flow: column; grid-template-rows: repeat(var(--lb-rows, 50), auto); column-gap: 48px; }
+}
+.lb__more {
+  margin-top: 18px; padding: 10px 16px; border: 1px solid var(--sld-line-2); border-radius: var(--sld-r);
+  background: none; color: var(--sld-ink); font: inherit; font-size: 12.5px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; cursor: pointer; transition: transform .16s ease, border-color .16s ease;
+}
+.lb__more:hover { border-color: var(--sld-gold); transform: translateY(-1px); }
+.lb__more:focus-visible { outline: 2px solid var(--sld-gold); outline-offset: 2px; }
+.lb__empty { margin: 0; padding: 22px 0; color: var(--sld-ink-3); font-size: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lb__row, .lb__more { transition: none; }
+  .lb__row:hover, .lb__more:hover { transform: none; }
+}
+@media (max-width: 759px) {
+  .v2-home .hm-leaderboard { padding-block: 44px 52px; }
+  /* One column: ten rows before the expander, not twenty. */
+  .lb:not(.is-open) .lb__row:nth-child(n+11) { display: none; }
+  .lb__name { font-size: 15.5px; }
+  .lb__row.is-podium .lb__name { font-size: 17px; }
+  .lb__level { display: none; }
+}

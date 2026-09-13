@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   adminListCreators, adminCreateCreator, adminSetCreatorStatus, CREATOR_STATUSES,
-  adminGetProgramSettings, adminSetProgramSettings,
+  adminGetProgramSettings, adminSetProgramSettings, adminCreatorStandings,
 } from '../../lib/creatorApi.js';
+import { money2 } from '../../lib/format.js';
 
 // ============================================================
 // ADMIN — Creator Program › Creators
@@ -37,11 +38,16 @@ export default function Creators() {
   const [filter, setFilter] = useState('all');
   const [program, setProgram] = useState(null);
   const [savingProgram, setSavingProgram] = useState(false);
+  // creator_id → { level, rank_name, rate, lifetime_confirmed_sales, pending_commission, confirmed_commission }
+  const [standings, setStandings] = useState({});
 
   async function load() {
     try {
       setRows(await adminListCreators());
       setErr('');
+      // Standings are derived by the database on every call; a failure here
+      // (0031 not applied) leaves the columns blank rather than the page broken.
+      adminCreatorStandings().then(setStandings).catch(() => setStandings({}));
     } catch (e) {
       setErr(e.message || String(e));
     } finally {
@@ -131,7 +137,7 @@ export default function Creators() {
                 defaultValue={program.default_commission_rate}
                 onBlur={(e) => saveProgram({ ...program, default_commission_rate: e.target.value })}
               />
-              <p className="hint">Applied to new applicants. Stored for Part 2 — no commission is calculated yet.</p>
+              <p className="hint">Applied to new applicants as their floor rate. The tier ladder (Creator Tiers &amp; Rewards) raises the rate as confirmed sales grow.</p>
             </div>
             <div className="field">
               <label className="label">Default attribution window (days)</label>
@@ -179,7 +185,7 @@ export default function Creators() {
             <div className="field">
               <label className="label">Commission rate (%)</label>
               <input className="input" type="number" min="0" max="100" step="0.5" value={form.default_commission_rate} onChange={(e) => set('default_commission_rate', e.target.value)} />
-              <p className="hint">Stored for Part 2. No commission is calculated yet.</p>
+              <p className="hint">A floor. The tier ladder raises it as confirmed sales grow; a campaign override still wins.</p>
             </div>
             <div className="field">
               <label className="label">Attribution window (days)</label>
@@ -230,8 +236,12 @@ export default function Creators() {
           <table className="adm-table">
             <thead>
               <tr>
-                <th>Creator</th><th>Code</th><th className="adm-items__amt">Commission</th>
-                <th className="adm-items__qty">Window</th><th>Status</th><th></th>
+                <th>Creator</th><th>Code</th><th>Tier</th>
+                <th className="adm-items__amt">Lifetime confirmed</th>
+                <th className="adm-items__amt">Pending</th>
+                <th className="adm-items__amt">Confirmed</th>
+                <th className="adm-items__amt">Rate</th>
+                <th>Status</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -242,8 +252,11 @@ export default function Creators() {
                     <span className="hint" style={{ display: 'block' }}>{r.email}</span>
                   </td>
                   <td className="adm-mono">{r.creator_code}</td>
-                  <td className="adm-items__amt">{Number(r.default_commission_rate)}%</td>
-                  <td className="adm-items__qty">{r.default_attribution_window_days}d</td>
+                  <td>{standings[r.id] ? <><strong>{standings[r.id].rank_name}</strong><span className="hint" style={{ display: 'block' }}>Level {standings[r.id].level}</span></> : <span className="hint">—</span>}</td>
+                  <td className="adm-items__amt">{standings[r.id] ? money2(standings[r.id].lifetime_confirmed_sales) : '—'}</td>
+                  <td className="adm-items__amt">{standings[r.id] ? money2(standings[r.id].pending_commission) : '—'}</td>
+                  <td className="adm-items__amt">{standings[r.id] ? money2(standings[r.id].confirmed_commission) : '—'}</td>
+                  <td className="adm-items__amt">{standings[r.id] ? `${Number(standings[r.id].rate)}%` : `${Number(r.default_commission_rate)}%`}<span className="hint" style={{ display: 'block' }}>floor {Number(r.default_commission_rate)}%</span></td>
                   <td><span className={`badge ${STATUS_BADGE[r.status] || 'badge-soft'}`}>{r.status}</span></td>
                   <td>
                     <div className="adm-rowacts">

@@ -7,6 +7,7 @@ import {
   claimCreatorAccount, getMyCreator, getMyCampaigns, getMyLinks, buildTrackingUrl,
   getMyCreatorAnalytics,
   getMyCreatorEarnings, getMyKyc, submitKyc, uploadKycDocument, requestPayout, getMyPayouts,
+  getMyCreatorStanding, getMyCreatorRewards, claimLevelReward, getCreatorLeaderboard,
   getCreatorTerms, termsArePublished, getMyTermsAcceptance, acceptCreatorTerms,
 } from '../lib/creatorApi.js';
 import { money2 } from '../lib/format.js';
@@ -14,6 +15,7 @@ import CreatorEarnings from '../components/creator/CreatorEarnings.jsx';
 import CreatorHowItWorks from '../components/creator/CreatorHowItWorks.jsx';
 import { Section, Empty, Pill, Step, Band, Cell, Balance, IdBar } from '../components/creator/CreatorUI.jsx';
 import CreatorPayouts from '../components/creator/CreatorPayouts.jsx';
+import CreatorTier, { TierStanding, WithdrawalsNotice } from '../components/creator/CreatorTier.jsx';
 import CreatorTermsPanel, { TermsUpdatedLine } from '../components/creator/CreatorTermsPanel.jsx';
 
 // ============================================================
@@ -35,6 +37,7 @@ const NAV = [
   { id: 'links', label: 'Links', icon: 'externalLink' },
   { id: 'analytics', label: 'Analytics', icon: 'award' },
   { id: 'earnings', label: 'Earnings', icon: 'crown' },
+  { id: 'tier', label: 'My tier', icon: 'star' },
   { id: 'payouts', label: 'Payouts', icon: 'card' },
   { id: 'how-it-works', label: 'How you earn', icon: 'circleAlert' },
   { id: 'profile', label: 'Profile', icon: 'user' },
@@ -123,6 +126,9 @@ export default function CreatorPortal() {
   const [earnings, setEarnings] = useState(null);
   const [kyc, setKyc] = useState(null);
   const [payouts, setPayouts] = useState([]);
+  const [standing, setStanding] = useState(null);
+  const [rewards, setRewards] = useState(null);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [terms, setTerms] = useState(null);
   const [termsAccepted, setTermsAccepted] = useState(null);   // null = unknown
   const [acceptingTerms, setAcceptingTerms] = useState(false);
@@ -131,10 +137,14 @@ export default function CreatorPortal() {
   // Reload just the money surfaces (earnings buckets, KYC, payout history)
   // after an action, without re-fetching the whole portal.
   const reloadMoney = useCallback(async () => {
-    const [en, ky, po] = await Promise.all([getMyCreatorEarnings(), getMyKyc(), getMyPayouts()]);
+    const [en, ky, po, st, rw] = await Promise.all([
+      getMyCreatorEarnings(), getMyKyc(), getMyPayouts(), getMyCreatorStanding(), getMyCreatorRewards(),
+    ]);
     setEarnings(en && en.ok ? en : null);
     setKyc(ky || null);
     setPayouts(Array.isArray(po) ? po : []);
+    setStanding(st && st.ok ? st : null);
+    setRewards(rw && rw.ok ? rw : null);
   }, []);
 
   // Terms load separately from the portal's own data. They are public-read
@@ -172,9 +182,10 @@ export default function CreatorPortal() {
     const me = await getMyCreator();
     if (!me) { setState('none'); return; }
     setCreator(me);
-    const [cs, ls, an, en, ky, po] = await Promise.all([
+    const [cs, ls, an, en, ky, po, st, rw, lb] = await Promise.all([
       getMyCampaigns(me.id), getMyLinks(me.id), getMyCreatorAnalytics(),
       getMyCreatorEarnings(), getMyKyc(), getMyPayouts(),
+      getMyCreatorStanding(), getMyCreatorRewards(), getCreatorLeaderboard(),
     ]);
     setCampaigns(cs);
     setLinks(ls);
@@ -182,6 +193,9 @@ export default function CreatorPortal() {
     setEarnings(en && en.ok ? en : null);
     setKyc(ky || null);
     setPayouts(Array.isArray(po) ? po : []);
+    setStanding(st && st.ok ? st : null);
+    setRewards(rw && rw.ok ? rw : null);
+    setLeaderboard(Array.isArray(lb) ? lb : []);
     setState('ready');
   }, []);
 
@@ -514,9 +528,22 @@ export default function CreatorPortal() {
 
           {tab === 'earnings' && (
             <>
+              <WithdrawalsNotice open={!!standing?.withdrawals_open} />
               <CreatorEarnings creator={creator} earnings={earnings} />
+              <TierStanding standing={standing} compact holdDays={Number(earnings?.settlement_hold_days ?? 7)} />
               <CreatorHowItWorks creator={creator} earnings={earnings} />
             </>
+          )}
+
+          {tab === 'tier' && (
+            <CreatorTier
+              standing={standing}
+              rewards={rewards}
+              leaderboard={leaderboard}
+              holdDays={Number(earnings?.settlement_hold_days ?? 7)}
+              onClaim={claimLevelReward}
+              onChanged={reloadMoney}
+            />
           )}
 
           {tab === 'how-it-works' && (
@@ -529,6 +556,7 @@ export default function CreatorPortal() {
               earnings={earnings}
               kyc={kyc}
               payouts={payouts}
+              withdrawalsOpen={!!standing?.withdrawals_open}
               onSubmitKyc={submitKyc}
               onUploadKycDocument={({ kind, file }) => uploadKycDocument({ creatorId: creator.id, kind, file })}
               onRequestPayout={requestPayout}

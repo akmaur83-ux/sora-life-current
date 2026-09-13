@@ -5,6 +5,7 @@ import EditorialCard from '../components/EditorialCard.jsx';
 import StoryBlock from '../components/StoryBlock.jsx';
 import Newsletter from '../components/Newsletter.jsx';
 import HomeOffers from '../components/promo/HomeOffers.jsx';
+import HomeLeaderboard from '../components/HomeLeaderboard.jsx';
 import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
@@ -125,6 +126,10 @@ export default function Home() {
       {/* 11 · Newsletter + Footer + tab bar are existing components, unchanged
              in Phase 1 */}
       <Newsletter />
+
+      {/* 12 · CREATOR LEADERBOARD — the dark block that closes the page and
+             runs into the footer. Absent until a creator has confirmed sales. */}
+      <HomeLeaderboard />
     </div>
   );
 }

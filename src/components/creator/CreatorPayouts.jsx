@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Icon from '../Icon.jsx';
 import { money2 } from '../../lib/format.js';
+import { WithdrawalsNotice } from './CreatorTier.jsx';
 import {
   KYC_DOCUMENT_ACCEPT, KYC_DOCUMENT_KINDS, KYC_DOCUMENT_MAX_BYTES,
   friendlyKycDocumentError, kycDocumentState, validateKycDocumentMetadata,
@@ -41,7 +42,7 @@ const KYC_BADGE = {
   needs_update: { tone: 'bad', label: 'Needs update' },
 };
 
-export default function CreatorPayouts({ creator, earnings, kyc, payouts, onSubmitKyc, onUploadKycDocument, onRequestPayout, onChanged }) {
+export default function CreatorPayouts({ creator, earnings, kyc, payouts, withdrawalsOpen = false, onSubmitKyc, onUploadKycDocument, onRequestPayout, onChanged }) {
   const status = kyc?.identity_status || 'not_started';
   const kycVerified = status === 'verified';
 
@@ -53,12 +54,15 @@ export default function CreatorPayouts({ creator, earnings, kyc, payouts, onSubm
         reviews and pays every request manually — money is never released automatically.
       </p>
 
+      <WithdrawalsNotice open={withdrawalsOpen} />
+
       <KycSection creator={creator} kyc={kyc} status={status} onSubmitKyc={onSubmitKyc} onUploadKycDocument={onUploadKycDocument} onChanged={onChanged} />
 
       <PayoutSection
         earnings={earnings}
         payouts={payouts}
         kycVerified={kycVerified}
+        withdrawalsOpen={withdrawalsOpen}
         onRequestPayout={onRequestPayout}
         onChanged={onChanged}
       />
@@ -359,7 +363,7 @@ function KycForm({ kyc, onSubmitKyc, onDone, onCancel }) {
 // ---------------------------------------------------------------
 // Payout window + request
 // ---------------------------------------------------------------
-function PayoutSection({ earnings, payouts, kycVerified, onRequestPayout, onChanged }) {
+function PayoutSection({ earnings, payouts, kycVerified, withdrawalsOpen = false, onRequestPayout, onChanged }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null); // {tone, text}
 
@@ -386,7 +390,13 @@ function PayoutSection({ earnings, payouts, kycVerified, onRequestPayout, onChan
 
   // ---- Banner state machine ----
   let banner;
-  if (!kycVerified) {
+  if (!withdrawalsOpen) {
+    banner = (
+      <Banner tone="warn" icon="lock"
+        title="Withdrawals open later"
+        body="Your commission keeps accruing. Payout requests open once SORA LIFE’s tax registration is complete — you’ll see the request button here the day they do." />
+    );
+  } else if (!kycVerified) {
     banner = (
       <Banner tone="warn" icon="shield"
         title="Verify your details to withdraw"
@@ -522,6 +532,7 @@ function friendlyKycError(reason) {
 
 function friendlyPayoutError(reason, { minPayout, payoutDay }) {
   return ({
+    withdrawals_closed: 'Withdrawals aren’t open yet. Your commission is safe and accruing; requests open once our tax registration is complete.',
     kyc_required: 'Your KYC needs to be verified before you can withdraw.',
     window_closed: `Payouts can only be requested on the ${ordinal(payoutDay)} of the month.`,
     already_requested: 'You’ve already requested a payout this month.',

@@ -342,7 +342,9 @@ await test('the audit list is read from creator_kyc_audit for one creator, newes
 console.log('\n— Portal: the rejection reason and document rows (SSR) —');
 // ============================================================
 
-const CreatorPayouts = component('../src/components/creator/CreatorPayouts.jsx', 'CreatorPayouts', { Icon, money2, ...rules });
+// WithdrawalsNotice (0031) is a sibling import; this suite is about KYC, so a
+// stub keeps the markup free of it.
+const CreatorPayouts = component('../src/components/creator/CreatorPayouts.jsx', 'CreatorPayouts', { Icon, money2, WithdrawalsNotice: () => null, ...rules });
 const portal = (kyc, extra = {}) => renderToStaticMarkup(h(CreatorPayouts, {
   creator: { id: CID }, earnings: { available: 0, payout_day: 1, min_payout: 500 }, kyc, payouts: [],
   onSubmitKyc: async () => ({ ok: true }), onUploadKycDocument: async () => ({ ok: true }), onRequestPayout: async () => ({ ok: true }), onChanged: async () => {},

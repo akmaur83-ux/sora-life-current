@@ -67,6 +67,8 @@ const STOREFRONT = [
   'src/styles/hero-cta.css',
   'src/styles/v2-home-marketplace.css',
   'src/styles/v2-home-discovery.css',
+  // The dark leaderboard block and the .sl-dark tokens the portal reuses.
+  'src/styles/leaderboard.css',
   'src/styles/category-spotlight.css',
   'src/styles/storefront-motion.css',
   'src/styles/storefront-background.css',
@@ -80,6 +82,7 @@ const DEFERRED = [
   'src/styles/passport.css',
   'src/styles/creator.css',
   'src/styles/creator-expressive.css',
+  'src/styles/creator-tier.css',
 ];
 
 function bundle(files, outFile, label) {

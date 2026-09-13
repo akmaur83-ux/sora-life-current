@@ -14,6 +14,7 @@ const NAV = [
   { to: '/admin/attribution', label: 'Attribution' },
   { to: '/admin/kyc', label: 'Creator KYC' },
   { to: '/admin/payouts', label: 'Creator Payouts' },
+  { to: '/admin/creator-tiers', label: 'Creator Tiers & Rewards' },
   { to: '/admin/categories', label: 'Categories' },
   { to: '/admin/hero-slides', label: 'Hero Slides' },
   { to: '/admin/promotions', label: 'Promotions' },
