@@ -23,6 +23,7 @@ const earnings = read('../src/components/creator/CreatorEarnings.jsx');
 const payouts = read('../src/components/creator/CreatorPayouts.jsx');
 const hiw = read('../src/components/creator/CreatorHowItWorks.jsx');
 const css = read('../src/styles/creator-expressive.css');
+const indexHtml = read('../index.html');
 
 let passed = 0, failed = 0, current = '(startup)';
 function fatal(kind, err) {
@@ -162,12 +163,9 @@ await test('all five meanings have a tone class', () => {
 });
 
 await test('the stylesheet is loaded after creator.css so it layers', () => {
-  // Creator styles now ship in the deferred CSS bundle, not individual links.
-  const build = readFileSync('build/build-css.mjs', 'utf8');
-  const deferred = build.slice(build.indexOf('const DEFERRED'), build.indexOf('function bundle'));
-  const base = deferred.indexOf('styles/creator.css');
-  const layer = deferred.indexOf('styles/creator-expressive.css');
-  assert.ok(base > -1 && layer > -1, 'both stylesheets must be bundled');
+  const base = indexHtml.indexOf('styles/creator.css');
+  const layer = indexHtml.indexOf('styles/creator-expressive.css');
+  assert.ok(base > -1 && layer > -1, 'both stylesheets must be linked');
   assert.ok(layer > base, 'the expressive layer must load second');
 });
 

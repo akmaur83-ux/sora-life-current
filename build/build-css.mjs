@@ -85,8 +85,6 @@ const DEFERRED = [
   'src/styles/creator-tier.css',
   // The dark room: re-points every token above and overrides the literals. Last on purpose.
   'src/styles/creator-dark.css',
-  // Creator Studio art direction; isolated from storefront and financial logic.
-  'src/styles/creator-studio.css',
 ];
 
 function bundle(files, outFile, label) {
