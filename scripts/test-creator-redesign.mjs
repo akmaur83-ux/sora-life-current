@@ -144,8 +144,8 @@ await test('the old one-off Bucket component was removed, not left dead', () => 
 
 await test('the portal and the dashboard use the shared primitives', () => {
   const c = js(portal);
-  assert.match(c, /import \{ Empty, Band, Cell, CountUp \} from/);
-  for (const el of ['<Empty', '<Band', '<Cell', '<CreatorDashboard', '<CreatorTierPage', '<CreatorProfilePage']) {
+  assert.match(c, /import \{ Empty \} from/);
+  for (const el of ['<Empty', '<CreatorDashboard', '<CreatorTierPage', '<CreatorProfilePage', '<CreatorAnalyticsPage']) {
     assert.ok(c.includes(el), `portal should use ${el}`);
   }
   const d = js(dashboard);
@@ -215,7 +215,11 @@ await test('the sidebar collapses to a scrolling icon+label strip on mobile, and
 await test('campaign and analytics empty states carry factual editorial labels and ruled rows', () => {
   assert.match(ui, /ck-empty__eyebrow/);
   assert.match(portal, /eyebrow="Campaign status"/);
-  assert.match(portal, /eyebrow="Analytics status"/);
+  // Analytics moved to its own studio page; every panel designs its own zero.
+  const analyticsPage = read('../src/components/creator/CreatorAnalyticsPage.jsx');
+  for (const empty of ['cd-chart__empty', 'ca-share__empty', 'ca-funnel__foot', 'cd-table__empty', 'ca-insights__empty']) {
+    assert.ok(analyticsPage.includes(empty), `analytics page designs its zero: ${empty}`);
+  }
   assert.match(css, /\.ck-empty__eyebrow \{/);
   assert.match(css, /border-top: 2px solid var\(--c-rule-2\)/);
   assert.match(css, /\.ck-empty__points li \{[\s\S]*?border-top: 1px solid var\(--c-rule\)/);

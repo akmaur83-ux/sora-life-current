@@ -197,7 +197,8 @@ await test('only transform and opacity ever animate; reduced motion stills the h
   }
   assert.doesNotMatch(block, /@keyframes|animation:/, 'the profile page has no keyframes of its own');
   const rm = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
-  assert.match(rm.slice(0, rm.indexOf('\n}')), /\.cp-copy:hover, \.crp\.crp--studio \.cp-btn:hover \{ transform: none; \}/);
+  const stilled = rm.slice(0, rm.indexOf('\n}')).match(/^[^\n]*\{ transform: none; \}/m)?.[0] || '';
+  for (const sel of ['.crp.crp--studio .cp-copy:hover', '.crp.crp--studio .cp-btn:hover']) assert.ok(stilled.includes(sel), `${sel} stilled under reduced motion`);
 });
 
 await test('390px is designed, not squeezed: header stacks, caps line goes, cards go one-up, aside goes', () => {

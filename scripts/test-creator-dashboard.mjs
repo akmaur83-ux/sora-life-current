@@ -19,6 +19,7 @@ import * as tiers from '../src/lib/creatorTiers.js';
 import * as rewardRules from '../src/lib/creatorRewards.js';
 import * as kycRules from '../src/lib/kycDocuments.js';
 import * as seriesRules from '../src/lib/creatorSeries.js';
+import * as analyticsRules from '../src/lib/creatorAnalytics.js';
 import * as activityRules from '../src/lib/creatorActivity.js';
 import { money2 } from '../src/lib/format.js';
 import { buildTrackingUrl } from '../src/lib/creatorLinkUtils.js';
@@ -209,6 +210,8 @@ const tierDeps = { Link, Icon, LeaderboardList, money2, CountUp: UI.CountUp, ...
 const T = {};
 for (const n of ['CreatorTier', 'TierStanding', 'WithdrawalsNotice', 'RankBadge']) T[n] = component('src/components/creator/CreatorTier.jsx', n, tierDeps);
 const CreatorDashboard = component('src/components/creator/CreatorDashboard.jsx', 'CreatorDashboard', { Link, Icon, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...tiers, ...seriesRules, ...activityRules });
+const StatCard = component('src/components/creator/CreatorDashboard.jsx', 'StatCard', { Link, Icon, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...tiers, ...seriesRules, ...activityRules });
+const CreatorAnalyticsPage = component('src/components/creator/CreatorAnalyticsPage.jsx', 'CreatorAnalyticsPage', { Link, Icon, StatCard, money2, ...seriesRules, ...analyticsRules });
 const RewardChooser = component('src/components/creator/CreatorTier.jsx', 'RewardChooser', tierDeps);
 const RewardHistory = component('src/components/creator/CreatorTier.jsx', 'RewardHistory', tierDeps);
 const CreatorTierPage = component('src/components/creator/CreatorTierPage.jsx', 'CreatorTierPage', { Link, Icon, LeaderboardList, CountUp: UI.CountUp, RewardChooser, RewardHistory, money2, ...tiers, ...rewardRules, ...seriesRules });
@@ -228,7 +231,7 @@ const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPort
   getMyCreatorAnalytics: noop, getMyCreatorEarnings: noop, getMyKyc: noop, submitKyc: noop, uploadKycDocument: noop, requestPayout: noop,
   getMyPayouts: async () => [], getMyCreatorStanding: noop, getMyCreatorRewards: noop, claimLevelReward: noop, getCreatorLeaderboard: async () => [], getMyActivitySeries: noop, getMyRecentClicks: async () => [],
   getCreatorTerms: async () => null, termsArePublished: () => false, getMyTermsAcceptance: async () => null, acceptCreatorTerms: noop,
-  money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, ...T, rankSlot: tiers.rankSlot, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, CreatorProfilePage, initialsOf, getLevelRewardsCatalog: async () => [],
+  money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, ...T, rankSlot: tiers.rankSlot, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, CreatorProfilePage, initialsOf, CreatorAnalyticsPage, getLevelRewardsCatalog: async () => [],
 });
 
 const NOW = '2026-09-13T10:30:00+05:30';

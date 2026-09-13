@@ -85,7 +85,7 @@ async function audit(file) {
 }
 
 let failed = 0;
-for (const name of ['portal-dashboard', 'portal-dashboard-reference', 'portal-earnings', 'portal-analytics', 'portal-tier', 'portal-profile', 'portal-profile-reference', 'portal-dashboard-empty', 'portal-earnings-empty', 'home-leaderboard']) {
+for (const name of ['portal-dashboard', 'portal-dashboard-reference', 'portal-earnings', 'portal-analytics', 'portal-analytics-reference', 'portal-analytics-empty', 'portal-tier', 'portal-profile', 'portal-profile-reference', 'portal-dashboard-empty', 'portal-earnings-empty', 'home-leaderboard']) {
   const file = join(DIR, `${name}.html`);
   if (!existsSync(file)) { console.log(`  SKIP  ${name} — run scripts/ssr-portal-shots.mjs first`); failed++; continue; }
   const r = await audit(file);

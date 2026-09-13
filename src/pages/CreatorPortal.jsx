@@ -11,15 +11,15 @@ import {
   getMyCreatorStanding, getMyCreatorRewards, claimLevelReward, getCreatorLeaderboard, getMyActivitySeries, getMyRecentClicks, getLevelRewardsCatalog,
   getCreatorTerms, termsArePublished, getMyTermsAcceptance, acceptCreatorTerms,
 } from '../lib/creatorApi.js';
-import { money2 } from '../lib/format.js';
 import CreatorEarnings from '../components/creator/CreatorEarnings.jsx';
 import CreatorHowItWorks from '../components/creator/CreatorHowItWorks.jsx';
-import { Empty, Band, Cell, CountUp } from '../components/creator/CreatorUI.jsx';
+import { Empty } from '../components/creator/CreatorUI.jsx';
 import CreatorDashboard from '../components/creator/CreatorDashboard.jsx';
 import CreatorPayouts from '../components/creator/CreatorPayouts.jsx';
 import { TierStanding, WithdrawalsNotice } from '../components/creator/CreatorTier.jsx';
 import CreatorTierPage from '../components/creator/CreatorTierPage.jsx';
 import CreatorProfilePage, { initialsOf } from '../components/creator/CreatorProfilePage.jsx';
+import CreatorAnalyticsPage from '../components/creator/CreatorAnalyticsPage.jsx';
 import { rankSlot } from '../lib/creatorTiers.js';
 import { rangeSeries, DEFAULT_RANGE } from '../lib/creatorSeries.js';
 import { buildActivity } from '../lib/creatorActivity.js';
@@ -233,7 +233,6 @@ export default function CreatorPortal({ initial = null }) {
   const rank = rankSlot(standing?.rank);
   const weekly = rangeSeries(seriesByRange['90d'], '90d');
   const dash = rangeSeries(seriesByRange[range], range);
-  const isZero = (v) => !(Number(v) > 0);
   const withdrawalsOpen = !!standing?.withdrawals_open;
   const activity = buildActivity({ creator, clicks: recentClicks, payouts, rewards, kyc, now: initial?.now ? new Date(initial.now) : new Date() });
   const initials = initialsOf(creator.display_name);
@@ -389,58 +388,17 @@ export default function CreatorPortal({ initial = null }) {
           )}
 
           {tab === 'analytics' && (
-            <>
-              <h1 className="serif crp__h1">My analytics</h1>
-              <p className="crp__lede">Attributed activity from your links. Figures update as orders qualify.</p>
-              <Band>
-                <Cell label="Link clicks" value={<CountUp value={analytics?.clicks ?? 0} format={(n) => String(Math.round(n))} />} tone="info" spark={weekly.clicks} zero={isZero(analytics?.clicks)}
-                  hint="Visits that arrived through one of your links." />
-                <Cell label="Attributed orders" value={<CountUp value={analytics?.attributed_orders ?? 0} format={(n) => String(Math.round(n))} />} tone="info" spark={weekly.orders} zero={isZero(analytics?.attributed_orders)}
-                  hint="Orders matched to you inside your attribution window." />
-                <Cell label="Products sold" value={<CountUp value={analytics?.products_sold ?? 0} format={(n) => String(Math.round(n))} />} tone="info" spark={weekly.products} zero={isZero(analytics?.products_sold)}
-                  hint="Individual units across your attributed orders." />
-                <Cell label="Attributed sales" value={<CountUp value={analytics?.attributed_sales ?? 0} format={money2} />} tone="ok" spark={weekly.sales} zero={isZero(analytics?.attributed_sales)}
-                  hint="Eligible sale value, before commission." />
-              </Band>
-              <p className="ck-band__caption">{weekly.available ? 'Sparklines show the last 12 weeks.' : 'Sparklines fill in week by week as activity is recorded.'}</p>
-
-              {Array.isArray(analytics?.top_products) && analytics.top_products.length > 0 ? (
-                <div className="crp__panel" style={{ marginTop: 'var(--sp-5)' }}>
-                  <h2 style={{ marginTop: 0, fontSize: 15 }}>Top products</h2>
-                  <div className="crp__list">
-                    {analytics.top_products.map((p, i) => (
-                      <article key={i} className="crp__item">
-                        <div className="crp__item-main"><h3>{p.name || 'Product'}</h3>
-                          <p className="crp__meta">{p.qty} sold</p></div>
-                        <span className="crp__stat-v is-ok">{money2(p.sales)}</span>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <Empty
-                  tone="info"
-                  icon="award"
-                  eyebrow="Analytics status"
-                  title="No attributed orders yet"
-                  body="These figures fill in on their own once someone shops through your link. Nothing here is estimated — every number is a real, matched order."
-                  points={[
-                    'A visit through your link is recorded immediately',
-                    'It stays attributed to you for your full attribution window',
-                    'Once that order is paid, it appears here and commission is created',
-                  ]}
-                >
-                  <Link to="/creator/how-it-works" className="btn btn-light">How earning works</Link>
-                </Empty>
-              )}
-
-              <div className="crp__notice" style={{ marginTop: 'var(--sp-5)' }}>
-                <strong>These figures are attributed sales, not commission.</strong> Your commission is in{' '}
-                <Link to="/creator/earnings">My earnings</Link>, and you can request a payout from{' '}
-                <Link to="/creator/payouts">Payouts</Link> once it clears. We never share your shoppers’
-                personal details with you.
-              </div>
-            </>
+            <CreatorAnalyticsPage
+              creator={creator}
+              analytics={analytics}
+              series={dash}
+              range={range}
+              onRange={onRange}
+              seriesLoading={seriesLoading}
+              links={links}
+              campaigns={campaigns}
+              buildUrl={buildTrackingUrl}
+            />
           )}
 
           {tab === 'earnings' && (

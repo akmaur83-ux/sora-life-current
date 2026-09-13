@@ -27,6 +27,7 @@ import * as kycRules from '../src/lib/kycDocuments.js';
 import { money2 } from '../src/lib/format.js';
 import { buildTrackingUrl } from '../src/lib/creatorLinkUtils.js';
 import * as seriesRules from '../src/lib/creatorSeries.js';
+import * as analyticsRules from '../src/lib/creatorAnalytics.js';
 import * as activityRules from '../src/lib/creatorActivity.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -66,6 +67,8 @@ const TierStanding = component('src/components/creator/CreatorTier.jsx', 'TierSt
 const WithdrawalsNotice = component('src/components/creator/CreatorTier.jsx', 'WithdrawalsNotice', tierDeps);
 const RankBadge = component('src/components/creator/CreatorTier.jsx', 'RankBadge', tierDeps);
 const CreatorDashboard = component('src/components/creator/CreatorDashboard.jsx', 'CreatorDashboard', { Link, Icon, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...tiers, ...seriesRules, ...activityRules });
+const StatCard = component('src/components/creator/CreatorDashboard.jsx', 'StatCard', { Link, Icon, CountUp: UI.CountUp, Sparkline: UI.Sparkline, money2, ...tiers, ...seriesRules, ...activityRules });
+const CreatorAnalyticsPage = component('src/components/creator/CreatorAnalyticsPage.jsx', 'CreatorAnalyticsPage', { Link, Icon, StatCard, money2, ...seriesRules, ...analyticsRules });
 const RewardChooser = component('src/components/creator/CreatorTier.jsx', 'RewardChooser', tierDeps);
 const RewardHistory = component('src/components/creator/CreatorTier.jsx', 'RewardHistory', tierDeps);
 const CreatorTierPage = component('src/components/creator/CreatorTierPage.jsx', 'CreatorTierPage', { Link, Icon, LeaderboardList, CountUp: UI.CountUp, RewardChooser, RewardHistory, money2, ...tiers, ...rewardRules, ...seriesRules });
@@ -87,7 +90,7 @@ const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPort
   getMyPayouts: async () => [], getMyCreatorStanding: noop, getMyCreatorRewards: noop, claimLevelReward: noop, getCreatorLeaderboard: async () => [], getMyActivitySeries: noop, getMyRecentClicks: async () => [],
   getCreatorTerms: async () => null, termsArePublished: () => false, getMyTermsAcceptance: async () => null, acceptCreatorTerms: noop,
   money2, CreatorEarnings, CreatorHowItWorks, ...UI, CreatorPayouts, CreatorTier, TierStanding, WithdrawalsNotice, RankBadge,
-  rankSlot: tiers.rankSlot, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, CreatorProfilePage, initialsOf, getLevelRewardsCatalog: async () => [],
+  rankSlot: tiers.rankSlot, ...seriesRules, ...activityRules, CreatorDashboard, CreatorTierPage, CreatorProfilePage, initialsOf, CreatorAnalyticsPage, getLevelRewardsCatalog: async () => [],
 });
 
 // ---- fixtures ---------------------------------------------------------------
@@ -128,7 +131,11 @@ const earnings = {
   ],
   monthly_history: [{ month: '2026-07', commission: 4120.5 }, { month: '2026-08', commission: 6210.75 }, { month: '2026-09', commission: 3868.8 }],
 };
-const analytics = { ok: true, clicks: 1240, attributed_orders: 58, products_sold: 131, attributed_sales: 138420 + 9640, eligible_orders: 55 };
+const analytics = { ok: true, clicks: 1240, attributed_orders: 58, products_sold: 131, attributed_sales: 138420 + 9640, eligible_orders: 55,
+  top_products: [
+    { name: 'Cold-pressed Amla Juice', qty: 41, sales: 56120 }, { name: 'Black Seed Oil', qty: 29, sales: 38640 }, { name: 'Moringa Capsules', qty: 24, sales: 21480 },
+    { name: 'Ashwagandha Gummies', qty: 18, sales: 15840 }, { name: 'Turmeric Latte Mix', qty: 11, sales: 9360 }, { name: 'Herbal Sleep Tea', qty: 8, sales: 6620 },
+  ] };
 const WEEKS = ['2026-06-15', '2026-06-22', '2026-06-29', '2026-07-06', '2026-07-13', '2026-07-20', '2026-07-27', '2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31', '2026-09-07'];
 const series90 = { ok: true, range: '90d', unit: 'week', series: WEEKS.map((at, i) => ({
   at, clicks: [40, 62, 80, 74, 91, 120, 98, 134, 150, 121, 168, 142, 100][i], orders: [1, 2, 4, 3, 5, 6, 4, 7, 8, 6, 9, 7, 3][i],
@@ -150,7 +157,8 @@ const NOW = '2026-09-13T10:30:00+05:30';
 const recentClicks = ['2026-09-13T08:20:00+05:30', '2026-09-13T07:05:00+05:30', '2026-09-12T19:40:00+05:30'];
 const initial = {
   creator, campaigns: [{ id: 'cp1', name: 'Diwali edit', campaign_code: 'DIWALI', status: 'active', commission_rate_override: null, start_at: '2026-10-01', end_at: '2026-11-15' }],
-  links: [{ id: 'l1', public_code: 'AARAV', label: 'Default', destination_type: 'home', destination_path: '/', status: 'active', created_at: '2026-03-02T00:00:00Z' }],
+  links: [{ id: 'l1', public_code: 'AARAV', label: 'Default', destination_type: 'home', destination_path: '/', status: 'active', created_at: '2026-03-02T00:00:00Z' },
+    { id: 'l2', public_code: 'DIW7K', label: 'Diwali edit', campaign_id: 'cp1', destination_type: 'collection', destination_path: '/collections/diwali', status: 'active', created_at: '2026-09-28T00:00:00Z' }],
   analytics, earnings, kyc: { identity_status: 'verified', verified_at: '2026-04-02T00:00:00Z', submitted_at: '2026-03-30T00:00:00Z' }, payouts: [], standing, rewards, leaderboard, terms: null,
   seriesByRange: { '7d': series7, '90d': series90 }, range: '7d', recentClicks, now: NOW, hour: 10,
   catalog: [
@@ -191,6 +199,8 @@ const pages = {
   'portal-dashboard-reference': page('SSR — portal dashboard (the mockup account)', renderToStaticMarkup(h(portalFor('dashboard'), { initial: refInitial })), deferredCss),
   'portal-earnings': page('SSR — portal earnings', renderToStaticMarkup(h(portalFor('earnings'), { initial })), deferredCss),
   'portal-analytics': page('SSR — portal analytics', renderToStaticMarkup(h(portalFor('analytics'), { initial })), deferredCss),
+  'portal-analytics-reference': page('SSR — portal analytics (the mockup account)', renderToStaticMarkup(h(portalFor('analytics'), { initial: refInitial })), deferredCss),
+  'portal-analytics-empty': page('SSR — portal analytics, empty', renderToStaticMarkup(h(portalFor('analytics'), { initial: emptyInitial })), deferredCss),
   'portal-tier': page('SSR — portal tier', renderToStaticMarkup(h(portalFor('tier'), { initial })), deferredCss),
   'portal-tier-reference': page('SSR — portal tier (the mockup account)', renderToStaticMarkup(h(portalFor('tier'), { initial: refInitial })), deferredCss),
   'portal-profile': page('SSR — portal profile', renderToStaticMarkup(h(portalFor('profile'), { initial })), deferredCss),
