@@ -34896,6 +34896,12 @@ function rankSlot(rankName) {
   return RANK_SLOTS[key] || 'neutral';
 }
 
+// Supplied rank badges, one per rank, at /img/rank-<slug>.webp. A rank with no
+// entry renders the CSS rosette. Add the file and the line here to light it up.
+const RANK_BADGES = Object.freeze({
+  rise: '/img/rank-rise.webp'
+});
+
 // Rupee amounts on the tier surfaces read in Indian grouping with no paise:
 // thresholds are round numbers and progress copy should not look like a bill.
 function rupees(n) {
@@ -35961,6 +35967,20 @@ async function getMyCreatorRewards() {
   return data || {
     ok: false
   };
+}
+// The active reward options at every level — what is on offer at the
+// milestones ahead. Readable by any creator (RLS, 0031); nothing personal.
+async function getLevelRewardsCatalog() {
+  const {
+    data,
+    error
+  } = await supabase.from('creator_level_rewards').select('id,level,option_index,label,description,reward_type,value').eq('is_active', true).order('level', {
+    ascending: true
+  }).order('option_index', {
+    ascending: true
+  });
+  if (error) return [];
+  return data || [];
 }
 async function claimLevelReward(level, rewardId) {
   const {
@@ -51688,6 +51708,68 @@ function donutGeometry(parts, {
   };
 }
 
+// ---- Bar chart geometry ------------------------------------------------------------
+// One bar per bucket, a nice-number axis with compact ₹ labels, the last bar
+// flagged as "now". All-zero → every bar at zero height (drawn 2px tall by
+// the component so the rhythm still reads), axis 0–4.
+function barChartGeometry(points, {
+  width = 360,
+  height = 160,
+  padL = 34,
+  padR = 6,
+  padT = 10,
+  padB = 24,
+  gap = 0.35,
+  minMax = 4
+} = {}) {
+  const vals = (Array.isArray(points) ? points : []).map(num);
+  const n = vals.length;
+  const innerW = width - padL - padR;
+  const innerH = height - padT - padB;
+  const rawMax = Math.max(0, ...vals);
+  const yMax = Math.max(minMax, niceMax(rawMax));
+  const baseY = padT + innerH;
+  const slot = n > 0 ? innerW / n : innerW;
+  const w = Math.max(2, slot * (1 - gap));
+  const bars = vals.map((v, i) => {
+    const hgt = yMax === 0 ? 0 : v / yMax * innerH;
+    return {
+      v,
+      x: r1(padL + i * slot + (slot - w) / 2),
+      y: r1(baseY - hgt),
+      w: r1(w),
+      h: r1(hgt)
+    };
+  });
+  const ticks = [0, 0.5, 1].map(f => ({
+    v: yMax * f,
+    y: r1(baseY - f * innerH),
+    label: compactRupees(yMax * f)
+  }));
+  return {
+    width,
+    height,
+    padL,
+    padR,
+    padT,
+    padB,
+    n,
+    yMax,
+    baseY,
+    bars,
+    ticks,
+    empty: rawMax === 0
+  };
+}
+function compactRupees(v) {
+  const n = Math.max(0, num(v));
+  if (n >= 10000000) return `₹${trim(n / 10000000)}Cr`;
+  if (n >= 100000) return `₹${trim(n / 100000)}L`;
+  if (n >= 1000) return `₹${trim(n / 1000)}k`;
+  return `₹${Math.round(n)}`;
+}
+const trim = x => (Math.round(x * 10) / 10).toString().replace(/\.0$/, '');
+
 const TONES = ['ok', 'hold', 'info', 'brand', 'bad', 'neutral'];
 const toneClass = tone => `ck-tone-${TONES.includes(tone) ? tone : 'neutral'}`;
 
@@ -52489,7 +52571,7 @@ function buildActivity({
   }));
 }
 
-const isZero = v => !(Number(v) > 0);
+const isZero$1 = v => !(Number(v) > 0);
 const countFmt = n => String(Math.round(n));
 
 // ---------------------------------------------------------------
@@ -52575,7 +52657,7 @@ function StatCard({
   tone = 'info',
   money = false
 }) {
-  const zero = isZero(value);
+  const zero = isZero$1(value);
   const t = trendOf || {
     dir: 'none',
     label: '—'
@@ -52727,7 +52809,7 @@ function PerformanceOverview({
         const v = series.totals?.[c.key] ?? 0;
         const t = trend(v, series.previous ? series.previous[c.key] : null);
         return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: `cd-metric${isZero(v) ? ' is-zero' : ''}`,
+          className: `cd-metric${isZero$1(v) ? ' is-zero' : ''}`,
           "data-tone": c.tone,
           children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             className: "cd-metric__label",
@@ -52999,7 +53081,7 @@ function EarningsBreakdown({
       }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
         className: "cd-earn__legend",
         children: parts.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-          className: isZero(p.value) ? 'is-zero' : '',
+          className: isZero$1(p.value) ? 'is-zero' : '',
           children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
               className: `cd-dot is-${p.tone}`,
@@ -53080,7 +53162,7 @@ function RecentActivity({
 // ---------------------------------------------------------------
 // Tier progress
 // ---------------------------------------------------------------
-function RankMedallion({
+function RankMedallion$1({
   rank,
   size = 80
 }) {
@@ -53142,7 +53224,7 @@ function TierProgress({
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "cd-tier__now",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(RankMedallion, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(RankMedallion$1, {
         rank: standing.rank
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
@@ -53269,7 +53351,7 @@ function TopCampaigns({
               children: available ? 'No link activity yet.' : 'Campaign figures appear here once activity is recorded.'
             })
           }) : rows.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
-            className: isZero(r.clicks) && isZero(r.sales) ? 'is-zero' : '',
+            className: isZero$1(r.clicks) && isZero$1(r.sales) ? 'is-zero' : '',
             children: [/*#__PURE__*/jsxRuntimeExports.jsxs("td", {
               children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
                 children: r.label
@@ -53622,58 +53704,6 @@ function TierStanding({
 }
 
 // ---------------------------------------------------------------
-// Ladder — every level, the current one marked.
-// ---------------------------------------------------------------
-function TierLadder({
-  standing
-}) {
-  const ladder = Array.isArray(standing?.ladder) ? standing.ladder : [];
-  if (ladder.length === 0) return null;
-  const current = Number(standing.level);
-  const top = ladder[ladder.length - 1];
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: "crp__panel ctier-ladder",
-    "aria-label": "Tier ladder",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-      className: "crp__panel-h",
-      children: "How the ladder works"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: "crp__meta",
-      children: "Your rate is set by confirmed lifetime sales through your links. It applies to every sale after you cross a threshold \u2014 earlier sales keep the rate they were recorded at."
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
-      className: "ctier-ladder__list",
-      children: ladder.map(l => {
-        const lv = Number(l.level);
-        const state = lv === current ? 'is-current' : lv < current ? 'is-done' : '';
-        return /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-          className: `ctier-ladder__row ${state}`,
-          "data-rank": rankSlot(l.rank),
-          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-            className: "ctier-ladder__lv",
-            children: ["L", lv]
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-            className: "ctier-ladder__rank",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              className: "ctier-ladder__dot",
-              "aria-hidden": "true"
-            }), l.rank]
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            className: "ctier-ladder__th",
-            children: rupees(l.threshold)
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-            className: "ctier-ladder__rate",
-            children: [Number(l.rate), "%"]
-          })]
-        }, lv);
-      })
-    }), top && standing.beyond_step > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "crp__foot-note",
-      children: ["Beyond Level ", top.level, ": a new level every ", rupees(standing.beyond_step), " in confirmed sales, at ", Number(top.rate), "%."]
-    })]
-  });
-}
-
-// ---------------------------------------------------------------
 // Rewards — the three-option chooser for each unlocked level, and history.
 // A level with no options configured is simply not here.
 // ---------------------------------------------------------------
@@ -53828,88 +53858,6 @@ function RewardHistory({
           children: CLAIM_STATUS_LABEL[c.status]
         })]
       }, c.id || c.level))
-    })]
-  });
-}
-
-// ---------------------------------------------------------------
-// Portal leaderboard — the public list, with the creator's own row marked.
-// ---------------------------------------------------------------
-function PortalLeaderboard({
-  rows,
-  standing
-}) {
-  const pos = standing?.leaderboard_position || null;
-  const total = standing?.leaderboard_total || 0;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: "ctier-board sl-dark",
-    "aria-labelledby": "ctier-board-h",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "ctier-board__head",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "ctier__eyebrow",
-        children: "Creator leaderboard"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        className: "ctier-board__h",
-        id: "ctier-board-h",
-        children: pos ? `You’re #${pos} of ${total}` : 'Top creators'
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "ctier-board__copy",
-        children: "Ranked by confirmed sales. The board shows names, ranks and levels only \u2014 your figures stay private."
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(LeaderboardList, {
-      rows: rows,
-      initial: 10,
-      highlightPosition: pos,
-      emptyText: "The board opens with the first confirmed sale."
-    }), pos && pos > 100 && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: "ctier-board__foot",
-      children: "You\u2019re outside the top 100 \u2014 every confirmed sale moves you up."
-    })]
-  });
-}
-
-// ---------------------------------------------------------------
-// The whole tab.
-// ---------------------------------------------------------------
-function CreatorTier({
-  standing,
-  rewards,
-  leaderboard,
-  holdDays = 7,
-  onClaim,
-  onChanged
-}) {
-  const open = !!standing?.withdrawals_open;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-      className: "serif crp__h1",
-      children: "My tier"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: "crp__lede",
-      children: "Your rank is earned on confirmed sales through your own links \u2014 no teams, no referrals. Every level raises your commission on the sales that follow."
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(WithdrawalsNotice, {
-      open: open
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(TierStanding, {
-      standing: standing,
-      holdDays: holdDays
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(RewardChooser, {
-      rewards: rewards,
-      onClaim: onClaim,
-      onChanged: onChanged
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(RewardHistory, {
-      rewards: rewards
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(PortalLeaderboard, {
-      rows: leaderboard,
-      standing: standing
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(TierLadder, {
-      standing: standing
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "crp__foot-note",
-      children: ["Sales count once the order is delivered and the ", holdDays, "-day return window has passed. See ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-        to: "/creator/how-it-works",
-        children: "how you earn"
-      }), "."]
     })]
   });
 }
@@ -54721,6 +54669,707 @@ function friendlyPayoutError(reason, {
   }[reason] || 'Couldn’t submit your payout request. Please try again.';
 }
 
+const isZero = v => !(Number(v) > 0);
+const DISMISS_KEY = 'crp.withdrawals-notice.dismissed';
+
+// ---------------------------------------------------------------
+// Dismissible amber bar. Dismissal lasts the session — the notice is about
+// money, so it returns on the next visit rather than vanishing for good.
+// ---------------------------------------------------------------
+function WithdrawalsBar({
+  open,
+  initiallyDismissed = false
+}) {
+  const [dismissed, setDismissed] = reactExports.useState(initiallyDismissed);
+  reactExports.useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem(DISMISS_KEY) === '1') setDismissed(true);
+    } catch {/* storage unavailable */}
+  }, []);
+  if (open || dismissed) return null;
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      window.sessionStorage.setItem(DISMISS_KEY, '1');
+    } catch {/* fine */}
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "ct-bar",
+    role: "status",
+    "data-withdrawals": "closed",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "ct-bar__ic",
+      "aria-hidden": "true",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "lock",
+        size: 15
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+        children: "Withdrawals aren\u2019t open yet."
+      }), " Your commission is accruing and stays yours; payout requests open once SORA LIFE\u2019s tax registration is complete."]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: "ct-bar__x",
+      onClick: dismiss,
+      "aria-label": "Dismiss for this session",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "x",
+        size: 16
+      })
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Medallion: the supplied badge for this rank, else a CSS rosette.
+// ---------------------------------------------------------------
+function RankMedallion({
+  rank,
+  size = 112
+}) {
+  const slot = rankSlot(rank);
+  const src = RANK_BADGES[slot];
+  if (src) {
+    return /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+      className: "ct-medal ct-medal--img",
+      src: src,
+      width: size,
+      height: size,
+      alt: `${rank} rank badge`,
+      "data-rank": slot,
+      loading: "lazy",
+      decoding: "async"
+    });
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+    className: "ct-medal ct-medal--css",
+    "data-rank": slot,
+    style: {
+      width: size,
+      height: size
+    },
+    role: "img",
+    "aria-label": `${rank} rank`,
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+      viewBox: "0 0 80 80",
+      width: size,
+      height: size,
+      "aria-hidden": "true",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+        className: "ct-medal__halo",
+        cx: "40",
+        cy: "40",
+        r: "38"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+        className: "ct-medal__rosette",
+        d: "M40 10l6.5 5.4 8.3-1.6 3.4 7.8 7.8 3.4-1.6 8.3L70 40l-5.6 6.7 1.6 8.3-7.8 3.4-3.4 7.8-8.3-1.6L40 70l-6.5-5.4-8.3 1.6-3.4-7.8-7.8-3.4 1.6-8.3L10 40l5.6-6.7-1.6-8.3 7.8-3.4 3.4-7.8 8.3 1.6z"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("circle", {
+        className: "ct-medal__inner",
+        cx: "40",
+        cy: "40",
+        r: "17"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+        className: "ct-medal__mark",
+        d: "M40 29l3.2 6.6 7.3 1-5.3 5.1 1.3 7.3-6.5-3.5-6.5 3.5 1.3-7.3-5.3-5.1 7.3-1z"
+      })]
+    })
+  });
+}
+
+// ---------------------------------------------------------------
+// Your current tier
+// ---------------------------------------------------------------
+function CurrentTierCard({
+  standing
+}) {
+  const p = tierProgress(standing);
+  const pct = Math.round(p.fraction * 100);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "ct-panel ct-now",
+    "aria-labelledby": "ct-now-h",
+    "data-rank": rankSlot(standing.rank),
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      className: "ct-panel__h",
+      id: "ct-now-h",
+      children: "Your current tier"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ct-now__body",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(RankMedallion, {
+        rank: standing.rank
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "ct-now__txt",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "ct-now__rankline",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+            className: "ct-now__rank serif",
+            children: standing.rank
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "ct-chip",
+            children: ["Level ", standing.level]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "ct-now__rate",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+            children: [Number(standing.rate), "%"]
+          }), " commission on every new sale"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "ct-now__prog",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: "ct-now__prog-l",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: p.atTop ? 'Top of the ladder' : `Progress to Level ${standing.next_level}`
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+              children: [pct, "%"]
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "cd-bar",
+            role: "progressbar",
+            "aria-valuemin": 0,
+            "aria-valuemax": 100,
+            "aria-valuenow": pct,
+            "aria-label": p.atTop ? 'Top level reached' : `Progress to level ${standing.next_level}`,
+            children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "cd-bar__fill",
+              style: {
+                transform: `scaleX(${p.fraction})`
+              }
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "ct-now__left",
+            children: p.atTop ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+              children: [rupees(standing.lifetime_confirmed_sales), " confirmed \xB7 ", Number(standing.rate), "% on every sale from here"]
+            }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+                children: rupees(p.remaining)
+              }), " more in confirmed sales to reach Level ", standing.next_level, standing.next_rate != null ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+                children: [" \xB7 unlocks ", Number(standing.next_rate), "%"]
+              }) : null]
+            })
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "ct-now__leaf",
+      "aria-hidden": "true"
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Your progression — bars of sales by period, latest in gold
+// ---------------------------------------------------------------
+function ProgressionCard({
+  series
+}) {
+  const points = Array.isArray(series?.sales) ? series.sales : [];
+  // Money axis: never shorter than ₹1,000, so an empty chart reads in rupees.
+  const g = barChartGeometry(points, {
+    width: 360,
+    height: 160,
+    minMax: 1000
+  });
+  const labels = Array.isArray(series?.labels) ? series.labels : [];
+  const every = Math.max(1, Math.ceil(g.n / 6));
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `ct-panel ct-prog${g.empty ? ' is-empty' : ''}`,
+    "aria-labelledby": "ct-prog-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ct-panel__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "ct-panel__h",
+        id: "ct-prog-h",
+        children: "Your progression"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "ct-panel__sub",
+        children: series?.available ? 'Sales attributed to you, by week' : 'Fills in as sales arrive'
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+      className: "ct-bars",
+      viewBox: `0 0 ${g.width} ${g.height}`,
+      role: "img",
+      "aria-label": g.empty ? 'No sales in this period yet' : 'Attributed sales by week, latest week highlighted',
+      children: [g.ticks.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("line", {
+        className: "ct-bars__grid",
+        x1: g.padL,
+        x2: g.width - g.padR,
+        y1: t.y,
+        y2: t.y
+      }, t.v)), g.ticks.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("text", {
+        className: "ct-bars__ytick",
+        x: g.padL - 6,
+        y: t.y + 3.5,
+        textAnchor: "end",
+        children: t.label
+      }, `t${t.v}`)), g.bars.map((b, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("g", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("rect", {
+          className: `ct-bars__bar${i === g.n - 1 ? ' is-now' : ''}${b.h === 0 ? ' is-zero' : ''}`,
+          x: b.x,
+          y: b.y,
+          width: b.w,
+          height: Math.max(b.h, 2),
+          rx: "3"
+        }), (i % every === 0 || i === g.n - 1) && /*#__PURE__*/jsxRuntimeExports.jsx("text", {
+          className: "ct-bars__xtick",
+          x: b.x + b.w / 2,
+          y: g.height - 6,
+          textAnchor: "middle",
+          children: bucketLabel(labels[i], series?.unit)
+        })]
+      }, i))]
+    }), g.empty && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "ct-panel__empty",
+      children: "No attributed sales yet \u2014 each bar fills in as orders arrive through your links."
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Four stat cards
+// ---------------------------------------------------------------
+function TierStats({
+  standing,
+  holdDays = 7
+}) {
+  const cards = [{
+    key: 'lifetime_confirmed_sales',
+    icon: 'award',
+    label: 'Lifetime Confirmed Sales',
+    tone: 'ok',
+    line: 'Counts toward your tier'
+  }, {
+    key: 'pending_commission',
+    icon: 'clock',
+    label: 'Pending Commission',
+    tone: 'hold',
+    line: `Confirms ${holdDays} days after delivery`
+  }, {
+    key: 'confirmed_commission',
+    icon: 'checkCircle',
+    label: 'Confirmed Commission',
+    tone: 'ok',
+    line: 'Earned at the rate of the day'
+  }, {
+    key: 'pending_sales',
+    icon: 'package',
+    label: 'Awaiting Confirmation',
+    tone: 'hold',
+    line: 'Sales not yet counted'
+  }];
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "ct-stats",
+    children: cards.map(c => {
+      const v = Number(standing?.[c.key] ?? 0);
+      return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+        className: `ct-stat${isZero(v) ? ' is-zero' : ''}`,
+        "data-tone": c.tone,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ct-stat__tile",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: c.icon,
+            size: 18
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ct-stat__label",
+          children: c.label
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+          className: "ct-stat__fig",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(CountUp, {
+            value: v,
+            format: money2
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ct-stat__line",
+          children: c.line
+        })]
+      }, c.key);
+    })
+  });
+}
+
+// ---------------------------------------------------------------
+// The ladder — every level, current highlighted, scrollable + expandable
+// ---------------------------------------------------------------
+function LadderTable({
+  standing
+}) {
+  const ladder = Array.isArray(standing?.ladder) ? standing.ladder : [];
+  const [open, setOpen] = reactExports.useState(false);
+  if (ladder.length === 0) return null;
+  const current = Number(standing.level);
+  const top = ladder[ladder.length - 1];
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "ct-panel ct-ladder",
+    "aria-labelledby": "ct-ladder-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ct-panel__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "ct-panel__h",
+        id: "ct-ladder-h",
+        children: "Tier ladder"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "ct-panel__sub",
+        children: [ladder.length, " levels \xB7 your rate follows confirmed lifetime sales"]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: `ct-ladder__scroll${open ? ' is-open' : ''}`,
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+        className: "ct-table",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Level"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Rank"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Commission"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              className: "ta-r",
+              children: "Required confirmed sales"
+            })]
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+          children: ladder.map(l => {
+            const lv = Number(l.level);
+            const state = lv === current ? 'is-current' : lv < current ? 'is-done' : '';
+            return /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+              className: state,
+              "data-rank": rankSlot(l.rank),
+              "aria-current": lv === current ? 'true' : undefined,
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                children: /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                  className: "ct-table__lv",
+                  children: ["L", lv]
+                })
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                children: /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                  className: "ct-table__rank",
+                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+                    className: "ct-dot",
+                    "aria-hidden": "true"
+                  }), l.rank, lv === current && /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+                    className: "ct-table__you",
+                    children: "You"
+                  })]
+                })
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                className: "ta-r",
+                children: /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+                  children: [Number(l.rate), "%"]
+                })
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                className: "ta-r",
+                children: rupees(l.threshold)
+              })]
+            }, lv);
+          })
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ct-ladder__foot",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "ct-ladder__more",
+        onClick: () => setOpen(v => !v),
+        "aria-expanded": open,
+        children: open ? 'Collapse the ladder' : `Show all ${ladder.length} levels`
+      }), standing.beyond_step > 0 && top && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "ct-panel__sub",
+        children: ["Beyond Level ", top.level, ": a new level every ", rupees(standing.beyond_step), ", at ", Number(top.rate), "%."]
+      })]
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Rewards at milestones
+// ---------------------------------------------------------------
+function MilestoneRewards({
+  standing,
+  rewards,
+  catalog,
+  onClaim,
+  onChanged
+}) {
+  const ladder = Array.isArray(standing?.ladder) ? standing.ladder : [];
+  const current = Number(standing?.level ?? 1);
+  const upcoming = ladder.filter(l => Number(l.level) > current).slice(0, 3);
+  const byLevel = new Map();
+  for (const r of Array.isArray(catalog) ? catalog : []) {
+    const lv = Number(r?.level);
+    if (!Number.isInteger(lv)) continue;
+    if (!byLevel.has(lv)) byLevel.set(lv, []);
+    byLevel.get(lv).push(r);
+  }
+  const next = upcoming[0] || null;
+  const nextOptions = next ? byLevel.get(Number(next.level)) || [] : [];
+  const remaining = next ? Math.max(0, Number(next.threshold) - Number(standing.lifetime_confirmed_sales || 0)) : 0;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "ct-panel ct-rewards",
+    "aria-labelledby": "ct-rewards-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ct-panel__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "ct-panel__h",
+        id: "ct-rewards-h",
+        children: "Rewards at milestones"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "ct-panel__sub",
+        children: "Every level carries a reward. You choose one of three when you reach it."
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(RewardChooser, {
+      rewards: rewards,
+      onClaim: onClaim,
+      onChanged: onChanged
+    }), next ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ct-next",
+      "data-rank": rankSlot(next.rank),
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "ct-next__ic",
+        "aria-hidden": "true",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "gift",
+          size: 18
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "ct-next__txt",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+          children: ["Next milestone: Level ", next.level, " \xB7 ", next.rank]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [rupees(remaining), " more in confirmed sales \xB7 ", Number(next.rate), "% commission from then on"]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: `ct-chip${nextOptions.length ? ' is-live' : ' is-soon'}`,
+        children: nextOptions.length ? `${nextOptions.length} option${nextOptions.length === 1 ? '' : 's'} to choose from` : 'Coming soon'
+      })]
+    }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ct-next is-top",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "ct-next__ic",
+        "aria-hidden": "true",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "crown",
+          size: 18
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "ct-next__txt",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+          children: "You\u2019ve reached the top of the ladder"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [Number(standing.rate), "% on every new sale"]
+        })]
+      })]
+    }), upcoming.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "ct-milestones",
+      children: upcoming.map(l => {
+        const opts = byLevel.get(Number(l.level)) || [];
+        return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+          className: "ct-milestone",
+          "data-rank": rankSlot(l.rank),
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "ct-milestone__lv",
+            children: ["Level ", l.level]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+            className: "ct-milestone__rank serif",
+            children: l.rank
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            className: "ct-milestone__req",
+            children: [rupees(l.threshold), " confirmed \xB7 ", Number(l.rate), "%"]
+          }), opts.length > 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+            className: "ct-milestone__opts",
+            children: opts.slice(0, 3).map(o => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "ct-milestone__type",
+                children: REWARD_TYPE_LABEL[o.reward_type] || 'Reward'
+              }), o.label]
+            }, o.id || o.option_index))
+          }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "ct-chip is-soon",
+            children: "Coming soon"
+          })]
+        }, l.level);
+      })
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Leaderboard strip: top three + you
+// ---------------------------------------------------------------
+function LeaderboardStrip({
+  rows,
+  standing
+}) {
+  const list = sanitizeLeaderboard(rows);
+  const pos = standing?.leaderboard_position || null;
+  const [open, setOpen] = reactExports.useState(false);
+  const top = list.slice(0, 3);
+  const me = pos && pos > 3 ? list.find(r => r.rank_position === pos) : null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "ct-panel ct-board",
+    "aria-labelledby": "ct-board-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ct-panel__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "ct-panel__h",
+        id: "ct-board-h",
+        children: "Creator leaderboard"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "ct-panel__sub",
+        children: pos ? `You’re #${pos} of ${standing.leaderboard_total}` : 'You join the board with your first confirmed sale'
+      })]
+    }), list.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "ct-panel__empty",
+      children: "The board opens with the first confirmed sale."
+    }) : /*#__PURE__*/jsxRuntimeExports.jsxs("ol", {
+      className: "ct-strip",
+      children: [top.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        className: `ct-strip__row${pos === r.rank_position ? ' is-me' : ''}`,
+        "data-rank": rankSlot(r.rank_name),
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ct-strip__pos",
+          children: String(r.rank_position).padStart(2, '0')
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ct-strip__name serif",
+          children: r.display_name
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "ct-strip__tier",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+            className: "ct-dot",
+            "aria-hidden": "true"
+          }), r.rank_name, " \xB7 L", r.level]
+        })]
+      }, r.rank_position)), me && /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        className: "ct-strip__row is-me",
+        "data-rank": rankSlot(me.rank_name),
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ct-strip__pos",
+          children: String(me.rank_position).padStart(2, '0')
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ct-strip__name serif",
+          children: me.display_name
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "ct-strip__tier",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("i", {
+            className: "ct-dot",
+            "aria-hidden": "true"
+          }), me.rank_name, " \xB7 L", me.level]
+        })]
+      }), pos && pos > 100 && /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        className: "ct-strip__row is-me is-out",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "ct-strip__pos",
+          children: ["#", pos]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ct-strip__name",
+          children: "You \u2014 outside the top 100"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "ct-strip__tier",
+          children: "every confirmed sale moves you up"
+        })]
+      })]
+    }), list.length > 3 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "ct-board__more",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "ct-ladder__more",
+        onClick: () => setOpen(v => !v),
+        "aria-expanded": open,
+        children: open ? 'Hide the full board' : 'View the full board'
+      })
+    }), open && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "ct-board__full sl-dark",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(LeaderboardList, {
+        rows: list,
+        initial: 20,
+        highlightPosition: pos
+      })
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// The page
+// ---------------------------------------------------------------
+function CreatorTierPage({
+  standing,
+  rewards,
+  catalog = [],
+  leaderboard,
+  series,
+  holdDays = 7,
+  onClaim,
+  onChanged,
+  noticeDismissed = false
+}) {
+  if (!standing || standing.ok === false) {
+    return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "crp__h1 serif",
+        children: "My Tier"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "crp__lede",
+        children: "Your tier appears once your account is active."
+      })]
+    });
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "ct",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ct-head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "crp__h1 serif",
+          children: "My Tier"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "crp__lede",
+          children: "Your rank is earned on confirmed sales through your own links \u2014 no teams, no referrals. Every level raises your commission on the sales that follow."
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "ct-head__line serif",
+        children: ["Every confirmed sale lifts your rank \u2014 ", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "and your rate with it."]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(WithdrawalsBar, {
+      open: !!standing.withdrawals_open,
+      initiallyDismissed: noticeDismissed
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ct-row ct-row--top",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(CurrentTierCard, {
+        standing: standing
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProgressionCard, {
+        series: series
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(TierStats, {
+      standing: standing,
+      holdDays: holdDays
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "ct-row ct-row--mid",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(LadderTable, {
+        standing: standing
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(MilestoneRewards, {
+        standing: standing,
+        rewards: rewards,
+        catalog: catalog,
+        onClaim: onClaim,
+        onChanged: onChanged
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(RewardHistory, {
+      rewards: rewards
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(LeaderboardStrip, {
+      rows: leaderboard,
+      standing: standing
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "crp__foot-note",
+      children: ["Sales count once the order is delivered and the ", holdDays, "-day return window has passed. See ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/creator/how-it-works",
+        children: "how you earn"
+      }), "."]
+    })]
+  });
+}
+
 const NAV = [{
   id: 'dashboard',
   label: 'Dashboard',
@@ -54815,6 +55464,7 @@ function CreatorPortal({
   const [range, setRange] = reactExports.useState(initial?.range || DEFAULT_RANGE);
   const [seriesLoading, setSeriesLoading] = reactExports.useState(false);
   const [recentClicks, setRecentClicks] = reactExports.useState(initial?.recentClicks || []);
+  const [catalog, setCatalog] = reactExports.useState(initial?.catalog || []);
   const [menuOpen, setMenuOpen] = reactExports.useState(false);
   const [terms, setTerms] = reactExports.useState(initial?.terms || null);
   const [termsAccepted, setTermsAccepted] = reactExports.useState(null); // null = unknown
@@ -54905,6 +55555,7 @@ function CreatorPortal({
     const [cs, ls, an, en, ky, po, st, rw, lb] = await Promise.all([getMyCampaigns(me.id), getMyLinks(me.id), getMyCreatorAnalytics(), getMyCreatorEarnings(), getMyKyc(), getMyPayouts(), getMyCreatorStanding(), getMyCreatorRewards(), getCreatorLeaderboard()]);
     for (const r of [DEFAULT_RANGE, '90d']) loadRange(r);
     getMyRecentClicks().then(c => setRecentClicks(Array.isArray(c) ? c : [])).catch(() => setRecentClicks([]));
+    getLevelRewardsCatalog().then(c => setCatalog(Array.isArray(c) ? c : [])).catch(() => setCatalog([]));
     setCampaigns(cs);
     setLinks(ls);
     setAnalytics(an && an.ok ? an : null);
@@ -55347,13 +55998,16 @@ function CreatorPortal({
             earnings: earnings,
             standing: standing
           })]
-        }), tab === 'tier' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTier, {
+        }), tab === 'tier' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorTierPage, {
           standing: standing,
           rewards: rewards,
+          catalog: catalog,
           leaderboard: leaderboard,
+          series: weekly,
           holdDays: Number(earnings?.settlement_hold_days ?? 7),
           onClaim: claimLevelReward,
-          onChanged: reloadMoney
+          onChanged: reloadMoney,
+          noticeDismissed: !!initial?.noticeDismissed
         }), tab === 'how-it-works' && /*#__PURE__*/jsxRuntimeExports.jsx(CreatorHowItWorks, {
           creator: creator,
           earnings: earnings,
