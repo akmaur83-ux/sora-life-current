@@ -104,18 +104,42 @@ await test('motion: transform and opacity only; reduced motion turns it all off'
   assert.doesNotMatch(read('src/components/creator/CreatorDashboard.jsx'), /from '(recharts|chart\.js|d3|victory|nivo|framer-motion|gsap)/);
 });
 
-await test('the mobile collapse is designed: one column, top strip nav, footer art gone, search hidden, tooltip on touch only', () => {
+await test('the phone page is designed: cream brand bar with the avatar, pill nav, the dashboard in phone order, stats two-up', () => {
   const m1019 = [...css.matchAll(/@media \(max-width: 1019px\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]).join('\n');
-  assert.match(m1019, /\.crp\.crp--studio \{ grid-template-columns: minmax\(0, 1fr\); \}/);
-  assert.match(m1019, /\.cs-nav \{ flex-direction: row;[^}]*overflow-x: auto/);
+  // Shell: the side and main wrappers flatten so brand and avatar share row one, the nav row two.
+  assert.match(m1019, /\.cs-side, \.crp\.crp--studio \.cs-main \{ display: contents; \}/);
+  assert.match(m1019, /\.cs-brand \{ grid-column: 1; grid-row: 1;/); assert.match(m1019, /\.cs-top \{ grid-column: 2; grid-row: 1;/);
+  assert.match(m1019, /\.cs-brand__mark svg path\[fill="#FBF8F1"\] \{ fill: var\(--s-forest\); \}/, 'the mark turns forest on cream');
+  assert.match(m1019, /\.cs-nav \{[^}]*grid-row: 2; flex-direction: row;[^}]*overflow-x: auto[^}]*background: var\(--s-paper\)/);
+  assert.match(m1019, /\.cs-nav__item\.is-on \{ color: #FBF8F1; background: var\(--s-forest\); \}/, 'the active tab is a forest pill');
   assert.match(m1019, /\.cs-side__foot \{ display: none; \}/);
   assert.match(m1019, /\.cs-search \{ display: none; \}/);
-  assert.match(m1019, /\.cd-row--hero \{ grid-template-columns: minmax\(0, 1fr\); \}/);
-  assert.match(m1019, /\.cd-row--split \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+  assert.doesNotMatch(m1019, /gradient/, 'gradients stay in the base rules');
+  // Dashboard: wrappers flatten and every card takes its phone order.
+  assert.match(m1019, /\.cd \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+  assert.match(m1019, /\.cd-row--stats, \.crp\.crp--studio \.cd-grid, \.crp\.crp--studio \.cd-col, \.crp\.crp--studio \.cd-row--split \{ display: contents; \}/);
+  const order = (cls) => Number(m1019.match(new RegExp('\\.' + cls + ' \\{[^}]*order: (\\d+)'))?.[1]);
+  assert.deepEqual(['cd-row--hero', 'cd-share', 'cd-stat', 'cd-tier', 'cd-feed', 'cd-perf', 'cd-earn', 'cd-camps', 'cd-promo'].map(order), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.match(m1019, /\.cd-stat \{ order: 3; grid-column: auto; \}/, 'stat cards two-up, everything else full width');
+  assert.match(m1019, /\.cd-mantra \{[^}]*grid-column: 2; grid-row: 1; display: grid;/, 'the mantra sits beside the greeting');
+  assert.match(m1019, /\.cd-mantra::before \{ display: block; \}/, 'with the leaf above it');
+  assert.match(css, /\.cd-mantra::before \{[^}]*content: '';\s*display: none;[^}]*creator-sidebar-bg\.webp/);
+  assert.match(m1019, /\.cd-share__go \{[^}]*border-radius: 999px;[^}]*background: var\(--s-gold\)/, 'Share Now is a gold pill');
+  assert.match(m1019, /\.cd-share__go-txt \{ display: inline; \}/); assert.match(css, /\.cd-share__go-txt \{ display: none; \}/);
+  assert.match(m1019, /\.cd-promo \{[^}]*background: var\(--s-forest-2\)/, 'the promo closes the page as a forest banner');
+  assert.match(m1019, /\.cd-promo__btn-txt \{ display: none; \}/); assert.match(m1019, /\.cd-promo__ic \{ display: grid; \}/);
   const m599 = [...css.matchAll(/@media \(max-width: 599px\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]).join('\n');
-  assert.match(m599, /\.cd-row--stats \{ grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(m599, /\.cd-stat__body \{ display: contents; \}/, 'compact stat card: tile + label, figure, trend + spark');
+  assert.match(m599, /\.cd-stat__fig \{ grid-column: 1 \/ -1; grid-row: 2;/);
+  assert.match(m599, /\.cd-stat__spark \{ grid-column: 1 \/ -1; grid-row: 3; justify-self: end;/);
+  assert.match(m599, /\.cd-row--stats \.cd-stat__vs \{ display: none; \}/);
   assert.match(m599, /\.cd-chart:not\(\.is-hover\) \.cd-tip \{ display: none; \}/);
   assert.match(read('src/pages/CreatorPortal.jsx'), /querySelector\('\.cs-nav__item\.is-on'\)/, 'the active item is scrolled into view');
+  // The markup carries the phone-only pieces without changing the desktop.
+  const dash = read('src/components/creator/CreatorDashboard.jsx');
+  assert.match(dash, /<span className="cd-share__go-txt">Share Now<\/span>/);
+  assert.match(dash, /<span className="cd-promo__ic" aria-hidden="true">/);
+  assert.match(dash, /className="cd-promo__btn" aria-label="Explore campaigns"><span className="cd-promo__btn-txt">Explore Campaigns<\/span>/);
 });
 
 await test('both backgrounds are WebP under 150 KB, named for their use, and referenced from the stylesheet', () => {
@@ -331,7 +355,7 @@ await test('recent activity comes from what happened; tier progress reads ₹0 o
   assert.match(html, /<strong>Next Level: Rise — Level 2<\/strong><span>Reach ₹10,000 in confirmed sales<\/span><span>11% commission on future sales<\/span>/);
   assert.match(html, /<td><strong>Default link<\/strong><\/td><td class="ta-r">5<\/td><td class="ta-r">0<\/td><td class="ta-r">₹0\.00<\/td><td class="ta-r is-earn">₹0\.00<\/td>/);
   assert.match(html, /<h2 class="cd-promo__h serif" id="cd-promo-h">Turn Your Influence <br\/>Into Impact<\/h2>/);
-  assert.match(html, /class="cd-promo__btn" href="\/creator\/campaigns">Explore Campaigns/);
+  assert.match(html, /class="cd-promo__btn" aria-label="Explore campaigns" href="\/creator\/campaigns"><span class="cd-promo__btn-txt">Explore Campaigns<\/span>/);
   const zero = render('dashboard', empty);
   assert.doesNotMatch(zero, /New link clicks/, 'no click row without clicks');
   assert.match(text(zero), /Account activated[\s\S]*Welcome to SORA LIFE/, "the account's own dates still make a feed");

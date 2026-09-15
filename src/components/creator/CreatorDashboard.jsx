@@ -92,7 +92,7 @@ export function ShareCta() {
         <strong>Share Your Link</strong>
         <span>Start earning today</span>
       </div>
-      <Link to="/creator/links" className="cd-share__go" aria-label="Open your links"><Icon name="arrowRight" size={18} /></Link>
+      <Link to="/creator/links" className="cd-share__go" aria-label="Open your links"><span className="cd-share__go-txt">Share Now</span><Icon name="arrowRight" size={18} /></Link>
       <span className="cd-share__ribbon" aria-hidden="true" />
     </section>
   );
@@ -381,10 +381,11 @@ export function TopCampaigns({ links, available }) {
 export function PromoCard() {
   return (
     <section className="cd-promo" aria-labelledby="cd-promo-h">
+      <span className="cd-promo__ic" aria-hidden="true"><Icon name="leaf" size={20} /></span>
       <div className="cd-promo__txt">
         <h2 className="cd-promo__h serif" id="cd-promo-h">Turn Your Influence <br />Into Impact</h2>
         <p>Share wellness. Earn rewards. Be part of a healthier India.</p>
-        <Link to="/creator/campaigns" className="cd-promo__btn">Explore Campaigns <Icon name="arrowRight" size={15} /></Link>
+        <Link to="/creator/campaigns" className="cd-promo__btn" aria-label="Explore campaigns"><span className="cd-promo__btn-txt">Explore Campaigns</span> <Icon name="arrowRight" size={15} /></Link>
       </div>
       <p className="cd-promo__words" aria-hidden="true"><span>People</span><span>Wellness</span><span>Progress</span><span>Together</span></p>
       <span className="cd-promo__wave" aria-hidden="true" />

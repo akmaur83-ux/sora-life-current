@@ -279,6 +279,11 @@
 .crp.crp--studio .cd-mantra__words { margin: 0; display: grid; gap: 4px; font-size: 13px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: var(--s-forest); }
 .crp.crp--studio .cd-mantra__sub { margin: 0; font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--s-ink-3); }
 .crp.crp--studio .cd-mantra__rule { display: block; width: 36px; height: 2px; background: var(--s-gold); }
+/* Phone only: the leaf above the mantra (shown by the mobile block). */
+.crp.crp--studio .cd-mantra::before {
+  content: ''; display: none; width: 112px; height: 78px; background: url('/img/creator-sidebar-bg.webp') center / cover no-repeat; opacity: .6;
+  -webkit-mask-image: radial-gradient(70% 70% at 50% 50%, #000 25%, transparent 75%); mask-image: radial-gradient(70% 70% at 50% 50%, #000 25%, transparent 75%);
+}
 
 /* Stats row: four cards + the CTA */
 .crp.crp--studio .cd-row--stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 250px; gap: 16px; }
@@ -309,6 +314,7 @@
 .crp.crp--studio .cd-share__txt span { font-size: 12.5px; color: rgba(251, 248, 241, .7); }
 .crp.crp--studio .cd-share__go { margin-left: auto; color: #FBF8F1; display: inline-flex; padding: 8px; border-radius: 50%; transition: transform .16s ease; }
 .crp.crp--studio .cd-share__go:hover { transform: translateX(3px); }
+.crp.crp--studio .cd-share__go-txt { display: none; }
 .crp.crp--studio .cd-share__ribbon {
   position: absolute; right: -30px; bottom: -34px; width: 120px; height: 120px; border-radius: 50%; pointer-events: none;
   background: radial-gradient(circle at 30% 30%, rgba(228, 196, 130, .55), rgba(199, 154, 69, .15) 55%, transparent 72%);
@@ -451,6 +457,7 @@
   position: relative; overflow: hidden; padding: 26px 24px; border-radius: var(--s-r); min-height: 200px;
   background: linear-gradient(135deg, #FBF5E8 0%, #F4E9D2 55%, #E9D4A5 100%); border: 1px solid var(--s-gold-soft); box-shadow: var(--s-shadow);
 }
+.crp.crp--studio .cd-promo__ic { display: none; position: relative; z-index: 1; width: 44px; height: 44px; border-radius: 50%; place-items: center; background: rgba(251, 248, 241, .1); color: var(--s-gold-2); flex: none; }
 .crp.crp--studio .cd-promo__txt { position: relative; z-index: 1; max-width: 62%; }
 .crp.crp--studio .cd-promo__h { margin: 0; font-size: 24px; line-height: 1.15; }
 .crp.crp--studio .cd-promo__txt p { margin: 10px 0 16px; font-size: 13.5px; line-height: 1.5; color: var(--s-ink-2); }
@@ -1100,44 +1107,114 @@
   .crp.crp--studio .cd-share { grid-column: 1 / -1; }
 }
 
-/* ---- Mobile: the sidebar becomes a top strip ------------------------------
-   Brand and avatar in one bar, the nav as a horizontal icon+label scroller
-   under it, the sidebar footer gone (it is decoration). One column below. */
+/* ---- Mobile: the studio folds into a phone page ------------------------------
+   Brand and avatar share one cream bar, the nav becomes a pill strip under
+   it, the sidebar footer goes (it is decoration). The dashboard reads in
+   phone order — greeting with the leaf and mantra beside it, the quote, the
+   share card, stats two-up, tier, activity, then the charts and the promo —
+   by flattening its wrappers (display: contents) so the page grid can place
+   every card. Gradients live in the base rules; this block only positions. */
 @media (max-width: 1019px) {
-  .crp.crp--studio { grid-template-columns: minmax(0, 1fr); }
-  .crp.crp--studio .cs-side { position: static; height: auto; overflow: visible; }
-  .crp.crp--studio .cs-brand { padding: 14px 16px; border-bottom: 0; }
-  .crp.crp--studio .cs-brand__mark svg { width: 30px; height: 22px; }
-  .crp.crp--studio .cs-brand__txt strong { font-size: 15px; }
-  .crp.crp--studio .cs-nav { flex-direction: row; gap: 2px; padding: 0 10px 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-  .crp.crp--studio .cs-nav::-webkit-scrollbar { display: none; }
-  .crp.crp--studio .cs-nav__item { flex: 0 0 auto; min-height: 40px; padding: 0 12px; font-size: 13px; }
-  .crp.crp--studio .cs-nav__soon { margin-left: 2px; }
-  .crp.crp--studio .cs-side__foot { display: none; }
-  .crp.crp--studio .cs-top { position: static; padding: 12px 16px; }
+  .crp.crp--studio { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto minmax(0, 1fr); align-content: start; }
+  .crp.crp--studio .cs-side, .crp.crp--studio .cs-main { display: contents; }
+  .crp.crp--studio .cs-brand { grid-column: 1; grid-row: 1; padding: 16px 16px 6px; border-bottom: 0; }
+  .crp.crp--studio .cs-brand__mark svg { width: 38px; height: 28px; }
+  .crp.crp--studio .cs-brand__mark svg path[fill="#FBF8F1"] { fill: var(--s-forest); }
+  .crp.crp--studio .cs-brand__mark svg path[stroke="#1E3A2F"] { stroke: var(--s-gold); }
+  .crp.crp--studio .cs-brand__txt strong { font-size: 17px; color: var(--s-forest); }
+  .crp.crp--studio .cs-brand__txt em { color: var(--s-gold-ink); }
+  .crp.crp--studio .cs-top { grid-column: 2; grid-row: 1; position: static; padding: 12px 16px 6px 0; background: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .crp.crp--studio .cs-search { display: none; }
   .crp.crp--studio .cs-top__right { margin-left: auto; }
-  .crp.crp--studio .cs-content { padding: 18px 16px 32px; }
-  .crp.crp--studio .cd-row--hero { grid-template-columns: minmax(0, 1fr); }
-  .crp.crp--studio .cd-quote { min-height: 130px; padding: 22px 20px; }
+  .crp.crp--studio .cs-user__avatar { width: 44px; height: 44px; }
+  .crp.crp--studio .cs-nav {
+    grid-column: 1 / -1; grid-row: 2; flex-direction: row; gap: 4px; margin: 8px 16px 0; padding: 4px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    background: var(--s-paper); border: 1px solid var(--s-line); border-radius: 16px;
+  }
+  .crp.crp--studio .cs-nav::-webkit-scrollbar { display: none; }
+  .crp.crp--studio .cs-nav__item { flex: 0 0 auto; min-height: 44px; padding: 0 16px; border-radius: 12px; font-size: 14px; color: var(--s-ink-2); }
+  .crp.crp--studio .cs-nav__item svg { opacity: 1; color: var(--s-forest); }
+  .crp.crp--studio .cs-nav__item:hover { color: var(--s-ink); background: var(--s-bg); }
+  .crp.crp--studio .cs-nav__item.is-on { color: #FBF8F1; background: var(--s-forest); }
+  .crp.crp--studio .cs-nav__item.is-on svg { color: var(--s-gold-2); }
+  .crp.crp--studio .cs-nav__soon { margin-left: 2px; }
+  .crp.crp--studio .cs-side__foot { display: none; }
+  .crp.crp--studio .cs-content { grid-column: 1 / -1; grid-row: 3; padding: 18px 16px 32px; }
+
+  /* Dashboard: the phone order */
+  .crp.crp--studio .cd { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .crp.crp--studio .cd-row--stats, .crp.crp--studio .cd-grid, .crp.crp--studio .cd-col, .crp.crp--studio .cd-row--split { display: contents; }
+  .crp.crp--studio .cd-row--hero, .crp.crp--studio .cd-share, .crp.crp--studio .cd-tier, .crp.crp--studio .cd-feed, .crp.crp--studio .cd-perf, .crp.crp--studio .cd-earn, .crp.crp--studio .cd-camps, .crp.crp--studio .cd-promo { grid-column: 1 / -1; }
+  .crp.crp--studio .cd-row--hero { order: 1; grid-template-columns: minmax(0, 1fr) 128px; gap: 10px 12px; }
+  .crp.crp--studio .cd-hello { grid-column: 1; grid-row: 1; padding: 4px 0; }
+  .crp.crp--studio .cd-mantra {
+    grid-column: 2; grid-row: 1; display: grid; align-content: end; justify-items: end; gap: 4px; padding: 0 0 6px;
+    background: none; border: 0; box-shadow: none; text-align: right;
+  }
+  .crp.crp--studio .cd-mantra::before { display: block; }
+  .crp.crp--studio .cd-mantra__words { font-size: 9.5px; letter-spacing: .22em; gap: 3px; color: var(--s-gold-ink); }
+  .crp.crp--studio .cd-mantra__sub { font-size: 8.5px; letter-spacing: .12em; white-space: nowrap; }
+  .crp.crp--studio .cd-mantra__rule { width: 28px; }
+  .crp.crp--studio .cd-quote { grid-column: 1 / -1; grid-row: 2; min-height: 150px; padding: 26px 22px; }
+  .crp.crp--studio .cd-share { order: 2; flex-wrap: wrap; gap: 12px; padding: 20px 18px; }
+  .crp.crp--studio .cd-share__txt strong { font-size: 16px; }
+  .crp.crp--studio .cd-share__go { padding: 11px 16px; border-radius: 999px; gap: 8px; background: var(--s-gold); color: var(--s-forest-2); font-size: 13px; font-weight: 700; }
+  .crp.crp--studio .cd-share__go-txt { display: inline; }
+  .crp.crp--studio .cd-share__go:hover { transform: translateY(-1px); }
+  .crp.crp--studio .cd-stat { order: 3; grid-column: auto; }
+  .crp.crp--studio .cd-tier { order: 4; }
+  .crp.crp--studio .cd-feed { order: 5; }
+  .crp.crp--studio .cd-perf { order: 6; }
+  .crp.crp--studio .cd-earn { order: 7; }
+  .crp.crp--studio .cd-camps { order: 8; }
+  .crp.crp--studio .cd-promo { order: 9; }
   .crp.crp--studio .cd-row--split { grid-template-columns: minmax(0, 1fr); }
   .crp.crp--studio .cd-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .crp.crp--studio .cd-panel__head { flex-direction: column; }
   .crp.crp--studio .cd-range { align-self: stretch; overflow-x: auto; }
+  .crp.crp--studio .cd-feed .cd-panel__head, .crp.crp--studio .cd-tier .cd-panel__head, .crp.crp--studio .cd-camps .cd-panel__head { flex-direction: row; align-items: center; }
+  .crp.crp--studio .cd-feed__item { grid-template-columns: 40px minmax(0, 1fr); }
+  .crp.crp--studio .cd-feed__when { grid-column: 2; margin-top: -4px; }
+  /* The promo becomes the closing forest banner */
+  .crp.crp--studio .cd-promo {
+    display: flex; align-items: center; gap: 14px; min-height: 0; padding: 22px 20px;
+    background: var(--s-forest-2); border-color: var(--s-forest-2); color: #FBF8F1;
+  }
+  .crp.crp--studio .cd-promo__ic { display: grid; }
+  .crp.crp--studio .cd-promo__txt { max-width: none; flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 12px; align-items: center; }
+  .crp.crp--studio .cd-promo__h { grid-column: 1; grid-row: 1; }
+  .crp.crp--studio .cd-promo__txt p { grid-column: 1; grid-row: 2; }
+  .crp.crp--studio .cd-promo__h { font-size: 18px; color: #FBF8F1; }
+  .crp.crp--studio .cd-promo__h br { display: none; }
+  .crp.crp--studio .cd-promo__txt p { margin: 4px 0 0; font-size: 12.5px; color: rgba(251, 248, 241, .7); }
+  .crp.crp--studio .cd-promo__btn { grid-column: 2; grid-row: 1 / 3; width: 44px; height: 44px; padding: 0; justify-content: center; border-radius: 50%; background: rgba(251, 248, 241, .12); flex: none; }
+  .crp.crp--studio .cd-promo__btn-txt { display: none; }
+  .crp.crp--studio .cd-promo__words { display: none; }
+  .crp.crp--studio .cd-promo__wave { right: -40px; bottom: -120px; opacity: .5; }
 }
 @media (max-width: 599px) {
-  .crp.crp--studio .cd-row--stats { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .crp.crp--studio .cd-stat { grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-rows: auto; padding: 14px 16px; }
-  .crp.crp--studio .cd-stat__tile { grid-row: auto; }
-  .crp.crp--studio .cd-stat__body { display: grid; }
-  .crp.crp--studio .cd-stat__fig { font-size: 24px; }
-  .crp.crp--studio .cd-stat__spark { grid-column: auto; align-self: end; }
+  .crp.crp--studio .cs-user__txt { display: none; }
+  .crp.crp--studio .cd-hello__hi { font-size: 16px; }
+  .crp.crp--studio .cd-hello__name { font-size: 30px; }
+  .crp.crp--studio .cd-hello__line { margin-top: 10px; font-size: 13px; }
+  .crp.crp--studio .cd { gap: 12px; }
+  /* Stat cards compact: tile and label on one row, the figure full width,
+     trend left and sparkline right on the last row. Shared by every page. */
+  .crp.crp--studio .cd-stat { grid-template-columns: 40px minmax(0, 1fr); grid-template-rows: auto auto auto; gap: 6px 10px; padding: 14px; align-items: center; }
+  .crp.crp--studio .cd-stat__tile { grid-column: 1; grid-row: 1; width: 40px; height: 40px; }
+  .crp.crp--studio .cd-stat__body { display: contents; }
+  .crp.crp--studio .cd-stat__label { grid-column: 2; grid-row: 1; font-size: 12px; line-height: 1.25; }
+  .crp.crp--studio .cd-stat__fig { grid-column: 1 / -1; grid-row: 2; font-size: 26px; }
+  .crp.crp--studio .cd-stat__fig.is-money { font-size: 21px; }
+  .crp.crp--studio .cd-stat__trend, .crp.crp--studio .cd-stat__hint { grid-column: 1 / -1; grid-row: 3; justify-self: start; align-self: center; margin: 0; font-size: 11.5px; }
+  .crp.crp--studio .cd-stat__spark { grid-column: 1 / -1; grid-row: 3; justify-self: end; align-self: center; margin: 0; }
+  .crp.crp--studio .cd-stat__spark .ck-spark { width: 64px; height: 24px; }
+  /* Two-up on the dashboard leaves no room for "vs previous 7 days" beside
+     the sparkline; the analytics and earnings cards are one-up and keep it. */
+  .crp.crp--studio .cd-row--stats .cd-stat__vs { display: none; }
+  .crp.crp--studio .cd-share__ic { width: 40px; height: 40px; }
   .crp.crp--studio .cd-earn__body { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .crp.crp--studio .cd-earn__legend { width: 100%; }
-  .crp.crp--studio .cd-promo__txt { max-width: 100%; }
-  .crp.crp--studio .cd-promo__words { display: none; }
-  .crp.crp--studio .cs-user__txt { display: none; }
-  .crp.crp--studio .cd-hello__name { font-size: 30px; }
   /* The tooltip only appears under a finger; the last point's readout would
      otherwise sit over a chart that is barely 130px tall. */
   .crp.crp--studio .cd-chart:not(.is-hover) .cd-tip { display: none; }
