@@ -52183,14 +52183,17 @@ function ShareCta() {
       }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
         children: "Start earning today"
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
       to: "/creator/links",
       className: "cd-share__go",
       "aria-label": "Open your links",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "cd-share__go-txt",
+        children: "Share Now"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
         name: "arrowRight",
         size: 18
-      })
+      })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
       className: "cd-share__ribbon",
       "aria-hidden": "true"
@@ -52840,7 +52843,14 @@ function PromoCard() {
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "cd-promo",
     "aria-labelledby": "cd-promo-h",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "cd-promo__ic",
+      "aria-hidden": "true",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "leaf",
+        size: 20
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "cd-promo__txt",
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
         className: "cd-promo__h serif",
@@ -52851,7 +52861,11 @@ function PromoCard() {
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: "/creator/campaigns",
         className: "cd-promo__btn",
-        children: ["Explore Campaigns ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        "aria-label": "Explore campaigns",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "cd-promo__btn-txt",
+          children: "Explore Campaigns"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "arrowRight",
           size: 15
         })]
