@@ -37,7 +37,10 @@ export function normalizeCartLines(items) {
   for (const item of items) {
     // Same product AND same variant is the same physical thing. A line with
     // no variant is kept distinct from a variant line of the same product.
-    const key = `${item.id}::${item.variantId ?? ''}`;
+    // A fashion line lives in a different catalogue, so its key says so: a
+    // fashion product and a wellness product can never merge, whatever
+    // their ids look like.
+    const key = `${item.catalogue === 'fashion' ? 'fashion:' : ''}${item.id}::${item.variantId ?? ''}`;
     const seen = merged.get(key);
     if (seen) {
       seen.qty += item.qty;
@@ -87,6 +90,9 @@ export function validateCartPayload(rawItems) {
       // alongside it is ignored entirely.
       variantId: raw.variantId != null ? String(raw.variantId).slice(0, 64) : null,
       variant: typeof raw.variant === 'string' ? raw.variant.slice(0, 120) : null,
+      // Which catalogue the id belongs to. Only 'fashion' is a value; a
+      // wellness line carries nothing, exactly as before this field existed.
+      ...(raw.catalogue === 'fashion' ? { catalogue: 'fashion' } : {}),
     });
   }
   return normalizeCartLines(items);
@@ -138,6 +144,27 @@ export function trustedVariantPrice(variantRow) {
     gstRate: Number.isFinite(Number(variantRow.gst_rate)) ? Number(variantRow.gst_rate) : null,
     stock: variantRow.stock,
   };
+}
+
+/**
+ * The trusted price of one fashion variant: the variant's own override when
+ * it carries one, otherwise the product's sale price, otherwise its MRP.
+ * Whole rupees, like every other payable figure here. Returns null when
+ * nothing usable is priced, so the caller refuses the line rather than
+ * charging zero.
+ */
+export function trustedFashionPrice(productRow, variantRow) {
+  if (!productRow || !variantRow) return null;
+  const num = (v) => (v == null ? null : (Number.isFinite(Number(v)) ? Number(v) : null));
+  const mrp = num(productRow.mrp);
+  const sale = num(productRow.sale_price);
+  const override = num(variantRow.price_override);
+  const price = override != null && override > 0 ? Math.round(override)
+    : sale != null && sale > 0 ? Math.round(sale)
+      : mrp != null && mrp > 0 ? Math.round(mrp) : null;
+  if (price == null || price <= 0) return null;
+  const unitMrp = mrp != null && mrp > 0 ? Math.round(mrp) : price;
+  return { price, mrp: Math.max(unitMrp, price), sku: variantRow.sku || null, label: [variantRow.size, variantRow.colour].filter(Boolean).join(' · ') || null };
 }
 
 /**
@@ -227,6 +254,13 @@ export function computeOrderTotal(items, productRows, deliveryMethod, opts = {})
     if (v && v.id != null) variantById.set(String(v.id), v);
   }
 
+  // The fashion catalogue's rows, indexed the same way. Empty for a wellness
+  // cart, in which case nothing below this comment changes what happens.
+  const fashionById = new Map();
+  for (const p of opts.fashionProductRows || []) if (p && p.id != null) fashionById.set(String(p.id), p);
+  const fashionVariantById = new Map();
+  for (const v of opts.fashionVariantRows || []) if (v && v.id != null) fashionVariantById.set(String(v.id), v);
+
   // Repeated lines for the same product+variant are merged BEFORE any stock
   // or quantity check, so two lines of the same SKU cannot each pass a check
   // that their combined quantity would fail.
@@ -238,6 +272,50 @@ export function computeOrderTotal(items, productRows, deliveryMethod, opts = {})
   let mrpTotal = 0;   // undiscounted reference total
 
   for (const item of normalized.items) {
+    // ---- Fashion: product + one size × colour variant, priced from the
+    // fashion tables. Every fashion line names a variant, because stock and
+    // the price override are per combination; a line without one is a line
+    // the customer has not finished choosing.
+    if (item.catalogue === 'fashion') {
+      const fRow = fashionById.get(item.id);
+      if (!fRow) return { ok: false, error: 'One or more items are no longer available.' };
+      if (fRow.is_active === false) return { ok: false, error: `"${fRow.name}" is no longer available.` };
+      if (!item.variantId) return { ok: false, error: `Please choose a size and colour for "${fRow.name}".` };
+      const fVar = fashionVariantById.get(item.variantId);
+      if (!fVar || fVar.is_active === false) return { ok: false, error: `The chosen size and colour of "${fRow.name}" is no longer available.` };
+      if (String(fVar.product_id) !== String(fRow.id)) return { ok: false, error: 'The selected size does not match the product.' };
+      const priced = trustedFashionPrice(fRow, fVar);
+      if (!priced) return { ok: false, error: `"${fRow.name}" is not available for purchase right now.` };
+      const stock = resolveStock(fVar.stock);
+      const outName = `${fRow.name}${priced.label ? ` (${priced.label})` : ''}`;
+      if (stock.tracked && stock.available === 0) return { ok: false, error: `"${outName}" is out of stock.` };
+      if (stock.tracked && item.qty > stock.available) {
+        return { ok: false, error: `Only ${stock.available} of "${outName}" ${stock.available === 1 ? 'is' : 'are'} left.` };
+      }
+      const lineTotal = priced.price * item.qty;
+      const lineMrp = priced.mrp * item.qty;
+      subtotal += lineTotal;
+      mrpTotal += lineMrp;
+      lines.push({
+        catalogue: 'fashion',
+        product_id: fRow.id,
+        biosash_id: null,
+        variant_id: String(fVar.id),
+        name: fRow.name,
+        sku: priced.sku,
+        unit_price: priced.price,
+        unit_mrp: priced.mrp,
+        qty: item.qty,
+        variant: priced.label,
+        line_mrp: lineMrp,
+        line_discount: round2(lineMrp - lineTotal),
+        line_total: lineTotal,
+        // Fashion rows carry no per-line GST slab; the configured default applies.
+        gst_rate: null,
+      });
+      continue;
+    }
+
     const row = byKey.get(item.id);
     // Unknown or inactive product -> reject rather than silently skip, so a
     // tampered/nonexistent id can never quietly reduce the amount.

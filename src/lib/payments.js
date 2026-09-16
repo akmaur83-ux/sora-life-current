@@ -98,6 +98,7 @@ export async function createPaymentOrder({
       qty: l.qty,
       variantId: l.variantId || null,
       variant: l.variant || null,
+      ...(l.catalogue === 'fashion' ? { catalogue: 'fashion' } : {}),
     })),
     delivery,
     customer,

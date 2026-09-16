@@ -320,7 +320,9 @@ test('G2 pruning only runs against the REAL catalogue, never the bundled seed', 
   assert.match(store, /PRUNE_MISSING/);
   // Only a missing PRODUCT is pruned. A retired pack size stays visible so the
   // customer's own choice is never silently discarded.
-  assert.match(store, /\.filter\(\(l\) => !productById\[l\.id\]\)/);
+  // A fashion line is never judged against the wellness catalogue at all —
+  // it has its own reconciliation against the fashion tables.
+  assert.match(store, /\.filter\(\(l\) => !isFashionLine\(l\) && !productById\[l\.id\]\)/);
 });
 
 test('G3 PRUNE_MISSING is a no-op when nothing is missing, so it cannot loop', () => {

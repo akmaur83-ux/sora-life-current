@@ -32,6 +32,18 @@ export async function getFashionProducts() {
   return Array.isArray(data) ? data : [];
 }
 
+/** The products (with active variants) behind a set of cart lines. */
+export async function getFashionProductsByIds(ids) {
+  const clean = [...new Set((ids || []).map(String).filter(Boolean))];
+  if (!clean.length) return [];
+  const { data, error } = await supabase
+    .from('fashion_products')
+    .select(`${PRODUCT_COLUMNS}, fashion_variants (${VARIANT_COLUMNS})`)
+    .in('id', clean);
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
 export async function getFashionProduct(slug) {
   const { data, error } = await supabase
     .from('fashion_products')

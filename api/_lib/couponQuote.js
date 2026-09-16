@@ -15,7 +15,7 @@
 import { validateCartPayload, computeOrderTotal, computeCouponDiscount } from './pricing.js';
 import { getTaxConfig } from './tax.js';
 import {
-  fetchProductsForCart, fetchVariantsForCart, fetchCouponRowByCode,
+  fetchCartRows, fetchCouponRowByCode,
   fetchActiveCoupons, countCouponUsesForUser, hasPriorPaidOrder,
 } from './supabaseAdmin.js';
 import {
@@ -36,17 +36,20 @@ export async function priceCart(rawItems, deliveryMethod, sb, opts = {}) {
   const parsed = validateCartPayload(rawItems);
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  const products = await fetchProductsForCart(parsed.items.map((i) => i.id), sb);
-  const variantRows = await fetchVariantsForCart(parsed.items.map((i) => i.variantId), sb);
+  // Both catalogues' rows in one go; a wellness-only cart fetches exactly
+  // what it did before and the fashion lists come back empty.
+  const { products, variantRows, fashionProductRows, fashionVariantRows } = await fetchCartRows(parsed.items, sb);
 
   const base = computeOrderTotal(parsed.items, products, deliveryMethod, {
     variantRows,
+    fashionProductRows,
+    fashionVariantRows,
     taxConfig: getTaxConfig(),
     buyerState: opts.buyerState ?? null,
   });
   if (!base.ok) return { ok: false, error: base.error };
 
-  return { ok: true, items: parsed.items, products, variantRows, base };
+  return { ok: true, items: parsed.items, products, variantRows, fashionProductRows, fashionVariantRows, base };
 }
 
 /**

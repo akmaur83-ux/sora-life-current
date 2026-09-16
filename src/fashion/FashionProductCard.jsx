@@ -1,19 +1,21 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { money } from '../lib/format.js';
 import { swatchOverflow } from '../lib/fashion.js';
+import { quickAddPlan } from '../lib/fashionPdp.js';
 import { useFashionWishlist } from '../lib/fashionWishlist.js';
+import { useStore } from '../lib/store.jsx';
+import { VariantSheet } from './FashionVariantPicker.jsx';
 
 // ============================================================
 // Fashion product card — image, discount badge, wishlist heart, quick-add,
 // price with the MRP struck through, name, rating with review count, and
 // colour swatches with a "+N" overflow.
 //
-// Quick-add opens the product page for now: the shared cart re-prices every
-// line against the wellness catalogue (store.jsx → hydrateCartLine, and
-// api/_lib/pricing.js server-side), and teaching both about fashion
-// variants is the first job of the PDP phase. Until then a "+" that
-// silently dropped the line would be worse than one that opens the product.
+// Quick-add is real: a product with one size × colour goes straight into
+// the cart; one with several opens the size/colour sheet. The line the
+// store keeps carries ids only — the server prices it.
 // ============================================================
 const rupee = (v) => money(v);
 export const productHref = (view) => `/fashion/p/${view.slug}`;
@@ -29,7 +31,14 @@ export function Stars({ value, size = 13 }) {
 
 export default function FashionProductCard({ view, layout = 'grid', mediaLoading = 'lazy' }) {
   const wish = useFashionWishlist();
+  const { addFashionToCart } = useStore();
+  const [sheet, setSheet] = useState(false);
   const wished = wish.has(view.id);
+  const plan = quickAddPlan(view);
+  const quickAdd = () => {
+    if (plan.mode === 'direct') addFashionToCart(view, plan.variant);
+    else if (plan.mode === 'sheet') setSheet(true);
+  };
   const { shown, more } = swatchOverflow(view.swatches, 4);
   const href = productHref(view);
   const out = !view.inStock;
@@ -45,7 +54,9 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
         <button type="button" className={`fs-heart${wished ? ' is-on' : ''}`} aria-pressed={wished} aria-label={wished ? `Remove ${view.name} from wishlist` : `Save ${view.name} to wishlist`} onClick={() => wish.toggle(view.id)}>
           <Icon name="heart" size={17} fill={wished ? 'currentColor' : 'none'} />
         </button>
-        <Link to={href} className="fs-quick" aria-label={`Choose size and colour for ${view.name}`}><Icon name="plus" size={20} /></Link>
+        {plan.mode !== 'none' && (
+          <button type="button" className="fs-quick" data-quick={plan.mode} aria-label={plan.mode === 'direct' ? `Add ${view.name} to cart` : `Choose size and colour for ${view.name}`} onClick={quickAdd}><Icon name="plus" size={20} /></button>
+        )}
       </div>
       <div className="fs-card__body">
         <p className="fs-price">
@@ -66,6 +77,7 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
           </p>
         )}
       </div>
+      {sheet && <VariantSheet view={view} onAdd={(variant) => addFashionToCart(view, variant)} onClose={() => setSheet(false)} />}
     </article>
   );
 }

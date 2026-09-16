@@ -87,7 +87,7 @@ export const PRODUCTS = [
 export const INITIAL = { categories: CATEGORIES, products: PRODUCTS };
 
 // ---- the app, wired like App.jsx --------------------------------------------
-export async function buildFashionApp({ cartCount = 0, session = null, wishlist = [] } = {}) {
+export async function buildFashionApp({ cartCount = 0, session = null, wishlist = [], onAdd = null } = {}) {
   const rules = await import(pathToFileURL(resolve(ROOT, 'src/lib/fashion.js')).href);
   const wishMod = await import(pathToFileURL(resolve(ROOT, 'src/lib/fashionWishlist.js')).href);
   const art = await import(pathToFileURL(resolve(ROOT, 'src/fashion/fashionArt.js')).href);
@@ -98,22 +98,26 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
   const { SparrowMark } = loadModule('src/components/Logo.jsx', { Link, useState: React.useState, branding: { siteName: 'SORA LIFE', tagline: 'HEALTH & WELLNESS', logoUrl: '' } });
   const Footer = () => h('footer', { className: 'ftr', 'data-stub': 'footer' }, h('div', { className: 'container', style: { paddingBlock: 40 } }, h('strong', { style: { color: '#FBF8F1' } }, 'SORA LIFE'), ' · footer (shared, stub)'));
   const Toasts = () => null;
-  const useStore = () => ({ cartCount, wishCount: 0 });
+  const added = [];
+  const useStore = () => ({ cartCount, wishCount: 0, addFashionToCart: (view, variant, qty = 1) => { added.push({ id: view.id, variantId: variant?.id, qty }); if (onAdd) onAdd(view, variant, qty); return true; } });
+  const pdpRules = await import(pathToFileURL(resolve(ROOT, 'src/lib/fashionPdp.js')).href);
+  const pdpContent = { deliveryEstimate: () => ({ range: 'Confirmed at checkout', days: 'Based on your delivery address and chosen method' }), deliveryOptions: () => [{ id: 'std', label: 'Standard', eta: '3–5 business days', price: 0 }, { id: 'exp', label: 'Express', eta: '1–2 business days', price: 79 }, { id: 'sched', label: 'Scheduled', eta: 'Choose your date', price: 49 }] };
   const useCustomerAuth = () => ({ session, loading: false });
   const branding = { siteName: 'SORA LIFE', tagline: 'HEALTH & WELLNESS' };
   const catalogue = loadModule('src/fashion/FashionCatalogue.jsx', { getFashionCategories: async () => [], getFashionProducts: async () => [], buildTree: rules.buildTree, productView: rules.productView });
-  const card = loadModule('src/fashion/FashionProductCard.jsx', { Link, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, swatchOverflow: rules.swatchOverflow, useFashionWishlist: wishMod.useFashionWishlist });
+  const picker = loadModule('src/fashion/FashionVariantPicker.jsx', { Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, selectionState: pdpRules.selectionState });
+  const card = loadModule('src/fashion/FashionProductCard.jsx', { Link, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, swatchOverflow: rules.swatchOverflow, quickAddPlan: pdpRules.quickAddPlan, useFashionWishlist: wishMod.useFashionWishlist, useStore, VariantSheet: picker.VariantSheet });
   const layout = loadModule('src/fashion/FashionLayout.jsx', { Link, Outlet, useLocation, useNavigate, Icon, SparrowMark, Footer, Toasts, useStore, branding, useFashionWishlist: wishMod.useFashionWishlist, FashionCatalogueProvider: catalogue.FashionCatalogueProvider, useFashionCatalogue: catalogue.useFashionCatalogue, categoryHref: rules.categoryHref, resolveCategory: rules.resolveCategory });
   const home = loadModule('src/fashion/FashionHome.jsx', { Link, Icon, useCustomerAuth, categoryHref: rules.categoryHref, sortViews: rules.sortViews, topBrands: rules.topBrands, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default, HERO_IMAGE: art.HERO_IMAGE, circleArt: art.circleArt, cardArt: art.cardArt });
   const listing = loadModule('src/fashion/FashionListing.jsx', { Link, useParams, useSearchParams, Icon, ...rules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default });
-  const stub = loadModule('src/fashion/FashionProductStub.jsx', { Link, useParams, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, breadcrumbFor: rules.breadcrumbFor, stockMatrix: rules.stockMatrix, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, Breadcrumb: listing.Breadcrumb, Stars: card.Stars });
+  const pdp = loadModule('src/fashion/FashionProductPage.jsx', { Link, useNavigate, useParams, useSearchParams, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, useStore, ...pdpContent, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, Breadcrumb: listing.Breadcrumb, FashionProductCard: card.default, Stars: card.Stars, VariantPicker: picker.VariantPicker });
   const App = ({ path, initial = INITIAL }) => h(StaticRouter, { location: path },
     h(Routes, null,
       h(Route, { path: '/fashion', element: h(layout.default, { initial }) },
         h(Route, { index: true, element: h(home.default) }),
         h(Route, { path: 'c/:slug', element: h(listing.default) }),
-        h(Route, { path: 'p/:slug', element: h(stub.default) }),
+        h(Route, { path: 'p/:slug', element: h(pdp.default) }),
         h(Route, { path: 'search', element: h(listing.FashionSearch) }),
         h(Route, { path: 'wishlist', element: h(listing.FashionWishlistPage) }))));
-  return { App, rules, render: (path, initial = INITIAL) => renderToStaticMarkup(h(App, { path, initial })), modules: { catalogue, card, layout, home, listing, stub } };
+  return { App, rules, pdpRules, added, render: (path, initial = INITIAL) => renderToStaticMarkup(h(App, { path, initial })), modules: { catalogue, card, layout, home, listing, pdp, picker } };
 }

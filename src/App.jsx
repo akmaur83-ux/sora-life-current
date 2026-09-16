@@ -22,7 +22,7 @@ import AdminLogin from './pages/AdminLogin.jsx';
 import FashionLayout from './fashion/FashionLayout.jsx';
 import FashionHome from './fashion/FashionHome.jsx';
 import FashionCategory, { FashionSearch, FashionWishlistPage } from './fashion/FashionListing.jsx';
-import FashionProductStub from './fashion/FashionProductStub.jsx';
+import FashionProductPage from './fashion/FashionProductPage.jsx';
 import { useAdminAuth } from './lib/adminAuth.jsx';
 import { branding } from './lib/settings.js';
 import { DEFERRED_ROUTES, loadDeferredStyles } from './lib/deferredStyles.js';
@@ -186,7 +186,7 @@ export default function App() {
       <Route path="/fashion" element={<FashionLayout />}>
         <Route index element={<FashionHome />} />
         <Route path="c/:slug" element={<FashionCategory />} />
-        <Route path="p/:slug" element={<FashionProductStub />} />
+        <Route path="p/:slug" element={<FashionProductPage />} />
         <Route path="search" element={<FashionSearch />} />
         <Route path="wishlist" element={<FashionWishlistPage />} />
       </Route>

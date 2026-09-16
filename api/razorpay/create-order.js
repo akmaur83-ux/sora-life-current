@@ -16,8 +16,8 @@ import { validateCartPayload, computeOrderTotal, generateOrderNumber } from '../
 import { getTaxConfig } from '../_lib/tax.js';
 import { getRazorpayCredentials, createRazorpayOrder } from '../_lib/razorpay.js';
 import {
-  getSupabaseConfig, fetchProductsForCart, insertOrder, getUserIdFromToken,
-  fetchVariantsForCart, fetchCouponRowByCode, recordConversion,
+  getSupabaseConfig, fetchCartRows, insertOrder, getUserIdFromToken,
+  fetchCouponRowByCode, recordConversion,
   findOrderByIdempotencyKey, consumeCouponForOrder, updateOrderById,
 } from '../_lib/supabaseAdmin.js';
 import { enforceRateLimit } from '../_lib/rateLimit.js';
@@ -291,10 +291,12 @@ export default async function handler(req, res) {
     const parsed = validateCartPayload(rawItems);
     if (!parsed.ok) return fail(res, 400, parsed.error);
 
-    // Trusted product + variant data straight from the database. The browser
-    // sent only ids and quantities; every price below is looked up here.
-    const products = await fetchProductsForCart(parsed.items.map((i) => i.id), sb);
-    const variantRows = await fetchVariantsForCart(parsed.items.map((i) => i.variantId), sb);
+    // Trusted product + variant data straight from the database, from BOTH
+    // catalogues: wellness ids resolve against products / product_variants
+    // exactly as before, fashion ids against fashion_products /
+    // fashion_variants. The browser sent only ids and quantities; every
+    // price below is looked up here.
+    const { products, variantRows, fashionProductRows, fashionVariantRows } = await fetchCartRows(parsed.items, sb);
 
     // Link this order to a signed-in customer, if any. The id is derived
     // server-side from the validated access token in the Authorization
@@ -328,7 +330,7 @@ export default async function handler(req, res) {
       // against is the goods value, and that must not be computed from a
       // total the coupon has already reduced.
       const dryRun = computeOrderTotal(parsed.items, products, delivery, {
-        variantRows, taxConfig: getTaxConfig(), buyerState,
+        variantRows, fashionProductRows, fashionVariantRows, taxConfig: getTaxConfig(), buyerState,
       });
       if (!dryRun.ok) return fail(res, 400, dryRun.error);
 
@@ -356,6 +358,8 @@ export default async function handler(req, res) {
 
     const totals = computeOrderTotal(parsed.items, products, delivery, {
       variantRows,
+      fashionProductRows,
+      fashionVariantRows,
       coupon,
       taxConfig: getTaxConfig(),
       buyerState,

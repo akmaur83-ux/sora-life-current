@@ -37,7 +37,9 @@ const pages = {
   'fashion-home': page('SSR — fashion home', app.render('/fashion')),
   'fashion-category-clothing': page('SSR — fashion category (level 1)', app.render('/fashion/c/clothing')),
   'fashion-category-mens-shirts-filtered': page('SSR — fashion category (level 3, filtered, list)', app.render('/fashion/c/mens-shirts?size=M&colour=Navy&view=list')),
-  'fashion-product-stub': page('SSR — fashion product stub', app.render('/fashion/p/meadow-linen-shirt-sage')),
+  'fashion-pdp': page('SSR — fashion product page', app.render('/fashion/p/meadow-linen-shirt-sage')),
+  'fashion-pdp-m-sage': page('SSR — fashion product page, M + Sage (out of stock)', app.render('/fashion/p/meadow-linen-shirt-sage?size=M&colour=Sage')),
+  'fashion-pdp-m-navy': page('SSR — fashion product page, M + Navy (in stock)', app.render('/fashion/p/meadow-linen-shirt-sage?size=M&colour=Navy')),
   'fashion-empty': page('SSR — fashion home, nothing stocked', app.render('/fashion', { categories: [], products: [] })),
 };
 for (const [name, html] of Object.entries(pages)) writeFileSync(join(OUT, `${name}.html`), html);

@@ -117,11 +117,11 @@ export default function Cart() {
                 const who = l.variantLabel ? `${l.product.name}, ${l.variantLabel}` : l.product.name;
                 return (
                 <div key={l.key} className={`cartrow ${l.purchasable ? '' : 'cartrow--blocked'}`}>
-                  <Link to={`/product/${l.product.slug}`} className="cartrow__media v2-cartrow__media"><ProductImage product={l.product} frame="v2" variant="card" /></Link>
+                  <Link to={l.product.href || `/product/${l.product.slug}`} className="cartrow__media v2-cartrow__media"><ProductImage product={l.product} frame="v2" variant="card" /></Link>
                   <div className="cartrow__info">
                     <div className="cartrow__top">
                       <div>
-                        <Link to={`/product/${l.product.slug}`} className="cartrow__name serif">{l.product.name}</Link>
+                        <Link to={l.product.href || `/product/${l.product.slug}`} className="cartrow__name serif">{l.product.name}</Link>
                         {/* Pack size is the variant; quantity is how many of
                             that pack. They are shown separately so "750 ml x 2"
                             can never be misread as "2 units of the base size". */}
@@ -268,9 +268,9 @@ function SavedList({ saved, dispatch, inline }) {
           const who = l.variantLabel ? `${l.product.name}, ${l.variantLabel}` : l.product.name;
           return (
           <div key={l.key} className="savedcard">
-            <Link to={`/product/${l.product.slug}`} className="savedcard__media"><ProductImage product={l.product} frame="v2" variant="card" /></Link>
+            <Link to={l.product.href || `/product/${l.product.slug}`} className="savedcard__media"><ProductImage product={l.product} frame="v2" variant="card" /></Link>
             <div className="savedcard__body">
-              <Link to={`/product/${l.product.slug}`} className="savedcard__name">{l.product.name}</Link>
+              <Link to={l.product.href || `/product/${l.product.slug}`} className="savedcard__name">{l.product.name}</Link>
               {/* The pack size, and the price OF that pack. This read
                   l.product.price, so saving a 750 ml line for later showed the
                   250 ml price (₹4,038 became ₹1,347) and dropped the label

@@ -37,6 +37,9 @@ export function cartToPayload(lines) {
     qty: l.qty,
     variantId: l.variantId || null,
     variant: l.variant || null,
+    // Which catalogue the id belongs to. Absent on a wellness line, so the
+    // payload for a wellness cart is byte-for-byte what it always was.
+    ...(l.catalogue === 'fashion' ? { catalogue: 'fashion' } : {}),
   }));
 }
 

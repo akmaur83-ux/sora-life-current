@@ -263,6 +263,54 @@ export async function fetchVariantsForCart(variantIds, cfg) {
   }
 }
 
+// ---- Fashion catalogue (0033) ------------------------------------------------
+// Read the same way the wellness rows above are: the browser sent ids, the
+// price is whatever these rows say. Both tables are absent until 0033 is
+// applied; a fashion line against a missing table is then simply "no longer
+// available" rather than a crash.
+export async function fetchFashionProductsForCart(ids, cfg) {
+  const clean = [...new Set((ids || []).filter(Boolean).map(String))];
+  if (!clean.length) return [];
+  const quoted = clean.map((i) => `"${i.replace(/"/g, '')}"`).join(',');
+  const select = 'id,name,slug,mrp,sale_price,is_active';
+  try {
+    return await rest(`fashion_products?select=${select}&id=in.(${quoted})`, cfg);
+  } catch (err) {
+    if (isMissingRelation(err)) { console.warn('[fashion] fashion_products table not present — run migration 0033.'); return []; }
+    throw err;
+  }
+}
+
+export async function fetchFashionVariantsForCart(variantIds, cfg) {
+  const ids = [...new Set((variantIds || []).filter(Boolean).map(String))];
+  if (!ids.length) return [];
+  const quoted = ids.map((i) => `"${i.replace(/"/g, '')}"`).join(',');
+  const select = 'id,product_id,size,colour,colour_hex,sku,stock,price_override,is_active';
+  try {
+    return await rest(`fashion_variants?select=${select}&id=in.(${quoted})`, cfg);
+  } catch (err) {
+    if (isMissingRelation(err)) return [];
+    throw err;
+  }
+}
+
+/**
+ * Every trusted row a priced cart needs, from both catalogues. Wellness ids
+ * go to products/product_variants exactly as before; fashion ids go to the
+ * fashion tables. The two never mix.
+ */
+export async function fetchCartRows(items, cfg) {
+  const wellness = items.filter((i) => i.catalogue !== 'fashion');
+  const fashion = items.filter((i) => i.catalogue === 'fashion');
+  const [products, variantRows, fashionProductRows, fashionVariantRows] = await Promise.all([
+    wellness.length ? fetchProductsForCart(wellness.map((i) => i.id), cfg) : Promise.resolve([]),
+    wellness.length ? fetchVariantsForCart(wellness.map((i) => i.variantId), cfg) : Promise.resolve([]),
+    fetchFashionProductsForCart(fashion.map((i) => i.id), cfg),
+    fetchFashionVariantsForCart(fashion.map((i) => i.variantId), cfg),
+  ]);
+  return { products, variantRows, fashionProductRows, fashionVariantRows };
+}
+
 /** All active variants for a product (admin/PDP hydration). */
 export async function fetchVariantsForProducts(productIds, cfg) {
   const ids = [...new Set((productIds || []).filter((n) => /^\d+$/.test(String(n))))];

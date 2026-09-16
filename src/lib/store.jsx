@@ -1,6 +1,10 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useEffect, useMemo, useReducer, useState, useCallback, useRef, useSyncExternalStore } from 'react';
 import { productById, getCatalogVersion, isCatalogHydrated, isPurchasable } from '../data/products.js';
 import { hydrateCartLine, cartSubtotal, cartMrpTotal, cartSavings } from './cartLine.js';
+import {
+  FASHION_CATALOGUE, fashionLineKey, isFashionLine, hydrateFashionCartLine, fashionRowFor, isFashionIdResolved,
+  ensureFashionProducts, fashionKeysToPrune, getFashionCartVersion, subscribeFashionCart,
+} from './fashionCartLine.js';
 import { useCustomerAuth } from './customerAuth.jsx';
 import { listWishlist, addWishlistItem, removeWishlistItem, mergeWishlist } from './wishlistData.js';
 import {
@@ -73,15 +77,23 @@ export function load() {
 function reducer(state, action) {
   switch (action.type) {
     case 'ADD': {
-      const { id, qty = 1, variant = null, variantId = null } = action;
+      const { id, qty = 1, variant = null, variantId = null, catalogue = null } = action;
       // Two different pack sizes of the same product are two cart lines, so
       // the key includes the variant. variantId is what the server prices
       // against; `variant` is only the human label shown in the UI.
-      const key = id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
+      //
+      // A FASHION line (catalogue: 'fashion') is keyed in its own namespace
+      // and carries the marker on the line, so it can never merge with, be
+      // priced as, or be pruned against a wellness product. A wellness line
+      // is shaped exactly as it always was — no catalogue field at all.
+      const fashion = catalogue === FASHION_CATALOGUE;
+      const key = fashion
+        ? fashionLineKey(id, variantId)
+        : id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
       const existing = state.cart.find((l) => l.key === key);
       const cart = existing
         ? state.cart.map((l) => (l.key === key ? { ...l, qty: l.qty + qty } : l))
-        : [...state.cart, { key, id, variant, variantId, qty }];
+        : [...state.cart, fashion ? { key, catalogue: FASHION_CATALOGUE, id, variant, variantId, qty } : { key, id, variant, variantId, qty }];
       return { ...state, cart };
     }
     case 'SET_QTY': {
@@ -192,6 +204,25 @@ export function StoreProvider({ children }) {
     return true;
   }, [toast]);
 
+  // The fashion add path. Takes the product view and the chosen size ×
+  // colour variant (fashion.js → productView / stockMatrix); the line
+  // carries ids only, and the label is display text. The stock gate here is
+  // a courtesy — the server re-checks it at quote and at order creation.
+  const addFashionToCart = useCallback((view, variant, qty = 1) => {
+    if (!view?.id || !variant?.id) {
+      toast('Please choose a size and colour first.', { kind: 'cart' });
+      return false;
+    }
+    if (!(Number(variant.stock) > 0)) {
+      toast('That size and colour is out of stock.', { kind: 'cart' });
+      return false;
+    }
+    const label = [variant.size, variant.colour].filter(Boolean).join(' · ') || null;
+    dispatch({ type: 'ADD', catalogue: FASHION_CATALOGUE, id: String(view.id), qty, variant: label, variantId: String(variant.id) });
+    toast('Added to cart', { kind: 'cart' });
+    return true;
+  }, [toast]);
+
   // What the UI renders. Recomputed from the two lists, never stored.
   const wishlist = useMemo(() => visibleWishlist(state), [state.guestWish, state.accountWish, state.syncedUserId]);
 
@@ -282,15 +313,27 @@ export function StoreProvider({ children }) {
   // line costs and whether it can be bought have exactly ONE implementation —
   // the same arrangement wishlistState.js uses, and for the same reason: those
   // rules are executed directly in tests rather than through a provider.
-  const hydrate = (l) => hydrateCartLine(l, productById[l.id]);
+  // A fashion line is priced from the fashion tables (fashionCartLine.js);
+  // a wellness line exactly as before. The wellness catalogue is never
+  // consulted for a fashion id, and vice versa.
+  const hydrate = (l) => (isFashionLine(l)
+    ? hydrateFashionCartLine(l, fashionRowFor(l.id), { resolved: isFashionIdResolved(l.id) })
+    : hydrateCartLine(l, productById[l.id]));
 
   // Variants arrive from Supabase AFTER first render. Memoising on state.cart
   // alone meant a line added with a 750 ml variantId kept the pre-variant
   // base price (250 ml) forever, because the cart array never changed. Read
   // the catalogue version during render so the async load invalidates these.
   const catalogVersion = getCatalogVersion();
-  const cartDetailed = useMemo(() => state.cart.map(hydrate).filter(Boolean), [state.cart, catalogVersion]);
-  const savedDetailed = useMemo(() => state.saved.map(hydrate).filter(Boolean), [state.saved, catalogVersion]);
+  // The fashion rows behind the cart's fashion lines load on demand; their
+  // version invalidates the memo the same way the wellness one does.
+  const fashionVersion = useSyncExternalStore(subscribeFashionCart, getFashionCartVersion, getFashionCartVersion);
+  useEffect(() => {
+    const ids = [...state.cart, ...state.saved].filter(isFashionLine).map((l) => l.id);
+    if (ids.length) ensureFashionProducts(ids);
+  }, [state.cart, state.saved]);
+  const cartDetailed = useMemo(() => state.cart.map(hydrate).filter(Boolean), [state.cart, catalogVersion, fashionVersion]);
+  const savedDetailed = useMemo(() => state.saved.map(hydrate).filter(Boolean), [state.saved, catalogVersion, fashionVersion]);
 
   // Lines that cannot be paid for. Cart and Checkout read this to block the
   // order instead of letting the customer discover it at the payment step.
@@ -316,13 +359,21 @@ export function StoreProvider({ children }) {
   //
   // PRUNE_MISSING returns the identical state when there is nothing to drop,
   // so this cannot re-trigger itself.
+  //
+  //   3. A FASHION line is judged against the fashion catalogue only: it is
+  //      pruned when a fetch for its id has answered and the product is gone,
+  //      and never because the wellness catalogue does not know the id.
   useEffect(() => {
     if (!isCatalogHydrated()) return;
     const keys = [...state.cart, ...state.saved]
-      .filter((l) => !productById[l.id])
+      .filter((l) => !isFashionLine(l) && !productById[l.id])
       .map((l) => l.key);
     if (keys.length) dispatch({ type: 'PRUNE_MISSING', keys });
   }, [state.cart, state.saved, catalogVersion]);
+  useEffect(() => {
+    const keys = fashionKeysToPrune([...state.cart, ...state.saved]);
+    if (keys.length) dispatch({ type: 'PRUNE_MISSING', keys });
+  }, [state.cart, state.saved, fashionVersion]);
   // Counted from the lines the cart can actually SHOW, so the badge can never
   // advertise an item the page does not list. state.cart may still hold a line
   // whose product has vanished; reconcileCart() below clears those for good.
@@ -344,6 +395,7 @@ export function StoreProvider({ children }) {
     toasts,
     toast,
     addToCart,
+    addFashionToCart,
     toggleWish,
     // Normalised on both sides: a caller passing the numeric 5 still matches
     // a stored '5'.
