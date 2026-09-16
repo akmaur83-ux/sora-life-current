@@ -90,6 +90,7 @@ export const INITIAL = { categories: CATEGORIES, products: PRODUCTS };
 export async function buildFashionApp({ cartCount = 0, session = null, wishlist = [] } = {}) {
   const rules = await import(pathToFileURL(resolve(ROOT, 'src/lib/fashion.js')).href);
   const wishMod = await import(pathToFileURL(resolve(ROOT, 'src/lib/fashionWishlist.js')).href);
+  const art = await import(pathToFileURL(resolve(ROOT, 'src/fashion/fashionArt.js')).href);
   wishMod.fashionWishlist.clear();
   for (const w of wishlist) wishMod.fashionWishlist.toggle(w);
   const { Link, Outlet, useLocation, useNavigate, useParams, useSearchParams, Routes, Route } = ReactRouter;
@@ -103,7 +104,7 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
   const catalogue = loadModule('src/fashion/FashionCatalogue.jsx', { getFashionCategories: async () => [], getFashionProducts: async () => [], buildTree: rules.buildTree, productView: rules.productView });
   const card = loadModule('src/fashion/FashionProductCard.jsx', { Link, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, swatchOverflow: rules.swatchOverflow, useFashionWishlist: wishMod.useFashionWishlist });
   const layout = loadModule('src/fashion/FashionLayout.jsx', { Link, Outlet, useLocation, useNavigate, Icon, SparrowMark, Footer, Toasts, useStore, branding, useFashionWishlist: wishMod.useFashionWishlist, FashionCatalogueProvider: catalogue.FashionCatalogueProvider, useFashionCatalogue: catalogue.useFashionCatalogue, categoryHref: rules.categoryHref, resolveCategory: rules.resolveCategory });
-  const home = loadModule('src/fashion/FashionHome.jsx', { Link, Icon, useCustomerAuth, categoryHref: rules.categoryHref, sortViews: rules.sortViews, topBrands: rules.topBrands, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default });
+  const home = loadModule('src/fashion/FashionHome.jsx', { Link, Icon, useCustomerAuth, categoryHref: rules.categoryHref, sortViews: rules.sortViews, topBrands: rules.topBrands, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default, HERO_IMAGE: art.HERO_IMAGE, circleArt: art.circleArt, cardArt: art.cardArt });
   const listing = loadModule('src/fashion/FashionListing.jsx', { Link, useParams, useSearchParams, Icon, ...rules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default });
   const stub = loadModule('src/fashion/FashionProductStub.jsx', { Link, useParams, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, breadcrumbFor: rules.breadcrumbFor, stockMatrix: rules.stockMatrix, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, Breadcrumb: listing.Breadcrumb, Stars: card.Stars });
   const App = ({ path, initial = INITIAL }) => h(StaticRouter, { location: path },

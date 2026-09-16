@@ -217,8 +217,17 @@ await test('/fashion: tiles, benefits, hero with an image slot, four category ca
   assert.match(html, /fs-benefits__signin[\s\S]*?<strong>Sign in<\/strong> for exclusive benefits/);
   const benefits = html.slice(html.indexOf('fs-benefits__list'), html.indexOf('</ul>', html.indexOf('fs-benefits__list')));
   assert.equal((benefits.match(/<li>/g) || []).length, 4, 'four benefit items');
-  assert.match(html, /<section class="fs-hero" aria-labelledby="fs-hero-h">[\s\S]*?Fashion for a brighter you[\s\S]*?New Season Essentials[\s\S]*?Shop now/);
-  assert.match(html, /class="fs-hero__slot"/, 'the image slot is empty until the artwork is supplied');
+  assert.match(html, /<section class="fs-hero has-image" aria-labelledby="fs-hero-h">[\s\S]*?Fashion for a brighter you[\s\S]*?New Season Essentials[\s\S]*?Shop now/);
+  assert.match(html, /<img src="\/img\/fashion-hero\.webp"[^>]*fetchpriority="high"/, 'the supplied banner, eager');
+  assert.doesNotMatch(html, /fs-hero__slot/, 'no typographic stand-in once the artwork exists');
+  const tiles = html.slice(html.indexOf('class="fs-tiles"'), html.indexOf('</nav>', html.indexOf('class="fs-tiles"')));
+  assert.deepEqual([...tiles.matchAll(/src="([^"]+)"/g)].map((m) => m[1]), ['/img/fashion-circle-men.webp', '/img/fashion-circle-women.webp', '/img/fashion-circle-kids.webp', '/img/fashion-circle-beauty.webp', '/img/fashion-circle-footwear.webp', '/img/fashion-circle-bags.webp'], 'every circle is a photograph — no initial-letter stand-in');
+  assert.doesNotMatch(tiles, /<b aria-hidden="true">B<\/b>/, 'the Beauty circle is no longer a B');
+  const catcards = html.slice(html.indexOf('class="fs-catcards"'), html.indexOf('Top Brands'));
+  assert.deepEqual([...catcards.matchAll(/src="([^"]+)"/g)].map((m) => m[1]), ['/img/fashion-card-clothing.webp', '/img/fashion-card-beauty.webp', '/img/fashion-card-footwear.webp', '/img/fashion-card-bags.webp']);
+  for (const f of ['fashion-hero', 'fashion-circle-men', 'fashion-circle-women', 'fashion-circle-kids', 'fashion-circle-beauty', 'fashion-circle-footwear', 'fashion-circle-bags', 'fashion-card-clothing', 'fashion-card-beauty', 'fashion-card-footwear', 'fashion-card-bags']) {
+    assert.ok(has(`img/${f}.webp`), `${f}.webp exists`); assert.ok(statSync(resolve(ROOT, `img/${f}.webp`)).size < 150 * 1024, `${f}.webp under 150KB`);
+  }
   assert.equal((html.match(/class="fs-catcard"/g) || []).length, 4);
   assert.match(html, /Shop by Category[\s\S]*?<strong>Clothing<\/strong><em>For Every You<\/em>/);
   assert.match(html, /Top Brands on SORA LIFE/);

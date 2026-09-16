@@ -5,6 +5,7 @@ import { categoryHref, sortViews, topBrands } from '../lib/fashion.js';
 import { useFashionCatalogue } from './FashionCatalogue.jsx';
 import { CategoryChips } from './FashionLayout.jsx';
 import FashionProductCard from './FashionProductCard.jsx';
+import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
 
 // ============================================================
 // /fashion — circular category tiles, the benefits strip, the hero (image
@@ -20,7 +21,7 @@ export const HERO = {
   cta: 'Shop now',
   href: '/fashion/c/clothing',
   note: 'Under ₹499',
-  image: null, // the artwork slot — set to '/img/<file>.webp' when supplied
+  image: HERO_IMAGE, // the supplied banner; null falls back to the typographic slot
 };
 
 function CategoryTiles({ tree }) {
@@ -31,7 +32,7 @@ function CategoryTiles({ tree }) {
     <nav className="fs-tiles" aria-label="Shop by">
       {tiles.map((c) => (
         <Link key={c.id} to={categoryHref(c)} className="fs-tile">
-          <span className="fs-tile__img">{c.image_url ? <img src={c.image_url} alt="" loading="lazy" decoding="async" width="200" height="200" /> : <b aria-hidden="true">{c.name.slice(0, 1)}</b>}</span>
+          <span className="fs-tile__img">{circleArt(c) ? <img src={circleArt(c)} alt="" loading="lazy" decoding="async" width="200" height="200" /> : <b aria-hidden="true">{c.name.slice(0, 1)}</b>}</span>
           <span className="fs-tile__name">{c.name}</span>
         </Link>
       ))}
@@ -72,7 +73,7 @@ function Hero() {
         <p className="fs-hero__note serif">{HERO.note}</p>
       </div>
       <div className="fs-hero__art" aria-hidden="true">
-        {HERO.image ? <img src={HERO.image} alt="" width="900" height="900" decoding="async" /> : (
+        {HERO.image ? <img src={HERO.image} alt="" width="1600" height="900" decoding="async" fetchpriority="high" /> : (
           <div className="fs-hero__slot">
             <p className="serif">Good Style<br />Brighter Days</p>
             <span className="fs-hero__words"><span>Wear</span><span>Live</span><span>Explore</span><span>Belong</span></span>
@@ -95,7 +96,7 @@ function ShopByCategory({ tree }) {
       <div className="fs-catcards">
         {roots.map((c) => (
           <Link key={c.id} to={categoryHref(c)} className="fs-catcard">
-            <span className="fs-catcard__img">{c.image_url ? <img src={c.image_url} alt="" loading="lazy" decoding="async" width="400" height="360" /> : <b aria-hidden="true">{c.name.slice(0, 1)}</b>}</span>
+            <span className="fs-catcard__img">{cardArt(c) ? <img src={cardArt(c)} alt="" loading="lazy" decoding="async" width="480" height="360" /> : <b aria-hidden="true">{c.name.slice(0, 1)}</b>}</span>
             <span className="fs-catcard__body">
               <strong>{c.name}</strong>
               {c.tagline && <em>{c.tagline}</em>}
