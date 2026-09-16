@@ -1,0 +1,30 @@
+/* ============================================================================
+   SORA LIFE — the fashion doorway on the wellness homepage (.fsb-*)
+   Storefront bundle: this is the only fashion CSS on the critical path.
+   ========================================================================= */
+.fsb__card {
+  position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 28px; align-items: center;
+  padding: 26px 28px; border-radius: 14px; text-decoration: none; color: var(--slv2-ivory);
+  background: var(--slv2-f800); border: 1px solid var(--slv2-f700);
+}
+.fsb__leaf {
+  position: absolute; right: -40px; top: -40px; width: 260px; height: 260px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 35% 35%, rgba(228, 196, 130, .45), rgba(199, 154, 69, .12) 55%, transparent 72%);
+}
+.fsb__txt { position: relative; display: grid; gap: 6px; min-width: 0; }
+.fsb__eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--slv2-gold-2); }
+.fsb__h { font-family: var(--font-display, 'Fraunces', Georgia, serif); font-weight: 500; font-size: clamp(20px, 2.2vw, 28px); line-height: 1.2; letter-spacing: -.01em; }
+.fsb__sub { font-size: 14px; color: rgba(251, 248, 241, .72); }
+.fsb__cta {
+  position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 20px; border-radius: 999px;
+  background: var(--slv2-gold); color: var(--slv2-f900); font-size: 14px; font-weight: 700; white-space: nowrap;
+  transition: transform .16s ease;
+}
+.fsb__card:hover .fsb__cta { transform: translateX(3px); }
+@media (max-width: 599px) {
+  .fsb__card { grid-template-columns: minmax(0, 1fr); padding: 22px 20px; }
+  .fsb__cta { justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fsb__card:hover .fsb__cta { transform: none; }
+}

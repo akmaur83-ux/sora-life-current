@@ -19,6 +19,10 @@ import CreatorPortal from './pages/CreatorPortal.jsx';
 import CreatorAttribution from './components/CreatorAttribution.jsx';
 import NotFound from './pages/NotFound.jsx';
 import AdminLogin from './pages/AdminLogin.jsx';
+import FashionLayout from './fashion/FashionLayout.jsx';
+import FashionHome from './fashion/FashionHome.jsx';
+import FashionCategory, { FashionSearch, FashionWishlistPage } from './fashion/FashionListing.jsx';
+import FashionProductStub from './fashion/FashionProductStub.jsx';
 import { useAdminAuth } from './lib/adminAuth.jsx';
 import { branding } from './lib/settings.js';
 import { DEFERRED_ROUTES, loadDeferredStyles } from './lib/deferredStyles.js';
@@ -176,6 +180,16 @@ export default function App() {
       <Route path="/invoice/:orderNumber" element={<Invoice />} />
       {/* Creator Program portal. Standalone shell, own chrome. */}
       <Route path="/creator/:tab?" element={<CreatorPortal />} />
+
+      {/* The fashion store: its own shell, catalogue and category tree; the
+          cart, account and checkout it links to are the shared ones. */}
+      <Route path="/fashion" element={<FashionLayout />}>
+        <Route index element={<FashionHome />} />
+        <Route path="c/:slug" element={<FashionCategory />} />
+        <Route path="p/:slug" element={<FashionProductStub />} />
+        <Route path="search" element={<FashionSearch />} />
+        <Route path="wishlist" element={<FashionWishlistPage />} />
+      </Route>
 
       <Route element={<Layout />}>
         <Route index element={<Home />} />

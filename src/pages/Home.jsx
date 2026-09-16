@@ -6,6 +6,7 @@ import StoryBlock from '../components/StoryBlock.jsx';
 import Newsletter from '../components/Newsletter.jsx';
 import HomeOffers from '../components/promo/HomeOffers.jsx';
 import HomeLeaderboard from '../components/HomeLeaderboard.jsx';
+import FashionBanner from '../components/FashionBanner.jsx';
 import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
@@ -59,6 +60,10 @@ export default function Home() {
       {/* 5 · CAMPAIGN / PROMOTION — existing promotions runtime, untouched.
              Renders nothing when no active promotion targets `home`. */}
       <HomeOffers appearance={visuals.offers} />
+
+      {/* The doorway to the fashion store — a separate section with its own
+          catalogue and navigation (/fashion). One block, no data dependency. */}
+      <FashionBanner />
 
       {/* selectHomeMerchandising balances this across categories. It is NOT a
           popularity measure, and today it is not a curated one either: the live

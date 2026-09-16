@@ -73,6 +73,9 @@ const STOREFRONT = [
   'src/styles/storefront-motion.css',
   'src/styles/storefront-background.css',
   'src/styles/storefront-refinements.css',
+  // The fashion doorway on the wellness homepage. Nothing else of the
+  // fashion store is on the critical path — its sheet is deferred below.
+  'src/styles/fashion-banner.css',
 ];
 
 // Routes outside the shop: /admin, /passport, /creator. No customer browsing
@@ -85,6 +88,8 @@ const DEFERRED = [
   'src/styles/creator-tier.css',
   // The studio shell + dashboard: re-points the tokens above to the light palette. Last on purpose.
   'src/styles/creator-dashboard.css',
+  // The fashion store (/fashion): its own shell and pages, namespaced .fs-*.
+  'src/styles/fashion.css',
 ];
 
 function bundle(files, outFile, label) {
