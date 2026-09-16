@@ -59247,6 +59247,33 @@ function FashionProductCard({
   });
 }
 
+// ============================================================
+// Fashion homepage art — the supplied photography, keyed by category slug.
+//
+// The category row (fashion_categories.image_url) holds ONE image per
+// category, but the homepage shows two treatments: a circular tile and a
+// wide card. The circle and card sets live here; a slug with no art here
+// falls back to the row's image_url, and a row with neither gets its
+// initial letter. All files are /img/*.webp under 150 KB.
+// ============================================================
+const HERO_IMAGE = '/img/fashion-hero.webp';
+const CIRCLE_ART = Object.freeze({
+  men: '/img/fashion-circle-men.webp',
+  women: '/img/fashion-circle-women.webp',
+  kids: '/img/fashion-circle-kids.webp',
+  beauty: '/img/fashion-circle-beauty.webp',
+  footwear: '/img/fashion-circle-footwear.webp',
+  'bags-accessories': '/img/fashion-circle-bags.webp'
+});
+const CARD_ART = Object.freeze({
+  clothing: '/img/fashion-card-clothing.webp',
+  beauty: '/img/fashion-card-beauty.webp',
+  footwear: '/img/fashion-card-footwear.webp',
+  'bags-accessories': '/img/fashion-card-bags.webp'
+});
+const circleArt = node => CIRCLE_ART[node?.slug] || node?.image_url || null;
+const cardArt = node => CARD_ART[node?.slug] || node?.image_url || null;
+
 const HERO = {
   eyebrow: 'Fashion for a brighter you',
   title: 'New Season Essentials',
@@ -59254,7 +59281,7 @@ const HERO = {
   cta: 'Shop now',
   href: '/fashion/c/clothing',
   note: 'Under ₹499',
-  image: null // the artwork slot — set to '/img/<file>.webp' when supplied
+  image: HERO_IMAGE // the supplied banner; null falls back to the typographic slot
 };
 function CategoryTiles({
   tree
@@ -59270,8 +59297,8 @@ function CategoryTiles({
       className: "fs-tile",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "fs-tile__img",
-        children: c.image_url ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-          src: c.image_url,
+        children: circleArt(c) ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: circleArt(c),
           alt: "",
           loading: "lazy",
           decoding: "async",
@@ -59331,7 +59358,7 @@ function Benefits() {
 }
 function Hero() {
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: `fs-hero${''}`,
+    className: `fs-hero${' has-image' }`,
     "aria-labelledby": "fs-hero-h",
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-hero__txt",
@@ -59359,24 +59386,14 @@ function Hero() {
     }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "fs-hero__art",
       "aria-hidden": "true",
-      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "fs-hero__slot",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-          className: "serif",
-          children: ["Good Style", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "Brighter Days"]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-          className: "fs-hero__words",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: "Wear"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: "Live"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: "Explore"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: "Belong"
-          })]
-        })]
-      })
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+        src: HERO.image,
+        alt: "",
+        width: "1600",
+        height: "900",
+        decoding: "async",
+        fetchpriority: "high"
+      }) 
     })]
   });
 }
@@ -59409,12 +59426,12 @@ function ShopByCategory({
         className: "fs-catcard",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "fs-catcard__img",
-          children: c.image_url ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-            src: c.image_url,
+          children: cardArt(c) ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: cardArt(c),
             alt: "",
             loading: "lazy",
             decoding: "async",
-            width: "400",
+            width: "480",
             height: "360"
           }) : /*#__PURE__*/jsxRuntimeExports.jsx("b", {
             "aria-hidden": "true",

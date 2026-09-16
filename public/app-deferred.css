@@ -6275,6 +6275,14 @@
 .fs-hero__slot p { margin: 0; font-style: italic; font-size: clamp(26px, 3vw, 40px); line-height: 1.15; color: var(--slv2-f800); }
 .fs-hero__words { display: grid; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .32em; text-transform: uppercase; color: var(--slv2-ink-3); }
 .fs-hero__words::after { content: ''; display: block; width: 44px; height: 2px; background: var(--slv2-gold); justify-self: end; margin-top: 6px; }
+/* With the supplied banner the artwork runs edge to edge behind the copy;
+   the subject sits right, so the copy keeps the left. A cream wash on the
+   left keeps the type legible where the photo runs under it. */
+.fs-hero.has-image { grid-template-columns: minmax(0, 1fr); min-height: 500px; padding: 44px 48px; }
+.fs-hero.has-image::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, rgba(251, 248, 241, .88) 0%, rgba(251, 248, 241, .55) 42%, rgba(251, 248, 241, 0) 62%); }
+.fs-hero.has-image .fs-hero__art { position: absolute; inset: 0; z-index: 0; min-height: 0; display: block; }
+.fs-hero.has-image .fs-hero__art img { width: 100%; height: 100%; max-height: none; object-fit: cover; object-position: right 28%; border-radius: 0; }
+.fs-hero.has-image .fs-hero__txt { position: relative; z-index: 2; max-width: 50%; }
 
 /* ---- Sections --------------------------------------------------------------- */
 .fs-sec { margin-top: 34px; }
@@ -6398,6 +6406,8 @@
   .fs-catcards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fs-brands__row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .fs-hero { grid-template-columns: minmax(0, 1fr); padding: 28px 24px; }
+  .fs-hero.has-image .fs-hero__txt { max-width: 62%; }
+  .fs-hero.has-image .fs-hero__art img { object-position: 72% center; }
   .fs-hero__art { min-height: 0; justify-items: start; }
   .fs-hero__slot { justify-items: start; text-align: left; }
   .fs-hero__words::after { justify-self: start; }
@@ -6430,6 +6440,10 @@
   .fs-benefits__signin { border-right: 0; border-bottom: 1px solid var(--fs-line); padding: 14px 16px; font-size: 16px; }
   .fs-benefits__list li { padding: 12px 4px; font-size: 12.5px; }
   .fs-hero { min-height: 0; padding: 24px 20px; gap: 18px; }
+  .fs-hero.has-image { min-height: 400px; padding: 26px 20px; }
+  .fs-hero.has-image::before { background: linear-gradient(90deg, rgba(251, 248, 241, .92) 0%, rgba(251, 248, 241, .7) 50%, rgba(251, 248, 241, .15) 100%); }
+  .fs-hero.has-image .fs-hero__txt { max-width: 100%; }
+  .fs-hero.has-image .fs-hero__art img { object-position: 78% center; }
   .fs-hero__h { font-size: 38px; }
   .fs-hero__sub { font-size: 15px; margin: 10px 0 16px; }
   .fs-hero__note { font-size: 30px; margin-top: 18px; }
