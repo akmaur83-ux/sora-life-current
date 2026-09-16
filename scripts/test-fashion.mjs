@@ -342,7 +342,8 @@ function homeSections(source) {
 }
 
 await test('the wellness homepage keeps every section in the same order — the fashion banner is the only addition', () => {
-  const before = homeSections(execFileSync('git', ['show', 'HEAD:src/pages/Home.jsx'], { cwd: ROOT, encoding: 'utf8' }));
+  // The homepage as it stood before the fashion store (b45cdc8), pinned.
+  const before = ['Hero', 'HomeCategoryStrip', 'HomeOffers', 'MarketplaceProductRail#trending', 'ShopByCategory', 'ShopByConcerns', 'FeaturedBrands', 'DiscoveryEdit', 'MarketplaceProductRail#popular', 'MomTrustSpotlight', 'CuratedCollections', 'CreatorCommunity', 'WhySoraLife', 'Newsletter', 'HomeLeaderboard'];
   const after = homeSections(read('src/pages/Home.jsx'));
   assert.ok(after.includes('FashionBanner'), 'the banner is on the homepage');
   assert.deepEqual(after.filter((s) => s !== 'FashionBanner'), before.filter((s) => s !== 'FashionBanner'), 'every other section, in order');
@@ -352,11 +353,13 @@ await test('the wellness homepage keeps every section in the same order — the 
 
 await test('the storefront stylesheet order is untouched; the fashion sheets are appended, the store one deferred', () => {
   const list = (src, name) => [...src.slice(src.indexOf(`const ${name}`), src.indexOf('];', src.indexOf(`const ${name}`))).matchAll(/'([^']+\.css)'/g)].map((m) => m[1]);
-  const before = execFileSync('git', ['show', 'HEAD:build/build-css.mjs'], { cwd: ROOT, encoding: 'utf8' });
+  // The wellness cascade as it stood before the fashion store (b45cdc8),
+  // pinned here so a reorder anywhere in it fails loudly.
+  const WELLNESS_CASCADE = ['tokens', 'base', 'components', 'layout', 'pages', 'pdp', 'home', 'promotions', 'v2-foundation', 'v2-header', 'v2-card', 'v2-home', 'v2-shop', 'v2-pdp', 'v2-cart-checkout', 'v2-mobile-cart', 'coupons', 'info', 'homepage-appearance', 'hero-cta', 'v2-home-marketplace', 'v2-home-discovery', 'leaderboard', 'category-spotlight', 'storefront-motion', 'storefront-background', 'storefront-refinements'].map((n) => `src/styles/${n}.css`);
   const after = read('build/build-css.mjs');
-  const sf = list(after, 'STOREFRONT'); const sfBefore = list(before, 'STOREFRONT');
-  assert.deepEqual(sf.slice(0, sfBefore.length), sfBefore, 'the cascade the wellness store loads is byte-for-byte the same list');
-  assert.deepEqual(sf.slice(sfBefore.length), ['src/styles/fashion-banner.css']);
+  const sf = list(after, 'STOREFRONT');
+  assert.deepEqual(sf.slice(0, WELLNESS_CASCADE.length), WELLNESS_CASCADE, 'the cascade the wellness store loads is the same list, in the same order');
+  assert.deepEqual(sf.slice(WELLNESS_CASCADE.length), ['src/styles/fashion-banner.css']);
   assert.equal(list(after, 'DEFERRED').at(-1), 'src/styles/fashion.css');
   assert.match(read('src/lib/deferredStyles.js'), /\(admin\|passport\|creator\|fashion\)/, 'the deferred sheet is fetched on /fashion');
   const css = read('src/styles/fashion.css');
