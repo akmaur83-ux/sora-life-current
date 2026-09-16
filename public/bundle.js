@@ -33068,7 +33068,7 @@ function PageHeading() {
     children: [name, " \u2014 a marketplace for wellness, personal care and everyday essentials"]
   });
 }
-function Hero() {
+function Hero$1() {
   return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(PageHeading, {}), heroSlidesConfigured ? /*#__PURE__*/jsxRuntimeExports.jsx(ConfiguredHero, {}) : /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceHero, {})]
   });
@@ -34053,7 +34053,7 @@ const PROMOTIONS_FALLBACK = [{
 const PLACEMENTS = ['home', 'pdp', 'cart'];
 const TYPES = ['poster', 'offer'];
 const THEME_VARIANTS = ['forest', 'cream', 'orange', 'dark', 'minimal'];
-function str$3(v, max = 400) {
+function str$4(v, max = 400) {
   return typeof v === 'string' ? v.trim().slice(0, max) : '';
 }
 
@@ -34064,20 +34064,20 @@ function normalizePromo(row) {
   const themeVariant = THEME_VARIANTS.includes(row.theme_variant ?? row.themeVariant) ? row.theme_variant ?? row.themeVariant : 'forest';
   const rawPlacements = row.placements ?? [];
   const placements = Array.isArray(rawPlacements) ? rawPlacements.filter(p => PLACEMENTS.includes(p)) : [];
-  const ctaUrl = str$3(row.cta_url ?? row.ctaUrl, 500) || null;
+  const ctaUrl = str$4(row.cta_url ?? row.ctaUrl, 500) || null;
   return {
     id: String(row.id ?? cryptoId()),
     type,
-    title: str$3(row.title, 160),
-    subtitle: str$3(row.subtitle, 320),
+    title: str$4(row.title, 160),
+    subtitle: str$4(row.subtitle, 320),
     couponCode: normalizeCode(row.coupon_code ?? row.couponCode),
-    ctaText: str$3(row.cta_text ?? row.ctaText, 60),
+    ctaText: str$4(row.cta_text ?? row.ctaText, 60),
     ctaUrl: safeCtaUrl(ctaUrl),
-    badgeText: str$3(row.badge_text ?? row.badgeText, 40),
-    imageUrl: str$3(row.image_url ?? row.imageUrl, 1000) || null,
+    badgeText: str$4(row.badge_text ?? row.badgeText, 40),
+    imageUrl: str$4(row.image_url ?? row.imageUrl, 1000) || null,
     // Optional artwork for >= 1024px (0029). Null means every viewport shows
     // imageUrl, exactly as before the column existed.
-    desktopImageUrl: str$3(row.desktop_image_url ?? row.desktopImageUrl, 1000) || null,
+    desktopImageUrl: str$4(row.desktop_image_url ?? row.desktopImageUrl, 1000) || null,
     themeVariant,
     textAlign: (row.text_align ?? row.textAlign) === 'center' ? 'center' : 'left',
     placements,
@@ -34088,7 +34088,7 @@ function normalizePromo(row) {
   };
 }
 function normalizeCode(v) {
-  const s = str$3(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+  const s = str$4(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
   return s || null;
 }
 
@@ -34751,7 +34751,7 @@ const DEFAULT_LADDER = Object.freeze([{
   rate: 25
 }]);
 const DEFAULT_BEYOND_STEP = 25000;
-const num$4 = v => {
+const num$5 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
@@ -34763,8 +34763,8 @@ function normalizeLadder(rows) {
   return rows.map((r, i) => ({
     level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
     rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
-    threshold: num$4(r?.threshold),
-    rate: num$4(r?.rate)
+    threshold: num$5(r?.threshold),
+    rate: num$5(r?.rate)
   })).sort((a, b) => a.level - b.level);
 }
 
@@ -36605,6 +36605,43 @@ function HomeLeaderboard({
   });
 }
 
+function FashionBanner() {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "v2-sec fsb",
+    "aria-labelledby": "fsb-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "v2-wrap",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/fashion",
+        className: "fsb__card",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "fsb__leaf",
+          "aria-hidden": "true"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "fsb__txt",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "fsb__eyebrow",
+            children: "New \xB7 Fashion & Lifestyle"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            className: "fsb__h",
+            id: "fsb-h",
+            children: "Clothing, footwear, bags, beauty and accessories \u2014 the SORA LIFE fashion store"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "fsb__sub",
+            children: "Same account, same bag, one checkout."
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "fsb__cta",
+          children: ["Explore fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      })
+    })
+  });
+}
+
 function PriceTag({
   product,
   showOff = true,
@@ -37289,7 +37326,7 @@ const NEUTRAL_THEME = {
   background: '#F1EDE4',
   gradient: 'linear-gradient(168deg, #F6F2EA 0%, #E9E3D7 100%)'
 };
-const str$2 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
+const str$3 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
 
 /**
  * A CSS colour we are willing to inline as a style value.
@@ -37299,7 +37336,7 @@ const str$2 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
  * quote or url() is refused rather than escaped.
  */
 function safeColor(value) {
-  const v = str$2(value, 40);
+  const v = str$3(value, 40);
   if (!v) return '';
   if (/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) return v;
   if (/^(?:rgb|hsl)a?\(\s*[\d.,%\s/deg]+\)$/i.test(v)) return v;
@@ -37314,7 +37351,7 @@ function safeColor(value) {
  * one. No url(), no var(), no expression, no nesting of other functions.
  */
 function safeGradient(value) {
-  const v = str$2(value, 240);
+  const v = str$3(value, 240);
   if (!v) return '';
   if (!/^(?:linear|radial|conic)-gradient\(/i.test(v)) return '';
   if (!v.endsWith(')')) return '';
@@ -37384,16 +37421,16 @@ function makeSpotlightId(productSlug, taken = []) {
  */
 function sanitizeSpotlightItem(raw, taken = []) {
   if (!raw || typeof raw !== 'object') return null;
-  const productSlug = str$2(raw.productSlug ?? raw.productId ?? raw.slug, 120);
+  const productSlug = str$3(raw.productSlug ?? raw.productId ?? raw.slug, 120);
   if (!productSlug) return null;
   return {
-    id: str$2(raw.id, 60) || makeSpotlightId(productSlug, taken),
+    id: str$3(raw.id, 60) || makeSpotlightId(productSlug, taken),
     productSlug,
     // Optional cutout/hero asset. Same URL policy the homepage visuals use.
     spotlightImage: safeVisualUrl(raw.spotlightImage) || '',
     // Owner-authored, and shown verbatim. Never generated from product data.
-    headline: str$2(raw.headline, 60),
-    subline: str$2(raw.subline, 90),
+    headline: str$3(raw.headline, 60),
+    subline: str$3(raw.subline, 90),
     background: safeColor(raw.background),
     gradient: safeGradient(raw.gradient),
     // Generated once by the Admin packshot preprocessor. It is deliberately
@@ -38510,7 +38547,7 @@ function DiscoveryTile({
     })
   });
 }
-function ShopByCategory({
+function ShopByCategory$1({
   cards
 }) {
   const list = Array.isArray(cards) ? cards : selectCategoryCards();
@@ -38577,9 +38614,9 @@ const CONTENT_LABELS = {
   how_to_use: 'How to use',
   specifications: 'Specifications'
 };
-const str$1 = v => (v === null || v === undefined ? '' : String(v)).trim();
+const str$2 = v => (v === null || v === undefined ? '' : String(v)).trim();
 const truthyStr = v => {
-  const s = str$1(v);
+  const s = str$2(v);
   return s.length ? s : null;
 };
 
@@ -38593,7 +38630,7 @@ function normalizeKeyClaims(value) {
   const list = Array.isArray(value) ? value
   // A tag input or a CSV cell may hand us a comma-separated string.
   : String(value).split(',');
-  const out = list.map(str$1).filter(Boolean);
+  const out = list.map(str$2).filter(Boolean);
   return arrayOrNull(out);
 }
 function normalizeBenefits(value) {
@@ -38603,7 +38640,7 @@ function normalizeBenefits(value) {
   for (const raw of value) {
     if (typeof raw === 'string') {
       // The legacy shape. Keep it readable rather than dropping the content.
-      const t = str$1(raw);
+      const t = str$2(raw);
       if (t) out.push({
         title: t,
         description: ''
@@ -38611,8 +38648,8 @@ function normalizeBenefits(value) {
       continue;
     }
     if (!raw || typeof raw !== 'object') continue;
-    const title = str$1(raw.title);
-    const description = str$1(raw.description);
+    const title = str$2(raw.title);
+    const description = str$2(raw.description);
     // A row with neither is not a benefit, it is an empty row the admin has
     // not filled in yet — dropped on save rather than stored.
     if (!title && !description) continue;
@@ -38629,7 +38666,7 @@ function normalizeIngredients(value) {
   const out = [];
   for (const raw of value) {
     if (typeof raw === 'string') {
-      const n = str$1(raw);
+      const n = str$2(raw);
       if (n) out.push({
         name: n,
         description: '',
@@ -38638,14 +38675,14 @@ function normalizeIngredients(value) {
       continue;
     }
     if (!raw || typeof raw !== 'object') continue;
-    const name = str$1(raw.name);
+    const name = str$2(raw.name);
     if (!name) continue; // an ingredient with no name is nothing
     out.push({
       name,
-      description: str$1(raw.description),
+      description: str$2(raw.description),
       // Only http(s). A relative or javascript: value must never reach an
       // <img src> on a live page.
-      image_url: /^https?:\/\//i.test(str$1(raw.image_url)) ? str$1(raw.image_url) : null
+      image_url: /^https?:\/\//i.test(str$2(raw.image_url)) ? str$2(raw.image_url) : null
     });
   }
   return out;
@@ -38655,7 +38692,7 @@ function normalizeHowToUse(value) {
   if (!Array.isArray(value)) return null;
   const out = [];
   for (const raw of value) {
-    const text = typeof raw === 'string' ? str$1(raw) : str$1(raw?.text);
+    const text = typeof raw === 'string' ? str$2(raw) : str$2(raw?.text);
     if (!text) continue;
     out.push({
       step: out.length + 1,
@@ -38667,7 +38704,7 @@ function normalizeHowToUse(value) {
 function normalizeSpecifications(value) {
   if (value === null || value === undefined) return null;
   // Accept both the stored object and the editor's row array.
-  const pairs = Array.isArray(value) ? value.map(r => [str$1(r?.key), str$1(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$1(k), str$1(v)]) : [];
+  const pairs = Array.isArray(value) ? value.map(r => [str$2(r?.key), str$2(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$2(k), str$2(v)]) : [];
   const out = {};
   for (const [k, v] of pairs) {
     if (!k || !v) continue; // a label with no value renders as "Shelf life:"
@@ -38733,7 +38770,7 @@ function validateContent(input) {
       errors.push('Benefits: each row needs a title and description.');
       break;
     }
-    if (!str$1(b.title) && !str$1(b.description)) {
+    if (!str$2(b.title) && !str$2(b.description)) {
       errors.push('Benefits: a row is completely empty.');
       break;
     }
@@ -38743,11 +38780,11 @@ function validateContent(input) {
       errors.push('Ingredients: each row needs a name.');
       break;
     }
-    if (!str$1(i.name)) {
+    if (!str$2(i.name)) {
       errors.push('Ingredients: a row has a description but no name.');
       break;
     }
-    const url = str$1(i.image_url);
+    const url = str$2(i.image_url);
     if (url && !/^https?:\/\//i.test(url)) {
       errors.push(`Ingredients: "${url.slice(0, 30)}" is not an http(s) image URL.`);
       break;
@@ -38758,7 +38795,7 @@ function validateContent(input) {
       errors.push('How to use: each step needs text.');
       break;
     }
-    if (!str$1(s.text)) {
+    if (!str$2(s.text)) {
       errors.push('How to use: a step has no text.');
       break;
     }
@@ -38798,7 +38835,7 @@ function contentScore(product) {
     missing: CONTENT_FIELDS.filter(f => !populated.includes(f)),
     count: populated.length,
     total: CONTENT_FIELDS.length,
-    hasDescription: !!str$1(product?.description)
+    hasDescription: !!str$2(product?.description)
   };
 }
 
@@ -40409,16 +40446,16 @@ function Home() {
   const story = homepage?.story;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "v2-home",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Hero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeCategoryStrip, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Hero$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeCategoryStrip, {
       appearance: visuals.categoryStrip
     }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
       eyebrow: "Across the catalogue",
       title: "Start here",
       products: merchandise.trending
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByConcerns, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FeaturedBrands, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByConcerns, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FeaturedBrands, {
       brands: merchandise.brands
     }), /*#__PURE__*/jsxRuntimeExports.jsx(DiscoveryEdit, {
       products: merchandise.discover,
@@ -40575,9 +40612,9 @@ const PRICE_BANDS = [{
   min: 5000,
   maxExclusive: Infinity
 }];
-const SORT_IDS = new Set(SHOP_SORTS.map(item => item.id));
+const SORT_IDS$1 = new Set(SHOP_SORTS.map(item => item.id));
 const HIGHLIGHT_IDS = new Set(['new', 'sale', 'bestseller']);
-const PRICE_IDS = new Set(PRICE_BANDS.map(item => item.id));
+const PRICE_IDS$1 = new Set(PRICE_BANDS.map(item => item.id));
 function values(value) {
   return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
 }
@@ -40587,7 +40624,7 @@ function validValues(value, allowed) {
 function normalizedShopSort(value) {
   // `featured` was the old ID for this same stable/curated ordering.
   if (value === 'featured') return 'recommended';
-  return SORT_IDS.has(value) ? value : 'recommended';
+  return SORT_IDS$1.has(value) ? value : 'recommended';
 }
 function readShopUrlState(searchParams, categorySlugs = []) {
   const params = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
@@ -40599,7 +40636,7 @@ function readShopUrlState(searchParams, categorySlugs = []) {
     categories: validValues(params.get('category'), allowedCategories),
     highlights: validValues(params.get('filter'), HIGHLIGHT_IDS),
     inStock: params.get('stock') === '1',
-    priceBand: PRICE_IDS.has(price) ? price : null
+    priceBand: PRICE_IDS$1.has(price) ? price : null
   };
 }
 function setList(params, key, list) {
@@ -40622,7 +40659,7 @@ function updateShopUrlState(searchParams, patch) {
     if (patch.inStock) params.set('stock', '1');else params.delete('stock');
   }
   if (has('priceBand')) {
-    if (PRICE_IDS.has(patch.priceBand)) params.set('price', patch.priceBand);else params.delete('price');
+    if (PRICE_IDS$1.has(patch.priceBand)) params.set('price', patch.priceBand);else params.delete('price');
   }
   return params;
 }
@@ -45338,7 +45375,7 @@ async function requireUserId() {
 }
 
 // ---------- field whitelists (prevent id/user_id injection) ----------
-function str(v) {
+function str$1(v) {
   return v == null ? null : String(v);
 }
 
@@ -45360,7 +45397,7 @@ function pickAddressColumns(fields = {}) {
   };
   const row = {};
   for (const [key, col] of Object.entries(map)) {
-    if (fields[key] !== undefined) row[col] = str(fields[key]);
+    if (fields[key] !== undefined) row[col] = str$1(fields[key]);
   }
   return row;
 }
@@ -51074,7 +51111,7 @@ function Invoice() {
     };
   }, [orderNumber, session, authLoading]);
   if (authLoading || order === undefined) {
-    return /*#__PURE__*/jsxRuntimeExports.jsx(Shell$1, {
+    return /*#__PURE__*/jsxRuntimeExports.jsx(Shell$2, {
       children: /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "muted",
         children: "Loading your invoice\u2026"
@@ -51082,7 +51119,7 @@ function Invoice() {
     });
   }
   if (!session) {
-    return /*#__PURE__*/jsxRuntimeExports.jsxs(Shell$1, {
+    return /*#__PURE__*/jsxRuntimeExports.jsxs(Shell$2, {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
         className: "serif inv__empty-h",
         children: "Sign in to view this invoice"
@@ -51100,7 +51137,7 @@ function Invoice() {
     });
   }
   if (!order) {
-    return /*#__PURE__*/jsxRuntimeExports.jsxs(Shell$1, {
+    return /*#__PURE__*/jsxRuntimeExports.jsxs(Shell$2, {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
         className: "serif inv__empty-h",
         children: "Invoice not found"
@@ -51424,7 +51461,7 @@ function Invoice() {
     })]
   });
 }
-function Shell$1({
+function Shell$2({
   children
 }) {
   return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -51453,7 +51490,7 @@ function Shell$1({
 // ============================================================
 
 const METRICS = Object.freeze(['clicks', 'orders', 'products', 'sales', 'commission']);
-const num$3 = v => {
+const num$4 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -51461,7 +51498,7 @@ const num$3 = v => {
 // Running total of a series — the shape of "lifetime so far".
 function cumulative(points) {
   let acc = 0;
-  return (Array.isArray(points) ? points : []).map(p => acc += num$3(p));
+  return (Array.isArray(points) ? points : []).map(p => acc += num$4(p));
 }
 
 // SVG geometry. `pad` keeps the stroke inside the box; a flat series sits on
@@ -51471,7 +51508,7 @@ function sparkGeometry(points, {
   height = 28,
   pad = 2
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$3);
+  const vals = (Array.isArray(points) ? points : []).map(num$4);
   const n = vals.length;
   if (n === 0) return {
     line: '',
@@ -51542,20 +51579,20 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
   };
   for (const m of METRICS) out[m] = Array.from({
     length: n
-  }, (_, i) => num$3(rows[i]?.[m]));
+  }, (_, i) => num$4(rows[i]?.[m]));
   out.labels = Array.from({
     length: n
   }, (_, i) => String(rows[i]?.at || ''));
   out.totals = Object.fromEntries(METRICS.map(m => [m, out[m].reduce((a, b) => a + b, 0)]));
-  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$3(raw.previous[m])])) : null;
+  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$4(raw.previous[m])])) : null;
   out.links = Array.isArray(raw?.links) ? raw.links.map(l => ({
     link_id: l?.link_id ?? null,
     label: String(l?.label || 'Link'),
     campaign: l?.campaign || null,
-    clicks: num$3(l?.clicks),
-    orders: num$3(l?.orders),
-    sales: num$3(l?.sales),
-    commission: num$3(l?.commission)
+    clicks: num$4(l?.clicks),
+    orders: num$4(l?.orders),
+    sales: num$4(l?.sales),
+    commission: num$4(l?.commission)
   })) : [];
   return out;
 }
@@ -51563,8 +51600,8 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
 // Trend versus the previous period. No previous period, or a previous of
 // zero, is "—" (not "+100%": there is nothing to be 100% of).
 function trend(current, previous) {
-  const c = num$3(current);
-  const p = previous == null ? null : num$3(previous);
+  const c = num$4(current);
+  const p = previous == null ? null : num$4(previous);
   if (p == null) return {
     pct: null,
     dir: 'none',
@@ -51614,8 +51651,8 @@ function areaChartGeometry({
   padT = 14,
   padB = 26
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num$3);
-  const b = (Array.isArray(orders) ? orders : []).map(num$3);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$4);
+  const b = (Array.isArray(orders) ? orders : []).map(num$4);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -51680,7 +51717,7 @@ function donutGeometry(parts, {
   const c = 2 * Math.PI * r;
   const list = (Array.isArray(parts) ? parts : []).map(p => ({
     ...p,
-    value: Math.max(0, num$3(p?.value))
+    value: Math.max(0, num$4(p?.value))
   }));
   const total = list.reduce((s, p) => s + p.value, 0);
   let offset = 0;
@@ -51722,7 +51759,7 @@ function barChartGeometry(points, {
   gap = 0.35,
   minMax = 4
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$3);
+  const vals = (Array.isArray(points) ? points : []).map(num$4);
   const n = vals.length;
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -51762,7 +51799,7 @@ function barChartGeometry(points, {
   };
 }
 function compactRupees(v) {
-  const n = Math.max(0, num$3(v));
+  const n = Math.max(0, num$4(v));
   if (n >= 10000000) return `₹${trim(n / 10000000)}Cr`;
   if (n >= 100000) return `₹${trim(n / 100000)}L`;
   if (n >= 1000) return `₹${trim(n / 1000)}k`;
@@ -53873,7 +53910,7 @@ function CreatorTierPage({
 }
 
 const isZero$1 = v => !(Number(v) > 0);
-const num$2 = v => v == null || v === '' ? NaN : Number(v);
+const num$3 = v => v == null || v === '' ? NaN : Number(v);
 const monthLabel = ym => {
   if (!ym) return '—';
   const [y, m] = String(ym).split('-').map(Number);
@@ -53884,7 +53921,7 @@ const monthLabel = ym => {
   }).format(new Date(y, m - 1, 1));
 };
 const ordinal$2 = n => {
-  const v = num$2(n);
+  const v = num$3(n);
   if (!Number.isFinite(v)) return '—';
   const s = ['th', 'st', 'nd', 'rd'];
   const r = v % 100;
@@ -53894,10 +53931,10 @@ const ordinal$2 = n => {
 // The terms the page quotes. The tier rate (0031) is the live one; the
 // earnings RPC's commission_rate is the floor, the creator row the fallback.
 function earningsTerms(earnings, standing, creator) {
-  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$2).find(v => Number.isFinite(v));
-  const hold = num$2(earnings?.settlement_hold_days);
-  const minPayout = num$2(earnings?.min_payout);
-  const payoutDay = num$2(earnings?.payout_day);
+  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$3).find(v => Number.isFinite(v));
+  const hold = num$3(earnings?.settlement_hold_days);
+  const minPayout = num$3(earnings?.min_payout);
+  const payoutDay = num$3(earnings?.payout_day);
   return {
     rate: Number.isFinite(rate) ? rate : null,
     hold: Number.isFinite(hold) && hold >= 0 ? hold : null,
@@ -55777,7 +55814,7 @@ const fmtDate = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   year: 'numeric'
 }).format(new Date(iso)) : '—';
 // null is "not set", never 0 — Number(null) would print a 0% rate.
-const num$1 = v => v == null || v === '' ? NaN : Number(v);
+const num$2 = v => v == null || v === '' ? NaN : Number(v);
 const initialsOf = name => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
 const STATUS = {
   active: {
@@ -55848,8 +55885,8 @@ function CreatorProfilePage({
   termsPublished = false
 }) {
   const st = STATUS[creator?.status] || STATUS.pending;
-  const rate = standing?.rate != null ? num$1(standing.rate) : num$1(creator?.default_commission_rate);
-  const windowDays = num$1(creator?.default_attribution_window_days);
+  const rate = standing?.rate != null ? num$2(standing.rate) : num$2(creator?.default_commission_rate);
+  const windowDays = num$2(creator?.default_attribution_window_days);
   const since = creator?.joined_at || creator?.created_at || null;
   const acct = standingFor(creator, kyc);
   const open = !!standing?.withdrawals_open;
@@ -56151,7 +56188,7 @@ function CreatorProfilePage({
 // derived (a ratio over zero, a period with no previous period) the value
 // is null and the page shows "—".
 // ============================================================
-const num = v => {
+const num$1 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -56159,7 +56196,7 @@ const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
 
 // A ratio, or null when there is nothing to divide by.
-const ratio = (n, d) => num(d) > 0 ? num(n) / num(d) : null;
+const ratio = (n, d) => num$1(d) > 0 ? num$1(n) / num$1(d) : null;
 
 // ---- Stat cards -------------------------------------------------------------
 // When the range series is available the cards follow the toggle (with the
@@ -56168,10 +56205,10 @@ const ratio = (n, d) => num(d) > 0 ? num(n) / num(d) : null;
 function analyticsStats(analytics, series) {
   const range = !!series?.available;
   const tot = range ? series.totals : {
-    clicks: num(analytics?.clicks),
-    orders: num(analytics?.attributed_orders),
-    products: num(analytics?.products_sold),
-    sales: num(analytics?.attributed_sales),
+    clicks: num$1(analytics?.clicks),
+    orders: num$1(analytics?.attributed_orders),
+    products: num$1(analytics?.products_sold),
+    sales: num$1(analytics?.attributed_sales),
     commission: 0
   };
   const prev = range && series.previous ? series.previous : null;
@@ -56185,10 +56222,10 @@ function analyticsStats(analytics, series) {
   }) : [];
   return {
     scope: range ? 'range' : 'all',
-    clicks: num(tot.clicks),
-    orders: num(tot.orders),
-    products: num(tot.products),
-    sales: num(tot.sales),
+    clicks: num$1(tot.clicks),
+    orders: num$1(tot.orders),
+    products: num$1(tot.products),
+    sales: num$1(tot.sales),
     conversion: conv == null ? null : r1(conv * 100),
     aov: aov == null ? null : r2(aov),
     trends: {
@@ -56248,9 +56285,9 @@ function periodLabel(series) {
 
 // ---- Funnel: click → attributed order → eligible order (all time) -------------
 function funnelFor(analytics) {
-  const clicks = num(analytics?.clicks);
-  const orders = num(analytics?.attributed_orders);
-  const eligible = num(analytics?.eligible_orders);
+  const clicks = num$1(analytics?.clicks);
+  const orders = num$1(analytics?.attributed_orders);
+  const eligible = num$1(analytics?.eligible_orders);
   const pct = v => clicks > 0 ? r1(v / clicks * 100) : null;
   return {
     empty: clicks === 0,
@@ -56281,8 +56318,8 @@ const SHARE_TONES = ['forest', 'green', 'gold', 'amber', 'neutral'];
 function productShare(topProducts, max = 4) {
   const rows = (Array.isArray(topProducts) ? topProducts : []).map(p => ({
     name: String(p?.name || 'Product'),
-    qty: num(p?.qty),
-    sales: num(p?.sales)
+    qty: num$1(p?.qty),
+    sales: num$1(p?.sales)
   })).filter(p => p.sales > 0).sort((a, b) => b.sales - a.sales);
   const total = rows.reduce((s, p) => s + p.sales, 0);
   const head = rows.slice(0, max);
@@ -56331,10 +56368,10 @@ function topLinks(seriesLinks, {
       label: r.label,
       campaign: r.campaign || null,
       url: String(url || '').replace(/^https?:\/\//, ''),
-      clicks: num(r.clicks),
-      orders: num(r.orders),
-      sales: num(r.sales),
-      commission: num(r.commission),
+      clicks: num$1(r.clicks),
+      orders: num$1(r.orders),
+      sales: num$1(r.sales),
+      commission: num$1(r.commission),
       conversion: ratio(r.orders, r.clicks) == null ? null : r1(ratio(r.orders, r.clicks) * 100)
     };
   });
@@ -56402,7 +56439,7 @@ function insightsFor({
 function argMax(arr) {
   if (!Array.isArray(arr) || arr.length === 0) return -1;
   let best = 0;
-  for (let i = 1; i < arr.length; i += 1) if (num(arr[i]) > num(arr[best])) best = i;
+  for (let i = 1; i < arr.length; i += 1) if (num$1(arr[i]) > num$1(arr[best])) best = i;
   return best;
 }
 
@@ -56414,11 +56451,11 @@ function analyticsCsv(series, links = []) {
   };
   const lines = [['period', ...METRICS].join(',')];
   const n = series?.labels?.length || 0;
-  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num(series[m]?.[i]))].map(esc).join(','));
+  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num$1(series[m]?.[i]))].map(esc).join(','));
   if (Array.isArray(links) && links.length > 0) {
     lines.push('');
     lines.push(['link', 'campaign', 'clicks', 'orders', 'sales', 'commission'].join(','));
-    for (const l of links) lines.push([l.label, l.campaign || '', num(l.clicks), num(l.orders), num(l.sales), num(l.commission)].map(esc).join(','));
+    for (const l of links) lines.push([l.label, l.campaign || '', num$1(l.clicks), num$1(l.orders), num$1(l.sales), num$1(l.commission)].map(esc).join(','));
   }
   return `${lines.join('\n')}\n`;
 }
@@ -56436,9 +56473,9 @@ function dualAxisGeometry({
   padT = 14,
   padB = 30
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num);
-  const b = (Array.isArray(orders) ? orders : []).map(num);
-  const c = (Array.isArray(sales) ? sales : []).map(num);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$1);
+  const b = (Array.isArray(orders) ? orders : []).map(num$1);
+  const c = (Array.isArray(sales) ? sales : []).map(num$1);
   const n = Math.max(a.length, b.length, c.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -56505,8 +56542,8 @@ function groupedBarGeometry(seriesA, seriesB, {
   gap = 0.3,
   minMax = 1000
 } = {}) {
-  const a = (Array.isArray(seriesA) ? seriesA : []).map(num);
-  const b = (Array.isArray(seriesB) ? seriesB : []).map(num);
+  const a = (Array.isArray(seriesA) ? seriesA : []).map(num$1);
+  const b = (Array.isArray(seriesB) ? seriesB : []).map(num$1);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -57579,7 +57616,7 @@ function CreatorPortal({
     return () => cancelAnimationFrame(frame);
   }, [tab, state]);
   if (authLoading || state === 'loading') {
-    return /*#__PURE__*/jsxRuntimeExports.jsx(Shell, {
+    return /*#__PURE__*/jsxRuntimeExports.jsx(Shell$1, {
       children: /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "muted",
         children: "Loading your creator portal\u2026"
@@ -57587,7 +57624,7 @@ function CreatorPortal({
     });
   }
   if (!session) {
-    return /*#__PURE__*/jsxRuntimeExports.jsxs(Shell, {
+    return /*#__PURE__*/jsxRuntimeExports.jsxs(Shell$1, {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
         className: "serif crp__empty-h",
         children: "Creator sign in"
@@ -57605,7 +57642,7 @@ function CreatorPortal({
     });
   }
   if (state === 'none') {
-    return /*#__PURE__*/jsxRuntimeExports.jsxs(Shell, {
+    return /*#__PURE__*/jsxRuntimeExports.jsxs(Shell$1, {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
         className: "serif crp__empty-h",
         children: "Not a creator account"
@@ -57904,7 +57941,7 @@ function PortalSearch({
     })]
   });
 }
-function Shell({
+function Shell$1({
   children
 }) {
   return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -58273,6 +58310,1748 @@ function AdminLogin() {
 }
 
 // ============================================================
+// Fashion wishlist — this browser's saved fashion products.
+//
+// Kept apart from the wellness wishlist on purpose: that list is keyed on
+// wellness product ids and synced to customer_wishlist, and a fashion id
+// dropped into it would render nothing there. This one is local to the
+// browser (localStorage), holds fashion product ids only, and is read by
+// the fashion header count, the hearts and /fashion/wishlist.
+// ============================================================
+const FASHION_WISH_KEY = 'sora.fashion.wish.v1';
+let ids = null;
+const listeners = new Set();
+function read() {
+  if (ids) return ids;
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(FASHION_WISH_KEY) : null;
+    const parsed = raw ? JSON.parse(raw) : [];
+    ids = Array.isArray(parsed) ? [...new Set(parsed.map(String))] : [];
+  } catch {
+    ids = [];
+  }
+  return ids;
+}
+function write(next) {
+  ids = [...new Set(next.map(String))];
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(FASHION_WISH_KEY, JSON.stringify(ids));
+  } catch {/* private mode */}
+  for (const l of listeners) l();
+}
+const fashionWishlist = {
+  get: read,
+  has: id => read().includes(String(id)),
+  toggle: id => {
+    const key = String(id);
+    const cur = read();
+    write(cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key]);
+    return !cur.includes(key);
+  },
+  remove: id => write(read().filter(x => x !== String(id))),
+  clear: () => write([]),
+  subscribe: fn => {
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+  }
+};
+function useFashionWishlist() {
+  // The server snapshot is the same cache: without localStorage it is empty,
+  // and a harness that seeds it renders what it seeded.
+  const list = reactExports.useSyncExternalStore(fashionWishlist.subscribe, read, read);
+  return {
+    ids: list,
+    count: list.length,
+    has: id => list.includes(String(id)),
+    toggle: fashionWishlist.toggle
+  };
+}
+
+// ============================================================
+// Fashion store — the pure rules.
+//
+// Everything the fashion pages decide without React or the network: the
+// category tree (three levels, cycle-safe), URL-backed listing state, the
+// filter and sort rules, what a product card shows, and the per-combination
+// stock matrix a size × colour catalogue needs. All of it runs in tests.
+// ============================================================
+
+const num = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const str = v => String(v ?? '').trim();
+
+// ---- Category tree ---------------------------------------------------------
+
+/** Flat rows → a tree with lookups. Inactive rows are kept but flagged. */
+function buildTree(rows) {
+  const list = (Array.isArray(rows) ? rows : []).map(r => ({
+    id: String(r.id),
+    parent_id: r.parent_id == null ? null : String(r.parent_id),
+    name: str(r.name),
+    slug: str(r.slug),
+    tagline: str(r.tagline),
+    image_url: r.image_url || null,
+    sort_order: num(r.sort_order),
+    is_active: r.is_active !== false
+  }));
+  const byId = new Map(list.map(n => [n.id, n]));
+  const childrenOf = new Map();
+  for (const n of list) {
+    const key = n.parent_id && byId.has(n.parent_id) ? n.parent_id : null;
+    if (!childrenOf.has(key)) childrenOf.set(key, []);
+    childrenOf.get(key).push(n);
+  }
+  const bySort = (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name);
+  for (const arr of childrenOf.values()) arr.sort(bySort);
+  const children = id => childrenOf.get(id == null ? null : String(id)) || [];
+  const ancestors = id => {
+    // root → … → node; stops on a cycle so a bad row cannot hang the page
+    const out = [];
+    const seen = new Set();
+    let cur = byId.get(String(id));
+    while (cur && !seen.has(cur.id)) {
+      seen.add(cur.id);
+      out.unshift(cur);
+      cur = cur.parent_id ? byId.get(cur.parent_id) : null;
+    }
+    return out;
+  };
+  const depth = id => ancestors(id).length;
+  const descendants = id => {
+    const out = [];
+    const stack = [...children(id)];
+    const seen = new Set();
+    while (stack.length) {
+      const n = stack.shift();
+      if (seen.has(n.id)) continue;
+      seen.add(n.id);
+      out.push(n);
+      stack.push(...children(n.id));
+    }
+    return out;
+  };
+  return {
+    list,
+    byId,
+    roots: children(null),
+    children,
+    ancestors,
+    depth,
+    descendants
+  };
+}
+
+/** `/fashion/c/<slug>` → the shallowest active category with that slug. */
+function resolveCategory(tree, slug) {
+  const s = str(slug).toLowerCase();
+  if (!s) return null;
+  const matches = tree.list.filter(n => n.slug === s && n.is_active);
+  if (matches.length === 0) return null;
+  matches.sort((a, b) => tree.depth(a.id) - tree.depth(b.id) || a.sort_order - b.sort_order);
+  return matches[0];
+}
+const categoryHref = node => `/fashion/c/${node.slug}`;
+function breadcrumbFor(tree, node) {
+  const trail = [{
+    name: 'Fashion',
+    href: '/fashion'
+  }];
+  if (!node) return trail;
+  for (const a of tree.ancestors(node.id)) trail.push({
+    name: a.name,
+    href: categoryHref(a)
+  });
+  return trail;
+}
+
+/** The ids a listing for `node` covers: itself plus everything below it. */
+function categoryScope(tree, node) {
+  if (!node) return null;
+  return new Set([node.id, ...tree.descendants(node.id).map(n => n.id)]);
+}
+
+// ---- Products ----------------------------------------------------------------
+
+/** One product with its variants → what a card or a listing needs. */
+function productView(product, variants = null) {
+  const vs = (Array.isArray(variants) ? variants : product?.fashion_variants || []).filter(v => v && v.is_active !== false).map(v => ({
+    id: String(v.id),
+    size: str(v.size),
+    colour: str(v.colour),
+    colour_hex: v.colour_hex || null,
+    sku: v.sku || null,
+    stock: Math.max(0, num(v.stock)),
+    price_override: v.price_override == null ? null : num(v.price_override),
+    sort_order: num(v.sort_order)
+  })).sort((a, b) => a.sort_order - b.sort_order);
+  const mrp = num(product?.mrp);
+  const sale = product?.sale_price == null ? null : num(product.sale_price);
+  const price = sale != null && sale < mrp ? sale : mrp;
+  const discountPct = product?.discount_percent != null ? num(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
+  const swatches = [];
+  for (const v of vs) {
+    let s = swatches.find(x => x.colour === v.colour);
+    if (!s) {
+      s = {
+        colour: v.colour,
+        hex: v.colour_hex,
+        stock: 0
+      };
+      swatches.push(s);
+    }
+    s.stock += v.stock;
+  }
+  const sizes = [...new Set(vs.map(v => v.size))];
+  const totalStock = vs.reduce((s, v) => s + v.stock, 0);
+  return {
+    id: String(product?.id ?? ''),
+    slug: str(product?.slug),
+    name: str(product?.name),
+    brand: str(product?.brand),
+    description: str(product?.description),
+    category_id: product?.category_id == null ? null : String(product.category_id),
+    image: Array.isArray(product?.images) && product.images[0] ? product.images[0] : null,
+    images: Array.isArray(product?.images) ? product.images.filter(Boolean) : [],
+    mrp,
+    sale,
+    price,
+    discountPct,
+    hasDiscount: discountPct > 0,
+    rating: Math.max(0, Math.min(5, num(product?.rating))),
+    reviewCount: Math.max(0, num(product?.review_count)),
+    isNew: product?.is_new === true,
+    isBestseller: product?.is_bestseller === true,
+    sortOrder: num(product?.sort_order),
+    variants: vs,
+    swatches,
+    sizes,
+    inStock: vs.length === 0 ? false : totalStock > 0,
+    totalStock,
+    minPrice: vs.length ? Math.min(price, ...vs.filter(v => v.price_override != null).map(v => v.price_override)) : price
+  };
+}
+
+/** Per-combination stock: Medium/green can be out while Medium/navy is in. */
+function stockMatrix(view) {
+  const cells = new Map();
+  for (const v of view.variants) cells.set(`${v.size} ${v.colour}`, v);
+  const get = (size, colour) => cells.get(`${size} ${colour}`) || null;
+  return {
+    sizes: view.sizes,
+    colours: view.swatches.map(s => s.colour),
+    get,
+    stock: (size, colour) => get(size, colour)?.stock ?? 0,
+    inStock: (size, colour) => (get(size, colour)?.stock ?? 0) > 0,
+    priceOf: (size, colour) => {
+      const v = get(size, colour);
+      return v && v.price_override != null ? v.price_override : view.price;
+    },
+    sizesInStockFor: colour => view.sizes.filter(s => (get(s, colour)?.stock ?? 0) > 0)
+  };
+}
+function swatchOverflow(swatches, max = 4) {
+  const list = Array.isArray(swatches) ? swatches : [];
+  return {
+    shown: list.slice(0, max),
+    more: Math.max(0, list.length - max)
+  };
+}
+
+// ---- Listing state in the URL ---------------------------------------------------
+
+const FASHION_SORTS = [{
+  id: 'featured',
+  label: 'Featured'
+}, {
+  id: 'price-asc',
+  label: 'Price: low to high'
+}, {
+  id: 'price-desc',
+  label: 'Price: high to low'
+}, {
+  id: 'discount',
+  label: 'Biggest discount'
+}, {
+  id: 'rating',
+  label: 'Top rated'
+}, {
+  id: 'new',
+  label: 'Newest'
+}];
+const FASHION_PRICE_BANDS = [{
+  id: 'under-500',
+  label: 'Under ₹500',
+  min: 0,
+  maxExclusive: 500
+}, {
+  id: '500-999',
+  label: '₹500 – ₹999',
+  min: 500,
+  maxExclusive: 1000
+}, {
+  id: '1000-1999',
+  label: '₹1,000 – ₹1,999',
+  min: 1000,
+  maxExclusive: 2000
+}, {
+  id: '2000-plus',
+  label: '₹2,000 & above',
+  min: 2000,
+  maxExclusive: Infinity
+}];
+const DISCOUNT_STEPS = [10, 25, 40, 50];
+const RATING_STEPS = [4, 3];
+const VIEWS = ['grid', 'list'];
+const SORT_IDS = new Set(FASHION_SORTS.map(s => s.id));
+const PRICE_IDS = new Set(FASHION_PRICE_BANDS.map(b => b.id));
+const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+const uniq = arr => [...new Set(arr)];
+function readFashionUrlState(searchParams) {
+  const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
+  const discount = num(p.get('discount'));
+  const rating = num(p.get('rating'));
+  return {
+    q: str(p.get('q')),
+    sort: SORT_IDS.has(p.get('sort')) ? p.get('sort') : 'featured',
+    price: PRICE_IDS.has(p.get('price')) ? p.get('price') : null,
+    sizes: uniq(list(p.get('size'))),
+    colours: uniq(list(p.get('colour'))),
+    brands: uniq(list(p.get('brand'))),
+    discount: DISCOUNT_STEPS.includes(discount) ? discount : null,
+    rating: RATING_STEPS.includes(rating) ? rating : null,
+    view: VIEWS.includes(p.get('view')) ? p.get('view') : 'grid'
+  };
+}
+function updateFashionUrlState(searchParams, patch) {
+  const p = new URLSearchParams(searchParams);
+  const has = k => Object.prototype.hasOwnProperty.call(patch, k);
+  const setList = (key, arr) => {
+    const v = uniq((Array.isArray(arr) ? arr : []).map(str).filter(Boolean));
+    if (v.length) p.set(key, v.join(','));else p.delete(key);
+  };
+  if (has('q')) {
+    const q = str(patch.q);
+    if (q) p.set('q', q);else p.delete('q');
+  }
+  if (has('sort')) {
+    if (SORT_IDS.has(patch.sort) && patch.sort !== 'featured') p.set('sort', patch.sort);else p.delete('sort');
+  }
+  if (has('price')) {
+    if (PRICE_IDS.has(patch.price)) p.set('price', patch.price);else p.delete('price');
+  }
+  if (has('sizes')) setList('size', patch.sizes);
+  if (has('colours')) setList('colour', patch.colours);
+  if (has('brands')) setList('brand', patch.brands);
+  if (has('discount')) {
+    if (DISCOUNT_STEPS.includes(num(patch.discount))) p.set('discount', String(num(patch.discount)));else p.delete('discount');
+  }
+  if (has('rating')) {
+    if (RATING_STEPS.includes(num(patch.rating))) p.set('rating', String(num(patch.rating)));else p.delete('rating');
+  }
+  if (has('view')) {
+    if (patch.view === 'list') p.set('view', 'list');else p.delete('view');
+  }
+  return p;
+}
+function activeFilterCount(state) {
+  return (state.price ? 1 : 0) + state.sizes.length + state.colours.length + state.brands.length + (state.discount ? 1 : 0) + (state.rating ? 1 : 0);
+}
+
+/** The choices the panel offers, from what is actually in the listing. */
+function filterOptions(views) {
+  const sizes = new Map();
+  const colours = new Map();
+  const brands = new Map();
+  for (const v of views) {
+    for (const s of v.sizes) sizes.set(s, (sizes.get(s) || 0) + 1);
+    for (const s of v.swatches) if (!colours.has(s.colour)) colours.set(s.colour, s.hex);
+    if (v.brand) brands.set(v.brand, (brands.get(v.brand) || 0) + 1);
+  }
+  const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+  const sortSizes = (a, b) => {
+    const ia = sizeOrder.indexOf(a);
+    const ib = sizeOrder.indexOf(b);
+    if (ia >= 0 && ib >= 0) return ia - ib;
+    if (ia >= 0) return -1;
+    if (ib >= 0) return 1;
+    return a.localeCompare(b, 'en', {
+      numeric: true
+    });
+  };
+  return {
+    sizes: [...sizes.keys()].sort(sortSizes),
+    colours: [...colours.entries()].map(([colour, hex]) => ({
+      colour,
+      hex
+    })).sort((a, b) => a.colour.localeCompare(b.colour)),
+    brands: [...brands.keys()].sort()
+  };
+}
+function matchesFilters(view, state) {
+  if (state.q) {
+    const q = state.q.toLowerCase();
+    if (!`${view.name} ${view.brand} ${view.description}`.toLowerCase().includes(q)) return false;
+  }
+  if (state.price) {
+    const band = FASHION_PRICE_BANDS.find(b => b.id === state.price);
+    if (band && !(view.price >= band.min && view.price < band.maxExclusive)) return false;
+  }
+  if (state.sizes.length && !state.sizes.some(s => view.sizes.includes(s))) return false;
+  if (state.colours.length && !state.colours.some(c => view.swatches.some(s => s.colour === c))) return false;
+  if (state.brands.length && !state.brands.includes(view.brand)) return false;
+  if (state.discount && view.discountPct < state.discount) return false;
+  if (state.rating && view.rating < state.rating) return false;
+  return true;
+}
+function sortViews(views, sort) {
+  const arr = [...views];
+  const featured = (a, b) => b.isBestseller - a.isBestseller || b.isNew - a.isNew || a.sortOrder - b.sortOrder || a.name.localeCompare(b.name);
+  switch (sort) {
+    case 'price-asc':
+      return arr.sort((a, b) => a.price - b.price || featured(a, b));
+    case 'price-desc':
+      return arr.sort((a, b) => b.price - a.price || featured(a, b));
+    case 'discount':
+      return arr.sort((a, b) => b.discountPct - a.discountPct || featured(a, b));
+    case 'rating':
+      return arr.sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount || featured(a, b));
+    case 'new':
+      return arr.sort((a, b) => b.isNew - a.isNew || a.sortOrder - b.sortOrder);
+    default:
+      return arr.sort(featured);
+  }
+}
+function applyListing(views, state, scope = null) {
+  const inScope = scope ? views.filter(v => v.category_id && scope.has(v.category_id)) : views;
+  return sortViews(inScope.filter(v => matchesFilters(v, state)), state.sort);
+}
+
+/** Distinct brands across the catalogue, most products first — the "Top Brands" row. */
+function topBrands(views, limit = 6) {
+  const count = new Map();
+  for (const v of views) if (v.brand) count.set(v.brand, (count.get(v.brand) || 0) + 1);
+  return [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, limit).map(([name, products]) => ({
+    name,
+    products
+  }));
+}
+
+// ============================================================
+// Fashion store — Supabase reads and admin writes.
+//
+// Reads go straight at the tables under RLS (public read where is_active,
+// exactly as the wellness categories and variants are read). Writes are
+// admin-only and follow the omit-when-absent rule: a caller that does not
+// mention a field cannot blank it.
+// ============================================================
+const PRODUCT_COLUMNS = 'id, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
+const VARIANT_COLUMNS = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
+async function getFashionCategories() {
+  const {
+    data,
+    error
+  } = await supabase.from('fashion_categories').select('id, parent_id, name, slug, tagline, image_url, sort_order, is_active').order('sort_order', {
+    ascending: true
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+/** Every active product with its active variants, in one request. */
+async function getFashionProducts() {
+  const {
+    data,
+    error
+  } = await supabase.from('fashion_products').select(`${PRODUCT_COLUMNS}, fashion_variants (${VARIANT_COLUMNS})`).eq('is_active', true).order('sort_order', {
+    ascending: true
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+const Ctx = /*#__PURE__*/reactExports.createContext(null);
+let cache = null; // { categories, products } — one fetch per session
+
+function shape(categories, products) {
+  const tree = buildTree(categories);
+  const views = (Array.isArray(products) ? products : []).filter(p => p && p.is_active !== false).map(p => productView(p, p.fashion_variants));
+  return {
+    tree,
+    views,
+    bySlug: new Map(views.map(v => [v.slug, v])),
+    byId: new Map(views.map(v => [v.id, v]))
+  };
+}
+function FashionCatalogueProvider({
+  initial = null,
+  children
+}) {
+  const [state, setState] = reactExports.useState(() => {
+    if (initial) return {
+      status: 'ready',
+      error: null,
+      ...shape(initial.categories, initial.products)
+    };
+    if (cache) return {
+      status: 'ready',
+      error: null,
+      ...shape(cache.categories, cache.products)
+    };
+    return {
+      status: 'loading',
+      error: null,
+      ...shape([], [])
+    };
+  });
+  reactExports.useEffect(() => {
+    if (initial || cache) return undefined;
+    let alive = true;
+    Promise.all([getFashionCategories(), getFashionProducts()]).then(([categories, products]) => {
+      cache = {
+        categories,
+        products
+      };
+      if (alive) setState({
+        status: 'ready',
+        error: null,
+        ...shape(categories, products)
+      });
+    }).catch(e => {
+      if (alive) setState(s => ({
+        ...s,
+        status: 'error',
+        error: e?.message || 'Could not load the fashion catalogue'
+      }));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [initial]);
+  const value = reactExports.useMemo(() => state, [state]);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Ctx.Provider, {
+    value: value,
+    children: children
+  });
+}
+function useFashionCatalogue() {
+  const v = reactExports.useContext(Ctx);
+  if (!v) throw new Error('useFashionCatalogue outside FashionCatalogueProvider');
+  return v;
+}
+
+const SEARCH_PLACEHOLDER = 'Search for fashion, lifestyle and more…';
+function FashionLogo() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+    to: "/fashion",
+    className: "fs-logo",
+    "aria-label": `${branding.siteName} fashion home`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(SparrowMark, {
+      size: 34
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+      className: "fs-logo__txt",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+        children: branding.siteName
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+        children: "Live a brighter you"
+      })]
+    })]
+  });
+}
+function FashionHeader({
+  onMenu
+}) {
+  const {
+    cartCount
+  } = useStore();
+  const wish = useFashionWishlist();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [q, setQ] = reactExports.useState(() => new URLSearchParams(location.search).get('q') || '');
+  const submit = e => {
+    e.preventDefault();
+    const term = q.trim();
+    navigate(term ? `/fashion/search?q=${encodeURIComponent(term)}` : '/fashion/search');
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+    className: "fs-hdr",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-hdr__row",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "fs-hdr__menu",
+        "aria-label": "Open menu",
+        onClick: onMenu,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "menu",
+          size: 24
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionLogo, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "fs-hdr__acts",
+        "aria-label": "Account, wishlist and cart",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/account",
+          className: "fs-hdr__act",
+          "aria-label": "Account",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "user",
+            size: 24
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion/wishlist",
+          className: "fs-hdr__act",
+          "aria-label": `Wishlist${wish.count ? `, ${wish.count} items` : ''}`,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "heart",
+            size: 24
+          }), wish.count > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "fs-hdr__count",
+            children: wish.count
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/cart",
+          className: "fs-hdr__act",
+          "aria-label": `Cart${cartCount ? `, ${cartCount} items` : ''}`,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "bag",
+            size: 24
+          }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "fs-hdr__count",
+            children: cartCount
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/",
+        className: "fs-hdr__back",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronLeft",
+          size: 15
+        }), " Wellness store"]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+      className: "fs-search",
+      role: "search",
+      onSubmit: submit,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "search",
+        size: 20
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+        type: "search",
+        value: q,
+        onChange: e => setQ(e.target.value),
+        placeholder: SEARCH_PLACEHOLDER,
+        "aria-label": "Search fashion"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "submit",
+        className: "fs-search__go",
+        "aria-label": "Search",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "search",
+          size: 22
+        })
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-strip",
+      "aria-label": "Delivery",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "fs-strip__loc",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "mapPin",
+          size: 18
+        }), " Delivering across India"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "fs-strip__sep",
+        "aria-hidden": "true"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "fs-strip__fast",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "truck",
+          size: 20
+        }), " Fast & reliable delivery"]
+      })]
+    })]
+  });
+}
+function CategoryChips({
+  onFilters = null,
+  filterCount = 0
+}) {
+  const {
+    tree
+  } = useFashionCatalogue();
+  const {
+    pathname
+  } = useLocation();
+  const m = pathname.match(/^\/fashion\/c\/([^/]+)/);
+  const current = m ? resolveCategory(tree, m[1]) : null;
+  const activeRootId = current ? tree.ancestors(current.id)[0]?.id : null;
+  if (tree.roots.length === 0 && !onFilters) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "fs-chips",
+    role: "navigation",
+    "aria-label": "Categories",
+    children: [tree.roots.filter(r => r.is_active).map(r => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+      to: categoryHref(r),
+      className: `fs-chip${r.id === activeRootId ? ' is-on' : ''}`,
+      "aria-current": r.id === activeRootId ? 'page' : undefined,
+      children: r.name
+    }, r.id)), onFilters && /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      type: "button",
+      className: "fs-chip fs-chip--filters",
+      onClick: onFilters,
+      "aria-label": filterCount ? `Filters, ${filterCount} active` : 'Filters',
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "sliders",
+        size: 17
+      }), " Filters", filterCount ? /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+        children: filterCount
+      }) : null]
+    })]
+  });
+}
+function Drawer({
+  open,
+  onClose
+}) {
+  const {
+    tree
+  } = useFashionCatalogue();
+  reactExports.useEffect(() => {
+    if (!open) return undefined;
+    const onKey = e => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+  if (!open) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "fs-drawer",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "Fashion menu",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: "fs-drawer__scrim",
+      "aria-label": "Close menu",
+      onClick: onClose
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-drawer__panel",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fs-drawer__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+          children: "Shop fashion"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "fs-drawer__x",
+          "aria-label": "Close menu",
+          onClick: onClose,
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "x",
+            size: 20
+          })
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+        className: "fs-drawer__nav",
+        children: tree.roots.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "fs-drawer__group",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: categoryHref(r),
+            onClick: onClose,
+            children: r.name
+          }), tree.children(r.id).length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+            children: tree.children(r.id).map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+              children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+                to: categoryHref(c),
+                onClick: onClose,
+                children: c.name
+              })
+            }, c.id))
+          })]
+        }, r.id))
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/",
+        className: "fs-drawer__back",
+        onClick: onClose,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronLeft",
+          size: 16
+        }), " Back to the wellness store"]
+      })]
+    })]
+  });
+}
+function Shell() {
+  const [menu, setMenu] = reactExports.useState(false);
+  const {
+    pathname
+  } = useLocation();
+  reactExports.useEffect(() => {
+    setMenu(false);
+  }, [pathname]);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "fs",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(FashionHeader, {
+      onMenu: () => setMenu(true)
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer, {
+      open: menu,
+      onClose: () => setMenu(false)
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
+      className: "fs-main",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Outlet, {})
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Footer, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
+  });
+}
+function FashionLayout({
+  initial = null
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsx(FashionCatalogueProvider, {
+    initial: initial,
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(Shell, {})
+  });
+}
+
+const rupee = v => money(v);
+const productHref = view => `/fashion/p/${view.slug}`;
+function Stars({
+  value,
+  size = 13
+}) {
+  const full = Math.round(Number(value) || 0);
+  return /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+    className: "fs-stars",
+    "aria-hidden": "true",
+    children: [1, 2, 3, 4, 5].map(i => /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+      name: "star",
+      size: size,
+      fill: i <= full ? 'currentColor' : 'none',
+      className: i <= full ? 'is-full' : 'is-empty',
+      stroke: 1.4
+    }, i))
+  });
+}
+function FashionProductCard({
+  view,
+  layout = 'grid',
+  mediaLoading = 'lazy'
+}) {
+  const wish = useFashionWishlist();
+  const wished = wish.has(view.id);
+  const {
+    shown,
+    more
+  } = swatchOverflow(view.swatches, 4);
+  const href = productHref(view);
+  const out = !view.inStock;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+    className: `fs-card${layout === 'list' ? ' fs-card--list' : ''}${out ? ' is-out' : ''}`,
+    "data-product": view.slug,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-card__media",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: href,
+        className: "fs-card__img",
+        "aria-label": view.name,
+        children: view.image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: view.image,
+          alt: "",
+          loading: mediaLoading,
+          decoding: "async",
+          width: "600",
+          height: "600"
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "fs-card__noimg",
+          "aria-hidden": "true",
+          children: view.name.slice(0, 1)
+        })
+      }), out ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "fs-badge fs-badge--out",
+        children: "Sold out"
+      }) : view.hasDiscount ? /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "fs-badge",
+        children: [view.discountPct, "% OFF"]
+      }) : view.isNew ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "fs-badge fs-badge--soft",
+        children: "New"
+      }) : null, /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: `fs-heart${wished ? ' is-on' : ''}`,
+        "aria-pressed": wished,
+        "aria-label": wished ? `Remove ${view.name} from wishlist` : `Save ${view.name} to wishlist`,
+        onClick: () => wish.toggle(view.id),
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "heart",
+          size: 17,
+          fill: wished ? 'currentColor' : 'none'
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: href,
+        className: "fs-quick",
+        "aria-label": `Choose size and colour for ${view.name}`,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "plus",
+          size: 20
+        })
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-card__body",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "fs-price",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "fs-price__cur",
+            children: "\u20B9"
+          }), rupee(view.price).replace(/^₹\s?/, '')]
+        }), view.hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "fs-price__mrp",
+          children: ["M.R.P: ", /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+            children: rupee(view.mrp)
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+        className: "fs-card__name",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: href,
+          children: view.name
+        })
+      }), layout === 'list' && view.brand && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fs-card__brand",
+        children: view.brand
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "fs-rating",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          children: view.rating.toFixed(1)
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Stars, {
+          value: view.rating
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "fs-rating__count",
+          children: ["(", view.reviewCount >= 1000 ? `${(view.reviewCount / 1000).toFixed(view.reviewCount >= 10000 ? 0 : 1).replace(/\.0$/, '')}K` : view.reviewCount, ")"]
+        })]
+      }), shown.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "fs-swatches",
+        "aria-label": `${view.swatches.length} colours`,
+        children: [shown.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: `fs-swatch${s.stock === 0 ? ' is-out' : ''}`,
+          style: {
+            background: s.hex || '#D9CBB0'
+          },
+          title: s.colour
+        }, s.colour)), more > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: href,
+          className: "fs-swatches__more",
+          children: ["+", more]
+        })]
+      })]
+    })]
+  });
+}
+
+const HERO = {
+  eyebrow: 'Fashion for a brighter you',
+  title: 'New Season Essentials',
+  sub: 'Style · Comfort · Everyday Living',
+  cta: 'Shop now',
+  href: '/fashion/c/clothing',
+  note: 'Under ₹499',
+  image: null // the artwork slot — set to '/img/<file>.webp' when supplied
+};
+function CategoryTiles({
+  tree
+}) {
+  const clothing = tree.roots.find(r => r.slug === 'clothing');
+  const tiles = [...(clothing ? tree.children(clothing.id) : []), ...tree.roots.filter(r => r !== clothing)].filter(c => c.is_active);
+  if (tiles.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+    className: "fs-tiles",
+    "aria-label": "Shop by",
+    children: tiles.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: categoryHref(c),
+      className: "fs-tile",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "fs-tile__img",
+        children: c.image_url ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: c.image_url,
+          alt: "",
+          loading: "lazy",
+          decoding: "async",
+          width: "200",
+          height: "200"
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          "aria-hidden": "true",
+          children: c.name.slice(0, 1)
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "fs-tile__name",
+        children: c.name
+      })]
+    }, c.id))
+  });
+}
+const BENEFITS = [['truck', 'Free standard', 'delivery*'], ['card', 'UPI & cards', 'at checkout'], ['package', 'Cash on', 'delivery'], ['tag', 'Coupons', '& offers']];
+function Benefits() {
+  const {
+    session
+  } = useCustomerAuth();
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "fs-benefits",
+    "aria-label": "Benefits",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: "/account",
+      className: "fs-benefits__signin",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "gift",
+        size: 30
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: session ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: "Your account"
+          }), " orders & addresses"]
+        }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: "Sign in"
+          }), " for exclusive benefits"]
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "chevronRight",
+        size: 18
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "fs-benefits__list",
+      children: BENEFITS.map(([icon, a, b]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: icon,
+          size: 26
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [a, /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), b]
+        })]
+      }, a))
+    })]
+  });
+}
+function Hero() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `fs-hero${''}`,
+    "aria-labelledby": "fs-hero-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-hero__txt",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fs-hero__eyebrow",
+        children: HERO.eyebrow
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "fs-hero__h serif",
+        id: "fs-hero-h",
+        children: HERO.title
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fs-hero__sub",
+        children: HERO.sub
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: HERO.href,
+        className: "fs-hero__cta",
+        children: [HERO.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 17
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fs-hero__note serif",
+        children: HERO.note
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "fs-hero__art",
+      "aria-hidden": "true",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fs-hero__slot",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "serif",
+          children: ["Good Style", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "Brighter Days"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "fs-hero__words",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Wear"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Live"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Explore"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Belong"
+          })]
+        })]
+      })
+    })]
+  });
+}
+function ShopByCategory({
+  tree
+}) {
+  const roots = tree.roots.filter(r => r.is_active).slice(0, 4);
+  if (roots.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "fs-sec",
+    "aria-labelledby": "fs-cats-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "fs-sec__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "fs-sec__h serif",
+        id: "fs-cats-h",
+        children: "Shop by Category"
+      }), tree.roots[0] && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: categoryHref(tree.roots[0]),
+        className: "fs-sec__link",
+        children: ["Explore all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 16
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "fs-catcards",
+      children: roots.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: categoryHref(c),
+        className: "fs-catcard",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "fs-catcard__img",
+          children: c.image_url ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: c.image_url,
+            alt: "",
+            loading: "lazy",
+            decoding: "async",
+            width: "400",
+            height: "360"
+          }) : /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+            "aria-hidden": "true",
+            children: c.name.slice(0, 1)
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "fs-catcard__body",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: c.name
+          }), c.tagline && /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+            children: c.tagline
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+            className: "fs-catcard__go",
+            "aria-hidden": "true",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronRight",
+              size: 16
+            })
+          })]
+        })]
+      }, c.id))
+    })]
+  });
+}
+function TopBrands({
+  views
+}) {
+  const brands = topBrands(views, 6);
+  if (brands.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "fs-sec fs-brands",
+    "aria-labelledby": "fs-brands-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "fs-sec__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "fs-sec__h serif",
+        id: "fs-brands-h",
+        children: "Top Brands on SORA LIFE"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/fashion/search",
+        className: "fs-sec__link",
+        children: ["See all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 16
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "fs-brands__row",
+      children: brands.map(b => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: `/fashion/search?brand=${encodeURIComponent(b.name)}`,
+        className: "fs-brandcard",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "fs-brandcard__logo serif",
+          children: b.name
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "fs-brandcard__meta",
+          children: [b.products, " ", b.products === 1 ? 'style' : 'styles']
+        })]
+      }, b.name))
+    })]
+  });
+}
+function FashionHome() {
+  const {
+    status,
+    tree,
+    views
+  } = useFashionCatalogue();
+  const grid = sortViews(views, 'featured');
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "fs-home",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
+      tree: tree
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Benefits, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Hero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {
+      tree: tree
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(TopBrands, {
+      views: views
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "fs-sec",
+      "aria-labelledby": "fs-grid-h",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "fs-sec__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "fs-sec__h serif",
+          id: "fs-grid-h",
+          children: "Fresh in fashion"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "fs-sec__count",
+          children: [grid.length, " ", grid.length === 1 ? 'style' : 'styles']
+        })]
+      }), grid.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fs-empty",
+        children: status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The fashion catalogue could not be loaded. Please try again shortly.' : 'The fashion store is being stocked — styles appear here as they go live.'
+      }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fs-grid",
+        children: grid.map((v, i) => /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductCard, {
+          view: v,
+          mediaLoading: i < 2 ? 'eager' : 'lazy'
+        }, v.id))
+      })]
+    })]
+  });
+}
+
+function Breadcrumb({
+  trail
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+    className: "fs-crumb",
+    "aria-label": "Breadcrumb",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+      children: trail.map((c, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: i < trail.length - 1 && c.href ? /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: c.href,
+          children: c.name
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          "aria-current": "page",
+          children: c.name
+        })
+      }, c.href || c.name))
+    })
+  });
+}
+function Check({
+  checked,
+  onChange,
+  children,
+  swatch = null
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+    className: `fs-filter__opt${checked ? ' is-on' : ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+      type: "checkbox",
+      checked: checked,
+      onChange: onChange
+    }), swatch && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "fs-filter__swatch",
+      style: {
+        background: swatch
+      },
+      "aria-hidden": "true"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      children: children
+    })]
+  });
+}
+function FilterPanel({
+  state,
+  options,
+  onPatch,
+  onClear,
+  onClose = null,
+  id = 'fs-filters'
+}) {
+  const toggle = (key, value) => onPatch({
+    [key]: state[key].includes(value) ? state[key].filter(v => v !== value) : [...state[key], value]
+  });
+  const count = activeFilterCount(state);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("aside", {
+    className: "fs-filters",
+    id: id,
+    "aria-label": "Filters",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "fs-filters__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+        children: ["Filters", count ? ` (${count})` : '']
+      }), count > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "fs-filters__clear",
+        onClick: onClear,
+        children: "Clear all"
+      }), onClose && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "fs-filters__x",
+        "aria-label": "Close filters",
+        onClick: onClose,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "x",
+          size: 18
+        })
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "fs-filter",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        children: "Price"
+      }), FASHION_PRICE_BANDS.map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        className: `fs-filter__opt${state.price === b.id ? ' is-on' : ''}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          type: "radio",
+          name: "price",
+          checked: state.price === b.id,
+          onChange: () => onPatch({
+            price: state.price === b.id ? null : b.id
+          }),
+          onClick: () => {
+            if (state.price === b.id) onPatch({
+              price: null
+            });
+          }
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: b.label
+        })]
+      }, b.id))]
+    }), options.sizes.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "fs-filter",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        children: "Size"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fs-filter__sizes",
+        children: options.sizes.map(s => /*#__PURE__*/jsxRuntimeExports.jsx(Check, {
+          checked: state.sizes.includes(s),
+          onChange: () => toggle('sizes', s),
+          children: s
+        }, s))
+      })]
+    }), options.colours.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "fs-filter",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        children: "Colour"
+      }), options.colours.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Check, {
+        checked: state.colours.includes(c.colour),
+        onChange: () => toggle('colours', c.colour),
+        swatch: c.hex || '#D9CBB0',
+        children: c.colour
+      }, c.colour))]
+    }), options.brands.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "fs-filter",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        children: "Brand"
+      }), options.brands.map(b => /*#__PURE__*/jsxRuntimeExports.jsx(Check, {
+        checked: state.brands.includes(b),
+        onChange: () => toggle('brands', b),
+        children: b
+      }, b))]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "fs-filter",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        children: "Discount"
+      }), DISCOUNT_STEPS.map(d => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        className: `fs-filter__opt${state.discount === d ? ' is-on' : ''}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          type: "radio",
+          name: "discount",
+          checked: state.discount === d,
+          onChange: () => onPatch({
+            discount: d
+          }),
+          onClick: () => {
+            if (state.discount === d) onPatch({
+              discount: null
+            });
+          }
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [d, "% or more"]
+        })]
+      }, d))]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "fs-filter",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        children: "Rating"
+      }), RATING_STEPS.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        className: `fs-filter__opt${state.rating === r ? ' is-on' : ''}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          type: "radio",
+          name: "rating",
+          checked: state.rating === r,
+          onChange: () => onPatch({
+            rating: r
+          }),
+          onClick: () => {
+            if (state.rating === r) onPatch({
+              rating: null
+            });
+          }
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "star",
+            size: 13,
+            fill: "currentColor"
+          }), " ", r, "\u2605 & above"]
+        })]
+      }, r))]
+    })]
+  });
+}
+function Listing({
+  title,
+  trail,
+  scope = null,
+  only = null,
+  intro = null,
+  emptyCopy
+}) {
+  const {
+    status,
+    tree,
+    views
+  } = useFashionCatalogue();
+  const [params, setParams] = useSearchParams();
+  const state = reactExports.useMemo(() => readFashionUrlState(params), [params]);
+  const [panel, setPanel] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!panel) return undefined;
+    const onKey = e => {
+      if (e.key === 'Escape') setPanel(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [panel]);
+  const pool = only ? views.filter(only) : views;
+  const inScope = scope ? pool.filter(v => v.category_id && scope.has(v.category_id)) : pool;
+  const options = reactExports.useMemo(() => filterOptions(inScope), [inScope]);
+  const results = applyListing(pool, state, scope);
+  const patch = p => setParams(updateFashionUrlState(params, p));
+  const clear = () => setParams(updateFashionUrlState(params, {
+    price: null,
+    sizes: [],
+    colours: [],
+    brands: [],
+    discount: null,
+    rating: null
+  }));
+  const count = activeFilterCount(state);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "fs-listing",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {
+      onFilters: () => setPanel(v => !v),
+      filterCount: count
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
+      trail: trail
+    }), intro, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-listing__bar",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "fs-listing__h serif",
+        children: title
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fs-listing__count",
+        role: "status",
+        children: status === 'loading' ? 'Loading…' : `${results.length} ${results.length === 1 ? 'product' : 'products'}`
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fs-listing__tools",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+          className: "fs-sort",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Sort by:"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("select", {
+            value: state.sort,
+            onChange: e => patch({
+              sort: e.target.value
+            }),
+            "aria-label": "Sort",
+            children: FASHION_SORTS.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+              value: s.id,
+              children: s.label
+            }, s.id))
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "chevronDown",
+            size: 15
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "fs-view",
+          role: "group",
+          "aria-label": "Layout",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: state.view === 'grid' ? 'is-on' : '',
+            "aria-pressed": state.view === 'grid',
+            "aria-label": "Grid view",
+            onClick: () => patch({
+              view: 'grid'
+            }),
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "grid",
+              size: 18
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: state.view === 'list' ? 'is-on' : '',
+            "aria-pressed": state.view === 'list',
+            "aria-label": "List view",
+            onClick: () => patch({
+              view: 'list'
+            }),
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "menu",
+              size: 18
+            })
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: `fs-listing__body${panel ? ' has-panel' : ''}`,
+      children: [panel && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "fs-filters__scrim",
+        "aria-label": "Close filters",
+        onClick: () => setPanel(false)
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(FilterPanel, {
+        state: state,
+        options: options,
+        onPatch: patch,
+        onClear: clear,
+        onClose: () => setPanel(false)
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fs-listing__results",
+        children: results.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "fs-empty",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            children: status === 'loading' ? 'Loading the catalogue…' : count > 0 ? 'Nothing matches these filters.' : emptyCopy
+          }), count > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: "fs-btn",
+            onClick: clear,
+            children: "Clear filters"
+          })]
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+          className: `fs-grid${state.view === 'list' ? ' fs-grid--list' : ''}`,
+          children: results.map((v, i) => /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductCard, {
+            view: v,
+            layout: state.view,
+            mediaLoading: i < 2 ? 'eager' : 'lazy'
+          }, v.id))
+        })
+      })]
+    })]
+  });
+}
+
+// ---- /fashion/c/<slug> --------------------------------------------------------
+function FashionCategory() {
+  const {
+    slug
+  } = useParams();
+  const {
+    status,
+    tree
+  } = useFashionCatalogue();
+  const node = resolveCategory(tree, slug);
+  if (!node) {
+    return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-listing",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
+        trail: [{
+          name: 'Fashion',
+          href: '/fashion'
+        }, {
+          name: 'Not found'
+        }]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fs-empty",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: status === 'loading' ? 'Loading the catalogue…' : `There is no “${slug}” category in the fashion store.`
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/fashion",
+          className: "fs-btn",
+          children: "Back to fashion"
+        })]
+      })]
+    });
+  }
+  const children = tree.children(node.id).filter(c => c.is_active);
+  const intro = children.length > 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+    className: "fs-subcats",
+    "aria-label": `Shop ${node.name}`,
+    children: children.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+      to: categoryHref(c),
+      className: "fs-subcat",
+      children: c.name
+    }, c.id))
+  }) : null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Listing, {
+    title: node.name,
+    trail: breadcrumbFor(tree, node),
+    scope: categoryScope(tree, node),
+    intro: intro,
+    emptyCopy: `No styles in ${node.name} yet — they appear here as they go live.`
+  });
+}
+
+// ---- /fashion/search ----------------------------------------------------------
+function FashionSearch() {
+  const [params] = useSearchParams();
+  const q = (params.get('q') || '').trim();
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Listing, {
+    title: q ? `Results for “${q}”` : 'All fashion',
+    trail: [{
+      name: 'Fashion',
+      href: '/fashion'
+    }, {
+      name: q ? 'Search' : 'All styles'
+    }],
+    emptyCopy: q ? `Nothing found for “${q}”. Try another word, or browse a category.` : 'The fashion store is being stocked — styles appear here as they go live.'
+  });
+}
+
+// ---- /fashion/wishlist --------------------------------------------------------
+function FashionWishlistPage() {
+  const wish = useFashionWishlist();
+  const set = new Set(wish.ids);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Listing, {
+    title: "Your fashion wishlist",
+    trail: [{
+      name: 'Fashion',
+      href: '/fashion'
+    }, {
+      name: 'Wishlist'
+    }],
+    only: v => set.has(v.id),
+    emptyCopy: "Nothing saved yet \u2014 tap the heart on any style to keep it here."
+  });
+}
+
+function FashionProductStub() {
+  const {
+    slug
+  } = useParams();
+  const {
+    status,
+    tree,
+    bySlug
+  } = useFashionCatalogue();
+  const view = bySlug.get(String(slug || ''));
+  if (!view) {
+    return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-listing",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fs-empty",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: status === 'loading' ? 'Loading the catalogue…' : `There is no “${slug}” in the fashion store.`
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/fashion",
+          className: "fs-btn",
+          children: "Back to fashion"
+        })]
+      })]
+    });
+  }
+  const node = view.category_id ? tree.byId.get(view.category_id) : null;
+  const trail = [...breadcrumbFor(tree, node), {
+    name: view.name
+  }];
+  const m = stockMatrix(view);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "fs-pdp",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
+      trail: trail
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-pdp__grid",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fs-pdp__media",
+        children: view.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: view.image,
+          alt: view.name,
+          width: "900",
+          height: "900",
+          decoding: "async"
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fs-pdp__body",
+        children: [view.brand && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fs-pdp__brand",
+          children: view.brand
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "fs-pdp__h serif",
+          children: view.name
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "fs-rating",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+            children: view.rating.toFixed(1)
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Stars, {
+            value: view.rating,
+            size: 15
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "fs-rating__count",
+            children: ["(", view.reviewCount.toLocaleString('en-IN'), ")"]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "fs-price fs-price--lg",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "fs-price__cur",
+              children: "\u20B9"
+            }), money(view.price).replace(/^₹\s?/, '')]
+          }), view.hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "fs-price__mrp",
+              children: ["M.R.P: ", /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+                children: money(view.mrp)
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "fs-badge",
+              children: [view.discountPct, "% OFF"]
+            })]
+          })]
+        }), view.description && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fs-pdp__desc",
+          children: view.description
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+          className: "fs-matrix",
+          "aria-label": "Availability by size and colour",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+                scope: "col",
+                children: "Size"
+              }), m.colours.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+                scope: "col",
+                children: c
+              }, c))]
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+            children: m.sizes.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+                scope: "row",
+                children: s
+              }), m.colours.map(c => {
+                const v = m.get(s, c);
+                return /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                  "data-stock": v ? v.stock > 0 ? 'in' : 'out' : 'none',
+                  children: !v ? '—' : v.stock > 0 ? `In stock${v.price_override != null ? ` · ${money(v.price_override)}` : ''}` : 'Out of stock'
+                }, c);
+              })]
+            }, s))
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "fs-pdp__soon",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "clock",
+            size: 15
+          }), " Size and colour selection, and Add to bag, arrive with the product page in the next phase."]
+        })]
+      })]
+    })]
+  });
+}
+
+// ============================================================
 // Styles for the routes outside the shop: /admin, /passport, /creator.
 //
 // These live in public/app-deferred.css (built by scripts/build-css.mjs) and
@@ -58293,7 +60072,7 @@ function AdminLogin() {
 // media="print" onload swap because the Content-Security-Policy has no
 // 'unsafe-inline' in script-src, so inline event handlers do not run.
 // ============================================================
-const DEFERRED_ROUTES = /^\/(admin|passport|creator)(\/|$)/;
+const DEFERRED_ROUTES = /^\/(admin|passport|creator|fashion)(\/|$)/;
 function loadDeferredStyles() {
   if (typeof document === 'undefined') return;
   if (document.querySelector('link[data-deferred-styles]')) return;
@@ -58568,6 +60347,25 @@ function App() {
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
         path: "/creator/:tab?",
         element: /*#__PURE__*/jsxRuntimeExports.jsx(CreatorPortal, {})
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Route, {
+        path: "/fashion",
+        element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionLayout, {}),
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          index: true,
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionHome, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "c/:slug",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionCategory, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "p/:slug",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductStub, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "search",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionSearch, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "wishlist",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionWishlistPage, {})
+        })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Route, {
         element: /*#__PURE__*/jsxRuntimeExports.jsx(Layout, {}),
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Route, {
