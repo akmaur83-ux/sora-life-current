@@ -29560,6 +29560,583 @@ if (!isSupabaseConfigured) {
 const supabase = createClient(supabaseUrl , supabasePublishableKey );
 
 // ============================================================
+// Fashion store — the pure rules.
+//
+// Everything the fashion pages decide without React or the network: the
+// category tree (three levels, cycle-safe), URL-backed listing state, the
+// filter and sort rules, what a product card shows, and the per-combination
+// stock matrix a size × colour catalogue needs. All of it runs in tests.
+// ============================================================
+
+const num$6 = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const str$4 = v => String(v ?? '').trim();
+
+// ---- Category tree ---------------------------------------------------------
+
+/** Flat rows → a tree with lookups. Inactive rows are kept but flagged. */
+function buildTree(rows) {
+  const list = (Array.isArray(rows) ? rows : []).map(r => ({
+    id: String(r.id),
+    parent_id: r.parent_id == null ? null : String(r.parent_id),
+    name: str$4(r.name),
+    slug: str$4(r.slug),
+    tagline: str$4(r.tagline),
+    image_url: r.image_url || null,
+    sort_order: num$6(r.sort_order),
+    is_active: r.is_active !== false
+  }));
+  const byId = new Map(list.map(n => [n.id, n]));
+  const childrenOf = new Map();
+  for (const n of list) {
+    const key = n.parent_id && byId.has(n.parent_id) ? n.parent_id : null;
+    if (!childrenOf.has(key)) childrenOf.set(key, []);
+    childrenOf.get(key).push(n);
+  }
+  const bySort = (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name);
+  for (const arr of childrenOf.values()) arr.sort(bySort);
+  const children = id => childrenOf.get(id == null ? null : String(id)) || [];
+  const ancestors = id => {
+    // root → … → node; stops on a cycle so a bad row cannot hang the page
+    const out = [];
+    const seen = new Set();
+    let cur = byId.get(String(id));
+    while (cur && !seen.has(cur.id)) {
+      seen.add(cur.id);
+      out.unshift(cur);
+      cur = cur.parent_id ? byId.get(cur.parent_id) : null;
+    }
+    return out;
+  };
+  const depth = id => ancestors(id).length;
+  const descendants = id => {
+    const out = [];
+    const stack = [...children(id)];
+    const seen = new Set();
+    while (stack.length) {
+      const n = stack.shift();
+      if (seen.has(n.id)) continue;
+      seen.add(n.id);
+      out.push(n);
+      stack.push(...children(n.id));
+    }
+    return out;
+  };
+  return {
+    list,
+    byId,
+    roots: children(null),
+    children,
+    ancestors,
+    depth,
+    descendants
+  };
+}
+
+/** `/fashion/c/<slug>` → the shallowest active category with that slug. */
+function resolveCategory(tree, slug) {
+  const s = str$4(slug).toLowerCase();
+  if (!s) return null;
+  const matches = tree.list.filter(n => n.slug === s && n.is_active);
+  if (matches.length === 0) return null;
+  matches.sort((a, b) => tree.depth(a.id) - tree.depth(b.id) || a.sort_order - b.sort_order);
+  return matches[0];
+}
+const categoryHref = node => `/fashion/c/${node.slug}`;
+function breadcrumbFor(tree, node) {
+  const trail = [{
+    name: 'Fashion',
+    href: '/fashion'
+  }];
+  if (!node) return trail;
+  for (const a of tree.ancestors(node.id)) trail.push({
+    name: a.name,
+    href: categoryHref(a)
+  });
+  return trail;
+}
+
+/** The ids a listing for `node` covers: itself plus everything below it. */
+function categoryScope(tree, node) {
+  if (!node) return null;
+  return new Set([node.id, ...tree.descendants(node.id).map(n => n.id)]);
+}
+
+// ---- Products ----------------------------------------------------------------
+
+/** One product with its variants → what a card or a listing needs. */
+function productView(product, variants = null) {
+  const vs = (Array.isArray(variants) ? variants : product?.fashion_variants || []).filter(v => v && v.is_active !== false).map(v => ({
+    id: String(v.id),
+    size: str$4(v.size),
+    colour: str$4(v.colour),
+    colour_hex: v.colour_hex || null,
+    sku: v.sku || null,
+    stock: Math.max(0, num$6(v.stock)),
+    price_override: v.price_override == null ? null : num$6(v.price_override),
+    sort_order: num$6(v.sort_order)
+  })).sort((a, b) => a.sort_order - b.sort_order);
+  const mrp = num$6(product?.mrp);
+  const sale = product?.sale_price == null ? null : num$6(product.sale_price);
+  const price = sale != null && sale < mrp ? sale : mrp;
+  const discountPct = product?.discount_percent != null ? num$6(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
+  const swatches = [];
+  for (const v of vs) {
+    let s = swatches.find(x => x.colour === v.colour);
+    if (!s) {
+      s = {
+        colour: v.colour,
+        hex: v.colour_hex,
+        stock: 0
+      };
+      swatches.push(s);
+    }
+    s.stock += v.stock;
+  }
+  const sizes = [...new Set(vs.map(v => v.size))];
+  const totalStock = vs.reduce((s, v) => s + v.stock, 0);
+  return {
+    id: String(product?.id ?? ''),
+    slug: str$4(product?.slug),
+    name: str$4(product?.name),
+    brand: str$4(product?.brand),
+    description: str$4(product?.description),
+    category_id: product?.category_id == null ? null : String(product.category_id),
+    image: Array.isArray(product?.images) && product.images[0] ? product.images[0] : null,
+    images: Array.isArray(product?.images) ? product.images.filter(Boolean) : [],
+    mrp,
+    sale,
+    price,
+    discountPct,
+    hasDiscount: discountPct > 0,
+    rating: Math.max(0, Math.min(5, num$6(product?.rating))),
+    reviewCount: Math.max(0, num$6(product?.review_count)),
+    isNew: product?.is_new === true,
+    isBestseller: product?.is_bestseller === true,
+    sortOrder: num$6(product?.sort_order),
+    variants: vs,
+    swatches,
+    sizes,
+    inStock: vs.length === 0 ? false : totalStock > 0,
+    totalStock,
+    minPrice: vs.length ? Math.min(price, ...vs.filter(v => v.price_override != null).map(v => v.price_override)) : price
+  };
+}
+
+/** Per-combination stock: Medium/green can be out while Medium/navy is in. */
+function stockMatrix(view) {
+  const cells = new Map();
+  for (const v of view.variants) cells.set(`${v.size} ${v.colour}`, v);
+  const get = (size, colour) => cells.get(`${size} ${colour}`) || null;
+  return {
+    sizes: view.sizes,
+    colours: view.swatches.map(s => s.colour),
+    get,
+    stock: (size, colour) => get(size, colour)?.stock ?? 0,
+    inStock: (size, colour) => (get(size, colour)?.stock ?? 0) > 0,
+    priceOf: (size, colour) => {
+      const v = get(size, colour);
+      return v && v.price_override != null ? v.price_override : view.price;
+    },
+    sizesInStockFor: colour => view.sizes.filter(s => (get(s, colour)?.stock ?? 0) > 0)
+  };
+}
+function swatchOverflow(swatches, max = 4) {
+  const list = Array.isArray(swatches) ? swatches : [];
+  return {
+    shown: list.slice(0, max),
+    more: Math.max(0, list.length - max)
+  };
+}
+
+// ---- Listing state in the URL ---------------------------------------------------
+
+const FASHION_SORTS = [{
+  id: 'featured',
+  label: 'Featured'
+}, {
+  id: 'price-asc',
+  label: 'Price: low to high'
+}, {
+  id: 'price-desc',
+  label: 'Price: high to low'
+}, {
+  id: 'discount',
+  label: 'Biggest discount'
+}, {
+  id: 'rating',
+  label: 'Top rated'
+}, {
+  id: 'new',
+  label: 'Newest'
+}];
+const FASHION_PRICE_BANDS = [{
+  id: 'under-500',
+  label: 'Under ₹500',
+  min: 0,
+  maxExclusive: 500
+}, {
+  id: '500-999',
+  label: '₹500 – ₹999',
+  min: 500,
+  maxExclusive: 1000
+}, {
+  id: '1000-1999',
+  label: '₹1,000 – ₹1,999',
+  min: 1000,
+  maxExclusive: 2000
+}, {
+  id: '2000-plus',
+  label: '₹2,000 & above',
+  min: 2000,
+  maxExclusive: Infinity
+}];
+const DISCOUNT_STEPS = [10, 25, 40, 50];
+const RATING_STEPS = [4, 3];
+const VIEWS = ['grid', 'list'];
+const SORT_IDS$1 = new Set(FASHION_SORTS.map(s => s.id));
+const PRICE_IDS$1 = new Set(FASHION_PRICE_BANDS.map(b => b.id));
+const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+const uniq = arr => [...new Set(arr)];
+function readFashionUrlState(searchParams) {
+  const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
+  const discount = num$6(p.get('discount'));
+  const rating = num$6(p.get('rating'));
+  return {
+    q: str$4(p.get('q')),
+    sort: SORT_IDS$1.has(p.get('sort')) ? p.get('sort') : 'featured',
+    price: PRICE_IDS$1.has(p.get('price')) ? p.get('price') : null,
+    sizes: uniq(list(p.get('size'))),
+    colours: uniq(list(p.get('colour'))),
+    brands: uniq(list(p.get('brand'))),
+    discount: DISCOUNT_STEPS.includes(discount) ? discount : null,
+    rating: RATING_STEPS.includes(rating) ? rating : null,
+    view: VIEWS.includes(p.get('view')) ? p.get('view') : 'grid'
+  };
+}
+function updateFashionUrlState(searchParams, patch) {
+  const p = new URLSearchParams(searchParams);
+  const has = k => Object.prototype.hasOwnProperty.call(patch, k);
+  const setList = (key, arr) => {
+    const v = uniq((Array.isArray(arr) ? arr : []).map(str$4).filter(Boolean));
+    if (v.length) p.set(key, v.join(','));else p.delete(key);
+  };
+  if (has('q')) {
+    const q = str$4(patch.q);
+    if (q) p.set('q', q);else p.delete('q');
+  }
+  if (has('sort')) {
+    if (SORT_IDS$1.has(patch.sort) && patch.sort !== 'featured') p.set('sort', patch.sort);else p.delete('sort');
+  }
+  if (has('price')) {
+    if (PRICE_IDS$1.has(patch.price)) p.set('price', patch.price);else p.delete('price');
+  }
+  if (has('sizes')) setList('size', patch.sizes);
+  if (has('colours')) setList('colour', patch.colours);
+  if (has('brands')) setList('brand', patch.brands);
+  if (has('discount')) {
+    if (DISCOUNT_STEPS.includes(num$6(patch.discount))) p.set('discount', String(num$6(patch.discount)));else p.delete('discount');
+  }
+  if (has('rating')) {
+    if (RATING_STEPS.includes(num$6(patch.rating))) p.set('rating', String(num$6(patch.rating)));else p.delete('rating');
+  }
+  if (has('view')) {
+    if (patch.view === 'list') p.set('view', 'list');else p.delete('view');
+  }
+  return p;
+}
+function activeFilterCount(state) {
+  return (state.price ? 1 : 0) + state.sizes.length + state.colours.length + state.brands.length + (state.discount ? 1 : 0) + (state.rating ? 1 : 0);
+}
+
+/** The choices the panel offers, from what is actually in the listing. */
+function filterOptions(views) {
+  const sizes = new Map();
+  const colours = new Map();
+  const brands = new Map();
+  for (const v of views) {
+    for (const s of v.sizes) sizes.set(s, (sizes.get(s) || 0) + 1);
+    for (const s of v.swatches) if (!colours.has(s.colour)) colours.set(s.colour, s.hex);
+    if (v.brand) brands.set(v.brand, (brands.get(v.brand) || 0) + 1);
+  }
+  const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+  const sortSizes = (a, b) => {
+    const ia = sizeOrder.indexOf(a);
+    const ib = sizeOrder.indexOf(b);
+    if (ia >= 0 && ib >= 0) return ia - ib;
+    if (ia >= 0) return -1;
+    if (ib >= 0) return 1;
+    return a.localeCompare(b, 'en', {
+      numeric: true
+    });
+  };
+  return {
+    sizes: [...sizes.keys()].sort(sortSizes),
+    colours: [...colours.entries()].map(([colour, hex]) => ({
+      colour,
+      hex
+    })).sort((a, b) => a.colour.localeCompare(b.colour)),
+    brands: [...brands.keys()].sort()
+  };
+}
+function matchesFilters(view, state) {
+  if (state.q) {
+    const q = state.q.toLowerCase();
+    if (!`${view.name} ${view.brand} ${view.description}`.toLowerCase().includes(q)) return false;
+  }
+  if (state.price) {
+    const band = FASHION_PRICE_BANDS.find(b => b.id === state.price);
+    if (band && !(view.price >= band.min && view.price < band.maxExclusive)) return false;
+  }
+  if (state.sizes.length && !state.sizes.some(s => view.sizes.includes(s))) return false;
+  if (state.colours.length && !state.colours.some(c => view.swatches.some(s => s.colour === c))) return false;
+  if (state.brands.length && !state.brands.includes(view.brand)) return false;
+  if (state.discount && view.discountPct < state.discount) return false;
+  if (state.rating && view.rating < state.rating) return false;
+  return true;
+}
+function sortViews(views, sort) {
+  const arr = [...views];
+  const featured = (a, b) => b.isBestseller - a.isBestseller || b.isNew - a.isNew || a.sortOrder - b.sortOrder || a.name.localeCompare(b.name);
+  switch (sort) {
+    case 'price-asc':
+      return arr.sort((a, b) => a.price - b.price || featured(a, b));
+    case 'price-desc':
+      return arr.sort((a, b) => b.price - a.price || featured(a, b));
+    case 'discount':
+      return arr.sort((a, b) => b.discountPct - a.discountPct || featured(a, b));
+    case 'rating':
+      return arr.sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount || featured(a, b));
+    case 'new':
+      return arr.sort((a, b) => b.isNew - a.isNew || a.sortOrder - b.sortOrder);
+    default:
+      return arr.sort(featured);
+  }
+}
+function applyListing(views, state, scope = null) {
+  const inScope = scope ? views.filter(v => v.category_id && scope.has(v.category_id)) : views;
+  return sortViews(inScope.filter(v => matchesFilters(v, state)), state.sort);
+}
+
+/** Distinct brands across the catalogue, most products first — the "Top Brands" row. */
+function topBrands(views, limit = 6) {
+  const count = new Map();
+  for (const v of views) if (v.brand) count.set(v.brand, (count.get(v.brand) || 0) + 1);
+  return [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, limit).map(([name, products]) => ({
+    name,
+    products
+  }));
+}
+
+// ============================================================
+// Fashion store — Supabase reads and admin writes.
+//
+// Reads go straight at the tables under RLS (public read where is_active,
+// exactly as the wellness categories and variants are read). Writes are
+// admin-only and follow the omit-when-absent rule: a caller that does not
+// mention a field cannot blank it.
+// ============================================================
+const PRODUCT_COLUMNS = 'id, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
+const VARIANT_COLUMNS = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
+async function getFashionCategories() {
+  const {
+    data,
+    error
+  } = await supabase.from('fashion_categories').select('id, parent_id, name, slug, tagline, image_url, sort_order, is_active').order('sort_order', {
+    ascending: true
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+/** Every active product with its active variants, in one request. */
+async function getFashionProducts() {
+  const {
+    data,
+    error
+  } = await supabase.from('fashion_products').select(`${PRODUCT_COLUMNS}, fashion_variants (${VARIANT_COLUMNS})`).eq('is_active', true).order('sort_order', {
+    ascending: true
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+/** The products (with active variants) behind a set of cart lines. */
+async function getFashionProductsByIds(ids) {
+  const clean = [...new Set((ids || []).map(String).filter(Boolean))];
+  if (!clean.length) return [];
+  const {
+    data,
+    error
+  } = await supabase.from('fashion_products').select(`${PRODUCT_COLUMNS}, fashion_variants (${VARIANT_COLUMNS})`).in('id', clean);
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+// ============================================================
+// Fashion cart lines — hydration against the FASHION catalogue.
+//
+// A stored fashion line is { key, catalogue: 'fashion', id, variantId,
+// variant, qty }: the product id and the size × colour variant id. It is
+// priced for display from fashion_products / fashion_variants, never from
+// the wellness catalogue, and it is never pruned by the wellness
+// reconciliation. The payable amount is the server's (api/_lib/pricing.js
+// → trustedFashionPrice); nothing here is charged.
+//
+// The rows live in a small module cache the store fills on demand for the
+// ids in the cart, so the cart page can price a fashion line without the
+// /fashion shell's catalogue being mounted.
+// ============================================================
+const FASHION_CATALOGUE = 'fashion';
+const fashionLineKey = (productId, variantId) => `fashion:${productId}::${variantId ?? ''}`;
+const isFashionLine = line => line?.catalogue === FASHION_CATALOGUE;
+const rows = new Map(); // product id → { row, variants }
+const known = new Set(); // ids a fetch has answered for (present or not)
+let cacheVersion = 0;
+let inflight = null;
+const listeners$1 = new Set();
+const bump = () => {
+  cacheVersion += 1;
+  for (const l of listeners$1) l();
+};
+const getFashionCartVersion = () => cacheVersion;
+const subscribeFashionCart = fn => {
+  listeners$1.add(fn);
+  return () => listeners$1.delete(fn);
+};
+/** A fetch has answered for this id — present or gone. */
+const isFashionIdResolved = id => known.has(String(id));
+const fashionRowFor = id => rows.get(String(id)) || null;
+
+/** Fetch any fashion ids not yet resolved. Safe to call on every render. */
+async function ensureFashionProducts(ids) {
+  const want = [...new Set((ids || []).map(String))].filter(id => !known.has(id));
+  if (!want.length) return;
+  if (inflight) {
+    await inflight;
+    return ensureFashionProducts(ids);
+  }
+  inflight = (async () => {
+    try {
+      const list = await getFashionProductsByIds(want);
+      for (const p of list) rows.set(String(p.id), {
+        row: p,
+        variants: Array.isArray(p.fashion_variants) ? p.fashion_variants : []
+      });
+      // Every id we asked about is now answered: a missing one is gone, and
+      // the store may prune it; an absent answer (network) leaves it pending.
+      for (const id of want) known.add(id);
+    } catch {/* network: the lines stay pending, never pruned */} finally {
+      inflight = null;
+      bump();
+    }
+  })();
+  await inflight;
+}
+const num$5 = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+/**
+ * Price and judge one fashion line for display. Mirrors the shape
+ * hydrateCartLine produces so Cart, Checkout and the summary render it
+ * unchanged: product (name, image, slug, href), variantObj, variantLabel,
+ * unitPrice, unitMrp, lineTotal, unavailableReason, purchasable.
+ *
+ * Until the fashion rows have loaded the line is PENDING: it counts toward
+ * the badge, shows in the cart with no price, and blocks checkout with a
+ * reason — it is never dropped for being unknown.
+ */
+function hydrateFashionCartLine(line, entry, {
+  resolved = false
+} = {}) {
+  if (!entry) {
+    if (resolved) return null; // the product is gone; the store prunes it
+    return {
+      ...line,
+      product: {
+        id: line.id,
+        name: 'Fashion item',
+        slug: '',
+        image: null,
+        href: '/fashion',
+        form: null,
+        cardImage: null
+      },
+      variantObj: null,
+      variantLabel: line.variant ?? null,
+      variantMissing: false,
+      variantStock: null,
+      unitPrice: null,
+      unitMrp: null,
+      lineTotal: 0,
+      pending: true,
+      unavailableReason: 'Checking availability…',
+      purchasable: false
+    };
+  }
+  const {
+    row,
+    variants
+  } = entry;
+  const v = variants.find(x => String(x.id) === String(line.variantId)) || null;
+  const variantMissing = !v || v.is_active === false;
+  const mrp = num$5(row.mrp);
+  const sale = row.sale_price == null ? null : num$5(row.sale_price);
+  const base = sale != null && sale > 0 && sale < mrp ? sale : mrp;
+  const override = v && v.price_override != null ? num$5(v.price_override) : null;
+  const unitPrice = variantMissing ? null : override != null && override > 0 ? override : base;
+  const unitMrp = unitPrice == null ? null : Math.max(mrp, unitPrice);
+  const stock = v ? Math.max(0, Math.floor(num$5(v.stock))) : null;
+  const label = v ? [v.size, v.colour].filter(Boolean).join(' · ') : line.variant ?? null;
+  let unavailableReason = null;
+  if (variantMissing) unavailableReason = label ? `“${label}” is no longer available.` : 'The size and colour you chose are no longer available.';else if (row.is_active === false) unavailableReason = 'This item is no longer available.';else if (stock === 0) unavailableReason = 'This size and colour is out of stock.';else if (stock != null && line.qty > stock) unavailableReason = stock === 1 ? 'Only 1 left — please reduce the quantity.' : `Only ${stock} left — please reduce the quantity.`;else if (!(unitPrice > 0)) unavailableReason = 'This item is not available to buy right now.';
+  const image = Array.isArray(row.images) && row.images[0] ? row.images[0] : null;
+  return {
+    ...line,
+    product: {
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      brand: row.brand || '',
+      image,
+      cardImage: image,
+      gallery: Array.isArray(row.images) ? row.images : [],
+      href: `/fashion/p/${row.slug}`,
+      form: null,
+      price: unitPrice,
+      mrp: unitMrp
+    },
+    variantObj: v ? {
+      id: String(v.id),
+      label,
+      price: unitPrice,
+      mrp: unitMrp,
+      stock,
+      size: v.size,
+      colour: v.colour,
+      colour_hex: v.colour_hex || null
+    } : null,
+    variantLabel: label,
+    variantMissing,
+    variantStock: stock,
+    unitPrice,
+    unitMrp,
+    lineTotal: unitPrice == null ? 0 : unitPrice * line.qty,
+    unavailableReason,
+    purchasable: unavailableReason == null
+  };
+}
+
+/** Which stored fashion lines point at a product a fetch has confirmed gone. */
+function fashionKeysToPrune(lines) {
+  return (Array.isArray(lines) ? lines : []).filter(l => isFashionLine(l) && isFashionIdResolved(l.id) && !fashionRowFor(l.id)).map(l => l.key);
+}
+
+// ============================================================
 // Password-recovery helpers.
 //
 // Kept free of React and of the Supabase client so the rules can be unit
@@ -30302,17 +30879,31 @@ function reducer(state, action) {
           id,
           qty = 1,
           variant = null,
-          variantId = null
+          variantId = null,
+          catalogue = null
         } = action;
         // Two different pack sizes of the same product are two cart lines, so
         // the key includes the variant. variantId is what the server prices
         // against; `variant` is only the human label shown in the UI.
-        const key = id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
+        //
+        // A FASHION line (catalogue: 'fashion') is keyed in its own namespace
+        // and carries the marker on the line, so it can never merge with, be
+        // priced as, or be pruned against a wellness product. A wellness line
+        // is shaped exactly as it always was — no catalogue field at all.
+        const fashion = catalogue === FASHION_CATALOGUE;
+        const key = fashion ? fashionLineKey(id, variantId) : id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
         const existing = state.cart.find(l => l.key === key);
         const cart = existing ? state.cart.map(l => l.key === key ? {
           ...l,
           qty: l.qty + qty
-        } : l) : [...state.cart, {
+        } : l) : [...state.cart, fashion ? {
+          key,
+          catalogue: FASHION_CATALOGUE,
+          id,
+          variant,
+          variantId,
+          qty
+        } : {
           key,
           id,
           variant,
@@ -30482,6 +31073,38 @@ function StoreProvider({
     return true;
   }, [toast]);
 
+  // The fashion add path. Takes the product view and the chosen size ×
+  // colour variant (fashion.js → productView / stockMatrix); the line
+  // carries ids only, and the label is display text. The stock gate here is
+  // a courtesy — the server re-checks it at quote and at order creation.
+  const addFashionToCart = reactExports.useCallback((view, variant, qty = 1) => {
+    if (!view?.id || !variant?.id) {
+      toast('Please choose a size and colour first.', {
+        kind: 'cart'
+      });
+      return false;
+    }
+    if (!(Number(variant.stock) > 0)) {
+      toast('That size and colour is out of stock.', {
+        kind: 'cart'
+      });
+      return false;
+    }
+    const label = [variant.size, variant.colour].filter(Boolean).join(' · ') || null;
+    dispatch({
+      type: 'ADD',
+      catalogue: FASHION_CATALOGUE,
+      id: String(view.id),
+      qty,
+      variant: label,
+      variantId: String(variant.id)
+    });
+    toast('Added to cart', {
+      kind: 'cart'
+    });
+    return true;
+  }, [toast]);
+
   // What the UI renders. Recomputed from the two lists, never stored.
   const wishlist = reactExports.useMemo(() => visibleWishlist(state), [state.guestWish, state.accountWish, state.syncedUserId]);
 
@@ -30597,15 +31220,27 @@ function StoreProvider({
   // line costs and whether it can be bought have exactly ONE implementation —
   // the same arrangement wishlistState.js uses, and for the same reason: those
   // rules are executed directly in tests rather than through a provider.
-  const hydrate = l => hydrateCartLine(l, productById[l.id]);
+  // A fashion line is priced from the fashion tables (fashionCartLine.js);
+  // a wellness line exactly as before. The wellness catalogue is never
+  // consulted for a fashion id, and vice versa.
+  const hydrate = l => isFashionLine(l) ? hydrateFashionCartLine(l, fashionRowFor(l.id), {
+    resolved: isFashionIdResolved(l.id)
+  }) : hydrateCartLine(l, productById[l.id]);
 
   // Variants arrive from Supabase AFTER first render. Memoising on state.cart
   // alone meant a line added with a 750 ml variantId kept the pre-variant
   // base price (250 ml) forever, because the cart array never changed. Read
   // the catalogue version during render so the async load invalidates these.
   const catalogVersion = getCatalogVersion();
-  const cartDetailed = reactExports.useMemo(() => state.cart.map(hydrate).filter(Boolean), [state.cart, catalogVersion]);
-  const savedDetailed = reactExports.useMemo(() => state.saved.map(hydrate).filter(Boolean), [state.saved, catalogVersion]);
+  // The fashion rows behind the cart's fashion lines load on demand; their
+  // version invalidates the memo the same way the wellness one does.
+  const fashionVersion = reactExports.useSyncExternalStore(subscribeFashionCart, getFashionCartVersion, getFashionCartVersion);
+  reactExports.useEffect(() => {
+    const ids = [...state.cart, ...state.saved].filter(isFashionLine).map(l => l.id);
+    if (ids.length) ensureFashionProducts(ids);
+  }, [state.cart, state.saved]);
+  const cartDetailed = reactExports.useMemo(() => state.cart.map(hydrate).filter(Boolean), [state.cart, catalogVersion, fashionVersion]);
+  const savedDetailed = reactExports.useMemo(() => state.saved.map(hydrate).filter(Boolean), [state.saved, catalogVersion, fashionVersion]);
 
   // Lines that cannot be paid for. Cart and Checkout read this to block the
   // order instead of letting the customer discover it at the payment step.
@@ -30628,14 +31263,25 @@ function StoreProvider({
   //
   // PRUNE_MISSING returns the identical state when there is nothing to drop,
   // so this cannot re-trigger itself.
+  //
+  //   3. A FASHION line is judged against the fashion catalogue only: it is
+  //      pruned when a fetch for its id has answered and the product is gone,
+  //      and never because the wellness catalogue does not know the id.
   reactExports.useEffect(() => {
     if (!isCatalogHydrated()) return;
-    const keys = [...state.cart, ...state.saved].filter(l => !productById[l.id]).map(l => l.key);
+    const keys = [...state.cart, ...state.saved].filter(l => !isFashionLine(l) && !productById[l.id]).map(l => l.key);
     if (keys.length) dispatch({
       type: 'PRUNE_MISSING',
       keys
     });
   }, [state.cart, state.saved, catalogVersion]);
+  reactExports.useEffect(() => {
+    const keys = fashionKeysToPrune([...state.cart, ...state.saved]);
+    if (keys.length) dispatch({
+      type: 'PRUNE_MISSING',
+      keys
+    });
+  }, [state.cart, state.saved, fashionVersion]);
   // Counted from the lines the cart can actually SHOW, so the badge can never
   // advertise an item the page does not list. state.cart may still hold a line
   // whose product has vanished; reconcileCart() below clears those for good.
@@ -30656,6 +31302,7 @@ function StoreProvider({
     toasts,
     toast,
     addToCart,
+    addFashionToCart,
     toggleWish,
     // Normalised on both sides: a caller passing the numeric 5 still matches
     // a stored '5'.
@@ -34053,7 +34700,7 @@ const PROMOTIONS_FALLBACK = [{
 const PLACEMENTS = ['home', 'pdp', 'cart'];
 const TYPES = ['poster', 'offer'];
 const THEME_VARIANTS = ['forest', 'cream', 'orange', 'dark', 'minimal'];
-function str$4(v, max = 400) {
+function str$3(v, max = 400) {
   return typeof v === 'string' ? v.trim().slice(0, max) : '';
 }
 
@@ -34064,20 +34711,20 @@ function normalizePromo(row) {
   const themeVariant = THEME_VARIANTS.includes(row.theme_variant ?? row.themeVariant) ? row.theme_variant ?? row.themeVariant : 'forest';
   const rawPlacements = row.placements ?? [];
   const placements = Array.isArray(rawPlacements) ? rawPlacements.filter(p => PLACEMENTS.includes(p)) : [];
-  const ctaUrl = str$4(row.cta_url ?? row.ctaUrl, 500) || null;
+  const ctaUrl = str$3(row.cta_url ?? row.ctaUrl, 500) || null;
   return {
     id: String(row.id ?? cryptoId()),
     type,
-    title: str$4(row.title, 160),
-    subtitle: str$4(row.subtitle, 320),
+    title: str$3(row.title, 160),
+    subtitle: str$3(row.subtitle, 320),
     couponCode: normalizeCode(row.coupon_code ?? row.couponCode),
-    ctaText: str$4(row.cta_text ?? row.ctaText, 60),
+    ctaText: str$3(row.cta_text ?? row.ctaText, 60),
     ctaUrl: safeCtaUrl(ctaUrl),
-    badgeText: str$4(row.badge_text ?? row.badgeText, 40),
-    imageUrl: str$4(row.image_url ?? row.imageUrl, 1000) || null,
+    badgeText: str$3(row.badge_text ?? row.badgeText, 40),
+    imageUrl: str$3(row.image_url ?? row.imageUrl, 1000) || null,
     // Optional artwork for >= 1024px (0029). Null means every viewport shows
     // imageUrl, exactly as before the column existed.
-    desktopImageUrl: str$4(row.desktop_image_url ?? row.desktopImageUrl, 1000) || null,
+    desktopImageUrl: str$3(row.desktop_image_url ?? row.desktopImageUrl, 1000) || null,
     themeVariant,
     textAlign: (row.text_align ?? row.textAlign) === 'center' ? 'center' : 'left',
     placements,
@@ -34088,7 +34735,7 @@ function normalizePromo(row) {
   };
 }
 function normalizeCode(v) {
-  const s = str$4(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+  const s = str$3(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
   return s || null;
 }
 
@@ -34751,7 +35398,7 @@ const DEFAULT_LADDER = Object.freeze([{
   rate: 25
 }]);
 const DEFAULT_BEYOND_STEP = 25000;
-const num$5 = v => {
+const num$4 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
@@ -34763,8 +35410,8 @@ function normalizeLadder(rows) {
   return rows.map((r, i) => ({
     level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
     rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
-    threshold: num$5(r?.threshold),
-    rate: num$5(r?.rate)
+    threshold: num$4(r?.threshold),
+    rate: num$4(r?.rate)
   })).sort((a, b) => a.level - b.level);
 }
 
@@ -37326,7 +37973,7 @@ const NEUTRAL_THEME = {
   background: '#F1EDE4',
   gradient: 'linear-gradient(168deg, #F6F2EA 0%, #E9E3D7 100%)'
 };
-const str$3 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
+const str$2 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
 
 /**
  * A CSS colour we are willing to inline as a style value.
@@ -37336,7 +37983,7 @@ const str$3 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
  * quote or url() is refused rather than escaped.
  */
 function safeColor(value) {
-  const v = str$3(value, 40);
+  const v = str$2(value, 40);
   if (!v) return '';
   if (/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) return v;
   if (/^(?:rgb|hsl)a?\(\s*[\d.,%\s/deg]+\)$/i.test(v)) return v;
@@ -37351,7 +37998,7 @@ function safeColor(value) {
  * one. No url(), no var(), no expression, no nesting of other functions.
  */
 function safeGradient(value) {
-  const v = str$3(value, 240);
+  const v = str$2(value, 240);
   if (!v) return '';
   if (!/^(?:linear|radial|conic)-gradient\(/i.test(v)) return '';
   if (!v.endsWith(')')) return '';
@@ -37421,16 +38068,16 @@ function makeSpotlightId(productSlug, taken = []) {
  */
 function sanitizeSpotlightItem(raw, taken = []) {
   if (!raw || typeof raw !== 'object') return null;
-  const productSlug = str$3(raw.productSlug ?? raw.productId ?? raw.slug, 120);
+  const productSlug = str$2(raw.productSlug ?? raw.productId ?? raw.slug, 120);
   if (!productSlug) return null;
   return {
-    id: str$3(raw.id, 60) || makeSpotlightId(productSlug, taken),
+    id: str$2(raw.id, 60) || makeSpotlightId(productSlug, taken),
     productSlug,
     // Optional cutout/hero asset. Same URL policy the homepage visuals use.
     spotlightImage: safeVisualUrl(raw.spotlightImage) || '',
     // Owner-authored, and shown verbatim. Never generated from product data.
-    headline: str$3(raw.headline, 60),
-    subline: str$3(raw.subline, 90),
+    headline: str$2(raw.headline, 60),
+    subline: str$2(raw.subline, 90),
     background: safeColor(raw.background),
     gradient: safeGradient(raw.gradient),
     // Generated once by the Admin packshot preprocessor. It is deliberately
@@ -38614,9 +39261,9 @@ const CONTENT_LABELS = {
   how_to_use: 'How to use',
   specifications: 'Specifications'
 };
-const str$2 = v => (v === null || v === undefined ? '' : String(v)).trim();
+const str$1 = v => (v === null || v === undefined ? '' : String(v)).trim();
 const truthyStr = v => {
-  const s = str$2(v);
+  const s = str$1(v);
   return s.length ? s : null;
 };
 
@@ -38630,7 +39277,7 @@ function normalizeKeyClaims(value) {
   const list = Array.isArray(value) ? value
   // A tag input or a CSV cell may hand us a comma-separated string.
   : String(value).split(',');
-  const out = list.map(str$2).filter(Boolean);
+  const out = list.map(str$1).filter(Boolean);
   return arrayOrNull(out);
 }
 function normalizeBenefits(value) {
@@ -38640,7 +39287,7 @@ function normalizeBenefits(value) {
   for (const raw of value) {
     if (typeof raw === 'string') {
       // The legacy shape. Keep it readable rather than dropping the content.
-      const t = str$2(raw);
+      const t = str$1(raw);
       if (t) out.push({
         title: t,
         description: ''
@@ -38648,8 +39295,8 @@ function normalizeBenefits(value) {
       continue;
     }
     if (!raw || typeof raw !== 'object') continue;
-    const title = str$2(raw.title);
-    const description = str$2(raw.description);
+    const title = str$1(raw.title);
+    const description = str$1(raw.description);
     // A row with neither is not a benefit, it is an empty row the admin has
     // not filled in yet — dropped on save rather than stored.
     if (!title && !description) continue;
@@ -38666,7 +39313,7 @@ function normalizeIngredients(value) {
   const out = [];
   for (const raw of value) {
     if (typeof raw === 'string') {
-      const n = str$2(raw);
+      const n = str$1(raw);
       if (n) out.push({
         name: n,
         description: '',
@@ -38675,14 +39322,14 @@ function normalizeIngredients(value) {
       continue;
     }
     if (!raw || typeof raw !== 'object') continue;
-    const name = str$2(raw.name);
+    const name = str$1(raw.name);
     if (!name) continue; // an ingredient with no name is nothing
     out.push({
       name,
-      description: str$2(raw.description),
+      description: str$1(raw.description),
       // Only http(s). A relative or javascript: value must never reach an
       // <img src> on a live page.
-      image_url: /^https?:\/\//i.test(str$2(raw.image_url)) ? str$2(raw.image_url) : null
+      image_url: /^https?:\/\//i.test(str$1(raw.image_url)) ? str$1(raw.image_url) : null
     });
   }
   return out;
@@ -38692,7 +39339,7 @@ function normalizeHowToUse(value) {
   if (!Array.isArray(value)) return null;
   const out = [];
   for (const raw of value) {
-    const text = typeof raw === 'string' ? str$2(raw) : str$2(raw?.text);
+    const text = typeof raw === 'string' ? str$1(raw) : str$1(raw?.text);
     if (!text) continue;
     out.push({
       step: out.length + 1,
@@ -38704,7 +39351,7 @@ function normalizeHowToUse(value) {
 function normalizeSpecifications(value) {
   if (value === null || value === undefined) return null;
   // Accept both the stored object and the editor's row array.
-  const pairs = Array.isArray(value) ? value.map(r => [str$2(r?.key), str$2(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$2(k), str$2(v)]) : [];
+  const pairs = Array.isArray(value) ? value.map(r => [str$1(r?.key), str$1(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$1(k), str$1(v)]) : [];
   const out = {};
   for (const [k, v] of pairs) {
     if (!k || !v) continue; // a label with no value renders as "Shelf life:"
@@ -38770,7 +39417,7 @@ function validateContent(input) {
       errors.push('Benefits: each row needs a title and description.');
       break;
     }
-    if (!str$2(b.title) && !str$2(b.description)) {
+    if (!str$1(b.title) && !str$1(b.description)) {
       errors.push('Benefits: a row is completely empty.');
       break;
     }
@@ -38780,11 +39427,11 @@ function validateContent(input) {
       errors.push('Ingredients: each row needs a name.');
       break;
     }
-    if (!str$2(i.name)) {
+    if (!str$1(i.name)) {
       errors.push('Ingredients: a row has a description but no name.');
       break;
     }
-    const url = str$2(i.image_url);
+    const url = str$1(i.image_url);
     if (url && !/^https?:\/\//i.test(url)) {
       errors.push(`Ingredients: "${url.slice(0, 30)}" is not an http(s) image URL.`);
       break;
@@ -38795,7 +39442,7 @@ function validateContent(input) {
       errors.push('How to use: each step needs text.');
       break;
     }
-    if (!str$2(s.text)) {
+    if (!str$1(s.text)) {
       errors.push('How to use: a step has no text.');
       break;
     }
@@ -38835,7 +39482,7 @@ function contentScore(product) {
     missing: CONTENT_FIELDS.filter(f => !populated.includes(f)),
     count: populated.length,
     total: CONTENT_FIELDS.length,
-    hasDescription: !!str$2(product?.description)
+    hasDescription: !!str$1(product?.description)
   };
 }
 
@@ -40612,9 +41259,9 @@ const PRICE_BANDS = [{
   min: 5000,
   maxExclusive: Infinity
 }];
-const SORT_IDS$1 = new Set(SHOP_SORTS.map(item => item.id));
+const SORT_IDS = new Set(SHOP_SORTS.map(item => item.id));
 const HIGHLIGHT_IDS = new Set(['new', 'sale', 'bestseller']);
-const PRICE_IDS$1 = new Set(PRICE_BANDS.map(item => item.id));
+const PRICE_IDS = new Set(PRICE_BANDS.map(item => item.id));
 function values(value) {
   return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
 }
@@ -40624,7 +41271,7 @@ function validValues(value, allowed) {
 function normalizedShopSort(value) {
   // `featured` was the old ID for this same stable/curated ordering.
   if (value === 'featured') return 'recommended';
-  return SORT_IDS$1.has(value) ? value : 'recommended';
+  return SORT_IDS.has(value) ? value : 'recommended';
 }
 function readShopUrlState(searchParams, categorySlugs = []) {
   const params = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
@@ -40636,7 +41283,7 @@ function readShopUrlState(searchParams, categorySlugs = []) {
     categories: validValues(params.get('category'), allowedCategories),
     highlights: validValues(params.get('filter'), HIGHLIGHT_IDS),
     inStock: params.get('stock') === '1',
-    priceBand: PRICE_IDS$1.has(price) ? price : null
+    priceBand: PRICE_IDS.has(price) ? price : null
   };
 }
 function setList(params, key, list) {
@@ -40659,7 +41306,7 @@ function updateShopUrlState(searchParams, patch) {
     if (patch.inStock) params.set('stock', '1');else params.delete('stock');
   }
   if (has('priceBand')) {
-    if (PRICE_IDS$1.has(patch.priceBand)) params.set('price', patch.priceBand);else params.delete('price');
+    if (PRICE_IDS.has(patch.priceBand)) params.set('price', patch.priceBand);else params.delete('price');
   }
   return params;
 }
@@ -43211,7 +43858,12 @@ function cartToPayload(lines) {
     id: l.id,
     qty: l.qty,
     variantId: l.variantId || null,
-    variant: l.variant || null
+    variant: l.variant || null,
+    // Which catalogue the id belongs to. Absent on a wellness line, so the
+    // payload for a wellness cart is byte-for-byte what it always was.
+    ...(l.catalogue === 'fashion' ? {
+      catalogue: 'fashion'
+    } : {})
   }));
 }
 async function post$1(url, payload, signal) {
@@ -44856,7 +45508,7 @@ function Cart() {
               return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
                 className: `cartrow ${l.purchasable ? '' : 'cartrow--blocked'}`,
                 children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-                  to: `/product/${l.product.slug}`,
+                  to: l.product.href || `/product/${l.product.slug}`,
                   className: "cartrow__media v2-cartrow__media",
                   children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
                     product: l.product,
@@ -44869,7 +45521,7 @@ function Cart() {
                     className: "cartrow__top",
                     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
                       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-                        to: `/product/${l.product.slug}`,
+                        to: l.product.href || `/product/${l.product.slug}`,
                         className: "cartrow__name serif",
                         children: l.product.name
                       }), (l.variantLabel || l.product.form) && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -45081,7 +45733,7 @@ function SavedList({
         return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "savedcard",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-            to: `/product/${l.product.slug}`,
+            to: l.product.href || `/product/${l.product.slug}`,
             className: "savedcard__media",
             children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
               product: l.product,
@@ -45091,7 +45743,7 @@ function SavedList({
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
             className: "savedcard__body",
             children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-              to: `/product/${l.product.slug}`,
+              to: l.product.href || `/product/${l.product.slug}`,
               className: "savedcard__name",
               children: l.product.name
             }), l.variantLabel && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -45375,7 +46027,7 @@ async function requireUserId() {
 }
 
 // ---------- field whitelists (prevent id/user_id injection) ----------
-function str$1(v) {
+function str(v) {
   return v == null ? null : String(v);
 }
 
@@ -45397,7 +46049,7 @@ function pickAddressColumns(fields = {}) {
   };
   const row = {};
   for (const [key, col] of Object.entries(map)) {
-    if (fields[key] !== undefined) row[col] = str$1(fields[key]);
+    if (fields[key] !== undefined) row[col] = str(fields[key]);
   }
   return row;
 }
@@ -45806,7 +46458,10 @@ async function createPaymentOrder({
       id: l.id,
       qty: l.qty,
       variantId: l.variantId || null,
-      variant: l.variant || null
+      variant: l.variant || null,
+      ...(l.catalogue === 'fashion' ? {
+        catalogue: 'fashion'
+      } : {})
     })),
     delivery,
     customer,
@@ -51490,7 +52145,7 @@ function Shell$2({
 // ============================================================
 
 const METRICS = Object.freeze(['clicks', 'orders', 'products', 'sales', 'commission']);
-const num$4 = v => {
+const num$3 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -51498,7 +52153,7 @@ const num$4 = v => {
 // Running total of a series — the shape of "lifetime so far".
 function cumulative(points) {
   let acc = 0;
-  return (Array.isArray(points) ? points : []).map(p => acc += num$4(p));
+  return (Array.isArray(points) ? points : []).map(p => acc += num$3(p));
 }
 
 // SVG geometry. `pad` keeps the stroke inside the box; a flat series sits on
@@ -51508,7 +52163,7 @@ function sparkGeometry(points, {
   height = 28,
   pad = 2
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$4);
+  const vals = (Array.isArray(points) ? points : []).map(num$3);
   const n = vals.length;
   if (n === 0) return {
     line: '',
@@ -51579,20 +52234,20 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
   };
   for (const m of METRICS) out[m] = Array.from({
     length: n
-  }, (_, i) => num$4(rows[i]?.[m]));
+  }, (_, i) => num$3(rows[i]?.[m]));
   out.labels = Array.from({
     length: n
   }, (_, i) => String(rows[i]?.at || ''));
   out.totals = Object.fromEntries(METRICS.map(m => [m, out[m].reduce((a, b) => a + b, 0)]));
-  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$4(raw.previous[m])])) : null;
+  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$3(raw.previous[m])])) : null;
   out.links = Array.isArray(raw?.links) ? raw.links.map(l => ({
     link_id: l?.link_id ?? null,
     label: String(l?.label || 'Link'),
     campaign: l?.campaign || null,
-    clicks: num$4(l?.clicks),
-    orders: num$4(l?.orders),
-    sales: num$4(l?.sales),
-    commission: num$4(l?.commission)
+    clicks: num$3(l?.clicks),
+    orders: num$3(l?.orders),
+    sales: num$3(l?.sales),
+    commission: num$3(l?.commission)
   })) : [];
   return out;
 }
@@ -51600,8 +52255,8 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
 // Trend versus the previous period. No previous period, or a previous of
 // zero, is "—" (not "+100%": there is nothing to be 100% of).
 function trend(current, previous) {
-  const c = num$4(current);
-  const p = previous == null ? null : num$4(previous);
+  const c = num$3(current);
+  const p = previous == null ? null : num$3(previous);
   if (p == null) return {
     pct: null,
     dir: 'none',
@@ -51651,8 +52306,8 @@ function areaChartGeometry({
   padT = 14,
   padB = 26
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num$4);
-  const b = (Array.isArray(orders) ? orders : []).map(num$4);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$3);
+  const b = (Array.isArray(orders) ? orders : []).map(num$3);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -51717,7 +52372,7 @@ function donutGeometry(parts, {
   const c = 2 * Math.PI * r;
   const list = (Array.isArray(parts) ? parts : []).map(p => ({
     ...p,
-    value: Math.max(0, num$4(p?.value))
+    value: Math.max(0, num$3(p?.value))
   }));
   const total = list.reduce((s, p) => s + p.value, 0);
   let offset = 0;
@@ -51759,7 +52414,7 @@ function barChartGeometry(points, {
   gap = 0.35,
   minMax = 4
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$4);
+  const vals = (Array.isArray(points) ? points : []).map(num$3);
   const n = vals.length;
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -51799,7 +52454,7 @@ function barChartGeometry(points, {
   };
 }
 function compactRupees(v) {
-  const n = Math.max(0, num$4(v));
+  const n = Math.max(0, num$3(v));
   if (n >= 10000000) return `₹${trim(n / 10000000)}Cr`;
   if (n >= 100000) return `₹${trim(n / 100000)}L`;
   if (n >= 1000) return `₹${trim(n / 1000)}k`;
@@ -53910,7 +54565,7 @@ function CreatorTierPage({
 }
 
 const isZero$1 = v => !(Number(v) > 0);
-const num$3 = v => v == null || v === '' ? NaN : Number(v);
+const num$2 = v => v == null || v === '' ? NaN : Number(v);
 const monthLabel = ym => {
   if (!ym) return '—';
   const [y, m] = String(ym).split('-').map(Number);
@@ -53921,7 +54576,7 @@ const monthLabel = ym => {
   }).format(new Date(y, m - 1, 1));
 };
 const ordinal$2 = n => {
-  const v = num$3(n);
+  const v = num$2(n);
   if (!Number.isFinite(v)) return '—';
   const s = ['th', 'st', 'nd', 'rd'];
   const r = v % 100;
@@ -53931,10 +54586,10 @@ const ordinal$2 = n => {
 // The terms the page quotes. The tier rate (0031) is the live one; the
 // earnings RPC's commission_rate is the floor, the creator row the fallback.
 function earningsTerms(earnings, standing, creator) {
-  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$3).find(v => Number.isFinite(v));
-  const hold = num$3(earnings?.settlement_hold_days);
-  const minPayout = num$3(earnings?.min_payout);
-  const payoutDay = num$3(earnings?.payout_day);
+  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$2).find(v => Number.isFinite(v));
+  const hold = num$2(earnings?.settlement_hold_days);
+  const minPayout = num$2(earnings?.min_payout);
+  const payoutDay = num$2(earnings?.payout_day);
   return {
     rate: Number.isFinite(rate) ? rate : null,
     hold: Number.isFinite(hold) && hold >= 0 ? hold : null,
@@ -55814,7 +56469,7 @@ const fmtDate = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   year: 'numeric'
 }).format(new Date(iso)) : '—';
 // null is "not set", never 0 — Number(null) would print a 0% rate.
-const num$2 = v => v == null || v === '' ? NaN : Number(v);
+const num$1 = v => v == null || v === '' ? NaN : Number(v);
 const initialsOf = name => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
 const STATUS = {
   active: {
@@ -55885,8 +56540,8 @@ function CreatorProfilePage({
   termsPublished = false
 }) {
   const st = STATUS[creator?.status] || STATUS.pending;
-  const rate = standing?.rate != null ? num$2(standing.rate) : num$2(creator?.default_commission_rate);
-  const windowDays = num$2(creator?.default_attribution_window_days);
+  const rate = standing?.rate != null ? num$1(standing.rate) : num$1(creator?.default_commission_rate);
+  const windowDays = num$1(creator?.default_attribution_window_days);
   const since = creator?.joined_at || creator?.created_at || null;
   const acct = standingFor(creator, kyc);
   const open = !!standing?.withdrawals_open;
@@ -56188,7 +56843,7 @@ function CreatorProfilePage({
 // derived (a ratio over zero, a period with no previous period) the value
 // is null and the page shows "—".
 // ============================================================
-const num$1 = v => {
+const num = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -56196,7 +56851,7 @@ const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
 
 // A ratio, or null when there is nothing to divide by.
-const ratio = (n, d) => num$1(d) > 0 ? num$1(n) / num$1(d) : null;
+const ratio = (n, d) => num(d) > 0 ? num(n) / num(d) : null;
 
 // ---- Stat cards -------------------------------------------------------------
 // When the range series is available the cards follow the toggle (with the
@@ -56205,10 +56860,10 @@ const ratio = (n, d) => num$1(d) > 0 ? num$1(n) / num$1(d) : null;
 function analyticsStats(analytics, series) {
   const range = !!series?.available;
   const tot = range ? series.totals : {
-    clicks: num$1(analytics?.clicks),
-    orders: num$1(analytics?.attributed_orders),
-    products: num$1(analytics?.products_sold),
-    sales: num$1(analytics?.attributed_sales),
+    clicks: num(analytics?.clicks),
+    orders: num(analytics?.attributed_orders),
+    products: num(analytics?.products_sold),
+    sales: num(analytics?.attributed_sales),
     commission: 0
   };
   const prev = range && series.previous ? series.previous : null;
@@ -56222,10 +56877,10 @@ function analyticsStats(analytics, series) {
   }) : [];
   return {
     scope: range ? 'range' : 'all',
-    clicks: num$1(tot.clicks),
-    orders: num$1(tot.orders),
-    products: num$1(tot.products),
-    sales: num$1(tot.sales),
+    clicks: num(tot.clicks),
+    orders: num(tot.orders),
+    products: num(tot.products),
+    sales: num(tot.sales),
     conversion: conv == null ? null : r1(conv * 100),
     aov: aov == null ? null : r2(aov),
     trends: {
@@ -56285,9 +56940,9 @@ function periodLabel(series) {
 
 // ---- Funnel: click → attributed order → eligible order (all time) -------------
 function funnelFor(analytics) {
-  const clicks = num$1(analytics?.clicks);
-  const orders = num$1(analytics?.attributed_orders);
-  const eligible = num$1(analytics?.eligible_orders);
+  const clicks = num(analytics?.clicks);
+  const orders = num(analytics?.attributed_orders);
+  const eligible = num(analytics?.eligible_orders);
   const pct = v => clicks > 0 ? r1(v / clicks * 100) : null;
   return {
     empty: clicks === 0,
@@ -56318,8 +56973,8 @@ const SHARE_TONES = ['forest', 'green', 'gold', 'amber', 'neutral'];
 function productShare(topProducts, max = 4) {
   const rows = (Array.isArray(topProducts) ? topProducts : []).map(p => ({
     name: String(p?.name || 'Product'),
-    qty: num$1(p?.qty),
-    sales: num$1(p?.sales)
+    qty: num(p?.qty),
+    sales: num(p?.sales)
   })).filter(p => p.sales > 0).sort((a, b) => b.sales - a.sales);
   const total = rows.reduce((s, p) => s + p.sales, 0);
   const head = rows.slice(0, max);
@@ -56368,10 +57023,10 @@ function topLinks(seriesLinks, {
       label: r.label,
       campaign: r.campaign || null,
       url: String(url || '').replace(/^https?:\/\//, ''),
-      clicks: num$1(r.clicks),
-      orders: num$1(r.orders),
-      sales: num$1(r.sales),
-      commission: num$1(r.commission),
+      clicks: num(r.clicks),
+      orders: num(r.orders),
+      sales: num(r.sales),
+      commission: num(r.commission),
       conversion: ratio(r.orders, r.clicks) == null ? null : r1(ratio(r.orders, r.clicks) * 100)
     };
   });
@@ -56439,7 +57094,7 @@ function insightsFor({
 function argMax(arr) {
   if (!Array.isArray(arr) || arr.length === 0) return -1;
   let best = 0;
-  for (let i = 1; i < arr.length; i += 1) if (num$1(arr[i]) > num$1(arr[best])) best = i;
+  for (let i = 1; i < arr.length; i += 1) if (num(arr[i]) > num(arr[best])) best = i;
   return best;
 }
 
@@ -56451,11 +57106,11 @@ function analyticsCsv(series, links = []) {
   };
   const lines = [['period', ...METRICS].join(',')];
   const n = series?.labels?.length || 0;
-  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num$1(series[m]?.[i]))].map(esc).join(','));
+  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num(series[m]?.[i]))].map(esc).join(','));
   if (Array.isArray(links) && links.length > 0) {
     lines.push('');
     lines.push(['link', 'campaign', 'clicks', 'orders', 'sales', 'commission'].join(','));
-    for (const l of links) lines.push([l.label, l.campaign || '', num$1(l.clicks), num$1(l.orders), num$1(l.sales), num$1(l.commission)].map(esc).join(','));
+    for (const l of links) lines.push([l.label, l.campaign || '', num(l.clicks), num(l.orders), num(l.sales), num(l.commission)].map(esc).join(','));
   }
   return `${lines.join('\n')}\n`;
 }
@@ -56473,9 +57128,9 @@ function dualAxisGeometry({
   padT = 14,
   padB = 30
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num$1);
-  const b = (Array.isArray(orders) ? orders : []).map(num$1);
-  const c = (Array.isArray(sales) ? sales : []).map(num$1);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num);
+  const b = (Array.isArray(orders) ? orders : []).map(num);
+  const c = (Array.isArray(sales) ? sales : []).map(num);
   const n = Math.max(a.length, b.length, c.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -56542,8 +57197,8 @@ function groupedBarGeometry(seriesA, seriesB, {
   gap = 0.3,
   minMax = 1000
 } = {}) {
-  const a = (Array.isArray(seriesA) ? seriesA : []).map(num$1);
-  const b = (Array.isArray(seriesB) ? seriesB : []).map(num$1);
+  const a = (Array.isArray(seriesA) ? seriesA : []).map(num);
+  const b = (Array.isArray(seriesB) ? seriesB : []).map(num);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -58367,410 +59022,6 @@ function useFashionWishlist() {
   };
 }
 
-// ============================================================
-// Fashion store — the pure rules.
-//
-// Everything the fashion pages decide without React or the network: the
-// category tree (three levels, cycle-safe), URL-backed listing state, the
-// filter and sort rules, what a product card shows, and the per-combination
-// stock matrix a size × colour catalogue needs. All of it runs in tests.
-// ============================================================
-
-const num = v => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
-const str = v => String(v ?? '').trim();
-
-// ---- Category tree ---------------------------------------------------------
-
-/** Flat rows → a tree with lookups. Inactive rows are kept but flagged. */
-function buildTree(rows) {
-  const list = (Array.isArray(rows) ? rows : []).map(r => ({
-    id: String(r.id),
-    parent_id: r.parent_id == null ? null : String(r.parent_id),
-    name: str(r.name),
-    slug: str(r.slug),
-    tagline: str(r.tagline),
-    image_url: r.image_url || null,
-    sort_order: num(r.sort_order),
-    is_active: r.is_active !== false
-  }));
-  const byId = new Map(list.map(n => [n.id, n]));
-  const childrenOf = new Map();
-  for (const n of list) {
-    const key = n.parent_id && byId.has(n.parent_id) ? n.parent_id : null;
-    if (!childrenOf.has(key)) childrenOf.set(key, []);
-    childrenOf.get(key).push(n);
-  }
-  const bySort = (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name);
-  for (const arr of childrenOf.values()) arr.sort(bySort);
-  const children = id => childrenOf.get(id == null ? null : String(id)) || [];
-  const ancestors = id => {
-    // root → … → node; stops on a cycle so a bad row cannot hang the page
-    const out = [];
-    const seen = new Set();
-    let cur = byId.get(String(id));
-    while (cur && !seen.has(cur.id)) {
-      seen.add(cur.id);
-      out.unshift(cur);
-      cur = cur.parent_id ? byId.get(cur.parent_id) : null;
-    }
-    return out;
-  };
-  const depth = id => ancestors(id).length;
-  const descendants = id => {
-    const out = [];
-    const stack = [...children(id)];
-    const seen = new Set();
-    while (stack.length) {
-      const n = stack.shift();
-      if (seen.has(n.id)) continue;
-      seen.add(n.id);
-      out.push(n);
-      stack.push(...children(n.id));
-    }
-    return out;
-  };
-  return {
-    list,
-    byId,
-    roots: children(null),
-    children,
-    ancestors,
-    depth,
-    descendants
-  };
-}
-
-/** `/fashion/c/<slug>` → the shallowest active category with that slug. */
-function resolveCategory(tree, slug) {
-  const s = str(slug).toLowerCase();
-  if (!s) return null;
-  const matches = tree.list.filter(n => n.slug === s && n.is_active);
-  if (matches.length === 0) return null;
-  matches.sort((a, b) => tree.depth(a.id) - tree.depth(b.id) || a.sort_order - b.sort_order);
-  return matches[0];
-}
-const categoryHref = node => `/fashion/c/${node.slug}`;
-function breadcrumbFor(tree, node) {
-  const trail = [{
-    name: 'Fashion',
-    href: '/fashion'
-  }];
-  if (!node) return trail;
-  for (const a of tree.ancestors(node.id)) trail.push({
-    name: a.name,
-    href: categoryHref(a)
-  });
-  return trail;
-}
-
-/** The ids a listing for `node` covers: itself plus everything below it. */
-function categoryScope(tree, node) {
-  if (!node) return null;
-  return new Set([node.id, ...tree.descendants(node.id).map(n => n.id)]);
-}
-
-// ---- Products ----------------------------------------------------------------
-
-/** One product with its variants → what a card or a listing needs. */
-function productView(product, variants = null) {
-  const vs = (Array.isArray(variants) ? variants : product?.fashion_variants || []).filter(v => v && v.is_active !== false).map(v => ({
-    id: String(v.id),
-    size: str(v.size),
-    colour: str(v.colour),
-    colour_hex: v.colour_hex || null,
-    sku: v.sku || null,
-    stock: Math.max(0, num(v.stock)),
-    price_override: v.price_override == null ? null : num(v.price_override),
-    sort_order: num(v.sort_order)
-  })).sort((a, b) => a.sort_order - b.sort_order);
-  const mrp = num(product?.mrp);
-  const sale = product?.sale_price == null ? null : num(product.sale_price);
-  const price = sale != null && sale < mrp ? sale : mrp;
-  const discountPct = product?.discount_percent != null ? num(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
-  const swatches = [];
-  for (const v of vs) {
-    let s = swatches.find(x => x.colour === v.colour);
-    if (!s) {
-      s = {
-        colour: v.colour,
-        hex: v.colour_hex,
-        stock: 0
-      };
-      swatches.push(s);
-    }
-    s.stock += v.stock;
-  }
-  const sizes = [...new Set(vs.map(v => v.size))];
-  const totalStock = vs.reduce((s, v) => s + v.stock, 0);
-  return {
-    id: String(product?.id ?? ''),
-    slug: str(product?.slug),
-    name: str(product?.name),
-    brand: str(product?.brand),
-    description: str(product?.description),
-    category_id: product?.category_id == null ? null : String(product.category_id),
-    image: Array.isArray(product?.images) && product.images[0] ? product.images[0] : null,
-    images: Array.isArray(product?.images) ? product.images.filter(Boolean) : [],
-    mrp,
-    sale,
-    price,
-    discountPct,
-    hasDiscount: discountPct > 0,
-    rating: Math.max(0, Math.min(5, num(product?.rating))),
-    reviewCount: Math.max(0, num(product?.review_count)),
-    isNew: product?.is_new === true,
-    isBestseller: product?.is_bestseller === true,
-    sortOrder: num(product?.sort_order),
-    variants: vs,
-    swatches,
-    sizes,
-    inStock: vs.length === 0 ? false : totalStock > 0,
-    totalStock,
-    minPrice: vs.length ? Math.min(price, ...vs.filter(v => v.price_override != null).map(v => v.price_override)) : price
-  };
-}
-
-/** Per-combination stock: Medium/green can be out while Medium/navy is in. */
-function stockMatrix(view) {
-  const cells = new Map();
-  for (const v of view.variants) cells.set(`${v.size} ${v.colour}`, v);
-  const get = (size, colour) => cells.get(`${size} ${colour}`) || null;
-  return {
-    sizes: view.sizes,
-    colours: view.swatches.map(s => s.colour),
-    get,
-    stock: (size, colour) => get(size, colour)?.stock ?? 0,
-    inStock: (size, colour) => (get(size, colour)?.stock ?? 0) > 0,
-    priceOf: (size, colour) => {
-      const v = get(size, colour);
-      return v && v.price_override != null ? v.price_override : view.price;
-    },
-    sizesInStockFor: colour => view.sizes.filter(s => (get(s, colour)?.stock ?? 0) > 0)
-  };
-}
-function swatchOverflow(swatches, max = 4) {
-  const list = Array.isArray(swatches) ? swatches : [];
-  return {
-    shown: list.slice(0, max),
-    more: Math.max(0, list.length - max)
-  };
-}
-
-// ---- Listing state in the URL ---------------------------------------------------
-
-const FASHION_SORTS = [{
-  id: 'featured',
-  label: 'Featured'
-}, {
-  id: 'price-asc',
-  label: 'Price: low to high'
-}, {
-  id: 'price-desc',
-  label: 'Price: high to low'
-}, {
-  id: 'discount',
-  label: 'Biggest discount'
-}, {
-  id: 'rating',
-  label: 'Top rated'
-}, {
-  id: 'new',
-  label: 'Newest'
-}];
-const FASHION_PRICE_BANDS = [{
-  id: 'under-500',
-  label: 'Under ₹500',
-  min: 0,
-  maxExclusive: 500
-}, {
-  id: '500-999',
-  label: '₹500 – ₹999',
-  min: 500,
-  maxExclusive: 1000
-}, {
-  id: '1000-1999',
-  label: '₹1,000 – ₹1,999',
-  min: 1000,
-  maxExclusive: 2000
-}, {
-  id: '2000-plus',
-  label: '₹2,000 & above',
-  min: 2000,
-  maxExclusive: Infinity
-}];
-const DISCOUNT_STEPS = [10, 25, 40, 50];
-const RATING_STEPS = [4, 3];
-const VIEWS = ['grid', 'list'];
-const SORT_IDS = new Set(FASHION_SORTS.map(s => s.id));
-const PRICE_IDS = new Set(FASHION_PRICE_BANDS.map(b => b.id));
-const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
-const uniq = arr => [...new Set(arr)];
-function readFashionUrlState(searchParams) {
-  const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
-  const discount = num(p.get('discount'));
-  const rating = num(p.get('rating'));
-  return {
-    q: str(p.get('q')),
-    sort: SORT_IDS.has(p.get('sort')) ? p.get('sort') : 'featured',
-    price: PRICE_IDS.has(p.get('price')) ? p.get('price') : null,
-    sizes: uniq(list(p.get('size'))),
-    colours: uniq(list(p.get('colour'))),
-    brands: uniq(list(p.get('brand'))),
-    discount: DISCOUNT_STEPS.includes(discount) ? discount : null,
-    rating: RATING_STEPS.includes(rating) ? rating : null,
-    view: VIEWS.includes(p.get('view')) ? p.get('view') : 'grid'
-  };
-}
-function updateFashionUrlState(searchParams, patch) {
-  const p = new URLSearchParams(searchParams);
-  const has = k => Object.prototype.hasOwnProperty.call(patch, k);
-  const setList = (key, arr) => {
-    const v = uniq((Array.isArray(arr) ? arr : []).map(str).filter(Boolean));
-    if (v.length) p.set(key, v.join(','));else p.delete(key);
-  };
-  if (has('q')) {
-    const q = str(patch.q);
-    if (q) p.set('q', q);else p.delete('q');
-  }
-  if (has('sort')) {
-    if (SORT_IDS.has(patch.sort) && patch.sort !== 'featured') p.set('sort', patch.sort);else p.delete('sort');
-  }
-  if (has('price')) {
-    if (PRICE_IDS.has(patch.price)) p.set('price', patch.price);else p.delete('price');
-  }
-  if (has('sizes')) setList('size', patch.sizes);
-  if (has('colours')) setList('colour', patch.colours);
-  if (has('brands')) setList('brand', patch.brands);
-  if (has('discount')) {
-    if (DISCOUNT_STEPS.includes(num(patch.discount))) p.set('discount', String(num(patch.discount)));else p.delete('discount');
-  }
-  if (has('rating')) {
-    if (RATING_STEPS.includes(num(patch.rating))) p.set('rating', String(num(patch.rating)));else p.delete('rating');
-  }
-  if (has('view')) {
-    if (patch.view === 'list') p.set('view', 'list');else p.delete('view');
-  }
-  return p;
-}
-function activeFilterCount(state) {
-  return (state.price ? 1 : 0) + state.sizes.length + state.colours.length + state.brands.length + (state.discount ? 1 : 0) + (state.rating ? 1 : 0);
-}
-
-/** The choices the panel offers, from what is actually in the listing. */
-function filterOptions(views) {
-  const sizes = new Map();
-  const colours = new Map();
-  const brands = new Map();
-  for (const v of views) {
-    for (const s of v.sizes) sizes.set(s, (sizes.get(s) || 0) + 1);
-    for (const s of v.swatches) if (!colours.has(s.colour)) colours.set(s.colour, s.hex);
-    if (v.brand) brands.set(v.brand, (brands.get(v.brand) || 0) + 1);
-  }
-  const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-  const sortSizes = (a, b) => {
-    const ia = sizeOrder.indexOf(a);
-    const ib = sizeOrder.indexOf(b);
-    if (ia >= 0 && ib >= 0) return ia - ib;
-    if (ia >= 0) return -1;
-    if (ib >= 0) return 1;
-    return a.localeCompare(b, 'en', {
-      numeric: true
-    });
-  };
-  return {
-    sizes: [...sizes.keys()].sort(sortSizes),
-    colours: [...colours.entries()].map(([colour, hex]) => ({
-      colour,
-      hex
-    })).sort((a, b) => a.colour.localeCompare(b.colour)),
-    brands: [...brands.keys()].sort()
-  };
-}
-function matchesFilters(view, state) {
-  if (state.q) {
-    const q = state.q.toLowerCase();
-    if (!`${view.name} ${view.brand} ${view.description}`.toLowerCase().includes(q)) return false;
-  }
-  if (state.price) {
-    const band = FASHION_PRICE_BANDS.find(b => b.id === state.price);
-    if (band && !(view.price >= band.min && view.price < band.maxExclusive)) return false;
-  }
-  if (state.sizes.length && !state.sizes.some(s => view.sizes.includes(s))) return false;
-  if (state.colours.length && !state.colours.some(c => view.swatches.some(s => s.colour === c))) return false;
-  if (state.brands.length && !state.brands.includes(view.brand)) return false;
-  if (state.discount && view.discountPct < state.discount) return false;
-  if (state.rating && view.rating < state.rating) return false;
-  return true;
-}
-function sortViews(views, sort) {
-  const arr = [...views];
-  const featured = (a, b) => b.isBestseller - a.isBestseller || b.isNew - a.isNew || a.sortOrder - b.sortOrder || a.name.localeCompare(b.name);
-  switch (sort) {
-    case 'price-asc':
-      return arr.sort((a, b) => a.price - b.price || featured(a, b));
-    case 'price-desc':
-      return arr.sort((a, b) => b.price - a.price || featured(a, b));
-    case 'discount':
-      return arr.sort((a, b) => b.discountPct - a.discountPct || featured(a, b));
-    case 'rating':
-      return arr.sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount || featured(a, b));
-    case 'new':
-      return arr.sort((a, b) => b.isNew - a.isNew || a.sortOrder - b.sortOrder);
-    default:
-      return arr.sort(featured);
-  }
-}
-function applyListing(views, state, scope = null) {
-  const inScope = scope ? views.filter(v => v.category_id && scope.has(v.category_id)) : views;
-  return sortViews(inScope.filter(v => matchesFilters(v, state)), state.sort);
-}
-
-/** Distinct brands across the catalogue, most products first — the "Top Brands" row. */
-function topBrands(views, limit = 6) {
-  const count = new Map();
-  for (const v of views) if (v.brand) count.set(v.brand, (count.get(v.brand) || 0) + 1);
-  return [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, limit).map(([name, products]) => ({
-    name,
-    products
-  }));
-}
-
-// ============================================================
-// Fashion store — Supabase reads and admin writes.
-//
-// Reads go straight at the tables under RLS (public read where is_active,
-// exactly as the wellness categories and variants are read). Writes are
-// admin-only and follow the omit-when-absent rule: a caller that does not
-// mention a field cannot blank it.
-// ============================================================
-const PRODUCT_COLUMNS = 'id, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
-const VARIANT_COLUMNS = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
-async function getFashionCategories() {
-  const {
-    data,
-    error
-  } = await supabase.from('fashion_categories').select('id, parent_id, name, slug, tagline, image_url, sort_order, is_active').order('sort_order', {
-    ascending: true
-  });
-  if (error) throw error;
-  return Array.isArray(data) ? data : [];
-}
-
-/** Every active product with its active variants, in one request. */
-async function getFashionProducts() {
-  const {
-    data,
-    error
-  } = await supabase.from('fashion_products').select(`${PRODUCT_COLUMNS}, fashion_variants (${VARIANT_COLUMNS})`).eq('is_active', true).order('sort_order', {
-    ascending: true
-  });
-  if (error) throw error;
-  return Array.isArray(data) ? data : [];
-}
-
 const Ctx = /*#__PURE__*/reactExports.createContext(null);
 let cache = null; // { categories, products } — one fetch per session
 
@@ -59112,6 +59363,257 @@ function FashionLayout({
   });
 }
 
+// ============================================================
+// Fashion PDP — the selection rules.
+//
+// Stock is per size × colour, so availability is always answered for the
+// pair: choose Medium and Sage reads "out of stock" while Medium and Navy
+// stays available. Nothing here computes a price — the figure shown for a
+// variant is the row's own (price_override or the product's sale price),
+// and the payable amount is the server's.
+// ============================================================
+const LOW_STOCK_AT = 5;
+
+/** ?size=M&colour=Navy → { size, colour } (null when absent or unknown). */
+function readSelection(searchParams, view) {
+  const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
+  const size = p.get('size');
+  const colour = p.get('colour');
+  return {
+    size: size && view.sizes.includes(size) ? size : null,
+    colour: colour && view.swatches.some(s => s.colour === colour) ? colour : null
+  };
+}
+function writeSelection(searchParams, {
+  size,
+  colour
+}) {
+  const p = new URLSearchParams(searchParams);
+  if (size) p.set('size', size);else p.delete('size');
+  if (colour) p.set('colour', colour);else p.delete('colour');
+  return p;
+}
+
+/**
+ * Everything the selectors and the buy buttons need for one (size, colour)
+ * choice. A size is available when some in-stock variant has it (for the
+ * chosen colour, once one is chosen); a colour likewise for the chosen size.
+ */
+function selectionState(view, {
+  size = null,
+  colour = null
+} = {}) {
+  const m = stockMatrix(view);
+  const inStock = (s, c) => m.inStock(s, c);
+  const sizes = view.sizes.map(s => ({
+    size: s,
+    available: colour ? inStock(s, colour) : view.swatches.some(sw => inStock(s, sw.colour)),
+    exists: colour ? m.get(s, colour) != null : true
+  }));
+  const colours = view.swatches.map(sw => ({
+    colour: sw.colour,
+    hex: sw.hex,
+    available: size ? inStock(size, sw.colour) : view.sizes.some(s => inStock(s, sw.colour)),
+    exists: size ? m.get(size, sw.colour) != null : true
+  }));
+  const variant = size && colour ? m.get(size, colour) : null;
+  let status = 'choose';
+  if (size && colour) status = !variant ? 'missing' : variant.stock === 0 ? 'out' : variant.stock <= LOW_STOCK_AT ? 'low' : 'in';
+  const stockNote = status === 'out' ? 'Out of stock in this size and colour' : status === 'low' ? `Only ${variant.stock} left` : status === 'missing' ? 'Not made in this size and colour' : null;
+  const missing = !size && !colour ? 'Choose a size and colour' : !size ? 'Choose a size' : !colour ? 'Choose a colour' : null;
+  return {
+    size,
+    colour,
+    sizes,
+    colours,
+    variant,
+    status,
+    stockNote,
+    missing,
+    canAdd: Boolean(variant) && variant.stock > 0,
+    // The variant's own figure when it carries one, else the product's — a
+    // lookup, not arithmetic; the server prices the order regardless.
+    price: variant && variant.price_override != null ? variant.price_override : view.price,
+    label: size && colour ? `${size} · ${colour}` : null
+  };
+}
+
+/** What the listing card's "+" should do. */
+function quickAddPlan(view) {
+  const live = view.variants.filter(v => v.stock > 0);
+  if (view.variants.length === 0 || live.length === 0) return {
+    mode: 'none'
+  };
+  if (view.variants.length === 1) return {
+    mode: 'direct',
+    variant: live[0]
+  };
+  return {
+    mode: 'sheet'
+  };
+}
+
+/** Related styles: same category first, then the same brand; never itself. */
+function relatedFor(view, views, limit = 4) {
+  const others = (Array.isArray(views) ? views : []).filter(v => v.id !== view.id);
+  const same = others.filter(v => v.category_id && v.category_id === view.category_id);
+  const brand = others.filter(v => !same.includes(v) && v.brand && v.brand === view.brand);
+  const rest = others.filter(v => !same.includes(v) && !brand.includes(v));
+  return [...same, ...brand, ...rest].slice(0, limit);
+}
+
+function VariantPicker({
+  view,
+  size,
+  colour,
+  onChange,
+  compact = false
+}) {
+  const st = selectionState(view, {
+    size,
+    colour
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `fs-pick${compact ? ' fs-pick--compact' : ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "fs-pick__group",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("legend", {
+        children: ["Colour", st.colour ? /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+          children: [": ", st.colour]
+        }) : null]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fs-pick__swatches",
+        children: st.colours.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: `fs-pick__swatch${c.colour === st.colour ? ' is-on' : ''}${c.available ? '' : ' is-out'}`,
+          style: {
+            '--sw': c.hex || '#D9CBB0'
+          },
+          "aria-pressed": c.colour === st.colour,
+          "aria-label": `${c.colour}${c.available ? '' : ' — not available for this size'}`,
+          title: c.colour,
+          onClick: () => onChange({
+            size: st.size,
+            colour: c.colour === st.colour ? null : c.colour
+          }),
+          children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {})
+        }, c.colour))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "fs-pick__group",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("legend", {
+        children: ["Size", st.size ? /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+          children: [": ", st.size]
+        }) : null]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fs-pick__sizes",
+        children: st.sizes.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: `fs-pick__size${s.size === st.size ? ' is-on' : ''}${s.available ? '' : ' is-out'}`,
+          "aria-pressed": s.size === st.size,
+          disabled: !s.available && s.size !== st.size,
+          "aria-label": `${s.size}${s.available ? '' : ' — out of stock'}`,
+          onClick: () => onChange({
+            size: s.size === st.size ? null : s.size,
+            colour: st.colour
+          }),
+          children: s.size
+        }, s.size))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: `fs-pick__note is-${st.status}`,
+      role: "status",
+      children: st.stockNote || st.missing || 'In stock'
+    })]
+  });
+}
+
+// ---------------------------------------------------------------
+// Quick-add sheet: the picker in a bottom sheet, one Add button.
+// ---------------------------------------------------------------
+function VariantSheet({
+  view,
+  onAdd,
+  onClose
+}) {
+  const [sel, setSel] = reactExports.useState({
+    size: null,
+    colour: null
+  });
+  const st = selectionState(view, sel);
+  reactExports.useEffect(() => {
+    const onKey = e => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "fs-sheet",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `Choose size and colour for ${view.name}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: "fs-sheet__scrim",
+      "aria-label": "Close",
+      onClick: onClose
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-sheet__panel",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "fs-sheet__head",
+        children: [view.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: view.image,
+          alt: "",
+          width: "64",
+          height: "64"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "fs-sheet__title",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: view.name
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "fs-price",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "fs-price__cur",
+                children: "\u20B9"
+              }), money(st.price).replace(/^₹\s?/, '')]
+            }), view.hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+              children: money(view.mrp)
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "fs-sheet__x",
+          "aria-label": "Close",
+          onClick: onClose,
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "x",
+            size: 20
+          })
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(VariantPicker, {
+        view: view,
+        size: sel.size,
+        colour: sel.colour,
+        onChange: setSel,
+        compact: true
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+        type: "button",
+        className: "fs-btn fs-btn--wide",
+        disabled: !st.canAdd,
+        onClick: () => {
+          if (onAdd(st.variant, st)) onClose();
+        },
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "bag",
+          size: 18
+        }), " ", st.canAdd ? 'Add to cart' : st.missing || 'Unavailable']
+      })]
+    })]
+  });
+}
+
 const rupee = v => money(v);
 const productHref = view => `/fashion/p/${view.slug}`;
 function Stars({
@@ -59137,7 +59639,15 @@ function FashionProductCard({
   mediaLoading = 'lazy'
 }) {
   const wish = useFashionWishlist();
+  const {
+    addFashionToCart
+  } = useStore();
+  const [sheet, setSheet] = reactExports.useState(false);
   const wished = wish.has(view.id);
+  const plan = quickAddPlan(view);
+  const quickAdd = () => {
+    if (plan.mode === 'direct') addFashionToCart(view, plan.variant);else if (plan.mode === 'sheet') setSheet(true);
+  };
   const {
     shown,
     more
@@ -59185,10 +59695,12 @@ function FashionProductCard({
           size: 17,
           fill: wished ? 'currentColor' : 'none'
         })
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-        to: href,
+      }), plan.mode !== 'none' && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
         className: "fs-quick",
-        "aria-label": `Choose size and colour for ${view.name}`,
+        "data-quick": plan.mode,
+        "aria-label": plan.mode === 'direct' ? `Add ${view.name} to cart` : `Choose size and colour for ${view.name}`,
+        onClick: quickAdd,
         children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "plus",
           size: 20
@@ -59243,6 +59755,10 @@ function FashionProductCard({
           children: ["+", more]
         })]
       })]
+    }), sheet && /*#__PURE__*/jsxRuntimeExports.jsx(VariantSheet, {
+      view: view,
+      onAdd: variant => addFashionToCart(view, variant),
+      onClose: () => setSheet(false)
     })]
   });
 }
@@ -59944,15 +60460,105 @@ function FashionWishlistPage() {
   });
 }
 
-function FashionProductStub() {
+function Gallery({
+  view
+}) {
+  const images = view.images.length ? view.images : view.image ? [view.image] : [];
+  const [active, setActive] = reactExports.useState(0);
+  if (images.length === 0) return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "fs-pdp__media fs-pdp__media--none",
+    "aria-hidden": "true",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+      children: view.name.slice(0, 1)
+    })
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "fs-gallery",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "fs-gallery__track",
+      role: "group",
+      "aria-label": `${view.name} images`,
+      children: images.map((src, i) => /*#__PURE__*/jsxRuntimeExports.jsx("figure", {
+        className: `fs-gallery__slide${i === active ? ' is-on' : ''}`,
+        id: `fs-slide-${i}`,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: src,
+          alt: i === 0 ? view.name : `${view.name} — view ${i + 1}`,
+          width: "900",
+          height: "900",
+          decoding: "async",
+          loading: i === 0 ? 'eager' : 'lazy',
+          fetchpriority: i === 0 ? 'high' : undefined
+        })
+      }, src + i))
+    }), images.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "fs-gallery__thumbs",
+      role: "tablist",
+      "aria-label": "Choose image",
+      children: images.map((src, i) => /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+        href: `#fs-slide-${i}`,
+        role: "tab",
+        "aria-selected": i === active,
+        className: `fs-gallery__thumb${i === active ? ' is-on' : ''}`,
+        onClick: () => setActive(i),
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: src,
+          alt: "",
+          width: "120",
+          height: "120",
+          loading: "lazy",
+          decoding: "async"
+        })
+      }, src + i))
+    })]
+  });
+}
+function DeliveryBlock() {
+  const est = deliveryEstimate();
+  const options = deliveryOptions();
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "fs-pdp__delivery",
+    "aria-labelledby": "fs-deliv-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+      className: "fs-pdp__h2",
+      id: "fs-deliv-h",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "truck",
+        size: 18
+      }), " Delivery"]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "fs-pdp__ship",
+      children: options.map(o => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [o.label, /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+            children: o.eta
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          children: o.price === 0 ? 'Free' : money(o.price)
+        })]
+      }, o.id))
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "fs-pdp__fine",
+      children: [est.range, " \u2014 ", est.days.toLowerCase(), ". Delivery is chosen at checkout."]
+    })]
+  });
+}
+function FashionProductPage() {
   const {
     slug
   } = useParams();
   const {
     status,
     tree,
+    views,
     bySlug
   } = useFashionCatalogue();
+  const {
+    addFashionToCart
+  } = useStore();
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const wish = useFashionWishlist();
   const view = bySlug.get(String(slug || ''));
   if (!view) {
     return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -59973,22 +60579,27 @@ function FashionProductStub() {
   const trail = [...breadcrumbFor(tree, node), {
     name: view.name
   }];
-  const m = stockMatrix(view);
+  const sel = readSelection(params, view);
+  const st = selectionState(view, sel);
+  const setSel = next => setParams(writeSelection(params, next), {
+    replace: true
+  });
+  const wished = wish.has(view.id);
+  const related = relatedFor(view, views, 4);
+  const add = () => addFashionToCart(view, st.variant);
+  const buyNow = () => {
+    if (addFashionToCart(view, st.variant)) navigate('/checkout');
+  };
+  const addLabel = st.canAdd ? 'Add to cart' : st.status === 'out' ? 'Out of stock' : st.status === 'missing' ? 'Not available' : st.missing;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "fs-pdp",
+    "data-product": view.slug,
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
       trail: trail
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-pdp__grid",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "fs-pdp__media",
-        children: view.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-          src: view.image,
-          alt: view.name,
-          width: "900",
-          height: "900",
-          decoding: "async"
-        })
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Gallery, {
+        view: view
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "fs-pdp__body",
         children: [view.brand && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -60006,15 +60617,16 @@ function FashionProductStub() {
             size: 15
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             className: "fs-rating__count",
-            children: ["(", view.reviewCount.toLocaleString('en-IN'), ")"]
+            children: ["(", view.reviewCount.toLocaleString('en-IN'), " ", view.reviewCount === 1 ? 'review' : 'reviews', ")"]
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
           className: "fs-price fs-price--lg",
+          "data-price": st.price,
           children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
               className: "fs-price__cur",
               children: "\u20B9"
-            }), money(view.price).replace(/^₹\s?/, '')]
+            }), money(st.price).replace(/^₹\s?/, '')]
           }), view.hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
             children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
               className: "fs-price__mrp",
@@ -60026,43 +60638,131 @@ function FashionProductStub() {
               children: [view.discountPct, "% OFF"]
             })]
           })]
-        }), view.description && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "fs-pdp__desc",
-          children: view.description
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
-          className: "fs-matrix",
-          "aria-label": "Availability by size and colour",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
-            children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
-                scope: "col",
-                children: "Size"
-              }), m.colours.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-                scope: "col",
-                children: c
-              }, c))]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fs-pdp__tax",
+          children: "Inclusive of all taxes"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(VariantPicker, {
+          view: view,
+          size: st.size,
+          colour: st.colour,
+          onChange: setSel
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "fs-pdp__actions",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+            type: "button",
+            className: "fs-btn fs-btn--add",
+            disabled: !st.canAdd,
+            onClick: add,
+            "data-can-add": st.canAdd ? 'yes' : 'no',
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "bag",
+              size: 18
+            }), " ", addLabel]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: "fs-btn fs-btn--buy",
+            disabled: !st.canAdd,
+            onClick: buyNow,
+            children: "Buy now"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: `fs-heart fs-heart--inline${wished ? ' is-on' : ''}`,
+            "aria-pressed": wished,
+            "aria-label": wished ? 'Remove from wishlist' : 'Save to wishlist',
+            onClick: () => wish.toggle(view.id),
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "heart",
+              size: 20,
+              fill: wished ? 'currentColor' : 'none'
             })
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
-            children: m.sizes.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
-                scope: "row",
-                children: s
-              }), m.colours.map(c => {
-                const v = m.get(s, c);
-                return /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-                  "data-stock": v ? v.stock > 0 ? 'in' : 'out' : 'none',
-                  children: !v ? '—' : v.stock > 0 ? `In stock${v.price_override != null ? ` · ${money(v.price_override)}` : ''}` : 'Out of stock'
-                }, c);
-              })]
-            }, s))
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-          className: "fs-pdp__soon",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "clock",
-            size: 15
-          }), " Size and colour selection, and Add to bag, arrive with the product page in the next phase."]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryBlock, {}), view.description && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+          className: "fs-pdp__section",
+          "aria-labelledby": "fs-desc-h",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "fs-pdp__h2",
+            id: "fs-desc-h",
+            children: "About this style"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "fs-pdp__desc",
+            children: view.description
+          })]
+        }), (view.brand || node) && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+          className: "fs-pdp__section",
+          "aria-labelledby": "fs-details-h",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "fs-pdp__h2",
+            id: "fs-details-h",
+            children: "Details"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+            className: "fs-pdp__details",
+            children: [view.brand && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+                children: "Brand"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+                children: view.brand
+              })]
+            }), node && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+                children: "Category"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+                children: tree.ancestors(node.id).map(a => a.name).join(' › ')
+              })]
+            }), view.sizes.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+                children: "Sizes"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+                children: view.sizes.join(', ')
+              })]
+            }), view.swatches.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+                children: "Colours"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+                children: view.swatches.map(s => s.colour).join(', ')
+              })]
+            })]
+          })]
         })]
+      })]
+    }), related.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "fs-sec",
+      "aria-labelledby": "fs-related-h",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+        className: "fs-sec__head",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "fs-sec__h serif",
+          id: "fs-related-h",
+          children: "You may also like"
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fs-grid fs-grid--related",
+        children: related.map(v => /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductCard, {
+          view: v
+        }, v.id))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-pdp__bar",
+      role: "region",
+      "aria-label": "Buy",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "fs-pdp__bar-price",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "fs-price__cur",
+            children: "\u20B9"
+          }), money(st.price).replace(/^₹\s?/, '')]
+        }), st.label && /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: st.label
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+        type: "button",
+        className: "fs-btn fs-btn--add",
+        disabled: !st.canAdd,
+        onClick: add,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "bag",
+          size: 18
+        }), " ", st.canAdd ? 'Add to cart' : st.missing || addLabel]
       })]
     })]
   });
@@ -60375,7 +61075,7 @@ function App() {
           element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionCategory, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "p/:slug",
-          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductStub, {})
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductPage, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "search",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionSearch, {})
