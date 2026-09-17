@@ -270,10 +270,15 @@ await test(`the eight fashion pages render byte-identically from the working tre
   const a = JSON.parse(now), b = JSON.parse(then);
   assert.deepEqual(Object.keys(a), Object.keys(b));
   for (const p of Object.keys(a)) assert.ok(a[p].length > 2000, `${p} rendered`);
-  assert.equal(now, then, 'identical markup for every page');
+  // The store switcher (test-store-nav.mjs) later replaced the lone "Wellness store" link with a
+  // two-link nav; normalise that block back to the old link so this stays a data-layer comparison.
+  const OLD_BACK = '<a class="fs-hdr__back" href="/"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg> Wellness store</a>';
+  const normalise = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, html.replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, OLD_BACK)]));
+  assert.deepEqual(normalise(now), normalise(then), 'identical markup for every page');
   assert.match(a['/fashion/p/meadow-linen-shirt-sage?size=M&colour=Sage'], /fs-pick__note is-out/, 'the per-combination stock state survives');
   // And the FASHION source that renders those pages is untouched: only the data layer moved.
-  for (const rel of ['src/fashion/FashionLayout.jsx', 'src/fashion/FashionHome.jsx', 'src/fashion/FashionListing.jsx', 'src/fashion/FashionProductPage.jsx', 'src/fashion/FashionProductCard.jsx', 'src/fashion/FashionCatalogue.jsx', 'src/fashion/FashionVariantPicker.jsx', 'src/styles/fashion.css']) {
+  // (FashionLayout.jsx and fashion.css carry the store switcher since d6a0c20 — pinned by test-store-nav.mjs.)
+  for (const rel of ['src/fashion/FashionHome.jsx', 'src/fashion/FashionListing.jsx', 'src/fashion/FashionProductPage.jsx', 'src/fashion/FashionProductCard.jsx', 'src/fashion/FashionCatalogue.jsx', 'src/fashion/FashionVariantPicker.jsx']) {
     assert.equal(read(rel), atBaseline(rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
 });

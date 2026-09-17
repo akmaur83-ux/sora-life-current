@@ -53,7 +53,12 @@ export function FashionHeader({ onMenu }) {
             <Icon name="bag" size={24} />{cartCount > 0 && <span className="fs-hdr__count">{cartCount}</span>}
           </Link>
         </nav>
-        <Link to="/" className="fs-hdr__back"><Icon name="chevronLeft" size={15} /> Wellness store</Link>
+        {/* The other storefronts: quiet text links at the right of the bar
+            (desktop); the drawer carries them on a phone. */}
+        <nav className="fs-hdr__stores" aria-label="Other stores">
+          <Link to="/" className="fs-hdr__back"><Icon name="chevronLeft" size={15} /> Wellness store</Link>
+          <Link to="/grocery" className="fs-hdr__back">Grocery store <Icon name="chevronRight" size={15} /></Link>
+        </nav>
       </div>
       <form className="fs-search" role="search" onSubmit={submit}>
         <Icon name="search" size={20} />
@@ -114,6 +119,7 @@ function Drawer({ open, onClose }) {
             </div>
           ))}
         </nav>
+        <Link to="/grocery" className="fs-drawer__back" onClick={onClose}><Icon name="chevronRight" size={16} /> Grocery store</Link>
         <Link to="/" className="fs-drawer__back" onClick={onClose}><Icon name="chevronLeft" size={16} /> Back to the wellness store</Link>
       </div>
     </div>

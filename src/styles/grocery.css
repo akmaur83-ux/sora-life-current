@@ -22,6 +22,10 @@
 .gs-logo strong { font-weight: 600; font-size: 28px; letter-spacing: .12em; color: var(--slv2-f700); white-space: nowrap; }
 .gs-logo em { font-style: normal; font-size: 9px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: var(--slv2-gold-ink); margin-top: 5px; white-space: nowrap; }
 .gs-hdr__acts { justify-self: end; display: flex; align-items: center; gap: 4px; }
+/* The other storefronts, as the fashion header's .fs-hdr__back: quiet, desktop only. */
+.gs-hdr__stores { display: inline-flex; align-items: center; gap: 14px; margin-right: 10px; }
+.gs-hdr__store { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--slv2-ink-3); text-decoration: none; white-space: nowrap; }
+.gs-hdr__store:hover { color: var(--slv2-f700); }
 .gs-hdr__act { position: relative; display: inline-flex; padding: 8px; border: 0; background: none; color: var(--slv2-f700); text-decoration: none; cursor: pointer; font: inherit; }
 .gs-hdr__act[aria-disabled="true"] { cursor: default; }
 .gs-hdr__count { position: absolute; top: 0; right: 0; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center; background: var(--slv2-gold); color: var(--slv2-f900); font-size: 11px; font-weight: 700; }
@@ -136,6 +140,7 @@
 
 /* ---- Tablet ------------------------------------------------------------------- */
 @media (max-width: 1019px) {
+  .gs-hdr__stores { display: none; }
   .gs-hero__slide { min-height: 360px; padding: 32px 28px; }
   .gs-hero__txt { max-width: 60%; }
   .gs-hero__note { right: 24px; top: 20px; font-size: 20px; }

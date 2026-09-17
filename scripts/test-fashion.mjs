@@ -389,8 +389,9 @@ await test('routes and the untouchables: /fashion, c/:slug, p/:slug are wired; c
   const changed = [...new Set([...git('diff', '--name-only', 'HEAD'), ...git('diff', '--name-only', 'HEAD~1', 'HEAD')])];
   // Phase 2 opened the cart and pricing path (store.jsx, cartLine.js, Cart.jsx, payments.js, api/_lib/pricing.js,
   // create-order, the quote). What stays closed: Razorpay itself, auth, the creator programme, the coupon rules,
-  // CategorySpotlight and the wellness PDP, the ingest/deactivation/gallery scripts.
-  const untouchable = /^(src\/pages\/(Product|Category|Shop)\.jsx|src\/lib\/(customerAuth\.jsx|adminAuth\.jsx|couponRules\.js|couponState\.js|creator[A-Za-z]*\.js)|src\/components\/(Header|CategorySpotlight|ProductCard)\.jsx|src\/components\/(category|pdp)\/|api\/_lib\/(razorpay|coupons|attribution)\.js|api\/razorpay\/(verify|webhook)\.js|api\/coupons\/|api\/creator\/|scripts\/(ingest|deactivate|gallery))/;
+  // CategorySpotlight and the wellness PDP, the ingest/deactivation/gallery scripts. The wellness Header
+  // was opened by the store-switcher task (links only; test-store-nav.mjs pins its exact diff).
+  const untouchable = /^(src\/pages\/(Product|Category|Shop)\.jsx|src\/lib\/(customerAuth\.jsx|adminAuth\.jsx|couponRules\.js|couponState\.js|creator[A-Za-z]*\.js)|src\/components\/(CategorySpotlight|ProductCard)\.jsx|src\/components\/(category|pdp)\/|api\/_lib\/(razorpay|coupons|attribution)\.js|api\/razorpay\/(verify|webhook)\.js|api\/coupons\/|api\/creator\/|scripts\/(ingest|deactivate|gallery))/;
   assert.deepEqual(changed.filter((f) => untouchable.test(f)), [], 'nothing on the do-not-touch list changed');
 });
 

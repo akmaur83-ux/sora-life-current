@@ -47,6 +47,11 @@ export function GroceryHeader({ onMenu }) {
         <button type="button" className="gs-hdr__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={26} /></button>
         <GroceryLogo />
         <nav className="gs-hdr__acts" aria-label="Wishlist and cart">
+          {/* The other storefronts: quiet text links (desktop); the drawer carries them on a phone. */}
+          <span className="gs-hdr__stores" role="navigation" aria-label="Other stores">
+            <Link to="/" className="gs-hdr__store"><Icon name="chevronLeft" size={15} /> Wellness store</Link>
+            <Link to="/fashion" className="gs-hdr__store">Fashion store <Icon name="chevronRight" size={15} /></Link>
+          </span>
           <button type="button" className="gs-hdr__act" aria-label="Wishlist" aria-disabled="true"><Icon name="heart" size={24} /></button>
           <Link to="/cart" className="gs-hdr__act" aria-label={`Cart${cartCount ? `, ${cartCount} items` : ''}`}>
             <Icon name="bag" size={24} />{cartCount > 0 && <span className="gs-hdr__count">{cartCount}</span>}

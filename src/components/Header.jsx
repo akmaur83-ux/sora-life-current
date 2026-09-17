@@ -163,6 +163,12 @@ export default function Header() {
             <button className="v2-hdr__act v2-only-mobile" onClick={() => setMobileSearch(true)} aria-label="Search" aria-expanded={mobileSearch}>
               <Icon name="search" size={19} stroke={1.5} />
             </button>
+            {/* The other storefronts — a quiet text link, as the fashion header
+                links back here. Desktop only; the drawer carries them on a phone. */}
+            <nav className="v2-hdr__stores" aria-label="Other stores">
+              <Link to="/fashion" className="v2-hdr__store">Fashion store <Icon name="chevronRight" size={14} stroke={1.8} /></Link>
+              <Link to="/grocery" className="v2-hdr__store">Grocery store <Icon name="chevronRight" size={14} stroke={1.8} /></Link>
+            </nav>
             <Link to="/account" className="v2-hdr__act v2-hide-mobile" aria-label="Account"><Icon name="user" size={19} stroke={1.5} /></Link>
             <Link to="/wishlist" className="v2-hdr__act v2-hide-mobile" aria-label={`Wishlist${wishCount > 0 ? `, ${wishCount} items` : ''}`}>
               <Icon name="heart" size={19} stroke={1.5} />
@@ -277,6 +283,9 @@ export default function Header() {
             {categories.map((c) => (
               <Link key={c.slug} to={`/category/${c.slug}`} className="drawer__cat">{c.name}<Icon name="chevronRight" size={17} /></Link>
             ))}
+            <div className="drawer__sec">Stores</div>
+            <Link to="/fashion" className="drawer__cat">Fashion store<Icon name="chevronRight" size={17} /></Link>
+            <Link to="/grocery" className="drawer__cat">Grocery store<Icon name="chevronRight" size={17} /></Link>
             {/* Last and quiet on purpose — shopping keeps the priority. These
                 two lived only in the footer, ~8 screens down, which is a long
                 way for the pages a first-time buyer checks before trusting a

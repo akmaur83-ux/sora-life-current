@@ -27,9 +27,12 @@ export const has = (rel) => existsSync(resolve(ROOT, rel));
 export const h = React.createElement;
 
 /** Every export of a JSX module, compiled in memory with `deps` in scope. */
-export function loadModule(rel, deps = {}) {
+export function loadModule(rel, deps = {}) { return loadSource(read(rel), deps); }
+
+/** The same, from module text (a file read from another tree, or a git object). */
+export function loadSource(source, deps = {}) {
   const names = [];
-  const { code } = transformSync(read(rel), {
+  const { code } = transformSync(source, {
     configFile: false, babelrc: false,
     presets: [['@babel/preset-react', { runtime: 'classic' }]],
     plugins: [() => ({ visitor: {

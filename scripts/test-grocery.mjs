@@ -472,10 +472,11 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
   // The data layer (src/lib/fashion*.js, catalogueCartCache.js, groceryCartLine.js, src/data/) and the
   // grocery components are this work's; the cart, checkout, coupons, auth and payment code are not.
   // (store.jsx carries the approved grocery namespace from this store's first phase; test-catalogue.mjs pins it since.)
-  const untouchable = /^(src\/fashion\/|src\/styles\/(?!grocery\.css)|src\/pages\/|src\/components\/|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/)/;
+  // The store switcher (test-store-nav.mjs) adds links to the wellness and fashion headers — those four files are pinned there.
+  const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$)|src\/styles\/(?!grocery\.css$|fashion\.css$|v2-header\.css$)|src\/pages\/|src\/components\/(?!Header\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/)/;
   const bad = [...changed].filter((f) => untouchable.test(f));
   assert.deepEqual(bad, [], `untouchable files changed: ${bad.join(', ')}`);
-  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'src/fashion', 'src/styles/fashion.css', 'src/styles/fashion-banner.css', 'api', 'src/pages', 'src/components'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
+  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'src/styles/fashion-banner.css', 'api', 'src/pages', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
 });
 
 await test('no migration beyond 0034, no dependency change since the baseline', () => {
