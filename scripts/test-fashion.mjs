@@ -191,13 +191,13 @@ await test('filters and sorts apply to the listing', () => {
   assert.deepEqual(rules.topBrands(views, 3).map((b) => b.name), ['Aurelia Wear', 'Celeste & Co.', 'Cub & Clover']);
 });
 
-await test('admin writes omit what the caller did not mention', () => {
+await test('admin writes omit what the caller did not mention (and, since 0034, always stamp store = fashion)', () => {
   assert.ok(rules);
-  assert.deepEqual(rules.fashionProductToRow({ slug: 'x', name: 'X' }), { slug: 'x', name: 'X' }, 'no is_active, no description, no prices invented');
-  assert.deepEqual(rules.fashionProductToRow({ slug: 'x', salePrice: null }), { slug: 'x', sale_price: null }, 'an explicit null is sent');
-  assert.deepEqual(rules.fashionProductToRow({ slug: 'x', isActive: false, images: [] }), { slug: 'x', is_active: false, images: [] });
-  assert.deepEqual(rules.fashionVariantToRow({ productId: 'p', size: 'M', colour: 'Navy', stock: 3 }), { product_id: 'p', size: 'M', colour: 'Navy', stock: 3 });
-  assert.deepEqual(rules.fashionCategoryToRow({ id: 'c', parentId: null }), { id: 'c', parent_id: null });
+  assert.deepEqual(rules.fashionProductToRow({ slug: 'x', name: 'X' }), { store: 'fashion', slug: 'x', name: 'X' }, 'no is_active, no description, no prices invented');
+  assert.deepEqual(rules.fashionProductToRow({ slug: 'x', salePrice: null }), { store: 'fashion', slug: 'x', sale_price: null }, 'an explicit null is sent');
+  assert.deepEqual(rules.fashionProductToRow({ slug: 'x', isActive: false, images: [] }), { store: 'fashion', slug: 'x', is_active: false, images: [] });
+  assert.deepEqual(rules.fashionVariantToRow({ productId: 'p', size: 'M', colour: 'Navy', stock: 3 }), { store: 'fashion', product_id: 'p', size: 'M', colour: 'Navy', stock: 3 });
+  assert.deepEqual(rules.fashionCategoryToRow({ id: 'c', parentId: null }), { store: 'fashion', id: 'c', parent_id: null });
   assert.doesNotMatch(read('src/lib/fashionApi.js'), /is_active: (true|false)|description: ''|stock: 0/, 'the API never defaults a column');
 });
 

@@ -19,7 +19,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server.mjs';
-import { ROOT, read, has, h, buildGroceryApp, loadModule } from './grocery-ssr.mjs';
+import { ROOT, read, has, h, buildGroceryApp, loadModule, loadGroceryData, CATEGORIES, PRODUCTS } from './grocery-ssr.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // The tip before the grocery store existed (the Phase 2 bundle commit). Pinned,
@@ -37,24 +37,30 @@ const text = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').repl
 const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 console.log(`\nsource root: ${ROOT}`);
 
-const NEW_FILES = ['src/data/groceryHomepage.js', 'src/lib/groceryCartLine.js', 'src/grocery/GroceryLayout.jsx', 'src/grocery/GroceryHome.jsx', 'src/grocery/GroceryProductCard.jsx', 'src/styles/grocery.css'];
+const NEW_FILES = ['src/data/groceryHomepage.js', 'src/lib/groceryCartLine.js', 'src/lib/catalogueCartCache.js', 'src/grocery/GroceryLayout.jsx', 'src/grocery/GroceryHome.jsx', 'src/grocery/GroceryProductCard.jsx', 'src/styles/grocery.css'];
 // The one delivery promise. Anything faster is a false claim, not a style.
 const FORBIDDEN_DELIVERY = [/\b10\s*-?\s*min/i, /\b30\s*-?\s*min/i, /\b\d+\s*mins?\b/i, /\bminutes?\b/i, /\binstant/i, /\bfast(er)?\s+(&\s+reliable\s+)?deliver/i, /\bsame[- ]day\b/i, /\bnext[- ]day\b/i, /\bexpress\b/i];
 
+// The data module, with the network stubbed and the catalogue seeded with
+// rows shaped like catalogue_categories / catalogue_products (the 0034 seed).
 let data = null;
-try { data = await import(pathToFileURL(resolve(ROOT, 'src/data/groceryHomepage.js')).href); } catch { data = null; }
+try { data = loadGroceryData(); } catch { data = null; }
+const priceOf = (p) => (data?.priceOf ? data.priceOf(p) : null);
 
 // ============================================================
-console.log('\n— The data file: the one place content lives —');
+console.log('\n— The data module: the catalogue tables, plus the homepage copy —');
 // ============================================================
 
-await test('src/data/groceryHomepage.js exists, is marked TEMPORARY, and exports slides, categories, products and the promo', () => {
-  assert.ok(has('src/data/groceryHomepage.js'), 'the data file is missing');
-  const src = read('src/data/groceryHomepage.js');
-  assert.ok(src.startsWith('// TEMPORARY. Replace with catalogue_products query when the store column migration lands. Nothing outside this file should need to change.'), 'the TEMPORARY header is the first line');
-  assert.ok(data, 'the module imports');
-  for (const k of ['HERO_SLIDES', 'CATEGORIES', 'PRODUCTS', 'DAILY_ESSENTIALS', 'PROMO', 'GROCERY_DELIVERY_WINDOW', 'GROCERY_TAGLINE', 'categoryHref', 'productById']) assert.ok(k in data, `exports ${k}`);
-  assert.equal(data.GROCERY_DELIVERY_WINDOW, '6-7 days');
+await test('src/data/groceryHomepage.js is the grocery data layer: queries, the catalogue hook, and the homepage copy — no product or category literals', () => {
+  assert.ok(has('src/data/groceryHomepage.js'), 'the data module is missing');
+  assert.ok(data, 'the module loads');
+  for (const k of ['HERO_SLIDES', 'DAILY_ESSENTIALS', 'PROMO', 'GROCERY_DELIVERY_WINDOW', 'GROCERY_TAGLINE', 'GROCERY_STORE', 'categoryHref', 'getGroceryCategories', 'getGroceryProducts', 'getGroceryProductsByIds', 'useGroceryCatalogue', 'seedGroceryCatalogue', 'priceOf', 'groceryProductView']) assert.ok(k in data, `exports ${k}`);
+  assert.equal(data.GROCERY_DELIVERY_WINDOW, '6-7 days'); assert.equal(data.GROCERY_STORE, 'grocery');
+  const src = stripComments(read('src/data/groceryHomepage.js'));
+  assert.doesNotMatch(src, /TEMPORARY/, 'the literals are gone');
+  assert.doesNotMatch(src, /Sona Masoori|Masoor Dal|Whole Wheat|Sunflower Oil|grocery-circle-|grocery-product-|net_content: '/, 'no category or product literal remains (the hero/promo may still LINK to a category slug)');
+  assert.match(src, /from\('catalogue_categories'\)/); assert.match(src, /from\('catalogue_products'\)/);
+  assert.doesNotMatch(src, /from\('(fashion|grocery)_/, 'only the shared catalogue tables');
 });
 
 await test('hero: an array (one slide for now) whose copy is text — headline, subline, CTA, href, and a photograph', () => {
@@ -66,34 +72,31 @@ await test('hero: an array (one slide for now) whose copy is text — headline, 
   }
 });
 
-await test('categories: ten (two rows of five), each with a slug, a name, a circle photo, and an href under /grocery/category/', () => {
-  assert.equal(data.CATEGORIES.length, 10);
+await test('the seeded catalogue: ten categories (schema field names, image_url) and four products (images[], net_content, mrp/sale_price) with a data-layer price', () => {
+  const { categories, products } = data.getGroceryCatalogue();
+  assert.equal(categories.length, 10); assert.equal(products.length, 4);
   const slugs = new Set();
-  for (const c of data.CATEGORIES) {
-    assert.match(c.slug, /^[a-z0-9-]+$/); assert.ok(!slugs.has(c.slug), `duplicate slug ${c.slug}`); slugs.add(c.slug);
-    assert.ok(c.name && c.image);
+  for (const c of categories) {
+    assert.match(c.slug, /^[a-z0-9-]+$/); assert.ok(!slugs.has(c.slug)); slugs.add(c.slug);
+    assert.equal(c.store, 'grocery'); assert.ok(c.name && c.image_url); assert.ok(!('image' in c), 'schema names only');
     assert.equal(data.categoryHref(c), `/grocery/category/${c.slug}`);
   }
-});
-
-await test('products: four, each with id, slug, brand, name, pack, price, mrp and a product shot; ids unique; productById finds them', () => {
-  assert.equal(data.PRODUCTS.length, 4);
-  const ids = new Set();
-  for (const p of data.PRODUCTS) {
-    for (const k of ['id', 'slug', 'brand', 'name', 'pack', 'image']) assert.ok(typeof p[k] === 'string' && p[k], `${p.slug}: ${k}`);
-    assert.ok(Number.isInteger(p.price) && p.price > 0, `${p.slug}: whole-rupee price`);
-    assert.ok(Number.isInteger(p.mrp) && p.mrp >= p.price, `${p.slug}: mrp ≥ price`);
-    assert.ok(!ids.has(p.id)); ids.add(p.id);
-    assert.equal(data.productById(p.id), p);
+  for (const p of products) {
+    for (const k of ['id', 'slug', 'brand', 'name', 'net_content']) assert.ok(typeof p[k] === 'string' && p[k], `${p.slug}: ${k}`);
+    assert.ok(Array.isArray(p.images) && p.images[0], `${p.slug}: images[]`);
+    assert.ok(!('pack' in p) && !('image' in p), 'schema names only');
+    assert.equal(p.price, data.priceOf(p)); assert.ok(p.price > 0 && p.mrp >= p.price, `${p.slug}: price ≤ mrp`);
   }
-  assert.equal(data.productById('nope'), null);
-  assert.equal(data.DAILY_ESSENTIALS.products, data.PRODUCTS);
-  assert.equal(data.DAILY_ESSENTIALS.title, 'Daily essentials');
+  assert.equal(data.priceOf({ mrp: 100, sale_price: 80 }), 80); assert.equal(data.priceOf({ mrp: 100, sale_price: null }), 100);
+  assert.equal(data.priceOf({ mrp: 100, sale_price: 120 }), 100, 'a sale above MRP is ignored'); assert.equal(data.priceOf({ mrp: 100, sale_price: 0 }), 100);
+  assert.equal(data.DAILY_ESSENTIALS.title, 'Daily essentials'); assert.equal(data.DAILY_ESSENTIALS.limit, 4);
 });
 
-await test('every image the data file names exists, is WebP, and is under 150 KB', () => {
-  const images = [...data.HERO_SLIDES.map((s) => s.image), ...data.CATEGORIES.map((c) => c.image), ...data.PRODUCTS.map((p) => p.image), data.PROMO.image];
-  assert.equal(new Set(images).size, 16, 'sixteen distinct photographs');
+await test('every image the migration seeds and the homepage copy names exists, is WebP, and is under 150 KB', () => {
+  const sql = read('supabase/migrations/0034_catalogue_multistore.sql');
+  const seeded = [...sql.matchAll(/'(\/img\/grocery-[a-z0-9-]+\.webp)'/g)].map((m) => m[1]);
+  const images = [...new Set([...data.HERO_SLIDES.map((s) => s.image), data.PROMO.image, ...seeded])];
+  assert.equal(images.length, 16, 'sixteen distinct photographs');
   for (const rel of images) {
     const file = resolve(ROOT, rel.replace(/^\//, ''));
     const size = statSync(file).size;
@@ -108,9 +111,10 @@ await test('no component hardcodes product or category data: every name and pric
     const src = stripComments(read(rel));
     assert.doesNotMatch(src, /\/img\/grocery-/, `${rel} names no image`);
     assert.doesNotMatch(src, /price:\s*\d|₹\s*\d/, `${rel} carries no price`);
-    for (const p of data.PRODUCTS) assert.ok(!src.includes(p.name), `${rel} does not hardcode "${p.name}"`);
-    for (const c of data.CATEGORIES) assert.ok(!src.includes(`'${c.slug}'`), `${rel} does not hardcode "${c.slug}"`);
-    assert.match(src, /from '\.\.\/data\/groceryHomepage\.js'|GroceryProductCard/, `${rel} reads the data file (or is the card)`);
+    for (const p of PRODUCTS) assert.ok(!src.includes(p.name), `${rel} does not hardcode "${p.name}"`);
+    for (const c of CATEGORIES) assert.ok(!src.includes(`'${c.slug}'`), `${rel} does not hardcode "${c.slug}"`);
+    assert.match(src, /from '\.\.\/data\/groceryHomepage\.js'|GroceryProductCard/, `${rel} reads the data module (or is the card)`);
+    assert.doesNotMatch(src, /\b(c|p|product)\.(pack|image)\b/, `${rel} reads schema field names (image_url, images[], net_content), not the old literals`);
   }
 });
 
@@ -212,8 +216,9 @@ await test('category circles: ten links, two rows of five, each /grocery/categor
   const circles = home.slice(home.indexOf('<nav class="gs-circles"'), home.indexOf('</nav>', home.indexOf('<nav class="gs-circles"')));
   const links = [...circles.matchAll(/<a class="gs-circle" href="([^"]+)"><span class="gs-circle__img"><img src="([^"]+)" alt="" loading="lazy"[^>]*><\/span><span class="gs-circle__name">([^<]+)<\/span><\/a>/g)];
   assert.equal(links.length, 10);
-  assert.deepEqual(links.map((m) => m[1]), data.CATEGORIES.map((c) => `/grocery/category/${c.slug}`));
-  assert.deepEqual(links.map((m) => m[3].replace(/&amp;/g, '&')), data.CATEGORIES.map((c) => c.name));
+  assert.deepEqual(links.map((m) => m[1]), CATEGORIES.map((c) => `/grocery/category/${c.slug}`));
+  assert.deepEqual(links.map((m) => m[2]), CATEGORIES.map((c) => c.image_url), 'the circle is the row\'s image_url');
+  assert.deepEqual(links.map((m) => m[3].replace(/&amp;/g, '&')), CATEGORIES.map((c) => c.name));
   const css = read('src/styles/grocery.css');
   assert.match(css, /\.gs-circles \{[^}]*grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/, 'five across on a wide screen');
   const phone = css.slice(css.indexOf('@media (max-width: 599px)'));
@@ -226,14 +231,14 @@ await test('Daily essentials: four cards with image, brand, name, pack, price an
   const cards = [...home.matchAll(/<article class="gs-card" data-product="([^"]+)">[\s\S]*?<\/article>/g)];
   assert.equal(cards.length, 4);
   cards.forEach((m, i) => {
-    const p = data.PRODUCTS[i]; const c = m[0];
+    const p = PRODUCTS[i]; const c = m[0]; const price = priceOf(p);
     assert.equal(m[1], p.slug);
-    assert.ok(c.includes(`<img src="${p.image}" alt="" loading="${i < 2 ? 'eager' : 'lazy'}"`), `${p.slug}: photo, first two eager`);
+    assert.ok(c.includes(`<img src="${p.images[0]}" alt="" loading="${i < 2 ? 'eager' : 'lazy'}"`), `${p.slug}: photo (images[0]), first two eager`);
     assert.ok(c.includes(`<p class="gs-card__brand">${p.brand}</p>`), 'brand line');
     assert.ok(c.includes(`<h3 class="gs-card__name">${p.name}</h3>`), 'name');
-    assert.ok(c.includes(`<p class="gs-card__pack">${p.pack}</p>`), 'weight/volume');
-    assert.ok(c.includes(`<p class="gs-price" data-price="${p.price}"><strong>₹${p.price}</strong>`), 'price');
-    assert.ok(c.includes(`<button type="button" class="gs-add" aria-label="Add ${p.name} ${p.pack} to cart">Add</button>`), 'Add');
+    assert.ok(c.includes(`<p class="gs-card__pack">${p.net_content}</p>`), 'net content');
+    assert.ok(c.includes(`<p class="gs-price" data-price="${price}"><strong>₹${price}</strong><s class="gs-price__mrp">₹${p.mrp}</s>`), 'the data layer\'s price, MRP struck');
+    assert.ok(c.includes(`<button type="button" class="gs-add" aria-label="Add ${p.name} ${p.net_content} to cart">Add</button>`), 'Add');
   });
 });
 
@@ -250,8 +255,8 @@ await test('text-in-image rule: every <img> on the page is decorative (alt=""), 
   for (const i of imgs) assert.match(i, / alt=""/, `${i.slice(0, 60)} carries no text`);
   const t = text(home);
   for (const s of data.HERO_SLIDES) for (const k of ['headline', 'sub', 'cta']) assert.ok(t.includes(s[k]), `hero ${k}`);
-  for (const c of data.CATEGORIES) assert.ok(t.includes(c.name), c.name);
-  for (const p of data.PRODUCTS) { assert.ok(t.includes(p.name)); assert.ok(t.includes(`₹${p.price}`)); assert.ok(t.includes(p.pack)); }
+  for (const c of CATEGORIES) assert.ok(t.includes(c.name), c.name);
+  for (const p of PRODUCTS) { assert.ok(t.includes(p.name)); assert.ok(t.includes(`₹${priceOf(p)}`)); assert.ok(t.includes(p.net_content)); }
   for (const k of ['headline', 'sub', 'cta']) assert.ok(t.includes(data.PROMO[k]), `promo ${k}`);
   assert.ok(t.includes('Delivery in 6-7 days'));
 });
@@ -338,19 +343,41 @@ await test('store.jsx: the grocery add path, hydration branch, reconciliation, a
   assert.equal(cut(read('src/lib/store.jsx')), cut(before), 'addFashionToCart is byte-identical');
 });
 
-await test('groceryCartLine: a grocery line hydrates from the data file with its display price, is NOT purchasable, and says why; a gone product prunes', async () => {
-  const mod = await import(pathToFileURL(resolve(ROOT, 'src/lib/groceryCartLine.js')).href);
+await test('groceryCartLine: pending until its row lands, then priced from catalogue_products and still NOT purchasable (no server pricing yet); a confirmed-gone product prunes', async () => {
+  const cache = loadModule('src/lib/catalogueCartCache.js', {});
+  const calls = [];
+  const mod = loadModule('src/lib/groceryCartLine.js', { ...cache, groceryProductView: data.groceryProductView, getGroceryProductsByIds: async (ids) => { calls.push(ids); return PRODUCTS.filter((p) => ids.includes(p.id)); } });
   assert.equal(mod.GROCERY_CATALOGUE, 'grocery');
   assert.equal(mod.groceryLineKey(G1, null), `grocery:${G1}::`);
   assert.ok(mod.isGroceryLine({ catalogue: 'grocery' })); assert.ok(!mod.isGroceryLine({ catalogue: 'fashion' })); assert.ok(!mod.isGroceryLine({ id: 'b183' }));
-  const line = { key: `grocery:${G1}::`, catalogue: 'grocery', id: G1, variant: '1 kg', variantId: null, qty: 3 };
+  const line = { key: `grocery:${G1}::`, catalogue: 'grocery', id: G1, variant: null, variantId: null, qty: 3 };
+  const gone = { key: 'grocery:00000000-0000-4000-8000-000000000799::', catalogue: 'grocery', id: '00000000-0000-4000-8000-000000000799', variant: null, variantId: null, qty: 1 };
+  // before any fetch: pending, counted, blocked, never null
+  const pending = mod.hydrateGroceryCartLine(line, mod.groceryProductFor(G1));
+  assert.equal(pending.pending, true); assert.equal(pending.purchasable, false); assert.equal(pending.unavailableReason, 'Checking availability…');
+  assert.equal(pending.qty, 3); assert.equal(pending.unitPrice, null); assert.equal(pending.lineTotal, 0); assert.equal(pending.product.href, '/grocery');
+  // the store's reconciliation asks for the rows and prunes nothing yet
+  let bumps = 0; cache.subscribeCatalogueCart(() => { bumps += 1; });
+  assert.deepEqual(mod.groceryKeysToPrune([line, gone, { key: 'b183', id: 'b183' }]), [], 'nothing pruned before a fetch has answered');
+  assert.equal(calls.length, 1); assert.deepEqual([...calls[0]].sort(), [G1, gone.id].sort(), 'one fetch for the unresolved grocery ids only');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(bumps >= 1, 'the shared version bumped when the rows landed, so the cart re-prices');
+  // after: priced from the row, blocked with the checkout note
   const l = mod.hydrateGroceryCartLine(line, mod.groceryProductFor(G1));
   assert.equal(l.product.name, 'Sona Masoori Rice'); assert.equal(l.product.href, '/grocery'); assert.equal(l.product.image, '/img/grocery-product-sona-masoori-rice.webp');
-  assert.equal(l.unitPrice, 89); assert.equal(l.unitMrp, 99); assert.equal(l.lineTotal, 267); assert.equal(l.variantLabel, '1 kg'); assert.equal(l.qty, 3);
+  assert.equal(l.unitPrice, 89); assert.equal(l.unitMrp, 99); assert.equal(l.lineTotal, 267); assert.equal(l.variantLabel, '1 kg', 'the label comes from net_content'); assert.equal(l.product.form, '1 kg');
   assert.equal(l.purchasable, false, 'no server pricing yet — the line is blocked at checkout');
   assert.equal(l.unavailableReason, mod.GROCERY_CHECKOUT_NOTE);
-  assert.equal(mod.hydrateGroceryCartLine({ ...line, id: 'gone' }, mod.groceryProductFor('gone')), null);
-  assert.deepEqual(mod.groceryKeysToPrune([line, { ...line, key: 'grocery:gone::', id: 'gone' }, { key: 'b183', id: 'gone' }]), ['grocery:gone::'], 'only a confirmed-gone grocery line; a wellness line is not this module\'s business');
+  assert.equal(mod.hydrateGroceryCartLine(gone, mod.groceryProductFor(gone.id)), null, 'a product a fetch confirmed gone is dropped');
+  assert.deepEqual(mod.groceryKeysToPrune([line, gone, { key: 'b183', id: 'b183' }]), [gone.key], 'only the confirmed-gone grocery line; a wellness line is not this module\'s business');
+  assert.equal(calls.length, 1, 'resolved ids are not fetched again');
+  const inactive = mod.hydrateGroceryCartLine(line, data.groceryProductView({ ...PRODUCTS[0], is_active: false }));
+  assert.equal(inactive.unavailableReason, 'This item is no longer available.');
+  // a network failure leaves the line pending, never pruned
+  const offline = loadModule('src/lib/groceryCartLine.js', { ...loadModule('src/lib/catalogueCartCache.js', {}), groceryProductView: data.groceryProductView, getGroceryProductsByIds: async () => { throw new Error('offline'); } });
+  assert.deepEqual(offline.groceryKeysToPrune([line]), []);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(offline.isGroceryIdResolved(G1), false); assert.deepEqual(offline.groceryKeysToPrune([line]), []);
   // Cart and Checkout gate on purchasable, so a grocery line can never reach create-order.
   assert.match(stripComments(read('src/pages/Checkout.jsx')), /blockedCartLines/);
 });
@@ -442,15 +469,18 @@ await test('App.jsx: /grocery is a sibling route tree with its own layout, outsi
 await test('nothing under the wellness storefront, /fashion, checkout, pricing, coupons, auth or payments changed since the baseline (working tree included)', () => {
   const changed = new Set(execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean));
   // public/ is build output — it changes with every release commit, by design, and is never hand-edited.
-  const untouchable = /^(src\/fashion\/|src\/styles\/(?!grocery\.css)|src\/pages\/|src\/components\/|src\/lib\/(?!store\.jsx|deferredStyles\.js|groceryCartLine\.js)|api\/|supabase\/)/;
+  // The data layer (src/lib/fashion*.js, catalogueCartCache.js, groceryCartLine.js, src/data/) and the
+  // grocery components are this work's; the cart, checkout, coupons, auth and payment code are not.
+  // (store.jsx carries the approved grocery namespace from this store's first phase; test-catalogue.mjs pins it since.)
+  const untouchable = /^(src\/fashion\/|src\/styles\/(?!grocery\.css)|src\/pages\/|src\/components\/|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/)/;
   const bad = [...changed].filter((f) => untouchable.test(f));
   assert.deepEqual(bad, [], `untouchable files changed: ${bad.join(', ')}`);
   assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'src/fashion', 'src/styles/fashion.css', 'src/styles/fashion-banner.css', 'api', 'src/pages', 'src/components'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
 });
 
-await test('no migration, no dependency change since the baseline', () => {
+await test('no migration beyond 0034, no dependency change since the baseline', () => {
   const changed = execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean);
-  assert.ok(!changed.some((f) => /^supabase\/migrations\//.test(f)), 'no migration');
+  assert.ok(!changed.some((f) => /^supabase\/migrations\/(?!0034_catalogue_multistore\.sql$|rollback\/0034_)/.test(f)), 'no migration other than 0034 and its rollback');
   assert.ok(!changed.some((f) => /^package(-lock)?\.json$/.test(f)), 'no dependency change');
 });
 

@@ -8,56 +8,40 @@
 // reconciliation. The payable amount is the server's (api/_lib/pricing.js
 // → trustedFashionPrice); nothing here is charged.
 //
-// The rows live in a small module cache the store fills on demand for the
-// ids in the cart, so the cart page can price a fashion line without the
-// /fashion shell's catalogue being mounted.
+// The rows live in the shared catalogue cart cache (catalogueCartCache.js)
+// under the fashion store, filled on demand for the ids in the cart, so the
+// cart page can price a fashion line without the /fashion shell's catalogue
+// being mounted. The version the store subscribes to is that cache's, so a
+// row of ANY store landing re-prices the cart.
 // ============================================================
 import { getFashionProductsByIds } from './fashionApi.js';
+import {
+  getCatalogueCartVersion, subscribeCatalogueCart, isCatalogueIdResolved, catalogueRowFor,
+  seedCatalogueRows, resetCatalogueCart, ensureCatalogueRows,
+} from './catalogueCartCache.js';
 
 export const FASHION_CATALOGUE = 'fashion';
 export const fashionLineKey = (productId, variantId) => `fashion:${productId}::${variantId ?? ''}`;
 export const isFashionLine = (line) => line?.catalogue === FASHION_CATALOGUE;
 
-const rows = new Map();      // product id → { row, variants }
-const known = new Set();     // ids a fetch has answered for (present or not)
-let cacheVersion = 0;
-let inflight = null;
-const listeners = new Set();
-const bump = () => { cacheVersion += 1; for (const l of listeners) l(); };
+/** What the cache keeps per product: the row and its variants (the embed is aliased fashion_variants). */
+const entryOf = (p) => ({ row: p, variants: Array.isArray(p.fashion_variants) ? p.fashion_variants : [] });
 
-export const getFashionCartVersion = () => cacheVersion;
-export const subscribeFashionCart = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
+export const getFashionCartVersion = getCatalogueCartVersion;
+export const subscribeFashionCart = subscribeCatalogueCart;
 /** A fetch has answered for this id — present or gone. */
-export const isFashionIdResolved = (id) => known.has(String(id));
-export const fashionRowFor = (id) => rows.get(String(id)) || null;
+export const isFashionIdResolved = (id) => isCatalogueIdResolved(FASHION_CATALOGUE, id);
+export const fashionRowFor = (id) => catalogueRowFor(FASHION_CATALOGUE, id);
 
 /** Seed the cache directly (tests, SSR, or a page that already holds the rows). */
 export function seedFashionCart(products) {
-  for (const p of Array.isArray(products) ? products : []) {
-    if (!p?.id) continue;
-    rows.set(String(p.id), { row: p, variants: Array.isArray(p.fashion_variants) ? p.fashion_variants : [] });
-    known.add(String(p.id));
-  }
-  bump();
+  seedCatalogueRows(FASHION_CATALOGUE, (Array.isArray(products) ? products : []).filter((p) => p?.id).map((p) => ({ id: p.id, entry: entryOf(p) })));
 }
-export function resetFashionCart() { rows.clear(); known.clear(); inflight = null; bump(); }
+export function resetFashionCart() { resetCatalogueCart(FASHION_CATALOGUE); }
 
 /** Fetch any fashion ids not yet resolved. Safe to call on every render. */
-export async function ensureFashionProducts(ids) {
-  const want = [...new Set((ids || []).map(String))].filter((id) => !known.has(id));
-  if (!want.length) return;
-  if (inflight) { await inflight; return ensureFashionProducts(ids); }
-  inflight = (async () => {
-    try {
-      const list = await getFashionProductsByIds(want);
-      for (const p of list) rows.set(String(p.id), { row: p, variants: Array.isArray(p.fashion_variants) ? p.fashion_variants : [] });
-      // Every id we asked about is now answered: a missing one is gone, and
-      // the store may prune it; an absent answer (network) leaves it pending.
-      for (const id of want) known.add(id);
-    } catch { /* network: the lines stay pending, never pruned */ }
-    finally { inflight = null; bump(); }
-  })();
-  await inflight;
+export function ensureFashionProducts(ids) {
+  return ensureCatalogueRows(FASHION_CATALOGUE, ids, getFashionProductsByIds, entryOf);
 }
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };

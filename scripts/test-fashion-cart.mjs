@@ -191,8 +191,11 @@ await test('both endpoints fetch both catalogues through one path, and the fashi
 console.log('\n— Client cart —');
 // ============================================================
 
+// Since 0034 the rows live in the shared per-store cache (catalogueCartCache.js);
+// each load here gets a fresh one so the tests stay independent.
+const freshCache = () => { try { return loadModule('src/lib/catalogueCartCache.js', {}); } catch { return {}; } };
 let fcl = null;
-try { fcl = loadModule('src/lib/fashionCartLine.js', { getFashionProductsByIds: async () => [] }); } catch { fcl = null; }
+try { fcl = loadModule('src/lib/fashionCartLine.js', { ...freshCache(), getFashionProductsByIds: async () => [] }); } catch { fcl = null; }
 
 await test('a stored fashion line hydrates against the fashion rows — priced, labelled, linked to /fashion — and pending until they load', () => {
   assert.ok(fcl, 'src/lib/fashionCartLine.js exists');
@@ -222,7 +225,7 @@ await test('a stored fashion line hydrates against the fashion rows — priced, 
 
 await test('the cache resolves ids on demand, and only a confirmed-gone product is pruned', async () => {
   let calls = [];
-  const mod = loadModule('src/lib/fashionCartLine.js', { getFashionProductsByIds: async (ids) => { calls.push(ids); return PRODUCTS.filter((p) => ids.includes(p.id)); } });
+  const mod = loadModule('src/lib/fashionCartLine.js', { ...freshCache(), getFashionProductsByIds: async (ids) => { calls.push(ids); return PRODUCTS.filter((p) => ids.includes(p.id)); } });
   const lines = [
     { key: mod.fashionLineKey(SHIRT.id, M_NAVY), catalogue: 'fashion', id: SHIRT.id, variantId: M_NAVY, qty: 1 },
     { key: mod.fashionLineKey('00000000-0000-4000-8000-000000000999', 'x'), catalogue: 'fashion', id: '00000000-0000-4000-8000-000000000999', variantId: 'x', qty: 1 },
@@ -235,7 +238,7 @@ await test('the cache resolves ids on demand, and only a confirmed-gone product 
   assert.deepEqual(mod.fashionKeysToPrune(lines), [lines[1].key], 'the gone product, and only it; the wellness line is not this module\'s business');
   await mod.ensureFashionProducts([SHIRT.id]);
   assert.equal(calls.length, 1, 'a resolved id is not fetched again');
-  const failing = loadModule('src/lib/fashionCartLine.js', { getFashionProductsByIds: async () => { throw new Error('offline'); } });
+  const failing = loadModule('src/lib/fashionCartLine.js', { ...freshCache(), getFashionProductsByIds: async () => { throw new Error('offline'); } });
   await failing.ensureFashionProducts([SHIRT.id]);
   assert.equal(failing.isFashionIdResolved(SHIRT.id), false, 'a network failure leaves the line pending, never pruned');
   assert.deepEqual(failing.fashionKeysToPrune(lines), []);

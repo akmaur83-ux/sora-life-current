@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
-import { CATEGORIES, DAILY_ESSENTIALS, GROCERY_DELIVERY_WINDOW, HERO_SLIDES, PROMO, categoryHref } from '../data/groceryHomepage.js';
+import { DAILY_ESSENTIALS, GROCERY_DELIVERY_WINDOW, HERO_SLIDES, PROMO, categoryHref, useGroceryCatalogue } from '../data/groceryHomepage.js';
 import GroceryProductCard from './GroceryProductCard.jsx';
 
 // ============================================================
 // /grocery — the trust strip, the hero carousel, the category circles,
 // "Daily essentials", and the promo strip. Every word on the page is HTML
-// text; the photographs are backgrounds and product shots only. All content
-// comes from src/data/groceryHomepage.js — nothing here is hardcoded.
+// text; the photographs are backgrounds and product shots only. The
+// categories and products are the live catalogue (catalogue_* where store
+// = 'grocery', via useGroceryCatalogue); the hero, promo and copy come from
+// src/data/groceryHomepage.js — nothing here is hardcoded. A section with
+// nothing to show says so rather than inventing tiles.
 // ============================================================
 
 const TRUST = [
@@ -74,13 +77,13 @@ export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS })
   );
 }
 
-function CategoryCircles() {
-  if (CATEGORIES.length === 0) return null;
+function CategoryCircles({ categories }) {
+  if (categories.length === 0) return null;
   return (
     <nav className="gs-circles" aria-label="Shop by category">
-      {CATEGORIES.map((c) => (
-        <Link key={c.slug} to={categoryHref(c)} className="gs-circle">
-          <span className="gs-circle__img">{c.image ? <img src={c.image} alt="" loading="lazy" decoding="async" width="200" height="200" /> : <b aria-hidden="true">{c.name.slice(0, 1)}</b>}</span>
+      {categories.map((c) => (
+        <Link key={c.id} to={categoryHref(c)} className="gs-circle">
+          <span className="gs-circle__img">{c.image_url ? <img src={c.image_url} alt="" loading="lazy" decoding="async" width="200" height="200" /> : <b aria-hidden="true">{c.name.slice(0, 1)}</b>}</span>
           <span className="gs-circle__name">{c.name}</span>
         </Link>
       ))}
@@ -88,18 +91,22 @@ function CategoryCircles() {
   );
 }
 
-function DailyEssentials() {
-  const { title, sub, seeAll, products } = DAILY_ESSENTIALS;
-  if (products.length === 0) return null;
+function DailyEssentials({ products, status }) {
+  const { title, sub, seeAll, limit } = DAILY_ESSENTIALS;
+  const row = products.slice(0, limit);
   return (
     <section className="gs-sec" aria-labelledby="gs-daily-h">
       <header className="gs-sec__head">
         <div><h2 className="gs-sec__h serif" id="gs-daily-h">{title}</h2>{sub && <p className="gs-sec__sub">{sub}</p>}</div>
         <Link to={seeAll} className="gs-sec__link">See all <Icon name="arrowRight" size={16} /></Link>
       </header>
-      <div className="gs-row">
-        {products.map((p, i) => <GroceryProductCard key={p.id} product={p} mediaLoading={i < 2 ? 'eager' : 'lazy'} />)}
-      </div>
+      {row.length === 0 ? (
+        <p className="gs-empty">{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The grocery catalogue could not be loaded. Please try again shortly.' : 'The grocery store is being stocked — products appear here as they go live.'}</p>
+      ) : (
+        <div className="gs-row">
+          {row.map((p, i) => <GroceryProductCard key={p.id} product={p} mediaLoading={i < 2 ? 'eager' : 'lazy'} />)}
+        </div>
+      )}
     </section>
   );
 }
@@ -118,12 +125,13 @@ function PromoStrip() {
 }
 
 export default function GroceryHome() {
+  const { status, categories, products } = useGroceryCatalogue();
   return (
     <div className="gs-home">
       <TrustStrip />
       <HeroCarousel />
-      <CategoryCircles />
-      <DailyEssentials />
+      <CategoryCircles categories={categories} />
+      <DailyEssentials products={products} status={status} />
       <PromoStrip />
     </div>
   );

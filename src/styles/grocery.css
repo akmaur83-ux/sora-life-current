@@ -98,6 +98,7 @@
 .gs-sec__h { margin: 0; font-size: clamp(26px, 2.6vw, 34px); line-height: 1.1; }
 .gs-sec__sub { margin: 4px 0 0; font-size: 15px; color: var(--slv2-ink-3); }
 .gs-sec__link { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 600; color: var(--slv2-gold-ink); text-decoration: none; white-space: nowrap; }
+.gs-empty { margin: 0; padding: 22px 16px; border: 1px dashed var(--gs-line); border-radius: var(--gs-r); background: var(--slv2-paper); color: var(--slv2-ink-3); font-size: 15px; text-align: center; }
 
 /* ---- Product row + card ---------------------------------------------------- */
 .gs-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }

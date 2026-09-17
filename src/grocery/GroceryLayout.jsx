@@ -5,7 +5,7 @@ import Footer from '../components/Footer.jsx';
 import Toasts from '../components/Toasts.jsx';
 import { useStore } from '../lib/store.jsx';
 import { branding } from '../lib/settings.js';
-import { CATEGORIES, GROCERY_DELIVERY_WINDOW, GROCERY_TAGLINE, categoryHref } from '../data/groceryHomepage.js';
+import { GROCERY_DELIVERY_WINDOW, GROCERY_TAGLINE, categoryHref, useGroceryCatalogue } from '../data/groceryHomepage.js';
 
 // ============================================================
 // The grocery store shell — its own header (menu, centred wordmark,
@@ -83,6 +83,7 @@ export function BottomNav() {
 }
 
 function Drawer({ open, onClose }) {
+  const { categories } = useGroceryCatalogue();
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -96,7 +97,7 @@ function Drawer({ open, onClose }) {
       <div className="gs-drawer__panel">
         <div className="gs-drawer__head"><strong>Shop groceries</strong><button type="button" className="gs-drawer__x" aria-label="Close menu" onClick={onClose}><Icon name="x" size={20} /></button></div>
         <nav className="gs-drawer__nav">
-          <ul>{CATEGORIES.map((c) => <li key={c.slug}><Link to={categoryHref(c)} onClick={onClose}>{c.name}</Link></li>)}</ul>
+          <ul>{categories.map((c) => <li key={c.id}><Link to={categoryHref(c)} onClick={onClose}>{c.name}</Link></li>)}</ul>
         </nav>
         <Link to="/fashion" className="gs-drawer__back" onClick={onClose}><Icon name="chevronRight" size={16} /> Fashion store</Link>
         <Link to="/" className="gs-drawer__back" onClick={onClose}><Icon name="chevronLeft" size={16} /> Back to the wellness store</Link>
