@@ -168,8 +168,8 @@ function Xc(a){if(null!==a.blockedOn)return !1;for(var b=a.targetContainers;0<b.
 function ad(a,b){a.blockedOn===b&&(a.blockedOn=null,Jc||(Jc=!0,ca.unstable_scheduleCallback(ca.unstable_NormalPriority,$c)));}
 function bd(a){function b(b){return ad(b,a)}if(0<Kc.length){ad(Kc[0],a);for(var c=1;c<Kc.length;c++){var d=Kc[c];d.blockedOn===a&&(d.blockedOn=null);}}null!==Lc&&ad(Lc,a);null!==Mc&&ad(Mc,a);null!==Nc&&ad(Nc,a);Oc.forEach(b);Pc.forEach(b);for(c=0;c<Qc.length;c++)d=Qc[c],d.blockedOn===a&&(d.blockedOn=null);for(;0<Qc.length&&(c=Qc[0],null===c.blockedOn);)Vc(c),null===c.blockedOn&&Qc.shift();}var cd=ua.ReactCurrentBatchConfig,dd=!0;
 function ed(a,b,c,d){var e=C,f=cd.transition;cd.transition=null;try{C=1,fd(a,b,c,d);}finally{C=e,cd.transition=f;}}function gd(a,b,c,d){var e=C,f=cd.transition;cd.transition=null;try{C=4,fd(a,b,c,d);}finally{C=e,cd.transition=f;}}
-function fd(a,b,c,d){if(dd){var e=Yc(a,b,c,d);if(null===e)hd(a,b,d,id$1,c),Sc(a,d);else if(Uc(e,a,b,c,d))d.stopPropagation();else if(Sc(a,d),b&4&&-1<Rc.indexOf(a)){for(;null!==e;){var f=Cb(e);null!==f&&Ec(f);f=Yc(a,b,c,d);null===f&&hd(a,b,d,id$1,c);if(f===e)break;e=f;}null!==e&&d.stopPropagation();}else hd(a,b,d,null,c);}}var id$1=null;
-function Yc(a,b,c,d){id$1=null;a=xb(d);a=Wc(a);if(null!==a)if(b=Vb(a),null===b)a=null;else if(c=b.tag,13===c){a=Wb(b);if(null!==a)return a;a=null;}else if(3===c){if(b.stateNode.current.memoizedState.isDehydrated)return 3===b.tag?b.stateNode.containerInfo:null;a=null;}else b!==a&&(a=null);id$1=a;return null}
+function fd(a,b,c,d){if(dd){var e=Yc(a,b,c,d);if(null===e)hd(a,b,d,id,c),Sc(a,d);else if(Uc(e,a,b,c,d))d.stopPropagation();else if(Sc(a,d),b&4&&-1<Rc.indexOf(a)){for(;null!==e;){var f=Cb(e);null!==f&&Ec(f);f=Yc(a,b,c,d);null===f&&hd(a,b,d,id,c);if(f===e)break;e=f;}null!==e&&d.stopPropagation();}else hd(a,b,d,null,c);}}var id=null;
+function Yc(a,b,c,d){id=null;a=xb(d);a=Wc(a);if(null!==a)if(b=Vb(a),null===b)a=null;else if(c=b.tag,13===c){a=Wb(b);if(null!==a)return a;a=null;}else if(3===c){if(b.stateNode.current.memoizedState.isDehydrated)return 3===b.tag?b.stateNode.containerInfo:null;a=null;}else b!==a&&(a=null);id=a;return null}
 function jd(a){switch(a){case "cancel":case "click":case "close":case "contextmenu":case "copy":case "cut":case "auxclick":case "dblclick":case "dragend":case "dragstart":case "drop":case "focusin":case "focusout":case "input":case "invalid":case "keydown":case "keypress":case "keyup":case "mousedown":case "mouseup":case "paste":case "pause":case "play":case "pointercancel":case "pointerdown":case "pointerup":case "ratechange":case "reset":case "resize":case "seeked":case "submit":case "touchcancel":case "touchend":case "touchstart":case "volumechange":case "change":case "selectionchange":case "textInput":case "compositionstart":case "compositionend":case "compositionupdate":case "beforeblur":case "afterblur":case "beforeinput":case "blur":case "fullscreenchange":case "focus":case "hashchange":case "popstate":case "select":case "selectstart":return 1;case "drag":case "dragenter":case "dragexit":case "dragleave":case "dragover":case "mousemove":case "mouseout":case "mouseover":case "pointermove":case "pointerout":case "pointerover":case "scroll":case "toggle":case "touchmove":case "wheel":case "mouseenter":case "mouseleave":case "pointerenter":case "pointerleave":return 4;
 case "message":switch(ec()){case fc:return 1;case gc:return 4;case hc:case ic:return 16;case jc:return 536870912;default:return 16}default:return 16}}var kd=null,ld=null,md=null;function nd(){if(md)return md;var a,b=ld,c=b.length,d,e="value"in kd?kd.value:kd.textContent,f=e.length;for(a=0;a<c&&b[a]===e[a];a++);var g=c-a;for(d=1;d<=g&&b[c-d]===e[f-d];d++);return md=e.slice(a,1<d?1-d:void 0)}
 function od(a){var b=a.keyCode;"charCode"in a?(a=a.charCode,0===a&&13===b&&(a=13)):a=b;10===a&&(a=13);return 32<=a||13===a?a:0}function pd(){return !0}function qd(){return !1}
@@ -6803,7 +6803,7 @@ function buildCatalog(rawList) {
 const initial$1 = buildCatalog(seedFromBiosash());
 let products = initial$1.products;
 let productBySlug = initial$1.productBySlug;
-let productById$1 = initial$1.productById;
+let productById = initial$1.productById;
 let catalogSource = 'static'; // 'static' | 'supabase'
 
 /**
@@ -6855,7 +6855,7 @@ function applyCatalog(rawList, source = 'supabase') {
   const built = buildCatalog(merged);
   products = built.products;
   productBySlug = built.productBySlug;
-  productById$1 = built.productById;
+  productById = built.productById;
   catalogSource = source;
   getPriceRange();
   catalogVersion += 1;
@@ -6893,7 +6893,7 @@ function getBestsellers(n = 12) {
   return picks.slice(0, n);
 }
 function getRelated(product) {
-  return (product.relatedIds || []).map(id => productById$1[id]).filter(Boolean);
+  return (product.relatedIds || []).map(id => productById[id]).filter(Boolean);
 }
 function normalizeSearchText(value) {
   return String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[’‘'`´]/g, '').replace(/[-_/]+/g, ' ').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
@@ -29568,7 +29568,9 @@ const supabase = createClient(supabaseUrl , supabasePublishableKey );
 // stock matrix a size × colour catalogue needs. All of it runs in tests.
 // ============================================================
 
-const num$7 = v => {
+/** The store column value every fashion row carries (catalogue_* since 0034). */
+const FASHION_STORE = 'fashion';
+const num$8 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -29585,7 +29587,7 @@ function buildTree(rows) {
     slug: str$4(r.slug),
     tagline: str$4(r.tagline),
     image_url: r.image_url || null,
-    sort_order: num$7(r.sort_order),
+    sort_order: num$8(r.sort_order),
     is_active: r.is_active !== false
   }));
   const byId = new Map(list.map(n => [n.id, n]));
@@ -29674,14 +29676,14 @@ function productView(product, variants = null) {
     colour: str$4(v.colour),
     colour_hex: v.colour_hex || null,
     sku: v.sku || null,
-    stock: Math.max(0, num$7(v.stock)),
-    price_override: v.price_override == null ? null : num$7(v.price_override),
-    sort_order: num$7(v.sort_order)
+    stock: Math.max(0, num$8(v.stock)),
+    price_override: v.price_override == null ? null : num$8(v.price_override),
+    sort_order: num$8(v.sort_order)
   })).sort((a, b) => a.sort_order - b.sort_order);
-  const mrp = num$7(product?.mrp);
-  const sale = product?.sale_price == null ? null : num$7(product.sale_price);
+  const mrp = num$8(product?.mrp);
+  const sale = product?.sale_price == null ? null : num$8(product.sale_price);
   const price = sale != null && sale < mrp ? sale : mrp;
-  const discountPct = product?.discount_percent != null ? num$7(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
+  const discountPct = product?.discount_percent != null ? num$8(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
   const swatches = [];
   for (const v of vs) {
     let s = swatches.find(x => x.colour === v.colour);
@@ -29711,11 +29713,11 @@ function productView(product, variants = null) {
     price,
     discountPct,
     hasDiscount: discountPct > 0,
-    rating: Math.max(0, Math.min(5, num$7(product?.rating))),
-    reviewCount: Math.max(0, num$7(product?.review_count)),
+    rating: Math.max(0, Math.min(5, num$8(product?.rating))),
+    reviewCount: Math.max(0, num$8(product?.review_count)),
     isNew: product?.is_new === true,
     isBestseller: product?.is_bestseller === true,
-    sortOrder: num$7(product?.sort_order),
+    sortOrder: num$8(product?.sort_order),
     variants: vs,
     swatches,
     sizes,
@@ -29802,8 +29804,8 @@ const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
 const uniq = arr => [...new Set(arr)];
 function readFashionUrlState(searchParams) {
   const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
-  const discount = num$7(p.get('discount'));
-  const rating = num$7(p.get('rating'));
+  const discount = num$8(p.get('discount'));
+  const rating = num$8(p.get('rating'));
   return {
     q: str$4(p.get('q')),
     sort: SORT_IDS$1.has(p.get('sort')) ? p.get('sort') : 'featured',
@@ -29837,10 +29839,10 @@ function updateFashionUrlState(searchParams, patch) {
   if (has('colours')) setList('colour', patch.colours);
   if (has('brands')) setList('brand', patch.brands);
   if (has('discount')) {
-    if (DISCOUNT_STEPS.includes(num$7(patch.discount))) p.set('discount', String(num$7(patch.discount)));else p.delete('discount');
+    if (DISCOUNT_STEPS.includes(num$8(patch.discount))) p.set('discount', String(num$8(patch.discount)));else p.delete('discount');
   }
   if (has('rating')) {
-    if (RATING_STEPS.includes(num$7(patch.rating))) p.set('rating', String(num$7(patch.rating)));else p.delete('rating');
+    if (RATING_STEPS.includes(num$8(patch.rating))) p.set('rating', String(num$8(patch.rating)));else p.delete('rating');
   }
   if (has('view')) {
     if (patch.view === 'list') p.set('view', 'list');else p.delete('view');
@@ -29933,18 +29935,31 @@ function topBrands(views, limit = 6) {
 // ============================================================
 // Fashion store — Supabase reads and admin writes.
 //
+// Since migration 0034 the fashion rows live in the shared catalogue
+// tables (catalogue_categories / catalogue_products / catalogue_variants)
+// under store = 'fashion'. Every read here filters on that store; every
+// write stamps it (fashion.js → fashion*ToRow). The variants embed is
+// ALIASED to its old name, `fashion_variants`, so the row shape the rest
+// of the fashion code reads (productView, the cart cache) is byte-for-byte
+// what the fashion tables returned.
+//
 // Reads go straight at the tables under RLS (public read where is_active,
 // exactly as the wellness categories and variants are read). Writes are
 // admin-only and follow the omit-when-absent rule: a caller that does not
 // mention a field cannot blank it.
 // ============================================================
-const PRODUCT_COLUMNS = 'id, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
+const CATEGORY_TABLE = 'catalogue_categories';
+const PRODUCT_TABLE = 'catalogue_products';
+const VARIANT_TABLE = 'catalogue_variants';
+const PRODUCT_COLUMNS$1 = 'id, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
 const VARIANT_COLUMNS = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
+/** The embed, under the name the fashion code has always read. */
+const PRODUCT_SELECT = `${PRODUCT_COLUMNS$1}, fashion_variants:${VARIANT_TABLE} (${VARIANT_COLUMNS})`;
 async function getFashionCategories() {
   const {
     data,
     error
-  } = await supabase.from('fashion_categories').select('id, parent_id, name, slug, tagline, image_url, sort_order, is_active').order('sort_order', {
+  } = await supabase.from(CATEGORY_TABLE).select('id, parent_id, name, slug, tagline, image_url, sort_order, is_active').eq('store', FASHION_STORE).order('sort_order', {
     ascending: true
   });
   if (error) throw error;
@@ -29956,7 +29971,7 @@ async function getFashionProducts() {
   const {
     data,
     error
-  } = await supabase.from('fashion_products').select(`${PRODUCT_COLUMNS}, fashion_variants (${VARIANT_COLUMNS})`).eq('is_active', true).order('sort_order', {
+  } = await supabase.from(PRODUCT_TABLE).select(PRODUCT_SELECT).eq('store', FASHION_STORE).eq('is_active', true).order('sort_order', {
     ascending: true
   });
   if (error) throw error;
@@ -29970,9 +29985,74 @@ async function getFashionProductsByIds(ids) {
   const {
     data,
     error
-  } = await supabase.from('fashion_products').select(`${PRODUCT_COLUMNS}, fashion_variants (${VARIANT_COLUMNS})`).in('id', clean);
+  } = await supabase.from(PRODUCT_TABLE).select(PRODUCT_SELECT).eq('store', FASHION_STORE).in('id', clean);
   if (error) throw error;
   return Array.isArray(data) ? data : [];
+}
+
+// ============================================================
+// Catalogue rows behind the cart — one cache for every store.
+//
+// A cart line from the fashion or grocery store carries ids only; to show
+// a name and a display price the cart needs the catalogue row. This module
+// holds those rows, keyed by store + id, fills them on demand, and tells
+// the store (via one version number) when they land so the cart re-prices.
+//
+// One cache rather than one per store, on purpose: src/lib/store.jsx
+// subscribes to a single version (the fashion one, since Phase 2), and a
+// grocery row arriving must invalidate the same memo. Nothing here knows a
+// column name — the per-store modules (fashionCartLine.js,
+// groceryCartLine.js) decide what an entry looks like and how it is priced.
+// ============================================================
+
+const rows = new Map(); // `${store}:${id}` → entry (whatever the store module keeps)
+const known = new Set(); // keys a fetch has answered for, present or not
+const inflight = new Map(); // store → the fetch in progress
+const listeners$2 = new Set();
+let cacheVersion = 0; // not `version`: the test loader puts React in scope, which has one
+
+const cacheKey = (store, id) => `${store}:${String(id)}`;
+const getCatalogueCartVersion = () => cacheVersion;
+const subscribeCatalogueCart = fn => {
+  listeners$2.add(fn);
+  return () => listeners$2.delete(fn);
+};
+const bumpCatalogueCart = () => {
+  cacheVersion += 1;
+  for (const l of listeners$2) l();
+};
+
+/** A fetch has answered for this store + id — present or gone. */
+const isCatalogueIdResolved = (store, id) => known.has(cacheKey(store, id));
+const catalogueRowFor = (store, id) => rows.get(cacheKey(store, id)) || null;
+
+/**
+ * Fetch any ids of this store not yet resolved. `fetcher(ids)` returns the
+ * rows; `shape(row)` turns one into the entry the store module wants. Safe
+ * to call on every render: resolved ids are skipped, one fetch per store
+ * runs at a time. A failed fetch (network) leaves the ids unresolved —
+ * pending in the cart, never pruned.
+ */
+async function ensureCatalogueRows(store, ids, fetcher, shape = row => row) {
+  const want = [...new Set((ids || []).map(String))].filter(id => !known.has(cacheKey(store, id)));
+  if (!want.length) return;
+  if (inflight.has(store)) {
+    await inflight.get(store);
+    return ensureCatalogueRows(store, ids, fetcher, shape);
+  }
+  const run = (async () => {
+    try {
+      const list = await fetcher(want);
+      for (const row of Array.isArray(list) ? list : []) if (row?.id != null) rows.set(cacheKey(store, row.id), shape(row));
+      // Every id we asked about is now answered: a missing one is gone.
+      for (const id of want) known.add(cacheKey(store, id));
+    } catch {/* network: the lines stay pending */} finally {
+      inflight.delete(store);
+      bumpCatalogueCart();
+    }
+  })();
+  inflight.set(store, run);
+  await run;
 }
 
 // ============================================================
@@ -29985,57 +30065,32 @@ async function getFashionProductsByIds(ids) {
 // reconciliation. The payable amount is the server's (api/_lib/pricing.js
 // → trustedFashionPrice); nothing here is charged.
 //
-// The rows live in a small module cache the store fills on demand for the
-// ids in the cart, so the cart page can price a fashion line without the
-// /fashion shell's catalogue being mounted.
+// The rows live in the shared catalogue cart cache (catalogueCartCache.js)
+// under the fashion store, filled on demand for the ids in the cart, so the
+// cart page can price a fashion line without the /fashion shell's catalogue
+// being mounted. The version the store subscribes to is that cache's, so a
+// row of ANY store landing re-prices the cart.
 // ============================================================
 const FASHION_CATALOGUE = 'fashion';
 const fashionLineKey = (productId, variantId) => `fashion:${productId}::${variantId ?? ''}`;
 const isFashionLine = line => line?.catalogue === FASHION_CATALOGUE;
-const rows = new Map(); // product id → { row, variants }
-const known = new Set(); // ids a fetch has answered for (present or not)
-let cacheVersion = 0;
-let inflight = null;
-const listeners$1 = new Set();
-const bump = () => {
-  cacheVersion += 1;
-  for (const l of listeners$1) l();
-};
-const getFashionCartVersion = () => cacheVersion;
-const subscribeFashionCart = fn => {
-  listeners$1.add(fn);
-  return () => listeners$1.delete(fn);
-};
+
+/** What the cache keeps per product: the row and its variants (the embed is aliased fashion_variants). */
+const entryOf = p => ({
+  row: p,
+  variants: Array.isArray(p.fashion_variants) ? p.fashion_variants : []
+});
+const getFashionCartVersion = getCatalogueCartVersion;
+const subscribeFashionCart = subscribeCatalogueCart;
 /** A fetch has answered for this id — present or gone. */
-const isFashionIdResolved = id => known.has(String(id));
-const fashionRowFor = id => rows.get(String(id)) || null;
+const isFashionIdResolved = id => isCatalogueIdResolved(FASHION_CATALOGUE, id);
+const fashionRowFor = id => catalogueRowFor(FASHION_CATALOGUE, id);
 
 /** Fetch any fashion ids not yet resolved. Safe to call on every render. */
-async function ensureFashionProducts(ids) {
-  const want = [...new Set((ids || []).map(String))].filter(id => !known.has(id));
-  if (!want.length) return;
-  if (inflight) {
-    await inflight;
-    return ensureFashionProducts(ids);
-  }
-  inflight = (async () => {
-    try {
-      const list = await getFashionProductsByIds(want);
-      for (const p of list) rows.set(String(p.id), {
-        row: p,
-        variants: Array.isArray(p.fashion_variants) ? p.fashion_variants : []
-      });
-      // Every id we asked about is now answered: a missing one is gone, and
-      // the store may prune it; an absent answer (network) leaves it pending.
-      for (const id of want) known.add(id);
-    } catch {/* network: the lines stay pending, never pruned */} finally {
-      inflight = null;
-      bump();
-    }
-  })();
-  await inflight;
+function ensureFashionProducts(ids) {
+  return ensureCatalogueRows(FASHION_CATALOGUE, ids, getFashionProductsByIds, entryOf);
 }
-const num$6 = v => {
+const num$7 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -30084,13 +30139,13 @@ function hydrateFashionCartLine(line, entry, {
   } = entry;
   const v = variants.find(x => String(x.id) === String(line.variantId)) || null;
   const variantMissing = !v || v.is_active === false;
-  const mrp = num$6(row.mrp);
-  const sale = row.sale_price == null ? null : num$6(row.sale_price);
+  const mrp = num$7(row.mrp);
+  const sale = row.sale_price == null ? null : num$7(row.sale_price);
   const base = sale != null && sale > 0 && sale < mrp ? sale : mrp;
-  const override = v && v.price_override != null ? num$6(v.price_override) : null;
+  const override = v && v.price_override != null ? num$7(v.price_override) : null;
   const unitPrice = variantMissing ? null : override != null && override > 0 ? override : base;
   const unitMrp = unitPrice == null ? null : Math.max(mrp, unitPrice);
-  const stock = v ? Math.max(0, Math.floor(num$6(v.stock))) : null;
+  const stock = v ? Math.max(0, Math.floor(num$7(v.stock))) : null;
   const label = v ? [v.size, v.colour].filter(Boolean).join(' · ') : line.variant ?? null;
   let unavailableReason = null;
   if (variantMissing) unavailableReason = label ? `“${label}” is no longer available.` : 'The size and colour you chose are no longer available.';else if (row.is_active === false) unavailableReason = 'This item is no longer available.';else if (stock === 0) unavailableReason = 'This size and colour is out of stock.';else if (stock != null && line.qty > stock) unavailableReason = stock === 1 ? 'Only 1 left — please reduce the quantity.' : `Only ${stock} left — please reduce the quantity.`;else if (!(unitPrice > 0)) unavailableReason = 'This item is not available to buy right now.';
@@ -30136,21 +30191,22 @@ function fashionKeysToPrune(lines) {
   return (Array.isArray(lines) ? lines : []).filter(l => isFashionLine(l) && isFashionIdResolved(l.id) && !fashionRowFor(l.id)).map(l => l.key);
 }
 
-// TEMPORARY. Replace with catalogue_products query when the store column migration lands. Nothing outside this file should need to change.
-//
 // ============================================================
-// The grocery homepage's content: hero slides, the category circles, the
-// "Daily essentials" row, and the promo strip. Every string here is
-// rendered as HTML text over a photograph — nothing is baked into an image.
-// Every image is /img/grocery-*.webp, under 150 KB.
+// Grocery store — the data layer behind /grocery.
 //
-// Prices are DISPLAY figures for the homepage card and the cart line. The
-// server prices every order; grocery lines cannot be ordered until the
-// catalogue migration gives it a table to price them from
-// (src/lib/groceryCartLine.js blocks them with a reason until then).
+// Catalogue rows come from the shared catalogue tables (migration 0034)
+// under store = 'grocery': categories from catalogue_categories, products
+// from catalogue_products. Rows keep the schema's field names — image_url,
+// images[], net_content, mrp, sale_price — so what a component reads is
+// what the table holds. The one derived field is `price`: the figure a card
+// shows (sale_price when set and below mrp, else mrp), decided here, never
+// in a component. The payable amount is always the server's.
+//
+// Homepage content that is not catalogue — the hero slides, the promo
+// strip, the tagline, the delivery window — stays here as plain objects.
+// Every word is rendered as HTML text over a photograph.
 // ============================================================
-
-const id = n => `00000000-0000-4000-8000-0000000007${String(n).padStart(2, '0')}`;
+const GROCERY_STORE = 'grocery';
 const GROCERY_TAGLINE = 'Good food, brighter days';
 
 /** Delivery promise. One string, used by the header badge and the trust strip. */
@@ -30164,98 +30220,11 @@ const HERO_SLIDES = [{
   href: '/grocery/category/everyday-staples',
   note: 'Good food, happier homes'
 }];
-
-/** Two rows of five on a wide screen; one scrolling row on a phone. */
-const CATEGORIES = [{
-  slug: 'everyday-staples',
-  name: 'Everyday Staples',
-  image: '/img/grocery-circle-everyday-staples.webp'
-}, {
-  slug: 'packaged-foods',
-  name: 'Packaged Foods',
-  image: '/img/grocery-circle-packaged-foods.webp'
-}, {
-  slug: 'spices-masalas',
-  name: 'Spices & Masalas',
-  image: '/img/grocery-circle-spices-masalas.webp'
-}, {
-  slug: 'cooking-oils',
-  name: 'Cooking Oils',
-  image: '/img/grocery-circle-cooking-oils.webp'
-}, {
-  slug: 'dry-fruits-nuts',
-  name: 'Dry Fruits & Nuts',
-  image: '/img/grocery-circle-dry-fruits-nuts.webp'
-}, {
-  slug: 'atta-rice',
-  name: 'Atta & Rice',
-  image: '/img/grocery-circle-atta-rice.webp'
-}, {
-  slug: 'tea-coffee',
-  name: 'Tea & Coffee',
-  image: '/img/grocery-circle-tea-coffee.webp'
-}, {
-  slug: 'pulses-dal',
-  name: 'Pulses & Dal',
-  image: '/img/grocery-circle-pulses-dal.webp'
-}, {
-  slug: 'snacks-munchies',
-  name: 'Snacks & Munchies',
-  image: '/img/grocery-circle-snacks-munchies.webp'
-}, {
-  slug: 'pantry-essentials',
-  name: 'Pantry Essentials',
-  image: '/img/grocery-circle-pantry-essentials.webp'
-}];
-const categoryHref = c => `/grocery/category/${c.slug}`;
-
-/** The "Daily essentials" row. `pack` is the weight or volume shown under the name. */
-const PRODUCTS = [{
-  id: id(1),
-  slug: 'sona-masoori-rice-1kg',
-  brand: 'SORA LIFE',
-  name: 'Sona Masoori Rice',
-  pack: '1 kg',
-  price: 89,
-  mrp: 99,
-  image: '/img/grocery-product-sona-masoori-rice.webp',
-  category: 'atta-rice'
-}, {
-  id: id(2),
-  slug: 'whole-wheat-atta-1kg',
-  brand: 'SORA LIFE',
-  name: 'Whole Wheat Atta',
-  pack: '1 kg',
-  price: 52,
-  mrp: 58,
-  image: '/img/grocery-product-whole-wheat-atta.webp',
-  category: 'atta-rice'
-}, {
-  id: id(3),
-  slug: 'sunflower-oil-1l',
-  brand: 'SORA LIFE',
-  name: 'Sunflower Oil',
-  pack: '1 L',
-  price: 142,
-  mrp: 165,
-  image: '/img/grocery-product-sunflower-oil.webp',
-  category: 'cooking-oils'
-}, {
-  id: id(4),
-  slug: 'masoor-dal-500g',
-  brand: 'SORA LIFE',
-  name: 'Masoor Dal',
-  pack: '500 g',
-  price: 78,
-  mrp: 89,
-  image: '/img/grocery-product-masoor-dal.webp',
-  category: 'pulses-dal'
-}];
 const DAILY_ESSENTIALS = {
   title: 'Daily essentials',
   sub: 'Good food for a brighter you',
   seeAll: '/grocery/category/everyday-staples',
-  products: PRODUCTS
+  limit: 4
 };
 const PROMO = {
   image: '/img/grocery-promo.webp',
@@ -30264,9 +30233,114 @@ const PROMO = {
   cta: 'Shop Fresh',
   href: '/grocery/category/everyday-staples'
 };
+const categoryHref = c => `/grocery/category/${c.slug}`;
 
-/** Product lookup for the cart line (src/lib/groceryCartLine.js). */
-const productById = productId => PRODUCTS.find(p => p.id === String(productId)) || null;
+// ---- Row shapes ----------------------------------------------------------------
+const CATEGORY_COLUMNS = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
+const PRODUCT_COLUMNS = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
+const num$6 = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+/** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
+const priceOf = row => {
+  const mrp = num$6(row?.mrp);
+  const sale = row?.sale_price == null ? null : num$6(row.sale_price);
+  return sale != null && sale > 0 && sale < mrp ? sale : mrp;
+};
+
+/** A product row for the homepage and the cart: the row as stored, plus `price`. */
+const groceryProductView = row => row ? {
+  ...row,
+  mrp: num$6(row.mrp),
+  sale_price: row.sale_price == null ? null : num$6(row.sale_price),
+  price: priceOf(row),
+  images: Array.isArray(row.images) ? row.images.filter(Boolean) : []
+} : null;
+
+// ---- Reads -----------------------------------------------------------------------
+async function getGroceryCategories() {
+  const {
+    data,
+    error
+  } = await supabase.from('catalogue_categories').select(CATEGORY_COLUMNS).eq('store', GROCERY_STORE).order('sort_order', {
+    ascending: true
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+async function getGroceryProducts() {
+  const {
+    data,
+    error
+  } = await supabase.from('catalogue_products').select(PRODUCT_COLUMNS).eq('store', GROCERY_STORE).eq('is_active', true).order('sort_order', {
+    ascending: true
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+/** The products behind a set of cart lines (any active state — the cart says why a line is blocked). */
+async function getGroceryProductsByIds(ids) {
+  const clean = [...new Set((ids || []).map(String).filter(Boolean))];
+  if (!clean.length) return [];
+  const {
+    data,
+    error
+  } = await supabase.from('catalogue_products').select(PRODUCT_COLUMNS).eq('store', GROCERY_STORE).in('id', clean);
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+// ---- The catalogue the pages render ------------------------------------------------
+// Loaded once per session and shared by every grocery page; `seed` sets it
+// for server rendering and tests. Components subscribe with
+// useGroceryCatalogue() and get { status, error, categories, products }.
+const EMPTY$1 = Object.freeze({
+  status: 'loading',
+  error: null,
+  categories: [],
+  products: []
+});
+let snapshot = EMPTY$1;
+let loading = null;
+const listeners$1 = new Set();
+const publish = next => {
+  snapshot = next;
+  for (const l of listeners$1) l();
+};
+const shape$1 = (categories, products) => ({
+  categories: (Array.isArray(categories) ? categories : []).filter(c => c && c.is_active !== false),
+  products: (Array.isArray(products) ? products : []).filter(p => p && p.is_active !== false).map(groceryProductView)
+});
+function loadGroceryCatalogue() {
+  if (snapshot.status === 'ready' || loading) return loading;
+  loading = Promise.all([getGroceryCategories(), getGroceryProducts()]).then(([categories, products]) => publish({
+    status: 'ready',
+    error: null,
+    ...shape$1(categories, products)
+  })).catch(e => {
+    loading = null;
+    publish({
+      ...snapshot,
+      status: 'error',
+      error: e?.message || 'Could not load the grocery catalogue'
+    });
+  });
+  return loading;
+}
+const subscribe = fn => {
+  listeners$1.add(fn);
+  if (snapshot.status === 'loading') loadGroceryCatalogue();
+  return () => listeners$1.delete(fn);
+};
+const getSnapshot = () => snapshot;
+
+/** { status: 'loading' | 'ready' | 'error', error, categories, products } — categories and products carry the schema's field names. */
+function useGroceryCatalogue() {
+  return reactExports.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
 
 // ============================================================
 // Grocery cart lines — the grocery namespace in the shared cart.
@@ -30274,20 +30348,32 @@ const productById = productId => PRODUCTS.find(p => p.id === String(productId)) 
 // A stored grocery line is { key, catalogue: 'grocery', id, variantId: null,
 // variant, qty }, keyed `grocery:<id>::` so it can never merge with, be
 // priced as, or be pruned against a wellness or fashion line. Mirrors
-// fashionCartLine.js; the only difference is where the rows come from —
-// for now the TEMPORARY homepage data file (src/data/groceryHomepage.js),
-// synchronously, so there is no pending state and nothing to fetch.
+// fashionCartLine.js: the rows come from catalogue_products (store =
+// 'grocery') through the shared catalogue cart cache, filled on demand for
+// the ids in the cart — the cart page prices a grocery line without the
+// /grocery shell's catalogue being mounted.
 //
-// Until the catalogue migration gives the server a grocery table to price
-// from, a grocery line is shown with its display price but is NOT
-// purchasable: Cart and Checkout block on `unavailableReason`, so no
-// grocery item can reach create-order. Nothing here is charged.
+// Until the rows land a line is PENDING: counted, shown without a price,
+// blocking checkout with a reason, never dropped. Once they have landed a
+// grocery line is shown with its display price but is still NOT
+// purchasable: the server prices only wellness and fashion lines until the
+// grocery checkout opens, so Cart and Checkout block on `unavailableReason`
+// and no grocery item can reach create-order. Nothing here is charged.
 // ============================================================
 const GROCERY_CATALOGUE = 'grocery';
 const groceryLineKey = (productId, variantId) => `grocery:${productId}::${variantId ?? ''}`;
 const isGroceryLine = line => line?.catalogue === GROCERY_CATALOGUE;
 const GROCERY_CHECKOUT_NOTE = 'Grocery checkout is opening soon — this item cannot be ordered yet.';
-const groceryProductFor = id => productById(id);
+
+/** A fetch has answered for this id — present or gone. */
+const isGroceryIdResolved = id => isCatalogueIdResolved(GROCERY_CATALOGUE, id);
+/** The product behind a line, once its row has landed (null while pending or when gone). */
+const groceryProductFor = id => catalogueRowFor(GROCERY_CATALOGUE, id);
+
+/** Fetch any grocery ids not yet resolved. Safe to call on every render. */
+function ensureGroceryProducts(ids) {
+  return ensureCatalogueRows(GROCERY_CATALOGUE, ids, getGroceryProductsByIds, groceryProductView);
+}
 const num$5 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -30295,14 +30381,41 @@ const num$5 = v => {
 
 /**
  * Shape one grocery line for display. Same fields hydrateCartLine produces
- * so Cart, Checkout and the summary render it unchanged. A product no
- * longer in the data file returns null and the store prunes the line.
+ * so Cart, Checkout and the summary render it unchanged. `product` is what
+ * groceryProductFor() returned: null before the row has landed (pending)
+ * and null once a fetch confirmed it gone (then the store prunes the line).
  */
 function hydrateGroceryCartLine(line, product) {
-  if (!product) return null;
+  if (!product) {
+    if (isGroceryIdResolved(line.id)) return null;
+    return {
+      ...line,
+      product: {
+        id: line.id,
+        name: 'Grocery item',
+        slug: '',
+        image: null,
+        href: '/grocery',
+        form: null,
+        cardImage: null
+      },
+      variantObj: null,
+      variantLabel: line.variant ?? null,
+      variantMissing: false,
+      variantStock: null,
+      unitPrice: null,
+      unitMrp: null,
+      lineTotal: 0,
+      pending: true,
+      unavailableReason: 'Checking availability…',
+      purchasable: false
+    };
+  }
   const unitPrice = num$5(product.price) > 0 ? num$5(product.price) : null;
   const unitMrp = unitPrice == null ? null : Math.max(num$5(product.mrp), unitPrice);
-  const unavailableReason = unitPrice == null ? 'This item is not available to buy right now.' : GROCERY_CHECKOUT_NOTE;
+  const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
+  let unavailableReason = null;
+  if (product.is_active === false) unavailableReason = 'This item is no longer available.';else if (unitPrice == null) unavailableReason = 'This item is not available to buy right now.';else unavailableReason = GROCERY_CHECKOUT_NOTE;
   return {
     ...line,
     product: {
@@ -30310,16 +30423,16 @@ function hydrateGroceryCartLine(line, product) {
       name: product.name,
       slug: product.slug,
       brand: product.brand || '',
-      image: product.image,
-      cardImage: product.image,
-      gallery: product.image ? [product.image] : [],
+      image,
+      cardImage: image,
+      gallery: Array.isArray(product.images) ? product.images : [],
       href: '/grocery',
-      form: product.pack || null,
+      form: product.net_content || null,
       price: unitPrice,
       mrp: unitMrp
     },
     variantObj: null,
-    variantLabel: line.variant ?? product.pack ?? null,
+    variantLabel: line.variant ?? product.net_content ?? null,
     variantMissing: false,
     variantStock: null,
     unitPrice,
@@ -30330,9 +30443,17 @@ function hydrateGroceryCartLine(line, product) {
   };
 }
 
-/** Which stored grocery lines point at a product the data file no longer has. */
+/**
+ * The store's grocery reconciliation, run from an effect on every cart
+ * change: ask for the rows behind any unresolved grocery line (the cache
+ * bumps the shared version when they land, and the cart re-prices), and
+ * report the lines whose product a fetch has confirmed gone.
+ */
 function groceryKeysToPrune(lines) {
-  return (Array.isArray(lines) ? lines : []).filter(l => isGroceryLine(l) && !groceryProductFor(l.id)).map(l => l.key);
+  const grocery = (Array.isArray(lines) ? lines : []).filter(isGroceryLine);
+  const unresolved = grocery.filter(l => !isGroceryIdResolved(l.id)).map(l => l.id);
+  if (unresolved.length) ensureGroceryProducts(unresolved);
+  return grocery.filter(l => isGroceryIdResolved(l.id) && !groceryProductFor(l.id)).map(l => l.key);
 }
 
 // ============================================================
@@ -31456,7 +31577,7 @@ function StoreProvider({
   // a fashion or grocery id, and vice versa.
   const hydrate = l => isFashionLine(l) ? hydrateFashionCartLine(l, fashionRowFor(l.id), {
     resolved: isFashionIdResolved(l.id)
-  }) : isGroceryLine(l) ? hydrateGroceryCartLine(l, groceryProductFor(l.id)) : hydrateCartLine(l, productById$1[l.id]);
+  }) : isGroceryLine(l) ? hydrateGroceryCartLine(l, groceryProductFor(l.id)) : hydrateCartLine(l, productById[l.id]);
 
   // Variants arrive from Supabase AFTER first render. Memoising on state.cart
   // alone meant a line added with a 750 ml variantId kept the pre-variant
@@ -31501,7 +31622,7 @@ function StoreProvider({
   //   4. A GROCERY line likewise: judged against the grocery data only.
   reactExports.useEffect(() => {
     if (!isCatalogHydrated()) return;
-    const keys = [...state.cart, ...state.saved].filter(l => !isFashionLine(l) && !isGroceryLine(l) && !productById$1[l.id]).map(l => l.key);
+    const keys = [...state.cart, ...state.saved].filter(l => !isFashionLine(l) && !isGroceryLine(l) && !productById[l.id]).map(l => l.key);
     if (keys.length) dispatch({
       type: 'PRUNE_MISSING',
       keys
@@ -48510,7 +48631,7 @@ function orderStatusLabel(o) {
 // DB id); the storefront catalogue is keyed by biosash_id || id.
 function productForLine(line) {
   const key = line?.biosash_id ?? line?.product_id;
-  return key != null ? productById$1[key] : undefined;
+  return key != null ? productById[key] : undefined;
 }
 const NAV$1 = [{
   id: 'orders',
@@ -49314,7 +49435,7 @@ function Orders$1() {
 function WishTab({
   wishlist
 }) {
-  const items = wishlist.map(id => productById$1[id]).filter(Boolean);
+  const items = wishlist.map(id => productById[id]).filter(Boolean);
   if (!items.length) return /*#__PURE__*/jsxRuntimeExports.jsx(EmptyPanel, {
     icon: "heart",
     title: "No saved items yet",
@@ -49927,7 +50048,7 @@ function Wishlist() {
     wishlist,
     addToCart
   } = useStore();
-  const items = wishlist.map(id => productById$1[id]).filter(Boolean);
+  const items = wishlist.map(id => productById[id]).filter(Boolean);
   if (!items.length) {
     return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -50871,7 +50992,7 @@ function computeStatusLabel({
  * either the order or the catalog. */
 function resolveProduct(item) {
   const catalogId = item?.biosash_id || item?.product_id;
-  const catalogProduct = catalogId != null ? productById$1[catalogId] : null;
+  const catalogProduct = catalogId != null ? productById[catalogId] : null;
   return {
     id: catalogId ?? item?.name,
     name: item?.name || catalogProduct?.name || 'Product',
@@ -61162,6 +61283,9 @@ function Drawer({
   open,
   onClose
 }) {
+  const {
+    categories
+  } = useGroceryCatalogue();
   reactExports.useEffect(() => {
     if (!open) return undefined;
     const onKey = e => {
@@ -61200,13 +61324,13 @@ function Drawer({
       }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
         className: "gs-drawer__nav",
         children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-          children: CATEGORIES.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
             children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
               to: categoryHref(c),
               onClick: onClose,
               children: c.name
             })
-          }, c.slug))
+          }, c.id))
         })
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: "/fashion",
@@ -61257,13 +61381,14 @@ function GroceryProductCard({
   const {
     addGroceryToCart
   } = useStore();
+  const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
     className: "gs-card",
     "data-product": product.slug,
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "gs-card__media",
-      children: [product.image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-        src: product.image,
+      children: [image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+        src: image,
         alt: "",
         loading: mediaLoading,
         decoding: "async",
@@ -61293,7 +61418,7 @@ function GroceryProductCard({
         children: product.name
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "gs-card__pack",
-        children: product.pack
+        children: product.net_content
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "gs-card__foot",
         children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
@@ -61309,7 +61434,7 @@ function GroceryProductCard({
           type: "button",
           className: "gs-add",
           onClick: () => addGroceryToCart(product),
-          "aria-label": `Add ${product.name} ${product.pack} to cart`,
+          "aria-label": `Add ${product.name} ${product.net_content} to cart`,
           children: "Add"
         })]
       })]
@@ -61433,18 +61558,20 @@ function HeroCarousel({
     })]
   });
 }
-function CategoryCircles() {
-  if (CATEGORIES.length === 0) return null;
+function CategoryCircles({
+  categories
+}) {
+  if (categories.length === 0) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
     className: "gs-circles",
     "aria-label": "Shop by category",
-    children: CATEGORIES.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+    children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
       to: categoryHref(c),
       className: "gs-circle",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "gs-circle__img",
-        children: c.image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-          src: c.image,
+        children: c.image_url ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: c.image_url,
           alt: "",
           loading: "lazy",
           decoding: "async",
@@ -61458,17 +61585,20 @@ function CategoryCircles() {
         className: "gs-circle__name",
         children: c.name
       })]
-    }, c.slug))
+    }, c.id))
   });
 }
-function DailyEssentials() {
+function DailyEssentials({
+  products,
+  status
+}) {
   const {
     title,
     sub,
     seeAll,
-    products
+    limit
   } = DAILY_ESSENTIALS;
-  if (products.length === 0) return null;
+  const row = products.slice(0, limit);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "gs-sec",
     "aria-labelledby": "gs-daily-h",
@@ -61491,9 +61621,12 @@ function DailyEssentials() {
           size: 16
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    }), row.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "gs-empty",
+      children: status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The grocery catalogue could not be loaded. Please try again shortly.' : 'The grocery store is being stocked — products appear here as they go live.'
+    }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "gs-row",
-      children: products.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(GroceryProductCard, {
+      children: row.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(GroceryProductCard, {
         product: p,
         mediaLoading: i < 2 ? 'eager' : 'lazy'
       }, p.id))
@@ -61536,9 +61669,19 @@ function PromoStrip() {
   });
 }
 function GroceryHome() {
+  const {
+    status,
+    categories,
+    products
+  } = useGroceryCatalogue();
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "gs-home",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HeroCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryCircles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(DailyEssentials, {}), /*#__PURE__*/jsxRuntimeExports.jsx(PromoStrip, {})]
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HeroCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryCircles, {
+      categories: categories
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(DailyEssentials, {
+      products: products,
+      status: status
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(PromoStrip, {})]
   });
 }
 
