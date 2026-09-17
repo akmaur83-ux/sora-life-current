@@ -168,8 +168,8 @@ function Xc(a){if(null!==a.blockedOn)return !1;for(var b=a.targetContainers;0<b.
 function ad(a,b){a.blockedOn===b&&(a.blockedOn=null,Jc||(Jc=!0,ca.unstable_scheduleCallback(ca.unstable_NormalPriority,$c)));}
 function bd(a){function b(b){return ad(b,a)}if(0<Kc.length){ad(Kc[0],a);for(var c=1;c<Kc.length;c++){var d=Kc[c];d.blockedOn===a&&(d.blockedOn=null);}}null!==Lc&&ad(Lc,a);null!==Mc&&ad(Mc,a);null!==Nc&&ad(Nc,a);Oc.forEach(b);Pc.forEach(b);for(c=0;c<Qc.length;c++)d=Qc[c],d.blockedOn===a&&(d.blockedOn=null);for(;0<Qc.length&&(c=Qc[0],null===c.blockedOn);)Vc(c),null===c.blockedOn&&Qc.shift();}var cd=ua.ReactCurrentBatchConfig,dd=!0;
 function ed(a,b,c,d){var e=C,f=cd.transition;cd.transition=null;try{C=1,fd(a,b,c,d);}finally{C=e,cd.transition=f;}}function gd(a,b,c,d){var e=C,f=cd.transition;cd.transition=null;try{C=4,fd(a,b,c,d);}finally{C=e,cd.transition=f;}}
-function fd(a,b,c,d){if(dd){var e=Yc(a,b,c,d);if(null===e)hd(a,b,d,id,c),Sc(a,d);else if(Uc(e,a,b,c,d))d.stopPropagation();else if(Sc(a,d),b&4&&-1<Rc.indexOf(a)){for(;null!==e;){var f=Cb(e);null!==f&&Ec(f);f=Yc(a,b,c,d);null===f&&hd(a,b,d,id,c);if(f===e)break;e=f;}null!==e&&d.stopPropagation();}else hd(a,b,d,null,c);}}var id=null;
-function Yc(a,b,c,d){id=null;a=xb(d);a=Wc(a);if(null!==a)if(b=Vb(a),null===b)a=null;else if(c=b.tag,13===c){a=Wb(b);if(null!==a)return a;a=null;}else if(3===c){if(b.stateNode.current.memoizedState.isDehydrated)return 3===b.tag?b.stateNode.containerInfo:null;a=null;}else b!==a&&(a=null);id=a;return null}
+function fd(a,b,c,d){if(dd){var e=Yc(a,b,c,d);if(null===e)hd(a,b,d,id$1,c),Sc(a,d);else if(Uc(e,a,b,c,d))d.stopPropagation();else if(Sc(a,d),b&4&&-1<Rc.indexOf(a)){for(;null!==e;){var f=Cb(e);null!==f&&Ec(f);f=Yc(a,b,c,d);null===f&&hd(a,b,d,id$1,c);if(f===e)break;e=f;}null!==e&&d.stopPropagation();}else hd(a,b,d,null,c);}}var id$1=null;
+function Yc(a,b,c,d){id$1=null;a=xb(d);a=Wc(a);if(null!==a)if(b=Vb(a),null===b)a=null;else if(c=b.tag,13===c){a=Wb(b);if(null!==a)return a;a=null;}else if(3===c){if(b.stateNode.current.memoizedState.isDehydrated)return 3===b.tag?b.stateNode.containerInfo:null;a=null;}else b!==a&&(a=null);id$1=a;return null}
 function jd(a){switch(a){case "cancel":case "click":case "close":case "contextmenu":case "copy":case "cut":case "auxclick":case "dblclick":case "dragend":case "dragstart":case "drop":case "focusin":case "focusout":case "input":case "invalid":case "keydown":case "keypress":case "keyup":case "mousedown":case "mouseup":case "paste":case "pause":case "play":case "pointercancel":case "pointerdown":case "pointerup":case "ratechange":case "reset":case "resize":case "seeked":case "submit":case "touchcancel":case "touchend":case "touchstart":case "volumechange":case "change":case "selectionchange":case "textInput":case "compositionstart":case "compositionend":case "compositionupdate":case "beforeblur":case "afterblur":case "beforeinput":case "blur":case "fullscreenchange":case "focus":case "hashchange":case "popstate":case "select":case "selectstart":return 1;case "drag":case "dragenter":case "dragexit":case "dragleave":case "dragover":case "mousemove":case "mouseout":case "mouseover":case "pointermove":case "pointerout":case "pointerover":case "scroll":case "toggle":case "touchmove":case "wheel":case "mouseenter":case "mouseleave":case "pointerenter":case "pointerleave":return 4;
 case "message":switch(ec()){case fc:return 1;case gc:return 4;case hc:case ic:return 16;case jc:return 536870912;default:return 16}default:return 16}}var kd=null,ld=null,md=null;function nd(){if(md)return md;var a,b=ld,c=b.length,d,e="value"in kd?kd.value:kd.textContent,f=e.length;for(a=0;a<c&&b[a]===e[a];a++);var g=c-a;for(d=1;d<=g&&b[c-d]===e[f-d];d++);return md=e.slice(a,1<d?1-d:void 0)}
 function od(a){var b=a.keyCode;"charCode"in a?(a=a.charCode,0===a&&13===b&&(a=13)):a=b;10===a&&(a=13);return 32<=a||13===a?a:0}function pd(){return !0}function qd(){return !1}
@@ -6803,7 +6803,7 @@ function buildCatalog(rawList) {
 const initial$1 = buildCatalog(seedFromBiosash());
 let products = initial$1.products;
 let productBySlug = initial$1.productBySlug;
-let productById = initial$1.productById;
+let productById$1 = initial$1.productById;
 let catalogSource = 'static'; // 'static' | 'supabase'
 
 /**
@@ -6855,7 +6855,7 @@ function applyCatalog(rawList, source = 'supabase') {
   const built = buildCatalog(merged);
   products = built.products;
   productBySlug = built.productBySlug;
-  productById = built.productById;
+  productById$1 = built.productById;
   catalogSource = source;
   getPriceRange();
   catalogVersion += 1;
@@ -6893,7 +6893,7 @@ function getBestsellers(n = 12) {
   return picks.slice(0, n);
 }
 function getRelated(product) {
-  return (product.relatedIds || []).map(id => productById[id]).filter(Boolean);
+  return (product.relatedIds || []).map(id => productById$1[id]).filter(Boolean);
 }
 function normalizeSearchText(value) {
   return String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[’‘'`´]/g, '').replace(/[-_/]+/g, ' ').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
@@ -29568,7 +29568,7 @@ const supabase = createClient(supabaseUrl , supabasePublishableKey );
 // stock matrix a size × colour catalogue needs. All of it runs in tests.
 // ============================================================
 
-const num$6 = v => {
+const num$7 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -29585,7 +29585,7 @@ function buildTree(rows) {
     slug: str$4(r.slug),
     tagline: str$4(r.tagline),
     image_url: r.image_url || null,
-    sort_order: num$6(r.sort_order),
+    sort_order: num$7(r.sort_order),
     is_active: r.is_active !== false
   }));
   const byId = new Map(list.map(n => [n.id, n]));
@@ -29644,7 +29644,7 @@ function resolveCategory(tree, slug) {
   matches.sort((a, b) => tree.depth(a.id) - tree.depth(b.id) || a.sort_order - b.sort_order);
   return matches[0];
 }
-const categoryHref = node => `/fashion/c/${node.slug}`;
+const categoryHref$1 = node => `/fashion/c/${node.slug}`;
 function breadcrumbFor(tree, node) {
   const trail = [{
     name: 'Fashion',
@@ -29653,7 +29653,7 @@ function breadcrumbFor(tree, node) {
   if (!node) return trail;
   for (const a of tree.ancestors(node.id)) trail.push({
     name: a.name,
-    href: categoryHref(a)
+    href: categoryHref$1(a)
   });
   return trail;
 }
@@ -29674,14 +29674,14 @@ function productView(product, variants = null) {
     colour: str$4(v.colour),
     colour_hex: v.colour_hex || null,
     sku: v.sku || null,
-    stock: Math.max(0, num$6(v.stock)),
-    price_override: v.price_override == null ? null : num$6(v.price_override),
-    sort_order: num$6(v.sort_order)
+    stock: Math.max(0, num$7(v.stock)),
+    price_override: v.price_override == null ? null : num$7(v.price_override),
+    sort_order: num$7(v.sort_order)
   })).sort((a, b) => a.sort_order - b.sort_order);
-  const mrp = num$6(product?.mrp);
-  const sale = product?.sale_price == null ? null : num$6(product.sale_price);
+  const mrp = num$7(product?.mrp);
+  const sale = product?.sale_price == null ? null : num$7(product.sale_price);
   const price = sale != null && sale < mrp ? sale : mrp;
-  const discountPct = product?.discount_percent != null ? num$6(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
+  const discountPct = product?.discount_percent != null ? num$7(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
   const swatches = [];
   for (const v of vs) {
     let s = swatches.find(x => x.colour === v.colour);
@@ -29711,11 +29711,11 @@ function productView(product, variants = null) {
     price,
     discountPct,
     hasDiscount: discountPct > 0,
-    rating: Math.max(0, Math.min(5, num$6(product?.rating))),
-    reviewCount: Math.max(0, num$6(product?.review_count)),
+    rating: Math.max(0, Math.min(5, num$7(product?.rating))),
+    reviewCount: Math.max(0, num$7(product?.review_count)),
     isNew: product?.is_new === true,
     isBestseller: product?.is_bestseller === true,
-    sortOrder: num$6(product?.sort_order),
+    sortOrder: num$7(product?.sort_order),
     variants: vs,
     swatches,
     sizes,
@@ -29802,8 +29802,8 @@ const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
 const uniq = arr => [...new Set(arr)];
 function readFashionUrlState(searchParams) {
   const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
-  const discount = num$6(p.get('discount'));
-  const rating = num$6(p.get('rating'));
+  const discount = num$7(p.get('discount'));
+  const rating = num$7(p.get('rating'));
   return {
     q: str$4(p.get('q')),
     sort: SORT_IDS$1.has(p.get('sort')) ? p.get('sort') : 'featured',
@@ -29837,10 +29837,10 @@ function updateFashionUrlState(searchParams, patch) {
   if (has('colours')) setList('colour', patch.colours);
   if (has('brands')) setList('brand', patch.brands);
   if (has('discount')) {
-    if (DISCOUNT_STEPS.includes(num$6(patch.discount))) p.set('discount', String(num$6(patch.discount)));else p.delete('discount');
+    if (DISCOUNT_STEPS.includes(num$7(patch.discount))) p.set('discount', String(num$7(patch.discount)));else p.delete('discount');
   }
   if (has('rating')) {
-    if (RATING_STEPS.includes(num$6(patch.rating))) p.set('rating', String(num$6(patch.rating)));else p.delete('rating');
+    if (RATING_STEPS.includes(num$7(patch.rating))) p.set('rating', String(num$7(patch.rating)));else p.delete('rating');
   }
   if (has('view')) {
     if (patch.view === 'list') p.set('view', 'list');else p.delete('view');
@@ -30035,7 +30035,7 @@ async function ensureFashionProducts(ids) {
   })();
   await inflight;
 }
-const num$5 = v => {
+const num$6 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -30084,13 +30084,13 @@ function hydrateFashionCartLine(line, entry, {
   } = entry;
   const v = variants.find(x => String(x.id) === String(line.variantId)) || null;
   const variantMissing = !v || v.is_active === false;
-  const mrp = num$5(row.mrp);
-  const sale = row.sale_price == null ? null : num$5(row.sale_price);
+  const mrp = num$6(row.mrp);
+  const sale = row.sale_price == null ? null : num$6(row.sale_price);
   const base = sale != null && sale > 0 && sale < mrp ? sale : mrp;
-  const override = v && v.price_override != null ? num$5(v.price_override) : null;
+  const override = v && v.price_override != null ? num$6(v.price_override) : null;
   const unitPrice = variantMissing ? null : override != null && override > 0 ? override : base;
   const unitMrp = unitPrice == null ? null : Math.max(mrp, unitPrice);
-  const stock = v ? Math.max(0, Math.floor(num$5(v.stock))) : null;
+  const stock = v ? Math.max(0, Math.floor(num$6(v.stock))) : null;
   const label = v ? [v.size, v.colour].filter(Boolean).join(' · ') : line.variant ?? null;
   let unavailableReason = null;
   if (variantMissing) unavailableReason = label ? `“${label}” is no longer available.` : 'The size and colour you chose are no longer available.';else if (row.is_active === false) unavailableReason = 'This item is no longer available.';else if (stock === 0) unavailableReason = 'This size and colour is out of stock.';else if (stock != null && line.qty > stock) unavailableReason = stock === 1 ? 'Only 1 left — please reduce the quantity.' : `Only ${stock} left — please reduce the quantity.`;else if (!(unitPrice > 0)) unavailableReason = 'This item is not available to buy right now.';
@@ -30134,6 +30134,205 @@ function hydrateFashionCartLine(line, entry, {
 /** Which stored fashion lines point at a product a fetch has confirmed gone. */
 function fashionKeysToPrune(lines) {
   return (Array.isArray(lines) ? lines : []).filter(l => isFashionLine(l) && isFashionIdResolved(l.id) && !fashionRowFor(l.id)).map(l => l.key);
+}
+
+// TEMPORARY. Replace with catalogue_products query when the store column migration lands. Nothing outside this file should need to change.
+//
+// ============================================================
+// The grocery homepage's content: hero slides, the category circles, the
+// "Daily essentials" row, and the promo strip. Every string here is
+// rendered as HTML text over a photograph — nothing is baked into an image.
+// Every image is /img/grocery-*.webp, under 150 KB.
+//
+// Prices are DISPLAY figures for the homepage card and the cart line. The
+// server prices every order; grocery lines cannot be ordered until the
+// catalogue migration gives it a table to price them from
+// (src/lib/groceryCartLine.js blocks them with a reason until then).
+// ============================================================
+
+const id = n => `00000000-0000-4000-8000-0000000007${String(n).padStart(2, '0')}`;
+const GROCERY_TAGLINE = 'Good food, brighter days';
+
+/** Delivery promise. One string, used by the header badge and the trust strip. */
+const GROCERY_DELIVERY_WINDOW = '6-7 days';
+const HERO_SLIDES = [{
+  id: 'freshness',
+  image: '/img/grocery-hero.webp',
+  headline: 'Freshness for a Brighter Everyday',
+  sub: 'Staples, snacks, spices & more for your happy home.',
+  cta: 'Shop Groceries',
+  href: '/grocery/category/everyday-staples',
+  note: 'Good food, happier homes'
+}];
+
+/** Two rows of five on a wide screen; one scrolling row on a phone. */
+const CATEGORIES = [{
+  slug: 'everyday-staples',
+  name: 'Everyday Staples',
+  image: '/img/grocery-circle-everyday-staples.webp'
+}, {
+  slug: 'packaged-foods',
+  name: 'Packaged Foods',
+  image: '/img/grocery-circle-packaged-foods.webp'
+}, {
+  slug: 'spices-masalas',
+  name: 'Spices & Masalas',
+  image: '/img/grocery-circle-spices-masalas.webp'
+}, {
+  slug: 'cooking-oils',
+  name: 'Cooking Oils',
+  image: '/img/grocery-circle-cooking-oils.webp'
+}, {
+  slug: 'dry-fruits-nuts',
+  name: 'Dry Fruits & Nuts',
+  image: '/img/grocery-circle-dry-fruits-nuts.webp'
+}, {
+  slug: 'atta-rice',
+  name: 'Atta & Rice',
+  image: '/img/grocery-circle-atta-rice.webp'
+}, {
+  slug: 'tea-coffee',
+  name: 'Tea & Coffee',
+  image: '/img/grocery-circle-tea-coffee.webp'
+}, {
+  slug: 'pulses-dal',
+  name: 'Pulses & Dal',
+  image: '/img/grocery-circle-pulses-dal.webp'
+}, {
+  slug: 'snacks-munchies',
+  name: 'Snacks & Munchies',
+  image: '/img/grocery-circle-snacks-munchies.webp'
+}, {
+  slug: 'pantry-essentials',
+  name: 'Pantry Essentials',
+  image: '/img/grocery-circle-pantry-essentials.webp'
+}];
+const categoryHref = c => `/grocery/category/${c.slug}`;
+
+/** The "Daily essentials" row. `pack` is the weight or volume shown under the name. */
+const PRODUCTS = [{
+  id: id(1),
+  slug: 'sona-masoori-rice-1kg',
+  brand: 'SORA LIFE',
+  name: 'Sona Masoori Rice',
+  pack: '1 kg',
+  price: 89,
+  mrp: 99,
+  image: '/img/grocery-product-sona-masoori-rice.webp',
+  category: 'atta-rice'
+}, {
+  id: id(2),
+  slug: 'whole-wheat-atta-1kg',
+  brand: 'SORA LIFE',
+  name: 'Whole Wheat Atta',
+  pack: '1 kg',
+  price: 52,
+  mrp: 58,
+  image: '/img/grocery-product-whole-wheat-atta.webp',
+  category: 'atta-rice'
+}, {
+  id: id(3),
+  slug: 'sunflower-oil-1l',
+  brand: 'SORA LIFE',
+  name: 'Sunflower Oil',
+  pack: '1 L',
+  price: 142,
+  mrp: 165,
+  image: '/img/grocery-product-sunflower-oil.webp',
+  category: 'cooking-oils'
+}, {
+  id: id(4),
+  slug: 'masoor-dal-500g',
+  brand: 'SORA LIFE',
+  name: 'Masoor Dal',
+  pack: '500 g',
+  price: 78,
+  mrp: 89,
+  image: '/img/grocery-product-masoor-dal.webp',
+  category: 'pulses-dal'
+}];
+const DAILY_ESSENTIALS = {
+  title: 'Daily essentials',
+  sub: 'Good food for a brighter you',
+  seeAll: '/grocery/category/everyday-staples',
+  products: PRODUCTS
+};
+const PROMO = {
+  image: '/img/grocery-promo.webp',
+  headline: 'Fresh ingredients. Happier meals.',
+  sub: 'Quality groceries for every home.',
+  cta: 'Shop Fresh',
+  href: '/grocery/category/everyday-staples'
+};
+
+/** Product lookup for the cart line (src/lib/groceryCartLine.js). */
+const productById = productId => PRODUCTS.find(p => p.id === String(productId)) || null;
+
+// ============================================================
+// Grocery cart lines — the grocery namespace in the shared cart.
+//
+// A stored grocery line is { key, catalogue: 'grocery', id, variantId: null,
+// variant, qty }, keyed `grocery:<id>::` so it can never merge with, be
+// priced as, or be pruned against a wellness or fashion line. Mirrors
+// fashionCartLine.js; the only difference is where the rows come from —
+// for now the TEMPORARY homepage data file (src/data/groceryHomepage.js),
+// synchronously, so there is no pending state and nothing to fetch.
+//
+// Until the catalogue migration gives the server a grocery table to price
+// from, a grocery line is shown with its display price but is NOT
+// purchasable: Cart and Checkout block on `unavailableReason`, so no
+// grocery item can reach create-order. Nothing here is charged.
+// ============================================================
+const GROCERY_CATALOGUE = 'grocery';
+const groceryLineKey = (productId, variantId) => `grocery:${productId}::${variantId ?? ''}`;
+const isGroceryLine = line => line?.catalogue === GROCERY_CATALOGUE;
+const GROCERY_CHECKOUT_NOTE = 'Grocery checkout is opening soon — this item cannot be ordered yet.';
+const groceryProductFor = id => productById(id);
+const num$5 = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+/**
+ * Shape one grocery line for display. Same fields hydrateCartLine produces
+ * so Cart, Checkout and the summary render it unchanged. A product no
+ * longer in the data file returns null and the store prunes the line.
+ */
+function hydrateGroceryCartLine(line, product) {
+  if (!product) return null;
+  const unitPrice = num$5(product.price) > 0 ? num$5(product.price) : null;
+  const unitMrp = unitPrice == null ? null : Math.max(num$5(product.mrp), unitPrice);
+  const unavailableReason = unitPrice == null ? 'This item is not available to buy right now.' : GROCERY_CHECKOUT_NOTE;
+  return {
+    ...line,
+    product: {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      brand: product.brand || '',
+      image: product.image,
+      cardImage: product.image,
+      gallery: product.image ? [product.image] : [],
+      href: '/grocery',
+      form: product.pack || null,
+      price: unitPrice,
+      mrp: unitMrp
+    },
+    variantObj: null,
+    variantLabel: line.variant ?? product.pack ?? null,
+    variantMissing: false,
+    variantStock: null,
+    unitPrice,
+    unitMrp,
+    lineTotal: unitPrice == null ? 0 : unitPrice * line.qty,
+    unavailableReason,
+    purchasable: unavailableReason == null
+  };
+}
+
+/** Which stored grocery lines point at a product the data file no longer has. */
+function groceryKeysToPrune(lines) {
+  return (Array.isArray(lines) ? lines : []).filter(l => isGroceryLine(l) && !groceryProductFor(l.id)).map(l => l.key);
 }
 
 // ============================================================
@@ -30890,8 +31089,11 @@ function reducer(state, action) {
         // and carries the marker on the line, so it can never merge with, be
         // priced as, or be pruned against a wellness product. A wellness line
         // is shaped exactly as it always was — no catalogue field at all.
+        // A GROCERY line (catalogue: 'grocery') gets the same treatment in its
+        // own namespace (groceryCartLine.js).
         const fashion = catalogue === FASHION_CATALOGUE;
-        const key = fashion ? fashionLineKey(id, variantId) : id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
+        const grocery = catalogue === GROCERY_CATALOGUE;
+        const key = fashion ? fashionLineKey(id, variantId) : grocery ? groceryLineKey(id, variantId) : id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
         const existing = state.cart.find(l => l.key === key);
         const cart = existing ? state.cart.map(l => l.key === key ? {
           ...l,
@@ -30899,6 +31101,13 @@ function reducer(state, action) {
         } : l) : [...state.cart, fashion ? {
           key,
           catalogue: FASHION_CATALOGUE,
+          id,
+          variant,
+          variantId,
+          qty
+        } : grocery ? {
+          key,
+          catalogue: GROCERY_CATALOGUE,
           id,
           variant,
           variantId,
@@ -31105,6 +31314,27 @@ function StoreProvider({
     return true;
   }, [toast]);
 
+  // The grocery add path. Takes a product from the grocery data
+  // (src/data/groceryHomepage.js); the line carries the id only, and the
+  // pack label is display text. No stock gate yet — there is no grocery
+  // stock to check until the catalogue migration lands, and the line is
+  // blocked at checkout until then (groceryCartLine.js).
+  const addGroceryToCart = reactExports.useCallback((product, qty = 1) => {
+    if (!product?.id) return false;
+    dispatch({
+      type: 'ADD',
+      catalogue: GROCERY_CATALOGUE,
+      id: String(product.id),
+      qty,
+      variant: product.pack || null,
+      variantId: null
+    });
+    toast('Added to cart', {
+      kind: 'cart'
+    });
+    return true;
+  }, [toast]);
+
   // What the UI renders. Recomputed from the two lists, never stored.
   const wishlist = reactExports.useMemo(() => visibleWishlist(state), [state.guestWish, state.accountWish, state.syncedUserId]);
 
@@ -31220,12 +31450,13 @@ function StoreProvider({
   // line costs and whether it can be bought have exactly ONE implementation —
   // the same arrangement wishlistState.js uses, and for the same reason: those
   // rules are executed directly in tests rather than through a provider.
-  // A fashion line is priced from the fashion tables (fashionCartLine.js);
-  // a wellness line exactly as before. The wellness catalogue is never
-  // consulted for a fashion id, and vice versa.
+  // A fashion line is priced from the fashion tables (fashionCartLine.js),
+  // a grocery line from the grocery data (groceryCartLine.js); a wellness
+  // line exactly as before. The wellness catalogue is never consulted for
+  // a fashion or grocery id, and vice versa.
   const hydrate = l => isFashionLine(l) ? hydrateFashionCartLine(l, fashionRowFor(l.id), {
     resolved: isFashionIdResolved(l.id)
-  }) : hydrateCartLine(l, productById[l.id]);
+  }) : isGroceryLine(l) ? hydrateGroceryCartLine(l, groceryProductFor(l.id)) : hydrateCartLine(l, productById$1[l.id]);
 
   // Variants arrive from Supabase AFTER first render. Memoising on state.cart
   // alone meant a line added with a 750 ml variantId kept the pre-variant
@@ -31267,9 +31498,10 @@ function StoreProvider({
   //   3. A FASHION line is judged against the fashion catalogue only: it is
   //      pruned when a fetch for its id has answered and the product is gone,
   //      and never because the wellness catalogue does not know the id.
+  //   4. A GROCERY line likewise: judged against the grocery data only.
   reactExports.useEffect(() => {
     if (!isCatalogHydrated()) return;
-    const keys = [...state.cart, ...state.saved].filter(l => !isFashionLine(l) && !productById[l.id]).map(l => l.key);
+    const keys = [...state.cart, ...state.saved].filter(l => !isFashionLine(l) && !isGroceryLine(l) && !productById$1[l.id]).map(l => l.key);
     if (keys.length) dispatch({
       type: 'PRUNE_MISSING',
       keys
@@ -31282,6 +31514,13 @@ function StoreProvider({
       keys
     });
   }, [state.cart, state.saved, fashionVersion]);
+  reactExports.useEffect(() => {
+    const keys = groceryKeysToPrune([...state.cart, ...state.saved]);
+    if (keys.length) dispatch({
+      type: 'PRUNE_MISSING',
+      keys
+    });
+  }, [state.cart, state.saved]);
   // Counted from the lines the cart can actually SHOW, so the badge can never
   // advertise an item the page does not list. state.cart may still hold a line
   // whose product has vanished; reconcileCart() below clears those for good.
@@ -31303,6 +31542,7 @@ function StoreProvider({
     toast,
     addToCart,
     addFashionToCart,
+    addGroceryToCart,
     toggleWish,
     // Normalised on both sides: a caller passing the numeric 5 still matches
     // a stored '5'.
@@ -48270,7 +48510,7 @@ function orderStatusLabel(o) {
 // DB id); the storefront catalogue is keyed by biosash_id || id.
 function productForLine(line) {
   const key = line?.biosash_id ?? line?.product_id;
-  return key != null ? productById[key] : undefined;
+  return key != null ? productById$1[key] : undefined;
 }
 const NAV$1 = [{
   id: 'orders',
@@ -49074,7 +49314,7 @@ function Orders$1() {
 function WishTab({
   wishlist
 }) {
-  const items = wishlist.map(id => productById[id]).filter(Boolean);
+  const items = wishlist.map(id => productById$1[id]).filter(Boolean);
   if (!items.length) return /*#__PURE__*/jsxRuntimeExports.jsx(EmptyPanel, {
     icon: "heart",
     title: "No saved items yet",
@@ -49687,7 +49927,7 @@ function Wishlist() {
     wishlist,
     addToCart
   } = useStore();
-  const items = wishlist.map(id => productById[id]).filter(Boolean);
+  const items = wishlist.map(id => productById$1[id]).filter(Boolean);
   if (!items.length) {
     return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -50631,7 +50871,7 @@ function computeStatusLabel({
  * either the order or the catalog. */
 function resolveProduct(item) {
   const catalogId = item?.biosash_id || item?.product_id;
-  const catalogProduct = catalogId != null ? productById[catalogId] : null;
+  const catalogProduct = catalogId != null ? productById$1[catalogId] : null;
   return {
     id: catalogId ?? item?.name,
     name: item?.name || catalogProduct?.name || 'Product',
@@ -59092,7 +59332,7 @@ function useFashionCatalogue() {
   return v;
 }
 
-const SEARCH_PLACEHOLDER = 'Search for fashion, lifestyle and more…';
+const SEARCH_PLACEHOLDER$1 = 'Search for fashion, lifestyle and more…';
 function FashionLogo() {
   return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
     to: "/fashion",
@@ -59191,7 +59431,7 @@ function FashionHeader({
         type: "search",
         value: q,
         onChange: e => setQ(e.target.value),
-        placeholder: SEARCH_PLACEHOLDER,
+        placeholder: SEARCH_PLACEHOLDER$1,
         "aria-label": "Search fashion"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
         type: "submit",
@@ -59243,7 +59483,7 @@ function CategoryChips({
     role: "navigation",
     "aria-label": "Categories",
     children: [tree.roots.filter(r => r.is_active).map(r => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-      to: categoryHref(r),
+      to: categoryHref$1(r),
       className: `fs-chip${r.id === activeRootId ? ' is-on' : ''}`,
       "aria-current": r.id === activeRootId ? 'page' : undefined,
       children: r.name
@@ -59261,7 +59501,7 @@ function CategoryChips({
     })]
   });
 }
-function Drawer({
+function Drawer$1({
   open,
   onClose
 }) {
@@ -59308,13 +59548,13 @@ function Drawer({
         children: tree.roots.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "fs-drawer__group",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-            to: categoryHref(r),
+            to: categoryHref$1(r),
             onClick: onClose,
             children: r.name
           }), tree.children(r.id).length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
             children: tree.children(r.id).map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
               children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-                to: categoryHref(c),
+                to: categoryHref$1(c),
                 onClick: onClose,
                 children: c.name
               })
@@ -59345,7 +59585,7 @@ function Shell() {
     className: "fs",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(FashionHeader, {
       onMenu: () => setMenu(true)
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer$1, {
       open: menu,
       onClose: () => setMenu(false)
     }), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
@@ -59809,7 +60049,7 @@ function CategoryTiles({
     className: "fs-tiles",
     "aria-label": "Shop by",
     children: tiles.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      to: categoryHref(c),
+      to: categoryHref$1(c),
       className: "fs-tile",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "fs-tile__img",
@@ -59928,7 +60168,7 @@ function ShopByCategory({
         id: "fs-cats-h",
         children: "Shop by Category"
       }), tree.roots[0] && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: categoryHref(tree.roots[0]),
+        to: categoryHref$1(tree.roots[0]),
         className: "fs-sec__link",
         children: ["Explore all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "chevronRight",
@@ -59938,7 +60178,7 @@ function ShopByCategory({
     }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "fs-catcards",
       children: roots.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: categoryHref(c),
+        to: categoryHref$1(c),
         className: "fs-catcard",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "fs-catcard__img",
@@ -60413,7 +60653,7 @@ function FashionCategory() {
     className: "fs-subcats",
     "aria-label": `Shop ${node.name}`,
     children: children.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-      to: categoryHref(c),
+      to: categoryHref$1(c),
       className: "fs-subcat",
       children: c.name
     }, c.id))
@@ -60768,6 +61008,540 @@ function FashionProductPage() {
   });
 }
 
+const SEARCH_PLACEHOLDER = 'Search for groceries, staples, and more...';
+
+/** Home is the only live tab; the rest render, do nothing, and never 404. */
+const BOTTOM_NAV = [{
+  id: 'home',
+  label: 'Home',
+  icon: 'home',
+  href: '/grocery'
+}, {
+  id: 'categories',
+  label: 'Categories',
+  icon: 'grid'
+}, {
+  id: 'offers',
+  label: 'Offers',
+  icon: 'tag'
+}, {
+  id: 'orders',
+  label: 'Orders',
+  icon: 'package'
+}, {
+  id: 'account',
+  label: 'Account',
+  icon: 'user'
+}];
+function GroceryLogo() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+    to: "/grocery",
+    className: "gs-logo",
+    "aria-label": `${branding.siteName} grocery home`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+      className: "serif",
+      children: branding.siteName
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+      children: GROCERY_TAGLINE
+    })]
+  });
+}
+function GroceryHeader({
+  onMenu
+}) {
+  const {
+    cartCount
+  } = useStore();
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+    className: "gs-hdr",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "gs-hdr__row",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "gs-hdr__menu",
+        "aria-label": "Open menu",
+        onClick: onMenu,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "menu",
+          size: 26
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(GroceryLogo, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "gs-hdr__acts",
+        "aria-label": "Wishlist and cart",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "gs-hdr__act",
+          "aria-label": "Wishlist",
+          "aria-disabled": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "heart",
+            size: 24
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/cart",
+          className: "gs-hdr__act",
+          "aria-label": `Cart${cartCount ? `, ${cartCount} items` : ''}`,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "bag",
+            size: 24
+          }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "gs-hdr__count",
+            children: cartCount
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "gs-deliver",
+      "aria-label": "Delivery",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "gs-deliver__addr",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "mapPin",
+          size: 22
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "gs-deliver__txt",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+            children: ["Deliver to Home ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronDown",
+              size: 14
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+            children: "Add your delivery address at checkout"
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "gs-deliver__badge",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "leaf",
+          size: 16
+        }), " Delivery in ", GROCERY_DELIVERY_WINDOW]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "gs-search",
+      role: "search",
+      "aria-label": "Search groceries",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "search",
+        size: 22
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+        type: "search",
+        placeholder: SEARCH_PLACEHOLDER,
+        "aria-label": "Search groceries (coming soon)",
+        readOnly: true
+      })]
+    })]
+  });
+}
+function BottomNav() {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+    className: "gs-nav",
+    "aria-label": "Grocery",
+    children: BOTTOM_NAV.map(item => item.href ? /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: item.href,
+      className: "gs-nav__item is-on",
+      "aria-current": "page",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: item.icon,
+        size: 24
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: item.label
+      })]
+    }, item.id) : /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+      className: "gs-nav__item",
+      "aria-disabled": "true",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: item.icon,
+        size: 24
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: item.label
+      })]
+    }, item.id))
+  });
+}
+function Drawer({
+  open,
+  onClose
+}) {
+  reactExports.useEffect(() => {
+    if (!open) return undefined;
+    const onKey = e => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+  if (!open) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "gs-drawer",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "Grocery menu",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: "gs-drawer__scrim",
+      "aria-label": "Close menu",
+      onClick: onClose
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "gs-drawer__panel",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "gs-drawer__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+          children: "Shop groceries"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "gs-drawer__x",
+          "aria-label": "Close menu",
+          onClick: onClose,
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "x",
+            size: 20
+          })
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+        className: "gs-drawer__nav",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          children: CATEGORIES.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+              to: categoryHref(c),
+              onClick: onClose,
+              children: c.name
+            })
+          }, c.slug))
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/fashion",
+        className: "gs-drawer__back",
+        onClick: onClose,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 16
+        }), " Fashion store"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/",
+        className: "gs-drawer__back",
+        onClick: onClose,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronLeft",
+          size: 16
+        }), " Back to the wellness store"]
+      })]
+    })]
+  });
+}
+function GroceryLayout() {
+  const [menu, setMenu] = reactExports.useState(false);
+  const {
+    pathname
+  } = useLocation();
+  reactExports.useEffect(() => {
+    setMenu(false);
+  }, [pathname]);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "gs",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(GroceryHeader, {
+      onMenu: () => setMenu(true)
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(BottomNav, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer, {
+      open: menu,
+      onClose: () => setMenu(false)
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
+      className: "gs-main",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Outlet, {})
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Footer, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
+  });
+}
+
+function GroceryProductCard({
+  product,
+  mediaLoading = 'lazy'
+}) {
+  const {
+    addGroceryToCart
+  } = useStore();
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+    className: "gs-card",
+    "data-product": product.slug,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "gs-card__media",
+      children: [product.image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+        src: product.image,
+        alt: "",
+        loading: mediaLoading,
+        decoding: "async",
+        width: "400",
+        height: "400"
+      }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "gs-card__noimg",
+        "aria-hidden": "true",
+        children: product.name.slice(0, 1)
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "gs-card__heart",
+        "aria-label": `Save ${product.name} to wishlist`,
+        "aria-disabled": "true",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "heart",
+          size: 16
+        })
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "gs-card__body",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "gs-card__brand",
+        children: product.brand
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+        className: "gs-card__name",
+        children: product.name
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "gs-card__pack",
+        children: product.pack
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "gs-card__foot",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "gs-price",
+          "data-price": product.price,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: money(product.price)
+          }), product.mrp > product.price && /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+            className: "gs-price__mrp",
+            children: money(product.mrp)
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "gs-add",
+          onClick: () => addGroceryToCart(product),
+          "aria-label": `Add ${product.name} ${product.pack} to cart`,
+          children: "Add"
+        })]
+      })]
+    })]
+  });
+}
+
+const TRUST = [['truck', 'Standard Delivery', GROCERY_DELIVERY_WINDOW], ['leaf', 'Fresh Products', 'Sourced with care'], ['shield', 'Trusted Quality', 'Good food, safer lives']];
+function TrustStrip() {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+    className: "gs-trust",
+    "aria-label": "Why shop with us",
+    children: TRUST.map(([icon, a, b]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: icon,
+        size: 28
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+          children: a
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: b
+        })]
+      })]
+    }, a))
+  });
+}
+const AUTOPLAY_MS = 6000;
+
+/**
+ * Full-width carousel. Autoplays only when there is more than one slide,
+ * pauses on hover and focus, and never moves under prefers-reduced-motion.
+ * The track slides on transform only.
+ */
+function HeroCarousel({
+  slides = HERO_SLIDES,
+  autoplayMs = AUTOPLAY_MS
+}) {
+  const [index, setIndex] = reactExports.useState(0);
+  const [paused, setPaused] = reactExports.useState(false);
+  const reduced = reactExports.useRef(false);
+  reactExports.useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => {
+      reduced.current = mq.matches;
+    };
+    sync();
+    mq.addEventListener?.('change', sync);
+    return () => mq.removeEventListener?.('change', sync);
+  }, []);
+  reactExports.useEffect(() => {
+    if (slides.length < 2 || paused) return undefined;
+    const t = setInterval(() => {
+      if (!reduced.current) setIndex(i => (i + 1) % slides.length);
+    }, autoplayMs);
+    return () => clearInterval(t);
+  }, [slides.length, paused, autoplayMs]);
+  if (slides.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "gs-hero",
+    "aria-roledescription": "carousel",
+    "aria-label": "Featured",
+    onMouseEnter: () => setPaused(true),
+    onMouseLeave: () => setPaused(false),
+    onFocus: () => setPaused(true),
+    onBlur: () => setPaused(false),
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "gs-hero__track",
+      style: {
+        transform: `translateX(-${index * 100}%)`
+      },
+      children: slides.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+        className: `gs-hero__slide${i === index ? ' is-on' : ''}`,
+        "aria-hidden": i !== index,
+        "aria-roledescription": "slide",
+        "aria-label": `${i + 1} of ${slides.length}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          className: "gs-hero__img",
+          src: s.image,
+          alt: "",
+          width: "1600",
+          height: "900",
+          decoding: "async",
+          fetchpriority: i === 0 ? 'high' : 'auto',
+          loading: i === 0 ? 'eager' : 'lazy'
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "gs-hero__txt",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+            className: "gs-hero__h serif",
+            children: s.headline
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "gs-hero__sub",
+            children: s.sub
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: s.href,
+            className: "gs-hero__cta",
+            tabIndex: i === index ? 0 : -1,
+            children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 17
+            })]
+          })]
+        }), s.note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "gs-hero__note serif",
+          "aria-hidden": "true",
+          children: s.note
+        })]
+      }, s.id))
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "gs-hero__dots",
+      role: "tablist",
+      "aria-label": "Choose slide",
+      children: slides.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        role: "tab",
+        "aria-selected": i === index,
+        "aria-label": `Slide ${i + 1}`,
+        className: `gs-hero__dot${i === index ? ' is-on' : ''}`,
+        onClick: () => setIndex(i)
+      }, s.id))
+    })]
+  });
+}
+function CategoryCircles() {
+  if (CATEGORIES.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+    className: "gs-circles",
+    "aria-label": "Shop by category",
+    children: CATEGORIES.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: categoryHref(c),
+      className: "gs-circle",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "gs-circle__img",
+        children: c.image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: c.image,
+          alt: "",
+          loading: "lazy",
+          decoding: "async",
+          width: "200",
+          height: "200"
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          "aria-hidden": "true",
+          children: c.name.slice(0, 1)
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "gs-circle__name",
+        children: c.name
+      })]
+    }, c.slug))
+  });
+}
+function DailyEssentials() {
+  const {
+    title,
+    sub,
+    seeAll,
+    products
+  } = DAILY_ESSENTIALS;
+  if (products.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "gs-sec",
+    "aria-labelledby": "gs-daily-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "gs-sec__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "gs-sec__h serif",
+          id: "gs-daily-h",
+          children: title
+        }), sub && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "gs-sec__sub",
+          children: sub
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: seeAll,
+        className: "gs-sec__link",
+        children: ["See all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 16
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "gs-row",
+      children: products.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(GroceryProductCard, {
+        product: p,
+        mediaLoading: i < 2 ? 'eager' : 'lazy'
+      }, p.id))
+    })]
+  });
+}
+function PromoStrip() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "gs-promo",
+    "aria-labelledby": "gs-promo-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "gs-promo__art",
+      "aria-hidden": "true",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+        src: PROMO.image,
+        alt: "",
+        loading: "lazy",
+        decoding: "async",
+        width: "1200",
+        height: "675"
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "gs-promo__txt",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "gs-promo__h serif",
+        id: "gs-promo-h",
+        children: PROMO.headline
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "gs-promo__sub",
+        children: PROMO.sub
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: PROMO.href,
+        className: "gs-promo__cta",
+        children: [PROMO.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 16
+        })]
+      })]
+    })]
+  });
+}
+function GroceryHome() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "gs-home",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HeroCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryCircles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(DailyEssentials, {}), /*#__PURE__*/jsxRuntimeExports.jsx(PromoStrip, {})]
+  });
+}
+
 // ============================================================
 // Styles for the routes outside the shop: /admin, /passport, /creator.
 //
@@ -60789,7 +61563,7 @@ function FashionProductPage() {
 // media="print" onload swap because the Content-Security-Policy has no
 // 'unsafe-inline' in script-src, so inline event handlers do not run.
 // ============================================================
-const DEFERRED_ROUTES = /^\/(admin|passport|creator|fashion)(\/|$)/;
+const DEFERRED_ROUTES = /^\/(admin|passport|creator|fashion|grocery)(\/|$)/;
 function loadDeferredStyles() {
   if (typeof document === 'undefined') return;
   if (document.querySelector('link[data-deferred-styles]')) return;
@@ -61083,6 +61857,13 @@ function App() {
           path: "wishlist",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionWishlistPage, {})
         })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+        path: "/grocery",
+        element: /*#__PURE__*/jsxRuntimeExports.jsx(GroceryLayout, {}),
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          index: true,
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(GroceryHome, {})
+        })
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Route, {
         element: /*#__PURE__*/jsxRuntimeExports.jsx(Layout, {}),
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Route, {
