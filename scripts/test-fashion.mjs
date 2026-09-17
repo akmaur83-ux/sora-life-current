@@ -367,8 +367,10 @@ await test('the storefront stylesheet order is untouched; the fashion sheets are
   const sf = list(after, 'STOREFRONT');
   assert.deepEqual(sf.slice(0, WELLNESS_CASCADE.length), WELLNESS_CASCADE, 'the cascade the wellness store loads is the same list, in the same order');
   assert.deepEqual(sf.slice(WELLNESS_CASCADE.length), ['src/styles/fashion-banner.css']);
-  assert.equal(list(after, 'DEFERRED').at(-1), 'src/styles/fashion.css');
-  assert.match(read('src/lib/deferredStyles.js'), /\(admin\|passport\|creator\|fashion\)/, 'the deferred sheet is fetched on /fashion');
+  // Deferred, after the creator sheets; a later store (grocery) may follow it.
+  const deferred = list(after, 'DEFERRED');
+  assert.ok(deferred.indexOf('src/styles/fashion.css') > deferred.indexOf('src/styles/creator-dashboard.css'), 'fashion.css is deferred, after the creator sheets');
+  assert.match(read('src/lib/deferredStyles.js'), /\(admin\|passport\|creator\|fashion(\|[a-z]+)*\)/, 'the deferred sheet is fetched on /fashion');
   const css = read('src/styles/fashion.css');
   assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /^(?!\s*[.@}]|\s*$)[a-z:*][^{]*\{/m, 'every rule is namespaced — no bare element or :root rule');
   assert.ok(css.split('\n').filter((l) => /^[.]/.test(l)).every((l) => l.startsWith('.fs')), 'every selector starts with .fs');

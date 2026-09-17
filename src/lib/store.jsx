@@ -5,6 +5,7 @@ import {
   FASHION_CATALOGUE, fashionLineKey, isFashionLine, hydrateFashionCartLine, fashionRowFor, isFashionIdResolved,
   ensureFashionProducts, fashionKeysToPrune, getFashionCartVersion, subscribeFashionCart,
 } from './fashionCartLine.js';
+import { GROCERY_CATALOGUE, groceryLineKey, isGroceryLine, hydrateGroceryCartLine, groceryProductFor, groceryKeysToPrune } from './groceryCartLine.js';
 import { useCustomerAuth } from './customerAuth.jsx';
 import { listWishlist, addWishlistItem, removeWishlistItem, mergeWishlist } from './wishlistData.js';
 import {
@@ -86,14 +87,20 @@ function reducer(state, action) {
       // and carries the marker on the line, so it can never merge with, be
       // priced as, or be pruned against a wellness product. A wellness line
       // is shaped exactly as it always was — no catalogue field at all.
+      // A GROCERY line (catalogue: 'grocery') gets the same treatment in its
+      // own namespace (groceryCartLine.js).
       const fashion = catalogue === FASHION_CATALOGUE;
+      const grocery = catalogue === GROCERY_CATALOGUE;
       const key = fashion
         ? fashionLineKey(id, variantId)
+        : grocery ? groceryLineKey(id, variantId)
         : id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
       const existing = state.cart.find((l) => l.key === key);
       const cart = existing
         ? state.cart.map((l) => (l.key === key ? { ...l, qty: l.qty + qty } : l))
-        : [...state.cart, fashion ? { key, catalogue: FASHION_CATALOGUE, id, variant, variantId, qty } : { key, id, variant, variantId, qty }];
+        : [...state.cart, fashion ? { key, catalogue: FASHION_CATALOGUE, id, variant, variantId, qty }
+          : grocery ? { key, catalogue: GROCERY_CATALOGUE, id, variant, variantId, qty }
+          : { key, id, variant, variantId, qty }];
       return { ...state, cart };
     }
     case 'SET_QTY': {
@@ -223,6 +230,18 @@ export function StoreProvider({ children }) {
     return true;
   }, [toast]);
 
+  // The grocery add path. Takes a product from the grocery data
+  // (src/data/groceryHomepage.js); the line carries the id only, and the
+  // pack label is display text. No stock gate yet — there is no grocery
+  // stock to check until the catalogue migration lands, and the line is
+  // blocked at checkout until then (groceryCartLine.js).
+  const addGroceryToCart = useCallback((product, qty = 1) => {
+    if (!product?.id) return false;
+    dispatch({ type: 'ADD', catalogue: GROCERY_CATALOGUE, id: String(product.id), qty, variant: product.pack || null, variantId: null });
+    toast('Added to cart', { kind: 'cart' });
+    return true;
+  }, [toast]);
+
   // What the UI renders. Recomputed from the two lists, never stored.
   const wishlist = useMemo(() => visibleWishlist(state), [state.guestWish, state.accountWish, state.syncedUserId]);
 
@@ -313,11 +332,13 @@ export function StoreProvider({ children }) {
   // line costs and whether it can be bought have exactly ONE implementation —
   // the same arrangement wishlistState.js uses, and for the same reason: those
   // rules are executed directly in tests rather than through a provider.
-  // A fashion line is priced from the fashion tables (fashionCartLine.js);
-  // a wellness line exactly as before. The wellness catalogue is never
-  // consulted for a fashion id, and vice versa.
+  // A fashion line is priced from the fashion tables (fashionCartLine.js),
+  // a grocery line from the grocery data (groceryCartLine.js); a wellness
+  // line exactly as before. The wellness catalogue is never consulted for
+  // a fashion or grocery id, and vice versa.
   const hydrate = (l) => (isFashionLine(l)
     ? hydrateFashionCartLine(l, fashionRowFor(l.id), { resolved: isFashionIdResolved(l.id) })
+    : isGroceryLine(l) ? hydrateGroceryCartLine(l, groceryProductFor(l.id))
     : hydrateCartLine(l, productById[l.id]));
 
   // Variants arrive from Supabase AFTER first render. Memoising on state.cart
@@ -363,10 +384,11 @@ export function StoreProvider({ children }) {
   //   3. A FASHION line is judged against the fashion catalogue only: it is
   //      pruned when a fetch for its id has answered and the product is gone,
   //      and never because the wellness catalogue does not know the id.
+  //   4. A GROCERY line likewise: judged against the grocery data only.
   useEffect(() => {
     if (!isCatalogHydrated()) return;
     const keys = [...state.cart, ...state.saved]
-      .filter((l) => !isFashionLine(l) && !productById[l.id])
+      .filter((l) => !isFashionLine(l) && !isGroceryLine(l) && !productById[l.id])
       .map((l) => l.key);
     if (keys.length) dispatch({ type: 'PRUNE_MISSING', keys });
   }, [state.cart, state.saved, catalogVersion]);
@@ -374,6 +396,10 @@ export function StoreProvider({ children }) {
     const keys = fashionKeysToPrune([...state.cart, ...state.saved]);
     if (keys.length) dispatch({ type: 'PRUNE_MISSING', keys });
   }, [state.cart, state.saved, fashionVersion]);
+  useEffect(() => {
+    const keys = groceryKeysToPrune([...state.cart, ...state.saved]);
+    if (keys.length) dispatch({ type: 'PRUNE_MISSING', keys });
+  }, [state.cart, state.saved]);
   // Counted from the lines the cart can actually SHOW, so the badge can never
   // advertise an item the page does not list. state.cart may still hold a line
   // whose product has vanished; reconcileCart() below clears those for good.
@@ -396,6 +422,7 @@ export function StoreProvider({ children }) {
     toast,
     addToCart,
     addFashionToCart,
+    addGroceryToCart,
     toggleWish,
     // Normalised on both sides: a caller passing the numeric 5 still matches
     // a stored '5'.

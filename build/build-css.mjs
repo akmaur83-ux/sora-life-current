@@ -90,6 +90,8 @@ const DEFERRED = [
   'src/styles/creator-dashboard.css',
   // The fashion store (/fashion): its own shell and pages, namespaced .fs-*.
   'src/styles/fashion.css',
+  // The grocery store (/grocery): its own shell and homepage, namespaced .gs-*.
+  'src/styles/grocery.css',
 ];
 
 function bundle(files, outFile, label) {

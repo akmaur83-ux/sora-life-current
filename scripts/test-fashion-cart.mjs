@@ -245,9 +245,10 @@ await test('the store keeps wellness lines exactly as before and gives fashion l
   const store = read('src/lib/store.jsx').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   assert.match(store, /const \{ id, qty = 1, variant = null, variantId = null, catalogue = null \} = action;/);
   assert.match(store, /: id \+ \(variantId \? '::' \+ variantId : variant \? '::' \+ variant : ''\);/, 'the wellness key is the old expression');
-  assert.match(store, /fashion \? \{ key, catalogue: FASHION_CATALOGUE, id, variant, variantId, qty \} : \{ key, id, variant, variantId, qty \}/, 'a wellness line has no catalogue field');
-  assert.match(store, /const hydrate = \(l\) => \(isFashionLine\(l\)\s*\? hydrateFashionCartLine\(l, fashionRowFor\(l\.id\), \{ resolved: isFashionIdResolved\(l\.id\) \}\)\s*: hydrateCartLine\(l, productById\[l\.id\]\)\);/);
-  assert.match(store, /\.filter\(\(l\) => !isFashionLine\(l\) && !productById\[l\.id\]\)/, 'the wellness prune never judges a fashion line');
+  // The grocery store (a later phase) sits between the two branches; the wellness line is still the bare shape.
+  assert.match(store, /fashion \? \{ key, catalogue: FASHION_CATALOGUE, id, variant, variantId, qty \}\s*: grocery \? \{ key, catalogue: GROCERY_CATALOGUE, id, variant, variantId, qty \}\s*: \{ key, id, variant, variantId, qty \}/, 'a wellness line has no catalogue field');
+  assert.match(store, /const hydrate = \(l\) => \(isFashionLine\(l\)\s*\? hydrateFashionCartLine\(l, fashionRowFor\(l\.id\), \{ resolved: isFashionIdResolved\(l\.id\) \}\)\s*: isGroceryLine\(l\) \? hydrateGroceryCartLine\(l, groceryProductFor\(l\.id\)\)\s*: hydrateCartLine\(l, productById\[l\.id\]\)\);/);
+  assert.match(store, /\.filter\(\(l\) => !isFashionLine\(l\) && !isGroceryLine\(l\) && !productById\[l\.id\]\)/, 'the wellness prune never judges a fashion line');
   assert.match(store, /const keys = fashionKeysToPrune\(\[\.\.\.state\.cart, \.\.\.state\.saved\]\);/);
   assert.match(store, /const addFashionToCart = useCallback\(\(view, variant, qty = 1\) => \{/);
   assert.match(store, /dispatch\(\{ type: 'ADD', catalogue: FASHION_CATALOGUE, id: String\(view\.id\), qty, variant: label, variantId: String\(variant\.id\) \}\);/);
