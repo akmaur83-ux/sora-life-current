@@ -31961,6 +31961,26 @@ function Header() {
               size: 19,
               stroke: 1.5
             })
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+            className: "v2-hdr__stores",
+            "aria-label": "Other stores",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+              to: "/fashion",
+              className: "v2-hdr__store",
+              children: ["Fashion store ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "chevronRight",
+                size: 14,
+                stroke: 1.8
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+              to: "/grocery",
+              className: "v2-hdr__store",
+              children: ["Grocery store ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "chevronRight",
+                size: 14,
+                stroke: 1.8
+              })]
+            })]
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/account",
             className: "v2-hdr__act v2-hide-mobile",
@@ -32192,6 +32212,23 @@ function Header() {
               size: 17
             })]
           }, c.slug)), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "drawer__sec",
+            children: "Stores"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/fashion",
+            className: "drawer__cat",
+            children: ["Fashion store", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronRight",
+              size: 17
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/grocery",
+            className: "drawer__cat",
+            children: ["Grocery store", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronRight",
+              size: 17
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
             className: "drawer__sec",
             children: "Company"
           }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
@@ -59533,13 +59570,24 @@ function FashionHeader({
             children: cartCount
           })]
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: "/",
-        className: "fs-hdr__back",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "chevronLeft",
-          size: 15
-        }), " Wellness store"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "fs-hdr__stores",
+        "aria-label": "Other stores",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/",
+          className: "fs-hdr__back",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "chevronLeft",
+            size: 15
+          }), " Wellness store"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/grocery",
+          className: "fs-hdr__back",
+          children: ["Grocery store ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "chevronRight",
+            size: 15
+          })]
+        })]
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
       className: "fs-search",
@@ -59682,6 +59730,14 @@ function Drawer$1({
             }, c.id))
           })]
         }, r.id))
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/grocery",
+        className: "fs-drawer__back",
+        onClick: onClose,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 16
+        }), " Grocery store"]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: "/",
         className: "fs-drawer__back",
@@ -61189,7 +61245,26 @@ function GroceryHeader({
       }), /*#__PURE__*/jsxRuntimeExports.jsx(GroceryLogo, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
         className: "gs-hdr__acts",
         "aria-label": "Wishlist and cart",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "gs-hdr__stores",
+          role: "navigation",
+          "aria-label": "Other stores",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/",
+            className: "gs-hdr__store",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronLeft",
+              size: 15
+            }), " Wellness store"]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/fashion",
+            className: "gs-hdr__store",
+            children: ["Fashion store ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronRight",
+              size: 15
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
           type: "button",
           className: "gs-hdr__act",
           "aria-label": "Wishlist",
