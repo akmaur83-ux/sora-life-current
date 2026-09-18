@@ -37669,35 +37669,151 @@ function FashionBanner() {
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "v2-sec fsb",
     "aria-labelledby": "fsb-h",
-    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    id: "more-to-explore",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "v2-wrap",
-      children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: "/fashion",
-        className: "fsb__card",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "fsb__leaf",
-          "aria-hidden": "true"
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-          className: "fsb__txt",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            className: "fsb__eyebrow",
-            children: "New \xB7 Fashion & Lifestyle"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-            className: "fsb__h",
-            id: "fsb-h",
-            children: "Clothing, footwear, bags, beauty and accessories \u2014 the SORA LIFE fashion store"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            className: "fsb__sub",
-            children: "Same account, same bag, one checkout."
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "fsb__intro",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fsb__eyebrow fsb__overline",
+          children: "More to explore"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          id: "fsb-h",
+          children: "Two Worlds. A Better You."
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fsb__lede",
+          children: "Fashion for your style. Living for your space. All at SORA LIFE."
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fsb__grid",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion",
+          className: "fsb__card fsb__card--fashion",
+          "aria-labelledby": "fsb-fashion-h fsb-fashion-cta",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "fsb__art",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+              src: "/img/fashion-hero.webp",
+              alt: "Relaxed olive and cream styling in a warm, sunlit studio",
+              width: 1599,
+              height: 900,
+              className: "fsb__image"
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: "fsb__content",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "fsb__eyebrow",
+              children: "Discover your style"
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
+              className: "fsb__h",
+              id: "fsb-fashion-h",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                children: "Fashion"
+              }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                children: "Store"
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "fsb__description",
+              children: "Clothing, footwear, bags, beauty and accessories \u2014 all in one place."
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "fsb__cta",
+              id: "fsb-fashion-cta",
+              children: ["Explore Fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 18
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
+              className: "fsb__details",
+              "aria-label": "Explore fashion",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                  name: "bag",
+                  size: 22
+                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                  children: ["Clothing", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "& more"]
+                })]
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                  name: "sparkle",
+                  size: 22
+                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                  children: ["Everyday", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "style"]
+                })]
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                  name: "search",
+                  size: 22
+                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                  children: ["Easy", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "shopping"]
+                })]
+              })]
+            })]
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-          className: "fsb__cta",
-          children: ["Explore fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "arrowRight",
-            size: 16
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/homeliving",
+          className: "fsb__card fsb__card--living",
+          "aria-labelledby": "fsb-living-h fsb-living-cta",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "fsb__art",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+              src: "/img/homeliving-hero.webp",
+              alt: "Sunlit bedroom with a woven headboard, botanical textiles and warm wood",
+              width: 1600,
+              height: 900,
+              className: "fsb__image"
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: "fsb__content",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "fsb__eyebrow",
+              children: "Make space for a better you"
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
+              className: "fsb__h",
+              id: "fsb-living-h",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                children: "Home & Living"
+              }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                children: "Store"
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "fsb__description",
+              children: "Home textiles, soft furnishings and everyday essentials for your space."
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "fsb__cta",
+              id: "fsb-living-cta",
+              children: ["Explore Living ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 18
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
+              className: "fsb__details",
+              "aria-label": "Explore home and living",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                  name: "leaf",
+                  size: 22
+                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                  children: ["Soft", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "textures"]
+                })]
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                  name: "home",
+                  size: 22
+                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                  children: ["Calm", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "spaces"]
+                })]
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                  name: "grid",
+                  size: 22
+                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                  children: ["Everyday", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "living"]
+                })]
+              })]
+            })]
           })]
         })]
-      })
+      })]
     })
   });
 }

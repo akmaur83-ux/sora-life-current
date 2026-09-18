@@ -19,6 +19,8 @@ import { pathToFileURL } from 'node:url';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { transformSync } from '@babel/core';
+import { Link } from 'react-router-dom';
+import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, buildFashionApp, loadModule, CATEGORIES, PRODUCTS, INITIAL } from './fashion-ssr.mjs';
 
 let passed = 0, failed = 0, current = '(startup)';
@@ -355,7 +357,16 @@ await test('the wellness homepage keeps every section in the same order — the 
   assert.ok(after.includes('FashionBanner'), 'the banner is on the homepage');
   assert.deepEqual(after.filter((s) => s !== 'FashionBanner'), before.filter((s) => s !== 'FashionBanner'), 'every other section, in order');
   assert.equal(after.indexOf('FashionBanner'), after.indexOf('HomeOffers') + 1, 'placed after the offers, before the first product rail');
-  assert.match(read('src/components/FashionBanner.jsx'), /<Link to="\/fashion" class(Name)?="fsb__card">/);
+  const Icon = loadModule('src/components/Icon.jsx').default;
+  const DeferredImage = loadModule('src/components/DeferredImage.jsx').default;
+  const Banner = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage }).default;
+  const html = renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(Banner)));
+  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/fashion', '/homeliving'], 'both whole-card links use existing stores');
+  assert.match(html, /Two Worlds\. A Better You\./);
+  assert.equal((html.match(/<img /g) || []).length, 2);
+  assert.equal((html.match(/loading="lazy"/g) || []).length, 2);
+  assert.doesNotMatch(html, /<img[^>]+ src=/, 'the below-fold images remain deferred on initial render');
+  assert.doesNotMatch(html, /<button/, 'no nested interactive controls inside the links');
 });
 
 await test('the storefront stylesheet order is untouched; the fashion sheets are appended, the store one deferred', () => {

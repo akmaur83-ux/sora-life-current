@@ -289,12 +289,20 @@ test('D18 two distinct category experiences, each rendered once', () => {
 
 test('D25 the discovery sections stay compact, with no wasted space', () => {
   const css = src('../src/styles/v2-home-discovery.css');
-  const pad = css.match(/\.hd-section \{[^}]*padding-block: (\d+)px (\d+)px/);
+  const pad = css.match(/\.hd-section \{[^}]*padding-block:\s*(\d+)px(?:\s+(\d+)px)?/);
   assert.ok(pad, 'the section must declare its own vertical padding');
-  assert.ok(Number(pad[1]) <= 24 && Number(pad[2]) <= 24, 'mobile section padding stays within 16-24px');
+  const top = Number(pad[1]);
+const bottom = Number(pad[2] ?? pad[1]);
+
+assert.ok(
+  top >= 16 && top <= 24 && bottom >= 16 && bottom <= 24,
+  'mobile section padding stays within 16-24px'
+);
   assert.match(css, /\.hd-section > \.v2-wrap \{ padding-inline: 16px; \}/, 'tight horizontal gutter on mobile');
-  assert.match(css, /\.hd-section \+ \.hd-section \{ margin-top: 0; \}/,
-    'the pair reads as one block — no band of page ground between them');
+  assert.ok(
+  /(?:\.hd-section\s*\+\s*\.hd-section|\.v2-home\s+\.v2-sec\.hd-section)\s*\{[^}]*margin-top:\s*0(?:px)?;?[^}]*\}/m.test(css),
+  'the pair reads as one block — no band of page ground between them'
+);
   assert.doesNotMatch(css, /min-height:\s*\d/, 'no min-height may pad the section out');
   assert.doesNotMatch(css, /margin-top:\s*-/, 'spacing is fixed at the cause, never with negative margins');
 });

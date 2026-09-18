@@ -9559,33 +9559,89 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 }
 
 /* ═══ src/styles/fashion-banner.css ═══ */
-/* ============================================================================
-   SORA LIFE — the fashion doorway on the wellness homepage (.fsb-*)
-   Storefront bundle: this is the only fashion CSS on the critical path.
-   ========================================================================= */
+/* Homepage store discovery only. Store interiors keep their own styling. */
+.fsb {
+  padding-block: clamp(30px, 4vw, 56px);
+  background: #f5f0e8;
+  color: var(--slv2-ink);
+}
+.fsb > .v2-wrap { max-width: var(--container-wide, 1440px); }
+.fsb__intro { max-width: 850px; margin: 0 auto 32px; text-align: center; }
+.fsb__eyebrow {
+  margin: 0 0 12px; font-family: var(--slv2-sans); font-size: 10px;
+  font-weight: 700; letter-spacing: .19em; text-transform: uppercase; line-height: 1.6; color: #454a3d;
+}
+.fsb__overline { display: flex; align-items: center; justify-content: center; gap: 20px; font-size: 11px; letter-spacing: .28em; }
+.fsb__overline::before, .fsb__overline::after { content: ''; width: 80px; height: 1px; background: #b6afa1; }
+.fsb__intro h2 {
+  margin: 0 0 12px; font-family: var(--font-display, 'Fraunces', Georgia, serif);
+  font-size: clamp(32px, 3.8vw, 52px); font-weight: 500; line-height: 1.12; letter-spacing: -.035em; color: #242921;
+}
+.fsb__lede { margin: 0; font-size: 16px; line-height: 1.65; color: #50534b; }
+.fsb__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
 .fsb__card {
-  position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 28px; align-items: center;
-  padding: 26px 28px; border-radius: 14px; text-decoration: none; color: var(--slv2-ivory);
-  background: var(--slv2-f800); border: 1px solid var(--slv2-f700);
+  --fsb-paper: #eadbca;
+  position: relative; isolation: isolate; display: grid; min-width: 0; overflow: hidden;
+  border-radius: 16px; border: 1px solid #d8cbbb; background: var(--fsb-paper); color: #242921; text-decoration: none;
+  box-shadow: 0 5px 18px #513c2610;
+  transition: transform 400ms cubic-bezier(.2, .65, .3, 1), box-shadow 400ms ease;
 }
-.fsb__leaf {
-  position: absolute; right: -40px; top: -40px; width: 260px; height: 260px; border-radius: 50%; pointer-events: none;
-  background: radial-gradient(circle at 35% 35%, rgba(228, 196, 130, .45), rgba(199, 154, 69, .12) 55%, transparent 72%);
+.fsb__card--living { --fsb-paper: #efe8db; }
+.fsb__card:focus-visible { outline: 3px solid var(--slv2-f700); outline-offset: 5px; }
+.fsb__art { position: absolute; inset: 0; z-index: -1; overflow: hidden; background: var(--fsb-paper); }
+.fsb__image { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 70% center; transition: transform 450ms ease; }
+.fsb__art::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, #ecdecded 0%, #ecdecdd9 31%, #ecdecd40 56%, transparent 78%);
 }
-.fsb__txt { position: relative; display: grid; gap: 6px; min-width: 0; }
-.fsb__eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--slv2-gold-2); }
-.fsb__h { font-family: var(--font-display, 'Fraunces', Georgia, serif); font-weight: 500; font-size: clamp(20px, 2.2vw, 28px); line-height: 1.2; letter-spacing: -.01em; }
-.fsb__sub { font-size: 14px; color: rgba(251, 248, 241, .72); }
+.fsb__card--living .fsb__art::after { background: linear-gradient(90deg, #f1eaddf5 0%, #f1eadddf 35%, #f1eadd40 62%, transparent 83%); }
+.fsb__content { display: flex; flex-direction: column; align-items: flex-start; width: 56%; min-width: 0; min-height: 442px; padding: 34px 0 28px 32px; }
+.fsb__h {
+  margin: 0 0 16px; font-family: var(--font-display, 'Fraunces', Georgia, serif);
+  font-size: clamp(36px, 3.6vw, 50px); font-weight: 500; line-height: 1.02; letter-spacing: -.04em; color: #20261f;
+}
+.fsb__h span { display: block; }
+.fsb__description { max-width: 29ch; margin: 0 0 20px; font-size: 15px; line-height: 1.55; color: #3f443b; }
 .fsb__cta {
-  position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 20px; border-radius: 999px;
-  background: var(--slv2-gold); color: var(--slv2-f900); font-size: 14px; font-weight: 700; white-space: nowrap;
-  transition: transform .16s ease;
+  display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 48px; padding: 12px 20px;
+  border-radius: 999px; border: 1px solid var(--slv2-f700); background: var(--slv2-f800); color: #fffdf8;
+  font-size: 14px; font-weight: 600; line-height: 1.4;
 }
-.fsb__card:hover .fsb__cta { transform: translateX(3px); }
+.fsb__card--living .fsb__cta { border-color: #ae8b66; background: #fffdf5ed; color: #263529; }
+.fsb__cta svg { flex: none; transition: transform 400ms ease; }
+.fsb__details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; width: 100%; max-width: 290px; list-style: none; margin: auto 0 0; padding: 26px 0 0; }
+.fsb__details li { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; font-size: 11px; line-height: 1.45; color: #444b3f; }
+.fsb__details svg { box-sizing: content-box; padding: 10px; border-radius: 50%; background: #fffcf180; }
+@media (hover: hover) and (pointer: fine) {
+  .fsb__card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px #513c2618; }
+  .fsb__card:hover .fsb__image { transform: scale(1.025); }
+  .fsb__card:hover .fsb__cta svg { transform: translateX(4px); }
+}
+@media (min-width: 600px) and (max-width: 1023px) {
+  .fsb__grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .fsb__content { width: 52%; min-height: 424px; padding-left: 36px; }
+  .fsb__h { font-size: 46px; }
+}
 @media (max-width: 599px) {
-  .fsb__card { grid-template-columns: minmax(0, 1fr); padding: 22px 20px; }
-  .fsb__cta { justify-self: start; }
+  .fsb__intro { margin-bottom: 26px; }
+  .fsb__overline { font-size: 10px; gap: 12px; }
+  .fsb__overline::before, .fsb__overline::after { width: 38px; }
+  .fsb__intro h2 { max-width: 12ch; margin-inline: auto; }
+  .fsb__lede { max-width: 32ch; margin-inline: auto; font-size: 15px; }
+  .fsb__grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  /* A dedicated image panel preserves the subject and keeps copy off faces. */
+  .fsb__art { position: relative; inset: auto; z-index: auto; aspect-ratio: 8 / 5; }
+  .fsb__image { position: absolute; right: 0; top: 0; width: 155%; max-width: none; object-position: right top; }
+  .fsb__art::after { display: none; }
+  .fsb__content { width: 100%; min-height: 0; padding: 24px; background: var(--fsb-paper); }
+  .fsb__eyebrow { font-size: 10px; letter-spacing: .16em; }
+  .fsb__h { font-size: 36px; line-height: 1.08; margin-bottom: 14px; }
+  .fsb__h span { display: inline; }
+  .fsb__description { max-width: 34ch; }
+  .fsb__details { max-width: none; gap: 10px; padding-top: 24px; }
+  .fsb__details li { font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .fsb__card:hover .fsb__cta { transform: none; }
+  .fsb__card, .fsb__image, .fsb__cta svg { transition: none; }
+  .fsb__card:hover, .fsb__card:hover .fsb__image, .fsb__card:hover .fsb__cta svg { transform: none; }
 }
