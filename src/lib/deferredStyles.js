@@ -19,7 +19,7 @@
 // media="print" onload swap because the Content-Security-Policy has no
 // 'unsafe-inline' in script-src, so inline event handlers do not run.
 // ============================================================
-export const DEFERRED_ROUTES = /^\/(admin|passport|creator|fashion|grocery)(\/|$)/;
+export const DEFERRED_ROUTES = /^\/(admin|passport|creator|fashion|grocery|homeliving)(\/|$)/;
 
 export function loadDeferredStyles() {
   if (typeof document === 'undefined') return;

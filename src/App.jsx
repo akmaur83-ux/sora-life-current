@@ -25,6 +25,8 @@ import FashionCategory, { FashionSearch, FashionWishlistPage } from './fashion/F
 import FashionProductPage from './fashion/FashionProductPage.jsx';
 import GroceryLayout from './grocery/GroceryLayout.jsx';
 import GroceryHome from './grocery/GroceryHome.jsx';
+import HomeLivingLayout from './homeliving/HomeLivingLayout.jsx';
+import HomeLivingHome from './homeliving/HomeLivingHome.jsx';
 import { useAdminAuth } from './lib/adminAuth.jsx';
 import { branding } from './lib/settings.js';
 import { DEFERRED_ROUTES, loadDeferredStyles } from './lib/deferredStyles.js';
@@ -197,6 +199,12 @@ export default function App() {
           is the shared one. Categories and products follow with the catalogue. */}
       <Route path="/grocery" element={<GroceryLayout />}>
         <Route index element={<GroceryHome />} />
+      </Route>
+
+      {/* The Home & Living store: its own shell and homepage; the cart it
+          links to is the shared one. Categories and products follow. */}
+      <Route path="/homeliving" element={<HomeLivingLayout />}>
+        <Route index element={<HomeLivingHome />} />
       </Route>
 
       <Route element={<Layout />}>

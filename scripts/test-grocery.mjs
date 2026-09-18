@@ -447,10 +447,10 @@ await test('1280px: the nav is a static strip under the header, no bottom paddin
 await test('deferred like fashion: grocery.css last in DEFERRED, /grocery in DEFERRED_ROUTES, nothing added to the storefront sheet', () => {
   const build = read('build/build-css.mjs');
   const deferred = build.slice(build.indexOf('const DEFERRED = ['), build.indexOf('];', build.indexOf('const DEFERRED = [')));
-  assert.match(deferred, /'src\/styles\/fashion\.css',\n[\s\S]*?'src\/styles\/grocery\.css',\n$/, 'appended after fashion.css');
+  assert.match(deferred, /'src\/styles\/fashion\.css',\n[\s\S]*?'src\/styles\/grocery\.css',\n/, 'appended after fashion.css (a later store may follow)');
   const storefront = build.slice(build.indexOf('const STOREFRONT = ['), build.indexOf('const DEFERRED'));
   assert.doesNotMatch(storefront, /grocery/);
-  assert.match(read('src/lib/deferredStyles.js'), /DEFERRED_ROUTES = \/\^\\\/\(admin\|passport\|creator\|fashion\|grocery\)\(\\\/\|\$\)\/;/);
+  assert.match(read('src/lib/deferredStyles.js'), /DEFERRED_ROUTES = \/\^\\\/\(admin\|passport\|creator\|fashion\|grocery(\|[a-z]+)*\)\(\\\/\|\$\)\/;/, 'the deferred sheet is fetched on /grocery (a later store may follow)');
 });
 
 // ============================================================

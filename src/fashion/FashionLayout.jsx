@@ -57,7 +57,8 @@ export function FashionHeader({ onMenu }) {
             (desktop); the drawer carries them on a phone. */}
         <nav className="fs-hdr__stores" aria-label="Other stores">
           <Link to="/" className="fs-hdr__back"><Icon name="chevronLeft" size={15} /> Wellness store</Link>
-          <Link to="/grocery" className="fs-hdr__back">Grocery store <Icon name="chevronRight" size={15} /></Link>
+          <Link to="/grocery" className="fs-hdr__back">Grocery <Icon name="chevronRight" size={15} /></Link>
+          <Link to="/homeliving" className="fs-hdr__back">Home &amp; Living <Icon name="chevronRight" size={15} /></Link>
         </nav>
       </div>
       <form className="fs-search" role="search" onSubmit={submit}>
@@ -120,6 +121,7 @@ function Drawer({ open, onClose }) {
           ))}
         </nav>
         <Link to="/grocery" className="fs-drawer__back" onClick={onClose}><Icon name="chevronRight" size={16} /> Grocery store</Link>
+        <Link to="/homeliving" className="fs-drawer__back" onClick={onClose}><Icon name="chevronRight" size={16} /> Home &amp; Living store</Link>
         <Link to="/" className="fs-drawer__back" onClick={onClose}><Icon name="chevronLeft" size={16} /> Back to the wellness store</Link>
       </div>
     </div>
