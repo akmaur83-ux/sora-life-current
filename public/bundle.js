@@ -29570,7 +29570,7 @@ const supabase = createClient(supabaseUrl , supabasePublishableKey );
 
 /** The store column value every fashion row carries (catalogue_* since 0034). */
 const FASHION_STORE = 'fashion';
-const num$8 = v => {
+const num$9 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -29587,7 +29587,7 @@ function buildTree(rows) {
     slug: str$4(r.slug),
     tagline: str$4(r.tagline),
     image_url: r.image_url || null,
-    sort_order: num$8(r.sort_order),
+    sort_order: num$9(r.sort_order),
     is_active: r.is_active !== false
   }));
   const byId = new Map(list.map(n => [n.id, n]));
@@ -29646,7 +29646,7 @@ function resolveCategory(tree, slug) {
   matches.sort((a, b) => tree.depth(a.id) - tree.depth(b.id) || a.sort_order - b.sort_order);
   return matches[0];
 }
-const categoryHref$1 = node => `/fashion/c/${node.slug}`;
+const categoryHref$2 = node => `/fashion/c/${node.slug}`;
 function breadcrumbFor(tree, node) {
   const trail = [{
     name: 'Fashion',
@@ -29655,7 +29655,7 @@ function breadcrumbFor(tree, node) {
   if (!node) return trail;
   for (const a of tree.ancestors(node.id)) trail.push({
     name: a.name,
-    href: categoryHref$1(a)
+    href: categoryHref$2(a)
   });
   return trail;
 }
@@ -29676,14 +29676,14 @@ function productView(product, variants = null) {
     colour: str$4(v.colour),
     colour_hex: v.colour_hex || null,
     sku: v.sku || null,
-    stock: Math.max(0, num$8(v.stock)),
-    price_override: v.price_override == null ? null : num$8(v.price_override),
-    sort_order: num$8(v.sort_order)
+    stock: Math.max(0, num$9(v.stock)),
+    price_override: v.price_override == null ? null : num$9(v.price_override),
+    sort_order: num$9(v.sort_order)
   })).sort((a, b) => a.sort_order - b.sort_order);
-  const mrp = num$8(product?.mrp);
-  const sale = product?.sale_price == null ? null : num$8(product.sale_price);
+  const mrp = num$9(product?.mrp);
+  const sale = product?.sale_price == null ? null : num$9(product.sale_price);
   const price = sale != null && sale < mrp ? sale : mrp;
-  const discountPct = product?.discount_percent != null ? num$8(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
+  const discountPct = product?.discount_percent != null ? num$9(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
   const swatches = [];
   for (const v of vs) {
     let s = swatches.find(x => x.colour === v.colour);
@@ -29713,11 +29713,11 @@ function productView(product, variants = null) {
     price,
     discountPct,
     hasDiscount: discountPct > 0,
-    rating: Math.max(0, Math.min(5, num$8(product?.rating))),
-    reviewCount: Math.max(0, num$8(product?.review_count)),
+    rating: Math.max(0, Math.min(5, num$9(product?.rating))),
+    reviewCount: Math.max(0, num$9(product?.review_count)),
     isNew: product?.is_new === true,
     isBestseller: product?.is_bestseller === true,
-    sortOrder: num$8(product?.sort_order),
+    sortOrder: num$9(product?.sort_order),
     variants: vs,
     swatches,
     sizes,
@@ -29804,8 +29804,8 @@ const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
 const uniq = arr => [...new Set(arr)];
 function readFashionUrlState(searchParams) {
   const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
-  const discount = num$8(p.get('discount'));
-  const rating = num$8(p.get('rating'));
+  const discount = num$9(p.get('discount'));
+  const rating = num$9(p.get('rating'));
   return {
     q: str$4(p.get('q')),
     sort: SORT_IDS$1.has(p.get('sort')) ? p.get('sort') : 'featured',
@@ -29839,10 +29839,10 @@ function updateFashionUrlState(searchParams, patch) {
   if (has('colours')) setList('colour', patch.colours);
   if (has('brands')) setList('brand', patch.brands);
   if (has('discount')) {
-    if (DISCOUNT_STEPS.includes(num$8(patch.discount))) p.set('discount', String(num$8(patch.discount)));else p.delete('discount');
+    if (DISCOUNT_STEPS.includes(num$9(patch.discount))) p.set('discount', String(num$9(patch.discount)));else p.delete('discount');
   }
   if (has('rating')) {
-    if (RATING_STEPS.includes(num$8(patch.rating))) p.set('rating', String(num$8(patch.rating)));else p.delete('rating');
+    if (RATING_STEPS.includes(num$9(patch.rating))) p.set('rating', String(num$9(patch.rating)));else p.delete('rating');
   }
   if (has('view')) {
     if (patch.view === 'list') p.set('view', 'list');else p.delete('view');
@@ -29951,10 +29951,10 @@ function topBrands(views, limit = 6) {
 const CATEGORY_TABLE = 'catalogue_categories';
 const PRODUCT_TABLE = 'catalogue_products';
 const VARIANT_TABLE = 'catalogue_variants';
-const PRODUCT_COLUMNS$1 = 'id, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
+const PRODUCT_COLUMNS$2 = 'id, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
 const VARIANT_COLUMNS = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
 /** The embed, under the name the fashion code has always read. */
-const PRODUCT_SELECT = `${PRODUCT_COLUMNS$1}, fashion_variants:${VARIANT_TABLE} (${VARIANT_COLUMNS})`;
+const PRODUCT_SELECT = `${PRODUCT_COLUMNS$2}, fashion_variants:${VARIANT_TABLE} (${VARIANT_COLUMNS})`;
 async function getFashionCategories() {
   const {
     data,
@@ -30008,18 +30008,18 @@ async function getFashionProductsByIds(ids) {
 const rows = new Map(); // `${store}:${id}` → entry (whatever the store module keeps)
 const known = new Set(); // keys a fetch has answered for, present or not
 const inflight = new Map(); // store → the fetch in progress
-const listeners$2 = new Set();
+const listeners$3 = new Set();
 let cacheVersion = 0; // not `version`: the test loader puts React in scope, which has one
 
 const cacheKey = (store, id) => `${store}:${String(id)}`;
 const getCatalogueCartVersion = () => cacheVersion;
 const subscribeCatalogueCart = fn => {
-  listeners$2.add(fn);
-  return () => listeners$2.delete(fn);
+  listeners$3.add(fn);
+  return () => listeners$3.delete(fn);
 };
 const bumpCatalogueCart = () => {
   cacheVersion += 1;
-  for (const l of listeners$2) l();
+  for (const l of listeners$3) l();
 };
 
 /** A fetch has answered for this store + id — present or gone. */
@@ -30090,7 +30090,7 @@ const fashionRowFor = id => catalogueRowFor(FASHION_CATALOGUE, id);
 function ensureFashionProducts(ids) {
   return ensureCatalogueRows(FASHION_CATALOGUE, ids, getFashionProductsByIds, entryOf);
 }
-const num$7 = v => {
+const num$8 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -30139,13 +30139,13 @@ function hydrateFashionCartLine(line, entry, {
   } = entry;
   const v = variants.find(x => String(x.id) === String(line.variantId)) || null;
   const variantMissing = !v || v.is_active === false;
-  const mrp = num$7(row.mrp);
-  const sale = row.sale_price == null ? null : num$7(row.sale_price);
+  const mrp = num$8(row.mrp);
+  const sale = row.sale_price == null ? null : num$8(row.sale_price);
   const base = sale != null && sale > 0 && sale < mrp ? sale : mrp;
-  const override = v && v.price_override != null ? num$7(v.price_override) : null;
+  const override = v && v.price_override != null ? num$8(v.price_override) : null;
   const unitPrice = variantMissing ? null : override != null && override > 0 ? override : base;
   const unitMrp = unitPrice == null ? null : Math.max(mrp, unitPrice);
-  const stock = v ? Math.max(0, Math.floor(num$7(v.stock))) : null;
+  const stock = v ? Math.max(0, Math.floor(num$8(v.stock))) : null;
   const label = v ? [v.size, v.colour].filter(Boolean).join(' · ') : line.variant ?? null;
   let unavailableReason = null;
   if (variantMissing) unavailableReason = label ? `“${label}” is no longer available.` : 'The size and colour you chose are no longer available.';else if (row.is_active === false) unavailableReason = 'This item is no longer available.';else if (stock === 0) unavailableReason = 'This size and colour is out of stock.';else if (stock != null && line.qty > stock) unavailableReason = stock === 1 ? 'Only 1 left — please reduce the quantity.' : `Only ${stock} left — please reduce the quantity.`;else if (!(unitPrice > 0)) unavailableReason = 'This item is not available to buy right now.';
@@ -30211,7 +30211,7 @@ const GROCERY_TAGLINE = 'Good food, brighter days';
 
 /** Delivery promise. One string, used by the header badge and the trust strip. */
 const GROCERY_DELIVERY_WINDOW = '6-7 days';
-const HERO_SLIDES = [{
+const HERO_SLIDES$1 = [{
   id: 'freshness',
   image: '/img/grocery-hero.webp',
   headline: 'Freshness for a Brighter Everyday',
@@ -30226,36 +30226,36 @@ const DAILY_ESSENTIALS = {
   seeAll: '/grocery/category/everyday-staples',
   limit: 4
 };
-const PROMO = {
+const PROMO$1 = {
   image: '/img/grocery-promo.webp',
   headline: 'Fresh ingredients. Happier meals.',
   sub: 'Quality groceries for every home.',
   cta: 'Shop Fresh',
   href: '/grocery/category/everyday-staples'
 };
-const categoryHref = c => `/grocery/category/${c.slug}`;
+const categoryHref$1 = c => `/grocery/category/${c.slug}`;
 
 // ---- Row shapes ----------------------------------------------------------------
-const CATEGORY_COLUMNS = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
-const PRODUCT_COLUMNS = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
-const num$6 = v => {
+const CATEGORY_COLUMNS$1 = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
+const PRODUCT_COLUMNS$1 = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
+const num$7 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
 
 /** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
-const priceOf = row => {
-  const mrp = num$6(row?.mrp);
-  const sale = row?.sale_price == null ? null : num$6(row.sale_price);
+const priceOf$1 = row => {
+  const mrp = num$7(row?.mrp);
+  const sale = row?.sale_price == null ? null : num$7(row.sale_price);
   return sale != null && sale > 0 && sale < mrp ? sale : mrp;
 };
 
 /** A product row for the homepage and the cart: the row as stored, plus `price`. */
 const groceryProductView = row => row ? {
   ...row,
-  mrp: num$6(row.mrp),
-  sale_price: row.sale_price == null ? null : num$6(row.sale_price),
-  price: priceOf(row),
+  mrp: num$7(row.mrp),
+  sale_price: row.sale_price == null ? null : num$7(row.sale_price),
+  price: priceOf$1(row),
   images: Array.isArray(row.images) ? row.images.filter(Boolean) : []
 } : null;
 
@@ -30264,7 +30264,7 @@ async function getGroceryCategories() {
   const {
     data,
     error
-  } = await supabase.from('catalogue_categories').select(CATEGORY_COLUMNS).eq('store', GROCERY_STORE).order('sort_order', {
+  } = await supabase.from('catalogue_categories').select(CATEGORY_COLUMNS$1).eq('store', GROCERY_STORE).order('sort_order', {
     ascending: true
   });
   if (error) throw error;
@@ -30274,7 +30274,7 @@ async function getGroceryProducts() {
   const {
     data,
     error
-  } = await supabase.from('catalogue_products').select(PRODUCT_COLUMNS).eq('store', GROCERY_STORE).eq('is_active', true).order('sort_order', {
+  } = await supabase.from('catalogue_products').select(PRODUCT_COLUMNS$1).eq('store', GROCERY_STORE).eq('is_active', true).order('sort_order', {
     ascending: true
   });
   if (error) throw error;
@@ -30288,7 +30288,7 @@ async function getGroceryProductsByIds(ids) {
   const {
     data,
     error
-  } = await supabase.from('catalogue_products').select(PRODUCT_COLUMNS).eq('store', GROCERY_STORE).in('id', clean);
+  } = await supabase.from('catalogue_products').select(PRODUCT_COLUMNS$1).eq('store', GROCERY_STORE).in('id', clean);
   if (error) throw error;
   return Array.isArray(data) ? data : [];
 }
@@ -30297,49 +30297,49 @@ async function getGroceryProductsByIds(ids) {
 // Loaded once per session and shared by every grocery page; `seed` sets it
 // for server rendering and tests. Components subscribe with
 // useGroceryCatalogue() and get { status, error, categories, products }.
-const EMPTY$1 = Object.freeze({
+const EMPTY$2 = Object.freeze({
   status: 'loading',
   error: null,
   categories: [],
   products: []
 });
-let snapshot = EMPTY$1;
-let loading = null;
-const listeners$1 = new Set();
-const publish = next => {
-  snapshot = next;
-  for (const l of listeners$1) l();
+let snapshot$1 = EMPTY$2;
+let loading$1 = null;
+const listeners$2 = new Set();
+const publish$1 = next => {
+  snapshot$1 = next;
+  for (const l of listeners$2) l();
 };
-const shape$1 = (categories, products) => ({
+const shape$2 = (categories, products) => ({
   categories: (Array.isArray(categories) ? categories : []).filter(c => c && c.is_active !== false),
   products: (Array.isArray(products) ? products : []).filter(p => p && p.is_active !== false).map(groceryProductView)
 });
 function loadGroceryCatalogue() {
-  if (snapshot.status === 'ready' || loading) return loading;
-  loading = Promise.all([getGroceryCategories(), getGroceryProducts()]).then(([categories, products]) => publish({
+  if (snapshot$1.status === 'ready' || loading$1) return loading$1;
+  loading$1 = Promise.all([getGroceryCategories(), getGroceryProducts()]).then(([categories, products]) => publish$1({
     status: 'ready',
     error: null,
-    ...shape$1(categories, products)
+    ...shape$2(categories, products)
   })).catch(e => {
-    loading = null;
-    publish({
-      ...snapshot,
+    loading$1 = null;
+    publish$1({
+      ...snapshot$1,
       status: 'error',
       error: e?.message || 'Could not load the grocery catalogue'
     });
   });
-  return loading;
+  return loading$1;
 }
-const subscribe = fn => {
-  listeners$1.add(fn);
-  if (snapshot.status === 'loading') loadGroceryCatalogue();
-  return () => listeners$1.delete(fn);
+const subscribe$1 = fn => {
+  listeners$2.add(fn);
+  if (snapshot$1.status === 'loading') loadGroceryCatalogue();
+  return () => listeners$2.delete(fn);
 };
-const getSnapshot = () => snapshot;
+const getSnapshot$1 = () => snapshot$1;
 
 /** { status: 'loading' | 'ready' | 'error', error, categories, products } — categories and products carry the schema's field names. */
 function useGroceryCatalogue() {
-  return reactExports.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return reactExports.useSyncExternalStore(subscribe$1, getSnapshot$1, getSnapshot$1);
 }
 
 // ============================================================
@@ -30374,7 +30374,7 @@ const groceryProductFor = id => catalogueRowFor(GROCERY_CATALOGUE, id);
 function ensureGroceryProducts(ids) {
   return ensureCatalogueRows(GROCERY_CATALOGUE, ids, getGroceryProductsByIds, groceryProductView);
 }
-const num$5 = v => {
+const num$6 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -30411,8 +30411,8 @@ function hydrateGroceryCartLine(line, product) {
       purchasable: false
     };
   }
-  const unitPrice = num$5(product.price) > 0 ? num$5(product.price) : null;
-  const unitMrp = unitPrice == null ? null : Math.max(num$5(product.mrp), unitPrice);
+  const unitPrice = num$6(product.price) > 0 ? num$6(product.price) : null;
+  const unitMrp = unitPrice == null ? null : Math.max(num$6(product.mrp), unitPrice);
   const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
   let unavailableReason = null;
   if (product.is_active === false) unavailableReason = 'This item is no longer available.';else if (unitPrice == null) unavailableReason = 'This item is not available to buy right now.';else unavailableReason = GROCERY_CHECKOUT_NOTE;
@@ -31967,7 +31967,7 @@ function Header() {
             children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
               to: "/fashion",
               className: "v2-hdr__store",
-              children: ["Fashion store ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              children: ["Fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
                 name: "chevronRight",
                 size: 14,
                 stroke: 1.8
@@ -31975,7 +31975,15 @@ function Header() {
             }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
               to: "/grocery",
               className: "v2-hdr__store",
-              children: ["Grocery store ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              children: ["Grocery ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "chevronRight",
+                size: 14,
+                stroke: 1.8
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+              to: "/homeliving",
+              className: "v2-hdr__store",
+              children: ["Home & Living ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
                 name: "chevronRight",
                 size: 14,
                 stroke: 1.8
@@ -32225,6 +32233,13 @@ function Header() {
             to: "/grocery",
             className: "drawer__cat",
             children: ["Grocery store", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronRight",
+              size: 17
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/homeliving",
+            className: "drawer__cat",
+            children: ["Home & Living store", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
               name: "chevronRight",
               size: 17
             })]
@@ -35796,7 +35811,7 @@ const DEFAULT_LADDER = Object.freeze([{
   rate: 25
 }]);
 const DEFAULT_BEYOND_STEP = 25000;
-const num$4 = v => {
+const num$5 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
@@ -35808,8 +35823,8 @@ function normalizeLadder(rows) {
   return rows.map((r, i) => ({
     level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
     rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
-    threshold: num$4(r?.threshold),
-    rate: num$4(r?.rate)
+    threshold: num$5(r?.threshold),
+    rate: num$5(r?.rate)
   })).sort((a, b) => a.level - b.level);
 }
 
@@ -45671,7 +45686,7 @@ function CouponCelebration({
 
 /** Debounce for cart edits. Long enough to coalesce a held-down stepper. */
 const QUOTE_DEBOUNCE_MS = 250;
-const EMPTY = {
+const EMPTY$1 = {
   breakdown: null,
   coupon: null,
   status: 'idle',
@@ -45690,7 +45705,7 @@ const EMPTY = {
  *   message the server's wording for a refusal — never composed here
  */
 function useCartQuote(lines, code, delivery = 'std') {
-  const [state, setState] = reactExports.useState(EMPTY);
+  const [state, setState] = reactExports.useState(EMPTY$1);
   const abortRef = reactExports.useRef(null);
 
   // The exact request that would be sent. Serialising it means a re-render
@@ -45710,7 +45725,7 @@ function useCartQuote(lines, code, delivery = 'std') {
 
     // Nothing to price. Reset rather than leaving the last cart's total up.
     if (!items.length) {
-      setState(EMPTY);
+      setState(EMPTY$1);
       return undefined;
     }
 
@@ -52543,7 +52558,7 @@ function Shell$2({
 // ============================================================
 
 const METRICS = Object.freeze(['clicks', 'orders', 'products', 'sales', 'commission']);
-const num$3 = v => {
+const num$4 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -52551,7 +52566,7 @@ const num$3 = v => {
 // Running total of a series — the shape of "lifetime so far".
 function cumulative(points) {
   let acc = 0;
-  return (Array.isArray(points) ? points : []).map(p => acc += num$3(p));
+  return (Array.isArray(points) ? points : []).map(p => acc += num$4(p));
 }
 
 // SVG geometry. `pad` keeps the stroke inside the box; a flat series sits on
@@ -52561,7 +52576,7 @@ function sparkGeometry(points, {
   height = 28,
   pad = 2
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$3);
+  const vals = (Array.isArray(points) ? points : []).map(num$4);
   const n = vals.length;
   if (n === 0) return {
     line: '',
@@ -52632,20 +52647,20 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
   };
   for (const m of METRICS) out[m] = Array.from({
     length: n
-  }, (_, i) => num$3(rows[i]?.[m]));
+  }, (_, i) => num$4(rows[i]?.[m]));
   out.labels = Array.from({
     length: n
   }, (_, i) => String(rows[i]?.at || ''));
   out.totals = Object.fromEntries(METRICS.map(m => [m, out[m].reduce((a, b) => a + b, 0)]));
-  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$3(raw.previous[m])])) : null;
+  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$4(raw.previous[m])])) : null;
   out.links = Array.isArray(raw?.links) ? raw.links.map(l => ({
     link_id: l?.link_id ?? null,
     label: String(l?.label || 'Link'),
     campaign: l?.campaign || null,
-    clicks: num$3(l?.clicks),
-    orders: num$3(l?.orders),
-    sales: num$3(l?.sales),
-    commission: num$3(l?.commission)
+    clicks: num$4(l?.clicks),
+    orders: num$4(l?.orders),
+    sales: num$4(l?.sales),
+    commission: num$4(l?.commission)
   })) : [];
   return out;
 }
@@ -52653,8 +52668,8 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
 // Trend versus the previous period. No previous period, or a previous of
 // zero, is "—" (not "+100%": there is nothing to be 100% of).
 function trend(current, previous) {
-  const c = num$3(current);
-  const p = previous == null ? null : num$3(previous);
+  const c = num$4(current);
+  const p = previous == null ? null : num$4(previous);
   if (p == null) return {
     pct: null,
     dir: 'none',
@@ -52704,8 +52719,8 @@ function areaChartGeometry({
   padT = 14,
   padB = 26
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num$3);
-  const b = (Array.isArray(orders) ? orders : []).map(num$3);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$4);
+  const b = (Array.isArray(orders) ? orders : []).map(num$4);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -52770,7 +52785,7 @@ function donutGeometry(parts, {
   const c = 2 * Math.PI * r;
   const list = (Array.isArray(parts) ? parts : []).map(p => ({
     ...p,
-    value: Math.max(0, num$3(p?.value))
+    value: Math.max(0, num$4(p?.value))
   }));
   const total = list.reduce((s, p) => s + p.value, 0);
   let offset = 0;
@@ -52812,7 +52827,7 @@ function barChartGeometry(points, {
   gap = 0.35,
   minMax = 4
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$3);
+  const vals = (Array.isArray(points) ? points : []).map(num$4);
   const n = vals.length;
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -52852,7 +52867,7 @@ function barChartGeometry(points, {
   };
 }
 function compactRupees(v) {
-  const n = Math.max(0, num$3(v));
+  const n = Math.max(0, num$4(v));
   if (n >= 10000000) return `₹${trim(n / 10000000)}Cr`;
   if (n >= 100000) return `₹${trim(n / 100000)}L`;
   if (n >= 1000) return `₹${trim(n / 1000)}k`;
@@ -54963,7 +54978,7 @@ function CreatorTierPage({
 }
 
 const isZero$1 = v => !(Number(v) > 0);
-const num$2 = v => v == null || v === '' ? NaN : Number(v);
+const num$3 = v => v == null || v === '' ? NaN : Number(v);
 const monthLabel = ym => {
   if (!ym) return '—';
   const [y, m] = String(ym).split('-').map(Number);
@@ -54974,7 +54989,7 @@ const monthLabel = ym => {
   }).format(new Date(y, m - 1, 1));
 };
 const ordinal$2 = n => {
-  const v = num$2(n);
+  const v = num$3(n);
   if (!Number.isFinite(v)) return '—';
   const s = ['th', 'st', 'nd', 'rd'];
   const r = v % 100;
@@ -54984,10 +54999,10 @@ const ordinal$2 = n => {
 // The terms the page quotes. The tier rate (0031) is the live one; the
 // earnings RPC's commission_rate is the floor, the creator row the fallback.
 function earningsTerms(earnings, standing, creator) {
-  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$2).find(v => Number.isFinite(v));
-  const hold = num$2(earnings?.settlement_hold_days);
-  const minPayout = num$2(earnings?.min_payout);
-  const payoutDay = num$2(earnings?.payout_day);
+  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$3).find(v => Number.isFinite(v));
+  const hold = num$3(earnings?.settlement_hold_days);
+  const minPayout = num$3(earnings?.min_payout);
+  const payoutDay = num$3(earnings?.payout_day);
   return {
     rate: Number.isFinite(rate) ? rate : null,
     hold: Number.isFinite(hold) && hold >= 0 ? hold : null,
@@ -56867,7 +56882,7 @@ const fmtDate = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   year: 'numeric'
 }).format(new Date(iso)) : '—';
 // null is "not set", never 0 — Number(null) would print a 0% rate.
-const num$1 = v => v == null || v === '' ? NaN : Number(v);
+const num$2 = v => v == null || v === '' ? NaN : Number(v);
 const initialsOf = name => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
 const STATUS = {
   active: {
@@ -56938,8 +56953,8 @@ function CreatorProfilePage({
   termsPublished = false
 }) {
   const st = STATUS[creator?.status] || STATUS.pending;
-  const rate = standing?.rate != null ? num$1(standing.rate) : num$1(creator?.default_commission_rate);
-  const windowDays = num$1(creator?.default_attribution_window_days);
+  const rate = standing?.rate != null ? num$2(standing.rate) : num$2(creator?.default_commission_rate);
+  const windowDays = num$2(creator?.default_attribution_window_days);
   const since = creator?.joined_at || creator?.created_at || null;
   const acct = standingFor(creator, kyc);
   const open = !!standing?.withdrawals_open;
@@ -57241,7 +57256,7 @@ function CreatorProfilePage({
 // derived (a ratio over zero, a period with no previous period) the value
 // is null and the page shows "—".
 // ============================================================
-const num = v => {
+const num$1 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -57249,7 +57264,7 @@ const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
 
 // A ratio, or null when there is nothing to divide by.
-const ratio = (n, d) => num(d) > 0 ? num(n) / num(d) : null;
+const ratio = (n, d) => num$1(d) > 0 ? num$1(n) / num$1(d) : null;
 
 // ---- Stat cards -------------------------------------------------------------
 // When the range series is available the cards follow the toggle (with the
@@ -57258,10 +57273,10 @@ const ratio = (n, d) => num(d) > 0 ? num(n) / num(d) : null;
 function analyticsStats(analytics, series) {
   const range = !!series?.available;
   const tot = range ? series.totals : {
-    clicks: num(analytics?.clicks),
-    orders: num(analytics?.attributed_orders),
-    products: num(analytics?.products_sold),
-    sales: num(analytics?.attributed_sales),
+    clicks: num$1(analytics?.clicks),
+    orders: num$1(analytics?.attributed_orders),
+    products: num$1(analytics?.products_sold),
+    sales: num$1(analytics?.attributed_sales),
     commission: 0
   };
   const prev = range && series.previous ? series.previous : null;
@@ -57275,10 +57290,10 @@ function analyticsStats(analytics, series) {
   }) : [];
   return {
     scope: range ? 'range' : 'all',
-    clicks: num(tot.clicks),
-    orders: num(tot.orders),
-    products: num(tot.products),
-    sales: num(tot.sales),
+    clicks: num$1(tot.clicks),
+    orders: num$1(tot.orders),
+    products: num$1(tot.products),
+    sales: num$1(tot.sales),
     conversion: conv == null ? null : r1(conv * 100),
     aov: aov == null ? null : r2(aov),
     trends: {
@@ -57338,9 +57353,9 @@ function periodLabel(series) {
 
 // ---- Funnel: click → attributed order → eligible order (all time) -------------
 function funnelFor(analytics) {
-  const clicks = num(analytics?.clicks);
-  const orders = num(analytics?.attributed_orders);
-  const eligible = num(analytics?.eligible_orders);
+  const clicks = num$1(analytics?.clicks);
+  const orders = num$1(analytics?.attributed_orders);
+  const eligible = num$1(analytics?.eligible_orders);
   const pct = v => clicks > 0 ? r1(v / clicks * 100) : null;
   return {
     empty: clicks === 0,
@@ -57371,8 +57386,8 @@ const SHARE_TONES = ['forest', 'green', 'gold', 'amber', 'neutral'];
 function productShare(topProducts, max = 4) {
   const rows = (Array.isArray(topProducts) ? topProducts : []).map(p => ({
     name: String(p?.name || 'Product'),
-    qty: num(p?.qty),
-    sales: num(p?.sales)
+    qty: num$1(p?.qty),
+    sales: num$1(p?.sales)
   })).filter(p => p.sales > 0).sort((a, b) => b.sales - a.sales);
   const total = rows.reduce((s, p) => s + p.sales, 0);
   const head = rows.slice(0, max);
@@ -57421,10 +57436,10 @@ function topLinks(seriesLinks, {
       label: r.label,
       campaign: r.campaign || null,
       url: String(url || '').replace(/^https?:\/\//, ''),
-      clicks: num(r.clicks),
-      orders: num(r.orders),
-      sales: num(r.sales),
-      commission: num(r.commission),
+      clicks: num$1(r.clicks),
+      orders: num$1(r.orders),
+      sales: num$1(r.sales),
+      commission: num$1(r.commission),
       conversion: ratio(r.orders, r.clicks) == null ? null : r1(ratio(r.orders, r.clicks) * 100)
     };
   });
@@ -57492,7 +57507,7 @@ function insightsFor({
 function argMax(arr) {
   if (!Array.isArray(arr) || arr.length === 0) return -1;
   let best = 0;
-  for (let i = 1; i < arr.length; i += 1) if (num(arr[i]) > num(arr[best])) best = i;
+  for (let i = 1; i < arr.length; i += 1) if (num$1(arr[i]) > num$1(arr[best])) best = i;
   return best;
 }
 
@@ -57504,11 +57519,11 @@ function analyticsCsv(series, links = []) {
   };
   const lines = [['period', ...METRICS].join(',')];
   const n = series?.labels?.length || 0;
-  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num(series[m]?.[i]))].map(esc).join(','));
+  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num$1(series[m]?.[i]))].map(esc).join(','));
   if (Array.isArray(links) && links.length > 0) {
     lines.push('');
     lines.push(['link', 'campaign', 'clicks', 'orders', 'sales', 'commission'].join(','));
-    for (const l of links) lines.push([l.label, l.campaign || '', num(l.clicks), num(l.orders), num(l.sales), num(l.commission)].map(esc).join(','));
+    for (const l of links) lines.push([l.label, l.campaign || '', num$1(l.clicks), num$1(l.orders), num$1(l.sales), num$1(l.commission)].map(esc).join(','));
   }
   return `${lines.join('\n')}\n`;
 }
@@ -57526,9 +57541,9 @@ function dualAxisGeometry({
   padT = 14,
   padB = 30
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num);
-  const b = (Array.isArray(orders) ? orders : []).map(num);
-  const c = (Array.isArray(sales) ? sales : []).map(num);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$1);
+  const b = (Array.isArray(orders) ? orders : []).map(num$1);
+  const c = (Array.isArray(sales) ? sales : []).map(num$1);
   const n = Math.max(a.length, b.length, c.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -57595,8 +57610,8 @@ function groupedBarGeometry(seriesA, seriesB, {
   gap = 0.3,
   minMax = 1000
 } = {}) {
-  const a = (Array.isArray(seriesA) ? seriesA : []).map(num);
-  const b = (Array.isArray(seriesB) ? seriesB : []).map(num);
+  const a = (Array.isArray(seriesA) ? seriesA : []).map(num$1);
+  const b = (Array.isArray(seriesB) ? seriesB : []).map(num$1);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -59373,7 +59388,7 @@ function AdminLogin() {
 // ============================================================
 const FASHION_WISH_KEY = 'sora.fashion.wish.v1';
 let ids = null;
-const listeners = new Set();
+const listeners$1 = new Set();
 function read() {
   if (ids) return ids;
   try {
@@ -59390,7 +59405,7 @@ function write(next) {
   try {
     if (typeof localStorage !== 'undefined') localStorage.setItem(FASHION_WISH_KEY, JSON.stringify(ids));
   } catch {/* private mode */}
-  for (const l of listeners) l();
+  for (const l of listeners$1) l();
 }
 const fashionWishlist = {
   get: read,
@@ -59404,8 +59419,8 @@ const fashionWishlist = {
   remove: id => write(read().filter(x => x !== String(id))),
   clear: () => write([]),
   subscribe: fn => {
-    listeners.add(fn);
-    return () => listeners.delete(fn);
+    listeners$1.add(fn);
+    return () => listeners$1.delete(fn);
   }
 };
 function useFashionWishlist() {
@@ -59423,7 +59438,7 @@ function useFashionWishlist() {
 const Ctx = /*#__PURE__*/reactExports.createContext(null);
 let cache = null; // { categories, products } — one fetch per session
 
-function shape(categories, products) {
+function shape$1(categories, products) {
   const tree = buildTree(categories);
   const views = (Array.isArray(products) ? products : []).filter(p => p && p.is_active !== false).map(p => productView(p, p.fashion_variants));
   return {
@@ -59441,17 +59456,17 @@ function FashionCatalogueProvider({
     if (initial) return {
       status: 'ready',
       error: null,
-      ...shape(initial.categories, initial.products)
+      ...shape$1(initial.categories, initial.products)
     };
     if (cache) return {
       status: 'ready',
       error: null,
-      ...shape(cache.categories, cache.products)
+      ...shape$1(cache.categories, cache.products)
     };
     return {
       status: 'loading',
       error: null,
-      ...shape([], [])
+      ...shape$1([], [])
     };
   });
   reactExports.useEffect(() => {
@@ -59465,7 +59480,7 @@ function FashionCatalogueProvider({
       if (alive) setState({
         status: 'ready',
         error: null,
-        ...shape(categories, products)
+        ...shape$1(categories, products)
       });
     }).catch(e => {
       if (alive) setState(s => ({
@@ -59490,7 +59505,7 @@ function useFashionCatalogue() {
   return v;
 }
 
-const SEARCH_PLACEHOLDER$1 = 'Search for fashion, lifestyle and more…';
+const SEARCH_PLACEHOLDER$2 = 'Search for fashion, lifestyle and more…';
 function FashionLogo() {
   return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
     to: "/fashion",
@@ -59583,7 +59598,14 @@ function FashionHeader({
         }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
           to: "/grocery",
           className: "fs-hdr__back",
-          children: ["Grocery store ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          children: ["Grocery ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "chevronRight",
+            size: 15
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/homeliving",
+          className: "fs-hdr__back",
+          children: ["Home & Living ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "chevronRight",
             size: 15
           })]
@@ -59600,7 +59622,7 @@ function FashionHeader({
         type: "search",
         value: q,
         onChange: e => setQ(e.target.value),
-        placeholder: SEARCH_PLACEHOLDER$1,
+        placeholder: SEARCH_PLACEHOLDER$2,
         "aria-label": "Search fashion"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
         type: "submit",
@@ -59652,7 +59674,7 @@ function CategoryChips({
     role: "navigation",
     "aria-label": "Categories",
     children: [tree.roots.filter(r => r.is_active).map(r => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-      to: categoryHref$1(r),
+      to: categoryHref$2(r),
       className: `fs-chip${r.id === activeRootId ? ' is-on' : ''}`,
       "aria-current": r.id === activeRootId ? 'page' : undefined,
       children: r.name
@@ -59670,7 +59692,7 @@ function CategoryChips({
     })]
   });
 }
-function Drawer$1({
+function Drawer$2({
   open,
   onClose
 }) {
@@ -59717,13 +59739,13 @@ function Drawer$1({
         children: tree.roots.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "fs-drawer__group",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-            to: categoryHref$1(r),
+            to: categoryHref$2(r),
             onClick: onClose,
             children: r.name
           }), tree.children(r.id).length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
             children: tree.children(r.id).map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
               children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-                to: categoryHref$1(c),
+                to: categoryHref$2(c),
                 onClick: onClose,
                 children: c.name
               })
@@ -59738,6 +59760,14 @@ function Drawer$1({
           name: "chevronRight",
           size: 16
         }), " Grocery store"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/homeliving",
+        className: "fs-drawer__back",
+        onClick: onClose,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 16
+        }), " Home & Living store"]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: "/",
         className: "fs-drawer__back",
@@ -59762,7 +59792,7 @@ function Shell() {
     className: "fs",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(FashionHeader, {
       onMenu: () => setMenu(true)
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer$1, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer$2, {
       open: menu,
       onClose: () => setMenu(false)
     }), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
@@ -60226,7 +60256,7 @@ function CategoryTiles({
     className: "fs-tiles",
     "aria-label": "Shop by",
     children: tiles.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      to: categoryHref$1(c),
+      to: categoryHref$2(c),
       className: "fs-tile",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "fs-tile__img",
@@ -60345,7 +60375,7 @@ function ShopByCategory({
         id: "fs-cats-h",
         children: "Shop by Category"
       }), tree.roots[0] && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: categoryHref$1(tree.roots[0]),
+        to: categoryHref$2(tree.roots[0]),
         className: "fs-sec__link",
         children: ["Explore all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "chevronRight",
@@ -60355,7 +60385,7 @@ function ShopByCategory({
     }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "fs-catcards",
       children: roots.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: categoryHref$1(c),
+        to: categoryHref$2(c),
         className: "fs-catcard",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "fs-catcard__img",
@@ -60830,7 +60860,7 @@ function FashionCategory() {
     className: "fs-subcats",
     "aria-label": `Shop ${node.name}`,
     children: children.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-      to: categoryHref$1(c),
+      to: categoryHref$2(c),
       className: "fs-subcat",
       children: c.name
     }, c.id))
@@ -61185,10 +61215,10 @@ function FashionProductPage() {
   });
 }
 
-const SEARCH_PLACEHOLDER = 'Search for groceries, staples, and more...';
+const SEARCH_PLACEHOLDER$1 = 'Search for groceries, staples, and more...';
 
 /** Home is the only live tab; the rest render, do nothing, and never 404. */
-const BOTTOM_NAV = [{
+const BOTTOM_NAV$1 = [{
   id: 'home',
   label: 'Home',
   icon: 'home',
@@ -61259,7 +61289,14 @@ function GroceryHeader({
           }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
             to: "/fashion",
             className: "gs-hdr__store",
-            children: ["Fashion store ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            children: ["Fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronRight",
+              size: 15
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/homeliving",
+            className: "gs-hdr__store",
+            children: ["Home & Living ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
               name: "chevronRight",
               size: 15
             })]
@@ -61321,18 +61358,18 @@ function GroceryHeader({
         size: 22
       }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
         type: "search",
-        placeholder: SEARCH_PLACEHOLDER,
+        placeholder: SEARCH_PLACEHOLDER$1,
         "aria-label": "Search groceries (coming soon)",
         readOnly: true
       })]
     })]
   });
 }
-function BottomNav() {
+function BottomNav$1() {
   return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
     className: "gs-nav",
     "aria-label": "Grocery",
-    children: BOTTOM_NAV.map(item => item.href ? /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+    children: BOTTOM_NAV$1.map(item => item.href ? /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
       to: item.href,
       className: "gs-nav__item is-on",
       "aria-current": "page",
@@ -61354,7 +61391,7 @@ function BottomNav() {
     }, item.id))
   });
 }
-function Drawer({
+function Drawer$1({
   open,
   onClose
 }) {
@@ -61401,7 +61438,7 @@ function Drawer({
         children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
           children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
             children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-              to: categoryHref(c),
+              to: categoryHref$1(c),
               onClick: onClose,
               children: c.name
             })
@@ -61415,6 +61452,14 @@ function Drawer({
           name: "chevronRight",
           size: 16
         }), " Fashion store"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/homeliving",
+        className: "gs-drawer__back",
+        onClick: onClose,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 16
+        }), " Home & Living store"]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: "/",
         className: "gs-drawer__back",
@@ -61439,7 +61484,7 @@ function GroceryLayout() {
     className: "gs",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(GroceryHeader, {
       onMenu: () => setMenu(true)
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(BottomNav, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(BottomNav$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer$1, {
       open: menu,
       onClose: () => setMenu(false)
     }), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
@@ -61517,12 +61562,12 @@ function GroceryProductCard({
   });
 }
 
-const TRUST = [['truck', 'Standard Delivery', GROCERY_DELIVERY_WINDOW], ['leaf', 'Fresh Products', 'Sourced with care'], ['shield', 'Trusted Quality', 'Good food, safer lives']];
-function TrustStrip() {
+const TRUST$1 = [['truck', 'Standard Delivery', GROCERY_DELIVERY_WINDOW], ['leaf', 'Fresh Products', 'Sourced with care'], ['shield', 'Trusted Quality', 'Good food, safer lives']];
+function TrustStrip$1() {
   return /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
     className: "gs-trust",
     "aria-label": "Why shop with us",
-    children: TRUST.map(([icon, a, b]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+    children: TRUST$1.map(([icon, a, b]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
         name: icon,
         size: 28
@@ -61536,16 +61581,16 @@ function TrustStrip() {
     }, a))
   });
 }
-const AUTOPLAY_MS = 6000;
+const AUTOPLAY_MS$1 = 6000;
 
 /**
  * Full-width carousel. Autoplays only when there is more than one slide,
  * pauses on hover and focus, and never moves under prefers-reduced-motion.
  * The track slides on transform only.
  */
-function HeroCarousel({
-  slides = HERO_SLIDES,
-  autoplayMs = AUTOPLAY_MS
+function HeroCarousel$1({
+  slides = HERO_SLIDES$1,
+  autoplayMs = AUTOPLAY_MS$1
 }) {
   const [index, setIndex] = reactExports.useState(0);
   const [paused, setPaused] = reactExports.useState(false);
@@ -61633,7 +61678,7 @@ function HeroCarousel({
     })]
   });
 }
-function CategoryCircles({
+function CategoryCircles$1({
   categories
 }) {
   if (categories.length === 0) return null;
@@ -61641,7 +61686,7 @@ function CategoryCircles({
     className: "gs-circles",
     "aria-label": "Shop by category",
     children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      to: categoryHref(c),
+      to: categoryHref$1(c),
       className: "gs-circle",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "gs-circle__img",
@@ -61708,7 +61753,7 @@ function DailyEssentials({
     })]
   });
 }
-function PromoStrip() {
+function PromoStrip$1() {
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "gs-promo",
     "aria-labelledby": "gs-promo-h",
@@ -61716,7 +61761,7 @@ function PromoStrip() {
       className: "gs-promo__art",
       "aria-hidden": "true",
       children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-        src: PROMO.image,
+        src: PROMO$1.image,
         alt: "",
         loading: "lazy",
         decoding: "async",
@@ -61728,14 +61773,14 @@ function PromoStrip() {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
         className: "gs-promo__h serif",
         id: "gs-promo-h",
-        children: PROMO.headline
+        children: PROMO$1.headline
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "gs-promo__sub",
-        children: PROMO.sub
+        children: PROMO$1.sub
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: PROMO.href,
+        to: PROMO$1.href,
         className: "gs-promo__cta",
-        children: [PROMO.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [PROMO$1.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "arrowRight",
           size: 16
         })]
@@ -61751,9 +61796,821 @@ function GroceryHome() {
   } = useGroceryCatalogue();
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "gs-home",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HeroCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryCircles, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HeroCarousel$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryCircles$1, {
       categories: categories
     }), /*#__PURE__*/jsxRuntimeExports.jsx(DailyEssentials, {
+      products: products,
+      status: status
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(PromoStrip$1, {})]
+  });
+}
+
+// ============================================================
+// Home & Living store — the data layer behind /homeliving.
+//
+// Catalogue rows come from the shared catalogue tables (migration 0034,
+// store 'homeliving' since 0035): categories from catalogue_categories,
+// products from catalogue_products. Rows keep the schema's field names —
+// image_url, images[], net_content, mrp, sale_price — so what a component
+// reads is what the table holds. The one derived field is `price`: the
+// figure a card shows (sale_price when set and below mrp, else mrp),
+// decided here, never in a component. The payable amount is always the
+// server's; this store has no cart path yet.
+//
+// Homepage content that is not catalogue — the hero slide, the trust
+// strip, the promo strip, the tagline, the delivery window — stays here as
+// plain objects. Every word is rendered as HTML text over a photograph.
+// The delivery promise is the one factual claim the store makes:
+// "Standard Delivery / 6-7 days". Nothing here says otherwise.
+// ============================================================
+const HOMELIVING_STORE = 'homeliving';
+const HOMELIVING_TAGLINE = 'Comfort for every home';
+
+/** Delivery promise. One string, used by the header badge and the trust strip. */
+const HOMELIVING_DELIVERY_WINDOW = '6-7 days';
+const HERO_SLIDES = [{
+  id: 'comfort',
+  image: '/img/homeliving-hero.webp',
+  eyebrow: 'Home & Living',
+  headline: 'Comfort Lives Here',
+  sub: 'Bedsheets, curtains, cushions, towels and more for a more beautiful home.',
+  cta: 'Explore Home Collection',
+  href: '/homeliving/category/bedsheets',
+  note: 'Better homes, brighter days'
+}];
+
+/** The four badges under the hero copy. The delivery one is the only factual claim. */
+const TRUST = [{
+  icon: 'sparkle',
+  title: 'Premium Fabrics',
+  sub: 'Chosen for touch and wear'
+}, {
+  icon: 'shield',
+  title: 'Trusted Quality',
+  sub: 'Checked before it ships'
+}, {
+  icon: 'truck',
+  title: 'Standard Delivery',
+  sub: HOMELIVING_DELIVERY_WINDOW
+}, {
+  icon: 'home',
+  title: 'For a Happier Home',
+  sub: 'Small details, warmer rooms'
+}];
+const CATEGORY_SECTION = {
+  eyebrow: 'Explore categories',
+  title: 'Everything for a Beautiful Home',
+  viewAll: '/homeliving/category/bedsheets'
+};
+const FEATURED = {
+  title: 'Featured Home Linen',
+  sub: 'Soft textures for every room',
+  seeAll: '/homeliving/category/bedsheets',
+  limit: 4
+};
+const PROMO = {
+  image: '/img/homeliving-promo.webp',
+  eyebrow: 'Natural fabrics. Timeless homes.',
+  headline: 'Bring Home Comfort',
+  sub: 'Soft textures. Soothing spaces. A better you.',
+  cta: 'Shop Home & Living',
+  href: '/homeliving/category/bedsheets',
+  badges: [{
+    icon: 'leaf',
+    title: 'Natural Fabrics'
+  }, {
+    icon: 'award',
+    title: 'Long-Lasting Quality'
+  }, {
+    icon: 'home',
+    title: 'Beautiful Homes, Happier Lives'
+  }]
+};
+const categoryHref = c => `/homeliving/category/${c.slug}`;
+
+// ---- Row shapes ----------------------------------------------------------------
+const CATEGORY_COLUMNS = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
+const PRODUCT_COLUMNS = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
+const num = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+/** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
+const priceOf = row => {
+  const mrp = num(row?.mrp);
+  const sale = row?.sale_price == null ? null : num(row.sale_price);
+  return sale != null && sale > 0 && sale < mrp ? sale : mrp;
+};
+
+/** A product row for the homepage: the row as stored, plus `price`. */
+const homelivingProductView = row => row ? {
+  ...row,
+  mrp: num(row.mrp),
+  sale_price: row.sale_price == null ? null : num(row.sale_price),
+  price: priceOf(row),
+  images: Array.isArray(row.images) ? row.images.filter(Boolean) : []
+} : null;
+
+// ---- Reads -----------------------------------------------------------------------
+async function getHomeLivingCategories() {
+  const {
+    data,
+    error
+  } = await supabase.from('catalogue_categories').select(CATEGORY_COLUMNS).eq('store', HOMELIVING_STORE).order('sort_order', {
+    ascending: true
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+async function getHomeLivingProducts() {
+  const {
+    data,
+    error
+  } = await supabase.from('catalogue_products').select(PRODUCT_COLUMNS).eq('store', HOMELIVING_STORE).eq('is_active', true).order('sort_order', {
+    ascending: true
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+// ---- The catalogue the pages render ------------------------------------------------
+// Loaded once per session and shared by every Home & Living page; `seed`
+// sets it for server rendering and tests. Components subscribe with
+// useHomeLivingCatalogue() and get { status, error, categories, products }.
+const EMPTY = Object.freeze({
+  status: 'loading',
+  error: null,
+  categories: [],
+  products: []
+});
+let snapshot = EMPTY;
+let loading = null;
+const listeners = new Set();
+const publish = next => {
+  snapshot = next;
+  for (const l of listeners) l();
+};
+const shape = (categories, products) => ({
+  categories: (Array.isArray(categories) ? categories : []).filter(c => c && c.is_active !== false),
+  products: (Array.isArray(products) ? products : []).filter(p => p && p.is_active !== false).map(homelivingProductView)
+});
+function loadHomeLivingCatalogue() {
+  if (snapshot.status === 'ready' || loading) return loading;
+  loading = Promise.all([getHomeLivingCategories(), getHomeLivingProducts()]).then(([categories, products]) => publish({
+    status: 'ready',
+    error: null,
+    ...shape(categories, products)
+  })).catch(e => {
+    loading = null;
+    publish({
+      ...snapshot,
+      status: 'error',
+      error: e?.message || 'Could not load the Home & Living catalogue'
+    });
+  });
+  return loading;
+}
+const subscribe = fn => {
+  listeners.add(fn);
+  if (snapshot.status === 'loading') loadHomeLivingCatalogue();
+  return () => listeners.delete(fn);
+};
+const getSnapshot = () => snapshot;
+
+/** { status: 'loading' | 'ready' | 'error', error, categories, products } — categories and products carry the schema's field names. */
+function useHomeLivingCatalogue() {
+  return reactExports.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+const SEARCH_PLACEHOLDER = 'Search for bedsheets, curtains, cushions...';
+
+/** Home is the only live tab; the rest render, do nothing, and never 404. */
+const BOTTOM_NAV = [{
+  id: 'home',
+  label: 'Home',
+  icon: 'home',
+  href: '/homeliving'
+}, {
+  id: 'categories',
+  label: 'Categories',
+  icon: 'grid'
+}, {
+  id: 'offers',
+  label: 'Offers',
+  icon: 'tag'
+}, {
+  id: 'orders',
+  label: 'Orders',
+  icon: 'package'
+}, {
+  id: 'account',
+  label: 'Account',
+  icon: 'user'
+}];
+function HomeLivingLogo() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+    to: "/homeliving",
+    className: "hl-logo",
+    "aria-label": `${branding.siteName} Home & Living home`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+      className: "serif",
+      children: branding.siteName
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+      children: HOMELIVING_TAGLINE
+    })]
+  });
+}
+function HomeLivingHeader({
+  onMenu
+}) {
+  const {
+    cartCount
+  } = useStore();
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+    className: "hl-hdr",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-hdr__row",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hl-hdr__menu",
+        "aria-label": "Open menu",
+        onClick: onMenu,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "menu",
+          size: 26
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingLogo, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hl-hdr__acts",
+        "aria-label": "Wishlist and cart",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "hl-hdr__stores",
+          role: "navigation",
+          "aria-label": "Other stores",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/",
+            className: "hl-hdr__store",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronLeft",
+              size: 15
+            }), " Wellness store"]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/fashion",
+            className: "hl-hdr__store",
+            children: ["Fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronRight",
+              size: 15
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/grocery",
+            className: "hl-hdr__store",
+            children: ["Grocery ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronRight",
+              size: 15
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "hl-hdr__act",
+          "aria-label": "Wishlist",
+          "aria-disabled": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "heart",
+            size: 24
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/cart",
+          className: "hl-hdr__act",
+          "aria-label": `Cart${cartCount ? `, ${cartCount} items` : ''}`,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "bag",
+            size: 24
+          }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hl-hdr__count",
+            children: cartCount
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-deliver",
+      "aria-label": "Delivery",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hl-deliver__addr",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "mapPin",
+          size: 22
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "hl-deliver__txt",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+            children: ["Deliver to Home ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronDown",
+              size: 14
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+            children: "Add your delivery address at checkout"
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hl-deliver__badge",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "truck",
+          size: 16
+        }), " Standard Delivery \xB7 ", HOMELIVING_DELIVERY_WINDOW]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-search",
+      role: "search",
+      "aria-label": "Search Home & Living",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "search",
+        size: 22
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+        type: "search",
+        placeholder: SEARCH_PLACEHOLDER,
+        "aria-label": "Search Home & Living (coming soon)",
+        readOnly: true
+      })]
+    })]
+  });
+}
+function BottomNav() {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+    className: "hl-nav",
+    "aria-label": "Home & Living",
+    children: BOTTOM_NAV.map(item => item.href ? /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: item.href,
+      className: "hl-nav__item is-on",
+      "aria-current": "page",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: item.icon,
+        size: 24
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: item.label
+      })]
+    }, item.id) : /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+      className: "hl-nav__item",
+      "aria-disabled": "true",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: item.icon,
+        size: 24
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: item.label
+      })]
+    }, item.id))
+  });
+}
+function Drawer({
+  open,
+  onClose
+}) {
+  const {
+    categories
+  } = useHomeLivingCatalogue();
+  reactExports.useEffect(() => {
+    if (!open) return undefined;
+    const onKey = e => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+  if (!open) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hl-drawer",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "Home & Living menu",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: "hl-drawer__scrim",
+      "aria-label": "Close menu",
+      onClick: onClose
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-drawer__panel",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hl-drawer__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+          children: "Shop Home & Living"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "hl-drawer__x",
+          "aria-label": "Close menu",
+          onClick: onClose,
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "x",
+            size: 20
+          })
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+        className: "hl-drawer__nav",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+              to: categoryHref(c),
+              onClick: onClose,
+              children: c.name
+            })
+          }, c.id))
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/fashion",
+        className: "hl-drawer__back",
+        onClick: onClose,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 16
+        }), " Fashion store"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/grocery",
+        className: "hl-drawer__back",
+        onClick: onClose,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 16
+        }), " Grocery store"]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/",
+        className: "hl-drawer__back",
+        onClick: onClose,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronLeft",
+          size: 16
+        }), " Back to the wellness store"]
+      })]
+    })]
+  });
+}
+function HomeLivingLayout() {
+  const [menu, setMenu] = reactExports.useState(false);
+  const {
+    pathname
+  } = useLocation();
+  reactExports.useEffect(() => {
+    setMenu(false);
+  }, [pathname]);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hl",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingHeader, {
+      onMenu: () => setMenu(true)
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(BottomNav, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer, {
+      open: menu,
+      onClose: () => setMenu(false)
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
+      className: "hl-main",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Outlet, {})
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Footer, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
+  });
+}
+
+function HomeLivingProductCard({
+  product,
+  mediaLoading = 'lazy'
+}) {
+  const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+    className: "hl-card",
+    "data-product": product.slug,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-card__media",
+      children: [image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+        src: image,
+        alt: "",
+        loading: mediaLoading,
+        decoding: "async",
+        width: "400",
+        height: "400"
+      }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "hl-card__noimg",
+        "aria-hidden": "true",
+        children: product.name.slice(0, 1)
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hl-card__heart",
+        "aria-label": `Save ${product.name} to wishlist`,
+        "aria-disabled": "true",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "heart",
+          size: 16
+        })
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-card__body",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hl-card__brand",
+        children: product.brand
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+        className: "hl-card__name",
+        children: product.name
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hl-card__size",
+        children: product.net_content
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "hl-price",
+        "data-price": product.price,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+          children: money(product.price)
+        }), product.mrp > product.price && /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+          className: "hl-price__mrp",
+          children: money(product.mrp)
+        })]
+      })]
+    })]
+  });
+}
+
+const AUTOPLAY_MS = 6000;
+
+/**
+ * Full-width carousel. Autoplays only when there is more than one slide,
+ * pauses on hover and focus, and never moves under prefers-reduced-motion.
+ * The track slides on transform only. The photograph keeps its subject on
+ * the right; the copy sits on the left over a cream wash.
+ */
+function HeroCarousel({
+  slides = HERO_SLIDES,
+  autoplayMs = AUTOPLAY_MS
+}) {
+  const [index, setIndex] = reactExports.useState(0);
+  const [paused, setPaused] = reactExports.useState(false);
+  const reduced = reactExports.useRef(false);
+  reactExports.useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => {
+      reduced.current = mq.matches;
+    };
+    sync();
+    mq.addEventListener?.('change', sync);
+    return () => mq.removeEventListener?.('change', sync);
+  }, []);
+  reactExports.useEffect(() => {
+    if (slides.length < 2 || paused) return undefined;
+    const t = setInterval(() => {
+      if (!reduced.current) setIndex(i => (i + 1) % slides.length);
+    }, autoplayMs);
+    return () => clearInterval(t);
+  }, [slides.length, paused, autoplayMs]);
+  if (slides.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "hl-hero",
+    "aria-roledescription": "carousel",
+    "aria-label": "Featured",
+    onMouseEnter: () => setPaused(true),
+    onMouseLeave: () => setPaused(false),
+    onFocus: () => setPaused(true),
+    onBlur: () => setPaused(false),
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hl-hero__track",
+      style: {
+        transform: `translateX(-${index * 100}%)`
+      },
+      children: slides.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+        className: `hl-hero__slide${i === index ? ' is-on' : ''}`,
+        "aria-hidden": i !== index,
+        "aria-roledescription": "slide",
+        "aria-label": `${i + 1} of ${slides.length}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          className: "hl-hero__img",
+          src: s.image,
+          alt: "",
+          width: "1600",
+          height: "900",
+          decoding: "async",
+          fetchpriority: i === 0 ? 'high' : 'auto',
+          loading: i === 0 ? 'eager' : 'lazy'
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hl-wrap hl-hero__inner",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: "hl-hero__txt",
+            children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "hl-hero__eyebrow",
+              children: s.eyebrow
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+              className: "hl-hero__h serif",
+              children: s.headline
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "hl-hero__sub",
+              children: s.sub
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+              to: s.href,
+              className: "hl-cta",
+              tabIndex: i === index ? 0 : -1,
+              children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 17
+              })]
+            })]
+          }), s.note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hl-hero__note serif",
+            "aria-hidden": "true",
+            children: s.note
+          })]
+        })]
+      }, s.id))
+    }), slides.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hl-hero__dots",
+      role: "tablist",
+      "aria-label": "Choose slide",
+      children: slides.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        role: "tab",
+        "aria-selected": i === index,
+        "aria-label": `Slide ${i + 1}`,
+        className: `hl-hero__dot${i === index ? ' is-on' : ''}`,
+        onClick: () => setIndex(i)
+      }, s.id))
+    })]
+  });
+}
+function TrustStrip() {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hl-wrap",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "hl-trust",
+      "aria-label": "Why shop with us",
+      children: TRUST.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "hl-trust__icon",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: t.icon,
+            size: 22
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "hl-trust__txt",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: t.title
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+            children: t.sub
+          })]
+        })]
+      }, t.title))
+    })
+  });
+}
+function CategoryCircles({
+  categories
+}) {
+  if (categories.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "hl-wrap hl-sec hl-cats",
+    "aria-labelledby": "hl-cats-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "hl-sec__head hl-cats__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hl-eyebrow",
+          children: CATEGORY_SECTION.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "hl-sec__h hl-sec__h--rule serif",
+          id: "hl-cats-h",
+          children: CATEGORY_SECTION.title
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: CATEGORY_SECTION.viewAll,
+        className: "hl-sec__link",
+        children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 16
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+      className: "hl-circles",
+      "aria-label": "Shop by category",
+      children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: categoryHref(c),
+        className: "hl-circle",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "hl-circle__img",
+          children: c.image_url ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: c.image_url,
+            alt: "",
+            loading: "lazy",
+            decoding: "async",
+            width: "200",
+            height: "200"
+          }) : /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+            "aria-hidden": "true",
+            children: c.name.slice(0, 1)
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "hl-circle__name",
+          children: c.name
+        })]
+      }, c.id))
+    })]
+  });
+}
+function FeaturedRow({
+  products,
+  status
+}) {
+  const {
+    title,
+    sub,
+    seeAll,
+    limit
+  } = FEATURED;
+  const row = products.slice(0, limit);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "hl-wrap hl-sec",
+    "aria-labelledby": "hl-featured-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "hl-sec__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "hl-sec__h serif",
+          id: "hl-featured-h",
+          children: title
+        }), sub && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hl-sec__sub",
+          children: sub
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: seeAll,
+        className: "hl-sec__link",
+        children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 16
+        })]
+      })]
+    }), row.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hl-empty",
+      children: status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : 'The Home & Living store is being stocked — products appear here as they go live.'
+    }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hl-row",
+      children: row.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingProductCard, {
+        product: p,
+        mediaLoading: i < 2 ? 'eager' : 'lazy'
+      }, p.id))
+    })]
+  });
+}
+function PromoStrip() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "hl-promo",
+    "aria-labelledby": "hl-promo-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hl-promo__art",
+      "aria-hidden": "true",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+        src: PROMO.image,
+        alt: "",
+        loading: "lazy",
+        decoding: "async",
+        width: "1200",
+        height: "400"
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-wrap hl-promo__inner",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hl-promo__txt",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hl-eyebrow",
+          children: PROMO.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "hl-promo__h serif",
+          id: "hl-promo-h",
+          children: PROMO.headline
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hl-promo__sub",
+          children: PROMO.sub
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: PROMO.href,
+          className: "hl-cta",
+          children: [PROMO.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hl-promo__badges",
+        "aria-label": "Why it matters",
+        children: PROMO.badges.map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hl-trust__icon",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: b.icon,
+              size: 22
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: b.title
+          })]
+        }, b.title))
+      })]
+    })]
+  });
+}
+function HomeLivingHome() {
+  const {
+    status,
+    categories,
+    products
+  } = useHomeLivingCatalogue();
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hl-home",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(HeroCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryCircles, {
+      categories: categories
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(FeaturedRow, {
       products: products,
       status: status
     }), /*#__PURE__*/jsxRuntimeExports.jsx(PromoStrip, {})]
@@ -61781,7 +62638,7 @@ function GroceryHome() {
 // media="print" onload swap because the Content-Security-Policy has no
 // 'unsafe-inline' in script-src, so inline event handlers do not run.
 // ============================================================
-const DEFERRED_ROUTES = /^\/(admin|passport|creator|fashion|grocery)(\/|$)/;
+const DEFERRED_ROUTES = /^\/(admin|passport|creator|fashion|grocery|homeliving)(\/|$)/;
 function loadDeferredStyles() {
   if (typeof document === 'undefined') return;
   if (document.querySelector('link[data-deferred-styles]')) return;
@@ -62081,6 +62938,13 @@ function App() {
         children: /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           index: true,
           element: /*#__PURE__*/jsxRuntimeExports.jsx(GroceryHome, {})
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+        path: "/homeliving",
+        element: /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingLayout, {}),
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          index: true,
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingHome, {})
         })
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Route, {
         element: /*#__PURE__*/jsxRuntimeExports.jsx(Layout, {}),
