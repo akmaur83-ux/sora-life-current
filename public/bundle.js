@@ -29570,11 +29570,11 @@ const supabase = createClient(supabaseUrl , supabasePublishableKey );
 
 /** The store column value every fashion row carries (catalogue_* since 0034). */
 const FASHION_STORE = 'fashion';
-const num$9 = v => {
+const num$a = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
-const str$4 = v => String(v ?? '').trim();
+const str$6 = v => String(v ?? '').trim();
 
 // ---- Category tree ---------------------------------------------------------
 
@@ -29583,11 +29583,11 @@ function buildTree(rows) {
   const list = (Array.isArray(rows) ? rows : []).map(r => ({
     id: String(r.id),
     parent_id: r.parent_id == null ? null : String(r.parent_id),
-    name: str$4(r.name),
-    slug: str$4(r.slug),
-    tagline: str$4(r.tagline),
+    name: str$6(r.name),
+    slug: str$6(r.slug),
+    tagline: str$6(r.tagline),
     image_url: r.image_url || null,
-    sort_order: num$9(r.sort_order),
+    sort_order: num$a(r.sort_order),
     is_active: r.is_active !== false
   }));
   const byId = new Map(list.map(n => [n.id, n]));
@@ -29638,16 +29638,16 @@ function buildTree(rows) {
 }
 
 /** `/fashion/c/<slug>` → the shallowest active category with that slug. */
-function resolveCategory(tree, slug) {
-  const s = str$4(slug).toLowerCase();
+function resolveCategory$1(tree, slug) {
+  const s = str$6(slug).toLowerCase();
   if (!s) return null;
   const matches = tree.list.filter(n => n.slug === s && n.is_active);
   if (matches.length === 0) return null;
   matches.sort((a, b) => tree.depth(a.id) - tree.depth(b.id) || a.sort_order - b.sort_order);
   return matches[0];
 }
-const categoryHref$2 = node => `/fashion/c/${node.slug}`;
-function breadcrumbFor(tree, node) {
+const categoryHref$3 = node => `/fashion/c/${node.slug}`;
+function breadcrumbFor$1(tree, node) {
   const trail = [{
     name: 'Fashion',
     href: '/fashion'
@@ -29655,13 +29655,13 @@ function breadcrumbFor(tree, node) {
   if (!node) return trail;
   for (const a of tree.ancestors(node.id)) trail.push({
     name: a.name,
-    href: categoryHref$2(a)
+    href: categoryHref$3(a)
   });
   return trail;
 }
 
 /** The ids a listing for `node` covers: itself plus everything below it. */
-function categoryScope(tree, node) {
+function categoryScope$1(tree, node) {
   if (!node) return null;
   return new Set([node.id, ...tree.descendants(node.id).map(n => n.id)]);
 }
@@ -29672,18 +29672,18 @@ function categoryScope(tree, node) {
 function productView(product, variants = null) {
   const vs = (Array.isArray(variants) ? variants : product?.fashion_variants || []).filter(v => v && v.is_active !== false).map(v => ({
     id: String(v.id),
-    size: str$4(v.size),
-    colour: str$4(v.colour),
+    size: str$6(v.size),
+    colour: str$6(v.colour),
     colour_hex: v.colour_hex || null,
     sku: v.sku || null,
-    stock: Math.max(0, num$9(v.stock)),
-    price_override: v.price_override == null ? null : num$9(v.price_override),
-    sort_order: num$9(v.sort_order)
+    stock: Math.max(0, num$a(v.stock)),
+    price_override: v.price_override == null ? null : num$a(v.price_override),
+    sort_order: num$a(v.sort_order)
   })).sort((a, b) => a.sort_order - b.sort_order);
-  const mrp = num$9(product?.mrp);
-  const sale = product?.sale_price == null ? null : num$9(product.sale_price);
+  const mrp = num$a(product?.mrp);
+  const sale = product?.sale_price == null ? null : num$a(product.sale_price);
   const price = sale != null && sale < mrp ? sale : mrp;
-  const discountPct = product?.discount_percent != null ? num$9(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
+  const discountPct = product?.discount_percent != null ? num$a(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
   const swatches = [];
   for (const v of vs) {
     let s = swatches.find(x => x.colour === v.colour);
@@ -29701,10 +29701,10 @@ function productView(product, variants = null) {
   const totalStock = vs.reduce((s, v) => s + v.stock, 0);
   return {
     id: String(product?.id ?? ''),
-    slug: str$4(product?.slug),
-    name: str$4(product?.name),
-    brand: str$4(product?.brand),
-    description: str$4(product?.description),
+    slug: str$6(product?.slug),
+    name: str$6(product?.name),
+    brand: str$6(product?.brand),
+    description: str$6(product?.description),
     category_id: product?.category_id == null ? null : String(product.category_id),
     image: Array.isArray(product?.images) && product.images[0] ? product.images[0] : null,
     images: Array.isArray(product?.images) ? product.images.filter(Boolean) : [],
@@ -29713,11 +29713,11 @@ function productView(product, variants = null) {
     price,
     discountPct,
     hasDiscount: discountPct > 0,
-    rating: Math.max(0, Math.min(5, num$9(product?.rating))),
-    reviewCount: Math.max(0, num$9(product?.review_count)),
+    rating: Math.max(0, Math.min(5, num$a(product?.rating))),
+    reviewCount: Math.max(0, num$a(product?.review_count)),
     isNew: product?.is_new === true,
     isBestseller: product?.is_bestseller === true,
-    sortOrder: num$9(product?.sort_order),
+    sortOrder: num$a(product?.sort_order),
     variants: vs,
     swatches,
     sizes,
@@ -29795,66 +29795,66 @@ const FASHION_PRICE_BANDS = [{
   min: 2000,
   maxExclusive: Infinity
 }];
-const DISCOUNT_STEPS = [10, 25, 40, 50];
-const RATING_STEPS = [4, 3];
-const VIEWS = ['grid', 'list'];
-const SORT_IDS$1 = new Set(FASHION_SORTS.map(s => s.id));
-const PRICE_IDS$1 = new Set(FASHION_PRICE_BANDS.map(b => b.id));
-const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
-const uniq = arr => [...new Set(arr)];
+const DISCOUNT_STEPS$1 = [10, 25, 40, 50];
+const RATING_STEPS$1 = [4, 3];
+const VIEWS$1 = ['grid', 'list'];
+const SORT_IDS$2 = new Set(FASHION_SORTS.map(s => s.id));
+const PRICE_IDS$2 = new Set(FASHION_PRICE_BANDS.map(b => b.id));
+const list$1 = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+const uniq$1 = arr => [...new Set(arr)];
 function readFashionUrlState(searchParams) {
   const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
-  const discount = num$9(p.get('discount'));
-  const rating = num$9(p.get('rating'));
+  const discount = num$a(p.get('discount'));
+  const rating = num$a(p.get('rating'));
   return {
-    q: str$4(p.get('q')),
-    sort: SORT_IDS$1.has(p.get('sort')) ? p.get('sort') : 'featured',
-    price: PRICE_IDS$1.has(p.get('price')) ? p.get('price') : null,
-    sizes: uniq(list(p.get('size'))),
-    colours: uniq(list(p.get('colour'))),
-    brands: uniq(list(p.get('brand'))),
-    discount: DISCOUNT_STEPS.includes(discount) ? discount : null,
-    rating: RATING_STEPS.includes(rating) ? rating : null,
-    view: VIEWS.includes(p.get('view')) ? p.get('view') : 'grid'
+    q: str$6(p.get('q')),
+    sort: SORT_IDS$2.has(p.get('sort')) ? p.get('sort') : 'featured',
+    price: PRICE_IDS$2.has(p.get('price')) ? p.get('price') : null,
+    sizes: uniq$1(list$1(p.get('size'))),
+    colours: uniq$1(list$1(p.get('colour'))),
+    brands: uniq$1(list$1(p.get('brand'))),
+    discount: DISCOUNT_STEPS$1.includes(discount) ? discount : null,
+    rating: RATING_STEPS$1.includes(rating) ? rating : null,
+    view: VIEWS$1.includes(p.get('view')) ? p.get('view') : 'grid'
   };
 }
 function updateFashionUrlState(searchParams, patch) {
   const p = new URLSearchParams(searchParams);
   const has = k => Object.prototype.hasOwnProperty.call(patch, k);
   const setList = (key, arr) => {
-    const v = uniq((Array.isArray(arr) ? arr : []).map(str$4).filter(Boolean));
+    const v = uniq$1((Array.isArray(arr) ? arr : []).map(str$6).filter(Boolean));
     if (v.length) p.set(key, v.join(','));else p.delete(key);
   };
   if (has('q')) {
-    const q = str$4(patch.q);
+    const q = str$6(patch.q);
     if (q) p.set('q', q);else p.delete('q');
   }
   if (has('sort')) {
-    if (SORT_IDS$1.has(patch.sort) && patch.sort !== 'featured') p.set('sort', patch.sort);else p.delete('sort');
+    if (SORT_IDS$2.has(patch.sort) && patch.sort !== 'featured') p.set('sort', patch.sort);else p.delete('sort');
   }
   if (has('price')) {
-    if (PRICE_IDS$1.has(patch.price)) p.set('price', patch.price);else p.delete('price');
+    if (PRICE_IDS$2.has(patch.price)) p.set('price', patch.price);else p.delete('price');
   }
   if (has('sizes')) setList('size', patch.sizes);
   if (has('colours')) setList('colour', patch.colours);
   if (has('brands')) setList('brand', patch.brands);
   if (has('discount')) {
-    if (DISCOUNT_STEPS.includes(num$9(patch.discount))) p.set('discount', String(num$9(patch.discount)));else p.delete('discount');
+    if (DISCOUNT_STEPS$1.includes(num$a(patch.discount))) p.set('discount', String(num$a(patch.discount)));else p.delete('discount');
   }
   if (has('rating')) {
-    if (RATING_STEPS.includes(num$9(patch.rating))) p.set('rating', String(num$9(patch.rating)));else p.delete('rating');
+    if (RATING_STEPS$1.includes(num$a(patch.rating))) p.set('rating', String(num$a(patch.rating)));else p.delete('rating');
   }
   if (has('view')) {
     if (patch.view === 'list') p.set('view', 'list');else p.delete('view');
   }
   return p;
 }
-function activeFilterCount(state) {
+function activeFilterCount$1(state) {
   return (state.price ? 1 : 0) + state.sizes.length + state.colours.length + state.brands.length + (state.discount ? 1 : 0) + (state.rating ? 1 : 0);
 }
 
 /** The choices the panel offers, from what is actually in the listing. */
-function filterOptions(views) {
+function filterOptions$1(views) {
   const sizes = new Map();
   const colours = new Map();
   const brands = new Map();
@@ -29883,7 +29883,7 @@ function filterOptions(views) {
     brands: [...brands.keys()].sort()
   };
 }
-function matchesFilters(view, state) {
+function matchesFilters$1(view, state) {
   if (state.q) {
     const q = state.q.toLowerCase();
     if (!`${view.name} ${view.brand} ${view.description}`.toLowerCase().includes(q)) return false;
@@ -29917,9 +29917,9 @@ function sortViews(views, sort) {
       return arr.sort(featured);
   }
 }
-function applyListing(views, state, scope = null) {
+function applyListing$1(views, state, scope = null) {
   const inScope = scope ? views.filter(v => v.category_id && scope.has(v.category_id)) : views;
-  return sortViews(inScope.filter(v => matchesFilters(v, state)), state.sort);
+  return sortViews(inScope.filter(v => matchesFilters$1(v, state)), state.sort);
 }
 
 /** Distinct brands across the catalogue, most products first — the "Top Brands" row. */
@@ -29952,9 +29952,9 @@ const CATEGORY_TABLE = 'catalogue_categories';
 const PRODUCT_TABLE = 'catalogue_products';
 const VARIANT_TABLE = 'catalogue_variants';
 const PRODUCT_COLUMNS$2 = 'id, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
-const VARIANT_COLUMNS = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
+const VARIANT_COLUMNS$1 = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
 /** The embed, under the name the fashion code has always read. */
-const PRODUCT_SELECT = `${PRODUCT_COLUMNS$2}, fashion_variants:${VARIANT_TABLE} (${VARIANT_COLUMNS})`;
+const PRODUCT_SELECT$1 = `${PRODUCT_COLUMNS$2}, fashion_variants:${VARIANT_TABLE} (${VARIANT_COLUMNS$1})`;
 async function getFashionCategories() {
   const {
     data,
@@ -29971,7 +29971,7 @@ async function getFashionProducts() {
   const {
     data,
     error
-  } = await supabase.from(PRODUCT_TABLE).select(PRODUCT_SELECT).eq('store', FASHION_STORE).eq('is_active', true).order('sort_order', {
+  } = await supabase.from(PRODUCT_TABLE).select(PRODUCT_SELECT$1).eq('store', FASHION_STORE).eq('is_active', true).order('sort_order', {
     ascending: true
   });
   if (error) throw error;
@@ -29985,7 +29985,7 @@ async function getFashionProductsByIds(ids) {
   const {
     data,
     error
-  } = await supabase.from(PRODUCT_TABLE).select(PRODUCT_SELECT).eq('store', FASHION_STORE).in('id', clean);
+  } = await supabase.from(PRODUCT_TABLE).select(PRODUCT_SELECT$1).eq('store', FASHION_STORE).in('id', clean);
   if (error) throw error;
   return Array.isArray(data) ? data : [];
 }
@@ -30090,7 +30090,7 @@ const fashionRowFor = id => catalogueRowFor(FASHION_CATALOGUE, id);
 function ensureFashionProducts(ids) {
   return ensureCatalogueRows(FASHION_CATALOGUE, ids, getFashionProductsByIds, entryOf);
 }
-const num$8 = v => {
+const num$9 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -30139,13 +30139,13 @@ function hydrateFashionCartLine(line, entry, {
   } = entry;
   const v = variants.find(x => String(x.id) === String(line.variantId)) || null;
   const variantMissing = !v || v.is_active === false;
-  const mrp = num$8(row.mrp);
-  const sale = row.sale_price == null ? null : num$8(row.sale_price);
+  const mrp = num$9(row.mrp);
+  const sale = row.sale_price == null ? null : num$9(row.sale_price);
   const base = sale != null && sale > 0 && sale < mrp ? sale : mrp;
-  const override = v && v.price_override != null ? num$8(v.price_override) : null;
+  const override = v && v.price_override != null ? num$9(v.price_override) : null;
   const unitPrice = variantMissing ? null : override != null && override > 0 ? override : base;
   const unitMrp = unitPrice == null ? null : Math.max(mrp, unitPrice);
-  const stock = v ? Math.max(0, Math.floor(num$8(v.stock))) : null;
+  const stock = v ? Math.max(0, Math.floor(num$9(v.stock))) : null;
   const label = v ? [v.size, v.colour].filter(Boolean).join(' · ') : line.variant ?? null;
   let unavailableReason = null;
   if (variantMissing) unavailableReason = label ? `“${label}” is no longer available.` : 'The size and colour you chose are no longer available.';else if (row.is_active === false) unavailableReason = 'This item is no longer available.';else if (stock === 0) unavailableReason = 'This size and colour is out of stock.';else if (stock != null && line.qty > stock) unavailableReason = stock === 1 ? 'Only 1 left — please reduce the quantity.' : `Only ${stock} left — please reduce the quantity.`;else if (!(unitPrice > 0)) unavailableReason = 'This item is not available to buy right now.';
@@ -30233,28 +30233,28 @@ const PROMO$1 = {
   cta: 'Shop Fresh',
   href: '/grocery/category/everyday-staples'
 };
-const categoryHref$1 = c => `/grocery/category/${c.slug}`;
+const categoryHref$2 = c => `/grocery/category/${c.slug}`;
 
 // ---- Row shapes ----------------------------------------------------------------
 const CATEGORY_COLUMNS$1 = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
 const PRODUCT_COLUMNS$1 = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
-const num$7 = v => {
+const num$8 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
 
 /** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
 const priceOf$1 = row => {
-  const mrp = num$7(row?.mrp);
-  const sale = row?.sale_price == null ? null : num$7(row.sale_price);
+  const mrp = num$8(row?.mrp);
+  const sale = row?.sale_price == null ? null : num$8(row.sale_price);
   return sale != null && sale > 0 && sale < mrp ? sale : mrp;
 };
 
 /** A product row for the homepage and the cart: the row as stored, plus `price`. */
 const groceryProductView = row => row ? {
   ...row,
-  mrp: num$7(row.mrp),
-  sale_price: row.sale_price == null ? null : num$7(row.sale_price),
+  mrp: num$8(row.mrp),
+  sale_price: row.sale_price == null ? null : num$8(row.sale_price),
   price: priceOf$1(row),
   images: Array.isArray(row.images) ? row.images.filter(Boolean) : []
 } : null;
@@ -30374,7 +30374,7 @@ const groceryProductFor = id => catalogueRowFor(GROCERY_CATALOGUE, id);
 function ensureGroceryProducts(ids) {
   return ensureCatalogueRows(GROCERY_CATALOGUE, ids, getGroceryProductsByIds, groceryProductView);
 }
-const num$6 = v => {
+const num$7 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -30411,8 +30411,8 @@ function hydrateGroceryCartLine(line, product) {
       purchasable: false
     };
   }
-  const unitPrice = num$6(product.price) > 0 ? num$6(product.price) : null;
-  const unitMrp = unitPrice == null ? null : Math.max(num$6(product.mrp), unitPrice);
+  const unitPrice = num$7(product.price) > 0 ? num$7(product.price) : null;
+  const unitMrp = unitPrice == null ? null : Math.max(num$7(product.mrp), unitPrice);
   const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
   let unavailableReason = null;
   if (product.is_active === false) unavailableReason = 'This item is no longer available.';else if (unitPrice == null) unavailableReason = 'This item is not available to buy right now.';else unavailableReason = GROCERY_CHECKOUT_NOTE;
@@ -35113,7 +35113,7 @@ const PROMOTIONS_FALLBACK = [{
 const PLACEMENTS = ['home', 'pdp', 'cart'];
 const TYPES = ['poster', 'offer'];
 const THEME_VARIANTS = ['forest', 'cream', 'orange', 'dark', 'minimal'];
-function str$3(v, max = 400) {
+function str$5(v, max = 400) {
   return typeof v === 'string' ? v.trim().slice(0, max) : '';
 }
 
@@ -35124,20 +35124,20 @@ function normalizePromo(row) {
   const themeVariant = THEME_VARIANTS.includes(row.theme_variant ?? row.themeVariant) ? row.theme_variant ?? row.themeVariant : 'forest';
   const rawPlacements = row.placements ?? [];
   const placements = Array.isArray(rawPlacements) ? rawPlacements.filter(p => PLACEMENTS.includes(p)) : [];
-  const ctaUrl = str$3(row.cta_url ?? row.ctaUrl, 500) || null;
+  const ctaUrl = str$5(row.cta_url ?? row.ctaUrl, 500) || null;
   return {
     id: String(row.id ?? cryptoId()),
     type,
-    title: str$3(row.title, 160),
-    subtitle: str$3(row.subtitle, 320),
+    title: str$5(row.title, 160),
+    subtitle: str$5(row.subtitle, 320),
     couponCode: normalizeCode(row.coupon_code ?? row.couponCode),
-    ctaText: str$3(row.cta_text ?? row.ctaText, 60),
+    ctaText: str$5(row.cta_text ?? row.ctaText, 60),
     ctaUrl: safeCtaUrl(ctaUrl),
-    badgeText: str$3(row.badge_text ?? row.badgeText, 40),
-    imageUrl: str$3(row.image_url ?? row.imageUrl, 1000) || null,
+    badgeText: str$5(row.badge_text ?? row.badgeText, 40),
+    imageUrl: str$5(row.image_url ?? row.imageUrl, 1000) || null,
     // Optional artwork for >= 1024px (0029). Null means every viewport shows
     // imageUrl, exactly as before the column existed.
-    desktopImageUrl: str$3(row.desktop_image_url ?? row.desktopImageUrl, 1000) || null,
+    desktopImageUrl: str$5(row.desktop_image_url ?? row.desktopImageUrl, 1000) || null,
     themeVariant,
     textAlign: (row.text_align ?? row.textAlign) === 'center' ? 'center' : 'left',
     placements,
@@ -35148,7 +35148,7 @@ function normalizePromo(row) {
   };
 }
 function normalizeCode(v) {
-  const s = str$3(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+  const s = str$5(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
   return s || null;
 }
 
@@ -35811,7 +35811,7 @@ const DEFAULT_LADDER = Object.freeze([{
   rate: 25
 }]);
 const DEFAULT_BEYOND_STEP = 25000;
-const num$5 = v => {
+const num$6 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
@@ -35823,8 +35823,8 @@ function normalizeLadder(rows) {
   return rows.map((r, i) => ({
     level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
     rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
-    threshold: num$5(r?.threshold),
-    rate: num$5(r?.rate)
+    threshold: num$6(r?.threshold),
+    rate: num$6(r?.rate)
   })).sort((a, b) => a.level - b.level);
 }
 
@@ -38386,7 +38386,7 @@ const NEUTRAL_THEME = {
   background: '#F1EDE4',
   gradient: 'linear-gradient(168deg, #F6F2EA 0%, #E9E3D7 100%)'
 };
-const str$2 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
+const str$4 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
 
 /**
  * A CSS colour we are willing to inline as a style value.
@@ -38396,7 +38396,7 @@ const str$2 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
  * quote or url() is refused rather than escaped.
  */
 function safeColor(value) {
-  const v = str$2(value, 40);
+  const v = str$4(value, 40);
   if (!v) return '';
   if (/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) return v;
   if (/^(?:rgb|hsl)a?\(\s*[\d.,%\s/deg]+\)$/i.test(v)) return v;
@@ -38411,7 +38411,7 @@ function safeColor(value) {
  * one. No url(), no var(), no expression, no nesting of other functions.
  */
 function safeGradient(value) {
-  const v = str$2(value, 240);
+  const v = str$4(value, 240);
   if (!v) return '';
   if (!/^(?:linear|radial|conic)-gradient\(/i.test(v)) return '';
   if (!v.endsWith(')')) return '';
@@ -38481,16 +38481,16 @@ function makeSpotlightId(productSlug, taken = []) {
  */
 function sanitizeSpotlightItem(raw, taken = []) {
   if (!raw || typeof raw !== 'object') return null;
-  const productSlug = str$2(raw.productSlug ?? raw.productId ?? raw.slug, 120);
+  const productSlug = str$4(raw.productSlug ?? raw.productId ?? raw.slug, 120);
   if (!productSlug) return null;
   return {
-    id: str$2(raw.id, 60) || makeSpotlightId(productSlug, taken),
+    id: str$4(raw.id, 60) || makeSpotlightId(productSlug, taken),
     productSlug,
     // Optional cutout/hero asset. Same URL policy the homepage visuals use.
     spotlightImage: safeVisualUrl(raw.spotlightImage) || '',
     // Owner-authored, and shown verbatim. Never generated from product data.
-    headline: str$2(raw.headline, 60),
-    subline: str$2(raw.subline, 90),
+    headline: str$4(raw.headline, 60),
+    subline: str$4(raw.subline, 90),
     background: safeColor(raw.background),
     gradient: safeGradient(raw.gradient),
     // Generated once by the Admin packshot preprocessor. It is deliberately
@@ -39674,9 +39674,9 @@ const CONTENT_LABELS = {
   how_to_use: 'How to use',
   specifications: 'Specifications'
 };
-const str$1 = v => (v === null || v === undefined ? '' : String(v)).trim();
+const str$3 = v => (v === null || v === undefined ? '' : String(v)).trim();
 const truthyStr = v => {
-  const s = str$1(v);
+  const s = str$3(v);
   return s.length ? s : null;
 };
 
@@ -39690,7 +39690,7 @@ function normalizeKeyClaims(value) {
   const list = Array.isArray(value) ? value
   // A tag input or a CSV cell may hand us a comma-separated string.
   : String(value).split(',');
-  const out = list.map(str$1).filter(Boolean);
+  const out = list.map(str$3).filter(Boolean);
   return arrayOrNull(out);
 }
 function normalizeBenefits(value) {
@@ -39700,7 +39700,7 @@ function normalizeBenefits(value) {
   for (const raw of value) {
     if (typeof raw === 'string') {
       // The legacy shape. Keep it readable rather than dropping the content.
-      const t = str$1(raw);
+      const t = str$3(raw);
       if (t) out.push({
         title: t,
         description: ''
@@ -39708,8 +39708,8 @@ function normalizeBenefits(value) {
       continue;
     }
     if (!raw || typeof raw !== 'object') continue;
-    const title = str$1(raw.title);
-    const description = str$1(raw.description);
+    const title = str$3(raw.title);
+    const description = str$3(raw.description);
     // A row with neither is not a benefit, it is an empty row the admin has
     // not filled in yet — dropped on save rather than stored.
     if (!title && !description) continue;
@@ -39726,7 +39726,7 @@ function normalizeIngredients(value) {
   const out = [];
   for (const raw of value) {
     if (typeof raw === 'string') {
-      const n = str$1(raw);
+      const n = str$3(raw);
       if (n) out.push({
         name: n,
         description: '',
@@ -39735,14 +39735,14 @@ function normalizeIngredients(value) {
       continue;
     }
     if (!raw || typeof raw !== 'object') continue;
-    const name = str$1(raw.name);
+    const name = str$3(raw.name);
     if (!name) continue; // an ingredient with no name is nothing
     out.push({
       name,
-      description: str$1(raw.description),
+      description: str$3(raw.description),
       // Only http(s). A relative or javascript: value must never reach an
       // <img src> on a live page.
-      image_url: /^https?:\/\//i.test(str$1(raw.image_url)) ? str$1(raw.image_url) : null
+      image_url: /^https?:\/\//i.test(str$3(raw.image_url)) ? str$3(raw.image_url) : null
     });
   }
   return out;
@@ -39752,7 +39752,7 @@ function normalizeHowToUse(value) {
   if (!Array.isArray(value)) return null;
   const out = [];
   for (const raw of value) {
-    const text = typeof raw === 'string' ? str$1(raw) : str$1(raw?.text);
+    const text = typeof raw === 'string' ? str$3(raw) : str$3(raw?.text);
     if (!text) continue;
     out.push({
       step: out.length + 1,
@@ -39764,7 +39764,7 @@ function normalizeHowToUse(value) {
 function normalizeSpecifications(value) {
   if (value === null || value === undefined) return null;
   // Accept both the stored object and the editor's row array.
-  const pairs = Array.isArray(value) ? value.map(r => [str$1(r?.key), str$1(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$1(k), str$1(v)]) : [];
+  const pairs = Array.isArray(value) ? value.map(r => [str$3(r?.key), str$3(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$3(k), str$3(v)]) : [];
   const out = {};
   for (const [k, v] of pairs) {
     if (!k || !v) continue; // a label with no value renders as "Shelf life:"
@@ -39830,7 +39830,7 @@ function validateContent(input) {
       errors.push('Benefits: each row needs a title and description.');
       break;
     }
-    if (!str$1(b.title) && !str$1(b.description)) {
+    if (!str$3(b.title) && !str$3(b.description)) {
       errors.push('Benefits: a row is completely empty.');
       break;
     }
@@ -39840,11 +39840,11 @@ function validateContent(input) {
       errors.push('Ingredients: each row needs a name.');
       break;
     }
-    if (!str$1(i.name)) {
+    if (!str$3(i.name)) {
       errors.push('Ingredients: a row has a description but no name.');
       break;
     }
-    const url = str$1(i.image_url);
+    const url = str$3(i.image_url);
     if (url && !/^https?:\/\//i.test(url)) {
       errors.push(`Ingredients: "${url.slice(0, 30)}" is not an http(s) image URL.`);
       break;
@@ -39855,7 +39855,7 @@ function validateContent(input) {
       errors.push('How to use: each step needs text.');
       break;
     }
-    if (!str$1(s.text)) {
+    if (!str$3(s.text)) {
       errors.push('How to use: a step has no text.');
       break;
     }
@@ -39895,7 +39895,7 @@ function contentScore(product) {
     missing: CONTENT_FIELDS.filter(f => !populated.includes(f)),
     count: populated.length,
     total: CONTENT_FIELDS.length,
-    hasDescription: !!str$1(product?.description)
+    hasDescription: !!str$3(product?.description)
   };
 }
 
@@ -41646,7 +41646,7 @@ const SHOP_SORTS = [{
   id: 'new',
   label: 'Newest'
 }];
-const PRICE_BANDS = [{
+const PRICE_BANDS$1 = [{
   id: 'under-500',
   label: 'Under ₹500',
   min: 0,
@@ -41672,9 +41672,9 @@ const PRICE_BANDS = [{
   min: 5000,
   maxExclusive: Infinity
 }];
-const SORT_IDS = new Set(SHOP_SORTS.map(item => item.id));
+const SORT_IDS$1 = new Set(SHOP_SORTS.map(item => item.id));
 const HIGHLIGHT_IDS = new Set(['new', 'sale', 'bestseller']);
-const PRICE_IDS = new Set(PRICE_BANDS.map(item => item.id));
+const PRICE_IDS$1 = new Set(PRICE_BANDS$1.map(item => item.id));
 function values(value) {
   return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
 }
@@ -41684,7 +41684,7 @@ function validValues(value, allowed) {
 function normalizedShopSort(value) {
   // `featured` was the old ID for this same stable/curated ordering.
   if (value === 'featured') return 'recommended';
-  return SORT_IDS.has(value) ? value : 'recommended';
+  return SORT_IDS$1.has(value) ? value : 'recommended';
 }
 function readShopUrlState(searchParams, categorySlugs = []) {
   const params = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
@@ -41696,7 +41696,7 @@ function readShopUrlState(searchParams, categorySlugs = []) {
     categories: validValues(params.get('category'), allowedCategories),
     highlights: validValues(params.get('filter'), HIGHLIGHT_IDS),
     inStock: params.get('stock') === '1',
-    priceBand: PRICE_IDS.has(price) ? price : null
+    priceBand: PRICE_IDS$1.has(price) ? price : null
   };
 }
 function setList(params, key, list) {
@@ -41719,7 +41719,7 @@ function updateShopUrlState(searchParams, patch) {
     if (patch.inStock) params.set('stock', '1');else params.delete('stock');
   }
   if (has('priceBand')) {
-    if (PRICE_IDS.has(patch.priceBand)) params.set('price', patch.priceBand);else params.delete('price');
+    if (PRICE_IDS$1.has(patch.priceBand)) params.set('price', patch.priceBand);else params.delete('price');
   }
   return params;
 }
@@ -41733,7 +41733,7 @@ function productMatchesHighlight(product, highlight) {
 }
 function productMatchesPriceBand(product, bandId) {
   if (!bandId) return true;
-  const band = PRICE_BANDS.find(item => item.id === bandId);
+  const band = PRICE_BANDS$1.find(item => item.id === bandId);
   if (!band) return true;
   const price = Number(product?.price);
   return Number.isFinite(price) && price >= band.min && price < band.maxExclusive;
@@ -41911,7 +41911,7 @@ function ProductBrowser({
         className: "v2-fp__prices",
         role: "group",
         "aria-label": "Price range",
-        children: PRICE_BANDS.map(band => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        children: PRICE_BANDS$1.map(band => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
           type: "button",
           className: `v2-fp__price ${priceBand === band.id ? 'is-on' : ''}`,
           "aria-pressed": priceBand === band.id,
@@ -46440,7 +46440,7 @@ async function requireUserId() {
 }
 
 // ---------- field whitelists (prevent id/user_id injection) ----------
-function str(v) {
+function str$2(v) {
   return v == null ? null : String(v);
 }
 
@@ -46462,7 +46462,7 @@ function pickAddressColumns(fields = {}) {
   };
   const row = {};
   for (const [key, col] of Object.entries(map)) {
-    if (fields[key] !== undefined) row[col] = str(fields[key]);
+    if (fields[key] !== undefined) row[col] = str$2(fields[key]);
   }
   return row;
 }
@@ -52558,7 +52558,7 @@ function Shell$2({
 // ============================================================
 
 const METRICS = Object.freeze(['clicks', 'orders', 'products', 'sales', 'commission']);
-const num$4 = v => {
+const num$5 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -52566,7 +52566,7 @@ const num$4 = v => {
 // Running total of a series — the shape of "lifetime so far".
 function cumulative(points) {
   let acc = 0;
-  return (Array.isArray(points) ? points : []).map(p => acc += num$4(p));
+  return (Array.isArray(points) ? points : []).map(p => acc += num$5(p));
 }
 
 // SVG geometry. `pad` keeps the stroke inside the box; a flat series sits on
@@ -52576,7 +52576,7 @@ function sparkGeometry(points, {
   height = 28,
   pad = 2
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$4);
+  const vals = (Array.isArray(points) ? points : []).map(num$5);
   const n = vals.length;
   if (n === 0) return {
     line: '',
@@ -52647,20 +52647,20 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
   };
   for (const m of METRICS) out[m] = Array.from({
     length: n
-  }, (_, i) => num$4(rows[i]?.[m]));
+  }, (_, i) => num$5(rows[i]?.[m]));
   out.labels = Array.from({
     length: n
   }, (_, i) => String(rows[i]?.at || ''));
   out.totals = Object.fromEntries(METRICS.map(m => [m, out[m].reduce((a, b) => a + b, 0)]));
-  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$4(raw.previous[m])])) : null;
+  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$5(raw.previous[m])])) : null;
   out.links = Array.isArray(raw?.links) ? raw.links.map(l => ({
     link_id: l?.link_id ?? null,
     label: String(l?.label || 'Link'),
     campaign: l?.campaign || null,
-    clicks: num$4(l?.clicks),
-    orders: num$4(l?.orders),
-    sales: num$4(l?.sales),
-    commission: num$4(l?.commission)
+    clicks: num$5(l?.clicks),
+    orders: num$5(l?.orders),
+    sales: num$5(l?.sales),
+    commission: num$5(l?.commission)
   })) : [];
   return out;
 }
@@ -52668,8 +52668,8 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
 // Trend versus the previous period. No previous period, or a previous of
 // zero, is "—" (not "+100%": there is nothing to be 100% of).
 function trend(current, previous) {
-  const c = num$4(current);
-  const p = previous == null ? null : num$4(previous);
+  const c = num$5(current);
+  const p = previous == null ? null : num$5(previous);
   if (p == null) return {
     pct: null,
     dir: 'none',
@@ -52719,8 +52719,8 @@ function areaChartGeometry({
   padT = 14,
   padB = 26
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num$4);
-  const b = (Array.isArray(orders) ? orders : []).map(num$4);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$5);
+  const b = (Array.isArray(orders) ? orders : []).map(num$5);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -52785,7 +52785,7 @@ function donutGeometry(parts, {
   const c = 2 * Math.PI * r;
   const list = (Array.isArray(parts) ? parts : []).map(p => ({
     ...p,
-    value: Math.max(0, num$4(p?.value))
+    value: Math.max(0, num$5(p?.value))
   }));
   const total = list.reduce((s, p) => s + p.value, 0);
   let offset = 0;
@@ -52827,7 +52827,7 @@ function barChartGeometry(points, {
   gap = 0.35,
   minMax = 4
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$4);
+  const vals = (Array.isArray(points) ? points : []).map(num$5);
   const n = vals.length;
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -52867,7 +52867,7 @@ function barChartGeometry(points, {
   };
 }
 function compactRupees(v) {
-  const n = Math.max(0, num$4(v));
+  const n = Math.max(0, num$5(v));
   if (n >= 10000000) return `₹${trim(n / 10000000)}Cr`;
   if (n >= 100000) return `₹${trim(n / 100000)}L`;
   if (n >= 1000) return `₹${trim(n / 1000)}k`;
@@ -54978,7 +54978,7 @@ function CreatorTierPage({
 }
 
 const isZero$1 = v => !(Number(v) > 0);
-const num$3 = v => v == null || v === '' ? NaN : Number(v);
+const num$4 = v => v == null || v === '' ? NaN : Number(v);
 const monthLabel = ym => {
   if (!ym) return '—';
   const [y, m] = String(ym).split('-').map(Number);
@@ -54989,7 +54989,7 @@ const monthLabel = ym => {
   }).format(new Date(y, m - 1, 1));
 };
 const ordinal$2 = n => {
-  const v = num$3(n);
+  const v = num$4(n);
   if (!Number.isFinite(v)) return '—';
   const s = ['th', 'st', 'nd', 'rd'];
   const r = v % 100;
@@ -54999,10 +54999,10 @@ const ordinal$2 = n => {
 // The terms the page quotes. The tier rate (0031) is the live one; the
 // earnings RPC's commission_rate is the floor, the creator row the fallback.
 function earningsTerms(earnings, standing, creator) {
-  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$3).find(v => Number.isFinite(v));
-  const hold = num$3(earnings?.settlement_hold_days);
-  const minPayout = num$3(earnings?.min_payout);
-  const payoutDay = num$3(earnings?.payout_day);
+  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$4).find(v => Number.isFinite(v));
+  const hold = num$4(earnings?.settlement_hold_days);
+  const minPayout = num$4(earnings?.min_payout);
+  const payoutDay = num$4(earnings?.payout_day);
   return {
     rate: Number.isFinite(rate) ? rate : null,
     hold: Number.isFinite(hold) && hold >= 0 ? hold : null,
@@ -56882,7 +56882,7 @@ const fmtDate = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   year: 'numeric'
 }).format(new Date(iso)) : '—';
 // null is "not set", never 0 — Number(null) would print a 0% rate.
-const num$2 = v => v == null || v === '' ? NaN : Number(v);
+const num$3 = v => v == null || v === '' ? NaN : Number(v);
 const initialsOf = name => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
 const STATUS = {
   active: {
@@ -56953,8 +56953,8 @@ function CreatorProfilePage({
   termsPublished = false
 }) {
   const st = STATUS[creator?.status] || STATUS.pending;
-  const rate = standing?.rate != null ? num$2(standing.rate) : num$2(creator?.default_commission_rate);
-  const windowDays = num$2(creator?.default_attribution_window_days);
+  const rate = standing?.rate != null ? num$3(standing.rate) : num$3(creator?.default_commission_rate);
+  const windowDays = num$3(creator?.default_attribution_window_days);
   const since = creator?.joined_at || creator?.created_at || null;
   const acct = standingFor(creator, kyc);
   const open = !!standing?.withdrawals_open;
@@ -57256,7 +57256,7 @@ function CreatorProfilePage({
 // derived (a ratio over zero, a period with no previous period) the value
 // is null and the page shows "—".
 // ============================================================
-const num$1 = v => {
+const num$2 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -57264,7 +57264,7 @@ const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
 
 // A ratio, or null when there is nothing to divide by.
-const ratio = (n, d) => num$1(d) > 0 ? num$1(n) / num$1(d) : null;
+const ratio = (n, d) => num$2(d) > 0 ? num$2(n) / num$2(d) : null;
 
 // ---- Stat cards -------------------------------------------------------------
 // When the range series is available the cards follow the toggle (with the
@@ -57273,10 +57273,10 @@ const ratio = (n, d) => num$1(d) > 0 ? num$1(n) / num$1(d) : null;
 function analyticsStats(analytics, series) {
   const range = !!series?.available;
   const tot = range ? series.totals : {
-    clicks: num$1(analytics?.clicks),
-    orders: num$1(analytics?.attributed_orders),
-    products: num$1(analytics?.products_sold),
-    sales: num$1(analytics?.attributed_sales),
+    clicks: num$2(analytics?.clicks),
+    orders: num$2(analytics?.attributed_orders),
+    products: num$2(analytics?.products_sold),
+    sales: num$2(analytics?.attributed_sales),
     commission: 0
   };
   const prev = range && series.previous ? series.previous : null;
@@ -57290,10 +57290,10 @@ function analyticsStats(analytics, series) {
   }) : [];
   return {
     scope: range ? 'range' : 'all',
-    clicks: num$1(tot.clicks),
-    orders: num$1(tot.orders),
-    products: num$1(tot.products),
-    sales: num$1(tot.sales),
+    clicks: num$2(tot.clicks),
+    orders: num$2(tot.orders),
+    products: num$2(tot.products),
+    sales: num$2(tot.sales),
     conversion: conv == null ? null : r1(conv * 100),
     aov: aov == null ? null : r2(aov),
     trends: {
@@ -57353,9 +57353,9 @@ function periodLabel(series) {
 
 // ---- Funnel: click → attributed order → eligible order (all time) -------------
 function funnelFor(analytics) {
-  const clicks = num$1(analytics?.clicks);
-  const orders = num$1(analytics?.attributed_orders);
-  const eligible = num$1(analytics?.eligible_orders);
+  const clicks = num$2(analytics?.clicks);
+  const orders = num$2(analytics?.attributed_orders);
+  const eligible = num$2(analytics?.eligible_orders);
   const pct = v => clicks > 0 ? r1(v / clicks * 100) : null;
   return {
     empty: clicks === 0,
@@ -57386,8 +57386,8 @@ const SHARE_TONES = ['forest', 'green', 'gold', 'amber', 'neutral'];
 function productShare(topProducts, max = 4) {
   const rows = (Array.isArray(topProducts) ? topProducts : []).map(p => ({
     name: String(p?.name || 'Product'),
-    qty: num$1(p?.qty),
-    sales: num$1(p?.sales)
+    qty: num$2(p?.qty),
+    sales: num$2(p?.sales)
   })).filter(p => p.sales > 0).sort((a, b) => b.sales - a.sales);
   const total = rows.reduce((s, p) => s + p.sales, 0);
   const head = rows.slice(0, max);
@@ -57436,10 +57436,10 @@ function topLinks(seriesLinks, {
       label: r.label,
       campaign: r.campaign || null,
       url: String(url || '').replace(/^https?:\/\//, ''),
-      clicks: num$1(r.clicks),
-      orders: num$1(r.orders),
-      sales: num$1(r.sales),
-      commission: num$1(r.commission),
+      clicks: num$2(r.clicks),
+      orders: num$2(r.orders),
+      sales: num$2(r.sales),
+      commission: num$2(r.commission),
       conversion: ratio(r.orders, r.clicks) == null ? null : r1(ratio(r.orders, r.clicks) * 100)
     };
   });
@@ -57507,7 +57507,7 @@ function insightsFor({
 function argMax(arr) {
   if (!Array.isArray(arr) || arr.length === 0) return -1;
   let best = 0;
-  for (let i = 1; i < arr.length; i += 1) if (num$1(arr[i]) > num$1(arr[best])) best = i;
+  for (let i = 1; i < arr.length; i += 1) if (num$2(arr[i]) > num$2(arr[best])) best = i;
   return best;
 }
 
@@ -57519,11 +57519,11 @@ function analyticsCsv(series, links = []) {
   };
   const lines = [['period', ...METRICS].join(',')];
   const n = series?.labels?.length || 0;
-  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num$1(series[m]?.[i]))].map(esc).join(','));
+  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num$2(series[m]?.[i]))].map(esc).join(','));
   if (Array.isArray(links) && links.length > 0) {
     lines.push('');
     lines.push(['link', 'campaign', 'clicks', 'orders', 'sales', 'commission'].join(','));
-    for (const l of links) lines.push([l.label, l.campaign || '', num$1(l.clicks), num$1(l.orders), num$1(l.sales), num$1(l.commission)].map(esc).join(','));
+    for (const l of links) lines.push([l.label, l.campaign || '', num$2(l.clicks), num$2(l.orders), num$2(l.sales), num$2(l.commission)].map(esc).join(','));
   }
   return `${lines.join('\n')}\n`;
 }
@@ -57541,9 +57541,9 @@ function dualAxisGeometry({
   padT = 14,
   padB = 30
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num$1);
-  const b = (Array.isArray(orders) ? orders : []).map(num$1);
-  const c = (Array.isArray(sales) ? sales : []).map(num$1);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$2);
+  const b = (Array.isArray(orders) ? orders : []).map(num$2);
+  const c = (Array.isArray(sales) ? sales : []).map(num$2);
   const n = Math.max(a.length, b.length, c.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -57610,8 +57610,8 @@ function groupedBarGeometry(seriesA, seriesB, {
   gap = 0.3,
   minMax = 1000
 } = {}) {
-  const a = (Array.isArray(seriesA) ? seriesA : []).map(num$1);
-  const b = (Array.isArray(seriesB) ? seriesB : []).map(num$1);
+  const a = (Array.isArray(seriesA) ? seriesA : []).map(num$2);
+  const b = (Array.isArray(seriesB) ? seriesB : []).map(num$2);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -59666,7 +59666,7 @@ function CategoryChips({
     pathname
   } = useLocation();
   const m = pathname.match(/^\/fashion\/c\/([^/]+)/);
-  const current = m ? resolveCategory(tree, m[1]) : null;
+  const current = m ? resolveCategory$1(tree, m[1]) : null;
   const activeRootId = current ? tree.ancestors(current.id)[0]?.id : null;
   if (tree.roots.length === 0 && !onFilters) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -59674,7 +59674,7 @@ function CategoryChips({
     role: "navigation",
     "aria-label": "Categories",
     children: [tree.roots.filter(r => r.is_active).map(r => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-      to: categoryHref$2(r),
+      to: categoryHref$3(r),
       className: `fs-chip${r.id === activeRootId ? ' is-on' : ''}`,
       "aria-current": r.id === activeRootId ? 'page' : undefined,
       children: r.name
@@ -59739,13 +59739,13 @@ function Drawer$2({
         children: tree.roots.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "fs-drawer__group",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-            to: categoryHref$2(r),
+            to: categoryHref$3(r),
             onClick: onClose,
             children: r.name
           }), tree.children(r.id).length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
             children: tree.children(r.id).map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
               children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-                to: categoryHref$2(c),
+                to: categoryHref$3(c),
                 onClick: onClose,
                 children: c.name
               })
@@ -60256,7 +60256,7 @@ function CategoryTiles({
     className: "fs-tiles",
     "aria-label": "Shop by",
     children: tiles.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      to: categoryHref$2(c),
+      to: categoryHref$3(c),
       className: "fs-tile",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "fs-tile__img",
@@ -60375,7 +60375,7 @@ function ShopByCategory({
         id: "fs-cats-h",
         children: "Shop by Category"
       }), tree.roots[0] && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: categoryHref$2(tree.roots[0]),
+        to: categoryHref$3(tree.roots[0]),
         className: "fs-sec__link",
         children: ["Explore all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "chevronRight",
@@ -60385,7 +60385,7 @@ function ShopByCategory({
     }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "fs-catcards",
       children: roots.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: categoryHref$2(c),
+        to: categoryHref$3(c),
         className: "fs-catcard",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "fs-catcard__img",
@@ -60499,7 +60499,7 @@ function FashionHome() {
   });
 }
 
-function Breadcrumb({
+function Breadcrumb$1({
   trail
 }) {
   return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
@@ -60518,7 +60518,7 @@ function Breadcrumb({
     })
   });
 }
-function Check({
+function Check$1({
   checked,
   onChange,
   children,
@@ -60541,7 +60541,7 @@ function Check({
     })]
   });
 }
-function FilterPanel({
+function FilterPanel$1({
   state,
   options,
   onPatch,
@@ -60552,7 +60552,7 @@ function FilterPanel({
   const toggle = (key, value) => onPatch({
     [key]: state[key].includes(value) ? state[key].filter(v => v !== value) : [...state[key], value]
   });
-  const count = activeFilterCount(state);
+  const count = activeFilterCount$1(state);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("aside", {
     className: "fs-filters",
     id: id,
@@ -60604,7 +60604,7 @@ function FilterPanel({
         children: "Size"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "fs-filter__sizes",
-        children: options.sizes.map(s => /*#__PURE__*/jsxRuntimeExports.jsx(Check, {
+        children: options.sizes.map(s => /*#__PURE__*/jsxRuntimeExports.jsx(Check$1, {
           checked: state.sizes.includes(s),
           onChange: () => toggle('sizes', s),
           children: s
@@ -60614,7 +60614,7 @@ function FilterPanel({
       className: "fs-filter",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
         children: "Colour"
-      }), options.colours.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Check, {
+      }), options.colours.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Check$1, {
         checked: state.colours.includes(c.colour),
         onChange: () => toggle('colours', c.colour),
         swatch: c.hex || '#D9CBB0',
@@ -60624,7 +60624,7 @@ function FilterPanel({
       className: "fs-filter",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
         children: "Brand"
-      }), options.brands.map(b => /*#__PURE__*/jsxRuntimeExports.jsx(Check, {
+      }), options.brands.map(b => /*#__PURE__*/jsxRuntimeExports.jsx(Check$1, {
         checked: state.brands.includes(b),
         onChange: () => toggle('brands', b),
         children: b
@@ -60633,7 +60633,7 @@ function FilterPanel({
       className: "fs-filter",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
         children: "Discount"
-      }), DISCOUNT_STEPS.map(d => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+      }), DISCOUNT_STEPS$1.map(d => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
         className: `fs-filter__opt${state.discount === d ? ' is-on' : ''}`,
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
           type: "radio",
@@ -60655,7 +60655,7 @@ function FilterPanel({
       className: "fs-filter",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
         children: "Rating"
-      }), RATING_STEPS.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+      }), RATING_STEPS$1.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
         className: `fs-filter__opt${state.rating === r ? ' is-on' : ''}`,
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
           type: "radio",
@@ -60680,7 +60680,7 @@ function FilterPanel({
     })]
   });
 }
-function Listing({
+function Listing$1({
   title,
   trail,
   scope = null,
@@ -60706,8 +60706,8 @@ function Listing({
   }, [panel]);
   const pool = only ? views.filter(only) : views;
   const inScope = scope ? pool.filter(v => v.category_id && scope.has(v.category_id)) : pool;
-  const options = reactExports.useMemo(() => filterOptions(inScope), [inScope]);
-  const results = applyListing(pool, state, scope);
+  const options = reactExports.useMemo(() => filterOptions$1(inScope), [inScope]);
+  const results = applyListing$1(pool, state, scope);
   const patch = p => setParams(updateFashionUrlState(params, p));
   const clear = () => setParams(updateFashionUrlState(params, {
     price: null,
@@ -60717,13 +60717,13 @@ function Listing({
     discount: null,
     rating: null
   }));
-  const count = activeFilterCount(state);
+  const count = activeFilterCount$1(state);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "fs-listing",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {
       onFilters: () => setPanel(v => !v),
       filterCount: count
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb$1, {
       trail: trail
     }), intro, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-listing__bar",
@@ -60792,7 +60792,7 @@ function Listing({
         className: "fs-filters__scrim",
         "aria-label": "Close filters",
         onClick: () => setPanel(false)
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(FilterPanel, {
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(FilterPanel$1, {
         state: state,
         options: options,
         onPatch: patch,
@@ -60832,11 +60832,11 @@ function FashionCategory() {
     status,
     tree
   } = useFashionCatalogue();
-  const node = resolveCategory(tree, slug);
+  const node = resolveCategory$1(tree, slug);
   if (!node) {
     return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-listing",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb$1, {
         trail: [{
           name: 'Fashion',
           href: '/fashion'
@@ -60860,15 +60860,15 @@ function FashionCategory() {
     className: "fs-subcats",
     "aria-label": `Shop ${node.name}`,
     children: children.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-      to: categoryHref$2(c),
+      to: categoryHref$3(c),
       className: "fs-subcat",
       children: c.name
     }, c.id))
   }) : null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx(Listing, {
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Listing$1, {
     title: node.name,
-    trail: breadcrumbFor(tree, node),
-    scope: categoryScope(tree, node),
+    trail: breadcrumbFor$1(tree, node),
+    scope: categoryScope$1(tree, node),
     intro: intro,
     emptyCopy: `No styles in ${node.name} yet — they appear here as they go live.`
   });
@@ -60878,7 +60878,7 @@ function FashionCategory() {
 function FashionSearch() {
   const [params] = useSearchParams();
   const q = (params.get('q') || '').trim();
-  return /*#__PURE__*/jsxRuntimeExports.jsx(Listing, {
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Listing$1, {
     title: q ? `Results for “${q}”` : 'All fashion',
     trail: [{
       name: 'Fashion',
@@ -60894,7 +60894,7 @@ function FashionSearch() {
 function FashionWishlistPage() {
   const wish = useFashionWishlist();
   const set = new Set(wish.ids);
-  return /*#__PURE__*/jsxRuntimeExports.jsx(Listing, {
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Listing$1, {
     title: "Your fashion wishlist",
     trail: [{
       name: 'Fashion',
@@ -61023,7 +61023,7 @@ function FashionProductPage() {
     });
   }
   const node = view.category_id ? tree.byId.get(view.category_id) : null;
-  const trail = [...breadcrumbFor(tree, node), {
+  const trail = [...breadcrumbFor$1(tree, node), {
     name: view.name
   }];
   const sel = readSelection(params, view);
@@ -61041,7 +61041,7 @@ function FashionProductPage() {
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "fs-pdp",
     "data-product": view.slug,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb$1, {
       trail: trail
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-pdp__grid",
@@ -61438,7 +61438,7 @@ function Drawer$1({
         children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
           children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
             children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-              to: categoryHref$1(c),
+              to: categoryHref$2(c),
               onClick: onClose,
               children: c.name
             })
@@ -61686,7 +61686,7 @@ function CategoryCircles$1({
     className: "gs-circles",
     "aria-label": "Shop by category",
     children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      to: categoryHref$1(c),
+      to: categoryHref$2(c),
       className: "gs-circle",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "gs-circle__img",
@@ -61886,31 +61886,65 @@ const PROMO = {
     title: 'Beautiful Homes, Happier Lives'
   }]
 };
-const categoryHref = c => `/homeliving/category/${c.slug}`;
+const categoryHref$1 = c => `/homeliving/category/${c.slug}`;
 
 // ---- Row shapes ----------------------------------------------------------------
 const CATEGORY_COLUMNS = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
 const PRODUCT_COLUMNS = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
-const num = v => {
+const VARIANT_COLUMNS = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
+/** The product row with its variants embedded (a size × colour each, or a size alone for a textile). */
+const PRODUCT_SELECT = `${PRODUCT_COLUMNS}, variants:catalogue_variants (${VARIANT_COLUMNS})`;
+const num$1 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
+const str$1 = v => String(v ?? '').trim();
 
 /** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
 const priceOf = row => {
-  const mrp = num(row?.mrp);
-  const sale = row?.sale_price == null ? null : num(row.sale_price);
+  const mrp = num$1(row?.mrp);
+  const sale = row?.sale_price == null ? null : num$1(row.sale_price);
   return sale != null && sale > 0 && sale < mrp ? sale : mrp;
 };
 
-/** A product row for the homepage: the row as stored, plus `price`. */
-const homelivingProductView = row => row ? {
-  ...row,
-  mrp: num(row.mrp),
-  sale_price: row.sale_price == null ? null : num(row.sale_price),
-  price: priceOf(row),
-  images: Array.isArray(row.images) ? row.images.filter(Boolean) : []
-} : null;
+/**
+ * A product row for the homepage and the listing: the row as stored, plus
+ * `price`, and the variant facets the listing filters on — `variants`
+ * (active, in order), `sizes` (distinct), `swatches` ({ colour, hex },
+ * distinct, empty colours skipped). A product without variants has empty
+ * facets and simply never shows under a size or colour filter.
+ */
+const homelivingProductView = row => {
+  if (!row) return null;
+  const variants = (Array.isArray(row.variants) ? row.variants : []).filter(v => v && v.is_active !== false).map(v => ({
+    id: String(v.id),
+    size: str$1(v.size),
+    colour: str$1(v.colour),
+    colour_hex: v.colour_hex || null,
+    sku: v.sku || null,
+    stock: Math.max(0, num$1(v.stock)),
+    price_override: v.price_override == null ? null : num$1(v.price_override),
+    sort_order: num$1(v.sort_order)
+  })).sort((a, b) => a.sort_order - b.sort_order);
+  const swatches = [];
+  for (const v of variants) if (v.colour && !swatches.some(s => s.colour === v.colour)) swatches.push({
+    colour: v.colour,
+    hex: v.colour_hex
+  });
+  return {
+    ...row,
+    mrp: num$1(row.mrp),
+    sale_price: row.sale_price == null ? null : num$1(row.sale_price),
+    price: priceOf(row),
+    discount_percent: row.discount_percent != null ? num$1(row.discount_percent) : 0,
+    rating: Math.max(0, Math.min(5, num$1(row.rating))),
+    review_count: Math.max(0, num$1(row.review_count)),
+    images: Array.isArray(row.images) ? row.images.filter(Boolean) : [],
+    variants,
+    sizes: [...new Set(variants.map(v => v.size).filter(Boolean))],
+    swatches
+  };
+};
 
 // ---- Reads -----------------------------------------------------------------------
 async function getHomeLivingCategories() {
@@ -61927,7 +61961,7 @@ async function getHomeLivingProducts() {
   const {
     data,
     error
-  } = await supabase.from('catalogue_products').select(PRODUCT_COLUMNS).eq('store', HOMELIVING_STORE).eq('is_active', true).order('sort_order', {
+  } = await supabase.from('catalogue_products').select(PRODUCT_SELECT).eq('store', HOMELIVING_STORE).eq('is_active', true).order('sort_order', {
     ascending: true
   });
   if (error) throw error;
@@ -62206,7 +62240,7 @@ function Drawer({
         children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
           children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
             children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-              to: categoryHref(c),
+              to: categoryHref$1(c),
               onClick: onClose,
               children: c.name
             })
@@ -62264,11 +62298,12 @@ function HomeLivingLayout() {
 
 function HomeLivingProductCard({
   product,
+  layout = 'grid',
   mediaLoading = 'lazy'
 }) {
   const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
-    className: "hl-card",
+    className: `hl-card${layout === 'list' ? ' hl-card--list' : ''}`,
     "data-product": product.slug,
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hl-card__media",
@@ -62477,7 +62512,7 @@ function CategoryCircles({
       className: "hl-circles",
       "aria-label": "Shop by category",
       children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: categoryHref(c),
+        to: categoryHref$1(c),
         className: "hl-circle",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "hl-circle__img",
@@ -62614,6 +62649,655 @@ function HomeLivingHome() {
       products: products,
       status: status
     }), /*#__PURE__*/jsxRuntimeExports.jsx(PromoStrip, {})]
+  });
+}
+
+// ============================================================
+// Home & Living listing — the pure rules.
+//
+// Everything /homeliving/category/<slug> decides without React or the
+// network: which category a slug means, what a category covers (itself
+// and everything below it), the breadcrumb, and the listing state that
+// lives in the URL — filters, sort and view — read and written exactly as
+// the fashion listing does (src/lib/fashion.js), with the same key names,
+// so a filtered view is shareable and the back button restores it.
+//
+// Facets: price band, size, colour, brand, discount, rating. Size and
+// colour come from a product's variants and only appear when a product
+// in the listing carries them; discount and rating only when a product
+// in the listing has one. A facet that could only ever say "nothing
+// matches" is not offered.
+// ============================================================
+
+const num = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const str = v => String(v ?? '').trim();
+
+// ---- Categories (flat today; one parent level is honoured if it ever appears) ----
+
+const STORE_HOME = {
+  name: 'Home & Living',
+  href: '/homeliving'
+};
+const categoryHref = node => `/homeliving/category/${node.slug}`;
+
+/** `/homeliving/category/<slug>` → the shallowest active category with that slug. */
+function resolveCategory(categories, slug) {
+  const s = str(slug).toLowerCase();
+  if (!s) return null;
+  const list = Array.isArray(categories) ? categories : [];
+  const depth = c => {
+    let d = 1;
+    let cur = c;
+    const seen = new Set();
+    while (cur && cur.parent_id && !seen.has(cur.id)) {
+      seen.add(cur.id);
+      cur = list.find(x => String(x.id) === String(cur.parent_id));
+      if (cur) d += 1;
+    }
+    return d;
+  };
+  const matches = list.filter(c => c && str(c.slug).toLowerCase() === s && c.is_active !== false);
+  if (matches.length === 0) return null;
+  matches.sort((a, b) => depth(a) - depth(b) || num(a.sort_order) - num(b.sort_order));
+  return matches[0];
+}
+
+/** Active direct children, in order. */
+function categoryChildren(categories, node) {
+  if (!node) return [];
+  return (Array.isArray(categories) ? categories : []).filter(c => c && c.is_active !== false && c.parent_id != null && String(c.parent_id) === String(node.id)).sort((a, b) => num(a.sort_order) - num(b.sort_order) || str(a.name).localeCompare(str(b.name)));
+}
+
+/** The ids a listing for `node` covers: itself plus everything below it. */
+function categoryScope(categories, node) {
+  if (!node) return null;
+  const ids = new Set([String(node.id)]);
+  const stack = [node];
+  while (stack.length) {
+    const cur = stack.shift();
+    for (const c of categoryChildren(categories, cur)) if (!ids.has(String(c.id))) {
+      ids.add(String(c.id));
+      stack.push(c);
+    }
+  }
+  return ids;
+}
+
+/** Home & Living › ancestors › node. Stops on a cycle so a bad row cannot hang the page. */
+function breadcrumbFor(categories, node) {
+  const trail = [{
+    ...STORE_HOME
+  }];
+  if (!node) return trail;
+  const list = Array.isArray(categories) ? categories : [];
+  const chain = [];
+  const seen = new Set();
+  let cur = node;
+  while (cur && !seen.has(String(cur.id))) {
+    seen.add(String(cur.id));
+    chain.unshift(cur);
+    cur = cur.parent_id ? list.find(x => String(x.id) === String(cur.parent_id)) : null;
+  }
+  for (const c of chain) trail.push({
+    name: c.name,
+    href: categoryHref(c)
+  });
+  return trail;
+}
+
+// ---- Listing state in the URL ---------------------------------------------------
+
+const HOMELIVING_SORTS = [{
+  id: 'featured',
+  label: 'Featured'
+}, {
+  id: 'price-asc',
+  label: 'Price: low to high'
+}, {
+  id: 'price-desc',
+  label: 'Price: high to low'
+}, {
+  id: 'discount',
+  label: 'Biggest discount'
+}, {
+  id: 'rating',
+  label: 'Top rated'
+}, {
+  id: 'new',
+  label: 'Newest'
+}];
+const PRICE_BANDS = [{
+  id: 'under-500',
+  label: 'Under ₹500',
+  min: 0,
+  maxExclusive: 500
+}, {
+  id: '500-999',
+  label: '₹500 – ₹999',
+  min: 500,
+  maxExclusive: 1000
+}, {
+  id: '1000-1999',
+  label: '₹1,000 – ₹1,999',
+  min: 1000,
+  maxExclusive: 2000
+}, {
+  id: '2000-plus',
+  label: '₹2,000 & above',
+  min: 2000,
+  maxExclusive: Infinity
+}];
+const DISCOUNT_STEPS = [10, 25, 40, 50];
+const RATING_STEPS = [4, 3];
+const VIEWS = ['grid', 'list'];
+const SORT_IDS = new Set(HOMELIVING_SORTS.map(s => s.id));
+const PRICE_IDS = new Set(PRICE_BANDS.map(b => b.id));
+const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+const uniq = arr => [...new Set(arr)];
+function readListingState(searchParams) {
+  const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
+  const discount = num(p.get('discount'));
+  const rating = num(p.get('rating'));
+  return {
+    sort: SORT_IDS.has(p.get('sort')) ? p.get('sort') : 'featured',
+    price: PRICE_IDS.has(p.get('price')) ? p.get('price') : null,
+    sizes: uniq(list(p.get('size'))),
+    colours: uniq(list(p.get('colour'))),
+    brands: uniq(list(p.get('brand'))),
+    discount: DISCOUNT_STEPS.includes(discount) ? discount : null,
+    rating: RATING_STEPS.includes(rating) ? rating : null,
+    view: VIEWS.includes(p.get('view')) ? p.get('view') : 'grid'
+  };
+}
+
+/** Only non-default values are written, so a clean listing has a clean URL. */
+function updateListingState(searchParams, patch) {
+  const p = new URLSearchParams(searchParams);
+  const has = k => Object.prototype.hasOwnProperty.call(patch, k);
+  const setList = (key, arr) => {
+    const v = uniq((Array.isArray(arr) ? arr : []).map(str).filter(Boolean));
+    if (v.length) p.set(key, v.join(','));else p.delete(key);
+  };
+  if (has('sort')) {
+    if (SORT_IDS.has(patch.sort) && patch.sort !== 'featured') p.set('sort', patch.sort);else p.delete('sort');
+  }
+  if (has('price')) {
+    if (PRICE_IDS.has(patch.price)) p.set('price', patch.price);else p.delete('price');
+  }
+  if (has('sizes')) setList('size', patch.sizes);
+  if (has('colours')) setList('colour', patch.colours);
+  if (has('brands')) setList('brand', patch.brands);
+  if (has('discount')) {
+    if (DISCOUNT_STEPS.includes(num(patch.discount))) p.set('discount', String(num(patch.discount)));else p.delete('discount');
+  }
+  if (has('rating')) {
+    if (RATING_STEPS.includes(num(patch.rating))) p.set('rating', String(num(patch.rating)));else p.delete('rating');
+  }
+  if (has('view')) {
+    if (patch.view === 'list') p.set('view', 'list');else p.delete('view');
+  }
+  return p;
+}
+const CLEAR_FILTERS = Object.freeze({
+  price: null,
+  sizes: [],
+  colours: [],
+  brands: [],
+  discount: null,
+  rating: null
+});
+function activeFilterCount(state) {
+  return (state.price ? 1 : 0) + state.sizes.length + state.colours.length + state.brands.length + (state.discount ? 1 : 0) + (state.rating ? 1 : 0);
+}
+
+/** The choices the panel offers, from what is actually in the listing. */
+function filterOptions(products) {
+  const sizes = new Map();
+  const colours = new Map();
+  const brands = new Map();
+  let anyDiscount = false;
+  let anyRating = false;
+  for (const p of Array.isArray(products) ? products : []) {
+    for (const s of p.sizes || []) sizes.set(s, (sizes.get(s) || 0) + 1);
+    for (const s of p.swatches || []) if (!colours.has(s.colour)) colours.set(s.colour, s.hex);
+    if (p.brand) brands.set(p.brand, (brands.get(p.brand) || 0) + 1);
+    if (num(p.discount_percent) > 0) anyDiscount = true;
+    if (num(p.rating) > 0) anyRating = true;
+  }
+  const sizeOrder = ['Single', 'Double', 'Queen', 'King', 'Super King', 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
+  const sortSizes = (a, b) => {
+    const ia = sizeOrder.indexOf(a);
+    const ib = sizeOrder.indexOf(b);
+    if (ia >= 0 && ib >= 0) return ia - ib;
+    if (ia >= 0) return -1;
+    if (ib >= 0) return 1;
+    return a.localeCompare(b, 'en', {
+      numeric: true
+    });
+  };
+  return {
+    sizes: [...sizes.keys()].sort(sortSizes),
+    colours: [...colours.entries()].map(([colour, hex]) => ({
+      colour,
+      hex
+    })).sort((a, b) => a.colour.localeCompare(b.colour)),
+    brands: [...brands.keys()].sort(),
+    discounts: anyDiscount ? DISCOUNT_STEPS : [],
+    ratings: anyRating ? RATING_STEPS : []
+  };
+}
+function matchesFilters(product, state) {
+  if (state.price) {
+    const band = PRICE_BANDS.find(b => b.id === state.price);
+    if (band && !(product.price >= band.min && product.price < band.maxExclusive)) return false;
+  }
+  if (state.sizes.length && !state.sizes.some(s => (product.sizes || []).includes(s))) return false;
+  if (state.colours.length && !state.colours.some(c => (product.swatches || []).some(s => s.colour === c))) return false;
+  if (state.brands.length && !state.brands.includes(product.brand)) return false;
+  if (state.discount && num(product.discount_percent) < state.discount) return false;
+  if (state.rating && num(product.rating) < state.rating) return false;
+  return true;
+}
+function sortProducts(products, sort) {
+  const arr = [...products];
+  const featured = (a, b) => (b.is_bestseller === true) - (a.is_bestseller === true) || (b.is_new === true) - (a.is_new === true) || num(a.sort_order) - num(b.sort_order) || str(a.name).localeCompare(str(b.name));
+  switch (sort) {
+    case 'price-asc':
+      return arr.sort((a, b) => a.price - b.price || featured(a, b));
+    case 'price-desc':
+      return arr.sort((a, b) => b.price - a.price || featured(a, b));
+    case 'discount':
+      return arr.sort((a, b) => num(b.discount_percent) - num(a.discount_percent) || featured(a, b));
+    case 'rating':
+      return arr.sort((a, b) => num(b.rating) - num(a.rating) || num(b.review_count) - num(a.review_count) || featured(a, b));
+    case 'new':
+      return arr.sort((a, b) => (b.is_new === true) - (a.is_new === true) || num(a.sort_order) - num(b.sort_order));
+    default:
+      return arr.sort(featured);
+  }
+}
+
+/** Scope (a Set of category ids, or null for everything) → filters → sort. */
+function applyListing(products, state, scope = null) {
+  const pool = Array.isArray(products) ? products : [];
+  const inScope = scope ? pool.filter(p => p.category_id != null && scope.has(String(p.category_id))) : pool;
+  return sortProducts(inScope.filter(p => matchesFilters(p, state)), state.sort);
+}
+
+function Breadcrumb({
+  trail
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+    className: "hl-crumb",
+    "aria-label": "Breadcrumb",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+      children: trail.map((c, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: i < trail.length - 1 && c.href ? /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: c.href,
+          children: c.name
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          "aria-current": "page",
+          children: c.name
+        })
+      }, c.href || c.name))
+    })
+  });
+}
+function Check({
+  checked,
+  onChange,
+  children,
+  swatch = null
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+    className: `hl-filter__opt${checked ? ' is-on' : ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+      type: "checkbox",
+      checked: checked,
+      onChange: onChange
+    }), swatch && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "hl-filter__swatch",
+      style: {
+        background: swatch
+      },
+      "aria-hidden": "true"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      children: children
+    })]
+  });
+}
+function Radio({
+  name,
+  on,
+  label,
+  onPick,
+  onClear
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+    className: `hl-filter__opt${on ? ' is-on' : ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+      type: "radio",
+      name: name,
+      checked: on,
+      onChange: onPick,
+      onClick: () => {
+        if (on) onClear();
+      }
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      children: label
+    })]
+  });
+}
+function FilterPanel({
+  state,
+  options,
+  onPatch,
+  onClear,
+  onClose = null,
+  id = 'hl-filters'
+}) {
+  const toggle = (key, value) => onPatch({
+    [key]: state[key].includes(value) ? state[key].filter(v => v !== value) : [...state[key], value]
+  });
+  const count = activeFilterCount(state);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("aside", {
+    className: "hl-filters",
+    id: id,
+    "aria-label": "Filters",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+      className: "hl-filters__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+        children: ["Filters", count ? ` (${count})` : '']
+      }), count > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hl-filters__clear",
+        onClick: onClear,
+        children: "Clear all"
+      }), onClose && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hl-filters__x",
+        "aria-label": "Close filters",
+        onClick: onClose,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "x",
+          size: 18
+        })
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "hl-filter",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        children: "Price"
+      }), PRICE_BANDS.map(b => /*#__PURE__*/jsxRuntimeExports.jsx(Radio, {
+        name: "price",
+        on: state.price === b.id,
+        label: b.label,
+        onPick: () => onPatch({
+          price: b.id
+        }),
+        onClear: () => onPatch({
+          price: null
+        })
+      }, b.id))]
+    }), options.sizes.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "hl-filter",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        children: "Size"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hl-filter__sizes",
+        children: options.sizes.map(s => /*#__PURE__*/jsxRuntimeExports.jsx(Check, {
+          checked: state.sizes.includes(s),
+          onChange: () => toggle('sizes', s),
+          children: s
+        }, s))
+      })]
+    }), options.colours.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "hl-filter",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        children: "Colour"
+      }), options.colours.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Check, {
+        checked: state.colours.includes(c.colour),
+        onChange: () => toggle('colours', c.colour),
+        swatch: c.hex || '#D9CBB0',
+        children: c.colour
+      }, c.colour))]
+    }), options.brands.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "hl-filter",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        children: "Brand"
+      }), options.brands.map(b => /*#__PURE__*/jsxRuntimeExports.jsx(Check, {
+        checked: state.brands.includes(b),
+        onChange: () => toggle('brands', b),
+        children: b
+      }, b))]
+    }), options.discounts.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "hl-filter",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        children: "Discount"
+      }), options.discounts.map(d => /*#__PURE__*/jsxRuntimeExports.jsx(Radio, {
+        name: "discount",
+        on: state.discount === d,
+        label: `${d}% or more`,
+        onPick: () => onPatch({
+          discount: d
+        }),
+        onClear: () => onPatch({
+          discount: null
+        })
+      }, d))]
+    }), options.ratings.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "hl-filter",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+        children: "Rating"
+      }), options.ratings.map(r => /*#__PURE__*/jsxRuntimeExports.jsx(Radio, {
+        name: "rating",
+        on: state.rating === r,
+        label: `${r}★ & above`,
+        onPick: () => onPatch({
+          rating: r
+        }),
+        onClear: () => onPatch({
+          rating: null
+        })
+      }, r))]
+    })]
+  });
+}
+function Listing({
+  title,
+  trail,
+  scope = null,
+  intro = null,
+  emptyCopy
+}) {
+  const {
+    status,
+    products
+  } = useHomeLivingCatalogue();
+  const [params, setParams] = useSearchParams();
+  const state = reactExports.useMemo(() => readListingState(params), [params]);
+  const [panel, setPanel] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!panel) return undefined;
+    const onKey = e => {
+      if (e.key === 'Escape') setPanel(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [panel]);
+  const inScope = reactExports.useMemo(() => scope ? products.filter(p => p.category_id != null && scope.has(String(p.category_id))) : products, [products, scope]);
+  const options = reactExports.useMemo(() => filterOptions(inScope), [inScope]);
+  const results = reactExports.useMemo(() => applyListing(products, state, scope), [products, state, scope]);
+  const patch = p => setParams(updateListingState(params, p));
+  const clear = () => setParams(updateListingState(params, CLEAR_FILTERS));
+  const count = activeFilterCount(state);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hl-wrap hl-listing",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
+      trail: trail
+    }), intro, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-listing__bar",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "hl-listing__h serif",
+        children: title
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hl-listing__count",
+        role: "status",
+        children: status === 'loading' ? 'Loading…' : `${results.length} ${results.length === 1 ? 'product' : 'products'}`
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hl-listing__tools",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+          type: "button",
+          className: "hl-filters__toggle",
+          onClick: () => setPanel(v => !v),
+          "aria-expanded": panel,
+          "aria-controls": "hl-filters",
+          "aria-label": count ? `Filters, ${count} active` : 'Filters',
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "sliders",
+            size: 17
+          }), " Filters", count ? /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+            children: count
+          }) : null]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+          className: "hl-sort",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Sort by:"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("select", {
+            value: state.sort,
+            onChange: e => patch({
+              sort: e.target.value
+            }),
+            "aria-label": "Sort",
+            children: HOMELIVING_SORTS.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+              value: s.id,
+              children: s.label
+            }, s.id))
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "chevronDown",
+            size: 15
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hl-view",
+          role: "group",
+          "aria-label": "Layout",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: state.view === 'grid' ? 'is-on' : '',
+            "aria-pressed": state.view === 'grid',
+            "aria-label": "Grid view",
+            onClick: () => patch({
+              view: 'grid'
+            }),
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "grid",
+              size: 18
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: state.view === 'list' ? 'is-on' : '',
+            "aria-pressed": state.view === 'list',
+            "aria-label": "List view",
+            onClick: () => patch({
+              view: 'list'
+            }),
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "menu",
+              size: 18
+            })
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: `hl-listing__body${panel ? ' has-panel' : ''}`,
+      children: [panel && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hl-filters__scrim",
+        "aria-label": "Close filters",
+        onClick: () => setPanel(false)
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(FilterPanel, {
+        state: state,
+        options: options,
+        onPatch: patch,
+        onClear: clear,
+        onClose: () => setPanel(false)
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hl-listing__results",
+        children: results.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hl-empty hl-empty--listing",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            children: status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : count > 0 ? 'Nothing matches these filters.' : emptyCopy
+          }), count > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: "hl-btn",
+            onClick: clear,
+            children: "Clear filters"
+          })]
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+          className: `hl-grid${state.view === 'list' ? ' hl-grid--list' : ''}`,
+          children: results.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingProductCard, {
+            product: p,
+            layout: state.view,
+            mediaLoading: i < 2 ? 'eager' : 'lazy'
+          }, p.id))
+        })
+      })]
+    })]
+  });
+}
+
+// ---- /homeliving/category/<slug> ------------------------------------------------
+function HomeLivingCategory() {
+  const {
+    slug
+  } = useParams();
+  const {
+    status,
+    categories
+  } = useHomeLivingCatalogue();
+  const node = resolveCategory(categories, slug);
+  // Hooks before the early return: the scope memo runs on every render.
+  const scope = reactExports.useMemo(() => categoryScope(categories, node), [categories, node]);
+  if (!node) {
+    return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-wrap hl-listing",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
+        trail: [{
+          name: 'Home & Living',
+          href: '/homeliving'
+        }, {
+          name: 'Not found'
+        }]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hl-empty hl-empty--listing",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : `There is no “${slug}” category in the Home & Living store.`
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/homeliving",
+          className: "hl-btn",
+          children: "Back to Home & Living"
+        })]
+      })]
+    });
+  }
+  const children = categoryChildren(categories, node);
+  const intro = children.length > 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+    className: "hl-subcats",
+    "aria-label": `Shop ${node.name}`,
+    children: children.map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+      to: categoryHref(c),
+      className: "hl-subcat",
+      children: c.name
+    }, c.id))
+  }) : null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Listing, {
+    title: node.name,
+    trail: breadcrumbFor(categories, node),
+    scope: scope,
+    intro: intro,
+    emptyCopy: `No products in ${node.name} yet — they appear here as they go live.`
   });
 }
 
@@ -62939,13 +63623,16 @@ function App() {
           index: true,
           element: /*#__PURE__*/jsxRuntimeExports.jsx(GroceryHome, {})
         })
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Route, {
         path: "/homeliving",
         element: /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingLayout, {}),
-        children: /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           index: true,
           element: /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingHome, {})
-        })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "category/:slug",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingCategory, {})
+        })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Route, {
         element: /*#__PURE__*/jsxRuntimeExports.jsx(Layout, {}),
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Route, {
