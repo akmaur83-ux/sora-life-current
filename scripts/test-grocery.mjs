@@ -473,7 +473,8 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
   // grocery components are this work's; the cart, checkout, coupons, auth and payment code are not.
   // (store.jsx carries the approved grocery namespace from this store's first phase; test-catalogue.mjs pins it since.)
   // The store switcher (test-store-nav.mjs) adds links to the wellness and fashion headers — those four files are pinned there.
-  const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$)|src\/styles\/(?!grocery\.css$|fashion\.css$|v2-header\.css$)|src\/pages\/|src\/components\/(?!Header\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/)/;
+  // (A later store's own sheet — homeliving.css — is that store's, pinned by test-homeliving.mjs.)
+  const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$)|src\/styles\/(?!grocery\.css$|fashion\.css$|v2-header\.css$|homeliving\.css$)|src\/pages\/|src\/components\/(?!Header\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/)/;
   const bad = [...changed].filter((f) => untouchable.test(f));
   assert.deepEqual(bad, [], `untouchable files changed: ${bad.join(', ')}`);
   assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'src/styles/fashion-banner.css', 'api', 'src/pages', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
@@ -481,7 +482,7 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
 
 await test('no migration beyond 0034, no dependency change since the baseline', () => {
   const changed = execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean);
-  assert.ok(!changed.some((f) => /^supabase\/migrations\/(?!0034_catalogue_multistore\.sql$|rollback\/0034_)/.test(f)), 'no migration other than 0034 and its rollback');
+  assert.ok(!changed.some((f) => /^supabase\/migrations\/(?!0034_catalogue_multistore\.sql$|rollback\/0034_|0035_homeliving_store\.sql$|rollback\/0035_)/.test(f)), 'no migration other than 0034 (the catalogue) and 0035 (the Home & Living store), with their rollbacks');
   assert.ok(!changed.some((f) => /^package(-lock)?\.json$/.test(f)), 'no dependency change');
 });
 
