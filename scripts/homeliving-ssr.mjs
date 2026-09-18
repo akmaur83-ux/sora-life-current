@@ -28,11 +28,12 @@ export const CATEGORIES = [
   cat(6, 'Rugs & Mats', 'rugs-mats', 'Underfoot, everyday'),
 ];
 const byCat = Object.fromEntries(CATEGORIES.map((c) => [c.slug, c.id]));
-const prod = (n, name, slug, catSlug, mrp, sale_price, image, sku, net_content, stock) => ({
+const prod = (n, name, slug, catSlug, mrp, sale_price, image, sku, net_content, stock, extra = {}) => ({
   id: pid(n), store: 'homeliving', name, slug, brand: 'SORA LIFE', description: `${name}.`, category_id: byCat[catSlug],
   mrp, sale_price, discount_percent: Math.round(((mrp - sale_price) / mrp) * 100), images: [image], sku, hsn_code: null, gst_rate: null, net_content, stock,
-  rating: 0, review_count: 0, is_active: true, is_new: false, is_bestseller: false, sort_order: n, is_demo: true,
+  rating: 0, review_count: 0, is_active: true, is_new: false, is_bestseller: false, sort_order: n, is_demo: true, variants: [], ...extra,
 });
+/** The 0035 placeholders — no variants, as seeded. */
 export const PRODUCTS = [
   prod(1, 'Botanical Bedsheet Set', 'botanical-bedsheet-set-king', 'bedsheets', 1899, 1499, '/img/homeliving-product-botanical-bedsheet-set.webp', 'SL-HL-BED-BOT-K', 'King · 1 bedsheet + 2 pillow covers', 40),
   prod(2, 'Leaf Cushion Cover Pair', 'leaf-cushion-cover-pair', 'cushion-covers', 699, 599, '/img/homeliving-product-leaf-cushion-cover-pair.webp', 'SL-HL-CUS-LEAF-2', 'Set of 2 · 40 × 40 cm', 60),
@@ -40,6 +41,24 @@ export const PRODUCTS = [
   prod(4, 'Bath Towel Set', 'bath-towel-set-pack-of-2', 'towels', 949, 799, '/img/homeliving-product-bath-towel-set.webp', 'SL-HL-TWL-BATH-2', 'Pack of 2 · 70 × 140 cm', 50),
 ];
 export const INITIAL = { categories: CATEGORIES, products: PRODUCTS };
+
+/**
+ * A richer catalogue for the LISTING suite: a second bedsheet with size ×
+ * colour variants, a third brand, a bestseller and a rated product, and a
+ * sub-category, so every facet, sort and scope rule has something to bite on.
+ */
+const vid = (n) => `00000000-0000-4000-8000-000000000a${String(n).padStart(2, '0')}`;
+const v = (n, product_id, size, colour, colour_hex, stock, sort_order) => ({ id: vid(n), product_id, size, colour, colour_hex, sku: `V-${n}`, stock, price_override: null, is_active: true, sort_order });
+export const LISTING_CATEGORIES = [...CATEGORIES, { id: cid(7), store: 'homeliving', parent_id: cid(1), name: 'Fitted Sheets', slug: 'fitted-sheets', tagline: '', image_url: null, sort_order: 1, is_active: true }, { id: cid(8), store: 'homeliving', parent_id: null, name: 'Retired', slug: 'retired', tagline: '', image_url: null, sort_order: 9, is_active: false }];
+export const LISTING_PRODUCTS = [
+  ...PRODUCTS,
+  prod(5, 'Sage Fitted Sheet', 'sage-fitted-sheet', 'bedsheets', 1299, 999, '/img/homeliving-product-botanical-bedsheet-set.webp', 'SL-HL-FIT-SAGE', 'Fitted sheet', 30, {
+    category_id: cid(7), brand: 'Meadow Weave', is_bestseller: true, rating: 4.4, review_count: 31,
+    variants: [v(1, pid(5), 'Single', 'Sage', '#8A9A6B', 6, 1), v(2, pid(5), 'King', 'Sage', '#8A9A6B', 0, 2), v(3, pid(5), 'King', 'Ivory', '#EDE6D6', 4, 3), v(4, pid(5), 'Queen', '', null, 2, 4)],
+  }),
+  prod(6, 'Jute Runner', 'jute-runner', 'rugs-mats', 1499, 1499, '/img/homeliving-product-cotton-quilt.webp', 'SL-HL-RUG-JUTE', '60 × 180 cm', 12, { brand: 'Loom & Co.', is_new: true, sale_price: null }),
+];
+export const LISTING = { categories: LISTING_CATEGORIES, products: LISTING_PRODUCTS };
 
 /** The Home & Living data module with the network stubbed and (optionally) seeded. */
 export function loadHomeLivingData({ supabase = noSupabase, initial = INITIAL } = {}) {
@@ -58,12 +77,16 @@ export async function buildHomeLivingApp({ cartCount = 0, initial = INITIAL } = 
   const useStore = () => ({ cartCount });
   const branding = { siteName: 'SORA LIFE', tagline: 'HEALTH & WELLNESS' };
   const money = (n) => `₹${Number(n).toLocaleString('en-IN')}`;
+  const { useParams, useSearchParams } = ReactRouter;
   const card = loadModule('src/homeliving/HomeLivingProductCard.jsx', { Icon, money });
   const layout = loadModule('src/homeliving/HomeLivingLayout.jsx', { Link, Outlet, useLocation, Icon, Footer, Toasts, useStore, branding, ...data });
   const home = loadModule('src/homeliving/HomeLivingHome.jsx', { Link, Icon, ...data, HomeLivingProductCard: card.default });
+  const rules = has('src/lib/homelivingListing.js') ? loadModule('src/lib/homelivingListing.js', {}) : {};
+  const category = has('src/homeliving/HomeLivingCategory.jsx') ? loadModule('src/homeliving/HomeLivingCategory.jsx', { Link, useParams, useSearchParams, Icon, useHomeLivingCatalogue: data.useHomeLivingCatalogue, ...rules, HomeLivingProductCard: card.default }) : null;
   const App = ({ path }) => h(StaticRouter, { location: path },
     h(Routes, null,
       h(Route, { path: '/homeliving', element: h(layout.default) },
-        h(Route, { index: true, element: h(home.default) }))));
-  return { App, data, render: (path) => renderToStaticMarkup(h(App, { path })), modules: { card, layout, home } };
+        h(Route, { index: true, element: h(home.default) }),
+        category ? h(Route, { path: 'category/:slug', element: h(category.default) }) : null)));
+  return { App, data, rules, render: (path) => renderToStaticMarkup(h(App, { path })), modules: { card, layout, home, category } };
 }

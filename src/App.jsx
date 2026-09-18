@@ -27,6 +27,7 @@ import GroceryLayout from './grocery/GroceryLayout.jsx';
 import GroceryHome from './grocery/GroceryHome.jsx';
 import HomeLivingLayout from './homeliving/HomeLivingLayout.jsx';
 import HomeLivingHome from './homeliving/HomeLivingHome.jsx';
+import HomeLivingCategory from './homeliving/HomeLivingCategory.jsx';
 import { useAdminAuth } from './lib/adminAuth.jsx';
 import { branding } from './lib/settings.js';
 import { DEFERRED_ROUTES, loadDeferredStyles } from './lib/deferredStyles.js';
@@ -205,6 +206,7 @@ export default function App() {
           links to is the shared one. Categories and products follow. */}
       <Route path="/homeliving" element={<HomeLivingLayout />}>
         <Route index element={<HomeLivingHome />} />
+        <Route path="category/:slug" element={<HomeLivingCategory />} />
       </Route>
 
       <Route element={<Layout />}>

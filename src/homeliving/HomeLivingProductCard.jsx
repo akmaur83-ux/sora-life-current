@@ -9,10 +9,10 @@ import { money } from '../lib/format.js';
 // cart namespace until the cart is next opened, so the card shows and
 // does not sell.
 // ============================================================
-export default function HomeLivingProductCard({ product, mediaLoading = 'lazy' }) {
+export default function HomeLivingProductCard({ product, layout = 'grid', mediaLoading = 'lazy' }) {
   const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
   return (
-    <article className="hl-card" data-product={product.slug}>
+    <article className={`hl-card${layout === 'list' ? ' hl-card--list' : ''}`} data-product={product.slug}>
       <div className="hl-card__media">
         {image
           ? <img src={image} alt="" loading={mediaLoading} decoding="async" width="400" height="400" />

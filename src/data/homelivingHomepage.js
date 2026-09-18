@@ -79,8 +79,12 @@ export const categoryHref = (c) => `/homeliving/category/${c.slug}`;
 // ---- Row shapes ----------------------------------------------------------------
 const CATEGORY_COLUMNS = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
 const PRODUCT_COLUMNS = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
+const VARIANT_COLUMNS = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
+/** The product row with its variants embedded (a size × colour each, or a size alone for a textile). */
+const PRODUCT_SELECT = `${PRODUCT_COLUMNS}, variants:catalogue_variants (${VARIANT_COLUMNS})`;
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const str = (v) => String(v ?? '').trim();
 
 /** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
 export const priceOf = (row) => {
@@ -89,8 +93,30 @@ export const priceOf = (row) => {
   return sale != null && sale > 0 && sale < mrp ? sale : mrp;
 };
 
-/** A product row for the homepage: the row as stored, plus `price`. */
-export const homelivingProductView = (row) => (row ? { ...row, mrp: num(row.mrp), sale_price: row.sale_price == null ? null : num(row.sale_price), price: priceOf(row), images: Array.isArray(row.images) ? row.images.filter(Boolean) : [] } : null);
+/**
+ * A product row for the homepage and the listing: the row as stored, plus
+ * `price`, and the variant facets the listing filters on — `variants`
+ * (active, in order), `sizes` (distinct), `swatches` ({ colour, hex },
+ * distinct, empty colours skipped). A product without variants has empty
+ * facets and simply never shows under a size or colour filter.
+ */
+export const homelivingProductView = (row) => {
+  if (!row) return null;
+  const variants = (Array.isArray(row.variants) ? row.variants : [])
+    .filter((v) => v && v.is_active !== false)
+    .map((v) => ({ id: String(v.id), size: str(v.size), colour: str(v.colour), colour_hex: v.colour_hex || null, sku: v.sku || null, stock: Math.max(0, num(v.stock)), price_override: v.price_override == null ? null : num(v.price_override), sort_order: num(v.sort_order) }))
+    .sort((a, b) => a.sort_order - b.sort_order);
+  const swatches = [];
+  for (const v of variants) if (v.colour && !swatches.some((s) => s.colour === v.colour)) swatches.push({ colour: v.colour, hex: v.colour_hex });
+  return {
+    ...row,
+    mrp: num(row.mrp), sale_price: row.sale_price == null ? null : num(row.sale_price), price: priceOf(row),
+    discount_percent: row.discount_percent != null ? num(row.discount_percent) : 0,
+    rating: Math.max(0, Math.min(5, num(row.rating))), review_count: Math.max(0, num(row.review_count)),
+    images: Array.isArray(row.images) ? row.images.filter(Boolean) : [],
+    variants, sizes: [...new Set(variants.map((v) => v.size).filter(Boolean))], swatches,
+  };
+};
 
 // ---- Reads -----------------------------------------------------------------------
 export async function getHomeLivingCategories() {
@@ -106,7 +132,7 @@ export async function getHomeLivingCategories() {
 export async function getHomeLivingProducts() {
   const { data, error } = await supabase
     .from('catalogue_products')
-    .select(PRODUCT_COLUMNS)
+    .select(PRODUCT_SELECT)
     .eq('store', HOMELIVING_STORE)
     .eq('is_active', true)
     .order('sort_order', { ascending: true });

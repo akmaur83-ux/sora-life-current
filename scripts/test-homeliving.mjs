@@ -338,7 +338,8 @@ await test('deferred like grocery: homeliving.css last in DEFERRED, /homeliving 
   assert.doesNotMatch(build.slice(build.indexOf('const STOREFRONT = ['), build.indexOf('const DEFERRED')), /homeliving/);
   assert.match(read('src/lib/deferredStyles.js'), /DEFERRED_ROUTES = \/\^\\\/\(admin\|passport\|creator\|fashion\|grocery\|homeliving\)\(\\\/\|\$\)\/;/);
   const src = read('src/App.jsx');
-  assert.match(src, /<Route path="\/homeliving" element=\{<HomeLivingLayout \/>\}>\n\s+<Route index element=\{<HomeLivingHome \/>\} \/>\n\s+<\/Route>/);
+  // The index route first; later phases add children (category/:slug — test-homeliving-listing.mjs) inside the same block.
+  assert.match(src, /<Route path="\/homeliving" element=\{<HomeLivingLayout \/>\}>\n\s+<Route index element=\{<HomeLivingHome \/>\} \/>\n(\s+<Route path="[^"]+" element=\{<HomeLiving[A-Za-z]+ \/>\} \/>\n)*\s+<\/Route>/);
   assert.ok(src.indexOf('<Route path="/grocery"') < src.indexOf('<Route path="/homeliving"') && src.indexOf('<Route path="/homeliving"') < src.indexOf('<Route element={<Layout />}>'));
 });
 
