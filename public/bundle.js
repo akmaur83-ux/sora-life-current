@@ -62106,9 +62106,20 @@ const HOMELIVING_TAGLINE = 'Comfort for every home';
 
 /** Delivery promise. One string, used by the header badge and the trust strip. */
 const HOMELIVING_DELIVERY_WINDOW = '6-7 days';
+
+/**
+ * The hero photograph comes as a pair the browser chooses between through
+ * <picture>: the 3:2 landscape from 768px up (furnishings right and low,
+ * the wall on the left takes the copy) and the 4:5 portrait below it
+ * (furnishings low, the copy upper-left). Both leave the top strip bare
+ * for the header that floats over it.
+ */
 const HERO_SLIDES$1 = [{
   id: 'comfort',
-  image: '/img/homeliving-hero.webp',
+  image: {
+    wide: '/img/homeliving-hero-wide.webp',
+    tall: '/img/homeliving-hero-tall.webp'
+  },
   eyebrow: 'Home & Living',
   headline: 'Comfort Lives Here',
   sub: 'Bedsheets, curtains, cushions, towels and more for a more beautiful home.',
@@ -62325,6 +62336,12 @@ function useHomeLivingCatalogue() {
 
 const SEARCH_PLACEHOLDER = 'Search for bedsheets, curtains, cushions...';
 
+/** The homepage, with or without the trailing slash: the only route whose header floats over the hero. */
+const HOME_PATH = /^\/homeliving\/?$/;
+
+/** How far the page scrolls before the floating header turns solid. */
+const SOLID_AFTER_PX = 8;
+
 /** Home is the only live tab; the rest render, do nothing, and never 404. */
 const BOTTOM_NAV$1 = [{
   id: 'home',
@@ -62361,14 +62378,98 @@ function HomeLivingLogo() {
     })]
   });
 }
+
+/**
+ * True once the window has scrolled past `threshold` pixels. Passive,
+ * rAF-throttled, the wellness header's pattern; a null threshold never
+ * listens (the solid header on every other page has nothing to switch).
+ */
+function useScrolledPast(threshold) {
+  const [past, setPast] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (threshold == null || typeof window === 'undefined') return undefined;
+    let raf = null;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        setPast(window.scrollY > threshold);
+      });
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, {
+      passive: true
+    });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [threshold]);
+  return past;
+}
+function DeliveryRow() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hl-deliver",
+    "aria-label": "Delivery",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+      className: "hl-deliver__addr",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "mapPin",
+        size: 22
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hl-deliver__txt",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+          children: ["Deliver to Home ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "chevronDown",
+            size: 14
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: "Add your delivery address at checkout"
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+      className: "hl-deliver__badge",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "truck",
+        size: 16
+      }), " Standard Delivery \xB7 ", HOMELIVING_DELIVERY_WINDOW]
+    })]
+  });
+}
+
+/** Visual only for now: no search route exists in the Home & Living store yet. */
+function SearchBar() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hl-search",
+    role: "search",
+    "aria-label": "Search Home & Living",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+      name: "search",
+      size: 22
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+      type: "search",
+      placeholder: SEARCH_PLACEHOLDER,
+      "aria-label": "Search Home & Living (coming soon)",
+      readOnly: true
+    })]
+  });
+}
+
+/**
+ * @param over  the homepage: the bar floats transparent over the hero and
+ *              turns solid (`is-solid`) once the page scrolls; the delivery
+ *              row and the search bar are the page's to place.
+ */
 function HomeLivingHeader({
-  onMenu
+  onMenu,
+  over = false
 }) {
   const {
     cartCount
   } = useStore();
+  const solid = useScrolledPast(over ? SOLID_AFTER_PX : null);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
-    className: "hl-hdr",
+    className: `hl-hdr${over ? ' hl-hdr--over' : ''}${over && solid ? ' is-solid' : ''}`,
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hl-hdr__row",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
@@ -62438,46 +62539,7 @@ function HomeLivingHeader({
           })]
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "hl-deliver",
-      "aria-label": "Delivery",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-        className: "hl-deliver__addr",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "mapPin",
-          size: 22
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-          className: "hl-deliver__txt",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("b", {
-            children: ["Deliver to Home ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-              name: "chevronDown",
-              size: 14
-            })]
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-            children: "Add your delivery address at checkout"
-          })]
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-        className: "hl-deliver__badge",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "truck",
-          size: 16
-        }), " Standard Delivery \xB7 ", HOMELIVING_DELIVERY_WINDOW]
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "hl-search",
-      role: "search",
-      "aria-label": "Search Home & Living",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "search",
-        size: 22
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-        type: "search",
-        placeholder: SEARCH_PLACEHOLDER,
-        "aria-label": "Search Home & Living (coming soon)",
-        readOnly: true
-      })]
-    })]
+    }), !over && /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryRow, {}), !over && /*#__PURE__*/jsxRuntimeExports.jsx(SearchBar, {})]
   });
 }
 function BottomNav$1() {
@@ -62600,14 +62662,16 @@ function HomeLivingLayout() {
   const {
     pathname
   } = useLocation();
+  const over = HOME_PATH.test(pathname);
   reactExports.useEffect(() => {
     setMenu(false);
   }, [pathname]);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "hl",
+    className: `hl${over ? ' hl--over' : ''}`,
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingHeader, {
-      onMenu: () => setMenu(true)
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(BottomNav$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer$1, {
+      onMenu: () => setMenu(true),
+      over: over
+    }), !over && /*#__PURE__*/jsxRuntimeExports.jsx(BottomNav$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer$1, {
       open: menu,
       onClose: () => setMenu(false)
     }), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
@@ -62686,11 +62750,17 @@ function HomeLivingProductCard({
 
 const AUTOPLAY_MS$1 = 6000;
 
+/** Below this the hero shows the 4:5 portrait; from it up, the 3:2 landscape. */
+const HERO_TALL_MEDIA = '(max-width: 767px)';
+
 /**
  * Full-width carousel. Autoplays only when there is more than one slide,
  * pauses on hover and focus, and never moves under prefers-reduced-motion.
- * The track slides on transform only. The photograph keeps its subject on
- * the right; the copy sits on the left over a cream wash.
+ * The track slides on transform only. Each slide is a <picture> the
+ * browser resolves — the portrait below 768px, the landscape from it — and
+ * the copy sits on the bare wall: left on the landscape, upper-left on the
+ * portrait, clear of the furnishings, over a wash light enough that the
+ * wall still reads as wall.
  */
 function HeroCarousel$1({
   slides = HERO_SLIDES$1,
@@ -62735,18 +62805,23 @@ function HeroCarousel$1({
         "aria-hidden": i !== index,
         "aria-roledescription": "slide",
         "aria-label": `${i + 1} of ${slides.length}`,
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
-          className: "hl-hero__img",
-          src: s.image,
-          alt: "",
-          width: "1600",
-          height: "900",
-          decoding: "async",
-          fetchpriority: i === 0 ? 'high' : 'auto',
-          loading: i === 0 ? 'eager' : 'lazy'
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("source", {
+            media: HERO_TALL_MEDIA,
+            srcSet: s.image.tall
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            className: "hl-hero__img",
+            src: s.image.wide,
+            alt: "",
+            width: "1536",
+            height: "1024",
+            decoding: "async",
+            fetchpriority: i === 0 ? 'high' : 'auto',
+            loading: i === 0 ? 'eager' : 'lazy'
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
           className: "hl-wrap hl-hero__inner",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
             className: "hl-hero__txt",
             children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
               className: "hl-hero__eyebrow",
@@ -62765,12 +62840,12 @@ function HeroCarousel$1({
                 name: "arrowRight",
                 size: 17
               })]
+            }), s.note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "hl-hero__note serif",
+              "aria-hidden": "true",
+              children: s.note
             })]
-          }), s.note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hl-hero__note serif",
-            "aria-hidden": "true",
-            children: s.note
-          })]
+          })
         })]
       }, s.id))
     }), slides.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -62788,6 +62863,8 @@ function HeroCarousel$1({
     })]
   });
 }
+
+/** One quiet row under the hero: a small icon, the label, the sub-label; it scrolls sideways on a phone if it will not fit. */
 function TrustStrip() {
   return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
     className: "hl-wrap",
@@ -62799,7 +62876,7 @@ function TrustStrip() {
           className: "hl-trust__icon",
           children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: t.icon,
-            size: 22
+            size: 18
           })
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
           className: "hl-trust__txt",
@@ -62813,9 +62890,48 @@ function TrustStrip() {
     })
   });
 }
+
+/**
+ * Six circles in a row; a scroller on a phone. The scroller tells you it
+ * scrolls: tiles snap so a swipe leaves whole circles, the right edge fades
+ * into the page instead of cutting a label mid-word, and a round chevron
+ * over the fade scrolls a page at a time — both gone once the end is in
+ * view. The measurement runs on scroll and resize; the server renders the
+ * row as not-at-end, the way a phone first sees it.
+ */
 function CategoryCircles({
   categories
 }) {
+  const track = reactExports.useRef(null);
+  const [edge, setEdge] = reactExports.useState({
+    start: true,
+    end: false
+  });
+  const measure = reactExports.useCallback(() => {
+    const el = track.current;
+    if (!el) return;
+    const start = el.scrollLeft <= 1;
+    const end = el.scrollWidth - el.clientWidth - el.scrollLeft <= 1;
+    setEdge(e => e.start === start && e.end === end ? e : {
+      start,
+      end
+    });
+  }, []);
+  reactExports.useEffect(() => {
+    measure();
+    if (typeof window === 'undefined') return undefined;
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [measure, categories.length]);
+  const more = () => {
+    const el = track.current;
+    if (!el) return;
+    const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollBy({
+      left: Math.round(el.clientWidth * 0.8),
+      behavior: reduced ? 'auto' : 'smooth'
+    });
+  };
   if (categories.length === 0) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "hl-wrap hl-sec hl-cats",
@@ -62839,30 +62955,46 @@ function CategoryCircles({
           size: 16
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
-      className: "hl-circles",
-      "aria-label": "Shop by category",
-      children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: categoryHref$1(c),
-        className: "hl-circle",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "hl-circle__img",
-          children: c.image_url ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-            src: c.image_url,
-            alt: "",
-            loading: "lazy",
-            decoding: "async",
-            width: "200",
-            height: "200"
-          }) : /*#__PURE__*/jsxRuntimeExports.jsx("b", {
-            "aria-hidden": "true",
-            children: c.name.slice(0, 1)
-          })
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "hl-circle__name",
-          children: c.name
-        })]
-      }, c.id))
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: `hl-circles__scroller${edge.start ? ' is-start' : ''}${edge.end ? ' is-end' : ''}`,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+        className: "hl-circles",
+        "aria-label": "Shop by category",
+        ref: track,
+        onScroll: measure,
+        children: categories.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: categoryHref$1(c),
+          className: "hl-circle",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hl-circle__img",
+            children: c.image_url ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+              src: c.image_url,
+              alt: "",
+              loading: "lazy",
+              decoding: "async",
+              width: "200",
+              height: "200"
+            }) : /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              "aria-hidden": "true",
+              children: c.name.slice(0, 1)
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hl-circle__name",
+            children: c.name
+          })]
+        }, c.id))
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hl-circles__more",
+        "aria-label": "Scroll to more categories",
+        tabIndex: edge.end ? -1 : 0,
+        "aria-hidden": edge.end,
+        onClick: more,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 20
+        })
+      })]
     })]
   });
 }
@@ -62974,7 +63106,10 @@ function HomeLivingHome() {
   } = useHomeLivingCatalogue();
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "hl-home",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(HeroCarousel$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryCircles, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(HeroCarousel$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BottomNav$1, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-tools",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeliveryRow, {}), /*#__PURE__*/jsxRuntimeExports.jsx(SearchBar, {})]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryCircles, {
       categories: categories
     }), /*#__PURE__*/jsxRuntimeExports.jsx(FeaturedRow, {
       products: products,
