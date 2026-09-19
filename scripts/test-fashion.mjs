@@ -361,12 +361,14 @@ await test('the wellness homepage keeps every section in the same order — the 
   const DeferredImage = loadModule('src/components/DeferredImage.jsx').default;
   const Banner = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage }).default;
   const html = renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(Banner)));
-  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/fashion', '/homeliving'], 'both whole-card links use existing stores');
+  // The section is the Lifestyle banner plus the two store cards as a carousel (test-store-doorway.mjs pins it).
+  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/lifestyle', '/fashion', '/homeliving'], 'the whole-card links use existing stores');
   assert.match(html, /Two Worlds\. A Better You\./);
-  assert.equal((html.match(/<img /g) || []).length, 2);
-  assert.equal((html.match(/loading="lazy"/g) || []).length, 2);
+  assert.equal((html.match(/<img /g) || []).length, 3);
+  assert.equal((html.match(/loading="lazy"/g) || []).length, 3);
   assert.doesNotMatch(html, /<img[^>]+ src=/, 'the below-fold images remain deferred on initial render');
-  assert.doesNotMatch(html, /<button/, 'no nested interactive controls inside the links');
+  for (const a of html.matchAll(/<a [^>]*>[\s\S]*?<\/a>/g)) assert.doesNotMatch(a[0].slice(2), /<button|<a /, 'no nested interactive controls inside the links');
+  assert.equal((html.match(/<button/g) || []).length, 2, 'the carousel dots are the only buttons');
 });
 
 await test('the storefront stylesheet order is untouched; the fashion sheets are appended, the store one deferred', () => {
