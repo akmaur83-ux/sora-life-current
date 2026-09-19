@@ -9,7 +9,7 @@
 .gs { --gs-hdr: #F7F3EA; --gs-r: 14px; --gs-r-sm: 10px; --gs-line: var(--slv2-stone); --gs-nav-h: 64px;
   --gs-shadow: 0 1px 2px rgba(22, 33, 27, .04), 0 10px 26px -18px rgba(22, 33, 27, .22);
   min-height: 100vh; background: var(--slv2-ivory); color: var(--slv2-ink-2); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
-.gs .serif { font-family: var(--font-display, 'Fraunces', Georgia, serif); font-weight: 500; letter-spacing: -.015em; color: var(--slv2-ink); }
+.gs .serif { font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-weight: 400; letter-spacing: -.008em; color: var(--slv2-ink); }
 .gs *, .gs *::before, .gs *::after { transition-property: transform, opacity; }
 .gs a { color: inherit; }
 .gs-main { display: block; max-width: 1280px; margin: 0 auto; padding: 0 16px 48px; }
@@ -19,7 +19,7 @@
 .gs-hdr__row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; max-width: 1280px; margin: 0 auto; padding: 12px 16px 8px; }
 .gs-hdr__menu { justify-self: start; border: 0; background: none; padding: 6px; margin-left: -6px; color: var(--slv2-ink); cursor: pointer; display: inline-flex; }
 .gs-logo { display: grid; justify-items: center; text-decoration: none; line-height: 1; min-width: 0; }
-.gs-logo strong { font-weight: 600; font-size: 28px; letter-spacing: .12em; color: var(--slv2-f700); white-space: nowrap; }
+.gs-logo strong { font-weight: 500; font-size: 28px; letter-spacing: .12em; color: var(--slv2-f700); white-space: nowrap; }
 .gs-logo em { font-style: normal; font-size: 9px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: var(--slv2-gold-ink); margin-top: 5px; white-space: nowrap; }
 .gs-hdr__acts { justify-self: end; display: flex; align-items: center; gap: 4px; }
 /* The other storefronts, as the fashion header's .fs-hdr__back: quiet, desktop only. */
@@ -78,7 +78,7 @@
 /* A cream wash on the left keeps the type legible where the photo runs under it. */
 .gs-hero__slide::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(251, 248, 241, .92) 0%, rgba(251, 248, 241, .62) 40%, rgba(251, 248, 241, 0) 62%); }
 .gs-hero__txt { position: relative; z-index: 1; max-width: 46%; }
-.gs-hero__h { margin: 0; font-size: clamp(34px, 4.6vw, 58px); line-height: 1.02; letter-spacing: -.02em; }
+.gs-hero__h { margin: 0; font-size: clamp(34px, 4.6vw, 58px); line-height: 1.02; letter-spacing: -.01em; }
 .gs-hero__sub { margin: 14px 0 22px; font-size: 18px; color: var(--slv2-ink-2); }
 .gs-hero__cta, .gs-promo__cta { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 24px; border-radius: 999px; background: var(--slv2-gold); color: var(--slv2-f900); font-size: 16px; font-weight: 700; text-decoration: none; transition: transform .16s ease; }
 .gs-hero__cta:hover, .gs-promo__cta:hover { transform: translateY(-1px); }
@@ -93,7 +93,7 @@
 .gs-circle__img { width: 118px; height: 118px; border-radius: 50%; overflow: hidden; background: var(--slv2-cream); border: 1px solid var(--gs-line); display: grid; place-items: center; transition: transform .18s ease; }
 .gs-circle:hover .gs-circle__img { transform: translateY(-2px); }
 .gs-circle__img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.gs-circle__img b { font-family: var(--font-display, 'Fraunces', Georgia, serif); font-size: 36px; color: var(--slv2-f700); }
+.gs-circle__img b { font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-size: 36px; color: var(--slv2-f700); }
 .gs-circle__name { font-size: 16px; font-weight: 500; line-height: 1.2; }
 
 /* ---- Sections --------------------------------------------------------------- */
@@ -109,7 +109,7 @@
 .gs-card { display: grid; grid-template-rows: auto 1fr; background: var(--slv2-paper); border: 1px solid var(--gs-line); border-radius: var(--gs-r); overflow: hidden; box-shadow: var(--gs-shadow); }
 .gs-card__media { position: relative; aspect-ratio: 1; background: var(--slv2-cream); }
 .gs-card__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.gs-card__noimg { display: grid; place-items: center; height: 100%; font-family: var(--font-display, 'Fraunces', Georgia, serif); font-size: 44px; color: var(--slv2-f700); }
+.gs-card__noimg { display: grid; place-items: center; height: 100%; font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-size: 44px; color: var(--slv2-f700); }
 .gs-card__heart { position: absolute; right: 10px; top: 10px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: var(--slv2-paper); color: var(--slv2-ink-3); display: grid; place-items: center; box-shadow: var(--gs-shadow); cursor: default; }
 .gs-card__body { display: grid; gap: 2px; padding: 12px 14px 14px; align-content: start; }
 .gs-card__brand { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--slv2-ink-3); }

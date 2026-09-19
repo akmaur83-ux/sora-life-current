@@ -10,7 +10,7 @@
 .hl { --hl-hdr: #F7F3EA; --hl-r: 14px; --hl-r-sm: 10px; --hl-line: var(--slv2-stone); --hl-nav-h: 64px;
   --hl-shadow: 0 1px 2px rgba(22, 33, 27, .04), 0 10px 26px -18px rgba(22, 33, 27, .22);
   min-height: 100vh; background: var(--slv2-ivory); color: var(--slv2-ink-2); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; overflow-x: clip; }
-.hl .serif { font-family: var(--font-display, 'Fraunces', Georgia, serif); font-weight: 500; letter-spacing: -.015em; color: var(--slv2-ink); }
+.hl .serif { font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-weight: 400; letter-spacing: -.008em; color: var(--slv2-ink); }
 .hl *, .hl *::before, .hl *::after { transition-property: transform, opacity; }
 .hl a { color: inherit; }
 .hl-main { display: block; padding: 0 0 48px; }
@@ -24,7 +24,7 @@
 .hl-hdr__row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; max-width: 1280px; margin: 0 auto; padding: 12px 16px 8px; }
 .hl-hdr__menu { justify-self: start; border: 0; background: none; padding: 6px; margin-left: -6px; color: var(--slv2-ink); cursor: pointer; display: inline-flex; }
 .hl-logo { display: grid; justify-items: center; text-decoration: none; line-height: 1; min-width: 0; }
-.hl-logo strong { font-weight: 600; font-size: 28px; letter-spacing: .12em; color: var(--slv2-f700); white-space: nowrap; }
+.hl-logo strong { font-weight: 500; font-size: 28px; letter-spacing: .12em; color: var(--slv2-f700); white-space: nowrap; }
 .hl-logo em { font-style: normal; font-size: 9px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: var(--slv2-gold-ink); margin-top: 5px; white-space: nowrap; }
 .hl-hdr__acts { justify-self: end; display: flex; align-items: center; gap: 4px; }
 /* The other storefronts, as the fashion header's .fs-hdr__back: quiet, desktop only. */
@@ -76,7 +76,7 @@
 .hl-hero__inner { position: relative; z-index: 1; width: 100%; padding-top: 56px; padding-bottom: 56px; }
 .hl-hero__txt { max-width: 44%; }
 .hl-hero__eyebrow { margin: 0 0 14px; font-size: 13px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: var(--slv2-gold-ink); }
-.hl-hero__h { margin: 0; font-size: clamp(42px, 5.6vw, 76px); line-height: .98; letter-spacing: -.025em; color: var(--slv2-f800); }
+.hl-hero__h { margin: 0; font-size: clamp(42px, 5.6vw, 76px); line-height: .98; letter-spacing: -.012em; color: var(--slv2-f800); }
 .hl-hero__sub { margin: 18px 0 26px; max-width: 34ch; font-size: 18px; line-height: 1.45; color: var(--slv2-ink-2); }
 .hl-hero__note { position: absolute; right: 16px; top: 44px; margin: 0; max-width: 200px; font-style: italic; font-size: 26px; line-height: 1.15; text-align: right; color: var(--slv2-f800); }
 .hl-hero__dots { position: absolute; left: 0; right: 0; bottom: 12px; z-index: 1; display: flex; justify-content: center; gap: 8px; }
@@ -108,7 +108,7 @@
 .hl-circle__img { width: 128px; height: 128px; border-radius: 50%; overflow: hidden; background: var(--slv2-cream); border: 1px solid var(--hl-line); display: grid; place-items: center; box-shadow: var(--hl-shadow); transition: transform .18s ease; }
 .hl-circle:hover .hl-circle__img { transform: translateY(-2px); }
 .hl-circle__img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.hl-circle__img b { font-family: var(--font-display, 'Fraunces', Georgia, serif); font-size: 40px; color: var(--slv2-f700); }
+.hl-circle__img b { font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-size: 40px; color: var(--slv2-f700); }
 .hl-circle__name { font-size: 15px; font-weight: 600; line-height: 1.2; }
 
 /* ---- Featured row + card ----------------------------------------------------- */
@@ -116,7 +116,7 @@
 .hl-card { display: grid; grid-template-rows: auto 1fr; background: var(--slv2-paper); border: 1px solid var(--hl-line); border-radius: var(--hl-r); overflow: hidden; box-shadow: var(--hl-shadow); }
 .hl-card__media { position: relative; aspect-ratio: 1; background: var(--slv2-cream); }
 .hl-card__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.hl-card__noimg { display: grid; place-items: center; height: 100%; font-family: var(--font-display, 'Fraunces', Georgia, serif); font-size: 44px; color: var(--slv2-f700); }
+.hl-card__noimg { display: grid; place-items: center; height: 100%; font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-size: 44px; color: var(--slv2-f700); }
 .hl-card__heart { position: absolute; right: 10px; top: 10px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: var(--slv2-paper); color: var(--slv2-ink-3); display: grid; place-items: center; box-shadow: var(--hl-shadow); cursor: default; }
 .hl-card__body { display: grid; gap: 2px; padding: 12px 14px 14px; align-content: start; }
 .hl-card__brand { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--slv2-ink-3); }
@@ -191,7 +191,7 @@
 .hl-pdp { padding-bottom: 8px; }
 .hl-pdp__grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 32px; margin-top: 18px; align-items: start; }
 .hl-pdp__media--none { border-radius: var(--hl-r); background: var(--slv2-cream); aspect-ratio: 1 / 1; display: grid; place-items: center; }
-.hl-pdp__media--none b { font-family: var(--font-display, 'Fraunces', Georgia, serif); font-size: 64px; color: var(--slv2-f700); }
+.hl-pdp__media--none b { font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-size: 64px; color: var(--slv2-f700); }
 .hl-gallery { position: sticky; top: 196px; display: grid; gap: 12px; }
 .hl-gallery__track { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: var(--hl-r); }
 .hl-gallery__track::-webkit-scrollbar { display: none; }

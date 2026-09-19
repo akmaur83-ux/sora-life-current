@@ -369,7 +369,7 @@
 .v2-ed__ui { position:absolute; inset:0; z-index:3; padding:12px; display:flex; flex-direction:column; justify-content:space-between; width:76%; }
 .v2-ed__k { font-family:var(--slv2-sans); font-size:9px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--slv2-ink-4); }
 .v2-ed__h {
-  font-family:var(--slv2-disp); font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+  font-family:var(--slv2-disp);
   font-size:16px; font-weight:500; line-height:1.13; letter-spacing:-.01em;
   margin:3px 0 0; color:var(--slv2-f900);
 }
@@ -403,7 +403,7 @@
 }
 .v2-story__b { padding:16px 4px 16px 16px; display:flex; flex-direction:column; justify-content:center; }
 .v2-story__h {
-  font-family:var(--slv2-disp); font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+  font-family:var(--slv2-disp);
   font-size:19px; font-weight:500; line-height:1.14; letter-spacing:-.012em;
   margin:5px 0 7px; color:var(--slv2-f900);
 }
@@ -827,7 +827,6 @@
   .v2-home .v2-hero--product .v2-hero__title,
   .v2-home .v2-hero__slide--collection .v2-hero__title {
     font-family:var(--slv2-sans);
-    font-variation-settings:normal;
     font-weight:600;
     line-height:1.08;
     letter-spacing:-.018em;

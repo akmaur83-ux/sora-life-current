@@ -147,7 +147,7 @@ await test('header: cream shell, hamburger, centred SORA LIFE wordmark in the se
   const css = read('src/styles/grocery.css');
   assert.match(css, /\.gs \{[^}]*--gs-hdr: #F7F3EA/); assert.match(css, /\.gs-hdr \{[^}]*background: var\(--gs-hdr\)/);
   assert.match(css, /\.gs-hdr__row \{[^}]*grid-template-columns: 1fr auto 1fr/, 'the wordmark is centred between equal columns');
-  assert.match(css, /\.gs \.serif \{[^}]*font-family: var\(--font-display, 'Fraunces'/);
+  assert.match(css, /\.gs \.serif \{[^}]*font-family: var\(--font-display, 'Playfair Display'/);
 });
 
 await test('below the header: the static address row and a badge reading exactly "Delivery in 6-7 days"; the search bar is visual only', () => {
@@ -475,7 +475,8 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
   // The store switcher (test-store-nav.mjs) adds links to the wellness and fashion headers — those four files are pinned there.
   // (A later store's own sheet — homeliving.css — is that store's, pinned by test-homeliving.mjs.)
   // The homepage store doorway (FashionBanner.jsx + fashion-banner.css) was redesigned in 71eb538 — an approved wellness change.
-  const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$)|src\/styles\/(?!grocery\.css$|fashion\.css$|v2-header\.css$|homeliving\.css$|fashion-banner\.css$|lifestyle\.css$)|src\/pages\/(?!Home\.jsx$)|src\/components\/(?!Header\.jsx$|FashionBanner\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/)/;
+  // The display typeface swap (test-typeface.mjs) touched index.html and most stylesheets — an approved change; that suite pins the sheets it must not have touched.
+  const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$)|src\/pages\/(?!Home\.jsx$)|src\/components\/(?!Header\.jsx$|FashionBanner\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/)/;
   const bad = [...changed].filter((f) => untouchable.test(f));
   assert.deepEqual(bad, [], `untouchable files changed: ${bad.join(', ')}`);
   // src/pages/Home.jsx mounts the store doorways (test-store-doorway.mjs pins its exact diff); everything else under src/pages is untouched.

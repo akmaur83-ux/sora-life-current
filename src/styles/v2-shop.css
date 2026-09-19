@@ -23,7 +23,7 @@
 .v2-crumbs svg { opacity:.6; }
 .v2-crumbs strong { color:var(--slv2-ink-2); font-weight:600; }
 /* Sans, matching .hd-title on the Homepage and the About/Legal headings.
-   Fraunces is now reserved for the wordmark; every page heading is Inter, so
+   The display serif is now reserved for the wordmark; every page heading is Inter, so
    Shop no longer reads as a different site from the page that links to it. */
 .v2-shop__title {
   font-family:var(--slv2-sans);

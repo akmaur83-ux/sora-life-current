@@ -15,6 +15,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT, buildFashionApp } from './fashion-ssr.mjs';
+// Review only: SSR_FONTS_CSS may point at a stylesheet of inline @font-face rules so the zero-network file measures with the real faces. Not set in the repo.
+const REVIEW_FONTS = process.env.SSR_FONTS_CSS ? readFileSync(process.env.SSR_FONTS_CSS, 'utf8') : '';
 
 const OUT = resolve(ROOT, 'reports/fashion');
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
@@ -29,7 +31,7 @@ const inlineMarkup = (html) => html.replace(/src="\/img\/([^"]+\.webp)"/g, (_, f
 const appCss = inlineCss(read('public/app.css'));
 const deferredCss = inlineCss(read('public/app-deferred.css'));
 const page = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title}</title><style>${appCss}</style><style>${deferredCss}</style><style>body{margin:0;background:#FBF8F1}</style></head><body>${inlineMarkup(body)}</body></html>`;
+<title>${title}</title><style>${REVIEW_FONTS}</style><style>${appCss}</style><style>${deferredCss}</style><style>body{margin:0;background:#FBF8F1}</style></head><body>${inlineMarkup(body)}</body></html>`;
 
 const app = await buildFashionApp({ cartCount: 4, wishlist: ['00000000-0000-4000-8000-000000000501', '00000000-0000-4000-8000-000000000504', '00000000-0000-4000-8000-000000000506'] });
 mkdirSync(OUT, { recursive: true });

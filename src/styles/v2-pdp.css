@@ -276,7 +276,7 @@
 .v2-pdp-root .pdp-sec__head { gap:8px; margin-bottom:11px; }
 .v2-pdp-root .pdp-sec__title {
   margin:0 0 13px;
-  font-family:var(--slv2-disp); font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+  font-family:var(--slv2-disp);
   font-size:21px; font-weight:500; line-height:1.15; letter-spacing:-.01em;
   color:var(--slv2-ink);
 }
@@ -725,17 +725,16 @@ body:has(.v2-pdp-root .buybar) .page-main {
 }
 
 /* ------------------------------------------------------------------ title */
-/* Fraunces, matching the shipped spotlight. This sheet previously argued for
+/* The display serif, matching the shipped spotlight. This sheet previously argued for
    sans, because at the time the serif made the PDP read as a different site
    from the grid that opened it. That grid changed: CategorySpotlight now sets
    the product's name in the display serif, so a customer arriving from the
    category hero sees the same string twice — and sans here is now the
    inconsistency the original note was trying to avoid. The PDP's own section
-   headings have been Fraunces all along. */
+   headings have been the display serif all along. */
 .v2-pdp-root .pdp__title {
   margin:0; max-width:20ch;
   font-family:var(--slv2-disp);
-  font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
   font-size:clamp(25px, 7.2vw, 31px); font-weight:600;
   line-height:1.14; letter-spacing:-.014em; text-wrap:balance;
   color:var(--slv2-ink);

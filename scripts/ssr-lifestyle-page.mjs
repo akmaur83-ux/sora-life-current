@@ -15,6 +15,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ROOT, read, buildLifestyleApp } from './lifestyle-ssr.mjs';
+// Review only: SSR_FONTS_CSS may point at a stylesheet of inline @font-face rules so the zero-network file measures with the real faces. Not set in the repo.
+const REVIEW_FONTS = process.env.SSR_FONTS_CSS ? readFileSync(process.env.SSR_FONTS_CSS, 'utf8') : '';
 
 const OUT = resolve(ROOT, 'reports/lifestyle');
 const dataUri = (f) => `data:image/webp;base64,${readFileSync(resolve(ROOT, 'img', f)).toString('base64')}`;
@@ -25,7 +27,7 @@ if (!/\.ls-hero__ctl \{/.test(deferred)) throw new Error('public/app-deferred.cs
 const css = [inlineCss(read('public/app.css')), inlineCss(deferred)].join('\n');
 
 const page = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title}</title><style>${css}</style><style>body{margin:0;background:#FBF8F1}</style></head><body>${body}</body></html>`;
+<title>${title}</title><style>${REVIEW_FONTS}</style><style>${css}</style><style>body{margin:0;background:#FBF8F1}</style></head><body>${body}</body></html>`;
 mkdirSync(OUT, { recursive: true });
 const app = await buildLifestyleApp({ cartCount: 3 });
 const body = app.render('/lifestyle');

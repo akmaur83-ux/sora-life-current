@@ -14,6 +14,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ROOT, buildGroceryApp } from './grocery-ssr.mjs';
+// Review only: SSR_FONTS_CSS may point at a stylesheet of inline @font-face rules so the zero-network file measures with the real faces. Not set in the repo.
+const REVIEW_FONTS = process.env.SSR_FONTS_CSS ? readFileSync(process.env.SSR_FONTS_CSS, 'utf8') : '';
 
 const OUT = resolve(ROOT, 'reports/grocery');
 const read = (rel) => readFileSync(resolve(ROOT, rel), 'utf8');
@@ -25,7 +27,7 @@ const css = [inlineCss(read('public/app.css')), inlineCss(read('public/app-defer
 const app = await buildGroceryApp({ cartCount: 3 });
 const body = inlineMarkup(app.render('/grocery'));
 const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SSR — grocery home</title><style>${css}</style><style>body{margin:0;background:#FBF8F1}</style></head><body>${body}</body></html>`;
+<title>SSR — grocery home</title><style>${REVIEW_FONTS}</style><style>${css}</style><style>body{margin:0;background:#FBF8F1}</style></head><body>${body}</body></html>`;
 mkdirSync(OUT, { recursive: true });
 writeFileSync(join(OUT, 'grocery-home.html'), page);
 console.log(`wrote ${join(OUT, 'grocery-home.html')} (${(page.length / 1024).toFixed(0)} KB, ${(body.match(/<img /g) || []).length} images inlined, 0 external references)`);

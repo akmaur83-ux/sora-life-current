@@ -18,6 +18,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { Link } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, h, loadModule } from './grocery-ssr.mjs';
+// Review only: SSR_FONTS_CSS may point at a stylesheet of inline @font-face rules so the zero-network file measures with the real faces. Not set in the repo.
+const REVIEW_FONTS = process.env.SSR_FONTS_CSS ? readFileSync(process.env.SSR_FONTS_CSS, 'utf8') : '';
 
 const OUT = resolve(ROOT, 'reports');
 const dataUri = (f) => `data:image/webp;base64,${readFileSync(resolve(ROOT, 'img', f)).toString('base64')}`;
@@ -35,7 +37,7 @@ const body = (renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(doorway.
   .replace(/(srcSet|src)="\/img\/([^"]+\.webp)"/g, (_, attr, f) => `${attr}="${dataUri(f)}"`);
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SSR — homepage store doorway</title><style>${css.replace(/url\('\/img\/([^']+\.webp)'\)/g, (_, f) => `url('${dataUri(f)}')`)}</style>
+<title>SSR — homepage store doorway</title><style>${REVIEW_FONTS}</style><style>${css.replace(/url\('\/img\/([^']+\.webp)'\)/g, (_, f) => `url('${dataUri(f)}')`)}</style>
 <style>body{margin:0;background:#FBF8F1}</style></head><body><main class="v2-home">${body}</main></body></html>`;
 mkdirSync(OUT, { recursive: true });
 const out = join(OUT, 'homepage-store-doorway.html');

@@ -79,7 +79,7 @@
 }
 .lb__row.is-podium .lb__pos { color: var(--rank); font-size: 15px; font-weight: 700; }
 .lb__name {
-  font-family: var(--font-display, 'Fraunces', Georgia, serif); font-size: 17px; font-weight: 500;
+  font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-size: 17px; font-weight: 500;
   letter-spacing: -.005em; color: var(--sld-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .lb__row.is-podium .lb__name { font-size: 19px; }
