@@ -15,7 +15,7 @@
 // ============================================================
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { ROOT, buildHomeLivingApp, LISTING } from './homeliving-ssr.mjs';
+import { ROOT, buildHomeLivingApp, LISTING, PDP } from './homeliving-ssr.mjs';
 
 const OUT = resolve(ROOT, 'reports/homeliving');
 const read = (rel) => readFileSync(resolve(ROOT, rel), 'utf8');
@@ -38,4 +38,9 @@ if (home.modules.category) {
   const listing = await buildHomeLivingApp({ cartCount: 3, initial: LISTING });
   write('homeliving-category-bedsheets.html', 'SSR — Home &amp; Living: Bedsheets', listing.render('/homeliving/category/bedsheets'));
   write('homeliving-category-bedsheets-filtered.html', 'SSR — Home &amp; Living: Bedsheets, King · Sage, list', listing.render('/homeliving/category/bedsheets?size=King&colour=Sage&sort=price-desc&view=list'));
+  if (listing.modules.pdp) {
+    const pdp = await buildHomeLivingApp({ cartCount: 3, initial: PDP });
+    write('homeliving-product-sage-fitted-sheet.html', 'SSR — Home &amp; Living: Sage Fitted Sheet (three images, size × colour)', pdp.render('/homeliving/p/sage-fitted-sheet?size=King&colour=Sage'));
+    write('homeliving-product-botanical-bedsheet-set.html', 'SSR — Home &amp; Living: Botanical Bedsheet Set (one image, no variants)', pdp.render('/homeliving/p/botanical-bedsheet-set-king'));
+  }
 }

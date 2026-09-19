@@ -80,8 +80,13 @@ export const categoryHref = (c) => `/homeliving/category/${c.slug}`;
 const CATEGORY_COLUMNS = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
 const PRODUCT_COLUMNS = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
 const VARIANT_COLUMNS = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
-/** The product row with its variants embedded (a size × colour each, or a size alone for a textile). */
-const PRODUCT_SELECT = `${PRODUCT_COLUMNS}, variants:catalogue_variants (${VARIANT_COLUMNS})`;
+const MEDIA_COLUMNS = 'id, public_url, alt_text, sort_order, is_primary';
+/**
+ * The product row with its variants (a size × colour each, or a size alone
+ * for a textile) and its gallery (catalogue_product_media: the primary shot
+ * plus detail shots, in order) embedded.
+ */
+const PRODUCT_SELECT = `${PRODUCT_COLUMNS}, variants:catalogue_variants (${VARIANT_COLUMNS}), media:catalogue_product_media (${MEDIA_COLUMNS})`;
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const str = (v) => String(v ?? '').trim();
@@ -94,11 +99,27 @@ export const priceOf = (row) => {
 };
 
 /**
- * A product row for the homepage and the listing: the row as stored, plus
- * `price`, and the variant facets the listing filters on — `variants`
- * (active, in order), `sizes` (distinct), `swatches` ({ colour, hex },
- * distinct, empty colours skipped). A product without variants has empty
- * facets and simply never shows under a size or colour filter.
+ * The ordered gallery: media rows primary-first then by sort_order — the
+ * same order the 0034 trigger writes into images[] — as { url, alt }. A
+ * product with no media rows yet falls back to images[] with the product
+ * name as alt, so a gallery always has what the card shows.
+ */
+export const galleryOf = (row) => {
+  const media = (Array.isArray(row?.media) ? row.media : [])
+    .filter((m) => m && str(m.public_url))
+    .sort((a, b) => ((b.is_primary === true) - (a.is_primary === true)) || (num(a.sort_order) - num(b.sort_order)) || str(a.id).localeCompare(str(b.id)))
+    .map((m, i) => ({ url: str(m.public_url), alt: str(m.alt_text) || (i === 0 ? str(row.name) : `${str(row.name)} — view ${i + 1}`), primary: m.is_primary === true }));
+  if (media.length) return media;
+  return (Array.isArray(row?.images) ? row.images : []).filter(Boolean).map((url, i) => ({ url: str(url), alt: i === 0 ? str(row.name) : `${str(row.name)} — view ${i + 1}`, primary: i === 0 }));
+};
+
+/**
+ * A product row for the homepage, the listing and the product page: the
+ * row as stored, plus `price`, the ordered `gallery`, and the variant
+ * facets the listing filters on — `variants` (active, in order), `sizes`
+ * (distinct), `swatches` ({ colour, hex }, distinct, empty colours
+ * skipped). A product without variants has empty facets and simply never
+ * shows under a size or colour filter.
  */
 export const homelivingProductView = (row) => {
   if (!row) return null;
@@ -114,6 +135,8 @@ export const homelivingProductView = (row) => {
     discount_percent: row.discount_percent != null ? num(row.discount_percent) : 0,
     rating: Math.max(0, Math.min(5, num(row.rating))), review_count: Math.max(0, num(row.review_count)),
     images: Array.isArray(row.images) ? row.images.filter(Boolean) : [],
+    gallery: galleryOf(row),
+    stock: Math.max(0, num(row.stock)),
     variants, sizes: [...new Set(variants.map((v) => v.size).filter(Boolean))], swatches,
   };
 };

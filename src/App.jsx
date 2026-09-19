@@ -28,6 +28,7 @@ import GroceryHome from './grocery/GroceryHome.jsx';
 import HomeLivingLayout from './homeliving/HomeLivingLayout.jsx';
 import HomeLivingHome from './homeliving/HomeLivingHome.jsx';
 import HomeLivingCategory from './homeliving/HomeLivingCategory.jsx';
+import HomeLivingProductPage from './homeliving/HomeLivingProductPage.jsx';
 import { useAdminAuth } from './lib/adminAuth.jsx';
 import { branding } from './lib/settings.js';
 import { DEFERRED_ROUTES, loadDeferredStyles } from './lib/deferredStyles.js';
@@ -207,6 +208,7 @@ export default function App() {
       <Route path="/homeliving" element={<HomeLivingLayout />}>
         <Route index element={<HomeLivingHome />} />
         <Route path="category/:slug" element={<HomeLivingCategory />} />
+        <Route path="p/:slug" element={<HomeLivingProductPage />} />
       </Route>
 
       <Route element={<Layout />}>

@@ -225,7 +225,7 @@ await test('featured row: four cards from the catalogue with photo, brand, name,
     const p = PRODUCTS[i]; const c = m[0]; const price = priceOf(p);
     assert.equal(m[1], p.slug);
     assert.ok(c.includes(`<img src="${p.images[0]}" alt="" loading="${i < 2 ? 'eager' : 'lazy'}"`), `${p.slug}: photo, first two eager`);
-    assert.ok(c.includes(`<p class="hl-card__brand">${p.brand}</p>`)); assert.ok(c.includes(`<h3 class="hl-card__name">${p.name}</h3>`));
+    assert.ok(c.includes(`<p class="hl-card__brand">${p.brand}</p>`)); assert.ok(c.includes(`<h3 class="hl-card__name"><a href="/homeliving/p/${p.slug}">${p.name}</a></h3>`), 'the name links to the product page');
     assert.ok(c.includes(`<p class="hl-card__size">${p.net_content.replace(/×/g, '×')}</p>`), 'size line');
     assert.ok(c.includes(`<p class="hl-price" data-price="${price}"><strong>₹${price.toLocaleString('en-IN')}</strong><s class="hl-price__mrp">₹${p.mrp.toLocaleString('en-IN')}</s>`), 'price with MRP');
     assert.doesNotMatch(c, /<button[^>]*>Add/, 'no add-to-cart that has nowhere to go');
@@ -368,7 +368,7 @@ console.log('\n— Isolation —');
 
 await test('the wellness, fashion and grocery storefronts changed only by the approved switcher lines; cart, checkout, coupons, auth, payments and the data layers are byte-identical', () => {
   const changed = new Set(execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean));
-  const allowed = /^(src\/homeliving\/|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|scripts\/|supabase\/migrations\/(0035_homeliving_store\.sql|rollback\/0035_homeliving_store_down\.sql)$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/styles\/v2-header\.css$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|img\/homeliving-|public\/|reports\/)/;
+  const allowed = /^(src\/homeliving\/|src\/lib\/homeliving[A-Za-z]*\.js$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|scripts\/|supabase\/migrations\/(0035_homeliving_store\.sql|rollback\/0035_homeliving_store_down\.sql)$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/styles\/v2-header\.css$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|img\/homeliving-|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/lib/fashionApi.js', 'src/data/groceryHomepage.js', 'src/grocery/GroceryHome.jsx', 'src/fashion/FashionHome.jsx', 'src/styles/fashion.css', 'src/styles/grocery.css', 'src/styles/layout.css']) {

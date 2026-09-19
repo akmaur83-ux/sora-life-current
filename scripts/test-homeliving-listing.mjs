@@ -108,7 +108,8 @@ await test('the data module exposes variant facets: variants (active, ordered), 
   assert.deepEqual(inactive.sizes, []);
   return loadModule('src/data/homelivingHomepage.js', { supabase: { from } }).getHomeLivingProducts().then(() => {
     assert.equal(calls[0].table, 'catalogue_products');
-    assert.match(calls[0].ops.find((o) => o[0] === 'select')[1], /, variants:catalogue_variants \(id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order\)$/, 'the embed');
+    // The product page (a later phase) appends the media embed after the variants; the variants embed itself is pinned here.
+    assert.match(calls[0].ops.find((o) => o[0] === 'select')[1], /, variants:catalogue_variants \(id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order\)(, media:catalogue_product_media \([^)]+\))?$/, 'the embed');
   });
 });
 
@@ -291,11 +292,14 @@ console.log('\n— Wiring and isolation —');
 
 await test('App.jsx: category/:slug is a child of the Home & Living route; the other storefronts, cart, checkout, coupons, auth, payments and shared build files are byte-identical to the baseline', () => {
   const src = read('src/App.jsx');
-  assert.match(src, /<Route path="\/homeliving" element=\{<HomeLivingLayout \/>\}>\n\s+<Route index element=\{<HomeLivingHome \/>\} \/>\n\s+<Route path="category\/:slug" element=\{<HomeLivingCategory \/>\} \/>\n\s+<\/Route>/);
+  assert.match(src, /<Route path="\/homeliving" element=\{<HomeLivingLayout \/>\}>\n\s+<Route index element=\{<HomeLivingHome \/>\} \/>\n\s+<Route path="category\/:slug" element=\{<HomeLivingCategory \/>\} \/>\n(\s+<Route path="[^"]+" element=\{<HomeLiving[A-Za-z]+ \/>\} \/>\n)*\s+<\/Route>/);
+  // Later phases add their own child routes (p/:slug — test-homeliving-pdp.mjs); strip those before comparing.
   const before = atCommit(BASELINE_SHA, 'src/App.jsx');
-  assert.equal(src.replace("import HomeLivingCategory from './homeliving/HomeLivingCategory.jsx';\n", '').replace('        <Route path="category/:slug" element={<HomeLivingCategory />} />\n', ''), before, 'App.jsx: the import and the route, nothing else');
+  const mine = src.replace("import HomeLivingCategory from './homeliving/HomeLivingCategory.jsx';\n", '').replace('        <Route path="category/:slug" element={<HomeLivingCategory />} />\n', '')
+    .replace(/import HomeLiving(?!Layout|Home|Category)[A-Za-z]+ from '\.\/homeliving\/HomeLiving[A-Za-z]+\.jsx';\n/g, '').replace(/        <Route path="(?!category\/)[^"]+" element=\{<HomeLiving[A-Za-z]+ \/>\} \/>\n/g, '');
+  assert.equal(mine, before, 'App.jsx: the import and the route, nothing else');
   const changed = new Set(execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean));
-  const allowed = /^(src\/homeliving\/|src\/lib\/homelivingListing\.js$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|src\/App\.jsx$|scripts\/|public\/|reports\/)/;
+  const allowed = /^(src\/homeliving\/|src\/lib\/homeliving[A-Za-z]*\.js$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|src\/App\.jsx$|scripts\/|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/components/Header.jsx', 'src/fashion/FashionLayout.jsx', 'src/fashion/FashionListing.jsx', 'src/lib/fashion.js', 'src/grocery/GroceryLayout.jsx', 'src/data/groceryHomepage.js', 'src/homeliving/HomeLivingLayout.jsx', 'src/homeliving/HomeLivingHome.jsx', 'build/build-css.mjs', 'src/lib/deferredStyles.js']) {
