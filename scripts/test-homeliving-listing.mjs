@@ -299,7 +299,8 @@ await test('App.jsx: category/:slug is a child of the Home & Living route; the o
     .replace(/import HomeLiving(?!Layout|Home|Category)[A-Za-z]+ from '\.\/homeliving\/HomeLiving[A-Za-z]+\.jsx';\n/g, '').replace(/        <Route path="(?!category\/)[^"]+" element=\{<HomeLiving[A-Za-z]+ \/>\} \/>\n/g, '');
   assert.equal(mine, before, 'App.jsx: the import and the route, nothing else');
   const changed = new Set(execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean));
-  const allowed = /^(src\/homeliving\/|src\/lib\/homeliving[A-Za-z]*\.js$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|src\/App\.jsx$|scripts\/|public\/|reports\/)/;
+  // The homepage store doorway (FashionBanner.jsx + fashion-banner.css) was redesigned in 71eb538 — an approved wellness change.
+  const allowed = /^(src\/homeliving\/|src\/lib\/homeliving[A-Za-z]*\.js$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|src\/App\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|scripts\/|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/components/Header.jsx', 'src/fashion/FashionLayout.jsx', 'src/fashion/FashionListing.jsx', 'src/lib/fashion.js', 'src/grocery/GroceryLayout.jsx', 'src/data/groceryHomepage.js', 'src/homeliving/HomeLivingLayout.jsx', 'src/homeliving/HomeLivingHome.jsx', 'build/build-css.mjs', 'src/lib/deferredStyles.js']) {

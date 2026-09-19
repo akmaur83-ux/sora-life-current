@@ -474,10 +474,11 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
   // (store.jsx carries the approved grocery namespace from this store's first phase; test-catalogue.mjs pins it since.)
   // The store switcher (test-store-nav.mjs) adds links to the wellness and fashion headers — those four files are pinned there.
   // (A later store's own sheet — homeliving.css — is that store's, pinned by test-homeliving.mjs.)
-  const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$)|src\/styles\/(?!grocery\.css$|fashion\.css$|v2-header\.css$|homeliving\.css$)|src\/pages\/|src\/components\/(?!Header\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/)/;
+  // The homepage store doorway (FashionBanner.jsx + fashion-banner.css) was redesigned in 71eb538 — an approved wellness change.
+  const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$)|src\/styles\/(?!grocery\.css$|fashion\.css$|v2-header\.css$|homeliving\.css$|fashion-banner\.css$)|src\/pages\/|src\/components\/(?!Header\.jsx$|FashionBanner\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/)/;
   const bad = [...changed].filter((f) => untouchable.test(f));
   assert.deepEqual(bad, [], `untouchable files changed: ${bad.join(', ')}`);
-  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'src/styles/fashion-banner.css', 'api', 'src/pages', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
+  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'api', 'src/pages', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
 });
 
 await test('no migration beyond 0034, no dependency change since the baseline', () => {
