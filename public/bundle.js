@@ -37665,6 +37665,95 @@ function HomeLeaderboard({
   });
 }
 
+const TALL = '(max-width: 1023px)';
+const STORES = [{
+  key: 'fashion',
+  to: '/fashion',
+  eyebrow: 'Discover your style',
+  heading: ['Fashion', 'Store'],
+  description: 'Clothing, footwear, bags, beauty and accessories — all in one place.',
+  cta: 'Explore Fashion',
+  wide: '/img/doorway-fashion-wide.webp',
+  tall: '/img/doorway-fashion-tall.webp',
+  alt: 'Camel coat and cream turtleneck, seated against a sunlit plaster wall',
+  detailsLabel: 'Explore fashion',
+  details: [['bag', 'Clothing', '& more'], ['sparkle', 'Everyday', 'style'], ['search', 'Easy', 'shopping']]
+}, {
+  key: 'living',
+  to: '/homeliving',
+  eyebrow: 'Make space for a better you',
+  heading: ['Home & Living', 'Store'],
+  description: 'Home textiles, soft furnishings and everyday essentials for your space.',
+  cta: 'Explore Living',
+  wide: '/img/doorway-living-wide.webp',
+  tall: '/img/doorway-living-tall.webp',
+  alt: 'Cream sofa with green cushions and a throw, a wooden coffee table and a jute rug in soft light',
+  detailsLabel: 'Explore home and living',
+  details: [['leaf', 'Soft', 'textures'], ['home', 'Calm', 'spaces'], ['grid', 'Everyday', 'living']]
+}];
+function DoorwayCard({
+  store
+}) {
+  const hId = `fsb-${store.key}-h`;
+  const ctaId = `fsb-${store.key}-cta`;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+    to: store.to,
+    className: `fsb__card fsb__card--${store.key}`,
+    "aria-labelledby": `${hId} ${ctaId}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "fsb__art",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+        src: store.wide,
+        sources: [{
+          media: TALL,
+          srcSet: store.tall
+        }],
+        alt: store.alt,
+        width: 1600,
+        height: 900,
+        className: "fsb__image"
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fsb__content",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fsb__copy",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fsb__eyebrow",
+          children: store.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
+          className: "fsb__h",
+          id: hId,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: store.heading[0]
+          }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: store.heading[1]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fsb__description",
+          children: store.description
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "fsb__cta",
+          id: ctaId,
+          children: [store.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 18
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "fsb__details",
+        "aria-label": store.detailsLabel,
+        children: store.details.map(([icon, a, b]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: icon,
+            size: 22
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [a, /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), b]
+          })]
+        }, icon))
+      })]
+    })]
+  });
+}
 function FashionBanner() {
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "v2-sec fsb",
@@ -37684,135 +37773,11 @@ function FashionBanner() {
           className: "fsb__lede",
           children: "Fashion for your style. Living for your space. All at SORA LIFE."
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "fsb__grid",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: "/fashion",
-          className: "fsb__card fsb__card--fashion",
-          "aria-labelledby": "fsb-fashion-h fsb-fashion-cta",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-            className: "fsb__art",
-            children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-              src: "/img/fashion-hero.webp",
-              alt: "Relaxed olive and cream styling in a warm, sunlit studio",
-              width: 1599,
-              height: 900,
-              className: "fsb__image"
-            })
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            className: "fsb__content",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-              className: "fsb__eyebrow",
-              children: "Discover your style"
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
-              className: "fsb__h",
-              id: "fsb-fashion-h",
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                children: "Fashion"
-              }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                children: "Store"
-              })]
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-              className: "fsb__description",
-              children: "Clothing, footwear, bags, beauty and accessories \u2014 all in one place."
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              className: "fsb__cta",
-              id: "fsb-fashion-cta",
-              children: ["Explore Fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                name: "arrowRight",
-                size: 18
-              })]
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
-              className: "fsb__details",
-              "aria-label": "Explore fashion",
-              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                  name: "bag",
-                  size: 22
-                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-                  children: ["Clothing", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "& more"]
-                })]
-              }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                  name: "sparkle",
-                  size: 22
-                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-                  children: ["Everyday", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "style"]
-                })]
-              }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                  name: "search",
-                  size: 22
-                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-                  children: ["Easy", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "shopping"]
-                })]
-              })]
-            })]
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: "/homeliving",
-          className: "fsb__card fsb__card--living",
-          "aria-labelledby": "fsb-living-h fsb-living-cta",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-            className: "fsb__art",
-            children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-              src: "/img/homeliving-hero.webp",
-              alt: "Sunlit bedroom with a woven headboard, botanical textiles and warm wood",
-              width: 1600,
-              height: 900,
-              className: "fsb__image"
-            })
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            className: "fsb__content",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-              className: "fsb__eyebrow",
-              children: "Make space for a better you"
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
-              className: "fsb__h",
-              id: "fsb-living-h",
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                children: "Home & Living"
-              }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                children: "Store"
-              })]
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-              className: "fsb__description",
-              children: "Home textiles, soft furnishings and everyday essentials for your space."
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              className: "fsb__cta",
-              id: "fsb-living-cta",
-              children: ["Explore Living ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                name: "arrowRight",
-                size: 18
-              })]
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
-              className: "fsb__details",
-              "aria-label": "Explore home and living",
-              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                  name: "leaf",
-                  size: 22
-                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-                  children: ["Soft", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "textures"]
-                })]
-              }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                  name: "home",
-                  size: 22
-                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-                  children: ["Calm", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "spaces"]
-                })]
-              }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                  name: "grid",
-                  size: 22
-                }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-                  children: ["Everyday", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "living"]
-                })]
-              })]
-            })]
-          })]
-        })]
+        children: STORES.map(store => /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCard, {
+          store: store
+        }, store.key))
       })]
     })
   });

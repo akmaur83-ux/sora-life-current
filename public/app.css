@@ -9559,7 +9559,7 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 }
 
 /* ═══ src/styles/fashion-banner.css ═══ */
-/* Homepage store discovery only. Store interiors keep their own styling. */
+/* Homepage store doorway only. Store interiors keep their own styling. */
 .fsb {
   padding-block: clamp(30px, 4vw, 56px);
   background: #f5f0e8;
@@ -9579,48 +9579,88 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 }
 .fsb__lede { margin: 0; font-size: 16px; line-height: 1.65; color: #50534b; }
 .fsb__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+
+/* ---- The card: one photo, every word on it ------------------------------------
+   The card is a size container, so the type is set in cqw and scales with the card
+   rather than the viewport: the copy stack that fits a 16:9 card fits it at every
+   width from 1024 up. The wash (.fsb__art::after) keeps the copy legible if a photo
+   is busier than the brief expects. ------------------------------------------- */
 .fsb__card {
-  --fsb-paper: #eadbca;
-  position: relative; isolation: isolate; display: grid; min-width: 0; overflow: hidden;
-  border-radius: 16px; border: 1px solid #d8cbbb; background: var(--fsb-paper); color: #242921; text-decoration: none;
+  --fsb-cream: #f6efe3;
+  position: relative; isolation: isolate; container-type: inline-size;
+  display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; overflow: hidden;
+  border-radius: 16px; border: 1px solid #d8cbbb; background: var(--fsb-cream); color: #242921; text-decoration: none;
   box-shadow: 0 5px 18px #513c2610;
   transition: transform 400ms cubic-bezier(.2, .65, .3, 1), box-shadow 400ms ease;
 }
-.fsb__card--living { --fsb-paper: #efe8db; }
 .fsb__card:focus-visible { outline: 3px solid var(--slv2-f700); outline-offset: 5px; }
-.fsb__art { position: absolute; inset: 0; z-index: -1; overflow: hidden; background: var(--fsb-paper); }
-.fsb__image { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 70% center; transition: transform 450ms ease; }
+.fsb__art { grid-area: 1 / 1; position: relative; overflow: hidden; aspect-ratio: 16 / 9; background: var(--fsb-cream); }
+.fsb__art picture { display: block; width: 100%; height: 100%; }
+.fsb__image { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; transition: transform 450ms ease; }
+/* The cream wash: strong under the copy on the left, gone before the subject. */
 .fsb__art::after {
   content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(90deg, #ecdecded 0%, #ecdecdd9 31%, #ecdecd40 56%, transparent 78%);
+  background: linear-gradient(90deg, #f6efe3e6 0%, #f6efe3c4 30%, #f6efe366 46%, #f6efe300 60%);
 }
-.fsb__card--living .fsb__art::after { background: linear-gradient(90deg, #f1eaddf5 0%, #f1eadddf 35%, #f1eadd40 62%, transparent 83%); }
-.fsb__content { display: flex; flex-direction: column; align-items: flex-start; width: 56%; min-width: 0; min-height: 442px; padding: 34px 0 28px 32px; }
+.fsb__content {
+  grid-area: 1 / 1; z-index: 1; display: flex; flex-direction: column; align-items: flex-start;
+  width: 52%; min-width: 0; padding: 3.4cqw 0 3cqw 3.4cqw;
+}
+.fsb__copy { display: block; min-width: 0; }
+.fsb__card .fsb__eyebrow { margin-bottom: .9cqw; font-size: max(9.5px, 1.9cqw); line-height: 1.4; }
 .fsb__h {
-  margin: 0 0 16px; font-family: var(--font-display, 'Fraunces', Georgia, serif);
-  font-size: clamp(36px, 3.6vw, 50px); font-weight: 500; line-height: 1.02; letter-spacing: -.04em; color: #20261f;
+  margin: 0 0 1.2cqw; font-family: var(--font-display, 'Fraunces', Georgia, serif);
+  font-size: 5.4cqw; font-weight: 500; line-height: 1.02; letter-spacing: -.04em; color: #20261f;
 }
 .fsb__h span { display: block; }
-.fsb__description { max-width: 29ch; margin: 0 0 20px; font-size: 15px; line-height: 1.55; color: #3f443b; }
+.fsb__description { max-width: 38ch; margin: 0 0 1.8cqw; font-size: max(12px, 2.5cqw); line-height: 1.4; color: #3f443b; }
 .fsb__cta {
-  display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 48px; padding: 12px 20px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 1.6cqw; min-height: max(34px, 6.6cqw); padding: 1.2cqw 3cqw;
   border-radius: 999px; border: 1px solid var(--slv2-f700); background: var(--slv2-f800); color: #fffdf8;
-  font-size: 14px; font-weight: 600; line-height: 1.4;
+  font-size: max(12.5px, 2.4cqw); font-weight: 600; line-height: 1.3;
 }
 .fsb__card--living .fsb__cta { border-color: #ae8b66; background: #fffdf5ed; color: #263529; }
-.fsb__cta svg { flex: none; transition: transform 400ms ease; }
-.fsb__details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; width: 100%; max-width: 290px; list-style: none; margin: auto 0 0; padding: 26px 0 0; }
-.fsb__details li { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; font-size: 11px; line-height: 1.45; color: #444b3f; }
-.fsb__details svg { box-sizing: content-box; padding: 10px; border-radius: 50%; background: #fffcf180; }
+.fsb__cta svg { flex: none; width: max(14px, 2.6cqw); height: max(14px, 2.6cqw); transition: transform 400ms ease; }
+.fsb__details {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2cqw; width: 100%; max-width: 44cqw;
+  list-style: none; margin: auto 0 0; padding: 1.8cqw 0 0;
+}
+.fsb__details li { display: flex; flex-direction: column; align-items: center; gap: .7cqw; text-align: center; font-size: max(10.5px, 2cqw); line-height: 1.3; color: #444b3f; }
+.fsb__details svg { box-sizing: content-box; width: max(18px, 3.8cqw); height: max(18px, 3.8cqw); padding: 1.2cqw; border-radius: 50%; background: #fffcf1b3; }
+
 @media (hover: hover) and (pointer: fine) {
   .fsb__card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px #513c2618; }
   .fsb__card:hover .fsb__image { transform: scale(1.025); }
   .fsb__card:hover .fsb__cta svg { transform: translateX(4px); }
 }
-@media (min-width: 600px) and (max-width: 1023px) {
-  .fsb__grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .fsb__content { width: 52%; min-height: 424px; padding-left: 36px; }
-  .fsb__h { font-size: 46px; }
+
+/* ---- Under 1024: stacked, the 4:5 portrait, the copy in its empty upper area ----
+   The phone scale is pinned by test-store-doorway.mjs: at a 358px card the stack
+   (eyebrow, two-line headline, two-line subline, CTA) must end above 46% of the
+   card's height, where the portrait subjects begin. Do not loosen it here. ------- */
+@media (max-width: 1023px) {
+  .fsb__grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .fsb__card {
+    --fsb-pad: clamp(18px, 5cqw, 32px);
+    --fsb-eyebrow: clamp(10px, 2.8cqw, 12px);
+    --fsb-h: clamp(26px, 8.4cqw, 44px);
+    --fsb-desc: clamp(13px, 3.8cqw, 17px);
+    --fsb-cta: clamp(40px, 11cqw, 48px);
+    grid-template-rows: auto auto;
+  }
+  .fsb__art { aspect-ratio: 4 / 5; }
+  .fsb__art::after { background: linear-gradient(180deg, #f6efe3e6 0%, #f6efe3bf 30%, #f6efe34d 48%, #f6efe300 62%); }
+  /* The content wrapper dissolves: the copy overlays the photo, the badges take the row below it. */
+  .fsb__content { display: contents; }
+  .fsb__copy { grid-area: 1 / 1; z-index: 1; align-self: start; padding: var(--fsb-pad) var(--fsb-pad) 0; }
+  .fsb__card .fsb__eyebrow { margin-bottom: 4px; font-size: var(--fsb-eyebrow); letter-spacing: .16em; }
+  .fsb__h { margin-bottom: 6px; font-size: var(--fsb-h); }
+  .fsb__description { max-width: 40ch; margin-bottom: 12px; font-size: var(--fsb-desc); line-height: 1.45; }
+  .fsb__cta { gap: 10px; min-height: var(--fsb-cta); padding: 10px 18px; font-size: 13.5px; }
+  .fsb__cta svg { width: 16px; height: 16px; }
+  .fsb__details { grid-area: 2 / 1; max-width: none; gap: 12px; margin: 0; padding: 16px var(--fsb-pad) 18px; }
+  .fsb__details li { gap: 8px; font-size: 12px; line-height: 1.4; }
+  .fsb__details svg { width: 22px; height: 22px; padding: 10px; }
 }
 @media (max-width: 599px) {
   .fsb__intro { margin-bottom: 26px; }
@@ -9628,18 +9668,6 @@ body:has(.v2-home) .ftr { margin-top: 0; }
   .fsb__overline::before, .fsb__overline::after { width: 38px; }
   .fsb__intro h2 { max-width: 12ch; margin-inline: auto; }
   .fsb__lede { max-width: 32ch; margin-inline: auto; font-size: 15px; }
-  .fsb__grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  /* A dedicated image panel preserves the subject and keeps copy off faces. */
-  .fsb__art { position: relative; inset: auto; z-index: auto; aspect-ratio: 8 / 5; }
-  .fsb__image { position: absolute; right: 0; top: 0; width: 155%; max-width: none; object-position: right top; }
-  .fsb__art::after { display: none; }
-  .fsb__content { width: 100%; min-height: 0; padding: 24px; background: var(--fsb-paper); }
-  .fsb__eyebrow { font-size: 10px; letter-spacing: .16em; }
-  .fsb__h { font-size: 36px; line-height: 1.08; margin-bottom: 14px; }
-  .fsb__h span { display: inline; }
-  .fsb__description { max-width: 34ch; }
-  .fsb__details { max-width: none; gap: 10px; padding-top: 24px; }
-  .fsb__details li { font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .fsb__card, .fsb__image, .fsb__cta svg { transition: none; }
