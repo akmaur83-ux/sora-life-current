@@ -296,15 +296,19 @@ await test('App.jsx: category/:slug is a child of the Home & Living route; the o
   // Later phases add their own child routes (p/:slug — test-homeliving-pdp.mjs); strip those before comparing.
   const before = atCommit(BASELINE_SHA, 'src/App.jsx');
   const mine = src.replace("import HomeLivingCategory from './homeliving/HomeLivingCategory.jsx';\n", '').replace('        <Route path="category/:slug" element={<HomeLivingCategory />} />\n', '')
-    .replace(/import HomeLiving(?!Layout|Home|Category)[A-Za-z]+ from '\.\/homeliving\/HomeLiving[A-Za-z]+\.jsx';\n/g, '').replace(/        <Route path="(?!category\/)[^"]+" element=\{<HomeLiving[A-Za-z]+ \/>\} \/>\n/g, '');
+    .replace(/import HomeLiving(?!Layout|Home|Category)[A-Za-z]+ from '\.\/homeliving\/HomeLiving[A-Za-z]+\.jsx';\n/g, '').replace(/        <Route path="(?!category\/)[^"]+" element=\{<HomeLiving[A-Za-z]+ \/>\} \/>\n/g, '')
+    .replace(/import Lifestyle[A-Za-z]+ from '\.\/lifestyle\/Lifestyle[A-Za-z]+\.jsx';\n/g, '').replace(/\n\s*\{\/\*[^*]*lifestyle[^*]*\*\/\}\n\s+<Route path="\/lifestyle" element=\{<LifestyleLayout \/>\}>\n\s+<Route index element=\{<LifestyleHome \/>\} \/>\n\s+<\/Route>\n/, '\n');
   assert.equal(mine, before, 'App.jsx: the import and the route, nothing else');
   const changed = new Set(execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean));
   // The homepage store doorway (FashionBanner.jsx + fashion-banner.css) was redesigned in 71eb538 — an approved wellness change.
-  const allowed = /^(src\/homeliving\/|src\/lib\/homeliving[A-Za-z]*\.js$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|src\/App\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|scripts\/|public\/|reports\/)/;
+  // The lifestyle storefront (test-lifestyle.mjs) — an approved change: its own files, the route, the sheet, one switcher link per shell; and the doorway images (test-store-doorway.mjs).
+  const allowed = /^(src\/homeliving\/|src\/lib\/homeliving[A-Za-z]*\.js$|src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|img\/doorway-|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|src\/App\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|scripts\/|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/components/Header.jsx', 'src/fashion/FashionLayout.jsx', 'src/fashion/FashionListing.jsx', 'src/lib/fashion.js', 'src/grocery/GroceryLayout.jsx', 'src/data/groceryHomepage.js', 'src/homeliving/HomeLivingLayout.jsx', 'src/homeliving/HomeLivingHome.jsx', 'build/build-css.mjs', 'src/lib/deferredStyles.js']) {
-    assert.equal(read(rel), atCommit(BASELINE_SHA, rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
+    // The lifestyle storefront (test-lifestyle.mjs) added one line about /lifestyle to each shell and the two build files; nothing else.
+    const sansLifestyle = (t) => t.split('\n').filter((l) => !/\/lifestyle\b|lifestyle\.css|Lifestyle store/.test(l)).join('\n').replace('|lifestyle)', ')');
+    assert.equal(sansLifestyle(read(rel)), sansLifestyle(atCommit(BASELINE_SHA, rel)), `${rel} is byte-identical to ${BASELINE_SHA} but for its lifestyle line`);
   }
   assert.ok(!changed.has('supabase/migrations/0036_') && ![...changed].some((f) => /^supabase\//.test(f)), 'no migration');
 });

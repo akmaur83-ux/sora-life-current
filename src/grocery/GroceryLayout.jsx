@@ -52,6 +52,7 @@ export function GroceryHeader({ onMenu }) {
             <Link to="/" className="gs-hdr__store"><Icon name="chevronLeft" size={15} /> Wellness store</Link>
             <Link to="/fashion" className="gs-hdr__store">Fashion <Icon name="chevronRight" size={15} /></Link>
             <Link to="/homeliving" className="gs-hdr__store">Home &amp; Living <Icon name="chevronRight" size={15} /></Link>
+            <Link to="/lifestyle" className="gs-hdr__store">Lifestyle <Icon name="chevronRight" size={15} /></Link>
           </span>
           <button type="button" className="gs-hdr__act" aria-label="Wishlist" aria-disabled="true"><Icon name="heart" size={24} /></button>
           <Link to="/cart" className="gs-hdr__act" aria-label={`Cart${cartCount ? `, ${cartCount} items` : ''}`}>
@@ -107,6 +108,7 @@ function Drawer({ open, onClose }) {
         </nav>
         <Link to="/fashion" className="gs-drawer__back" onClick={onClose}><Icon name="chevronRight" size={16} /> Fashion store</Link>
         <Link to="/homeliving" className="gs-drawer__back" onClick={onClose}><Icon name="chevronRight" size={16} /> Home &amp; Living store</Link>
+        <Link to="/lifestyle" className="gs-drawer__back" onClick={onClose}><Icon name="chevronRight" size={16} /> Lifestyle store</Link>
         <Link to="/" className="gs-drawer__back" onClick={onClose}><Icon name="chevronLeft" size={16} /> Back to the wellness store</Link>
       </div>
     </div>

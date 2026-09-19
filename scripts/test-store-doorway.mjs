@@ -245,7 +245,8 @@ await test('motion: transitions on transform, opacity and box-shadow only; hover
 // ---- wiring and isolation ------------------------------------------------
 await test('Home.jsx, the build lists and every other file are byte-identical to the baseline: only the banner\'s own files, the four images, scripts and build output changed', () => {
   const changed = new Set(execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean));
-  const allowed = /^(src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|img\/doorway-(fashion|living)-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
+  // The lifestyle storefront (test-lifestyle.mjs) — an approved change: its own files, the route, the sheet, one switcher link per shell; and the doorway images (test-store-doorway.mjs).
+  const allowed = /^(src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|img\/doorway-(fashion|living)-(wide|tall)\.webp$|src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|img\/doorway-|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/homeliving\/HomeLivingLayout\.jsx$|scripts\/|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   assert.match(read('src/pages/Home.jsx'), /<HomeOffers[^>]*\/>\s*(\{\/\*[\s\S]*?\*\/\})?\s*<FashionBanner \/>/, 'still mounted after the offers');

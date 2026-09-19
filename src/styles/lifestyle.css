@@ -1,0 +1,238 @@
+/* ============================================================================
+   SORA LIFE — the lifestyle storefront (/lifestyle). Namespaced .ls-*, deferred bundle.
+
+   The roof over the fashion and Home & Living stores, on the storefront's
+   own tokens (--slv2-*): ivory ground, a cream header, paper cards, forest
+   for navigation, type and the calls to action. Mobile first — the hero is
+   a 4:5 portrait with the copy on its empty upper-left, the rows scroll
+   sideways; from 1024px the hero is a 16:9 landscape with the copy on the
+   left and the rows become grids. Only transform and opacity ever animate.
+   Nothing here matches outside .ls.
+   ========================================================================= */
+.ls { --ls-hdr: #F7F3EA; --ls-r: 16px; --ls-r-sm: 10px; --ls-line: var(--slv2-stone); --ls-nav-h: 64px; --ls-cream: #f6efe3;
+  --ls-shadow: 0 1px 2px rgba(22, 33, 27, .04), 0 10px 26px -18px rgba(22, 33, 27, .22);
+  min-height: 100vh; background: var(--slv2-ivory); color: var(--slv2-ink-2); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; overflow-x: clip; }
+.ls .serif { font-family: var(--font-display, 'Fraunces', Georgia, serif); font-weight: 500; letter-spacing: -.015em; color: var(--slv2-ink); }
+.ls *, .ls *::before, .ls *::after { transition-property: transform, opacity; }
+.ls a { color: inherit; }
+/* Coloured links carry .ls in their selector so they outrank the inherit above. */
+.ls-main { display: block; padding: 0 0 40px; }
+.ls-wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
+.ls-eyebrow { margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; line-height: 1.4; color: var(--slv2-ink-2); }
+.ls .ls-cta { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 22px; white-space: nowrap; border-radius: 999px; background: var(--slv2-f800); color: #fffdf8; font-size: 15px; font-weight: 600; text-decoration: none; transition: transform .16s ease; }
+.ls-cta:hover { transform: translateY(-1px); }
+.ls .ls-cta--sm { min-height: 40px; padding: 0 16px; gap: 8px; font-size: 13.5px; }
+.ls .ls-cta--paper { background: var(--slv2-paper); color: var(--slv2-f800); }
+.ls-empty { margin: 0; padding: 22px 16px; border: 1px dashed var(--ls-line); border-radius: var(--ls-r); text-align: center; color: var(--slv2-ink-3); }
+
+/* ---- Header ------------------------------------------------------------- */
+.ls-hdr { position: sticky; top: 0; z-index: 20; background: var(--ls-hdr); border-bottom: 1px solid var(--ls-line); }
+.ls-hdr__row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; max-width: 1280px; margin: 0 auto; padding: 10px 12px; }
+.ls-hdr__menu { justify-self: start; border: 0; background: none; padding: 6px; margin-left: -6px; color: var(--slv2-ink); cursor: pointer; display: inline-flex; }
+.ls-logo { display: grid; justify-items: center; text-decoration: none; line-height: 1; min-width: 0; }
+.ls-logo strong { font-weight: 600; font-size: 24px; letter-spacing: .12em; color: var(--slv2-f700); white-space: nowrap; }
+.ls-logo em { font-style: normal; font-size: 9px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: var(--slv2-gold-ink); margin-top: 5px; white-space: nowrap; }
+.ls-hdr__acts { justify-self: end; display: flex; align-items: center; gap: 0; }
+.ls-hdr__stores { display: none; align-items: center; gap: 14px; margin-right: 10px; }
+.ls .ls-hdr__store { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--slv2-ink-3); text-decoration: none; white-space: nowrap; }
+.ls-hdr__store:hover { color: var(--slv2-f700); }
+.ls .ls-hdr__act { position: relative; display: inline-flex; padding: 7px; border: 0; background: none; color: var(--slv2-f700); text-decoration: none; cursor: pointer; font: inherit; }
+.ls-hdr__act[aria-disabled="true"] { cursor: default; }
+.ls-hdr__count { position: absolute; top: 0; right: 0; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center; background: var(--slv2-gold); color: var(--slv2-f900); font-size: 11px; font-weight: 700; }
+
+/* ---- Bottom nav ----------------------------------------------------------- */
+.ls-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: calc(var(--ls-nav-h) + env(safe-area-inset-bottom, 0px)); padding: 0 4px env(safe-area-inset-bottom, 0px); background: var(--slv2-paper); border-top: 1px solid var(--ls-line); box-shadow: var(--slv2-sh-up, 0 -1px 0 rgba(20, 38, 28, .06)); }
+.ls .ls-nav__item { display: grid; justify-items: center; align-content: center; gap: 4px; min-height: var(--ls-nav-h); color: var(--slv2-ink-3); font-size: 12px; font-weight: 500; text-decoration: none; }
+.ls .ls-nav__item.is-on { color: var(--slv2-f700); font-weight: 700; }
+.ls-nav__item[aria-disabled="true"] { cursor: default; }
+.ls { padding-bottom: calc(var(--ls-nav-h) + env(safe-area-inset-bottom, 0px)); }
+
+/* ---- Drawer ------------------------------------------------------------- */
+.ls-drawer { position: fixed; inset: 0; z-index: 40; }
+.ls-drawer__scrim { position: absolute; inset: 0; border: 0; background: rgba(22, 33, 27, .45); cursor: pointer; }
+.ls-drawer__panel { position: absolute; left: 0; top: 0; bottom: 0; width: min(320px, 86vw); overflow-y: auto; padding: 18px 20px; background: var(--slv2-ivory); box-shadow: var(--ls-shadow); }
+.ls-drawer__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; font-size: 16px; color: var(--slv2-ink); }
+.ls-drawer__x { border: 0; background: none; padding: 6px; color: var(--slv2-ink-3); cursor: pointer; display: inline-flex; }
+.ls-drawer__nav { margin-top: 10px; }
+.ls-drawer__h { margin: 0 0 4px; font-size: 12px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--slv2-gold-ink); }
+.ls-drawer__nav ul { list-style: none; margin: 0; padding: 0; display: grid; }
+.ls-drawer__nav li a { display: block; padding: 10px 0; border-top: 1px solid var(--ls-line); font-size: 15px; font-weight: 600; color: var(--slv2-ink); text-decoration: none; }
+.ls .ls-drawer__back { display: flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 14px; font-weight: 700; color: var(--slv2-f700); text-decoration: none; }
+
+/* ---- Hero: full-bleed, the copy on the empty upper-left of a 4:5 portrait ------
+   The phone scale is pinned by test-lifestyle.mjs: at a 390px slide the copy
+   stack (two-line eyebrow, two-line headline, two-line subline, CTA) ends
+   above 46% of the 4:5 art, where the portrait subjects begin. ---------------- */
+.ls-hero { position: relative; overflow: hidden; background: var(--ls-cream); }
+.ls-hero__track { display: flex; transition: transform .5s ease; }
+.ls-hero__slide { position: relative; flex: 0 0 100%; display: grid; grid-template-columns: minmax(0, 1fr); }
+.ls-hero__art { grid-area: 1 / 1; position: relative; overflow: hidden; aspect-ratio: 4 / 5; background: var(--ls-cream); }
+.ls-hero__pic { display: block; width: 100%; height: 100%; }
+.ls-hero__img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.ls-hero__art::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, #f6efe3e6 0%, #f6efe3bf 30%, #f6efe34d 48%, #f6efe300 62%); }
+.ls-hero__copy { --ls-hero-pad: clamp(16px, 4.6vw, 18px); --ls-hero-eyebrow: clamp(10px, 2.7vw, 10.5px); --ls-hero-h: clamp(28px, 8.2vw, 32px); --ls-hero-sub: clamp(13px, 3.6vw, 14px); --ls-hero-cta: clamp(40px, 11.3vw, 44px);
+  grid-area: 1 / 1; z-index: 1; align-self: start; padding: var(--ls-hero-pad) var(--ls-hero-pad) 0; max-width: 100%; }
+.ls-hero__eyebrow { margin: 0 0 4px; font-size: var(--ls-hero-eyebrow); font-weight: 700; letter-spacing: .22em; text-transform: uppercase; line-height: 1.35; color: var(--slv2-ink-2); }
+.ls-hero__eyebrow span { display: block; }
+.ls-hero__h { margin: 0 0 6px; font-size: var(--ls-hero-h); line-height: 1; letter-spacing: -.03em; color: var(--slv2-ink); }
+.ls-hero__h span { display: block; }
+.ls-hero__sub { margin: 0 0 12px; max-width: 30ch; font-size: var(--ls-hero-sub); line-height: 1.4; color: var(--slv2-ink-2); }
+.ls-hero__copy .ls-cta { min-height: var(--ls-hero-cta); }
+.ls-hero__note { position: absolute; right: 16px; top: 16px; z-index: 1; margin: 0; max-width: 34%; font-style: italic; font-size: 17px; line-height: 1.15; text-align: right; color: var(--slv2-f800); }
+/* The counter, the progress bar and the arrows, as in the mockup: "1 / 3" — bar — ‹ › */
+.ls-hero__ctl { position: absolute; left: 16px; right: 16px; bottom: 14px; z-index: 2; display: flex; align-items: center; gap: 12px; }
+.ls-hero__count { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .06em; color: var(--slv2-ink); font-variant-numeric: tabular-nums; }
+.ls-hero__count b { font-weight: 700; }
+.ls-hero__bar { position: relative; width: 72px; height: 2px; background: rgba(22, 33, 27, .18); border-radius: 999px; overflow: hidden; }
+.ls-hero__bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--slv2-f700); transition: none; }
+.ls-hero__arrow { width: 34px; height: 34px; padding: 0; border: 1px solid rgba(22, 33, 27, .18); border-radius: 50%; background: rgba(251, 248, 241, .7); color: var(--slv2-ink); display: grid; place-items: center; cursor: pointer; }
+.ls-hero__arrow + .ls-hero__arrow { margin-left: -4px; }
+
+/* ---- Category circles: a scroller on a phone, a row from 1024 ---------------- */
+.ls-homecats { margin-top: 14px; }
+.ls-circles { display: flex; gap: 12px; margin: 0 -12px; padding: 4px 12px 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.ls-circles::-webkit-scrollbar { display: none; }
+.ls-circle { flex: 0 0 88px; display: grid; justify-items: center; gap: 8px; text-decoration: none; color: var(--slv2-ink); text-align: center; }
+.ls-circle__img { width: 88px; height: 88px; border-radius: 50%; overflow: hidden; background: var(--slv2-cream); border: 1px solid var(--ls-line); display: grid; place-items: center; box-shadow: var(--ls-shadow); transition: transform .18s ease; }
+.ls-circle:hover .ls-circle__img { transform: translateY(-2px); }
+.ls-circle__img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ls-circle__img b { font-family: var(--font-display, 'Fraunces', Georgia, serif); font-size: 32px; color: var(--slv2-f700); }
+.ls-circle__name { font-size: 12.5px; font-weight: 600; line-height: 1.2; }
+
+/* ---- Sections --------------------------------------------------------------- */
+.ls-sec { margin-top: 26px; }
+.ls-sec__head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.ls-sec__h { margin: 0; font-size: 24px; line-height: 1.1; }
+.ls-sec__h--rule { padding-right: 70px; position: relative; }
+.ls-sec__h--rule::after { content: ''; position: absolute; right: 0; top: 55%; width: 56px; height: 1px; background: var(--ls-line); }
+.ls .ls-sec__link { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--slv2-ink); text-decoration: none; white-space: nowrap; }
+
+/* ---- The fashion doorway card: one photograph, subject right, copy left --------- */
+.ls-banner { --ls-banner-pad: 16px; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); margin-top: 18px; overflow: hidden; border-radius: var(--ls-r); border: 1px solid #d8cbbb; background: var(--ls-cream); color: var(--slv2-ink); text-decoration: none; box-shadow: var(--ls-shadow); transition: transform 400ms cubic-bezier(.2, .65, .3, 1), box-shadow 400ms ease; }
+.ls-banner:focus-visible { outline: 3px solid var(--slv2-f700); outline-offset: 4px; }
+.ls-banner__art { grid-area: 1 / 1; position: relative; overflow: hidden; aspect-ratio: 16 / 10; }
+.ls-banner__art img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; transition: transform 450ms ease; }
+.ls-banner__art::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, #f6efe3e6 0%, #f6efe3c4 30%, #f6efe366 46%, #f6efe300 60%); }
+.ls-banner__copy { grid-area: 1 / 1; z-index: 1; align-self: center; width: 54%; min-width: 0; padding: var(--ls-banner-pad); }
+.ls-banner__eyebrow { margin-bottom: 4px; font-size: 10px; letter-spacing: .2em; }
+.ls-banner__eyebrow span { display: block; }
+.ls-banner__h { margin: 0 0 6px; font-size: 24px; line-height: 1.02; letter-spacing: -.03em; }
+.ls-banner__h span { display: block; }
+.ls-banner__sub { margin: 0 0 10px; max-width: 30ch; font-size: 12.5px; line-height: 1.4; color: var(--slv2-ink-2); }
+/* The script note sits top-right, where the subject's head is on a 16:10 phone crop — so it waits for the wide card. */
+.ls-banner__note { display: none; position: absolute; right: 14px; top: 12px; z-index: 1; margin: 0; max-width: 30%; font-style: italic; font-size: 15px; line-height: 1.15; text-align: right; color: var(--slv2-f800); }
+
+/* ---- Feature tiles: dark circular icon left, two lines right ------------------ */
+.ls-features { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ls-features li { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--ls-r); background: var(--ls-cream); border: 1px solid var(--ls-line); }
+.ls-features__icon { flex: none; width: 46px; height: 46px; border-radius: 50%; background: var(--slv2-f800); color: #fffdf8; display: grid; place-items: center; }
+.ls-features__txt { display: grid; gap: 2px; min-width: 0; line-height: 1.25; }
+.ls-features__txt strong { font-size: 14px; color: var(--slv2-ink); }
+.ls-features__txt em { font-style: normal; font-size: 12px; color: var(--slv2-ink-3); }
+
+/* ---- Trending Now: a scroller on a phone, four across from 1024 ------------------ */
+.ls-row { display: flex; gap: 10px; margin: 0 -12px; padding: 0 12px 6px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.ls-row::-webkit-scrollbar { display: none; }
+.ls-card { flex: 0 0 168px; scroll-snap-align: start; display: grid; grid-template-rows: auto 1fr; background: var(--slv2-paper); border: 1px solid var(--ls-line); border-radius: var(--ls-r); overflow: hidden; box-shadow: var(--ls-shadow); text-decoration: none; color: var(--slv2-ink); }
+.ls-card__media { position: relative; display: block; aspect-ratio: 1; background: var(--slv2-cream); }
+.ls-card__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ls-card__noimg { display: grid; place-items: center; height: 100%; font-family: var(--font-display, 'Fraunces', Georgia, serif); font-size: 40px; color: var(--slv2-f700); }
+.ls-card__heart { position: absolute; right: 8px; top: 8px; width: 30px; height: 30px; border-radius: 50%; background: var(--slv2-paper); color: var(--slv2-ink-3); display: grid; place-items: center; box-shadow: var(--ls-shadow); }
+.ls-card__body { display: grid; gap: 6px; padding: 10px 12px 12px; align-content: start; }
+.ls-card__name { font-size: 14px; font-weight: 600; line-height: 1.25; color: var(--slv2-ink); }
+.ls-card__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ls-price { display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
+.ls-price strong { font-size: 17px; font-weight: 700; color: var(--slv2-price); }
+.ls-price__mrp { font-size: 12px; color: var(--slv2-ink-4); }
+/* Reserved: the Add button lands here once this storefront has a cart namespace. */
+.ls-card__slot { flex: none; width: 36px; height: 36px; }
+
+/* ---- Promo strip: linen left, one line and a paper pill right ---------------------- */
+.ls-promo { position: relative; display: grid; grid-template-columns: 34% minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 14px; row-gap: 10px; margin-top: 22px; overflow: hidden; border-radius: var(--ls-r); background: var(--slv2-f800); color: #fffdf8; }
+.ls-promo__art { grid-row: 1 / 3; align-self: stretch; min-height: 118px; }
+.ls-promo__art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ls-promo__h { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; line-height: 1.5; }
+.ls-promo .ls-cta { grid-column: 2; justify-self: start; align-self: start; margin: 0 14px 16px 0; }
+.ls-promo__h { grid-column: 2; align-self: end; padding: 16px 14px 0 0; }
+
+@media (hover: hover) and (pointer: fine) {
+  .ls-banner:hover { transform: translateY(-3px); box-shadow: 0 10px 25px #513c2618; }
+  .ls-banner:hover .ls-banner__art img { transform: scale(1.025); }
+}
+
+/* ---- Tablets (600–1023): still the portrait treatment, with room for larger type ------ */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .ls-hero__copy { --ls-hero-pad: 32px; --ls-hero-eyebrow: 12px; --ls-hero-h: clamp(40px, 5.6vw, 52px); --ls-hero-sub: 17px; --ls-hero-cta: 48px; }
+  .ls-hero__sub { max-width: 34ch; }
+  .ls-hero__note { right: 32px; top: 32px; font-size: 22px; }
+  .ls-hero__ctl { left: 32px; right: 32px; bottom: 24px; }
+  .ls-circle { flex-basis: 112px; }
+  .ls-circle__img { width: 112px; height: 112px; }
+  .ls-circle__name { font-size: 14px; }
+  .ls-banner { --ls-banner-pad: 28px; }
+  .ls-banner__eyebrow { font-size: 11px; }
+  .ls-banner__h { font-size: 36px; }
+  .ls-banner__sub { font-size: 15px; }
+  .ls-card { flex-basis: 220px; }
+}
+
+/* ---- From 1024: the 16:9 hero with the copy left, rows become grids ----------- */
+@media (min-width: 1024px) {
+  .ls-main { padding-bottom: 56px; }
+  .ls { padding-bottom: 0; }
+  .ls-hdr__row { padding: 12px 16px; }
+  .ls-logo strong { font-size: 28px; }
+  .ls-hdr__stores { display: inline-flex; }
+  .ls-hdr__act { padding: 8px; }
+  .ls-nav { position: static; height: auto; padding: 0; grid-template-columns: repeat(5, auto); justify-content: center; gap: 8px; background: var(--slv2-paper); border-top: 0; border-bottom: 1px solid var(--ls-line); box-shadow: none; }
+  .ls-nav__item { grid-auto-flow: column; gap: 8px; min-height: 48px; padding: 0 18px; font-size: 14px; }
+  .ls-hero__art { aspect-ratio: 16 / 7; max-height: 720px; }
+  .ls-hero__art::after { background: linear-gradient(90deg, #f6efe3e6 0%, #f6efe3c4 28%, #f6efe366 44%, #f6efe300 58%); }
+  .ls-hero__copy { --ls-hero-pad: clamp(32px, 4vw, 64px); --ls-hero-eyebrow: 13px; --ls-hero-h: clamp(44px, 4.6vw, 68px); --ls-hero-sub: 18px; --ls-hero-cta: 48px; align-self: center; width: min(42%, 560px); padding: var(--ls-hero-pad); }
+  .ls-hero__eyebrow { margin-bottom: 12px; }
+  .ls-hero__eyebrow span { display: inline; }
+  .ls-hero__eyebrow span + span::before { content: ' · '; }
+  .ls-hero__h { margin-bottom: 14px; }
+  .ls-hero__sub { margin-bottom: 22px; max-width: 34ch; }
+  .ls-hero__note { right: 40px; top: 40px; max-width: 220px; font-size: 26px; }
+  .ls-hero__ctl { left: clamp(32px, 4vw, 64px); bottom: 28px; }
+  .ls-hero__bar { width: 120px; }
+  .ls-homecats { margin-top: 30px; }
+  .ls-circles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 4px 0 8px; overflow: visible; }
+  .ls-circle { flex: none; gap: 12px; }
+  .ls-circle__img { width: 128px; height: 128px; }
+  .ls-circle__name { font-size: 15px; }
+  .ls-sec { margin-top: 40px; }
+  .ls-sec__h { font-size: clamp(28px, 2.8vw, 38px); }
+  .ls-sec__link { font-size: 15px; padding-bottom: 2px; border-bottom: 1.5px solid currentColor; }
+  .ls-banner { --ls-banner-pad: clamp(28px, 3vw, 48px); margin-top: 30px; }
+  .ls-banner__art { aspect-ratio: 5 / 2; }
+  .ls-banner__copy { width: 46%; }
+  .ls-banner__eyebrow { font-size: 12px; margin-bottom: 10px; }
+  .ls-banner__eyebrow span { display: inline; }
+  .ls-banner__eyebrow span + span::before { content: ' · '; }
+  .ls-banner__h { font-size: clamp(38px, 3.6vw, 52px); margin-bottom: 12px; }
+  .ls-banner__sub { font-size: 16px; margin-bottom: 18px; }
+  .ls-banner__note { display: block; right: 36px; top: 28px; max-width: 220px; font-size: 24px; }
+  .ls-features { margin-top: 30px; gap: 16px; }
+  .ls-features li { padding: 18px 20px; gap: 16px; }
+  .ls-features__icon { width: 56px; height: 56px; }
+  .ls-features__txt strong { font-size: 17px; }
+  .ls-features__txt em { font-size: 14px; }
+  .ls-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; overflow: visible; }
+  .ls-card { flex: none; }
+  .ls-card__body { padding: 12px 14px 14px; }
+  .ls-card__name { font-size: 16px; }
+  .ls-price strong { font-size: 20px; }
+  .ls-promo { grid-template-columns: 30% minmax(0, 1fr) auto; grid-template-rows: auto; column-gap: 28px; margin-top: 40px; }
+  .ls-promo__art { grid-row: auto; }
+  .ls-promo__art { min-height: 150px; }
+  .ls-promo__h { grid-column: auto; align-self: center; padding: 0; font-size: 15px; letter-spacing: .28em; }
+  .ls-promo .ls-cta { grid-column: auto; align-self: center; margin: 0 32px 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ls *, .ls *::before, .ls *::after { transition: none !important; }
+  .ls-hero__track { transition: none; }
+  .ls-cta:hover, .ls-circle:hover .ls-circle__img, .ls-banner:hover, .ls-banner:hover .ls-banner__art img { transform: none; }
+}

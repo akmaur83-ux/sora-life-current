@@ -169,6 +169,7 @@ export default function Header() {
               <Link to="/fashion" className="v2-hdr__store">Fashion <Icon name="chevronRight" size={14} stroke={1.8} /></Link>
               <Link to="/grocery" className="v2-hdr__store">Grocery <Icon name="chevronRight" size={14} stroke={1.8} /></Link>
               <Link to="/homeliving" className="v2-hdr__store">Home &amp; Living <Icon name="chevronRight" size={14} stroke={1.8} /></Link>
+              <Link to="/lifestyle" className="v2-hdr__store">Lifestyle <Icon name="chevronRight" size={14} stroke={1.8} /></Link>
             </nav>
             <Link to="/account" className="v2-hdr__act v2-hide-mobile" aria-label="Account"><Icon name="user" size={19} stroke={1.5} /></Link>
             <Link to="/wishlist" className="v2-hdr__act v2-hide-mobile" aria-label={`Wishlist${wishCount > 0 ? `, ${wishCount} items` : ''}`}>
@@ -288,6 +289,7 @@ export default function Header() {
             <Link to="/fashion" className="drawer__cat">Fashion store<Icon name="chevronRight" size={17} /></Link>
             <Link to="/grocery" className="drawer__cat">Grocery store<Icon name="chevronRight" size={17} /></Link>
             <Link to="/homeliving" className="drawer__cat">Home &amp; Living store<Icon name="chevronRight" size={17} /></Link>
+            <Link to="/lifestyle" className="drawer__cat">Lifestyle store<Icon name="chevronRight" size={17} /></Link>
             {/* Last and quiet on purpose — shopping keeps the priority. These
                 two lived only in the footer, ~8 screens down, which is a long
                 way for the pages a first-time buyer checks before trusting a

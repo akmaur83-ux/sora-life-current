@@ -149,7 +149,7 @@ await test('the delivery badge reads "Standard Delivery · 6-7 days"; the search
   assert.match(home, /<input type="search" placeholder="Search for bedsheets, curtains, cushions\.\.\." aria-label="Search Home &amp; Living \(coming soon\)" readonly=""\/>/);
   assert.doesNotMatch(home, /<form/, 'nothing submits');
   const layout = read('src/homeliving/HomeLivingLayout.jsx');
-  assert.match(layout, /<Link to="\/fashion" className="hl-drawer__back"[^>]*>[\s\S]*?Fashion store<\/Link>\n\s+<Link to="\/grocery" className="hl-drawer__back"[^>]*>[\s\S]*?Grocery store<\/Link>\n\s+<Link to="\/" className="hl-drawer__back"[^>]*>[\s\S]*?Back to the wellness store<\/Link>/);
+  assert.match(layout, /<Link to="\/fashion" className="hl-drawer__back"[^>]*>[\s\S]*?Fashion store<\/Link>\n\s+<Link to="\/grocery" className="hl-drawer__back"[^>]*>[\s\S]*?Grocery store<\/Link>\n(\s+<Link to="\/lifestyle" className="hl-drawer__back"[^>]*>[\s\S]*?Lifestyle store<\/Link>\n)?\s+<Link to="\/" className="hl-drawer__back"[^>]*>[\s\S]*?Back to the wellness store<\/Link>/);
   assert.match(layout, /categories\.map\(\(c\) => <li key=\{c\.id\}><Link to=\{categoryHref\(c\)\}/, 'the drawer lists the live categories');
 });
 
@@ -274,10 +274,12 @@ await test('wellness, fashion and grocery each gained "Home & Living" in the bar
   assert.match(grocery, /<Link to="\/homeliving" className="gs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Home &amp; Living store<\/Link>/);
   // Each shell: exactly the other three, by path.
   const paths = (src, cls) => [...src.matchAll(new RegExp(`<Link to="([^"]+)" className="${cls}"`, 'g'))].map((m) => m[1]);
-  assert.deepEqual(paths(header, 'v2-hdr__store'), ['/fashion', '/grocery', '/homeliving']);
-  assert.deepEqual(paths(fashion, 'fs-hdr__back'), ['/', '/grocery', '/homeliving']);
-  assert.deepEqual(paths(grocery, 'gs-hdr__store'), ['/', '/fashion', '/homeliving']);
-  assert.deepEqual(paths(read('src/homeliving/HomeLivingLayout.jsx'), 'hl-hdr__store'), ['/', '/fashion', '/grocery']);
+  // A later store (Lifestyle, test-lifestyle.mjs) appends its own link after these.
+  const upTo = (list, n) => list.slice(0, n);
+  assert.deepEqual(upTo(paths(header, 'v2-hdr__store'), 3), ['/fashion', '/grocery', '/homeliving']);
+  assert.deepEqual(upTo(paths(fashion, 'fs-hdr__back'), 3), ['/', '/grocery', '/homeliving']);
+  assert.deepEqual(upTo(paths(grocery, 'gs-hdr__store'), 3), ['/', '/fashion', '/homeliving']);
+  assert.deepEqual(upTo(paths(read('src/homeliving/HomeLivingLayout.jsx'), 'hl-hdr__store'), 3), ['/', '/fashion', '/grocery']);
 });
 
 // ============================================================
@@ -334,9 +336,9 @@ await test('1280px: the nav is a static strip under the header, the bar switcher
 await test('deferred like grocery: homeliving.css last in DEFERRED, /homeliving in DEFERRED_ROUTES, the route mounted after /grocery and outside the wellness Layout', () => {
   const build = read('build/build-css.mjs');
   const deferred = build.slice(build.indexOf('const DEFERRED = ['), build.indexOf('];', build.indexOf('const DEFERRED = [')));
-  assert.match(deferred, /'src\/styles\/grocery\.css',\n[\s\S]*?'src\/styles\/homeliving\.css',\n$/);
+  assert.match(deferred, /'src\/styles\/grocery\.css',\n[\s\S]*?'src\/styles\/homeliving\.css',\n(\s*\/\/[^\n]*\n\s*'src\/styles\/lifestyle\.css',\n)?$/);
   assert.doesNotMatch(build.slice(build.indexOf('const STOREFRONT = ['), build.indexOf('const DEFERRED')), /homeliving/);
-  assert.match(read('src/lib/deferredStyles.js'), /DEFERRED_ROUTES = \/\^\\\/\(admin\|passport\|creator\|fashion\|grocery\|homeliving\)\(\\\/\|\$\)\/;/);
+  assert.match(read('src/lib/deferredStyles.js'), /DEFERRED_ROUTES = \/\^\\\/\(admin\|passport\|creator\|fashion\|grocery\|homeliving(\|lifestyle)?\)\(\\\/\|\$\)\/;/);
   const src = read('src/App.jsx');
   // The index route first; later phases add children (category/:slug — test-homeliving-listing.mjs) inside the same block.
   assert.match(src, /<Route path="\/homeliving" element=\{<HomeLivingLayout \/>\}>\n\s+<Route index element=\{<HomeLivingHome \/>\} \/>\n(\s+<Route path="[^"]+" element=\{<HomeLiving[A-Za-z]+ \/>\} \/>\n)*\s+<\/Route>/);
@@ -369,7 +371,8 @@ console.log('\n— Isolation —');
 await test('the wellness, fashion and grocery storefronts changed only by the approved switcher lines; cart, checkout, coupons, auth, payments and the data layers are byte-identical', () => {
   const changed = new Set(execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean));
   // The homepage store doorway (FashionBanner.jsx + fashion-banner.css) was redesigned in 71eb538 — an approved wellness change.
-  const allowed = /^(src\/homeliving\/|src\/lib\/homeliving[A-Za-z]*\.js$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|scripts\/|supabase\/migrations\/(0035_homeliving_store\.sql|rollback\/0035_homeliving_store_down\.sql)$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/styles\/v2-header\.css$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|img\/homeliving-|public\/|reports\/)/;
+  // The lifestyle storefront (test-lifestyle.mjs) — an approved change: its own files, the route, the sheet, one switcher link per shell; and the doorway images (test-store-doorway.mjs).
+  const allowed = /^(src\/homeliving\/|src\/lib\/homeliving[A-Za-z]*\.js$|src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|img\/doorway-|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|scripts\/|supabase\/migrations\/(0035_homeliving_store\.sql|rollback\/0035_homeliving_store_down\.sql)$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/styles\/v2-header\.css$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|img\/homeliving-|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/lib/fashionApi.js', 'src/data/groceryHomepage.js', 'src/grocery/GroceryHome.jsx', 'src/fashion/FashionHome.jsx', 'src/styles/fashion.css', 'src/styles/grocery.css', 'src/styles/layout.css']) {
@@ -381,7 +384,7 @@ await test('the wellness, fashion and grocery storefronts changed only by the ap
     const then = atCommit(BASELINE_SHA, rel).split('\n').filter((l) => !keep.test(l)).join('\n');
     assert.equal(now, then, `${rel}: nothing beyond the switcher lines changed`);
   };
-  onlySwitcher('src/components/Header.jsx', /v2-hdr__store"|drawer__cat">(Fashion|Grocery|Home &amp; Living) store/);
+  onlySwitcher('src/components/Header.jsx', /v2-hdr__store"|drawer__cat">(Fashion|Grocery|Home &amp; Living|Lifestyle) store/);
   onlySwitcher('src/fashion/FashionLayout.jsx', /className="fs-hdr__back"|className="fs-drawer__back"/);
   onlySwitcher('src/grocery/GroceryLayout.jsx', /className="gs-hdr__store"|className="gs-drawer__back"/);
   const v2 = read('src/styles/v2-header.css'), v2then = atCommit(BASELINE_SHA, 'src/styles/v2-header.css');

@@ -71,11 +71,14 @@ await test('the wellness header renders as the baseline render plus exactly the 
   assert.ok(nowHeader.includes('<a class="v2-hdr__store" href="/homeliving">Home &amp; Living <svg'));
   assert.ok(nowHeader.includes('<a class="drawer__cat" href="/grocery">Grocery store<svg'));
   assert.ok(nowHeader.includes('<a class="drawer__cat" href="/homeliving">Home &amp; Living store<svg'));
+  // The lifestyle storefront (test-lifestyle.mjs) added the fourth link to every switcher.
+  assert.ok(nowHeader.includes('<a class="v2-hdr__store" href="/lifestyle">Lifestyle <svg'));
+  assert.ok(nowHeader.includes('<a class="drawer__cat" href="/lifestyle">Lifestyle store<svg'));
   assert.doesNotMatch(nowHeader, /v2-hdr__store" href="\/"/, 'wellness never links to itself');
   // Strip exactly the two insertions and the render must equal the baseline byte for byte.
   const stripped = nowHeader
     .replace(/<nav class="v2-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, '')
-    .replace(/<div class="drawer__sec">Stores<\/div>(<a class="drawer__cat" href="\/(fashion|grocery|homeliving)">[\s\S]*?<\/a>){3}/, '');
+    .replace(/<div class="drawer__sec">Stores<\/div>(<a class="drawer__cat" href="\/(fashion|grocery|homeliving|lifestyle)">[\s\S]*?<\/a>){4}/, '');
   assert.equal(stripped, thenHeader, 'nothing else in the wellness header changed');
   // Placement: in the right group, after the mobile search button, before the account icon; in the drawer between Categories and Company.
   const right = nowHeader.slice(nowHeader.indexOf('<div class="v2-hdr__right">'), nowHeader.indexOf('<nav class="v2-hdr__nav"'));
@@ -104,13 +107,13 @@ await test('the eight fashion pages equal the baseline render once the stores bl
   assert.deepEqual(Object.keys(now), Object.keys(then));
   for (const p of Object.keys(now)) {
     const html = now[p];
-    assert.match(html, /<nav class="fs-hdr__stores" aria-label="Other stores"><a class="fs-hdr__back" href="\/"><svg[^>]*>[\s\S]*?<\/svg> Wellness store<\/a><a class="fs-hdr__back" href="\/grocery">Grocery <svg[\s\S]*?<\/svg><\/a><a class="fs-hdr__back" href="\/homeliving">Home &amp; Living <svg/, `${p}: the other stores, wellness first`);
+    assert.match(html, /<nav class="fs-hdr__stores" aria-label="Other stores"><a class="fs-hdr__back" href="\/"><svg[^>]*>[\s\S]*?<\/svg> Wellness store<\/a><a class="fs-hdr__back" href="\/grocery">Grocery <svg[\s\S]*?<\/svg><\/a><a class="fs-hdr__back" href="\/homeliving">Home &amp; Living <svg[\s\S]*?<\/svg><\/a><a class="fs-hdr__back" href="\/lifestyle">Lifestyle <svg/, `${p}: the other stores, wellness first`);
     assert.doesNotMatch(html, /fs-hdr__back" href="\/fashion"/, `${p}: fashion never links to itself`);
     const stripped = html.replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, '<a class="fs-hdr__back" href="/"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg> Wellness store</a>');
     assert.equal(stripped, then[p], `${p}: otherwise byte-identical`);
   }
   const layout = read('src/fashion/FashionLayout.jsx');
-  assert.match(layout, /<Link to="\/grocery" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Grocery store<\/Link>\n\s+<Link to="\/homeliving" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Home &amp; Living store<\/Link>\n\s+<Link to="\/" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronLeft" size=\{16\} \/> Back to the wellness store<\/Link>/, 'the drawer lists the other stores beside the way back');
+  assert.match(layout, /<Link to="\/grocery" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Grocery store<\/Link>\n\s+<Link to="\/homeliving" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Home &amp; Living store<\/Link>\n\s+<Link to="\/lifestyle" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Lifestyle store<\/Link>\n\s+<Link to="\/" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronLeft" size=\{16\} \/> Back to the wellness store<\/Link>/, 'the drawer lists the other stores beside the way back');
   const css = read('src/styles/fashion.css');
   assert.match(css, /\.fs-hdr__stores \{ display: inline-flex; align-items: center; gap: 14px; \}/);
   assert.match(css.slice(css.indexOf('@media (max-width: 1019px)')), /\.fs-hdr__stores \{ display: none; \}/, 'hidden on phone and tablet, as the Wellness link was');
@@ -123,10 +126,10 @@ console.log('\n— Grocery: Wellness and Fashion in the header; the drawer alrea
 await test('the grocery header links to Wellness and Fashion (never Grocery), hidden below 1020px; the drawer lists both', async () => {
   const app = await buildGroceryApp({ cartCount: 1 });
   const html = app.render('/grocery');
-  assert.match(html, /<nav class="gs-hdr__acts" aria-label="Wishlist and cart"><span class="gs-hdr__stores" role="navigation" aria-label="Other stores"><a class="gs-hdr__store" href="\/"><svg[\s\S]*?<\/svg> Wellness store<\/a><a class="gs-hdr__store" href="\/fashion">Fashion <svg[\s\S]*?<\/svg><\/a><a class="gs-hdr__store" href="\/homeliving">Home &amp; Living <svg[\s\S]*?<\/svg><\/a><\/span><button type="button" class="gs-hdr__act" aria-label="Wishlist"/);
+  assert.match(html, /<nav class="gs-hdr__acts" aria-label="Wishlist and cart"><span class="gs-hdr__stores" role="navigation" aria-label="Other stores"><a class="gs-hdr__store" href="\/"><svg[\s\S]*?<\/svg> Wellness store<\/a><a class="gs-hdr__store" href="\/fashion">Fashion <svg[\s\S]*?<\/svg><\/a><a class="gs-hdr__store" href="\/homeliving">Home &amp; Living <svg[\s\S]*?<\/svg><\/a><a class="gs-hdr__store" href="\/lifestyle">Lifestyle <svg[\s\S]*?<\/svg><\/a><\/span><button type="button" class="gs-hdr__act" aria-label="Wishlist"/);
   assert.doesNotMatch(html, /gs-hdr__store" href="\/grocery"/, 'grocery never links to itself');
   const layout = read('src/grocery/GroceryLayout.jsx');
-  assert.match(layout, /<Link to="\/fashion" className="gs-drawer__back" onClick=\{onClose\}>[\s\S]*?Fashion store<\/Link>\n\s+<Link to="\/homeliving" className="gs-drawer__back" onClick=\{onClose\}>[\s\S]*?Home &amp; Living store<\/Link>\n\s+<Link to="\/" className="gs-drawer__back" onClick=\{onClose\}>[\s\S]*?Back to the wellness store<\/Link>/);
+  assert.match(layout, /<Link to="\/fashion" className="gs-drawer__back" onClick=\{onClose\}>[\s\S]*?Fashion store<\/Link>\n\s+<Link to="\/homeliving" className="gs-drawer__back" onClick=\{onClose\}>[\s\S]*?Home &amp; Living store<\/Link>\n\s+<Link to="\/lifestyle" className="gs-drawer__back" onClick=\{onClose\}>[\s\S]*?Lifestyle store<\/Link>\n\s+<Link to="\/" className="gs-drawer__back" onClick=\{onClose\}>[\s\S]*?Back to the wellness store<\/Link>/);
   const css = read('src/styles/grocery.css');
   assert.match(css, /\.gs-hdr__store \{ display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var\(--slv2-ink-3\); text-decoration: none; white-space: nowrap; \}/, 'the fashion link\'s style');
   const tablet = css.slice(css.indexOf('@media (max-width: 1019px)'), css.indexOf('@media (max-width: 599px)'));
@@ -137,16 +140,19 @@ await test('the grocery header links to Wellness and Fashion (never Grocery), hi
 console.log('\n— Every shell, every store —');
 // ============================================================
 
-await test('each shell links to exactly the other stores by path, and the four paths are the four storefront roots', () => {
-  const stores = { '/': 'Wellness store', '/fashion': 'Fashion store', '/grocery': 'Grocery store', '/homeliving': 'Home & Living store' };
+await test('each shell links to exactly the other stores by path, and the five paths are the five storefront roots', () => {
+  const stores = { '/': 'Wellness store', '/fashion': 'Fashion store', '/grocery': 'Grocery store', '/homeliving': 'Home & Living store', '/lifestyle': 'Lifestyle store' };
   const wellness = nowHeader.match(/<a class="v2-hdr__store" href="([^"]+)"/g).map((m) => m.match(/href="([^"]+)"/)[1]);
-  assert.deepEqual(wellness, ['/fashion', '/grocery', '/homeliving']);
+  assert.deepEqual(wellness, ['/fashion', '/grocery', '/homeliving', '/lifestyle']);
   const fashion = read('src/fashion/FashionLayout.jsx').match(/className="fs-hdr__back"/g).length;
-  assert.equal(fashion, 3);
+  assert.equal(fashion, 4);
   const grocery = read('src/grocery/GroceryLayout.jsx').match(/className="gs-hdr__store"/g).length;
-  assert.equal(grocery, 3);
+  assert.equal(grocery, 4);
   const homeliving = read('src/homeliving/HomeLivingLayout.jsx').match(/className="hl-hdr__store"/g).length;
-  assert.equal(homeliving, 3);
+  assert.equal(homeliving, 4);
+  // The lifestyle shell draws its links from one OTHER_STORES list: the four other roots, wellness first, never itself.
+  const lifestyle = [...read('src/lifestyle/LifestyleLayout.jsx').matchAll(/\{ href: '([^']+)', label: '[^']+ store'/g)].map((m) => m[1]);
+  assert.deepEqual(lifestyle, ['/', '/fashion', '/homeliving', '/grocery']);
   for (const [path, label] of Object.entries(stores)) {
     const app = read('src/App.jsx');
     assert.ok(path === '/' ? /<Route index element=\{<Home \/>\} \/>/.test(app) : app.includes(`<Route path="${path}"`), `${label} is routed at ${path}`);

@@ -94,6 +94,8 @@ const DEFERRED = [
   'src/styles/grocery.css',
   // The Home & Living store (/homeliving): its own shell and homepage, namespaced .hl-*.
   'src/styles/homeliving.css',
+  // The lifestyle storefront (/lifestyle): its own shell and homepage, namespaced .ls-*.
+  'src/styles/lifestyle.css',
 ];
 
 function bundle(files, outFile, label) {

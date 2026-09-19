@@ -267,14 +267,18 @@ console.log('\n— Wiring and isolation —');
 await test('App.jsx: p/:slug is a child of the Home & Living route; nothing else shared changed; the other storefronts, cart, checkout, coupons, auth and payments are byte-identical', () => {
   const src = read('src/App.jsx');
   assert.match(src, /<Route path="category\/:slug" element=\{<HomeLivingCategory \/>\} \/>\n\s+<Route path="p\/:slug" element=\{<HomeLivingProductPage \/>\} \/>\n\s+<\/Route>/);
-  assert.equal(src.replace("import HomeLivingProductPage from './homeliving/HomeLivingProductPage.jsx';\n", '').replace('        <Route path="p/:slug" element={<HomeLivingProductPage />} />\n', ''), atCommit(BASELINE_SHA, 'src/App.jsx'), 'App.jsx: the import and the route, nothing else');
+  // The lifestyle storefront (a later phase) added its own imports and route block; strip those before comparing.
+  assert.equal(src.replace("import HomeLivingProductPage from './homeliving/HomeLivingProductPage.jsx';\n", '').replace('        <Route path="p/:slug" element={<HomeLivingProductPage />} />\n', '').replace(/import Lifestyle[A-Za-z]+ from '\.\/lifestyle\/Lifestyle[A-Za-z]+\.jsx';\n/g, '').replace(/\n\s*\{\/\*[^*]*lifestyle[^*]*\*\/\}\n\s+<Route path="\/lifestyle" element=\{<LifestyleLayout \/>\}>\n\s+<Route index element=\{<LifestyleHome \/>\} \/>\n\s+<\/Route>\n/, '\n'), atCommit(BASELINE_SHA, 'src/App.jsx'), 'App.jsx: the import and the route, nothing else');
   const changed = new Set(execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean));
   // The homepage store doorway (FashionBanner.jsx + fashion-banner.css) was redesigned in 71eb538 — an approved wellness change.
-  const allowed = /^(src\/homeliving\/|src\/lib\/homelivingPdp\.js$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|src\/App\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|scripts\/|public\/|reports\/)/;
+  // The lifestyle storefront (test-lifestyle.mjs) — an approved change: its own files, the route, the sheet, one switcher link per shell; and the doorway images (test-store-doorway.mjs).
+  const allowed = /^(src\/homeliving\/|src\/lib\/homelivingPdp\.js$|src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|img\/doorway-|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|src\/App\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|scripts\/|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/components/Header.jsx', 'src/fashion/FashionProductPage.jsx', 'src/fashion/FashionLayout.jsx', 'src/lib/fashionPdp.js', 'src/grocery/GroceryLayout.jsx', 'src/data/groceryHomepage.js', 'src/homeliving/HomeLivingLayout.jsx', 'src/homeliving/HomeLivingHome.jsx', 'src/homeliving/HomeLivingCategory.jsx', 'src/lib/homelivingListing.js', 'build/build-css.mjs', 'src/lib/deferredStyles.js']) {
-    assert.equal(read(rel), atCommit(BASELINE_SHA, rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
+    // The lifestyle storefront (test-lifestyle.mjs) added one line about /lifestyle to each shell and the two build files; nothing else.
+    const sansLifestyle = (t) => t.split('\n').filter((l) => !/\/lifestyle\b|lifestyle\.css|Lifestyle store/.test(l)).join('\n').replace('|lifestyle)', ')');
+    assert.equal(sansLifestyle(read(rel)), sansLifestyle(atCommit(BASELINE_SHA, rel)), `${rel} is byte-identical to ${BASELINE_SHA} but for its lifestyle line`);
   }
   assert.ok(![...changed].some((f) => /^supabase\//.test(f)), 'no migration');
 });

@@ -29,6 +29,8 @@ import HomeLivingLayout from './homeliving/HomeLivingLayout.jsx';
 import HomeLivingHome from './homeliving/HomeLivingHome.jsx';
 import HomeLivingCategory from './homeliving/HomeLivingCategory.jsx';
 import HomeLivingProductPage from './homeliving/HomeLivingProductPage.jsx';
+import LifestyleLayout from './lifestyle/LifestyleLayout.jsx';
+import LifestyleHome from './lifestyle/LifestyleHome.jsx';
 import { useAdminAuth } from './lib/adminAuth.jsx';
 import { branding } from './lib/settings.js';
 import { DEFERRED_ROUTES, loadDeferredStyles } from './lib/deferredStyles.js';
@@ -209,6 +211,12 @@ export default function App() {
         <Route index element={<HomeLivingHome />} />
         <Route path="category/:slug" element={<HomeLivingCategory />} />
         <Route path="p/:slug" element={<HomeLivingProductPage />} />
+      </Route>
+
+      {/* The lifestyle storefront: the roof over the fashion and Home & Living
+          stores — its own shell and homepage; every section links into them. */}
+      <Route path="/lifestyle" element={<LifestyleLayout />}>
+        <Route index element={<LifestyleHome />} />
       </Route>
 
       <Route element={<Layout />}>
