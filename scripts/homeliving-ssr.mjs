@@ -110,7 +110,8 @@ export async function buildHomeLivingApp({ cartCount = 0, initial = INITIAL } = 
   const { useParams, useSearchParams } = ReactRouter;
   const card = loadModule('src/homeliving/HomeLivingProductCard.jsx', { Link, Icon, money });
   const layout = loadModule('src/homeliving/HomeLivingLayout.jsx', { Link, Outlet, useLocation, Icon, Footer, Toasts, useStore, branding, ...data });
-  const home = loadModule('src/homeliving/HomeLivingHome.jsx', { Link, Icon, ...data, HomeLivingProductCard: card.default });
+  // The homepage mounts the shell's nav strip, delivery row and search bar under its hero.
+  const home = loadModule('src/homeliving/HomeLivingHome.jsx', { Link, Icon, ...data, HomeLivingProductCard: card.default, BottomNav: layout.BottomNav, DeliveryRow: layout.DeliveryRow, SearchBar: layout.SearchBar });
   const rules = has('src/lib/homelivingListing.js') ? loadModule('src/lib/homelivingListing.js', {}) : {};
   const category = has('src/homeliving/HomeLivingCategory.jsx') ? loadModule('src/homeliving/HomeLivingCategory.jsx', { Link, useParams, useSearchParams, Icon, useHomeLivingCatalogue: data.useHomeLivingCatalogue, ...rules, HomeLivingProductCard: card.default }) : null;
   const pdpRules = has('src/lib/homelivingPdp.js') ? loadModule('src/lib/homelivingPdp.js', {}) : {};

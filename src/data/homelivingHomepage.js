@@ -26,10 +26,17 @@ export const HOMELIVING_TAGLINE = 'Comfort for every home';
 /** Delivery promise. One string, used by the header badge and the trust strip. */
 export const HOMELIVING_DELIVERY_WINDOW = '6-7 days';
 
+/**
+ * The hero photograph comes as a pair the browser chooses between through
+ * <picture>: the 3:2 landscape from 768px up (furnishings right and low,
+ * the wall on the left takes the copy) and the 4:5 portrait below it
+ * (furnishings low, the copy upper-left). Both leave the top strip bare
+ * for the header that floats over it.
+ */
 export const HERO_SLIDES = [
   {
     id: 'comfort',
-    image: '/img/homeliving-hero.webp',
+    image: { wide: '/img/homeliving-hero-wide.webp', tall: '/img/homeliving-hero-tall.webp' },
     eyebrow: 'Home & Living',
     headline: 'Comfort Lives Here',
     sub: 'Bedsheets, curtains, cushions, towels and more for a more beautiful home.',

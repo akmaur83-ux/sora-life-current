@@ -298,7 +298,8 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page; the
   assert.match(buildCss, /'src\/styles\/homeliving\.css',\n(\s*\/\/[^\n]*\n)*\s*'src\/styles\/lifestyle\.css',\n\];/, 'lifestyle.css is the last deferred sheet');
   assert.match(read('src/lib/deferredStyles.js'), /\(admin\|passport\|creator\|fashion\|grocery\|homeliving\|lifestyle\)/);
   // Each shell: the diff against the baseline is additions only, every added line about /lifestyle.
-  for (const rel of ['src/components/Header.jsx', 'src/fashion/FashionLayout.jsx', 'src/grocery/GroceryLayout.jsx', 'src/homeliving/HomeLivingLayout.jsx']) {
+  // The homepage rework (test-homeliving-hero.mjs): the hero runs to the top with the shell floating over it — an approved change to the store's own homepage files; that suite pins the category and product pages unchanged.
+  for (const rel of ['src/components/Header.jsx', 'src/fashion/FashionLayout.jsx', 'src/grocery/GroceryLayout.jsx']) {
     const diff = execFileSync('git', ['diff', BASELINE_SHA, '--', rel], { cwd: REPO, encoding: 'utf8' }).split('\n').filter((l) => /^[-+]/.test(l) && !/^(\+\+\+|---)/.test(l));
     assert.ok(diff.length >= 2 && diff.length <= 4, `${rel}: one bar link and one drawer link (${diff.length} lines)`);
     for (const l of diff) { assert.match(l, /^\+/, `${rel}: additions only — ${l}`); assert.match(l, /\/lifestyle"/, `${rel}: about /lifestyle — ${l}`); }
@@ -307,10 +308,10 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page; the
   // The homepage doorway was rebuilt around the Lifestyle banner (test-store-doorway.mjs) — an approved change to its own two files.
   // The homepage doorway split (test-store-doorway.mjs): Home.jsx mounts the Lifestyle banner and the store carousel — an approved change.
   // The display typeface swap (test-typeface.mjs) touched index.html and most stylesheets — an approved change; that suite pins the sheets it must not have touched.
-  const allowed = /^(src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|src\/pages\/Home\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/homeliving\/HomeLivingLayout\.jsx$|scripts\/|public\/|reports\/)/;
+  const allowed = /^(src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|src\/pages\/Home\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|src\/data\/homelivingHomepage\.js$|img\/homeliving-hero-|scripts\/|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
-  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/fashionApi.js', 'src/lib/fashion.js', 'src/data/homelivingHomepage.js', 'src/fashion/fashionArt.js', 'src/fashion/FashionHome.jsx', 'src/homeliving/HomeLivingHome.jsx']) {
+  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/fashionApi.js', 'src/lib/fashion.js', 'src/fashion/fashionArt.js', 'src/fashion/FashionHome.jsx']) {
     assert.equal(read(rel), atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n'), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
   assert.ok(!(readFileSync(resolve(ROOT, 'src/data/lifestyleHomepage.js'), 'utf8').includes("from('")), 'the lifestyle data layer issues no query of its own — it reads through the two stores');

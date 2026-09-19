@@ -281,7 +281,8 @@ await test('motion: transitions on transform, opacity and box-shadow only; hover
 await test('the build lists and every other file are byte-identical to the baseline: only the section\'s own files, Home.jsx (the two mounts), scripts and build output changed', () => {
   const changed = new Set(execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean));
   // The typeface swap (test-typeface.mjs) touched index.html and the stylesheets in the same release.
-  const allowed = /^(src\/components\/FashionBanner\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/pages\/Home\.jsx$|img\/lifestyle-banner-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
+  // The Home & Living homepage rework (test-homeliving-hero.mjs) — an approved change to that store's own homepage files and its hero pair.
+  const allowed = /^(src\/components\/FashionBanner\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/pages\/Home\.jsx$|img\/lifestyle-banner-(wide|tall)\.webp$|src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|src\/data\/homelivingHomepage\.js$|img\/homeliving-hero-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/pages/Home.jsx', 'build/build-css.mjs', 'src/App.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/lib/store.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/payments.js', 'src/lib/customerAuth.jsx']) {

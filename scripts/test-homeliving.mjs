@@ -89,8 +89,8 @@ await test('the seeded catalogue renders synchronously; unseeded is "loading" wi
 await test('every image the migration seeds and the homepage copy names exists, is WebP, and is under 150 KB; the weaver is compressed but not placed', () => {
   const sql = read('supabase/migrations/0035_homeliving_store.sql');
   const seeded = [...sql.matchAll(/'(\/img\/homeliving-[a-z0-9-]+\.webp)'/g)].map((m) => m[1]);
-  const images = [...new Set([...data.HERO_SLIDES.map((s) => s.image), data.PROMO.image, ...seeded])];
-  assert.equal(images.length, 12, 'twelve distinct photographs on the page');
+  const images = [...new Set([...data.HERO_SLIDES.flatMap((s) => [s.image.wide, s.image.tall]), data.PROMO.image, ...seeded])];
+  assert.equal(images.length, 13, 'thirteen distinct photographs on the page (the hero is a landscape/portrait pair)');
   for (const rel of [...images, '/img/homeliving-artisan.webp']) {
     const file = resolve(ROOT, rel.replace(/^\//, ''));
     const size = statSync(file).size;
@@ -131,9 +131,9 @@ console.log('\n— The shell and the homepage, rendered through the real router 
 const app = await buildHomeLivingApp({ cartCount: 3 }).catch((e) => ({ error: e }));
 const home = app.error ? '' : app.render('/homeliving');
 
-await test('header: cream shell, hamburger, centred SORA LIFE wordmark with the tagline, the three other stores, inert wishlist, cart with the shared count', () => {
+await test('header: the shell (cream everywhere but the homepage, where it floats over the hero), hamburger, centred SORA LIFE wordmark with the tagline, the three other stores, inert wishlist, cart with the shared count', () => {
   assert.ok(!app.error, app.error?.message);
-  assert.match(home, /^<div class="hl"><header class="hl-hdr"><div class="hl-hdr__row"><button type="button" class="hl-hdr__menu" aria-label="Open menu">/);
+  assert.match(home, /^<div class="hl hl--over"><header class="hl-hdr hl-hdr--over"><div class="hl-hdr__row"><button type="button" class="hl-hdr__menu" aria-label="Open menu">/);
   assert.match(home, /<a class="hl-logo" aria-label="SORA LIFE Home &amp; Living home" href="\/homeliving"><strong class="serif">SORA LIFE<\/strong><em>Comfort for every home<\/em><\/a>/);
   assert.match(home, /<span class="hl-hdr__stores" role="navigation" aria-label="Other stores"><a class="hl-hdr__store" href="\/"><svg[\s\S]*?<\/svg> Wellness store<\/a><a class="hl-hdr__store" href="\/fashion">Fashion <svg[\s\S]*?<\/svg><\/a><a class="hl-hdr__store" href="\/grocery">Grocery <svg[\s\S]*?<\/svg><\/a><\/span>/);
   assert.doesNotMatch(home, /hl-hdr__store" href="\/homeliving"/, 'never links to itself');
@@ -160,18 +160,18 @@ await test('bottom nav matches grocery: Home / Categories / Offers / Orders / Ac
   assert.equal((nav.match(/<a /g) || []).length, 1); assert.equal((nav.match(/aria-disabled="true"/g) || []).length, 4);
 });
 
-await test('section order: hero → trust strip → category circles → featured row → promo', () => {
-  const marks = ['<section class="hl-hero"', '<ul class="hl-trust"', '<nav class="hl-circles"', 'id="hl-featured-h"', '<section class="hl-promo"'];
+await test('section order: hero → nav strip → delivery row + search bar → trust band → category circles → featured row → promo', () => {
+  const marks = ['<section class="hl-hero"', '<nav class="hl-nav"', '<div class="hl-tools"><div class="hl-deliver"', '<div class="hl-search"', '<ul class="hl-trust"', '<nav class="hl-circles"', 'id="hl-featured-h"', '<section class="hl-promo"'];
   const idx = marks.map((m) => home.indexOf(m));
   assert.ok(idx.every((i) => i >= 0), `every section present: ${idx}`);
   assert.deepEqual([...idx].sort((a, b) => a - b), idx, 'in the specified order');
-  assert.ok(home.indexOf('<main class="hl-main">') < idx[0] && home.indexOf('data-stub="footer"') > idx[4]);
+  assert.ok(home.indexOf('<main class="hl-main">') < idx[0] && home.indexOf('data-stub="footer"') > idx[7]);
 });
 
 await test('hero: eyebrow HOME & LIVING, headline, subline, gold CTA "Explore Home Collection", the note — all HTML over a photograph with an empty alt; one slide, no dots', () => {
   const hero = home.slice(home.indexOf('<section class="hl-hero"'), home.indexOf('</section>', home.indexOf('<section class="hl-hero"')));
   const s = data.HERO_SLIDES[0];
-  assert.match(hero, /<img class="hl-hero__img" src="\/img\/homeliving-hero\.webp" alt="" width="1600" height="900"[^>]*fetchpriority="high" loading="eager"\/>/);
+  assert.match(hero, /<picture><source media="\(max-width: 767px\)" srcSet="\/img\/homeliving-hero-tall\.webp"\/><img class="hl-hero__img" src="\/img\/homeliving-hero-wide\.webp" alt="" width="1536" height="1024"[^>]*fetchpriority="high" loading="eager"\/><\/picture>/);
   assert.ok(hero.includes('<p class="hl-hero__eyebrow">Home &amp; Living</p>'), 'eyebrow');
   assert.ok(hero.includes(`<h1 class="hl-hero__h serif">${s.headline}</h1>`), 'headline is an h1');
   assert.ok(hero.includes(`<p class="hl-hero__sub">${s.sub}</p>`), 'subline');
@@ -180,9 +180,9 @@ await test('hero: eyebrow HOME & LIVING, headline, subline, gold CTA "Explore Ho
   assert.doesNotMatch(hero, /hl-hero__dot/, 'no dots for a single slide');
   const css = read('src/styles/homeliving.css');
   assert.match(css, /\.hl-cta \{[^}]*background: var\(--slv2-gold\)/, 'gold CTA');
-  assert.match(css, /\.hl-hero__img \{[^}]*object-position: right center/, 'the bed stays right');
-  assert.match(css, /\.hl-hero__slide::before \{[^}]*linear-gradient\(90deg, rgba\(251, 248, 241, \.96\) 0%/, 'a cream wash under the copy');
-  assert.match(css, /\.hl-hero__txt \{ max-width: 44%; \}/, 'the copy keeps to the wall on the left');
+  assert.match(css, /\.hl-hero__img \{[^}]*object-position: 50% 22%/, 'the crop favours the top strip the header floats over');
+  assert.match(css, /\.hl-hero__slide::before \{[^}]*linear-gradient\(90deg, rgba\(251, 248, 241, \.5\) 0%/, 'a wash under the copy light enough that the wall still reads as wall');
+  assert.match(css, /\.hl-hero__txt \{ max-width: 40%; \}/, 'the copy keeps to the wall on the left');
 });
 
 await test('hero carousel: several slides render one visible, the rest aria-hidden with CTAs out of the tab order, dots appear; autoplay only with 2+, pauses on hover/focus, honours reduced motion', () => {
@@ -299,26 +299,26 @@ await test('homeliving.css: every selector is under .hl; only transform and opac
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.hl \*, \.hl \*::before, \.hl \*::after \{ transition: none !important; \}/);
 });
 
-await test('390px: stacked hero copy over a top-down wash, circles and cards scroll sideways, 2×2 trust, promo art on top, bottom nav fixed above the safe area', () => {
+await test('390px: the portrait hero with the copy upper-left over a top-down wash, circles and cards scroll sideways, the trust band scrolls as one row, promo art on top, bottom nav fixed above the safe area', () => {
   const css = read('src/styles/homeliving.css');
-  const phone = css.slice(css.indexOf('@media (max-width: 599px)'), css.indexOf('@media (prefers-reduced-motion'));
+  const phone = css.slice(css.indexOf('@media (max-width: 767px)'), css.indexOf('@media (prefers-reduced-motion'));
   assert.match(phone, /\.hl-hero__slide::before \{ background: linear-gradient\(180deg/);
-  assert.match(phone, /\.hl-hero__txt \{ max-width: 100%; \}/);
+  assert.match(phone, /\.hl-hero__txt \{ max-width: min\(100%, 320px\); \}/);
   assert.match(phone, /\.hl-circles \{ display: flex;[^}]*overflow-x: auto/); assert.match(phone, /\.hl-circle \{ flex: 0 0 88px/);
   assert.match(phone, /\.hl-row \{ display: flex;[^}]*scroll-snap-type: x mandatory/); assert.match(phone, /\.hl-card \{ flex: 0 0 168px; scroll-snap-align: start; \}/);
-  assert.match(phone, /\.hl-trust \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(phone, /\.hl-trust \{ margin: 14px -12px 0;[^}]*overflow-x: auto/, 'one row that scrolls, never 2×2');
   assert.match(phone, /\.hl-promo__art \{ position: static; width: 100%; aspect-ratio: 16 \/ 7; \}/);
   assert.match(css, /\.hl-nav \{ position: fixed; left: 0; right: 0; bottom: 0;[^}]*env\(safe-area-inset-bottom, 0px\)/);
   assert.match(css, /\.hl \{ padding-bottom: calc\(var\(--hl-nav-h\) \+ env\(safe-area-inset-bottom, 0px\)\); \}/);
 });
 
-await test('768px: the tablet rules — bar switcher hidden, hero copy at 56%, six circles at 100px, 2×2 trust, promo art at 38%, nav still fixed', () => {
+await test('768px: the tablet rules — bar switcher hidden, hero copy at 42% of the landscape, six circles at 100px, the trust band one row with stacked labels, promo art at 38%, nav still fixed', () => {
   const css = read('src/styles/homeliving.css');
-  const tablet = css.slice(css.indexOf('@media (max-width: 1019px)'), css.indexOf('@media (max-width: 599px)'));
+  const tablet = css.slice(css.indexOf('@media (max-width: 1019px)'), css.indexOf('@media (max-width: 767px)'));
   assert.match(tablet, /\.hl-hdr__stores \{ display: none; \}/);
-  assert.match(tablet, /\.hl-hero__txt \{ max-width: 56%; \}/);
+  assert.match(tablet, /\.hl-hero__txt \{ max-width: 42%; \}/);
   assert.match(tablet, /\.hl-circle__img \{ width: 100px; height: 100px; \}/);
-  assert.match(tablet, /\.hl-trust \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/);
+  assert.match(tablet, /\.hl-trust__txt \{ display: grid; gap: 1px; \}/);
   assert.match(tablet, /\.hl-promo__art \{ width: 38%; \}/);
   assert.doesNotMatch(tablet, /\.hl-nav \{/, 'nothing at 768 un-fixes the nav');
 });

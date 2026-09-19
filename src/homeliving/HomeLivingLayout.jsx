@@ -15,12 +15,26 @@ import { HOMELIVING_DELIVERY_WINDOW, HOMELIVING_TAGLINE, categoryHref, useHomeLi
 // fashion or grocery item in the bag shows here too. Built on the
 // /grocery shell pattern; namespaced .hl-*.
 //
+// On the homepage the hero photograph runs to the top of the page and the
+// header floats over its bare top strip — transparent until the page
+// scrolls, then the solid cream bar it is everywhere else. Nothing sits
+// above the photograph: the nav strip, the delivery row and the search bar
+// are mounted by the page under the hero (BottomNav, DeliveryRow,
+// SearchBar are exported for it). Every other page keeps the bar solid
+// with the delivery row and the search bar inside it, as before.
+//
 // Delivery copy is the one factual promise the store makes:
 // "Standard Delivery / 6-7 days" (HOMELIVING_DELIVERY_WINDOW). Nothing here
 // says otherwise.
 // ============================================================
 
 const SEARCH_PLACEHOLDER = 'Search for bedsheets, curtains, cushions...';
+
+/** The homepage, with or without the trailing slash: the only route whose header floats over the hero. */
+const HOME_PATH = /^\/homeliving\/?$/;
+
+/** How far the page scrolls before the floating header turns solid. */
+export const SOLID_AFTER_PX = 8;
 
 /** Home is the only live tab; the rest render, do nothing, and never 404. */
 export const BOTTOM_NAV = [
@@ -40,10 +54,62 @@ function HomeLivingLogo() {
   );
 }
 
-export function HomeLivingHeader({ onMenu }) {
-  const { cartCount } = useStore();
+/**
+ * True once the window has scrolled past `threshold` pixels. Passive,
+ * rAF-throttled, the wellness header's pattern; a null threshold never
+ * listens (the solid header on every other page has nothing to switch).
+ */
+function useScrolledPast(threshold) {
+  const [past, setPast] = useState(false);
+  useEffect(() => {
+    if (threshold == null || typeof window === 'undefined') return undefined;
+    let raf = null;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = null; setPast(window.scrollY > threshold); });
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, [threshold]);
+  return past;
+}
+
+export function DeliveryRow() {
   return (
-    <header className="hl-hdr">
+    <div className="hl-deliver" aria-label="Delivery">
+      <span className="hl-deliver__addr">
+        <Icon name="mapPin" size={22} />
+        <span className="hl-deliver__txt">
+          <b>Deliver to Home <Icon name="chevronDown" size={14} /></b>
+          <em>Add your delivery address at checkout</em>
+        </span>
+      </span>
+      <span className="hl-deliver__badge"><Icon name="truck" size={16} /> Standard Delivery · {HOMELIVING_DELIVERY_WINDOW}</span>
+    </div>
+  );
+}
+
+/** Visual only for now: no search route exists in the Home & Living store yet. */
+export function SearchBar() {
+  return (
+    <div className="hl-search" role="search" aria-label="Search Home & Living">
+      <Icon name="search" size={22} />
+      <input type="search" placeholder={SEARCH_PLACEHOLDER} aria-label="Search Home & Living (coming soon)" readOnly />
+    </div>
+  );
+}
+
+/**
+ * @param over  the homepage: the bar floats transparent over the hero and
+ *              turns solid (`is-solid`) once the page scrolls; the delivery
+ *              row and the search bar are the page's to place.
+ */
+export function HomeLivingHeader({ onMenu, over = false }) {
+  const { cartCount } = useStore();
+  const solid = useScrolledPast(over ? SOLID_AFTER_PX : null);
+  return (
+    <header className={`hl-hdr${over ? ' hl-hdr--over' : ''}${over && solid ? ' is-solid' : ''}`}>
       <div className="hl-hdr__row">
         <button type="button" className="hl-hdr__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={26} /></button>
         <HomeLivingLogo />
@@ -61,21 +127,8 @@ export function HomeLivingHeader({ onMenu }) {
           </Link>
         </nav>
       </div>
-      <div className="hl-deliver" aria-label="Delivery">
-        <span className="hl-deliver__addr">
-          <Icon name="mapPin" size={22} />
-          <span className="hl-deliver__txt">
-            <b>Deliver to Home <Icon name="chevronDown" size={14} /></b>
-            <em>Add your delivery address at checkout</em>
-          </span>
-        </span>
-        <span className="hl-deliver__badge"><Icon name="truck" size={16} /> Standard Delivery · {HOMELIVING_DELIVERY_WINDOW}</span>
-      </div>
-      {/* Visual only for now: no search route exists in the Home & Living store yet. */}
-      <div className="hl-search" role="search" aria-label="Search Home & Living">
-        <Icon name="search" size={22} />
-        <input type="search" placeholder={SEARCH_PLACEHOLDER} aria-label="Search Home & Living (coming soon)" readOnly />
-      </div>
+      {!over && <DeliveryRow />}
+      {!over && <SearchBar />}
     </header>
   );
 }
@@ -119,12 +172,15 @@ function Drawer({ open, onClose }) {
 export default function HomeLivingLayout() {
   const [menu, setMenu] = useState(false);
   const { pathname } = useLocation();
+  const over = HOME_PATH.test(pathname);
   useEffect(() => { setMenu(false); }, [pathname]);
   return (
-    <div className="hl">
-      <HomeLivingHeader onMenu={() => setMenu(true)} />
-      {/* Fixed to the bottom of a phone; a static strip under the header on a wide screen. */}
-      <BottomNav />
+    <div className={`hl${over ? ' hl--over' : ''}`}>
+      <HomeLivingHeader onMenu={() => setMenu(true)} over={over} />
+      {/* Fixed to the bottom of a phone; a static strip under the header on a wide
+          screen. The homepage mounts it under the hero instead (nothing sits above
+          the photograph), so it is the page's there. */}
+      {!over && <BottomNav />}
       <Drawer open={menu} onClose={() => setMenu(false)} />
       <main className="hl-main"><Outlet /></main>
       <Footer />

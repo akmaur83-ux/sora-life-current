@@ -7,7 +7,7 @@
    to edge; everything else sits in a 1280px wrap. Only transform and
    opacity ever animate. Nothing here matches outside .hl.
    ========================================================================= */
-.hl { --hl-hdr: #F7F3EA; --hl-r: 14px; --hl-r-sm: 10px; --hl-line: var(--slv2-stone); --hl-nav-h: 64px;
+.hl { --hl-hdr: #F7F3EA; --hl-r: 14px; --hl-r-sm: 10px; --hl-line: var(--slv2-stone); --hl-nav-h: 64px; --hl-hdr-h: 68px;
   --hl-shadow: 0 1px 2px rgba(22, 33, 27, .04), 0 10px 26px -18px rgba(22, 33, 27, .22);
   min-height: 100vh; background: var(--slv2-ivory); color: var(--slv2-ink-2); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; overflow-x: clip; }
 .hl .serif { font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-weight: 400; letter-spacing: -.008em; color: var(--slv2-ink); }
@@ -21,6 +21,22 @@
 
 /* ---- Header ------------------------------------------------------------- */
 .hl-hdr { position: sticky; top: 0; z-index: 20; background: var(--hl-hdr); border-bottom: 1px solid var(--hl-line); }
+/* The homepage: the hero runs to the top of the page and the header floats over its
+   bare top strip. Transparent, one fixed height the negative margin pulls the page up
+   by, a soft top-down cream scrim behind it (::after, reaching 72px below the bar) so
+   the wordmark and icons hold if the photograph is brighter than expected, and the
+   cream bar itself (::before) fading in once the page scrolls so the header stays
+   legible over the page below. Both layers move on opacity only. */
+.hl-hdr--over { background: transparent; border-bottom: 0; margin-bottom: calc(-1 * var(--hl-hdr-h)); }
+.hl-hdr--over::before, .hl-hdr--over::after { content: ''; position: absolute; left: 0; right: 0; top: 0; pointer-events: none; transition: opacity .22s ease; }
+.hl-hdr--over::before { bottom: 0; z-index: -1; background: var(--hl-hdr); border-bottom: 1px solid var(--hl-line); opacity: 0; }
+.hl-hdr--over::after { height: calc(100% + 72px); z-index: -2; background: linear-gradient(180deg, rgba(251, 248, 241, .48) 0%, rgba(251, 248, 241, .3) 45%, rgba(251, 248, 241, 0) 100%); }
+.hl-hdr--over.is-solid::before { opacity: 1; }
+.hl-hdr--over.is-solid::after { opacity: 0; }
+.hl-hdr--over .hl-hdr__row { height: var(--hl-hdr-h); padding-top: 0; padding-bottom: 0; }
+/* Over the photograph the tagline's gold falls to 3.5:1 on the wall — a darker gold
+   (5:1 measured under the scrim) until the bar goes solid and the token returns. */
+.hl-hdr--over:not(.is-solid) .hl-logo em { color: #664B12; }
 .hl-hdr__row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; max-width: 1280px; margin: 0 auto; padding: 12px 16px 8px; }
 .hl-hdr__menu { justify-self: start; border: 0; background: none; padding: 6px; margin-left: -6px; color: var(--slv2-ink); cursor: pointer; display: inline-flex; }
 .hl-logo { display: grid; justify-items: center; text-decoration: none; line-height: 1; min-width: 0; }
@@ -47,6 +63,8 @@
 .hl-search input { flex: 1; min-width: 0; height: 54px; padding: 0 14px 0 50px; border: 1.5px solid var(--slv2-stone-2); border-radius: 14px; background: var(--slv2-paper); font: inherit; font-size: 16px; color: var(--slv2-ink); outline: none; }
 .hl-search input::placeholder { color: var(--slv2-ink-3); }
 .hl-search input:focus { border-color: var(--slv2-f700); }
+/* The homepage: the delivery row and the search bar under the hero, on the cream the header wears elsewhere. */
+.hl-tools { background: var(--hl-hdr); border-bottom: 1px solid var(--hl-line); padding-top: 8px; }
 
 /* ---- Bottom nav ----------------------------------------------------------- */
 /* Phone and tablet: fixed to the bottom edge, above the home indicator. */
@@ -66,29 +84,34 @@
 .hl-drawer__nav li a { display: block; padding: 11px 0; border-top: 1px solid var(--hl-line); font-size: 16px; font-weight: 600; color: var(--slv2-ink); text-decoration: none; }
 .hl-drawer__back { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; margin-right: 18px; font-size: 14px; font-weight: 700; color: var(--slv2-f700); text-decoration: none; }
 
-/* ---- Home: hero (edge to edge, copy left over a cream wash) --------------- */
+/* ---- Home: hero (edge to edge, to the top of the page; copy on the bare wall) --- */
 .hl-hero { position: relative; overflow: hidden; background: var(--slv2-cream); border-bottom: 1px solid var(--hl-line); }
 .hl-hero__track { display: flex; transition: transform .5s ease; }
-.hl-hero__slide { position: relative; flex: 0 0 100%; min-height: 560px; display: grid; align-items: center; }
-.hl-hero__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: right center; }
-/* The photograph keeps its bed on the right; the wall on the left takes the type, and the wash makes sure of it. */
-.hl-hero__slide::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(251, 248, 241, .96) 0%, rgba(251, 248, 241, .82) 32%, rgba(251, 248, 241, .35) 50%, rgba(251, 248, 241, 0) 64%); }
-.hl-hero__inner { position: relative; z-index: 1; width: 100%; padding-top: 56px; padding-bottom: 56px; }
-.hl-hero__txt { max-width: 44%; }
-.hl-hero__eyebrow { margin: 0 0 14px; font-size: 13px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: var(--slv2-gold-ink); }
+/* The landscape's 3:2, capped so a laptop still sees the band under it; the crop
+   favours the top, which keeps the header's strip bare. */
+.hl-hero__slide { position: relative; flex: 0 0 100%; aspect-ratio: 3 / 2; max-height: 820px; display: grid; align-items: start; }
+.hl-hero__slide > picture { display: block; position: absolute; inset: 0; }
+.hl-hero__img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; }
+/* The furnishings sit right and low; the copy takes the wall on the left, and a wash
+   light enough that the wall still reads as wall keeps the small type at 4.5:1. */
+.hl-hero__slide::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(251, 248, 241, .5) 0%, rgba(251, 248, 241, .42) 28%, rgba(251, 248, 241, 0) 50%); }
+.hl-hero__inner { position: relative; z-index: 1; width: 100%; padding-top: calc(var(--hl-hdr-h) + 56px); padding-bottom: 56px; }
+.hl-hero__txt { max-width: 40%; }
+.hl-hero__eyebrow { margin: 0 0 14px; font-size: 13px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: #664B12; }
 .hl-hero__h { margin: 0; font-size: clamp(42px, 5.6vw, 76px); line-height: .98; letter-spacing: -.012em; color: var(--slv2-f800); }
 .hl-hero__sub { margin: 18px 0 26px; max-width: 34ch; font-size: 18px; line-height: 1.45; color: var(--slv2-ink-2); }
-.hl-hero__note { position: absolute; right: 16px; top: 44px; margin: 0; max-width: 200px; font-style: italic; font-size: 26px; line-height: 1.15; text-align: right; color: var(--slv2-f800); }
+.hl-hero__note { margin: 18px 0 0; font-style: italic; font-size: 24px; line-height: 1.15; color: var(--slv2-f800); }
 .hl-hero__dots { position: absolute; left: 0; right: 0; bottom: 12px; z-index: 1; display: flex; justify-content: center; gap: 8px; }
 .hl-hero__dot { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 999px; background: rgba(22, 33, 27, .28); cursor: pointer; }
 .hl-hero__dot.is-on { width: 22px; background: var(--slv2-f700); }
 
-/* ---- Home: trust strip (four icon badges under the hero copy) -------------- */
-.hl-trust { list-style: none; margin: 0; padding: 22px 0 6px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.hl-trust li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--slv2-paper); border: 1px solid var(--hl-line); border-radius: var(--hl-r); }
+/* ---- Home: trust band (one quiet row under the tools; the promo reuses the icon) --- */
+.hl-trust { list-style: none; margin: 18px 0 0; padding: 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-top: 1px solid var(--hl-line); border-bottom: 1px solid var(--hl-line); }
+.hl-trust li { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .hl-trust__icon { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 1.5px solid var(--slv2-f700); color: var(--slv2-f700); display: grid; place-items: center; background: var(--slv2-ivory); }
-.hl-trust__txt { display: grid; line-height: 1.25; min-width: 0; }
-.hl-trust__txt strong { font-size: 14.5px; color: var(--slv2-ink); }
+.hl-trust .hl-trust__icon { width: auto; height: auto; border: 0; background: none; }
+.hl-trust__txt { display: flex; align-items: baseline; gap: 6px; line-height: 1.25; min-width: 0; white-space: nowrap; }
+.hl-trust__txt strong { font-size: 13.5px; font-weight: 600; color: var(--slv2-ink); }
 .hl-trust__txt em { font-style: normal; font-size: 12.5px; color: var(--slv2-ink-3); }
 
 /* ---- Sections --------------------------------------------------------------- */
@@ -110,6 +133,8 @@
 .hl-circle__img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .hl-circle__img b { font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-size: 40px; color: var(--slv2-f700); }
 .hl-circle__name { font-size: 15px; font-weight: 600; line-height: 1.2; }
+.hl-circles__scroller { position: relative; }
+.hl-circles__scroller::after, .hl-circles__more { display: none; }
 
 /* ---- Featured row + card ----------------------------------------------------- */
 .hl-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
@@ -273,11 +298,15 @@
   .hl-pdp__grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .hl-gallery { position: static; }
   .hl-gallery__thumbs { display: none; }
-  .hl-hero__slide { min-height: 460px; }
-  .hl-hero__inner { padding-top: 40px; padding-bottom: 40px; }
-  .hl-hero__txt { max-width: 56%; }
-  .hl-hero__note { top: 24px; font-size: 21px; max-width: 150px; }
-  .hl-trust { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* The landscape still (3:2 from 768px); the copy narrower on the wall, the note dropped. */
+  .hl-hero__inner { padding-top: calc(var(--hl-hdr-h) + 32px); padding-bottom: 40px; }
+  .hl-hero__txt { max-width: 42%; }
+  .hl-hero__eyebrow { font-size: 12px; margin-bottom: 10px; }
+  .hl-hero__sub { font-size: 15px; margin: 14px 0 20px; }
+  .hl-hero__note { display: none; }
+  /* Four still fit in one row with the sub-label under its label. */
+  .hl-trust { gap: 16px; }
+  .hl-trust__txt { display: grid; gap: 1px; }
   .hl-circles { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
   .hl-circle__img { width: 100px; height: 100px; }
   .hl-circle__name { font-size: 13.5px; }
@@ -286,9 +315,27 @@
   .hl-promo__inner { grid-template-columns: minmax(0, 1fr); padding-left: calc(38% + 24px); gap: 20px; }
 }
 
+/* ---- Below 768px: the portrait ------------------------------------------------- */
+@media (max-width: 767px) {
+  /* The 4:5 portrait (the <picture> switches at the same width): the furnishings fill
+     the lower half, so the copy sits upper-left under the header — one line of headline
+     at 360px and up — and the wash runs top-down under it, starting clear of the
+     header's own scrim. */
+  .hl-hero__slide { aspect-ratio: 4 / 5; max-height: none; }
+  .hl-hero__img { object-position: 50% 50%; }
+  .hl-hero__slide::before { background: linear-gradient(180deg, rgba(251, 248, 241, 0) 0%, rgba(251, 248, 241, .38) 18%, rgba(251, 248, 241, .38) 42%, rgba(251, 248, 241, 0) 60%); }
+  .hl-hero .hl-hero__inner { padding-top: calc(var(--hl-hdr-h) + 4px); padding-bottom: 26px; }
+  .hl-hero__txt { max-width: min(100%, 320px); }
+  .hl-hero__eyebrow { font-size: 11px; margin-bottom: 6px; }
+  .hl-hero__h { font-size: clamp(26px, 8.2vw, 32px); }
+  /* Three short lines: two would reach under the archway's curtain on a 360px phone. */
+  .hl-hero__sub { font-size: 14px; line-height: 1.35; max-width: 30ch; margin: 6px 0 10px; }
+}
+
 /* ---- Phone --------------------------------------------------------------------- */
 @media (max-width: 599px) {
   .hl-wrap { padding: 0 12px; }
+  .hl { --hl-hdr-h: 60px; }
   .hl-hdr__row { padding: 10px 12px 6px; gap: 8px; }
   .hl-logo strong { font-size: 24px; }
   .hl-hdr__acts { gap: 0; }
@@ -299,32 +346,30 @@
   .hl-search { padding: 0 12px 12px; }
   .hl-search > svg { left: 28px; }
   .hl-search input { height: 50px; font-size: 15px; }
-  /* The crop pulls the bed under the copy on a phone: the wash runs top-down instead. */
-  .hl-hero__slide { min-height: 420px; align-items: start; }
-  .hl-hero__slide::before { background: linear-gradient(180deg, rgba(251, 248, 241, .96) 0%, rgba(251, 248, 241, .86) 44%, rgba(251, 248, 241, .1) 100%); }
-  .hl-hero__img { object-position: 64% 100%; }
-  .hl-hero__inner { padding-top: 26px; padding-bottom: 26px; }
-  .hl-hero__txt { max-width: 100%; }
-  .hl-hero__eyebrow { font-size: 11px; margin-bottom: 10px; }
-  .hl-hero__h { font-size: 38px; }
-  .hl-hero__sub { font-size: 15px; margin: 12px 0 18px; }
   .hl-cta { min-height: 44px; padding: 0 20px; font-size: 15px; }
-  .hl-hero__note { position: static; max-width: none; margin: 14px 0 0; font-size: 18px; text-align: left; }
-  .hl-trust { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 14px 0 0; }
-  .hl-trust li { gap: 10px; padding: 8px 10px; }
-  .hl-trust__icon { width: 38px; height: 38px; }
+  .hl-tools { padding-top: 6px; }
+  /* The band scrolls sideways when four will not fit; the last item peeks so it reads as more. */
+  .hl-trust { margin: 14px -12px 0; padding: 10px 12px; gap: 18px; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .hl-trust::-webkit-scrollbar { display: none; }
+  .hl-trust li { flex: none; }
   .hl-trust__txt strong { font-size: 13px; }
   .hl-trust__txt em { font-size: 11.5px; }
   .hl-sec { margin-top: 26px; }
   .hl-sec__h { font-size: 24px; }
   .hl-sec__sub { font-size: 13px; }
   .hl-sec__link { font-size: 14px; }
-  /* Six circles scroll sideways on a phone. */
-  .hl-circles { display: flex; gap: 12px; margin: 0 -12px; padding: 4px 12px 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  /* Six circles scroll sideways on a phone. Tiles snap so a swipe leaves whole circles;
+     the right edge fades into the page rather than cutting a label; a round chevron over
+     the fade scrolls a page — fade and chevron both leave once the end is in view. */
+  .hl-circles__scroller { margin: 0 -12px; }
+  .hl-circles { display: flex; gap: 12px; padding: 4px 12px 8px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: 12px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .hl-circles::-webkit-scrollbar { display: none; }
-  .hl-circle { flex: 0 0 88px; gap: 8px; }
+  .hl-circle { flex: 0 0 88px; gap: 8px; scroll-snap-align: start; }
   .hl-circle__img { width: 88px; height: 88px; }
   .hl-circle__name { font-size: 12.5px; }
+  .hl-circles__scroller::after { content: ''; display: block; position: absolute; top: 0; right: 0; bottom: 0; width: 64px; pointer-events: none; background: linear-gradient(90deg, rgba(251, 248, 241, 0) 0%, rgba(251, 248, 241, .85) 55%, rgba(251, 248, 241, 1) 100%); transition: opacity .18s ease; }
+  .hl-circles__more { display: grid; place-items: center; position: absolute; right: 10px; top: 32px; width: 36px; height: 36px; padding: 0; border: 1px solid var(--hl-line); border-radius: 50%; background: var(--slv2-paper); color: var(--slv2-f700); box-shadow: var(--hl-shadow); cursor: pointer; transition: opacity .18s ease; }
+  .hl-circles__scroller.is-end::after, .hl-circles__scroller.is-end .hl-circles__more { opacity: 0; pointer-events: none; }
   /* The featured row scrolls sideways, snapping card by card. */
   .hl-row { display: flex; gap: 10px; margin: 0 -12px; padding: 0 12px 6px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .hl-row::-webkit-scrollbar { display: none; }
