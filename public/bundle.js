@@ -37681,6 +37681,20 @@ function HomeLeaderboard({
 }
 
 const TALL = '(max-width: 1023px)';
+const AUTOPLAY_MS$3 = 6000;
+const LIFESTYLE = {
+  key: 'lifestyle',
+  to: '/lifestyle',
+  eyebrow: 'Live beautifully',
+  heading: ['Lifestyle', 'Store'],
+  description: 'Fashion, home, living and everyday essentials — all in one place.',
+  cta: 'Explore Lifestyle',
+  wide: '/img/lifestyle-banner-wide.webp',
+  tall: '/img/lifestyle-banner-tall.webp',
+  alt: 'Camel coat and cream turtleneck, seated beside a cream sofa with green cushions, a wooden coffee table and an olive tree',
+  detailsLabel: 'What the lifestyle store brings together',
+  details: [['bag', 'Fashion & Accessories'], ['home', 'Home & Living'], ['sparkle', 'Beauty & Wellness'], ['grid', 'Everyday Essentials']]
+};
 const STORES = [{
   key: 'fashion',
   to: '/fashion',
@@ -37689,10 +37703,9 @@ const STORES = [{
   description: 'Clothing, footwear, bags, beauty and accessories — all in one place.',
   cta: 'Explore Fashion',
   wide: '/img/doorway-fashion-wide.webp',
-  tall: '/img/doorway-fashion-tall.webp',
   alt: 'Camel coat and cream turtleneck, seated against a sunlit plaster wall',
   detailsLabel: 'Explore fashion',
-  details: [['bag', 'Clothing', '& more'], ['sparkle', 'Everyday', 'style'], ['search', 'Easy', 'shopping']]
+  details: [['bag', 'Clothing & more'], ['sparkle', 'Everyday style'], ['search', 'Easy shopping']]
 }, {
   key: 'living',
   to: '/homeliving',
@@ -37701,28 +37714,32 @@ const STORES = [{
   description: 'Home textiles, soft furnishings and everyday essentials for your space.',
   cta: 'Explore Living',
   wide: '/img/doorway-living-wide.webp',
-  tall: '/img/doorway-living-tall.webp',
   alt: 'Cream sofa with green cushions and a throw, a wooden coffee table and a jute rug in soft light',
   detailsLabel: 'Explore home and living',
-  details: [['leaf', 'Soft', 'textures'], ['home', 'Calm', 'spaces'], ['grid', 'Everyday', 'living']]
+  details: [['leaf', 'Soft textures'], ['home', 'Calm spaces'], ['grid', 'Everyday living']]
 }];
+
+/** One photograph, every word on it. `tall` (optional) is the portrait the browser takes under 1024px. */
 function DoorwayCard({
-  store
+  store,
+  modifier,
+  tabIndex
 }) {
   const hId = `fsb-${store.key}-h`;
   const ctaId = `fsb-${store.key}-cta`;
   return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
     to: store.to,
-    className: `fsb__card fsb__card--${store.key}`,
+    className: `fsb__card fsb__card--${store.key}${modifier ? ` fsb__card--${modifier}` : ''}`,
     "aria-labelledby": `${hId} ${ctaId}`,
+    tabIndex: tabIndex,
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "fsb__art",
       children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
         src: store.wide,
-        sources: [{
+        sources: store.tall ? [{
           media: TALL,
           srcSet: store.tall
-        }],
+        }] : undefined,
         alt: store.alt,
         width: 1600,
         height: 900,
@@ -37735,7 +37752,11 @@ function DoorwayCard({
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "fsb__eyebrow",
           children: store.eyebrow
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
+        }), modifier === 'lead' ? /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+          className: "fsb__h",
+          id: hId,
+          children: store.heading.join(' ')
+        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
           className: "fsb__h",
           id: hId,
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -37757,15 +37778,132 @@ function DoorwayCard({
       }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
         className: "fsb__details",
         "aria-label": store.detailsLabel,
-        children: store.details.map(([icon, a, b]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        children: store.details.map(([icon, label]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: icon,
             size: 22
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-            children: [a, /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), b]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: label
           })]
         }, icon))
       })]
+    })]
+  });
+}
+
+/**
+ * The two store cards, one at a time. Autoplays only when there is more
+ * than one slide, pauses on hover and focus, never moves under
+ * prefers-reduced-motion; the track slides on transform only. A sideways
+ * swipe of 40px or more changes the slide — and swallows the click that
+ * would otherwise follow the card link.
+ */
+function DoorwayCarousel({
+  stores = STORES,
+  autoplayMs = AUTOPLAY_MS$3
+}) {
+  const [index, setIndex] = reactExports.useState(0);
+  const [paused, setPaused] = reactExports.useState(false);
+  const reduced = reactExports.useRef(false);
+  const swipe = reactExports.useRef({
+    x: null,
+    y: null,
+    moved: false
+  });
+  const n = stores.length;
+  reactExports.useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => {
+      reduced.current = mq.matches;
+    };
+    sync();
+    mq.addEventListener?.('change', sync);
+    return () => mq.removeEventListener?.('change', sync);
+  }, []);
+  reactExports.useEffect(() => {
+    if (n < 2 || paused) return undefined;
+    const t = setInterval(() => {
+      if (!reduced.current) setIndex(i => (i + 1) % n);
+    }, autoplayMs);
+    return () => clearInterval(t);
+  }, [n, paused, autoplayMs]);
+  if (n === 0) return null;
+  const go = d => setIndex(i => (i + d + n) % n);
+  const onPointerDown = e => {
+    swipe.current = {
+      x: e.clientX,
+      y: e.clientY,
+      moved: false
+    };
+  };
+  const onPointerUp = e => {
+    const s = swipe.current;
+    if (s.x == null) return;
+    const dx = e.clientX - s.x,
+      dy = e.clientY - s.y;
+    swipe.current = {
+      x: null,
+      y: null,
+      moved: Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy)
+    };
+    if (swipe.current.moved) go(dx < 0 ? 1 : -1);
+  };
+  const onClickCapture = e => {
+    if (swipe.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      swipe.current.moved = false;
+    }
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "fsb__carousel",
+    "aria-roledescription": "carousel",
+    "aria-label": "The stores",
+    onMouseEnter: () => setPaused(true),
+    onMouseLeave: () => setPaused(false),
+    onFocus: () => setPaused(true),
+    onBlur: () => setPaused(false),
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "fsb__viewport",
+      onPointerDown: onPointerDown,
+      onPointerUp: onPointerUp,
+      onPointerCancel: () => {
+        swipe.current = {
+          x: null,
+          y: null,
+          moved: false
+        };
+      },
+      onClickCapture: onClickCapture,
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fsb__track",
+        style: {
+          transform: `translateX(-${index * 100}%)`
+        },
+        children: stores.map((store, i) => /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+          className: `fsb__slide${i === index ? ' is-on' : ''}`,
+          "aria-hidden": i !== index,
+          "aria-roledescription": "slide",
+          "aria-label": `${i + 1} of ${n}`,
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCard, {
+            store: store,
+            tabIndex: i === index ? undefined : -1
+          })
+        }, store.key))
+      })
+    }), n > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "fsb__dots",
+      role: "tablist",
+      "aria-label": "Choose a store",
+      children: stores.map((store, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        role: "tab",
+        "aria-selected": i === index,
+        "aria-label": `${store.heading.join(' ')}`,
+        className: `fsb__dot${i === index ? ' is-on' : ''}`,
+        onClick: () => setIndex(i)
+      }, store.key))
     })]
   });
 }
@@ -37788,12 +37926,10 @@ function FashionBanner() {
           className: "fsb__lede",
           children: "Fashion for your style. Living for your space. All at SORA LIFE."
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "fsb__grid",
-        children: STORES.map(store => /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCard, {
-          store: store
-        }, store.key))
-      })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCard, {
+        store: LIFESTYLE,
+        modifier: "lead"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCarousel, {})]
     })
   });
 }
