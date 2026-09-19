@@ -37703,6 +37703,7 @@ const STORES = [{
   description: 'Clothing, footwear, bags, beauty and accessories — all in one place.',
   cta: 'Explore Fashion',
   wide: '/img/doorway-fashion-wide.webp',
+  tall: '/img/doorway-fashion-tall.webp',
   alt: 'Camel coat and cream turtleneck, seated against a sunlit plaster wall',
   detailsLabel: 'Explore fashion',
   details: [['bag', 'Clothing & more'], ['sparkle', 'Everyday style'], ['search', 'Easy shopping']]
@@ -37714,6 +37715,7 @@ const STORES = [{
   description: 'Home textiles, soft furnishings and everyday essentials for your space.',
   cta: 'Explore Living',
   wide: '/img/doorway-living-wide.webp',
+  tall: '/img/doorway-living-tall.webp',
   alt: 'Cream sofa with green cushions and a throw, a wooden coffee table and a jute rug in soft light',
   detailsLabel: 'Explore home and living',
   details: [['leaf', 'Soft textures'], ['home', 'Calm spaces'], ['grid', 'Everyday living']]

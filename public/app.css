@@ -76,7 +76,7 @@
   --color-star: #E8B04B;
 
   /* ---- Typography ---- */
-  --font-display: 'Fraunces', 'Georgia', 'Times New Roman', serif;
+  --font-display: 'Playfair Display', 'Georgia', 'Times New Roman', serif;
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   --text-xs: 0.75rem;
@@ -2978,7 +2978,7 @@ h3 { font-size: var(--text-xl); }
   --slv2-container:1240px;
 
   --slv2-sans:'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --slv2-disp:'Fraunces', Georgia, 'Times New Roman', serif;
+  --slv2-disp:'Playfair Display', Georgia, 'Times New Roman', serif;
 
   /* ---- existing Admin Appearance bridge ----
      These V2-only aliases consume the established --st-* theme variables.
@@ -3009,11 +3009,7 @@ h3 { font-size: var(--text-xl); }
 .v2-bleed { margin-inline:calc(-1 * var(--slv2-gutter)); }
 
 /* ------------------------------------------------------------ typography */
-.v2-disp {
-  font-family:var(--slv2-disp);
-  font-optical-sizing:auto;
-  font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
-}
+.v2-disp { font-family:var(--slv2-disp); }
 .v2-num { font-variant-numeric:tabular-nums; }
 
 .v2-eyebrow {
@@ -3022,7 +3018,7 @@ h3 { font-size: var(--text-xl); }
   color:var(--slv2-gold-ink); margin:0 0 5px; line-height:1.3;
 }
 .v2-h2 {
-  font-family:var(--slv2-disp); font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+  font-family:var(--slv2-disp);
   font-size:19px; font-weight:500; letter-spacing:-.008em; line-height:1.15;
   margin:0; color:var(--slv2-ink); text-wrap:balance;
 }
@@ -3420,7 +3416,6 @@ h3 { font-size: var(--text-xl); }
 }
 .v2-pimg__fallback b {
   display:block; font-family:var(--slv2-disp);
-  font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
   font-size:13px; font-weight:500; letter-spacing:.16em; text-transform:uppercase;
   opacity:.62;
 }
@@ -3931,7 +3926,7 @@ h3 { font-size: var(--text-xl); }
 .v2-ed__ui { position:absolute; inset:0; z-index:3; padding:12px; display:flex; flex-direction:column; justify-content:space-between; width:76%; }
 .v2-ed__k { font-family:var(--slv2-sans); font-size:9px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--slv2-ink-4); }
 .v2-ed__h {
-  font-family:var(--slv2-disp); font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+  font-family:var(--slv2-disp);
   font-size:16px; font-weight:500; line-height:1.13; letter-spacing:-.01em;
   margin:3px 0 0; color:var(--slv2-f900);
 }
@@ -3965,7 +3960,7 @@ h3 { font-size: var(--text-xl); }
 }
 .v2-story__b { padding:16px 4px 16px 16px; display:flex; flex-direction:column; justify-content:center; }
 .v2-story__h {
-  font-family:var(--slv2-disp); font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+  font-family:var(--slv2-disp);
   font-size:19px; font-weight:500; line-height:1.14; letter-spacing:-.012em;
   margin:5px 0 7px; color:var(--slv2-f900);
 }
@@ -4389,7 +4384,6 @@ h3 { font-size: var(--text-xl); }
   .v2-home .v2-hero--product .v2-hero__title,
   .v2-home .v2-hero__slide--collection .v2-hero__title {
     font-family:var(--slv2-sans);
-    font-variation-settings:normal;
     font-weight:600;
     line-height:1.08;
     letter-spacing:-.018em;
@@ -4458,7 +4452,7 @@ h3 { font-size: var(--text-xl); }
 .v2-crumbs svg { opacity:.6; }
 .v2-crumbs strong { color:var(--slv2-ink-2); font-weight:600; }
 /* Sans, matching .hd-title on the Homepage and the About/Legal headings.
-   Fraunces is now reserved for the wordmark; every page heading is Inter, so
+   The display serif is now reserved for the wordmark; every page heading is Inter, so
    Shop no longer reads as a different site from the page that links to it. */
 .v2-shop__title {
   font-family:var(--slv2-sans);
@@ -5009,7 +5003,7 @@ h3 { font-size: var(--text-xl); }
 .v2-pdp-root .pdp-sec__head { gap:8px; margin-bottom:11px; }
 .v2-pdp-root .pdp-sec__title {
   margin:0 0 13px;
-  font-family:var(--slv2-disp); font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
+  font-family:var(--slv2-disp);
   font-size:21px; font-weight:500; line-height:1.15; letter-spacing:-.01em;
   color:var(--slv2-ink);
 }
@@ -5458,17 +5452,16 @@ body:has(.v2-pdp-root .buybar) .page-main {
 }
 
 /* ------------------------------------------------------------------ title */
-/* Fraunces, matching the shipped spotlight. This sheet previously argued for
+/* The display serif, matching the shipped spotlight. This sheet previously argued for
    sans, because at the time the serif made the PDP read as a different site
    from the grid that opened it. That grid changed: CategorySpotlight now sets
    the product's name in the display serif, so a customer arriving from the
    category hero sees the same string twice — and sans here is now the
    inconsistency the original note was trying to avoid. The PDP's own section
-   headings have been Fraunces all along. */
+   headings have been the display serif all along. */
 .v2-pdp-root .pdp__title {
   margin:0; max-width:20ch;
   font-family:var(--slv2-disp);
-  font-variation-settings:'opsz' 144, 'SOFT' 0, 'WONK' 0;
   font-size:clamp(25px, 7.2vw, 31px); font-weight:600;
   line-height:1.14; letter-spacing:-.014em; text-wrap:balance;
   color:var(--slv2-ink);
@@ -7501,7 +7494,6 @@ a.info-channel:hover { background:var(--info-soft); }
 .v2-home .hm-creator h2,
 .v2-home .hm-trust__number {
   font-family:var(--slv2-sans);
-  font-variation-settings:normal;
 }
 .v2-home .v2-h2 {
   color:var(--hm-ink);
@@ -7684,7 +7676,7 @@ a.info-channel:hover { background:var(--info-soft); }
 .v2-home .hp-offers__heading .v2-h2 { color:var(--hm-ink); }
 .v2-home .hp-offers__hint { color:var(--hm-muted); }
 .v2-home .hp-offers h2,
-.v2-home .hp-offers h3 { font-family:var(--slv2-sans); font-variation-settings:normal; }
+.v2-home .hp-offers h3 { font-family:var(--slv2-sans); }
 .v2-home .hp-offers__frame { border-radius:2px; }
 .v2-home .hp-offers__poster,
 .v2-home .hp-offers__poster img,
@@ -8347,7 +8339,7 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 }
 .lb__row.is-podium .lb__pos { color: var(--rank); font-size: 15px; font-weight: 700; }
 .lb__name {
-  font-family: var(--font-display, 'Fraunces', Georgia, serif); font-size: 17px; font-weight: 500;
+  font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-size: 17px; font-weight: 500;
   letter-spacing: -.005em; color: var(--sld-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .lb__row.is-podium .lb__name { font-size: 19px; }
@@ -9574,18 +9566,21 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 .fsb__overline { display: flex; align-items: center; justify-content: center; gap: 20px; font-size: 11px; letter-spacing: .28em; }
 .fsb__overline::before, .fsb__overline::after { content: ''; width: 80px; height: 1px; background: #b6afa1; }
 .fsb__intro h2 {
-  margin: 0 0 12px; font-family: var(--font-display, 'Fraunces', Georgia, serif);
-  font-size: clamp(32px, 3.8vw, 52px); font-weight: 500; line-height: 1.12; letter-spacing: -.035em; color: #242921;
+  margin: 0 0 12px; font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-size: clamp(32px, 3.8vw, 52px); font-weight: 400; line-height: 1.12; letter-spacing: -.02em; color: #242921;
 }
 .fsb__lede { margin: 0; font-size: 16px; line-height: 1.65; color: #50534b; }
 
-/* ---- The card: one photo, every word on it ------------------------------------
+/* ---- The card: one photograph, every word on it ---------------------------------
    Shared by the Lifestyle banner (.fsb__card--lead) and the two carousel cards.
-   A card is a size container, so the carousel cards' type is set in cqw and
-   scales with the card; the banner, being page-wide, sets its own scale in
-   px and vw. The wash (.fsb__art::after) keeps the copy legible. ------------- */
+   The photo fills the card; the copy and the badges both sit on it, over a long
+   cream wash that fades to nothing with no stop the eye can find — never a
+   panel. A card is a size container, so the carousel cards' type is set in cqw
+   and scales with the card; the banner, being page-wide, sets its own scale in
+   px and vw. ------------------------------------------------------------------- */
 .fsb__card {
   --fsb-cream: #f6efe3;
+  --fsb-wash: linear-gradient(90deg, rgba(246, 239, 227, .9) 0%, rgba(246, 239, 227, .8) 20%, rgba(246, 239, 227, .58) 34%, rgba(246, 239, 227, .3) 47%, rgba(246, 239, 227, .1) 56%, rgba(246, 239, 227, 0) 64%);
   position: relative; isolation: isolate; container-type: inline-size;
   display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; overflow: hidden;
   border-radius: 16px; border: 1px solid #d8cbbb; background: var(--fsb-cream); color: #242921; text-decoration: none;
@@ -9596,20 +9591,17 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 .fsb__art { grid-area: 1 / 1; position: relative; overflow: hidden; aspect-ratio: 16 / 9; background: var(--fsb-cream); }
 .fsb__art picture { display: block; width: 100%; height: 100%; }
 .fsb__image { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; transition: transform 450ms ease; }
-/* The cream wash: strong under the copy on the left, gone before the subject. */
-.fsb__art::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(90deg, #f6efe3e6 0%, #f6efe3c4 30%, #f6efe366 46%, #f6efe300 60%);
-}
+.fsb__art::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: var(--fsb-wash); }
+/* The copy column: the copy at the top, the badges pushed to the bottom of the same column, all on the photo. */
 .fsb__content {
-  grid-area: 1 / 1; z-index: 1; display: flex; flex-direction: column; align-items: flex-start;
+  grid-area: 1 / 1; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
   width: 52%; min-width: 0; padding: 3.4cqw 0 3cqw 3.4cqw;
 }
 .fsb__copy { display: block; min-width: 0; }
 .fsb__card .fsb__eyebrow { margin-bottom: .9cqw; font-size: clamp(9.5px, 1.9cqw, 12px); line-height: 1.4; }
 .fsb__h {
-  margin: 0 0 1.2cqw; font-family: var(--font-display, 'Fraunces', Georgia, serif);
-  font-size: min(5.4cqw, 44px); font-weight: 500; line-height: 1.02; letter-spacing: -.04em; color: #20261f;
+  margin: 0 0 1.2cqw; font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-size: min(5.4cqw, 44px); font-weight: 400; line-height: 1.02; letter-spacing: -.02em; color: #20261f;
 }
 .fsb__h span { display: block; }
 .fsb__description { max-width: 38ch; margin: 0 0 1.8cqw; font-size: clamp(12px, 2.5cqw, 17px); line-height: 1.4; color: #3f443b; }
@@ -9620,28 +9612,33 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 }
 .fsb__card--living .fsb__cta { border-color: #ae8b66; background: #fffdf5ed; color: #263529; }
 .fsb__cta svg { flex: none; width: clamp(14px, 2.6cqw, 18px); height: clamp(14px, 2.6cqw, 18px); transition: transform 400ms ease; }
+/* The badges: soft pills on the photo, carried by the wash where it is busy. */
 .fsb__details {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2cqw; width: 100%; max-width: 44cqw;
-  list-style: none; margin: auto 0 0; padding: 1.8cqw 0 0;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4cqw; width: 100%; max-width: 46cqw;
+  list-style: none; margin: auto 0 0; padding: 2.4cqw 0 0;
 }
-.fsb__details li { display: flex; flex-direction: column; align-items: center; gap: .7cqw; text-align: center; font-size: clamp(10.5px, 2cqw, 13px); line-height: 1.3; color: #444b3f; }
-.fsb__details svg { box-sizing: content-box; width: clamp(18px, 3.8cqw, 24px); height: clamp(18px, 3.8cqw, 24px); padding: min(1.2cqw, 10px); border-radius: 50%; background: #fffcf1b3; }
+.fsb__details li {
+  display: flex; flex-direction: column; align-items: center; gap: .7cqw; padding: 1.2cqw .8cqw; border-radius: 12px;
+  background: rgba(251, 248, 241, .58); text-align: center; font-size: clamp(10.5px, 2cqw, 13px); line-height: 1.3; color: #444b3f;
+}
+.fsb__details svg { box-sizing: content-box; width: clamp(18px, 3.6cqw, 22px); height: clamp(18px, 3.6cqw, 22px); padding: min(1.1cqw, 9px); border-radius: 50%; background: #fffcf1d9; }
 
 /* ---- Part A: the Lifestyle banner — page-wide, the copy on the empty left 38% ----
-   16:9 photo shown at 16:7 (the head sits in the upper third, kept by the
+   The 16:9 photo shown at 16:7 (the head sits in the upper third, kept by the
    object-position); the wash is gone by 52%, before the sofa. -------------------- */
+.fsb__card--lead { --fsb-wash: linear-gradient(90deg, rgba(246, 239, 227, .9) 0%, rgba(246, 239, 227, .8) 16%, rgba(246, 239, 227, .58) 28%, rgba(246, 239, 227, .3) 39%, rgba(246, 239, 227, .1) 46%, rgba(246, 239, 227, 0) 52%); }
 .fsb__card--lead .fsb__art { aspect-ratio: 16 / 7; }
 .fsb__card--lead .fsb__image { object-position: center 35%; }
-.fsb__card--lead .fsb__art::after { background: linear-gradient(90deg, #f6efe3e6 0%, #f6efe3c4 26%, #f6efe366 40%, #f6efe300 52%); }
 .fsb__card--lead .fsb__content { width: 38%; padding: clamp(28px, 3.2vw, 44px) 0 clamp(24px, 2.8vw, 36px) clamp(28px, 3.2vw, 44px); }
 .fsb__card--lead .fsb__eyebrow { margin-bottom: 12px; font-size: 13px; letter-spacing: .24em; }
-.fsb__card--lead .fsb__h { margin-bottom: 14px; font-size: clamp(40px, 4.2vw, 56px); }
+/* "Lifestyle Store" on one line in the 38% column: at 1280 that column is 419px; Playfair at the old 4.2vw (54px) needed ~470. */
+.fsb__card--lead .fsb__h { margin-bottom: 14px; font-size: clamp(36px, 3.6vw, 48px); }
 .fsb__card--lead .fsb__description { max-width: 34ch; margin-bottom: 20px; font-size: clamp(15px, 1.3vw, 17px); line-height: 1.45; }
 .fsb__card--lead .fsb__cta { gap: 12px; min-height: 48px; padding: 0 24px; font-size: 15px; }
 .fsb__card--lead .fsb__cta svg { width: 18px; height: 18px; }
-.fsb__card--lead .fsb__details { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; max-width: none; padding-top: 22px; }
-.fsb__card--lead .fsb__details li { gap: 8px; font-size: 13px; line-height: 1.3; }
-.fsb__card--lead .fsb__details svg { width: 22px; height: 22px; padding: 10px; }
+.fsb__card--lead .fsb__details { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; max-width: none; padding-top: 22px; }
+.fsb__card--lead .fsb__details li { gap: 8px; padding: 10px 6px; font-size: 12.5px; line-height: 1.3; }
+.fsb__card--lead .fsb__details svg { width: 20px; height: 20px; padding: 9px; }
 
 /* ---- Part B: the two store cards as one carousel, visibly smaller than the banner ---
    One slide in view; the track moves on transform only. ------------------------------ */
@@ -9660,51 +9657,36 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 }
 
 /* ---- Under 1024 ------------------------------------------------------------------
-   The banner becomes the 4:5 portrait with the copy in its empty upper-left and
-   the four badges beneath the photo. The phone scale is pinned by
-   test-store-doorway.mjs: at a 358px card the copy stack (eyebrow, one-line
-   headline, two-line subline, CTA) must end above 42% of the card's height,
-   where the portrait subject begins. Do not loosen it here.
-   The carousel cards keep the landscape photo at 16:10 with the copy on the
-   left of the subject and their badges beneath — shorter than the banner. --------- */
+   Every card is its 4:5 portrait, the copy in the empty upper-left over a wash that
+   fades down from the top, the badges at the foot over a wash that fades up from
+   the bottom — one photograph, nothing beneath it. The phone scale is pinned by
+   test-store-doorway.mjs: at a 358px banner the copy stack ends above 42% of the
+   card (the portrait subject begins there); on the 344px carousel cards above 45%.
+   Do not loosen it here. ----------------------------------------------------------- */
 @media (max-width: 1023px) {
   .fsb__card {
     --fsb-pad: clamp(18px, 5cqw, 32px);
     --fsb-eyebrow: clamp(10px, 2.8cqw, 12px);
-    --fsb-h: clamp(26px, 8.4cqw, 44px);
+    --fsb-h: clamp(25px, 8.4cqw, 44px);
     --fsb-desc: clamp(13px, 3.8cqw, 17px);
-    --fsb-cta: clamp(40px, 11cqw, 48px);
-    grid-template-rows: auto auto;
+    --fsb-cta: clamp(38px, 11cqw, 48px);
+    --fsb-wash: linear-gradient(180deg, rgba(246, 239, 227, .86) 0%, rgba(246, 239, 227, .74) 16%, rgba(246, 239, 227, .52) 32%, rgba(246, 239, 227, .26) 46%, rgba(246, 239, 227, .08) 56%, rgba(246, 239, 227, 0) 64%),
+                linear-gradient(0deg, rgba(246, 239, 227, .84) 0%, rgba(246, 239, 227, .66) 10%, rgba(246, 239, 227, .44) 20%, rgba(246, 239, 227, .22) 30%, rgba(246, 239, 227, .06) 38%, rgba(246, 239, 227, 0) 44%);
   }
-  /* The content wrapper dissolves: the copy overlays the photo, the badges take the row below it. */
-  .fsb__content { display: contents; }
-  .fsb__copy { grid-area: 1 / 1; z-index: 1; align-self: start; padding: var(--fsb-pad) var(--fsb-pad) 0; }
-  .fsb__details { grid-area: 2 / 1; max-width: none; gap: 12px; margin: 0; padding: 16px var(--fsb-pad) 18px; }
-  .fsb__details li { gap: 8px; font-size: 12px; line-height: 1.4; }
-  .fsb__details svg { width: 22px; height: 22px; padding: 10px; }
-  /* Part A on a phone. */
-  .fsb__card--lead .fsb__art { aspect-ratio: 4 / 5; }
-  .fsb__card--lead .fsb__image { object-position: center; }
-  .fsb__card--lead .fsb__art::after { background: linear-gradient(180deg, #f6efe3e6 0%, #f6efe3bf 30%, #f6efe34d 46%, #f6efe300 58%); }
-  .fsb__card--lead .fsb__eyebrow { margin-bottom: 4px; font-size: var(--fsb-eyebrow); letter-spacing: .16em; }
-  .fsb__card--lead .fsb__h { margin-bottom: 6px; font-size: var(--fsb-h); }
-  .fsb__card--lead .fsb__description { max-width: 40ch; margin-bottom: 12px; font-size: var(--fsb-desc); line-height: 1.45; }
-  .fsb__card--lead .fsb__cta { gap: 10px; min-height: var(--fsb-cta); padding: 10px 18px; font-size: 13.5px; }
-  .fsb__card--lead .fsb__cta svg { width: 16px; height: 16px; }
-  .fsb__card--lead .fsb__details { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; padding: 16px var(--fsb-pad) 18px; }
-  .fsb__card--lead .fsb__details li { flex-direction: row; align-items: center; text-align: left; gap: 10px; font-size: 13px; }
-  .fsb__card--lead .fsb__details svg { width: 20px; height: 20px; padding: 9px; }
-  /* Part B on a phone: landscape cards, the copy left of the subject. */
-  .fsb__carousel { max-width: none; }
-  .fsb__slide .fsb__art { aspect-ratio: 16 / 10; }
-  .fsb__slide .fsb__image { object-position: center 20%; }
-  .fsb__slide .fsb__copy { align-self: center; width: 54%; padding: 14px; }
-  .fsb__slide .fsb__eyebrow { margin-bottom: 4px; font-size: 10px; letter-spacing: .2em; }
-  .fsb__slide .fsb__h { margin-bottom: 6px; font-size: 24px; }
-  .fsb__slide .fsb__description { max-width: 30ch; margin-bottom: 10px; font-size: 12.5px; line-height: 1.4; }
-  .fsb__slide .fsb__cta { gap: 8px; min-height: 36px; padding: 0 14px; font-size: 13px; }
-  .fsb__slide .fsb__cta svg { width: 14px; height: 14px; }
-  .fsb__slide .fsb__details { padding: 14px 14px 16px; }
+  /* Every rule here is `.fsb__card .x`: it outranks the banner's own desktop rules (same specificity, later) as well as the base. */
+  .fsb__card .fsb__art { aspect-ratio: 4 / 5; }
+  .fsb__card .fsb__image { object-position: center; }
+  .fsb__card .fsb__content { width: 100%; padding: var(--fsb-pad); }
+  .fsb__card .fsb__eyebrow { margin-bottom: 4px; font-size: var(--fsb-eyebrow); letter-spacing: .16em; }
+  .fsb__card .fsb__h { margin-bottom: 6px; font-size: var(--fsb-h); }
+  .fsb__card .fsb__description { max-width: 30ch; margin-bottom: 8px; font-size: var(--fsb-desc); line-height: 1.45; }
+  .fsb__card .fsb__cta { gap: 10px; min-height: var(--fsb-cta); padding: 10px 16px; font-size: 13.5px; }
+  .fsb__card .fsb__cta svg { width: 16px; height: 16px; }
+  .fsb__card .fsb__details { grid-template-columns: repeat(auto-fit, minmax(136px, 1fr)); gap: 8px; max-width: none; padding-top: 16px; }
+  .fsb__card .fsb__details li { flex-direction: row; align-items: center; gap: 10px; padding: 8px 10px; text-align: left; font-size: 12.5px; line-height: 1.3; }
+  .fsb__card .fsb__details svg { width: 18px; height: 18px; padding: 8px; }
+  /* Part B on a phone: the same card, inset a little so it reads smaller than the banner. */
+  .fsb__carousel { max-width: 96%; }
 }
 @media (max-width: 599px) {
   .fsb__intro { margin-bottom: 26px; }
