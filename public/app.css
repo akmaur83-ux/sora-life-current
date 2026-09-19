@@ -9630,7 +9630,6 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 /* ---- Part A: the Lifestyle banner — page-wide, the copy on the empty left 38% ----
    16:9 photo shown at 16:7 (the head sits in the upper third, kept by the
    object-position); the wash is gone by 52%, before the sofa. -------------------- */
-.fsb__card--lead { margin-bottom: 22px; }
 .fsb__card--lead .fsb__art { aspect-ratio: 16 / 7; }
 .fsb__card--lead .fsb__image { object-position: center 35%; }
 .fsb__card--lead .fsb__art::after { background: linear-gradient(90deg, #f6efe3e6 0%, #f6efe3c4 26%, #f6efe366 40%, #f6efe300 52%); }
@@ -9684,7 +9683,6 @@ body:has(.v2-home) .ftr { margin-top: 0; }
   .fsb__details li { gap: 8px; font-size: 12px; line-height: 1.4; }
   .fsb__details svg { width: 22px; height: 22px; padding: 10px; }
   /* Part A on a phone. */
-  .fsb__card--lead { margin-bottom: 20px; }
   .fsb__card--lead .fsb__art { aspect-ratio: 4 / 5; }
   .fsb__card--lead .fsb__image { object-position: center; }
   .fsb__card--lead .fsb__art::after { background: linear-gradient(180deg, #f6efe3e6 0%, #f6efe3bf 30%, #f6efe34d 46%, #f6efe300 58%); }

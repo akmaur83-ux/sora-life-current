@@ -37907,7 +37907,24 @@ function DoorwayCarousel({
     })]
   });
 }
-function FashionBanner() {
+
+/** The Lifestyle banner on its own — no heading. Sits after the offers. */
+function LifestyleBanner() {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "v2-sec fsb fsb--lead",
+    "aria-labelledby": "fsb-lifestyle-h fsb-lifestyle-cta",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "v2-wrap",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCard, {
+        store: LIFESTYLE,
+        modifier: "lead"
+      })
+    })
+  });
+}
+
+/** The two store cards under their heading. Sits just above the popular rail. */
+function StoreCarousel() {
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "v2-sec fsb",
     "aria-labelledby": "fsb-h",
@@ -37926,9 +37943,6 @@ function FashionBanner() {
           className: "fsb__lede",
           children: "Fashion for your style. Living for your space. All at SORA LIFE."
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCard, {
-        store: LIFESTYLE,
-        modifier: "lead"
       }), /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCarousel, {})]
     })
   });
@@ -41742,7 +41756,7 @@ function Home() {
       appearance: visuals.categoryStrip
     }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
       eyebrow: "Across the catalogue",
       title: "Start here",
@@ -41752,7 +41766,7 @@ function Home() {
     }), /*#__PURE__*/jsxRuntimeExports.jsx(DiscoveryEdit, {
       products: merchandise.discover,
       link: merchandise.discoverLink
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(StoreCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "popular",
       eyebrow: merchandise.popularEyebrow,
       title: merchandise.popularTitle,
