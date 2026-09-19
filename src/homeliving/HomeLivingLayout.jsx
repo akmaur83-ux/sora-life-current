@@ -28,7 +28,7 @@ import { HOMELIVING_DELIVERY_WINDOW, HOMELIVING_TAGLINE, categoryHref, useHomeLi
 // says otherwise.
 // ============================================================
 
-const SEARCH_PLACEHOLDER = 'Search for bedsheets, curtains, cushions...';
+const SEARCH_PLACEHOLDER = 'Search bedsheets, curtains, cushions...';
 
 /** The homepage, with or without the trailing slash: the only route whose header floats over the hero. */
 const HOME_PATH = /^\/homeliving\/?$/;
