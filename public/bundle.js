@@ -29570,7 +29570,7 @@ const supabase = createClient(supabaseUrl , supabasePublishableKey );
 
 /** The store column value every fashion row carries (catalogue_* since 0034). */
 const FASHION_STORE = 'fashion';
-const num$a = v => {
+const num$b = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -29587,7 +29587,7 @@ function buildTree(rows) {
     slug: str$6(r.slug),
     tagline: str$6(r.tagline),
     image_url: r.image_url || null,
-    sort_order: num$a(r.sort_order),
+    sort_order: num$b(r.sort_order),
     is_active: r.is_active !== false
   }));
   const byId = new Map(list.map(n => [n.id, n]));
@@ -29676,14 +29676,14 @@ function productView(product, variants = null) {
     colour: str$6(v.colour),
     colour_hex: v.colour_hex || null,
     sku: v.sku || null,
-    stock: Math.max(0, num$a(v.stock)),
-    price_override: v.price_override == null ? null : num$a(v.price_override),
-    sort_order: num$a(v.sort_order)
+    stock: Math.max(0, num$b(v.stock)),
+    price_override: v.price_override == null ? null : num$b(v.price_override),
+    sort_order: num$b(v.sort_order)
   })).sort((a, b) => a.sort_order - b.sort_order);
-  const mrp = num$a(product?.mrp);
-  const sale = product?.sale_price == null ? null : num$a(product.sale_price);
+  const mrp = num$b(product?.mrp);
+  const sale = product?.sale_price == null ? null : num$b(product.sale_price);
   const price = sale != null && sale < mrp ? sale : mrp;
-  const discountPct = product?.discount_percent != null ? num$a(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
+  const discountPct = product?.discount_percent != null ? num$b(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
   const swatches = [];
   for (const v of vs) {
     let s = swatches.find(x => x.colour === v.colour);
@@ -29713,11 +29713,11 @@ function productView(product, variants = null) {
     price,
     discountPct,
     hasDiscount: discountPct > 0,
-    rating: Math.max(0, Math.min(5, num$a(product?.rating))),
-    reviewCount: Math.max(0, num$a(product?.review_count)),
+    rating: Math.max(0, Math.min(5, num$b(product?.rating))),
+    reviewCount: Math.max(0, num$b(product?.review_count)),
     isNew: product?.is_new === true,
     isBestseller: product?.is_bestseller === true,
-    sortOrder: num$a(product?.sort_order),
+    sortOrder: num$b(product?.sort_order),
     variants: vs,
     swatches,
     sizes,
@@ -29804,8 +29804,8 @@ const list$1 = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean
 const uniq$1 = arr => [...new Set(arr)];
 function readFashionUrlState(searchParams) {
   const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
-  const discount = num$a(p.get('discount'));
-  const rating = num$a(p.get('rating'));
+  const discount = num$b(p.get('discount'));
+  const rating = num$b(p.get('rating'));
   return {
     q: str$6(p.get('q')),
     sort: SORT_IDS$2.has(p.get('sort')) ? p.get('sort') : 'featured',
@@ -29839,10 +29839,10 @@ function updateFashionUrlState(searchParams, patch) {
   if (has('colours')) setList('colour', patch.colours);
   if (has('brands')) setList('brand', patch.brands);
   if (has('discount')) {
-    if (DISCOUNT_STEPS$1.includes(num$a(patch.discount))) p.set('discount', String(num$a(patch.discount)));else p.delete('discount');
+    if (DISCOUNT_STEPS$1.includes(num$b(patch.discount))) p.set('discount', String(num$b(patch.discount)));else p.delete('discount');
   }
   if (has('rating')) {
-    if (RATING_STEPS$1.includes(num$a(patch.rating))) p.set('rating', String(num$a(patch.rating)));else p.delete('rating');
+    if (RATING_STEPS$1.includes(num$b(patch.rating))) p.set('rating', String(num$b(patch.rating)));else p.delete('rating');
   }
   if (has('view')) {
     if (patch.view === 'list') p.set('view', 'list');else p.delete('view');
@@ -30090,7 +30090,7 @@ const fashionRowFor = id => catalogueRowFor(FASHION_CATALOGUE, id);
 function ensureFashionProducts(ids) {
   return ensureCatalogueRows(FASHION_CATALOGUE, ids, getFashionProductsByIds, entryOf);
 }
-const num$9 = v => {
+const num$a = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -30139,13 +30139,13 @@ function hydrateFashionCartLine(line, entry, {
   } = entry;
   const v = variants.find(x => String(x.id) === String(line.variantId)) || null;
   const variantMissing = !v || v.is_active === false;
-  const mrp = num$9(row.mrp);
-  const sale = row.sale_price == null ? null : num$9(row.sale_price);
+  const mrp = num$a(row.mrp);
+  const sale = row.sale_price == null ? null : num$a(row.sale_price);
   const base = sale != null && sale > 0 && sale < mrp ? sale : mrp;
-  const override = v && v.price_override != null ? num$9(v.price_override) : null;
+  const override = v && v.price_override != null ? num$a(v.price_override) : null;
   const unitPrice = variantMissing ? null : override != null && override > 0 ? override : base;
   const unitMrp = unitPrice == null ? null : Math.max(mrp, unitPrice);
-  const stock = v ? Math.max(0, Math.floor(num$9(v.stock))) : null;
+  const stock = v ? Math.max(0, Math.floor(num$a(v.stock))) : null;
   const label = v ? [v.size, v.colour].filter(Boolean).join(' · ') : line.variant ?? null;
   let unavailableReason = null;
   if (variantMissing) unavailableReason = label ? `“${label}” is no longer available.` : 'The size and colour you chose are no longer available.';else if (row.is_active === false) unavailableReason = 'This item is no longer available.';else if (stock === 0) unavailableReason = 'This size and colour is out of stock.';else if (stock != null && line.qty > stock) unavailableReason = stock === 1 ? 'Only 1 left — please reduce the quantity.' : `Only ${stock} left — please reduce the quantity.`;else if (!(unitPrice > 0)) unavailableReason = 'This item is not available to buy right now.';
@@ -30238,23 +30238,23 @@ const categoryHref$2 = c => `/grocery/category/${c.slug}`;
 // ---- Row shapes ----------------------------------------------------------------
 const CATEGORY_COLUMNS$1 = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
 const PRODUCT_COLUMNS$1 = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
-const num$8 = v => {
+const num$9 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
 
 /** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
 const priceOf$1 = row => {
-  const mrp = num$8(row?.mrp);
-  const sale = row?.sale_price == null ? null : num$8(row.sale_price);
+  const mrp = num$9(row?.mrp);
+  const sale = row?.sale_price == null ? null : num$9(row.sale_price);
   return sale != null && sale > 0 && sale < mrp ? sale : mrp;
 };
 
 /** A product row for the homepage and the cart: the row as stored, plus `price`. */
 const groceryProductView = row => row ? {
   ...row,
-  mrp: num$8(row.mrp),
-  sale_price: row.sale_price == null ? null : num$8(row.sale_price),
+  mrp: num$9(row.mrp),
+  sale_price: row.sale_price == null ? null : num$9(row.sale_price),
   price: priceOf$1(row),
   images: Array.isArray(row.images) ? row.images.filter(Boolean) : []
 } : null;
@@ -30374,7 +30374,7 @@ const groceryProductFor = id => catalogueRowFor(GROCERY_CATALOGUE, id);
 function ensureGroceryProducts(ids) {
   return ensureCatalogueRows(GROCERY_CATALOGUE, ids, getGroceryProductsByIds, groceryProductView);
 }
-const num$7 = v => {
+const num$8 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -30411,8 +30411,8 @@ function hydrateGroceryCartLine(line, product) {
       purchasable: false
     };
   }
-  const unitPrice = num$7(product.price) > 0 ? num$7(product.price) : null;
-  const unitMrp = unitPrice == null ? null : Math.max(num$7(product.mrp), unitPrice);
+  const unitPrice = num$8(product.price) > 0 ? num$8(product.price) : null;
+  const unitMrp = unitPrice == null ? null : Math.max(num$8(product.mrp), unitPrice);
   const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
   let unavailableReason = null;
   if (product.is_active === false) unavailableReason = 'This item is no longer available.';else if (unitPrice == null) unavailableReason = 'This item is not available to buy right now.';else unavailableReason = GROCERY_CHECKOUT_NOTE;
@@ -35811,7 +35811,7 @@ const DEFAULT_LADDER = Object.freeze([{
   rate: 25
 }]);
 const DEFAULT_BEYOND_STEP = 25000;
-const num$6 = v => {
+const num$7 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
@@ -35823,8 +35823,8 @@ function normalizeLadder(rows) {
   return rows.map((r, i) => ({
     level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
     rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
-    threshold: num$6(r?.threshold),
-    rate: num$6(r?.rate)
+    threshold: num$7(r?.threshold),
+    rate: num$7(r?.rate)
   })).sort((a, b) => a.level - b.level);
 }
 
@@ -52674,7 +52674,7 @@ function Shell$2({
 // ============================================================
 
 const METRICS = Object.freeze(['clicks', 'orders', 'products', 'sales', 'commission']);
-const num$5 = v => {
+const num$6 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -52682,7 +52682,7 @@ const num$5 = v => {
 // Running total of a series — the shape of "lifetime so far".
 function cumulative(points) {
   let acc = 0;
-  return (Array.isArray(points) ? points : []).map(p => acc += num$5(p));
+  return (Array.isArray(points) ? points : []).map(p => acc += num$6(p));
 }
 
 // SVG geometry. `pad` keeps the stroke inside the box; a flat series sits on
@@ -52692,7 +52692,7 @@ function sparkGeometry(points, {
   height = 28,
   pad = 2
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$5);
+  const vals = (Array.isArray(points) ? points : []).map(num$6);
   const n = vals.length;
   if (n === 0) return {
     line: '',
@@ -52763,20 +52763,20 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
   };
   for (const m of METRICS) out[m] = Array.from({
     length: n
-  }, (_, i) => num$5(rows[i]?.[m]));
+  }, (_, i) => num$6(rows[i]?.[m]));
   out.labels = Array.from({
     length: n
   }, (_, i) => String(rows[i]?.at || ''));
   out.totals = Object.fromEntries(METRICS.map(m => [m, out[m].reduce((a, b) => a + b, 0)]));
-  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$5(raw.previous[m])])) : null;
+  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$6(raw.previous[m])])) : null;
   out.links = Array.isArray(raw?.links) ? raw.links.map(l => ({
     link_id: l?.link_id ?? null,
     label: String(l?.label || 'Link'),
     campaign: l?.campaign || null,
-    clicks: num$5(l?.clicks),
-    orders: num$5(l?.orders),
-    sales: num$5(l?.sales),
-    commission: num$5(l?.commission)
+    clicks: num$6(l?.clicks),
+    orders: num$6(l?.orders),
+    sales: num$6(l?.sales),
+    commission: num$6(l?.commission)
   })) : [];
   return out;
 }
@@ -52784,8 +52784,8 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
 // Trend versus the previous period. No previous period, or a previous of
 // zero, is "—" (not "+100%": there is nothing to be 100% of).
 function trend(current, previous) {
-  const c = num$5(current);
-  const p = previous == null ? null : num$5(previous);
+  const c = num$6(current);
+  const p = previous == null ? null : num$6(previous);
   if (p == null) return {
     pct: null,
     dir: 'none',
@@ -52835,8 +52835,8 @@ function areaChartGeometry({
   padT = 14,
   padB = 26
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num$5);
-  const b = (Array.isArray(orders) ? orders : []).map(num$5);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$6);
+  const b = (Array.isArray(orders) ? orders : []).map(num$6);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -52901,7 +52901,7 @@ function donutGeometry(parts, {
   const c = 2 * Math.PI * r;
   const list = (Array.isArray(parts) ? parts : []).map(p => ({
     ...p,
-    value: Math.max(0, num$5(p?.value))
+    value: Math.max(0, num$6(p?.value))
   }));
   const total = list.reduce((s, p) => s + p.value, 0);
   let offset = 0;
@@ -52943,7 +52943,7 @@ function barChartGeometry(points, {
   gap = 0.35,
   minMax = 4
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$5);
+  const vals = (Array.isArray(points) ? points : []).map(num$6);
   const n = vals.length;
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -52983,7 +52983,7 @@ function barChartGeometry(points, {
   };
 }
 function compactRupees(v) {
-  const n = Math.max(0, num$5(v));
+  const n = Math.max(0, num$6(v));
   if (n >= 10000000) return `₹${trim(n / 10000000)}Cr`;
   if (n >= 100000) return `₹${trim(n / 100000)}L`;
   if (n >= 1000) return `₹${trim(n / 1000)}k`;
@@ -55094,7 +55094,7 @@ function CreatorTierPage({
 }
 
 const isZero$1 = v => !(Number(v) > 0);
-const num$4 = v => v == null || v === '' ? NaN : Number(v);
+const num$5 = v => v == null || v === '' ? NaN : Number(v);
 const monthLabel = ym => {
   if (!ym) return '—';
   const [y, m] = String(ym).split('-').map(Number);
@@ -55105,7 +55105,7 @@ const monthLabel = ym => {
   }).format(new Date(y, m - 1, 1));
 };
 const ordinal$2 = n => {
-  const v = num$4(n);
+  const v = num$5(n);
   if (!Number.isFinite(v)) return '—';
   const s = ['th', 'st', 'nd', 'rd'];
   const r = v % 100;
@@ -55115,10 +55115,10 @@ const ordinal$2 = n => {
 // The terms the page quotes. The tier rate (0031) is the live one; the
 // earnings RPC's commission_rate is the floor, the creator row the fallback.
 function earningsTerms(earnings, standing, creator) {
-  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$4).find(v => Number.isFinite(v));
-  const hold = num$4(earnings?.settlement_hold_days);
-  const minPayout = num$4(earnings?.min_payout);
-  const payoutDay = num$4(earnings?.payout_day);
+  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$5).find(v => Number.isFinite(v));
+  const hold = num$5(earnings?.settlement_hold_days);
+  const minPayout = num$5(earnings?.min_payout);
+  const payoutDay = num$5(earnings?.payout_day);
   return {
     rate: Number.isFinite(rate) ? rate : null,
     hold: Number.isFinite(hold) && hold >= 0 ? hold : null,
@@ -56998,7 +56998,7 @@ const fmtDate = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   year: 'numeric'
 }).format(new Date(iso)) : '—';
 // null is "not set", never 0 — Number(null) would print a 0% rate.
-const num$3 = v => v == null || v === '' ? NaN : Number(v);
+const num$4 = v => v == null || v === '' ? NaN : Number(v);
 const initialsOf = name => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
 const STATUS = {
   active: {
@@ -57069,8 +57069,8 @@ function CreatorProfilePage({
   termsPublished = false
 }) {
   const st = STATUS[creator?.status] || STATUS.pending;
-  const rate = standing?.rate != null ? num$3(standing.rate) : num$3(creator?.default_commission_rate);
-  const windowDays = num$3(creator?.default_attribution_window_days);
+  const rate = standing?.rate != null ? num$4(standing.rate) : num$4(creator?.default_commission_rate);
+  const windowDays = num$4(creator?.default_attribution_window_days);
   const since = creator?.joined_at || creator?.created_at || null;
   const acct = standingFor(creator, kyc);
   const open = !!standing?.withdrawals_open;
@@ -57372,7 +57372,7 @@ function CreatorProfilePage({
 // derived (a ratio over zero, a period with no previous period) the value
 // is null and the page shows "—".
 // ============================================================
-const num$2 = v => {
+const num$3 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -57380,7 +57380,7 @@ const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
 
 // A ratio, or null when there is nothing to divide by.
-const ratio = (n, d) => num$2(d) > 0 ? num$2(n) / num$2(d) : null;
+const ratio = (n, d) => num$3(d) > 0 ? num$3(n) / num$3(d) : null;
 
 // ---- Stat cards -------------------------------------------------------------
 // When the range series is available the cards follow the toggle (with the
@@ -57389,10 +57389,10 @@ const ratio = (n, d) => num$2(d) > 0 ? num$2(n) / num$2(d) : null;
 function analyticsStats(analytics, series) {
   const range = !!series?.available;
   const tot = range ? series.totals : {
-    clicks: num$2(analytics?.clicks),
-    orders: num$2(analytics?.attributed_orders),
-    products: num$2(analytics?.products_sold),
-    sales: num$2(analytics?.attributed_sales),
+    clicks: num$3(analytics?.clicks),
+    orders: num$3(analytics?.attributed_orders),
+    products: num$3(analytics?.products_sold),
+    sales: num$3(analytics?.attributed_sales),
     commission: 0
   };
   const prev = range && series.previous ? series.previous : null;
@@ -57406,10 +57406,10 @@ function analyticsStats(analytics, series) {
   }) : [];
   return {
     scope: range ? 'range' : 'all',
-    clicks: num$2(tot.clicks),
-    orders: num$2(tot.orders),
-    products: num$2(tot.products),
-    sales: num$2(tot.sales),
+    clicks: num$3(tot.clicks),
+    orders: num$3(tot.orders),
+    products: num$3(tot.products),
+    sales: num$3(tot.sales),
     conversion: conv == null ? null : r1(conv * 100),
     aov: aov == null ? null : r2(aov),
     trends: {
@@ -57469,9 +57469,9 @@ function periodLabel(series) {
 
 // ---- Funnel: click → attributed order → eligible order (all time) -------------
 function funnelFor(analytics) {
-  const clicks = num$2(analytics?.clicks);
-  const orders = num$2(analytics?.attributed_orders);
-  const eligible = num$2(analytics?.eligible_orders);
+  const clicks = num$3(analytics?.clicks);
+  const orders = num$3(analytics?.attributed_orders);
+  const eligible = num$3(analytics?.eligible_orders);
   const pct = v => clicks > 0 ? r1(v / clicks * 100) : null;
   return {
     empty: clicks === 0,
@@ -57502,8 +57502,8 @@ const SHARE_TONES = ['forest', 'green', 'gold', 'amber', 'neutral'];
 function productShare(topProducts, max = 4) {
   const rows = (Array.isArray(topProducts) ? topProducts : []).map(p => ({
     name: String(p?.name || 'Product'),
-    qty: num$2(p?.qty),
-    sales: num$2(p?.sales)
+    qty: num$3(p?.qty),
+    sales: num$3(p?.sales)
   })).filter(p => p.sales > 0).sort((a, b) => b.sales - a.sales);
   const total = rows.reduce((s, p) => s + p.sales, 0);
   const head = rows.slice(0, max);
@@ -57552,10 +57552,10 @@ function topLinks(seriesLinks, {
       label: r.label,
       campaign: r.campaign || null,
       url: String(url || '').replace(/^https?:\/\//, ''),
-      clicks: num$2(r.clicks),
-      orders: num$2(r.orders),
-      sales: num$2(r.sales),
-      commission: num$2(r.commission),
+      clicks: num$3(r.clicks),
+      orders: num$3(r.orders),
+      sales: num$3(r.sales),
+      commission: num$3(r.commission),
       conversion: ratio(r.orders, r.clicks) == null ? null : r1(ratio(r.orders, r.clicks) * 100)
     };
   });
@@ -57623,7 +57623,7 @@ function insightsFor({
 function argMax(arr) {
   if (!Array.isArray(arr) || arr.length === 0) return -1;
   let best = 0;
-  for (let i = 1; i < arr.length; i += 1) if (num$2(arr[i]) > num$2(arr[best])) best = i;
+  for (let i = 1; i < arr.length; i += 1) if (num$3(arr[i]) > num$3(arr[best])) best = i;
   return best;
 }
 
@@ -57635,11 +57635,11 @@ function analyticsCsv(series, links = []) {
   };
   const lines = [['period', ...METRICS].join(',')];
   const n = series?.labels?.length || 0;
-  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num$2(series[m]?.[i]))].map(esc).join(','));
+  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num$3(series[m]?.[i]))].map(esc).join(','));
   if (Array.isArray(links) && links.length > 0) {
     lines.push('');
     lines.push(['link', 'campaign', 'clicks', 'orders', 'sales', 'commission'].join(','));
-    for (const l of links) lines.push([l.label, l.campaign || '', num$2(l.clicks), num$2(l.orders), num$2(l.sales), num$2(l.commission)].map(esc).join(','));
+    for (const l of links) lines.push([l.label, l.campaign || '', num$3(l.clicks), num$3(l.orders), num$3(l.sales), num$3(l.commission)].map(esc).join(','));
   }
   return `${lines.join('\n')}\n`;
 }
@@ -57657,9 +57657,9 @@ function dualAxisGeometry({
   padT = 14,
   padB = 30
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num$2);
-  const b = (Array.isArray(orders) ? orders : []).map(num$2);
-  const c = (Array.isArray(sales) ? sales : []).map(num$2);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$3);
+  const b = (Array.isArray(orders) ? orders : []).map(num$3);
+  const c = (Array.isArray(sales) ? sales : []).map(num$3);
   const n = Math.max(a.length, b.length, c.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -57726,8 +57726,8 @@ function groupedBarGeometry(seriesA, seriesB, {
   gap = 0.3,
   minMax = 1000
 } = {}) {
-  const a = (Array.isArray(seriesA) ? seriesA : []).map(num$2);
-  const b = (Array.isArray(seriesB) ? seriesB : []).map(num$2);
+  const a = (Array.isArray(seriesA) ? seriesA : []).map(num$3);
+  const b = (Array.isArray(seriesB) ? seriesB : []).map(num$3);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -59935,10 +59935,10 @@ function FashionLayout({
 // variant is the row's own (price_override or the product's sale price),
 // and the payable amount is the server's.
 // ============================================================
-const LOW_STOCK_AT = 5;
+const LOW_STOCK_AT$1 = 5;
 
 /** ?size=M&colour=Navy → { size, colour } (null when absent or unknown). */
-function readSelection(searchParams, view) {
+function readSelection$1(searchParams, view) {
   const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
   const size = p.get('size');
   const colour = p.get('colour');
@@ -59947,7 +59947,7 @@ function readSelection(searchParams, view) {
     colour: colour && view.swatches.some(s => s.colour === colour) ? colour : null
   };
 }
-function writeSelection(searchParams, {
+function writeSelection$1(searchParams, {
   size,
   colour
 }) {
@@ -59962,7 +59962,7 @@ function writeSelection(searchParams, {
  * choice. A size is available when some in-stock variant has it (for the
  * chosen colour, once one is chosen); a colour likewise for the chosen size.
  */
-function selectionState(view, {
+function selectionState$1(view, {
   size = null,
   colour = null
 } = {}) {
@@ -59981,7 +59981,7 @@ function selectionState(view, {
   }));
   const variant = size && colour ? m.get(size, colour) : null;
   let status = 'choose';
-  if (size && colour) status = !variant ? 'missing' : variant.stock === 0 ? 'out' : variant.stock <= LOW_STOCK_AT ? 'low' : 'in';
+  if (size && colour) status = !variant ? 'missing' : variant.stock === 0 ? 'out' : variant.stock <= LOW_STOCK_AT$1 ? 'low' : 'in';
   const stockNote = status === 'out' ? 'Out of stock in this size and colour' : status === 'low' ? `Only ${variant.stock} left` : status === 'missing' ? 'Not made in this size and colour' : null;
   const missing = !size && !colour ? 'Choose a size and colour' : !size ? 'Choose a size' : !colour ? 'Choose a colour' : null;
   return {
@@ -60017,7 +60017,7 @@ function quickAddPlan(view) {
 }
 
 /** Related styles: same category first, then the same brand; never itself. */
-function relatedFor(view, views, limit = 4) {
+function relatedFor$1(view, views, limit = 4) {
   const others = (Array.isArray(views) ? views : []).filter(v => v.id !== view.id);
   const same = others.filter(v => v.category_id && v.category_id === view.category_id);
   const brand = others.filter(v => !same.includes(v) && v.brand && v.brand === view.brand);
@@ -60025,14 +60025,14 @@ function relatedFor(view, views, limit = 4) {
   return [...same, ...brand, ...rest].slice(0, limit);
 }
 
-function VariantPicker({
+function VariantPicker$1({
   view,
   size,
   colour,
   onChange,
   compact = false
 }) {
-  const st = selectionState(view, {
+  const st = selectionState$1(view, {
     size,
     colour
   });
@@ -60103,7 +60103,7 @@ function VariantSheet({
     size: null,
     colour: null
   });
-  const st = selectionState(view, sel);
+  const st = selectionState$1(view, sel);
   reactExports.useEffect(() => {
     const onKey = e => {
       if (e.key === 'Escape') onClose();
@@ -60155,7 +60155,7 @@ function VariantSheet({
             size: 20
           })
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(VariantPicker, {
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(VariantPicker$1, {
         view: view,
         size: sel.size,
         colour: sel.colour,
@@ -60178,7 +60178,7 @@ function VariantSheet({
 }
 
 const rupee = v => money(v);
-const productHref = view => `/fashion/p/${view.slug}`;
+const productHref$1 = view => `/fashion/p/${view.slug}`;
 function Stars({
   value,
   size = 13
@@ -60215,7 +60215,7 @@ function FashionProductCard({
     shown,
     more
   } = swatchOverflow(view.swatches, 4);
-  const href = productHref(view);
+  const href = productHref$1(view);
   const out = !view.inStock;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
     className: `fs-card${layout === 'list' ? ' fs-card--list' : ''}${out ? ' is-out' : ''}`,
@@ -61023,7 +61023,7 @@ function FashionWishlistPage() {
   });
 }
 
-function Gallery({
+function Gallery$1({
   view
 }) {
   const images = view.images.length ? view.images : view.image ? [view.image] : [];
@@ -61076,7 +61076,7 @@ function Gallery({
     })]
   });
 }
-function DeliveryBlock() {
+function DeliveryBlock$1() {
   const est = deliveryEstimate();
   const options = deliveryOptions();
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
@@ -61142,13 +61142,13 @@ function FashionProductPage() {
   const trail = [...breadcrumbFor$1(tree, node), {
     name: view.name
   }];
-  const sel = readSelection(params, view);
-  const st = selectionState(view, sel);
-  const setSel = next => setParams(writeSelection(params, next), {
+  const sel = readSelection$1(params, view);
+  const st = selectionState$1(view, sel);
+  const setSel = next => setParams(writeSelection$1(params, next), {
     replace: true
   });
   const wished = wish.has(view.id);
-  const related = relatedFor(view, views, 4);
+  const related = relatedFor$1(view, views, 4);
   const add = () => addFashionToCart(view, st.variant);
   const buyNow = () => {
     if (addFashionToCart(view, st.variant)) navigate('/checkout');
@@ -61161,7 +61161,7 @@ function FashionProductPage() {
       trail: trail
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-pdp__grid",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Gallery, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Gallery$1, {
         view: view
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "fs-pdp__body",
@@ -61204,7 +61204,7 @@ function FashionProductPage() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "fs-pdp__tax",
           children: "Inclusive of all taxes"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(VariantPicker, {
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(VariantPicker$1, {
           view: view,
           size: st.size,
           colour: st.colour,
@@ -61239,7 +61239,7 @@ function FashionProductPage() {
               fill: wished ? 'currentColor' : 'none'
             })
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryBlock, {}), view.description && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryBlock$1, {}), view.description && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
           className: "fs-pdp__section",
           "aria-labelledby": "fs-desc-h",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
@@ -62008,9 +62008,14 @@ const categoryHref$1 = c => `/homeliving/category/${c.slug}`;
 const CATEGORY_COLUMNS = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
 const PRODUCT_COLUMNS = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
 const VARIANT_COLUMNS = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
-/** The product row with its variants embedded (a size × colour each, or a size alone for a textile). */
-const PRODUCT_SELECT = `${PRODUCT_COLUMNS}, variants:catalogue_variants (${VARIANT_COLUMNS})`;
-const num$1 = v => {
+const MEDIA_COLUMNS = 'id, public_url, alt_text, sort_order, is_primary';
+/**
+ * The product row with its variants (a size × colour each, or a size alone
+ * for a textile) and its gallery (catalogue_product_media: the primary shot
+ * plus detail shots, in order) embedded.
+ */
+const PRODUCT_SELECT = `${PRODUCT_COLUMNS}, variants:catalogue_variants (${VARIANT_COLUMNS}), media:catalogue_product_media (${MEDIA_COLUMNS})`;
+const num$2 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -62018,17 +62023,38 @@ const str$1 = v => String(v ?? '').trim();
 
 /** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
 const priceOf = row => {
-  const mrp = num$1(row?.mrp);
-  const sale = row?.sale_price == null ? null : num$1(row.sale_price);
+  const mrp = num$2(row?.mrp);
+  const sale = row?.sale_price == null ? null : num$2(row.sale_price);
   return sale != null && sale > 0 && sale < mrp ? sale : mrp;
 };
 
 /**
- * A product row for the homepage and the listing: the row as stored, plus
- * `price`, and the variant facets the listing filters on — `variants`
- * (active, in order), `sizes` (distinct), `swatches` ({ colour, hex },
- * distinct, empty colours skipped). A product without variants has empty
- * facets and simply never shows under a size or colour filter.
+ * The ordered gallery: media rows primary-first then by sort_order — the
+ * same order the 0034 trigger writes into images[] — as { url, alt }. A
+ * product with no media rows yet falls back to images[] with the product
+ * name as alt, so a gallery always has what the card shows.
+ */
+const galleryOf = row => {
+  const media = (Array.isArray(row?.media) ? row.media : []).filter(m => m && str$1(m.public_url)).sort((a, b) => (b.is_primary === true) - (a.is_primary === true) || num$2(a.sort_order) - num$2(b.sort_order) || str$1(a.id).localeCompare(str$1(b.id))).map((m, i) => ({
+    url: str$1(m.public_url),
+    alt: str$1(m.alt_text) || (i === 0 ? str$1(row.name) : `${str$1(row.name)} — view ${i + 1}`),
+    primary: m.is_primary === true
+  }));
+  if (media.length) return media;
+  return (Array.isArray(row?.images) ? row.images : []).filter(Boolean).map((url, i) => ({
+    url: str$1(url),
+    alt: i === 0 ? str$1(row.name) : `${str$1(row.name)} — view ${i + 1}`,
+    primary: i === 0
+  }));
+};
+
+/**
+ * A product row for the homepage, the listing and the product page: the
+ * row as stored, plus `price`, the ordered `gallery`, and the variant
+ * facets the listing filters on — `variants` (active, in order), `sizes`
+ * (distinct), `swatches` ({ colour, hex }, distinct, empty colours
+ * skipped). A product without variants has empty facets and simply never
+ * shows under a size or colour filter.
  */
 const homelivingProductView = row => {
   if (!row) return null;
@@ -62038,9 +62064,9 @@ const homelivingProductView = row => {
     colour: str$1(v.colour),
     colour_hex: v.colour_hex || null,
     sku: v.sku || null,
-    stock: Math.max(0, num$1(v.stock)),
-    price_override: v.price_override == null ? null : num$1(v.price_override),
-    sort_order: num$1(v.sort_order)
+    stock: Math.max(0, num$2(v.stock)),
+    price_override: v.price_override == null ? null : num$2(v.price_override),
+    sort_order: num$2(v.sort_order)
   })).sort((a, b) => a.sort_order - b.sort_order);
   const swatches = [];
   for (const v of variants) if (v.colour && !swatches.some(s => s.colour === v.colour)) swatches.push({
@@ -62049,13 +62075,15 @@ const homelivingProductView = row => {
   });
   return {
     ...row,
-    mrp: num$1(row.mrp),
-    sale_price: row.sale_price == null ? null : num$1(row.sale_price),
+    mrp: num$2(row.mrp),
+    sale_price: row.sale_price == null ? null : num$2(row.sale_price),
     price: priceOf(row),
-    discount_percent: row.discount_percent != null ? num$1(row.discount_percent) : 0,
-    rating: Math.max(0, Math.min(5, num$1(row.rating))),
-    review_count: Math.max(0, num$1(row.review_count)),
+    discount_percent: row.discount_percent != null ? num$2(row.discount_percent) : 0,
+    rating: Math.max(0, Math.min(5, num$2(row.rating))),
+    review_count: Math.max(0, num$2(row.review_count)),
     images: Array.isArray(row.images) ? row.images.filter(Boolean) : [],
+    gallery: galleryOf(row),
+    stock: Math.max(0, num$2(row.stock)),
     variants,
     sizes: [...new Set(variants.map(v => v.size).filter(Boolean))],
     swatches
@@ -62412,28 +62440,35 @@ function HomeLivingLayout() {
   });
 }
 
+const productHref = product => `/homeliving/p/${product.slug}`;
 function HomeLivingProductCard({
   product,
   layout = 'grid',
   mediaLoading = 'lazy'
 }) {
   const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
+  const href = productHref(product);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
     className: `hl-card${layout === 'list' ? ' hl-card--list' : ''}`,
     "data-product": product.slug,
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hl-card__media",
-      children: [image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-        src: image,
-        alt: "",
-        loading: mediaLoading,
-        decoding: "async",
-        width: "400",
-        height: "400"
-      }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "hl-card__noimg",
-        "aria-hidden": "true",
-        children: product.name.slice(0, 1)
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: href,
+        className: "hl-card__img",
+        "aria-label": product.name,
+        children: image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: image,
+          alt: "",
+          loading: mediaLoading,
+          decoding: "async",
+          width: "400",
+          height: "400"
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "hl-card__noimg",
+          "aria-hidden": "true",
+          children: product.name.slice(0, 1)
+        })
       }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
         type: "button",
         className: "hl-card__heart",
@@ -62451,7 +62486,10 @@ function HomeLivingProductCard({
         children: product.brand
       }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
         className: "hl-card__name",
-        children: product.name
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: href,
+          children: product.name
+        })
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "hl-card__size",
         children: product.net_content
@@ -62785,7 +62823,7 @@ function HomeLivingHome() {
 // matches" is not offered.
 // ============================================================
 
-const num = v => {
+const num$1 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -62817,14 +62855,14 @@ function resolveCategory(categories, slug) {
   };
   const matches = list.filter(c => c && str(c.slug).toLowerCase() === s && c.is_active !== false);
   if (matches.length === 0) return null;
-  matches.sort((a, b) => depth(a) - depth(b) || num(a.sort_order) - num(b.sort_order));
+  matches.sort((a, b) => depth(a) - depth(b) || num$1(a.sort_order) - num$1(b.sort_order));
   return matches[0];
 }
 
 /** Active direct children, in order. */
 function categoryChildren(categories, node) {
   if (!node) return [];
-  return (Array.isArray(categories) ? categories : []).filter(c => c && c.is_active !== false && c.parent_id != null && String(c.parent_id) === String(node.id)).sort((a, b) => num(a.sort_order) - num(b.sort_order) || str(a.name).localeCompare(str(b.name)));
+  return (Array.isArray(categories) ? categories : []).filter(c => c && c.is_active !== false && c.parent_id != null && String(c.parent_id) === String(node.id)).sort((a, b) => num$1(a.sort_order) - num$1(b.sort_order) || str(a.name).localeCompare(str(b.name)));
 }
 
 /** The ids a listing for `node` covers: itself plus everything below it. */
@@ -62915,8 +62953,8 @@ const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
 const uniq = arr => [...new Set(arr)];
 function readListingState(searchParams) {
   const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
-  const discount = num(p.get('discount'));
-  const rating = num(p.get('rating'));
+  const discount = num$1(p.get('discount'));
+  const rating = num$1(p.get('rating'));
   return {
     sort: SORT_IDS.has(p.get('sort')) ? p.get('sort') : 'featured',
     price: PRICE_IDS.has(p.get('price')) ? p.get('price') : null,
@@ -62947,10 +62985,10 @@ function updateListingState(searchParams, patch) {
   if (has('colours')) setList('colour', patch.colours);
   if (has('brands')) setList('brand', patch.brands);
   if (has('discount')) {
-    if (DISCOUNT_STEPS.includes(num(patch.discount))) p.set('discount', String(num(patch.discount)));else p.delete('discount');
+    if (DISCOUNT_STEPS.includes(num$1(patch.discount))) p.set('discount', String(num$1(patch.discount)));else p.delete('discount');
   }
   if (has('rating')) {
-    if (RATING_STEPS.includes(num(patch.rating))) p.set('rating', String(num(patch.rating)));else p.delete('rating');
+    if (RATING_STEPS.includes(num$1(patch.rating))) p.set('rating', String(num$1(patch.rating)));else p.delete('rating');
   }
   if (has('view')) {
     if (patch.view === 'list') p.set('view', 'list');else p.delete('view');
@@ -62980,8 +63018,8 @@ function filterOptions(products) {
     for (const s of p.sizes || []) sizes.set(s, (sizes.get(s) || 0) + 1);
     for (const s of p.swatches || []) if (!colours.has(s.colour)) colours.set(s.colour, s.hex);
     if (p.brand) brands.set(p.brand, (brands.get(p.brand) || 0) + 1);
-    if (num(p.discount_percent) > 0) anyDiscount = true;
-    if (num(p.rating) > 0) anyRating = true;
+    if (num$1(p.discount_percent) > 0) anyDiscount = true;
+    if (num$1(p.rating) > 0) anyRating = true;
   }
   const sizeOrder = ['Single', 'Double', 'Queen', 'King', 'Super King', 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
   const sortSizes = (a, b) => {
@@ -63013,24 +63051,24 @@ function matchesFilters(product, state) {
   if (state.sizes.length && !state.sizes.some(s => (product.sizes || []).includes(s))) return false;
   if (state.colours.length && !state.colours.some(c => (product.swatches || []).some(s => s.colour === c))) return false;
   if (state.brands.length && !state.brands.includes(product.brand)) return false;
-  if (state.discount && num(product.discount_percent) < state.discount) return false;
-  if (state.rating && num(product.rating) < state.rating) return false;
+  if (state.discount && num$1(product.discount_percent) < state.discount) return false;
+  if (state.rating && num$1(product.rating) < state.rating) return false;
   return true;
 }
 function sortProducts(products, sort) {
   const arr = [...products];
-  const featured = (a, b) => (b.is_bestseller === true) - (a.is_bestseller === true) || (b.is_new === true) - (a.is_new === true) || num(a.sort_order) - num(b.sort_order) || str(a.name).localeCompare(str(b.name));
+  const featured = (a, b) => (b.is_bestseller === true) - (a.is_bestseller === true) || (b.is_new === true) - (a.is_new === true) || num$1(a.sort_order) - num$1(b.sort_order) || str(a.name).localeCompare(str(b.name));
   switch (sort) {
     case 'price-asc':
       return arr.sort((a, b) => a.price - b.price || featured(a, b));
     case 'price-desc':
       return arr.sort((a, b) => b.price - a.price || featured(a, b));
     case 'discount':
-      return arr.sort((a, b) => num(b.discount_percent) - num(a.discount_percent) || featured(a, b));
+      return arr.sort((a, b) => num$1(b.discount_percent) - num$1(a.discount_percent) || featured(a, b));
     case 'rating':
-      return arr.sort((a, b) => num(b.rating) - num(a.rating) || num(b.review_count) - num(a.review_count) || featured(a, b));
+      return arr.sort((a, b) => num$1(b.rating) - num$1(a.rating) || num$1(b.review_count) - num$1(a.review_count) || featured(a, b));
     case 'new':
-      return arr.sort((a, b) => (b.is_new === true) - (a.is_new === true) || num(a.sort_order) - num(b.sort_order));
+      return arr.sort((a, b) => (b.is_new === true) - (a.is_new === true) || num$1(a.sort_order) - num$1(b.sort_order));
     default:
       return arr.sort(featured);
   }
@@ -63418,6 +63456,513 @@ function HomeLivingCategory() {
 }
 
 // ============================================================
+// Home & Living PDP — the selection rules.
+//
+// Three shapes of product, one answer:
+//   size × colour variants  — stock is per pair (the fashion rule): Single
+//                             in Sage can be out while Single in Ivory is in;
+//   size-only variants      — a textile sold by size with no colour (the
+//                             0034 schema allows an empty colour): complete
+//                             once a size is chosen;
+//   no variants             — stock is the product row's own.
+// Every size and colour is listed; an unavailable one is marked, not
+// hidden. Nothing here computes a price — the figure shown for a variant
+// is the row's own (price_override or the product's), and the payable
+// amount is the server's. There is no cart path for this store yet.
+// ============================================================
+
+const LOW_STOCK_AT = 5;
+const num = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+/** The variant rows of a view, keyed for a (size, colour) lookup. */
+function matrix(view) {
+  const cells = new Map();
+  for (const v of view.variants || []) cells.set(`${v.size} ${v.colour || ''}`, v);
+  const get = (size, colour) => cells.get(`${size} ${colour || ''}`) || null;
+  return {
+    get,
+    inStock: (size, colour) => (get(size, colour)?.stock ?? 0) > 0
+  };
+}
+
+/** What the product is sold by. */
+function selectionShape(view) {
+  const variants = view?.variants || [];
+  if (variants.length === 0) return 'none';
+  return (view.swatches || []).length > 0 ? 'size-colour' : 'size';
+}
+
+/** ?size=Single&colour=Sage → { size, colour } (null when absent, unknown, or not a choice this product offers). */
+function readSelection(searchParams, view) {
+  const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
+  const size = p.get('size');
+  const colour = p.get('colour');
+  const shape = selectionShape(view);
+  return {
+    size: shape !== 'none' && size && view.sizes.includes(size) ? size : null,
+    colour: shape === 'size-colour' && colour && view.swatches.some(s => s.colour === colour) ? colour : null
+  };
+}
+function writeSelection(searchParams, {
+  size,
+  colour
+}) {
+  const p = new URLSearchParams(searchParams);
+  if (size) p.set('size', size);else p.delete('size');
+  if (colour) p.set('colour', colour);else p.delete('colour');
+  return p;
+}
+const stockStatus = stock => stock <= 0 ? 'out' : stock <= LOW_STOCK_AT ? 'low' : 'in';
+/**
+ * The MRP comparison for the figure shown. The product's MRP belongs to the
+ * product's own price, so the strike-through and the row's discount_percent
+ * appear only when that is the figure shown; a variant's price_override is
+ * shown alone — no MRP it was never measured against.
+ */
+const priced = (view, price) => {
+  const mrp = num(view.mrp);
+  const own = price === num(view.price);
+  const hasDiscount = own && mrp > price && price > 0;
+  return {
+    price,
+    mrp,
+    hasDiscount,
+    discountPct: hasDiscount ? num(view.discount_percent) : 0
+  };
+};
+const stockNoteFor = (status, stock, what) => status === 'out' ? `Out of stock${what}` : status === 'low' ? `Only ${stock} left` : null;
+
+/**
+ * Everything the selectors, the stock line and the (future) buy button
+ * need for one choice. `available` on a size answers for the chosen colour
+ * (or any colour); on a colour, for the chosen size (or any size).
+ */
+function selectionState(view, {
+  size = null,
+  colour = null
+} = {}) {
+  const shape = selectionShape(view);
+  const m = matrix(view);
+  if (shape === 'none') {
+    const stock = Math.max(0, num(view.stock));
+    const status = stockStatus(stock);
+    return {
+      shape,
+      size: null,
+      colour: null,
+      sizes: [],
+      colours: [],
+      variant: null,
+      status,
+      stockNote: stockNoteFor(status, stock, ''),
+      missing: null,
+      canAdd: stock > 0,
+      stock,
+      ...priced(view, num(view.price)),
+      label: null
+    };
+  }
+  const colourless = shape === 'size';
+  const sizes = view.sizes.map(s => ({
+    size: s,
+    available: colourless ? m.inStock(s, '') : colour ? m.inStock(s, colour) : view.swatches.some(sw => m.inStock(s, sw.colour)),
+    exists: colourless ? m.get(s, '') != null : colour ? m.get(s, colour) != null : true
+  }));
+  const colours = colourless ? [] : view.swatches.map(sw => ({
+    colour: sw.colour,
+    hex: sw.hex,
+    available: size ? m.inStock(size, sw.colour) : view.sizes.some(s => m.inStock(s, sw.colour)),
+    exists: size ? m.get(size, sw.colour) != null : true
+  }));
+  const complete = colourless ? Boolean(size) : Boolean(size && colour);
+  const variant = complete ? m.get(size, colourless ? '' : colour) : null;
+  let status = 'choose';
+  if (complete) status = !variant ? 'missing' : stockStatus(variant.stock);
+  const what = colourless ? ' in this size' : ' in this size and colour';
+  const stockNote = status === 'missing' ? colourless ? 'Not made in this size' : 'Not made in this size and colour' : complete ? stockNoteFor(status, variant?.stock ?? 0, what) : null;
+  const missing = complete ? null : colourless ? 'Choose a size' : !size && !colour ? 'Choose a size and colour' : !size ? 'Choose a size' : 'Choose a colour';
+  return {
+    shape,
+    size,
+    colour: colourless ? null : colour,
+    sizes,
+    colours,
+    variant,
+    status,
+    stockNote,
+    missing,
+    canAdd: Boolean(variant) && variant.stock > 0,
+    stock: variant ? variant.stock : null,
+    // The variant's own figure when it carries one, else the product's — a lookup, not arithmetic.
+    ...priced(view, variant && variant.price_override != null ? num(variant.price_override) : num(view.price)),
+    label: complete ? colourless ? size : `${size} · ${colour}` : null
+  };
+}
+
+/** Related products: same category first, then the same brand; never itself. */
+function relatedFor(view, products, limit = 4) {
+  const others = (Array.isArray(products) ? products : []).filter(p => p.id !== view.id);
+  const same = others.filter(p => p.category_id != null && String(p.category_id) === String(view.category_id));
+  const brand = others.filter(p => !same.includes(p) && p.brand && p.brand === view.brand);
+  const rest = others.filter(p => !same.includes(p) && !brand.includes(p));
+  return [...same, ...brand, ...rest].slice(0, limit);
+}
+
+function Gallery({
+  view
+}) {
+  const images = view.gallery && view.gallery.length ? view.gallery : [];
+  const [active, setActive] = reactExports.useState(0);
+  if (images.length === 0) return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hl-pdp__media hl-pdp__media--none",
+    "aria-hidden": "true",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+      children: view.name.slice(0, 1)
+    })
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hl-gallery",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hl-gallery__track",
+      role: "group",
+      "aria-label": `${view.name} images`,
+      children: images.map((img, i) => /*#__PURE__*/jsxRuntimeExports.jsx("figure", {
+        className: `hl-gallery__slide${i === active ? ' is-on' : ''}`,
+        id: `hl-slide-${i}`,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: img.url,
+          alt: img.alt,
+          width: "900",
+          height: "900",
+          decoding: "async",
+          loading: i === 0 ? 'eager' : 'lazy',
+          fetchpriority: i === 0 ? 'high' : undefined
+        })
+      }, img.url + i))
+    }), images.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hl-gallery__thumbs",
+      role: "tablist",
+      "aria-label": "Choose image",
+      children: images.map((img, i) => /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+        href: `#hl-slide-${i}`,
+        role: "tab",
+        "aria-selected": i === active,
+        className: `hl-gallery__thumb${i === active ? ' is-on' : ''}`,
+        onClick: () => setActive(i),
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: img.url,
+          alt: "",
+          width: "120",
+          height: "120",
+          loading: "lazy",
+          decoding: "async"
+        })
+      }, img.url + i))
+    })]
+  });
+}
+
+/**
+ * The size (× colour) choice. Every size and colour is listed — an
+ * unavailable one is disabled or struck, not hidden — and the stock note
+ * answers for the pair. A size-only product shows sizes alone.
+ */
+function VariantPicker({
+  view,
+  st,
+  onChange
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hl-pick",
+    children: [st.colours.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "hl-pick__group",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("legend", {
+        children: ["Colour", st.colour ? /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+          children: [": ", st.colour]
+        }) : null]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hl-pick__swatches",
+        children: st.colours.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: `hl-pick__swatch${c.colour === st.colour ? ' is-on' : ''}${c.available ? '' : ' is-out'}`,
+          style: {
+            '--sw': c.hex || '#D9CBB0'
+          },
+          "aria-pressed": c.colour === st.colour,
+          "aria-label": `${c.colour}${c.available ? '' : ' — not available for this size'}`,
+          title: c.colour,
+          onClick: () => onChange({
+            size: st.size,
+            colour: c.colour === st.colour ? null : c.colour
+          }),
+          children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {})
+        }, c.colour))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      className: "hl-pick__group",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("legend", {
+        children: ["Size", st.size ? /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+          children: [": ", st.size]
+        }) : null]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hl-pick__sizes",
+        children: st.sizes.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: `hl-pick__size${s.size === st.size ? ' is-on' : ''}${s.available ? '' : ' is-out'}`,
+          "aria-pressed": s.size === st.size,
+          disabled: !s.available && s.size !== st.size,
+          "aria-label": `${s.size}${s.available ? '' : ' — out of stock'}`,
+          onClick: () => onChange({
+            size: s.size === st.size ? null : s.size,
+            colour: st.colour
+          }),
+          children: s.size
+        }, s.size))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: `hl-pick__note is-${st.status}`,
+      role: "status",
+      children: st.stockNote || st.missing || 'In stock'
+    })]
+  });
+}
+function DeliveryBlock() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "hl-pdp__delivery",
+    "aria-labelledby": "hl-deliv-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+      className: "hl-pdp__h2",
+      id: "hl-deliv-h",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "truck",
+        size: 18
+      }), " Delivery"]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "hl-pdp__ship",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: ["Standard delivery", /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: HOMELIVING_DELIVERY_WINDOW
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+        children: "Free"
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hl-pdp__fine",
+      children: "Other delivery options are chosen at checkout."
+    })]
+  });
+}
+const priceDigits = n => money(n).replace(/^₹\s?/, '');
+function HomeLivingProductPage() {
+  const {
+    slug
+  } = useParams();
+  const {
+    status,
+    categories,
+    products
+  } = useHomeLivingCatalogue();
+  const [params, setParams] = useSearchParams();
+  const view = reactExports.useMemo(() => products.find(p => p.slug === String(slug || '')) || null, [products, slug]);
+  if (!view) {
+    return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-wrap hl-listing",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
+        trail: [{
+          name: 'Home & Living',
+          href: '/homeliving'
+        }, {
+          name: 'Not found'
+        }]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hl-empty hl-empty--listing",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : `There is no “${slug}” in the Home & Living store.`
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/homeliving",
+          className: "hl-btn",
+          children: "Back to Home & Living"
+        })]
+      })]
+    });
+  }
+  const node = view.category_id != null ? categories.find(c => String(c.id) === String(view.category_id)) || null : null;
+  const trail = [...breadcrumbFor(categories, node), {
+    name: view.name
+  }];
+  const sel = readSelection(params, view);
+  const st = selectionState(view, sel);
+  const setSel = next => setParams(writeSelection(params, next), {
+    replace: true
+  });
+  const related = relatedFor(view, products, 4);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hl-wrap hl-pdp",
+    "data-product": view.slug,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
+      trail: trail
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-pdp__grid",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Gallery, {
+        view: view
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hl-pdp__body",
+        children: [view.brand && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hl-pdp__brand",
+          children: view.brand
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "hl-pdp__h serif",
+          children: view.name
+        }), view.net_content && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hl-pdp__size",
+          children: view.net_content
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "hl-price hl-price--lg",
+          "data-price": st.price,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "hl-price__cur",
+              children: "\u20B9"
+            }), priceDigits(st.price)]
+          }), st.hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "hl-price__mrp",
+              children: ["M.R.P: ", /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+                children: money(st.mrp)
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "hl-badge",
+              children: [st.discountPct, "% OFF"]
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hl-pdp__tax",
+          children: "Inclusive of all taxes"
+        }), st.shape === 'none' ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: `hl-pick__note hl-pick__note--solo is-${st.status}`,
+          role: "status",
+          children: st.stockNote || 'In stock'
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx(VariantPicker, {
+          view: view,
+          st: st,
+          onChange: setSel
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+          className: "hl-pdp__actions",
+          "data-slot": "add-to-cart",
+          "data-can-add": st.canAdd ? 'yes' : 'no',
+          children: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: "hl-card__heart hl-heart--inline",
+            "aria-label": `Save ${view.name} to wishlist`,
+            "aria-disabled": "true",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "heart",
+              size: 20
+            })
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryBlock, {}), view.description && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+          className: "hl-pdp__section",
+          "aria-labelledby": "hl-desc-h",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "hl-pdp__h2",
+            id: "hl-desc-h",
+            children: "About this product"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hl-pdp__desc",
+            children: view.description
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+          className: "hl-pdp__section",
+          "aria-labelledby": "hl-details-h",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "hl-pdp__h2",
+            id: "hl-details-h",
+            children: "Details"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+            className: "hl-pdp__details",
+            children: [view.brand && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+                children: "Brand"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+                children: view.brand
+              })]
+            }), node && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+                children: "Category"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+                children: breadcrumbFor(categories, node).slice(1).map(c => c.name).join(' › ')
+              })]
+            }), view.net_content && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+                children: "Size"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+                children: view.net_content
+              })]
+            }), view.sizes.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+                children: "Sizes"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+                children: view.sizes.join(', ')
+              })]
+            }), view.swatches.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+                children: "Colours"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+                children: view.swatches.map(s => s.colour).join(', ')
+              })]
+            }), view.sku && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+                children: "SKU"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+                children: view.sku
+              })]
+            })]
+          })]
+        })]
+      })]
+    }), related.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "hl-sec",
+      "aria-labelledby": "hl-related-h",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+        className: "hl-sec__head",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "hl-sec__h serif",
+          id: "hl-related-h",
+          children: "You may also like"
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hl-row hl-row--related",
+        children: related.map(p => /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingProductCard, {
+          product: p
+        }, p.id))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-pdp__bar",
+      role: "region",
+      "aria-label": "Buy",
+      "data-slot": "add-to-cart",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hl-pdp__bar-price",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hl-price__cur",
+            children: "\u20B9"
+          }), priceDigits(st.price)]
+        }), st.label && /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: st.label
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: `hl-pick__note is-${st.status}`,
+        children: st.stockNote || st.missing || 'In stock'
+      })]
+    })]
+  });
+}
+
+// ============================================================
 // Styles for the routes outside the shop: /admin, /passport, /creator.
 //
 // These live in public/app-deferred.css (built by scripts/build-css.mjs) and
@@ -63748,6 +64293,9 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "category/:slug",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingCategory, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "p/:slug",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingProductPage, {})
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Route, {
         element: /*#__PURE__*/jsxRuntimeExports.jsx(Layout, {}),
