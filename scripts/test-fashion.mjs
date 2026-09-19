@@ -342,7 +342,7 @@ function homeSections(source) {
     configFile: false, babelrc: false, presets: [['@babel/preset-react', { runtime: 'classic' }]],
     plugins: [() => ({ visitor: { ImportDeclaration(p) { p.remove(); }, ExportDefaultDeclaration(p) { p.replaceWith(p.node.declaration); } } })],
   });
-  const names = ['Hero', 'HomeCategoryStrip', 'EditorialCard', 'StoryBlock', 'Newsletter', 'HomeOffers', 'HomeLeaderboard', 'MarketplaceProductRail', 'FeaturedBrands', 'DiscoveryEdit', 'MomTrustSpotlight', 'CuratedCollections', 'CreatorCommunity', 'WhySoraLife', 'ShopByCategory', 'ShopByConcerns', 'FashionBanner'];
+  const names = ['Hero', 'HomeCategoryStrip', 'EditorialCard', 'StoryBlock', 'Newsletter', 'HomeOffers', 'HomeLeaderboard', 'MarketplaceProductRail', 'FeaturedBrands', 'DiscoveryEdit', 'MomTrustSpotlight', 'CuratedCollections', 'CreatorCommunity', 'WhySoraLife', 'ShopByCategory', 'ShopByConcerns', 'LifestyleBanner', 'StoreCarousel'];
   const stubs = Object.fromEntries(names.map((n) => [n, (props) => h('section', { 'data-c': n + (props?.id ? `#${props.id}` : '') })]));
   const scope = { React, ...React, ...stubs, useSyncExternalStore: () => ({ visuals: {} }), subscribeHomepage: () => () => {}, getHomepageSnapshot: () => ({}),
     sanitizeHomepageVisuals: () => ({}), watchHomepageVisuals: () => {}, products: [], categories: [], selectHomeMerchandising: () => ({ trending: [], discover: [], popular: [], brands: [], momProducts: [], collections: [], popularTitle: 'Popular' }), homepage: {} };
@@ -350,18 +350,19 @@ function homeSections(source) {
   return [...renderToStaticMarkup(h(Home)).matchAll(/data-c="([^"]+)"/g)].map((m) => m[1]);
 }
 
-await test('the wellness homepage keeps every section in the same order — the fashion banner is the only addition', () => {
+await test('the wellness homepage keeps every section in the same order — the Lifestyle banner (after the offers) and the store carousel (above the popular rail) are the only additions', () => {
   // The homepage as it stood before the fashion store (b45cdc8), pinned.
   const before = ['Hero', 'HomeCategoryStrip', 'HomeOffers', 'MarketplaceProductRail#trending', 'ShopByCategory', 'ShopByConcerns', 'FeaturedBrands', 'DiscoveryEdit', 'MarketplaceProductRail#popular', 'MomTrustSpotlight', 'CuratedCollections', 'CreatorCommunity', 'WhySoraLife', 'Newsletter', 'HomeLeaderboard'];
   const after = homeSections(read('src/pages/Home.jsx'));
-  assert.ok(after.includes('FashionBanner'), 'the banner is on the homepage');
-  assert.deepEqual(after.filter((s) => s !== 'FashionBanner'), before.filter((s) => s !== 'FashionBanner'), 'every other section, in order');
-  assert.equal(after.indexOf('FashionBanner'), after.indexOf('HomeOffers') + 1, 'placed after the offers, before the first product rail');
+  const added = ['LifestyleBanner', 'StoreCarousel'];
+  for (const s of added) assert.equal(after.filter((x) => x === s).length, 1, `${s} is on the homepage once`);
+  assert.deepEqual(after.filter((s) => !added.includes(s)), before, 'every other section, in order');
+  assert.equal(after.indexOf('LifestyleBanner'), after.indexOf('HomeOffers') + 1, 'the banner sits after the offers, before the first product rail');
+  assert.equal(after.indexOf('StoreCarousel'), after.indexOf('MarketplaceProductRail#popular') - 1, 'the carousel sits directly above the popular rail (test-store-doorway.mjs pins both sections)');
   const Icon = loadModule('src/components/Icon.jsx').default;
   const DeferredImage = loadModule('src/components/DeferredImage.jsx').default;
-  const Banner = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage }).default;
-  const html = renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(Banner)));
-  // The section is the Lifestyle banner plus the two store cards as a carousel (test-store-doorway.mjs pins it).
+  const doorway = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage });
+  const html = renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(doorway.LifestyleBanner))) + renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(doorway.StoreCarousel)));
   assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/lifestyle', '/fashion', '/homeliving'], 'the whole-card links use existing stores');
   assert.match(html, /Two Worlds\. A Better You\./);
   assert.equal((html.match(/<img /g) || []).length, 3);

@@ -6,7 +6,7 @@ import StoryBlock from '../components/StoryBlock.jsx';
 import Newsletter from '../components/Newsletter.jsx';
 import HomeOffers from '../components/promo/HomeOffers.jsx';
 import HomeLeaderboard from '../components/HomeLeaderboard.jsx';
-import FashionBanner from '../components/FashionBanner.jsx';
+import { LifestyleBanner, StoreCarousel } from '../components/FashionBanner.jsx';
 import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
@@ -61,9 +61,8 @@ export default function Home() {
              Renders nothing when no active promotion targets `home`. */}
       <HomeOffers appearance={visuals.offers} />
 
-      {/* The doorway to the fashion store — a separate section with its own
-          catalogue and navigation (/fashion). One block, no data dependency. */}
-      <FashionBanner />
+      {/* The doorway to the lifestyle store — one banner, no data dependency. */}
+      <LifestyleBanner />
 
       {/* selectHomeMerchandising balances this across categories. It is NOT a
           popularity measure, and today it is not a curated one either: the live
@@ -85,6 +84,10 @@ export default function Home() {
       <FeaturedBrands brands={merchandise.brands} />
 
       <DiscoveryEdit products={merchandise.discover} link={merchandise.discoverLink} />
+
+      {/* The fashion and Home & Living store cards as one carousel, under
+          their own heading, just above the popular rail. No data dependency. */}
+      <StoreCarousel />
 
       <MarketplaceProductRail
         id="popular"

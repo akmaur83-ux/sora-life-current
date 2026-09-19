@@ -28,7 +28,7 @@ import { ROOT, read, has, h, loadModule } from './grocery-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
 
 // The tree as it stood before this work: the lifestyle storefront release.
-const BASELINE_SHA = '34c4788';
+const BASELINE_SHA = 'ccaff64';
 let passed = 0, failed = 0, current = '(startup)';
 process.on('unhandledRejection', (e) => { console.error(`\n  FATAL during: ${current}\n  ${e?.stack || e}`); process.exitCode = 1; });
 async function test(name, fn) {
@@ -95,18 +95,39 @@ await test('the images: the Lifestyle banner pair (16:9 landscape, 4:5 portrait)
 const Icon = loadModule('src/components/Icon.jsx').default;
 const DeferredImage = loadModule('src/components/DeferredImage.jsx').default;
 const mod = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage });
-const Banner = mod.default;
-const html = renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(Banner)));
+// A tree without the two exports (the pre-change tree) renders nothing here and fails each test on its own.
+const safe = (C) => { try { return C ? renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(C))) : ''; } catch { return ''; } };
+const render = (m) => safe(m.LifestyleBanner) + safe(m.StoreCarousel);
+const bannerHtml = safe(mod.LifestyleBanner);
+const carouselHtml = safe(mod.StoreCarousel);
+const html = bannerHtml + carouselHtml;
 const EagerImage = ({ src, sources = [], loading, decoding, fetchPriority, ...props }) =>
   h('picture', null, ...sources.map((s) => h('source', { key: s.media, media: s.media, srcSet: s.srcSet })), h('img', { ...props, src }));
-const eager = renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage: EagerImage }).default)));
+const eager = render(loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage: EagerImage }));
 
-await test('the section: heading and lede kept; then the Lifestyle banner (one whole-card link to /lifestyle), then the carousel with the two store cards; three links, no control inside any of them', () => {
-  assert.match(html, /<h2 id="fsb-h">Two Worlds\. A Better You\.<\/h2><p class="fsb__lede">Fashion for your style\. Living for your space\. All at SORA LIFE\.<\/p><\/header>/);
-  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/lifestyle', '/fashion', '/homeliving']);
-  assert.ok(html.indexOf('fsb__card--lead') < html.indexOf('fsb__carousel'), 'the banner first, the carousel beneath');
-  assert.match(html, /<\/header><a class="fsb__card fsb__card--lifestyle fsb__card--lead" aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta" href="\/lifestyle">/, 'the banner sits directly under the heading');
+await test('two sections, placed independently: LifestyleBanner is the banner alone with no heading; StoreCarousel is the heading and lede over the two store cards; no default export; no control inside any card link', () => {
+  assert.equal(mod.default, undefined, 'no combined default export any more');
+  assert.match(bannerHtml, /^<section class="v2-sec fsb fsb--lead" aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta"><div class="v2-wrap"><a class="fsb__card fsb__card--lifestyle fsb__card--lead" aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta" href="\/lifestyle">/, 'the banner section is the card and nothing else');
+  assert.doesNotMatch(bannerHtml, /fsb__intro|Two Worlds|More to explore|fsb__carousel/, 'no heading on the banner');
+  assert.deepEqual([...bannerHtml.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/lifestyle']);
+  assert.match(carouselHtml, /^<section class="v2-sec fsb" aria-labelledby="fsb-h" id="more-to-explore"><div class="v2-wrap"><header class="fsb__intro"><p class="fsb__eyebrow fsb__overline">More to explore<\/p><h2 id="fsb-h">Two Worlds\. A Better You\.<\/h2><p class="fsb__lede">Fashion for your style\. Living for your space\. All at SORA LIFE\.<\/p><\/header><div class="fsb__carousel"/, 'the heading moved with the carousel');
+  assert.doesNotMatch(carouselHtml, /fsb__card--lead|\/lifestyle/, 'the banner is not in the carousel section');
+  assert.deepEqual([...carouselHtml.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/fashion', '/homeliving']);
   for (const a of html.matchAll(/<a [^>]*>[\s\S]*?<\/a>/g)) assert.doesNotMatch(a[0].slice(2), /<button|<a /, 'nothing interactive inside a card link');
+});
+
+await test('Home.jsx: LifestyleBanner sits directly after the offers; StoreCarousel sits directly above the popular rail (the slot, not its title — "Worth discovering" becomes "Bestsellers" with verified data); each once; nothing else in Home.jsx changed', () => {
+  const home = read('src/pages/Home.jsx');
+  assert.equal((home.match(/<LifestyleBanner \/>/g) || []).length, 1); assert.equal((home.match(/<StoreCarousel \/>/g) || []).length, 1);
+  assert.doesNotMatch(home, /FashionBanner \/>|import FashionBanner/, 'the combined component is gone from the page');
+  assert.match(home, /<HomeOffers[^>]*\/>\s*(\{\/\*[\s\S]*?\*\/\})?\s*<LifestyleBanner \/>/, 'the banner after the offers');
+  assert.match(home, /<DiscoveryEdit[^>]*\/>\s*(\{\/\*[\s\S]*?\*\/\})?\s*<StoreCarousel \/>\s*(\{\/\*[\s\S]*?\*\/\})?\s*<MarketplaceProductRail\s+id="popular"/, 'the carousel between the discovery edit and the popular rail');
+  const then = atCommit(BASELINE_SHA, 'src/pages/Home.jsx').replace(/\r\n/g, '\n');
+  const mine = home
+    .replace("import { LifestyleBanner, StoreCarousel } from '../components/FashionBanner.jsx';", "import FashionBanner from '../components/FashionBanner.jsx';")
+    .replace(/      \{\/\* The doorway to the lifestyle store[^*]*\*\/\}\n      <LifestyleBanner \/>\n/, "      {/* The doorway to the fashion store — a separate section with its own\n          catalogue and navigation (/fashion). One block, no data dependency. */}\n      <FashionBanner />\n")
+    .replace(/      \{\/\* The fashion and Home & Living store cards[\s\S]*?\*\/\}\n      <StoreCarousel \/>\n\n/, '');
+  assert.equal(mine, then, 'Home.jsx: the import and the two mounts, nothing else');
 });
 
 await test('Part A: the <picture> takes the 4:5 portrait under 1024px and the landscape otherwise; eyebrow "Live beautifully", "Lifestyle Store", the subline, "Explore Lifestyle" and the four badges — all HTML', () => {
@@ -190,6 +211,7 @@ await test('1280 (from 1024): the banner is page-wide at 16:7 with the copy on t
   assert.equal(decl(wideBlock, '.fsb__viewport', 'overflow'), 'hidden'); assert.equal(decl(wideBlock, '.fsb__viewport', 'touch-action'), 'pan-y', 'vertical scrolling stays with the page; the swipe is ours');
   assert.match(decl(wideBlock, '.fsb__track', 'transition'), /^transform /);
   assert.doesNotMatch(wideBlock, /\.fsb__grid/, 'the side-by-side grid is gone');
+  assert.doesNotMatch(css, /\.fsb__card--lead \{ margin-bottom/, 'the banner is its own section now; no spacing to a carousel beneath');
 });
 
 await test('390 and 768: the banner is the 4:5 portrait with the copy on it (cell 1/1, top) under a top-down wash and the badges in the row beneath, two by two; the carousel cards are 16:10 landscapes — shorter than the banner — with their copy left of the subject and badges beneath', () => {
@@ -230,15 +252,14 @@ await test('motion: transitions on transform, opacity and box-shadow only; hover
 });
 
 // ---- wiring and isolation ------------------------------------------------
-await test('Home.jsx, the build lists and every other file are byte-identical to the baseline: only the section\'s own files, the two new images, scripts and build output changed', () => {
+await test('the build lists and every other file are byte-identical to the baseline: only the section\'s own files, Home.jsx (the two mounts), scripts and build output changed', () => {
   const changed = new Set(execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean));
-  const allowed = /^(src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|img\/lifestyle-banner-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
+  const allowed = /^(src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|src\/pages\/Home\.jsx$|img\/lifestyle-banner-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
-  for (const rel of ['src/pages/Home.jsx', 'build/build-css.mjs', 'src/App.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/lib/store.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/payments.js', 'src/lib/customerAuth.jsx']) {
+  for (const rel of ['build/build-css.mjs', 'src/App.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/lib/store.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/payments.js', 'src/lib/customerAuth.jsx']) {
     assert.equal(read(rel), atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n'), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
-  assert.match(read('src/pages/Home.jsx'), /<HomeOffers[^>]*\/>\s*(\{\/\*[\s\S]*?\*\/\})?\s*<FashionBanner \/>/, 'still mounted after the offers');
   assert.match(read('build/build-css.mjs'), /'src\/styles\/fashion-banner\.css',/);
 });
 

@@ -27,8 +27,11 @@ if (!/\.fsb__card \{[^}]*container-type: inline-size/.test(css)) throw new Error
 const Icon = loadModule('src/components/Icon.jsx').default;
 const EagerImage = ({ src, sources = [], loading, decoding, fetchPriority, ...props }) =>
   h('picture', null, ...sources.map((s) => h('source', { key: s.media, media: s.media, srcSet: s.srcSet })), h('img', { ...props, src }));
-const Banner = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage: EagerImage }).default;
-const body = renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(Banner)))
+const doorway = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage: EagerImage });
+// The two sections as Home.jsx places them (the banner after the offers, the carousel above the popular rail), with a
+// stand-in for the sections between them so the gap reads as it does on the page.
+const between = '<section class="v2-sec" style="padding:40px 0;text-align:center;color:#8a8f86;font:14px Inter,sans-serif">— Start here · Shop by category · Concerns · Brands · Discovery edit (the wellness sections, unchanged) —</section>';
+const body = (renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(doorway.LifestyleBanner))) + between + renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(doorway.StoreCarousel))))
   .replace(/(srcSet|src)="\/img\/([^"]+\.webp)"/g, (_, attr, f) => `${attr}="${dataUri(f)}"`);
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

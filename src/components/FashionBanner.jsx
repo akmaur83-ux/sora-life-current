@@ -4,19 +4,22 @@ import Icon from './Icon.jsx';
 import DeferredImage from './DeferredImage.jsx';
 
 // ============================================================
-// The homepage doorway to the other stores. No catalogue dependency.
+// The homepage doorways to the other stores. No catalogue dependency.
+// Two sections, placed independently by Home.jsx.
 //
-// Two parts under the section heading. First the Lifestyle banner: one
-// whole-card link over one photograph — a 16:9 landscape whose subject
-// sits right (the copy takes the left) from 1024px, a 4:5 portrait whose
-// subject sits low (the copy takes the empty upper-left) below it; the
-// browser chooses through <picture>. Its four icon badges sit over the
-// photo beneath the CTA on a wide screen and beneath the photo on a
-// phone, where the empty area holds the copy alone. Then the two store
-// cards, Fashion and Home & Living, as one carousel: one slide at a time
-// on a transform-only track, autoplaying, paused on hover and focus,
-// still under prefers-reduced-motion, with dots and a swipe. Every word
-// is HTML; images stay deferred until they scroll near.
+// LifestyleBanner — one whole-card link over one photograph: a 16:9
+// landscape whose subject sits right (the copy takes the left) from
+// 1024px, a 4:5 portrait whose subject sits low (the copy takes the empty
+// upper-left) below it; the browser chooses through <picture>. Its four
+// icon badges sit over the photo beneath the CTA on a wide screen and
+// beneath the photo on a phone, where the empty area holds the copy alone.
+//
+// StoreCarousel — under its own heading, the two store cards, Fashion and
+// Home & Living, as one carousel: one slide at a time on a transform-only
+// track, autoplaying, paused on hover and focus, still under
+// prefers-reduced-motion, with dots and a swipe.
+//
+// Every word is HTML; images stay deferred until they scroll near.
 // ============================================================
 const TALL = '(max-width: 1023px)';
 export const AUTOPLAY_MS = 6000;
@@ -157,7 +160,19 @@ export function DoorwayCarousel({ stores = STORES, autoplayMs = AUTOPLAY_MS }) {
   );
 }
 
-export default function FashionBanner() {
+/** The Lifestyle banner on its own — no heading. Sits after the offers. */
+export function LifestyleBanner() {
+  return (
+    <section className="v2-sec fsb fsb--lead" aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta">
+      <div className="v2-wrap">
+        <DoorwayCard store={LIFESTYLE} modifier="lead" />
+      </div>
+    </section>
+  );
+}
+
+/** The two store cards under their heading. Sits just above the popular rail. */
+export function StoreCarousel() {
   return (
     <section className="v2-sec fsb" aria-labelledby="fsb-h" id="more-to-explore">
       <div className="v2-wrap">
@@ -166,7 +181,6 @@ export default function FashionBanner() {
           <h2 id="fsb-h">Two Worlds. A Better You.</h2>
           <p className="fsb__lede">Fashion for your style. Living for your space. All at SORA LIFE.</p>
         </header>
-        <DoorwayCard store={LIFESTYLE} modifier="lead" />
         <DoorwayCarousel />
       </div>
     </section>

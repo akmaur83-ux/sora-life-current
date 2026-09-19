@@ -305,10 +305,11 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page; the
   }
   const changed = new Set(execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean));
   // The homepage doorway was rebuilt around the Lifestyle banner (test-store-doorway.mjs) — an approved change to its own two files.
-  const allowed = /^(src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/homeliving\/HomeLivingLayout\.jsx$|scripts\/|public\/|reports\/)/;
+  // The homepage doorway split (test-store-doorway.mjs): Home.jsx mounts the Lifestyle banner and the store carousel — an approved change.
+  const allowed = /^(src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|src\/pages\/Home\.jsx$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/homeliving\/HomeLivingLayout\.jsx$|scripts\/|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
-  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/fashionApi.js', 'src/lib/fashion.js', 'src/data/homelivingHomepage.js', 'src/fashion/fashionArt.js', 'src/fashion/FashionHome.jsx', 'src/homeliving/HomeLivingHome.jsx', 'src/pages/Home.jsx']) {
+  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/fashionApi.js', 'src/lib/fashion.js', 'src/data/homelivingHomepage.js', 'src/fashion/fashionArt.js', 'src/fashion/FashionHome.jsx', 'src/homeliving/HomeLivingHome.jsx']) {
     assert.equal(read(rel), atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n'), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
   assert.ok(!(readFileSync(resolve(ROOT, 'src/data/lifestyleHomepage.js'), 'utf8').includes("from('")), 'the lifestyle data layer issues no query of its own — it reads through the two stores');
