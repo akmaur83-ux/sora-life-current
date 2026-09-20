@@ -7089,8 +7089,14 @@
      the lower half, so the copy sits upper-left under the header — one line of headline
      at 360px and up — and the wash runs top-down under it, starting clear of the
      header's own scrim. */
-  .hl-hero__slide { aspect-ratio: 4 / 5; max-height: none; }
-  .hl-hero__img { object-position: 50% 50%; }
+  /* The hero's height is what the first screen leaves it: the small viewport less
+     the tools block (151px), the trust band and its margin (67px), the fixed nav (64px
+     plus the safe-area inset) and 10px of slack — so the band ends just above the nav
+     and no text straddles its edge on first paint, whatever the phone's height. Shorter
+     than 4:5 the photograph keeps its top (the copy's wall, the sofa) and loses floor;
+     taller, it loses a sliver of each side. */
+  .hl-hero__slide { aspect-ratio: auto; height: calc(100vh - 292px - env(safe-area-inset-bottom, 0px)); height: calc(100svh - 292px - env(safe-area-inset-bottom, 0px)); min-height: 300px; max-height: 700px; }
+  .hl-hero__img { object-position: 50% 0; }
   .hl-hero__slide::before { background: linear-gradient(180deg, rgba(251, 248, 241, 0) 0%, rgba(251, 248, 241, .38) 18%, rgba(251, 248, 241, .38) 42%, rgba(251, 248, 241, 0) 60%); }
   .hl-hero .hl-hero__inner { padding-top: calc(var(--hl-hdr-h) + 4px); padding-bottom: 26px; }
   .hl-hero__txt { max-width: min(100%, 320px); }
