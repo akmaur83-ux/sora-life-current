@@ -6782,6 +6782,9 @@
 .hl *, .hl *::before, .hl *::after { transition-property: transform, opacity; }
 .hl a { color: inherit; }
 .hl-main { display: block; padding: 0 0 48px; }
+.hl-home { background:
+  radial-gradient(circle at 8% 34%, rgba(202, 167, 83, .08), transparent 24rem),
+  linear-gradient(180deg, var(--slv2-ivory) 0%, #FCFAF5 58%, var(--slv2-ivory) 100%); }
 .hl-wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
 .hl-eyebrow { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--slv2-gold-ink); }
 .hl-cta { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 24px; border-radius: 999px; background: var(--slv2-gold); color: var(--slv2-f900); font-size: 16px; font-weight: 700; text-decoration: none; transition: transform .16s ease; }
@@ -7095,15 +7098,15 @@
      and no text straddles its edge on first paint, whatever the phone's height. Shorter
      than 4:5 the photograph keeps its top (the copy's wall, the sofa) and loses floor;
      taller, it loses a sliver of each side. */
-  .hl-hero__slide { aspect-ratio: auto; height: calc(100vh - 292px - env(safe-area-inset-bottom, 0px)); height: calc(100svh - 292px - env(safe-area-inset-bottom, 0px)); min-height: 300px; max-height: 700px; }
-  .hl-hero__img { object-position: 50% 0; }
-  .hl-hero__slide::before { background: linear-gradient(180deg, rgba(251, 248, 241, 0) 0%, rgba(251, 248, 241, .38) 18%, rgba(251, 248, 241, .38) 42%, rgba(251, 248, 241, 0) 60%); }
-  .hl-hero .hl-hero__inner { padding-top: calc(var(--hl-hdr-h) + 4px); padding-bottom: 26px; }
-  .hl-hero__txt { max-width: min(100%, 320px); }
-  .hl-hero__eyebrow { font-size: 11px; margin-bottom: 6px; }
-  .hl-hero__h { font-size: clamp(26px, 8.2vw, 32px); }
-  /* Three short lines: two would reach under the archway's curtain on a 360px phone. */
-  .hl-hero__sub { font-size: 14px; line-height: 1.35; max-width: 30ch; margin: 6px 0 10px; }
+  .hl-hero__slide { aspect-ratio: auto; height: clamp(410px, 54svh, 480px); min-height: 410px; max-height: 480px; }
+  .hl-hero__img { object-position: 50% 4%; }
+  .hl-hero__slide::before { background: linear-gradient(180deg, rgba(251, 248, 241, .08) 0%, rgba(251, 248, 241, .2) 38%, rgba(251, 248, 241, 0) 68%); }
+  .hl-hero .hl-hero__inner { padding-top: calc(var(--hl-hdr-h) + 10px); padding-bottom: 34px; }
+  .hl-hero__txt { max-width: min(100%, 300px); padding: 14px 16px 15px; border: 1px solid rgba(255, 255, 255, .6); border-radius: 18px; background: linear-gradient(135deg, rgba(255, 253, 248, .88), rgba(255, 250, 240, .68)); box-shadow: 0 18px 38px -30px rgba(31, 42, 34, .62); backdrop-filter: blur(7px); }
+  .hl-hero__eyebrow { font-size: 10px; margin-bottom: 6px; }
+  .hl-hero__h { font-size: clamp(27px, 7.4vw, 30px); line-height: 1; }
+  .hl-hero__sub { font-size: 13px; line-height: 1.4; max-width: 30ch; margin: 7px 0 11px; }
+  .hl-hero .hl-cta { min-height: 40px; padding: 0 16px; font-size: 13.5px; box-shadow: 0 10px 24px -18px rgba(91, 64, 8, .72); }
 }
 
 /* ---- Phone --------------------------------------------------------------------- */
@@ -7178,6 +7181,61 @@
   .hl-promo__sub { font-size: 14px; }
   .hl-promo__badges { gap: 8px; }
   .hl-promo__badges li { font-size: 12px; }
+
+  /* Homepage composition: a compact, raised utility dock replaces the three
+     oversized cream rows; the rest of the page reads as a set of calm editorial
+     modules. These selectors are homepage-only, leaving listing and PDP shells
+     unchanged. */
+  .hl-home .hl-tools { position: relative; z-index: 3; width: calc(100% - 24px); margin: -18px auto 0; padding: 10px; border: 1px solid rgba(196, 179, 146, .72); border-radius: 18px; background: rgba(255, 253, 248, .97); box-shadow: 0 18px 42px -30px rgba(32, 48, 38, .58); }
+  .hl-home .hl-tools .hl-deliver { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 0 0 9px; border-bottom: 1px solid rgba(196, 179, 146, .48); }
+  .hl-home .hl-deliver__addr { min-width: 0; gap: 6px; }
+  .hl-home .hl-deliver__addr > svg { width: 18px; height: 18px; }
+  .hl-home .hl-deliver__txt b { font-size: 12.5px; }
+  .hl-home .hl-deliver__txt em { max-width: 16ch; font-size: 10px; }
+  .hl-home .hl-deliver__badge { min-height: 28px; margin-left: 0; padding: 0 8px; font-size: 10px; letter-spacing: -.015em; }
+  .hl-home .hl-search { padding: 9px 0 0; }
+  .hl-home .hl-search > svg { left: 13px; width: 18px; height: 18px; }
+  .hl-home .hl-search input { height: 42px; padding-left: 39px; border-width: 1px; border-radius: 12px; font-size: 13px; background: #FFFDF8; }
+
+  .hl-home .hl-trust { margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; overflow: visible; border: 0; }
+  .hl-home .hl-trust li { min-height: 58px; padding: 9px 10px; gap: 8px; border: 1px solid rgba(205, 190, 161, .62); border-radius: 14px; background: rgba(255, 255, 255, .7); box-shadow: 0 10px 25px -25px rgba(22, 33, 27, .55); }
+  .hl-home .hl-trust .hl-trust__icon { width: 29px; height: 29px; border: 0; border-radius: 9px; background: var(--slv2-f100); color: var(--slv2-f700); }
+  .hl-home .hl-trust__txt { white-space: normal; }
+  .hl-home .hl-trust__txt strong { font-size: 11.5px; line-height: 1.15; }
+  .hl-home .hl-trust__txt em { font-size: 9.5px; line-height: 1.25; }
+
+  .hl-home .hl-sec { margin-top: 28px; }
+  .hl-home .hl-sec__head { align-items: flex-start; margin-bottom: 14px; }
+  .hl-home .hl-sec__head > div { min-width: 0; }
+  .hl-home .hl-eyebrow { margin-bottom: 6px; font-size: 9.5px; letter-spacing: .2em; }
+  .hl-home .hl-sec__h { font-size: 22px; line-height: 1.08; }
+  .hl-home .hl-sec__h--rule { padding-bottom: 10px; }
+  .hl-home .hl-sec__h--rule::after { width: 46px; }
+  .hl-home .hl-sec__sub { font-size: 12px; }
+  .hl-home .hl-sec__link { gap: 4px; font-size: 12.5px; }
+
+  .hl-home .hl-cats { margin-right: 10px; margin-left: 10px; padding: 18px 14px 15px; border: 1px solid rgba(205, 190, 161, .58); border-radius: 22px; background: linear-gradient(145deg, rgba(255, 255, 255, .8), rgba(248, 242, 229, .7)); box-shadow: 0 24px 50px -42px rgba(30, 44, 34, .7); }
+  .hl-home .hl-circles__scroller { margin: 0 -14px; }
+  .hl-home .hl-circles { gap: 10px; padding: 3px 14px 5px; scroll-padding-inline: 14px; }
+  .hl-home .hl-circle { flex-basis: 76px; gap: 7px; }
+  .hl-home .hl-circle__img { width: 76px; height: 76px; border: 2px solid rgba(255, 255, 255, .88); box-shadow: 0 0 0 1px rgba(196, 179, 146, .72), 0 12px 24px -20px rgba(22, 33, 27, .7); }
+  .hl-home .hl-circle__name { font-size: 11.5px; }
+  .hl-home .hl-circles__scroller::after { width: 52px; background: linear-gradient(90deg, rgba(250, 247, 239, 0), rgba(250, 247, 239, .94) 62%, #FAF7EF 100%); }
+  .hl-home .hl-circles__more { right: 7px; top: 24px; width: 32px; height: 32px; }
+
+  .hl-home .hl-row { gap: 9px; }
+  .hl-home .hl-card { flex-basis: 154px; border-radius: 16px; box-shadow: 0 16px 32px -28px rgba(22, 33, 27, .7); }
+  .hl-home .hl-card__body { padding: 9px 10px 11px; }
+  .hl-home .hl-card__brand { font-size: 9px; }
+  .hl-home .hl-card__name { font-size: 13px; }
+  .hl-home .hl-card__size { font-size: 10.5px; }
+  .hl-home .hl-price { margin-top: 7px; gap: 6px; }
+  .hl-home .hl-price strong { font-size: 16px; }
+  .hl-home .hl-price__mrp { font-size: 10.5px; }
+
+  .hl-home .hl-promo { margin: 30px 10px 0; border: 1px solid rgba(196, 179, 146, .62); border-radius: 22px; box-shadow: 0 24px 48px -38px rgba(22, 33, 27, .7); }
+  .hl-home .hl-promo__inner { padding: 18px 14px 22px; }
+  .hl-home .hl-promo__h { font-size: 25px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
