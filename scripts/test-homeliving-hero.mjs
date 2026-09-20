@@ -87,7 +87,8 @@ await test('the hero is a <picture>: the portrait below 768px, the landscape fro
   assert.match(css, /\.hl-hero__slide \{ position: relative; flex: 0 0 100%; aspect-ratio: 3 \/ 2; max-height: 820px; display: grid; align-items: start; \}/, 'the landscape at 3:2, capped');
   assert.match(css, /\.hl-hero__slide > picture \{ display: block; position: absolute; inset: 0; \}/, 'the picture is out of the grid flow');
   assert.match(css, /\.hl-hero__img \{ display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; \}/, 'the crop favours the top');
-  assert.match(section(css, '@media (max-width: 767px)', '@media (max-width: 599px)'), /\.hl-hero__slide \{ aspect-ratio: 4 \/ 5; max-height: none; \}\n\s*\.hl-hero__img \{ object-position: 50% 50%; \}/, 'the portrait below 768px, uncropped');
+  // Below 768px the hero is what the first screen leaves it (the tools block, the trust band, the fixed nav and 10px of slack subtracted from the small viewport), so the band ends just above the nav on first paint; the crop keeps the photograph's top.
+  assert.match(section(css, '@media (max-width: 767px)', '@media (max-width: 599px)'), /\.hl-hero__slide \{ aspect-ratio: auto; height: calc\(100vh - 292px - env\(safe-area-inset-bottom, 0px\)\); height: calc\(100svh - 292px - env\(safe-area-inset-bottom, 0px\)\); min-height: 300px; max-height: 700px; \}\n\s*\.hl-hero__img \{ object-position: 50% 0; \}/, 'the portrait below 768px, sized to the first screen');
   assert.doesNotMatch(css, /\.hl-hero__note \{[^}]*position: absolute/, 'the note is in the copy block, not pinned top-right under the header');
 });
 
