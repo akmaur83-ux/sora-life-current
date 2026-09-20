@@ -60717,9 +60717,9 @@ function FashionHome() {
   const grid = sortViews(views, 'featured');
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "fs-home",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Hero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
       tree: tree
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(Benefits, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Hero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Benefits, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {
       tree: tree
     }), /*#__PURE__*/jsxRuntimeExports.jsx(TopBrands, {
       views: views
