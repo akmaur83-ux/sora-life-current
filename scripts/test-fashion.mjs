@@ -239,6 +239,19 @@ await test('/fashion: tiles, benefits, hero with an image slot, four category ca
   assert.equal((html.match(/class="fs-card"/g) || []).length, 6);
   assert.match(html, /<a class="fs-hdr__back" href="\/">[\s\S]*?Wellness store<\/a>/, 'a way back to the wellness store');
   assert.match(html, /data-stub="footer"/, 'the shared footer');
+  const order = ['<section class="fs-hero has-image"', 'class="fs-chips"', 'class="fs-tiles"', 'class="fs-benefits"', 'Shop by Category'].map((mark) => html.indexOf(mark));
+  assert.ok(order.every((i) => i >= 0) && order.every((i, n) => n === 0 || order[n - 1] < i), 'the campaign hero leads the homepage before the compact category and benefit modules');
+});
+
+await test('/fashion at 390px: the hero leads, supporting modules are compact, category cards form a zoomed-out rail, and the homepage remains namespaced', () => {
+  const css = read('src/styles/fashion.css');
+  const phone = css.slice(css.indexOf('@media (max-width: 599px)'), css.indexOf('@media (prefers-reduced-motion: reduce)'));
+  assert.match(phone, /\.fs-hero\.has-image \{ min-height: 338px; padding: 16px 14px; border-radius: 20px; \}/);
+  assert.match(phone, /\.fs-hero\.has-image \.fs-hero__txt \{ max-width: min\(76%, 256px\);[^}]*border-radius: 17px;[^}]*backdrop-filter: blur\(6px\); \}/);
+  assert.match(phone, /\.fs-home \.fs-tile \{ width: 74px; gap: 7px; \}/);
+  assert.match(phone, /\.fs-home \.fs-benefits__list \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/);
+  assert.match(phone, /\.fs-home \.fs-catcards \{ display: flex;[^}]*overflow-x: auto;[^}]*scroll-snap-type: x proximity;/);
+  assert.match(phone, /\.fs-home \.fs-catcard \{ flex: 0 0 148px;[^}]*scroll-snap-align: start; \}/);
 });
 
 await test('the product card: badge, heart, quick-add, price with MRP struck, name, rating with count, swatches with +N', () => {

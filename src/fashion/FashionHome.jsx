@@ -135,10 +135,10 @@ export default function FashionHome() {
   const grid = sortViews(views, 'featured');
   return (
     <div className="fs-home">
+      <Hero />
       <CategoryChips />
       <CategoryTiles tree={tree} />
       <Benefits />
-      <Hero />
       <ShopByCategory tree={tree} />
       <TopBrands views={views} />
       <section className="fs-sec" aria-labelledby="fs-grid-h">
