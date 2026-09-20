@@ -63,21 +63,11 @@ const INTERVAL = 6000;
 // can never render as an empty colour block — see posterFor() below.
 const FALLBACK_POSTER = '/media/hero-poster.jpg';
 
-// Admin-uploaded hero art lives in Supabase Storage and is served at full size
-// (the current slides are a 1.8 MB PNG and a 1.6 MB JPEG). Supabase can render
-// resized, format-negotiated variants from the same object, so we ask for a
-// width-appropriate rendition instead of the original. Non-Supabase paths
-// (our local /media stills) are returned untouched.
-const SB_OBJECT = '/storage/v1/object/public/';
-const SB_RENDER = '/storage/v1/render/image/public/';
-const HERO_WIDTHS = [640, 1024, 1600, 1920];
-
-function isSupabaseObject(src) {
-  return typeof src === 'string' && src.includes(SB_OBJECT) && /supabase\.co/.test(src);
-}
-function heroSrc(src, width) {
-  if (!isSupabaseObject(src)) return src;
-  return `${src.replace(SB_OBJECT, SB_RENDER)}?width=${width}&quality=72`;
+// Admin-uploaded hero art uses its original public Storage URL. The render
+// endpoint is not assumed to be available, so remote art has no generated
+// transform URL or srcset. Local poster variants below remain optimized.
+function heroSrc(src) {
+  return src;
 }
 // Locally-shipped hero stills that have pre-built WebP renditions alongside
 // them (see media/hero-poster-<w>.webp). Keyed by the original path.
@@ -95,8 +85,7 @@ function heroSrcSet(src) {
     const base = src.replace(/\.[a-z]+$/i, '');
     return local.map((w) => `${base}-${w}.webp ${w}w`).join(', ');
   }
-  if (!isSupabaseObject(src)) return undefined;
-  return HERO_WIDTHS.map((w) => `${heroSrc(src, w)} ${w}w`).join(', ');
+  return undefined;
 }
 
 // Desktop artwork is offered through <picture>, so the BROWSER chooses by

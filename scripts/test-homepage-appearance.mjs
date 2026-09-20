@@ -136,14 +136,15 @@ await check('P5 the real DeferredImage defers the sources too: nothing is fetche
   const bare = renderToStaticMarkup(h(RealDeferredImage, { src: '/m.png', alt: '', loading: 'eager' }));
   assert.doesNotMatch(bare, /<picture/);
 });
-await check('P7 the hero offers the desktop artwork the same way, with its rendition srcset', () => {
+await check('P7 hero storage URLs stay direct while local poster renditions and desktop picture selection remain intact', () => {
   // The real helper from Hero.jsx, with the module's other dependencies
   // stubbed — none of them is involved in choosing an image.
   const noop = () => null;
-  const withDesktopSource = component('../src/components/Hero.jsx', 'withDesktopSource', {
-    Link, Icon, ProductImage: noop, HeroCta: noop, branding: {}, heroSlides: [], heroSlidesConfigured: false,
-    homepage: {}, products: [], categories: [], selectMarketplaceHeroProducts: () => [],
-  });
+  const { heroSrc, heroSrcSet, withDesktopSource } = component('../src/components/Hero.jsx',
+    '{ heroSrc, heroSrcSet, withDesktopSource }', {
+      Link, Icon, ProductImage: noop, HeroCta: noop, branding: {}, heroSlides: [], heroSlidesConfigured: false,
+      homepage: {}, products: [], categories: [], selectMarketplaceHeroProducts: () => [],
+    });
   const img = h('img', { className: 'v2-hero__img', src: '/m.png', alt: '' });
   const sb = 'https://gbcnvrymoarcqrvdnnvb.supabase.co/storage/v1/object/public/product-images/hero/d.png';
 
@@ -151,15 +152,29 @@ await check('P7 the hero offers the desktop artwork the same way, with its rendi
   assert.doesNotMatch(bare, /<picture/, 'no desktop image → the bare <img>, byte for byte');
   assert.match(bare, /<img class="v2-hero__img" src="\/m\.png"/);
 
+  assert.equal(heroSrc(sb, 1600), sb, 'the public object URL is the image src without a render-endpoint rewrite');
+  assert.equal(heroSrcSet(sb), undefined, 'remote Storage art has no generated transformed srcset candidates');
+  const remoteImg = renderToStaticMarkup(h('img', { src: heroSrc(sb, 1600), srcSet: heroSrcSet(sb), alt: '' }));
+  assert.match(remoteImg, /src="https:\/\/gbcnvrymoarcqrvdnnvb\.supabase\.co\/storage\/v1\/object\/public\/product-images\/hero\/d\.png"/);
+  assert.doesNotMatch(remoteImg, /srcSet=|render\/image\/public|[?&](?:width|quality)=/, 'the remote <img> has no transformed candidates');
+
   const pic = renderToStaticMarkup(withDesktopSource(sb, img));
   assert.match(pic, /^<picture><source media="\(min-width: 1024px\)"/, 'the source leads, keyed on the desktop boundary');
-  // A Supabase object gets the same width renditions the mobile image gets.
-  assert.match(pic, /render\/image\/public\/product-images\/hero\/d\.png\?width=1600&amp;quality=72 1600w/);
+  assert.match(pic, /srcSet="https:\/\/gbcnvrymoarcqrvdnnvb\.supabase\.co\/storage\/v1\/object\/public\/product-images\/hero\/d\.png"/, 'desktop art also keeps its original public object URL');
+  assert.doesNotMatch(pic, /render\/image\/public|[?&](?:width|quality)=|\s(?:640|1024|1600|1920)w/, 'the desktop source has no generated Supabase renditions');
   assert.match(pic, /sizes="100vw"/);
   assert.match(pic, /<img class="v2-hero__img" src="\/m\.png"/, 'image_url stays the <img>');
+  assert.ok(pic.indexOf('<source') < pic.indexOf('<img'), 'the desktop source still precedes the default image');
 
-  const local = renderToStaticMarkup(withDesktopSource('/media/wide.jpg', img));
-  assert.match(local, /<source media="\(min-width: 1024px\)" srcSet="\/media\/wide\.jpg"/, 'a non-Supabase path is used as-is');
+  const localPoster = '/media/hero-poster.jpg';
+  const localSrcSet = '/media/hero-poster-1024.webp 1024w, /media/hero-poster-1600.webp 1600w';
+  assert.equal(heroSrcSet(localPoster), localSrcSet, 'the shipped poster keeps both pre-built WebP variants');
+  const localImg = renderToStaticMarkup(h('img', { src: heroSrc(localPoster, 1600), srcSet: heroSrcSet(localPoster), sizes: '100vw', alt: '' }));
+  assert.match(localImg, /srcSet="\/media\/hero-poster-1024\.webp 1024w, \/media\/hero-poster-1600\.webp 1600w"/);
+  const local = renderToStaticMarkup(withDesktopSource(localPoster, img));
+  assert.match(local, /<source media="\(min-width: 1024px\)" srcSet="\/media\/hero-poster-1024\.webp 1024w, \/media\/hero-poster-1600\.webp 1600w" sizes="100vw"/,
+    'desktop <picture> keeps the local poster rendition srcset');
+  assert.match(local, /<img class="v2-hero__img" src="\/m\.png"/, 'desktop <picture> retains its default image');
 });
 await check('P6 the media query is the ONE boundary, and it is the stylesheet\'s desktop boundary', () => {
   // Both artwork renderers name the same query, and it is min-width 1024 —
