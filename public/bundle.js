@@ -51030,15 +51030,7 @@ function Contact() {
 const SHIPPING_METHODS = [{
   name: 'Standard',
   fee: '₹0',
-  note: 'Free on every order, at any basket value.'
-}, {
-  name: 'Express',
-  fee: '₹79',
-  note: 'A flat charge, added at checkout.'
-}, {
-  name: 'Scheduled',
-  fee: '₹49',
-  note: 'A flat charge for the Scheduled option at checkout.'
+  note: 'Free on every eligible order. Delivery time depends on location and courier serviceability.'
 }];
 
 // key -> { title, blurb, facts[], ownerLabel, showContact }
@@ -51046,27 +51038,33 @@ function documents(name) {
   return {
     shipping: {
       title: 'Shipping Policy',
-      blurb: 'The delivery options offered at checkout, and what each costs.',
+      blurb: 'How SORA LIFE dispatches and delivers eligible orders across India.',
       methods: SHIPPING_METHODS,
       facts: [{
-        heading: 'Delivery charges',
-        body: 'Each method carries the flat charge shown above, applied at checkout regardless of order value. There is no minimum-order threshold for free shipping — Standard delivery is free on every order.'
+        heading: 'Shipping coverage',
+        body: 'SORA LIFE ships eligible orders across India, subject to product availability, courier serviceability and applicable delivery restrictions.'
+      }, {
+        heading: 'Dispatch time',
+        body: 'Orders are ordinarily dispatched within 2–3 business days after successful order confirmation. Dispatch may take longer during public holidays, unusually high order volumes or circumstances outside our reasonable control.'
+      }, {
+        heading: 'Standard delivery',
+        body: 'Standard delivery is free on eligible orders and generally takes approximately 6–7 business days. Actual delivery time depends on the customer’s location, courier serviceability and the movement of the shipment after dispatch.'
       }, {
         heading: 'Delivery estimates',
-        body: 'Checkout presents the current delivery options and may show an estimated window before payment. No fixed delivery timeline is promised on this page.'
+        body: 'Delivery timelines are estimates and are not guaranteed delivery dates. Weather, public holidays, carrier delays, remote locations, operational disruptions and other circumstances outside our reasonable control may result in additional delivery time.'
       }, {
-        heading: 'Cash on delivery',
-        body: 'Cash on delivery is available at checkout where eligible for your order.'
+        heading: 'Delivery details',
+        body: 'Customers are responsible for providing a complete and accurate delivery address, PIN code and contact information. Incorrect or incomplete information may delay delivery.'
       }, {
         heading: 'Tracking',
         body: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-          children: ["Once an order ships, its status \u2014 and a tracking link, when the seller provides one \u2014 appears in ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          children: ["Once an order ships, its latest status \u2014 and a tracking link when tracking information is available \u2014 appears in ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/account/orders",
             children: "your orders"
           }), "."]
         })
       }],
-      ownerLabel: 'shipping',
+      ownerLabel: null,
       showContact: true
     }
   };
