@@ -8,7 +8,8 @@
 // bar under it; the header transparent until the page scrolls and solid
 // after; every other page's header solid with the delivery row and the
 // search bar inside it, as before; the copy's measured type scale; the
-// trust band as one quiet row; the circles' snap, fade and chevron; and
+// trust band as one quiet row on larger screens and a compact phone grid;
+// the circles' snap, fade and chevron; and
 // the isolation of everything else. NO NETWORK, NO DATABASE, NO BROWSER.
 //
 //   node scripts/test-homeliving-hero.mjs
@@ -87,8 +88,9 @@ await test('the hero is a <picture>: the portrait below 768px, the landscape fro
   assert.match(css, /\.hl-hero__slide \{ position: relative; flex: 0 0 100%; aspect-ratio: 3 \/ 2; max-height: 820px; display: grid; align-items: start; \}/, 'the landscape at 3:2, capped');
   assert.match(css, /\.hl-hero__slide > picture \{ display: block; position: absolute; inset: 0; \}/, 'the picture is out of the grid flow');
   assert.match(css, /\.hl-hero__img \{ display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; \}/, 'the crop favours the top');
-  // Below 768px the hero is what the first screen leaves it (the tools block, the trust band, the fixed nav and 10px of slack subtracted from the small viewport), so the band ends just above the nav on first paint; the crop keeps the photograph's top.
-  assert.match(section(css, '@media (max-width: 767px)', '@media (max-width: 599px)'), /\.hl-hero__slide \{ aspect-ratio: auto; height: calc\(100vh - 292px - env\(safe-area-inset-bottom, 0px\)\); height: calc\(100svh - 292px - env\(safe-area-inset-bottom, 0px\)\); min-height: 300px; max-height: 700px; \}\n\s*\.hl-hero__img \{ object-position: 50% 0; \}/, 'the portrait below 768px, sized to the first screen');
+  // Below 768px the portrait is shorter than a full screen and keeps the image's
+  // useful upper area, making the utility and shopping content arrive sooner.
+  assert.match(section(css, '@media (max-width: 767px)', '@media (max-width: 599px)'), /\.hl-hero__slide \{ aspect-ratio: auto; height: clamp\(410px, 54svh, 480px\); min-height: 410px; max-height: 480px; \}\n\s*\.hl-hero__img \{ object-position: 50% 4%; \}/, 'the portrait below 768px is compact and bounded');
   assert.doesNotMatch(css, /\.hl-hero__note \{[^}]*position: absolute/, 'the note is in the copy block, not pinned top-right under the header');
 });
 
@@ -113,7 +115,7 @@ await test('the floating header: fixed height the page is pulled up by, transpar
   assert.match(layoutSrc, /\{!over && <DeliveryRow \/>\}\n\s*\{!over && <SearchBar \/>\}/); assert.match(layoutSrc, /\{!over && <BottomNav \/>\}/);
 });
 
-await test('the copy: on the landscape, top-aligned on the bare wall left, 40% wide (42% on a tablet, the note dropped there); on the portrait, upper-left under the header — one line of headline from 360px, three short lines of sub, the CTA above the sofa', () => {
+await test('the copy: on the landscape, top-aligned on the bare wall left, 40% wide (42% on a tablet, the note dropped there); on the portrait, compact in a premium frosted panel under the header', () => {
   assert.match(css, /\.hl-hero__inner \{ position: relative; z-index: 1; width: 100%; padding-top: calc\(var\(--hl-hdr-h\) \+ 56px\); padding-bottom: 56px; \}/);
   assert.match(css, /\.hl-hero__txt \{ max-width: 40%; \}/);
   assert.match(css, /\.hl-hero__slide::before \{[^}]*linear-gradient\(90deg, rgba\(251, 248, 241, \.5\) 0%, rgba\(251, 248, 241, \.42\) 28%, rgba\(251, 248, 241, 0\) 50%\)/, 'a wash the wall shows through (eyebrow 6.4:1, sub 7.3:1 measured at 1280)');
@@ -122,14 +124,17 @@ await test('the copy: on the landscape, top-aligned on the bare wall left, 40% w
   const tablet = section(css, '@media (max-width: 1019px)', '@media (max-width: 767px)');
   assert.match(tablet, /\.hl-hero__inner \{ padding-top: calc\(var\(--hl-hdr-h\) \+ 32px\); padding-bottom: 40px; \}/);
   assert.match(tablet, /\.hl-hero__txt \{ max-width: 42%; \}/); assert.match(tablet, /\.hl-hero__note \{ display: none; \}/);
-  // The portrait: measured at 390 the CTA ends at 44% of the hero with 43px above the sofa (48% / 25px at 360; 53% / 2px at 320, the floor of this scale).
+  // The portrait is intentionally shorter than a full viewport so the collection
+  // begins to appear on first scroll, while the copy remains readable over the image.
   const portrait = section(css, '@media (max-width: 767px)', '@media (max-width: 599px)');
-  assert.match(portrait, /\.hl-hero__slide::before \{ background: linear-gradient\(180deg, rgba\(251, 248, 241, 0\) 0%, rgba\(251, 248, 241, \.38\) 18%, rgba\(251, 248, 241, \.38\) 42%, rgba\(251, 248, 241, 0\) 60%\); \}/, 'the wash starts clear of the header scrim');
-  assert.match(portrait, /\.hl-hero \.hl-hero__inner \{ padding-top: calc\(var\(--hl-hdr-h\) \+ 4px\); padding-bottom: 26px; \}/, 'outranks the phone .hl-wrap reset that follows it');
-  assert.match(portrait, /\.hl-hero__txt \{ max-width: min\(100%, 320px\); \}/);
-  assert.match(portrait, /\.hl-hero__eyebrow \{ font-size: 11px; margin-bottom: 6px; \}/);
-  assert.match(portrait, /\.hl-hero__h \{ font-size: clamp\(26px, 8\.2vw, 32px\); \}/, '"Comfort Lives Here" on one line at 360px and up');
-  assert.match(portrait, /\.hl-hero__sub \{ font-size: 14px; line-height: 1\.35; max-width: 30ch; margin: 6px 0 10px; \}/);
+  assert.match(portrait, /\.hl-hero__slide \{ aspect-ratio: auto; height: clamp\(410px, 54svh, 480px\); min-height: 410px; max-height: 480px; \}/, 'the mobile hero is compact and bounded');
+  assert.match(portrait, /\.hl-hero__slide::before \{ background: linear-gradient\(180deg, rgba\(251, 248, 241, \.08\) 0%, rgba\(251, 248, 241, \.2\) 38%, rgba\(251, 248, 241, 0\) 68%\); \}/, 'a light wash preserves the photograph');
+  assert.match(portrait, /\.hl-hero \.hl-hero__inner \{ padding-top: calc\(var\(--hl-hdr-h\) \+ 10px\); padding-bottom: 34px; \}/, 'outranks the phone .hl-wrap reset that follows it');
+  assert.match(portrait, /\.hl-hero__txt \{ max-width: min\(100%, 300px\); padding: 14px 16px 15px;[^}]*border-radius: 18px;[^}]*backdrop-filter: blur\(7px\); \}/, 'a restrained frosted editorial panel keeps the copy readable');
+  assert.match(portrait, /\.hl-hero__eyebrow \{ font-size: 10px; margin-bottom: 6px; \}/);
+  assert.match(portrait, /\.hl-hero__h \{ font-size: clamp\(27px, 7\.4vw, 30px\); line-height: 1; \}/);
+  assert.match(portrait, /\.hl-hero__sub \{ font-size: 13px; line-height: 1\.4; max-width: 30ch; margin: 7px 0 11px; \}/);
+  assert.match(portrait, /\.hl-hero \.hl-cta \{ min-height: 40px; padding: 0 16px; font-size: 13\.5px;/, 'the CTA scales with the compact portrait composition');
   assert.doesNotMatch(section(css, '@media (max-width: 599px)'), /\.hl-hero__(h|sub|txt|eyebrow|inner|slide|img) \{/, 'the phone block leaves the hero to the portrait block');
 });
 
@@ -152,7 +157,7 @@ await test('the category and product pages keep the solid bar with the delivery 
 console.log('\n— The trust band and the category scroller —');
 // ============================================================
 
-await test('the trust band: one quiet row — an 18px icon, the label, the sub-label — bordered top and bottom, four across; stacked labels on a tablet; a sideways scroller on a phone; the promo keeps its 46px icon rings', () => {
+await test('the trust band: one quiet row on larger screens, a fully visible two-column phone grid, and the promo keeps its 46px icon rings', () => {
   const strip = home.slice(home.indexOf('<ul class="hl-trust"'), home.indexOf('</ul>', home.indexOf('<ul class="hl-trust"')));
   assert.equal((strip.match(/<li><span class="hl-trust__icon"><svg width="18" height="18"/g) || []).length, 4);
   assert.match(css, /\.hl-trust \{ list-style: none; margin: 18px 0 0; padding: 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-top: 1px solid var\(--hl-line\); border-bottom: 1px solid var\(--hl-line\); \}/);
@@ -165,7 +170,8 @@ await test('the trust band: one quiet row — an 18px icon, the label, the sub-l
   const phone = section(css, '@media (max-width: 599px)');
   assert.match(phone, /\.hl-trust \{ margin: 14px -12px 0; padding: 10px 12px; gap: 18px; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; \}/);
   assert.match(phone, /\.hl-trust li \{ flex: none; \}/);
-  assert.doesNotMatch(css, /\.hl-trust \{[^}]*grid-template-columns/, 'never a 2×2 grid');
+  assert.match(phone, /\.hl-home \.hl-trust \{ margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); gap: 8px; overflow: visible; border: 0; \}/, 'the homepage overrides the fallback scroller with a 2×2 grid');
+  assert.match(phone, /\.hl-home \.hl-trust li \{ min-height: 58px;[^}]*border-radius: 14px;/, 'each trust item is a readable compact tile');
   assert.match(home, /<ul class="hl-promo__badges" aria-label="Why it matters"><li><span class="hl-trust__icon"><svg width="22" height="22"/, 'the promo badges as before');
 });
 

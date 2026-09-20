@@ -299,14 +299,20 @@ await test('homeliving.css: every selector is under .hl; only transform and opac
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.hl \*, \.hl \*::before, \.hl \*::after \{ transition: none !important; \}/);
 });
 
-await test('390px: the portrait hero with the copy upper-left over a top-down wash, circles and cards scroll sideways, the trust band scrolls as one row, promo art on top, bottom nav fixed above the safe area', () => {
+await test('390px: the shorter portrait hero, raised utility dock, compact editorial modules, two-column trust grid, and fixed bottom nav form a balanced mobile storefront', () => {
   const css = read('src/styles/homeliving.css');
   const phone = css.slice(css.indexOf('@media (max-width: 767px)'), css.indexOf('@media (prefers-reduced-motion'));
+  const homePhone = css.slice(css.indexOf('/* Homepage composition:'));
   assert.match(phone, /\.hl-hero__slide::before \{ background: linear-gradient\(180deg/);
-  assert.match(phone, /\.hl-hero__txt \{ max-width: min\(100%, 320px\); \}/);
+  assert.match(phone, /\.hl-hero__slide \{ aspect-ratio: auto; height: clamp\(410px, 54svh, 480px\); min-height: 410px; max-height: 480px; \}/);
+  assert.match(phone, /\.hl-hero__txt \{ max-width: min\(100%, 300px\);[^}]*border-radius: 18px;/);
   assert.match(phone, /\.hl-circles \{ display: flex;[^}]*overflow-x: auto/); assert.match(phone, /\.hl-circle \{ flex: 0 0 88px/);
   assert.match(phone, /\.hl-row \{ display: flex;[^}]*scroll-snap-type: x mandatory/); assert.match(phone, /\.hl-card \{ flex: 0 0 168px; scroll-snap-align: start; \}/);
-  assert.match(phone, /\.hl-trust \{ margin: 14px -12px 0;[^}]*overflow-x: auto/, 'one row that scrolls, never 2×2');
+  assert.match(homePhone, /\.hl-home \.hl-tools \{ position: relative;[^}]*width: calc\(100% - 24px\); margin: -18px auto 0;[^}]*border-radius: 18px;/, 'the delivery and search controls become one raised utility dock');
+  assert.match(homePhone, /\.hl-home \.hl-trust \{ margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);[^}]*overflow: visible;/, 'the homepage trust items are fully visible in a 2×2 grid');
+  assert.match(homePhone, /\.hl-home \.hl-cats \{[^}]*margin-left: 10px;[^}]*border-radius: 22px;/, 'categories sit in a compact premium module');
+  assert.match(homePhone, /\.hl-home \.hl-circle \{ flex-basis: 76px;/, 'the category tiles reveal more choices in the viewport');
+  assert.match(homePhone, /\.hl-home \.hl-card \{ flex-basis: 154px;/, 'featured cards are slightly zoomed out without changing their content');
   assert.match(phone, /\.hl-promo__art \{ position: static; width: 100%; aspect-ratio: 16 \/ 7; \}/);
   assert.match(css, /\.hl-nav \{ position: fixed; left: 0; right: 0; bottom: 0;[^}]*env\(safe-area-inset-bottom, 0px\)/);
   assert.match(css, /\.hl \{ padding-bottom: calc\(var\(--hl-nav-h\) \+ env\(safe-area-inset-bottom, 0px\)\); \}/);
