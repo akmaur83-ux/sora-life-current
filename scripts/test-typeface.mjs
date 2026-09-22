@@ -79,7 +79,7 @@ await test('the optical-weight map on the measured storefront sheets: the .serif
   assert.match(fashion, /\.fs-brandcard__logo \{ font-size: 18px; letter-spacing: \.18em; text-transform: uppercase; text-align: center; font-weight: 500; \}/);
   assert.match(fashion, /\.fs-hero__h \{ margin: 0; font-size: clamp\(38px, 5vw, 64px\); line-height: 1; letter-spacing: -\.01em; \}/);
   assert.match(grocery, /\.gs-hero__h \{ margin: 0; font-size: clamp\(34px, 4\.6vw, 58px\); line-height: 1\.02; letter-spacing: -\.01em; \}/);
-  assert.match(homeliving, /\.hl-hero__h \{ margin: 0; font-size: clamp\(42px, 5\.6vw, 76px\); line-height: \.98; letter-spacing: -\.012em; color: var\(--slv2-f800\); \}/);
+  assert.match(homeliving, /\.hl-hero__h \{ margin: 0; font-size: clamp\(38px, 5vw, 68px\); line-height: \.98; letter-spacing: -\.012em; color: var\(--slv2-f800\); \}/);
   assert.match(lifestyle, /\.ls-hero__h \{ margin: 0 0 6px; font-size: var\(--ls-hero-h\); line-height: 1; letter-spacing: -\.015em; color: var\(--slv2-ink\); \}/);
   assert.match(lifestyle, /\.ls-banner__h \{ margin: 0 0 6px; font-size: 24px; line-height: 1\.02; letter-spacing: -\.015em; \}/);
   // Nothing at 600+ on a display-font rule in these sheets any more.
