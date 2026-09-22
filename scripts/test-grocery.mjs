@@ -476,11 +476,16 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
   // (A later store's own sheet — homeliving.css — is that store's, pinned by test-homeliving.mjs.)
   // The homepage store doorway (FashionBanner.jsx + fashion-banner.css) was redesigned in 71eb538 — an approved wellness change.
   // The display typeface swap (test-typeface.mjs) touched index.html and most stylesheets — an approved change; that suite pins the sheets it must not have touched.
-  const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$)|src\/pages\/(?!Home\.jsx$)|src\/components\/(?!Header\.jsx$|FashionBanner\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/)/;
+  // Three approved changes landed beside this section and moved files these pins guard:
+  //   86ea8cf  src/components/Hero.jsx   — the wellness hero drops the Supabase render-transform URLs (test-homepage-appearance.mjs)
+  //   e58317c  src/fashion/FashionHome.jsx — the campaign hero leads /fashion (test-fashion.mjs pins the new order)
+  //   a651320  src/pages/Legal.jsx       — the shipping policy rewrite (test-company-surfaces.mjs pins the policy)
+  const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$|FashionHome\.jsx$)|src\/pages\/(?!Home\.jsx$|Legal\.jsx$)|src\/components\/(?!Header\.jsx$|FashionBanner\.jsx$|Hero\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/)/;
   const bad = [...changed].filter((f) => untouchable.test(f));
   assert.deepEqual(bad, [], `untouchable files changed: ${bad.join(', ')}`);
-  // src/pages/Home.jsx mounts the store doorways (test-store-doorway.mjs pins its exact diff); everything else under src/pages is untouched.
-  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'api', 'src/pages', ':(exclude)src/pages/Home.jsx', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
+  // src/pages/Home.jsx mounts the store doorways (test-store-doorway.mjs pins its exact diff) and src/pages/Legal.jsx carries the shipping-policy
+  // rewrite (a651320, pinned by test-company-surfaces.mjs); everything else under src/pages is untouched, and api/ is untouched entirely.
+  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'api', 'src/pages', ':(exclude)src/pages/Home.jsx', ':(exclude)src/pages/Legal.jsx', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
 });
 
 await test('no migration beyond 0034, no dependency change since the baseline', () => {

@@ -273,12 +273,24 @@ await test(`the eight fashion pages render byte-identically from the working tre
   // The store switcher (test-store-nav.mjs) later replaced the lone "Wellness store" link with a
   // two-link nav; normalise that block back to the old link so this stays a data-layer comparison.
   const OLD_BACK = '<a class="fs-hdr__back" href="/"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg> Wellness store</a>';
-  const normalise = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, html.replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, OLD_BACK)]));
-  assert.deepEqual(normalise(now), normalise(then), 'identical markup for every page');
+  // e58317c moved the campaign hero to the top of /fashion (test-fashion.mjs pins the new
+  // order). The block itself is unchanged, so lift it out of both renders and compare it
+  // separately: this assertion stays a data-layer comparison, not a layout one.
+  const HERO_BLOCK = /<section class="fs-hero[^"]*"[\s\S]*?<\/section>/;
+  const liftHero = (html) => [HERO_BLOCK.exec(html)?.[0] || '', html.replace(HERO_BLOCK, '')];
+  const normalise = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(html.replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, OLD_BACK))[1]]));
+  const heroes = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(html)[0]]));
+  assert.deepEqual(normalise(now), normalise(then), 'identical markup for every page, the campaign hero aside');
+  assert.deepEqual(heroes(now), heroes(then), 'the campaign hero block itself is byte-identical — only its position changed');
   assert.match(a['/fashion/p/meadow-linen-shirt-sage?size=M&colour=Sage'], /fs-pick__note is-out/, 'the per-combination stock state survives');
   // And the FASHION source that renders those pages is untouched: only the data layer moved.
   // (FashionLayout.jsx and fashion.css carry the store switcher since d6a0c20 — pinned by test-store-nav.mjs.)
-  for (const rel of ['src/fashion/FashionHome.jsx', 'src/fashion/FashionListing.jsx', 'src/fashion/FashionProductPage.jsx', 'src/fashion/FashionProductCard.jsx', 'src/fashion/FashionCatalogue.jsx', 'src/fashion/FashionVariantPicker.jsx']) {
+  // FashionHome.jsx moved its campaign hero to the top of the page in e58317c — one JSX line, the same
+  // blocks in a new order, pinned by test-fashion.mjs and by the two render comparisons above.
+  const heroMove = (t) => t.split('\n').filter((l) => l.trim() !== '<Hero />').join('\n')
+    .replace('      <ShopByCategory tree={tree} />', '      <Hero />\n      <ShopByCategory tree={tree} />');
+  assert.equal(heroMove(read('src/fashion/FashionHome.jsx')), atBaseline('src/fashion/FashionHome.jsx'), 'FashionHome.jsx: the hero moved, nothing else');
+  for (const rel of ['src/fashion/FashionListing.jsx', 'src/fashion/FashionProductPage.jsx', 'src/fashion/FashionProductCard.jsx', 'src/fashion/FashionCatalogue.jsx', 'src/fashion/FashionVariantPicker.jsx']) {
     assert.equal(read(rel), atBaseline(rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
 });

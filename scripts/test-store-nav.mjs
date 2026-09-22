@@ -110,7 +110,13 @@ await test('the eight fashion pages equal the baseline render once the stores bl
     assert.match(html, /<nav class="fs-hdr__stores" aria-label="Other stores"><a class="fs-hdr__back" href="\/"><svg[^>]*>[\s\S]*?<\/svg> Wellness store<\/a><a class="fs-hdr__back" href="\/grocery">Grocery <svg[\s\S]*?<\/svg><\/a><a class="fs-hdr__back" href="\/homeliving">Home &amp; Living <svg[\s\S]*?<\/svg><\/a><a class="fs-hdr__back" href="\/lifestyle">Lifestyle <svg/, `${p}: the other stores, wellness first`);
     assert.doesNotMatch(html, /fs-hdr__back" href="\/fashion"/, `${p}: fashion never links to itself`);
     const stripped = html.replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, '<a class="fs-hdr__back" href="/"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg> Wellness store</a>');
-    assert.equal(stripped, then[p], `${p}: otherwise byte-identical`);
+    // e58317c moved the campaign hero to the top of /fashion (test-fashion.mjs pins the new order).
+    // The block itself is unchanged, so compare it separately and the page without it — this stays a
+    // switcher comparison rather than a layout one.
+    const HERO_BLOCK = /<section class="fs-hero[^"]*"[\s\S]*?<\/section>/;
+    const hero = (html) => HERO_BLOCK.exec(html)?.[0] || '';
+    assert.equal(hero(stripped), hero(then[p]), `${p}: the campaign hero block is byte-identical`);
+    assert.equal(stripped.replace(HERO_BLOCK, ''), then[p].replace(HERO_BLOCK, ''), `${p}: otherwise byte-identical`);
   }
   const layout = read('src/fashion/FashionLayout.jsx');
   assert.match(layout, /<Link to="\/grocery" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Grocery store<\/Link>\n\s+<Link to="\/homeliving" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Home &amp; Living store<\/Link>\n\s+<Link to="\/lifestyle" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Lifestyle store<\/Link>\n\s+<Link to="\/" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronLeft" size=\{16\} \/> Back to the wellness store<\/Link>/, 'the drawer lists the other stores beside the way back');
