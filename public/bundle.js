@@ -3152,10 +3152,10 @@ let branding = {
 };
 
 // `freeShippingThreshold` used to live here. There is no such threshold:
-// shipping is a flat per-method fee (Standard ₹0, Express ₹79, Scheduled
-// ₹49) at every basket size — see api/_lib/pricing.js, which is the only
-// authority on what a customer is charged. The key was read by nothing, so
-// it was a stale contradiction waiting to be re-used.
+// Standard is the only delivery method and it is free at every basket size —
+// see api/_lib/pricing.js, which is the only authority on what a customer is
+// charged. The key was read by nothing, so it was a stale contradiction
+// waiting to be re-used.
 let announcement = {
   notices: ['FREE STANDARD SHIPPING', 'COD Available',
   // Marketplace-neutral. The storefront carries many labels, so the built-in
@@ -32576,7 +32576,7 @@ const LEGAL_DEFAULTS = {
       "a": "You can check out as a guest. Creating an account keeps your order history, saved addresses and wishlist together and lets you reorder more easily."
     }, {
       "q": "What are the delivery options and charges?",
-      "a": "Standard, Express and Scheduled delivery are offered, each with its own charge. The current options and any delivery estimate are shown at checkout before you pay. See the Shipping page for the full breakdown."
+      "a": "Standard delivery is the only method offered, and it is free on eligible orders. The current option and any delivery estimate are shown at checkout before you pay. See the Shipping page for the full breakdown."
     }, {
       "q": "How is my payment handled?",
       "a": "Your order total is recalculated on our server before payment, and online payments are processed by Razorpay — Sora Life does not receive or store your full card details. Cash on delivery is also presented as a payment option at checkout."
@@ -43457,13 +43457,13 @@ function deliveryEstimate() {
 }
 
 /**
- * The three delivery methods a customer can actually choose, with the fee
- * each one actually costs.
+ * The delivery method a customer can actually choose, with the fee it costs.
  *
- * AUTHORITY: api/_lib/pricing.js — `DELIVERY_FEES = { std: 0, exp: 79, sched: 49 }`
- * is the only thing that decides what is charged. This list is display copy for
- * the PDP and must be kept in step with it; Checkout.jsx carries the same three
- * rows for the picker itself.
+ * AUTHORITY: api/_lib/pricing.js — `DELIVERY_FEES = { std: 0 }` is the only
+ * thing that decides what is charged. This list is display copy for the PDP and
+ * must be kept in step with it; Checkout.jsx carries the same row for the
+ * picker itself. Express and Scheduled were withdrawn — see the Shipping
+ * Policy, which documents Standard only.
  *
  * The fee is FLAT AT EVERY BASKET SIZE. There is no free-shipping threshold,
  * and no surface may imply one — a `freeShippingThreshold` setting was removed
@@ -43503,18 +43503,8 @@ function deliveryOptions() {
   return [{
     id: 'std',
     label: 'Standard',
-    eta: '3–5 business days',
+    eta: '6–7 business days',
     price: 0
-  }, {
-    id: 'exp',
-    label: 'Express',
-    eta: '1–2 business days',
-    price: 79
-  }, {
-    id: 'sched',
-    label: 'Scheduled',
-    eta: 'Choose your date',
-    price: 49
   }];
 }
 
@@ -43873,7 +43863,7 @@ function ProductDeliveryInfo() {
     }
     setChecked({
       ok: true,
-      message: `Delivering to ${pin}. ${options[0].eta} on Standard; faster methods are shown at checkout.`
+      message: `Delivering to ${pin}. ${options[0].eta} on Standard delivery.`
     });
   };
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -47150,22 +47140,18 @@ function verifyPayment(response) {
 
 const ADDRESS_FIELDS = ['firstName', 'lastName', 'phone', 'address', 'apartment', 'landmark', 'city', 'state', 'pin'];
 const STEPS = ['Shipping', 'Delivery', 'Payment'];
-const DELIVERY = [{
+const DELIVERY = [
+// Standard only — brands ship standard, and the Shipping Policy documents no
+// other method. api/_lib/pricing.js lists no other fee, so nothing else can
+// be charged even if this list were bypassed. The window matches the policy's
+// "approximately 6–7 business days": a shorter promise here would be a
+// promise the policy does not make.
+{
   id: 'std',
   label: 'Standard',
-  eta: '3–5 business days',
+  eta: '6–7 business days',
   price: 0,
   note: 'Free'
-}, {
-  id: 'exp',
-  label: 'Express',
-  eta: '1–2 business days',
-  price: 79
-}, {
-  id: 'sched',
-  label: 'Scheduled',
-  eta: 'Pick a date at doorstep',
-  price: 49
 }];
 const EMPTY_FORM = {
   email: '',
@@ -47434,18 +47420,18 @@ function Checkout() {
     };
   }, [placed]);
 
-  // Flat per-method fee at every basket size — Standard ₹0, Express ₹79,
-  // Scheduled ₹49 — matching api/_lib/pricing.js exactly. There is no
-  // basket-value threshold: an earlier version waived the fee on larger
-  // baskets and quoted a cheaper total than the server actually charged.
+  // Standard ₹0 at every basket size, matching api/_lib/pricing.js exactly —
+  // it lists no other method, so nothing else can be charged. There is no
+  // basket-value threshold: an earlier version waived a paid method's fee on
+  // larger baskets and quoted a cheaper total than the server actually charged.
   const deliveryFee = DELIVERY.find(d => d.id === delivery)?.price || 0;
   const shipBase = deliveryFee;
   const total = Math.max(0, subtotal + shipBase);
 
-  // Live server pricing for the CHOSEN delivery method, including the coupon
-  // carried over from the cart. Switching Express to Standard re-quotes, so
-  // the summary always reflects the option actually selected rather than
-  // waiting for create-order to correct it.
+  // Live server pricing for the chosen delivery method, including the coupon
+  // carried over from the cart. Changing the selection re-quotes, so the
+  // summary always reflects the option actually selected rather than waiting
+  // for create-order to correct it.
   const quote = useCartQuote(cartDetailed, couponCode, delivery);
   if (placed) {
     return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
