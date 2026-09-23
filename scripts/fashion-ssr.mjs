@@ -101,7 +101,10 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
   const added = [];
   const useStore = () => ({ cartCount, wishCount: 0, addFashionToCart: (view, variant, qty = 1) => { added.push({ id: view.id, variantId: variant?.id, qty }); if (onAdd) onAdd(view, variant, qty); return true; } });
   const pdpRules = await import(pathToFileURL(resolve(ROOT, 'src/lib/fashionPdp.js')).href);
-  const pdpContent = { deliveryEstimate: () => ({ range: 'Confirmed at checkout', days: 'Based on your delivery address and chosen method' }), deliveryOptions: () => [{ id: 'std', label: 'Standard', eta: '3–5 business days', price: 0 }, { id: 'exp', label: 'Express', eta: '1–2 business days', price: 79 }, { id: 'sched', label: 'Scheduled', eta: 'Choose your date', price: 49 }] };
+  // The real module, not a copy of it: a frozen stub here meant the suites
+  // asserted the harness while the app drifted underneath them. Loaded from
+  // ROOT, so a baseline comparison reads that tree's copy.
+  const pdpContent = await import(pathToFileURL(resolve(ROOT, 'src/data/pdpContent.js')).href);
   const useCustomerAuth = () => ({ session, loading: false });
   const branding = { siteName: 'SORA LIFE', tagline: 'HEALTH & WELLNESS' };
   const catalogue = loadModule('src/fashion/FashionCatalogue.jsx', { getFashionCategories: async () => [], getFashionProducts: async () => [], buildTree: rules.buildTree, productView: rules.productView });

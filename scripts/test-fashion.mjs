@@ -418,7 +418,9 @@ await test('routes and the untouchables: /fashion, c/:slug, p/:slug are wired; c
   // create-order, the quote). What stays closed: Razorpay itself, auth, the creator programme, the coupon rules,
   // CategorySpotlight and the wellness PDP, the ingest/deactivation/gallery scripts. The wellness Header
   // was opened by the store-switcher task (links only; test-store-nav.mjs pins its exact diff).
-  const untouchable = /^(src\/pages\/(Product|Category|Shop)\.jsx|src\/lib\/(customerAuth\.jsx|adminAuth\.jsx|couponRules\.js|couponState\.js|creator[A-Za-z]*\.js)|src\/components\/(CategorySpotlight|ProductCard)\.jsx|src\/components\/(category|pdp)\/|api\/_lib\/(razorpay|coupons|attribution)\.js|api\/razorpay\/(verify|webhook)\.js|api\/coupons\/|api\/creator\/|scripts\/(ingest|deactivate|gallery))/;
+  // ProductDeliveryInfo.jsx is the one file under src/components/pdp/ the Express/Scheduled
+  // withdrawal had to touch — it advertised the withdrawn methods (test-company-surfaces.mjs).
+  const untouchable = /^(src\/pages\/(Product|Category|Shop)\.jsx|src\/lib\/(customerAuth\.jsx|adminAuth\.jsx|couponRules\.js|couponState\.js|creator[A-Za-z]*\.js)|src\/components\/(CategorySpotlight|ProductCard)\.jsx|src\/components\/category\/|src\/components\/pdp\/(?!ProductDeliveryInfo\.jsx$)|api\/_lib\/(razorpay|coupons|attribution)\.js|api\/razorpay\/(verify|webhook)\.js|api\/coupons\/|api\/creator\/|scripts\/(ingest|deactivate|gallery))/;
   assert.deepEqual(changed.filter((f) => untouchable.test(f)), [], 'nothing on the do-not-touch list changed');
 });
 

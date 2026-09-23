@@ -383,11 +383,26 @@ await test('the wellness, fashion and grocery storefronts changed only by the ap
   //   86ea8cf  src/components/Hero.jsx   — the wellness hero drops the Supabase render-transform URLs (test-homepage-appearance.mjs)
   //   e58317c  src/fashion/FashionHome.jsx — the campaign hero leads /fashion (test-fashion.mjs pins the new order)
   //   a651320  src/pages/Legal.jsx       — the shipping policy rewrite (test-company-surfaces.mjs pins the policy)
-  const allowed = /^(src\/homeliving\/|src\/lib\/homeliving[A-Za-z]*\.js$|src\/pages\/Home\.jsx$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|img\/doorway-|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|scripts\/|supabase\/migrations\/(0035_homeliving_store\.sql|rollback\/0035_homeliving_store_down\.sql)$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/styles\/v2-header\.css$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|img\/homeliving-|public\/|reports\/)/;
+  // Express and Scheduled were withdrawn — brands ship standard, and the published Shipping Policy
+  // documents Standard only. That edited the fee map (api/_lib/pricing.js), the checkout picker,
+  // the PDP's display copy (src/data/pdpContent.js) and the PDP delivery panel, and nothing else.
+  // test-company-surfaces.mjs pins the fee map against the policy; test-payment-hardening.mjs,
+  // test-payment-logic.mjs and test-commerce-pricing.mjs pin that a withdrawn method cannot be charged.
+  const allowed = /^(src\/homeliving\/|src\/lib\/homeliving[A-Za-z]*\.js$|src\/pages\/Home\.jsx$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|img\/doorway-|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|scripts\/|supabase\/migrations\/(0035_homeliving_store\.sql|rollback\/0035_homeliving_store_down\.sql)$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/styles\/v2-header\.css$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|img\/homeliving-|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/lib/fashionApi.js', 'src/data/groceryHomepage.js', 'src/grocery/GroceryHome.jsx', 'src/styles/layout.css']) { // fashion.css and grocery.css carry the typeface map now (test-typeface.mjs pins it)
-    assert.equal(read(rel), atCommit(BASELINE_SHA, rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
+    // Express and Scheduled were withdrawn (test-company-surfaces.mjs pins the fee map against the
+    // published policy; the three payment suites pin that a withdrawn method cannot be charged).
+    // For the two files that carries — the fee map and the checkout picker — normalise that one
+    // declaration and the comments around it; every other file below stays a byte comparison.
+    const sansDelivery = (t) => (/DELIVERY_FEES = \{|const DELIVERY = \[/.test(t)
+      ? t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+        .replace(/export const DELIVERY_FEES = \{[^}]*\};/, 'DELIVERY_FEES')
+        .replace(/const DELIVERY = \[[\s\S]*?\n\];/, 'DELIVERY')
+        .split('\n').filter((l) => l.trim()).join('\n')
+      : t);
+    assert.equal(sansDelivery(read(rel)), sansDelivery(atCommit(BASELINE_SHA, rel)), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
   // The three touched shells differ from the baseline by their switcher lines only.
   const onlySwitcher = (rel, keep) => {

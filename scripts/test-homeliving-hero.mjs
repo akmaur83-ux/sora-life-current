@@ -215,11 +215,26 @@ await test('isolation: the store\'s own homepage files, its sheet, the two photo
   //   e58317c  src/fashion/FashionHome.jsx — the campaign hero leads /fashion (test-fashion.mjs pins the new order)
   //   a651320  src/pages/Legal.jsx       — the shipping policy rewrite (test-company-surfaces.mjs pins the policy)
   //   e58317c also restyled src/styles/fashion.css.
-  const allowed = /^(src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/fashion\.css$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|img\/homeliving-hero-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
+  // Express and Scheduled were withdrawn — brands ship standard, and the published Shipping Policy
+  // documents Standard only. That edited the fee map (api/_lib/pricing.js), the checkout picker,
+  // the PDP's display copy (src/data/pdpContent.js) and the PDP delivery panel, and nothing else.
+  // test-company-surfaces.mjs pins the fee map against the policy; test-payment-hardening.mjs,
+  // test-payment-logic.mjs and test-commerce-pricing.mjs pin that a withdrawn method cannot be charged.
+  const allowed = /^(src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/fashion\.css$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|img\/homeliving-hero-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/homeliving/HomeLivingCategory.jsx', 'src/homeliving/HomeLivingProductPage.jsx', 'src/homeliving/HomeLivingProductCard.jsx', 'src/lib/homelivingListing.js', 'src/lib/homelivingPdp.js', 'src/components/Header.jsx', 'src/fashion/FashionLayout.jsx', 'src/grocery/GroceryLayout.jsx', 'src/lifestyle/LifestyleLayout.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/data/lifestyleHomepage.js', 'src/styles/grocery.css', 'src/styles/lifestyle.css', 'src/styles/v2-foundation.css', 'src/styles/tokens.css', 'src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/App.jsx', 'build/build-css.mjs', 'src/lib/deferredStyles.js', 'index.html']) {
-    assert.equal(read(rel).replace(/\r\n/g, '\n'), atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n'), `${rel} is byte-identical to ${BASELINE_SHA}`);
+    // Express and Scheduled were withdrawn (test-company-surfaces.mjs pins the fee map against the
+    // published policy; the three payment suites pin that a withdrawn method cannot be charged).
+    // For the two files that carries — the fee map and the checkout picker — normalise that one
+    // declaration and the comments around it; every other file below stays a byte comparison.
+    const sansDelivery = (t) => (/DELIVERY_FEES = \{|const DELIVERY = \[/.test(t)
+      ? t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+        .replace(/export const DELIVERY_FEES = \{[^}]*\};/, 'DELIVERY_FEES')
+        .replace(/const DELIVERY = \[[\s\S]*?\n\];/, 'DELIVERY')
+        .split('\n').filter((l) => l.trim()).join('\n')
+      : t);
+    assert.equal(sansDelivery(read(rel).replace(/\r\n/g, '\n')), sansDelivery(atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n')), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
   assert.ok(![...changed].some((f) => /^supabase\//.test(f)), 'no migration');
   const untracked = execFileSync('git', ['status', '--porcelain'], { cwd: REPO, encoding: 'utf8' }).split('\n').map((l) => l.slice(3).replace(/^"|"$/g, '')).filter(Boolean);

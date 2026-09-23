@@ -71,14 +71,18 @@ await test('wellness-only carts price byte-for-byte as they did before this phas
   assert.ok(pricing, 'api/_lib/pricing.js loads');
   const carts = [
     [[{ id: 'b183', qty: 2 }], 'std', {}],
-    [[{ id: 'b183', qty: 1 }, { id: 'b185', qty: 3 }], 'exp', {}],
-    [[{ id: 'b777', qty: 2, variantId: 'v750', variant: '750 ml' }], 'sched', {}],
+    // These two carried 'exp' and 'sched' until those methods were withdrawn.
+    // The baseline this compares against still prices them, so leaving them
+    // here would make this assertion measure the withdrawal instead of the
+    // fashion phase it exists to guard.
+    [[{ id: 'b183', qty: 1 }, { id: 'b185', qty: 3 }], 'std', {}],
+    [[{ id: 'b777', qty: 2, variantId: 'v750', variant: '750 ml' }], 'std', {}],
     [[{ id: 'b183', qty: 1 }, { id: 'b777', qty: 1, variantId: 'v750' }], 'std', { coupon: { code: 'TEN', type: 'percent', value: 10, max_discount: 0, min_order_value: 0, is_active: true } }],
     [[{ id: 'b185', qty: 4 }], 'std', { coupon: { code: 'FLAT50', type: 'flat', value: 50, min_order_value: 100, is_active: true }, buyerState: 'Punjab' }],
     [[{ id: 'b777', qty: 1, variantId: 'v250' }], 'std', {}],          // out of stock → refused
     [[{ id: 'b777', qty: 9, variantId: 'v750' }], 'std', {}],          // over stock → refused
     [[{ id: 'nope', qty: 1 }], 'std', {}],                              // unknown → refused
-    [[{ id: 'b183', qty: 1, price: 1, amount: 1 }], 'exp', {}],         // smuggled figures ignored
+    [[{ id: 'b183', qty: 1, price: 1, amount: 1 }], 'std', {}],         // smuggled figures ignored
   ];
   for (const [items, delivery, extra] of carts) {
     const before = baseline.computeOrderTotal(baseline.validateCartPayload(items).items, WELLNESS_ROWS, delivery, { variantRows: WELLNESS_VARIANTS, taxConfig: TAX, ...extra });
@@ -108,10 +112,10 @@ await test('a fashion-only cart prices from the fashion tables: override, then s
 });
 
 await test('a mixed cart prices both catalogues and checks out as one order', () => {
-  const t = price([{ id: 'b183', qty: 2 }, { catalogue: 'fashion', id: SHIRT.id, qty: 1, variantId: M_NAVY }, { id: 'b777', qty: 1, variantId: 'v750' }], 'exp');
+  const t = price([{ id: 'b183', qty: 2 }, { catalogue: 'fashion', id: SHIRT.id, qty: 1, variantId: M_NAVY }, { id: 'b777', qty: 1, variantId: 'v750' }], 'std');
   assert.equal(t.ok, true, t.error);
   assert.deepEqual(t.lines.map((l) => [l.catalogue ?? 'wellness', l.line_total]), [['wellness', 472], ['fashion', 1099], ['wellness', 810]]);
-  assert.equal(t.subtotal, 2381); assert.equal(t.shipping, 79); assert.equal(t.total, 2460); assert.equal(t.amountPaise, 246000);
+  assert.equal(t.subtotal, 2381); assert.equal(t.shipping, 0); assert.equal(t.total, 2381); assert.equal(t.amountPaise, 238100);
   assert.equal(t.lines.length, 3, 'one order, three lines');
   assert.ok(t.lines.every((l) => Number.isFinite(l.taxable_value)), 'tax is apportioned across both catalogues');
 });
@@ -290,7 +294,10 @@ await test('gallery, brand, name, rating, price row, both selectors, delivery ru
   assert.match(html, /<legend>Colour<\/legend>/); assert.match(html, /<legend>Size<\/legend>/);
   assert.deepEqual([...html.matchAll(/class="fs-pick__swatch[^"]*" style="--sw:([^"]+)"/g)].map((m) => m[1]), ['#8A9A6B', '#2F3A56', '#EDE6D6', '#B4552E', '#1B1B1B'], 'swatches use colour_hex');
   assert.deepEqual([...html.matchAll(/class="fs-pick__size[^"]*"[^>]*>([^<]+)</g)].map((m) => m[1]), ['S', 'M', 'L', 'XL'], 'every size is listed');
-  assert.match(html, /Delivery[\s\S]*?Standard<em>3–5 business days<\/em><\/span><b>Free<\/b>[\s\S]*?Express[\s\S]*?<b>₹79<\/b>[\s\S]*?Scheduled[\s\S]*?<b>₹49<\/b>/, 'the real shipping rules');
+  // Standard is the only method offered, and this block is rendered from the
+  // real src/data/pdpContent.js now rather than a copy of it in the harness.
+  assert.match(html, /Delivery[\s\S]*?Standard<em>6–7 business days<\/em><\/span><b>Free<\/b>/, 'the real shipping rule');
+  assert.doesNotMatch(html, /Express|Scheduled/, 'no withdrawn method is offered on the PDP');
   assert.match(html, /About this style[\s\S]*?A breathable linen-blend shirt/);
   assert.match(html, /<dt>Category<\/dt><dd>Clothing › Men › Shirts<\/dd>/);
   const related = html.slice(html.indexOf('You may also like'));

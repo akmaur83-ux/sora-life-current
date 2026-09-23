@@ -14,9 +14,9 @@ import { money } from '../../lib/format.js';
 // against it. The moment a serviceability source exists, this is the one place
 // that has to change.
 //
-// The three fees are flat at every basket size. Nothing here may imply a
-// free-shipping threshold, because there isn't one: Standard is free because
-// Standard is free. api/_lib/pricing.js decides what is actually charged.
+// Standard is the only method, and it is free at every basket size. Nothing
+// here may imply a free-shipping threshold, because there isn't one: Standard
+// is free because Standard is free. api/_lib/pricing.js decides what is charged.
 // ============================================================
 const PIN = /^[1-9][0-9]{5}$/;
 
@@ -34,7 +34,7 @@ export default function ProductDeliveryInfo() {
     }
     setChecked({
       ok: true,
-      message: `Delivering to ${pin}. ${options[0].eta} on Standard; faster methods are shown at checkout.`,
+      message: `Delivering to ${pin}. ${options[0].eta} on Standard delivery.`,
     });
   };
 

@@ -435,14 +435,18 @@ console.log('\n— Shipping is a flat per-method fee —');
 // ============================================================
 
 for (const [subtotal, unit] of [[100, 100], [699, 699], [700, 700], [5000, 5000]]) {
-  await test(`₹${subtotal} basket -> std 0 / exp 79 / sched 49`, () => {
+  await test(`₹${subtotal} basket -> std 0, and a withdrawn method cannot be charged`, () => {
     const row = { ...P, sale_price: unit, original_price: unit, discount_percent: 0 };
     const at = (m) => computeOrderTotal([{ id: 'b115', qty: 1 }], [row], m, { taxConfig: NO_TAX });
     eq(at('std').shipping, 0, 'standard');
-    eq(at('exp').shipping, 79, 'express must not be waived');
-    eq(at('sched').shipping, 49, 'scheduled must not be waived');
-    eq(at('exp').total, subtotal + 79, 'express total');
-    eq(at('sched').total, subtotal + 49, 'scheduled total');
+    // Express and Scheduled were withdrawn. A payload still naming one is
+    // priced AND stored as Standard — never charged the retired fee.
+    eq(at('exp').shipping, 0, 'express cannot be charged');
+    eq(at('sched').shipping, 0, 'scheduled cannot be charged');
+    eq(at('exp').deliveryMethod, 'std', 'express is recorded as standard');
+    eq(at('sched').deliveryMethod, 'std', 'scheduled is recorded as standard');
+    eq(at('exp').total, subtotal, 'express total carries no shipping');
+    eq(at('sched').total, subtotal, 'scheduled total carries no shipping');
   });
 }
 

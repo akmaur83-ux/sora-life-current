@@ -192,8 +192,20 @@ await test('fashionCartLine and groceryCartLine share the catalogue cart cache: 
 });
 
 await test('store.jsx, the cart line rules, the quote and payment plumbing, checkout and the server are byte-identical to the baseline', () => {
-  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/cartQuote.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/_lib/supabaseAdmin.js', 'api/razorpay/create-order.js']) {
+  // Express and Scheduled were withdrawn, which edited the delivery list in
+  // Checkout.jsx and the fee map in pricing.js — and nothing else in either
+  // file. test-company-surfaces.mjs pins the fee map exactly and the three
+  // payment suites pin the behaviour; here, normalise those two declarations
+  // (and comments) on both sides so this still proves the REST is identical.
+  const sansDelivery = (t) => stripComments(t)
+    .replace(/export const DELIVERY_FEES = \{[^}]*\};/, 'DELIVERY_FEES')
+    .replace(/const DELIVERY = \[[\s\S]*?\n\];/, 'DELIVERY')
+    .split('\n').filter((l) => l.trim()).join('\n');
+  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/cartQuote.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'api/_lib/supabaseAdmin.js', 'api/razorpay/create-order.js']) {
     assert.equal(read(rel), atBaseline(rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
+  }
+  for (const rel of ['src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js']) {
+    assert.equal(sansDelivery(read(rel)), sansDelivery(atBaseline(rel)), `${rel}: nothing beyond the delivery withdrawal changed since ${BASELINE_SHA}`);
   }
   // The server keeps reading the fashion_* names — now the 0034 views.
   const admin = read('api/_lib/supabaseAdmin.js');
@@ -278,7 +290,12 @@ await test(`the eight fashion pages render byte-identically from the working tre
   // separately: this assertion stays a data-layer comparison, not a layout one.
   const HERO_BLOCK = /<section class="fs-hero[^"]*"[\s\S]*?<\/section>/;
   const liftHero = (html) => [HERO_BLOCK.exec(html)?.[0] || '', html.replace(HERO_BLOCK, '')];
-  const normalise = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(html.replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, OLD_BACK))[1]]));
+  // The PDP's delivery list is rendered from src/data/pdpContent.js, which lost
+  // Express and Scheduled when they were withdrawn — so it legitimately differs
+  // from the baseline's three rows. test-fashion-cart.mjs pins what it must say
+  // now; strip it here so this stays a data-layer comparison.
+  const SHIP_LIST = /<ul class="fs-pdp__ship">[\s\S]*?<\/ul>/;
+  const normalise = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(html.replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, OLD_BACK))[1].replace(SHIP_LIST, 'SHIP')]));
   const heroes = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(html)[0]]));
   assert.deepEqual(normalise(now), normalise(then), 'identical markup for every page, the campaign hero aside');
   assert.deepEqual(heroes(now), heroes(then), 'the campaign hero block itself is byte-identical — only its position changed');

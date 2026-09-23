@@ -88,10 +88,14 @@ check('Admin exposes structured business fields and plain policy text only', () 
 });
 
 check('shipping policy exactly matches server delivery fees', () => {
-  assert.deepEqual(DELIVERY_FEES, { std: 0, exp: 79, sched: 49 });
+  // Standard is the only method offered, so it is the only one the policy may
+  // document — and the only one the server can charge. Express and Scheduled
+  // were withdrawn; a policy that still advertised them would be promising a
+  // service this store cannot provide.
+  assert.deepEqual(DELIVERY_FEES, { std: 0 });
   assert.match(legal, /Standard[\s\S]*₹0/);
-  assert.match(legal, /Express[\s\S]*₹79/);
-  assert.match(legal, /Scheduled[\s\S]*₹49/);
+  assert.doesNotMatch(legal, /Express/);
+  assert.doesNotMatch(legal, /Scheduled/);
   assert.doesNotMatch(publicSurfaces, /₹\s*699|above\s+₹?\s*699|orders?\s+over\s+₹?\s*699/i);
 });
 

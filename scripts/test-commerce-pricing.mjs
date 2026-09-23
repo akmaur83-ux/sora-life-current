@@ -188,28 +188,29 @@ test('standard is free at any basket size (it costs ₹0, nothing is waived)', (
   eq(r.breakdown.shippingWaived, false, 'std is priced at 0, not discounted to 0');
 });
 
-test('paid express shipping is added on a small basket', () => {
+test('a withdrawn method adds nothing on a small basket', () => {
   const cheap = { ...PRODUCT, sale_price: 200, original_price: 200, discount_percent: 0 };
   const r = computeOrderTotal([{ id: 'b115', qty: 1 }], [cheap], 'exp', { taxConfig: NO_TAX });
-  eq(r.shipping, 79);
-  eq(r.total, 279);
+  eq(r.shipping, 0);
+  eq(r.total, 200);
+  eq(r.deliveryMethod, 'std', 'and is recorded as standard');
 });
 
-test('express stays ₹79 on a large basket — no threshold waives it', () => {
+test('a withdrawn method adds nothing on a large basket either', () => {
   const r = computeOrderTotal([{ id: 'b115', qty: 1, variantId: 'v750' }], [PRODUCT], 'exp', {
     variantRows: VARIANTS, taxConfig: NO_TAX,
   }); // 1599
-  eq(r.shipping, 79, 'express must NOT be waived at 1599');
-  eq(r.total, 1678);
+  eq(r.shipping, 0, 'express cannot be charged at 1599');
+  eq(r.total, 1599);
 });
 
 test('a coupon cannot change the shipping fee in either direction', () => {
   const p = { ...PRODUCT, sale_price: 700, original_price: 700, discount_percent: 0 };
-  const r = computeOrderTotal([{ id: 'b115', qty: 1 }], [p], 'exp', {
+  const r = computeOrderTotal([{ id: 'b115', qty: 1 }], [p], 'std', {
     taxConfig: NO_TAX, coupon: { type: 'flat', value: 100 },
   });
-  eq(r.shipping, 79, 'shipping is independent of basket value');
-  eq(r.total, 679, '700 - 100 + 79');
+  eq(r.shipping, 0, 'shipping is independent of basket value');
+  eq(r.total, 600, '700 - 100 + 0');
 });
 
 console.log('\n— GST / tax —');

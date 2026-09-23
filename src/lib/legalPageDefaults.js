@@ -38,7 +38,7 @@ export const LEGAL_DEFAULTS = {
       },
       {
         "q": "What are the delivery options and charges?",
-        "a": "Standard, Express and Scheduled delivery are offered, each with its own charge. The current options and any delivery estimate are shown at checkout before you pay. See the Shipping page for the full breakdown."
+        "a": "Standard delivery is the only method offered, and it is free on eligible orders. The current option and any delivery estimate are shown at checkout before you pay. See the Shipping page for the full breakdown."
       },
       {
         "q": "How is my payment handled?",

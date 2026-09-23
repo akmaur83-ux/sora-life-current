@@ -116,7 +116,11 @@ await test('the eight fashion pages equal the baseline render once the stores bl
     const HERO_BLOCK = /<section class="fs-hero[^"]*"[\s\S]*?<\/section>/;
     const hero = (html) => HERO_BLOCK.exec(html)?.[0] || '';
     assert.equal(hero(stripped), hero(then[p]), `${p}: the campaign hero block is byte-identical`);
-    assert.equal(stripped.replace(HERO_BLOCK, ''), then[p].replace(HERO_BLOCK, ''), `${p}: otherwise byte-identical`);
+    // The PDP's delivery list lost Express and Scheduled when they were withdrawn
+    // (test-fashion-cart.mjs pins what it says now), so it is normalised out here.
+    const SHIP_LIST = /<ul class="fs-pdp__ship">[\s\S]*?<\/ul>/;
+    const sans = (html) => html.replace(HERO_BLOCK, '').replace(SHIP_LIST, 'SHIP');
+    assert.equal(sans(stripped), sans(then[p]), `${p}: otherwise byte-identical`);
   }
   const layout = read('src/fashion/FashionLayout.jsx');
   assert.match(layout, /<Link to="\/grocery" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Grocery store<\/Link>\n\s+<Link to="\/homeliving" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Home &amp; Living store<\/Link>\n\s+<Link to="\/lifestyle" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Lifestyle store<\/Link>\n\s+<Link to="\/" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronLeft" size=\{16\} \/> Back to the wellness store<\/Link>/, 'the drawer lists the other stores beside the way back');
@@ -166,8 +170,21 @@ await test('each shell links to exactly the other stores by path, and the five p
 });
 
 await test('cart, checkout, coupons, auth, payments and the data layer are byte-identical to the baseline; no migration, no bundle', () => {
-  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/lib/fashionApi.js', 'src/data/groceryHomepage.js']) {
+  const stripComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  // Express and Scheduled were withdrawn, which edited the delivery list in
+  // Checkout.jsx and the fee map in pricing.js — and nothing else in either
+  // file. test-company-surfaces.mjs pins the fee map exactly and the three
+  // payment suites pin the behaviour; here, normalise those two declarations
+  // (and comments) on both sides so this still proves the REST is identical.
+  const sansDelivery = (t) => stripComments(t)
+    .replace(/export const DELIVERY_FEES = \{[^}]*\};/, 'DELIVERY_FEES')
+    .replace(/const DELIVERY = \[[\s\S]*?\n\];/, 'DELIVERY')
+    .split('\n').filter((l) => l.trim()).join('\n');
+  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'api/razorpay/create-order.js', 'src/lib/fashionApi.js', 'src/data/groceryHomepage.js']) {
     assert.equal(read(rel), atCommit(BASELINE_SHA, rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
+  }
+  for (const rel of ['src/pages/Checkout.jsx', 'api/_lib/pricing.js']) {
+    assert.equal(sansDelivery(read(rel)), sansDelivery(atCommit(BASELINE_SHA, rel)), `${rel}: nothing beyond the delivery withdrawal changed since ${BASELINE_SHA}`);
   }
   const changed = execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean);
   assert.ok(!changed.some((f) => /^supabase\/(?!migrations\/(0035_|rollback\/0035_))/.test(f)), 'no migration beyond 0035 (the Home & Living store)');

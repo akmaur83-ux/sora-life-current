@@ -30,14 +30,14 @@ console.log('\n— Amount is computed from the DB, not the client —');
   ok('client-supplied price/amount fields are ignored', t.total === 236);
 }
 {
-  // Express is ₹79 regardless of basket value — there is no threshold that
-  // waives it. A large basket used to ship express for free.
+  // Express was withdrawn: it is not in DELIVERY_FEES, so a payload naming it
+  // is priced as Standard at ₹0 at every basket value.
   const { items } = validateCartPayload([{ id: 'b183', qty: 3 }]); // 708
   const t = computeOrderTotal(items, ROWS, 'exp');
-  ok('express charged on a large basket (708 + 79)', t.subtotal === 708 && t.shipping === 79 && t.total === 787);
+  ok('a withdrawn method costs nothing on a large basket (708 + 0)', t.subtotal === 708 && t.shipping === 0 && t.total === 708 && t.deliveryMethod === 'std');
   const { items: i2 } = validateCartPayload([{ id: 'b185', qty: 1 }]); // 191
   const t2 = computeOrderTotal(i2, ROWS, 'exp');
-  ok('express charged on a small basket (191 + 79)', t2.shipping === 79 && t2.total === 270);
+  ok('a withdrawn method costs nothing on a small basket (191 + 0)', t2.shipping === 0 && t2.total === 191 && t2.deliveryMethod === 'std');
 }
 
 console.log('\n— Tampering is rejected —');

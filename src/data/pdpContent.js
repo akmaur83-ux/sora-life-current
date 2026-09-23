@@ -97,13 +97,13 @@ export function deliveryEstimate() {
 }
 
 /**
- * The three delivery methods a customer can actually choose, with the fee
- * each one actually costs.
+ * The delivery method a customer can actually choose, with the fee it costs.
  *
- * AUTHORITY: api/_lib/pricing.js — `DELIVERY_FEES = { std: 0, exp: 79, sched: 49 }`
- * is the only thing that decides what is charged. This list is display copy for
- * the PDP and must be kept in step with it; Checkout.jsx carries the same three
- * rows for the picker itself.
+ * AUTHORITY: api/_lib/pricing.js — `DELIVERY_FEES = { std: 0 }` is the only
+ * thing that decides what is charged. This list is display copy for the PDP and
+ * must be kept in step with it; Checkout.jsx carries the same row for the
+ * picker itself. Express and Scheduled were withdrawn — see the Shipping
+ * Policy, which documents Standard only.
  *
  * The fee is FLAT AT EVERY BASKET SIZE. There is no free-shipping threshold,
  * and no surface may imply one — a `freeShippingThreshold` setting was removed
@@ -142,9 +142,7 @@ export function perUnitPrice(price, label) {
 
 export function deliveryOptions() {
   return [
-    { id: 'std', label: 'Standard', eta: '3–5 business days', price: 0 },
-    { id: 'exp', label: 'Express', eta: '1–2 business days', price: 79 },
-    { id: 'sched', label: 'Scheduled', eta: 'Choose your date', price: 49 },
+    { id: 'std', label: 'Standard', eta: '6–7 business days', price: 0 },
   ];
 }
 

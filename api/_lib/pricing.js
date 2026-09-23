@@ -13,11 +13,20 @@ import { computeTax, getTaxConfig, round2 } from './tax.js';
 
 // Mirrors the delivery options shown at checkout. Server-authoritative.
 //
-// These fees are ABSOLUTE: there is deliberately no cart-subtotal threshold
-// that waives Express or Scheduled. Standard is free at every basket size
-// because its fee is ₹0, not because a threshold zeroed it. A threshold used
-// to exist here and silently made a ₹700 basket ship Express for free.
-export const DELIVERY_FEES = { std: 0, exp: 79, sched: 49 };
+// Standard is the ONLY method this store offers. Brands ship standard, so
+// Express and Scheduled were withdrawn and the published Shipping Policy has
+// documented Standard-only since a651320. Their absence from this map is what
+// makes them unbuyable: the method resolution below falls back to 'std' for
+// anything it does not recognise, so a payload naming 'exp' is priced AND
+// stored as Standard at ₹0 rather than rejected — a tampered payload gets the
+// honest price, and the payment path gains no new failure mode. Orders placed
+// before the withdrawal keep the method and the fee they were charged;
+// nothing re-prices a placed order.
+//
+// The fee is ABSOLUTE: Standard is free at every basket size because its fee
+// is ₹0, not because a threshold zeroed it. A threshold used to exist here and
+// silently made a ₹700 basket ship Express for free.
+export const DELIVERY_FEES = { std: 0 };
 export const MAX_QTY_PER_LINE = 20;
 export const MAX_LINES = 50;
 
@@ -420,10 +429,10 @@ export function computeOrderTotal(items, productRows, deliveryMethod, opts = {})
   const couponDiscount = computeCouponDiscount(coupon, subtotal);
   const goodsAfterDiscount = round2(subtotal - couponDiscount);
 
-  // Shipping is a flat per-method fee and does NOT depend on basket value:
-  // Standard ₹0, Express ₹79, Scheduled ₹49 at every subtotal. The previous
-  // ₹699 threshold zeroed Express/Scheduled on larger baskets, so the courier
-  // cost was absorbed on exactly the orders that cost the most to ship.
+  // Shipping does NOT depend on basket value: Standard is ₹0 at every
+  // subtotal, and Standard is the only method offered. The ₹699 threshold this
+  // replaced zeroed the withdrawn paid methods on larger baskets, so the
+  // courier cost was absorbed on exactly the orders that cost most to ship.
   const shippingBase = DELIVERY_FEES[method];
   const shipping = shippingBase;
   // Nothing is ever waived now; Standard simply costs nothing. Retained so
