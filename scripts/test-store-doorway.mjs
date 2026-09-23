@@ -291,7 +291,10 @@ await test('the build lists and every other file are byte-identical to the basel
   // the PDP's display copy (src/data/pdpContent.js) and the PDP delivery panel, and nothing else.
   // test-company-surfaces.mjs pins the fee map against the policy; test-payment-hardening.mjs,
   // test-payment-logic.mjs and test-commerce-pricing.mjs pin that a withdrawn method cannot be charged.
-  const allowed = /^(src\/components\/FashionBanner\.jsx$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/pages\/Home\.jsx$|img\/lifestyle-banner-(wide|tall)\.webp$|src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|src\/data\/homelivingHomepage\.js$|img\/homeliving-hero-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
+  // api/_lib/couponQuote.js: quoteCoupon dropped the fashion rows priceCart had fetched, so every
+  // coupon on a cart holding a fashion line was refused. Fixed on its own; test-coupon-quote-rows.mjs
+  // pins it through quoteCoupon rather than through computeOrderTotal.
+  const allowed = /^(src\/components\/FashionBanner\.jsx$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/pages\/Home\.jsx$|img\/lifestyle-banner-(wide|tall)\.webp$|src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|src\/data\/homelivingHomepage\.js$|img\/homeliving-hero-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
   const bad = [...changed].filter((f) => !allowed.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/pages/Home.jsx', 'build/build-css.mjs', 'src/App.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/lib/store.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/payments.js', 'src/lib/customerAuth.jsx']) {

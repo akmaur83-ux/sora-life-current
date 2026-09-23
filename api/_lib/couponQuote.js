@@ -150,6 +150,12 @@ export async function quoteCoupon(code, priced, deliveryMethod, buyer, sb, opts 
   // total the invoice could not reproduce.
   const totals = computeOrderTotal(priced.items, priced.products, deliveryMethod, {
     variantRows: priced.variantRows,
+    // priceCart fetched these and returned them; dropping them here re-priced a
+    // fashion line against no fashion rows, so computeOrderTotal refused the
+    // whole cart as "no longer available" — every coupon on a cart holding a
+    // fashion item failed, while the same cart priced fine without one.
+    fashionProductRows: priced.fashionProductRows,
+    fashionVariantRows: priced.fashionVariantRows,
     coupon,
     taxConfig: getTaxConfig(),
     buyerState: opts.buyerState ?? null,

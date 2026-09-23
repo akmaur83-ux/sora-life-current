@@ -495,14 +495,14 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
   // the PDP's display copy (src/data/pdpContent.js) and the PDP delivery panel, and nothing else.
   // test-company-surfaces.mjs pins the fee map against the policy; test-payment-hardening.mjs,
   // test-payment-logic.mjs and test-commerce-pricing.mjs pin that a withdrawn method cannot be charged.
-  const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$|FashionHome\.jsx$)|src\/pages\/(?!Home\.jsx$|Legal\.jsx$|Checkout\.jsx$)|src\/components\/(?!Header\.jsx$|FashionBanner\.jsx$|Hero\.jsx$|pdp\/ProductDeliveryInfo\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/(?!_lib\/pricing\.js$))/;
+  const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$|FashionHome\.jsx$)|src\/pages\/(?!Home\.jsx$|Legal\.jsx$|Checkout\.jsx$)|src\/components\/(?!Header\.jsx$|FashionBanner\.jsx$|Hero\.jsx$|pdp\/ProductDeliveryInfo\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/(?!_lib\/pricing\.js$|_lib\/couponQuote\.js$))/;
   const bad = [...changed].filter((f) => untouchable.test(f));
   assert.deepEqual(bad, [], `untouchable files changed: ${bad.join(', ')}`);
   // src/pages/Home.jsx mounts the store doorways (test-store-doorway.mjs pins its exact diff) and src/pages/Legal.jsx carries the shipping-policy
   // rewrite (a651320, pinned by test-company-surfaces.mjs). Checkout.jsx and api/_lib/pricing.js carry the
   // Express/Scheduled withdrawal, compared above with that one declaration normalised out; everything else
   // under src/pages and the whole of api/ is untouched.
-  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'api', ':(exclude)api/_lib/pricing.js', 'src/pages', ':(exclude)src/pages/Home.jsx', ':(exclude)src/pages/Legal.jsx', ':(exclude)src/pages/Checkout.jsx', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
+  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'api', ':(exclude)api/_lib/pricing.js', ':(exclude)api/_lib/couponQuote.js', 'src/pages', ':(exclude)src/pages/Home.jsx', ':(exclude)src/pages/Legal.jsx', ':(exclude)src/pages/Checkout.jsx', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
 });
 
 await test('no migration beyond 0034, no dependency change since the baseline', () => {
