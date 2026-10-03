@@ -53,6 +53,15 @@ const NAV = [{
   to: '/admin/homepage',
   label: 'Homepage'
 }, {
+  to: '/admin/storefronts',
+  label: 'Fashion & Lifestyle'
+}, {
+  to: '/admin/store-catalogue/fashion',
+  label: 'Fashion Products'
+}, {
+  to: '/admin/store-catalogue/homeliving',
+  label: 'Home & Living Products'
+}, {
   to: '/admin/category-experience',
   label: 'Category Experience'
 }, {

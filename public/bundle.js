@@ -29568,6 +29568,7 @@ const supabase = createClient(supabaseUrl , supabasePublishableKey );
 // stock matrix a size × colour catalogue needs. All of it runs in tests.
 // ============================================================
 
+const MAX_DEPTH = 3;
 /** The store column value every fashion row carries (catalogue_* since 0034). */
 const FASHION_STORE = 'fashion';
 const num$c = v => {
@@ -29634,6 +29635,55 @@ function buildTree(rows) {
     ancestors,
     depth,
     descendants
+  };
+}
+
+/** Would placing `id` under `parentId` keep the tree legal? Mirrors the SQL guard. */
+function validatePlacement(rows, {
+  id = null,
+  parentId = null
+} = {}) {
+  const tree = buildTree(rows);
+  const self = id == null ? null : String(id);
+  let depth = 1;
+  let cur = parentId == null ? null : String(parentId);
+  const seen = new Set();
+  while (cur) {
+    if (self != null && cur === self) return {
+      ok: false,
+      reason: 'cycle'
+    };
+    if (seen.has(cur)) return {
+      ok: false,
+      reason: 'cycle'
+    };
+    seen.add(cur);
+    depth += 1;
+    if (depth > MAX_DEPTH) return {
+      ok: false,
+      reason: 'depth'
+    };
+    const node = tree.byId.get(cur);
+    cur = node ? node.parent_id : null;
+  }
+  // Moving a branch carries its subtree with it.
+  let height = 0;
+  if (self != null) {
+    const walk = (nid, lvl) => {
+      for (const c of tree.children(nid)) {
+        height = Math.max(height, lvl);
+        walk(c.id, lvl + 1);
+      }
+    };
+    walk(self, 1);
+  }
+  if (depth + height > MAX_DEPTH) return {
+    ok: false,
+    reason: 'depth'
+  };
+  return {
+    ok: true,
+    depth
   };
 }
 
@@ -33576,7 +33626,7 @@ const toggle = (label, value = false) => ({
   type: 'boolean',
   value
 });
-const image = label => ({
+const image$1 = label => ({
   label,
   type: 'image',
   value: ''
@@ -33591,7 +33641,7 @@ const HOMEPAGE_VISUAL_FIELDS = {
   categoryStrip: {
     enabled: toggle('Enable category background', false),
     backgroundColor: color$1('Background color', '#F7F1E7'),
-    imageUrl: image('Background strip image'),
+    imageUrl: image$1('Background strip image'),
     imageSize: select$1('Background image fit', 'cover', ['cover', 'contain']),
     imagePosition: select$1('Background image position', 'center center', IMAGE_POSITIONS),
     imageOpacity: number$1('Background image opacity', 1, 0, 1, 0.05),
@@ -33604,10 +33654,10 @@ const HOMEPAGE_VISUAL_FIELDS = {
     borderColor: color$1('Border color', '#DED2C4'),
     borderWidth: number$1('Border thickness (px)', 1, 0, 4),
     radius: number$1('Corner radius (px)', 8, 0, 16),
-    textureUrl: image('Decorative texture'),
+    textureUrl: image$1('Decorative texture'),
     texturePosition: select$1('Texture position', 'center center', IMAGE_POSITIONS),
-    leftImage: image('Left decoration'),
-    rightImage: image('Right decoration'),
+    leftImage: image$1('Left decoration'),
+    rightImage: image$1('Right decoration'),
     decorationOpacity: number$1('Decoration opacity', 0.25, 0, 1, 0.05),
     decorationSize: number$1('Decoration width (px)', 120, 24, 240),
     decorationPosition: select$1('Decoration vertical position', 'center', ['top', 'center', 'bottom']),
@@ -33623,13 +33673,13 @@ const HOMEPAGE_VISUAL_FIELDS = {
     borderWidth: number$1('Frame border thickness (px)', 1, 0, 4),
     accentColor: color$1('Heading and accent color', '#702B3B'),
     radius: number$1('Frame corner radius (px)', 12, 0, 16),
-    textureUrl: image('Frame background image / texture'),
+    textureUrl: image$1('Frame background image / texture'),
     textureOpacity: number$1('Texture opacity', 0.12, 0, 1, 0.01),
     padding: number$1('Section top and bottom padding (px)', 20, 0, 48),
     gap: number$1('Gap between promotions (px)', 16, 8, 32),
     desktopColumns: select$1('Maximum promotions per desktop row', 2, [1, 2, 3]),
     mobileWidth: number$1('Mobile promotion width (%)', 90, 88, 92),
-    decorationUrl: image('Optional decorative artwork'),
+    decorationUrl: image$1('Optional decorative artwork'),
     decorationOpacity: number$1('Artwork opacity', 0.15, 0, 1, 0.05),
     decorationSize: number$1('Artwork width (px)', 160, 24, 240)
   }
@@ -59727,8 +59777,214 @@ function useFashionCatalogue() {
   return v;
 }
 
+// Presentation-only settings for the two editorial storefronts. They live
+// inside the existing public `homepage` site_settings record, so this feature
+// needs no table, RLS or schema change. Defaults match the current hardcoded
+// storefronts exactly: nothing changes visually until an admin saves.
+
+const DEFAULT_FASHION_STOREFRONT = Object.freeze({
+  header: {
+    tagline: 'Live a brighter you',
+    searchPlaceholder: 'Search for fashion, lifestyle and more…'
+  },
+  hero: {
+    eyebrow: 'Fashion for a brighter you',
+    title: 'New Season Essentials',
+    subtitle: 'Style · Comfort · Everyday Living',
+    ctaLabel: 'Shop now',
+    ctaLink: '/fashion/c/clothing',
+    note: 'Under ₹499',
+    image: '/img/fashion-hero.webp'
+  },
+  sections: {
+    categoriesTitle: 'Shop by Category',
+    categoriesCta: 'Explore all',
+    brandsTitle: 'Top Brands on SORA LIFE',
+    brandsCta: 'See all',
+    productsTitle: 'Fresh in fashion'
+  }
+});
+const DEFAULT_LIFESTYLE_STOREFRONT = Object.freeze({
+  header: {
+    tagline: 'Live a better you'
+  },
+  heroSlides: [{
+    id: 'home',
+    tall: '/img/doorway-living-tall.webp',
+    wide: '/img/doorway-living-wide.webp',
+    alt: 'Cream sofa with green cushions and a throw, a wooden coffee table and a jute rug in soft light',
+    eyebrowOne: 'Beautiful spaces',
+    eyebrowTwo: 'Happier days',
+    headlineOne: 'Make Home',
+    headlineTwo: 'a Happier Place',
+    subtitle: 'Home essentials for a calmer, warmer and more you.',
+    ctaLabel: 'Shop Home & Living',
+    ctaLink: '/homeliving',
+    note: 'Good spaces, better days'
+  }, {
+    id: 'bedroom',
+    tall: '/img/lifestyle-hero-bedroom-tall.webp',
+    wide: '/img/homeliving-hero.webp',
+    alt: 'A cane headboard, botanical bedsheets, green cushions and a quilt in a sunlit bedroom',
+    eyebrowOne: 'Bedsheets',
+    eyebrowTwo: 'Quilts & cushions',
+    headlineOne: 'Sleep Softer,',
+    headlineTwo: 'Wake Brighter',
+    subtitle: 'Cotton bedsheets, quilts and cushion covers for calmer rooms.',
+    ctaLabel: 'Shop Bedsheets',
+    ctaLink: '/homeliving/category/bedsheets',
+    note: 'Rest well, every night'
+  }, {
+    id: 'fashion',
+    tall: '/img/doorway-fashion-tall.webp',
+    wide: '/img/doorway-fashion-wide.webp',
+    alt: 'Camel coat and cream turtleneck, seated against a sunlit plaster wall',
+    eyebrowOne: 'Your style',
+    eyebrowTwo: 'Your story',
+    headlineOne: 'Fashion',
+    headlineTwo: 'for Everyday',
+    subtitle: 'Clothing, footwear, bags and more — all in one place.',
+    ctaLabel: 'Explore Fashion',
+    ctaLink: '/fashion',
+    note: 'Wear what feels you'
+  }],
+  fashionBanner: {
+    image: '/img/doorway-fashion-wide.webp',
+    alt: 'Camel coat and cream turtleneck, seated against a sunlit plaster wall',
+    eyebrowOne: 'Your style',
+    eyebrowTwo: 'Your story',
+    headlineOne: 'Fashion',
+    headlineTwo: 'for Everyday',
+    subtitle: 'Clothing, footwear, bags and more — all in one place.',
+    ctaLabel: 'Explore Fashion',
+    ctaLink: '/fashion',
+    note: 'Wear what feels you'
+  },
+  sections: {
+    fashionCategoriesTitle: 'Shop Fashion Categories',
+    fashionCategoriesCta: 'View All',
+    trendingTitle: 'Trending Now',
+    trendingCta: 'View All'
+  },
+  promo: {
+    image: '/img/homeliving-promo.webp',
+    headline: 'Made for everyday living',
+    ctaLabel: 'Shop Home & Living',
+    ctaLink: '/homeliving'
+  }
+});
+const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+const text = (value, fallback, max = 140) => {
+  if (typeof value !== 'string') return fallback;
+  const clean = value.trim().replace(/\s+/g, ' ');
+  return clean ? clean.slice(0, max) : fallback;
+};
+const image = (value, fallback) => safeVisualUrl(value) || fallback;
+const link = (value, fallback) => {
+  if (typeof value !== 'string') return fallback;
+  const clean = value.trim();
+  return /^\/(?!\/)[^\s]*$/.test(clean) ? clean.slice(0, 240) : fallback;
+};
+function normalizeFashionStorefront(value) {
+  const root = object(value);
+  const header = object(root.header);
+  const hero = object(root.hero);
+  const sections = object(root.sections);
+  const d = DEFAULT_FASHION_STOREFRONT;
+  return {
+    header: {
+      tagline: text(header.tagline, d.header.tagline, 60),
+      searchPlaceholder: text(header.searchPlaceholder, d.header.searchPlaceholder, 90)
+    },
+    hero: {
+      eyebrow: text(hero.eyebrow, d.hero.eyebrow, 70),
+      title: text(hero.title, d.hero.title, 90),
+      subtitle: text(hero.subtitle, d.hero.subtitle, 140),
+      ctaLabel: text(hero.ctaLabel, d.hero.ctaLabel, 40),
+      ctaLink: link(hero.ctaLink, d.hero.ctaLink),
+      note: text(hero.note, d.hero.note, 60),
+      image: image(hero.image, d.hero.image)
+    },
+    sections: {
+      categoriesTitle: text(sections.categoriesTitle, d.sections.categoriesTitle, 70),
+      categoriesCta: text(sections.categoriesCta, d.sections.categoriesCta, 30),
+      brandsTitle: text(sections.brandsTitle, d.sections.brandsTitle, 80),
+      brandsCta: text(sections.brandsCta, d.sections.brandsCta, 30),
+      productsTitle: text(sections.productsTitle, d.sections.productsTitle, 70)
+    }
+  };
+}
+function normalizeLifestyleSlide(value, fallback) {
+  const slide = object(value);
+  return {
+    id: fallback.id,
+    tall: image(slide.tall, fallback.tall),
+    wide: image(slide.wide, fallback.wide),
+    alt: text(slide.alt, fallback.alt, 180),
+    eyebrowOne: text(slide.eyebrowOne, fallback.eyebrowOne, 50),
+    eyebrowTwo: text(slide.eyebrowTwo, fallback.eyebrowTwo, 50),
+    headlineOne: text(slide.headlineOne, fallback.headlineOne, 60),
+    headlineTwo: text(slide.headlineTwo, fallback.headlineTwo, 60),
+    subtitle: text(slide.subtitle, fallback.subtitle, 160),
+    ctaLabel: text(slide.ctaLabel, fallback.ctaLabel, 45),
+    ctaLink: link(slide.ctaLink, fallback.ctaLink),
+    note: text(slide.note, fallback.note, 70)
+  };
+}
+function normalizeBanner(value, fallback) {
+  const banner = object(value);
+  return {
+    image: image(banner.image, fallback.image),
+    alt: text(banner.alt, fallback.alt, 180),
+    eyebrowOne: text(banner.eyebrowOne, fallback.eyebrowOne, 50),
+    eyebrowTwo: text(banner.eyebrowTwo, fallback.eyebrowTwo, 50),
+    headlineOne: text(banner.headlineOne, fallback.headlineOne, 60),
+    headlineTwo: text(banner.headlineTwo, fallback.headlineTwo, 60),
+    subtitle: text(banner.subtitle, fallback.subtitle, 160),
+    ctaLabel: text(banner.ctaLabel, fallback.ctaLabel, 45),
+    ctaLink: link(banner.ctaLink, fallback.ctaLink),
+    note: text(banner.note, fallback.note, 70)
+  };
+}
+function normalizeLifestyleStorefront(value) {
+  const root = object(value);
+  const header = object(root.header);
+  const sections = object(root.sections);
+  const promo = object(root.promo);
+  const d = DEFAULT_LIFESTYLE_STOREFRONT;
+  const incomingSlides = Array.isArray(root.heroSlides) ? root.heroSlides : [];
+  return {
+    header: {
+      tagline: text(header.tagline, d.header.tagline, 60)
+    },
+    heroSlides: d.heroSlides.map((fallback, index) => normalizeLifestyleSlide(incomingSlides[index], fallback)),
+    fashionBanner: normalizeBanner(root.fashionBanner, d.fashionBanner),
+    sections: {
+      fashionCategoriesTitle: text(sections.fashionCategoriesTitle, d.sections.fashionCategoriesTitle, 80),
+      fashionCategoriesCta: text(sections.fashionCategoriesCta, d.sections.fashionCategoriesCta, 30),
+      trendingTitle: text(sections.trendingTitle, d.sections.trendingTitle, 70),
+      trendingCta: text(sections.trendingCta, d.sections.trendingCta, 30)
+    },
+    promo: {
+      image: image(promo.image, d.promo.image),
+      headline: text(promo.headline, d.promo.headline, 100),
+      ctaLabel: text(promo.ctaLabel, d.promo.ctaLabel, 45),
+      ctaLink: link(promo.ctaLink, d.promo.ctaLink)
+    }
+  };
+}
+function mergeStorefrontCustomization(homepage, fashion, lifestyle) {
+  return {
+    ...object(homepage),
+    fashion_storefront: normalizeFashionStorefront(fashion),
+    lifestyle_storefront: normalizeLifestyleStorefront(lifestyle)
+  };
+}
+
 const SEARCH_PLACEHOLDER$2 = 'Search for fashion, lifestyle and more…';
-function FashionLogo() {
+function FashionLogo({
+  tagline
+}) {
   return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
     to: "/fashion",
     className: "fs-logo",
@@ -59740,7 +59996,7 @@ function FashionLogo() {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
         children: branding.siteName
       }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-        children: "Live a brighter you"
+        children: tagline
       })]
     })]
   });
@@ -59754,6 +60010,8 @@ function FashionHeader({
   const wish = useFashionWishlist();
   const navigate = useNavigate();
   const location = useLocation();
+  const homepage = reactExports.useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+  const config = normalizeFashionStorefront(homepage.fashion_storefront);
   const [q, setQ] = reactExports.useState(() => new URLSearchParams(location.search).get('q') || '');
   const submit = e => {
     e.preventDefault();
@@ -59773,7 +60031,9 @@ function FashionHeader({
           name: "menu",
           size: 24
         })
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionLogo, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionLogo, {
+        tagline: config.header.tagline
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
         className: "fs-hdr__acts",
         "aria-label": "Account, wishlist and cart",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
@@ -59851,7 +60111,7 @@ function FashionHeader({
         type: "search",
         value: q,
         onChange: e => setQ(e.target.value),
-        placeholder: SEARCH_PLACEHOLDER$2,
+        placeholder: config.header.searchPlaceholder || SEARCH_PLACEHOLDER$2,
         "aria-label": "Search fashion"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
         type: "submit",
@@ -60475,13 +60735,11 @@ const circleArt = node => CIRCLE_ART[node?.slug] || node?.image_url || null;
 const cardArt = node => CARD_ART[node?.slug] || node?.image_url || null;
 
 const HERO = {
-  eyebrow: 'Fashion for a brighter you',
-  title: 'New Season Essentials',
-  sub: 'Style · Comfort · Everyday Living',
-  cta: 'Shop now',
-  href: '/fashion/c/clothing',
-  note: 'Under ₹499',
-  image: HERO_IMAGE // the supplied banner; null falls back to the typographic slot
+  ...DEFAULT_FASHION_STOREFRONT.hero,
+  sub: DEFAULT_FASHION_STOREFRONT.hero.subtitle,
+  cta: DEFAULT_FASHION_STOREFRONT.hero.ctaLabel,
+  href: DEFAULT_FASHION_STOREFRONT.hero.ctaLink,
+  image: HERO_IMAGE
 };
 function CategoryTiles({
   tree
@@ -60556,49 +60814,70 @@ function Benefits() {
     })]
   });
 }
-function Hero() {
+function Hero({
+  config
+}) {
+  const hero = config || HERO;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: `fs-hero${' has-image' }`,
+    className: `fs-hero${hero.image ? ' has-image' : ''}`,
     "aria-labelledby": "fs-hero-h",
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-hero__txt",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "fs-hero__eyebrow",
-        children: HERO.eyebrow
+        children: hero.eyebrow
       }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
         className: "fs-hero__h serif",
         id: "fs-hero-h",
-        children: HERO.title
+        children: hero.title
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "fs-hero__sub",
-        children: HERO.sub
+        children: hero.subtitle || hero.sub
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: HERO.href,
+        to: hero.ctaLink || hero.href,
         className: "fs-hero__cta",
-        children: [HERO.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [hero.ctaLabel || hero.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "arrowRight",
           size: 17
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "fs-hero__note serif",
-        children: HERO.note
+        children: hero.note
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "fs-hero__art",
       "aria-hidden": "true",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-        src: HERO.image,
+      children: hero.image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+        src: hero.image,
         alt: "",
         width: "1600",
         height: "900",
         decoding: "async",
         fetchpriority: "high"
-      }) 
+      }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fs-hero__slot",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "serif",
+          children: ["Good Style", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "Brighter Days"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "fs-hero__words",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Wear"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Live"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Explore"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Belong"
+          })]
+        })]
+      })
     })]
   });
 }
 function ShopByCategory({
-  tree
+  tree,
+  copy
 }) {
   const roots = tree.roots.filter(r => r.is_active).slice(0, 4);
   if (roots.length === 0) return null;
@@ -60610,11 +60889,11 @@ function ShopByCategory({
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
         className: "fs-sec__h serif",
         id: "fs-cats-h",
-        children: "Shop by Category"
+        children: copy.categoriesTitle
       }), tree.roots[0] && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: categoryHref$3(tree.roots[0]),
         className: "fs-sec__link",
-        children: ["Explore all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [copy.categoriesCta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "chevronRight",
           size: 16
         })]
@@ -60657,7 +60936,8 @@ function ShopByCategory({
   });
 }
 function TopBrands({
-  views
+  views,
+  copy
 }) {
   const brands = topBrands(views, 6);
   if (brands.length === 0) return null;
@@ -60669,11 +60949,11 @@ function TopBrands({
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
         className: "fs-sec__h serif",
         id: "fs-brands-h",
-        children: "Top Brands on SORA LIFE"
+        children: copy.brandsTitle
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: "/fashion/search",
         className: "fs-sec__link",
-        children: ["See all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [copy.brandsCta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "chevronRight",
           size: 16
         })]
@@ -60700,15 +60980,21 @@ function FashionHome() {
     tree,
     views
   } = useFashionCatalogue();
+  const homepage = reactExports.useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+  const config = normalizeFashionStorefront(homepage.fashion_storefront);
   const grid = sortViews(views, 'featured');
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "fs-home",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Hero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Hero, {
+      config: config.hero
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
       tree: tree
     }), /*#__PURE__*/jsxRuntimeExports.jsx(Benefits, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {
-      tree: tree
+      tree: tree,
+      copy: config.sections
     }), /*#__PURE__*/jsxRuntimeExports.jsx(TopBrands, {
-      views: views
+      views: views,
+      copy: config.sections
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "fs-sec",
       "aria-labelledby": "fs-grid-h",
@@ -60717,7 +61003,7 @@ function FashionHome() {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           className: "fs-sec__h serif",
           id: "fs-grid-h",
-          children: "Fresh in fashion"
+          children: config.sections.productsTitle
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
           className: "fs-sec__count",
           children: [grid.length, " ", grid.length === 1 ? 'style' : 'styles']
@@ -64266,7 +64552,7 @@ function HomeLivingProductPage() {
 // Nothing here says otherwise, and nothing here claims a benefit to the
 // planet.
 // ============================================================
-const LIFESTYLE_TAGLINE = 'Live a better you';
+const LIFESTYLE_TAGLINE = DEFAULT_LIFESTYLE_STOREFRONT.header.tagline;
 
 /** Delivery promise. The Home & Living window; the only factual claim on the page. */
 const LIFESTYLE_DELIVERY_WINDOW = HOMELIVING_DELIVERY_WINDOW;
@@ -64280,58 +64566,37 @@ const TALL_MEDIA = '(max-width: 1023px)';
  * landscape whose subject sits right (the copy takes the left). With one
  * slide the counter and arrows are not rendered.
  */
-const HERO_SLIDES = [{
-  id: 'home',
-  tall: '/img/doorway-living-tall.webp',
-  wide: '/img/doorway-living-wide.webp',
-  alt: 'Cream sofa with green cushions and a throw, a wooden coffee table and a jute rug in soft light',
-  eyebrow: ['Beautiful spaces', 'Happier days'],
-  headline: ['Make Home', 'a Happier Place'],
-  sub: 'Home essentials for a calmer, warmer and more you.',
-  cta: 'Shop Home & Living',
-  href: '/homeliving',
-  note: 'Good spaces, better days'
-}, {
-  id: 'bedroom',
-  tall: '/img/lifestyle-hero-bedroom-tall.webp',
-  wide: '/img/homeliving-hero.webp',
-  alt: 'A cane headboard, botanical bedsheets, green cushions and a quilt in a sunlit bedroom',
-  eyebrow: ['Bedsheets', 'Quilts & cushions'],
-  headline: ['Sleep Softer,', 'Wake Brighter'],
-  sub: 'Cotton bedsheets, quilts and cushion covers for calmer rooms.',
-  cta: 'Shop Bedsheets',
-  href: '/homeliving/category/bedsheets',
-  note: 'Rest well, every night'
-}, {
-  id: 'fashion',
-  tall: '/img/doorway-fashion-tall.webp',
-  wide: '/img/doorway-fashion-wide.webp',
-  alt: 'Camel coat and cream turtleneck, seated against a sunlit plaster wall',
-  eyebrow: ['Your style', 'Your story'],
-  headline: ['Fashion', 'for Everyday'],
-  sub: 'Clothing, footwear, bags and more — all in one place.',
-  cta: 'Explore Fashion',
-  href: '/fashion',
-  note: 'Wear what feels you'
-}];
+const HERO_SLIDES = DEFAULT_LIFESTYLE_STOREFRONT.heroSlides.map(slide => ({
+  id: slide.id,
+  tall: slide.tall,
+  wide: slide.wide,
+  alt: slide.alt,
+  eyebrow: [slide.eyebrowOne, slide.eyebrowTwo],
+  headline: [slide.headlineOne, slide.headlineTwo],
+  sub: slide.subtitle,
+  cta: slide.ctaLabel,
+  href: slide.ctaLink,
+  note: slide.note
+}));
 
 /** The fashion doorway card between the two category rows. The photo's subject sits right; the copy takes the left. */
 const FASHION_BANNER = {
-  image: '/img/doorway-fashion-wide.webp',
-  alt: 'Camel coat and cream turtleneck, seated against a sunlit plaster wall',
-  eyebrow: ['Your style', 'Your story'],
-  headline: ['Fashion', 'for Everyday'],
-  sub: 'Clothing, footwear, bags and more — all in one place.',
-  cta: 'Explore Fashion',
-  href: '/fashion',
-  note: 'Wear what feels you'
+  image: DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.image,
+  alt: DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.alt,
+  eyebrow: [DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.eyebrowOne, DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.eyebrowTwo],
+  headline: [DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.headlineOne, DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.headlineTwo],
+  sub: DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.subtitle,
+  cta: DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.ctaLabel,
+  href: DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.ctaLink,
+  note: DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.note
 };
 const HOME_CATEGORIES = {
   label: 'Shop Home & Living by category',
   viewAll: '/homeliving'
 };
 const FASHION_CATEGORIES = {
-  title: 'Shop Fashion Categories',
+  title: DEFAULT_LIFESTYLE_STOREFRONT.sections.fashionCategoriesTitle,
+  cta: DEFAULT_LIFESTYLE_STOREFRONT.sections.fashionCategoriesCta,
   viewAll: '/fashion'
 };
 
@@ -64346,15 +64611,16 @@ const FEATURES = [{
   sub: LIFESTYLE_DELIVERY_WINDOW
 }];
 const TRENDING = {
-  title: 'Trending Now',
+  title: DEFAULT_LIFESTYLE_STOREFRONT.sections.trendingTitle,
+  cta: DEFAULT_LIFESTYLE_STOREFRONT.sections.trendingCta,
   viewAll: '/homeliving',
   limit: 4
 };
 const PROMO = {
-  image: '/img/homeliving-promo.webp',
-  headline: 'Made for everyday living',
-  cta: 'Shop Home & Living',
-  href: '/homeliving'
+  image: DEFAULT_LIFESTYLE_STOREFRONT.promo.image,
+  headline: DEFAULT_LIFESTYLE_STOREFRONT.promo.headline,
+  cta: DEFAULT_LIFESTYLE_STOREFRONT.promo.ctaLabel,
+  href: DEFAULT_LIFESTYLE_STOREFRONT.promo.ctaLink
 };
 
 // ---- Links into the two stores ---------------------------------------------------
@@ -64549,7 +64815,9 @@ const OTHER_STORES = [{
   label: 'Grocery store',
   short: 'Grocery'
 }];
-function LifestyleLogo() {
+function LifestyleLogo({
+  tagline = LIFESTYLE_TAGLINE
+}) {
   return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
     to: "/lifestyle",
     className: "ls-logo",
@@ -64558,7 +64826,7 @@ function LifestyleLogo() {
       className: "serif",
       children: branding.siteName
     }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-      children: LIFESTYLE_TAGLINE
+      children: tagline
     })]
   });
 }
@@ -64568,6 +64836,8 @@ function LifestyleHeader({
   const {
     cartCount
   } = useStore();
+  const homepage = reactExports.useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+  const config = normalizeLifestyleStorefront(homepage.lifestyle_storefront);
   return /*#__PURE__*/jsxRuntimeExports.jsx("header", {
     className: "ls-hdr",
     children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -64581,7 +64851,9 @@ function LifestyleHeader({
           name: "menu",
           size: 26
         })
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleLogo, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleLogo, {
+        tagline: config.header.tagline
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
         className: "ls-hdr__acts",
         "aria-label": "Search, wishlist and cart",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -64973,8 +65245,10 @@ function HomeCircles({
 }
 
 /** The fashion doorway: one photograph, subject right, every word on its left. */
-function FashionBannerCard() {
-  const b = FASHION_BANNER;
+function FashionBannerCard({
+  banner = FASHION_BANNER
+}) {
+  const b = banner;
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "ls-wrap",
     children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
@@ -65019,7 +65293,7 @@ function FashionBannerCard() {
             size: 16
           })]
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      }), b.note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "ls-banner__note serif",
         "aria-hidden": "true",
         children: b.note
@@ -65028,7 +65302,8 @@ function FashionBannerCard() {
   });
 }
 function FashionCircles({
-  categories
+  categories,
+  copy = FASHION_CATEGORIES
 }) {
   if (categories.length === 0) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
@@ -65039,11 +65314,11 @@ function FashionCircles({
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
         className: "ls-sec__h serif",
         id: "ls-fashion-h",
-        children: FASHION_CATEGORIES.title
+        children: copy.title
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: FASHION_CATEGORIES.viewAll,
+        to: copy.viewAll,
         className: "ls-sec__link",
-        children: ["View All ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [copy.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "arrowRight",
           size: 16
         })]
@@ -65141,9 +65416,10 @@ function TrendingCard({
 }
 function TrendingRow({
   products,
-  status
+  status,
+  copy = TRENDING
 }) {
-  const row = trendingOf(products, TRENDING.limit);
+  const row = trendingOf(products, copy.limit);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "ls-wrap ls-sec",
     "aria-labelledby": "ls-trending-h",
@@ -65152,11 +65428,11 @@ function TrendingRow({
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
         className: "ls-sec__h ls-sec__h--rule serif",
         id: "ls-trending-h",
-        children: TRENDING.title
+        children: copy.title
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: TRENDING.viewAll,
+        to: copy.viewAll,
         className: "ls-sec__link",
-        children: ["View All ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [copy.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "arrowRight",
           size: 16
         })]
@@ -65173,7 +65449,9 @@ function TrendingRow({
     })]
   });
 }
-function PromoStrip() {
+function PromoStrip({
+  promo = PROMO
+}) {
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "ls-wrap",
     children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -65183,7 +65461,7 @@ function PromoStrip() {
         className: "ls-promo__art",
         "aria-hidden": "true",
         children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-          src: PROMO.image,
+          src: promo.image,
           alt: "",
           loading: "lazy",
           decoding: "async",
@@ -65193,11 +65471,11 @@ function PromoStrip() {
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "ls-promo__h",
         id: "ls-promo-h",
-        children: PROMO.headline
+        children: promo.headline
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: PROMO.href,
+        to: promo.href,
         className: "ls-cta ls-cta--paper",
-        children: [PROMO.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [promo.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "arrowRight",
           size: 16
         })]
@@ -65212,16 +65490,64 @@ function LifestyleHome() {
     fashionCategories,
     products
   } = useLifestyleCatalogue();
+  const homepage = reactExports.useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+  const config = normalizeLifestyleStorefront(homepage.lifestyle_storefront);
+  const slides = config.heroSlides.map(slide => ({
+    id: slide.id,
+    tall: slide.tall,
+    wide: slide.wide,
+    alt: slide.alt,
+    eyebrow: [slide.eyebrowOne, slide.eyebrowTwo],
+    headline: [slide.headlineOne, slide.headlineTwo],
+    sub: slide.subtitle,
+    cta: slide.ctaLabel,
+    href: slide.ctaLink,
+    note: slide.note
+  }));
+  const banner = {
+    image: config.fashionBanner.image,
+    alt: config.fashionBanner.alt,
+    eyebrow: [config.fashionBanner.eyebrowOne, config.fashionBanner.eyebrowTwo],
+    headline: [config.fashionBanner.headlineOne, config.fashionBanner.headlineTwo],
+    sub: config.fashionBanner.subtitle,
+    cta: config.fashionBanner.ctaLabel,
+    href: config.fashionBanner.ctaLink,
+    note: config.fashionBanner.note
+  };
+  const fashionCopy = {
+    ...FASHION_CATEGORIES,
+    title: config.sections.fashionCategoriesTitle,
+    cta: config.sections.fashionCategoriesCta
+  };
+  const trendingCopy = {
+    ...TRENDING,
+    title: config.sections.trendingTitle,
+    cta: config.sections.trendingCta
+  };
+  const promo = {
+    image: config.promo.image,
+    headline: config.promo.headline,
+    cta: config.promo.ctaLabel,
+    href: config.promo.ctaLink
+  };
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "ls-home",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(HeroCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeCircles, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(HeroCarousel, {
+      slides: slides
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeCircles, {
       categories: homeCategories
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionBannerCard, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FashionCircles, {
-      categories: fashionCategories
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionBannerCard, {
+      banner: banner
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionCircles, {
+      categories: fashionCategories,
+      copy: fashionCopy
     }), /*#__PURE__*/jsxRuntimeExports.jsx(FeatureTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TrendingRow, {
       products: products,
-      status: status
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(PromoStrip, {})]
+      status: status,
+      copy: trendingCopy
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(PromoStrip, {
+      promo: promo
+    })]
   });
 }
 
@@ -65307,6 +65633,8 @@ const HeroSlides = /*#__PURE__*/reactExports.lazy(() => import('./chunks/HeroSli
 const Promotions = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Promotions.js'));
 const Coupons = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Coupons.js'));
 const HomepageSettings = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Homepage.js'));
+const Storefronts = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Storefronts.js'));
+const StoreCatalogue = /*#__PURE__*/reactExports.lazy(() => import('./chunks/StoreCatalogue.js'));
 const CategoryExperience = /*#__PURE__*/reactExports.lazy(() => import('./chunks/CategoryExperience.js'));
 const Branding = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Branding.js'));
 const Settings = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Settings.js'));
@@ -65499,6 +65827,12 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "homepage",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(HomepageSettings, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "storefronts",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(Storefronts, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "store-catalogue/:store/:productId?",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(StoreCatalogue, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "category-experience",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(CategoryExperience, {})
@@ -65769,5 +66103,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { adminUpdateProduct as $, fulfillmentStatusLabel as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, REWARD_OPTION_SLOTS as a$, adminCreateProduct as a0, adminListVariants as a1, adminCreateVariant as a2, adminUpdateVariant as a3, adminSetVariantActive as a4, adminDeleteVariant as a5, adminGetProgramSettings as a6, CREATOR_STATUSES as a7, money2 as a8, adminListCreators as a9, adminGetConversionAudit as aA, adminRefundConversion as aB, adminListKyc as aC, KYC_STATUSES as aD, KYC_SIGNED_URL_SECONDS as aE, adminSetKycStatus as aF, KYC_DOCUMENT_KINDS as aG, kycDocumentState as aH, adminKycDocumentUrl as aI, adminListKycAudit as aJ, getPayoutConfig as aK, adminListPayouts as aL, PAYOUT_STATUSES as aM, adminSetWithdrawalsOpen as aN, adminGetPayoutLedger as aO, adminGetPayoutAudit as aP, adminGetKycForCreator as aQ, adminReviewPayout as aR, adminMarkPayoutPaid as aS, normalizeLadder as aT, DEFAULT_BEYOND_STEP as aU, adminGetTierLadder as aV, validateLadder as aW, ladderErrorMessage as aX, rupees as aY, adminListLevelRewards as aZ, groupRewardsByLevel as a_, adminCreatorStandings as aa, adminSetProgramSettings as ab, adminCreateCreator as ac, adminSetCreatorStatus as ad, normalizeContentPatch as ae, contentScore as af, adminGetCreator as ag, adminListCodeAliases as ah, adminListCampaigns as ai, adminListLinks as aj, adminListAudit as ak, adminListAttributionEvents as al, adminUpdateCampaign as am, adminCreateCampaign as an, CAMPAIGN_STATUSES as ao, buildTrackingUrl as ap, normalizeDestination as aq, DESTINATION_TYPES as ar, CopyButton as as, adminChangeCreatorCode as at, adminUpdateCreator as au, adminCreateLink as av, adminSetLinkStatus as aw, adminListConversions as ax, CONVERSION_STATUSES as ay, adminGetConversionItems as az, Link as b, validateImageUpload as b$, validateRewardOption as b0, REWARD_TYPES as b1, REWARD_TYPE_LABEL as b2, adminListRewardClaims as b3, CLAIM_STATUSES as b4, CLAIM_STATUS_LABEL as b5, DEFAULT_LADDER as b6, adminSetTierLadder as b7, rewardOptionErrorMessage as b8, adminUpsertLevelReward as b9, PromoOfferCard as bA, adminListPromotions as bB, adminUpsertPromotion as bC, adminDeletePromotion as bD, adminSetPromotionActive as bE, adminReorderPromotions as bF, uploadPromoImage as bG, supabase as bH, CouponTicket as bI, HOMEPAGE_VISUAL_FIELDS as bJ, safeVisualUrl as bK, MAX_CONCERN_PRODUCTS as bL, searchCatalogueForPicker as bM, productGallery as bN, MAX_DISCOVERY_CARDS as bO, makeDiscoveryId as bP, sanitizeHomepageVisuals as bQ, normalizeDiscovery as bR, products as bS, discoveryPayload as bT, mergeHomepageVisuals as bU, isSpotlightEligible as bV, categoryBySlug as bW, sanitizeCategoryConfig as bX, safeColor as bY, safeGradient as bZ, makeSpotlightId as b_, adminDeleteLevelReward as ba, adminSetRewardClaimStatus as bb, adminGetTheme as bc, sanitizeTheme$1 as bd, TOKENS as be, PRESET_LIST as bf, GROUPS as bg, DEFAULT_THEME as bh, OVERLAY_SCALES as bi, TYPE_SCALES as bj, HEX_RE as bk, adminSetTheme as bl, overlayRgba as bm, adminUpsertCategory as bn, adminDeleteCategory as bo, sanitizeHeroCta as bp, HERO_CTA_FIELDS as bq, adminUpsertHeroSlide as br, mergeHeroCta as bs, announceHomepageSaved as bt, adminDeleteHeroSlide as bu, adminReorderHeroSlides as bv, uploadImage as bw, uploadHeroVideo as bx, normalizePromo as by, PromoPoster as bz, LegalUpdated as c, normalizeCategoryExperience as c0, categoryExperiencePayload as c1, categoryIsReadyButOff as c2, categoryToneTheme as c3, MIN_INTERVAL_MS as c4, MAX_INTERVAL_MS as c5, DEFAULT_ITEM_SCALE as c6, MIN_ITEM_SCALE as c7, MAX_ITEM_SCALE as c8, ITEM_OFFSET_LIMIT as c9, CategorySpotlight as ca, SOCIAL_NETWORKS as cb, POLICY_KEYS as cc, validateCompanyForSave as cd, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminListHeroSlides as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminSeedDefaultHeroSlides as p, adminImportBiosashCatalog as q, reactExports as r, money as s, adminSetProductActive as t, useParams as u, validateLegalPage as v, adminDeleteProduct as w, adminReorderProducts as x, categories as y, adminListOrders as z };
+export { adminUpdateProduct as $, fulfillmentStatusLabel as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, REWARD_OPTION_SLOTS as a$, adminCreateProduct as a0, adminListVariants as a1, adminCreateVariant as a2, adminUpdateVariant as a3, adminSetVariantActive as a4, adminDeleteVariant as a5, adminGetProgramSettings as a6, CREATOR_STATUSES as a7, money2 as a8, adminListCreators as a9, adminGetConversionAudit as aA, adminRefundConversion as aB, adminListKyc as aC, KYC_STATUSES as aD, KYC_SIGNED_URL_SECONDS as aE, adminSetKycStatus as aF, KYC_DOCUMENT_KINDS as aG, kycDocumentState as aH, adminKycDocumentUrl as aI, adminListKycAudit as aJ, getPayoutConfig as aK, adminListPayouts as aL, PAYOUT_STATUSES as aM, adminSetWithdrawalsOpen as aN, adminGetPayoutLedger as aO, adminGetPayoutAudit as aP, adminGetKycForCreator as aQ, adminReviewPayout as aR, adminMarkPayoutPaid as aS, normalizeLadder as aT, DEFAULT_BEYOND_STEP as aU, adminGetTierLadder as aV, validateLadder as aW, ladderErrorMessage as aX, rupees as aY, adminListLevelRewards as aZ, groupRewardsByLevel as a_, adminCreatorStandings as aa, adminSetProgramSettings as ab, adminCreateCreator as ac, adminSetCreatorStatus as ad, normalizeContentPatch as ae, contentScore as af, adminGetCreator as ag, adminListCodeAliases as ah, adminListCampaigns as ai, adminListLinks as aj, adminListAudit as ak, adminListAttributionEvents as al, adminUpdateCampaign as am, adminCreateCampaign as an, CAMPAIGN_STATUSES as ao, buildTrackingUrl as ap, normalizeDestination as aq, DESTINATION_TYPES as ar, CopyButton as as, adminChangeCreatorCode as at, adminUpdateCreator as au, adminCreateLink as av, adminSetLinkStatus as aw, adminListConversions as ax, CONVERSION_STATUSES as ay, adminGetConversionItems as az, Link as b, isSpotlightEligible as b$, validateRewardOption as b0, REWARD_TYPES as b1, REWARD_TYPE_LABEL as b2, adminListRewardClaims as b3, CLAIM_STATUSES as b4, CLAIM_STATUS_LABEL as b5, DEFAULT_LADDER as b6, adminSetTierLadder as b7, rewardOptionErrorMessage as b8, adminUpsertLevelReward as b9, PromoOfferCard as bA, adminListPromotions as bB, adminUpsertPromotion as bC, adminDeletePromotion as bD, adminSetPromotionActive as bE, adminReorderPromotions as bF, uploadPromoImage as bG, supabase as bH, CouponTicket as bI, HOMEPAGE_VISUAL_FIELDS as bJ, safeVisualUrl as bK, MAX_CONCERN_PRODUCTS as bL, searchCatalogueForPicker as bM, productGallery as bN, MAX_DISCOVERY_CARDS as bO, makeDiscoveryId as bP, sanitizeHomepageVisuals as bQ, normalizeDiscovery as bR, products as bS, discoveryPayload as bT, mergeHomepageVisuals as bU, normalizeFashionStorefront as bV, normalizeLifestyleStorefront as bW, mergeStorefrontCustomization as bX, buildTree as bY, validatePlacement as bZ, useSearchParams as b_, adminDeleteLevelReward as ba, adminSetRewardClaimStatus as bb, adminGetTheme as bc, sanitizeTheme$1 as bd, TOKENS as be, PRESET_LIST as bf, GROUPS as bg, DEFAULT_THEME as bh, OVERLAY_SCALES as bi, TYPE_SCALES as bj, HEX_RE as bk, adminSetTheme as bl, overlayRgba as bm, adminUpsertCategory as bn, adminDeleteCategory as bo, sanitizeHeroCta as bp, HERO_CTA_FIELDS as bq, adminUpsertHeroSlide as br, mergeHeroCta as bs, announceHomepageSaved as bt, adminDeleteHeroSlide as bu, adminReorderHeroSlides as bv, uploadImage as bw, uploadHeroVideo as bx, normalizePromo as by, PromoPoster as bz, LegalUpdated as c, categoryBySlug as c0, sanitizeCategoryConfig as c1, safeColor as c2, safeGradient as c3, makeSpotlightId as c4, validateImageUpload as c5, normalizeCategoryExperience as c6, categoryExperiencePayload as c7, categoryIsReadyButOff as c8, categoryToneTheme as c9, MIN_INTERVAL_MS as ca, MAX_INTERVAL_MS as cb, DEFAULT_ITEM_SCALE as cc, MIN_ITEM_SCALE as cd, MAX_ITEM_SCALE as ce, ITEM_OFFSET_LIMIT as cf, CategorySpotlight as cg, SOCIAL_NETWORKS as ch, POLICY_KEYS as ci, validateCompanyForSave as cj, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminListHeroSlides as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminSeedDefaultHeroSlides as p, adminImportBiosashCatalog as q, reactExports as r, money as s, adminSetProductActive as t, useParams as u, validateLegalPage as v, adminDeleteProduct as w, adminReorderProducts as x, categories as y, adminListOrders as z };
 //# sourceMappingURL=bundle.js.map
