@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { money } from '../lib/format.js';
+import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+import { normalizeLifestyleStorefront } from '../lib/storefrontCustomization.js';
 import { FASHION_BANNER, FASHION_CATEGORIES, FEATURES, HERO_SLIDES, HOME_CATEGORIES, PROMO, TALL_MEDIA, TRENDING, homeCategoryHref, productHref, trendingOf, useLifestyleCatalogue } from '../data/lifestyleHomepage.js';
 
 // ============================================================
@@ -104,8 +106,8 @@ function HomeCircles({ categories }) {
 }
 
 /** The fashion doorway: one photograph, subject right, every word on its left. */
-function FashionBannerCard() {
-  const b = FASHION_BANNER;
+function FashionBannerCard({ banner = FASHION_BANNER }) {
+  const b = banner;
   return (
     <section className="ls-wrap">
       <Link to={b.href} className="ls-banner" aria-labelledby="ls-banner-h ls-banner-cta">
@@ -122,13 +124,13 @@ function FashionBannerCard() {
   );
 }
 
-function FashionCircles({ categories }) {
+function FashionCircles({ categories, copy = FASHION_CATEGORIES }) {
   if (categories.length === 0) return null;
   return (
     <section className="ls-wrap ls-sec" aria-labelledby="ls-fashion-h">
       <header className="ls-sec__head">
-        <h2 className="ls-sec__h serif" id="ls-fashion-h">{FASHION_CATEGORIES.title}</h2>
-        <Link to={FASHION_CATEGORIES.viewAll} className="ls-sec__link">View All <Icon name="arrowRight" size={16} /></Link>
+        <h2 className="ls-sec__h serif" id="ls-fashion-h">{copy.title}</h2>
+        <Link to={copy.viewAll} className="ls-sec__link">{copy.cta} <Icon name="arrowRight" size={16} /></Link>
       </header>
       <Circles items={categories} label="Shop fashion by category" />
     </section>
@@ -174,13 +176,13 @@ export function TrendingCard({ product, mediaLoading = 'lazy' }) {
   );
 }
 
-function TrendingRow({ products, status }) {
-  const row = trendingOf(products, TRENDING.limit);
+function TrendingRow({ products, status, copy = TRENDING }) {
+  const row = trendingOf(products, copy.limit);
   return (
     <section className="ls-wrap ls-sec" aria-labelledby="ls-trending-h">
       <header className="ls-sec__head">
-        <h2 className="ls-sec__h ls-sec__h--rule serif" id="ls-trending-h">{TRENDING.title}</h2>
-        <Link to={TRENDING.viewAll} className="ls-sec__link">View All <Icon name="arrowRight" size={16} /></Link>
+        <h2 className="ls-sec__h ls-sec__h--rule serif" id="ls-trending-h">{copy.title}</h2>
+        <Link to={copy.viewAll} className="ls-sec__link">{copy.cta} <Icon name="arrowRight" size={16} /></Link>
       </header>
       {row.length === 0 ? (
         <p className="ls-empty">{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The catalogue could not be loaded. Please try again shortly.' : 'Products appear here as the stores are stocked.'}</p>
@@ -193,13 +195,13 @@ function TrendingRow({ products, status }) {
   );
 }
 
-function PromoStrip() {
+function PromoStrip({ promo = PROMO }) {
   return (
     <section className="ls-wrap">
       <div className="ls-promo" aria-labelledby="ls-promo-h">
-        <div className="ls-promo__art" aria-hidden="true"><img src={PROMO.image} alt="" loading="lazy" decoding="async" width="1200" height="400" /></div>
-        <p className="ls-promo__h" id="ls-promo-h">{PROMO.headline}</p>
-        <Link to={PROMO.href} className="ls-cta ls-cta--paper">{PROMO.cta} <Icon name="arrowRight" size={16} /></Link>
+        <div className="ls-promo__art" aria-hidden="true"><img src={promo.image} alt="" loading="lazy" decoding="async" width="1200" height="400" /></div>
+        <p className="ls-promo__h" id="ls-promo-h">{promo.headline}</p>
+        <Link to={promo.href} className="ls-cta ls-cta--paper">{promo.cta} <Icon name="arrowRight" size={16} /></Link>
       </div>
     </section>
   );
@@ -207,15 +209,44 @@ function PromoStrip() {
 
 export default function LifestyleHome() {
   const { status, homeCategories, fashionCategories, products } = useLifestyleCatalogue();
+  const homepage = useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+  const config = normalizeLifestyleStorefront(homepage.lifestyle_storefront);
+  const slides = config.heroSlides.map((slide) => ({
+    id: slide.id, tall: slide.tall, wide: slide.wide, alt: slide.alt,
+    eyebrow: [slide.eyebrowOne, slide.eyebrowTwo],
+    headline: [slide.headlineOne, slide.headlineTwo],
+    sub: slide.subtitle, cta: slide.ctaLabel, href: slide.ctaLink, note: slide.note,
+  }));
+  const banner = {
+    image: config.fashionBanner.image, alt: config.fashionBanner.alt,
+    eyebrow: [config.fashionBanner.eyebrowOne, config.fashionBanner.eyebrowTwo],
+    headline: [config.fashionBanner.headlineOne, config.fashionBanner.headlineTwo],
+    sub: config.fashionBanner.subtitle, cta: config.fashionBanner.ctaLabel,
+    href: config.fashionBanner.ctaLink, note: config.fashionBanner.note,
+  };
+  const fashionCopy = {
+    ...FASHION_CATEGORIES,
+    title: config.sections.fashionCategoriesTitle,
+    cta: config.sections.fashionCategoriesCta,
+  };
+  const trendingCopy = {
+    ...TRENDING,
+    title: config.sections.trendingTitle,
+    cta: config.sections.trendingCta,
+  };
+  const promo = {
+    image: config.promo.image, headline: config.promo.headline,
+    cta: config.promo.ctaLabel, href: config.promo.ctaLink,
+  };
   return (
     <div className="ls-home">
-      <HeroCarousel />
+      <HeroCarousel slides={slides} />
       <HomeCircles categories={homeCategories} />
-      <FashionBannerCard />
-      <FashionCircles categories={fashionCategories} />
+      <FashionBannerCard banner={banner} />
+      <FashionCircles categories={fashionCategories} copy={fashionCopy} />
       <FeatureTiles />
-      <TrendingRow products={products} status={status} />
-      <PromoStrip />
+      <TrendingRow products={products} status={status} copy={trendingCopy} />
+      <PromoStrip promo={promo} />
     </div>
   );
 }

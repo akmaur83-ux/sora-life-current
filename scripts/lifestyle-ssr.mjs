@@ -32,17 +32,21 @@ export function loadLifestyleData({ supabase = noSupabase, initial = INITIAL } =
   const fashion = loadModule('src/lib/fashion.js', {});
   const fashionApi = loadModule('src/lib/fashionApi.js', { supabase, FASHION_STORE: fashion.FASHION_STORE });
   const fashionArt = loadModule('src/fashion/fashionArt.js', {});
+  const customization = has('src/lib/storefrontCustomization.js')
+    ? loadModule('src/lib/storefrontCustomization.js', { safeVisualUrl: (value) => (typeof value === 'string' && (/^\//.test(value) || /^https:\/\//.test(value)) ? value : '') })
+    : {};
   const data = loadModule('src/data/lifestyleHomepage.js', {
     HOMELIVING_DELIVERY_WINDOW: homeliving.HOMELIVING_DELIVERY_WINDOW, getHomeLivingCategories: homeliving.getHomeLivingCategories, getHomeLivingProducts: homeliving.getHomeLivingProducts, homelivingProductView: homeliving.homelivingProductView,
     getFashionCategories: fashionApi.getFashionCategories, getFashionProducts: fashionApi.getFashionProducts,
     buildTree: fashion.buildTree, fashionProductView: fashion.productView, circleArt: fashionArt.circleArt,
+    DEFAULT_LIFESTYLE_STOREFRONT: customization.DEFAULT_LIFESTYLE_STOREFRONT,
   });
   if (initial) data.seedLifestyleCatalogue(initial);
   return data;
 }
 
 // ---- the app, wired like App.jsx --------------------------------------------
-export async function buildLifestyleApp({ cartCount = 0, initial = INITIAL } = {}) {
+export async function buildLifestyleApp({ cartCount = 0, initial = INITIAL, homepage = {} } = {}) {
   const data = loadLifestyleData({ initial });
   const { Link, Outlet, useLocation, Routes, Route } = ReactRouter;
   const Icon = loadModule('src/components/Icon.jsx', {}).default;
@@ -51,8 +55,12 @@ export async function buildLifestyleApp({ cartCount = 0, initial = INITIAL } = {
   const useStore = () => ({ cartCount });
   const branding = { siteName: 'SORA LIFE', tagline: 'HEALTH & WELLNESS' };
   const money = (n) => `₹${Number(n).toLocaleString('en-IN')}`;
-  const layout = loadModule('src/lifestyle/LifestyleLayout.jsx', { Link, Outlet, useLocation, Icon, Footer, Toasts, useStore, branding, ...data });
-  const home = loadModule('src/lifestyle/LifestyleHome.jsx', { Link, Icon, money, ...data });
+  const customization = has('src/lib/storefrontCustomization.js')
+    ? loadModule('src/lib/storefrontCustomization.js', { safeVisualUrl: (value) => (typeof value === 'string' && (/^\//.test(value) || /^https:\/\//.test(value)) ? value : '') })
+    : {};
+  const homepageDeps = { getHomepageSnapshot: () => homepage, subscribeHomepage: () => () => {}, ...customization };
+  const layout = loadModule('src/lifestyle/LifestyleLayout.jsx', { Link, Outlet, useLocation, Icon, Footer, Toasts, useStore, branding, ...data, ...homepageDeps });
+  const home = loadModule('src/lifestyle/LifestyleHome.jsx', { Link, Icon, money, ...data, ...homepageDeps });
   const App = ({ path }) => h(StaticRouter, { location: path },
     h(Routes, null,
       h(Route, { path: '/lifestyle', element: h(layout.default) },

@@ -74,6 +74,8 @@ const HeroSlides = lazy(() => import('./admin/pages/HeroSlides.jsx'));
 const Promotions = lazy(() => import('./admin/pages/Promotions.jsx'));
 const Coupons = lazy(() => import('./admin/pages/Coupons.jsx'));
 const HomepageSettings = lazy(() => import('./admin/pages/Homepage.jsx'));
+const Storefronts = lazy(() => import('./admin/pages/Storefronts.jsx'));
+const StoreCatalogue = lazy(() => import('./admin/pages/StoreCatalogue.jsx'));
 const CategoryExperience = lazy(() => import('./admin/pages/CategoryExperience.jsx'));
 const Branding = lazy(() => import('./admin/pages/Branding.jsx'));
 const Settings = lazy(() => import('./admin/pages/Settings.jsx'));
@@ -177,6 +179,8 @@ export default function App() {
         <Route path="promotions" element={<Promotions />} />
         <Route path="coupons" element={<Coupons />} />
         <Route path="homepage" element={<HomepageSettings />} />
+        <Route path="storefronts" element={<Storefronts />} />
+        <Route path="store-catalogue/:store/:productId?" element={<StoreCatalogue />} />
         <Route path="category-experience" element={<CategoryExperience />} />
         <Route path="branding" element={<Branding />} />
         <Route path="appearance" element={<Appearance />} />

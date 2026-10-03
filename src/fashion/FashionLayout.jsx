@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { SparrowMark } from '../components/Logo.jsx';
 import Footer from '../components/Footer.jsx';
 import Toasts from '../components/Toasts.jsx';
 import { useStore } from '../lib/store.jsx';
-import { branding } from '../lib/settings.js';
+import { branding, getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
 import { useFashionWishlist } from '../lib/fashionWishlist.js';
 import { FashionCatalogueProvider, useFashionCatalogue } from './FashionCatalogue.jsx';
 import { categoryHref, resolveCategory } from '../lib/fashion.js';
+import { normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
 
 // ============================================================
 // The fashion store shell — its own header (logo, search, account,
@@ -19,11 +20,11 @@ import { categoryHref, resolveCategory } from '../lib/fashion.js';
 
 const SEARCH_PLACEHOLDER = 'Search for fashion, lifestyle and more…';
 
-function FashionLogo() {
+function FashionLogo({ tagline }) {
   return (
     <Link to="/fashion" className="fs-logo" aria-label={`${branding.siteName} fashion home`}>
       <SparrowMark size={34} />
-      <span className="fs-logo__txt"><strong>{branding.siteName}</strong><em>Live a brighter you</em></span>
+      <span className="fs-logo__txt"><strong>{branding.siteName}</strong><em>{tagline}</em></span>
     </Link>
   );
 }
@@ -33,6 +34,8 @@ export function FashionHeader({ onMenu }) {
   const wish = useFashionWishlist();
   const navigate = useNavigate();
   const location = useLocation();
+  const homepage = useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+  const config = normalizeFashionStorefront(homepage.fashion_storefront);
   const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') || '');
   const submit = (e) => {
     e.preventDefault();
@@ -43,7 +46,7 @@ export function FashionHeader({ onMenu }) {
     <header className="fs-hdr">
       <div className="fs-hdr__row">
         <button type="button" className="fs-hdr__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={24} /></button>
-        <FashionLogo />
+        <FashionLogo tagline={config.header.tagline} />
         <nav className="fs-hdr__acts" aria-label="Account, wishlist and cart">
           <Link to="/account" className="fs-hdr__act" aria-label="Account"><Icon name="user" size={24} /></Link>
           <Link to="/fashion/wishlist" className="fs-hdr__act" aria-label={`Wishlist${wish.count ? `, ${wish.count} items` : ''}`}>
@@ -64,7 +67,7 @@ export function FashionHeader({ onMenu }) {
       </div>
       <form className="fs-search" role="search" onSubmit={submit}>
         <Icon name="search" size={20} />
-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={SEARCH_PLACEHOLDER} aria-label="Search fashion" />
+        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={config.header.searchPlaceholder || SEARCH_PLACEHOLDER} aria-label="Search fashion" />
         <button type="submit" className="fs-search__go" aria-label="Search"><Icon name="search" size={22} /></button>
       </form>
       <div className="fs-strip" aria-label="Delivery">

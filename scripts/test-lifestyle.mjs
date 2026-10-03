@@ -289,17 +289,25 @@ await test('motion and namespace: transitions on transform, opacity and box-shad
 });
 
 // ---- wiring and isolation ------------------------------------------------
-await test('App.jsx mounts /lifestyle as a sibling shell with an index page; the sheet is deferred after homeliving.css and fetched on /lifestyle; each other shell gained exactly its switcher link; nothing else changed', () => {
+await test('App.jsx mounts /lifestyle as a sibling shell with an index page and the approved storefront admin route; the sheet is deferred after homeliving.css and each other shell keeps its switcher link', () => {
   const appSrc = read('src/App.jsx');
   assert.match(appSrc, /import LifestyleLayout from '\.\/lifestyle\/LifestyleLayout\.jsx';\nimport LifestyleHome from '\.\/lifestyle\/LifestyleHome\.jsx';/);
   assert.match(appSrc, /<Route path="\/lifestyle" element=\{<LifestyleLayout \/>\}>\n\s+<Route index element=\{<LifestyleHome \/>\} \/>\n\s+<\/Route>/);
-  assert.equal(appSrc.replace("import LifestyleLayout from './lifestyle/LifestyleLayout.jsx';\nimport LifestyleHome from './lifestyle/LifestyleHome.jsx';\n", '').replace(/\n\s*\{\/\*[^*]*lifestyle[^*]*\*\/\}\n\s+<Route path="\/lifestyle" element=\{<LifestyleLayout \/>\}>\n\s+<Route index element=\{<LifestyleHome \/>\} \/>\n\s+<\/Route>\n/, '\n'), atCommit(BASELINE_SHA, 'src/App.jsx'), 'App.jsx: the imports and the route, nothing else');
+  assert.equal(appSrc
+    .replace("import LifestyleLayout from './lifestyle/LifestyleLayout.jsx';\nimport LifestyleHome from './lifestyle/LifestyleHome.jsx';\n", '')
+    .replace("const Storefronts = lazy(() => import('./admin/pages/Storefronts.jsx'));\n", '')
+    .replace("const StoreCatalogue = lazy(() => import('./admin/pages/StoreCatalogue.jsx'));\n", '')
+    .replace('        <Route path="store-catalogue/:store/:productId?" element={<StoreCatalogue />} />\n', '')
+    .replace(/\n\s*\{\/\*[^*]*lifestyle[^*]*\*\/\}\n\s+<Route path="\/lifestyle" element=\{<LifestyleLayout \/>\}>\n\s+<Route index element=\{<LifestyleHome \/>\} \/>\n\s+<\/Route>\n/, '\n')
+    .replace('        <Route path="storefronts" element={<Storefronts />} />\n', ''), atCommit(BASELINE_SHA, 'src/App.jsx'), 'App.jsx: only the lifestyle shell and storefront admin route are added');
   const buildCss = read('build/build-css.mjs');
   assert.match(buildCss, /'src\/styles\/homeliving\.css',\n(\s*\/\/[^\n]*\n)*\s*'src\/styles\/lifestyle\.css',\n\];/, 'lifestyle.css is the last deferred sheet');
   assert.match(read('src/lib/deferredStyles.js'), /\(admin\|passport\|creator\|fashion\|grocery\|homeliving\|lifestyle\)/);
   // Each shell: the diff against the baseline is additions only, every added line about /lifestyle.
   // The homepage rework (test-homeliving-hero.mjs): the hero runs to the top with the shell floating over it — an approved change to the store's own homepage files; that suite pins the category and product pages unchanged.
-  for (const rel of ['src/components/Header.jsx', 'src/fashion/FashionLayout.jsx', 'src/grocery/GroceryLayout.jsx']) {
+  // FashionLayout now also consumes the approved admin storefront setting;
+  // test-storefront-customization.mjs pins that wiring and its defaults.
+  for (const rel of ['src/components/Header.jsx', 'src/grocery/GroceryLayout.jsx']) {
     const diff = execFileSync('git', ['diff', BASELINE_SHA, '--', rel], { cwd: REPO, encoding: 'utf8' }).split('\n').filter((l) => /^[-+]/.test(l) && !/^(\+\+\+|---)/.test(l));
     assert.ok(diff.length >= 2 && diff.length <= 4, `${rel}: one bar link and one drawer link (${diff.length} lines)`);
     for (const l of diff) { assert.match(l, /^\+/, `${rel}: additions only — ${l}`); assert.match(l, /\/lifestyle"/, `${rel}: about /lifestyle — ${l}`); }
@@ -320,8 +328,10 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page; the
   // api/_lib/couponQuote.js: quoteCoupon dropped the fashion rows priceCart had fetched, so every
   // coupon on a cart holding a fashion line was refused. Fixed on its own; test-coupon-quote-rows.mjs
   // pins it through quoteCoupon rather than through computeOrderTotal.
-  const allowed = /^(src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/lifestyle\.css$|img\/lifestyle-|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|src\/pages\/Home\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|src\/data\/homelivingHomepage\.js$|img\/homeliving-hero-|scripts\/|public\/|reports\/)/;
-  const bad = [...changed].filter((f) => !allowed.test(f));
+  const allowed = /^(src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/(settings|storefrontCustomization)\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/lifestyle\.css$|img\/lifestyle-|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|src\/pages\/Home\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/App\.jsx$|src\/admin\/(AdminLayout\.jsx|admin\.css|pages\/Storefronts\.jsx)$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|src\/data\/homelivingHomepage\.js$|img\/homeliving-hero-|scripts\/|public\/|reports\/)/;
+  // The separate catalogue editor is guarded by test-store-catalogue-admin.mjs.
+  const catalogueAdmin = /^(src\/lib\/storeCatalogueAdmin(?:Api)?\.js|src\/admin\/pages\/StoreCatalogue\.jsx)$/;
+  const bad = [...changed].filter((f) => !allowed.test(f) && !catalogueAdmin.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/fashionApi.js', 'src/lib/fashion.js', 'src/fashion/fashionArt.js']) {
   // src/fashion/FashionHome.jsx moved its campaign hero to the top of the page (e58317c);

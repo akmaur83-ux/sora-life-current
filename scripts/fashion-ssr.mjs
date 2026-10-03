@@ -87,7 +87,7 @@ export const PRODUCTS = [
 export const INITIAL = { categories: CATEGORIES, products: PRODUCTS };
 
 // ---- the app, wired like App.jsx --------------------------------------------
-export async function buildFashionApp({ cartCount = 0, session = null, wishlist = [], onAdd = null } = {}) {
+export async function buildFashionApp({ cartCount = 0, session = null, wishlist = [], onAdd = null, homepage = {} } = {}) {
   const rules = await import(pathToFileURL(resolve(ROOT, 'src/lib/fashion.js')).href);
   const wishMod = await import(pathToFileURL(resolve(ROOT, 'src/lib/fashionWishlist.js')).href);
   const art = await import(pathToFileURL(resolve(ROOT, 'src/fashion/fashionArt.js')).href);
@@ -107,11 +107,15 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
   const pdpContent = await import(pathToFileURL(resolve(ROOT, 'src/data/pdpContent.js')).href);
   const useCustomerAuth = () => ({ session, loading: false });
   const branding = { siteName: 'SORA LIFE', tagline: 'HEALTH & WELLNESS' };
+  const customization = has('src/lib/storefrontCustomization.js')
+    ? loadModule('src/lib/storefrontCustomization.js', { safeVisualUrl: (value) => (typeof value === 'string' && (/^\//.test(value) || /^https:\/\//.test(value)) ? value : '') })
+    : {};
+  const homepageDeps = { getHomepageSnapshot: () => homepage, subscribeHomepage: () => () => {}, ...customization };
   const catalogue = loadModule('src/fashion/FashionCatalogue.jsx', { getFashionCategories: async () => [], getFashionProducts: async () => [], buildTree: rules.buildTree, productView: rules.productView });
   const picker = loadModule('src/fashion/FashionVariantPicker.jsx', { Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, selectionState: pdpRules.selectionState });
   const card = loadModule('src/fashion/FashionProductCard.jsx', { Link, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, swatchOverflow: rules.swatchOverflow, quickAddPlan: pdpRules.quickAddPlan, useFashionWishlist: wishMod.useFashionWishlist, useStore, VariantSheet: picker.VariantSheet });
-  const layout = loadModule('src/fashion/FashionLayout.jsx', { Link, Outlet, useLocation, useNavigate, Icon, SparrowMark, Footer, Toasts, useStore, branding, useFashionWishlist: wishMod.useFashionWishlist, FashionCatalogueProvider: catalogue.FashionCatalogueProvider, useFashionCatalogue: catalogue.useFashionCatalogue, categoryHref: rules.categoryHref, resolveCategory: rules.resolveCategory });
-  const home = loadModule('src/fashion/FashionHome.jsx', { Link, Icon, useCustomerAuth, categoryHref: rules.categoryHref, sortViews: rules.sortViews, topBrands: rules.topBrands, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default, HERO_IMAGE: art.HERO_IMAGE, circleArt: art.circleArt, cardArt: art.cardArt });
+  const layout = loadModule('src/fashion/FashionLayout.jsx', { Link, Outlet, useLocation, useNavigate, Icon, SparrowMark, Footer, Toasts, useStore, branding, useFashionWishlist: wishMod.useFashionWishlist, FashionCatalogueProvider: catalogue.FashionCatalogueProvider, useFashionCatalogue: catalogue.useFashionCatalogue, categoryHref: rules.categoryHref, resolveCategory: rules.resolveCategory, ...homepageDeps });
+  const home = loadModule('src/fashion/FashionHome.jsx', { Link, Icon, useCustomerAuth, categoryHref: rules.categoryHref, sortViews: rules.sortViews, topBrands: rules.topBrands, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default, HERO_IMAGE: art.HERO_IMAGE, circleArt: art.circleArt, cardArt: art.cardArt, ...homepageDeps });
   const listing = loadModule('src/fashion/FashionListing.jsx', { Link, useParams, useSearchParams, Icon, ...rules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default });
   const pdp = loadModule('src/fashion/FashionProductPage.jsx', { Link, useNavigate, useParams, useSearchParams, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, useStore, ...pdpContent, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, Breadcrumb: listing.Breadcrumb, FashionProductCard: card.default, Stars: card.Stars, VariantPicker: picker.VariantPicker });
   const App = ({ path, initial = INITIAL }) => h(StaticRouter, { location: path },

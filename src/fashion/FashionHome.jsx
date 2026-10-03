@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { useCustomerAuth } from '../lib/customerAuth.jsx';
@@ -6,6 +7,8 @@ import { useFashionCatalogue } from './FashionCatalogue.jsx';
 import { CategoryChips } from './FashionLayout.jsx';
 import FashionProductCard from './FashionProductCard.jsx';
 import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
+import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
 
 // ============================================================
 // /fashion — circular category tiles, the benefits strip, the hero (image
@@ -15,13 +18,11 @@ import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
 // ============================================================
 
 export const HERO = {
-  eyebrow: 'Fashion for a brighter you',
-  title: 'New Season Essentials',
-  sub: 'Style · Comfort · Everyday Living',
-  cta: 'Shop now',
-  href: '/fashion/c/clothing',
-  note: 'Under ₹499',
-  image: HERO_IMAGE, // the supplied banner; null falls back to the typographic slot
+  ...DEFAULT_FASHION_STOREFRONT.hero,
+  sub: DEFAULT_FASHION_STOREFRONT.hero.subtitle,
+  cta: DEFAULT_FASHION_STOREFRONT.hero.ctaLabel,
+  href: DEFAULT_FASHION_STOREFRONT.hero.ctaLink,
+  image: HERO_IMAGE,
 };
 
 function CategoryTiles({ tree }) {
@@ -62,18 +63,19 @@ function Benefits() {
   );
 }
 
-function Hero() {
+function Hero({ config }) {
+  const hero = config || HERO;
   return (
-    <section className={`fs-hero${HERO.image ? ' has-image' : ''}`} aria-labelledby="fs-hero-h">
+    <section className={`fs-hero${hero.image ? ' has-image' : ''}`} aria-labelledby="fs-hero-h">
       <div className="fs-hero__txt">
-        <p className="fs-hero__eyebrow">{HERO.eyebrow}</p>
-        <h1 className="fs-hero__h serif" id="fs-hero-h">{HERO.title}</h1>
-        <p className="fs-hero__sub">{HERO.sub}</p>
-        <Link to={HERO.href} className="fs-hero__cta">{HERO.cta} <Icon name="arrowRight" size={17} /></Link>
-        <p className="fs-hero__note serif">{HERO.note}</p>
+        <p className="fs-hero__eyebrow">{hero.eyebrow}</p>
+        <h1 className="fs-hero__h serif" id="fs-hero-h">{hero.title}</h1>
+        <p className="fs-hero__sub">{hero.subtitle || hero.sub}</p>
+        <Link to={hero.ctaLink || hero.href} className="fs-hero__cta">{hero.ctaLabel || hero.cta} <Icon name="arrowRight" size={17} /></Link>
+        <p className="fs-hero__note serif">{hero.note}</p>
       </div>
       <div className="fs-hero__art" aria-hidden="true">
-        {HERO.image ? <img src={HERO.image} alt="" width="1600" height="900" decoding="async" fetchpriority="high" /> : (
+        {hero.image ? <img src={hero.image} alt="" width="1600" height="900" decoding="async" fetchpriority="high" /> : (
           <div className="fs-hero__slot">
             <p className="serif">Good Style<br />Brighter Days</p>
             <span className="fs-hero__words"><span>Wear</span><span>Live</span><span>Explore</span><span>Belong</span></span>
@@ -84,14 +86,14 @@ function Hero() {
   );
 }
 
-function ShopByCategory({ tree }) {
+function ShopByCategory({ tree, copy }) {
   const roots = tree.roots.filter((r) => r.is_active).slice(0, 4);
   if (roots.length === 0) return null;
   return (
     <section className="fs-sec" aria-labelledby="fs-cats-h">
       <header className="fs-sec__head">
-        <h2 className="fs-sec__h serif" id="fs-cats-h">Shop by Category</h2>
-        {tree.roots[0] && <Link to={categoryHref(tree.roots[0])} className="fs-sec__link">Explore all <Icon name="chevronRight" size={16} /></Link>}
+        <h2 className="fs-sec__h serif" id="fs-cats-h">{copy.categoriesTitle}</h2>
+        {tree.roots[0] && <Link to={categoryHref(tree.roots[0])} className="fs-sec__link">{copy.categoriesCta} <Icon name="chevronRight" size={16} /></Link>}
       </header>
       <div className="fs-catcards">
         {roots.map((c) => (
@@ -109,14 +111,14 @@ function ShopByCategory({ tree }) {
   );
 }
 
-function TopBrands({ views }) {
+function TopBrands({ views, copy }) {
   const brands = topBrands(views, 6);
   if (brands.length === 0) return null;
   return (
     <section className="fs-sec fs-brands" aria-labelledby="fs-brands-h">
       <header className="fs-sec__head">
-        <h2 className="fs-sec__h serif" id="fs-brands-h">Top Brands on SORA LIFE</h2>
-        <Link to="/fashion/search" className="fs-sec__link">See all <Icon name="chevronRight" size={16} /></Link>
+        <h2 className="fs-sec__h serif" id="fs-brands-h">{copy.brandsTitle}</h2>
+        <Link to="/fashion/search" className="fs-sec__link">{copy.brandsCta} <Icon name="chevronRight" size={16} /></Link>
       </header>
       <div className="fs-brands__row">
         {brands.map((b) => (
@@ -132,18 +134,20 @@ function TopBrands({ views }) {
 
 export default function FashionHome() {
   const { status, tree, views } = useFashionCatalogue();
+  const homepage = useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+  const config = normalizeFashionStorefront(homepage.fashion_storefront);
   const grid = sortViews(views, 'featured');
   return (
     <div className="fs-home">
-      <Hero />
+      <Hero config={config.hero} />
       <CategoryChips />
       <CategoryTiles tree={tree} />
       <Benefits />
-      <ShopByCategory tree={tree} />
-      <TopBrands views={views} />
+      <ShopByCategory tree={tree} copy={config.sections} />
+      <TopBrands views={views} copy={config.sections} />
       <section className="fs-sec" aria-labelledby="fs-grid-h">
         <header className="fs-sec__head">
-          <h2 className="fs-sec__h serif" id="fs-grid-h">Fresh in fashion</h2>
+          <h2 className="fs-sec__h serif" id="fs-grid-h">{config.sections.productsTitle}</h2>
           <span className="fs-sec__count">{grid.length} {grid.length === 1 ? 'style' : 'styles'}</span>
         </header>
         {grid.length === 0 ? (

@@ -21,8 +21,9 @@ import { HOMELIVING_DELIVERY_WINDOW, getHomeLivingCategories, getHomeLivingProdu
 import { getFashionCategories, getFashionProducts } from '../lib/fashionApi.js';
 import { buildTree, productView as fashionProductView } from '../lib/fashion.js';
 import { circleArt } from '../fashion/fashionArt.js';
+import { DEFAULT_LIFESTYLE_STOREFRONT } from '../lib/storefrontCustomization.js';
 
-export const LIFESTYLE_TAGLINE = 'Live a better you';
+export const LIFESTYLE_TAGLINE = DEFAULT_LIFESTYLE_STOREFRONT.header.tagline;
 
 /** Delivery promise. The Home & Living window; the only factual claim on the page. */
 export const LIFESTYLE_DELIVERY_WINDOW = HOMELIVING_DELIVERY_WINDOW;
@@ -36,59 +37,27 @@ export const TALL_MEDIA = '(max-width: 1023px)';
  * landscape whose subject sits right (the copy takes the left). With one
  * slide the counter and arrows are not rendered.
  */
-export const HERO_SLIDES = [
-  {
-    id: 'home',
-    tall: '/img/doorway-living-tall.webp',
-    wide: '/img/doorway-living-wide.webp',
-    alt: 'Cream sofa with green cushions and a throw, a wooden coffee table and a jute rug in soft light',
-    eyebrow: ['Beautiful spaces', 'Happier days'],
-    headline: ['Make Home', 'a Happier Place'],
-    sub: 'Home essentials for a calmer, warmer and more you.',
-    cta: 'Shop Home & Living',
-    href: '/homeliving',
-    note: 'Good spaces, better days',
-  },
-  {
-    id: 'bedroom',
-    tall: '/img/lifestyle-hero-bedroom-tall.webp',
-    wide: '/img/homeliving-hero.webp',
-    alt: 'A cane headboard, botanical bedsheets, green cushions and a quilt in a sunlit bedroom',
-    eyebrow: ['Bedsheets', 'Quilts & cushions'],
-    headline: ['Sleep Softer,', 'Wake Brighter'],
-    sub: 'Cotton bedsheets, quilts and cushion covers for calmer rooms.',
-    cta: 'Shop Bedsheets',
-    href: '/homeliving/category/bedsheets',
-    note: 'Rest well, every night',
-  },
-  {
-    id: 'fashion',
-    tall: '/img/doorway-fashion-tall.webp',
-    wide: '/img/doorway-fashion-wide.webp',
-    alt: 'Camel coat and cream turtleneck, seated against a sunlit plaster wall',
-    eyebrow: ['Your style', 'Your story'],
-    headline: ['Fashion', 'for Everyday'],
-    sub: 'Clothing, footwear, bags and more — all in one place.',
-    cta: 'Explore Fashion',
-    href: '/fashion',
-    note: 'Wear what feels you',
-  },
-];
+export const HERO_SLIDES = DEFAULT_LIFESTYLE_STOREFRONT.heroSlides.map((slide) => ({
+  id: slide.id, tall: slide.tall, wide: slide.wide, alt: slide.alt,
+  eyebrow: [slide.eyebrowOne, slide.eyebrowTwo],
+  headline: [slide.headlineOne, slide.headlineTwo],
+  sub: slide.subtitle, cta: slide.ctaLabel, href: slide.ctaLink, note: slide.note,
+}));
 
 /** The fashion doorway card between the two category rows. The photo's subject sits right; the copy takes the left. */
 export const FASHION_BANNER = {
-  image: '/img/doorway-fashion-wide.webp',
-  alt: 'Camel coat and cream turtleneck, seated against a sunlit plaster wall',
-  eyebrow: ['Your style', 'Your story'],
-  headline: ['Fashion', 'for Everyday'],
-  sub: 'Clothing, footwear, bags and more — all in one place.',
-  cta: 'Explore Fashion',
-  href: '/fashion',
-  note: 'Wear what feels you',
+  image: DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.image,
+  alt: DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.alt,
+  eyebrow: [DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.eyebrowOne, DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.eyebrowTwo],
+  headline: [DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.headlineOne, DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.headlineTwo],
+  sub: DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.subtitle,
+  cta: DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.ctaLabel,
+  href: DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.ctaLink,
+  note: DEFAULT_LIFESTYLE_STOREFRONT.fashionBanner.note,
 };
 
 export const HOME_CATEGORIES = { label: 'Shop Home & Living by category', viewAll: '/homeliving' };
-export const FASHION_CATEGORIES = { title: 'Shop Fashion Categories', viewAll: '/fashion' };
+export const FASHION_CATEGORIES = { title: DEFAULT_LIFESTYLE_STOREFRONT.sections.fashionCategoriesTitle, cta: DEFAULT_LIFESTYLE_STOREFRONT.sections.fashionCategoriesCta, viewAll: '/fashion' };
 
 /** The two feature tiles. Both are facts about what we sell and how it ships. */
 export const FEATURES = [
@@ -96,13 +65,13 @@ export const FEATURES = [
   { icon: 'truck', title: 'Standard Delivery', sub: LIFESTYLE_DELIVERY_WINDOW },
 ];
 
-export const TRENDING = { title: 'Trending Now', viewAll: '/homeliving', limit: 4 };
+export const TRENDING = { title: DEFAULT_LIFESTYLE_STOREFRONT.sections.trendingTitle, cta: DEFAULT_LIFESTYLE_STOREFRONT.sections.trendingCta, viewAll: '/homeliving', limit: 4 };
 
 export const PROMO = {
-  image: '/img/homeliving-promo.webp',
-  headline: 'Made for everyday living',
-  cta: 'Shop Home & Living',
-  href: '/homeliving',
+  image: DEFAULT_LIFESTYLE_STOREFRONT.promo.image,
+  headline: DEFAULT_LIFESTYLE_STOREFRONT.promo.headline,
+  cta: DEFAULT_LIFESTYLE_STOREFRONT.promo.ctaLabel,
+  href: DEFAULT_LIFESTYLE_STOREFRONT.promo.ctaLink,
 };
 
 // ---- Links into the two stores ---------------------------------------------------
