@@ -21,6 +21,7 @@ import NotFound from './pages/NotFound.jsx';
 import AdminLogin from './pages/AdminLogin.jsx';
 import FashionLayout from './fashion/FashionLayout.jsx';
 import FashionHome from './fashion/FashionHome.jsx';
+import FashionDepartment from './fashion/FashionDepartment.jsx';
 import FashionCategory, { FashionSearch, FashionWishlistPage } from './fashion/FashionListing.jsx';
 import FashionProductPage from './fashion/FashionProductPage.jsx';
 import GroceryLayout from './grocery/GroceryLayout.jsx';
@@ -197,6 +198,8 @@ export default function App() {
           cart, account and checkout it links to are the shared ones. */}
       <Route path="/fashion" element={<FashionLayout />}>
         <Route index element={<FashionHome />} />
+        <Route path="men" element={<FashionDepartment key="men" department="men" />} />
+        <Route path="women" element={<FashionDepartment key="women" department="women" />} />
         <Route path="c/:slug" element={<FashionCategory />} />
         <Route path="p/:slug" element={<FashionProductPage />} />
         <Route path="search" element={<FashionSearch />} />

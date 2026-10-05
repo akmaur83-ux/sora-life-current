@@ -76,6 +76,7 @@ const STOREFRONT = [
   // The fashion doorway on the wellness homepage. Nothing else of the
   // fashion store is on the critical path — its sheet is deferred below.
   'src/styles/fashion-banner.css',
+  'src/styles/fashion-choice.css',
 ];
 
 // Routes outside the shop: /admin, /passport, /creator. No customer browsing
@@ -90,6 +91,7 @@ const DEFERRED = [
   'src/styles/creator-dashboard.css',
   // The fashion store (/fashion): its own shell and pages, namespaced .fs-*.
   'src/styles/fashion.css',
+  'src/styles/fashion-departments.css',
   // The grocery store (/grocery): its own shell and homepage, namespaced .gs-*.
   'src/styles/grocery.css',
   // The Home & Living store (/homeliving): its own shell and homepage, namespaced .hl-*.

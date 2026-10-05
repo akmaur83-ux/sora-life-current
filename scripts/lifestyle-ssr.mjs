@@ -60,7 +60,8 @@ export async function buildLifestyleApp({ cartCount = 0, initial = INITIAL, home
     : {};
   const homepageDeps = { getHomepageSnapshot: () => homepage, subscribeHomepage: () => () => {}, ...customization };
   const layout = loadModule('src/lifestyle/LifestyleLayout.jsx', { Link, Outlet, useLocation, Icon, Footer, Toasts, useStore, branding, ...data, ...homepageDeps });
-  const home = loadModule('src/lifestyle/LifestyleHome.jsx', { Link, Icon, money, ...data, ...homepageDeps });
+  const FashionEntryLink = loadModule('src/components/FashionEntryLink.jsx', { Link, useLocation, Icon }).default;
+  const home = loadModule('src/lifestyle/LifestyleHome.jsx', { Link, Icon, money, FashionEntryLink, ...data, ...homepageDeps });
   const App = ({ path }) => h(StaticRouter, { location: path },
     h(Routes, null,
       h(Route, { path: '/lifestyle', element: h(layout.default) },

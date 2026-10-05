@@ -42,6 +42,19 @@ export function FashionHeader({ onMenu }) {
     const term = q.trim();
     navigate(term ? `/fashion/search?q=${encodeURIComponent(term)}` : '/fashion/search');
   };
+  if (/^\/fashion\/women\/?$/.test(location.pathname)) return (
+    <header className="sw-header">
+      <button type="button" className="sw-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
+      <FashionLogo tagline="Tradition in every drape" />
+      <nav className="sw-header__nav" aria-label="Saree store"><Link to="/fashion/women">Home</Link><a href="#fd-products">Shop</a><a href="#sw-collections">Collections <Icon name="chevronDown" size={12} /></a><Link to="/about">About</Link><Link to="/contact">Contact</Link></nav>
+      <nav className="sw-header__actions" aria-label="Search, account, wishlist and cart">
+        <Link to="/fashion/search" aria-label="Search fashion"><Icon name="search" size={19} /></Link>
+        <Link to="/account" aria-label="Account"><Icon name="user" size={19} /></Link>
+        <Link to="/fashion/wishlist" aria-label={`Wishlist${wish.count ? `, ${wish.count} items` : ''}`}><Icon name="heart" size={19} /></Link>
+        <Link to="/cart" aria-label={`Cart${cartCount ? `, ${cartCount} items` : ''}`}><Icon name="bag" size={19} />{cartCount > 0 && <span>{cartCount}</span>}</Link>
+      </nav>
+    </header>
+  );
   return (
     <header className="fs-hdr">
       <div className="fs-hdr__row">
@@ -138,7 +151,7 @@ function Shell() {
   const { pathname } = useLocation();
   useEffect(() => { setMenu(false); }, [pathname]);
   return (
-    <div className="fs">
+    <div className={`fs${/^\/fashion\/(men|women)\/?$/.test(pathname) ? ' fs--department' : ''}${/^\/fashion\/women\/?$/.test(pathname) ? ' fs--saree' : ''}`}>
       <FashionHeader onMenu={() => setMenu(true)} />
       <Drawer open={menu} onClose={() => setMenu(false)} />
       <main className="fs-main"><Outlet /></main>

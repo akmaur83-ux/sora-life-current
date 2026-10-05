@@ -15,7 +15,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, h, loadModule } from './grocery-ssr.mjs';
 // Review only: SSR_FONTS_CSS may point at a stylesheet of inline @font-face rules so the zero-network file measures with the real faces. Not set in the repo.
@@ -29,7 +29,8 @@ if (!/\.fsb__card \{[^}]*container-type: inline-size/.test(css)) throw new Error
 const Icon = loadModule('src/components/Icon.jsx').default;
 const EagerImage = ({ src, sources = [], loading, decoding, fetchPriority, ...props }) =>
   h('picture', null, ...sources.map((s) => h('source', { key: s.media, media: s.media, srcSet: s.srcSet })), h('img', { ...props, src }));
-const doorway = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage: EagerImage });
+const FashionEntryLink = loadModule('src/components/FashionEntryLink.jsx', { Link, useLocation, Icon }).default;
+const doorway = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage: EagerImage, FashionEntryLink });
 // The two sections as Home.jsx places them (the banner after the offers, the carousel above the popular rail), with a
 // stand-in for the sections between them so the gap reads as it does on the page.
 const between = '<section class="v2-sec" style="padding:40px 0;text-align:center;color:#8a8f86;font:14px Inter,sans-serif">— Start here · Shop by category · Concerns · Brands · Discovery edit (the wellness sections, unchanged) —</section>';

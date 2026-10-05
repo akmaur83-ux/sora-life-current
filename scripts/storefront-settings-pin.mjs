@@ -13,6 +13,14 @@
 // settings read changed, and the defaults are the old wording. Each hunk must
 // match exactly once; any other edit in those spots fails here, loudly.
 // Files outside the six pass through untouched.
+//
+// The fashion departments followed: /fashion/men and /fashion/women
+// (FashionDepartment.jsx and departmentContent.js; test-fashion-departments.mjs
+// owns them) and the chooser the default Fashion doorways open
+// (FashionEntryLink.jsx). `sansFashionDepartments` undoes exactly what that
+// change did to six shared files, the same way. `sansStorefrontChanges` applies
+// both, newest first; the suites call that one, so the next approved change is
+// added here, once.
 // ============================================================
 import assert from 'node:assert/strict';
 import { DEFAULT_FASHION_STOREFRONT as F, DEFAULT_LIFESTYLE_STOREFRONT as L } from '../src/lib/storefrontCustomization.js';
@@ -23,13 +31,22 @@ export const STOREFRONT_ADMIN_FILES = /^(src\/admin\/AdminLayout\.jsx|src\/admin
 /** The storefront files that now read the setting — each undone by sansStorefrontSettings. */
 export const STOREFRONT_SETTINGS_READS = /^(src\/App\.jsx|src\/fashion\/(FashionHome|FashionLayout)\.jsx|src\/lifestyle\/(LifestyleHome|LifestyleLayout)\.jsx|src\/data\/lifestyleHomepage\.js)$/;
 
+/** The files the fashion departments added: the two pages, the chooser, their sheets and the editorial artwork. */
+export const FASHION_DEPARTMENT_FILES = /^(src\/fashion\/(FashionDepartment\.jsx|departmentContent\.js)|src\/components\/FashionEntryLink\.jsx|src\/styles\/fashion-(choice|departments)\.css|img\/fashion-editorial\/[a-z0-9-]+\.webp)$/;
+
+/** The shared files the departments edited — each undone by sansFashionDepartments. */
+export const FASHION_DEPARTMENT_EDITS = /^(src\/App\.jsx|src\/fashion\/(FashionHome|FashionLayout)\.jsx|src\/lifestyle\/LifestyleHome\.jsx|src\/components\/FashionBanner\.jsx|build\/build-css\.mjs)$/;
+
+/** Rendered /fashion: the Men and Women tiles open their department pages instead of the category listings. */
+export const sansDepartmentTiles = (html) => html.replace(/<a class="fs-tile" href="\/fashion\/(men|women)">/g, '<a class="fs-tile" href="/fashion/c/$1">');
+
 const q = (s) => { assert.ok(!/['\\\n]/.test(s), `default needs escaping: ${s}`); return `'${s}'`; };
 const pair = (a, b) => `[${q(a)}, ${q(b)}]`;
 const lines = (indent, entries) => entries.map(([k, v]) => `${indent}${k}: ${v},\n`).join('');
 
 const swap = (rel, text, now, then) => {
   const n = text.split(now).length - 1;
-  assert.equal(n, 1, `${rel}: expected the 99b67ba hunk exactly once, found ${n}: ${now.slice(0, 80)}`);
+  assert.equal(n, 1, `${rel}: expected the approved hunk exactly once, found ${n}: ${now.slice(0, 80)}`);
   return text.replace(now, () => then);
 };
 const swapAll = (rel, text, re, then, count) => {
@@ -184,3 +201,57 @@ export function sansStorefrontSettings(rel, text) {
   const undo = UNDO[rel];
   return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
 }
+
+// Removes one block that starts with `start` (exactly once) and runs to the first `end` after it.
+const cut = (rel, text, start, end) => {
+  const n = text.split(start).length - 1;
+  assert.equal(n, 1, `${rel}: expected the approved block exactly once, found ${n}: ${start.slice(0, 80)}`);
+  const from = text.indexOf(start), to = text.indexOf(end, from);
+  assert.ok(to > from, `${rel}: the approved block is not closed`);
+  return text.slice(0, from) + text.slice(to + end.length);
+};
+
+const UNDO_DEPARTMENTS = {
+  'src/App.jsx': (t, r) => {
+    t = swap(r, t, "import FashionDepartment from './fashion/FashionDepartment.jsx';\n", '');
+    return swap(r, t, '        <Route path="men" element={<FashionDepartment key="men" department="men" />} />\n        <Route path="women" element={<FashionDepartment key="women" department="women" />} />\n', '');
+  },
+
+  'src/fashion/FashionHome.jsx': (t, r) =>
+    swap(r, t, "<Link key={c.id} to={['men', 'women'].includes(c.slug) ? `/fashion/${c.slug}` : categoryHref(c)} className=\"fs-tile\">", '<Link key={c.id} to={categoryHref(c)} className="fs-tile">'),
+
+  'src/fashion/FashionLayout.jsx': (t, r) => {
+    // The saree page's own header, returned early on /fashion/women; every other route keeps .fs-hdr.
+    t = cut(r, t, '  if (/^\\/fashion\\/women\\/?$/.test(location.pathname)) return (\n    <header className="sw-header">\n', '\n    </header>\n  );\n');
+    return swap(r, t, "<div className={`fs${/^\\/fashion\\/(men|women)\\/?$/.test(pathname) ? ' fs--department' : ''}${/^\\/fashion\\/women\\/?$/.test(pathname) ? ' fs--saree' : ''}`}>", '<div className="fs">');
+  },
+
+  'src/lifestyle/LifestyleHome.jsx': (t, r) => {
+    t = swap(r, t, "import FashionEntryLink from '../components/FashionEntryLink.jsx';\n", '');
+    t = swap(r, t, '<FashionEntryLink to={s.href} className="ls-cta" tabIndex={i === index ? 0 : -1}>{s.cta} <Icon name="arrowRight" size={17} /></FashionEntryLink>',
+      '<Link to={s.href} className="ls-cta" tabIndex={i === index ? 0 : -1}>{s.cta} <Icon name="arrowRight" size={17} /></Link>');
+    t = swap(r, t, '<FashionEntryLink to={b.href} className="ls-banner" aria-labelledby="ls-banner-h ls-banner-cta">', '<Link to={b.href} className="ls-banner" aria-labelledby="ls-banner-h ls-banner-cta">');
+    return swap(r, t, '      </FashionEntryLink>\n', '      </Link>\n');
+  },
+
+  'src/components/FashionBanner.jsx': (t, r) => {
+    t = swap(r, t, "import FashionEntryLink from './FashionEntryLink.jsx';\n", '');
+    t = swap(r, t, "  const Entry = store.key === 'fashion' ? FashionEntryLink : Link;\n", '');
+    t = swap(r, t, '    <Entry to={store.to} className=', '    <Link to={store.to} className=');
+    return swap(r, t, '    </Entry>\n', '    </Link>\n');
+  },
+
+  'build/build-css.mjs': (t, r) => {
+    t = swap(r, t, "  'src/styles/fashion-banner.css',\n  'src/styles/fashion-choice.css',\n", "  'src/styles/fashion-banner.css',\n");
+    return swap(r, t, "  'src/styles/fashion.css',\n  'src/styles/fashion-departments.css',\n", "  'src/styles/fashion.css',\n");
+  },
+};
+
+/** The file as it stood before the fashion departments, LF-normalised; anything outside the six comes back as given. */
+export function sansFashionDepartments(rel, text) {
+  const undo = UNDO_DEPARTMENTS[rel];
+  return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
+}
+
+/** Every approved storefront change above undone, newest first: what the older pins compare. */
+export const sansStorefrontChanges = (rel, text) => sansStorefrontSettings(rel, sansFashionDepartments(rel, text));

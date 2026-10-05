@@ -1,0 +1,37 @@
+/* Loaded with the storefront: the banner chooser also opens outside /fashion. */
+.fashion-choice { width: min(960px, calc(100% - 32px)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid #e5dacf; border-radius: 16px; color: #241e1a; background: #fbf7f1; box-shadow: 0 30px 100px #0005; overflow: auto; }
+.fashion-choice::backdrop { background: #171210b8; backdrop-filter: blur(6px); }
+.fashion-choice__inner { padding: 44px 30px 26px; position: relative; }
+.fashion-choice__close { position: absolute; top: 10px; right: 10px; width: 42px; height: 42px; display: grid; place-items: center; background: transparent; border: 0; color: #332921; cursor: pointer; }
+.fashion-choice__eyebrow { margin: 0 0 12px; color: #795942; font: 600 11px/1.5 'Inter', sans-serif; text-transform: uppercase; letter-spacing: .2em; text-align: center; }
+.fashion-choice h2 { margin: 0; font: 400 clamp(26px, 4vw, 42px)/1.15 var(--font-display, Georgia, serif); text-align: center; }
+.fashion-choice__intro { margin: 12px 0 26px; text-align: center; font: 400 14px/1.5 'Inter', sans-serif; color: #74645a; }
+.fashion-choice__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.fashion-choice__card { position: relative; display: block; aspect-ratio: 3/4; overflow: hidden; isolation: isolate; border-radius: 8px; text-decoration: none; background: #292825; color: #fff; }
+.fashion-choice__card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, #18120fef 0%, #18120f80 28%, transparent 65%); z-index: -1; }
+.fashion-choice__card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; transition: transform .4s ease; }
+.fashion-choice__card > span { position: absolute; bottom: 22px; inset-inline: 18px; display: grid; gap: 8px; }
+.fashion-choice__card small { font: 500 9px/1.4 'Inter', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #eee0d6; }
+.fashion-choice__card strong { display: flex; align-items: center; justify-content: space-between; gap: 6px; font: 400 clamp(20px, 2.4vw, 29px)/1.15 var(--font-display, Georgia, serif); color: #fff; }
+.fashion-choice__card em { font: normal 11px/1.4 'Inter', sans-serif; color: #ede3dd; }
+.fashion-choice__card--women::after { background: linear-gradient(0deg, #38172ff5, #38172f70 35%, transparent 70%); }
+.fashion-choice__card--kids { background: #cfba98; }
+.fashion-choice__card--kids img { filter: saturate(.5); }
+.fashion-choice__card--kids em { width: fit-content; padding: 5px 10px; border: 1px solid #ffffff70; border-radius: 30px; }
+.fashion-choice__all { width: fit-content; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; margin: 18px auto 0; color: #5b4636; font: 600 12px/1.4 'Inter', sans-serif; text-underline-offset: 4px; }
+.fashion-choice :focus-visible { outline: 2px solid #a7753d; outline-offset: 4px; }
+@media (hover: hover) { .fashion-choice__card[href]:hover img { transform: scale(1.045); } }
+@media (max-width: 600px) {
+  .fashion-choice__inner { padding: 46px 18px 16px; }
+  .fashion-choice__grid { grid-template-columns: 1fr; gap: 10px; }
+  .fashion-choice__card { aspect-ratio: auto; min-height: 132px; }
+  .fashion-choice__card img { width: 46%; left: auto; object-position: center 35%; }
+  .fashion-choice__card::after { background: linear-gradient(90deg, #211e1b 20%, #211e1bc9 58%, transparent 90%); }
+  .fashion-choice__card--women::after { background: linear-gradient(90deg, #3b2134 20%, #3b2134ba 58%, transparent 90%); }
+  .fashion-choice__card--kids::after { background: linear-gradient(90deg, #6c553c 20%, #6c553cc4 58%, transparent 90%); }
+  .fashion-choice__card > span { inset: 22px auto 20px 18px; width: 62%; align-content: center; }
+  .fashion-choice__card strong { font-size: 23px; }
+  .fashion-choice__intro { margin-bottom: 20px; }
+}
+.fashion-choice__card--men img { object-position: 75% center; }
+@media (prefers-reduced-motion: reduce) { .fashion-choice__card img { transition: none; transform: none !important; } }

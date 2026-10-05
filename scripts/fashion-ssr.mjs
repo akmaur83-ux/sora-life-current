@@ -116,15 +116,24 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
   const card = loadModule('src/fashion/FashionProductCard.jsx', { Link, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, swatchOverflow: rules.swatchOverflow, quickAddPlan: pdpRules.quickAddPlan, useFashionWishlist: wishMod.useFashionWishlist, useStore, VariantSheet: picker.VariantSheet });
   const layout = loadModule('src/fashion/FashionLayout.jsx', { Link, Outlet, useLocation, useNavigate, Icon, SparrowMark, Footer, Toasts, useStore, branding, useFashionWishlist: wishMod.useFashionWishlist, FashionCatalogueProvider: catalogue.FashionCatalogueProvider, useFashionCatalogue: catalogue.useFashionCatalogue, categoryHref: rules.categoryHref, resolveCategory: rules.resolveCategory, ...homepageDeps });
   const home = loadModule('src/fashion/FashionHome.jsx', { Link, Icon, useCustomerAuth, categoryHref: rules.categoryHref, sortViews: rules.sortViews, topBrands: rules.topBrands, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default, HERO_IMAGE: art.HERO_IMAGE, circleArt: art.circleArt, cardArt: art.cardArt, ...homepageDeps });
+  // The department pages arrived with /fashion/men and /fashion/women. A baseline tree from
+  // before them has neither file, so it renders without the two routes instead of crashing.
+  const department = has('src/fashion/FashionDepartment.jsx')
+    ? loadModule('src/fashion/FashionDepartment.jsx', { Link, Icon, ...rules, ...loadModule('src/fashion/departmentContent.js'), useFashionCatalogue: catalogue.useFashionCatalogue, FashionProductCard: card.default })
+    : null;
   const listing = loadModule('src/fashion/FashionListing.jsx', { Link, useParams, useSearchParams, Icon, ...rules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default });
   const pdp = loadModule('src/fashion/FashionProductPage.jsx', { Link, useNavigate, useParams, useSearchParams, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, useStore, ...pdpContent, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, Breadcrumb: listing.Breadcrumb, FashionProductCard: card.default, Stars: card.Stars, VariantPicker: picker.VariantPicker });
   const App = ({ path, initial = INITIAL }) => h(StaticRouter, { location: path },
     h(Routes, null,
       h(Route, { path: '/fashion', element: h(layout.default, { initial }) },
         h(Route, { index: true, element: h(home.default) }),
+        ...(department ? [
+          h(Route, { path: 'men', element: h(department.default, { department: 'men' }) }),
+          h(Route, { path: 'women', element: h(department.default, { department: 'women' }) }),
+        ] : []),
         h(Route, { path: 'c/:slug', element: h(listing.default) }),
         h(Route, { path: 'p/:slug', element: h(pdp.default) }),
         h(Route, { path: 'search', element: h(listing.FashionSearch) }),
         h(Route, { path: 'wishlist', element: h(listing.FashionWishlistPage) }))));
-  return { App, rules, pdpRules, added, render: (path, initial = INITIAL) => renderToStaticMarkup(h(App, { path, initial })), modules: { catalogue, card, layout, home, listing, pdp, picker } };
+  return { App, rules, pdpRules, added, render: (path, initial = INITIAL) => renderToStaticMarkup(h(App, { path, initial })), modules: { catalogue, card, layout, home, listing, pdp, picker, department } };
 }

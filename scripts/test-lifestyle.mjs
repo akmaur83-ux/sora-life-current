@@ -21,10 +21,11 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule, buildLifestyleApp, loadLifestyleData, INITIAL, HOME_CATEGORIES, HOME_PRODUCTS, FASHION_CATEGORIES, FASHION_PRODUCTS } from './lifestyle-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
+import { FASHION_DEPARTMENT_FILES } from './storefront-settings-pin.mjs';
 
 // The tree as it stood before this work: the homepage store doorway release.
 const BASELINE_SHA = '9ca51d5';
@@ -157,7 +158,7 @@ await test('the hero: three slides, each a <picture> — the 4:5 portrait under 
     assert.ok(s.includes(`<p class="ls-hero__eyebrow"><span>${e.eyebrow[0]}</span> <span>${e.eyebrow[1]}</span></p>`), `slide ${i + 1}: two-line eyebrow`);
     assert.ok(s.includes(`<h1 class="ls-hero__h serif"><span>${e.h[0]}</span> <span>${e.h[1]}</span></h1>`), `slide ${i + 1}: two-line headline`);
     assert.ok(s.includes(`<p class="ls-hero__sub">${e.sub}</p>`));
-    assert.match(s, new RegExp(`<a class="ls-cta" tabindex="${i === 0 ? '0' : '-1'}" href="${e.href.replace(/\//g, '\\/')}">${e.cta} <svg`), `slide ${i + 1}: the CTA`);
+    assert.match(s, new RegExp(`<a class="ls-cta" tabindex="${i === 0 ? '0' : '-1'}"${e.href === '/fashion' ? ' aria-haspopup="dialog"' : ''} href="${e.href.replace(/\//g, '\\/')}">${e.cta} <svg`), `slide ${i + 1}: the CTA`);
     assert.ok(s.includes(`<p class="ls-hero__note serif" aria-hidden="true">${e.note}</p>`));
     assert.ok(s.indexOf('class="ls-hero__art"') < s.indexOf('class="ls-hero__copy"'), 'art first, the copy on it');
     assert.match(s, new RegExp(`^[^>]*aria-hidden="${i === 0 ? 'false' : 'true'}"`), `slide ${i + 1} ${i === 0 ? 'is' : 'is not'} the current one`);
@@ -166,7 +167,8 @@ await test('the hero: three slides, each a <picture> — the 4:5 portrait under 
   assert.equal((hero.match(/<img /g) || []).length, 3, 'one photograph per slide, nothing else');
   // One slide: no counter, no arrows.
   const Icon = loadModule('src/components/Icon.jsx').default;
-  const home = loadModule('src/lifestyle/LifestyleHome.jsx', { Link, Icon, money: (n) => `₹${n}`, ...app.data });
+  const FashionEntryLink = loadModule('src/components/FashionEntryLink.jsx', { Link, useLocation, Icon }).default;
+  const home = loadModule('src/lifestyle/LifestyleHome.jsx', { Link, Icon, FashionEntryLink, money: (n) => `₹${n}`, ...app.data });
   const one = renderToStaticMarkup(h(StaticRouter, { location: '/lifestyle' }, h(home.HeroCarousel, { slides: [app.data.HERO_SLIDES[0]] })));
   assert.equal((one.match(/<article /g) || []).length, 1); assert.doesNotMatch(one, /ls-hero__ctl|ls-hero__arrow|ls-hero__count/);
   assert.equal(renderToStaticMarkup(h(StaticRouter, { location: '/lifestyle' }, h(home.HeroCarousel, { slides: [] }))), '');
@@ -184,7 +186,7 @@ await test('the circles: six Home & Living (catalogue names, image_url, /homeliv
   const fc = [...fashion.matchAll(/<a class="ls-circle" href="([^"]+)"><span class="ls-circle__img"><img src="([^"]+)"[^>]*\/><\/span><span class="ls-circle__name">([^<]+)<\/span><\/a>/g)];
   assert.deepEqual(fc.map((m) => m[1]), ['/fashion/c/men', '/fashion/c/women', '/fashion/c/kids', '/fashion/c/beauty', '/fashion/c/footwear', '/fashion/c/bags-accessories']);
   assert.deepEqual(fc.map((m) => m[2]), ['/img/fashion-circle-men.webp', '/img/fashion-circle-women.webp', '/img/fashion-circle-kids.webp', '/img/fashion-circle-beauty.webp', '/img/fashion-circle-footwear.webp', '/img/fashion-circle-bags.webp']);
-  const banner = html.match(/<a class="ls-banner" aria-labelledby="ls-banner-h ls-banner-cta" href="\/fashion">([\s\S]*?)<\/a>/);
+  const banner = html.match(/<a class="ls-banner" aria-labelledby="ls-banner-h ls-banner-cta" aria-haspopup="dialog" href="\/fashion">([\s\S]*?)<\/a>/);
   assert.ok(banner, 'the fashion card is one whole-card link');
   assert.match(banner[1], /<div class="ls-banner__art"><img src="\/img\/doorway-fashion-wide\.webp" alt="[^"]{20,}" width="1600" height="900" loading="lazy" decoding="async"\/><\/div><div class="ls-banner__copy">/);
   assert.ok(banner[1].includes('<p class="ls-eyebrow ls-banner__eyebrow"><span>Your style</span> <span>Your story</span></p><h2 class="ls-banner__h serif" id="ls-banner-h"><span>Fashion</span> <span>for Everyday</span></h2><p class="ls-banner__sub">Clothing, footwear, bags and more — all in one place.</p><span class="ls-cta ls-cta--sm" id="ls-banner-cta">Explore Fashion <svg'));
@@ -294,6 +296,9 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page and 
   assert.match(appSrc, /import LifestyleLayout from '\.\/lifestyle\/LifestyleLayout\.jsx';\nimport LifestyleHome from '\.\/lifestyle\/LifestyleHome\.jsx';/);
   assert.match(appSrc, /<Route path="\/lifestyle" element=\{<LifestyleLayout \/>\}>\n\s+<Route index element=\{<LifestyleHome \/>\} \/>\n\s+<\/Route>/);
   assert.equal(appSrc
+    .replace("import FashionDepartment from './fashion/FashionDepartment.jsx';\n", '')
+    .replace('        <Route path="men" element={<FashionDepartment key="men" department="men" />} />\n', '')
+    .replace('        <Route path="women" element={<FashionDepartment key="women" department="women" />} />\n', '')
     .replace("import LifestyleLayout from './lifestyle/LifestyleLayout.jsx';\nimport LifestyleHome from './lifestyle/LifestyleHome.jsx';\n", '')
     .replace("const Storefronts = lazy(() => import('./admin/pages/Storefronts.jsx'));\n", '')
     .replace("const StoreCatalogue = lazy(() => import('./admin/pages/StoreCatalogue.jsx'));\n", '')
@@ -331,7 +336,8 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page and 
   const allowed = /^(src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/(settings|storefrontCustomization)\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/lifestyle\.css$|img\/lifestyle-|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|src\/pages\/Home\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/App\.jsx$|src\/admin\/(AdminLayout\.jsx|admin\.css|pages\/Storefronts\.jsx)$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|src\/data\/homelivingHomepage\.js$|img\/homeliving-hero-|scripts\/|public\/|reports\/)/;
   // The separate catalogue editor is guarded by test-store-catalogue-admin.mjs.
   const catalogueAdmin = /^(src\/lib\/storeCatalogueAdmin(?:Api)?\.js|src\/admin\/pages\/StoreCatalogue\.jsx)$/;
-  const bad = [...changed].filter((f) => !allowed.test(f) && !catalogueAdmin.test(f));
+  // The fashion departments' own files (test-fashion-departments.mjs).
+  const bad = [...changed].filter((f) => !allowed.test(f) && !catalogueAdmin.test(f) && !FASHION_DEPARTMENT_FILES.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/fashionApi.js', 'src/lib/fashion.js', 'src/fashion/fashionArt.js']) {
   // src/fashion/FashionHome.jsx moved its campaign hero to the top of the page (e58317c);

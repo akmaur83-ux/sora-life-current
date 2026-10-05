@@ -22,7 +22,7 @@ import { resolve } from 'node:path';
 import sharp from 'sharp';
 import { ROOT, read, buildHomeLivingApp } from './homeliving-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { STOREFRONT_ADMIN_FILES, STOREFRONT_SETTINGS_READS, sansStorefrontSettings } from './storefront-settings-pin.mjs';
+import { FASHION_DEPARTMENT_EDITS, FASHION_DEPARTMENT_FILES, STOREFRONT_ADMIN_FILES, STOREFRONT_SETTINGS_READS, sansStorefrontChanges } from './storefront-settings-pin.mjs';
 
 // The tip before this work: the typeface release.
 const BASELINE_SHA = '24bb729';
@@ -229,10 +229,14 @@ await test('isolation: the store\'s own homepage files, its sheet, the two photo
   // (test-storefront-customization.mjs and test-store-catalogue-admin.mjs own it). Its admin
   // pages and libs may change; the storefront files it touched are compared through
   // sansStorefrontSettings (storefront-settings-pin.mjs), which undoes exactly that settings read.
+  // The fashion departments followed (/fashion/men, /fashion/women and the doorway chooser;
+  // test-fashion-departments.mjs owns them): their own files may change, and the shared files
+  // they edited go through sansStorefrontChanges, which undoes both changes.
   const allowed = /^(src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/fashion\.css$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|img\/homeliving-hero-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
-  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !STOREFRONT_SETTINGS_READS.test(f));
+  // Every shared file either change edited is in the byte list below (FashionBanner.jsx joins it), so it may appear here.
+  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !STOREFRONT_SETTINGS_READS.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !FASHION_DEPARTMENT_EDITS.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
-  for (const rel of ['src/homeliving/HomeLivingCategory.jsx', 'src/homeliving/HomeLivingProductPage.jsx', 'src/homeliving/HomeLivingProductCard.jsx', 'src/lib/homelivingListing.js', 'src/lib/homelivingPdp.js', 'src/components/Header.jsx', 'src/fashion/FashionLayout.jsx', 'src/grocery/GroceryLayout.jsx', 'src/lifestyle/LifestyleLayout.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/data/lifestyleHomepage.js', 'src/styles/grocery.css', 'src/styles/lifestyle.css', 'src/styles/v2-foundation.css', 'src/styles/tokens.css', 'src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/App.jsx', 'build/build-css.mjs', 'src/lib/deferredStyles.js', 'index.html']) {
+  for (const rel of ['src/homeliving/HomeLivingCategory.jsx', 'src/homeliving/HomeLivingProductPage.jsx', 'src/homeliving/HomeLivingProductCard.jsx', 'src/lib/homelivingListing.js', 'src/lib/homelivingPdp.js', 'src/components/Header.jsx', 'src/fashion/FashionLayout.jsx', 'src/grocery/GroceryLayout.jsx', 'src/lifestyle/LifestyleLayout.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/data/lifestyleHomepage.js', 'src/styles/grocery.css', 'src/styles/lifestyle.css', 'src/styles/v2-foundation.css', 'src/styles/tokens.css', 'src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/App.jsx', 'build/build-css.mjs', 'src/lib/deferredStyles.js', 'index.html', 'src/components/FashionBanner.jsx']) {
     // Express and Scheduled were withdrawn (test-company-surfaces.mjs pins the fee map against the
     // published policy; the three payment suites pin that a withdrawn method cannot be charged).
     // For the two files that carries — the fee map and the checkout picker — normalise that one
@@ -243,7 +247,7 @@ await test('isolation: the store\'s own homepage files, its sheet, the two photo
         .replace(/const DELIVERY = \[[\s\S]*?\n\];/, 'DELIVERY')
         .split('\n').filter((l) => l.trim()).join('\n')
       : t);
-    assert.equal(sansDelivery(sansStorefrontSettings(rel, read(rel)).replace(/\r\n/g, '\n')), sansDelivery(atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n')), `${rel} is byte-identical to ${BASELINE_SHA}`);
+    assert.equal(sansDelivery(sansStorefrontChanges(rel, read(rel)).replace(/\r\n/g, '\n')), sansDelivery(atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n')), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
   assert.ok(![...changed].some((f) => /^supabase\//.test(f)), 'no migration');
   const untracked = execFileSync('git', ['status', '--porcelain'], { cwd: REPO, encoding: 'utf8' }).split('\n').map((l) => l.slice(3).replace(/^"|"$/g, '')).filter(Boolean);

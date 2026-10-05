@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
+import FashionEntryLink from '../components/FashionEntryLink.jsx';
 import Icon from '../components/Icon.jsx';
 import { money } from '../lib/format.js';
 import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
@@ -68,7 +69,7 @@ export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS })
               <p className="ls-hero__eyebrow"><span>{s.eyebrow[0]}</span> <span>{s.eyebrow[1]}</span></p>
               <h1 className="ls-hero__h serif"><span>{s.headline[0]}</span> <span>{s.headline[1]}</span></h1>
               <p className="ls-hero__sub">{s.sub}</p>
-              <Link to={s.href} className="ls-cta" tabIndex={i === index ? 0 : -1}>{s.cta} <Icon name="arrowRight" size={17} /></Link>
+              <FashionEntryLink to={s.href} className="ls-cta" tabIndex={i === index ? 0 : -1}>{s.cta} <Icon name="arrowRight" size={17} /></FashionEntryLink>
             </div>
             {s.note && <p className="ls-hero__note serif" aria-hidden="true">{s.note}</p>}
           </article>
@@ -110,7 +111,7 @@ function FashionBannerCard({ banner = FASHION_BANNER }) {
   const b = banner;
   return (
     <section className="ls-wrap">
-      <Link to={b.href} className="ls-banner" aria-labelledby="ls-banner-h ls-banner-cta">
+      <FashionEntryLink to={b.href} className="ls-banner" aria-labelledby="ls-banner-h ls-banner-cta">
         <div className="ls-banner__art"><img src={b.image} alt={b.alt} width="1600" height="900" loading="lazy" decoding="async" /></div>
         <div className="ls-banner__copy">
           <p className="ls-eyebrow ls-banner__eyebrow"><span>{b.eyebrow[0]}</span> <span>{b.eyebrow[1]}</span></p>
@@ -119,7 +120,7 @@ function FashionBannerCard({ banner = FASHION_BANNER }) {
           <span className="ls-cta ls-cta--sm" id="ls-banner-cta">{b.cta} <Icon name="arrowRight" size={16} /></span>
         </div>
         {b.note && <p className="ls-banner__note serif" aria-hidden="true">{b.note}</p>}
-      </Link>
+      </FashionEntryLink>
     </section>
   );
 }

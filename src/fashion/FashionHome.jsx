@@ -32,7 +32,7 @@ function CategoryTiles({ tree }) {
   return (
     <nav className="fs-tiles" aria-label="Shop by">
       {tiles.map((c) => (
-        <Link key={c.id} to={categoryHref(c)} className="fs-tile">
+        <Link key={c.id} to={['men', 'women'].includes(c.slug) ? `/fashion/${c.slug}` : categoryHref(c)} className="fs-tile">
           <span className="fs-tile__img">{circleArt(c) ? <img src={circleArt(c)} alt="" loading="lazy" decoding="async" width="200" height="200" /> : <b aria-hidden="true">{c.name.slice(0, 1)}</b>}</span>
           <span className="fs-tile__name">{c.name}</span>
         </Link>

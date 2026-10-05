@@ -22,11 +22,11 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule } from './grocery-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { STOREFRONT_ADMIN_FILES, STOREFRONT_SETTINGS_READS, sansStorefrontSettings } from './storefront-settings-pin.mjs';
+import { FASHION_DEPARTMENT_EDITS, FASHION_DEPARTMENT_FILES, STOREFRONT_ADMIN_FILES, STOREFRONT_SETTINGS_READS, sansStorefrontChanges } from './storefront-settings-pin.mjs';
 
 // The tree as it stood before this work: the carousel-move release.
 const BASELINE_SHA = 'b582caa';
@@ -106,7 +106,8 @@ await test('the images: the Lifestyle banner pair and the two store cards\' pair
 // ---- the component, rendered ---------------------------------------------
 const Icon = loadModule('src/components/Icon.jsx').default;
 const DeferredImage = loadModule('src/components/DeferredImage.jsx').default;
-const mod = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage });
+const FashionEntryLink = loadModule('src/components/FashionEntryLink.jsx', { Link, useLocation, Icon }).default;
+const mod = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage, FashionEntryLink });
 // A tree without the two exports (the pre-change tree) renders nothing here and fails each test on its own.
 const safe = (C) => { try { return C ? renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(C))) : ''; } catch { return ''; } };
 const render = (m) => safe(m.LifestyleBanner) + safe(m.StoreCarousel);
@@ -115,7 +116,7 @@ const carouselHtml = safe(mod.StoreCarousel);
 const html = bannerHtml + carouselHtml;
 const EagerImage = ({ src, sources = [], loading, decoding, fetchPriority, ...props }) =>
   h('picture', null, ...sources.map((s) => h('source', { key: s.media, media: s.media, srcSet: s.srcSet })), h('img', { ...props, src }));
-const eager = render(loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage: EagerImage }));
+const eager = render(loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage: EagerImage, FashionEntryLink }));
 
 await test('two sections, placed independently: LifestyleBanner is the banner alone with no heading; StoreCarousel is the heading and lede over the two store cards; no default export; no control inside any card link', () => {
   assert.equal(mod.default, undefined, 'no combined default export any more');
@@ -160,7 +161,7 @@ await test('Part B: the two cards as today — same copy, same badges, the same 
   ];
   slides.forEach((s, i) => {
     const e = expect[i], c = s[4];
-    assert.match(c, new RegExp(`<a class="fsb__card fsb__card--${e.key}" aria-labelledby="fsb-${e.key}-h fsb-${e.key}-cta"${i === 0 ? '' : ' tabindex="-1"'} href="${e.href.replace(/\//g, '\\/')}">`), `${e.key}: ${i === 0 ? 'tabbable' : 'untabbable while hidden'}`);
+    assert.match(c, new RegExp(`<a class="fsb__card fsb__card--${e.key}" aria-labelledby="fsb-${e.key}-h fsb-${e.key}-cta"${i === 0 ? '' : ' tabindex="-1"'}${e.key === 'fashion' ? ' aria-haspopup="dialog"' : ''} href="${e.href.replace(/\//g, '\\/')}">`), `${e.key}: ${i === 0 ? 'tabbable' : 'untabbable while hidden'}`);
     assert.match(c, /<div class="fsb__art"><picture><source media="\(max-width: 1023px\)"\/><img alt="[^"]{20,}" width="1600" height="900" class="fsb__image" loading="lazy" decoding="async"\/><\/picture><\/div>/, `${e.key}: one photograph — the portrait under 1024px, the landscape above`);
     assert.ok(c.includes(`<p class="fsb__eyebrow">${e.eyebrow}</p><h3 class="fsb__h" id="fsb-${e.key}-h"><span>${e.h[0]}</span> <span>${e.h[1]}</span></h3><p class="fsb__description">${e.desc}</p><span class="fsb__cta" id="fsb-${e.key}-cta">${e.cta} <svg`), `${e.key}: the copy as today`);
     assert.deepEqual([...c.matchAll(/<li><svg[\s\S]*?<\/svg><span>([^<]*)<\/span><\/li>/g)].map((m) => m[1].replace(/&amp;/g, '&')), e.badges, `${e.key}: the badges as today`);
@@ -299,8 +300,11 @@ await test('the build lists and every other file are byte-identical to the basel
   // (test-storefront-customization.mjs and test-store-catalogue-admin.mjs own it). Its admin
   // pages and libs may change; the storefront files it touched are compared through
   // sansStorefrontSettings (storefront-settings-pin.mjs), which undoes exactly that settings read.
+  // The fashion departments followed (/fashion/men, /fashion/women and the doorway chooser;
+  // test-fashion-departments.mjs owns them): their own files may change, and the shared files
+  // they edited go through sansStorefrontChanges, which undoes both changes.
   const allowed = /^(src\/components\/FashionBanner\.jsx$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/pages\/Home\.jsx$|img\/lifestyle-banner-(wide|tall)\.webp$|src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|src\/data\/homelivingHomepage\.js$|img\/homeliving-hero-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
-  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !STOREFRONT_SETTINGS_READS.test(f));
+  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !STOREFRONT_SETTINGS_READS.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !FASHION_DEPARTMENT_EDITS.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/pages/Home.jsx', 'build/build-css.mjs', 'src/App.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/lifestyle/LifestyleLayout.jsx', 'src/data/lifestyleHomepage.js', 'src/fashion/FashionLayout.jsx', 'src/lib/store.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/payments.js', 'src/lib/customerAuth.jsx']) {
     // Express and Scheduled were withdrawn (test-company-surfaces.mjs pins the fee map against the
@@ -313,7 +317,7 @@ await test('the build lists and every other file are byte-identical to the basel
         .replace(/const DELIVERY = \[[\s\S]*?\n\];/, 'DELIVERY')
         .split('\n').filter((l) => l.trim()).join('\n')
       : t);
-    assert.equal(sansDelivery(sansStorefrontSettings(rel, read(rel))), sansDelivery(atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n')), `${rel} is byte-identical to ${BASELINE_SHA}`);
+    assert.equal(sansDelivery(sansStorefrontChanges(rel, read(rel))), sansDelivery(atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n')), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
   assert.match(read('build/build-css.mjs'), /'src\/styles\/fashion-banner\.css',/);
 });

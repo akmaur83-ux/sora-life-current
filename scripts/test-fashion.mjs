@@ -19,7 +19,7 @@ import { pathToFileURL } from 'node:url';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { transformSync } from '@babel/core';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, buildFashionApp, loadModule, CATEGORIES, PRODUCTS, INITIAL } from './fashion-ssr.mjs';
 
@@ -374,7 +374,8 @@ await test('the wellness homepage keeps every section in the same order — the 
   assert.equal(after.indexOf('StoreCarousel'), after.indexOf('MarketplaceProductRail#popular') - 1, 'the carousel sits directly above the popular rail (test-store-doorway.mjs pins both sections)');
   const Icon = loadModule('src/components/Icon.jsx').default;
   const DeferredImage = loadModule('src/components/DeferredImage.jsx').default;
-  const doorway = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage });
+  const FashionEntryLink = loadModule('src/components/FashionEntryLink.jsx', { Link, useLocation, Icon }).default;
+  const doorway = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage, FashionEntryLink });
   const html = renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(doorway.LifestyleBanner))) + renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(doorway.StoreCarousel)));
   assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/lifestyle', '/fashion', '/homeliving'], 'the whole-card links use existing stores');
   assert.match(html, /Two Worlds\. A Better You\./);
@@ -393,9 +394,10 @@ await test('the storefront stylesheet order is untouched; the fashion sheets are
   const after = read('build/build-css.mjs');
   const sf = list(after, 'STOREFRONT');
   assert.deepEqual(sf.slice(0, WELLNESS_CASCADE.length), WELLNESS_CASCADE, 'the cascade the wellness store loads is the same list, in the same order');
-  assert.deepEqual(sf.slice(WELLNESS_CASCADE.length), ['src/styles/fashion-banner.css']);
+  assert.deepEqual(sf.slice(WELLNESS_CASCADE.length), ['src/styles/fashion-banner.css', 'src/styles/fashion-choice.css']);
   // Deferred, after the creator sheets; a later store (grocery) may follow it.
   const deferred = list(after, 'DEFERRED');
+  assert.equal(deferred.indexOf('src/styles/fashion-departments.css'), deferred.indexOf('src/styles/fashion.css') + 1);
   assert.ok(deferred.indexOf('src/styles/fashion.css') > deferred.indexOf('src/styles/creator-dashboard.css'), 'fashion.css is deferred, after the creator sheets');
   assert.match(read('src/lib/deferredStyles.js'), /\(admin\|passport\|creator\|fashion(\|[a-z]+)*\)/, 'the deferred sheet is fetched on /fashion');
   const css = read('src/styles/fashion.css');

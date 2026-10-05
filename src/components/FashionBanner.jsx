@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import DeferredImage from './DeferredImage.jsx';
+import FashionEntryLink from './FashionEntryLink.jsx';
 
 // ============================================================
 // The homepage doorways to the other stores. No catalogue dependency.
@@ -71,8 +72,9 @@ export const STORES = [
 function DoorwayCard({ store, modifier, tabIndex }) {
   const hId = `fsb-${store.key}-h`;
   const ctaId = `fsb-${store.key}-cta`;
+  const Entry = store.key === 'fashion' ? FashionEntryLink : Link;
   return (
-    <Link to={store.to} className={`fsb__card fsb__card--${store.key}${modifier ? ` fsb__card--${modifier}` : ''}`} aria-labelledby={`${hId} ${ctaId}`} tabIndex={tabIndex}>
+    <Entry to={store.to} className={`fsb__card fsb__card--${store.key}${modifier ? ` fsb__card--${modifier}` : ''}`} aria-labelledby={`${hId} ${ctaId}`} tabIndex={tabIndex}>
       <div className="fsb__art">
         <DeferredImage
           src={store.wide}
@@ -98,7 +100,7 @@ function DoorwayCard({ store, modifier, tabIndex }) {
           ))}
         </ul>
       </div>
-    </Link>
+    </Entry>
   );
 }
 

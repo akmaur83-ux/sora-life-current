@@ -25,6 +25,7 @@ import * as ReactRouter from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, h, loadModule, loadSource, buildGroceryApp } from './grocery-ssr.mjs';
 import { REPO, exportBaseline, atCommit } from './baseline-export.mjs';
+import { sansDepartmentTiles } from './storefront-settings-pin.mjs';
 
 // The tip before the store switcher (the catalogue bundle commit).
 const BASELINE_SHA = 'd6a0c20';
@@ -106,7 +107,8 @@ await test('the eight fashion pages equal the baseline render once the stores bl
   const then = JSON.parse(execFileSync(process.execPath, [dump], { cwd: REPO, encoding: 'utf8', env: { ...process.env, FASHION_SRC_ROOT: baselineDir }, maxBuffer: 64 * 1024 * 1024 }));
   assert.deepEqual(Object.keys(now), Object.keys(then));
   for (const p of Object.keys(now)) {
-    const html = now[p];
+    // The fashion departments point the Men and Women tiles at their pages (test-fashion-departments.mjs).
+    const html = sansDepartmentTiles(now[p]);
     assert.match(html, /<nav class="fs-hdr__stores" aria-label="Other stores"><a class="fs-hdr__back" href="\/"><svg[^>]*>[\s\S]*?<\/svg> Wellness store<\/a><a class="fs-hdr__back" href="\/grocery">Grocery <svg[\s\S]*?<\/svg><\/a><a class="fs-hdr__back" href="\/homeliving">Home &amp; Living <svg[\s\S]*?<\/svg><\/a><a class="fs-hdr__back" href="\/lifestyle">Lifestyle <svg/, `${p}: the other stores, wellness first`);
     assert.doesNotMatch(html, /fs-hdr__back" href="\/fashion"/, `${p}: fashion never links to itself`);
     const stripped = html.replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, '<a class="fs-hdr__back" href="/"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg> Wellness store</a>');

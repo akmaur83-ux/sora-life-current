@@ -23,7 +23,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ROOT, read, has, h, loadModule, loadGroceryData, CATEGORIES, PRODUCTS, noSupabase } from './grocery-ssr.mjs';
-import { sansStorefrontSettings } from './storefront-settings-pin.mjs';
+import { sansDepartmentTiles, sansStorefrontChanges } from './storefront-settings-pin.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // The tip before the data layer moved (the grocery bundle commit). Pinned so the
@@ -296,7 +296,8 @@ await test(`the eight fashion pages render byte-identically from the working tre
   // from the baseline's three rows. test-fashion-cart.mjs pins what it must say
   // now; strip it here so this stays a data-layer comparison.
   const SHIP_LIST = /<ul class="fs-pdp__ship">[\s\S]*?<\/ul>/;
-  const normalise = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(html.replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, OLD_BACK))[1].replace(SHIP_LIST, 'SHIP')]));
+  // The fashion departments point the Men and Women tiles at their pages (test-fashion-departments.mjs).
+  const normalise = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(sansDepartmentTiles(html).replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, OLD_BACK))[1].replace(SHIP_LIST, 'SHIP')]));
   const heroes = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(html)[0]]));
   assert.deepEqual(normalise(now), normalise(then), 'identical markup for every page, the campaign hero aside');
   assert.deepEqual(heroes(now), heroes(then), 'the campaign hero block itself is byte-identical — only its position changed');
@@ -308,8 +309,9 @@ await test(`the eight fashion pages render byte-identically from the working tre
   const heroMove = (t) => t.split('\n').filter((l) => l.trim() !== '<Hero />').join('\n')
     .replace('      <ShopByCategory tree={tree} />', '      <Hero />\n      <ShopByCategory tree={tree} />');
   // 99b67ba then made its copy editable from the admin (test-storefront-customization.mjs owns that):
-  // sansStorefrontSettings undoes exactly that read, each default resolved to the literal it replaced.
-  assert.equal(heroMove(sansStorefrontSettings('src/fashion/FashionHome.jsx', read('src/fashion/FashionHome.jsx'))), atBaseline('src/fashion/FashionHome.jsx'), 'FashionHome.jsx: the hero moved and the copy reads the storefront setting, nothing else');
+  // sansStorefrontSettings undoes exactly that read, each default resolved to the literal it replaced;
+  // the departments then pointed two tiles at their pages, and sansStorefrontChanges undoes both.
+  assert.equal(heroMove(sansStorefrontChanges('src/fashion/FashionHome.jsx', read('src/fashion/FashionHome.jsx'))), atBaseline('src/fashion/FashionHome.jsx'), 'FashionHome.jsx: the hero moved, the copy reads the storefront setting and two tiles open the department pages, nothing else');
   for (const rel of ['src/fashion/FashionListing.jsx', 'src/fashion/FashionProductPage.jsx', 'src/fashion/FashionProductCard.jsx', 'src/fashion/FashionCatalogue.jsx', 'src/fashion/FashionVariantPicker.jsx']) {
     assert.equal(read(rel), atBaseline(rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
