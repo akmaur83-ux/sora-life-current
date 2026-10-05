@@ -21,6 +21,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule, buildHomeLivingApp, loadHomeLivingData, CATEGORIES, PRODUCTS } from './homeliving-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
+import { STOREFRONT_ADMIN_FILES, sansStorefrontSettings } from './storefront-settings-pin.mjs';
 
 // The tip before the Home & Living store (the store-switcher bundle commit).
 const BASELINE_SHA = 'c060167';
@@ -391,8 +392,12 @@ await test('the wellness, fashion and grocery storefronts changed only by the ap
   // api/_lib/couponQuote.js: quoteCoupon dropped the fashion rows priceCart had fetched, so every
   // coupon on a cart holding a fashion line was refused. Fixed on its own; test-coupon-quote-rows.mjs
   // pins it through quoteCoupon rather than through computeOrderTotal.
+  // 99b67ba made the Fashion and Lifestyle storefront copy editable from the admin
+  // (test-storefront-customization.mjs and test-store-catalogue-admin.mjs own it). Its admin
+  // pages and libs may change; the storefront files it touched are compared through
+  // sansStorefrontSettings (storefront-settings-pin.mjs), which undoes exactly that settings read.
   const allowed = /^(src\/homeliving\/|src\/lib\/homeliving[A-Za-z]*\.js$|src\/pages\/Home\.jsx$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|img\/doorway-|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|scripts\/|supabase\/migrations\/(0035_homeliving_store\.sql|rollback\/0035_homeliving_store_down\.sql)$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/styles\/v2-header\.css$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|img\/homeliving-|public\/|reports\/)/;
-  const bad = [...changed].filter((f) => !allowed.test(f));
+  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/lib/fashionApi.js', 'src/data/groceryHomepage.js', 'src/grocery/GroceryHome.jsx', 'src/styles/layout.css']) { // fashion.css and grocery.css carry the typeface map now (test-typeface.mjs pins it)
     // Express and Scheduled were withdrawn (test-company-surfaces.mjs pins the fee map against the
@@ -409,7 +414,7 @@ await test('the wellness, fashion and grocery storefronts changed only by the ap
   }
   // The three touched shells differ from the baseline by their switcher lines only.
   const onlySwitcher = (rel, keep) => {
-    const now = read(rel).split('\n').filter((l) => !keep.test(l)).join('\n');
+    const now = sansStorefrontSettings(rel, read(rel)).split('\n').filter((l) => !keep.test(l)).join('\n');
     const then = atCommit(BASELINE_SHA, rel).split('\n').filter((l) => !keep.test(l)).join('\n');
     assert.equal(now, then, `${rel}: nothing beyond the switcher lines changed`);
   };

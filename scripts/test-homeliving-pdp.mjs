@@ -18,6 +18,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { ROOT, read, loadModule, buildHomeLivingApp, loadHomeLivingData, CATEGORIES, PRODUCTS, PDP, PDP_PRODUCTS } from './homeliving-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
+import { STOREFRONT_ADMIN_FILES, sansStorefrontSettings } from './storefront-settings-pin.mjs';
 
 // The tip before the product page (the listing's bundle commit).
 const BASELINE_SHA = '99c4282';
@@ -265,7 +266,8 @@ console.log('\n— Wiring and isolation —');
 // ============================================================
 
 await test('App.jsx: p/:slug is a child of the Home & Living route; nothing else shared changed; the other storefronts, cart, checkout, coupons, auth and payments are byte-identical', () => {
-  const src = read('src/App.jsx');
+  // 99b67ba added two admin routes and their lazy imports (test-storefront-customization.mjs); undone first.
+  const src = sansStorefrontSettings('src/App.jsx', read('src/App.jsx'));
   assert.match(src, /<Route path="category\/:slug" element=\{<HomeLivingCategory \/>\} \/>\n\s+<Route path="p\/:slug" element=\{<HomeLivingProductPage \/>\} \/>\n\s+<\/Route>/);
   // The lifestyle storefront (a later phase) added its own imports and route block; strip those before comparing.
   assert.equal(src.replace("import HomeLivingProductPage from './homeliving/HomeLivingProductPage.jsx';\n", '').replace('        <Route path="p/:slug" element={<HomeLivingProductPage />} />\n', '').replace(/import Lifestyle[A-Za-z]+ from '\.\/lifestyle\/Lifestyle[A-Za-z]+\.jsx';\n/g, '').replace(/\n\s*\{\/\*[^*]*lifestyle[^*]*\*\/\}\n\s+<Route path="\/lifestyle" element=\{<LifestyleLayout \/>\}>\n\s+<Route index element=\{<LifestyleHome \/>\} \/>\n\s+<\/Route>\n/, '\n'), atCommit(BASELINE_SHA, 'src/App.jsx'), 'App.jsx: the import and the route, nothing else');
@@ -285,8 +287,12 @@ await test('App.jsx: p/:slug is a child of the Home & Living route; nothing else
   // api/_lib/couponQuote.js: quoteCoupon dropped the fashion rows priceCart had fetched, so every
   // coupon on a cart holding a fashion line was refused. Fixed on its own; test-coupon-quote-rows.mjs
   // pins it through quoteCoupon rather than through computeOrderTotal.
+  // 99b67ba made the Fashion and Lifestyle storefront copy editable from the admin
+  // (test-storefront-customization.mjs and test-store-catalogue-admin.mjs own it). Its admin
+  // pages and libs may change; the storefront files it touched are compared through
+  // sansStorefrontSettings (storefront-settings-pin.mjs), which undoes exactly that settings read.
   const allowed = /^(src\/homeliving\/|src\/lib\/homelivingPdp\.js$|src\/pages\/Home\.jsx$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|img\/doorway-|img\/homeliving-hero-|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|src\/App\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|scripts\/|public\/|reports\/)/;
-  const bad = [...changed].filter((f) => !allowed.test(f));
+  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/components/Header.jsx', 'src/fashion/FashionProductPage.jsx', 'src/fashion/FashionLayout.jsx', 'src/lib/fashionPdp.js', 'src/grocery/GroceryLayout.jsx', 'src/data/groceryHomepage.js', 'src/homeliving/HomeLivingCategory.jsx', 'src/lib/homelivingListing.js', 'build/build-css.mjs', 'src/lib/deferredStyles.js']) {
   // The homepage rework (test-homeliving-hero.mjs): the hero runs to the top with the shell floating over it — an approved change to the store's own homepage files; that suite pins the category and product pages unchanged.
@@ -302,7 +308,7 @@ await test('App.jsx: p/:slug is a child of the Home & Living route; nothing else
         .replace(/const DELIVERY = \[[\s\S]*?\n\];/, 'DELIVERY')
         .split('\n').filter((l) => l.trim()).join('\n')
       : t);
-    assert.equal(sansDelivery(sansLifestyle(read(rel))), sansDelivery(sansLifestyle(atCommit(BASELINE_SHA, rel))), `${rel} is byte-identical to ${BASELINE_SHA} but for its lifestyle line`);
+    assert.equal(sansDelivery(sansLifestyle(sansStorefrontSettings(rel, read(rel)))), sansDelivery(sansLifestyle(atCommit(BASELINE_SHA, rel))), `${rel} is byte-identical to ${BASELINE_SHA} but for its lifestyle line`);
   }
   assert.ok(![...changed].some((f) => /^supabase\//.test(f)), 'no migration');
 });

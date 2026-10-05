@@ -23,6 +23,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ROOT, read, has, h, loadModule, loadGroceryData, CATEGORIES, PRODUCTS, noSupabase } from './grocery-ssr.mjs';
+import { sansStorefrontSettings } from './storefront-settings-pin.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // The tip before the data layer moved (the grocery bundle commit). Pinned so the
@@ -306,7 +307,9 @@ await test(`the eight fashion pages render byte-identically from the working tre
   // blocks in a new order, pinned by test-fashion.mjs and by the two render comparisons above.
   const heroMove = (t) => t.split('\n').filter((l) => l.trim() !== '<Hero />').join('\n')
     .replace('      <ShopByCategory tree={tree} />', '      <Hero />\n      <ShopByCategory tree={tree} />');
-  assert.equal(heroMove(read('src/fashion/FashionHome.jsx')), atBaseline('src/fashion/FashionHome.jsx'), 'FashionHome.jsx: the hero moved, nothing else');
+  // 99b67ba then made its copy editable from the admin (test-storefront-customization.mjs owns that):
+  // sansStorefrontSettings undoes exactly that read, each default resolved to the literal it replaced.
+  assert.equal(heroMove(sansStorefrontSettings('src/fashion/FashionHome.jsx', read('src/fashion/FashionHome.jsx'))), atBaseline('src/fashion/FashionHome.jsx'), 'FashionHome.jsx: the hero moved and the copy reads the storefront setting, nothing else');
   for (const rel of ['src/fashion/FashionListing.jsx', 'src/fashion/FashionProductPage.jsx', 'src/fashion/FashionProductCard.jsx', 'src/fashion/FashionCatalogue.jsx', 'src/fashion/FashionVariantPicker.jsx']) {
     assert.equal(read(rel), atBaseline(rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }

@@ -26,6 +26,7 @@ import { Link } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule } from './grocery-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
+import { STOREFRONT_ADMIN_FILES, STOREFRONT_SETTINGS_READS, sansStorefrontSettings } from './storefront-settings-pin.mjs';
 
 // The tree as it stood before this work: the carousel-move release.
 const BASELINE_SHA = 'b582caa';
@@ -294,10 +295,14 @@ await test('the build lists and every other file are byte-identical to the basel
   // api/_lib/couponQuote.js: quoteCoupon dropped the fashion rows priceCart had fetched, so every
   // coupon on a cart holding a fashion line was refused. Fixed on its own; test-coupon-quote-rows.mjs
   // pins it through quoteCoupon rather than through computeOrderTotal.
+  // 99b67ba made the Fashion and Lifestyle storefront copy editable from the admin
+  // (test-storefront-customization.mjs and test-store-catalogue-admin.mjs own it). Its admin
+  // pages and libs may change; the storefront files it touched are compared through
+  // sansStorefrontSettings (storefront-settings-pin.mjs), which undoes exactly that settings read.
   const allowed = /^(src\/components\/FashionBanner\.jsx$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/pages\/Home\.jsx$|img\/lifestyle-banner-(wide|tall)\.webp$|src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|src\/data\/homelivingHomepage\.js$|img\/homeliving-hero-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
-  const bad = [...changed].filter((f) => !allowed.test(f));
+  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !STOREFRONT_SETTINGS_READS.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
-  for (const rel of ['src/pages/Home.jsx', 'build/build-css.mjs', 'src/App.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/lib/store.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/payments.js', 'src/lib/customerAuth.jsx']) {
+  for (const rel of ['src/pages/Home.jsx', 'build/build-css.mjs', 'src/App.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/lifestyle/LifestyleLayout.jsx', 'src/data/lifestyleHomepage.js', 'src/fashion/FashionLayout.jsx', 'src/lib/store.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/payments.js', 'src/lib/customerAuth.jsx']) {
     // Express and Scheduled were withdrawn (test-company-surfaces.mjs pins the fee map against the
     // published policy; the three payment suites pin that a withdrawn method cannot be charged).
     // For the two files that carries — the fee map and the checkout picker — normalise that one
@@ -308,7 +313,7 @@ await test('the build lists and every other file are byte-identical to the basel
         .replace(/const DELIVERY = \[[\s\S]*?\n\];/, 'DELIVERY')
         .split('\n').filter((l) => l.trim()).join('\n')
       : t);
-    assert.equal(sansDelivery(read(rel)), sansDelivery(atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n')), `${rel} is byte-identical to ${BASELINE_SHA}`);
+    assert.equal(sansDelivery(sansStorefrontSettings(rel, read(rel))), sansDelivery(atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n')), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
   assert.match(read('build/build-css.mjs'), /'src\/styles\/fashion-banner\.css',/);
 });
