@@ -17,3 +17,6 @@ __pycache__
 *.pyc
 .build-check
 .flake-reports
+*.local
+reports
+.creator-qa
