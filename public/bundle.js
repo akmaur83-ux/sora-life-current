@@ -37720,6 +37720,169 @@ function HomeLeaderboard({
   });
 }
 
+function FashionChooser({
+  onClose
+}) {
+  const dialog = reactExports.useRef(null);
+  const titleId = reactExports.useId();
+  reactExports.useEffect(() => {
+    const node = dialog.current;
+    const opener = document.activeElement;
+    const {
+      overflow,
+      paddingRight
+    } = document.body.style;
+    const gap = window.innerWidth - document.documentElement.clientWidth;
+    const padding = parseFloat(getComputedStyle(document.body).paddingRight) || 0;
+    node.showModal(); // Native top layer, focus trap and Escape handling.
+    document.body.style.overflow = 'hidden';
+    if (gap > 0) document.body.style.paddingRight = `${padding + gap}px`;
+    return () => {
+      node.close();
+      document.body.style.overflow = overflow;
+      document.body.style.paddingRight = paddingRight;
+      if (opener?.isConnected) opener.focus({
+        preventScroll: true
+      });
+    };
+  }, []);
+  return /*#__PURE__*/jsxRuntimeExports.jsx("dialog", {
+    ref: dialog,
+    className: "fashion-choice",
+    "aria-labelledby": titleId,
+    onCancel: onClose,
+    onClick: event => {
+      if (event.target === event.currentTarget) onClose();
+    },
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fashion-choice__inner",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "fashion-choice__close",
+        "aria-label": "Close fashion selection",
+        onClick: onClose,
+        autoFocus: true,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "x",
+          size: 22
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fashion-choice__eyebrow",
+        children: "SORA LIFE / The fashion edit"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        id: titleId,
+        children: "Find your kind of style."
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fashion-choice__intro",
+        children: "Three worlds. A style for every you."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fashion-choice__grid",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion/men",
+          className: "fashion-choice__card fashion-choice__card--men",
+          onClick: onClose,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: "/img/fashion-editorial/men-hero-desktop-1000.webp",
+            alt: "",
+            width: "1000",
+            height: "563"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("small", {
+              children: "The everyday edit"
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+              children: ["Men\u2019s fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 22
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+              children: "Explore the collection"
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion/women",
+          className: "fashion-choice__card fashion-choice__card--women",
+          onClick: onClose,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: "/img/fashion-editorial/women-category-silk.webp",
+            alt: "",
+            width: "480",
+            height: "480"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("small", {
+              children: "Tradition meets today"
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+              children: ["Women\u2019s fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 22
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+              children: "Explore the collection"
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "fashion-choice__card fashion-choice__card--kids",
+          "aria-disabled": "true",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: "/img/fashion-circle-kids.webp",
+            alt: "",
+            width: "640",
+            height: "640"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("small", {
+              children: "Little personalities"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+              children: "Kids\u2019 fashion"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+              children: "Coming soon"
+            })]
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/fashion",
+        className: "fashion-choice__all",
+        onClick: onClose,
+        children: ["Browse all fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 15
+        })]
+      })]
+    })
+  });
+}
+
+// Only the default Fashion doorway opens the chooser. Custom admin links
+// and modified clicks retain normal link navigation and open-in-new-tab.
+function FashionEntryLink({
+  to = '/fashion',
+  children,
+  onClick,
+  ...props
+}) {
+  const [open, setOpen] = reactExports.useState(false);
+  const location = useLocation();
+  const isEntry = to === '/fashion' || to === '/fashion/';
+  reactExports.useEffect(() => {
+    setOpen(false);
+  }, [location.pathname, location.search]);
+  function activate(event) {
+    onClick?.(event);
+    if (!isEntry || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || props.target === '_blank') return;
+    event.preventDefault();
+    setOpen(true);
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+      ...props,
+      to: to,
+      onClick: activate,
+      "aria-haspopup": isEntry ? 'dialog' : undefined,
+      children: children
+    }), open && typeof document !== 'undefined' && /*#__PURE__*/reactDomExports.createPortal(/*#__PURE__*/jsxRuntimeExports.jsx(FashionChooser, {
+      onClose: () => setOpen(false)
+    }), document.body)]
+  });
+}
+
 const TALL = '(max-width: 1023px)';
 const AUTOPLAY_MS$3 = 6000;
 const LIFESTYLE = {
@@ -37769,7 +37932,8 @@ function DoorwayCard({
 }) {
   const hId = `fsb-${store.key}-h`;
   const ctaId = `fsb-${store.key}-cta`;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+  const Entry = store.key === 'fashion' ? FashionEntryLink : Link;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(Entry, {
     to: store.to,
     className: `fsb__card fsb__card--${store.key}${modifier ? ` fsb__card--${modifier}` : ''}`,
     "aria-labelledby": `${hId} ${ctaId}`,
@@ -60018,6 +60182,77 @@ function FashionHeader({
     const term = q.trim();
     navigate(term ? `/fashion/search?q=${encodeURIComponent(term)}` : '/fashion/search');
   };
+  if (/^\/fashion\/women\/?$/.test(location.pathname)) return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+    className: "sw-header",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: "sw-header__menu",
+      "aria-label": "Open menu",
+      onClick: onMenu,
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "menu",
+        size: 22
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionLogo, {
+      tagline: "Tradition in every drape"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+      className: "sw-header__nav",
+      "aria-label": "Saree store",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/fashion/women",
+        children: "Home"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+        href: "#fd-products",
+        children: "Shop"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+        href: "#sw-collections",
+        children: ["Collections ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronDown",
+          size: 12
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/about",
+        children: "About"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/contact",
+        children: "Contact"
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+      className: "sw-header__actions",
+      "aria-label": "Search, account, wishlist and cart",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/fashion/search",
+        "aria-label": "Search fashion",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "search",
+          size: 19
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/account",
+        "aria-label": "Account",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "user",
+          size: 19
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/fashion/wishlist",
+        "aria-label": `Wishlist${wish.count ? `, ${wish.count} items` : ''}`,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "heart",
+          size: 19
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/cart",
+        "aria-label": `Cart${cartCount ? `, ${cartCount} items` : ''}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "bag",
+          size: 19
+        }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: cartCount
+        })]
+      })]
+    })]
+  });
   return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
     className: "fs-hdr",
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -60286,7 +60521,7 @@ function Shell() {
     setMenu(false);
   }, [pathname]);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "fs",
+    className: `fs${/^\/fashion\/(men|women)\/?$/.test(pathname) ? ' fs--department' : ''}${/^\/fashion\/women\/?$/.test(pathname) ? ' fs--saree' : ''}`,
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(FashionHeader, {
       onMenu: () => setMenu(true)
     }), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer$3, {
@@ -60751,7 +60986,7 @@ function CategoryTiles({
     className: "fs-tiles",
     "aria-label": "Shop by",
     children: tiles.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      to: categoryHref$3(c),
+      to: ['men', 'women'].includes(c.slug) ? `/fashion/${c.slug}` : categoryHref$3(c),
       className: "fs-tile",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "fs-tile__img",
@@ -61017,6 +61252,701 @@ function FashionHome() {
           view: v,
           mediaLoading: i < 2 ? 'eager' : 'lazy'
         }, v.id))
+      })]
+    })]
+  });
+}
+
+// Presentation only. Supplied editorial artwork is independent of inventory.
+// Product images/prices continue to come from the existing catalogue.
+const photo = (fallback, alt, src = '') => ({
+  src,
+  fallback,
+  alt
+});
+const artwork = (name, alt, extra = {}) => ({
+  src: `/img/fashion-editorial/${name}.webp`,
+  fallback: `/img/fashion-editorial/${name}.webp`,
+  alt,
+  ...extra
+});
+const DEPARTMENT_CONTENT = {
+  men: {
+    label: "Men's fashion",
+    categorySlug: 'men',
+    eyebrow: 'The new everyday',
+    title: ['Summer', 'Essentials'],
+    intro: 'Easy layers. Strong silhouettes. Your everyday, redefined.',
+    hero: artwork('men-hero-desktop', 'Black and cream hoodie styling in a minimal urban setting', {
+      width: 1600,
+      height: 900,
+      mobile: '/img/fashion-editorial/men-hero-mobile.webp',
+      srcSet: '/img/fashion-editorial/men-hero-desktop-1000.webp 1000w, /img/fashion-editorial/men-hero-desktop.webp 1600w'
+    }),
+    heroNote: 'The style edit / 01',
+    cta: 'Explore menswear',
+    collectionTitle: 'Find your next essential',
+    productsTitle: 'The everyday line-up',
+    collections: [{
+      title: 'Shirts',
+      slug: 'mens-shirts',
+      image: photo('/img/demo-mens-shirt.webp', 'A sage shirt')
+    }, {
+      title: 'T-shirts',
+      slug: 'mens-t-shirts',
+      image: photo('/img/fashion-circle-men.webp', 'Relaxed menswear')
+    }, {
+      title: 'Trousers',
+      slug: 'mens-trousers',
+      image: photo('/img/fashion-card-clothing.webp', 'Everyday clothing')
+    }],
+    editorial: [{
+      eyebrow: 'Less effort. More style.',
+      title: 'Make it your uniform.',
+      text: 'Build a wardrobe that works together.',
+      image: photo('/img/fashion-circle-men.webp', 'Casual menswear edit')
+    }, {
+      eyebrow: 'The details matter',
+      title: 'Keep it effortless.',
+      text: 'Fresh combinations for your everyday rotation.',
+      image: photo('/img/demo-mens-shirt.webp', 'Linen shirt detail')
+    }],
+    looks: [{
+      title: 'The daily layer',
+      image: photo('/img/fashion-circle-men.webp', 'Layered menswear styling')
+    }, {
+      title: 'Quiet confidence',
+      image: photo('/img/demo-mens-shirt.webp', 'Neutral menswear essential')
+    }, {
+      title: 'Easy weekends',
+      image: photo('/img/fashion-card-clothing.webp', 'Weekend clothing edit')
+    }, {
+      title: 'Finishing touches',
+      image: photo('/img/fashion-circle-men.webp', 'Menswear finishing details')
+    }]
+  },
+  women: {
+    label: "Women's fashion",
+    categorySlug: 'women',
+    eyebrow: 'Timeless elegance',
+    title: ['Beautiful Sarees', 'for Every Story'],
+    intro: 'From traditional handloom to modern weaves, find the perfect saree for every occasion.',
+    hero: artwork('women-hero-desktop', 'Woman in a plum and gold saree seated in a sunlit heritage courtyard', {
+      width: 1920,
+      height: 700,
+      mobile: '/img/fashion-editorial/women-hero-mobile.webp',
+      srcSet: '/img/fashion-editorial/women-hero-desktop-1200.webp 1200w, /img/fashion-editorial/women-hero-desktop.webp 1920w'
+    }),
+    alternateHero: artwork('women-hero-alternate', 'Plum silk saree with gold woven motifs in a warm carved-stone interior', {
+      width: 1600,
+      height: 900,
+      mobile: '/img/fashion-editorial/women-hero-alternate-mobile.webp',
+      srcSet: '/img/fashion-editorial/women-hero-alternate-1000.webp 1000w, /img/fashion-editorial/women-hero-alternate.webp 1600w'
+    }),
+    cta: 'Shop now',
+    collectionTitle: 'Explore Our Collections',
+    productsTitle: 'From our collection',
+    // Slugs are used only when that category exists under Women in the real
+    // catalogue. Until then the tile opens the complete Women collection.
+    collections: [{
+      title: 'Silk Sarees',
+      caption: 'Elegant & rich',
+      slug: 'silk-sarees',
+      image: artwork('women-category-silk', 'Red silk saree with a woven gold border')
+    }, {
+      title: 'Cotton Sarees',
+      caption: 'Comfort & class',
+      slug: 'cotton-sarees',
+      image: artwork('women-category-cotton', 'Pale aqua cotton saree with a cream and gold border')
+    }, {
+      title: 'Georgette Sarees',
+      caption: 'Light & graceful',
+      slug: 'georgette-sarees',
+      image: artwork('women-category-georgette', 'Dusty rose georgette saree')
+    }, {
+      title: 'Kanjivaram Sarees',
+      caption: 'Royal tradition',
+      slug: 'kanjivaram-sarees',
+      image: artwork('women-category-kanjivaram', 'Deep maroon silk saree with a broad gold border')
+    }, {
+      title: 'Party Wear Sarees',
+      caption: 'For special moments',
+      slug: 'party-wear-sarees',
+      image: artwork('women-category-party', 'Black saree with gold embroidery')
+    }, {
+      title: 'Handloom Sarees',
+      caption: 'Pure & authentic',
+      slug: 'handloom-sarees',
+      image: artwork('women-category-handloom', 'Emerald green handloom fabric and gold detailing')
+    }],
+    editorial: [{
+      eyebrow: 'Featured collection',
+      title: 'Traditional Handloom Sarees',
+      text: 'Pure weaves. Timeless beauty.',
+      cta: 'Shop Handloom',
+      slug: 'handloom-sarees',
+      image: artwork('women-editorial-handloom', 'Woman in an ivory and red handloom saree beside a brass planter', {
+        width: 1400,
+        height: 540,
+        srcSet: '/img/fashion-editorial/women-editorial-handloom-800.webp 800w, /img/fashion-editorial/women-editorial-handloom.webp 1400w',
+        sizes: '(max-width: 700px) 100vw, 56vw'
+      })
+    }, {
+      eyebrow: 'The Banarasi edit',
+      title: 'Banarasi Sarees',
+      text: 'Rich heritage. Modern elegance.',
+      cta: 'Shop Banarasi',
+      slug: 'banarasi-sarees',
+      image: artwork('women-editorial-banarasi', 'Plum Banarasi silk with ornate gold woven motifs', {
+        width: 1200,
+        height: 649,
+        srcSet: '/img/fashion-editorial/women-editorial-banarasi-700.webp 700w, /img/fashion-editorial/women-editorial-banarasi.webp 1200w',
+        sizes: '(max-width: 700px) 100vw, 40vw'
+      })
+    }],
+    promo: artwork('women-editorial-banarasi', 'Gold brocade across folded plum silk', {
+      width: 1200,
+      height: 649
+    })
+  }
+};
+
+function departmentCatalogue(tree, views, slug) {
+  const category = resolveCategory$1(tree, slug);
+  const belongs = node => !!category && tree.ancestors(node.id).some(p => p.id === category.id) && tree.ancestors(node.id).every(p => p.is_active);
+  const categories = tree.list.filter(belongs);
+  const ids = new Set(categories.map(c => c.id));
+  return {
+    category,
+    categories,
+    products: sortViews(views.filter(v => ids.has(v.category_id)), 'featured')
+  };
+}
+function EditorialImage({
+  image,
+  priority = false,
+  className = ''
+}) {
+  const [failed, setFailed] = reactExports.useState('');
+  const src = image.src && failed !== image.src ? image.src : image.fallback;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
+    className: className,
+    children: [image.mobile && !failed && /*#__PURE__*/jsxRuntimeExports.jsx("source", {
+      media: "(max-width: 700px)",
+      srcSet: image.mobile
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+      src: src,
+      srcSet: !failed ? image.srcSet : undefined,
+      sizes: image.sizes || '100vw',
+      alt: image.alt,
+      width: image.width || 1200,
+      height: image.height || 1400,
+      loading: priority ? 'eager' : 'lazy',
+      fetchpriority: priority ? 'high' : 'auto',
+      decoding: "async",
+      onError: src !== image.fallback ? () => setFailed(src) : undefined
+    }, src)]
+  });
+}
+function DepartmentNav({
+  active
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+    className: "fd-nav",
+    "aria-label": "Fashion departments",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+      to: "/fashion",
+      children: "All fashion"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+      to: "/fashion/men",
+      "aria-current": active === 'men' ? 'page' : undefined,
+      children: "Men"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+      to: "/fashion/women",
+      "aria-current": active === 'women' ? 'page' : undefined,
+      children: "Women"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+      "aria-disabled": "true",
+      children: ["Kids ", /*#__PURE__*/jsxRuntimeExports.jsx("small", {
+        children: "Coming soon"
+      })]
+    })]
+  });
+}
+function SectionHead({
+  eyebrow,
+  title,
+  href,
+  id
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+    className: "fd-section-head",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fd-eyebrow",
+        children: eyebrow
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        id: id,
+        children: title
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: href,
+      children: ["Explore all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "arrowRight",
+        size: 17
+      })]
+    })]
+  });
+}
+function SareeDepartment({
+  config,
+  products,
+  status,
+  listing,
+  collectionHref
+}) {
+  const [slide, setSlide] = reactExports.useState(0);
+  const productRail = reactExports.useRef(null);
+  const slides = [config.hero, config.alternateHero];
+  const step = direction => setSlide(index => (index + direction + slides.length) % slides.length);
+  const scrollProducts = direction => {
+    const rail = productRail.current;
+    if (rail) rail.scrollBy({
+      left: direction * rail.clientWidth,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
+    });
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "sw",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "sw-hero",
+      "aria-label": "Saree collection",
+      "aria-roledescription": "carousel",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+        image: slides[slide],
+        priority: true,
+        className: "sw-hero__art"
+      }, slide), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "sw-hero__copy",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "sw-eyebrow",
+          children: config.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          children: config.title.map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: line
+          }, line))
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "sw-hero__intro",
+          children: config.intro
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: listing,
+          className: "sw-button",
+          children: [config.cta, /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 17
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "sw-hero__controls",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+          className: "sw-hero__dots",
+          "aria-label": "Choose a collection image",
+          children: slides.map((_, index) => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+            type: "button",
+            "aria-label": `Show collection image ${index + 1}`,
+            "aria-pressed": slide === index,
+            onClick: () => setSlide(index),
+            children: ["0", index + 1]
+          }, index))
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "sw-arrows",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            "aria-label": "Previous collection image",
+            onClick: () => step(-1),
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronLeft",
+              size: 18
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            "aria-label": "Next collection image",
+            onClick: () => step(1),
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronRight",
+              size: 18
+            })
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "sw-collections sw-wrap",
+      id: "sw-collections",
+      "aria-labelledby": "sw-collections-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "sw-collections__intro",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "sw-eyebrow",
+          children: "Shop by category"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+          id: "sw-collections-title",
+          children: ["Explore Our", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), " Collections"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          children: ["Discover sarees for every mood,", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "occasion and style."]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: listing,
+          className: "sw-inline-link",
+          children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "sw-collections__grid",
+        children: config.collections.map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: collectionHref(item.slug),
+          className: "sw-collection",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+            image: item.image
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: item.title
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: item.caption
+          })]
+        }, item.slug))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+      className: "sw-editorials",
+      "aria-label": "Featured saree collections",
+      children: config.editorial.map((item, index) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: collectionHref(item.slug),
+        className: `sw-editorial sw-editorial--${index + 1}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+          image: item.image
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "sw-eyebrow",
+            children: item.eyebrow
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            children: item.title
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            children: item.text
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "sw-button sw-button--outline",
+            children: [item.cta, /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 15
+            })]
+          })]
+        })]
+      }, item.slug))
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "sw-products sw-wrap",
+      id: "fd-products",
+      "aria-labelledby": "sw-products-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "sw-section-head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "sw-eyebrow",
+            children: "The wardrobe edit"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            id: "sw-products-title",
+            children: config.productsTitle
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            children: ["Explore the styles currently available", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "in our catalogue."]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "sw-arrows",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            "aria-label": "Previous products",
+            onClick: () => scrollProducts(-1),
+            disabled: products.length < 3,
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronLeft",
+              size: 16
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            "aria-label": "Next products",
+            onClick: () => scrollProducts(1),
+            disabled: products.length < 3,
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronRight",
+              size: 16
+            })
+          })]
+        })]
+      }), products.length ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "sw-products__rail",
+        ref: productRail,
+        children: products.slice(0, 8).map(view => /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductCard, {
+          view: view
+        }, view.id))
+      }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fd-empty",
+        role: "status",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'A new chapter in style is on its way. Explore all fashion while this collection comes together.'
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion",
+          children: ["Explore all fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "sw-promo",
+      "aria-labelledby": "sw-promo-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+        image: config.promo
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "sw-eyebrow",
+          children: "A timeless expression"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+          id: "sw-promo-title",
+          children: ["A little tradition.", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "A story of your own."]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: listing,
+        className: "sw-button sw-button--outline",
+        children: ["Explore the collection ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 16
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+      className: "sw-services sw-wrap",
+      "aria-label": "Shopping information",
+      children: [['truck', 'Free standard shipping', 'Choose Standard at checkout', '/shipping'], ['lock', 'Secure checkout', 'View payment options at checkout', '/terms'], ['return', 'Returns & refunds', 'Read our return policy', '/returns'], ['chat', 'Dedicated support', 'We’re here to help you', '/contact']].map(([icon, title, description, href]) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: href,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: icon,
+          size: 27
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: title
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("small", {
+            children: description
+          })]
+        })]
+      }, title))
+    })]
+  });
+}
+function FashionDepartment({
+  department = 'men'
+}) {
+  reactExports.useEffect(() => {
+    // A doorway can sit far down the homepage. Open each edit at its hero,
+    // while preserving direct links to a section within the department.
+    if (!window.location.hash) window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'instant'
+    });
+  }, [department]);
+  const config = DEPARTMENT_CONTENT[department] || DEPARTMENT_CONTENT.men;
+  const {
+    tree,
+    views,
+    status
+  } = useFashionCatalogue();
+  const {
+    category,
+    categories,
+    products
+  } = departmentCatalogue(tree, views, config.categorySlug);
+  const listing = category ? categoryHref$3(category) : '#fd-products';
+  const collectionHref = slug => {
+    const node = categories.find(c => c.slug === slug);
+    return node ? categoryHref$3(node) : listing;
+  };
+  if (department === 'women') return /*#__PURE__*/jsxRuntimeExports.jsx(SareeDepartment, {
+    config: config,
+    products: products,
+    status: status,
+    listing: listing,
+    collectionHref: collectionHref
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `fd fd--${department}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(DepartmentNav, {
+      active: department
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "fd-hero",
+      "aria-labelledby": "fd-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fd-hero__photo",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+          image: config.hero,
+          priority: true
+        }, department)
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fd-hero__copy",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fd-eyebrow",
+          children: config.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          id: "fd-title",
+          children: config.title.map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: line
+          }, line))
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fd-hero__intro",
+          children: config.intro
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: listing,
+          className: "fd-cta",
+          children: [config.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 19
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "fd-hero__edition",
+        children: config.heroNote
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "fd-hero__number",
+        "aria-hidden": "true",
+        children: department === 'men' ? '01' : '02'
+      })]
+    }), department === 'men' && /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+      className: "fd-highlights",
+      "aria-label": "Explore menswear",
+      children: [["sparkle", "Everyday style", "Find your own rhythm"], ["star", "The wardrobe edit", "Pieces to make yours"], ["grid", "Mix. Match. Repeat.", "A fresh perspective"], ["bag", "Your next favourite", "Explore the collection"]].map(([icon, label, sub]) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: listing,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: icon,
+          size: 28
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: label
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("small", {
+            children: sub
+          })]
+        })]
+      }, label))
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "fd-section fd-collections",
+      "aria-labelledby": "fd-collections-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHead, {
+        eyebrow: "Shop by collection",
+        title: config.collectionTitle,
+        href: listing,
+        id: "fd-collections-title"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fd-collections__grid",
+        children: config.collections.map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: collectionHref(item.slug),
+          className: "fd-collection",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "fd-collection__photo",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+              image: item.image
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: item.title
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 17
+          })]
+        }, item.title))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+      className: "fd-editorials",
+      "aria-label": "The style edits",
+      children: config.editorial.map((item, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: listing,
+        className: `fd-editorial fd-editorial--${i + 1}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+          image: item.image
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "fd-eyebrow",
+            children: item.eyebrow
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            children: item.title
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            children: item.text
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "fd-text-link",
+            children: ["Discover the edit ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 16
+            })]
+          })]
+        })]
+      }, item.title))
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "fd-section",
+      "aria-labelledby": "fd-products-title",
+      id: "fd-products",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHead, {
+        eyebrow: "Curated for you",
+        title: config.productsTitle,
+        href: listing,
+        id: "fd-products-title"
+      }), products.length ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fd-products",
+        children: products.slice(0, 8).map(view => /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductCard, {
+          view: view
+        }, view.id))
+      }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fd-empty",
+        role: "status",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "bag",
+          size: 28
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'A new chapter in style is on its way. Explore all fashion while this collection comes together.'
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion",
+          children: ["Explore all fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "fd-section fd-looks",
+      "aria-labelledby": "fd-looks-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHead, {
+        eyebrow: department === 'men' ? 'Wear it your way' : 'The styling journal',
+        title: department === 'men' ? 'Shop the look' : 'A little inspiration',
+        href: listing,
+        id: "fd-looks-title"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fd-looks__grid",
+        children: config.looks.map(look => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: listing,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+            image: look.image
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [look.title, /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 17
+            })]
+          })]
+        }, look.title))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "fd-closing",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "fd-eyebrow",
+        children: ["SORA LIFE / ", config.label]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        children: department === 'men' ? 'Good style. Your rules.' : 'Your story. Beautifully worn.'
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: listing,
+        className: "fd-cta",
+        children: ["Find your next favourite ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 18
+        })]
       })]
     })]
   });
@@ -65141,7 +66071,7 @@ function HeroCarousel({
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
             className: "ls-hero__sub",
             children: s.sub
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(FashionEntryLink, {
             to: s.href,
             className: "ls-cta",
             tabIndex: i === index ? 0 : -1,
@@ -65251,7 +66181,7 @@ function FashionBannerCard({
   const b = banner;
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "ls-wrap",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs(FashionEntryLink, {
       to: b.href,
       className: "ls-banner",
       "aria-labelledby": "ls-banner-h ls-banner-cta",
@@ -65861,6 +66791,16 @@ function App() {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           index: true,
           element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionHome, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "men",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionDepartment, {
+            department: "men"
+          }, "men")
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "women",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionDepartment, {
+            department: "women"
+          }, "women")
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "c/:slug",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionCategory, {})
