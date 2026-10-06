@@ -21,7 +21,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule, buildHomeLivingApp, loadHomeLivingData, CATEGORIES, PRODUCTS } from './homeliving-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { FASHION_DEPARTMENT_FILES, STOREFRONT_ADMIN_FILES, sansStorefrontChanges } from './storefront-settings-pin.mjs';
+import { DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES, STOREFRONT_ADMIN_FILES, sansStorefrontChanges } from './storefront-settings-pin.mjs';
 
 // The tip before the Home & Living store (the store-switcher bundle commit).
 const BASELINE_SHA = 'c060167';
@@ -400,7 +400,8 @@ await test('the wellness, fashion and grocery storefronts changed only by the ap
   // test-fashion-departments.mjs owns them): their own files may change, and the shared files
   // they edited go through sansStorefrontChanges, which undoes both changes.
   const allowed = /^(src\/homeliving\/|src\/lib\/homeliving[A-Za-z]*\.js$|src\/pages\/Home\.jsx$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|img\/doorway-|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|scripts\/|supabase\/migrations\/(0035_homeliving_store\.sql|rollback\/0035_homeliving_store_down\.sql)$|src\/App\.jsx$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/styles\/v2-header\.css$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|img\/homeliving-|public\/|reports\/)/;
-  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !FASHION_DEPARTMENT_FILES.test(f));
+  // .vercelignore is deploy configuration (f927077), not storefront code.
+  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/lib/fashionApi.js', 'src/data/groceryHomepage.js', 'src/grocery/GroceryHome.jsx', 'src/styles/layout.css']) { // fashion.css and grocery.css carry the typeface map now (test-typeface.mjs pins it)
     // Express and Scheduled were withdrawn (test-company-surfaces.mjs pins the fee map against the

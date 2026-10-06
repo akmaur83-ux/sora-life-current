@@ -25,7 +25,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule, buildLifestyleApp, loadLifestyleData, INITIAL, HOME_CATEGORIES, HOME_PRODUCTS, FASHION_CATEGORIES, FASHION_PRODUCTS } from './lifestyle-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { FASHION_DEPARTMENT_FILES } from './storefront-settings-pin.mjs';
+import { DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES } from './storefront-settings-pin.mjs';
 
 // The tree as it stood before this work: the homepage store doorway release.
 const BASELINE_SHA = '9ca51d5';
@@ -337,7 +337,8 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page and 
   // The separate catalogue editor is guarded by test-store-catalogue-admin.mjs.
   const catalogueAdmin = /^(src\/lib\/storeCatalogueAdmin(?:Api)?\.js|src\/admin\/pages\/StoreCatalogue\.jsx)$/;
   // The fashion departments' own files (test-fashion-departments.mjs).
-  const bad = [...changed].filter((f) => !allowed.test(f) && !catalogueAdmin.test(f) && !FASHION_DEPARTMENT_FILES.test(f));
+  // .vercelignore is deploy configuration (f927077), not storefront code.
+  const bad = [...changed].filter((f) => !allowed.test(f) && !catalogueAdmin.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/fashionApi.js', 'src/lib/fashion.js', 'src/fashion/fashionArt.js']) {
   // src/fashion/FashionHome.jsx moved its campaign hero to the top of the page (e58317c);

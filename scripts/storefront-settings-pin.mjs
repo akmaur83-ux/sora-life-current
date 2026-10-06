@@ -28,6 +28,9 @@ import { DEFAULT_FASHION_STOREFRONT as F, DEFAULT_LIFESTYLE_STOREFRONT as L } fr
 /** The admin pages and libs 99b67ba added or touched: no storefront renders them. */
 export const STOREFRONT_ADMIN_FILES = /^(src\/admin\/AdminLayout\.jsx|src\/admin\/admin\.css|src\/admin\/pages\/(Storefronts|StoreCatalogue)\.jsx|src\/lib\/storefrontCustomization\.js|src\/lib\/storeCatalogueAdmin(Api)?\.js)$/;
 
+/** Deploy configuration, not storefront code: f927077 keeps the local QA folders and reports out of every deployment. */
+export const DEPLOY_CONFIG_FILES = /^\.vercelignore$/;
+
 /** The storefront files that now read the setting — each undone by sansStorefrontSettings. */
 export const STOREFRONT_SETTINGS_READS = /^(src\/App\.jsx|src\/fashion\/(FashionHome|FashionLayout)\.jsx|src\/lifestyle\/(LifestyleHome|LifestyleLayout)\.jsx|src\/data\/lifestyleHomepage\.js)$/;
 

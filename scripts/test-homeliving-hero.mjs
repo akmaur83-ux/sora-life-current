@@ -22,7 +22,7 @@ import { resolve } from 'node:path';
 import sharp from 'sharp';
 import { ROOT, read, buildHomeLivingApp } from './homeliving-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { FASHION_DEPARTMENT_EDITS, FASHION_DEPARTMENT_FILES, STOREFRONT_ADMIN_FILES, STOREFRONT_SETTINGS_READS, sansStorefrontChanges } from './storefront-settings-pin.mjs';
+import { DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_EDITS, FASHION_DEPARTMENT_FILES, STOREFRONT_ADMIN_FILES, STOREFRONT_SETTINGS_READS, sansStorefrontChanges } from './storefront-settings-pin.mjs';
 
 // The tip before this work: the typeface release.
 const BASELINE_SHA = '24bb729';
@@ -234,7 +234,8 @@ await test('isolation: the store\'s own homepage files, its sheet, the two photo
   // they edited go through sansStorefrontChanges, which undoes both changes.
   const allowed = /^(src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/fashion\.css$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|img\/homeliving-hero-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
   // Every shared file either change edited is in the byte list below (FashionBanner.jsx joins it), so it may appear here.
-  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !STOREFRONT_SETTINGS_READS.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !FASHION_DEPARTMENT_EDITS.test(f));
+  // .vercelignore is deploy configuration (f927077), not storefront code.
+  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !STOREFRONT_SETTINGS_READS.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !FASHION_DEPARTMENT_EDITS.test(f) && !DEPLOY_CONFIG_FILES.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/homeliving/HomeLivingCategory.jsx', 'src/homeliving/HomeLivingProductPage.jsx', 'src/homeliving/HomeLivingProductCard.jsx', 'src/lib/homelivingListing.js', 'src/lib/homelivingPdp.js', 'src/components/Header.jsx', 'src/fashion/FashionLayout.jsx', 'src/grocery/GroceryLayout.jsx', 'src/lifestyle/LifestyleLayout.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/data/lifestyleHomepage.js', 'src/styles/grocery.css', 'src/styles/lifestyle.css', 'src/styles/v2-foundation.css', 'src/styles/tokens.css', 'src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/App.jsx', 'build/build-css.mjs', 'src/lib/deferredStyles.js', 'index.html', 'src/components/FashionBanner.jsx']) {
     // Express and Scheduled were withdrawn (test-company-surfaces.mjs pins the fee map against the
