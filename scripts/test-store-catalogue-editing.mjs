@@ -139,6 +139,20 @@ await test('a slug or SKU another product in the store holds is refused before t
   await api.saveStoreProduct('fashion', 'fp-linen', { ...own, brand: 'Atelier' }, own.updated_at);   // its own slug and SKU are not a clash
 });
 
+await test('one save reports everything: a taken slug or SKU alongside the other field problems', async () => {
+  const { api, store } = await apiOver();
+  const own = await api.getStoreProduct('fashion', 'fp-linen');
+  await assert.rejects(api.saveStoreProduct('fashion', 'fp-linen', { ...own, slug: 'wrap-dress', sku: 'AW-WRAP', sale_price: 1500, hsn_code: '62052' }, own.updated_at),
+    (e) => JSON.stringify(Object.keys(e.fieldErrors).sort()) === JSON.stringify(['hsn_code', 'sale_price', 'sku', 'slug']) && e.fieldErrors.slug === 'Another product in this store already uses this slug.');
+  await assert.rejects(api.saveStoreProduct('fashion', null, { name: 'Wrap Dress', category_id: 'fc-dresses', mrp: '' }),
+    (e) => e.fieldErrors?.slug === 'Another product in this store already uses this slug.' && !!e.fieldErrors.mrp, 'the automatic slug from the name is checked too');
+  await assert.rejects(api.saveStoreProduct('fashion', 'fp-linen', { ...own, slug: 'Bad Slug!' }, own.updated_at),
+    (e) => /lowercase letters/.test(e.fieldErrors?.slug), 'a slug its rule refuses reports the rule, not a clash');
+  await assert.rejects(api.saveStoreVariant('homeliving', 'hp-percale', null, { size: 'Single', colour: 'Ivory', sku: 'AW-LIN-M-SAGE', stock: '-1' }),
+    (e) => /unique across every store/.test(e.fieldErrors?.sku) && !!e.fieldErrors.stock);
+  assert.equal(store.writes().length, 0);
+});
+
 await test('variant SKUs are unique across EVERY store (the 0033 constraint); size × colour is unique per product', async () => {
   const { api, store } = await apiOver();
   await assert.rejects(api.saveStoreVariant('homeliving', 'hp-percale', null, { size: 'Single', colour: 'Ivory', sku: 'AW-LIN-M-SAGE', stock: 1 }),

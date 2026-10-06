@@ -772,7 +772,9 @@
 .sc-field--error .input, .sc-field--error .select, .sc-field--error .textarea { border-color: var(--color-sale, #A94F4F); box-shadow: 0 0 0 1px var(--color-sale, #A94F4F); }
 .sc-field .hint.err { margin: 0; font-weight: 600; }
 .sc-reload { margin-left: 10px; }
-/* What the store does with what is entered here (grocery not sold; GST recorded, not applied). */
+/* What the store does with what is entered here (grocery not sold; GST recorded, not applied).
+   Its own class, not .info: the storefront's info pages own .info (min-height: 60vh). */
+.adm-banner.sc-info { background: var(--honey-100); color: var(--honey-700); border: 1px solid var(--honey-300); }
 .sc-note { margin: 12px 0 16px; }
 @media (max-width: 640px) {
   .sc-panel { padding: 16px; }

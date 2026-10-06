@@ -72,7 +72,7 @@ function ClaimList({ warnings }) {
 }
 function ClaimNotice({ warnings }) {
   if (!warnings?.length) return null;
-  return <div className="adm-banner info sc-claims" role="status"><strong>Saved — check this copy before customers read it.</strong> SORA LIFE cannot back these claims without proof (a certificate, a courier promise, clinical evidence). This is a warning, not a block: edit the copy if it overstates.<ClaimList warnings={warnings} /></div>;
+  return <div className="adm-banner sc-info sc-claims" role="status"><strong>Saved — check this copy before customers read it.</strong> SORA LIFE cannot back these claims without proof (a certificate, a courier promise, clinical evidence). This is a warning, not a block: edit the copy if it overstates.<ClaimList warnings={warnings} /></div>;
 }
 
 function CategoryEditor({ store, categories, initial, onSaved, onCancel }) {
@@ -297,7 +297,7 @@ function VariantsEditor({ store, product, onChanged }) {
     finally { setBusy(false); }
   }
   return <section className="surface sc-panel"><h2>Sizes, colours &amp; stock</h2><p className="hint">{store === 'fashion' ? 'Fashion stock comes from these variants. For a single option use “One size” and its colour, or “Default”.' : 'Optional: add sizes or colours for this product. When active variants exist, their stock is used instead of product stock.'}</p>
-    {store === 'grocery' && <p className="adm-banner info sc-note" role="note">{GROCERY_VARIANTS_UNREAD}</p>}
+    {store === 'grocery' && <p className="adm-banner sc-info sc-note" role="note">{GROCERY_VARIANTS_UNREAD}</p>}
     <Messages error={errors.banner} message={message} stale={errors.stale} />
     {!!product.variants?.length && <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Size / option</th><th>Colour</th><th>Stock</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody>{product.variants.map((row) => <tr key={row.id}><td>{row.size}</td><td>{row.colour || '—'}</td><td>{row.stock}</td><td>{row.price_override == null ? 'Product price' : money(row.price_override)}</td><td>{row.is_active ? 'Active' : 'Hidden'}</td><td><div className="sc-actions sc-actions--row"><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => { setEditing(row.id); setForm(row); setMessage(''); errors.reset(); }}>Edit</button><button type="button" className="btn btn-ghost btn-sm sc-danger" disabled={busy} onClick={() => remove(row)}>Delete</button></div></td></tr>)}</tbody></table></div>}
     <form onSubmit={save} noValidate><fieldset disabled={busy}><h3>{editing ? 'Edit variant' : 'Add variant'}</h3><div className="adm-grid2">
@@ -476,7 +476,7 @@ function ProductEditor({ store, productId }) {
         <Field form="prod" errors={errors} label="HSN code (optional)" field="hsn_code" value={form} set={setForm} hint="4, 6 or 8 digits. Example: 6302 (bed linen)." />
         <Field form="prod" errors={errors} label="GST rate % (optional)" field="gst_rate" type="number" min="0" max="100" step="0.01" value={form} set={setForm} hint="0 to 100. Leave blank if not yet known." />
       </div>
-      <p className="adm-banner info sc-note" role="note">{gstNote(store)}</p>
+      <p className="adm-banner sc-info sc-note" role="note">{gstNote(store)}</p>
       {!categories.length && <p className="hint"><Link to={`/admin/store-catalogue/${store}?tab=categories`}>Create a category first</Link>.</p>}
       <Field form="prod" errors={errors} label="Description" field="description" value={form} set={setForm} multiline />
       <div className="sc-actions"><Check label="New arrival" field="is_new" value={form} set={setForm} /><Check label="Bestseller" field="is_bestseller" value={form} set={setForm} />{!isNew && <Check label="Published / visible to customers" field="is_active" value={form} set={setForm} />}</div>
@@ -491,7 +491,7 @@ export default function StoreCatalogue() {
   if (!Object.hasOwn(CATALOGUE_STORES, store)) return <div className="adm-empty">Choose a store: <Link to="/admin/store-catalogue/fashion">Fashion</Link> · <Link to="/admin/store-catalogue/homeliving">Home &amp; Living</Link> · <Link to="/admin/store-catalogue/grocery">Grocery</Link></div>;
   return <div className="adm-catalogue"><div className="adm__head"><div><h1>Store Products</h1><p>Manage products and categories for Fashion, Home &amp; Living and Grocery. Lifestyle brings Fashion and Home &amp; Living together.</p></div><Link className="btn btn-outline btn-sm" to="/admin/storefronts">Storefront design</Link></div>
     <div className="sc-toolbar"><label className="sc-field"><span className="label">Store</span><select className="select" value={store} disabled={!!productId} onChange={(e) => navigate(`/admin/store-catalogue/${e.target.value}`)}>{Object.entries(CATALOGUE_STORES).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label><a className="inline-link" href={`/${store}`} target="_blank" rel="noreferrer">View {CATALOGUE_STORES[store]} ↗</a>{store !== 'grocery' && <a className="inline-link" href="/lifestyle" target="_blank" rel="noreferrer">View Lifestyle ↗</a>}</div>
-    {store === 'grocery' && <div className="adm-banner info" role="note"><strong>Not for sale yet.</strong> {GROCERY_NOT_SOLD}</div>}
+    {store === 'grocery' && <div className="adm-banner sc-info" role="note"><strong>Not for sale yet.</strong> {GROCERY_NOT_SOLD}</div>}
     {productId ? <ProductEditor key={`${store}-${productId}`} store={store} productId={productId} /> : <CatalogueList key={store} store={store} />}
   </div>;
 }

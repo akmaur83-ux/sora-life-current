@@ -5,6 +5,7 @@ import { compressToWebp } from './storeCatalogueImage.js';
 import {
   requireCatalogueStore, catalogueProductPayload, catalogueCategoryPayload, catalogueVariantPayload, assertCataloguePublishable,
   CatalogueInputError, CatalogueStaleWriteError, CatalogueRefusedError, catalogueWriteError, planDemoDelete,
+  catalogueSlug, PRODUCT_FIELD_RULES, VARIANT_FIELD_RULES,
 } from './storeCatalogueAdmin.js';
 
 // Uses existing admin RLS. No service credentials, schema changes or wellness writes.
@@ -69,28 +70,42 @@ async function writeOne(query, table, filters, kind) {
   throw new CatalogueRefusedError(`The database refused to change this ${kind}: this account is not a catalogue admin. Sign in again with an admin account.`);
 }
 
-/** Refuse a product slug or SKU another product in this store already holds, before the database does. */
-async function assertProductKeysFree(store, id, row) {
+/** A field's value as its rule reads it, or null if the rule refuses it (that refusal is reported separately). */
+const readable = (rule, value) => { try { return rule(value); } catch { return null; } };
+
+/** Product slugs and SKUs another product in this store already holds: { field: message }. */
+async function productKeyClashes(store, id, keys) {
   const errors = {};
   for (const field of ['slug', 'sku']) {
-    if (!row[field]) continue;
-    let query = supabase.from('catalogue_products').select('id').eq('store', store).eq(field, row[field]);
+    if (!keys[field]) continue;
+    let query = supabase.from('catalogue_products').select('id').eq('store', store).eq(field, keys[field]);
     if (id) query = query.neq('id', id);
     const taken = await result(query.limit(1));
     if (taken?.length) errors[field] = `Another product in this store already uses this ${field === 'slug' ? 'slug' : 'SKU'}.`;
   }
-  if (Object.keys(errors).length) throw new CatalogueInputError(errors);
+  return errors;
 }
 
 /** Variant SKUs are unique across EVERY store (the 0033 constraint), so the check is not store-scoped. */
-async function assertVariantSkuFree(id, sku) {
-  if (!sku) return;
+async function variantSkuClash(id, sku) {
+  if (!sku) return {};
   let query = supabase.from('catalogue_variants').select('id, store').eq('sku', sku);
   if (id) query = query.neq('id', id);
   const taken = await result(query.limit(1));
-  if (taken?.length) {
-    throw new CatalogueInputError({ sku: `This SKU is already used by another variant${taken[0].store ? ` (${taken[0].store} store)` : ''}. Variant SKUs are unique across every store.` });
-  }
+  return taken?.length ? { sku: `This SKU is already used by another variant${taken[0].store ? ` (${taken[0].store} store)` : ''}. Variant SKUs are unique across every store.` } : {};
+}
+
+/**
+ * The payload rules, then the availability checks — run even when a rule
+ * failed, so one save reports every problem (a clashing slug as well as a
+ * bad HSN), never one per attempt. A field's own rule error wins over a clash.
+ */
+async function validated(build, clashes) {
+  let row = null, ruleErrors = {};
+  try { row = build(); } catch (error) { if (!error.fieldErrors) throw error; ruleErrors = error.fieldErrors; }
+  const errors = { ...(await clashes(row)), ...ruleErrors };
+  if (Object.keys(errors).length) throw new CatalogueInputError(errors);
+  return row;
 }
 
 export const listStoreCategories = (store) => allRows('catalogue_categories', store);
@@ -109,8 +124,10 @@ export async function getStoreProduct(store, id) {
 export async function saveStoreProduct(store, id, input, expectedUpdatedAt = null) {
   requireCatalogueStore(store);
   const categories = await listStoreCategories(store);
-  const row = catalogueProductPayload(input, categories);
-  await assertProductKeysFree(store, id, row);
+  const row = await validated(() => catalogueProductPayload(input, categories), (built) => productKeyClashes(store, id, built || {
+    slug: readable(PRODUCT_FIELD_RULES.slug, String(input.slug ?? '').trim() || catalogueSlug(input.name)),
+    sku: readable(PRODUCT_FIELD_RULES.sku, input.sku),
+  }));
   // First create a draft; images/variants can then be saved against its real id.
   if (!id) return result(supabase.from('catalogue_products').insert({ ...row, store, is_active: false }).select().single(), 'product');
   if (row.is_active) assertCataloguePublishable(store, await getStoreProduct(store, id));
@@ -128,8 +145,8 @@ export async function saveStoreVariant(store, productId, id, input, expectedUpda
   requireCatalogueStore(store);
   const product = await getStoreProduct(store, productId);
   if (id && !(product.variants || []).some((v) => v.id === id)) throw new Error('Variant not found on this product.');
-  const row = catalogueVariantPayload({ ...input, id }, store, product.variants || []);
-  await assertVariantSkuFree(id, row.sku);
+  const row = await validated(() => catalogueVariantPayload({ ...input, id }, store, product.variants || []),
+    (built) => variantSkuClash(id, built ? built.sku : readable(VARIANT_FIELD_RULES.sku, input.sku)));
   if (id) return guardedUpdate('catalogue_variants', { store, product_id: productId, id }, row, expectedUpdatedAt, 'variant');
   return result(supabase.from('catalogue_variants').insert({ ...row, store, product_id: productId }).select().single(), 'variant');
 }
@@ -146,10 +163,15 @@ export function storagePathOf(url) {
   const path = decodeURIComponent(String(url).slice(at + BUCKET_PREFIX.length).split('?')[0]);
   return /^[A-Za-z0-9/_.-]+$/.test(path) && !path.includes('..') ? path : null;
 }
+/** Store a converted image; a refusal from the bucket's policy reads as one. */
+async function storeWebp(store, webp) {
+  try { return await uploadImage(webp.file, `catalogue/${store}`); }
+  catch (error) { throw catalogueWriteError(error, 'image'); }
+}
 export async function uploadStoreImageFile(store, file) {
   requireCatalogueStore(store);
   const webp = await compressToWebp(file);
-  const url = await uploadImage(webp.file, `catalogue/${store}`);
+  const url = await storeWebp(store, webp);
   return { url, storage_path: storagePathOf(url), bytes: webp.bytes, width: webp.width, height: webp.height };
 }
 /** One image (a category picture, or the add-by-URL form's upload): the WebP's public URL. */
@@ -171,7 +193,7 @@ export async function addStoreImages(store, productId, files, onProgress = () =>
       report('converting');
       const webp = await compressToWebp(file);
       report('uploading', { bytes: webp.bytes });
-      const public_url = await uploadImage(webp.file, `catalogue/${store}`);
+      const public_url = await storeWebp(store, webp);
       const product = await getStoreProduct(store, productId);      // re-read: order and primary as they are now
       const media = product.media || [];
       const row = {

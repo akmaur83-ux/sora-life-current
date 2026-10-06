@@ -266,8 +266,9 @@ export function createCatalogueDb(rows = {}, { admin = true } = {}) {
       from: (bucket) => ({
         async upload(path, file, opts = {}) {
           storage.uploads.push({ bucket, path, type: opts.contentType || file?.type, size: file?.size, admin: session.admin });
-          if (!session.admin) return { data: null, error: { statusCode: '403', error: 'Unauthorized', message: 'new row violates row-level security policy' } };
-          if (storage.objects.has(`${bucket}/${path}`) && !opts.upsert) return { data: null, error: { statusCode: '409', message: 'The resource already exists' } };
+          // supabase-js hands back a StorageError (an Error) with the HTTP status.
+          if (!session.admin) return { data: null, error: Object.assign(new Error('new row violates row-level security policy'), { name: 'StorageApiError', statusCode: '403', status: 403 }) };
+          if (storage.objects.has(`${bucket}/${path}`) && !opts.upsert) return { data: null, error: Object.assign(new Error('The resource already exists'), { name: 'StorageApiError', statusCode: '409', status: 409 }) };
           storage.objects.set(`${bucket}/${path}`, { file, opts });
           return { data: { path }, error: null };
         },

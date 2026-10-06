@@ -149,5 +149,13 @@ await test('every grocery page says it cannot be sold yet and that variants are 
   }
 });
 
+await test("the notes use the admin's own banner class — not .info, which the storefront's info pages size to 60vh", async () => {
+  const { handle } = await openPage({ params: { store: 'grocery', productId: 'gp-rice' } });
+  const classes = findAll(handle.tree, (n) => typeof n.props?.className === 'string').map((n) => n.props.className.split(/\s+/));
+  assert.ok(!classes.some((c) => c.includes('info')), 'no element of the catalogue page carries the bare class "info"');
+  assert.ok(classes.some((c) => c.includes('sc-info')));
+  assert.match(read('src/admin/admin.css'), /\.adm-banner\.sc-info \{/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed) process.exitCode = 1;
