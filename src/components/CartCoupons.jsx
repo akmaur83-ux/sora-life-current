@@ -101,13 +101,18 @@ export default function CartCoupons({ items, code, quote, onApply, onRemove }) {
   // Refetched whenever the basket changes, for the same reason the quote is:
   // an offer's worth depends on the basket, so a stale list would advertise a
   // saving that no longer holds.
-  const signature = JSON.stringify(items.map((l) => [l.id, l.qty, l.variantId || null]));
+  //
+  // The catalogue rides along. Without it a fashion or Home & Living line
+  // reached /api/coupons/eligible as a wellness id, was refused, and the
+  // whole offers list came back empty. cartToPayload sends it for those two
+  // stores only, so a wellness request is exactly what it was.
+  const signature = JSON.stringify(items.map((l) => [l.id, l.qty, l.variantId || null, l.catalogue || null]));
   useEffect(() => {
     const controller = new AbortController();
     (async () => {
       try {
         const next = await fetchEligibleCoupons({
-          items: JSON.parse(signature).map(([id, qty, variantId]) => ({ id, qty, variantId })),
+          items: JSON.parse(signature).map(([id, qty, variantId, catalogue]) => ({ id, qty, variantId, catalogue })),
           signal: controller.signal,
         });
         if (!controller.signal.aborted) setOffers(next);

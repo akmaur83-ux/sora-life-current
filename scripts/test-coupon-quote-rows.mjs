@@ -22,7 +22,8 @@
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import { ROOT, read } from './grocery-ssr.mjs';
+import { ROOT, read, loadModule, loadSource } from './grocery-ssr.mjs';
+import { atCommit } from './baseline-export.mjs';
 
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -37,6 +38,8 @@ const load = (rel) => import(pathToFileURL(resolve(ROOT, rel)).href);
 const WELLNESS = { id: 11, biosash_id: 'b183', name: 'Wellness Item', original_price: 250, sale_price: 236, discount_percent: 0, is_active: true, stock: true };
 const SHIRT = { id: 'p-shirt', name: 'Meadow Linen Shirt', slug: 'meadow-linen-shirt', mrp: 1299, sale_price: 1099, is_active: true };
 const SHIRT_VAR = { id: 'v-m-navy', product_id: 'p-shirt', size: 'M', colour: 'Navy', sku: 'SH-M-NV', stock: 5, price_override: null, is_active: true };
+// A Home & Living product without options (catalogue_products, store 'homeliving').
+const TOWELS = { id: 'h-towels', name: 'Bath Towel Set', slug: 'bath-towel-set', sku: 'SL-HL-TWL-2', mrp: 949, sale_price: 799, stock: 5, is_active: true };
 const COUPON = { id: 'c1', code: 'TEN', type: 'percent', value: 10, max_discount: 0, min_order_value: 0, is_active: true, usage_limit: null, per_user_limit: null, starts_at: null, ends_at: null, first_order_only: false };
 
 // One PostgREST-shaped stub. `rest()` in supabaseAdmin builds a path string;
@@ -49,6 +52,7 @@ function stubFetch() {
       : table === 'product_variants' ? []
       : table === 'fashion_products' ? [SHIRT]
       : table === 'fashion_variants' ? [SHIRT_VAR]
+      : table === 'catalogue_products' ? [TOWELS]
       : table === 'coupons' ? [COUPON]
       : [];
     return { ok: true, status: 200, text: async () => JSON.stringify(rows) };
@@ -111,6 +115,41 @@ await test('the source itself: every computeOrderTotal call in the quote path is
     assert.match(call, /fashionProductRows/, 'a computeOrderTotal call without the fashion product rows refuses every fashion line');
     assert.match(call, /fashionVariantRows/, 'and without the variant rows it cannot price one');
   }
+});
+
+// The Cart page's offers panel asks /api/coupons/eligible about the same basket.
+// It used to send each line as [id, qty, variantId] and drop the catalogue, so
+// a fashion or Home & Living line arrived as a wellness id and the whole list
+// came back empty. The component is called with its hooks injected, so the
+// request it builds is the request it really sends.
+await test('the offers panel sends the catalogue with each line: a cart holding a fashion or Home & Living item is priced for its offers, and a wellness request is unchanged', async () => {
+  const requestOf = (source) => {
+    const calls = [];
+    const mod = loadSource(source, {
+      Icon: () => null, money: (n) => `₹${n}`, normalizeCouponCode: (c) => c,
+      fetchEligibleCoupons: async ({ items }) => { calls.push(items); return { applicable: [], unlockable: [] }; },
+      useState: (init) => [typeof init === 'function' ? init() : init, () => {}],
+      useEffect: (fn) => { fn(); },
+    });
+    return (lines) => { calls.length = 0; mod.default({ items: lines, code: '', quote: { status: 'idle' }, onApply() {}, onRemove() {} }); return calls[0]; };
+  };
+  const before = requestOf(atCommit('8ca5caa', 'src/components/CartCoupons.jsx'));
+  const after = requestOf(read('src/components/CartCoupons.jsx'));
+  const api = loadModule('src/lib/couponApi.js', { supabase: {}, getVisitorId: () => 'v' });
+  const wellness = [{ key: 'b183', id: 'b183', qty: 2, variantId: null }, { key: 'b777::v750', id: 'b777', qty: 1, variantId: 'v750' }];
+  assert.equal(JSON.stringify(api.cartToPayload(after(wellness))), JSON.stringify(api.cartToPayload(before(wellness))), 'a wellness request is byte-for-byte what it was');
+  const mixed = [{ key: 'b183', id: 'b183', qty: 2, variantId: null }, { key: 'f', catalogue: 'fashion', id: 'p-shirt', qty: 1, variantId: 'v-m-navy' }, { key: 'h', catalogue: 'homeliving', id: 'h-towels', qty: 1, variantId: null }, { key: 'g', catalogue: 'grocery', id: 'g-rice', qty: 1, variantId: null }];
+  assert.deepEqual(api.cartToPayload(before(mixed)).map((l) => l.catalogue ?? null), [null, null, null, null], 'the marker used to be dropped');
+  assert.deepEqual(api.cartToPayload(after(mixed)).map((l) => l.catalogue ?? null), [null, 'fashion', 'homeliving', null], 'fashion and Home & Living carry it; grocery still carries nothing');
+  globalThis.fetch = stubFetch();
+  try {
+    const basket = mixed.slice(0, 3); // a grocery line never reaches the server: the cart blocks it first
+    const was = await quoteMod.priceCart(api.cartToPayload(before(basket)), 'std', cfg);
+    assert.equal(was.ok, false, 'without the marker the basket was refused — the empty offers list');
+    const now = await quoteMod.priceCart(api.cartToPayload(after(basket)), 'std', cfg);
+    assert.equal(now.ok, true, now.error);
+    assert.equal(now.base.subtotal, 472 + 1099 + 799, 'every line priced for the offers it qualifies for');
+  } finally { globalThis.fetch = realFetch; }
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

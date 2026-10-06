@@ -51,7 +51,7 @@ export const FASHION_DEPARTMENT_EDITS = /^(src\/App\.jsx|src\/fashion\/(FashionH
  * by sansCartChanges. A suite may allow one in its changed-file list only where
  * it also byte-checks that file through sansStorefrontChanges.
  */
-export const CART_CHANGE_EDITS = /^(src\/lib\/(store\.jsx|payments\.js|couponApi\.js|homelivingPdp\.js)|api\/_lib\/(pricing|supabaseAdmin|couponQuote)\.js|api\/razorpay\/create-order\.js|src\/homeliving\/HomeLivingProduct(Card|Page)\.jsx|src\/data\/homelivingHomepage\.js)$/;
+export const CART_CHANGE_EDITS = /^(src\/lib\/(store\.jsx|payments\.js|couponApi\.js|homelivingPdp\.js)|api\/_lib\/(pricing|supabaseAdmin|couponQuote)\.js|api\/razorpay\/create-order\.js|src\/homeliving\/HomeLivingProduct(Card|Page)\.jsx|src\/data\/homelivingHomepage\.js|src\/components\/CartCoupons\.jsx)$/;
 
 /** The files the Home & Living cart added: its cart line module, and the suite and undo patch that pin it. */
 export const HOMELIVING_CART_FILES = /^(src\/lib\/homelivingCartLine\.js|scripts\/test-homeliving-cart\.mjs|scripts\/pins\/homeliving-cart\.patch)$/;
@@ -298,6 +298,10 @@ function undoFromPatch(name) {
   return Object.fromEntries(Object.entries(files).map(([r, hunks]) => [r, (t, rr) => hunks.reduce((acc, [now, then]) => swap(rr, acc, now, then), t)]));
 }
 
+// The Cart page's coupon offers carry the catalogue: without it a fashion or Home &
+// Living line was priced as wellness and the whole offers list came back empty.
+const UNDO_COUPON_OFFERS = undoFromPatch('coupon-offers.patch');
+
 // The Home & Living cart: its namespace in store.jsx, the server pricing it from
 // the catalogue tables, the marker on the wire, and Add to cart on its PDP and card.
 const UNDO_HOMELIVING_CART = undoFromPatch('homeliving-cart.patch');
@@ -329,7 +333,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart

@@ -396,7 +396,7 @@ await test('checkout plumbing untouched: a grocery line goes to neither endpoint
   assert.deepEqual(payload[0], { id: 'b183', qty: 2, variantId: null, variant: null });
   assert.deepEqual(payload[1], { id: 'f1', qty: 1, variantId: 'v', variant: 'M', catalogue: 'fashion' });
   assert.ok(!('unitPrice' in payload[2]) && !('lineTotal' in payload[2]) && !('price' in payload[2]), 'never a price');
-  for (const rel of ['src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/cartLine.js', 'src/lib/cartQuote.js', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'api/_lib/supabaseAdmin.js']) {
+  for (const rel of ['src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/cartLine.js', 'src/lib/cartQuote.js', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'api/_lib/supabaseAdmin.js', 'src/components/CartCoupons.jsx']) {
     // Approved cart changes since (sansCartChanges) are undone first; nothing else may differ.
     const now = sansStorefrontChanges(rel, read(rel));
     // Express and Scheduled were withdrawn (test-company-surfaces.mjs pins the fee map against the

@@ -342,7 +342,7 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page and 
   // The Home & Living cart's own new files (test-homeliving-cart.mjs).
   const bad = [...changed].filter((f) => !allowed.test(f) && !catalogueAdmin.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !HOMELIVING_CART_FILES.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
-  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/fashionApi.js', 'src/lib/fashion.js', 'src/fashion/fashionArt.js', 'api/_lib/supabaseAdmin.js', 'api/razorpay/create-order.js', 'src/lib/couponApi.js', 'src/homeliving/HomeLivingProductCard.jsx', 'src/homeliving/HomeLivingProductPage.jsx', 'src/lib/homelivingPdp.js']) {
+  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/fashionApi.js', 'src/lib/fashion.js', 'src/fashion/fashionArt.js', 'api/_lib/supabaseAdmin.js', 'api/razorpay/create-order.js', 'src/lib/couponApi.js', 'src/homeliving/HomeLivingProductCard.jsx', 'src/homeliving/HomeLivingProductPage.jsx', 'src/lib/homelivingPdp.js', 'src/components/CartCoupons.jsx']) {
   // src/fashion/FashionHome.jsx moved its campaign hero to the top of the page (e58317c);
   // test-fashion.mjs pins the new order and test-catalogue.mjs the rendered markup, so it is no longer asserted byte-identical here.
 
