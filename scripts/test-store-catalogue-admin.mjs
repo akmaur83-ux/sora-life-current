@@ -32,7 +32,9 @@ const eq = (q, key, value) => q.ops.some((op) => op[0] === 'eq' && op[1] === key
 const normal = (q) => ({ data: q.table === 'catalogue_categories' && !payload(q) ? cats : one(q) ? { ...product, ...payload(q) } : has(q, 'limit') ? [] : [product], error: null });
 
 await test('only supported stores, valid category and real numeric prices/stock are accepted', () => {
-  for (const store of ['grocery', 'wellness', 'lifestyle', '__proto__']) assert.throws(() => rules.requireCatalogueStore(store));
+  // Grocery joined the picker (data entry ahead of its storefront; the page says it cannot be sold yet).
+  for (const store of ['wellness', 'lifestyle', '__proto__']) assert.throws(() => rules.requireCatalogueStore(store));
+  for (const store of ['fashion', 'homeliving', 'grocery']) assert.equal(rules.requireCatalogueStore(store), store);
   const row = rules.catalogueProductPayload({ ...input, discount_percent: 88, images: ['bad'], rating: 5, is_demo: true }, cats);
   assert.equal(row.slug, 'linen-shirt'); assert.equal(row.sale_price, 999);
   for (const key of ['discount_percent', 'images', 'rating', 'is_demo', 'store', 'id']) assert.ok(!(key in row));

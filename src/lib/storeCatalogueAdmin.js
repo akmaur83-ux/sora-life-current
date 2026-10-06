@@ -1,10 +1,25 @@
 import { buildTree, validatePlacement } from './fashion.js';
 import { safeVisualUrl } from './homepageAppearance.js';
 
-export const CATALOGUE_STORES = { fashion: 'Fashion', homeliving: 'Home & Living' };
+export const CATALOGUE_STORES = { fashion: 'Fashion', homeliving: 'Home & Living', grocery: 'Grocery' };
 export function requireCatalogueStore(store) {
-  if (!Object.hasOwn(CATALOGUE_STORES, store)) throw new Error('Choose Fashion or Home & Living.');
+  if (!Object.hasOwn(CATALOGUE_STORES, store)) throw new Error('Choose Fashion, Home & Living or Grocery.');
   return store;
+}
+
+// What each store does with the data entered here, said plainly where it is
+// entered. Grocery rows can be published to /grocery but checkout does not
+// price them (api/_lib/pricing.js takes only fashion and homeliving lines),
+// and the grocery storefront reads no variants. GST: checkout deliberately
+// ignores catalogue_products.gst_rate for every catalogue line (pricing.js
+// sets gst_rate null) until the HSN codes and rates are audited, so the rate
+// is captured now and applied later.
+export const GROCERY_NOT_SOLD = 'Grocery cannot be sold yet. Checkout does not price grocery items: a published grocery product shows on /grocery but cannot be bought. Sizes and variants entered here are not read anywhere yet.';
+export const GROCERY_VARIANTS_UNREAD = 'Not read anywhere yet: the grocery storefront shows the product only, and ignores these rows.';
+export function gstNote(store) {
+  requireCatalogueStore(store);
+  if (store === 'grocery') return 'GST rate is recorded only. Grocery cannot be sold yet, so no rate is charged anywhere.';
+  return `GST rate is recorded, not yet applied at checkout. Checkout still uses the default GST rate for every ${CATALOGUE_STORES[store]} line until the HSN audit is complete.`;
 }
 const text = (value) => String(value ?? '').trim();
 export const catalogueSlug = (value) => text(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -65,6 +80,14 @@ function amount(value, message, { optional = false, min = 0.01, max = 99999999.9
   return Math.round(n * 100) / 100;
 }
 const displayOrder = (value) => wholeNumber(value ?? 0, 'Display order must be a whole number.', { min: -2147483648 });
+/** 4, 6 or 8 digits (the database CHECK). Spaces and dots are dropped: "6302 10 90" and "6302.10.90" are both 63021090. */
+function hsnCode(value) {
+  const digits = text(value).replace(/[\s.]/g, '');
+  if (!digits) return null;
+  if (!/^[0-9]{4}([0-9]{2}){0,2}$/.test(digits)) throw new Error('HSN code must be 4, 6 or 8 digits.');
+  return digits;
+}
+const gstRate = (value) => amount(value, 'GST rate must be a number from 0 to 100, or blank.', { optional: true, min: 0, max: 100 });
 
 export function categoryOptions(categories) {
   const tree = buildTree(categories);
@@ -85,6 +108,7 @@ export function catalogueProductPayload(input, categories) {
   const row = {
     name, slug: productSlug, category_id: category?.id, brand: text(input.brand), description: text(input.description),
     mrp, sale_price, sku: c.take('sku', () => sku(input.sku)), net_content: text(input.net_content) || null,
+    hsn_code: c.take('hsn_code', () => hsnCode(input.hsn_code)), gst_rate: c.take('gst_rate', () => gstRate(input.gst_rate)),
     stock: c.take('stock', () => wholeNumber(input.stock ?? 0, 'Stock must be a whole number, 0 or more.')),
     sort_order: c.take('sort_order', () => displayOrder(input.sort_order)),
     is_active: input.is_active === true, is_new: input.is_new === true, is_bestseller: input.is_bestseller === true,
@@ -136,8 +160,10 @@ export function assertCataloguePublishable(store, product) {
   if (!(product.images || []).some((url) => safeVisualUrl(url))) throw new Error('Add a product image before publishing.');
   if (store === 'fashion' && !(product.variants || []).some((row) => row.is_active !== false)) throw new Error('Add at least one active size/colour variant with stock before publishing. Zero stock is allowed for sold-out products.');
 }
+/** The storefront page for a product, or null where the store has none (grocery has no product pages yet). */
 export function catalogueProductHref(store, slug) {
   requireCatalogueStore(store);
+  if (store === 'grocery') return null;
   return `/${store}/p/${encodeURIComponent(slug)}`;
 }
 
@@ -192,7 +218,7 @@ export function catalogueWriteError(error, kind = 'row') {
 // After its OWN gallery write the editor re-reads the product and adopts the
 // new token only if nothing it edits has changed — if another admin saved
 // the product in between, the old token stays and the next save is refused.
-export const PRODUCT_EDITABLE_FIELDS = ['name', 'slug', 'category_id', 'brand', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'stock', 'sort_order', 'is_active', 'is_new', 'is_bestseller'];
+export const PRODUCT_EDITABLE_FIELDS = ['name', 'slug', 'category_id', 'brand', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', 'stock', 'sort_order', 'is_active', 'is_new', 'is_bestseller'];
 const same = (a, b) => (a == null && b == null) || (a != null && b != null && String(a) === String(b));
 export function versionAfterOwnWrite(base, fresh, fields = PRODUCT_EDITABLE_FIELDS) {
   if (!base || !fresh) return base?.updated_at ?? null;

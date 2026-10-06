@@ -737,6 +737,8 @@
 .sc-field--error .input, .sc-field--error .select, .sc-field--error .textarea { border-color: var(--color-sale, #A94F4F); box-shadow: 0 0 0 1px var(--color-sale, #A94F4F); }
 .sc-field .hint.err { margin: 0; font-weight: 600; }
 .sc-reload { margin-left: 10px; }
+/* What the store does with what is entered here (grocery not sold; GST recorded, not applied). */
+.sc-note { margin: 12px 0 16px; }
 @media (max-width: 640px) {
   .sc-panel { padding: 16px; }
   .sc-panel .adm-grid2 { grid-template-columns: minmax(0, 1fr); }

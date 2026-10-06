@@ -23,6 +23,7 @@ const NAV = [
   { to: '/admin/storefronts', label: 'Fashion & Lifestyle' },
   { to: '/admin/store-catalogue/fashion', label: 'Fashion Products' },
   { to: '/admin/store-catalogue/homeliving', label: 'Home & Living Products' },
+  { to: '/admin/store-catalogue/grocery', label: 'Grocery Products' },
   { to: '/admin/category-experience', label: 'Category Experience' },
   { to: '/admin/branding', label: 'Branding' },
   { to: '/admin/appearance', label: 'Storefront Appearance' },
