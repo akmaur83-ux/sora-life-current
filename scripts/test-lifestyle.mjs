@@ -334,8 +334,9 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page and 
   // coupon on a cart holding a fashion line was refused. Fixed on its own; test-coupon-quote-rows.mjs
   // pins it through quoteCoupon rather than through computeOrderTotal.
   const allowed = /^(src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/(settings|storefrontCustomization)\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/lifestyle\.css$|img\/lifestyle-|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|src\/pages\/Home\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/App\.jsx$|src\/admin\/(AdminLayout\.jsx|admin\.css|pages\/Storefronts\.jsx)$|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|src\/data\/homelivingHomepage\.js$|img\/homeliving-hero-|scripts\/|public\/|reports\/)/;
-  // The separate catalogue editor is guarded by test-store-catalogue-admin.mjs.
-  const catalogueAdmin = /^(src\/lib\/storeCatalogueAdmin(?:Api)?\.js|src\/admin\/pages\/StoreCatalogue\.jsx)$/;
+  // The separate catalogue editor is guarded by test-store-catalogue-admin.mjs and, since the
+  // catalogue admin work, by the test-store-catalogue-*.mjs suites (its WebP, CSV and claim modules).
+  const catalogueAdmin = /^(src\/lib\/storeCatalogue(?:Admin|AdminApi|Image|Csv)\.js|src\/lib\/claimWarnings\.js|src\/admin\/pages\/StoreCatalogue\.jsx)$/;
   // The fashion departments' own files (test-fashion-departments.mjs).
   // .vercelignore is deploy configuration (f927077), not storefront code.
   // An approved cart change may edit a shared cart file only because the byte checks below undo it (sansCartChanges).

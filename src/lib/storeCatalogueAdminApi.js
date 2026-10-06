@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js';
 import { uploadImage } from './adminApi.js';
 import { safeVisualUrl } from './homepageAppearance.js';
+import { compressToWebp } from './storeCatalogueImage.js';
 import {
   requireCatalogueStore, catalogueProductPayload, catalogueCategoryPayload, catalogueVariantPayload, assertCataloguePublishable,
   CatalogueInputError, CatalogueStaleWriteError, CatalogueRefusedError, catalogueWriteError,
@@ -51,6 +52,21 @@ async function guardedUpdate(table, filters, row, expectedUpdatedAt, kind) {
     throw new CatalogueStaleWriteError(`This ${kind} was changed elsewhere after you opened it. Nothing was saved — reload to see the current version, then reapply your changes.`);
   }
   throw new CatalogueRefusedError(`The database refused to save this ${kind}: this account is not a catalogue admin. Sign in again with an admin account.`);
+}
+
+/**
+ * Write one row with no version check (reorder, primary, detach — each states
+ * its own intent and is safe to repeat), and still explain zero rows: the row
+ * is gone, or row-level security filtered the write out.
+ */
+async function writeOne(query, table, filters, kind) {
+  const data = await result(query.select('id'), kind);
+  if (data?.length) return data[0];
+  let check = supabase.from(table).select('id');
+  for (const [key, value] of Object.entries(filters)) check = check.eq(key, value);
+  const current = await result(check.maybeSingle());
+  if (!current) throw new CatalogueStaleWriteError(`This ${kind} was already removed — reload to see the current gallery. Nothing was saved.`);
+  throw new CatalogueRefusedError(`The database refused to change this ${kind}: this account is not a catalogue admin. Sign in again with an admin account.`);
 }
 
 /** Refuse a product slug or SKU another product in this store already holds, before the database does. */
@@ -117,9 +133,87 @@ export async function saveStoreVariant(store, productId, id, input, expectedUpda
   if (id) return guardedUpdate('catalogue_variants', { store, product_id: productId, id }, row, expectedUpdatedAt, 'variant');
   return result(supabase.from('catalogue_variants').insert({ ...row, store, product_id: productId }).select().single(), 'variant');
 }
-export async function uploadStoreImage(store, file) {
+// ---- Images ---------------------------------------------------------------------
+// Every catalogue upload is converted to a WebP under 150 KB in the browser
+// first (storeCatalogueImage.js), then stored through the same admin-only
+// path every product image uses: uploadImage → the product-images bucket,
+// whose storage policy admits admin_users members only.
+const BUCKET_PREFIX = '/storage/v1/object/public/product-images/';
+/** The object path inside product-images, recorded on the media row so a later clean-up can find the file. */
+export function storagePathOf(url) {
+  const at = String(url || '').indexOf(BUCKET_PREFIX);
+  if (at < 0) return null;
+  const path = decodeURIComponent(String(url).slice(at + BUCKET_PREFIX.length).split('?')[0]);
+  return /^[A-Za-z0-9/_.-]+$/.test(path) && !path.includes('..') ? path : null;
+}
+export async function uploadStoreImageFile(store, file) {
   requireCatalogueStore(store);
-  return uploadImage(file, `catalogue/${store}`);
+  const webp = await compressToWebp(file);
+  const url = await uploadImage(webp.file, `catalogue/${store}`);
+  return { url, storage_path: storagePathOf(url), bytes: webp.bytes, width: webp.width, height: webp.height };
+}
+/** One image (a category picture, or the add-by-URL form's upload): the WebP's public URL. */
+export async function uploadStoreImage(store, file) {
+  return (await uploadStoreImageFile(store, file)).url;
+}
+/**
+ * Add several images to a product's gallery, one at a time. A file that fails
+ * (unreadable, cannot fit 150 KB, upload refused) is reported and the rest go
+ * on. The first image a product ever gets becomes its primary.
+ * onProgress(index, { name, status: converting|uploading|added|failed, bytes?, error? })
+ */
+export async function addStoreImages(store, productId, files, onProgress = () => {}) {
+  requireCatalogueStore(store);
+  const results = [];
+  for (const [index, file] of [...files].entries()) {
+    const report = (status, extra = {}) => onProgress(index, { name: file?.name || `Image ${index + 1}`, status, ...extra });
+    try {
+      report('converting');
+      const webp = await compressToWebp(file);
+      report('uploading', { bytes: webp.bytes });
+      const public_url = await uploadImage(webp.file, `catalogue/${store}`);
+      const product = await getStoreProduct(store, productId);      // re-read: order and primary as they are now
+      const media = product.media || [];
+      const row = {
+        product_id: productId, public_url, storage_path: storagePathOf(public_url), alt_text: product.name,
+        sort_order: media.length ? Math.max(...media.map((m) => Number(m.sort_order) || 0)) + 1 : 0,
+        is_primary: !media.length,
+      };
+      await result(supabase.from('catalogue_product_media').insert(row).select().single(), 'image');
+      report('added', { bytes: webp.bytes });
+      results.push({ name: file?.name, ok: true, bytes: webp.bytes });
+    } catch (error) {
+      report('failed', { error: error.message });
+      results.push({ name: file?.name, ok: false, error: error.message });
+    }
+  }
+  return results;
+}
+/** Put the gallery in this order (sort_order 0…n-1). The ids must be exactly the product's images. */
+export async function reorderStoreMedia(store, productId, orderedIds) {
+  const product = await getStoreProduct(store, productId);
+  const media = product.media || [];
+  if (orderedIds.length !== media.length || !media.every((m) => orderedIds.includes(m.id))) {
+    throw new CatalogueStaleWriteError('The gallery changed while you were reordering it. Nothing was saved — reload and try again.');
+  }
+  for (const [index, id] of orderedIds.entries()) {
+    if (Number(media.find((m) => m.id === id).sort_order) === index) continue;
+    await writeOne(supabase.from('catalogue_product_media').update({ sort_order: index }).eq('product_id', productId).eq('id', id), 'catalogue_product_media', { product_id: productId, id }, 'image');
+  }
+}
+/** Make one image the primary; the 0034 trigger demotes the others. */
+export async function setStoreMediaPrimary(store, productId, id) {
+  const product = await getStoreProduct(store, productId);
+  if (!(product.media || []).some((m) => m.id === id)) throw new CatalogueStaleWriteError('That image is no longer on this product. Reload to see the current gallery.');
+  await writeOne(supabase.from('catalogue_product_media').update({ is_primary: true }).eq('product_id', productId).eq('id', id), 'catalogue_product_media', { product_id: productId, id }, 'image');
+}
+/** Change an image's alt text, refused if the image changed since it was read. */
+export async function saveStoreMediaAlt(store, productId, id, altText, expectedUpdatedAt) {
+  const product = await getStoreProduct(store, productId);
+  if (!(product.media || []).some((m) => m.id === id)) throw new CatalogueStaleWriteError('That image is no longer on this product. Reload to see the current gallery.');
+  const alt_text = String(altText || '').trim();
+  if (alt_text.length > 300) throw new CatalogueInputError({ alt_text: 'Keep alt text under 300 characters.' });
+  return guardedUpdate('catalogue_product_media', { product_id: productId, id }, { alt_text }, expectedUpdatedAt, 'image');
 }
 export async function saveStoreMedia(store, productId, id, input) {
   requireCatalogueStore(store);
@@ -141,5 +235,5 @@ export async function removeStoreMedia(store, productId, id) {
   if (!(product.media || []).some((m) => m.id === id)) throw new Error('Image not found on this product.');
   if (product.is_active && product.media.length < 2) throw new Error('Keep one image on a published product, or save it as a draft first.');
   // Detach only; never delete an original Storage object.
-  await result(supabase.from('catalogue_product_media').delete().eq('product_id', productId).eq('id', id).select('id').single(), 'image');
+  await writeOne(supabase.from('catalogue_product_media').delete().eq('product_id', productId).eq('id', id), 'catalogue_product_media', { product_id: productId, id }, 'image');
 }

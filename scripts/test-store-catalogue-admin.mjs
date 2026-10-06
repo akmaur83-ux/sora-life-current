@@ -21,7 +21,7 @@ function fake(respond) {
     } });
     return chain;
   } };
-  return { calls, api: loadModule('src/lib/storeCatalogueAdminApi.js', { supabase, uploadImage: async (_, folder) => `https://images.example/${folder}/new.webp`, safeVisualUrl, ...rules }) };
+  return { calls, api: loadModule('src/lib/storeCatalogueAdminApi.js', { supabase, uploadImage: async (_, folder) => `https://images.example/${folder}/new.webp`, compressToWebp: async (file) => ({ file, bytes: 1 }), safeVisualUrl, ...rules }) };
 }
 const has = (q, method) => q.ops.find((op) => op[0] === method);
 // One row back: `.single()`, or `.maybeSingle()` where a missing product must read as "deleted".

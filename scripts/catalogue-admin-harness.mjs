@@ -283,11 +283,38 @@ export async function loadCatalogueAdmin({ supabase, uploadImage = null, deps = 
   const fashion = await importSrc('src/lib/fashion.js');
   const appearance = await importSrc('src/lib/homepageAppearance.js');
   const format = await importSrc('src/lib/format.js');
+  const mediaOps = await importSrc('src/lib/productMediaOperations.js');
+  const content = await importSrc('src/lib/productContent.js');
+  // The REAL wellness uploader (validation, then product-images/<folder>/<random>.<ext>)
+  // over the fake client's storage, which admits admin sessions only.
+  const adminApi = loadModule('src/lib/adminApi.js', { supabase, BIOSASH_PRODUCTS: [], normalizeContentPatch: content.normalizeContentPatch, ...mediaOps });
+  // The real WebP ladder with a fake codec (Node has no canvas); see imageFile().
+  const image = has('src/lib/storeCatalogueImage.js') ? await importSrc('src/lib/storeCatalogueImage.js') : null;
+  const compressToWebp = image ? (file, opts = {}) => image.compressToWebp(file, { decode: fakeDecode, encode: fakeEncode, ...opts }) : undefined;
   const ruleDeps = { buildTree: fashion.buildTree, validatePlacement: fashion.validatePlacement, safeVisualUrl: appearance.safeVisualUrl, ...deps };
   const rules = loadModule('src/lib/storeCatalogueAdmin.js', ruleDeps);
-  const upload = uploadImage || (async (file, folder) => `https://project.supabase.co/storage/v1/object/public/product-images/${folder}/upload-${file?.name || 'file'}`);
-  const api = loadModule('src/lib/storeCatalogueAdminApi.js', { supabase, uploadImage: upload, safeVisualUrl: appearance.safeVisualUrl, ...rules, ...deps });
-  return { rules, api, fashion, appearance, format };
+  const api = loadModule('src/lib/storeCatalogueAdminApi.js', { supabase, uploadImage: uploadImage || adminApi.uploadImage, compressToWebp, safeVisualUrl: appearance.safeVisualUrl, ...rules, ...deps });
+  return { rules, api, fashion, appearance, format, adminApi, image };
+}
+
+// ---- A fake image codec -------------------------------------------------------------
+// imageFile() makes a File that "decodes" to the given size. fakeEncode() turns
+// a rung of the ladder into a WebP-headed blob whose size grows with pixels ×
+// quality × detail, so a test chooses which rung fits by choosing `detail`.
+export function imageFile(name, { width = 3000, height = 2000, detail = 0.2, type = 'image/jpeg', encoderType = 'image/webp' } = {}) {
+  const file = new File([JSON.stringify({ width, height, detail, encoderType })], name, { type });
+  return file;
+}
+export async function fakeDecode(file) {
+  const meta = JSON.parse(await file.text());
+  return { ...meta, closed: false, close() { this.closed = true; } };
+}
+export async function fakeEncode(img, { width, height, quality }) {
+  const size = Math.max(16, Math.round(width * height * quality * img.detail));
+  const bytes = new Uint8Array(size);
+  bytes.set([...'RIFF'].map((c) => c.charCodeAt(0)), 0);
+  bytes.set([...'WEBP'].map((c) => c.charCodeAt(0)), 8);
+  return new Blob([bytes], { type: img.encoderType });
 }
 
 /** The page module with its router hooks, API and rules injected. */
@@ -450,7 +477,8 @@ export async function openPage({ params, search = '', fixtures = catalogueFixtur
   const store = createCatalogueDb(fixtures, { admin });
   const mods = await loadCatalogueAdmin({ supabase: store.supabase, deps });
   const router = fakeRouter(params, search);
-  const page = loadCataloguePage({ ...mods, router, deps });
+  const win = { answer: true, asked: [], reloaded: false, confirm(message) { win.asked.push(message); return win.answer; }, location: { reload() { win.reloaded = true; } } };
+  const page = loadCataloguePage({ ...mods, router, deps: { window: win, ...deps } });
   const handle = await mount(h(page.default));
-  return { ...mods, store, router, page, handle };
+  return { ...mods, store, router, page, handle, win };
 }

@@ -31,8 +31,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DEFAULT_FASHION_STOREFRONT as F, DEFAULT_LIFESTYLE_STOREFRONT as L } from '../src/lib/storefrontCustomization.js';
 
-/** The admin pages and libs 99b67ba added or touched: no storefront renders them. */
-export const STOREFRONT_ADMIN_FILES = /^(src\/admin\/AdminLayout\.jsx|src\/admin\/admin\.css|src\/admin\/pages\/(Storefronts|StoreCatalogue)\.jsx|src\/lib\/storefrontCustomization\.js|src\/lib\/storeCatalogueAdmin(Api)?\.js)$/;
+/**
+ * The admin pages and libs 99b67ba added or touched: no storefront renders them.
+ * The catalogue admin work (2026-10-06) adds admin-only modules beside them —
+ * the WebP converter, the CSV import planner and the claim warnings — owned by
+ * the test-store-catalogue-*.mjs suites, which also pin that no storefront
+ * file imports any of them.
+ */
+export const STOREFRONT_ADMIN_FILES = /^(src\/admin\/AdminLayout\.jsx|src\/admin\/admin\.css|src\/admin\/pages\/(Storefronts|StoreCatalogue)\.jsx|src\/lib\/storefrontCustomization\.js|src\/lib\/storeCatalogue(Admin|AdminApi|Image|Csv)\.js|src\/lib\/claimWarnings\.js)$/;
 
 /** Deploy configuration, not storefront code: f927077 keeps the local QA folders and reports out of every deployment. */
 export const DEPLOY_CONFIG_FILES = /^\.vercelignore$/;

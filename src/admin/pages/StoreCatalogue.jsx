@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { money } from '../../lib/format.js';
 import { CATALOGUE_STORES, catalogueSlug, categoryOptions, catalogueProductHref, catalogueFailureView, versionAfterOwnWrite, gstNote, GROCERY_NOT_SOLD, GROCERY_VARIANTS_UNREAD } from '../../lib/storeCatalogueAdmin.js';
-import { listStoreCategories, listStoreProducts, getStoreProduct, saveStoreProduct, saveStoreCategory, saveStoreVariant, uploadStoreImage, saveStoreMedia, removeStoreMedia } from '../../lib/storeCatalogueAdminApi.js';
+import { listStoreCategories, listStoreProducts, getStoreProduct, saveStoreProduct, saveStoreCategory, saveStoreVariant, uploadStoreImage, saveStoreMedia, removeStoreMedia, addStoreImages, reorderStoreMedia, setStoreMediaPrimary, saveStoreMediaAlt } from '../../lib/storeCatalogueAdminApi.js';
 
 const EMPTY_PRODUCT = { name: '', slug: '', brand: '', description: '', category_id: '', mrp: '', sale_price: '', sku: '', net_content: '', hsn_code: '', gst_rate: '', stock: 0, sort_order: 0, is_active: false, is_new: false, is_bestseller: false };
 const EMPTY_CATEGORY = { name: '', slug: '', parent_id: '', tagline: '', image_url: '', sort_order: 0, is_active: true };
@@ -13,7 +13,7 @@ const EMPTY_VARIANT = { size: '', colour: '', colour_hex: '', sku: '', stock: 0,
 const PRODUCT_FIELDS = (store) => ['name', 'slug', 'category_id', 'brand', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', ...(store === 'fashion' ? [] : ['stock']), 'sort_order', 'description'];
 const CATEGORY_FIELDS = ['name', 'slug', 'parent_id', 'sort_order', 'tagline', 'image_url'];
 const VARIANT_FIELDS = ['size', 'colour', 'colour_hex', 'sku', 'stock', 'price_override', 'sort_order'];
-const IMAGE_FIELDS = ['public_url', 'alt_text', 'sort_order'];
+const IMAGE_FIELDS = ['public_url'];
 
 /** One form's save outcome: errors beside fields, a banner, and whether it was a stale write. */
 function useFormErrors(visible) {
@@ -169,36 +169,96 @@ function VariantsEditor({ store, product, onChanged }) {
   </section>;
 }
 
+// The gallery: several uploads at once (each made a WebP under 150 KB first),
+// drag — or ← / → — to reorder, one primary, alt text per image. Every change
+// goes through catalogue_product_media; the 0034 trigger rewrites images[].
+const UPLOAD_STATUS = { converting: 'Converting to WebP…', uploading: 'Uploading…', added: 'Added', failed: 'Not added' };
+const kb = (bytes) => `${Math.round(bytes / 1000)} KB`;
+function galleryOrder(media) {
+  return [...(media || [])].sort((a, b) => a.sort_order - b.sort_order || String(a.created_at).localeCompare(String(b.created_at)));
+}
+/** The order after dropping `dragged` onto `target`: it takes the target's place. */
+export function dropOrder(ids, dragged, target) {
+  if (dragged === target || !ids.includes(dragged) || !ids.includes(target)) return ids;
+  const next = ids.filter((id) => id !== dragged);
+  next.splice(ids.indexOf(target), 0, dragged);
+  return next;
+}
 function GalleryEditor({ store, product, onChanged }) {
-  const empty = () => ({ public_url: '', alt_text: product.name, sort_order: Math.max(-1, ...(product.media || []).map((row) => row.sort_order)) + 1, is_primary: !product.media?.length });
-  const [form, setForm] = useState(empty), [editing, setEditing] = useState(null);
-  const [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false), [uploadError, setUploadError] = useState(''), [message, setMessage] = useState('');
+  const media = galleryOrder(product.media);
+  const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+  const [queue, setQueue] = useState([]), [alts, setAlts] = useState({}), [over, setOver] = useState(null);
+  const [urlForm, setUrlForm] = useState({ public_url: '', alt_text: '' });
   const errors = useFormErrors(IMAGE_FIELDS);
-  async function save(e) {
-    e.preventDefault(); if (busy || uploading) return;
-    setBusy(true); errors.reset(); setUploadError(''); setMessage('');
-    try { await saveStoreMedia(store, product.id, editing, form); await onChanged(); setForm({ ...empty(), sort_order: Number(form.sort_order) + 1, is_primary: false }); setEditing(null); setMessage('Image saved.'); }
-    catch (err) { errors.capture(err); }
-    finally { setBusy(false); }
-  }
-  async function remove(row) {
-    if (!window.confirm('Remove this image from the gallery? The original file will be kept.')) return;
+  const dragged = useRef(null);
+  async function run(task, done) {
+    if (busy) return;
     setBusy(true); errors.reset(); setMessage('');
-    try { await removeStoreMedia(store, product.id, row.id); await onChanged(); if (editing === row.id) { setEditing(null); setForm(empty()); } setMessage('Image removed from gallery.'); }
-    catch (err) { errors.capture(err); }
+    try { await task(); await onChanged(); if (done) setMessage(done); }
+    catch (err) { errors.capture(err); await onChanged(); }
     finally { setBusy(false); }
   }
-  return <section className="surface sc-panel"><h2>Product images</h2><p className="hint">Upload an image or paste a public image URL, then save it. Choose a primary image for product cards.</p><Messages error={errors.banner || uploadError} message={message} />
-    <div className="sc-gallery">{[...(product.media || [])].sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order).map((row) => <div key={row.id} className="sc-image"><img src={row.public_url} alt={row.alt_text || product.name} /><span className="hint">{row.is_primary ? 'Primary · ' : ''}Order {row.sort_order}</span><div className="sc-actions"><button type="button" className="btn btn-outline btn-sm" disabled={busy || uploading} onClick={() => { setEditing(row.id); setForm(row); setMessage(''); errors.reset(); }}>Edit</button><button type="button" className="btn btn-outline btn-sm" disabled={busy || uploading} onClick={() => remove(row)}>Remove</button></div></div>)}</div>
-    <form onSubmit={save} noValidate><fieldset disabled={busy || uploading}>
-      <h3>{editing ? 'Edit image' : 'Add image'}</h3>
-      <Field form="img" errors={errors} label="Image URL" field="public_url" value={form} set={setForm} required />
-    </fieldset>
-      <Upload store={store} disabled={busy} onUpload={(public_url) => setForm((old) => ({ ...old, public_url }))} onBusy={setUploading} onError={setUploadError} />
-      <fieldset disabled={busy || uploading}><div className="adm-grid2"><Field form="img" errors={errors} label="Image description / alt text" field="alt_text" value={form} set={setForm} /><Field form="img" errors={errors} label="Display order" field="sort_order" type="number" step="1" value={form} set={setForm} /></div>
-        <Check label="Use as primary image" field="is_primary" value={form} set={setForm} /><div className="sc-actions"><button className="btn btn-sm" type="submit">{busy ? 'Saving…' : 'Save image'}</button>{editing && <button className="btn btn-outline btn-sm" type="button" onClick={() => { setEditing(null); setForm(empty()); errors.reset(); }}>Cancel edit</button>}</div>
-      </fieldset>
-    </form>
+  async function upload(fileList) {
+    const files = [...(fileList || [])];
+    if (!files.length || busy) return;
+    setQueue(files.map((file) => ({ name: file.name, status: 'converting' })));
+    let results = [];
+    await run(async () => {
+      results = await addStoreImages(store, product.id, files, (index, state) => setQueue((old) => old.map((row, i) => (i === index ? state : row))));
+    });
+    if (!results.length) return;
+    const added = results.filter((r) => r.ok).length, failed = results.length - added;
+    setMessage(`${added} of ${results.length} image${results.length === 1 ? '' : 's'} added${failed ? ` — ${failed} not added (see below)` : ''}.`);
+  }
+  const persistOrder = (ids) => run(() => reorderStoreMedia(store, product.id, ids), 'Order saved.');
+  const move = (id, delta) => {
+    const ids = media.map((m) => m.id), at = ids.indexOf(id), to = at + delta;
+    if (to < 0 || to >= ids.length) return;
+    [ids[at], ids[to]] = [ids[to], ids[at]];
+    return persistOrder(ids);
+  };
+  function drop(targetId) {
+    const from = dragged.current; dragged.current = null; setOver(null);
+    if (!from || from === targetId) return;
+    return persistOrder(dropOrder(media.map((m) => m.id), from, targetId));
+  }
+  async function saveAlt(row) {
+    const next = alts[row.id];
+    if (next === undefined || next.trim() === (row.alt_text || '')) return;
+    await run(() => saveStoreMediaAlt(store, product.id, row.id, next, row.updated_at), 'Alt text saved.');
+    setAlts((old) => { const copy = { ...old }; delete copy[row.id]; return copy; });
+  }
+  function remove(row) {
+    if (!window.confirm('Remove this image from the gallery? The original file will be kept.')) return;
+    return run(() => removeStoreMedia(store, product.id, row.id), 'Image removed from gallery.');
+  }
+  async function addByUrl(e) {
+    e.preventDefault();
+    const next = media.length ? Math.max(...media.map((m) => Number(m.sort_order) || 0)) + 1 : 0;
+    await run(async () => { await saveStoreMedia(store, product.id, null, { ...urlForm, alt_text: urlForm.alt_text || product.name, sort_order: next }); setUrlForm({ public_url: '', alt_text: '' }); }, 'Image saved.');
+  }
+  return <section className="surface sc-panel"><h2>Product images</h2>
+    <p className="hint">Customers see the primary image first, then the others in this order. Drag an image onto another to move it there, or use ← and →.</p>
+    <Messages error={errors.banner} message={message} stale={errors.stale} />
+    <label className={`sc-drop${busy ? ' is-busy' : ''}`} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { if (dragged.current) return; e.preventDefault(); upload(e.dataTransfer?.files); }}>
+      <strong>{busy ? 'Working…' : 'Add images'}</strong>
+      <span className="hint">Choose or drop several at once: JPEG, PNG or WebP. Each is converted to WebP under 150 KB before it is uploaded.</span>
+      <input type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={(e) => { const files = [...(e.target.files || [])]; e.target.value = ''; upload(files); }} />
+    </label>
+    {!!queue.length && <ul className="sc-queue" aria-live="polite">{queue.map((row, i) => <li key={`${i}-${row.name}`} className={`sc-queue__item is-${row.status}`}><span>{row.name}</span><span>{UPLOAD_STATUS[row.status]}{row.bytes && row.status === 'added' ? ` · ${kb(row.bytes)} WebP` : ''}{row.error ? `: ${row.error}` : ''}</span></li>)}</ul>}
+    {!media.length ? <p className="adm-empty">No images yet. Add at least one before publishing.</p> : <ol className="sc-gallery" aria-label="Gallery order">{media.map((row, i) => <li key={row.id} className={`sc-image${over === row.id ? ' is-over' : ''}`} draggable={!busy}
+        onDragStart={(e) => { dragged.current = row.id; e.dataTransfer?.setData?.('text/plain', row.id); }} onDragEnd={() => { dragged.current = null; setOver(null); }}
+        onDragOver={(e) => { if (dragged.current) { e.preventDefault(); setOver(row.id); } }} onDrop={(e) => { if (!dragged.current) return; e.preventDefault(); e.stopPropagation?.(); drop(row.id); }}>
+      <img src={row.public_url} alt={row.alt_text || product.name} draggable={false} />
+      <div className="sc-image__meta"><span className="sc-image__pos">{i + 1}</span>{row.is_primary ? <span className="badge sc-primary">Primary</span> : <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => run(() => setStoreMediaPrimary(store, product.id, row.id), 'Primary image changed.')}>Make primary</button>}</div>
+      <label className="sc-field"><span className="label">Alt text, image {i + 1}</span><input className="input" value={alts[row.id] ?? row.alt_text ?? ''} disabled={busy} onChange={(e) => setAlts((old) => ({ ...old, [row.id]: e.target.value }))} onBlur={() => saveAlt(row)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveAlt(row); } }} /></label>
+      <div className="sc-actions"><button type="button" className="btn btn-light btn-sm" aria-label={`Move image ${i + 1} earlier`} disabled={busy || i === 0} onClick={() => move(row.id, -1)}>←</button><button type="button" className="btn btn-light btn-sm" aria-label={`Move image ${i + 1} later`} disabled={busy || i === media.length - 1} onClick={() => move(row.id, 1)}>→</button><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => remove(row)}>Remove</button></div>
+    </li>)}</ol>}
+    <form onSubmit={addByUrl} noValidate><fieldset disabled={busy}>
+      <h3>Add by URL</h3><p className="hint">For an image already hosted, or a bundled /img/… path. It is added as it is — not converted.</p>
+      <div className="adm-grid2"><Field form="img" errors={errors} label="Image URL" field="public_url" value={urlForm} set={setUrlForm} required /><Field form="img" errors={errors} label="Image description / alt text" field="alt_text" value={urlForm} set={setUrlForm} /></div>
+      <div className="sc-actions"><button className="btn btn-sm" type="submit">Save image</button></div>
+    </fieldset></form>
   </section>;
 }
 

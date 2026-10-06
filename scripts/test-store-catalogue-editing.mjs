@@ -266,7 +266,7 @@ await test('variant and category forms show their errors inline too', async () =
 
 await test("page: the editor's own image save does not make its next product save look stale", async () => {
   const { handle, store } = await openPage({ params: { store: 'fashion', productId: 'fp-linen' } });
-  const gallery = () => formOf(handle.tree, 'Add image');
+  const gallery = () => formOf(handle.tree, 'Add by URL') || formOf(handle.tree, 'Add image');   // the add-by-URL form (the old tree called it "Add image")
   await handle.act(() => change(fieldByLabel(gallery(), 'Image URL').control, '/img/fashion-hero.webp'));
   await handle.act(() => submit(gallery()));
   assert.equal(row(store, 'catalogue_products', 'fp-linen').images.length, 2);

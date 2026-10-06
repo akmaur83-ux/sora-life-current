@@ -728,10 +728,23 @@
 .sc-toolbar .sc-field { flex: 1 1 210px; max-width: 420px; }
 .sc-upload { display: grid; gap: 8px; margin: 12px 0 20px; font-size: 14px; }
 .sc-upload input { max-width: 100%; }
-.sc-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
-.sc-image { min-width: 0; }
-.sc-image img { display: block; width: 100%; height: 140px; object-fit: contain; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; }
-.sc-image .sc-actions { gap: 6px; margin: 8px 0; }
+.sc-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; list-style: none; margin: 16px 0; padding: 0; }
+.sc-image { min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: grab; }
+.sc-image.is-over { outline: 2px dashed var(--honey-500, #C9A24B); outline-offset: 2px; }
+.sc-image img { display: block; width: 100%; height: 150px; object-fit: contain; border-radius: 6px; margin-bottom: 8px; background: var(--ivory, #FBF8F1); }
+.sc-image .sc-field { margin-top: 8px; }
+.sc-image .sc-actions { gap: 6px; margin: 8px 0 0; }
+.sc-image__meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; }
+.sc-image__pos { font-weight: 700; font-size: 13px; color: var(--color-text-muted); }
+.sc-primary { background: var(--forest-50, #EEF3EC); color: var(--forest-700, #2F4A35); }
+/* The upload target: a file input inside a dashed drop area. */
+.sc-drop { display: grid; gap: 6px; padding: 18px; border: 1.5px dashed var(--line); border-radius: 8px; background: var(--ivory, #FBF8F1); cursor: pointer; }
+.sc-drop.is-busy { opacity: .7; cursor: progress; }
+.sc-drop input { max-width: 100%; }
+.sc-queue { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.sc-queue__item { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: 6px; background: var(--ivory, #FBF8F1); }
+.sc-queue__item.is-added { color: var(--forest-700, #2F4A35); }
+.sc-queue__item.is-failed { color: var(--color-sale, #A94F4F); }
 .adm-catalogue .adm-checkrow { gap: 8px; }
 /* A field the last save refused: its own message sits under it (.hint.err). */
 .sc-field--error .input, .sc-field--error .select, .sc-field--error .textarea { border-color: var(--color-sale, #A94F4F); box-shadow: 0 0 0 1px var(--color-sale, #A94F4F); }
