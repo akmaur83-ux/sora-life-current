@@ -32,6 +32,7 @@ import {
   catalogueProductPayload, catalogueVariantPayload, categoryOptions, CATALOGUE_STORES,
   PRODUCT_FIELD_RULES, VARIANT_FIELD_RULES,
 } from './storeCatalogueAdmin.js';
+import { productClaimWarnings } from './claimWarnings.js';
 
 export const PRODUCT_CSV_COLUMNS = ['id', 'slug', 'name', 'brand', 'category', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', 'stock', 'is_new', 'is_bestseller', 'sort_order'];
 export const VARIANT_CSV_COLUMNS = ['product_slug', 'size', 'colour', 'colour_hex', 'sku', 'stock', 'price_override', 'is_active', 'sort_order'];
@@ -183,7 +184,9 @@ export function planProductImport(text, { store, products, categories, overwrite
     const input = creating ? { slug: slugCell, stock: 0, sort_order: 0, ...applied, is_active: false } : { ...current, ...applied };
     try { catalogueProductPayload(input, categories); }
     catch (error) { skipped.push({ line, key: label.slug, reason: reasons(error) }); continue; }
-    planned.push({ ...label, kind: creating ? 'create' : 'update', diffs, input, expectedUpdatedAt: current?.updated_at ?? null });
+    // Claim warnings for the copy this row would write (warn, never block).
+    const warnings = productClaimWarnings({ name: applied.name, description: applied.description });
+    planned.push({ ...label, kind: creating ? 'create' : 'update', diffs, input, warnings, expectedUpdatedAt: current?.updated_at ?? null });
   }
   // One product twice in a file: neither row is guessed between.
   const twice = new Set([...keyLines.values()].filter((l) => l.length > 1).flat());

@@ -294,8 +294,9 @@ export async function loadCatalogueAdmin({ supabase, uploadImage = null, deps = 
   const ruleDeps = { buildTree: fashion.buildTree, validatePlacement: fashion.validatePlacement, safeVisualUrl: appearance.safeVisualUrl, ...deps };
   const rules = loadModule('src/lib/storeCatalogueAdmin.js', ruleDeps);
   const api = loadModule('src/lib/storeCatalogueAdminApi.js', { supabase, uploadImage: uploadImage || adminApi.uploadImage, compressToWebp, safeVisualUrl: appearance.safeVisualUrl, ...rules, ...deps });
-  const csv = has('src/lib/storeCatalogueCsv.js') ? loadModule('src/lib/storeCatalogueCsv.js', { ...rules }) : {};
-  return { rules, api, csv, fashion, appearance, format, adminApi, image };
+  const claims = has('src/lib/claimWarnings.js') ? await importSrc('src/lib/claimWarnings.js') : {};
+  const csv = has('src/lib/storeCatalogueCsv.js') ? loadModule('src/lib/storeCatalogueCsv.js', { ...rules, ...claims }) : {};
+  return { rules, api, csv, claims, fashion, appearance, format, adminApi, image };
 }
 
 // ---- A fake image codec -------------------------------------------------------------
@@ -319,16 +320,17 @@ export async function fakeEncode(img, { width, height, quality }) {
 }
 
 /** The page module with its router hooks, API and rules injected. */
-export function loadCataloguePage({ rules, api, csv = {}, format, router, deps = {} }) {
+export function loadCataloguePage({ rules, api, csv = {}, claims = {}, format, router, deps = {} }) {
   const Link = ({ to, children, ...props }) => h('a', { ...props, href: to }, children);
   return loadModule('src/admin/pages/StoreCatalogue.jsx', {
     Link, money: format.money, useNavigate: () => router.navigate, useParams: () => router.params, useSearchParams: () => [router.search, router.setSearch],
-    ...rules, ...api, ...csv, ...deps,
+    useLocation: () => router.location,
+    ...rules, ...api, ...csv, ...claims, ...deps,
   });
 }
 
 export function fakeRouter(params, search = '') {
-  const router = { params, search: new URLSearchParams(search), navigations: [] };
+  const router = { params, search: new URLSearchParams(search), navigations: [], location: { pathname: '/admin', state: null } };
   router.navigate = (to, opts) => { router.navigations.push([to, opts]); };
   router.setSearch = (next) => { router.search = typeof next === 'function' ? next(router.search) : new URLSearchParams(next); mountState.dirty = true; };
   return router;

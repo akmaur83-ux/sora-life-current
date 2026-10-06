@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { money } from '../../lib/format.js';
 import { CATALOGUE_STORES, catalogueSlug, categoryOptions, catalogueProductHref, catalogueFailureView, versionAfterOwnWrite, gstNote, GROCERY_NOT_SOLD, GROCERY_VARIANTS_UNREAD } from '../../lib/storeCatalogueAdmin.js';
 import { listStoreCategories, listStoreProducts, getStoreProduct, saveStoreProduct, saveStoreCategory, saveStoreVariant, uploadStoreImage, saveStoreMedia, removeStoreMedia, addStoreImages, reorderStoreMedia, setStoreMediaPrimary, saveStoreMediaAlt, applyCatalogueImport, deleteStoreVariant, previewStoreDemoDelete, deleteStoreDemoRows } from '../../lib/storeCatalogueAdminApi.js';
 import { planProductImport, planVariantImport, productsToCsv, variantsToCsv, describeDiff } from '../../lib/storeCatalogueCsv.js';
+import { productClaimWarnings, CLAIM_KINDS } from '../../lib/claimWarnings.js';
 
 const EMPTY_PRODUCT = { name: '', slug: '', brand: '', description: '', category_id: '', mrp: '', sale_price: '', sku: '', net_content: '', hsn_code: '', gst_rate: '', stock: 0, sort_order: 0, is_active: false, is_new: false, is_bestseller: false };
 const EMPTY_CATEGORY = { name: '', slug: '', parent_id: '', tagline: '', image_url: '', sort_order: 0, is_active: true };
@@ -63,6 +64,15 @@ function Upload({ store, onUpload, onBusy, onError, disabled = false }) {
     finally { setBusy(false); onBusy(false); }
   }
   return <label className="sc-upload"><span>{busy ? 'Uploading image…' : 'Upload image'}</span><input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || disabled} onChange={upload} /></label>;
+}
+
+/** Claim warnings: shown, never blocking (claimWarnings.js). */
+function ClaimList({ warnings }) {
+  return <ul className="sc-list sc-claims__list">{warnings.map((w, i) => <li key={`${w.field}-${w.kind}-${w.term}-${i}`}><strong>{CLAIM_KINDS[w.kind]}</strong> in {w.label.toLowerCase()}: “{w.term}” — <q>{w.excerpt}</q></li>)}</ul>;
+}
+function ClaimNotice({ warnings }) {
+  if (!warnings?.length) return null;
+  return <div className="adm-banner info sc-claims" role="status"><strong>Saved — check this copy before customers read it.</strong> SORA LIFE cannot back these claims without proof (a certificate, a courier promise, clinical evidence). This is a warning, not a block: edit the copy if it overstates.<ClaimList warnings={warnings} /></div>;
 }
 
 function CategoryEditor({ store, categories, initial, onSaved, onCancel }) {
@@ -161,10 +171,10 @@ function CatalogueImport({ store, products, categories, onApplied }) {
     <Messages error={error || (plan && !plan.ok ? plan.reason : '')} message={message} />
     {!!failures.length && <div className="adm-banner err" role="alert"><strong>Not applied</strong><ul className="sc-list">{failures.map((f) => <li key={f.line}>Line {f.line}{f.key ? ` (${f.key})` : ''}: {f.reason}</li>)}</ul></div>}
     {plan?.ok && <div className="sc-plan">
-      <p className="sc-plan__summary"><strong>{file.name}</strong> — {updates} to update · {creates} to create · {plan.kept.length} kept by fill-only · {plan.skipped.length} skipped</p>
+      <p className="sc-plan__summary"><strong>{file.name}</strong> — {updates} to update · {creates} to create · {plan.kept.length} kept by fill-only · {plan.skipped.length} skipped{plan.changes.some((c) => c.warnings?.length) ? ` · ${plan.changes.filter((c) => c.warnings?.length).length} with claim warnings` : ''}</p>
       {!!plan.ignored.length && <p className="hint">Columns not imported: {plan.ignored.join(', ')}.</p>}
       {!!plan.changes.length && <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Line</th><th>{kind === 'products' ? 'Product' : 'Variant'}</th><th>What changes</th></tr></thead><tbody>
-        {plan.changes.map((c) => <tr key={c.line}><td>{c.line}</td><td>{c.kind === 'create' && <span className="badge sc-new">New</span>} <strong>{kind === 'products' ? c.name : c.label}</strong>{kind === 'products' && <span className="hint"> {c.slug}</span>}</td><td><ul className="sc-diffs">{c.diffs.map((d) => <li key={d.field} className={d.skipped ? 'is-kept' : ''}>{describeDiff(d, categories)}{d.skipped ? ' — kept (fill-only)' : ''}</li>)}</ul></td></tr>)}
+        {plan.changes.map((c) => <tr key={c.line}><td>{c.line}</td><td>{c.kind === 'create' && <span className="badge sc-new">New</span>} <strong>{kind === 'products' ? c.name : c.label}</strong>{kind === 'products' && <span className="hint"> {c.slug}</span>}</td><td><ul className="sc-diffs">{c.diffs.map((d) => <li key={d.field} className={d.skipped ? 'is-kept' : ''}>{describeDiff(d, categories)}{d.skipped ? ' — kept (fill-only)' : ''}</li>)}</ul>{!!c.warnings?.length && <div className="sc-claims sc-claims--row"><strong>Check before applying</strong> (a warning, not a block):<ClaimList warnings={c.warnings} /></div>}</td></tr>)}
       </tbody></table></div>}
       {!!plan.kept.length && <details className="sc-kept"><summary>{plan.kept.length} row{plan.kept.length === 1 ? '' : 's'} where every change was kept by fill-only</summary><ul className="sc-list">{plan.kept.map((c) => <li key={c.line}>Line {c.line} ({c.slug || c.label}): {c.diffs.map((d) => describeDiff(d, categories)).join('; ')}</li>)}</ul></details>}
       {!!plan.skipped.length && <div className="adm-banner err"><strong>{plan.skipped.length} row{plan.skipped.length === 1 ? '' : 's'} skipped — nothing from {plan.skipped.length === 1 ? 'it' : 'them'} will be written</strong><ul className="sc-list">{plan.skipped.map((s) => <li key={s.line}>Line {s.line}{s.key ? ` (${s.key})` : ''}: {s.reason}</li>)}</ul></div>}
@@ -396,8 +406,10 @@ function GalleryEditor({ store, product, onChanged }) {
 }
 
 function ProductEditor({ store, productId }) {
-  const navigate = useNavigate(), [params] = useSearchParams();
+  const navigate = useNavigate(), [params] = useSearchParams(), location = useLocation();
   const isNew = productId === 'new';
+  // Warnings from the last save (or from the draft this editor was just created as).
+  const [claims, setClaims] = useState(() => location?.state?.claimWarnings || []);
   const [categories, setCategories] = useState([]), [product, setProduct] = useState(null);
   const [form, setForm] = useState({ ...EMPTY_PRODUCT, category_id: params.get('category') || '' });
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [loadError, setLoadError] = useState(''), [refreshError, setRefreshError] = useState('');
@@ -427,10 +439,13 @@ function ProductEditor({ store, productId }) {
   }
   async function save(e) {
     e.preventDefault(); if (busy) return;
-    setBusy(true); errors.reset(); setMessage(''); setRefreshError('');
+    setBusy(true); errors.reset(); setMessage(''); setRefreshError(''); setClaims([]);
     try {
       const row = await saveStoreProduct(store, isNew ? null : productId, form, isNew ? null : base.current?.updated_at);
-      if (isNew) { navigate(`/admin/store-catalogue/${store}/${row.id}`, { replace: true }); return; }
+      // Warn, never block: the save has already happened.
+      const warnings = productClaimWarnings(row);
+      if (isNew) { navigate(`/admin/store-catalogue/${store}/${row.id}`, { replace: true, state: warnings.length ? { claimWarnings: warnings } : undefined }); return; }
+      setClaims(warnings);
       base.current = { ...base.current, ...row };
       setForm((old) => ({ ...old, ...row }));
       await refresh(); setMessage(row.is_active ? 'Published. Refresh the storefront to see your changes.' : 'Draft saved. Add images and stock/variants, then publish above.');
@@ -442,6 +457,7 @@ function ProductEditor({ store, productId }) {
   return <div className="adm-form sc-product">
     <div className="sc-actions"><Link className="inline-link" to={`/admin/store-catalogue/${store}`}>← Back to products</Link>{product?.is_active && catalogueProductHref(store, product.slug) && <a className="inline-link" href={catalogueProductHref(store, product.slug)} target="_blank" rel="noreferrer">View product ↗</a>}</div>
     <Messages error={errors.banner || refreshError} message={message} stale={errors.stale} />
+    <ClaimNotice warnings={claims} />
     <form className="surface sc-panel" onSubmit={save} noValidate><h2>{isNew ? 'Add product' : product?.name}</h2><p className="hint">{isNew ? '1. Create a draft → 2. Add images and stock/variants → 3. Publish.' : `Status: ${product?.is_active ? 'Published' : 'Draft — not visible to customers'}. Images and variants have their own save buttons below.`}</p><fieldset disabled={busy}>
       <div className="adm-grid2">
         <Field form="prod" errors={errors} label="Product name" field="name" value={form} set={setForm} required />
