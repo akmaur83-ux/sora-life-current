@@ -755,6 +755,13 @@
 .sc-diffs .is-kept { color: var(--color-text-muted); }
 .sc-kept { margin: 12px 0; font-size: 13px; }
 .sc-new { margin-right: 4px; }
+/* Status filter, demo badge, deletes. */
+.sc-toolbar .sc-field--narrow { flex: 0 1 190px; }
+.sc-demo { margin-left: 6px; background: var(--honey-100, #F7EBCF); color: var(--honey-700, #7A5A12); }
+.sc-actions--row { margin: 0; gap: 6px; flex-wrap: nowrap; }
+.sc-danger { color: var(--color-sale, #A94F4F); }
+.sc-danger-btn { background: var(--color-sale, #A94F4F); border-color: var(--color-sale, #A94F4F); color: #fff; }
+.sc-demo-panel h3 { font-size: 15px; }
 .adm-catalogue .adm-checkrow { gap: 8px; }
 /* A field the last save refused: its own message sits under it (.hint.err). */
 .sc-field--error .input, .sc-field--error .select, .sc-field--error .textarea { border-color: var(--color-sale, #A94F4F); box-shadow: 0 0 0 1px var(--color-sale, #A94F4F); }

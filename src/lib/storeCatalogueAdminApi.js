@@ -4,7 +4,7 @@ import { safeVisualUrl } from './homepageAppearance.js';
 import { compressToWebp } from './storeCatalogueImage.js';
 import {
   requireCatalogueStore, catalogueProductPayload, catalogueCategoryPayload, catalogueVariantPayload, assertCataloguePublishable,
-  CatalogueInputError, CatalogueStaleWriteError, CatalogueRefusedError, catalogueWriteError,
+  CatalogueInputError, CatalogueStaleWriteError, CatalogueRefusedError, catalogueWriteError, planDemoDelete,
 } from './storeCatalogueAdmin.js';
 
 // Uses existing admin RLS. No service credentials, schema changes or wellness writes.
@@ -262,4 +262,80 @@ export async function applyCatalogueImport(store, plan, onProgress = () => {}) {
     onProgress(index + 1, plan.changes.length);
   }
   return { done, failed };
+}
+
+// ---- Deletes ----------------------------------------------------------------------
+/** DELETE one row only if it is still the version the admin was looking at; zero rows is explained. */
+async function guardedDelete(table, filters, expectedUpdatedAt, kind) {
+  if (!expectedUpdatedAt) throw new CatalogueStaleWriteError(`Reload before deleting this ${kind}: the page did not record which version it showed.`);
+  let query = supabase.from(table).delete();
+  for (const [key, value] of Object.entries(filters)) query = query.eq(key, value);
+  const data = await result(query.eq('updated_at', expectedUpdatedAt).select('id'), kind);
+  if (data?.length) return;
+  let check = supabase.from(table).select('id, updated_at');
+  for (const [key, value] of Object.entries(filters)) check = check.eq(key, value);
+  const current = await result(check.maybeSingle());
+  if (!current) throw new CatalogueStaleWriteError(`This ${kind} was already deleted. Reload to see the current list.`);
+  if (current.updated_at !== expectedUpdatedAt) throw new CatalogueStaleWriteError(`This ${kind} was changed elsewhere after you opened it. Nothing was deleted — reload and check it first.`);
+  throw new CatalogueRefusedError(`The database refused to delete this ${kind}: this account is not a catalogue admin. Sign in again with an admin account.`);
+}
+/**
+ * Delete one size × colour for good. Carts holding it then show it as no
+ * longer sold (the cart hydrators' "variant missing" path) and the server
+ * refuses it at checkout; past orders keep their own copy of the line.
+ * A published Fashion product keeps at least one active variant — the same
+ * rule publishing enforces.
+ */
+export async function deleteStoreVariant(store, productId, id, expectedUpdatedAt) {
+  requireCatalogueStore(store);
+  const product = await getStoreProduct(store, productId);
+  const variant = (product.variants || []).find((v) => v.id === id);
+  if (!variant) throw new CatalogueStaleWriteError('This variant is no longer on the product. Reload to see the current sizes.');
+  if (store === 'fashion' && product.is_active && !product.variants.some((v) => v.id !== id && v.is_active !== false)) {
+    throw new Error('A published Fashion product needs at least one active size/colour. Add another first, or unpublish the product.');
+  }
+  await guardedDelete('catalogue_variants', { store, product_id: productId, id }, expectedUpdatedAt, 'variant');
+}
+
+/** What "delete demo rows" would do in this store, read fresh (planDemoDelete). */
+export async function previewStoreDemoDelete(store) {
+  requireCatalogueStore(store);
+  const [categories, products] = await Promise.all([listStoreCategories(store), listStoreProducts(store)]);
+  return planDemoDelete(categories, products);
+}
+const sameIds = (a, b) => JSON.stringify(a.map((x) => String(x.id)).sort()) === JSON.stringify(b.map((x) => String(x.id)).sort());
+/**
+ * Delete the demo rows the admin reviewed — and only if a fresh look agrees
+ * with what they reviewed. Products first (their variants and images
+ * cascade), then the demo categories with nothing real in them, deepest
+ * first; immediately before the categories go, the store is checked again
+ * for a real product filed in one of them since.
+ */
+export async function deleteStoreDemoRows(store, reviewed) {
+  requireCatalogueStore(store);
+  const fresh = await previewStoreDemoDelete(store);
+  if (!reviewed || !sameIds(fresh.products, reviewed.products) || !sameIds(fresh.categories, reviewed.categories)) {
+    throw new CatalogueStaleWriteError('The demo rows changed since you reviewed them. Nothing was deleted — review them again.');
+  }
+  const summary = { products: 0, variants: 0, images: 0, categories: 0, kept: fresh.keptCategories };
+  if (fresh.products.length) {
+    const gone = await result(supabase.from('catalogue_products').delete().eq('store', store).eq('is_demo', true).in('id', fresh.products.map((p) => p.id)).select('id'), 'product');
+    if (!gone?.length) throw new CatalogueRefusedError('The database refused to delete the demo products: this account is not a catalogue admin. Nothing was deleted.');
+    const ids = new Set(gone.map((r) => String(r.id)));
+    for (const p of fresh.products) if (ids.has(String(p.id))) { summary.products += 1; summary.variants += p.variants; summary.images += p.images; }
+  }
+  if (fresh.categories.length) {
+    const ids = fresh.categories.map((c) => c.id);
+    const real = await result(supabase.from('catalogue_products').select('id, name').eq('store', store).eq('is_demo', false).in('category_id', ids).limit(1));
+    if (real?.length) {
+      throw new CatalogueStaleWriteError(`${summary.products} demo product${summary.products === 1 ? ' was' : 's were'} deleted, but no category was: “${real[0].name}” was filed in one of them meanwhile. Review the demo rows again.`);
+    }
+    for (const depth of [...new Set(fresh.categories.map((c) => c.depth))].sort((a, b) => b - a)) {
+      const level = fresh.categories.filter((c) => c.depth === depth).map((c) => c.id);
+      const gone = await result(supabase.from('catalogue_categories').delete().eq('store', store).eq('is_demo', true).in('id', level).select('id'), 'category');
+      summary.categories += gone?.length || 0;
+    }
+    if (!summary.categories && !summary.products) throw new CatalogueRefusedError('The database refused to delete the demo categories: this account is not a catalogue admin. Nothing was deleted.');
+  }
+  return summary;
 }

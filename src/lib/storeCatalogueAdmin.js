@@ -275,3 +275,44 @@ export function catalogueFailureView(error, visibleFields = []) {
   }
   return { fields: {}, banner: error?.message || 'Something went wrong. Nothing was saved.', stale: !!error?.isStaleWrite };
 }
+
+// ---- Demo rows ------------------------------------------------------------------
+// The 0033–0035 seeds are marked is_demo. "Delete demo rows" in one store is
+// decided here from the rows alone, so the admin can read exactly what will
+// go before anything does:
+//   * every demo product goes, with its variants and images (both cascade)
+//   * a demo category goes only if nothing real sits in it or anywhere under
+//     it — deleting a category sets its products' category to NULL (0033:
+//     on delete set null), which would orphan a real product — and a parent
+//     can only go after its children (on delete restrict), so the order is
+//     deepest first
+//   * every demo category kept is listed with the reason
+// Demo variants on a real product are not touched: the product is real.
+const someNames = (rows) => { const names = rows.map((r) => `“${r.name}”`); return names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', '); };
+export function planDemoDelete(categories, products) {
+  const byParent = new Map();
+  for (const c of categories) byParent.set(c.parent_id || null, [...(byParent.get(c.parent_id || null) || []), c]);
+  const below = (id, depth = 0) => (depth > 3 ? [] : (byParent.get(id) || []).flatMap((child) => [child, ...below(child.id, depth + 1)]));
+  const depthOf = (c) => { let d = 1, parent = c.parent_id; while (parent && d < 5) { d += 1; parent = categories.find((x) => x.id === parent)?.parent_id; } return d; };
+  const realProducts = products.filter((p) => p.is_demo !== true);
+  const remove = [], kept = [];
+  for (const category of categories.filter((c) => c.is_demo === true)) {
+    const tree = [category, ...below(category.id)];
+    const ids = new Set(tree.map((c) => c.id));
+    const real = realProducts.filter((p) => ids.has(p.category_id));
+    const realCategories = tree.filter((c) => c.is_demo !== true);
+    const reasons = [];
+    if (real.length) reasons.push(`${real.length} real product${real.length === 1 ? ' is' : 's are'} filed ${tree.length > 1 ? 'in it or under it' : 'in it'}: ${someNames(real)}`);
+    if (realCategories.length) reasons.push(`it holds the real categor${realCategories.length === 1 ? 'y' : 'ies'} ${someNames(realCategories)}`);
+    if (reasons.length) kept.push({ id: category.id, name: category.name, reasons });
+    else remove.push({ id: category.id, name: category.name, depth: depthOf(category) });
+  }
+  remove.sort((a, b) => b.depth - a.depth || a.name.localeCompare(b.name));
+  const demo = products.filter((p) => p.is_demo === true);
+  return {
+    products: demo.map((p) => ({ id: p.id, name: p.name, variants: (p.variants || []).length, images: (p.media || []).length })),
+    categories: remove,
+    keptCategories: kept,
+    demoVariantsOnRealProducts: realProducts.reduce((n, p) => n + (p.variants || []).filter((v) => v.is_demo === true).length, 0),
+  };
+}

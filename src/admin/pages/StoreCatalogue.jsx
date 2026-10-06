@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { money } from '../../lib/format.js';
 import { CATALOGUE_STORES, catalogueSlug, categoryOptions, catalogueProductHref, catalogueFailureView, versionAfterOwnWrite, gstNote, GROCERY_NOT_SOLD, GROCERY_VARIANTS_UNREAD } from '../../lib/storeCatalogueAdmin.js';
-import { listStoreCategories, listStoreProducts, getStoreProduct, saveStoreProduct, saveStoreCategory, saveStoreVariant, uploadStoreImage, saveStoreMedia, removeStoreMedia, addStoreImages, reorderStoreMedia, setStoreMediaPrimary, saveStoreMediaAlt, applyCatalogueImport } from '../../lib/storeCatalogueAdminApi.js';
+import { listStoreCategories, listStoreProducts, getStoreProduct, saveStoreProduct, saveStoreCategory, saveStoreVariant, uploadStoreImage, saveStoreMedia, removeStoreMedia, addStoreImages, reorderStoreMedia, setStoreMediaPrimary, saveStoreMediaAlt, applyCatalogueImport, deleteStoreVariant, previewStoreDemoDelete, deleteStoreDemoRows } from '../../lib/storeCatalogueAdminApi.js';
 import { planProductImport, planVariantImport, productsToCsv, variantsToCsv, describeDiff } from '../../lib/storeCatalogueCsv.js';
 
 const EMPTY_PRODUCT = { name: '', slug: '', brand: '', description: '', category_id: '', mrp: '', sale_price: '', sku: '', net_content: '', hsn_code: '', gst_rate: '', stock: 0, sort_order: 0, is_active: false, is_new: false, is_bestseller: false };
@@ -173,6 +173,45 @@ function CatalogueImport({ store, products, categories, onApplied }) {
   </section>;
 }
 
+// "Delete demo rows" for one store: review exactly what goes and what stays
+// (planDemoDelete), then delete — refused if the rows changed since review.
+function DemoRows({ store, onClose, onDeleted }) {
+  const [plan, setPlan] = useState(null), [busy, setBusy] = useState(true), [error, setError] = useState(''), [done, setDone] = useState(null);
+  useEffect(() => {
+    let current = true;
+    previewStoreDemoDelete(store).then((p) => { if (current) setPlan(p); }).catch((err) => { if (current) setError(err.message); }).finally(() => { if (current) setBusy(false); });
+    return () => { current = false; };
+  }, [store]);
+  const nothing = plan && !plan.products.length && !plan.categories.length;
+  async function remove() {
+    if (!window.confirm(`Delete ${plan.products.length} demo product${plan.products.length === 1 ? '' : 's'} and ${plan.categories.length} demo categor${plan.categories.length === 1 ? 'y' : 'ies'} from ${CATALOGUE_STORES[store]}? This cannot be undone.`)) return;
+    setBusy(true); setError('');
+    try { setDone(await deleteStoreDemoRows(store, plan)); onDeleted(); }
+    catch (err) { setError(err.message); if (err.isStaleWrite) { try { setPlan(await previewStoreDemoDelete(store)); } catch { /* the error already says to review again */ } } }
+    finally { setBusy(false); }
+  }
+  const keptList = (rows) => <ul className="sc-list">{rows.map((k) => <li key={k.id}><strong>{k.name}</strong> — kept: {k.reasons.join('; ')}.</li>)}</ul>;
+  return <section className="surface sc-panel sc-demo-panel" aria-label="Demo rows">
+    <h2>Demo rows in {CATALOGUE_STORES[store]}</h2>
+    <Messages error={error} />
+    {done ? <>
+      <div className="adm-banner ok" role="status">Deleted {done.products} demo product{done.products === 1 ? '' : 's'} (with {done.variants} variant{done.variants === 1 ? '' : 's'} and {done.images} image{done.images === 1 ? '' : 's'}) and {done.categories} demo categor{done.categories === 1 ? 'y' : 'ies'}.</div>
+      {!!done.kept.length && <>{keptList(done.kept)}</>}
+    </> : busy && !plan ? <p role="status">Checking for demo rows…</p> : plan && <>
+      {nothing ? <p className="adm-empty">No demo rows to delete in {CATALOGUE_STORES[store]}.</p> : <>
+        <p>These go: the demo products with their variants and images, then the demo categories that hold nothing real.</p>
+        {!!plan.products.length && <><h3>{plan.products.length} demo product{plan.products.length === 1 ? '' : 's'}</h3><ul className="sc-list">{plan.products.map((p) => <li key={p.id}>{p.name}{p.variants || p.images ? ` (${[p.variants && `${p.variants} variant${p.variants === 1 ? '' : 's'}`, p.images && `${p.images} image${p.images === 1 ? '' : 's'}`].filter(Boolean).join(', ')})` : ''}</li>)}</ul></>}
+        {!!plan.categories.length && <><h3>{plan.categories.length} demo categor{plan.categories.length === 1 ? 'y' : 'ies'}</h3><ul className="sc-list">{plan.categories.map((c) => <li key={c.id}>{c.name}</li>)}</ul></>}
+      </>}
+      {!!plan.keptCategories.length && <><h3>Kept</h3><p className="hint">A category is never deleted while something real sits in it — that would leave the real product without a category.</p>{keptList(plan.keptCategories)}</>}
+      {!!plan.demoVariantsOnRealProducts && <p className="hint">{plan.demoVariantsOnRealProducts} demo variant{plan.demoVariantsOnRealProducts === 1 ? '' : 's'} on real products {plan.demoVariantsOnRealProducts === 1 ? 'is' : 'are'} left alone.</p>}
+      <p className="hint">Carts holding a deleted product drop it; past orders keep their own copy. Image files stay in storage.</p>
+      <div className="sc-actions">{!nothing && <button type="button" className="btn sc-danger-btn" disabled={busy} onClick={remove}>{busy ? 'Deleting…' : 'Delete these demo rows'}</button>}<button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={onClose}>Close</button></div>
+    </>}
+    {done && <div className="sc-actions"><button type="button" className="btn btn-outline btn-sm" onClick={onClose}>Close</button></div>}
+  </section>;
+}
+
 function CatalogueList({ store }) {
   const [params, setParams] = useSearchParams();
   const [categories, setCategories] = useState([]), [products, setProducts] = useState([]);
@@ -187,7 +226,11 @@ function CatalogueList({ store }) {
     return () => { current = false; };
   }, [store, revision]);
   const update = (patch) => setParams((old) => { const next = new URLSearchParams(old); for (const [key, value] of Object.entries(patch)) { if (value) next.set(key, value); else next.delete(key); } return next; }, { replace: true });
-  const shown = products.filter((row) => (!category || row.category_id === category) && `${row.name} ${row.sku || ''} ${row.brand}`.toLowerCase().includes(search.toLowerCase()));
+  const status = ['published', 'draft'].includes(params.get('status')) ? params.get('status') : '';
+  const [demoOpen, setDemoOpen] = useState(false);
+  const shown = products.filter((row) => (!category || row.category_id === category)
+    && (!status || (status === 'published') === (row.is_active === true))
+    && `${row.name} ${row.sku || ''} ${row.brand}`.toLowerCase().includes(search.toLowerCase()));
   const categoriesById = new Map(categoryOptions(categories).map((row) => [row.id, row.label]));
   return <>
     <div className="adm-chipbar" aria-label="Catalogue section">
@@ -201,14 +244,17 @@ function CatalogueList({ store }) {
       <div className="sc-toolbar">
         <label className="sc-field"><span className="label">Search products</span><input className="input" value={search} onChange={(e) => update({ q: e.target.value })} placeholder="Name, brand or SKU" /></label>
         <label className="sc-field"><span className="label">Category / subcategory</span><select className="select" value={category} onChange={(e) => update({ category: e.target.value })}><option value="">All categories</option>{categoryOptions(categories).map((row) => <option key={row.id} value={row.id}>{row.label}</option>)}</select></label>
+        <label className="sc-field sc-field--narrow"><span className="label">Status</span><select className="select" value={status} onChange={(e) => update({ status: e.target.value })}><option value="">Published and drafts</option><option value="published">Published only</option><option value="draft">Drafts only</option></select></label>
         <Link className="btn btn-sm" to={`/admin/store-catalogue/${store}/new${category ? `?category=${encodeURIComponent(category)}` : ''}`}>+ Add product</Link>
+        <button type="button" className="btn btn-outline btn-sm" aria-expanded={demoOpen} onClick={() => setDemoOpen((open) => !open)}>Remove demo rows…</button>
       </div>
-      <p className="hint">{shown.length} of {products.length} products · includes drafts</p>
+      {demoOpen && <DemoRows store={store} onClose={() => setDemoOpen(false)} onDeleted={() => setRevision((n) => n + 1)} />}
+      <p className="hint">{shown.length} of {products.length} products{status ? ` · ${status === 'published' ? 'published only' : 'drafts only'}` : ' · includes drafts'}</p>
       {!shown.length ? <div className="adm-empty">No products in this selection. Add a product, or choose another category.</div> : <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead><tbody>
         {shown.map((row) => {
           const variants = (row.variants || []).filter((v) => v.is_active !== false);
           const stock = store === 'fashion' || variants.length ? variants.reduce((n, v) => n + Number(v.stock || 0), 0) : row.stock;
-          return <tr key={row.id}><td><div className="adm-row-name"><span className="adm-thumb">{row.images?.[0] && <img src={row.images[0]} alt="" loading="lazy" />}</span><div><strong>{row.name}</strong><span>{row.sku || row.slug}</span></div></div></td><td>{categoriesById.get(row.category_id) || 'Unassigned'}</td><td>{money(row.sale_price ?? row.mrp)}</td><td>{stock || 0}</td><td>{row.is_active ? 'Published' : 'Draft'}</td><td><Link className="inline-link" to={`/admin/store-catalogue/${store}/${row.id}`}>Edit</Link>{row.is_active && catalogueProductHref(store, row.slug) && <> · <a className="inline-link" href={catalogueProductHref(store, row.slug)} target="_blank" rel="noreferrer">View</a></>}</td></tr>;
+          return <tr key={row.id}><td><div className="adm-row-name"><span className="adm-thumb">{row.images?.[0] && <img src={row.images[0]} alt="" loading="lazy" />}</span><div><strong>{row.name}</strong><span>{row.sku || row.slug}</span></div></div></td><td>{categoriesById.get(row.category_id) || 'Unassigned'}</td><td>{money(row.sale_price ?? row.mrp)}</td><td>{stock || 0}</td><td>{row.is_active ? 'Published' : 'Draft'}{row.is_demo && <span className="badge sc-demo" title="Placeholder from the store's seed data">Demo</span>}</td><td><Link className="inline-link" to={`/admin/store-catalogue/${store}/${row.id}`}>Edit</Link>{row.is_active && catalogueProductHref(store, row.slug) && <> · <a className="inline-link" href={catalogueProductHref(store, row.slug)} target="_blank" rel="noreferrer">View</a></>}</td></tr>;
         })}
       </tbody></table></div>}
     </> : <>
@@ -224,6 +270,14 @@ function VariantsEditor({ store, product, onChanged }) {
   const [form, setForm] = useState(EMPTY_VARIANT), [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const errors = useFormErrors(VARIANT_FIELDS);
+  async function remove(row) {
+    const label = row.colour ? `${row.size} / ${row.colour}` : row.size;
+    if (!window.confirm(`Delete the ${label} variant? This cannot be undone.\n\nCarts holding it will show it as no longer sold, and checkout will refuse it. Past orders keep their own copy.\n\nTo hide it for now instead, edit it and untick "Active variant".`)) return;
+    setBusy(true); errors.reset(); setMessage('');
+    try { await deleteStoreVariant(store, product.id, row.id, row.updated_at); if (editing === row.id) { setEditing(null); setForm(EMPTY_VARIANT); } await onChanged(); setMessage(`Variant ${label} deleted.`); }
+    catch (err) { errors.capture(err); }
+    finally { setBusy(false); }
+  }
   async function save(e) {
     e.preventDefault(); if (busy) return;
     setBusy(true); errors.reset(); setMessage('');
@@ -235,7 +289,7 @@ function VariantsEditor({ store, product, onChanged }) {
   return <section className="surface sc-panel"><h2>Sizes, colours &amp; stock</h2><p className="hint">{store === 'fashion' ? 'Fashion stock comes from these variants. For a single option use “One size” and its colour, or “Default”.' : 'Optional: add sizes or colours for this product. When active variants exist, their stock is used instead of product stock.'}</p>
     {store === 'grocery' && <p className="adm-banner info sc-note" role="note">{GROCERY_VARIANTS_UNREAD}</p>}
     <Messages error={errors.banner} message={message} stale={errors.stale} />
-    {!!product.variants?.length && <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Size / option</th><th>Colour</th><th>Stock</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody>{product.variants.map((row) => <tr key={row.id}><td>{row.size}</td><td>{row.colour || '—'}</td><td>{row.stock}</td><td>{row.price_override == null ? 'Product price' : money(row.price_override)}</td><td>{row.is_active ? 'Active' : 'Hidden'}</td><td><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => { setEditing(row.id); setForm(row); setMessage(''); errors.reset(); }}>Edit</button></td></tr>)}</tbody></table></div>}
+    {!!product.variants?.length && <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Size / option</th><th>Colour</th><th>Stock</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody>{product.variants.map((row) => <tr key={row.id}><td>{row.size}</td><td>{row.colour || '—'}</td><td>{row.stock}</td><td>{row.price_override == null ? 'Product price' : money(row.price_override)}</td><td>{row.is_active ? 'Active' : 'Hidden'}</td><td><div className="sc-actions sc-actions--row"><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => { setEditing(row.id); setForm(row); setMessage(''); errors.reset(); }}>Edit</button><button type="button" className="btn btn-ghost btn-sm sc-danger" disabled={busy} onClick={() => remove(row)}>Delete</button></div></td></tr>)}</tbody></table></div>}
     <form onSubmit={save} noValidate><fieldset disabled={busy}><h3>{editing ? 'Edit variant' : 'Add variant'}</h3><div className="adm-grid2">
       <Field form="var" errors={errors} label="Size / option" field="size" value={form} set={setForm} required />
       <Field form="var" errors={errors} label={`Colour${store === 'fashion' ? '' : ' (optional)'}`} field="colour" value={form} set={setForm} required={store === 'fashion'} />
