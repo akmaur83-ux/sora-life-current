@@ -298,6 +298,10 @@ function undoFromPatch(name) {
   return Object.fromEntries(Object.entries(files).map(([r, hunks]) => [r, (t, rr) => hunks.reduce((acc, [now, then]) => swap(rr, acc, now, then), t)]));
 }
 
+// The Home & Living PDP's delivery line: "Other delivery options are chosen at
+// checkout" has been false since Express and Scheduled were withdrawn (2fa4ed2).
+const UNDO_DELIVERY_COPY = undoFromPatch('homeliving-delivery-copy.patch');
+
 // The Cart page's coupon offers carry the catalogue: without it a fashion or Home &
 // Living line was priced as wellness and the whole offers list came back empty.
 const UNDO_COUPON_OFFERS = undoFromPatch('coupon-offers.patch');
@@ -333,7 +337,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart

@@ -103,7 +103,7 @@ function DeliveryBlock() {
     <section className="hl-pdp__delivery" aria-labelledby="hl-deliv-h">
       <h2 className="hl-pdp__h2" id="hl-deliv-h"><Icon name="truck" size={18} /> Delivery</h2>
       <p className="hl-pdp__ship"><span>Standard delivery<em>{HOMELIVING_DELIVERY_WINDOW}</em></span><b>Free</b></p>
-      <p className="hl-pdp__fine">Other delivery options are chosen at checkout.</p>
+      <p className="hl-pdp__fine">Select Standard delivery at checkout.</p>
     </section>
   );
 }

@@ -155,7 +155,9 @@ await test('/homeliving/p/sage-fitted-sheet: breadcrumb back through the categor
   assert.deepEqual([...html.matchAll(/class="hl-pick__swatch[^"]*" style="--sw:([^"]+)"/g)].map((m) => m[1]), ['#8A9A6B', '#EDE6D6']);
   assert.deepEqual([...html.matchAll(/class="hl-pick__size[^"]*"[^>]*>([^<]+)</g)].map((m) => m[1]), ['Single', 'King']);
   assert.match(html, /<p class="hl-pick__note is-choose" role="status">Choose a size and colour<\/p>/);
-  assert.match(html, /<h2 class="hl-pdp__h2" id="hl-deliv-h">[\s\S]*?Delivery<\/h2><p class="hl-pdp__ship"><span>Standard delivery<em>6-7 days<\/em><\/span><b>Free<\/b><\/p><p class="hl-pdp__fine">Other delivery options are chosen at checkout\.<\/p>/);
+  assert.match(html, /<h2 class="hl-pdp__h2" id="hl-deliv-h">[\s\S]*?Delivery<\/h2><p class="hl-pdp__ship"><span>Standard delivery<em>6-7 days<\/em><\/span><b>Free<\/b><\/p><p class="hl-pdp__fine">Select Standard delivery at checkout\.<\/p>/);
+  // Standard is the only method since Express and Scheduled were withdrawn (2fa4ed2): no "other options".
+  assert.doesNotMatch(html, /[Oo]ther delivery options/);
   assert.match(html, /About this product<\/h2><p class="hl-pdp__desc">Sage Fitted Sheet\.<\/p>/);
   assert.match(html, /<dt>Category<\/dt><dd>Bedsheets › Fitted Sheets<\/dd>/); assert.match(html, /<dt>Sizes<\/dt><dd>Single, King<\/dd>/); assert.match(html, /<dt>Colours<\/dt><dd>Sage, Ivory<\/dd>/); assert.match(html, /<dt>SKU<\/dt><dd>SL-HL-FIT-SAGE<\/dd>/);
   const related = html.slice(html.indexOf('You may also like'));
