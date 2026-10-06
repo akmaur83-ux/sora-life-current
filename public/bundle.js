@@ -29571,7 +29571,7 @@ const supabase = createClient(supabaseUrl , supabasePublishableKey );
 const MAX_DEPTH = 3;
 /** The store column value every fashion row carries (catalogue_* since 0034). */
 const FASHION_STORE = 'fashion';
-const num$c = v => {
+const num$d = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -29588,7 +29588,7 @@ function buildTree(rows) {
     slug: str$6(r.slug),
     tagline: str$6(r.tagline),
     image_url: r.image_url || null,
-    sort_order: num$c(r.sort_order),
+    sort_order: num$d(r.sort_order),
     is_active: r.is_active !== false
   }));
   const byId = new Map(list.map(n => [n.id, n]));
@@ -29726,14 +29726,14 @@ function productView(product, variants = null) {
     colour: str$6(v.colour),
     colour_hex: v.colour_hex || null,
     sku: v.sku || null,
-    stock: Math.max(0, num$c(v.stock)),
-    price_override: v.price_override == null ? null : num$c(v.price_override),
-    sort_order: num$c(v.sort_order)
+    stock: Math.max(0, num$d(v.stock)),
+    price_override: v.price_override == null ? null : num$d(v.price_override),
+    sort_order: num$d(v.sort_order)
   })).sort((a, b) => a.sort_order - b.sort_order);
-  const mrp = num$c(product?.mrp);
-  const sale = product?.sale_price == null ? null : num$c(product.sale_price);
+  const mrp = num$d(product?.mrp);
+  const sale = product?.sale_price == null ? null : num$d(product.sale_price);
   const price = sale != null && sale < mrp ? sale : mrp;
-  const discountPct = product?.discount_percent != null ? num$c(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
+  const discountPct = product?.discount_percent != null ? num$d(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
   const swatches = [];
   for (const v of vs) {
     let s = swatches.find(x => x.colour === v.colour);
@@ -29763,11 +29763,11 @@ function productView(product, variants = null) {
     price,
     discountPct,
     hasDiscount: discountPct > 0,
-    rating: Math.max(0, Math.min(5, num$c(product?.rating))),
-    reviewCount: Math.max(0, num$c(product?.review_count)),
+    rating: Math.max(0, Math.min(5, num$d(product?.rating))),
+    reviewCount: Math.max(0, num$d(product?.review_count)),
     isNew: product?.is_new === true,
     isBestseller: product?.is_bestseller === true,
-    sortOrder: num$c(product?.sort_order),
+    sortOrder: num$d(product?.sort_order),
     variants: vs,
     swatches,
     sizes,
@@ -29854,8 +29854,8 @@ const list$1 = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean
 const uniq$1 = arr => [...new Set(arr)];
 function readFashionUrlState(searchParams) {
   const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
-  const discount = num$c(p.get('discount'));
-  const rating = num$c(p.get('rating'));
+  const discount = num$d(p.get('discount'));
+  const rating = num$d(p.get('rating'));
   return {
     q: str$6(p.get('q')),
     sort: SORT_IDS$2.has(p.get('sort')) ? p.get('sort') : 'featured',
@@ -29889,10 +29889,10 @@ function updateFashionUrlState(searchParams, patch) {
   if (has('colours')) setList('colour', patch.colours);
   if (has('brands')) setList('brand', patch.brands);
   if (has('discount')) {
-    if (DISCOUNT_STEPS$1.includes(num$c(patch.discount))) p.set('discount', String(num$c(patch.discount)));else p.delete('discount');
+    if (DISCOUNT_STEPS$1.includes(num$d(patch.discount))) p.set('discount', String(num$d(patch.discount)));else p.delete('discount');
   }
   if (has('rating')) {
-    if (RATING_STEPS$1.includes(num$c(patch.rating))) p.set('rating', String(num$c(patch.rating)));else p.delete('rating');
+    if (RATING_STEPS$1.includes(num$d(patch.rating))) p.set('rating', String(num$d(patch.rating)));else p.delete('rating');
   }
   if (has('view')) {
     if (patch.view === 'list') p.set('view', 'list');else p.delete('view');
@@ -30140,7 +30140,7 @@ const fashionRowFor = id => catalogueRowFor(FASHION_CATALOGUE, id);
 function ensureFashionProducts(ids) {
   return ensureCatalogueRows(FASHION_CATALOGUE, ids, getFashionProductsByIds, entryOf);
 }
-const num$b = v => {
+const num$c = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -30189,13 +30189,13 @@ function hydrateFashionCartLine(line, entry, {
   } = entry;
   const v = variants.find(x => String(x.id) === String(line.variantId)) || null;
   const variantMissing = !v || v.is_active === false;
-  const mrp = num$b(row.mrp);
-  const sale = row.sale_price == null ? null : num$b(row.sale_price);
+  const mrp = num$c(row.mrp);
+  const sale = row.sale_price == null ? null : num$c(row.sale_price);
   const base = sale != null && sale > 0 && sale < mrp ? sale : mrp;
-  const override = v && v.price_override != null ? num$b(v.price_override) : null;
+  const override = v && v.price_override != null ? num$c(v.price_override) : null;
   const unitPrice = variantMissing ? null : override != null && override > 0 ? override : base;
   const unitMrp = unitPrice == null ? null : Math.max(mrp, unitPrice);
-  const stock = v ? Math.max(0, Math.floor(num$b(v.stock))) : null;
+  const stock = v ? Math.max(0, Math.floor(num$c(v.stock))) : null;
   const label = v ? [v.size, v.colour].filter(Boolean).join(' · ') : line.variant ?? null;
   let unavailableReason = null;
   if (variantMissing) unavailableReason = label ? `“${label}” is no longer available.` : 'The size and colour you chose are no longer available.';else if (row.is_active === false) unavailableReason = 'This item is no longer available.';else if (stock === 0) unavailableReason = 'This size and colour is out of stock.';else if (stock != null && line.qty > stock) unavailableReason = stock === 1 ? 'Only 1 left — please reduce the quantity.' : `Only ${stock} left — please reduce the quantity.`;else if (!(unitPrice > 0)) unavailableReason = 'This item is not available to buy right now.';
@@ -30288,23 +30288,23 @@ const categoryHref$2 = c => `/grocery/category/${c.slug}`;
 // ---- Row shapes ----------------------------------------------------------------
 const CATEGORY_COLUMNS$1 = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
 const PRODUCT_COLUMNS$1 = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
-const num$a = v => {
+const num$b = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
 
 /** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
 const priceOf$1 = row => {
-  const mrp = num$a(row?.mrp);
-  const sale = row?.sale_price == null ? null : num$a(row.sale_price);
+  const mrp = num$b(row?.mrp);
+  const sale = row?.sale_price == null ? null : num$b(row.sale_price);
   return sale != null && sale > 0 && sale < mrp ? sale : mrp;
 };
 
 /** A product row for the homepage and the cart: the row as stored, plus `price`. */
 const groceryProductView = row => row ? {
   ...row,
-  mrp: num$a(row.mrp),
-  sale_price: row.sale_price == null ? null : num$a(row.sale_price),
+  mrp: num$b(row.mrp),
+  sale_price: row.sale_price == null ? null : num$b(row.sale_price),
   price: priceOf$1(row),
   images: Array.isArray(row.images) ? row.images.filter(Boolean) : []
 } : null;
@@ -30424,7 +30424,7 @@ const groceryProductFor = id => catalogueRowFor(GROCERY_CATALOGUE, id);
 function ensureGroceryProducts(ids) {
   return ensureCatalogueRows(GROCERY_CATALOGUE, ids, getGroceryProductsByIds, groceryProductView);
 }
-const num$9 = v => {
+const num$a = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -30461,8 +30461,8 @@ function hydrateGroceryCartLine(line, product) {
       purchasable: false
     };
   }
-  const unitPrice = num$9(product.price) > 0 ? num$9(product.price) : null;
-  const unitMrp = unitPrice == null ? null : Math.max(num$9(product.mrp), unitPrice);
+  const unitPrice = num$a(product.price) > 0 ? num$a(product.price) : null;
+  const unitMrp = unitPrice == null ? null : Math.max(num$a(product.mrp), unitPrice);
   const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
   let unavailableReason = null;
   if (product.is_active === false) unavailableReason = 'This item is no longer available.';else if (unitPrice == null) unavailableReason = 'This item is not available to buy right now.';else unavailableReason = GROCERY_CHECKOUT_NOTE;
@@ -30504,6 +30504,403 @@ function groceryKeysToPrune(lines) {
   const unresolved = grocery.filter(l => !isGroceryIdResolved(l.id)).map(l => l.id);
   if (unresolved.length) ensureGroceryProducts(unresolved);
   return grocery.filter(l => isGroceryIdResolved(l.id) && !groceryProductFor(l.id)).map(l => l.key);
+}
+
+// ============================================================
+// Home & Living store — the data layer behind /homeliving.
+//
+// Catalogue rows come from the shared catalogue tables (migration 0034,
+// store 'homeliving' since 0035): categories from catalogue_categories,
+// products from catalogue_products. Rows keep the schema's field names —
+// image_url, images[], net_content, mrp, sale_price — so what a component
+// reads is what the table holds. The one derived field is `price`: the
+// figure a card shows (sale_price when set and below mrp, else mrp),
+// decided here, never in a component. The payable amount is always the
+// server's (api/_lib/pricing.js → trustedHomeLivingPrice, the same rule).
+//
+// Homepage content that is not catalogue — the hero slide, the trust
+// strip, the promo strip, the tagline, the delivery window — stays here as
+// plain objects. Every word is rendered as HTML text over a photograph.
+// The delivery promise is the one factual claim the store makes:
+// "Standard Delivery / 6-7 days". Nothing here says otherwise.
+// ============================================================
+const HOMELIVING_STORE = 'homeliving';
+const HOMELIVING_TAGLINE = 'Comfort for every home';
+
+/** Delivery promise. One string, used by the header badge and the trust strip. */
+const HOMELIVING_DELIVERY_WINDOW = '6-7 days';
+
+/**
+ * The hero photograph comes as a pair the browser chooses between through
+ * <picture>: the 3:2 landscape from 768px up (furnishings right and low,
+ * the wall on the left takes the copy) and the 4:5 portrait below it
+ * (furnishings low, the copy upper-left). Both leave the top strip bare
+ * for the header that floats over it.
+ */
+const HERO_SLIDES$1 = [{
+  id: 'comfort',
+  image: {
+    wide: '/img/homeliving-hero-wide.webp',
+    tall: '/img/homeliving-hero-tall.webp'
+  },
+  eyebrow: 'Home & Living',
+  headline: 'Comfort Lives Here',
+  sub: 'Bedsheets, curtains, cushions, towels and more for a more beautiful home.',
+  cta: 'Explore Home Collection',
+  href: '/homeliving/category/bedsheets',
+  note: 'Better homes, brighter days'
+}];
+
+/** The four badges under the hero copy. The delivery one is the only factual claim. */
+const TRUST$1 = [{
+  icon: 'sparkle',
+  title: 'Premium Fabrics',
+  sub: 'Chosen for touch and wear'
+}, {
+  icon: 'shield',
+  title: 'Trusted Quality',
+  sub: 'Checked before it ships'
+}, {
+  icon: 'truck',
+  title: 'Standard Delivery',
+  sub: HOMELIVING_DELIVERY_WINDOW
+}, {
+  icon: 'home',
+  title: 'For a Happier Home',
+  sub: 'Small details, warmer rooms'
+}];
+const CATEGORY_SECTION = {
+  eyebrow: 'Explore categories',
+  title: 'Everything for a Beautiful Home',
+  viewAll: '/homeliving/category/bedsheets'
+};
+const FEATURED = {
+  title: 'Featured Home Linen',
+  sub: 'Soft textures for every room',
+  seeAll: '/homeliving/category/bedsheets',
+  limit: 4
+};
+const PROMO$1 = {
+  image: '/img/homeliving-promo.webp',
+  eyebrow: 'Natural fabrics. Timeless homes.',
+  headline: 'Bring Home Comfort',
+  sub: 'Soft textures. Soothing spaces. A better you.',
+  cta: 'Shop Home & Living',
+  href: '/homeliving/category/bedsheets',
+  badges: [{
+    icon: 'leaf',
+    title: 'Natural Fabrics'
+  }, {
+    icon: 'award',
+    title: 'Long-Lasting Quality'
+  }, {
+    icon: 'home',
+    title: 'Beautiful Homes, Happier Lives'
+  }]
+};
+const categoryHref$1 = c => `/homeliving/category/${c.slug}`;
+
+// ---- Row shapes ----------------------------------------------------------------
+const CATEGORY_COLUMNS = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
+const PRODUCT_COLUMNS = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
+const VARIANT_COLUMNS = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
+const MEDIA_COLUMNS = 'id, public_url, alt_text, sort_order, is_primary';
+/**
+ * The product row with its variants (a size × colour each, or a size alone
+ * for a textile) and its gallery (catalogue_product_media: the primary shot
+ * plus detail shots, in order) embedded.
+ */
+const PRODUCT_SELECT = `${PRODUCT_COLUMNS}, variants:catalogue_variants (${VARIANT_COLUMNS}), media:catalogue_product_media (${MEDIA_COLUMNS})`;
+const num$9 = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const str$5 = v => String(v ?? '').trim();
+
+/** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
+const priceOf = row => {
+  const mrp = num$9(row?.mrp);
+  const sale = row?.sale_price == null ? null : num$9(row.sale_price);
+  return sale != null && sale > 0 && sale < mrp ? sale : mrp;
+};
+
+/**
+ * The ordered gallery: media rows primary-first then by sort_order — the
+ * same order the 0034 trigger writes into images[] — as { url, alt }. A
+ * product with no media rows yet falls back to images[] with the product
+ * name as alt, so a gallery always has what the card shows.
+ */
+const galleryOf = row => {
+  const media = (Array.isArray(row?.media) ? row.media : []).filter(m => m && str$5(m.public_url)).sort((a, b) => (b.is_primary === true) - (a.is_primary === true) || num$9(a.sort_order) - num$9(b.sort_order) || str$5(a.id).localeCompare(str$5(b.id))).map((m, i) => ({
+    url: str$5(m.public_url),
+    alt: str$5(m.alt_text) || (i === 0 ? str$5(row.name) : `${str$5(row.name)} — view ${i + 1}`),
+    primary: m.is_primary === true
+  }));
+  if (media.length) return media;
+  return (Array.isArray(row?.images) ? row.images : []).filter(Boolean).map((url, i) => ({
+    url: str$5(url),
+    alt: i === 0 ? str$5(row.name) : `${str$5(row.name)} — view ${i + 1}`,
+    primary: i === 0
+  }));
+};
+
+/**
+ * A product row for the homepage, the listing and the product page: the
+ * row as stored, plus `price`, the ordered `gallery`, and the variant
+ * facets the listing filters on — `variants` (active, in order), `sizes`
+ * (distinct), `swatches` ({ colour, hex }, distinct, empty colours
+ * skipped). A product without variants has empty facets and simply never
+ * shows under a size or colour filter.
+ */
+const homelivingProductView = row => {
+  if (!row) return null;
+  const variants = (Array.isArray(row.variants) ? row.variants : []).filter(v => v && v.is_active !== false).map(v => ({
+    id: String(v.id),
+    size: str$5(v.size),
+    colour: str$5(v.colour),
+    colour_hex: v.colour_hex || null,
+    sku: v.sku || null,
+    stock: Math.max(0, num$9(v.stock)),
+    price_override: v.price_override == null ? null : num$9(v.price_override),
+    sort_order: num$9(v.sort_order)
+  })).sort((a, b) => a.sort_order - b.sort_order);
+  const swatches = [];
+  for (const v of variants) if (v.colour && !swatches.some(s => s.colour === v.colour)) swatches.push({
+    colour: v.colour,
+    hex: v.colour_hex
+  });
+  return {
+    ...row,
+    mrp: num$9(row.mrp),
+    sale_price: row.sale_price == null ? null : num$9(row.sale_price),
+    price: priceOf(row),
+    discount_percent: row.discount_percent != null ? num$9(row.discount_percent) : 0,
+    rating: Math.max(0, Math.min(5, num$9(row.rating))),
+    review_count: Math.max(0, num$9(row.review_count)),
+    images: Array.isArray(row.images) ? row.images.filter(Boolean) : [],
+    gallery: galleryOf(row),
+    stock: Math.max(0, num$9(row.stock)),
+    variants,
+    sizes: [...new Set(variants.map(v => v.size).filter(Boolean))],
+    swatches
+  };
+};
+
+// ---- Reads -----------------------------------------------------------------------
+async function getHomeLivingCategories() {
+  const {
+    data,
+    error
+  } = await supabase.from('catalogue_categories').select(CATEGORY_COLUMNS).eq('store', HOMELIVING_STORE).order('sort_order', {
+    ascending: true
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+async function getHomeLivingProducts() {
+  const {
+    data,
+    error
+  } = await supabase.from('catalogue_products').select(PRODUCT_SELECT).eq('store', HOMELIVING_STORE).eq('is_active', true).order('sort_order', {
+    ascending: true
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+/**
+ * The rows behind cart lines, by id, with their variants — so the cart can
+ * price a Home & Living line without the /homeliving shell being mounted.
+ * Inactive rows come back too: the cart says "no longer available" rather
+ * than silently dropping a line the customer chose.
+ */
+async function getHomeLivingProductsByIds(ids) {
+  const clean = [...new Set((ids || []).map(String).filter(Boolean))];
+  if (!clean.length) return [];
+  const {
+    data,
+    error
+  } = await supabase.from('catalogue_products').select(PRODUCT_SELECT).eq('store', HOMELIVING_STORE).in('id', clean);
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+// ---- The catalogue the pages render ------------------------------------------------
+// Loaded once per session and shared by every Home & Living page; `seed`
+// sets it for server rendering and tests. Components subscribe with
+// useHomeLivingCatalogue() and get { status, error, categories, products }.
+const EMPTY$2 = Object.freeze({
+  status: 'loading',
+  error: null,
+  categories: [],
+  products: []
+});
+let snapshot$1 = EMPTY$2;
+let loading$1 = null;
+const listeners$2 = new Set();
+const publish$1 = next => {
+  snapshot$1 = next;
+  for (const l of listeners$2) l();
+};
+const shape$2 = (categories, products) => ({
+  categories: (Array.isArray(categories) ? categories : []).filter(c => c && c.is_active !== false),
+  products: (Array.isArray(products) ? products : []).filter(p => p && p.is_active !== false).map(homelivingProductView)
+});
+function loadHomeLivingCatalogue() {
+  if (snapshot$1.status === 'ready' || loading$1) return loading$1;
+  loading$1 = Promise.all([getHomeLivingCategories(), getHomeLivingProducts()]).then(([categories, products]) => publish$1({
+    status: 'ready',
+    error: null,
+    ...shape$2(categories, products)
+  })).catch(e => {
+    loading$1 = null;
+    publish$1({
+      ...snapshot$1,
+      status: 'error',
+      error: e?.message || 'Could not load the Home & Living catalogue'
+    });
+  });
+  return loading$1;
+}
+const subscribe$1 = fn => {
+  listeners$2.add(fn);
+  if (snapshot$1.status === 'loading') loadHomeLivingCatalogue();
+  return () => listeners$2.delete(fn);
+};
+const getSnapshot$1 = () => snapshot$1;
+
+/** { status: 'loading' | 'ready' | 'error', error, categories, products } — categories and products carry the schema's field names. */
+function useHomeLivingCatalogue() {
+  return reactExports.useSyncExternalStore(subscribe$1, getSnapshot$1, getSnapshot$1);
+}
+
+// ============================================================
+// Home & Living cart lines — the homeliving namespace in the shared cart.
+//
+// A stored line is { key, catalogue: 'homeliving', id, variantId, variant,
+// qty }, keyed `homeliving:<id>::<variantId>` so it can never merge with, be
+// priced as, or be pruned against a line of another store. Mirrors
+// groceryCartLine.js: the rows come from catalogue_products (store =
+// 'homeliving') through the shared catalogue cart cache, filled on demand for
+// the ids in the cart. Unlike a grocery line, a Home & Living line is
+// PURCHASABLE once its row has landed and nothing is wrong with it: the
+// server prices it (api/_lib/pricing.js → trustedHomeLivingPrice), so the
+// figure here is for display and nothing here is charged.
+//
+// A product with size × colour variants is stocked and (optionally) priced
+// per variant, and its line must name one; a product without variants is
+// stocked on its own row and its line names none.
+// ============================================================
+const HOMELIVING_CATALOGUE = 'homeliving';
+const homelivingLineKey = (productId, variantId) => `homeliving:${productId}::${variantId ?? ''}`;
+const isHomeLivingLine = line => line?.catalogue === HOMELIVING_CATALOGUE;
+
+/** A fetch has answered for this id — present or gone. */
+const isHomeLivingIdResolved = id => isCatalogueIdResolved(HOMELIVING_CATALOGUE, id);
+/**
+ * What the cache keeps for a product, once its row has landed (null while
+ * pending and when gone): the storefront's view of the row, so the cart and
+ * the product page read the same price rule and the same active variants.
+ */
+const homelivingEntryFor = id => catalogueRowFor(HOMELIVING_CATALOGUE, id);
+
+/** Fetch any Home & Living ids not yet resolved. Safe to call on every render. */
+function ensureHomeLivingProducts(ids) {
+  return ensureCatalogueRows(HOMELIVING_CATALOGUE, ids, getHomeLivingProductsByIds, homelivingProductView);
+}
+const num$8 = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+/**
+ * Shape one Home & Living line for display. Same fields hydrateCartLine
+ * produces so Cart, Checkout and the summary render it unchanged. `view` is
+ * what homelivingEntryFor() returned. Until the row lands the line is
+ * PENDING: counted, shown without a price, blocking checkout with a reason,
+ * never dropped. Once a fetch has confirmed the product gone it returns
+ * null and the store prunes the line.
+ */
+function hydrateHomeLivingCartLine(line, view, {
+  resolved = false
+} = {}) {
+  if (!view) {
+    if (resolved) return null;
+    return {
+      ...line,
+      product: {
+        id: line.id,
+        name: 'Home & Living item',
+        slug: '',
+        image: null,
+        href: '/homeliving',
+        form: null,
+        cardImage: null
+      },
+      variantObj: null,
+      variantLabel: line.variant ?? null,
+      variantMissing: false,
+      variantStock: null,
+      unitPrice: null,
+      unitMrp: null,
+      lineTotal: 0,
+      pending: true,
+      unavailableReason: 'Checking availability…',
+      purchasable: false
+    };
+  }
+  const variants = Array.isArray(view.variants) ? view.variants : [];
+  const hasVariants = variants.length > 0;
+  // view.variants holds the ACTIVE variants only, so one that was retired is simply not found.
+  const v = line.variantId ? variants.find(x => String(x.id) === String(line.variantId)) || null : null;
+  const variantMissing = Boolean(line.variantId) && !v;
+  const label = v ? [v.size, v.colour].filter(Boolean).join(' · ') || null : line.variant ?? null;
+  const override = v && v.price_override != null ? num$8(v.price_override) : null;
+  const unitPrice = variantMissing ? null : override != null && override > 0 ? override : num$8(view.price) > 0 ? num$8(view.price) : null;
+  const unitMrp = unitPrice == null ? null : Math.max(num$8(view.mrp), unitPrice);
+  const stock = hasVariants ? v ? Math.max(0, Math.floor(num$8(v.stock))) : null : Math.max(0, Math.floor(num$8(view.stock)));
+  let unavailableReason = null;
+  if (view.is_active === false) unavailableReason = 'This item is no longer available.';else if (variantMissing) unavailableReason = hasVariants && label ? `“${label}” is no longer available.` : 'This item is no longer sold in that option.';else if (hasVariants && !v) unavailableReason = 'Please choose a size for this item.';else if (stock === 0) unavailableReason = hasVariants ? 'This option is out of stock.' : 'This item is out of stock.';else if (stock != null && line.qty > stock) unavailableReason = stock === 1 ? 'Only 1 left — please reduce the quantity.' : `Only ${stock} left — please reduce the quantity.`;else if (!(unitPrice > 0)) unavailableReason = 'This item is not available to buy right now.';
+  const image = Array.isArray(view.images) && view.images[0] ? view.images[0] : null;
+  return {
+    ...line,
+    product: {
+      id: view.id,
+      name: view.name,
+      slug: view.slug,
+      brand: view.brand || '',
+      image,
+      cardImage: image,
+      gallery: Array.isArray(view.images) ? view.images : [],
+      href: `/homeliving/p/${view.slug}`,
+      form: hasVariants ? null : view.net_content || null,
+      price: unitPrice,
+      mrp: unitMrp
+    },
+    variantObj: v ? {
+      id: String(v.id),
+      label,
+      price: unitPrice,
+      mrp: unitMrp,
+      stock,
+      size: v.size,
+      colour: v.colour || null,
+      colour_hex: v.colour_hex || null
+    } : null,
+    variantLabel: label ?? (hasVariants ? null : view.net_content ?? null),
+    variantMissing,
+    variantStock: stock,
+    unitPrice,
+    unitMrp,
+    lineTotal: unitPrice == null ? 0 : unitPrice * line.qty,
+    unavailableReason,
+    purchasable: unavailableReason == null
+  };
+}
+
+/** Which stored Home & Living lines point at a product a fetch has confirmed gone. */
+function homelivingKeysToPrune(lines) {
+  return (Array.isArray(lines) ? lines : []).filter(l => isHomeLivingLine(l) && isHomeLivingIdResolved(l.id) && !homelivingEntryFor(l.id)).map(l => l.key);
 }
 
 // ============================================================
@@ -31261,10 +31658,12 @@ function reducer(state, action) {
         // priced as, or be pruned against a wellness product. A wellness line
         // is shaped exactly as it always was — no catalogue field at all.
         // A GROCERY line (catalogue: 'grocery') gets the same treatment in its
-        // own namespace (groceryCartLine.js).
+        // own namespace (groceryCartLine.js), and so does a HOME & LIVING line
+        // (catalogue: 'homeliving', homelivingCartLine.js).
         const fashion = catalogue === FASHION_CATALOGUE;
         const grocery = catalogue === GROCERY_CATALOGUE;
-        const key = fashion ? fashionLineKey(id, variantId) : grocery ? groceryLineKey(id, variantId) : id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
+        const homeliving = catalogue === HOMELIVING_CATALOGUE;
+        const key = fashion ? fashionLineKey(id, variantId) : grocery ? groceryLineKey(id, variantId) : homeliving ? homelivingLineKey(id, variantId) : id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
         const existing = state.cart.find(l => l.key === key);
         const cart = existing ? state.cart.map(l => l.key === key ? {
           ...l,
@@ -31279,6 +31678,13 @@ function reducer(state, action) {
         } : grocery ? {
           key,
           catalogue: GROCERY_CATALOGUE,
+          id,
+          variant,
+          variantId,
+          qty
+        } : homeliving ? {
+          key,
+          catalogue: HOMELIVING_CATALOGUE,
           id,
           variant,
           variantId,
@@ -31485,20 +31891,58 @@ function StoreProvider({
     return true;
   }, [toast]);
 
-  // The grocery add path. Takes a product from the grocery data
-  // (src/data/groceryHomepage.js); the line carries the id only, and the
-  // pack label is display text. No stock gate yet — there is no grocery
-  // stock to check until the catalogue migration lands, and the line is
-  // blocked at checkout until then (groceryCartLine.js).
+  // The grocery add path. Takes a catalogue_products row (store 'grocery');
+  // the line carries the id only, and the size label is display text. No
+  // stock gate yet — the line is blocked at checkout regardless
+  // (groceryCartLine.js), so nothing here can be bought.
   const addGroceryToCart = reactExports.useCallback((product, qty = 1) => {
     if (!product?.id) return false;
+    // A catalogue row carries net_content, never `pack`, so every grocery line
+    // was stored with variant: null since the catalogue migration (0034).
+    // hydrateGroceryCartLine falls back to the row's net_content, which is why
+    // the cart still showed the size.
     dispatch({
       type: 'ADD',
       catalogue: GROCERY_CATALOGUE,
       id: String(product.id),
       qty,
-      variant: product.pack || null,
+      variant: product.net_content || null,
       variantId: null
+    });
+    toast('Added to cart', {
+      kind: 'cart'
+    });
+    return true;
+  }, [toast]);
+
+  // The Home & Living add path. A product with size × colour variants must
+  // name one (stock and any price override are per combination); a product
+  // without variants is added on its own row stock. The stock gate here is a
+  // courtesy — the server re-checks it at quote and at order creation.
+  const addHomeLivingToCart = reactExports.useCallback((view, variant = null, qty = 1) => {
+    if (!view?.id) return false;
+    const hasVariants = Array.isArray(view.variants) && view.variants.length > 0;
+    if (hasVariants && !variant?.id) {
+      toast('Please choose a size first.', {
+        kind: 'cart'
+      });
+      return false;
+    }
+    const stock = hasVariants ? Number(variant.stock) : Number(view.stock);
+    if (!(stock > 0)) {
+      toast(hasVariants ? 'That option is out of stock.' : 'This item is out of stock.', {
+        kind: 'cart'
+      });
+      return false;
+    }
+    const label = hasVariants ? [variant.size, variant.colour].filter(Boolean).join(' · ') || null : view.net_content || null;
+    dispatch({
+      type: 'ADD',
+      catalogue: HOMELIVING_CATALOGUE,
+      id: String(view.id),
+      qty,
+      variant: label,
+      variantId: hasVariants ? String(variant.id) : null
     });
     toast('Added to cart', {
       kind: 'cart'
@@ -31622,12 +32066,15 @@ function StoreProvider({
   // the same arrangement wishlistState.js uses, and for the same reason: those
   // rules are executed directly in tests rather than through a provider.
   // A fashion line is priced from the fashion tables (fashionCartLine.js),
-  // a grocery line from the grocery data (groceryCartLine.js); a wellness
+  // a grocery line from the grocery data (groceryCartLine.js), a Home &
+  // Living line from its catalogue rows (homelivingCartLine.js); a wellness
   // line exactly as before. The wellness catalogue is never consulted for
-  // a fashion or grocery id, and vice versa.
+  // another store's id, and vice versa.
   const hydrate = l => isFashionLine(l) ? hydrateFashionCartLine(l, fashionRowFor(l.id), {
     resolved: isFashionIdResolved(l.id)
-  }) : isGroceryLine(l) ? hydrateGroceryCartLine(l, groceryProductFor(l.id)) : hydrateCartLine(l, productById[l.id]);
+  }) : isGroceryLine(l) ? hydrateGroceryCartLine(l, groceryProductFor(l.id)) : isHomeLivingLine(l) ? hydrateHomeLivingCartLine(l, homelivingEntryFor(l.id), {
+    resolved: isHomeLivingIdResolved(l.id)
+  }) : hydrateCartLine(l, productById[l.id]);
 
   // Variants arrive from Supabase AFTER first render. Memoising on state.cart
   // alone meant a line added with a 750 ml variantId kept the pre-variant
@@ -31640,6 +32087,11 @@ function StoreProvider({
   reactExports.useEffect(() => {
     const ids = [...state.cart, ...state.saved].filter(isFashionLine).map(l => l.id);
     if (ids.length) ensureFashionProducts(ids);
+  }, [state.cart, state.saved]);
+  // The Home & Living rows live in the same cache, so the same version re-prices them.
+  reactExports.useEffect(() => {
+    const ids = [...state.cart, ...state.saved].filter(isHomeLivingLine).map(l => l.id);
+    if (ids.length) ensureHomeLivingProducts(ids);
   }, [state.cart, state.saved]);
   const cartDetailed = reactExports.useMemo(() => state.cart.map(hydrate).filter(Boolean), [state.cart, catalogVersion, fashionVersion]);
   const savedDetailed = reactExports.useMemo(() => state.saved.map(hydrate).filter(Boolean), [state.saved, catalogVersion, fashionVersion]);
@@ -31670,9 +32122,12 @@ function StoreProvider({
   //      pruned when a fetch for its id has answered and the product is gone,
   //      and never because the wellness catalogue does not know the id.
   //   4. A GROCERY line likewise: judged against the grocery data only.
+  //   5. A HOME & LIVING line likewise, once its rows have answered — keyed on
+  //      the cache version, so it is pruned when they land, not on the next
+  //      cart change.
   reactExports.useEffect(() => {
     if (!isCatalogHydrated()) return;
-    const keys = [...state.cart, ...state.saved].filter(l => !isFashionLine(l) && !isGroceryLine(l) && !productById[l.id]).map(l => l.key);
+    const keys = [...state.cart, ...state.saved].filter(l => !isFashionLine(l) && !isGroceryLine(l) && !isHomeLivingLine(l) && !productById[l.id]).map(l => l.key);
     if (keys.length) dispatch({
       type: 'PRUNE_MISSING',
       keys
@@ -31692,6 +32147,13 @@ function StoreProvider({
       keys
     });
   }, [state.cart, state.saved]);
+  reactExports.useEffect(() => {
+    const keys = homelivingKeysToPrune([...state.cart, ...state.saved]);
+    if (keys.length) dispatch({
+      type: 'PRUNE_MISSING',
+      keys
+    });
+  }, [state.cart, state.saved, fashionVersion]);
   // Counted from the lines the cart can actually SHOW, so the badge can never
   // advertise an item the page does not list. state.cart may still hold a line
   // whose product has vanished; reconcileCart() below clears those for good.
@@ -31714,6 +32176,7 @@ function StoreProvider({
     addToCart,
     addFashionToCart,
     addGroceryToCart,
+    addHomeLivingToCart,
     toggleWish,
     // Normalised on both sides: a caller passing the numeric 5 still matches
     // a stored '5'.
@@ -35168,7 +35631,7 @@ const PROMOTIONS_FALLBACK = [{
 const PLACEMENTS = ['home', 'pdp', 'cart'];
 const TYPES = ['poster', 'offer'];
 const THEME_VARIANTS = ['forest', 'cream', 'orange', 'dark', 'minimal'];
-function str$5(v, max = 400) {
+function str$4(v, max = 400) {
   return typeof v === 'string' ? v.trim().slice(0, max) : '';
 }
 
@@ -35179,20 +35642,20 @@ function normalizePromo(row) {
   const themeVariant = THEME_VARIANTS.includes(row.theme_variant ?? row.themeVariant) ? row.theme_variant ?? row.themeVariant : 'forest';
   const rawPlacements = row.placements ?? [];
   const placements = Array.isArray(rawPlacements) ? rawPlacements.filter(p => PLACEMENTS.includes(p)) : [];
-  const ctaUrl = str$5(row.cta_url ?? row.ctaUrl, 500) || null;
+  const ctaUrl = str$4(row.cta_url ?? row.ctaUrl, 500) || null;
   return {
     id: String(row.id ?? cryptoId()),
     type,
-    title: str$5(row.title, 160),
-    subtitle: str$5(row.subtitle, 320),
+    title: str$4(row.title, 160),
+    subtitle: str$4(row.subtitle, 320),
     couponCode: normalizeCode(row.coupon_code ?? row.couponCode),
-    ctaText: str$5(row.cta_text ?? row.ctaText, 60),
+    ctaText: str$4(row.cta_text ?? row.ctaText, 60),
     ctaUrl: safeCtaUrl(ctaUrl),
-    badgeText: str$5(row.badge_text ?? row.badgeText, 40),
-    imageUrl: str$5(row.image_url ?? row.imageUrl, 1000) || null,
+    badgeText: str$4(row.badge_text ?? row.badgeText, 40),
+    imageUrl: str$4(row.image_url ?? row.imageUrl, 1000) || null,
     // Optional artwork for >= 1024px (0029). Null means every viewport shows
     // imageUrl, exactly as before the column existed.
-    desktopImageUrl: str$5(row.desktop_image_url ?? row.desktopImageUrl, 1000) || null,
+    desktopImageUrl: str$4(row.desktop_image_url ?? row.desktopImageUrl, 1000) || null,
     themeVariant,
     textAlign: (row.text_align ?? row.textAlign) === 'center' ? 'center' : 'left',
     placements,
@@ -35203,7 +35666,7 @@ function normalizePromo(row) {
   };
 }
 function normalizeCode(v) {
-  const s = str$5(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+  const s = str$4(v, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
   return s || null;
 }
 
@@ -35866,7 +36329,7 @@ const DEFAULT_LADDER = Object.freeze([{
   rate: 25
 }]);
 const DEFAULT_BEYOND_STEP = 25000;
-const num$8 = v => {
+const num$7 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
@@ -35878,8 +36341,8 @@ function normalizeLadder(rows) {
   return rows.map((r, i) => ({
     level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
     rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
-    threshold: num$8(r?.threshold),
-    rate: num$8(r?.rate)
+    threshold: num$7(r?.threshold),
+    rate: num$7(r?.rate)
   })).sort((a, b) => a.level - b.level);
 }
 
@@ -38838,7 +39301,7 @@ const NEUTRAL_THEME = {
   background: '#F1EDE4',
   gradient: 'linear-gradient(168deg, #F6F2EA 0%, #E9E3D7 100%)'
 };
-const str$4 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
+const str$3 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
 
 /**
  * A CSS colour we are willing to inline as a style value.
@@ -38848,7 +39311,7 @@ const str$4 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
  * quote or url() is refused rather than escaped.
  */
 function safeColor(value) {
-  const v = str$4(value, 40);
+  const v = str$3(value, 40);
   if (!v) return '';
   if (/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) return v;
   if (/^(?:rgb|hsl)a?\(\s*[\d.,%\s/deg]+\)$/i.test(v)) return v;
@@ -38863,7 +39326,7 @@ function safeColor(value) {
  * one. No url(), no var(), no expression, no nesting of other functions.
  */
 function safeGradient(value) {
-  const v = str$4(value, 240);
+  const v = str$3(value, 240);
   if (!v) return '';
   if (!/^(?:linear|radial|conic)-gradient\(/i.test(v)) return '';
   if (!v.endsWith(')')) return '';
@@ -38933,16 +39396,16 @@ function makeSpotlightId(productSlug, taken = []) {
  */
 function sanitizeSpotlightItem(raw, taken = []) {
   if (!raw || typeof raw !== 'object') return null;
-  const productSlug = str$4(raw.productSlug ?? raw.productId ?? raw.slug, 120);
+  const productSlug = str$3(raw.productSlug ?? raw.productId ?? raw.slug, 120);
   if (!productSlug) return null;
   return {
-    id: str$4(raw.id, 60) || makeSpotlightId(productSlug, taken),
+    id: str$3(raw.id, 60) || makeSpotlightId(productSlug, taken),
     productSlug,
     // Optional cutout/hero asset. Same URL policy the homepage visuals use.
     spotlightImage: safeVisualUrl(raw.spotlightImage) || '',
     // Owner-authored, and shown verbatim. Never generated from product data.
-    headline: str$4(raw.headline, 60),
-    subline: str$4(raw.subline, 90),
+    headline: str$3(raw.headline, 60),
+    subline: str$3(raw.subline, 90),
     background: safeColor(raw.background),
     gradient: safeGradient(raw.gradient),
     // Generated once by the Admin packshot preprocessor. It is deliberately
@@ -40126,9 +40589,9 @@ const CONTENT_LABELS = {
   how_to_use: 'How to use',
   specifications: 'Specifications'
 };
-const str$3 = v => (v === null || v === undefined ? '' : String(v)).trim();
+const str$2 = v => (v === null || v === undefined ? '' : String(v)).trim();
 const truthyStr = v => {
-  const s = str$3(v);
+  const s = str$2(v);
   return s.length ? s : null;
 };
 
@@ -40142,7 +40605,7 @@ function normalizeKeyClaims(value) {
   const list = Array.isArray(value) ? value
   // A tag input or a CSV cell may hand us a comma-separated string.
   : String(value).split(',');
-  const out = list.map(str$3).filter(Boolean);
+  const out = list.map(str$2).filter(Boolean);
   return arrayOrNull(out);
 }
 function normalizeBenefits(value) {
@@ -40152,7 +40615,7 @@ function normalizeBenefits(value) {
   for (const raw of value) {
     if (typeof raw === 'string') {
       // The legacy shape. Keep it readable rather than dropping the content.
-      const t = str$3(raw);
+      const t = str$2(raw);
       if (t) out.push({
         title: t,
         description: ''
@@ -40160,8 +40623,8 @@ function normalizeBenefits(value) {
       continue;
     }
     if (!raw || typeof raw !== 'object') continue;
-    const title = str$3(raw.title);
-    const description = str$3(raw.description);
+    const title = str$2(raw.title);
+    const description = str$2(raw.description);
     // A row with neither is not a benefit, it is an empty row the admin has
     // not filled in yet — dropped on save rather than stored.
     if (!title && !description) continue;
@@ -40178,7 +40641,7 @@ function normalizeIngredients(value) {
   const out = [];
   for (const raw of value) {
     if (typeof raw === 'string') {
-      const n = str$3(raw);
+      const n = str$2(raw);
       if (n) out.push({
         name: n,
         description: '',
@@ -40187,14 +40650,14 @@ function normalizeIngredients(value) {
       continue;
     }
     if (!raw || typeof raw !== 'object') continue;
-    const name = str$3(raw.name);
+    const name = str$2(raw.name);
     if (!name) continue; // an ingredient with no name is nothing
     out.push({
       name,
-      description: str$3(raw.description),
+      description: str$2(raw.description),
       // Only http(s). A relative or javascript: value must never reach an
       // <img src> on a live page.
-      image_url: /^https?:\/\//i.test(str$3(raw.image_url)) ? str$3(raw.image_url) : null
+      image_url: /^https?:\/\//i.test(str$2(raw.image_url)) ? str$2(raw.image_url) : null
     });
   }
   return out;
@@ -40204,7 +40667,7 @@ function normalizeHowToUse(value) {
   if (!Array.isArray(value)) return null;
   const out = [];
   for (const raw of value) {
-    const text = typeof raw === 'string' ? str$3(raw) : str$3(raw?.text);
+    const text = typeof raw === 'string' ? str$2(raw) : str$2(raw?.text);
     if (!text) continue;
     out.push({
       step: out.length + 1,
@@ -40216,7 +40679,7 @@ function normalizeHowToUse(value) {
 function normalizeSpecifications(value) {
   if (value === null || value === undefined) return null;
   // Accept both the stored object and the editor's row array.
-  const pairs = Array.isArray(value) ? value.map(r => [str$3(r?.key), str$3(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$3(k), str$3(v)]) : [];
+  const pairs = Array.isArray(value) ? value.map(r => [str$2(r?.key), str$2(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$2(k), str$2(v)]) : [];
   const out = {};
   for (const [k, v] of pairs) {
     if (!k || !v) continue; // a label with no value renders as "Shelf life:"
@@ -40282,7 +40745,7 @@ function validateContent(input) {
       errors.push('Benefits: each row needs a title and description.');
       break;
     }
-    if (!str$3(b.title) && !str$3(b.description)) {
+    if (!str$2(b.title) && !str$2(b.description)) {
       errors.push('Benefits: a row is completely empty.');
       break;
     }
@@ -40292,11 +40755,11 @@ function validateContent(input) {
       errors.push('Ingredients: each row needs a name.');
       break;
     }
-    if (!str$3(i.name)) {
+    if (!str$2(i.name)) {
       errors.push('Ingredients: a row has a description but no name.');
       break;
     }
-    const url = str$3(i.image_url);
+    const url = str$2(i.image_url);
     if (url && !/^https?:\/\//i.test(url)) {
       errors.push(`Ingredients: "${url.slice(0, 30)}" is not an http(s) image URL.`);
       break;
@@ -40307,7 +40770,7 @@ function validateContent(input) {
       errors.push('How to use: each step needs text.');
       break;
     }
-    if (!str$3(s.text)) {
+    if (!str$2(s.text)) {
       errors.push('How to use: a step has no text.');
       break;
     }
@@ -40347,7 +40810,7 @@ function contentScore(product) {
     missing: CONTENT_FIELDS.filter(f => !populated.includes(f)),
     count: populated.length,
     total: CONTENT_FIELDS.length,
-    hasDescription: !!str$3(product?.description)
+    hasDescription: !!str$2(product?.description)
   };
 }
 
@@ -44715,9 +45178,10 @@ function cartToPayload(lines) {
     variantId: l.variantId || null,
     variant: l.variant || null,
     // Which catalogue the id belongs to. Absent on a wellness line, so the
-    // payload for a wellness cart is byte-for-byte what it always was.
-    ...(l.catalogue === 'fashion' ? {
-      catalogue: 'fashion'
+    // payload for a wellness cart is byte-for-byte what it always was; a
+    // grocery line is blocked before checkout and carries none either.
+    ...(l.catalogue === 'fashion' || l.catalogue === 'homeliving' ? {
+      catalogue: l.catalogue
     } : {})
   }));
 }
@@ -45854,16 +46318,22 @@ function CartCoupons({
   // Refetched whenever the basket changes, for the same reason the quote is:
   // an offer's worth depends on the basket, so a stale list would advertise a
   // saving that no longer holds.
-  const signature = JSON.stringify(items.map(l => [l.id, l.qty, l.variantId || null]));
+  //
+  // The catalogue rides along. Without it a fashion or Home & Living line
+  // reached /api/coupons/eligible as a wellness id, was refused, and the
+  // whole offers list came back empty. cartToPayload sends it for those two
+  // stores only, so a wellness request is exactly what it was.
+  const signature = JSON.stringify(items.map(l => [l.id, l.qty, l.variantId || null, l.catalogue || null]));
   reactExports.useEffect(() => {
     const controller = new AbortController();
     (async () => {
       try {
         const next = await fetchEligibleCoupons({
-          items: JSON.parse(signature).map(([id, qty, variantId]) => ({
+          items: JSON.parse(signature).map(([id, qty, variantId, catalogue]) => ({
             id,
             qty,
-            variantId
+            variantId,
+            catalogue
           })),
           signal: controller.signal
         });
@@ -46128,7 +46598,7 @@ function CouponCelebration({
 
 /** Debounce for cart edits. Long enough to coalesce a held-down stepper. */
 const QUOTE_DEBOUNCE_MS = 250;
-const EMPTY$2 = {
+const EMPTY$1 = {
   breakdown: null,
   coupon: null,
   status: 'idle',
@@ -46147,7 +46617,7 @@ const EMPTY$2 = {
  *   message the server's wording for a refusal — never composed here
  */
 function useCartQuote(lines, code, delivery = 'std') {
-  const [state, setState] = reactExports.useState(EMPTY$2);
+  const [state, setState] = reactExports.useState(EMPTY$1);
   const abortRef = reactExports.useRef(null);
 
   // The exact request that would be sent. Serialising it means a re-render
@@ -46167,7 +46637,7 @@ function useCartQuote(lines, code, delivery = 'std') {
 
     // Nothing to price. Reset rather than leaving the last cart's total up.
     if (!items.length) {
-      setState(EMPTY$2);
+      setState(EMPTY$1);
       return undefined;
     }
 
@@ -46882,7 +47352,7 @@ async function requireUserId() {
 }
 
 // ---------- field whitelists (prevent id/user_id injection) ----------
-function str$2(v) {
+function str$1(v) {
   return v == null ? null : String(v);
 }
 
@@ -46904,7 +47374,7 @@ function pickAddressColumns(fields = {}) {
   };
   const row = {};
   for (const [key, col] of Object.entries(map)) {
-    if (fields[key] !== undefined) row[col] = str$2(fields[key]);
+    if (fields[key] !== undefined) row[col] = str$1(fields[key]);
   }
   return row;
 }
@@ -47314,8 +47784,10 @@ async function createPaymentOrder({
       qty: l.qty,
       variantId: l.variantId || null,
       variant: l.variant || null,
-      ...(l.catalogue === 'fashion' ? {
-        catalogue: 'fashion'
+      // A wellness line carries nothing, so its payload is byte-for-byte what it
+      // always was; a grocery line is blocked before checkout and never arrives.
+      ...(l.catalogue === 'fashion' || l.catalogue === 'homeliving' ? {
+        catalogue: l.catalogue
       } : {})
     })),
     delivery,
@@ -52994,7 +53466,7 @@ function Shell$2({
 // ============================================================
 
 const METRICS = Object.freeze(['clicks', 'orders', 'products', 'sales', 'commission']);
-const num$7 = v => {
+const num$6 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -53002,7 +53474,7 @@ const num$7 = v => {
 // Running total of a series — the shape of "lifetime so far".
 function cumulative(points) {
   let acc = 0;
-  return (Array.isArray(points) ? points : []).map(p => acc += num$7(p));
+  return (Array.isArray(points) ? points : []).map(p => acc += num$6(p));
 }
 
 // SVG geometry. `pad` keeps the stroke inside the box; a flat series sits on
@@ -53012,7 +53484,7 @@ function sparkGeometry(points, {
   height = 28,
   pad = 2
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$7);
+  const vals = (Array.isArray(points) ? points : []).map(num$6);
   const n = vals.length;
   if (n === 0) return {
     line: '',
@@ -53083,20 +53555,20 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
   };
   for (const m of METRICS) out[m] = Array.from({
     length: n
-  }, (_, i) => num$7(rows[i]?.[m]));
+  }, (_, i) => num$6(rows[i]?.[m]));
   out.labels = Array.from({
     length: n
   }, (_, i) => String(rows[i]?.at || ''));
   out.totals = Object.fromEntries(METRICS.map(m => [m, out[m].reduce((a, b) => a + b, 0)]));
-  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$7(raw.previous[m])])) : null;
+  out.previous = raw?.previous && typeof raw.previous === 'object' ? Object.fromEntries(METRICS.map(m => [m, num$6(raw.previous[m])])) : null;
   out.links = Array.isArray(raw?.links) ? raw.links.map(l => ({
     link_id: l?.link_id ?? null,
     label: String(l?.label || 'Link'),
     campaign: l?.campaign || null,
-    clicks: num$7(l?.clicks),
-    orders: num$7(l?.orders),
-    sales: num$7(l?.sales),
-    commission: num$7(l?.commission)
+    clicks: num$6(l?.clicks),
+    orders: num$6(l?.orders),
+    sales: num$6(l?.sales),
+    commission: num$6(l?.commission)
   })) : [];
   return out;
 }
@@ -53104,8 +53576,8 @@ function rangeSeries(raw, rangeId = DEFAULT_RANGE) {
 // Trend versus the previous period. No previous period, or a previous of
 // zero, is "—" (not "+100%": there is nothing to be 100% of).
 function trend(current, previous) {
-  const c = num$7(current);
-  const p = previous == null ? null : num$7(previous);
+  const c = num$6(current);
+  const p = previous == null ? null : num$6(previous);
   if (p == null) return {
     pct: null,
     dir: 'none',
@@ -53155,8 +53627,8 @@ function areaChartGeometry({
   padT = 14,
   padB = 26
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num$7);
-  const b = (Array.isArray(orders) ? orders : []).map(num$7);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$6);
+  const b = (Array.isArray(orders) ? orders : []).map(num$6);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -53221,7 +53693,7 @@ function donutGeometry(parts, {
   const c = 2 * Math.PI * r;
   const list = (Array.isArray(parts) ? parts : []).map(p => ({
     ...p,
-    value: Math.max(0, num$7(p?.value))
+    value: Math.max(0, num$6(p?.value))
   }));
   const total = list.reduce((s, p) => s + p.value, 0);
   let offset = 0;
@@ -53263,7 +53735,7 @@ function barChartGeometry(points, {
   gap = 0.35,
   minMax = 4
 } = {}) {
-  const vals = (Array.isArray(points) ? points : []).map(num$7);
+  const vals = (Array.isArray(points) ? points : []).map(num$6);
   const n = vals.length;
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -53303,7 +53775,7 @@ function barChartGeometry(points, {
   };
 }
 function compactRupees(v) {
-  const n = Math.max(0, num$7(v));
+  const n = Math.max(0, num$6(v));
   if (n >= 10000000) return `₹${trim(n / 10000000)}Cr`;
   if (n >= 100000) return `₹${trim(n / 100000)}L`;
   if (n >= 1000) return `₹${trim(n / 1000)}k`;
@@ -55414,7 +55886,7 @@ function CreatorTierPage({
 }
 
 const isZero$1 = v => !(Number(v) > 0);
-const num$6 = v => v == null || v === '' ? NaN : Number(v);
+const num$5 = v => v == null || v === '' ? NaN : Number(v);
 const monthLabel = ym => {
   if (!ym) return '—';
   const [y, m] = String(ym).split('-').map(Number);
@@ -55425,7 +55897,7 @@ const monthLabel = ym => {
   }).format(new Date(y, m - 1, 1));
 };
 const ordinal$2 = n => {
-  const v = num$6(n);
+  const v = num$5(n);
   if (!Number.isFinite(v)) return '—';
   const s = ['th', 'st', 'nd', 'rd'];
   const r = v % 100;
@@ -55435,10 +55907,10 @@ const ordinal$2 = n => {
 // The terms the page quotes. The tier rate (0031) is the live one; the
 // earnings RPC's commission_rate is the floor, the creator row the fallback.
 function earningsTerms(earnings, standing, creator) {
-  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$6).find(v => Number.isFinite(v));
-  const hold = num$6(earnings?.settlement_hold_days);
-  const minPayout = num$6(earnings?.min_payout);
-  const payoutDay = num$6(earnings?.payout_day);
+  const rate = [standing?.rate, earnings?.commission_rate, creator?.default_commission_rate].map(num$5).find(v => Number.isFinite(v));
+  const hold = num$5(earnings?.settlement_hold_days);
+  const minPayout = num$5(earnings?.min_payout);
+  const payoutDay = num$5(earnings?.payout_day);
   return {
     rate: Number.isFinite(rate) ? rate : null,
     hold: Number.isFinite(hold) && hold >= 0 ? hold : null,
@@ -57318,7 +57790,7 @@ const fmtDate = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   year: 'numeric'
 }).format(new Date(iso)) : '—';
 // null is "not set", never 0 — Number(null) would print a 0% rate.
-const num$5 = v => v == null || v === '' ? NaN : Number(v);
+const num$4 = v => v == null || v === '' ? NaN : Number(v);
 const initialsOf = name => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
 const STATUS = {
   active: {
@@ -57389,8 +57861,8 @@ function CreatorProfilePage({
   termsPublished = false
 }) {
   const st = STATUS[creator?.status] || STATUS.pending;
-  const rate = standing?.rate != null ? num$5(standing.rate) : num$5(creator?.default_commission_rate);
-  const windowDays = num$5(creator?.default_attribution_window_days);
+  const rate = standing?.rate != null ? num$4(standing.rate) : num$4(creator?.default_commission_rate);
+  const windowDays = num$4(creator?.default_attribution_window_days);
   const since = creator?.joined_at || creator?.created_at || null;
   const acct = standingFor(creator, kyc);
   const open = !!standing?.withdrawals_open;
@@ -57692,7 +58164,7 @@ function CreatorProfilePage({
 // derived (a ratio over zero, a period with no previous period) the value
 // is null and the page shows "—".
 // ============================================================
-const num$4 = v => {
+const num$3 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -57700,7 +58172,7 @@ const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
 
 // A ratio, or null when there is nothing to divide by.
-const ratio = (n, d) => num$4(d) > 0 ? num$4(n) / num$4(d) : null;
+const ratio = (n, d) => num$3(d) > 0 ? num$3(n) / num$3(d) : null;
 
 // ---- Stat cards -------------------------------------------------------------
 // When the range series is available the cards follow the toggle (with the
@@ -57709,10 +58181,10 @@ const ratio = (n, d) => num$4(d) > 0 ? num$4(n) / num$4(d) : null;
 function analyticsStats(analytics, series) {
   const range = !!series?.available;
   const tot = range ? series.totals : {
-    clicks: num$4(analytics?.clicks),
-    orders: num$4(analytics?.attributed_orders),
-    products: num$4(analytics?.products_sold),
-    sales: num$4(analytics?.attributed_sales),
+    clicks: num$3(analytics?.clicks),
+    orders: num$3(analytics?.attributed_orders),
+    products: num$3(analytics?.products_sold),
+    sales: num$3(analytics?.attributed_sales),
     commission: 0
   };
   const prev = range && series.previous ? series.previous : null;
@@ -57726,10 +58198,10 @@ function analyticsStats(analytics, series) {
   }) : [];
   return {
     scope: range ? 'range' : 'all',
-    clicks: num$4(tot.clicks),
-    orders: num$4(tot.orders),
-    products: num$4(tot.products),
-    sales: num$4(tot.sales),
+    clicks: num$3(tot.clicks),
+    orders: num$3(tot.orders),
+    products: num$3(tot.products),
+    sales: num$3(tot.sales),
     conversion: conv == null ? null : r1(conv * 100),
     aov: aov == null ? null : r2(aov),
     trends: {
@@ -57789,9 +58261,9 @@ function periodLabel(series) {
 
 // ---- Funnel: click → attributed order → eligible order (all time) -------------
 function funnelFor(analytics) {
-  const clicks = num$4(analytics?.clicks);
-  const orders = num$4(analytics?.attributed_orders);
-  const eligible = num$4(analytics?.eligible_orders);
+  const clicks = num$3(analytics?.clicks);
+  const orders = num$3(analytics?.attributed_orders);
+  const eligible = num$3(analytics?.eligible_orders);
   const pct = v => clicks > 0 ? r1(v / clicks * 100) : null;
   return {
     empty: clicks === 0,
@@ -57822,8 +58294,8 @@ const SHARE_TONES = ['forest', 'green', 'gold', 'amber', 'neutral'];
 function productShare(topProducts, max = 4) {
   const rows = (Array.isArray(topProducts) ? topProducts : []).map(p => ({
     name: String(p?.name || 'Product'),
-    qty: num$4(p?.qty),
-    sales: num$4(p?.sales)
+    qty: num$3(p?.qty),
+    sales: num$3(p?.sales)
   })).filter(p => p.sales > 0).sort((a, b) => b.sales - a.sales);
   const total = rows.reduce((s, p) => s + p.sales, 0);
   const head = rows.slice(0, max);
@@ -57872,10 +58344,10 @@ function topLinks(seriesLinks, {
       label: r.label,
       campaign: r.campaign || null,
       url: String(url || '').replace(/^https?:\/\//, ''),
-      clicks: num$4(r.clicks),
-      orders: num$4(r.orders),
-      sales: num$4(r.sales),
-      commission: num$4(r.commission),
+      clicks: num$3(r.clicks),
+      orders: num$3(r.orders),
+      sales: num$3(r.sales),
+      commission: num$3(r.commission),
       conversion: ratio(r.orders, r.clicks) == null ? null : r1(ratio(r.orders, r.clicks) * 100)
     };
   });
@@ -57943,7 +58415,7 @@ function insightsFor({
 function argMax(arr) {
   if (!Array.isArray(arr) || arr.length === 0) return -1;
   let best = 0;
-  for (let i = 1; i < arr.length; i += 1) if (num$4(arr[i]) > num$4(arr[best])) best = i;
+  for (let i = 1; i < arr.length; i += 1) if (num$3(arr[i]) > num$3(arr[best])) best = i;
   return best;
 }
 
@@ -57955,11 +58427,11 @@ function analyticsCsv(series, links = []) {
   };
   const lines = [['period', ...METRICS].join(',')];
   const n = series?.labels?.length || 0;
-  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num$4(series[m]?.[i]))].map(esc).join(','));
+  for (let i = 0; i < n; i += 1) lines.push([series.labels[i], ...METRICS.map(m => num$3(series[m]?.[i]))].map(esc).join(','));
   if (Array.isArray(links) && links.length > 0) {
     lines.push('');
     lines.push(['link', 'campaign', 'clicks', 'orders', 'sales', 'commission'].join(','));
-    for (const l of links) lines.push([l.label, l.campaign || '', num$4(l.clicks), num$4(l.orders), num$4(l.sales), num$4(l.commission)].map(esc).join(','));
+    for (const l of links) lines.push([l.label, l.campaign || '', num$3(l.clicks), num$3(l.orders), num$3(l.sales), num$3(l.commission)].map(esc).join(','));
   }
   return `${lines.join('\n')}\n`;
 }
@@ -57977,9 +58449,9 @@ function dualAxisGeometry({
   padT = 14,
   padB = 30
 } = {}) {
-  const a = (Array.isArray(clicks) ? clicks : []).map(num$4);
-  const b = (Array.isArray(orders) ? orders : []).map(num$4);
-  const c = (Array.isArray(sales) ? sales : []).map(num$4);
+  const a = (Array.isArray(clicks) ? clicks : []).map(num$3);
+  const b = (Array.isArray(orders) ? orders : []).map(num$3);
+  const c = (Array.isArray(sales) ? sales : []).map(num$3);
   const n = Math.max(a.length, b.length, c.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -58046,8 +58518,8 @@ function groupedBarGeometry(seriesA, seriesB, {
   gap = 0.3,
   minMax = 1000
 } = {}) {
-  const a = (Array.isArray(seriesA) ? seriesA : []).map(num$4);
-  const b = (Array.isArray(seriesB) ? seriesB : []).map(num$4);
+  const a = (Array.isArray(seriesA) ? seriesA : []).map(num$3);
+  const b = (Array.isArray(seriesB) ? seriesB : []).map(num$3);
   const n = Math.max(a.length, b.length);
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
@@ -59824,7 +60296,7 @@ function AdminLogin() {
 // ============================================================
 const FASHION_WISH_KEY = 'sora.fashion.wish.v1';
 let ids = null;
-const listeners$2 = new Set();
+const listeners$1 = new Set();
 function read() {
   if (ids) return ids;
   try {
@@ -59841,7 +60313,7 @@ function write(next) {
   try {
     if (typeof localStorage !== 'undefined') localStorage.setItem(FASHION_WISH_KEY, JSON.stringify(ids));
   } catch {/* private mode */}
-  for (const l of listeners$2) l();
+  for (const l of listeners$1) l();
 }
 const fashionWishlist = {
   get: read,
@@ -59855,8 +60327,8 @@ const fashionWishlist = {
   remove: id => write(read().filter(x => x !== String(id))),
   clear: () => write([]),
   subscribe: fn => {
-    listeners$2.add(fn);
-    return () => listeners$2.delete(fn);
+    listeners$1.add(fn);
+    return () => listeners$1.delete(fn);
   }
 };
 function useFashionWishlist() {
@@ -59874,7 +60346,7 @@ function useFashionWishlist() {
 const Ctx = /*#__PURE__*/reactExports.createContext(null);
 let cache = null; // { categories, products } — one fetch per session
 
-function shape$2(categories, products) {
+function shape$1(categories, products) {
   const tree = buildTree(categories);
   const views = (Array.isArray(products) ? products : []).filter(p => p && p.is_active !== false).map(p => productView(p, p.fashion_variants));
   return {
@@ -59892,17 +60364,17 @@ function FashionCatalogueProvider({
     if (initial) return {
       status: 'ready',
       error: null,
-      ...shape$2(initial.categories, initial.products)
+      ...shape$1(initial.categories, initial.products)
     };
     if (cache) return {
       status: 'ready',
       error: null,
-      ...shape$2(cache.categories, cache.products)
+      ...shape$1(cache.categories, cache.products)
     };
     return {
       status: 'loading',
       error: null,
-      ...shape$2([], [])
+      ...shape$1([], [])
     };
   });
   reactExports.useEffect(() => {
@@ -59916,7 +60388,7 @@ function FashionCatalogueProvider({
       if (alive) setState({
         status: 'ready',
         error: null,
-        ...shape$2(categories, products)
+        ...shape$1(categories, products)
       });
     }).catch(e => {
       if (alive) setState(s => ({
@@ -63030,12 +63502,12 @@ function GroceryProductCard({
   });
 }
 
-const TRUST$1 = [['truck', 'Standard Delivery', GROCERY_DELIVERY_WINDOW], ['leaf', 'Fresh Products', 'Sourced with care'], ['shield', 'Trusted Quality', 'Good food, safer lives']];
+const TRUST = [['truck', 'Standard Delivery', GROCERY_DELIVERY_WINDOW], ['leaf', 'Fresh Products', 'Sourced with care'], ['shield', 'Trusted Quality', 'Good food, safer lives']];
 function TrustStrip$1() {
   return /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
     className: "gs-trust",
     "aria-label": "Why shop with us",
-    children: TRUST$1.map(([icon, a, b]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+    children: TRUST.map(([icon, a, b]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
         name: icon,
         size: 28
@@ -63271,257 +63743,6 @@ function GroceryHome() {
       status: status
     }), /*#__PURE__*/jsxRuntimeExports.jsx(PromoStrip$2, {})]
   });
-}
-
-// ============================================================
-// Home & Living store — the data layer behind /homeliving.
-//
-// Catalogue rows come from the shared catalogue tables (migration 0034,
-// store 'homeliving' since 0035): categories from catalogue_categories,
-// products from catalogue_products. Rows keep the schema's field names —
-// image_url, images[], net_content, mrp, sale_price — so what a component
-// reads is what the table holds. The one derived field is `price`: the
-// figure a card shows (sale_price when set and below mrp, else mrp),
-// decided here, never in a component. The payable amount is always the
-// server's; this store has no cart path yet.
-//
-// Homepage content that is not catalogue — the hero slide, the trust
-// strip, the promo strip, the tagline, the delivery window — stays here as
-// plain objects. Every word is rendered as HTML text over a photograph.
-// The delivery promise is the one factual claim the store makes:
-// "Standard Delivery / 6-7 days". Nothing here says otherwise.
-// ============================================================
-const HOMELIVING_STORE = 'homeliving';
-const HOMELIVING_TAGLINE = 'Comfort for every home';
-
-/** Delivery promise. One string, used by the header badge and the trust strip. */
-const HOMELIVING_DELIVERY_WINDOW = '6-7 days';
-
-/**
- * The hero photograph comes as a pair the browser chooses between through
- * <picture>: the 3:2 landscape from 768px up (furnishings right and low,
- * the wall on the left takes the copy) and the 4:5 portrait below it
- * (furnishings low, the copy upper-left). Both leave the top strip bare
- * for the header that floats over it.
- */
-const HERO_SLIDES$1 = [{
-  id: 'comfort',
-  image: {
-    wide: '/img/homeliving-hero-wide.webp',
-    tall: '/img/homeliving-hero-tall.webp'
-  },
-  eyebrow: 'Home & Living',
-  headline: 'Comfort Lives Here',
-  sub: 'Bedsheets, curtains, cushions, towels and more for a more beautiful home.',
-  cta: 'Explore Home Collection',
-  href: '/homeliving/category/bedsheets',
-  note: 'Better homes, brighter days'
-}];
-
-/** The four badges under the hero copy. The delivery one is the only factual claim. */
-const TRUST = [{
-  icon: 'sparkle',
-  title: 'Premium Fabrics',
-  sub: 'Chosen for touch and wear'
-}, {
-  icon: 'shield',
-  title: 'Trusted Quality',
-  sub: 'Checked before it ships'
-}, {
-  icon: 'truck',
-  title: 'Standard Delivery',
-  sub: HOMELIVING_DELIVERY_WINDOW
-}, {
-  icon: 'home',
-  title: 'For a Happier Home',
-  sub: 'Small details, warmer rooms'
-}];
-const CATEGORY_SECTION = {
-  eyebrow: 'Explore categories',
-  title: 'Everything for a Beautiful Home',
-  viewAll: '/homeliving/category/bedsheets'
-};
-const FEATURED = {
-  title: 'Featured Home Linen',
-  sub: 'Soft textures for every room',
-  seeAll: '/homeliving/category/bedsheets',
-  limit: 4
-};
-const PROMO$1 = {
-  image: '/img/homeliving-promo.webp',
-  eyebrow: 'Natural fabrics. Timeless homes.',
-  headline: 'Bring Home Comfort',
-  sub: 'Soft textures. Soothing spaces. A better you.',
-  cta: 'Shop Home & Living',
-  href: '/homeliving/category/bedsheets',
-  badges: [{
-    icon: 'leaf',
-    title: 'Natural Fabrics'
-  }, {
-    icon: 'award',
-    title: 'Long-Lasting Quality'
-  }, {
-    icon: 'home',
-    title: 'Beautiful Homes, Happier Lives'
-  }]
-};
-const categoryHref$1 = c => `/homeliving/category/${c.slug}`;
-
-// ---- Row shapes ----------------------------------------------------------------
-const CATEGORY_COLUMNS = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
-const PRODUCT_COLUMNS = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
-const VARIANT_COLUMNS = 'id, product_id, size, colour, colour_hex, sku, stock, price_override, is_active, sort_order';
-const MEDIA_COLUMNS = 'id, public_url, alt_text, sort_order, is_primary';
-/**
- * The product row with its variants (a size × colour each, or a size alone
- * for a textile) and its gallery (catalogue_product_media: the primary shot
- * plus detail shots, in order) embedded.
- */
-const PRODUCT_SELECT = `${PRODUCT_COLUMNS}, variants:catalogue_variants (${VARIANT_COLUMNS}), media:catalogue_product_media (${MEDIA_COLUMNS})`;
-const num$3 = v => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
-const str$1 = v => String(v ?? '').trim();
-
-/** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
-const priceOf = row => {
-  const mrp = num$3(row?.mrp);
-  const sale = row?.sale_price == null ? null : num$3(row.sale_price);
-  return sale != null && sale > 0 && sale < mrp ? sale : mrp;
-};
-
-/**
- * The ordered gallery: media rows primary-first then by sort_order — the
- * same order the 0034 trigger writes into images[] — as { url, alt }. A
- * product with no media rows yet falls back to images[] with the product
- * name as alt, so a gallery always has what the card shows.
- */
-const galleryOf = row => {
-  const media = (Array.isArray(row?.media) ? row.media : []).filter(m => m && str$1(m.public_url)).sort((a, b) => (b.is_primary === true) - (a.is_primary === true) || num$3(a.sort_order) - num$3(b.sort_order) || str$1(a.id).localeCompare(str$1(b.id))).map((m, i) => ({
-    url: str$1(m.public_url),
-    alt: str$1(m.alt_text) || (i === 0 ? str$1(row.name) : `${str$1(row.name)} — view ${i + 1}`),
-    primary: m.is_primary === true
-  }));
-  if (media.length) return media;
-  return (Array.isArray(row?.images) ? row.images : []).filter(Boolean).map((url, i) => ({
-    url: str$1(url),
-    alt: i === 0 ? str$1(row.name) : `${str$1(row.name)} — view ${i + 1}`,
-    primary: i === 0
-  }));
-};
-
-/**
- * A product row for the homepage, the listing and the product page: the
- * row as stored, plus `price`, the ordered `gallery`, and the variant
- * facets the listing filters on — `variants` (active, in order), `sizes`
- * (distinct), `swatches` ({ colour, hex }, distinct, empty colours
- * skipped). A product without variants has empty facets and simply never
- * shows under a size or colour filter.
- */
-const homelivingProductView = row => {
-  if (!row) return null;
-  const variants = (Array.isArray(row.variants) ? row.variants : []).filter(v => v && v.is_active !== false).map(v => ({
-    id: String(v.id),
-    size: str$1(v.size),
-    colour: str$1(v.colour),
-    colour_hex: v.colour_hex || null,
-    sku: v.sku || null,
-    stock: Math.max(0, num$3(v.stock)),
-    price_override: v.price_override == null ? null : num$3(v.price_override),
-    sort_order: num$3(v.sort_order)
-  })).sort((a, b) => a.sort_order - b.sort_order);
-  const swatches = [];
-  for (const v of variants) if (v.colour && !swatches.some(s => s.colour === v.colour)) swatches.push({
-    colour: v.colour,
-    hex: v.colour_hex
-  });
-  return {
-    ...row,
-    mrp: num$3(row.mrp),
-    sale_price: row.sale_price == null ? null : num$3(row.sale_price),
-    price: priceOf(row),
-    discount_percent: row.discount_percent != null ? num$3(row.discount_percent) : 0,
-    rating: Math.max(0, Math.min(5, num$3(row.rating))),
-    review_count: Math.max(0, num$3(row.review_count)),
-    images: Array.isArray(row.images) ? row.images.filter(Boolean) : [],
-    gallery: galleryOf(row),
-    stock: Math.max(0, num$3(row.stock)),
-    variants,
-    sizes: [...new Set(variants.map(v => v.size).filter(Boolean))],
-    swatches
-  };
-};
-
-// ---- Reads -----------------------------------------------------------------------
-async function getHomeLivingCategories() {
-  const {
-    data,
-    error
-  } = await supabase.from('catalogue_categories').select(CATEGORY_COLUMNS).eq('store', HOMELIVING_STORE).order('sort_order', {
-    ascending: true
-  });
-  if (error) throw error;
-  return Array.isArray(data) ? data : [];
-}
-async function getHomeLivingProducts() {
-  const {
-    data,
-    error
-  } = await supabase.from('catalogue_products').select(PRODUCT_SELECT).eq('store', HOMELIVING_STORE).eq('is_active', true).order('sort_order', {
-    ascending: true
-  });
-  if (error) throw error;
-  return Array.isArray(data) ? data : [];
-}
-
-// ---- The catalogue the pages render ------------------------------------------------
-// Loaded once per session and shared by every Home & Living page; `seed`
-// sets it for server rendering and tests. Components subscribe with
-// useHomeLivingCatalogue() and get { status, error, categories, products }.
-const EMPTY$1 = Object.freeze({
-  status: 'loading',
-  error: null,
-  categories: [],
-  products: []
-});
-let snapshot$1 = EMPTY$1;
-let loading$1 = null;
-const listeners$1 = new Set();
-const publish$1 = next => {
-  snapshot$1 = next;
-  for (const l of listeners$1) l();
-};
-const shape$1 = (categories, products) => ({
-  categories: (Array.isArray(categories) ? categories : []).filter(c => c && c.is_active !== false),
-  products: (Array.isArray(products) ? products : []).filter(p => p && p.is_active !== false).map(homelivingProductView)
-});
-function loadHomeLivingCatalogue() {
-  if (snapshot$1.status === 'ready' || loading$1) return loading$1;
-  loading$1 = Promise.all([getHomeLivingCategories(), getHomeLivingProducts()]).then(([categories, products]) => publish$1({
-    status: 'ready',
-    error: null,
-    ...shape$1(categories, products)
-  })).catch(e => {
-    loading$1 = null;
-    publish$1({
-      ...snapshot$1,
-      status: 'error',
-      error: e?.message || 'Could not load the Home & Living catalogue'
-    });
-  });
-  return loading$1;
-}
-const subscribe$1 = fn => {
-  listeners$1.add(fn);
-  if (snapshot$1.status === 'loading') loadHomeLivingCatalogue();
-  return () => listeners$1.delete(fn);
-};
-const getSnapshot$1 = () => snapshot$1;
-
-/** { status: 'loading' | 'ready' | 'error', error, categories, products } — categories and products carry the schema's field names. */
-function useHomeLivingCatalogue() {
-  return reactExports.useSyncExternalStore(subscribe$1, getSnapshot$1, getSnapshot$1);
 }
 
 const SEARCH_PLACEHOLDER = 'Search bedsheets, curtains, cushions...';
@@ -63877,8 +64098,13 @@ function HomeLivingProductCard({
   layout = 'grid',
   mediaLoading = 'lazy'
 }) {
+  const {
+    addHomeLivingToCart
+  } = useStore();
   const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
   const href = productHref$1(product);
+  const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+  const inStock = Number(product.stock) > 0;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
     className: `hl-card${layout === 'list' ? ' hl-card--list' : ''}`,
     "data-product": product.slug,
@@ -63933,6 +64159,21 @@ function HomeLivingProductCard({
           className: "hl-price__mrp",
           children: money(product.mrp)
         })]
+      }), hasVariants ? /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: href,
+        className: "hl-btn hl-add hl-card__add hl-card__add--choose",
+        children: "Choose options"
+      }) : /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hl-btn hl-add hl-card__add",
+        disabled: !inStock,
+        onClick: inStock ? () => addHomeLivingToCart(product, null, 1) : undefined,
+        children: inStock ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "bag",
+            size: 16
+          }), " Add to cart"]
+        }) : 'Out of stock'
       })]
     })]
   });
@@ -64061,7 +64302,7 @@ function TrustStrip() {
     children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
       className: "hl-trust",
       "aria-label": "Why shop with us",
-      children: TRUST.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+      children: TRUST$1.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "hl-trust__icon",
           children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -64970,7 +65211,7 @@ function HomeLivingCategory() {
 // Every size and colour is listed; an unavailable one is marked, not
 // hidden. Nothing here computes a price — the figure shown for a variant
 // is the row's own (price_override or the product's), and the payable
-// amount is the server's. There is no cart path for this store yet.
+// amount is the server's. `canAdd` is what enables Add to cart.
 // ============================================================
 
 const LOW_STOCK_AT = 5;
@@ -65038,7 +65279,7 @@ const priced = (view, price) => {
 const stockNoteFor = (status, stock, what) => status === 'out' ? `Out of stock${what}` : status === 'low' ? `Only ${stock} left` : null;
 
 /**
- * Everything the selectors, the stock line and the (future) buy button
+ * Everything the selectors, the stock line and the buy button
  * need for one choice. `available` on a size answers for the chosen colour
  * (or any colour); on a colour, for the chosen size (or any size).
  */
@@ -65253,11 +65494,34 @@ function DeliveryBlock() {
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
       className: "hl-pdp__fine",
-      children: "Other delivery options are chosen at checkout."
+      children: "Select Standard delivery at checkout."
     })]
   });
 }
 const priceDigits = n => money(n).replace(/^₹\s?/, '');
+
+/**
+ * Add to cart — disabled until the choice is complete and in stock. It names
+ * a dead end (out of stock, not made in that pair); a choice still to make is
+ * spelt out by the stock note beside it, so the button does not repeat it.
+ */
+function AddToCartButton({
+  st,
+  onAdd,
+  className = ''
+}) {
+  const label = st.status === 'out' ? 'Out of stock' : st.status === 'missing' ? 'Not available' : 'Add to cart';
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+    type: "button",
+    className: `hl-btn hl-add${className ? ` ${className}` : ''}`,
+    disabled: !st.canAdd,
+    onClick: st.canAdd ? onAdd : undefined,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+      name: "bag",
+      size: 18
+    }), " ", label]
+  });
+}
 function HomeLivingProductPage() {
   const {
     slug
@@ -65267,6 +65531,9 @@ function HomeLivingProductPage() {
     categories,
     products
   } = useHomeLivingCatalogue();
+  const {
+    addHomeLivingToCart
+  } = useStore();
   const [params, setParams] = useSearchParams();
   const view = reactExports.useMemo(() => products.find(p => p.slug === String(slug || '')) || null, [products, slug]);
   if (!view) {
@@ -65301,6 +65568,8 @@ function HomeLivingProductPage() {
     replace: true
   });
   const related = relatedFor(view, products, 4);
+  // st.variant is the chosen size × colour (null for a product without variants).
+  const add = () => addHomeLivingToCart(view, st.variant, 1);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "hl-wrap hl-pdp",
     "data-product": view.slug,
@@ -65351,11 +65620,14 @@ function HomeLivingProductPage() {
           view: view,
           st: st,
           onChange: setSel
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "hl-pdp__actions",
           "data-slot": "add-to-cart",
           "data-can-add": st.canAdd ? 'yes' : 'no',
-          children: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(AddToCartButton, {
+            st: st,
+            onAdd: add
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
             type: "button",
             className: "hl-card__heart hl-heart--inline",
             "aria-label": `Save ${view.name} to wishlist`,
@@ -65364,7 +65636,7 @@ function HomeLivingProductPage() {
               name: "heart",
               size: 20
             })
-          })
+          })]
         }), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryBlock, {}), view.description && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
           className: "hl-pdp__section",
           "aria-labelledby": "hl-desc-h",
@@ -65455,10 +65727,14 @@ function HomeLivingProductPage() {
           }), priceDigits(st.price)]
         }), st.label && /*#__PURE__*/jsxRuntimeExports.jsx("em", {
           children: st.label
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: `hl-pick__note is-${st.status}`,
+          children: st.stockNote || st.missing || 'In stock'
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: `hl-pick__note is-${st.status}`,
-        children: st.stockNote || st.missing || 'In stock'
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(AddToCartButton, {
+        st: st,
+        onAdd: add,
+        className: "hl-add--bar"
       })]
     })]
   });
