@@ -331,7 +331,9 @@ await test('a grocery line is keyed grocery:<id>:: and carries catalogue: "groce
 await test('store.jsx: the grocery add path, hydration branch, reconciliation, and the context export — the fashion lines untouched', () => {
   const store = stripComments(read('src/lib/store.jsx'));
   assert.match(store, /const addGroceryToCart = useCallback\(\(product, qty = 1\) => \{/);
-  assert.match(store, /dispatch\(\{ type: 'ADD', catalogue: GROCERY_CATALOGUE, id: String\(product\.id\), qty, variant: product\.pack \|\| null, variantId: null \}\);/);
+  // A catalogue row carries net_content, never `pack`: the line now stores the size it shows.
+  assert.match(store, /dispatch\(\{ type: 'ADD', catalogue: GROCERY_CATALOGUE, id: String\(product\.id\), qty, variant: product\.net_content \|\| null, variantId: null \}\);/);
+  assert.doesNotMatch(store, /product\.pack/, 'nothing reads a field no catalogue row has');
   assert.match(store, /: isGroceryLine\(l\) \? hydrateGroceryCartLine\(l, groceryProductFor\(l\.id\)\)\s*: hydrateCartLine\(l, productById\[l\.id\]\)\);/);
   assert.match(store, /\? hydrateFashionCartLine\(l, fashionRowFor\(l\.id\), \{ resolved: isFashionIdResolved\(l\.id\) \}\)/, 'fashion hydration as it was');
   assert.match(store, /\.filter\(\(l\) => !isFashionLine\(l\) && !isGroceryLine\(l\) && !productById\[l\.id\]\)/, 'the wellness prune never judges a grocery line');

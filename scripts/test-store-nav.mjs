@@ -25,7 +25,7 @@ import * as ReactRouter from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, h, loadModule, loadSource, buildGroceryApp } from './grocery-ssr.mjs';
 import { REPO, exportBaseline, atCommit } from './baseline-export.mjs';
-import { sansDepartmentTiles } from './storefront-settings-pin.mjs';
+import { sansDepartmentTiles, sansStorefrontChanges } from './storefront-settings-pin.mjs';
 
 // The tip before the store switcher (the catalogue bundle commit).
 const BASELINE_SHA = 'd6a0c20';
@@ -183,10 +183,11 @@ await test('cart, checkout, coupons, auth, payments and the data layer are byte-
     .replace(/const DELIVERY = \[[\s\S]*?\n\];/, 'DELIVERY')
     .split('\n').filter((l) => l.trim()).join('\n');
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'api/razorpay/create-order.js', 'src/lib/fashionApi.js', 'src/data/groceryHomepage.js']) {
-    assert.equal(read(rel), atCommit(BASELINE_SHA, rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
+    // Approved cart changes since are undone first (sansCartChanges); nothing else may differ.
+    assert.equal(sansStorefrontChanges(rel, read(rel)), atCommit(BASELINE_SHA, rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
   for (const rel of ['src/pages/Checkout.jsx', 'api/_lib/pricing.js']) {
-    assert.equal(sansDelivery(read(rel)), sansDelivery(atCommit(BASELINE_SHA, rel)), `${rel}: nothing beyond the delivery withdrawal changed since ${BASELINE_SHA}`);
+    assert.equal(sansDelivery(sansStorefrontChanges(rel, read(rel))), sansDelivery(atCommit(BASELINE_SHA, rel)), `${rel}: nothing beyond the delivery withdrawal changed since ${BASELINE_SHA}`);
   }
   const changed = execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean);
   assert.ok(!changed.some((f) => /^supabase\/(?!migrations\/(0035_|rollback\/0035_))/.test(f)), 'no migration beyond 0035 (the Home & Living store)');

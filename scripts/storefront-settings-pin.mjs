@@ -21,6 +21,11 @@
 // change did to six shared files, the same way. `sansStorefrontChanges` applies
 // both, newest first; the suites call that one, so the next approved change is
 // added here, once.
+//
+// Approved cart changes are undone the same way by `sansCartChanges`, first
+// in the chain since they are the newest: the hunks are the change itself,
+// so a cart or payment file that passes through and equals its baseline
+// proves nothing else in it moved.
 // ============================================================
 import assert from 'node:assert/strict';
 import { DEFAULT_FASHION_STOREFRONT as F, DEFAULT_LIFESTYLE_STOREFRONT as L } from '../src/lib/storefrontCustomization.js';
@@ -39,6 +44,13 @@ export const FASHION_DEPARTMENT_FILES = /^(src\/fashion\/(FashionDepartment\.jsx
 
 /** The shared files the departments edited — each undone by sansFashionDepartments. */
 export const FASHION_DEPARTMENT_EDITS = /^(src\/App\.jsx|src\/fashion\/(FashionHome|FashionLayout)\.jsx|src\/lifestyle\/LifestyleHome\.jsx|src\/components\/FashionBanner\.jsx|build\/build-css\.mjs)$/;
+
+/**
+ * The shared cart and payment files an approved cart change edited — each undone
+ * by sansCartChanges. A suite may allow one in its changed-file list only where
+ * it also byte-checks that file through sansStorefrontChanges.
+ */
+export const CART_CHANGE_EDITS = /^src\/lib\/store\.jsx$/;
 
 /** Rendered /fashion: the Men and Women tiles open their department pages instead of the category listings. */
 export const sansDepartmentTiles = (html) => html.replace(/<a class="fs-tile" href="\/fashion\/(men|women)">/g, '<a class="fs-tile" href="/fashion/c/$1">');
@@ -256,5 +268,44 @@ export function sansFashionDepartments(rel, text) {
   return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
 }
 
-/** Every approved storefront change above undone, newest first: what the older pins compare. */
-export const sansStorefrontChanges = (rel, text) => sansStorefrontSettings(rel, sansFashionDepartments(rel, text));
+// ---- Approved cart changes, newest first ------------------------------------------
+// Each entry undoes one commit's hunks in the shared cart and payment files.
+
+// The grocery size label: addGroceryToCart read product.pack, which no
+// catalogue row has, so every grocery line was stored with variant: null.
+const UNDO_GROCERY_LABEL = {
+  'src/lib/store.jsx': (t, r) => swap(r, t, [
+    '  // The grocery add path. Takes a catalogue_products row (store \'grocery\');',
+    '  // the line carries the id only, and the size label is display text. No',
+    '  // stock gate yet — the line is blocked at checkout regardless',
+    '  // (groceryCartLine.js), so nothing here can be bought.',
+    '  const addGroceryToCart = useCallback((product, qty = 1) => {',
+    '    if (!product?.id) return false;',
+    '    // A catalogue row carries net_content, never `pack`, so every grocery line',
+    '    // was stored with variant: null since the catalogue migration (0034).',
+    '    // hydrateGroceryCartLine falls back to the row\'s net_content, which is why',
+    '    // the cart still showed the size.',
+    '    dispatch({ type: \'ADD\', catalogue: GROCERY_CATALOGUE, id: String(product.id), qty, variant: product.net_content || null, variantId: null });',
+  ].join('\n'), [
+    '  // The grocery add path. Takes a product from the grocery data',
+    '  // (src/data/groceryHomepage.js); the line carries the id only, and the',
+    '  // pack label is display text. No stock gate yet — there is no grocery',
+    '  // stock to check until the catalogue migration lands, and the line is',
+    '  // blocked at checkout until then (groceryCartLine.js).',
+    '  const addGroceryToCart = useCallback((product, qty = 1) => {',
+    '    if (!product?.id) return false;',
+    '    dispatch({ type: \'ADD\', catalogue: GROCERY_CATALOGUE, id: String(product.id), qty, variant: product.pack || null, variantId: null });',
+  ].join('\n')),
+};
+
+const CART_CHANGES = [UNDO_GROCERY_LABEL];
+
+/** The file as it stood before the approved cart changes, LF-normalised; anything they did not touch comes back as given. */
+export function sansCartChanges(rel, text) {
+  const undos = CART_CHANGES.map((c) => c[rel]).filter(Boolean);
+  if (!undos.length) return text;
+  return undos.reduce((t, undo) => undo(t, rel), text.replace(/\r\n/g, '\n'));
+}
+
+/** Every approved change above undone, newest first: what the older pins compare. */
+export const sansStorefrontChanges = (rel, text) => sansStorefrontSettings(rel, sansFashionDepartments(rel, sansCartChanges(rel, text)));

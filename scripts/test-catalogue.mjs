@@ -202,11 +202,12 @@ await test('store.jsx, the cart line rules, the quote and payment plumbing, chec
     .replace(/export const DELIVERY_FEES = \{[^}]*\};/, 'DELIVERY_FEES')
     .replace(/const DELIVERY = \[[\s\S]*?\n\];/, 'DELIVERY')
     .split('\n').filter((l) => l.trim()).join('\n');
+  // Approved cart changes since are undone first (sansCartChanges); nothing else may differ.
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/cartQuote.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'api/_lib/supabaseAdmin.js', 'api/razorpay/create-order.js']) {
-    assert.equal(read(rel), atBaseline(rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
+    assert.equal(sansStorefrontChanges(rel, read(rel)), atBaseline(rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
   for (const rel of ['src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js']) {
-    assert.equal(sansDelivery(read(rel)), sansDelivery(atBaseline(rel)), `${rel}: nothing beyond the delivery withdrawal changed since ${BASELINE_SHA}`);
+    assert.equal(sansDelivery(sansStorefrontChanges(rel, read(rel))), sansDelivery(atBaseline(rel)), `${rel}: nothing beyond the delivery withdrawal changed since ${BASELINE_SHA}`);
   }
   // The server keeps reading the fashion_* names — now the 0034 views.
   const admin = read('api/_lib/supabaseAdmin.js');

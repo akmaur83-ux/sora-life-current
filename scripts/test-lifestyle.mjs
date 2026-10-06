@@ -25,7 +25,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule, buildLifestyleApp, loadLifestyleData, INITIAL, HOME_CATEGORIES, HOME_PRODUCTS, FASHION_CATEGORIES, FASHION_PRODUCTS } from './lifestyle-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES } from './storefront-settings-pin.mjs';
+import { CART_CHANGE_EDITS, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES, sansStorefrontChanges } from './storefront-settings-pin.mjs';
 
 // The tree as it stood before this work: the homepage store doorway release.
 const BASELINE_SHA = '9ca51d5';
@@ -338,7 +338,8 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page and 
   const catalogueAdmin = /^(src\/lib\/storeCatalogueAdmin(?:Api)?\.js|src\/admin\/pages\/StoreCatalogue\.jsx)$/;
   // The fashion departments' own files (test-fashion-departments.mjs).
   // .vercelignore is deploy configuration (f927077), not storefront code.
-  const bad = [...changed].filter((f) => !allowed.test(f) && !catalogueAdmin.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f));
+  // An approved cart change may edit a shared cart file only because the byte checks below undo it (sansCartChanges).
+  const bad = [...changed].filter((f) => !allowed.test(f) && !catalogueAdmin.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/fashionApi.js', 'src/lib/fashion.js', 'src/fashion/fashionArt.js']) {
   // src/fashion/FashionHome.jsx moved its campaign hero to the top of the page (e58317c);
@@ -354,7 +355,7 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page and 
         .replace(/const DELIVERY = \[[\s\S]*?\n\];/, 'DELIVERY')
         .split('\n').filter((l) => l.trim()).join('\n')
       : t);
-    assert.equal(sansDelivery(read(rel)), sansDelivery(atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n')), `${rel} is byte-identical to ${BASELINE_SHA}`);
+    assert.equal(sansDelivery(sansStorefrontChanges(rel, read(rel))), sansDelivery(atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n')), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
   assert.ok(!(readFileSync(resolve(ROOT, 'src/data/lifestyleHomepage.js'), 'utf8').includes("from('")), 'the lifestyle data layer issues no query of its own — it reads through the two stores');
 });

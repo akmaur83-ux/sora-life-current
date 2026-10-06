@@ -230,14 +230,17 @@ export function StoreProvider({ children }) {
     return true;
   }, [toast]);
 
-  // The grocery add path. Takes a product from the grocery data
-  // (src/data/groceryHomepage.js); the line carries the id only, and the
-  // pack label is display text. No stock gate yet — there is no grocery
-  // stock to check until the catalogue migration lands, and the line is
-  // blocked at checkout until then (groceryCartLine.js).
+  // The grocery add path. Takes a catalogue_products row (store 'grocery');
+  // the line carries the id only, and the size label is display text. No
+  // stock gate yet — the line is blocked at checkout regardless
+  // (groceryCartLine.js), so nothing here can be bought.
   const addGroceryToCart = useCallback((product, qty = 1) => {
     if (!product?.id) return false;
-    dispatch({ type: 'ADD', catalogue: GROCERY_CATALOGUE, id: String(product.id), qty, variant: product.pack || null, variantId: null });
+    // A catalogue row carries net_content, never `pack`, so every grocery line
+    // was stored with variant: null since the catalogue migration (0034).
+    // hydrateGroceryCartLine falls back to the row's net_content, which is why
+    // the cart still showed the size.
+    dispatch({ type: 'ADD', catalogue: GROCERY_CATALOGUE, id: String(product.id), qty, variant: product.net_content || null, variantId: null });
     toast('Added to cart', { kind: 'cart' });
     return true;
   }, [toast]);
