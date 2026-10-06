@@ -137,6 +137,19 @@ await test('the file is checked before anything: a key column, and columns it wi
   assert.equal(plan.changes.length, 0);
 });
 
+await test('the catalogue parser is the wellness parser, line for line in behaviour (it is copied to keep the admin chunk separate)', async () => {
+  const s = await setup('fashion');
+  const { ROOT } = await import('./catalogue-admin-harness.mjs');
+  const { pathToFileURL } = await import('node:url');
+  const { resolve } = await import('node:path');
+  const wellness = await import(pathToFileURL(resolve(ROOT, 'src/lib/productContentCsv.js')).href);
+  const corpus = [
+    '', '﻿slug,name\na,b\n', 'a,b\r\nc,d\r\n', 'a,"b,c",d\n', 'a,"say ""hi""",c', '"multi\nline",x\n', ',,\n\n,x,\n', 'a,b', '"unterminated,x\ny',
+    'slug,description\nlinen,"40 × 40 cm, ₹1,299"\n', ' spaced , cells \n',
+  ];
+  for (const text of corpus) assert.deepEqual(s.csv.parseCsv(text), wellness.parseCsv(text), JSON.stringify(text));
+});
+
 console.log('\n— Applying —');
 
 await test('apply writes each row through the editor\'s save; a row changed since planning fails alone, the others land', async () => {

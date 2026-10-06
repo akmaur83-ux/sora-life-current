@@ -294,8 +294,7 @@ export async function loadCatalogueAdmin({ supabase, uploadImage = null, deps = 
   const ruleDeps = { buildTree: fashion.buildTree, validatePlacement: fashion.validatePlacement, safeVisualUrl: appearance.safeVisualUrl, ...deps };
   const rules = loadModule('src/lib/storeCatalogueAdmin.js', ruleDeps);
   const api = loadModule('src/lib/storeCatalogueAdminApi.js', { supabase, uploadImage: uploadImage || adminApi.uploadImage, compressToWebp, safeVisualUrl: appearance.safeVisualUrl, ...rules, ...deps });
-  const contentCsv = await importSrc('src/lib/productContentCsv.js');
-  const csv = has('src/lib/storeCatalogueCsv.js') ? loadModule('src/lib/storeCatalogueCsv.js', { parseCsv: contentCsv.parseCsv, ...rules }) : {};
+  const csv = has('src/lib/storeCatalogueCsv.js') ? loadModule('src/lib/storeCatalogueCsv.js', { ...rules }) : {};
   return { rules, api, csv, fashion, appearance, format, adminApi, image };
 }
 

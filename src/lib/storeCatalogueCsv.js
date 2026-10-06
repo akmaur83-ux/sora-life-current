@@ -28,7 +28,6 @@
 // Two files: products (one row per product) and variants (one row per size ×
 // colour, matched on the product's slug, the size and the colour).
 // ============================================================
-import { parseCsv } from './productContentCsv.js';
 import {
   catalogueProductPayload, catalogueVariantPayload, categoryOptions, CATALOGUE_STORES,
   PRODUCT_FIELD_RULES, VARIANT_FIELD_RULES,
@@ -46,6 +45,36 @@ export const FIELD_LABELS = {
   sku: 'SKU', net_content: 'Pack / dimensions', hsn_code: 'HSN code', gst_rate: 'GST rate', stock: 'Stock', is_new: 'New arrival',
   is_bestseller: 'Bestseller', sort_order: 'Display order', colour_hex: 'Colour hex', price_override: 'Price override', is_active: 'Active',
 };
+
+// ---------- parse ----------
+/**
+ * RFC 4180-ish: quoted fields, doubled quotes, newlines inside quotes, a
+ * spreadsheet's byte-order mark. The same parser as productContentCsv.js —
+ * copied, not imported, so this admin chunk does not pull the wellness
+ * importer into a shared chunk and reshuffle the storefront bundle's exports.
+ * test-store-catalogue-csv.mjs pins that the two agree.
+ */
+export function parseCsv(text) {
+  const src = String(text || '').replace(/^﻿/, '');
+  const rows = [];
+  let row = [], cur = '', quoted = false;
+  for (let i = 0; i < src.length; i += 1) {
+    const c = src[i];
+    if (quoted) {
+      if (c === '"') {
+        if (src[i + 1] === '"') { cur += '"'; i += 1; } else quoted = false;
+      } else cur += c;
+      continue;
+    }
+    if (c === '"') { quoted = true; continue; }
+    if (c === ',') { row.push(cur); cur = ''; continue; }
+    if (c === '\r') continue;
+    if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; continue; }
+    cur += c;
+  }
+  if (cur.length || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter((r) => r.some((v) => String(v).trim() !== ''));
+}
 
 // ---------- export ----------
 const cell = (v) => {
