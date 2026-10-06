@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { money } from '../../lib/format.js';
 import { CATALOGUE_STORES, catalogueSlug, categoryOptions, catalogueProductHref, catalogueFailureView, versionAfterOwnWrite, gstNote, GROCERY_NOT_SOLD, GROCERY_VARIANTS_UNREAD } from '../../lib/storeCatalogueAdmin.js';
-import { listStoreCategories, listStoreProducts, getStoreProduct, saveStoreProduct, saveStoreCategory, saveStoreVariant, uploadStoreImage, saveStoreMedia, removeStoreMedia, addStoreImages, reorderStoreMedia, setStoreMediaPrimary, saveStoreMediaAlt } from '../../lib/storeCatalogueAdminApi.js';
+import { listStoreCategories, listStoreProducts, getStoreProduct, saveStoreProduct, saveStoreCategory, saveStoreVariant, uploadStoreImage, saveStoreMedia, removeStoreMedia, addStoreImages, reorderStoreMedia, setStoreMediaPrimary, saveStoreMediaAlt, applyCatalogueImport } from '../../lib/storeCatalogueAdminApi.js';
+import { planProductImport, planVariantImport, productsToCsv, variantsToCsv, describeDiff } from '../../lib/storeCatalogueCsv.js';
 
 const EMPTY_PRODUCT = { name: '', slug: '', brand: '', description: '', category_id: '', mrp: '', sale_price: '', sku: '', net_content: '', hsn_code: '', gst_rate: '', stock: 0, sort_order: 0, is_active: false, is_new: false, is_bestseller: false };
 const EMPTY_CATEGORY = { name: '', slug: '', parent_id: '', tagline: '', image_url: '', sort_order: 0, is_active: true };
@@ -96,16 +97,92 @@ function CategoryEditor({ store, categories, initial, onSaved, onCancel }) {
   </form>;
 }
 
+function downloadText(name, text) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// CSV bulk import — the wellness pattern: export, edit, choose the file, read
+// the plan, apply. Nothing is written until Apply; storeCatalogueCsv.js plans,
+// applyCatalogueImport writes each row through the editor's own save.
+function CatalogueImport({ store, products, categories, onApplied }) {
+  const [kind, setKind] = useState('products');
+  const [overwrite, setOverwrite] = useState(false), [create, setCreate] = useState(false);
+  const [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(false), [progress, setProgress] = useState(''), [message, setMessage] = useState(''), [error, setError] = useState(''), [failures, setFailures] = useState([]);
+  const plan = useMemo(() => {
+    if (!file || file.kind !== kind) return null;
+    return kind === 'products'
+      ? planProductImport(file.text, { store, products, categories, overwrite, create })
+      : planVariantImport(file.text, { store, products, overwrite, create });
+  }, [file, kind, store, products, categories, overwrite, create]);
+  const noun = kind === 'products' ? 'products' : 'variants';
+  const creates = plan?.changes?.filter((c) => c.kind === 'create').length || 0;
+  const updates = (plan?.changes?.length || 0) - creates;
+  async function choose(e) {
+    const chosen = e.target.files?.[0]; e.target.value = '';
+    if (!chosen) return;
+    setMessage(''); setError(''); setFailures([]);
+    try { setFile({ name: chosen.name, kind, text: await chosen.text() }); }
+    catch { setError(`“${chosen.name}” could not be read.`); }
+  }
+  async function apply() {
+    if (!plan?.changes?.length || busy) return;
+    if (!window.confirm(`Apply ${plan.changes.length} change${plan.changes.length === 1 ? '' : 's'} to ${CATALOGUE_STORES[store]} ${noun}?\n\n`
+      + `${updates} to update, ${creates} to create${kind === 'products' && creates ? ' (as drafts)' : ''}.\n`
+      + `${overwrite ? 'EXISTING VALUES WILL BE OVERWRITTEN.' : 'Fill-only: existing values are kept.'}`)) return;
+    setBusy(true); setMessage(''); setError(''); setFailures([]);
+    try {
+      const { done, failed } = await applyCatalogueImport(store, plan, (n, total) => setProgress(`${n} of ${total}`));
+      const created = done.filter((c) => c.kind === 'create').length;
+      setMessage(`${done.length - created} ${noun} updated, ${created} created${kind === 'products' && created ? ' as drafts' : ''}.${failed.length ? ` ${failed.length} not applied — see below.` : ''}`);
+      setFailures(failed);
+      setFile(null);
+      onApplied();
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); setProgress(''); }
+  }
+  return <section className="surface sc-panel sc-import">
+    <h2>Bulk import (CSV)</h2>
+    <div className="adm-chipbar" aria-label="What to import">
+      {[['products', 'Products'], ['variants', 'Sizes & colours (variants)']].map(([id, label]) => <button key={id} type="button" className={`adm-chip${kind === id ? ' active' : ''}`} aria-pressed={kind === id} disabled={busy} onClick={() => { setKind(id); setFile(null); setMessage(''); setFailures([]); }}>{label}</button>)}
+    </div>
+    <ol className="sc-steps">
+      <li><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => downloadText(`sora-${store}-${noun}-${new Date().toISOString().slice(0, 10)}.csv`, kind === 'products' ? productsToCsv(products, categories) : variantsToCsv(products))}>Export current {noun} (CSV)</button></li>
+      <li>Edit it in a spreadsheet. <strong>A blank cell leaves that field alone</strong> — it never clears it.{kind === 'products' ? ' Category is the path the export shows, e.g. clothing/shirts.' : ' Rows are matched on product_slug, size and colour.'}</li>
+      <li><label className="sc-file"><span>Choose the edited file</span><input type="file" accept=".csv,text/csv" disabled={busy} onChange={choose} /></label> — you will see exactly what would change. Nothing is saved until you apply it.</li>
+    </ol>
+    <div className="sc-options">
+      <label className="adm-checkrow"><input type="checkbox" checked={overwrite} disabled={busy} onChange={(e) => setOverwrite(e.target.checked)} /><span><strong>Overwrite existing values.</strong> Off (fill-only): a cell only fills an empty field. Prices, stock and flags always have a value, so changing them needs this.</span></label>
+      <label className="adm-checkrow"><input type="checkbox" checked={create} disabled={busy} onChange={(e) => setCreate(e.target.checked)} /><span><strong>Create new {noun}</strong> for rows that match nothing{kind === 'products' ? ' — as drafts; publish each from its editor once it has images' : ''}.</span></label>
+    </div>
+    <Messages error={error || (plan && !plan.ok ? plan.reason : '')} message={message} />
+    {!!failures.length && <div className="adm-banner err" role="alert"><strong>Not applied</strong><ul className="sc-list">{failures.map((f) => <li key={f.line}>Line {f.line}{f.key ? ` (${f.key})` : ''}: {f.reason}</li>)}</ul></div>}
+    {plan?.ok && <div className="sc-plan">
+      <p className="sc-plan__summary"><strong>{file.name}</strong> — {updates} to update · {creates} to create · {plan.kept.length} kept by fill-only · {plan.skipped.length} skipped</p>
+      {!!plan.ignored.length && <p className="hint">Columns not imported: {plan.ignored.join(', ')}.</p>}
+      {!!plan.changes.length && <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Line</th><th>{kind === 'products' ? 'Product' : 'Variant'}</th><th>What changes</th></tr></thead><tbody>
+        {plan.changes.map((c) => <tr key={c.line}><td>{c.line}</td><td>{c.kind === 'create' && <span className="badge sc-new">New</span>} <strong>{kind === 'products' ? c.name : c.label}</strong>{kind === 'products' && <span className="hint"> {c.slug}</span>}</td><td><ul className="sc-diffs">{c.diffs.map((d) => <li key={d.field} className={d.skipped ? 'is-kept' : ''}>{describeDiff(d, categories)}{d.skipped ? ' — kept (fill-only)' : ''}</li>)}</ul></td></tr>)}
+      </tbody></table></div>}
+      {!!plan.kept.length && <details className="sc-kept"><summary>{plan.kept.length} row{plan.kept.length === 1 ? '' : 's'} where every change was kept by fill-only</summary><ul className="sc-list">{plan.kept.map((c) => <li key={c.line}>Line {c.line} ({c.slug || c.label}): {c.diffs.map((d) => describeDiff(d, categories)).join('; ')}</li>)}</ul></details>}
+      {!!plan.skipped.length && <div className="adm-banner err"><strong>{plan.skipped.length} row{plan.skipped.length === 1 ? '' : 's'} skipped — nothing from {plan.skipped.length === 1 ? 'it' : 'them'} will be written</strong><ul className="sc-list">{plan.skipped.map((s) => <li key={s.line}>Line {s.line}{s.key ? ` (${s.key})` : ''}: {s.reason}</li>)}</ul></div>}
+      <div className="sc-actions"><button type="button" className="btn" disabled={busy || !plan.changes.length} onClick={apply}>{busy ? `Applying… ${progress}` : `Apply ${plan.changes.length} change${plan.changes.length === 1 ? '' : 's'}`}</button><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => setFile(null)}>Discard plan</button></div>
+    </div>}
+  </section>;
+}
+
 function CatalogueList({ store }) {
   const [params, setParams] = useSearchParams();
   const [categories, setCategories] = useState([]), [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true), [error, setError] = useState(''), [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(true), [loaded, setLoaded] = useState(false), [error, setError] = useState(''), [editing, setEditing] = useState(null);
   const [revision, setRevision] = useState(0);
-  const tab = params.get('tab') === 'categories' ? 'categories' : 'products';
+  const tab = ['categories', 'import'].includes(params.get('tab')) ? params.get('tab') : 'products';
   const category = params.get('category') || '', search = params.get('q') || '';
   useEffect(() => {
     let current = true; setLoading(true); setError('');
-    Promise.all([listStoreCategories(store), listStoreProducts(store)]).then(([cats, rows]) => { if (current) { setCategories(cats); setProducts(rows); } })
+    Promise.all([listStoreCategories(store), listStoreProducts(store)]).then(([cats, rows]) => { if (current) { setCategories(cats); setProducts(rows); setLoaded(true); } })
       .catch((err) => { if (current) setError(err.message); }).finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [store, revision]);
@@ -116,9 +193,11 @@ function CatalogueList({ store }) {
     <div className="adm-chipbar" aria-label="Catalogue section">
       <button className={`adm-chip${tab === 'products' ? ' active' : ''}`} onClick={() => update({ tab: '' })}>Products</button>
       <button className={`adm-chip${tab === 'categories' ? ' active' : ''}`} onClick={() => update({ tab: 'categories' })}>Categories &amp; subcategories</button>
+      <button className={`adm-chip${tab === 'import' ? ' active' : ''}`} onClick={() => update({ tab: 'import' })}>Bulk import (CSV)</button>
     </div>
     <Messages error={error} />
-    {loading ? <p role="status">Loading catalogue…</p> : error ? <button className="btn btn-outline" onClick={() => setRevision((n) => n + 1)}>Retry loading</button> : tab === 'products' ? <>
+    {/* Only the first load replaces the page: a reload after an import keeps its result on screen. */}
+    {loading && !loaded ? <p role="status">Loading catalogue…</p> : error && !loaded ? <button className="btn btn-outline" onClick={() => setRevision((n) => n + 1)}>Retry loading</button> : tab === 'import' ? <CatalogueImport store={store} products={products} categories={categories} onApplied={() => setRevision((n) => n + 1)} /> : tab === 'products' ? <>
       <div className="sc-toolbar">
         <label className="sc-field"><span className="label">Search products</span><input className="input" value={search} onChange={(e) => update({ q: e.target.value })} placeholder="Name, brand or SKU" /></label>
         <label className="sc-field"><span className="label">Category / subcategory</span><select className="select" value={category} onChange={(e) => update({ category: e.target.value })}><option value="">All categories</option>{categoryOptions(categories).map((row) => <option key={row.id} value={row.id}>{row.label}</option>)}</select></label>

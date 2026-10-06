@@ -294,7 +294,9 @@ export async function loadCatalogueAdmin({ supabase, uploadImage = null, deps = 
   const ruleDeps = { buildTree: fashion.buildTree, validatePlacement: fashion.validatePlacement, safeVisualUrl: appearance.safeVisualUrl, ...deps };
   const rules = loadModule('src/lib/storeCatalogueAdmin.js', ruleDeps);
   const api = loadModule('src/lib/storeCatalogueAdminApi.js', { supabase, uploadImage: uploadImage || adminApi.uploadImage, compressToWebp, safeVisualUrl: appearance.safeVisualUrl, ...rules, ...deps });
-  return { rules, api, fashion, appearance, format, adminApi, image };
+  const contentCsv = await importSrc('src/lib/productContentCsv.js');
+  const csv = has('src/lib/storeCatalogueCsv.js') ? loadModule('src/lib/storeCatalogueCsv.js', { parseCsv: contentCsv.parseCsv, ...rules }) : {};
+  return { rules, api, csv, fashion, appearance, format, adminApi, image };
 }
 
 // ---- A fake image codec -------------------------------------------------------------
@@ -318,11 +320,11 @@ export async function fakeEncode(img, { width, height, quality }) {
 }
 
 /** The page module with its router hooks, API and rules injected. */
-export function loadCataloguePage({ rules, api, format, router, deps = {} }) {
+export function loadCataloguePage({ rules, api, csv = {}, format, router, deps = {} }) {
   const Link = ({ to, children, ...props }) => h('a', { ...props, href: to }, children);
   return loadModule('src/admin/pages/StoreCatalogue.jsx', {
     Link, money: format.money, useNavigate: () => router.navigate, useParams: () => router.params, useSearchParams: () => [router.search, router.setSearch],
-    ...rules, ...api, ...deps,
+    ...rules, ...api, ...csv, ...deps,
   });
 }
 

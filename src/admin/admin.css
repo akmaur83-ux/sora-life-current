@@ -745,6 +745,16 @@
 .sc-queue__item { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: 6px; background: var(--ivory, #FBF8F1); }
 .sc-queue__item.is-added { color: var(--forest-700, #2F4A35); }
 .sc-queue__item.is-failed { color: var(--color-sale, #A94F4F); }
+/* CSV import: steps, options, the plan. */
+.sc-steps { margin: 12px 0; padding-left: 20px; display: grid; gap: 10px; font-size: 14px; }
+.sc-file { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.sc-options { display: grid; gap: 8px; margin: 8px 0 16px; font-size: 14px; }
+.sc-options .adm-checkrow { align-items: flex-start; }
+.sc-plan__summary { margin: 8px 0 12px; }
+.sc-diffs, .sc-list { margin: 0; padding-left: 18px; font-size: 13px; }
+.sc-diffs .is-kept { color: var(--color-text-muted); }
+.sc-kept { margin: 12px 0; font-size: 13px; }
+.sc-new { margin-right: 4px; }
 .adm-catalogue .adm-checkrow { gap: 8px; }
 /* A field the last save refused: its own message sits under it (.hint.err). */
 .sc-field--error .input, .sc-field--error .select, .sc-field--error .textarea { border-color: var(--color-sale, #A94F4F); box-shadow: 0 0 0 1px var(--color-sale, #A94F4F); }

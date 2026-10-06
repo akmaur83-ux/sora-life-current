@@ -237,3 +237,29 @@ export async function removeStoreMedia(store, productId, id) {
   // Detach only; never delete an original Storage object.
   await writeOne(supabase.from('catalogue_product_media').delete().eq('product_id', productId).eq('id', id), 'catalogue_product_media', { product_id: productId, id }, 'image');
 }
+
+// ---- CSV import: apply a plan ----------------------------------------------------
+/**
+ * Apply a plan from storeCatalogueCsv.js, row by row, through the editor's
+ * own save functions — the same validation, uniqueness checks and
+ * stale-write guard (each row carries the updated_at it was planned
+ * against). A row that fails is reported; the rest go on, as in the
+ * wellness content import.
+ */
+export async function applyCatalogueImport(store, plan, onProgress = () => {}) {
+  requireCatalogueStore(store);
+  const done = [], failed = [];
+  for (const [index, change] of (plan?.changes || []).entries()) {
+    try {
+      if (plan.kind === 'products') await saveStoreProduct(store, change.kind === 'create' ? null : change.id, change.input, change.expectedUpdatedAt);
+      else await saveStoreVariant(store, change.productId, change.kind === 'create' ? null : change.variantId, change.input, change.expectedUpdatedAt);
+      done.push(change);
+    } catch (error) {
+      const reason = error.isStaleWrite ? 'Changed since this file was planned — choose the file again to plan against the current values.'
+        : error.fieldErrors ? Object.values(error.fieldErrors).join(' ') : error.message;
+      failed.push({ line: change.line, key: change.slug || change.label, reason });
+    }
+    onProgress(index + 1, plan.changes.length);
+  }
+  return { done, failed };
+}

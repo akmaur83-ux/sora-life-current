@@ -88,6 +88,40 @@ function hsnCode(value) {
   return digits;
 }
 const gstRate = (value) => amount(value, 'GST rate must be a number from 0 to 100, or blank.', { optional: true, min: 0, max: 100 });
+const colourHex = (value) => {
+  const hex = text(value) || null;
+  if (hex && !/^#[0-9a-f]{6}$/i.test(hex)) throw new Error('Colour hex must look like #123ABC.');
+  return hex;
+};
+
+// One rule per field: how a value is read, and what is wrong with it. The
+// payload builders below use them, and so does the CSV planner — so a cell is
+// read exactly as the editor reads the same field.
+export const PRODUCT_FIELD_RULES = {
+  name: (v) => { const t = text(v); if (!t) throw new Error('Enter a product name.'); return t; },
+  slug: (v) => slug(v, ''),
+  brand: (v) => text(v),
+  description: (v) => text(v),
+  mrp: (v) => amount(v, 'Enter an MRP of at least ₹0.01.'),
+  sale_price: (v) => amount(v, 'Selling price must be at least ₹0.01, or blank to sell at MRP.', { optional: true }),
+  sku: (v) => sku(v),
+  net_content: (v) => text(v) || null,
+  hsn_code: (v) => hsnCode(v),
+  gst_rate: (v) => gstRate(v),
+  stock: (v) => wholeNumber(v ?? 0, 'Stock must be a whole number, 0 or more.'),
+  sort_order: (v) => displayOrder(v),
+  is_new: (v) => v === true,
+  is_bestseller: (v) => v === true,
+};
+export const VARIANT_FIELD_RULES = {
+  colour_hex: (v) => colourHex(v),
+  sku: (v) => sku(v),
+  stock: (v) => wholeNumber(v, 'Stock must be a whole number, 0 or more.'),
+  price_override: (v) => amount(v, 'Price override must be at least ₹0.01, or blank to use the product price.', { optional: true }),
+  is_active: (v) => v !== false,
+  sort_order: (v) => displayOrder(v),
+};
+const P = PRODUCT_FIELD_RULES, V = VARIANT_FIELD_RULES;
 
 export function categoryOptions(categories) {
   const tree = buildTree(categories);
@@ -102,16 +136,16 @@ export function catalogueProductPayload(input, categories) {
   if (!category) c.fail('category_id', 'Choose a category in this store.');
   else if (input.is_active && buildTree(categories).ancestors(category.id).some((row) => !row.is_active)) c.fail('category_id', 'Activate this category and its parent categories before publishing.');
   const productSlug = name || text(input.slug) ? c.take('slug', () => slug(input.slug, name)) : undefined;
-  const mrp = c.take('mrp', () => amount(input.mrp, 'Enter an MRP of at least ₹0.01.'));
-  const sale_price = c.take('sale_price', () => amount(input.sale_price, 'Selling price must be at least ₹0.01, or blank to sell at MRP.', { optional: true }));
+  const mrp = c.take('mrp', () => P.mrp(input.mrp));
+  const sale_price = c.take('sale_price', () => P.sale_price(input.sale_price));
   if (sale_price != null && mrp != null && sale_price > mrp) c.fail('sale_price', `Selling price cannot be more than the MRP (₹${mrp}).`);
   const row = {
-    name, slug: productSlug, category_id: category?.id, brand: text(input.brand), description: text(input.description),
-    mrp, sale_price, sku: c.take('sku', () => sku(input.sku)), net_content: text(input.net_content) || null,
-    hsn_code: c.take('hsn_code', () => hsnCode(input.hsn_code)), gst_rate: c.take('gst_rate', () => gstRate(input.gst_rate)),
-    stock: c.take('stock', () => wholeNumber(input.stock ?? 0, 'Stock must be a whole number, 0 or more.')),
-    sort_order: c.take('sort_order', () => displayOrder(input.sort_order)),
-    is_active: input.is_active === true, is_new: input.is_new === true, is_bestseller: input.is_bestseller === true,
+    name, slug: productSlug, category_id: category?.id, brand: P.brand(input.brand), description: P.description(input.description),
+    mrp, sale_price, sku: c.take('sku', () => P.sku(input.sku)), net_content: P.net_content(input.net_content),
+    hsn_code: c.take('hsn_code', () => P.hsn_code(input.hsn_code)), gst_rate: c.take('gst_rate', () => P.gst_rate(input.gst_rate)),
+    stock: c.take('stock', () => P.stock(input.stock)),
+    sort_order: c.take('sort_order', () => P.sort_order(input.sort_order)),
+    is_active: input.is_active === true, is_new: P.is_new(input.is_new), is_bestseller: P.is_bestseller(input.is_bestseller),
   };
   c.done();
   return row;
@@ -141,17 +175,16 @@ export function catalogueVariantPayload(input, store, siblings = []) {
   const size = text(input.size), colour = text(input.colour);
   if (!size) c.fail('size', store === 'fashion' ? 'Enter a size. Use “One size” for a single option.' : 'Enter a size or option.');
   if (store === 'fashion' && !colour) c.fail('colour', 'Enter a colour. Use “Default” for a single option.');
-  const colour_hex = text(input.colour_hex) || null;
-  if (colour_hex && !/^#[0-9a-f]{6}$/i.test(colour_hex)) c.fail('colour_hex', 'Colour hex must look like #123ABC.');
+  const colour_hex = c.take('colour_hex', () => V.colour_hex(input.colour_hex));
   // Same rule as the unique constraint on (product, size, colour).
   if (size && siblings.some((row) => row.id !== input.id && text(row.size) === size && text(row.colour) === colour)) {
     c.fail('size', `This product already has a ${colour ? `${size} / ${colour}` : size} variant.`);
   }
-  const row = { size, colour, colour_hex, sku: c.take('sku', () => sku(input.sku)),
-    stock: c.take('stock', () => wholeNumber(input.stock, 'Stock must be a whole number, 0 or more.')),
-    price_override: c.take('price_override', () => amount(input.price_override, 'Price override must be at least ₹0.01, or blank to use the product price.', { optional: true })),
-    is_active: input.is_active !== false,
-    sort_order: c.take('sort_order', () => displayOrder(input.sort_order)) };
+  const row = { size, colour, colour_hex, sku: c.take('sku', () => V.sku(input.sku)),
+    stock: c.take('stock', () => V.stock(input.stock)),
+    price_override: c.take('price_override', () => V.price_override(input.price_override)),
+    is_active: V.is_active(input.is_active),
+    sort_order: c.take('sort_order', () => V.sort_order(input.sort_order)) };
   c.done();
   return row;
 }
