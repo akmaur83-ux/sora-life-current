@@ -733,6 +733,10 @@
 .sc-image img { display: block; width: 100%; height: 140px; object-fit: contain; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; }
 .sc-image .sc-actions { gap: 6px; margin: 8px 0; }
 .adm-catalogue .adm-checkrow { gap: 8px; }
+/* A field the last save refused: its own message sits under it (.hint.err). */
+.sc-field--error .input, .sc-field--error .select, .sc-field--error .textarea { border-color: var(--color-sale, #A94F4F); box-shadow: 0 0 0 1px var(--color-sale, #A94F4F); }
+.sc-field .hint.err { margin: 0; font-weight: 600; }
+.sc-reload { margin-left: 10px; }
 @media (max-width: 640px) {
   .sc-panel { padding: 16px; }
   .sc-panel .adm-grid2 { grid-template-columns: minmax(0, 1fr); }
