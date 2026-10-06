@@ -6,6 +6,10 @@ import {
   ensureFashionProducts, fashionKeysToPrune, getFashionCartVersion, subscribeFashionCart,
 } from './fashionCartLine.js';
 import { GROCERY_CATALOGUE, groceryLineKey, isGroceryLine, hydrateGroceryCartLine, groceryProductFor, groceryKeysToPrune } from './groceryCartLine.js';
+import {
+  HOMELIVING_CATALOGUE, homelivingLineKey, isHomeLivingLine, hydrateHomeLivingCartLine, homelivingEntryFor, isHomeLivingIdResolved,
+  homelivingKeysToPrune, ensureHomeLivingProducts,
+} from './homelivingCartLine.js';
 import { useCustomerAuth } from './customerAuth.jsx';
 import { listWishlist, addWishlistItem, removeWishlistItem, mergeWishlist } from './wishlistData.js';
 import {
@@ -88,18 +92,22 @@ function reducer(state, action) {
       // priced as, or be pruned against a wellness product. A wellness line
       // is shaped exactly as it always was — no catalogue field at all.
       // A GROCERY line (catalogue: 'grocery') gets the same treatment in its
-      // own namespace (groceryCartLine.js).
+      // own namespace (groceryCartLine.js), and so does a HOME & LIVING line
+      // (catalogue: 'homeliving', homelivingCartLine.js).
       const fashion = catalogue === FASHION_CATALOGUE;
       const grocery = catalogue === GROCERY_CATALOGUE;
+      const homeliving = catalogue === HOMELIVING_CATALOGUE;
       const key = fashion
         ? fashionLineKey(id, variantId)
         : grocery ? groceryLineKey(id, variantId)
+        : homeliving ? homelivingLineKey(id, variantId)
         : id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
       const existing = state.cart.find((l) => l.key === key);
       const cart = existing
         ? state.cart.map((l) => (l.key === key ? { ...l, qty: l.qty + qty } : l))
         : [...state.cart, fashion ? { key, catalogue: FASHION_CATALOGUE, id, variant, variantId, qty }
           : grocery ? { key, catalogue: GROCERY_CATALOGUE, id, variant, variantId, qty }
+          : homeliving ? { key, catalogue: HOMELIVING_CATALOGUE, id, variant, variantId, qty }
           : { key, id, variant, variantId, qty }];
       return { ...state, cart };
     }
@@ -245,6 +253,28 @@ export function StoreProvider({ children }) {
     return true;
   }, [toast]);
 
+  // The Home & Living add path. A product with size × colour variants must
+  // name one (stock and any price override are per combination); a product
+  // without variants is added on its own row stock. The stock gate here is a
+  // courtesy — the server re-checks it at quote and at order creation.
+  const addHomeLivingToCart = useCallback((view, variant = null, qty = 1) => {
+    if (!view?.id) return false;
+    const hasVariants = Array.isArray(view.variants) && view.variants.length > 0;
+    if (hasVariants && !variant?.id) {
+      toast('Please choose a size first.', { kind: 'cart' });
+      return false;
+    }
+    const stock = hasVariants ? Number(variant.stock) : Number(view.stock);
+    if (!(stock > 0)) {
+      toast(hasVariants ? 'That option is out of stock.' : 'This item is out of stock.', { kind: 'cart' });
+      return false;
+    }
+    const label = hasVariants ? [variant.size, variant.colour].filter(Boolean).join(' · ') || null : (view.net_content || null);
+    dispatch({ type: 'ADD', catalogue: HOMELIVING_CATALOGUE, id: String(view.id), qty, variant: label, variantId: hasVariants ? String(variant.id) : null });
+    toast('Added to cart', { kind: 'cart' });
+    return true;
+  }, [toast]);
+
   // What the UI renders. Recomputed from the two lists, never stored.
   const wishlist = useMemo(() => visibleWishlist(state), [state.guestWish, state.accountWish, state.syncedUserId]);
 
@@ -336,12 +366,14 @@ export function StoreProvider({ children }) {
   // the same arrangement wishlistState.js uses, and for the same reason: those
   // rules are executed directly in tests rather than through a provider.
   // A fashion line is priced from the fashion tables (fashionCartLine.js),
-  // a grocery line from the grocery data (groceryCartLine.js); a wellness
+  // a grocery line from the grocery data (groceryCartLine.js), a Home &
+  // Living line from its catalogue rows (homelivingCartLine.js); a wellness
   // line exactly as before. The wellness catalogue is never consulted for
-  // a fashion or grocery id, and vice versa.
+  // another store's id, and vice versa.
   const hydrate = (l) => (isFashionLine(l)
     ? hydrateFashionCartLine(l, fashionRowFor(l.id), { resolved: isFashionIdResolved(l.id) })
     : isGroceryLine(l) ? hydrateGroceryCartLine(l, groceryProductFor(l.id))
+    : isHomeLivingLine(l) ? hydrateHomeLivingCartLine(l, homelivingEntryFor(l.id), { resolved: isHomeLivingIdResolved(l.id) })
     : hydrateCartLine(l, productById[l.id]));
 
   // Variants arrive from Supabase AFTER first render. Memoising on state.cart
@@ -355,6 +387,11 @@ export function StoreProvider({ children }) {
   useEffect(() => {
     const ids = [...state.cart, ...state.saved].filter(isFashionLine).map((l) => l.id);
     if (ids.length) ensureFashionProducts(ids);
+  }, [state.cart, state.saved]);
+  // The Home & Living rows live in the same cache, so the same version re-prices them.
+  useEffect(() => {
+    const ids = [...state.cart, ...state.saved].filter(isHomeLivingLine).map((l) => l.id);
+    if (ids.length) ensureHomeLivingProducts(ids);
   }, [state.cart, state.saved]);
   const cartDetailed = useMemo(() => state.cart.map(hydrate).filter(Boolean), [state.cart, catalogVersion, fashionVersion]);
   const savedDetailed = useMemo(() => state.saved.map(hydrate).filter(Boolean), [state.saved, catalogVersion, fashionVersion]);
@@ -388,10 +425,13 @@ export function StoreProvider({ children }) {
   //      pruned when a fetch for its id has answered and the product is gone,
   //      and never because the wellness catalogue does not know the id.
   //   4. A GROCERY line likewise: judged against the grocery data only.
+  //   5. A HOME & LIVING line likewise, once its rows have answered — keyed on
+  //      the cache version, so it is pruned when they land, not on the next
+  //      cart change.
   useEffect(() => {
     if (!isCatalogHydrated()) return;
     const keys = [...state.cart, ...state.saved]
-      .filter((l) => !isFashionLine(l) && !isGroceryLine(l) && !productById[l.id])
+      .filter((l) => !isFashionLine(l) && !isGroceryLine(l) && !isHomeLivingLine(l) && !productById[l.id])
       .map((l) => l.key);
     if (keys.length) dispatch({ type: 'PRUNE_MISSING', keys });
   }, [state.cart, state.saved, catalogVersion]);
@@ -403,6 +443,10 @@ export function StoreProvider({ children }) {
     const keys = groceryKeysToPrune([...state.cart, ...state.saved]);
     if (keys.length) dispatch({ type: 'PRUNE_MISSING', keys });
   }, [state.cart, state.saved]);
+  useEffect(() => {
+    const keys = homelivingKeysToPrune([...state.cart, ...state.saved]);
+    if (keys.length) dispatch({ type: 'PRUNE_MISSING', keys });
+  }, [state.cart, state.saved, fashionVersion]);
   // Counted from the lines the cart can actually SHOW, so the badge can never
   // advertise an item the page does not list. state.cart may still hold a line
   // whose product has vanished; reconcileCart() below clears those for good.
@@ -426,6 +470,7 @@ export function StoreProvider({ children }) {
     addToCart,
     addFashionToCart,
     addGroceryToCart,
+    addHomeLivingToCart,
     toggleWish,
     // Normalised on both sides: a caller passing the numeric 5 still matches
     // a stored '5'.

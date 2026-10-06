@@ -98,29 +98,32 @@ export function loadHomeLivingData({ supabase = noSupabase, initial = INITIAL } 
 }
 
 // ---- the app, wired like App.jsx --------------------------------------------
-export async function buildHomeLivingApp({ cartCount = 0, initial = INITIAL } = {}) {
+export async function buildHomeLivingApp({ cartCount = 0, initial = INITIAL, onAdd = null } = {}) {
   const data = loadHomeLivingData({ initial });
   const { Link, Outlet, useLocation, Routes, Route } = ReactRouter;
   const Icon = loadModule('src/components/Icon.jsx', {}).default;
   const Footer = () => h('footer', { className: 'ftr', 'data-stub': 'footer' }, h('div', { className: 'container', style: { paddingBlock: 40 } }, h('strong', { style: { color: '#FBF8F1' } }, 'SORA LIFE'), ' · footer (shared, stub)'));
   const Toasts = () => null;
-  const useStore = () => ({ cartCount });
+  // The store as the card and the product page see it: the badge count, and an
+  // add path that records what it was handed (tests read `added`).
+  const added = [];
+  const useStore = () => ({ cartCount, addHomeLivingToCart: (view, variant = null, qty = 1) => { added.push({ id: view.id, variantId: variant?.id ?? null, qty }); if (onAdd) onAdd(view, variant, qty); return true; } });
   const branding = { siteName: 'SORA LIFE', tagline: 'HEALTH & WELLNESS' };
   const money = (n) => `₹${Number(n).toLocaleString('en-IN')}`;
   const { useParams, useSearchParams } = ReactRouter;
-  const card = loadModule('src/homeliving/HomeLivingProductCard.jsx', { Link, Icon, money });
+  const card = loadModule('src/homeliving/HomeLivingProductCard.jsx', { Link, Icon, money, useStore });
   const layout = loadModule('src/homeliving/HomeLivingLayout.jsx', { Link, Outlet, useLocation, Icon, Footer, Toasts, useStore, branding, ...data });
   // The homepage mounts the shell's nav strip, delivery row and search bar under its hero.
   const home = loadModule('src/homeliving/HomeLivingHome.jsx', { Link, Icon, ...data, HomeLivingProductCard: card.default, BottomNav: layout.BottomNav, DeliveryRow: layout.DeliveryRow, SearchBar: layout.SearchBar });
   const rules = has('src/lib/homelivingListing.js') ? loadModule('src/lib/homelivingListing.js', {}) : {};
   const category = has('src/homeliving/HomeLivingCategory.jsx') ? loadModule('src/homeliving/HomeLivingCategory.jsx', { Link, useParams, useSearchParams, Icon, useHomeLivingCatalogue: data.useHomeLivingCatalogue, ...rules, HomeLivingProductCard: card.default }) : null;
   const pdpRules = has('src/lib/homelivingPdp.js') ? loadModule('src/lib/homelivingPdp.js', {}) : {};
-  const pdp = has('src/homeliving/HomeLivingProductPage.jsx') ? loadModule('src/homeliving/HomeLivingProductPage.jsx', { Link, useParams, useSearchParams, Icon, money, HOMELIVING_DELIVERY_WINDOW: data.HOMELIVING_DELIVERY_WINDOW, useHomeLivingCatalogue: data.useHomeLivingCatalogue, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, Breadcrumb: category?.Breadcrumb, HomeLivingProductCard: card.default }) : null;
+  const pdp = has('src/homeliving/HomeLivingProductPage.jsx') ? loadModule('src/homeliving/HomeLivingProductPage.jsx', { Link, useParams, useSearchParams, Icon, money, useStore, HOMELIVING_DELIVERY_WINDOW: data.HOMELIVING_DELIVERY_WINDOW, useHomeLivingCatalogue: data.useHomeLivingCatalogue, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, Breadcrumb: category?.Breadcrumb, HomeLivingProductCard: card.default }) : null;
   const App = ({ path }) => h(StaticRouter, { location: path },
     h(Routes, null,
       h(Route, { path: '/homeliving', element: h(layout.default) },
         h(Route, { index: true, element: h(home.default) }),
         category ? h(Route, { path: 'category/:slug', element: h(category.default) }) : null,
         pdp ? h(Route, { path: 'p/:slug', element: h(pdp.default) }) : null)));
-  return { App, data, rules, pdpRules, render: (path) => renderToStaticMarkup(h(App, { path })), modules: { card, layout, home, category, pdp } };
+  return { App, data, rules, pdpRules, added, render: (path) => renderToStaticMarkup(h(App, { path })), modules: { card, layout, home, category, pdp } };
 }

@@ -17,6 +17,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ROOT, read, h, buildFashionApp, loadModule, PRODUCTS, CATEGORIES } from './fashion-ssr.mjs';
+import { sansStorefrontChanges } from './storefront-settings-pin.mjs';
+// Approved cart changes since this phase (sansCartChanges) are undone before a source check: what remains is this phase's.
+const readPinned = (rel) => sansStorefrontChanges(rel, read(rel));
 
 let passed = 0, failed = 0, current = '(startup)';
 process.on('unhandledRejection', (e) => { console.error(`\n  FATAL during: ${current}\n  ${e?.stack || e}`); process.exitCode = 1; });
@@ -170,17 +173,17 @@ await test('the payload marks the catalogue and the two never merge or masquerad
 });
 
 await test('both endpoints fetch both catalogues through one path, and the fashion fetchers exist', () => {
-  const admin = read('api/_lib/supabaseAdmin.js');
+  const admin = readPinned('api/_lib/supabaseAdmin.js');
   for (const fn of ['fetchFashionProductsForCart', 'fetchFashionVariantsForCart', 'fetchCartRows']) assert.match(admin, new RegExp(`export async function ${fn}\\(`));
   assert.match(admin, /const select = 'id,name,slug,mrp,sale_price,is_active';[\s\S]*?fashion_products\?select=\$\{select\}&id=in\./);
   assert.match(admin, /const select = 'id,product_id,size,colour,colour_hex,sku,stock,price_override,is_active';[\s\S]*?fashion_variants\?select=\$\{select\}&id=in\./);
   assert.match(admin, /wellness\.length \? fetchProductsForCart\(wellness\.map\(\(i\) => i\.id\), cfg\) : Promise\.resolve\(\[\]\)/, 'a wellness id never reaches the fashion tables and a fashion id never reaches products');
-  const create = read('api/razorpay/create-order.js');
+  const create = readPinned('api/razorpay/create-order.js');
   assert.match(create, /const \{ products, variantRows, fashionProductRows, fashionVariantRows \} = await fetchCartRows\(parsed\.items, sb\);/);
   assert.match(create, /variantRows, fashionProductRows, fashionVariantRows, taxConfig: getTaxConfig\(\), buyerState,/, 'the coupon dry run sees fashion rows');
   assert.match(create, /variantRows,\n\s+fashionProductRows,\n\s+fashionVariantRows,\n\s+coupon,/, 'the charged total sees fashion rows');
   assert.doesNotMatch(create, /fetchProductsForCart|fetchVariantsForCart/, 'no second, wellness-only fetch left behind');
-  const quote = read('api/_lib/couponQuote.js');
+  const quote = readPinned('api/_lib/couponQuote.js');
   assert.match(quote, /await fetchCartRows\(parsed\.items, sb\)/);
   assert.match(quote, /fashionProductRows,\n\s+fashionVariantRows,\n\s+taxConfig/);
   // The rule that governs this run: nothing in the client computes a price.
@@ -249,7 +252,7 @@ await test('the cache resolves ids on demand, and only a confirmed-gone product 
 });
 
 await test('the store keeps wellness lines exactly as before and gives fashion lines their own namespace, hydration and reconciliation', () => {
-  const store = read('src/lib/store.jsx').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const store = readPinned('src/lib/store.jsx').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   assert.match(store, /const \{ id, qty = 1, variant = null, variantId = null, catalogue = null \} = action;/);
   assert.match(store, /: id \+ \(variantId \? '::' \+ variantId : variant \? '::' \+ variant : ''\);/, 'the wellness key is the old expression');
   // The grocery store (a later phase) sits between the two branches; the wellness line is still the bare shape.
@@ -271,7 +274,7 @@ await test('the browser sends ids and the catalogue — never a price — for bo
   const lines = [{ id: 'b183', qty: 2, variantId: null, variant: null }, { key: 'k', catalogue: 'fashion', id: SHIRT.id, qty: 1, variantId: M_NAVY, variant: 'M · Navy', unitPrice: 1099, lineTotal: 1099 }];
   assert.deepEqual(api.cartToPayload(lines), [{ id: 'b183', qty: 2, variantId: null, variant: null }, { id: SHIRT.id, qty: 1, variantId: M_NAVY, variant: 'M · Navy', catalogue: 'fashion' }]);
   assert.deepEqual(Object.keys(api.cartToPayload(lines)[0]), ['id', 'qty', 'variantId', 'variant'], 'a wellness item has exactly the keys it always had');
-  const pay = read('src/lib/payments.js');
+  const pay = readPinned('src/lib/payments.js');
   assert.match(pay, /variant: l\.variant \|\| null,\n\s+\.\.\.\(l\.catalogue === 'fashion' \? \{ catalogue: 'fashion' \} : \{\}\),/);
   assert.doesNotMatch(pay, /unitPrice|lineTotal|price:/, 'create-order is never sent a price');
 });

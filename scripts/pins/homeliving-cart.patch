@@ -1,0 +1,659 @@
+diff --git a/api/_lib/couponQuote.js b/api/_lib/couponQuote.js
+index 6281629..4729c66 100644
+--- a/api/_lib/couponQuote.js
++++ b/api/_lib/couponQuote.js
+@@ -36,20 +36,22 @@ export async function priceCart(rawItems, deliveryMethod, sb, opts = {}) {
+   const parsed = validateCartPayload(rawItems);
+   if (!parsed.ok) return { ok: false, error: parsed.error };
+ 
+-  // Both catalogues' rows in one go; a wellness-only cart fetches exactly
+-  // what it did before and the fashion lists come back empty.
+-  const { products, variantRows, fashionProductRows, fashionVariantRows } = await fetchCartRows(parsed.items, sb);
++  // Every catalogue's rows in one go; a wellness-only cart fetches exactly
++  // what it did before and the other stores' lists come back empty.
++  const { products, variantRows, fashionProductRows, fashionVariantRows, homeLivingProductRows, homeLivingVariantRows } = await fetchCartRows(parsed.items, sb);
+ 
+   const base = computeOrderTotal(parsed.items, products, deliveryMethod, {
+     variantRows,
+     fashionProductRows,
+     fashionVariantRows,
++    homeLivingProductRows,
++    homeLivingVariantRows,
+     taxConfig: getTaxConfig(),
+     buyerState: opts.buyerState ?? null,
+   });
+   if (!base.ok) return { ok: false, error: base.error };
+ 
+-  return { ok: true, items: parsed.items, products, variantRows, fashionProductRows, fashionVariantRows, base };
++  return { ok: true, items: parsed.items, products, variantRows, fashionProductRows, fashionVariantRows, homeLivingProductRows, homeLivingVariantRows, base };
+ }
+ 
+ /**
+@@ -156,6 +158,9 @@ export async function quoteCoupon(code, priced, deliveryMethod, buyer, sb, opts
+     // fashion item failed, while the same cart priced fine without one.
+     fashionProductRows: priced.fashionProductRows,
+     fashionVariantRows: priced.fashionVariantRows,
++    // The same for the Home & Living rows: a coupon re-prices them too.
++    homeLivingProductRows: priced.homeLivingProductRows,
++    homeLivingVariantRows: priced.homeLivingVariantRows,
+     coupon,
+     taxConfig: getTaxConfig(),
+     buyerState: opts.buyerState ?? null,
+diff --git a/api/_lib/pricing.js b/api/_lib/pricing.js
+index 25343a7..f90adcc 100644
+--- a/api/_lib/pricing.js
++++ b/api/_lib/pricing.js
+@@ -46,10 +46,10 @@ export function normalizeCartLines(items) {
+   for (const item of items) {
+     // Same product AND same variant is the same physical thing. A line with
+     // no variant is kept distinct from a variant line of the same product.
+-    // A fashion line lives in a different catalogue, so its key says so: a
+-    // fashion product and a wellness product can never merge, whatever
+-    // their ids look like.
+-    const key = `${item.catalogue === 'fashion' ? 'fashion:' : ''}${item.id}::${item.variantId ?? ''}`;
++    // A fashion or Home & Living line lives in a different catalogue, so its
++    // key says so: products of two stores can never merge, whatever their ids
++    // look like. A wellness line carries no catalogue, so its key is unchanged.
++    const key = `${item.catalogue ? `${item.catalogue}:` : ''}${item.id}::${item.variantId ?? ''}`;
+     const seen = merged.get(key);
+     if (seen) {
+       seen.qty += item.qty;
+@@ -99,9 +99,11 @@ export function validateCartPayload(rawItems) {
+       // alongside it is ignored entirely.
+       variantId: raw.variantId != null ? String(raw.variantId).slice(0, 64) : null,
+       variant: typeof raw.variant === 'string' ? raw.variant.slice(0, 120) : null,
+-      // Which catalogue the id belongs to. Only 'fashion' is a value; a
+-      // wellness line carries nothing, exactly as before this field existed.
+-      ...(raw.catalogue === 'fashion' ? { catalogue: 'fashion' } : {}),
++      // Which catalogue the id belongs to. A closed list — anything else is
++      // dropped, so an unknown store's line is looked up in the wellness
++      // tables, found missing, and refused. A wellness line carries nothing,
++      // exactly as before this field existed.
++      ...(raw.catalogue === 'fashion' || raw.catalogue === 'homeliving' ? { catalogue: raw.catalogue } : {}),
+     });
+   }
+   return normalizeCartLines(items);
+@@ -176,6 +178,34 @@ export function trustedFashionPrice(productRow, variantRow) {
+   return { price, mrp: Math.max(unitMrp, price), sku: variantRow.sku || null, label: [variantRow.size, variantRow.colour].filter(Boolean).join(' · ') || null };
+ }
+ 
++/**
++ * The trusted price of one Home & Living line: the variant's override when it
++ * carries one, else the product's sale price when it is set AND below MRP,
++ * else MRP. The `sale < mrp` test is what the storefront's priceOf() applies,
++ * so the figure charged is the figure the product page showed.
++ * (trustedFashionPrice deliberately differs: it takes any positive sale
++ * price.) Whole rupees. `variantRow` is null for a product without variants.
++ * Returns null when nothing usable is priced, so the caller refuses the line.
++ */
++export function trustedHomeLivingPrice(productRow, variantRow) {
++  if (!productRow) return null;
++  const num = (v) => (v == null ? null : (Number.isFinite(Number(v)) ? Number(v) : null));
++  const mrp = num(productRow.mrp);
++  const sale = num(productRow.sale_price);
++  const override = variantRow ? num(variantRow.price_override) : null;
++  const base = sale != null && sale > 0 && mrp != null && sale < mrp ? sale : mrp;
++  const price = override != null && override > 0 ? Math.round(override)
++    : base != null && base > 0 ? Math.round(base) : null;
++  if (price == null || price <= 0) return null;
++  const unitMrp = mrp != null && mrp > 0 ? Math.round(mrp) : price;
++  return {
++    price,
++    mrp: Math.max(unitMrp, price),
++    sku: (variantRow && variantRow.sku) || productRow.sku || null,
++    label: variantRow ? [variantRow.size, variantRow.colour].filter(Boolean).join(' · ') || null : null,
++  };
++}
++
+ /**
+  * Interpret a stock value from the database into { tracked, available }.
+  *
+@@ -270,6 +300,18 @@ export function computeOrderTotal(items, productRows, deliveryMethod, opts = {})
+   const fashionVariantById = new Map();
+   for (const v of opts.fashionVariantRows || []) if (v && v.id != null) fashionVariantById.set(String(v.id), v);
+ 
++  // The Home & Living rows, and EVERY active variant of each product: whether
++  // a product has variants decides whether a line naming none is finished.
++  const homeLivingById = new Map();
++  for (const p of opts.homeLivingProductRows || []) if (p && p.id != null) homeLivingById.set(String(p.id), p);
++  const homeLivingVariantsByProduct = new Map();
++  for (const v of opts.homeLivingVariantRows || []) {
++    if (!v || v.product_id == null || v.is_active === false) continue;
++    const k = String(v.product_id);
++    if (!homeLivingVariantsByProduct.has(k)) homeLivingVariantsByProduct.set(k, []);
++    homeLivingVariantsByProduct.get(k).push(v);
++  }
++
+   // Repeated lines for the same product+variant are merged BEFORE any stock
+   // or quantity check, so two lines of the same SKU cannot each pass a check
+   // that their combined quantity would fail.
+@@ -325,6 +367,63 @@ export function computeOrderTotal(items, productRows, deliveryMethod, opts = {})
+       continue;
+     }
+ 
++    // ---- Home & Living: catalogue_products (store 'homeliving'), with size ×
++    // colour variants when the product has them and its own row stock when it
++    // does not. Nothing the browser sent is a price; every gate is a refusal.
++    if (item.catalogue === 'homeliving') {
++      const hRow = homeLivingById.get(item.id);
++      if (!hRow) return { ok: false, error: 'One or more items are no longer available.' };
++      if (hRow.is_active === false) return { ok: false, error: `"${hRow.name}" is no longer available.` };
++      const siblings = homeLivingVariantsByProduct.get(String(hRow.id)) || [];
++      let hVar = null;
++      if (item.variantId) {
++        // Not among THIS product's active variants: gone, retired, or borrowed
++        // from another product. One refusal covers all three.
++        hVar = siblings.find((v) => String(v.id) === String(item.variantId)) || null;
++        if (!hVar) return { ok: false, error: `The option you chose for "${hRow.name}" is no longer available.` };
++      } else if (siblings.length) {
++        return { ok: false, error: `Please choose an option for "${hRow.name}".` };
++      }
++      const priced = trustedHomeLivingPrice(hRow, hVar);
++      if (!priced) return { ok: false, error: `"${hRow.name}" is not available for purchase right now.` };
++      // A product WITH variants is stocked per variant; one without, on its
++      // row. Both columns are integer NOT NULL (0033, 0034); a missing value is
++      // read as none in stock, never as "not tracked", so this cannot fail open.
++      const stock = resolveStock(Number.isFinite(Number(hVar ? hVar.stock : hRow.stock)) ? Number(hVar ? hVar.stock : hRow.stock) : 0);
++      const outName = `${hRow.name}${priced.label ? ` (${priced.label})` : ''}`;
++      if (stock.available === 0) return { ok: false, error: `"${outName}" is out of stock.` };
++      if (item.qty > stock.available) {
++        return { ok: false, error: `Only ${stock.available} of "${outName}" ${stock.available === 1 ? 'is' : 'are'} left.` };
++      }
++      const lineTotal = priced.price * item.qty;
++      const lineMrp = priced.mrp * item.qty;
++      subtotal += lineTotal;
++      mrpTotal += lineMrp;
++      lines.push({
++        catalogue: 'homeliving',
++        product_id: hRow.id,
++        biosash_id: null,
++        variant_id: hVar ? String(hVar.id) : null,
++        name: hRow.name,
++        sku: priced.sku,
++        unit_price: priced.price,
++        unit_mrp: priced.mrp,
++        qty: item.qty,
++        variant: priced.label,
++        line_mrp: lineMrp,
++        line_discount: round2(lineMrp - lineTotal),
++        line_total: lineTotal,
++        // Deliberately null, like fashion: the configured default slab applies.
++        // catalogue_products.gst_rate is not read — no Home & Living product
++        // has one filled in (0035 left them NULL), and honouring an admin field
++        // nobody has reviewed could charge whatever was typed into it. Before
++        // the row's slab is honoured, every product's HSN code and rate must be
++        // audited, and this line changed in its own reviewed commit.
++        gst_rate: null,
++      });
++      continue;
++    }
++
+     const row = byKey.get(item.id);
+     // Unknown or inactive product -> reject rather than silently skip, so a
+     // tampered/nonexistent id can never quietly reduce the amount.
+diff --git a/api/_lib/supabaseAdmin.js b/api/_lib/supabaseAdmin.js
+index 870f00e..7ecb7df 100644
+--- a/api/_lib/supabaseAdmin.js
++++ b/api/_lib/supabaseAdmin.js
+@@ -299,16 +299,59 @@ export async function fetchFashionVariantsForCart(variantIds, cfg) {
+  * go to products/product_variants exactly as before; fashion ids go to the
+  * fashion tables. The two never mix.
+  */
++// ---- Home & Living (0035) ----------------------------------------------------
++// Read from the BASE tables with an explicit store filter, not through a
++// compatibility view: 0034 created fashion_products / fashion_variants as views
++// over catalogue_* where store = 'fashion', and no such view exists for this
++// store. Filtering here needs no migration. The store column is NOT NULL with a
++// CHECK, cannot be changed after insert, and a variant's store must match its
++// product's (0034's triggers), so no row reaches this filter from another store.
++export async function fetchHomeLivingProductsForCart(ids, cfg) {
++  const clean = [...new Set((ids || []).filter(Boolean).map(String))];
++  if (!clean.length) return [];
++  const quoted = clean.map((i) => `"${i.replace(/"/g, '')}"`).join(',');
++  // gst_rate is not selected: the line is charged at the default slab (pricing.js).
++  const select = 'id,name,slug,sku,mrp,sale_price,stock,is_active';
++  try {
++    return await rest(`catalogue_products?select=${select}&store=eq.homeliving&id=in.(${quoted})`, cfg);
++  } catch (err) {
++    if (isMissingRelation(err)) { console.warn('[homeliving] catalogue_products not present — run migrations 0034 and 0035.'); return []; }
++    throw err;
++  }
++}
++
++// EVERY active variant of the cart's products, not just the ids the browser
++// named: the server has to know whether a product HAS variants before it can
++// decide that a line naming none is unfinished rather than variant-less.
++export async function fetchHomeLivingVariantsForCart(productIds, cfg) {
++  const clean = [...new Set((productIds || []).filter(Boolean).map(String))];
++  if (!clean.length) return [];
++  const quoted = clean.map((i) => `"${i.replace(/"/g, '')}"`).join(',');
++  const select = 'id,product_id,size,colour,sku,stock,price_override,is_active';
++  try {
++    return await rest(`catalogue_variants?select=${select}&store=eq.homeliving&is_active=eq.true&product_id=in.(${quoted})`, cfg);
++  } catch (err) {
++    if (isMissingRelation(err)) return [];
++    throw err;
++  }
++}
++
+ export async function fetchCartRows(items, cfg) {
+-  const wellness = items.filter((i) => i.catalogue !== 'fashion');
++  // A line with no catalogue is wellness. Grocery never arrives here (Cart
++  // blocks it); a catalogue the server does not know was already dropped by
++  // validateCartPayload, so such a line is wellness and is refused there.
++  const wellness = items.filter((i) => !i.catalogue);
+   const fashion = items.filter((i) => i.catalogue === 'fashion');
+-  const [products, variantRows, fashionProductRows, fashionVariantRows] = await Promise.all([
++  const homeliving = items.filter((i) => i.catalogue === 'homeliving');
++  const [products, variantRows, fashionProductRows, fashionVariantRows, homeLivingProductRows, homeLivingVariantRows] = await Promise.all([
+     wellness.length ? fetchProductsForCart(wellness.map((i) => i.id), cfg) : Promise.resolve([]),
+     wellness.length ? fetchVariantsForCart(wellness.map((i) => i.variantId), cfg) : Promise.resolve([]),
+     fetchFashionProductsForCart(fashion.map((i) => i.id), cfg),
+     fetchFashionVariantsForCart(fashion.map((i) => i.variantId), cfg),
++    fetchHomeLivingProductsForCart(homeliving.map((i) => i.id), cfg),
++    fetchHomeLivingVariantsForCart(homeliving.map((i) => i.id), cfg),
+   ]);
+-  return { products, variantRows, fashionProductRows, fashionVariantRows };
++  return { products, variantRows, fashionProductRows, fashionVariantRows, homeLivingProductRows, homeLivingVariantRows };
+ }
+ 
+ /** All active variants for a product (admin/PDP hydration). */
+diff --git a/api/razorpay/create-order.js b/api/razorpay/create-order.js
+index 94bd347..f2f552a 100644
+--- a/api/razorpay/create-order.js
++++ b/api/razorpay/create-order.js
+@@ -291,12 +291,13 @@ export default async function handler(req, res) {
+     const parsed = validateCartPayload(rawItems);
+     if (!parsed.ok) return fail(res, 400, parsed.error);
+ 
+-    // Trusted product + variant data straight from the database, from BOTH
+-    // catalogues: wellness ids resolve against products / product_variants
++    // Trusted product + variant data straight from the database, from every
++    // catalogue: wellness ids resolve against products / product_variants
+     // exactly as before, fashion ids against fashion_products /
+-    // fashion_variants. The browser sent only ids and quantities; every
+-    // price below is looked up here.
+-    const { products, variantRows, fashionProductRows, fashionVariantRows } = await fetchCartRows(parsed.items, sb);
++    // fashion_variants, Home & Living ids against catalogue_products /
++    // catalogue_variants (store 'homeliving'). The browser sent only ids and
++    // quantities; every price below is looked up here.
++    const { products, variantRows, fashionProductRows, fashionVariantRows, homeLivingProductRows, homeLivingVariantRows } = await fetchCartRows(parsed.items, sb);
+ 
+     // Link this order to a signed-in customer, if any. The id is derived
+     // server-side from the validated access token in the Authorization
+@@ -330,7 +331,7 @@ export default async function handler(req, res) {
+       // against is the goods value, and that must not be computed from a
+       // total the coupon has already reduced.
+       const dryRun = computeOrderTotal(parsed.items, products, delivery, {
+-        variantRows, fashionProductRows, fashionVariantRows, taxConfig: getTaxConfig(), buyerState,
++        variantRows, fashionProductRows, fashionVariantRows, homeLivingProductRows, homeLivingVariantRows, taxConfig: getTaxConfig(), buyerState,
+       });
+       if (!dryRun.ok) return fail(res, 400, dryRun.error);
+ 
+@@ -360,6 +361,8 @@ export default async function handler(req, res) {
+       variantRows,
+       fashionProductRows,
+       fashionVariantRows,
++      homeLivingProductRows,
++      homeLivingVariantRows,
+       coupon,
+       taxConfig: getTaxConfig(),
+       buyerState,
+diff --git a/src/data/homelivingHomepage.js b/src/data/homelivingHomepage.js
+index 15674c9..9ec9be5 100644
+--- a/src/data/homelivingHomepage.js
++++ b/src/data/homelivingHomepage.js
+@@ -8,7 +8,7 @@
+ // reads is what the table holds. The one derived field is `price`: the
+ // figure a card shows (sale_price when set and below mrp, else mrp),
+ // decided here, never in a component. The payable amount is always the
+-// server's; this store has no cart path yet.
++// server's (api/_lib/pricing.js → trustedHomeLivingPrice, the same rule).
+ //
+ // Homepage content that is not catalogue — the hero slide, the trust
+ // strip, the promo strip, the tagline, the delivery window — stays here as
+@@ -170,6 +170,24 @@ export async function getHomeLivingProducts() {
+   return Array.isArray(data) ? data : [];
+ }
+ 
++/**
++ * The rows behind cart lines, by id, with their variants — so the cart can
++ * price a Home & Living line without the /homeliving shell being mounted.
++ * Inactive rows come back too: the cart says "no longer available" rather
++ * than silently dropping a line the customer chose.
++ */
++export async function getHomeLivingProductsByIds(ids) {
++  const clean = [...new Set((ids || []).map(String).filter(Boolean))];
++  if (!clean.length) return [];
++  const { data, error } = await supabase
++    .from('catalogue_products')
++    .select(PRODUCT_SELECT)
++    .eq('store', HOMELIVING_STORE)
++    .in('id', clean);
++  if (error) throw error;
++  return Array.isArray(data) ? data : [];
++}
++
+ // ---- The catalogue the pages render ------------------------------------------------
+ // Loaded once per session and shared by every Home & Living page; `seed`
+ // sets it for server rendering and tests. Components subscribe with
+diff --git a/src/homeliving/HomeLivingProductCard.jsx b/src/homeliving/HomeLivingProductCard.jsx
+index 600ce4b..be58ac4 100644
+--- a/src/homeliving/HomeLivingProductCard.jsx
++++ b/src/homeliving/HomeLivingProductCard.jsx
+@@ -1,20 +1,26 @@
+ import { Link } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import { money } from '../lib/format.js';
++import { useStore } from '../lib/store.jsx';
+ 
+ // ============================================================
+-// Home & Living product card — image, brand line, name, size, price. The
+-// image and the name link to the product page. `product` is a
+-// catalogue_products row (schema field names: images[], net_content, mrp,
+-// sale_price) plus the data layer's `price`. Nothing here computes a
+-// price. There is no Add button yet: this store has no cart namespace
+-// until the cart is next opened, so the card shows and does not sell.
++// Home & Living product card — image, brand line, name, size, price, and
++// the buy action. The image and the name link to the product page.
++// `product` is the data layer's view of a catalogue_products row (schema
++// field names: images[], net_content, mrp, sale_price) plus `price` and its
++// active `variants`. Nothing here computes a price. A product without
++// variants is added straight from the card on its own stock; a product with
++// variants has a size (and colour) to choose, so the card sends the
++// customer to the product page to choose it.
+ // ============================================================
+ export const productHref = (product) => `/homeliving/p/${product.slug}`;
+ 
+ export default function HomeLivingProductCard({ product, layout = 'grid', mediaLoading = 'lazy' }) {
++  const { addHomeLivingToCart } = useStore();
+   const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
+   const href = productHref(product);
++  const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
++  const inStock = Number(product.stock) > 0;
+   return (
+     <article className={`hl-card${layout === 'list' ? ' hl-card--list' : ''}`} data-product={product.slug}>
+       <div className="hl-card__media">
+@@ -33,6 +39,13 @@ export default function HomeLivingProductCard({ product, layout = 'grid', mediaL
+           <strong>{money(product.price)}</strong>
+           {product.mrp > product.price && <s className="hl-price__mrp">{money(product.mrp)}</s>}
+         </p>
++        {hasVariants
++          ? <Link to={href} className="hl-btn hl-add hl-card__add hl-card__add--choose">Choose options</Link>
++          : (
++            <button type="button" className="hl-btn hl-add hl-card__add" disabled={!inStock} onClick={inStock ? () => addHomeLivingToCart(product, null, 1) : undefined}>
++              {inStock ? <><Icon name="bag" size={16} /> Add to cart</> : 'Out of stock'}
++            </button>
++          )}
+       </div>
+     </article>
+   );
+diff --git a/src/homeliving/HomeLivingProductPage.jsx b/src/homeliving/HomeLivingProductPage.jsx
+index dc09652..02b5d1e 100644
+--- a/src/homeliving/HomeLivingProductPage.jsx
++++ b/src/homeliving/HomeLivingProductPage.jsx
+@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
+ import { Link, useParams, useSearchParams } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import { money } from '../lib/format.js';
++import { useStore } from '../lib/store.jsx';
+ import { HOMELIVING_DELIVERY_WINDOW, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
+ import { breadcrumbFor } from '../lib/homelivingListing.js';
+ import { readSelection, writeSelection, selectionState, relatedFor } from '../lib/homelivingPdp.js';
+@@ -19,9 +20,10 @@ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
+ // live in the URL, so a link to a variant opens on that variant. Every
+ // price shown is the row's own figure.
+ //
+-// There is no Add to cart yet: this store has no cart namespace until the
+-// cart is next opened. The action row (.hl-pdp__actions, data-slot) and the
+-// phone bar (.hl-pdp__bar) keep the space for it beside the wishlist.
++// Add to cart sits in the action row (.hl-pdp__actions, data-slot) beside
++// the wishlist, and in the phone bar (.hl-pdp__bar). It is enabled only when
++// the choice is complete and in stock (selectionState → canAdd); the line
++// goes into the homeliving cart namespace and the server prices it.
+ // ============================================================
+ 
+ export function Gallery({ view }) {
+@@ -108,9 +110,24 @@ function DeliveryBlock() {
+ 
+ const priceDigits = (n) => money(n).replace(/^₹\s?/, '');
+ 
++/**
++ * Add to cart — disabled until the choice is complete and in stock. It names
++ * a dead end (out of stock, not made in that pair); a choice still to make is
++ * spelt out by the stock note beside it, so the button does not repeat it.
++ */
++export function AddToCartButton({ st, onAdd, className = '' }) {
++  const label = st.status === 'out' ? 'Out of stock' : st.status === 'missing' ? 'Not available' : 'Add to cart';
++  return (
++    <button type="button" className={`hl-btn hl-add${className ? ` ${className}` : ''}`} disabled={!st.canAdd} onClick={st.canAdd ? onAdd : undefined}>
++      <Icon name="bag" size={18} /> {label}
++    </button>
++  );
++}
++
+ export default function HomeLivingProductPage() {
+   const { slug } = useParams();
+   const { status, categories, products } = useHomeLivingCatalogue();
++  const { addHomeLivingToCart } = useStore();
+   const [params, setParams] = useSearchParams();
+   const view = useMemo(() => products.find((p) => p.slug === String(slug || '')) || null, [products, slug]);
+ 
+@@ -132,6 +149,8 @@ export default function HomeLivingProductPage() {
+   const st = selectionState(view, sel);
+   const setSel = (next) => setParams(writeSelection(params, next), { replace: true });
+   const related = relatedFor(view, products, 4);
++  // st.variant is the chosen size × colour (null for a product without variants).
++  const add = () => addHomeLivingToCart(view, st.variant, 1);
+ 
+   return (
+     <div className="hl-wrap hl-pdp" data-product={view.slug}>
+@@ -153,8 +172,9 @@ export default function HomeLivingProductPage() {
+             ? <p className={`hl-pick__note hl-pick__note--solo is-${st.status}`} role="status">{st.stockNote || 'In stock'}</p>
+             : <VariantPicker view={view} st={st} onChange={setSel} />}
+ 
+-          {/* The action row. Add to cart lands in the first cell (data-slot) once this store has a cart namespace. */}
++          {/* The action row: Add to cart in the first cell, the wishlist beside it. */}
+           <div className="hl-pdp__actions" data-slot="add-to-cart" data-can-add={st.canAdd ? 'yes' : 'no'}>
++            <AddToCartButton st={st} onAdd={add} />
+             <button type="button" className="hl-card__heart hl-heart--inline" aria-label={`Save ${view.name} to wishlist`} aria-disabled="true"><Icon name="heart" size={20} /></button>
+           </div>
+ 
+@@ -189,10 +209,10 @@ export default function HomeLivingProductPage() {
+         </section>
+       )}
+ 
+-      {/* Phone: the price stays in reach; the Add button joins it here once the cart namespace exists. */}
++      {/* Phone: the price, the choice and its stock in reach, with Add to cart beside them. */}
+       <div className="hl-pdp__bar" role="region" aria-label="Buy" data-slot="add-to-cart">
+-        <span className="hl-pdp__bar-price"><b><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</b>{st.label && <em>{st.label}</em>}</span>
+-        <span className={`hl-pick__note is-${st.status}`}>{st.stockNote || st.missing || 'In stock'}</span>
++        <span className="hl-pdp__bar-price"><b><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</b>{st.label && <em>{st.label}</em>}<span className={`hl-pick__note is-${st.status}`}>{st.stockNote || st.missing || 'In stock'}</span></span>
++        <AddToCartButton st={st} onAdd={add} className="hl-add--bar" />
+       </div>
+     </div>
+   );
+diff --git a/src/lib/couponApi.js b/src/lib/couponApi.js
+index a7d50b1..4fb2f51 100644
+--- a/src/lib/couponApi.js
++++ b/src/lib/couponApi.js
+@@ -38,8 +38,9 @@ export function cartToPayload(lines) {
+     variantId: l.variantId || null,
+     variant: l.variant || null,
+     // Which catalogue the id belongs to. Absent on a wellness line, so the
+-    // payload for a wellness cart is byte-for-byte what it always was.
+-    ...(l.catalogue === 'fashion' ? { catalogue: 'fashion' } : {}),
++    // payload for a wellness cart is byte-for-byte what it always was; a
++    // grocery line is blocked before checkout and carries none either.
++    ...(l.catalogue === 'fashion' || l.catalogue === 'homeliving' ? { catalogue: l.catalogue } : {}),
+   }));
+ }
+ 
+diff --git a/src/lib/homelivingPdp.js b/src/lib/homelivingPdp.js
+index e0eae7b..52ce055 100644
+--- a/src/lib/homelivingPdp.js
++++ b/src/lib/homelivingPdp.js
+@@ -11,7 +11,7 @@
+ // Every size and colour is listed; an unavailable one is marked, not
+ // hidden. Nothing here computes a price — the figure shown for a variant
+ // is the row's own (price_override or the product's), and the payable
+-// amount is the server's. There is no cart path for this store yet.
++// amount is the server's. `canAdd` is what enables Add to cart.
+ // ============================================================
+ 
+ export const LOW_STOCK_AT = 5;
+@@ -66,7 +66,7 @@ const priced = (view, price) => {
+ const stockNoteFor = (status, stock, what) => (status === 'out' ? `Out of stock${what}` : status === 'low' ? `Only ${stock} left` : null);
+ 
+ /**
+- * Everything the selectors, the stock line and the (future) buy button
++ * Everything the selectors, the stock line and the buy button
+  * need for one choice. `available` on a size answers for the chosen colour
+  * (or any colour); on a colour, for the chosen size (or any size).
+  */
+diff --git a/src/lib/payments.js b/src/lib/payments.js
+index a2fda9f..dfa3e1b 100644
+--- a/src/lib/payments.js
++++ b/src/lib/payments.js
+@@ -98,7 +98,9 @@ export async function createPaymentOrder({
+       qty: l.qty,
+       variantId: l.variantId || null,
+       variant: l.variant || null,
+-      ...(l.catalogue === 'fashion' ? { catalogue: 'fashion' } : {}),
++      // A wellness line carries nothing, so its payload is byte-for-byte what it
++      // always was; a grocery line is blocked before checkout and never arrives.
++      ...(l.catalogue === 'fashion' || l.catalogue === 'homeliving' ? { catalogue: l.catalogue } : {}),
+     })),
+     delivery,
+     customer,
+diff --git a/src/lib/store.jsx b/src/lib/store.jsx
+index 67ca1e0..ccd5024 100644
+--- a/src/lib/store.jsx
++++ b/src/lib/store.jsx
+@@ -6,6 +6,10 @@ import {
+   ensureFashionProducts, fashionKeysToPrune, getFashionCartVersion, subscribeFashionCart,
+ } from './fashionCartLine.js';
+ import { GROCERY_CATALOGUE, groceryLineKey, isGroceryLine, hydrateGroceryCartLine, groceryProductFor, groceryKeysToPrune } from './groceryCartLine.js';
++import {
++  HOMELIVING_CATALOGUE, homelivingLineKey, isHomeLivingLine, hydrateHomeLivingCartLine, homelivingEntryFor, isHomeLivingIdResolved,
++  homelivingKeysToPrune, ensureHomeLivingProducts,
++} from './homelivingCartLine.js';
+ import { useCustomerAuth } from './customerAuth.jsx';
+ import { listWishlist, addWishlistItem, removeWishlistItem, mergeWishlist } from './wishlistData.js';
+ import {
+@@ -88,18 +92,22 @@ function reducer(state, action) {
+       // priced as, or be pruned against a wellness product. A wellness line
+       // is shaped exactly as it always was — no catalogue field at all.
+       // A GROCERY line (catalogue: 'grocery') gets the same treatment in its
+-      // own namespace (groceryCartLine.js).
++      // own namespace (groceryCartLine.js), and so does a HOME & LIVING line
++      // (catalogue: 'homeliving', homelivingCartLine.js).
+       const fashion = catalogue === FASHION_CATALOGUE;
+       const grocery = catalogue === GROCERY_CATALOGUE;
++      const homeliving = catalogue === HOMELIVING_CATALOGUE;
+       const key = fashion
+         ? fashionLineKey(id, variantId)
+         : grocery ? groceryLineKey(id, variantId)
++        : homeliving ? homelivingLineKey(id, variantId)
+         : id + (variantId ? '::' + variantId : variant ? '::' + variant : '');
+       const existing = state.cart.find((l) => l.key === key);
+       const cart = existing
+         ? state.cart.map((l) => (l.key === key ? { ...l, qty: l.qty + qty } : l))
+         : [...state.cart, fashion ? { key, catalogue: FASHION_CATALOGUE, id, variant, variantId, qty }
+           : grocery ? { key, catalogue: GROCERY_CATALOGUE, id, variant, variantId, qty }
++          : homeliving ? { key, catalogue: HOMELIVING_CATALOGUE, id, variant, variantId, qty }
+           : { key, id, variant, variantId, qty }];
+       return { ...state, cart };
+     }
+@@ -245,6 +253,28 @@ export function StoreProvider({ children }) {
+     return true;
+   }, [toast]);
+ 
++  // The Home & Living add path. A product with size × colour variants must
++  // name one (stock and any price override are per combination); a product
++  // without variants is added on its own row stock. The stock gate here is a
++  // courtesy — the server re-checks it at quote and at order creation.
++  const addHomeLivingToCart = useCallback((view, variant = null, qty = 1) => {
++    if (!view?.id) return false;
++    const hasVariants = Array.isArray(view.variants) && view.variants.length > 0;
++    if (hasVariants && !variant?.id) {
++      toast('Please choose a size first.', { kind: 'cart' });
++      return false;
++    }
++    const stock = hasVariants ? Number(variant.stock) : Number(view.stock);
++    if (!(stock > 0)) {
++      toast(hasVariants ? 'That option is out of stock.' : 'This item is out of stock.', { kind: 'cart' });
++      return false;
++    }
++    const label = hasVariants ? [variant.size, variant.colour].filter(Boolean).join(' · ') || null : (view.net_content || null);
++    dispatch({ type: 'ADD', catalogue: HOMELIVING_CATALOGUE, id: String(view.id), qty, variant: label, variantId: hasVariants ? String(variant.id) : null });
++    toast('Added to cart', { kind: 'cart' });
++    return true;
++  }, [toast]);
++
+   // What the UI renders. Recomputed from the two lists, never stored.
+   const wishlist = useMemo(() => visibleWishlist(state), [state.guestWish, state.accountWish, state.syncedUserId]);
+ 
+@@ -336,12 +366,14 @@ export function StoreProvider({ children }) {
+   // the same arrangement wishlistState.js uses, and for the same reason: those
+   // rules are executed directly in tests rather than through a provider.
+   // A fashion line is priced from the fashion tables (fashionCartLine.js),
+-  // a grocery line from the grocery data (groceryCartLine.js); a wellness
++  // a grocery line from the grocery data (groceryCartLine.js), a Home &
++  // Living line from its catalogue rows (homelivingCartLine.js); a wellness
+   // line exactly as before. The wellness catalogue is never consulted for
+-  // a fashion or grocery id, and vice versa.
++  // another store's id, and vice versa.
+   const hydrate = (l) => (isFashionLine(l)
+     ? hydrateFashionCartLine(l, fashionRowFor(l.id), { resolved: isFashionIdResolved(l.id) })
+     : isGroceryLine(l) ? hydrateGroceryCartLine(l, groceryProductFor(l.id))
++    : isHomeLivingLine(l) ? hydrateHomeLivingCartLine(l, homelivingEntryFor(l.id), { resolved: isHomeLivingIdResolved(l.id) })
+     : hydrateCartLine(l, productById[l.id]));
+ 
+   // Variants arrive from Supabase AFTER first render. Memoising on state.cart
+@@ -356,6 +388,11 @@ export function StoreProvider({ children }) {
+     const ids = [...state.cart, ...state.saved].filter(isFashionLine).map((l) => l.id);
+     if (ids.length) ensureFashionProducts(ids);
+   }, [state.cart, state.saved]);
++  // The Home & Living rows live in the same cache, so the same version re-prices them.
++  useEffect(() => {
++    const ids = [...state.cart, ...state.saved].filter(isHomeLivingLine).map((l) => l.id);
++    if (ids.length) ensureHomeLivingProducts(ids);
++  }, [state.cart, state.saved]);
+   const cartDetailed = useMemo(() => state.cart.map(hydrate).filter(Boolean), [state.cart, catalogVersion, fashionVersion]);
+   const savedDetailed = useMemo(() => state.saved.map(hydrate).filter(Boolean), [state.saved, catalogVersion, fashionVersion]);
+ 
+@@ -388,10 +425,13 @@ export function StoreProvider({ children }) {
+   //      pruned when a fetch for its id has answered and the product is gone,
+   //      and never because the wellness catalogue does not know the id.
+   //   4. A GROCERY line likewise: judged against the grocery data only.
++  //   5. A HOME & LIVING line likewise, once its rows have answered — keyed on
++  //      the cache version, so it is pruned when they land, not on the next
++  //      cart change.
+   useEffect(() => {
+     if (!isCatalogHydrated()) return;
+     const keys = [...state.cart, ...state.saved]
+-      .filter((l) => !isFashionLine(l) && !isGroceryLine(l) && !productById[l.id])
++      .filter((l) => !isFashionLine(l) && !isGroceryLine(l) && !isHomeLivingLine(l) && !productById[l.id])
+       .map((l) => l.key);
+     if (keys.length) dispatch({ type: 'PRUNE_MISSING', keys });
+   }, [state.cart, state.saved, catalogVersion]);
+@@ -403,6 +443,10 @@ export function StoreProvider({ children }) {
+     const keys = groceryKeysToPrune([...state.cart, ...state.saved]);
+     if (keys.length) dispatch({ type: 'PRUNE_MISSING', keys });
+   }, [state.cart, state.saved]);
++  useEffect(() => {
++    const keys = homelivingKeysToPrune([...state.cart, ...state.saved]);
++    if (keys.length) dispatch({ type: 'PRUNE_MISSING', keys });
++  }, [state.cart, state.saved, fashionVersion]);
+   // Counted from the lines the cart can actually SHOW, so the badge can never
+   // advertise an item the page does not list. state.cart may still hold a line
+   // whose product has vanished; reconcileCart() below clears those for good.
+@@ -426,6 +470,7 @@ export function StoreProvider({ children }) {
+     addToCart,
+     addFashionToCart,
+     addGroceryToCart,
++    addHomeLivingToCart,
+     toggleWish,
+     // Normalised on both sides: a caller passing the numeric 5 still matches
+     // a stored '5'.

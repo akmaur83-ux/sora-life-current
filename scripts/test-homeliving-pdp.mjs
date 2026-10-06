@@ -18,7 +18,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { ROOT, read, loadModule, buildHomeLivingApp, loadHomeLivingData, CATEGORIES, PRODUCTS, PDP, PDP_PRODUCTS } from './homeliving-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { CART_CHANGE_EDITS, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES, STOREFRONT_ADMIN_FILES, sansStorefrontChanges } from './storefront-settings-pin.mjs';
+import { CART_CHANGE_EDITS, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES, HOMELIVING_CART_FILES, STOREFRONT_ADMIN_FILES, sansStorefrontChanges } from './storefront-settings-pin.mjs';
 
 // The tip before the product page (the listing's bundle commit).
 const BASELINE_SHA = '99c4282';
@@ -169,7 +169,8 @@ await test('the URL drives the selection: ?size=King&colour=Sage marks Sage stru
   assert.match(out, /class="hl-pick__swatch is-on is-out" style="--sw:#8A9A6B" aria-pressed="true" aria-label="Sage — not available for this size"/, 'the chosen colour stays chosen but is marked out for this size');
   assert.match(out, /<button type="button" class="hl-pick__size is-on is-out" aria-pressed="true" aria-label="King — out of stock"/, 'the chosen size stays chosen (so it can be un-chosen) but is marked out for Sage');
   assert.match(out, /<p class="hl-pick__note is-out" role="status">Out of stock in this size and colour<\/p>/);
-  assert.match(out, /<div class="hl-pdp__bar" role="region" aria-label="Buy" data-slot="add-to-cart"><span class="hl-pdp__bar-price"><b><span class="hl-price__cur">₹<\/span>999<\/b><em>King · Sage<\/em><\/span><span class="hl-pick__note is-out">Out of stock in this size and colour<\/span><\/div>/);
+  // The Home & Living cart (test-homeliving-cart.mjs) put the note under the price and Add to cart beside it.
+  assert.match(out, /<div class="hl-pdp__bar" role="region" aria-label="Buy" data-slot="add-to-cart"><span class="hl-pdp__bar-price"><b><span class="hl-price__cur">₹<\/span>999<\/b><em>King · Sage<\/em><span class="hl-pick__note is-out">Out of stock in this size and colour<\/span><\/span><button type="button" class="hl-btn hl-add hl-add--bar" disabled=""><svg[\s\S]*?<\/svg> Out of stock<\/button><\/div>/);
   const low = render('/homeliving/p/sage-fitted-sheet?size=Single&colour=Ivory');
   assert.match(low, /<p class="hl-pick__note is-low" role="status">Only 2 left<\/p>/);
   assert.match(low, /data-can-add="yes"/);
@@ -193,10 +194,11 @@ await test('size-only and no-variant products: sizes alone with the out one stru
   assert.match(curtain, /<p class="hl-pick__note hl-pick__note--solo is-out" role="status">Out of stock<\/p>/); assert.match(curtain, /data-can-add="no"/);
 });
 
-await test('no Add button anywhere, but the slot is reserved: the action row and the phone bar carry data-slot="add-to-cart"; the wishlist sits in the second cell', () => {
+await test('Add to cart fills the reserved slot: the first cell of the action row and the phone bar (data-slot="add-to-cart"); the wishlist keeps the second cell', () => {
+  // The slot this suite reserved is filled by the Home & Living cart (test-homeliving-cart.mjs pins the behaviour).
   const html = render('/homeliving/p/sage-fitted-sheet');
-  assert.doesNotMatch(html, /<button[^>]*>[^<]*Add to (cart|bag)/i);
-  assert.match(html, /<div class="hl-pdp__actions" data-slot="add-to-cart" data-can-add="no"><button type="button" class="hl-card__heart hl-heart--inline" aria-label="Save Sage Fitted Sheet to wishlist" aria-disabled="true">/);
+  assert.match(html, /<div class="hl-pdp__actions" data-slot="add-to-cart" data-can-add="no"><button type="button" class="hl-btn hl-add" disabled=""><svg[\s\S]*?<\/svg> Add to cart<\/button><button type="button" class="hl-card__heart hl-heart--inline" aria-label="Save Sage Fitted Sheet to wishlist" aria-disabled="true">/);
+  assert.equal((html.match(/data-slot="add-to-cart"/g) || []).length, 2, 'the action row and the phone bar');
   assert.match(read('src/styles/homeliving.css'), /\.hl-pdp__actions \{ display: grid; grid-template-columns: minmax\(0, 1\.4fr\) 48px;/, 'the first cell is kept for it');
   assert.match(read('src/styles/homeliving.css'), /\.hl-heart--inline \{[^}]*grid-column: 2;/);
 });
@@ -298,9 +300,10 @@ await test('App.jsx: p/:slug is a child of the Home & Living route; nothing else
   const allowed = /^(src\/homeliving\/|src\/lib\/homelivingPdp\.js$|src\/pages\/Home\.jsx$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/lifestyle\/|src\/data\/lifestyleHomepage\.js$|src\/styles\/lifestyle\.css$|img\/lifestyle-|img\/doorway-|img\/homeliving-hero-|build\/build-css\.mjs$|src\/lib\/deferredStyles\.js$|src\/components\/Header\.jsx$|src\/fashion\/FashionLayout\.jsx$|src\/grocery\/GroceryLayout\.jsx$|src\/data\/homelivingHomepage\.js$|src\/styles\/homeliving\.css$|src\/App\.jsx$|src\/components\/FashionBanner\.jsx$|src\/styles\/fashion-banner\.css$|scripts\/|public\/|reports\/)/;
   // .vercelignore is deploy configuration (f927077), not storefront code.
   // An approved cart change may edit a shared cart file only because the byte checks below undo it (sansCartChanges).
-  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f));
+  // The Home & Living cart's own new files (test-homeliving-cart.mjs).
+  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !HOMELIVING_CART_FILES.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
-  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/components/Header.jsx', 'src/fashion/FashionProductPage.jsx', 'src/fashion/FashionLayout.jsx', 'src/lib/fashionPdp.js', 'src/grocery/GroceryLayout.jsx', 'src/data/groceryHomepage.js', 'src/homeliving/HomeLivingCategory.jsx', 'src/lib/homelivingListing.js', 'build/build-css.mjs', 'src/lib/deferredStyles.js']) {
+  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/components/Header.jsx', 'src/fashion/FashionProductPage.jsx', 'src/fashion/FashionLayout.jsx', 'src/lib/fashionPdp.js', 'src/grocery/GroceryLayout.jsx', 'src/data/groceryHomepage.js', 'src/homeliving/HomeLivingCategory.jsx', 'src/lib/homelivingListing.js', 'build/build-css.mjs', 'src/lib/deferredStyles.js', 'api/_lib/supabaseAdmin.js']) {
   // The homepage rework (test-homeliving-hero.mjs): the hero runs to the top with the shell floating over it — an approved change to the store's own homepage files; that suite pins the category and product pages unchanged.
     // The lifestyle storefront (test-lifestyle.mjs) added one line about /lifestyle to each shell and the two build files; nothing else.
     const sansLifestyle = (t) => t.split('\n').filter((l) => !/\/lifestyle\b|lifestyle\.css|Lifestyle store/.test(l)).join('\n').replace('|lifestyle)', ')');

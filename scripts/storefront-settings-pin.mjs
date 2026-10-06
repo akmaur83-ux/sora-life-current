@@ -28,6 +28,7 @@
 // proves nothing else in it moved.
 // ============================================================
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { DEFAULT_FASHION_STOREFRONT as F, DEFAULT_LIFESTYLE_STOREFRONT as L } from '../src/lib/storefrontCustomization.js';
 
 /** The admin pages and libs 99b67ba added or touched: no storefront renders them. */
@@ -50,7 +51,10 @@ export const FASHION_DEPARTMENT_EDITS = /^(src\/App\.jsx|src\/fashion\/(FashionH
  * by sansCartChanges. A suite may allow one in its changed-file list only where
  * it also byte-checks that file through sansStorefrontChanges.
  */
-export const CART_CHANGE_EDITS = /^src\/lib\/store\.jsx$/;
+export const CART_CHANGE_EDITS = /^(src\/lib\/(store\.jsx|payments\.js|couponApi\.js|homelivingPdp\.js)|api\/_lib\/(pricing|supabaseAdmin|couponQuote)\.js|api\/razorpay\/create-order\.js|src\/homeliving\/HomeLivingProduct(Card|Page)\.jsx|src\/data\/homelivingHomepage\.js)$/;
+
+/** The files the Home & Living cart added: its cart line module, and the suite and undo patch that pin it. */
+export const HOMELIVING_CART_FILES = /^(src\/lib\/homelivingCartLine\.js|scripts\/test-homeliving-cart\.mjs|scripts\/pins\/homeliving-cart\.patch)$/;
 
 /** Rendered /fashion: the Men and Women tiles open their department pages instead of the category listings. */
 export const sansDepartmentTiles = (html) => html.replace(/<a class="fs-tile" href="\/fashion\/(men|women)">/g, '<a class="fs-tile" href="/fashion/c/$1">');
@@ -271,6 +275,33 @@ export function sansFashionDepartments(rel, text) {
 // ---- Approved cart changes, newest first ------------------------------------------
 // Each entry undoes one commit's hunks in the shared cart and payment files.
 
+/**
+ * A recorded change, read back from its own `git diff -a -U3` (scripts/pins/):
+ * each hunk's new side (context and + lines) is swapped for its old side
+ * (context and - lines), exactly once per file, so the patch can only undo
+ * the text it was recorded from.
+ */
+function undoFromPatch(name) {
+  const text = readFileSync(new URL(`./pins/${name}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const files = {}; let rel = null; let hunk = null;
+  const flush = () => { if (hunk && rel) (files[rel] ||= []).push([hunk.now.join('\n'), hunk.then.join('\n')]); hunk = null; };
+  for (const line of text.split('\n')) {
+    if (line.startsWith('diff --git ')) { flush(); rel = null; continue; }
+    if (line.startsWith('+++ ')) { rel = line.slice(4).replace(/^b\//, ''); continue; }
+    if (line.startsWith('@@')) { flush(); hunk = { now: [], then: [] }; continue; }
+    if (!hunk || line === '' || line.startsWith('\\')) continue;
+    if (line[0] === ' ') { hunk.now.push(line.slice(1)); hunk.then.push(line.slice(1)); }
+    else if (line[0] === '+') hunk.now.push(line.slice(1));
+    else if (line[0] === '-') hunk.then.push(line.slice(1));
+  }
+  flush();
+  return Object.fromEntries(Object.entries(files).map(([r, hunks]) => [r, (t, rr) => hunks.reduce((acc, [now, then]) => swap(rr, acc, now, then), t)]));
+}
+
+// The Home & Living cart: its namespace in store.jsx, the server pricing it from
+// the catalogue tables, the marker on the wire, and Add to cart on its PDP and card.
+const UNDO_HOMELIVING_CART = undoFromPatch('homeliving-cart.patch');
+
 // The grocery size label: addGroceryToCart read product.pack, which no
 // catalogue row has, so every grocery line was stored with variant: null.
 const UNDO_GROCERY_LABEL = {
@@ -298,7 +329,16 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+
+/**
+ * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
+ * change (test-grocery owns the size label) and must see that change, not its undo.
+ */
+export function sansHomeLivingCart(rel, text) {
+  const undo = UNDO_HOMELIVING_CART[rel];
+  return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
+}
 
 /** The file as it stood before the approved cart changes, LF-normalised; anything they did not touch comes back as given. */
 export function sansCartChanges(rel, text) {

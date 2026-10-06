@@ -38,8 +38,9 @@ export function cartToPayload(lines) {
     variantId: l.variantId || null,
     variant: l.variant || null,
     // Which catalogue the id belongs to. Absent on a wellness line, so the
-    // payload for a wellness cart is byte-for-byte what it always was.
-    ...(l.catalogue === 'fashion' ? { catalogue: 'fashion' } : {}),
+    // payload for a wellness cart is byte-for-byte what it always was; a
+    // grocery line is blocked before checkout and carries none either.
+    ...(l.catalogue === 'fashion' || l.catalogue === 'homeliving' ? { catalogue: l.catalogue } : {}),
   }));
 }
 

@@ -46,10 +46,10 @@ export function normalizeCartLines(items) {
   for (const item of items) {
     // Same product AND same variant is the same physical thing. A line with
     // no variant is kept distinct from a variant line of the same product.
-    // A fashion line lives in a different catalogue, so its key says so: a
-    // fashion product and a wellness product can never merge, whatever
-    // their ids look like.
-    const key = `${item.catalogue === 'fashion' ? 'fashion:' : ''}${item.id}::${item.variantId ?? ''}`;
+    // A fashion or Home & Living line lives in a different catalogue, so its
+    // key says so: products of two stores can never merge, whatever their ids
+    // look like. A wellness line carries no catalogue, so its key is unchanged.
+    const key = `${item.catalogue ? `${item.catalogue}:` : ''}${item.id}::${item.variantId ?? ''}`;
     const seen = merged.get(key);
     if (seen) {
       seen.qty += item.qty;
@@ -99,9 +99,11 @@ export function validateCartPayload(rawItems) {
       // alongside it is ignored entirely.
       variantId: raw.variantId != null ? String(raw.variantId).slice(0, 64) : null,
       variant: typeof raw.variant === 'string' ? raw.variant.slice(0, 120) : null,
-      // Which catalogue the id belongs to. Only 'fashion' is a value; a
-      // wellness line carries nothing, exactly as before this field existed.
-      ...(raw.catalogue === 'fashion' ? { catalogue: 'fashion' } : {}),
+      // Which catalogue the id belongs to. A closed list — anything else is
+      // dropped, so an unknown store's line is looked up in the wellness
+      // tables, found missing, and refused. A wellness line carries nothing,
+      // exactly as before this field existed.
+      ...(raw.catalogue === 'fashion' || raw.catalogue === 'homeliving' ? { catalogue: raw.catalogue } : {}),
     });
   }
   return normalizeCartLines(items);
@@ -174,6 +176,34 @@ export function trustedFashionPrice(productRow, variantRow) {
   if (price == null || price <= 0) return null;
   const unitMrp = mrp != null && mrp > 0 ? Math.round(mrp) : price;
   return { price, mrp: Math.max(unitMrp, price), sku: variantRow.sku || null, label: [variantRow.size, variantRow.colour].filter(Boolean).join(' · ') || null };
+}
+
+/**
+ * The trusted price of one Home & Living line: the variant's override when it
+ * carries one, else the product's sale price when it is set AND below MRP,
+ * else MRP. The `sale < mrp` test is what the storefront's priceOf() applies,
+ * so the figure charged is the figure the product page showed.
+ * (trustedFashionPrice deliberately differs: it takes any positive sale
+ * price.) Whole rupees. `variantRow` is null for a product without variants.
+ * Returns null when nothing usable is priced, so the caller refuses the line.
+ */
+export function trustedHomeLivingPrice(productRow, variantRow) {
+  if (!productRow) return null;
+  const num = (v) => (v == null ? null : (Number.isFinite(Number(v)) ? Number(v) : null));
+  const mrp = num(productRow.mrp);
+  const sale = num(productRow.sale_price);
+  const override = variantRow ? num(variantRow.price_override) : null;
+  const base = sale != null && sale > 0 && mrp != null && sale < mrp ? sale : mrp;
+  const price = override != null && override > 0 ? Math.round(override)
+    : base != null && base > 0 ? Math.round(base) : null;
+  if (price == null || price <= 0) return null;
+  const unitMrp = mrp != null && mrp > 0 ? Math.round(mrp) : price;
+  return {
+    price,
+    mrp: Math.max(unitMrp, price),
+    sku: (variantRow && variantRow.sku) || productRow.sku || null,
+    label: variantRow ? [variantRow.size, variantRow.colour].filter(Boolean).join(' · ') || null : null,
+  };
 }
 
 /**
@@ -270,6 +300,18 @@ export function computeOrderTotal(items, productRows, deliveryMethod, opts = {})
   const fashionVariantById = new Map();
   for (const v of opts.fashionVariantRows || []) if (v && v.id != null) fashionVariantById.set(String(v.id), v);
 
+  // The Home & Living rows, and EVERY active variant of each product: whether
+  // a product has variants decides whether a line naming none is finished.
+  const homeLivingById = new Map();
+  for (const p of opts.homeLivingProductRows || []) if (p && p.id != null) homeLivingById.set(String(p.id), p);
+  const homeLivingVariantsByProduct = new Map();
+  for (const v of opts.homeLivingVariantRows || []) {
+    if (!v || v.product_id == null || v.is_active === false) continue;
+    const k = String(v.product_id);
+    if (!homeLivingVariantsByProduct.has(k)) homeLivingVariantsByProduct.set(k, []);
+    homeLivingVariantsByProduct.get(k).push(v);
+  }
+
   // Repeated lines for the same product+variant are merged BEFORE any stock
   // or quantity check, so two lines of the same SKU cannot each pass a check
   // that their combined quantity would fail.
@@ -320,6 +362,63 @@ export function computeOrderTotal(items, productRows, deliveryMethod, opts = {})
         line_discount: round2(lineMrp - lineTotal),
         line_total: lineTotal,
         // Fashion rows carry no per-line GST slab; the configured default applies.
+        gst_rate: null,
+      });
+      continue;
+    }
+
+    // ---- Home & Living: catalogue_products (store 'homeliving'), with size ×
+    // colour variants when the product has them and its own row stock when it
+    // does not. Nothing the browser sent is a price; every gate is a refusal.
+    if (item.catalogue === 'homeliving') {
+      const hRow = homeLivingById.get(item.id);
+      if (!hRow) return { ok: false, error: 'One or more items are no longer available.' };
+      if (hRow.is_active === false) return { ok: false, error: `"${hRow.name}" is no longer available.` };
+      const siblings = homeLivingVariantsByProduct.get(String(hRow.id)) || [];
+      let hVar = null;
+      if (item.variantId) {
+        // Not among THIS product's active variants: gone, retired, or borrowed
+        // from another product. One refusal covers all three.
+        hVar = siblings.find((v) => String(v.id) === String(item.variantId)) || null;
+        if (!hVar) return { ok: false, error: `The option you chose for "${hRow.name}" is no longer available.` };
+      } else if (siblings.length) {
+        return { ok: false, error: `Please choose an option for "${hRow.name}".` };
+      }
+      const priced = trustedHomeLivingPrice(hRow, hVar);
+      if (!priced) return { ok: false, error: `"${hRow.name}" is not available for purchase right now.` };
+      // A product WITH variants is stocked per variant; one without, on its
+      // row. Both columns are integer NOT NULL (0033, 0034); a missing value is
+      // read as none in stock, never as "not tracked", so this cannot fail open.
+      const stock = resolveStock(Number.isFinite(Number(hVar ? hVar.stock : hRow.stock)) ? Number(hVar ? hVar.stock : hRow.stock) : 0);
+      const outName = `${hRow.name}${priced.label ? ` (${priced.label})` : ''}`;
+      if (stock.available === 0) return { ok: false, error: `"${outName}" is out of stock.` };
+      if (item.qty > stock.available) {
+        return { ok: false, error: `Only ${stock.available} of "${outName}" ${stock.available === 1 ? 'is' : 'are'} left.` };
+      }
+      const lineTotal = priced.price * item.qty;
+      const lineMrp = priced.mrp * item.qty;
+      subtotal += lineTotal;
+      mrpTotal += lineMrp;
+      lines.push({
+        catalogue: 'homeliving',
+        product_id: hRow.id,
+        biosash_id: null,
+        variant_id: hVar ? String(hVar.id) : null,
+        name: hRow.name,
+        sku: priced.sku,
+        unit_price: priced.price,
+        unit_mrp: priced.mrp,
+        qty: item.qty,
+        variant: priced.label,
+        line_mrp: lineMrp,
+        line_discount: round2(lineMrp - lineTotal),
+        line_total: lineTotal,
+        // Deliberately null, like fashion: the configured default slab applies.
+        // catalogue_products.gst_rate is not read — no Home & Living product
+        // has one filled in (0035 left them NULL), and honouring an admin field
+        // nobody has reviewed could charge whatever was typed into it. Before
+        // the row's slab is honoured, every product's HSN code and rate must be
+        // audited, and this line changed in its own reviewed commit.
         gst_rate: null,
       });
       continue;

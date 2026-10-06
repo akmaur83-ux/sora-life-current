@@ -26,7 +26,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule } from './grocery-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { CART_CHANGE_EDITS, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_EDITS, FASHION_DEPARTMENT_FILES, STOREFRONT_ADMIN_FILES, STOREFRONT_SETTINGS_READS, sansStorefrontChanges } from './storefront-settings-pin.mjs';
+import { CART_CHANGE_EDITS, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_EDITS, FASHION_DEPARTMENT_FILES, HOMELIVING_CART_FILES, STOREFRONT_ADMIN_FILES, STOREFRONT_SETTINGS_READS, sansStorefrontChanges } from './storefront-settings-pin.mjs';
 
 // The tree as it stood before this work: the carousel-move release.
 const BASELINE_SHA = 'b582caa';
@@ -306,9 +306,10 @@ await test('the build lists and every other file are byte-identical to the basel
   const allowed = /^(src\/components\/FashionBanner\.jsx$|api\/_lib\/couponQuote\.js$|api\/_lib\/pricing\.js$|src\/pages\/Checkout\.jsx$|src\/data\/pdpContent\.js$|src\/components\/pdp\/ProductDeliveryInfo\.jsx$|src\/lib\/legalPageDefaults\.js$|src\/lib\/settings\.js$|src\/components\/Hero\.jsx$|src\/fashion\/FashionHome\.jsx$|src\/pages\/Legal\.jsx$|src\/styles\/[a-z0-9-]+\.css$|index\.html$|src\/pages\/Home\.jsx$|img\/lifestyle-banner-(wide|tall)\.webp$|src\/homeliving\/(HomeLivingLayout|HomeLivingHome)\.jsx$|src\/data\/homelivingHomepage\.js$|img\/homeliving-hero-(wide|tall)\.webp$|scripts\/|public\/|reports\/)/;
   // .vercelignore is deploy configuration (f927077), not storefront code.
   // An approved cart change may edit a shared cart file only because the byte checks below undo it (sansCartChanges).
-  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !STOREFRONT_SETTINGS_READS.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !FASHION_DEPARTMENT_EDITS.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f));
+  // The Home & Living cart's own new files (test-homeliving-cart.mjs).
+  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !STOREFRONT_SETTINGS_READS.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !FASHION_DEPARTMENT_EDITS.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !HOMELIVING_CART_FILES.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
-  for (const rel of ['src/pages/Home.jsx', 'build/build-css.mjs', 'src/App.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/lifestyle/LifestyleLayout.jsx', 'src/data/lifestyleHomepage.js', 'src/fashion/FashionLayout.jsx', 'src/lib/store.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/payments.js', 'src/lib/customerAuth.jsx']) {
+  for (const rel of ['src/pages/Home.jsx', 'build/build-css.mjs', 'src/App.jsx', 'src/lifestyle/LifestyleHome.jsx', 'src/lifestyle/LifestyleLayout.jsx', 'src/data/lifestyleHomepage.js', 'src/fashion/FashionLayout.jsx', 'src/lib/store.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'api/_lib/supabaseAdmin.js', 'api/razorpay/create-order.js', 'src/lib/couponApi.js', 'src/homeliving/HomeLivingProductCard.jsx', 'src/homeliving/HomeLivingProductPage.jsx', 'src/lib/homelivingPdp.js']) {
     // Express and Scheduled were withdrawn (test-company-surfaces.mjs pins the fee map against the
     // published policy; the three payment suites pin that a withdrawn method cannot be charged).
     // For the two files that carries — the fee map and the checkout picker — normalise that one

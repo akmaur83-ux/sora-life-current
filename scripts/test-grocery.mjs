@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, buildGroceryApp, loadModule, loadGroceryData, CATEGORIES, PRODUCTS } from './grocery-ssr.mjs';
-import { FASHION_DEPARTMENT_FILES } from './storefront-settings-pin.mjs';
+import { CART_CHANGE_EDITS, FASHION_DEPARTMENT_FILES, sansHomeLivingCart, sansStorefrontChanges } from './storefront-settings-pin.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // The tip before the grocery store existed (the Phase 2 bundle commit). Pinned,
@@ -283,6 +283,8 @@ function loadReducer(source, deps) {
 }
 const fashionDeps = { FASHION_CATALOGUE: 'fashion', fashionLineKey: (p, v) => `fashion:${p}::${v ?? ''}` };
 const groceryDeps = { GROCERY_CATALOGUE: 'grocery', groceryLineKey: (p, v) => `grocery:${p}::${v ?? ''}` };
+// The Home & Living cart (test-homeliving-cart.mjs) has its own namespace in the same reducer.
+const homelivingDeps = { HOMELIVING_CATALOGUE: 'homeliving', homelivingLineKey: (p, v) => `homeliving:${p}::${v ?? ''}` };
 const G1 = '00000000-0000-4000-8000-000000000701';
 const SCRIPT = [
   { type: 'ADD', id: 'b183', qty: 2 },
@@ -304,7 +306,7 @@ await test('wellness and fashion lines are byte-identical to the pre-change redu
   const before = atBaseline('src/lib/store.jsx');
   const after = read('src/lib/store.jsx');
   const oldReducer = loadReducer(before, { ...fashionDeps });
-  const newReducer = loadReducer(after, { ...fashionDeps, ...groceryDeps });
+  const newReducer = loadReducer(after, { ...fashionDeps, ...groceryDeps, ...homelivingDeps });
   const a = run(oldReducer, SCRIPT), b = run(newReducer, SCRIPT);
   assert.equal(JSON.stringify(b), JSON.stringify(a));
   assert.equal(b.cart.length, 2, 'the variant line, the fashion line; base removed; x9 saved');
@@ -314,7 +316,7 @@ await test('wellness and fashion lines are byte-identical to the pre-change redu
 });
 
 await test('a grocery line is keyed grocery:<id>:: and carries catalogue: "grocery"; the same id in three catalogues stays three lines; adding twice merges', () => {
-  const reducer = loadReducer(read('src/lib/store.jsx'), { ...fashionDeps, ...groceryDeps });
+  const reducer = loadReducer(read('src/lib/store.jsx'), { ...fashionDeps, ...groceryDeps, ...homelivingDeps });
   const s = run(reducer, [
     { type: 'ADD', catalogue: 'grocery', id: G1, qty: 1, variant: '1 kg', variantId: null },
     { type: 'ADD', id: G1, qty: 1 },
@@ -329,7 +331,9 @@ await test('a grocery line is keyed grocery:<id>:: and carries catalogue: "groce
 });
 
 await test('store.jsx: the grocery add path, hydration branch, reconciliation, and the context export — the fashion lines untouched', () => {
-  const store = stripComments(read('src/lib/store.jsx'));
+  // The Home & Living cart, which came after this store, is undone first (sansHomeLivingCart);
+  // the grocery size label is this suite's own change, so it stays.
+  const store = stripComments(sansHomeLivingCart('src/lib/store.jsx', read('src/lib/store.jsx')));
   assert.match(store, /const addGroceryToCart = useCallback\(\(product, qty = 1\) => \{/);
   // A catalogue row carries net_content, never `pack`: the line now stores the size it shows.
   assert.match(store, /dispatch\(\{ type: 'ADD', catalogue: GROCERY_CATALOGUE, id: String\(product\.id\), qty, variant: product\.net_content \|\| null, variantId: null \}\);/);
@@ -392,8 +396,9 @@ await test('checkout plumbing untouched: a grocery line goes to neither endpoint
   assert.deepEqual(payload[0], { id: 'b183', qty: 2, variantId: null, variant: null });
   assert.deepEqual(payload[1], { id: 'f1', qty: 1, variantId: 'v', variant: 'M', catalogue: 'fashion' });
   assert.ok(!('unitPrice' in payload[2]) && !('lineTotal' in payload[2]) && !('price' in payload[2]), 'never a price');
-  for (const rel of ['src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/cartLine.js', 'src/lib/cartQuote.js', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js']) {
-    const now = read(rel);
+  for (const rel of ['src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/cartLine.js', 'src/lib/cartQuote.js', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'api/_lib/supabaseAdmin.js']) {
+    // Approved cart changes since (sansCartChanges) are undone first; nothing else may differ.
+    const now = sansStorefrontChanges(rel, read(rel));
     // Express and Scheduled were withdrawn (test-company-surfaces.mjs pins the fee map against the
     // published policy; the three payment suites pin that a withdrawn method cannot be charged).
     // For the two files that carries — the fee map and the checkout picker — normalise that one
@@ -500,13 +505,14 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
   // test-payment-logic.mjs and test-commerce-pricing.mjs pin that a withdrawn method cannot be charged.
   const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$|FashionHome\.jsx$)|src\/pages\/(?!Home\.jsx$|Legal\.jsx$|Checkout\.jsx$)|src\/components\/(?!Header\.jsx$|FashionBanner\.jsx$|Hero\.jsx$|pdp\/ProductDeliveryInfo\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/(?!_lib\/pricing\.js$|_lib\/couponQuote\.js$))/;
   // The fashion departments added two pages and the doorway chooser (test-fashion-departments.mjs owns them).
-  const bad = [...changed].filter((f) => untouchable.test(f) && !FASHION_DEPARTMENT_FILES.test(f));
+  // An approved cart change may touch a payment file only because the plumbing test byte-checks it through the undo.
+  const bad = [...changed].filter((f) => untouchable.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !CART_CHANGE_EDITS.test(f));
   assert.deepEqual(bad, [], `untouchable files changed: ${bad.join(', ')}`);
   // src/pages/Home.jsx mounts the store doorways (test-store-doorway.mjs pins its exact diff) and src/pages/Legal.jsx carries the shipping-policy
   // rewrite (a651320, pinned by test-company-surfaces.mjs). Checkout.jsx and api/_lib/pricing.js carry the
   // Express/Scheduled withdrawal, compared above with that one declaration normalised out; everything else
   // under src/pages and the whole of api/ is untouched.
-  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'api', ':(exclude)api/_lib/pricing.js', ':(exclude)api/_lib/couponQuote.js', 'src/pages', ':(exclude)src/pages/Home.jsx', ':(exclude)src/pages/Legal.jsx', ':(exclude)src/pages/Checkout.jsx', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
+  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'api', ':(exclude)api/_lib/pricing.js', ':(exclude)api/_lib/couponQuote.js', ':(exclude)api/_lib/supabaseAdmin.js', ':(exclude)api/razorpay/create-order.js', 'src/pages', ':(exclude)src/pages/Home.jsx', ':(exclude)src/pages/Legal.jsx', ':(exclude)src/pages/Checkout.jsx', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
 });
 
 await test('no migration beyond 0034, no dependency change since the baseline', () => {

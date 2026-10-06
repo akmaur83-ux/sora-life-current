@@ -25,7 +25,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule, buildLifestyleApp, loadLifestyleData, INITIAL, HOME_CATEGORIES, HOME_PRODUCTS, FASHION_CATEGORIES, FASHION_PRODUCTS } from './lifestyle-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { CART_CHANGE_EDITS, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES, sansStorefrontChanges } from './storefront-settings-pin.mjs';
+import { CART_CHANGE_EDITS, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES, HOMELIVING_CART_FILES, sansStorefrontChanges } from './storefront-settings-pin.mjs';
 
 // The tree as it stood before this work: the homepage store doorway release.
 const BASELINE_SHA = '9ca51d5';
@@ -339,9 +339,10 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page and 
   // The fashion departments' own files (test-fashion-departments.mjs).
   // .vercelignore is deploy configuration (f927077), not storefront code.
   // An approved cart change may edit a shared cart file only because the byte checks below undo it (sansCartChanges).
-  const bad = [...changed].filter((f) => !allowed.test(f) && !catalogueAdmin.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f));
+  // The Home & Living cart's own new files (test-homeliving-cart.mjs).
+  const bad = [...changed].filter((f) => !allowed.test(f) && !catalogueAdmin.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !HOMELIVING_CART_FILES.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
-  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/fashionApi.js', 'src/lib/fashion.js', 'src/fashion/fashionArt.js']) {
+  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'src/lib/fashionApi.js', 'src/lib/fashion.js', 'src/fashion/fashionArt.js', 'api/_lib/supabaseAdmin.js', 'api/razorpay/create-order.js', 'src/lib/couponApi.js', 'src/homeliving/HomeLivingProductCard.jsx', 'src/homeliving/HomeLivingProductPage.jsx', 'src/lib/homelivingPdp.js']) {
   // src/fashion/FashionHome.jsx moved its campaign hero to the top of the page (e58317c);
   // test-fashion.mjs pins the new order and test-catalogue.mjs the rendered markup, so it is no longer asserted byte-identical here.
 

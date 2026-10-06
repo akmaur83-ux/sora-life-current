@@ -168,6 +168,11 @@
 /* ---- Category listing (/homeliving/category/<slug>) ---------------------------- */
 .hl-listing { padding-bottom: 8px; }
 .hl-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--slv2-f700); background: var(--slv2-f700); color: var(--slv2-ivory); font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
+/* Add to cart: the PDP action row's first cell, the phone bar, and the card. Disabled reads as a state, not a button. */
+.hl-add { justify-content: center; min-height: 48px; }
+.hl-add:disabled { background: var(--slv2-ivory); border-color: var(--hl-line); color: var(--slv2-ink-3); cursor: not-allowed; }
+.hl-card__add { margin-top: 10px; min-height: 40px; padding: 0 12px; font-size: 13.5px; }
+.hl-card__add--choose { background: transparent; color: var(--slv2-f700); }
 .hl-crumb ol { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--slv2-ink-3); }
 .hl-crumb li + li::before { content: '›'; margin-right: 6px; color: var(--slv2-ink-4); }
 .hl-crumb a { text-decoration: none; color: var(--slv2-ink-3); }
@@ -405,6 +410,8 @@
   .hl-pdp__bar-price { display: grid; line-height: 1.15; }
   .hl-pdp__bar-price b { font-size: 20px; color: var(--slv2-ink); font-variant-numeric: tabular-nums; }
   .hl-pdp__bar-price em { font-style: normal; font-size: 12px; color: var(--slv2-ink-3); }
+  .hl-pdp__bar-price .hl-pick__note { font-size: 12px; }
+  .hl-add--bar { min-height: 46px; padding: 0 16px; }
   .hl-promo { margin-top: 26px; min-height: 0; }
   .hl-promo__art { position: static; width: 100%; aspect-ratio: 16 / 7; }
   .hl-promo__art::after { display: none; }

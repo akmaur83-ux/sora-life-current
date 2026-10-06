@@ -291,12 +291,13 @@ export default async function handler(req, res) {
     const parsed = validateCartPayload(rawItems);
     if (!parsed.ok) return fail(res, 400, parsed.error);
 
-    // Trusted product + variant data straight from the database, from BOTH
-    // catalogues: wellness ids resolve against products / product_variants
+    // Trusted product + variant data straight from the database, from every
+    // catalogue: wellness ids resolve against products / product_variants
     // exactly as before, fashion ids against fashion_products /
-    // fashion_variants. The browser sent only ids and quantities; every
-    // price below is looked up here.
-    const { products, variantRows, fashionProductRows, fashionVariantRows } = await fetchCartRows(parsed.items, sb);
+    // fashion_variants, Home & Living ids against catalogue_products /
+    // catalogue_variants (store 'homeliving'). The browser sent only ids and
+    // quantities; every price below is looked up here.
+    const { products, variantRows, fashionProductRows, fashionVariantRows, homeLivingProductRows, homeLivingVariantRows } = await fetchCartRows(parsed.items, sb);
 
     // Link this order to a signed-in customer, if any. The id is derived
     // server-side from the validated access token in the Authorization
@@ -330,7 +331,7 @@ export default async function handler(req, res) {
       // against is the goods value, and that must not be computed from a
       // total the coupon has already reduced.
       const dryRun = computeOrderTotal(parsed.items, products, delivery, {
-        variantRows, fashionProductRows, fashionVariantRows, taxConfig: getTaxConfig(), buyerState,
+        variantRows, fashionProductRows, fashionVariantRows, homeLivingProductRows, homeLivingVariantRows, taxConfig: getTaxConfig(), buyerState,
       });
       if (!dryRun.ok) return fail(res, 400, dryRun.error);
 
@@ -360,6 +361,8 @@ export default async function handler(req, res) {
       variantRows,
       fashionProductRows,
       fashionVariantRows,
+      homeLivingProductRows,
+      homeLivingVariantRows,
       coupon,
       taxConfig: getTaxConfig(),
       buyerState,

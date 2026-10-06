@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { money } from '../lib/format.js';
+import { useStore } from '../lib/store.jsx';
 import { HOMELIVING_DELIVERY_WINDOW, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
 import { breadcrumbFor } from '../lib/homelivingListing.js';
 import { readSelection, writeSelection, selectionState, relatedFor } from '../lib/homelivingPdp.js';
@@ -19,9 +20,10 @@ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
 // live in the URL, so a link to a variant opens on that variant. Every
 // price shown is the row's own figure.
 //
-// There is no Add to cart yet: this store has no cart namespace until the
-// cart is next opened. The action row (.hl-pdp__actions, data-slot) and the
-// phone bar (.hl-pdp__bar) keep the space for it beside the wishlist.
+// Add to cart sits in the action row (.hl-pdp__actions, data-slot) beside
+// the wishlist, and in the phone bar (.hl-pdp__bar). It is enabled only when
+// the choice is complete and in stock (selectionState → canAdd); the line
+// goes into the homeliving cart namespace and the server prices it.
 // ============================================================
 
 export function Gallery({ view }) {
@@ -108,9 +110,24 @@ function DeliveryBlock() {
 
 const priceDigits = (n) => money(n).replace(/^₹\s?/, '');
 
+/**
+ * Add to cart — disabled until the choice is complete and in stock. It names
+ * a dead end (out of stock, not made in that pair); a choice still to make is
+ * spelt out by the stock note beside it, so the button does not repeat it.
+ */
+export function AddToCartButton({ st, onAdd, className = '' }) {
+  const label = st.status === 'out' ? 'Out of stock' : st.status === 'missing' ? 'Not available' : 'Add to cart';
+  return (
+    <button type="button" className={`hl-btn hl-add${className ? ` ${className}` : ''}`} disabled={!st.canAdd} onClick={st.canAdd ? onAdd : undefined}>
+      <Icon name="bag" size={18} /> {label}
+    </button>
+  );
+}
+
 export default function HomeLivingProductPage() {
   const { slug } = useParams();
   const { status, categories, products } = useHomeLivingCatalogue();
+  const { addHomeLivingToCart } = useStore();
   const [params, setParams] = useSearchParams();
   const view = useMemo(() => products.find((p) => p.slug === String(slug || '')) || null, [products, slug]);
 
@@ -132,6 +149,8 @@ export default function HomeLivingProductPage() {
   const st = selectionState(view, sel);
   const setSel = (next) => setParams(writeSelection(params, next), { replace: true });
   const related = relatedFor(view, products, 4);
+  // st.variant is the chosen size × colour (null for a product without variants).
+  const add = () => addHomeLivingToCart(view, st.variant, 1);
 
   return (
     <div className="hl-wrap hl-pdp" data-product={view.slug}>
@@ -153,8 +172,9 @@ export default function HomeLivingProductPage() {
             ? <p className={`hl-pick__note hl-pick__note--solo is-${st.status}`} role="status">{st.stockNote || 'In stock'}</p>
             : <VariantPicker view={view} st={st} onChange={setSel} />}
 
-          {/* The action row. Add to cart lands in the first cell (data-slot) once this store has a cart namespace. */}
+          {/* The action row: Add to cart in the first cell, the wishlist beside it. */}
           <div className="hl-pdp__actions" data-slot="add-to-cart" data-can-add={st.canAdd ? 'yes' : 'no'}>
+            <AddToCartButton st={st} onAdd={add} />
             <button type="button" className="hl-card__heart hl-heart--inline" aria-label={`Save ${view.name} to wishlist`} aria-disabled="true"><Icon name="heart" size={20} /></button>
           </div>
 
@@ -189,10 +209,10 @@ export default function HomeLivingProductPage() {
         </section>
       )}
 
-      {/* Phone: the price stays in reach; the Add button joins it here once the cart namespace exists. */}
+      {/* Phone: the price, the choice and its stock in reach, with Add to cart beside them. */}
       <div className="hl-pdp__bar" role="region" aria-label="Buy" data-slot="add-to-cart">
-        <span className="hl-pdp__bar-price"><b><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</b>{st.label && <em>{st.label}</em>}</span>
-        <span className={`hl-pick__note is-${st.status}`}>{st.stockNote || st.missing || 'In stock'}</span>
+        <span className="hl-pdp__bar-price"><b><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</b>{st.label && <em>{st.label}</em>}<span className={`hl-pick__note is-${st.status}`}>{st.stockNote || st.missing || 'In stock'}</span></span>
+        <AddToCartButton st={st} onAdd={add} className="hl-add--bar" />
       </div>
     </div>
   );

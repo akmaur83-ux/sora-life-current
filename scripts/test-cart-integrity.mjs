@@ -24,6 +24,7 @@
 // ============================================================
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { sansStorefrontChanges } from './storefront-settings-pin.mjs';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { transformSync } from '@babel/core';
@@ -314,7 +315,8 @@ test('G1 the badge counts rendered lines, not raw storage', () => {
 });
 
 test('G2 pruning only runs against the REAL catalogue, never the bundled seed', () => {
-  const store = code('../src/lib/store.jsx');
+  // Approved cart changes since (sansCartChanges) are undone first; each later store's line is pinned by its own suite.
+  const store = sansStorefrontChanges('src/lib/store.jsx', src('../src/lib/store.jsx')).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   assert.match(store, /if \(!isCatalogHydrated\(\)\) return;/,
     'pruning before Supabase lands would delete valid lines');
   assert.match(store, /PRUNE_MISSING/);

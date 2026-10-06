@@ -404,7 +404,7 @@ await test('the wellness, fashion and grocery storefronts changed only by the ap
   // An approved cart change may edit a shared cart file only because the byte checks below undo it (sansCartChanges).
   const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
-  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/lib/fashionApi.js', 'src/data/groceryHomepage.js', 'src/grocery/GroceryHome.jsx', 'src/styles/layout.css']) { // fashion.css and grocery.css carry the typeface map now (test-typeface.mjs pins it)
+  for (const rel of ['src/lib/store.jsx', 'src/lib/cartLine.js', 'src/lib/couponApi.js', 'src/lib/payments.js', 'src/lib/customerAuth.jsx', 'src/pages/Cart.jsx', 'src/pages/Checkout.jsx', 'api/_lib/pricing.js', 'api/razorpay/create-order.js', 'src/lib/fashionApi.js', 'src/data/groceryHomepage.js', 'src/grocery/GroceryHome.jsx', 'src/styles/layout.css', 'api/_lib/supabaseAdmin.js']) { // fashion.css and grocery.css carry the typeface map now (test-typeface.mjs pins it)
     // Express and Scheduled were withdrawn (test-company-surfaces.mjs pins the fee map against the
     // published policy; the three payment suites pin that a withdrawn method cannot be charged).
     // For the two files that carries — the fee map and the checkout picker — normalise that one

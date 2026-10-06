@@ -36,20 +36,22 @@ export async function priceCart(rawItems, deliveryMethod, sb, opts = {}) {
   const parsed = validateCartPayload(rawItems);
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  // Both catalogues' rows in one go; a wellness-only cart fetches exactly
-  // what it did before and the fashion lists come back empty.
-  const { products, variantRows, fashionProductRows, fashionVariantRows } = await fetchCartRows(parsed.items, sb);
+  // Every catalogue's rows in one go; a wellness-only cart fetches exactly
+  // what it did before and the other stores' lists come back empty.
+  const { products, variantRows, fashionProductRows, fashionVariantRows, homeLivingProductRows, homeLivingVariantRows } = await fetchCartRows(parsed.items, sb);
 
   const base = computeOrderTotal(parsed.items, products, deliveryMethod, {
     variantRows,
     fashionProductRows,
     fashionVariantRows,
+    homeLivingProductRows,
+    homeLivingVariantRows,
     taxConfig: getTaxConfig(),
     buyerState: opts.buyerState ?? null,
   });
   if (!base.ok) return { ok: false, error: base.error };
 
-  return { ok: true, items: parsed.items, products, variantRows, fashionProductRows, fashionVariantRows, base };
+  return { ok: true, items: parsed.items, products, variantRows, fashionProductRows, fashionVariantRows, homeLivingProductRows, homeLivingVariantRows, base };
 }
 
 /**
@@ -156,6 +158,9 @@ export async function quoteCoupon(code, priced, deliveryMethod, buyer, sb, opts 
     // fashion item failed, while the same cart priced fine without one.
     fashionProductRows: priced.fashionProductRows,
     fashionVariantRows: priced.fashionVariantRows,
+    // The same for the Home & Living rows: a coupon re-prices them too.
+    homeLivingProductRows: priced.homeLivingProductRows,
+    homeLivingVariantRows: priced.homeLivingVariantRows,
     coupon,
     taxConfig: getTaxConfig(),
     buyerState: opts.buyerState ?? null,

@@ -299,16 +299,59 @@ export async function fetchFashionVariantsForCart(variantIds, cfg) {
  * go to products/product_variants exactly as before; fashion ids go to the
  * fashion tables. The two never mix.
  */
+// ---- Home & Living (0035) ----------------------------------------------------
+// Read from the BASE tables with an explicit store filter, not through a
+// compatibility view: 0034 created fashion_products / fashion_variants as views
+// over catalogue_* where store = 'fashion', and no such view exists for this
+// store. Filtering here needs no migration. The store column is NOT NULL with a
+// CHECK, cannot be changed after insert, and a variant's store must match its
+// product's (0034's triggers), so no row reaches this filter from another store.
+export async function fetchHomeLivingProductsForCart(ids, cfg) {
+  const clean = [...new Set((ids || []).filter(Boolean).map(String))];
+  if (!clean.length) return [];
+  const quoted = clean.map((i) => `"${i.replace(/"/g, '')}"`).join(',');
+  // gst_rate is not selected: the line is charged at the default slab (pricing.js).
+  const select = 'id,name,slug,sku,mrp,sale_price,stock,is_active';
+  try {
+    return await rest(`catalogue_products?select=${select}&store=eq.homeliving&id=in.(${quoted})`, cfg);
+  } catch (err) {
+    if (isMissingRelation(err)) { console.warn('[homeliving] catalogue_products not present — run migrations 0034 and 0035.'); return []; }
+    throw err;
+  }
+}
+
+// EVERY active variant of the cart's products, not just the ids the browser
+// named: the server has to know whether a product HAS variants before it can
+// decide that a line naming none is unfinished rather than variant-less.
+export async function fetchHomeLivingVariantsForCart(productIds, cfg) {
+  const clean = [...new Set((productIds || []).filter(Boolean).map(String))];
+  if (!clean.length) return [];
+  const quoted = clean.map((i) => `"${i.replace(/"/g, '')}"`).join(',');
+  const select = 'id,product_id,size,colour,sku,stock,price_override,is_active';
+  try {
+    return await rest(`catalogue_variants?select=${select}&store=eq.homeliving&is_active=eq.true&product_id=in.(${quoted})`, cfg);
+  } catch (err) {
+    if (isMissingRelation(err)) return [];
+    throw err;
+  }
+}
+
 export async function fetchCartRows(items, cfg) {
-  const wellness = items.filter((i) => i.catalogue !== 'fashion');
+  // A line with no catalogue is wellness. Grocery never arrives here (Cart
+  // blocks it); a catalogue the server does not know was already dropped by
+  // validateCartPayload, so such a line is wellness and is refused there.
+  const wellness = items.filter((i) => !i.catalogue);
   const fashion = items.filter((i) => i.catalogue === 'fashion');
-  const [products, variantRows, fashionProductRows, fashionVariantRows] = await Promise.all([
+  const homeliving = items.filter((i) => i.catalogue === 'homeliving');
+  const [products, variantRows, fashionProductRows, fashionVariantRows, homeLivingProductRows, homeLivingVariantRows] = await Promise.all([
     wellness.length ? fetchProductsForCart(wellness.map((i) => i.id), cfg) : Promise.resolve([]),
     wellness.length ? fetchVariantsForCart(wellness.map((i) => i.variantId), cfg) : Promise.resolve([]),
     fetchFashionProductsForCart(fashion.map((i) => i.id), cfg),
     fetchFashionVariantsForCart(fashion.map((i) => i.variantId), cfg),
+    fetchHomeLivingProductsForCart(homeliving.map((i) => i.id), cfg),
+    fetchHomeLivingVariantsForCart(homeliving.map((i) => i.id), cfg),
   ]);
-  return { products, variantRows, fashionProductRows, fashionVariantRows };
+  return { products, variantRows, fashionProductRows, fashionVariantRows, homeLivingProductRows, homeLivingVariantRows };
 }
 
 /** All active variants for a product (admin/PDP hydration). */

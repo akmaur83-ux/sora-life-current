@@ -8,7 +8,7 @@
 // reads is what the table holds. The one derived field is `price`: the
 // figure a card shows (sale_price when set and below mrp, else mrp),
 // decided here, never in a component. The payable amount is always the
-// server's; this store has no cart path yet.
+// server's (api/_lib/pricing.js → trustedHomeLivingPrice, the same rule).
 //
 // Homepage content that is not catalogue — the hero slide, the trust
 // strip, the promo strip, the tagline, the delivery window — stays here as
@@ -166,6 +166,24 @@ export async function getHomeLivingProducts() {
     .eq('store', HOMELIVING_STORE)
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+/**
+ * The rows behind cart lines, by id, with their variants — so the cart can
+ * price a Home & Living line without the /homeliving shell being mounted.
+ * Inactive rows come back too: the cart says "no longer available" rather
+ * than silently dropping a line the customer chose.
+ */
+export async function getHomeLivingProductsByIds(ids) {
+  const clean = [...new Set((ids || []).map(String).filter(Boolean))];
+  if (!clean.length) return [];
+  const { data, error } = await supabase
+    .from('catalogue_products')
+    .select(PRODUCT_SELECT)
+    .eq('store', HOMELIVING_STORE)
+    .in('id', clean);
   if (error) throw error;
   return Array.isArray(data) ? data : [];
 }

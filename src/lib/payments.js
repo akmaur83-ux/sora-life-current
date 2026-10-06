@@ -98,7 +98,9 @@ export async function createPaymentOrder({
       qty: l.qty,
       variantId: l.variantId || null,
       variant: l.variant || null,
-      ...(l.catalogue === 'fashion' ? { catalogue: 'fashion' } : {}),
+      // A wellness line carries nothing, so its payload is byte-for-byte what it
+      // always was; a grocery line is blocked before checkout and never arrives.
+      ...(l.catalogue === 'fashion' || l.catalogue === 'homeliving' ? { catalogue: l.catalogue } : {}),
     })),
     delivery,
     customer,
