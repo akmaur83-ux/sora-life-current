@@ -62,6 +62,9 @@ const NAV = [{
   to: '/admin/store-catalogue/homeliving',
   label: 'Home & Living Products'
 }, {
+  to: '/admin/store-catalogue/grocery',
+  label: 'Grocery Products'
+}, {
   to: '/admin/category-experience',
   label: 'Category Experience'
 }, {

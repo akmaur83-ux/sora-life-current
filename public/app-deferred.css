@@ -81,7 +81,9 @@
 .adm-banner { padding: 14px 18px; border-radius: var(--r-sm); margin-bottom: var(--sp-5); font-size: var(--text-sm); }
 .adm-banner.ok { background: var(--forest-50); color: var(--forest-700); border: 1px solid var(--forest-200); }
 .adm-banner.err { background: var(--clay-100); color: var(--clay-600); border: 1px solid var(--clay-500); }
-.adm-banner.info { background: var(--honey-100); color: var(--honey-700); border: 1px solid var(--honey-300); }
+/* .info is also the storefront's info-page wrapper (src/styles/info.css: min-height 60vh, its own
+   padding and font), and app.css is on every route — so the admin banner undoes those here. */
+.adm-banner.info { background: var(--honey-100); color: var(--honey-700); border: 1px solid var(--honey-300); min-height: 0; padding: 14px 18px; font-family: inherit; }
 
 .adm-slide-list { display: flex; flex-direction: column; gap: var(--sp-4); }
 .adm-slide-card { display: grid; grid-template-columns: 140px 1fr auto; gap: var(--sp-4); align-items: center; background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: var(--sp-4); }
@@ -732,11 +734,56 @@
 .sc-toolbar .sc-field { flex: 1 1 210px; max-width: 420px; }
 .sc-upload { display: grid; gap: 8px; margin: 12px 0 20px; font-size: 14px; }
 .sc-upload input { max-width: 100%; }
-.sc-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
-.sc-image { min-width: 0; }
-.sc-image img { display: block; width: 100%; height: 140px; object-fit: contain; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; }
-.sc-image .sc-actions { gap: 6px; margin: 8px 0; }
+.sc-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; list-style: none; margin: 16px 0; padding: 0; }
+.sc-image { min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: grab; }
+.sc-image.is-over { outline: 2px dashed var(--honey-500, #C9A24B); outline-offset: 2px; }
+.sc-image img { display: block; width: 100%; height: 150px; object-fit: contain; border-radius: 6px; margin-bottom: 8px; background: var(--ivory, #FBF8F1); }
+.sc-image .sc-field { margin-top: 8px; }
+.sc-image .sc-actions { gap: 6px; margin: 8px 0 0; }
+.sc-image__meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 38px; }
+.sc-image__pos { font-weight: 700; font-size: 13px; color: var(--color-text-muted); }
+.sc-primary { background: var(--forest-50, #EEF3EC); color: var(--forest-700, #2F4A35); }
+/* The upload target: a file input inside a dashed drop area. */
+.sc-drop { display: grid; gap: 6px; padding: 18px; border: 1.5px dashed var(--line); border-radius: 8px; background: var(--ivory, #FBF8F1); cursor: pointer; }
+.sc-drop.is-busy { opacity: .7; cursor: progress; }
+.sc-drop input { max-width: 100%; }
+.sc-queue { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.sc-queue__item { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 6px 10px; border-radius: 6px; background: var(--ivory, #FBF8F1); }
+.sc-queue__item > span:first-child { flex: 0 0 auto; max-width: 40%; overflow-wrap: anywhere; font-weight: 600; }
+.sc-queue__item > span:last-child { flex: 1 1 auto; text-align: right; }
+.sc-queue__item.is-added { color: var(--forest-700, #2F4A35); }
+.sc-queue__item.is-failed { color: var(--color-sale, #A94F4F); }
+/* CSV import: steps, options, the plan. */
+.sc-steps { margin: 12px 0; padding-left: 20px; display: grid; gap: 10px; font-size: 14px; }
+.sc-file { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.sc-options { display: grid; gap: 8px; margin: 8px 0 16px; font-size: 14px; }
+.sc-options .adm-checkrow { align-items: flex-start; }
+.sc-plan__summary { margin: 8px 0 12px; }
+.sc-diffs, .sc-list { margin: 0; padding-left: 18px; font-size: 13px; }
+.sc-diffs .is-kept { color: var(--color-text-muted); }
+.sc-kept { margin: 12px 0; font-size: 13px; }
+.sc-new { margin-right: 4px; }
+/* Status filter, demo badge, deletes. */
+.sc-toolbar .sc-field--narrow { flex: 0 1 190px; }
+.sc-demo { margin-left: 6px; background: var(--honey-100, #F7EBCF); color: var(--honey-700, #7A5A12); }
+.sc-actions--row { margin: 0; gap: 6px; flex-wrap: nowrap; }
+.sc-danger { color: var(--color-sale, #A94F4F); }
+.sc-danger-btn { background: var(--color-sale, #A94F4F); border-color: var(--color-sale, #A94F4F); color: #fff; }
+.sc-demo-panel h3 { font-size: 15px; }
+/* Claim warnings (warn, never block). */
+.sc-claims { margin: 12px 0 16px; }
+.sc-claims__list { margin-top: 6px; }
+.sc-claims__list q { color: var(--color-text-muted); }
+.sc-claims--row { margin: 8px 0 0; padding: 8px 10px; border-radius: 6px; background: var(--honey-100, #F7EBCF); font-size: 13px; }
 .adm-catalogue .adm-checkrow { gap: 8px; }
+/* A field the last save refused: its own message sits under it (.hint.err). */
+.sc-field--error .input, .sc-field--error .select, .sc-field--error .textarea { border-color: var(--color-sale, #A94F4F); box-shadow: 0 0 0 1px var(--color-sale, #A94F4F); }
+.sc-field .hint.err { margin: 0; font-weight: 600; }
+.sc-reload { margin-left: 10px; }
+/* What the store does with what is entered here (grocery not sold; GST recorded, not applied).
+   Its own class, not .info: the storefront's info pages own .info (min-height: 60vh). */
+.adm-banner.sc-info { background: var(--honey-100); color: var(--honey-700); border: 1px solid var(--honey-300); }
+.sc-note { margin: 12px 0 16px; }
 @media (max-width: 640px) {
   .sc-panel { padding: 16px; }
   .sc-panel .adm-grid2 { grid-template-columns: minmax(0, 1fr); }
