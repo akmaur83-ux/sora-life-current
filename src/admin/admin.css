@@ -77,7 +77,9 @@
 .adm-banner { padding: 14px 18px; border-radius: var(--r-sm); margin-bottom: var(--sp-5); font-size: var(--text-sm); }
 .adm-banner.ok { background: var(--forest-50); color: var(--forest-700); border: 1px solid var(--forest-200); }
 .adm-banner.err { background: var(--clay-100); color: var(--clay-600); border: 1px solid var(--clay-500); }
-.adm-banner.info { background: var(--honey-100); color: var(--honey-700); border: 1px solid var(--honey-300); }
+/* .info is also the storefront's info-page wrapper (src/styles/info.css: min-height 60vh, its own
+   padding and font), and app.css is on every route — so the admin banner undoes those here. */
+.adm-banner.info { background: var(--honey-100); color: var(--honey-700); border: 1px solid var(--honey-300); min-height: 0; padding: 14px 18px; font-family: inherit; }
 
 .adm-slide-list { display: flex; flex-direction: column; gap: var(--sp-4); }
 .adm-slide-card { display: grid; grid-template-columns: 140px 1fr auto; gap: var(--sp-4); align-items: center; background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: var(--sp-4); }
