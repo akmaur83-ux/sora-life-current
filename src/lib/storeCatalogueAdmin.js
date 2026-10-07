@@ -160,7 +160,9 @@ export function catalogueCategoryPayload(input, categories, id = null) {
   const categorySlug = name || text(input.slug) ? c.take('slug', () => slug(input.slug, name)) : undefined;
   // Same rule as the unique index: a slug is unique among one parent's children in one store.
   if (categorySlug && categories.some((row) => row.id !== id && (row.parent_id || null) === parent_id && row.slug === categorySlug)) {
-    c.fail('slug', 'Another category under the same parent already uses this slug.');
+    // When the slug was made from the name, the Slug field is empty — say which slug clashed.
+    c.fail('slug', text(input.slug) ? 'Another category under the same parent already uses this slug.'
+      : `Another category under the same parent already uses the slug “${categorySlug}” made from the name. Enter a different slug.`);
   }
   const image_url = text(input.image_url) ? safeVisualUrl(input.image_url) : null;
   if (text(input.image_url) && !image_url) c.fail('image_url', 'Enter a public HTTPS image URL or a local image path.');

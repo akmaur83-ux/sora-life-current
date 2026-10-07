@@ -131,7 +131,7 @@ await test('every field problem is reported at once, each against its field', as
 await test('a slug or SKU another product in the store holds is refused before the write; other stores and the row itself are fine', async () => {
   const { api, store } = await apiOver();
   await assert.rejects(api.saveStoreProduct('fashion', null, { name: 'Linen Shirt', category_id: 'fc-shirts', mrp: 999, sku: 'AW-WRAP' }),
-    (e) => e.fieldErrors?.slug === 'Another product in this store already uses this slug.' && e.fieldErrors?.sku === 'Another product in this store already uses this SKU.');
+    (e) => e.fieldErrors?.slug === 'Another product in this store already uses the slug “linen-shirt” made from the name. Enter a different slug.' && e.fieldErrors?.sku === 'Another product in this store already uses this SKU.');
   assert.equal(store.writes().length, 0, 'nothing was inserted');
   const homeliving = await api.saveStoreProduct('homeliving', null, { name: 'Linen Shirt', category_id: 'hc-bedsheets', mrp: 999, sku: 'AW-WRAP' });
   assert.equal(homeliving.slug, 'linen-shirt', 'slugs and product SKUs are per store');
@@ -145,7 +145,7 @@ await test('one save reports everything: a taken slug or SKU alongside the other
   await assert.rejects(api.saveStoreProduct('fashion', 'fp-linen', { ...own, slug: 'wrap-dress', sku: 'AW-WRAP', sale_price: 1500, hsn_code: '62052' }, own.updated_at),
     (e) => JSON.stringify(Object.keys(e.fieldErrors).sort()) === JSON.stringify(['hsn_code', 'sale_price', 'sku', 'slug']) && e.fieldErrors.slug === 'Another product in this store already uses this slug.');
   await assert.rejects(api.saveStoreProduct('fashion', null, { name: 'Wrap Dress', category_id: 'fc-dresses', mrp: '' }),
-    (e) => e.fieldErrors?.slug === 'Another product in this store already uses this slug.' && !!e.fieldErrors.mrp, 'the automatic slug from the name is checked too');
+    (e) => e.fieldErrors?.slug === 'Another product in this store already uses the slug “wrap-dress” made from the name. Enter a different slug.' && !!e.fieldErrors.mrp, 'the automatic slug from the name is checked too, and named');
   await assert.rejects(api.saveStoreProduct('fashion', 'fp-linen', { ...own, slug: 'Bad Slug!' }, own.updated_at),
     (e) => /lowercase letters/.test(e.fieldErrors?.slug), 'a slug its rule refuses reports the rule, not a clash');
   await assert.rejects(api.saveStoreVariant('homeliving', 'hp-percale', null, { size: 'Single', colour: 'Ivory', sku: 'AW-LIN-M-SAGE', stock: '-1' }),
@@ -168,7 +168,9 @@ await test('variant SKUs are unique across EVERY store (the 0033 constraint); si
 await test('a category slug is unique under one parent, not across the tree', async () => {
   const { api } = await apiOver();
   await assert.rejects(api.saveStoreCategory('fashion', null, { name: 'Shirts', parent_id: 'fc-clothing' }),
-    (e) => e.fieldErrors?.slug === 'Another category under the same parent already uses this slug.');
+    (e) => e.fieldErrors?.slug === 'Another category under the same parent already uses the slug “shirts” made from the name. Enter a different slug.');
+  await assert.rejects(api.saveStoreCategory('fashion', null, { name: 'Shirts again', slug: 'shirts', parent_id: 'fc-clothing' }),
+    (e) => e.fieldErrors?.slug === 'Another category under the same parent already uses this slug.', 'a typed slug is "this slug"');
   const top = await api.saveStoreCategory('fashion', null, { name: 'Shirts' });
   assert.equal(top.parent_id, null);
 });
@@ -275,7 +277,7 @@ await test('variant and category forms show their errors inline too', async () =
   await list.handle.act(() => change(fieldByLabel(cat(), 'Category name').control, 'Shirts'));
   await list.handle.act(() => change(fieldByLabel(cat(), 'Parent category (up to 3 levels)').control, 'fc-clothing'));
   await list.handle.act(() => submit(cat()));
-  assert.equal(fieldByLabel(cat(), 'Slug').error, 'Another category under the same parent already uses this slug.');
+  assert.equal(fieldByLabel(cat(), 'Slug').error, 'Another category under the same parent already uses the slug “shirts” made from the name. Enter a different slug.');
 });
 
 await test("page: the editor's own image save does not make its next product save look stale", async () => {

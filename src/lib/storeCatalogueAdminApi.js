@@ -73,15 +73,21 @@ async function writeOne(query, table, filters, kind) {
 /** A field's value as its rule reads it, or null if the rule refuses it (that refusal is reported separately). */
 const readable = (rule, value) => { try { return rule(value); } catch { return null; } };
 
-/** Product slugs and SKUs another product in this store already holds: { field: message }. */
-async function productKeyClashes(store, id, keys) {
+/**
+ * Product slugs and SKUs another product in this store already holds: { field: message }.
+ * `autoSlug`: the slug was made from the name, so the Slug field is empty — the message names it.
+ */
+async function productKeyClashes(store, id, keys, { autoSlug = false } = {}) {
   const errors = {};
   for (const field of ['slug', 'sku']) {
     if (!keys[field]) continue;
     let query = supabase.from('catalogue_products').select('id').eq('store', store).eq(field, keys[field]);
     if (id) query = query.neq('id', id);
     const taken = await result(query.limit(1));
-    if (taken?.length) errors[field] = `Another product in this store already uses this ${field === 'slug' ? 'slug' : 'SKU'}.`;
+    if (!taken?.length) continue;
+    errors[field] = field === 'sku' ? 'Another product in this store already uses this SKU.'
+      : autoSlug ? `Another product in this store already uses the slug “${keys.slug}” made from the name. Enter a different slug.`
+        : 'Another product in this store already uses this slug.';
   }
   return errors;
 }
@@ -124,10 +130,11 @@ export async function getStoreProduct(store, id) {
 export async function saveStoreProduct(store, id, input, expectedUpdatedAt = null) {
   requireCatalogueStore(store);
   const categories = await listStoreCategories(store);
+  const autoSlug = !String(input.slug ?? '').trim();
   const row = await validated(() => catalogueProductPayload(input, categories), (built) => productKeyClashes(store, id, built || {
-    slug: readable(PRODUCT_FIELD_RULES.slug, String(input.slug ?? '').trim() || catalogueSlug(input.name)),
+    slug: readable(PRODUCT_FIELD_RULES.slug, autoSlug ? catalogueSlug(input.name) : input.slug),
     sku: readable(PRODUCT_FIELD_RULES.sku, input.sku),
-  }));
+  }, { autoSlug }));
   // First create a draft; images/variants can then be saved against its real id.
   if (!id) return result(supabase.from('catalogue_products').insert({ ...row, store, is_active: false }).select().single(), 'product');
   if (row.is_active) assertCataloguePublishable(store, await getStoreProduct(store, id));
