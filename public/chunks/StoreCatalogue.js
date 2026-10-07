@@ -421,6 +421,98 @@ function planDemoDelete(categories, products) {
   };
 }
 
+// ---- Gallery files: their order, and matching them to products by name ---------------
+// Files chosen together are taken in file-name order whatever order the file
+// dialog hands them over in, numbers compared as numbers (x-2 before x-10), so
+// "<slug>-1" is always first — and, in an empty gallery, the primary.
+function sortByFileName(files) {
+  return [...(files || [])].sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), 'en', {
+    numeric: true,
+    sensitivity: 'base'
+  }));
+}
+const BULK_IMAGE_NAME = /^(.+)-(\d{1,4})\.(webp|jpe?g|png)$/i;
+/**
+ * Plan a bulk gallery upload. Each file named <product slug>-<number>.<webp|jpg|png>
+ * goes to that product, in number order; number 1 becomes the primary of an
+ * empty gallery. Pure: nothing is read or written.
+ *   uploads   [{ product, files, numbers, existing }] — what an upload will add
+ *   held      [{ product, files, numbers, existing, reason }] — matched, not uploaded:
+ *             two files with one number, or a gallery that already has images
+ *             (unless `append`, which adds after them)
+ *   unmatched [{ name, reason }] — files that name no product in this store
+ */
+function planBulkImages(files, products, {
+  append = false
+} = {}) {
+  const bySlug = new Map((products || []).map(p => [String(p.slug || '').toLowerCase(), p]));
+  const groups = new Map(),
+    unmatched = [];
+  for (const file of files || []) {
+    const name = String(file?.name || '');
+    const match = BULK_IMAGE_NAME.exec(name);
+    if (!match) {
+      unmatched.push({
+        name,
+        reason: /\.(webp|jpe?g|png)$/i.test(name) ? 'The name does not end in -<number>, e.g. -1.webp.' : 'Not a JPEG, PNG or WebP file.'
+      });
+      continue;
+    }
+    const slug = match[1].toLowerCase(),
+      product = bySlug.get(slug);
+    if (!product) {
+      unmatched.push({
+        name,
+        reason: `No product in this store has the slug “${slug}”.`
+      });
+      continue;
+    }
+    if (!groups.has(product.id)) groups.set(product.id, {
+      product,
+      entries: []
+    });
+    groups.get(product.id).entries.push({
+      file,
+      number: Number(match[2])
+    });
+  }
+  const uploads = [],
+    held = [];
+  for (const {
+    product,
+    entries
+  } of groups.values()) {
+    entries.sort((a, b) => a.number - b.number || a.file.name.localeCompare(b.file.name));
+    const row = {
+      product,
+      files: entries.map(e => e.file),
+      numbers: entries.map(e => e.number),
+      existing: (product.media || []).length
+    };
+    const repeated = [...new Set(row.numbers.filter((n, i) => row.numbers.indexOf(n) !== i))];
+    if (repeated.length) {
+      held.push({
+        ...row,
+        reason: `More than one file is numbered ${repeated.join(', ')} (${entries.filter(e => repeated.includes(e.number)).map(e => e.file.name).join(', ')}). Keep one file per number.`
+      });
+    } else if (row.existing && !append) {
+      held.push({
+        ...row,
+        reason: `Already has ${row.existing} image${row.existing === 1 ? '' : 's'}. Tick “Also add to products that already have images” to add these after them.`
+      });
+    } else uploads.push(row);
+  }
+  const byName = (a, b) => String(a.product.name).localeCompare(String(b.product.name));
+  return {
+    uploads: uploads.sort(byName),
+    held: held.sort(byName),
+    unmatched: unmatched.sort((a, b) => a.name.localeCompare(b.name, 'en', {
+      numeric: true
+    })),
+    fileCount: uploads.reduce((n, row) => n + row.files.length, 0)
+  };
+}
+
 // ============================================================
 // Catalogue images: every upload becomes a WebP under 150 KB, in the browser,
 // before it leaves the admin's machine.
@@ -431,6 +523,10 @@ function planDemoDelete(categories, products) {
 // is never shrunk below 800 px to make the size: an image that cannot fit at
 // 800 px is refused rather than shipped as a thumbnail — a product page needs
 // the detail.
+//
+// A file that already meets the target is used as it is: a real WebP (by its
+// bytes, not just its name) of at most 150 KB whose longest side is at most
+// 1600 px. Re-encoding it would only cost quality.
 //
 // The decode and encode steps are injectable: the browser path uses
 // createImageBitmap and a canvas; tests drive the ladder with a fake codec.
@@ -491,9 +587,21 @@ async function encodeInBrowser(bitmap, {
   return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('The image could not be encoded.')), 'image/webp', quality));
 }
 
+/** Whether the file's bytes are a WebP: "RIFF", a length, then "WEBP". */
+async function hasWebpHeader(file) {
+  try {
+    const b = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+    const at = (i, text) => [...text].every((c, k) => b[i + k] === c.charCodeAt(0));
+    return b.length === 12 && at(0, 'RIFF') && at(8, 'WEBP');
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Turn an uploaded image into a WebP File under maxBytes.
- * Resolves { file, width, height, quality, bytes, sourceBytes }.
+ * Turn an uploaded image into a WebP File under maxBytes — or, when it already
+ * is one that fits (see above), pass it through unchanged.
+ * Resolves { file, width, height, quality, bytes, sourceBytes, unchanged }.
  */
 async function compressToWebp(file, {
   decode = decodeInBrowser,
@@ -507,6 +615,19 @@ async function compressToWebp(file, {
   const image = await decode(file);
   try {
     if (!(image.width > 0 && image.height > 0)) throw new Error(`“${file.name}” has no usable size.`);
+    if (file.type === 'image/webp' && file.size <= maxBytes && Math.max(image.width, image.height) <= WEBP_SIDES[0] && (await hasWebpHeader(file))) {
+      return {
+        file: new File([file], webpName(file.name), {
+          type: 'image/webp'
+        }),
+        width: image.width,
+        height: image.height,
+        quality: null,
+        bytes: file.size,
+        sourceBytes: file.size,
+        unchanged: true
+      };
+    }
     for (const attempt of webpAttempts(image.width, image.height)) {
       const blob = await encode(image, attempt);
       // Safari's canvas silently falls back to PNG for an encoder it lacks.
@@ -520,7 +641,8 @@ async function compressToWebp(file, {
           height: attempt.height,
           quality: attempt.quality,
           bytes: blob.size,
-          sourceBytes: file.size
+          sourceBytes: file.size,
+          unchanged: false
         };
       }
     }
@@ -764,15 +886,16 @@ async function uploadStoreImage(store, file) {
   return (await uploadStoreImageFile(store, file)).url;
 }
 /**
- * Add several images to a product's gallery, one at a time. A file that fails
+ * Add several images to a product's gallery, one at a time, in file-name order
+ * (sortByFileName), whatever order they were chosen in. A file that fails
  * (unreadable, cannot fit 150 KB, upload refused) is reported and the rest go
  * on. The first image a product ever gets becomes its primary.
- * onProgress(index, { name, status: converting|uploading|added|failed, bytes?, error? })
+ * onProgress(index in that order, { name, status: converting|uploading|added|failed, bytes?, unchanged?, error? })
  */
 async function addStoreImages(store, productId, files, onProgress = () => {}) {
   requireCatalogueStore(store);
   const results = [];
-  for (const [index, file] of [...files].entries()) {
+  for (const [index, file] of sortByFileName(files).entries()) {
     const report = (status, extra = {}) => onProgress(index, {
       name: file?.name || `Image ${index + 1}`,
       status,
@@ -797,12 +920,14 @@ async function addStoreImages(store, productId, files, onProgress = () => {}) {
       };
       await result(supabase.from('catalogue_product_media').insert(row).select().single(), 'image');
       report('added', {
-        bytes: webp.bytes
+        bytes: webp.bytes,
+        unchanged: webp.unchanged === true
       });
       results.push({
         name: file?.name,
         ok: true,
-        bytes: webp.bytes
+        bytes: webp.bytes,
+        unchanged: webp.unchanged === true
       });
     } catch (error) {
       report('failed', {
@@ -814,6 +939,68 @@ async function addStoreImages(store, productId, files, onProgress = () => {}) {
         error: error.message
       });
     }
+  }
+  return results;
+}
+/**
+ * Run a bulk gallery upload planned by planBulkImages: each product's files go
+ * through addStoreImages (the same conversion, bucket and media rows as the
+ * product editor), one product at a time. A product whose gallery changed since
+ * the plan was made is skipped, not added to — choosing the files again
+ * re-plans against the gallery as it is.
+ * onProgress({ status, fileName, productName, product, products, file, files }) — product and file count from 1.
+ * Resolves [{ product, added, unchanged, failed: [{ name, error }], skipped? }].
+ */
+async function addStoreImagesByName(store, plan, onProgress = () => {}) {
+  requireCatalogueStore(store);
+  const rows = plan?.uploads || [],
+    results = [];
+  for (const [k, {
+    product,
+    files,
+    existing
+  }] of rows.entries()) {
+    try {
+      const count = ((await getStoreProduct(store, product.id)).media || []).length;
+      if (count !== existing) {
+        results.push({
+          product,
+          added: 0,
+          unchanged: 0,
+          failed: [],
+          skipped: `Its gallery changed after the files were chosen (${existing} image${existing === 1 ? '' : 's'} then, ${count} now). Nothing was added — choose the files again.`
+        });
+        continue;
+      }
+    } catch (error) {
+      results.push({
+        product,
+        added: 0,
+        unchanged: 0,
+        failed: [],
+        skipped: error.message
+      });
+      continue;
+    }
+    const out = await addStoreImages(store, product.id, files, (index, state) => onProgress({
+      status: state.status,
+      fileName: state.name,
+      productName: product.name,
+      product: k + 1,
+      products: rows.length,
+      file: index + 1,
+      files: files.length
+    }));
+    const ok = out.filter(r => r.ok);
+    results.push({
+      product,
+      added: ok.length,
+      unchanged: ok.filter(r => r.unchanged).length,
+      failed: out.filter(r => !r.ok).map(r => ({
+        name: r.name,
+        error: r.error
+      }))
+    });
   }
   return results;
 }
@@ -2374,6 +2561,210 @@ function CatalogueImport({
     })]
   });
 }
+const count = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+// Bulk images: many files at once, each to the product its name gives
+// (<slug>-<number>), shown as a plan before anything is uploaded. The upload
+// runs in this browser as the signed-in admin, through the product editor's own
+// gallery path (addStoreImages): the same conversion, bucket and policies.
+function BulkImages({
+  store,
+  products,
+  onApplied
+}) {
+  const [files, setFiles] = reactExports.useState([]),
+    [append, setAppend] = reactExports.useState(false);
+  const [busy, setBusy] = reactExports.useState(false),
+    [progress, setProgress] = reactExports.useState(''),
+    [error, setError] = reactExports.useState(''),
+    [results, setResults] = reactExports.useState(null);
+  const plan = reactExports.useMemo(() => files.length ? planBulkImages(files, products, {
+    append
+  }) : null, [files, products, append]);
+  function choose(list) {
+    const chosen = [...(list || [])];
+    if (!chosen.length || busy) return;
+    setFiles(chosen);
+    setResults(null);
+    setError('');
+  }
+  async function upload() {
+    if (!plan?.fileCount || busy) return;
+    if (!window.confirm(`Upload ${count(plan.fileCount, 'image')} to ${count(plan.uploads.length, `${CATALOGUE_STORES[store]} product`)}?\n\n` + 'Each goes into its product’s gallery in number order; number 1 becomes the primary of an empty gallery. Nothing is published and no stock changes.')) return;
+    setBusy(true);
+    setError('');
+    setResults(null);
+    try {
+      setResults(await addStoreImagesByName(store, plan, p => setProgress(`product ${p.product} of ${p.products}, image ${p.file} of ${p.files}`)));
+      setFiles([]);
+      onApplied();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+      setProgress('');
+    }
+  }
+  const added = results ? results.reduce((n, r) => n + r.added, 0) : 0,
+    asIs = results ? results.reduce((n, r) => n + r.unchanged, 0) : 0;
+  const problems = results ? results.filter(r => r.skipped || r.failed.length) : [];
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "surface sc-panel sc-import sc-bulk",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      children: "Bulk images"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("ol", {
+      className: "sc-steps",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        children: ["Name each file after its product\u2019s slug and a number: ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+          children: "blue-linen-shirt-1.webp"
+        }), ", ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+          children: "blue-linen-shirt-2.webp"
+        }), ". The slug is the Slug field in the product\u2019s editor, and a column of the CSV export."]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: "Choose or drop all the files at once, for as many products as you like. You will see which product each file goes to before anything is uploaded."
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: "Number 1 becomes the primary image of an empty gallery; the rest follow in number order. A WebP already under 150 KB is used as it is; anything else is converted like any upload."
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+      className: `sc-drop${busy ? ' is-busy' : ''}`,
+      onDragOver: e => e.preventDefault(),
+      onDrop: e => {
+        e.preventDefault();
+        choose(e.dataTransfer?.files);
+      },
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+        children: busy ? 'Uploading…' : 'Choose images'
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "hint",
+        children: "JPEG, PNG or WebP, named <slug>-<number>."
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+        type: "file",
+        multiple: true,
+        accept: "image/jpeg,image/png,image/webp",
+        disabled: busy,
+        onChange: e => {
+          const list = [...(e.target.files || [])];
+          e.target.value = '';
+          choose(list);
+        }
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "sc-options",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        className: "adm-checkrow",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          type: "checkbox",
+          checked: append,
+          disabled: busy,
+          onChange: e => setAppend(e.target.checked)
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: "Also add to products that already have images"
+          }), ", after their current images. Off: a product that already has images is left alone."]
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Messages, {
+      error: error,
+      message: results ? `${count(added, 'image')} added to ${count(results.filter(r => r.added).length, 'product')}${asIs ? ` (${asIs} used as they were)` : ''}.${problems.length ? ` ${count(problems.length, 'product')} with problems — see below.` : ''} Nothing was published.` : ''
+    }), !!problems.length && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "adm-banner err",
+      role: "alert",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+        children: "Not everything was added"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "sc-list",
+        children: problems.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: r.product.name
+          }), ": ", r.skipped || r.failed.map(f => `${f.name}: ${f.error}`).join(' · ')]
+        }, r.product.id))
+      })]
+    }), plan && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "sc-plan",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "sc-plan__summary",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+          children: count(files.length, 'file')
+        }), " \u2014 ", count(plan.fileCount, 'image'), " to upload to ", count(plan.uploads.length, 'product'), " \xB7 ", count(plan.held.length, 'product'), " held back \xB7 ", count(plan.unmatched.length, 'file'), " matching no product"]
+      }), !!plan.uploads.length && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "adm-table-wrap",
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+          className: "adm-table",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+                children: "Product"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+                children: "Gallery now"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+                children: "Images to add, in order"
+              })]
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+            children: plan.uploads.map(row => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+                  children: row.product.name
+                }), " ", /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                  className: "hint",
+                  children: [row.product.slug, " \xB7 ", row.product.is_active ? 'Published' : 'Draft']
+                })]
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                children: row.existing ? `${count(row.existing, 'image')} — these go after them` : 'Empty'
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                children: /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+                  className: "sc-list",
+                  children: row.files.map((file, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+                    children: [file.name, !row.existing && i === 0 ? ' — primary' : '']
+                  }, file.name))
+                })
+              })]
+            }, row.product.id))
+          })]
+        })
+      }), !!plan.held.length && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "adm-banner err",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+          children: [count(plan.held.length, 'product'), " held back \u2014 nothing will be uploaded to ", plan.held.length === 1 ? 'it' : 'them']
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "sc-list",
+          children: plan.held.map(row => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+              children: row.product.name
+            }), " (", count(row.files.length, 'file'), "): ", row.reason]
+          }, row.product.id))
+        })]
+      }), !!plan.unmatched.length && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "adm-banner err",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+          children: [count(plan.unmatched.length, 'file'), " matching no product \u2014 not uploaded"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "sc-list",
+          children: plan.unmatched.map(u => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+            children: [u.name, ": ", u.reason]
+          }, u.name))
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "sc-actions",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "btn",
+          disabled: busy || !plan.fileCount,
+          onClick: upload,
+          children: busy ? `Uploading… ${progress}` : `Upload ${count(plan.fileCount, 'image')} to ${count(plan.uploads.length, 'product')}`
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "btn btn-outline btn-sm",
+          disabled: busy,
+          onClick: () => setFiles([]),
+          children: "Clear"
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hint",
+      children: "Drafts stay drafts and stock is not touched: publish each product from its editor. Keep this tab open until the upload finishes."
+    })]
+  });
+}
 
 // "Delete demo rows" for one store: review exactly what goes and what stays
 // (planDemoDelete), then delete — refused if the rows changed since review.
@@ -2521,7 +2912,7 @@ function CatalogueList({
     [error, setError] = reactExports.useState(''),
     [editing, setEditing] = reactExports.useState(null);
   const [revision, setRevision] = reactExports.useState(0);
-  const tab = ['categories', 'import'].includes(params.get('tab')) ? params.get('tab') : 'products';
+  const tab = ['categories', 'import', 'images'].includes(params.get('tab')) ? params.get('tab') : 'products';
   const category = params.get('category') || '',
     search = params.get('q') || '';
   reactExports.useEffect(() => {
@@ -2578,6 +2969,12 @@ function CatalogueList({
           tab: 'import'
         }),
         children: "Bulk import (CSV)"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        className: `adm-chip${tab === 'images' ? ' active' : ''}`,
+        onClick: () => update({
+          tab: 'images'
+        }),
+        children: "Bulk images"
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx(Messages, {
       error: error
@@ -2592,6 +2989,10 @@ function CatalogueList({
       store: store,
       products: products,
       categories: categories,
+      onApplied: () => setRevision(n => n + 1)
+    }) : tab === 'images' ? /*#__PURE__*/jsxRuntimeExports.jsx(BulkImages, {
+      store: store,
+      products: products,
       onApplied: () => setRevision(n => n + 1)
     }) : tab === 'products' ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -3078,7 +3479,7 @@ function GalleryEditor({
     }
   }
   async function upload(fileList) {
-    const files = [...(fileList || [])];
+    const files = sortByFileName(fileList); // the order addStoreImages adds them in
     if (!files.length || busy) return;
     setQueue(files.map(file => ({
       name: file.name,
@@ -3127,6 +3528,8 @@ function GalleryEditor({
   }
   async function addByUrl(e) {
     e.preventDefault();
+    // Optional: an empty URL (Enter in the alt-text box) adds nothing and is not an error.
+    if (!urlForm.public_url.trim()) return;
     const next = media.length ? Math.max(...media.map(m => Number(m.sort_order) || 0)) + 1 : 0;
     await run(async () => {
       await saveStoreMedia(store, product.id, null, {
@@ -3183,7 +3586,7 @@ function GalleryEditor({
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           children: row.name
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-          children: [UPLOAD_STATUS[row.status], row.bytes && row.status === 'added' ? ` · ${kb(row.bytes)} WebP` : '', row.error ? `: ${row.error}` : '']
+          children: [UPLOAD_STATUS[row.status], row.bytes && row.status === 'added' ? ` · ${kb(row.bytes)} WebP${row.unchanged ? ', used as it was' : ''}` : '', row.error ? `: ${row.error}` : '']
         })]
       }, `${i}-${row.name}`))
     }), !media.length ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -3289,7 +3692,7 @@ function GalleryEditor({
           children: "Add by URL"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "hint",
-          children: "For an image already hosted, or a bundled /img/\u2026 path. It is added as it is \u2014 not converted."
+          children: "Optional. For an image already hosted, or a bundled /img/\u2026 path. It is added as it is \u2014 not converted. Uploads, order and primary above save as you make them."
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "adm-grid2",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(Field, {
@@ -3298,8 +3701,7 @@ function GalleryEditor({
             label: "Image URL",
             field: "public_url",
             value: urlForm,
-            set: setUrlForm,
-            required: true
+            set: setUrlForm
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
             form: "img",
             errors: errors,
@@ -3313,7 +3715,8 @@ function GalleryEditor({
           children: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
             className: "btn btn-sm",
             type: "submit",
-            children: "Save image"
+            disabled: !urlForm.public_url.trim(),
+            children: "Add image from URL"
           })
         })]
       })
