@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { money } from '../../lib/format.js';
-import { CATALOGUE_STORES, catalogueSlug, categoryOptions, catalogueProductHref, catalogueFailureView, versionAfterOwnWrite, gstNote, GROCERY_NOT_SOLD, GROCERY_VARIANTS_UNREAD } from '../../lib/storeCatalogueAdmin.js';
-import { listStoreCategories, listStoreProducts, getStoreProduct, saveStoreProduct, saveStoreCategory, saveStoreVariant, uploadStoreImage, saveStoreMedia, removeStoreMedia, addStoreImages, reorderStoreMedia, setStoreMediaPrimary, saveStoreMediaAlt, applyCatalogueImport, deleteStoreVariant, previewStoreDemoDelete, deleteStoreDemoRows } from '../../lib/storeCatalogueAdminApi.js';
+import { CATALOGUE_STORES, catalogueSlug, categoryOptions, catalogueProductHref, catalogueFailureView, versionAfterOwnWrite, gstNote, GROCERY_NOT_SOLD, GROCERY_VARIANTS_UNREAD, sortByFileName, planBulkImages } from '../../lib/storeCatalogueAdmin.js';
+import { listStoreCategories, listStoreProducts, getStoreProduct, saveStoreProduct, saveStoreCategory, saveStoreVariant, uploadStoreImage, saveStoreMedia, removeStoreMedia, addStoreImages, reorderStoreMedia, setStoreMediaPrimary, saveStoreMediaAlt, applyCatalogueImport, deleteStoreVariant, previewStoreDemoDelete, deleteStoreDemoRows, addStoreImagesByName } from '../../lib/storeCatalogueAdminApi.js';
 import { planProductImport, planVariantImport, productsToCsv, variantsToCsv, describeDiff } from '../../lib/storeCatalogueCsv.js';
 import { productClaimWarnings, CLAIM_KINDS } from '../../lib/claimWarnings.js';
 
@@ -183,6 +183,62 @@ function CatalogueImport({ store, products, categories, onApplied }) {
   </section>;
 }
 
+const count = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+// Bulk images: many files at once, each to the product its name gives
+// (<slug>-<number>), shown as a plan before anything is uploaded. The upload
+// runs in this browser as the signed-in admin, through the product editor's own
+// gallery path (addStoreImages): the same conversion, bucket and policies.
+function BulkImages({ store, products, onApplied }) {
+  const [files, setFiles] = useState([]), [append, setAppend] = useState(false);
+  const [busy, setBusy] = useState(false), [progress, setProgress] = useState(''), [error, setError] = useState(''), [results, setResults] = useState(null);
+  const plan = useMemo(() => (files.length ? planBulkImages(files, products, { append }) : null), [files, products, append]);
+  function choose(list) {
+    const chosen = [...(list || [])];
+    if (!chosen.length || busy) return;
+    setFiles(chosen); setResults(null); setError('');
+  }
+  async function upload() {
+    if (!plan?.fileCount || busy) return;
+    if (!window.confirm(`Upload ${count(plan.fileCount, 'image')} to ${count(plan.uploads.length, `${CATALOGUE_STORES[store]} product`)}?\n\n`
+      + 'Each goes into its product’s gallery in number order; number 1 becomes the primary of an empty gallery. Nothing is published and no stock changes.')) return;
+    setBusy(true); setError(''); setResults(null);
+    try {
+      setResults(await addStoreImagesByName(store, plan, (p) => setProgress(`product ${p.product} of ${p.products}, image ${p.file} of ${p.files}`)));
+      setFiles([]);
+      onApplied();
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); setProgress(''); }
+  }
+  const added = results ? results.reduce((n, r) => n + r.added, 0) : 0, asIs = results ? results.reduce((n, r) => n + r.unchanged, 0) : 0;
+  const problems = results ? results.filter((r) => r.skipped || r.failed.length) : [];
+  return <section className="surface sc-panel sc-import sc-bulk">
+    <h2>Bulk images</h2>
+    <ol className="sc-steps">
+      <li>Name each file after its product’s slug and a number: <code>blue-linen-shirt-1.webp</code>, <code>blue-linen-shirt-2.webp</code>. The slug is the Slug field in the product’s editor, and a column of the CSV export.</li>
+      <li>Choose or drop all the files at once, for as many products as you like. You will see which product each file goes to before anything is uploaded.</li>
+      <li>Number 1 becomes the primary image of an empty gallery; the rest follow in number order. A WebP already under 150 KB is used as it is; anything else is converted like any upload.</li>
+    </ol>
+    <label className={`sc-drop${busy ? ' is-busy' : ''}`} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); choose(e.dataTransfer?.files); }}>
+      <strong>{busy ? 'Uploading…' : 'Choose images'}</strong>
+      <span className="hint">JPEG, PNG or WebP, named &lt;slug&gt;-&lt;number&gt;.</span>
+      <input type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={(e) => { const list = [...(e.target.files || [])]; e.target.value = ''; choose(list); }} />
+    </label>
+    <div className="sc-options"><label className="adm-checkrow"><input type="checkbox" checked={append} disabled={busy} onChange={(e) => setAppend(e.target.checked)} /><span><strong>Also add to products that already have images</strong>, after their current images. Off: a product that already has images is left alone.</span></label></div>
+    <Messages error={error} message={results ? `${count(added, 'image')} added to ${count(results.filter((r) => r.added).length, 'product')}${asIs ? ` (${asIs} used as they were)` : ''}.${problems.length ? ` ${count(problems.length, 'product')} with problems — see below.` : ''} Nothing was published.` : ''} />
+    {!!problems.length && <div className="adm-banner err" role="alert"><strong>Not everything was added</strong><ul className="sc-list">{problems.map((r) => <li key={r.product.id}><strong>{r.product.name}</strong>: {r.skipped || r.failed.map((f) => `${f.name}: ${f.error}`).join(' · ')}</li>)}</ul></div>}
+    {plan && <div className="sc-plan">
+      <p className="sc-plan__summary"><strong>{count(files.length, 'file')}</strong> — {count(plan.fileCount, 'image')} to upload to {count(plan.uploads.length, 'product')} · {count(plan.held.length, 'product')} held back · {count(plan.unmatched.length, 'file')} matching no product</p>
+      {!!plan.uploads.length && <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Product</th><th>Gallery now</th><th>Images to add, in order</th></tr></thead><tbody>
+        {plan.uploads.map((row) => <tr key={row.product.id}><td><strong>{row.product.name}</strong> <span className="hint">{row.product.slug} · {row.product.is_active ? 'Published' : 'Draft'}</span></td><td>{row.existing ? `${count(row.existing, 'image')} — these go after them` : 'Empty'}</td><td><ol className="sc-list">{row.files.map((file, i) => <li key={file.name}>{file.name}{!row.existing && i === 0 ? ' — primary' : ''}</li>)}</ol></td></tr>)}
+      </tbody></table></div>}
+      {!!plan.held.length && <div className="adm-banner err"><strong>{count(plan.held.length, 'product')} held back — nothing will be uploaded to {plan.held.length === 1 ? 'it' : 'them'}</strong><ul className="sc-list">{plan.held.map((row) => <li key={row.product.id}><strong>{row.product.name}</strong> ({count(row.files.length, 'file')}): {row.reason}</li>)}</ul></div>}
+      {!!plan.unmatched.length && <div className="adm-banner err"><strong>{count(plan.unmatched.length, 'file')} matching no product — not uploaded</strong><ul className="sc-list">{plan.unmatched.map((u) => <li key={u.name}>{u.name}: {u.reason}</li>)}</ul></div>}
+      <div className="sc-actions"><button type="button" className="btn" disabled={busy || !plan.fileCount} onClick={upload}>{busy ? `Uploading… ${progress}` : `Upload ${count(plan.fileCount, 'image')} to ${count(plan.uploads.length, 'product')}`}</button><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => setFiles([])}>Clear</button></div>
+    </div>}
+    <p className="hint">Drafts stay drafts and stock is not touched: publish each product from its editor. Keep this tab open until the upload finishes.</p>
+  </section>;
+}
+
 // "Delete demo rows" for one store: review exactly what goes and what stays
 // (planDemoDelete), then delete — refused if the rows changed since review.
 function DemoRows({ store, onClose, onDeleted }) {
@@ -227,7 +283,7 @@ function CatalogueList({ store }) {
   const [categories, setCategories] = useState([]), [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true), [loaded, setLoaded] = useState(false), [error, setError] = useState(''), [editing, setEditing] = useState(null);
   const [revision, setRevision] = useState(0);
-  const tab = ['categories', 'import'].includes(params.get('tab')) ? params.get('tab') : 'products';
+  const tab = ['categories', 'import', 'images'].includes(params.get('tab')) ? params.get('tab') : 'products';
   const category = params.get('category') || '', search = params.get('q') || '';
   useEffect(() => {
     let current = true; setLoading(true); setError('');
@@ -247,10 +303,11 @@ function CatalogueList({ store }) {
       <button className={`adm-chip${tab === 'products' ? ' active' : ''}`} onClick={() => update({ tab: '' })}>Products</button>
       <button className={`adm-chip${tab === 'categories' ? ' active' : ''}`} onClick={() => update({ tab: 'categories' })}>Categories &amp; subcategories</button>
       <button className={`adm-chip${tab === 'import' ? ' active' : ''}`} onClick={() => update({ tab: 'import' })}>Bulk import (CSV)</button>
+      <button className={`adm-chip${tab === 'images' ? ' active' : ''}`} onClick={() => update({ tab: 'images' })}>Bulk images</button>
     </div>
     <Messages error={error} />
     {/* Only the first load replaces the page: a reload after an import keeps its result on screen. */}
-    {loading && !loaded ? <p role="status">Loading catalogue…</p> : error && !loaded ? <button className="btn btn-outline" onClick={() => setRevision((n) => n + 1)}>Retry loading</button> : tab === 'import' ? <CatalogueImport store={store} products={products} categories={categories} onApplied={() => setRevision((n) => n + 1)} /> : tab === 'products' ? <>
+    {loading && !loaded ? <p role="status">Loading catalogue…</p> : error && !loaded ? <button className="btn btn-outline" onClick={() => setRevision((n) => n + 1)}>Retry loading</button> : tab === 'import' ? <CatalogueImport store={store} products={products} categories={categories} onApplied={() => setRevision((n) => n + 1)} /> : tab === 'images' ? <BulkImages store={store} products={products} onApplied={() => setRevision((n) => n + 1)} /> : tab === 'products' ? <>
       <div className="sc-toolbar">
         <label className="sc-field"><span className="label">Search products</span><input className="input" value={search} onChange={(e) => update({ q: e.target.value })} placeholder="Name, brand or SKU" /></label>
         <label className="sc-field"><span className="label">Category / subcategory</span><select className="select" value={category} onChange={(e) => update({ category: e.target.value })}><option value="">All categories</option>{categoryOptions(categories).map((row) => <option key={row.id} value={row.id}>{row.label}</option>)}</select></label>
@@ -342,7 +399,7 @@ function GalleryEditor({ store, product, onChanged }) {
     finally { setBusy(false); }
   }
   async function upload(fileList) {
-    const files = [...(fileList || [])];
+    const files = sortByFileName(fileList);   // the order addStoreImages adds them in
     if (!files.length || busy) return;
     setQueue(files.map((file) => ({ name: file.name, status: 'converting' })));
     let results = [];
@@ -390,7 +447,7 @@ function GalleryEditor({ store, product, onChanged }) {
       <span className="hint">Choose or drop several at once: JPEG, PNG or WebP. Each is converted to WebP under 150 KB before it is uploaded.</span>
       <input type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={(e) => { const files = [...(e.target.files || [])]; e.target.value = ''; upload(files); }} />
     </label>
-    {!!queue.length && <ul className="sc-queue" aria-live="polite">{queue.map((row, i) => <li key={`${i}-${row.name}`} className={`sc-queue__item is-${row.status}`}><span>{row.name}</span><span>{UPLOAD_STATUS[row.status]}{row.bytes && row.status === 'added' ? ` · ${kb(row.bytes)} WebP` : ''}{row.error ? `: ${row.error}` : ''}</span></li>)}</ul>}
+    {!!queue.length && <ul className="sc-queue" aria-live="polite">{queue.map((row, i) => <li key={`${i}-${row.name}`} className={`sc-queue__item is-${row.status}`}><span>{row.name}</span><span>{UPLOAD_STATUS[row.status]}{row.bytes && row.status === 'added' ? ` · ${kb(row.bytes)} WebP${row.unchanged ? ', used as it was' : ''}` : ''}{row.error ? `: ${row.error}` : ''}</span></li>)}</ul>}
     {!media.length ? <p className="adm-empty">No images yet. Add at least one before publishing.</p> : <ol className="sc-gallery" aria-label="Gallery order">{media.map((row, i) => <li key={row.id} className={`sc-image${over === row.id ? ' is-over' : ''}`} draggable={!busy}
         onDragStart={(e) => { dragged.current = row.id; e.dataTransfer?.setData?.('text/plain', row.id); }} onDragEnd={() => { dragged.current = null; setOver(null); }}
         onDragOver={(e) => { if (dragged.current) { e.preventDefault(); setOver(row.id); } }} onDrop={(e) => { if (!dragged.current) return; e.preventDefault(); e.stopPropagation?.(); drop(row.id); }}>

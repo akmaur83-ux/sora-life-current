@@ -9,6 +9,10 @@
 // 800 px is refused rather than shipped as a thumbnail — a product page needs
 // the detail.
 //
+// A file that already meets the target is used as it is: a real WebP (by its
+// bytes, not just its name) of at most 150 KB whose longest side is at most
+// 1600 px. Re-encoding it would only cost quality.
+//
 // The decode and encode steps are injectable: the browser path uses
 // createImageBitmap and a canvas; tests drive the ladder with a fake codec.
 // ============================================================
@@ -53,9 +57,19 @@ async function encodeInBrowser(bitmap, { width, height, quality }) {
   return new Promise((resolve, reject) => canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('The image could not be encoded.'))), 'image/webp', quality));
 }
 
+/** Whether the file's bytes are a WebP: "RIFF", a length, then "WEBP". */
+async function hasWebpHeader(file) {
+  try {
+    const b = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+    const at = (i, text) => [...text].every((c, k) => b[i + k] === c.charCodeAt(0));
+    return b.length === 12 && at(0, 'RIFF') && at(8, 'WEBP');
+  } catch { return false; }
+}
+
 /**
- * Turn an uploaded image into a WebP File under maxBytes.
- * Resolves { file, width, height, quality, bytes, sourceBytes }.
+ * Turn an uploaded image into a WebP File under maxBytes — or, when it already
+ * is one that fits (see above), pass it through unchanged.
+ * Resolves { file, width, height, quality, bytes, sourceBytes, unchanged }.
  */
 export async function compressToWebp(file, { decode = decodeInBrowser, encode = encodeInBrowser, maxBytes = WEBP_MAX_BYTES } = {}) {
   if (!file || typeof file !== 'object') throw new Error('No image selected.');
@@ -65,6 +79,12 @@ export async function compressToWebp(file, { decode = decodeInBrowser, encode = 
   const image = await decode(file);
   try {
     if (!(image.width > 0 && image.height > 0)) throw new Error(`“${file.name}” has no usable size.`);
+    if (file.type === 'image/webp' && file.size <= maxBytes && Math.max(image.width, image.height) <= WEBP_SIDES[0] && await hasWebpHeader(file)) {
+      return {
+        file: new File([file], webpName(file.name), { type: 'image/webp' }),
+        width: image.width, height: image.height, quality: null, bytes: file.size, sourceBytes: file.size, unchanged: true,
+      };
+    }
     for (const attempt of webpAttempts(image.width, image.height)) {
       const blob = await encode(image, attempt);
       // Safari's canvas silently falls back to PNG for an encoder it lacks.
@@ -72,7 +92,7 @@ export async function compressToWebp(file, { decode = decodeInBrowser, encode = 
       if (blob.size <= maxBytes) {
         return {
           file: new File([blob], webpName(file.name), { type: 'image/webp' }),
-          width: attempt.width, height: attempt.height, quality: attempt.quality, bytes: blob.size, sourceBytes: file.size,
+          width: attempt.width, height: attempt.height, quality: attempt.quality, bytes: blob.size, sourceBytes: file.size, unchanged: false,
         };
       }
     }

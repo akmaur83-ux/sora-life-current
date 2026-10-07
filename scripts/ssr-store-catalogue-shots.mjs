@@ -103,6 +103,21 @@ const SCREENS = [
     await p.handle.act(() => findAll(p.handle.tree, (n) => n.type === 'input' && n.props.type === 'checkbox')[1].props.onChange({ target: { checked: true } }));
     return p;
   }],
+  ...[['bulk-images', 'Bulk images — the plan before uploading', false], ['bulk-images-done', 'Bulk images — after the upload', true]].map(([name, title, upload]) => [name, title, '/admin/store-catalogue/homeliving', async () => {
+    const fixtures = catalogueFixtures();
+    const percale = fixtures.catalogue_products.find((row) => row.id === 'hp-percale');
+    for (const [id, pname, slug] of [['hp-sunlit', 'Sunlit Blossom Queen Bedsheet Set', 'sunlit-blossom-queen-bedsheet-set'], ['hp-chevron', 'Blue Chevron Single Bedsheet Set', 'blue-chevron-single-bedsheet-set']]) {
+      fixtures.catalogue_products.push({ ...percale, id, name: pname, slug, brand: 'Homley', sku: null, stock: 0, images: [], is_active: false });
+    }
+    const p = await openPage({ params: { store: 'homeliving' }, search: 'tab=images', fixtures });
+    const fits = (n) => imageFile(n, { width: 1600, height: 1435, type: 'image/webp', webpBytes: 140000 });
+    const files = [...[1, 2, 3, 4, 5].map((n) => fits(`sunlit-blossom-queen-bedsheet-set-${n}.webp`)), ...[1, 2, 3, 4].map((n) => fits(`blue-chevron-single-bedsheet-set-${n}.webp`)),
+      imageFile('blue-chevron-single-bedsheet-set-5.jpg', { detail: 3 }), fits('percale-sheet-set-1.webp'), fits('review-sheet.jpg')];
+    const input = findAll(p.handle.tree, (n) => n.type === 'input' && n.props.type === 'file' && n.props.multiple)[0];
+    await p.handle.act(() => input.props.onChange({ target: { files, value: '' } }));
+    if (upload) await p.handle.act(() => findAll(p.handle.tree, (n) => n.type === 'button' && /^Upload /.test(n.props.children))[0].props.onClick());
+    return p;
+  }]),
   ['demo-rows', 'Demo rows — the review before deleting', '/admin/store-catalogue/homeliving', async () => {
     const p = await openPage({ params: { store: 'homeliving' } });
     await p.handle.act(() => buttonByText(p.handle.tree, 'Remove demo rows…').props.onClick());

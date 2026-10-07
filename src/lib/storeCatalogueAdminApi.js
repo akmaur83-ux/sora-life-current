@@ -5,7 +5,7 @@ import { compressToWebp } from './storeCatalogueImage.js';
 import {
   requireCatalogueStore, catalogueProductPayload, catalogueCategoryPayload, catalogueVariantPayload, assertCataloguePublishable,
   CatalogueInputError, CatalogueStaleWriteError, CatalogueRefusedError, catalogueWriteError, planDemoDelete,
-  catalogueSlug, PRODUCT_FIELD_RULES, VARIANT_FIELD_RULES,
+  catalogueSlug, PRODUCT_FIELD_RULES, VARIANT_FIELD_RULES, sortByFileName,
 } from './storeCatalogueAdmin.js';
 
 // Uses existing admin RLS. No service credentials, schema changes or wellness writes.
@@ -186,15 +186,16 @@ export async function uploadStoreImage(store, file) {
   return (await uploadStoreImageFile(store, file)).url;
 }
 /**
- * Add several images to a product's gallery, one at a time. A file that fails
+ * Add several images to a product's gallery, one at a time, in file-name order
+ * (sortByFileName), whatever order they were chosen in. A file that fails
  * (unreadable, cannot fit 150 KB, upload refused) is reported and the rest go
  * on. The first image a product ever gets becomes its primary.
- * onProgress(index, { name, status: converting|uploading|added|failed, bytes?, error? })
+ * onProgress(index in that order, { name, status: converting|uploading|added|failed, bytes?, unchanged?, error? })
  */
 export async function addStoreImages(store, productId, files, onProgress = () => {}) {
   requireCatalogueStore(store);
   const results = [];
-  for (const [index, file] of [...files].entries()) {
+  for (const [index, file] of sortByFileName(files).entries()) {
     const report = (status, extra = {}) => onProgress(index, { name: file?.name || `Image ${index + 1}`, status, ...extra });
     try {
       report('converting');
@@ -209,12 +210,38 @@ export async function addStoreImages(store, productId, files, onProgress = () =>
         is_primary: !media.length,
       };
       await result(supabase.from('catalogue_product_media').insert(row).select().single(), 'image');
-      report('added', { bytes: webp.bytes });
-      results.push({ name: file?.name, ok: true, bytes: webp.bytes });
+      report('added', { bytes: webp.bytes, unchanged: webp.unchanged === true });
+      results.push({ name: file?.name, ok: true, bytes: webp.bytes, unchanged: webp.unchanged === true });
     } catch (error) {
       report('failed', { error: error.message });
       results.push({ name: file?.name, ok: false, error: error.message });
     }
+  }
+  return results;
+}
+/**
+ * Run a bulk gallery upload planned by planBulkImages: each product's files go
+ * through addStoreImages (the same conversion, bucket and media rows as the
+ * product editor), one product at a time. A product whose gallery changed since
+ * the plan was made is skipped, not added to — choosing the files again
+ * re-plans against the gallery as it is.
+ * onProgress({ status, fileName, productName, product, products, file, files }) — product and file count from 1.
+ * Resolves [{ product, added, unchanged, failed: [{ name, error }], skipped? }].
+ */
+export async function addStoreImagesByName(store, plan, onProgress = () => {}) {
+  requireCatalogueStore(store);
+  const rows = plan?.uploads || [], results = [];
+  for (const [k, { product, files, existing }] of rows.entries()) {
+    try {
+      const count = ((await getStoreProduct(store, product.id)).media || []).length;
+      if (count !== existing) {
+        results.push({ product, added: 0, unchanged: 0, failed: [], skipped: `Its gallery changed after the files were chosen (${existing} image${existing === 1 ? '' : 's'} then, ${count} now). Nothing was added — choose the files again.` });
+        continue;
+      }
+    } catch (error) { results.push({ product, added: 0, unchanged: 0, failed: [], skipped: error.message }); continue; }
+    const out = await addStoreImages(store, product.id, files, (index, state) => onProgress({ status: state.status, fileName: state.name, productName: product.name, product: k + 1, products: rows.length, file: index + 1, files: files.length }));
+    const ok = out.filter((r) => r.ok);
+    results.push({ product, added: ok.length, unchanged: ok.filter((r) => r.unchanged).length, failed: out.filter((r) => !r.ok).map((r) => ({ name: r.name, error: r.error })) });
   }
   return results;
 }

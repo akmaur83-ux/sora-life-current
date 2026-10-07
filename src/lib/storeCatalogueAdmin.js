@@ -318,3 +318,55 @@ export function planDemoDelete(categories, products) {
     demoVariantsOnRealProducts: realProducts.reduce((n, p) => n + (p.variants || []).filter((v) => v.is_demo === true).length, 0),
   };
 }
+
+// ---- Gallery files: their order, and matching them to products by name ---------------
+// Files chosen together are taken in file-name order whatever order the file
+// dialog hands them over in, numbers compared as numbers (x-2 before x-10), so
+// "<slug>-1" is always first — and, in an empty gallery, the primary.
+export function sortByFileName(files) {
+  return [...(files || [])].sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), 'en', { numeric: true, sensitivity: 'base' }));
+}
+const BULK_IMAGE_NAME = /^(.+)-(\d{1,4})\.(webp|jpe?g|png)$/i;
+/**
+ * Plan a bulk gallery upload. Each file named <product slug>-<number>.<webp|jpg|png>
+ * goes to that product, in number order; number 1 becomes the primary of an
+ * empty gallery. Pure: nothing is read or written.
+ *   uploads   [{ product, files, numbers, existing }] — what an upload will add
+ *   held      [{ product, files, numbers, existing, reason }] — matched, not uploaded:
+ *             two files with one number, or a gallery that already has images
+ *             (unless `append`, which adds after them)
+ *   unmatched [{ name, reason }] — files that name no product in this store
+ */
+export function planBulkImages(files, products, { append = false } = {}) {
+  const bySlug = new Map((products || []).map((p) => [String(p.slug || '').toLowerCase(), p]));
+  const groups = new Map(), unmatched = [];
+  for (const file of files || []) {
+    const name = String(file?.name || '');
+    const match = BULK_IMAGE_NAME.exec(name);
+    if (!match) {
+      unmatched.push({ name, reason: /\.(webp|jpe?g|png)$/i.test(name) ? 'The name does not end in -<number>, e.g. -1.webp.' : 'Not a JPEG, PNG or WebP file.' });
+      continue;
+    }
+    const slug = match[1].toLowerCase(), product = bySlug.get(slug);
+    if (!product) { unmatched.push({ name, reason: `No product in this store has the slug “${slug}”.` }); continue; }
+    if (!groups.has(product.id)) groups.set(product.id, { product, entries: [] });
+    groups.get(product.id).entries.push({ file, number: Number(match[2]) });
+  }
+  const uploads = [], held = [];
+  for (const { product, entries } of groups.values()) {
+    entries.sort((a, b) => a.number - b.number || a.file.name.localeCompare(b.file.name));
+    const row = { product, files: entries.map((e) => e.file), numbers: entries.map((e) => e.number), existing: (product.media || []).length };
+    const repeated = [...new Set(row.numbers.filter((n, i) => row.numbers.indexOf(n) !== i))];
+    if (repeated.length) {
+      held.push({ ...row, reason: `More than one file is numbered ${repeated.join(', ')} (${entries.filter((e) => repeated.includes(e.number)).map((e) => e.file.name).join(', ')}). Keep one file per number.` });
+    } else if (row.existing && !append) {
+      held.push({ ...row, reason: `Already has ${row.existing} image${row.existing === 1 ? '' : 's'}. Tick “Also add to products that already have images” to add these after them.` });
+    } else uploads.push(row);
+  }
+  const byName = (a, b) => String(a.product.name).localeCompare(String(b.product.name));
+  return {
+    uploads: uploads.sort(byName), held: held.sort(byName),
+    unmatched: unmatched.sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true })),
+    fileCount: uploads.reduce((n, row) => n + row.files.length, 0),
+  };
+}

@@ -22,7 +22,7 @@
 // ============================================================
 import assert from 'node:assert/strict';
 import {
-  createCatalogueDb, catalogueFixtures, loadCatalogueAdmin, openPage, imageFile,
+  createCatalogueDb, catalogueFixtures, loadCatalogueAdmin, openPage, imageFile, fakeDecode, fakeEncode,
   fieldByLabel, buttonByText, formOf, change, submit, findAll, textOf,
 } from './catalogue-admin-harness.mjs';
 
@@ -91,7 +91,8 @@ console.log('\n— The gallery API —');
 await test('several images at once: each converted, uploaded to product-images under catalogue/<store>/, attached in order; a failure does not stop the batch', async () => {
   const { api, store } = await apiOver();
   const progress = [];
-  const files = [imageFile('front.jpg', { detail: FITS_FIRST }), imageFile('noise.jpg', { detail: NEVER_FITS }), imageFile('back.png', { detail: FITS_LATER, type: 'image/png' })];
+  // Named so that file-name order (the order the gallery adds them in) is the order listed.
+  const files = [imageFile('1-front.jpg', { detail: FITS_FIRST }), imageFile('2-noise.jpg', { detail: NEVER_FITS }), imageFile('3-back.png', { detail: FITS_LATER, type: 'image/png' })];
   const results = await api.addStoreImages('fashion', 'fp-linen', files, (i, s) => progress.push([i, s.status]));
   assert.deepEqual(results.map((r) => r.ok), [true, false, true]);
   assert.match(results[1].error, /could not be brought under 150 KB/);
@@ -118,6 +119,51 @@ await test("a product's first image becomes its primary", async () => {
   await api.addStoreImages('fashion', 'fp-wrap', [imageFile('a.jpg', { detail: FITS_FIRST }), imageFile('b.jpg', { detail: FITS_FIRST })]);
   const media = mediaOf(store, 'fp-wrap');
   assert.deepEqual(media.map((m) => m.is_primary), [true, false]);
+});
+
+// The file each stored object was made from (imageFile() puts its name inside).
+const sourceName = async (store, m) => {
+  const text = await store.storage.objects.get(`product-images/${m.storage_path}`).file.text();
+  return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)).name;
+};
+const fitsAlready = (name, extra = {}) => imageFile(name, { width: 1200, height: 900, type: 'image/webp', webpBytes: 60000, ...extra });
+
+await test('files are added in file-name order whatever order they were chosen in — 2 before 10 — so -1 is first and the primary', async () => {
+  const { api, store } = await apiOver();
+  const chosen = ['wrap-10.webp', 'wrap-2.webp', 'Wrap-1.webp', 'wrap-3.webp'];
+  const results = await api.addStoreImages('fashion', 'fp-wrap', chosen.map((n) => fitsAlready(n)));
+  const inOrder = ['Wrap-1.webp', 'wrap-2.webp', 'wrap-3.webp', 'wrap-10.webp'];
+  assert.deepEqual(results.map((r) => r.name), inOrder);
+  const media = mediaOf(store, 'fp-wrap');
+  assert.deepEqual(await Promise.all(media.map((m) => sourceName(store, m))), inOrder, 'gallery order is file-name order');
+  assert.equal(await sourceName(store, media.find((m) => m.is_primary)), 'Wrap-1.webp');
+});
+
+await test('a WebP that already fits — at most 150 000 bytes and 1600 px — is uploaded as it is, byte for byte; anything else is still converted', async () => {
+  const { api, image, store } = await apiOver();
+  let encodes = 0;
+  const encode = async (...args) => { encodes += 1; return fakeEncode(...args); };
+  const convert = (file) => image.compressToWebp(file, { decode: fakeDecode, encode });
+  const ours = fitsAlready('sunlit-blossom-1.webp', { width: 1600, height: 1435, webpBytes: 150000 });
+  const kept = await convert(ours);
+  assert.equal(encodes, 0, 'not re-encoded');
+  assert.deepEqual([kept.unchanged, kept.bytes, kept.width, kept.height, kept.quality], [true, 150000, 1600, 1435, null]);
+  assert.deepEqual(new Uint8Array(await kept.file.arrayBuffer()), new Uint8Array(await ours.arrayBuffer()), 'the same bytes');
+  assert.deepEqual([kept.file.name, kept.file.type], ['sunlit-blossom-1.webp', 'image/webp']);
+  for (const [why, file] of [
+    ['over 150 000 bytes', fitsAlready('big.webp', { webpBytes: 150001, detail: FITS_FIRST })],
+    ['longer than 1600 px', fitsAlready('wide.webp', { width: 2400, height: 1600, detail: FITS_FIRST })],
+    ['named WebP but not one inside', imageFile('renamed.webp', { width: 1200, height: 900, type: 'image/webp', detail: FITS_FIRST })],
+    ['a JPEG, however small', imageFile('small.jpg', { width: 1200, height: 900, detail: FITS_FIRST })],
+  ]) {
+    encodes = 0;
+    const out = await convert(file);
+    assert.ok(encodes > 0 && out.unchanged === false && out.bytes <= 150000, `${why}: converted`);
+  }
+  // Through the gallery: reported per file, and the stored object is the file itself.
+  const [result] = await api.addStoreImages('fashion', 'fp-wrap', [ours]);
+  assert.deepEqual([result.ok, result.unchanged, result.bytes], [true, true, 150000]);
+  assert.equal(store.storage.uploads.at(-1).size, 150000);
 });
 
 await test('reorder writes sort_order 0…n-1; an id set that no longer matches the gallery writes nothing', async () => {
@@ -166,14 +212,25 @@ await test('the editor uploads several files, shows each one\'s outcome, and the
   const input = findAll(handle.tree, (n) => n.type === 'input' && n.props.type === 'file' && n.props.multiple)[0];
   assert.ok(input, 'a multi-file input');
   assert.equal(input.props.accept, 'image/jpeg,image/png,image/webp');
-  await handle.act(() => input.props.onChange({ target: { files: [imageFile('front.jpg', { detail: FITS_FIRST }), imageFile('noise.jpg', { detail: NEVER_FITS }), imageFile('back.jpg', { detail: FITS_LATER })], value: 'x' } }));
+  await handle.act(() => input.props.onChange({ target: { files: [imageFile('1-front.jpg', { detail: FITS_FIRST }), imageFile('2-noise.jpg', { detail: NEVER_FITS }), imageFile('3-back.jpg', { detail: FITS_LATER })], value: 'x' } }));
   const queue = findAll(handle.tree, (n) => n.type === 'li' && /sc-queue__item/.test(n.props.className)).map(textOf);
   assert.equal(queue.length, 3);
-  assert.match(queue[0], /^front\.jpgAdded · \d+ KB WebP$/);
-  assert.match(queue[1], /^noise\.jpgNot added: “noise\.jpg” could not be brought under 150 KB/);
+  assert.match(queue[0], /^1-front\.jpgAdded · \d+ KB WebP$/);
+  assert.match(queue[1], /^2-noise\.jpgNot added: “2-noise\.jpg” could not be brought under 150 KB/);
   assert.match(handle.text(), /2 of 3 images added — 1 not added \(see below\)\./);
   assert.equal(findAll(handle.tree, (n) => n.type === 'li' && /\bsc-image\b/.test(n.props.className)).length, 3);
   assert.equal(mediaOf(store, 'fp-linen').length, 3);
+});
+
+await test('the editor lists the chosen files in the order they will be added, and says which were used as they were', async () => {
+  const { handle } = await openPage({ params: { store: 'fashion', productId: 'fp-wrap' } });
+  const input = findAll(handle.tree, (n) => n.type === 'input' && n.props.type === 'file' && n.props.multiple)[0];
+  await handle.act(() => input.props.onChange({ target: { files: [imageFile('wrap-2.jpg', { detail: FITS_FIRST }), fitsAlready('wrap-1.webp')], value: 'x' } }));
+  const queue = findAll(handle.tree, (n) => n.type === 'li' && /sc-queue__item/.test(n.props.className)).map(textOf);
+  assert.match(queue[0], /^wrap-1\.webpAdded · 60 KB WebP, used as it was$/);
+  assert.match(queue[1], /^wrap-2\.jpgAdded · \d+ KB WebP$/);
+  const tiles = findAll(handle.tree, (n) => n.type === 'li' && String(n.props.className || '').split(' ').includes('sc-image'));
+  assert.match(textOf(tiles[0]), /Primary/, 'wrap-1 is the primary');
 });
 
 const threeImages = () => {

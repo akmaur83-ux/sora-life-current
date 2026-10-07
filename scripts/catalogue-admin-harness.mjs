@@ -304,12 +304,17 @@ export async function loadCatalogueAdmin({ supabase, uploadImage = null, deps = 
 // imageFile() makes a File that "decodes" to the given size. fakeEncode() turns
 // a rung of the ladder into a WebP-headed blob whose size grows with pixels ×
 // quality × detail, so a test chooses which rung fits by choosing `detail`.
-export function imageFile(name, { width = 3000, height = 2000, detail = 0.2, type = 'image/jpeg', encoderType = 'image/webp' } = {}) {
-  const file = new File([JSON.stringify({ width, height, detail, encoderType })], name, { type });
-  return file;
+// webpBytes: a file whose bytes really are a WebP ("RIFF", a length, "WEBP")
+// of exactly that many bytes, for the pass-through of a WebP that already fits.
+export function imageFile(name, { width = 3000, height = 2000, detail = 0.2, type = 'image/jpeg', encoderType = 'image/webp', webpBytes = 0 } = {}) {
+  const meta = JSON.stringify({ width, height, detail, encoderType, name });
+  if (!webpBytes) return new File([meta], name, { type });
+  const head = 'RIFF\0\0\0\0WEBP';
+  return new File([head + meta + ' '.repeat(Math.max(0, webpBytes - head.length - meta.length))], name, { type });
 }
 export async function fakeDecode(file) {
-  const meta = JSON.parse(await file.text());
+  const text = await file.text();
+  const meta = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
   return { ...meta, closed: false, close() { this.closed = true; } };
 }
 export async function fakeEncode(img, { width, height, quality }) {
