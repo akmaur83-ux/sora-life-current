@@ -23,7 +23,7 @@
 import assert from 'node:assert/strict';
 import {
   createCatalogueDb, catalogueFixtures, loadCatalogueAdmin, openPage, imageFile,
-  fieldByLabel, buttonByText, formOf, change, findAll, textOf,
+  fieldByLabel, buttonByText, formOf, change, submit, findAll, textOf,
 } from './catalogue-admin-harness.mjs';
 
 let passed = 0, failed = 0;
@@ -220,6 +220,34 @@ await test('make primary, alt text on blur, and remove (with confirmation) from 
   await handle.act(() => buttonByText(tilesOf(handle)[0], 'Remove').props.onClick());
   assert.equal(mediaOf(store, 'fp-linen').length, 2);
   assert.match(win.asked[0], /The original file will be kept/);
+});
+
+await test('Add by URL is optional: left empty it shows no error and adds nothing; a bad URL is still refused', async () => {
+  const { handle, store } = await openPage({ params: { store: 'fashion', productId: 'fp-linen' } });
+  const form = () => formOf(handle.tree, 'Add by URL');
+  const button = () => findAll(form(), (n) => n.type === 'button' && n.props.type === 'submit')[0];
+  const url = () => fieldByLabel(form(), 'Image URL');
+  // The gallery saves as it goes; this button only adds a hosted image, so it must not read like a gallery save.
+  assert.equal(textOf(button()), 'Add image from URL');
+  assert.equal(button().props.disabled, true, 'nothing to add until a URL is typed');
+  assert.equal(url().control.props.required, false, 'the gallery works without this field');
+  const before = mediaOf(store, 'fp-linen').length;
+  await handle.act(() => change(fieldByLabel(form(), 'Image description / alt text').control, 'Front'));
+  await handle.act(() => submit(form()));   // Enter in the alt-text box submits the form
+  await handle.act(() => change(url().control, '   '));
+  await handle.act(() => submit(form()));
+  assert.doesNotMatch(handle.text(), /Enter a public HTTPS image URL/);
+  assert.equal(url().error, null, 'no error beside the URL field');
+  assert.equal(mediaOf(store, 'fp-linen').length, before, 'an empty form adds nothing');
+  await handle.act(() => change(url().control, 'javascript:alert(1)'));
+  assert.equal(button().props.disabled, false);
+  await handle.act(() => submit(form()));
+  assert.equal(url().error, 'Enter a public HTTPS image URL or a local image path.', 'a typed URL that is not allowed is still refused, beside the field');
+  assert.equal(mediaOf(store, 'fp-linen').length, before);
+  await handle.act(() => change(url().control, '/img/fashion-hero.webp'));
+  await handle.act(() => submit(form()));
+  assert.equal(mediaOf(store, 'fp-linen').length, before + 1);
+  assert.equal(url().control.props.value, '', 'the form is cleared after an add');
 });
 
 await test('the WebP converter is admin-only: nothing but the catalogue admin API imports it', async () => {

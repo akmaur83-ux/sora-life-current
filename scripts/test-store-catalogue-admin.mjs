@@ -159,6 +159,6 @@ await test('editor routes sit within existing admin guard and are discoverable f
     const source = read(p); assert.ok(source.includes('/admin/store-catalogue/fashion')); assert.ok(source.includes('/admin/store-catalogue/homeliving'));
   }
   const page = read('src/admin/pages/StoreCatalogue.jsx');
-  for (const label of ['+ Add product', '+ Add category', 'Create draft & continue', 'Save variant', 'Save image', 'Published / visible to customers']) assert.ok(page.includes(label), label);
+  for (const label of ['+ Add product', '+ Add category', 'Create draft & continue', 'Save variant', 'Add image from URL', 'Published / visible to customers']) assert.ok(page.includes(label), label);
 });
 console.log(`\n${count} tests passed.`);

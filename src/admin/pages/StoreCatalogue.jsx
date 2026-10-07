@@ -377,6 +377,8 @@ function GalleryEditor({ store, product, onChanged }) {
   }
   async function addByUrl(e) {
     e.preventDefault();
+    // Optional: an empty URL (Enter in the alt-text box) adds nothing and is not an error.
+    if (!urlForm.public_url.trim()) return;
     const next = media.length ? Math.max(...media.map((m) => Number(m.sort_order) || 0)) + 1 : 0;
     await run(async () => { await saveStoreMedia(store, product.id, null, { ...urlForm, alt_text: urlForm.alt_text || product.name, sort_order: next }); setUrlForm({ public_url: '', alt_text: '' }); }, 'Image saved.');
   }
@@ -398,9 +400,9 @@ function GalleryEditor({ store, product, onChanged }) {
       <div className="sc-actions"><button type="button" className="btn btn-light btn-sm" aria-label={`Move image ${i + 1} earlier`} disabled={busy || i === 0} onClick={() => move(row.id, -1)}>←</button><button type="button" className="btn btn-light btn-sm" aria-label={`Move image ${i + 1} later`} disabled={busy || i === media.length - 1} onClick={() => move(row.id, 1)}>→</button><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => remove(row)}>Remove</button></div>
     </li>)}</ol>}
     <form onSubmit={addByUrl} noValidate><fieldset disabled={busy}>
-      <h3>Add by URL</h3><p className="hint">For an image already hosted, or a bundled /img/… path. It is added as it is — not converted.</p>
-      <div className="adm-grid2"><Field form="img" errors={errors} label="Image URL" field="public_url" value={urlForm} set={setUrlForm} required /><Field form="img" errors={errors} label="Image description / alt text" field="alt_text" value={urlForm} set={setUrlForm} /></div>
-      <div className="sc-actions"><button className="btn btn-sm" type="submit">Save image</button></div>
+      <h3>Add by URL</h3><p className="hint">Optional. For an image already hosted, or a bundled /img/… path. It is added as it is — not converted. Uploads, order and primary above save as you make them.</p>
+      <div className="adm-grid2"><Field form="img" errors={errors} label="Image URL" field="public_url" value={urlForm} set={setUrlForm} /><Field form="img" errors={errors} label="Image description / alt text" field="alt_text" value={urlForm} set={setUrlForm} /></div>
+      <div className="sc-actions"><button className="btn btn-sm" type="submit" disabled={!urlForm.public_url.trim()}>Add image from URL</button></div>
     </fieldset></form>
   </section>;
 }
