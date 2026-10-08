@@ -63869,7 +63869,9 @@ function SearchBar() {
 /**
  * @param over  the homepage: the bar floats transparent over the hero and
  *              turns solid (`is-solid`) once the page scrolls; the delivery
- *              row and the search bar are the page's to place.
+ *              row and the search bar are the page's to place. Otherwise the
+ *              bar and, under it, the delivery row and the search bar
+ *              (.hl-tools--bar) in one .hl-top block.
  */
 function HomeLivingHeader({
   onMenu,
@@ -63879,9 +63881,9 @@ function HomeLivingHeader({
     cartCount
   } = useStore();
   const solid = useScrolledPast(over ? SOLID_AFTER_PX : null);
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+  const bar = /*#__PURE__*/jsxRuntimeExports.jsx("header", {
     className: `hl-hdr${over ? ' hl-hdr--over' : ''}${over && solid ? ' is-solid' : ''}`,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hl-hdr__row",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
         type: "button",
@@ -63950,7 +63952,15 @@ function HomeLivingHeader({
           })]
         })]
       })]
-    }), !over && /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryRow, {}), !over && /*#__PURE__*/jsxRuntimeExports.jsx(SearchBar, {})]
+    })
+  });
+  if (over) return bar;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hl-top",
+    children: [bar, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-tools hl-tools--bar",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeliveryRow, {}), /*#__PURE__*/jsxRuntimeExports.jsx(SearchBar, {})]
+    })]
   });
 }
 function BottomNav$1() {
@@ -65354,11 +65364,420 @@ function relatedFor(view, products, limit = 4) {
   return [...same, ...brand, ...rest].slice(0, limit);
 }
 
+const ZOOM_MAX = 4;
+const TAP_SLOP = 10; // px a press may wander and still be a tap
+const TAP_MS = 400; // a press held longer is not a tap
+const SWIPE_PX = 56; // sideways travel that moves to the next image
+const CLOSE_PX = 96; // downward travel that closes
+const REST = Object.freeze({
+  scale: 1,
+  x: 0,
+  y: 0
+});
+const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+
+/** Zoom to `scale` about `at` (a point from the frame's centre), keeping the image point under it still. */
+function zoomAbout(view, scale, at) {
+  const s = clamp(scale, 1, ZOOM_MAX);
+  if (s === 1) return REST;
+  const k = s / view.scale;
+  return {
+    scale: s,
+    x: at.x - (at.x - view.x) * k,
+    y: at.y - (at.y - view.y) * k
+  };
+}
+/** The size an image shows at in the frame: contained, never enlarged. */
+function fitSize(natural, frame) {
+  if (!natural?.width || !natural?.height) return {
+    width: frame.width,
+    height: frame.height
+  };
+  const k = Math.min(1, frame.width / natural.width, frame.height / natural.height);
+  return {
+    width: natural.width * k,
+    height: natural.height * k
+  };
+}
+/** A zoomed image can be dragged only as far as it overflows the frame on that axis. */
+function clampPan(view, fit, frame) {
+  const mx = Math.max(0, (fit.width * view.scale - frame.width) / 2),
+    my = Math.max(0, (fit.height * view.scale - frame.height) / 2);
+  return {
+    scale: view.scale,
+    x: clamp(view.x, -mx, mx),
+    y: clamp(view.y, -my, my)
+  };
+}
+/** What a one-finger drag is, once it has left the tap slop. */
+function gestureKind(dx, dy, zoomed) {
+  if (zoomed) return 'pan';
+  if (Math.abs(dx) > Math.abs(dy)) return 'swipe';
+  return dy > 0 ? 'dismiss' : 'none';
+}
+/** Where a released swipe or pull lands: another image, closed, or back where it was. */
+function release(kind, dx, dy, index, count) {
+  if (kind === 'swipe' && dx <= -SWIPE_PX && index < count - 1) return {
+    index: index + 1
+  };
+  if (kind === 'swipe' && dx >= SWIPE_PX && index > 0) return {
+    index: index - 1
+  };
+  if (kind === 'dismiss' && dy >= CLOSE_PX) return {
+    close: true
+  };
+  return {};
+}
+function GalleryZoom({
+  images,
+  start = 0,
+  name,
+  onClose
+}) {
+  const count = images.length;
+  const [index, setIndex] = reactExports.useState(clamp(start, 0, count - 1));
+  const [view, setView] = reactExports.useState(REST);
+  const [drag, setDrag] = reactExports.useState({
+    x: 0,
+    y: 0
+  });
+  const [moving, setMoving] = reactExports.useState(false);
+  const dialog = reactExports.useRef(null),
+    frame = reactExports.useRef(null),
+    closer = reactExports.useRef(null);
+  const pointers = reactExports.useRef(new Map()),
+    gesture = reactExports.useRef(null),
+    tap = reactExports.useRef(null),
+    natural = reactExports.useRef({});
+  const live = reactExports.useRef({
+    index,
+    view
+  });
+  live.current = {
+    index,
+    view
+  };
+  const close = reactExports.useCallback(() => onClose(live.current.index), [onClose]);
+  const go = reactExports.useCallback(to => {
+    setIndex(clamp(to, 0, count - 1));
+    setView(REST);
+    setDrag({
+      x: 0,
+      y: 0
+    });
+  }, [count]);
+  /** A client point as an offset from the frame's centre. */
+  const fromCentre = reactExports.useCallback((x, y) => {
+    const r = frame.current.getBoundingClientRect();
+    return {
+      x: x - (r.left + r.width / 2),
+      y: y - (r.top + r.height / 2)
+    };
+  }, []);
+  const bound = reactExports.useCallback(v => {
+    const f = {
+      width: frame.current.clientWidth,
+      height: frame.current.clientHeight
+    };
+    return v.scale <= 1 ? REST : clampPan(v, fitSize(natural.current[live.current.index], f), f);
+  }, []);
+
+  // The page under it stays put; Escape closes; ← → move; Tab stays inside.
+  reactExports.useEffect(() => {
+    const root = document.documentElement,
+      was = root.style.overflow;
+    root.style.overflow = 'hidden';
+    closer.current?.focus({
+      preventScroll: true
+    });
+    const onKey = e => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        close();
+      } else if (e.key === 'ArrowRight') go(live.current.index + 1);else if (e.key === 'ArrowLeft') go(live.current.index - 1);else if (e.key === 'Tab' && dialog.current) {
+        const stops = [...dialog.current.querySelectorAll('button:not([disabled])')];
+        const at = stops.indexOf(document.activeElement);
+        e.preventDefault();
+        stops[(at + (e.shiftKey ? -1 : 1) + stops.length) % stops.length]?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      root.style.overflow = was;
+    };
+  }, [close, go]);
+
+  // The wheel zooms about the pointer. Not passive, so the browser's own zoom stays out of it.
+  reactExports.useEffect(() => {
+    const el = frame.current;
+    if (!el) return undefined;
+    const onWheel = e => {
+      e.preventDefault();
+      const v = live.current.view;
+      setView(bound(zoomAbout(v, v.scale * Math.exp(-e.deltaY * 0.0025), fromCentre(e.clientX, e.clientY))));
+    };
+    el.addEventListener('wheel', onWheel, {
+      passive: false
+    });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [bound, fromCentre]);
+  const pair = () => {
+    const [a, b] = [...pointers.current.values()];
+    return {
+      a,
+      b,
+      d: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+      m: fromCentre((a.x + b.x) / 2, (a.y + b.y) / 2)
+    };
+  };
+  const onDown = e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    tap.current = null;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {/* not a live pointer */}
+    pointers.current.set(e.pointerId, {
+      x: e.clientX,
+      y: e.clientY
+    });
+    const v0 = live.current.view;
+    if (pointers.current.size === 2) {
+      const {
+        d,
+        m
+      } = pair();
+      gesture.current = {
+        kind: 'pinch',
+        d0: d,
+        m0: m,
+        v0
+      };
+      setDrag({
+        x: 0,
+        y: 0
+      });
+    } else if (pointers.current.size === 1) gesture.current = {
+      kind: 'press',
+      x0: e.clientX,
+      y0: e.clientY,
+      t0: performance.now(),
+      v0,
+      mouse: e.pointerType === 'mouse'
+    };
+    setMoving(true);
+  };
+  const onMove = e => {
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, {
+      x: e.clientX,
+      y: e.clientY
+    });
+    const g = gesture.current;
+    if (!g) return;
+    if (g.kind === 'pinch') {
+      if (pointers.current.size < 2) return;
+      const {
+        d,
+        m
+      } = pair();
+      const z = zoomAbout(g.v0, g.v0.scale * d / g.d0, g.m0);
+      setView(bound({
+        scale: z.scale,
+        x: z.x + m.x - g.m0.x,
+        y: z.y + m.y - g.m0.y
+      }));
+      return;
+    }
+    const dx = e.clientX - g.x0,
+      dy = e.clientY - g.y0;
+    if (g.kind === 'press') {
+      if (Math.hypot(dx, dy) < TAP_SLOP) return;
+      g.kind = gestureKind(dx, dy, g.v0.scale > 1);
+    }
+    if (g.kind === 'pan') setView(bound({
+      scale: g.v0.scale,
+      x: g.v0.x + dx,
+      y: g.v0.y + dy
+    }));else if (g.kind === 'swipe') {
+      const edge = dx > 0 && live.current.index === 0 || dx < 0 && live.current.index === count - 1;
+      setDrag({
+        x: edge ? dx * 0.35 : dx,
+        y: 0
+      });
+    } else if (g.kind === 'dismiss') setDrag({
+      x: 0,
+      y: Math.max(0, dy)
+    });
+  };
+  const onUp = e => {
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.delete(e.pointerId);
+    const g = gesture.current;
+    if (!g) return;
+    if (g.kind === 'pinch') {
+      // One finger lifted: the other carries on as a pan.
+      if (pointers.current.size === 1) {
+        const [r] = [...pointers.current.values()];
+        gesture.current = {
+          kind: 'pan',
+          x0: r.x,
+          y0: r.y,
+          v0: live.current.view
+        };
+        return;
+      }
+      if (live.current.view.scale < 1.05) setView(REST);
+      gesture.current = null;
+      setMoving(false);
+      return;
+    }
+    if (pointers.current.size > 0) return;
+    gesture.current = null;
+    setMoving(false);
+    if (e.type === 'pointercancel') {
+      setDrag({
+        x: 0,
+        y: 0
+      });
+      return;
+    }
+    // A tap is acted on by the click that follows it (onTap): closing here would let a
+    // phone's click land on the gallery image under the finger and open it again.
+    if (g.kind === 'press') {
+      tap.current = performance.now() - g.t0 <= TAP_MS ? {
+        mouse: g.mouse
+      } : null;
+      return;
+    }
+    const to = release(g.kind, e.clientX - g.x0, e.clientY - g.y0, live.current.index, count);
+    if (to.close) {
+      close();
+      return;
+    }
+    if (to.index != null) go(to.index);else setDrag({
+      x: 0,
+      y: 0
+    });
+  };
+  // A click zooms in at the point and back out; a tap steps out of a zoom, or closes.
+  const onTap = e => {
+    const t = tap.current;
+    tap.current = null;
+    if (!t) return;
+    const zoomed = live.current.view.scale > 1;
+    if (t.mouse) setView(zoomed ? REST : bound(zoomAbout(REST, 2.5, fromCentre(e.clientX, e.clientY))));else if (zoomed) setView(REST);else close();
+  };
+  return /*#__PURE__*/reactDomExports.createPortal(/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `hl-zoom${moving ? ' is-moving' : ''}`,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${name} images, full screen`,
+    ref: dialog,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hl-zoom__backdrop",
+      style: {
+        opacity: 1 - Math.min(0.6, drag.y / 400)
+      },
+      "aria-hidden": "true"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: `hl-zoom__frame${view.scale > 1 ? ' is-zoomed' : ''}`,
+      ref: frame,
+      onPointerDown: onDown,
+      onPointerMove: onMove,
+      onPointerUp: onUp,
+      onPointerCancel: onUp,
+      onClick: onTap,
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hl-zoom__track",
+        style: {
+          transform: `translate3d(calc(${-index * 100}% + ${drag.x}px), ${drag.y}px, 0)`
+        },
+        children: images.map((img, i) => /*#__PURE__*/jsxRuntimeExports.jsx("figure", {
+          className: "hl-zoom__slide",
+          "aria-hidden": i !== index,
+          children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            className: "hl-zoom__img",
+            src: img.url,
+            alt: img.alt,
+            draggable: "false",
+            decoding: "async",
+            loading: Math.abs(i - index) <= 1 ? 'eager' : 'lazy',
+            onLoad: e => {
+              natural.current[i] = {
+                width: e.currentTarget.naturalWidth,
+                height: e.currentTarget.naturalHeight
+              };
+            },
+            style: i === index ? {
+              transform: `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.scale})`
+            } : undefined
+          })
+        }, img.url + i))
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-zoom__bar",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hl-zoom__count",
+        "aria-live": "polite",
+        children: [index + 1, " / ", count]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hl-zoom__btn",
+        "aria-label": "Close full screen",
+        ref: closer,
+        onClick: close,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "x",
+          size: 22
+        })
+      })]
+    }), count > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hl-zoom__btn hl-zoom__prev",
+        "aria-label": "Previous image",
+        disabled: index === 0,
+        onClick: () => go(index - 1),
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronLeft",
+          size: 24
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hl-zoom__btn hl-zoom__next",
+        "aria-label": "Next image",
+        disabled: index === count - 1,
+        onClick: () => go(index + 1),
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 24
+        })
+      })]
+    })]
+  }), document.body);
+}
 function Gallery({
   view
 }) {
   const images = view.gallery && view.gallery.length ? view.gallery : [];
   const [active, setActive] = reactExports.useState(0);
+  const [zoom, setZoom] = reactExports.useState(null); // the image open full screen
+  const track = reactExports.useRef(null);
+  // Back from full screen: the gallery shows the image it closed on, and that image has focus.
+  const closeZoom = i => {
+    setZoom(null);
+    setActive(i);
+    const el = track.current,
+      slide = el?.children[i];
+    if (!slide) return;
+    el.scrollTo({
+      left: slide.offsetLeft - el.firstElementChild.offsetLeft
+    });
+    slide.querySelector('button')?.focus({
+      preventScroll: true
+    });
+  };
   if (images.length === 0) return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
     className: "hl-pdp__media hl-pdp__media--none",
     "aria-hidden": "true",
@@ -65372,19 +65791,31 @@ function Gallery({
       className: "hl-gallery__track",
       role: "group",
       "aria-label": `${view.name} images`,
+      ref: track,
       children: images.map((img, i) => /*#__PURE__*/jsxRuntimeExports.jsx("figure", {
         className: `hl-gallery__slide${i === active ? ' is-on' : ''}`,
         id: `hl-slide-${i}`,
-        children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-          src: img.url,
-          alt: img.alt,
-          width: "900",
-          height: "900",
-          decoding: "async",
-          loading: i === 0 ? 'eager' : 'lazy',
-          fetchpriority: i === 0 ? 'high' : undefined
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "hl-gallery__zoom",
+          "aria-label": `View image ${i + 1} of ${images.length} full screen`,
+          onClick: () => setZoom(i),
+          children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: img.url,
+            alt: img.alt,
+            width: "900",
+            height: "900",
+            decoding: "async",
+            loading: i === 0 ? 'eager' : 'lazy',
+            fetchpriority: i === 0 ? 'high' : undefined
+          })
         })
       }, img.url + i))
+    }), zoom != null && /*#__PURE__*/jsxRuntimeExports.jsx(GalleryZoom, {
+      images: images,
+      start: zoom,
+      name: view.name,
+      onClose: closeZoom
     }), images.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "hl-gallery__thumbs",
       role: "tablist",
