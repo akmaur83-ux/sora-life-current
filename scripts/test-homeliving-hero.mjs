@@ -114,10 +114,11 @@ await test('the floating header: fixed height the page is pulled up by, transpar
   assert.match(layoutSrc, /raf = requestAnimationFrame\(\(\) => \{ raf = null; setPast\(window\.scrollY > threshold\); \}\);/);
   assert.match(layoutSrc, /className=\{`hl-hdr\$\{over \? ' hl-hdr--over' : ''\}\$\{over && solid \? ' is-solid' : ''\}`\}/);
   assert.match(layoutSrc, /const HOME_PATH = \/\^\\\/homeliving\\\/\?\$\/;/); assert.match(layoutSrc, /const over = HOME_PATH\.test\(pathname\);/);
-  assert.match(layoutSrc, /\{!over && <DeliveryRow \/>\}\n\s*\{!over && <SearchBar \/>\}/); assert.match(layoutSrc, /\{!over && <BottomNav \/>\}/);
+  // Every other page: the bar, then the delivery row and the search bar, in one .hl-top block.
+  assert.match(layoutSrc, /if \(over\) return bar;\n\s*return <div className="hl-top">\{bar\}<div className="hl-tools hl-tools--bar"><DeliveryRow \/><SearchBar \/><\/div><\/div>;/); assert.match(layoutSrc, /\{!over && <BottomNav \/>\}/);
 });
 
-await test('the copy: on the landscape, top-aligned on the bare wall left, 40% wide (42% on a tablet, the note dropped there); on the portrait, compact in a premium frosted panel under the header', () => {
+await test('the copy: on the landscape, top-aligned on the bare wall left, 40% wide (42% on a tablet, the note dropped there); on the portrait, compact under the header on a soft wash — no card — the room reading through', () => {
   assert.match(css, /\.hl-hero__inner \{ position: relative; z-index: 1; width: 100%; padding-top: calc\(var\(--hl-hdr-h\) \+ 56px\); padding-bottom: 56px; \}/);
   assert.match(css, /\.hl-hero__txt \{ max-width: 40%; \}/);
   assert.match(css, /\.hl-hero__slide::before \{[^}]*linear-gradient\(90deg, rgba\(251, 248, 241, \.5\) 0%, rgba\(251, 248, 241, \.42\) 28%, rgba\(251, 248, 241, 0\) 50%\)/, 'a wash the wall shows through (eyebrow 6.4:1, sub 7.3:1 measured at 1280)');
@@ -132,24 +133,43 @@ await test('the copy: on the landscape, top-aligned on the bare wall left, 40% w
   assert.match(portrait, /\.hl-hero__slide \{ aspect-ratio: auto; height: clamp\(410px, 54svh, 480px\); min-height: 410px; max-height: 480px; \}/, 'the mobile hero is compact and bounded');
   assert.match(portrait, /\.hl-hero__slide::before \{ background: linear-gradient\(180deg, rgba\(251, 248, 241, \.08\) 0%, rgba\(251, 248, 241, \.2\) 38%, rgba\(251, 248, 241, 0\) 68%\); \}/, 'a light wash preserves the photograph');
   assert.match(portrait, /\.hl-hero \.hl-hero__inner \{ padding-top: calc\(var\(--hl-hdr-h\) \+ 10px\); padding-bottom: 34px; \}/, 'outranks the phone .hl-wrap reset that follows it');
-  assert.match(portrait, /\.hl-hero__txt \{ max-width: min\(100%, 300px\); padding: 14px 16px 15px;[^}]*border-radius: 18px;[^}]*backdrop-filter: blur\(7px\); \}/, 'a restrained frosted editorial panel keeps the copy readable');
-  assert.match(portrait, /\.hl-hero__eyebrow \{ font-size: 10px; margin-bottom: 6px; \}/);
-  assert.match(portrait, /\.hl-hero__h \{ font-size: clamp\(27px, 7\.4vw, 30px\); line-height: 1; \}/);
-  assert.match(portrait, /\.hl-hero__sub \{ font-size: 13px; line-height: 1\.4; max-width: 30ch; margin: 7px 0 11px; \}/);
-  assert.match(portrait, /\.hl-hero \.hl-cta \{ min-height: 40px; padding: 0 16px; font-size: 13\.5px;/, 'the CTA scales with the compact portrait composition');
+  // No card: a feathered cream wash behind the copy, the sofa and the room reading through
+  // it, and a faint halo on the type. Measured at 390 against the darkest pixel behind each
+  // line with the text hidden (halo not counted): eyebrow 5.6:1, headline 9.3:1, sub 5.3:1.
+  assert.match(portrait, /\.hl-hero__txt \{ position: relative; isolation: isolate; max-width: min\(100%, 300px\); padding: 14px 16px 15px; \}/, 'the copy block is a plain box');
+  assert.match(portrait, /\.hl-hero__txt::before \{ content: ''; position: absolute; inset: -14px -40px -18px -16px; z-index: -1; pointer-events: none; background: linear-gradient\(100deg, rgba\(251, 248, 241, \.56\) 0%, rgba\(251, 248, 241, \.4\) 55%, rgba\(251, 248, 241, 0\) 100%\); -webkit-mask-image: linear-gradient\(180deg, transparent 0%, #000 20%, #000 80%, transparent 100%\); mask-image: [^;]+; \}/, 'a soft wash, feathered top and bottom, fading out to the right');
+  assert.doesNotMatch(portrait, /\.hl-hero__txt(::before)? \{[^}]*(backdrop-filter|border-radius|box-shadow|border:)/, 'no frosted card: no blur, no rounded panel, no shadow, no border');
+  assert.match(portrait, /\.hl-hero__eyebrow, \.hl-hero__h, \.hl-hero__sub \{ text-shadow: 0 0 12px rgba\(251, 248, 241, \.75\); \}/, 'a faint halo on the type, not on the CTA');
+  assert.match(portrait, /\.hl-hero__eyebrow \{ font-size: 9\.5px; margin-bottom: 6px; \}/);
+  assert.match(portrait, /\.hl-hero__h \{ font-size: clamp\(25px, 6\.8vw, 28px\); line-height: 1; \}/);
+  assert.match(portrait, /\.hl-hero__sub \{ font-size: 12\.5px; line-height: 1\.4; max-width: 30ch; margin: 7px 0 11px; \}/);
+  assert.match(portrait, /\.hl-hero \.hl-cta \{ min-height: 38px; padding: 0 15px; font-size: 13px;/, 'the CTA scales with the compact portrait composition');
   assert.doesNotMatch(section(css, '@media (max-width: 599px)'), /\.hl-hero__(h|sub|txt|eyebrow|inner|slide|img) \{/, 'the phone block leaves the hero to the portrait block');
 });
 
 // ============================================================
-console.log('\n— Every other page: the solid header, unchanged —');
+console.log('\n— Every other page: the solid header —');
 // ============================================================
 
-await test('the category and product pages keep the solid bar with the delivery row and the search bar inside it and the nav strip before main — the homepage rework never reaches them', () => {
+await test('the category and product pages keep the solid bar with the delivery row and the search bar under it in one .hl-top block, and the nav strip before main — the homepage rework never reaches them', () => {
   for (const [name, html] of [['category', category], ['product', product]]) {
-    assert.match(html, /^<div class="hl"><header class="hl-hdr"><div class="hl-hdr__row">/, `${name}: the plain shell`);
-    assert.match(html, /<\/div><div class="hl-deliver" aria-label="Delivery">[\s\S]*?<span class="hl-deliver__badge">[\s\S]*?<\/svg> Standard Delivery · 6-7 days<\/span><\/div><div class="hl-search" role="search" aria-label="Search Home &amp; Living">[\s\S]*?<\/div><\/header><nav class="hl-nav" aria-label="Home &amp; Living">/, `${name}: delivery row and search bar inside the header, then the nav strip`);
-    assert.doesNotMatch(html, /hl-hdr--over|hl--over|hl-tools/, `${name}: nothing of the floating header`);
+    assert.match(html, /^<div class="hl"><div class="hl-top"><header class="hl-hdr"><div class="hl-hdr__row">/, `${name}: the plain shell`);
+    assert.match(html, /<\/div><\/header><div class="hl-tools hl-tools--bar"><div class="hl-deliver" aria-label="Delivery">[\s\S]*?<span class="hl-deliver__badge">[\s\S]*?<\/svg> Standard Delivery · 6-7 days<\/span><\/div><div class="hl-search" role="search" aria-label="Search Home &amp; Living">[\s\S]*?<\/div><\/div><\/div><nav class="hl-nav" aria-label="Home &amp; Living">/, `${name}: the bar, then the delivery row and the search bar, then the nav strip`);
+    assert.doesNotMatch(html, /hl-hdr--over|hl--over/, `${name}: nothing of the floating header`);
   }
+});
+
+await test('wide, the bar, the delivery row and the search bar stick as one block (the line under the search bar, as before); up to 1019px only the bar sticks and the delivery row and the search bar scroll away', () => {
+  assert.match(css, /\.hl-hdr \{ position: sticky; top: 0; z-index: 20; background: var\(--hl-hdr\); border-bottom: 1px solid var\(--hl-line\); \}/, 'the bar itself, unchanged');
+  assert.match(css, /\.hl-top \{ position: sticky; top: 0; z-index: 20; \}\n\.hl-top \.hl-hdr \{ border-bottom: 0; \}\n\.hl-top \.hl-tools--bar \{ padding-top: 0; \}/);
+  assert.match(css, /\.hl-tools \{ background: var\(--hl-hdr\); border-bottom: 1px solid var\(--hl-line\);/, 'the tools carry the cream and the line');
+  const tablet = section(css, '@media (max-width: 1019px)', '@media (max-width: 767px)');
+  assert.match(tablet, /\.hl-top \{ display: contents; \}\n\s*\.hl-top \.hl-hdr \{ border-bottom: 1px solid var\(--hl-line\); \}/, 'the block lets go of its box, so the bar alone sticks for the whole page');
+  assert.match(css, /\.hl \{[^}]*overflow-x: clip;/, 'clip, not hidden: the page is no scroll container, so the bar can stick');
+  assert.match(css, /\.hl-gallery \{ position: sticky; top: 196px;/); assert.match(css, /\.hl-filters \{ position: sticky; top: 190px;/, 'the wide offsets still clear the whole block');
+});
+
+await test('the header row is the same markup on every page', () => {
   // The header's row markup is the same on every page.
   const row = (html) => html.slice(html.indexOf('<div class="hl-hdr__row">'), html.indexOf('</nav></div>', html.indexOf('<div class="hl-hdr__row">')));
   assert.equal(row(home), row(category)); assert.equal(row(category), row(product));

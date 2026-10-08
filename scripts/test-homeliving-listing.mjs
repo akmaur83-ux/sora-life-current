@@ -170,7 +170,7 @@ const render = (p) => app.render(p);
 await test('/homeliving/category/bedsheets: breadcrumb, the sub-category pill, title, live count, sort, grid/list, the filter panel with every facet in scope, two cards in featured order', () => {
   assert.ok(!app.error, app.error?.message);
   const html = render('/homeliving/category/bedsheets');
-  assert.match(html, /<div class="hl"><header class="hl-hdr">/, 'inside the Home & Living shell');
+  assert.match(html, /<div class="hl"><div class="hl-top"><header class="hl-hdr">/, 'inside the Home & Living shell');
   assert.match(html, /<nav class="hl-crumb" aria-label="Breadcrumb"><ol><li><a href="\/homeliving">Home &amp; Living<\/a><\/li><li><span aria-current="page">Bedsheets<\/span><\/li><\/ol><\/nav>/);
   assert.match(html, /<nav class="hl-subcats" aria-label="Shop Bedsheets"><a class="hl-subcat" href="\/homeliving\/category\/fitted-sheets">Fitted Sheets<\/a><\/nav>/);
   assert.match(html, /<h1 class="hl-listing__h serif">Bedsheets<\/h1><p class="hl-listing__count" role="status">2 products<\/p>/);
@@ -216,7 +216,7 @@ await test('three empty states: filters that match nothing (with Clear), a categ
 
 await test('an unknown slug renders a not-found state inside the shell — never a crash', () => {
   const html = render('/homeliving/category/nope');
-  assert.match(html, /<div class="hl"><header class="hl-hdr">[\s\S]*?<nav class="hl-crumb"[\s\S]*?<span aria-current="page">Not found<\/span>/);
+  assert.match(html, /<div class="hl"><div class="hl-top"><header class="hl-hdr">[\s\S]*?<nav class="hl-crumb"[\s\S]*?<span aria-current="page">Not found<\/span>/);
   assert.match(html, /<p>There is no “nope” category in the Home &amp; Living store\.<\/p><a class="hl-btn" href="\/homeliving">Back to Home &amp; Living<\/a>/);
   assert.match(html, /data-stub="footer"/, 'the shell\'s footer follows');
   assert.doesNotMatch(render('/homeliving/category/retired'), /hl-listing__bar/, 'an inactive category is not found either');

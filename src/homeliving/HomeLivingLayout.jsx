@@ -20,8 +20,12 @@ import { HOMELIVING_DELIVERY_WINDOW, HOMELIVING_TAGLINE, categoryHref, useHomeLi
 // scrolls, then the solid cream bar it is everywhere else. Nothing sits
 // above the photograph: the nav strip, the delivery row and the search bar
 // are mounted by the page under the hero (BottomNav, DeliveryRow,
-// SearchBar are exported for it). Every other page keeps the bar solid
-// with the delivery row and the search bar inside it, as before.
+// SearchBar are exported for it). Every other page keeps the bar solid,
+// with the delivery row and the search bar under it in one .hl-top block:
+// on a wide screen the block sticks as one; up to 1019px (where the
+// bottom nav is fixed) only the bar sticks and the delivery row and the
+// search bar scroll away with the page, so they do not hold the first
+// screen.
 //
 // Delivery copy is the one factual promise the store makes:
 // "Standard Delivery / 6-7 days" (HOMELIVING_DELIVERY_WINDOW). Nothing here
@@ -103,12 +107,14 @@ export function SearchBar() {
 /**
  * @param over  the homepage: the bar floats transparent over the hero and
  *              turns solid (`is-solid`) once the page scrolls; the delivery
- *              row and the search bar are the page's to place.
+ *              row and the search bar are the page's to place. Otherwise the
+ *              bar and, under it, the delivery row and the search bar
+ *              (.hl-tools--bar) in one .hl-top block.
  */
 export function HomeLivingHeader({ onMenu, over = false }) {
   const { cartCount } = useStore();
   const solid = useScrolledPast(over ? SOLID_AFTER_PX : null);
-  return (
+  const bar = (
     <header className={`hl-hdr${over ? ' hl-hdr--over' : ''}${over && solid ? ' is-solid' : ''}`}>
       <div className="hl-hdr__row">
         <button type="button" className="hl-hdr__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={26} /></button>
@@ -127,10 +133,10 @@ export function HomeLivingHeader({ onMenu, over = false }) {
           </Link>
         </nav>
       </div>
-      {!over && <DeliveryRow />}
-      {!over && <SearchBar />}
     </header>
   );
+  if (over) return bar;
+  return <div className="hl-top">{bar}<div className="hl-tools hl-tools--bar"><DeliveryRow /><SearchBar /></div></div>;
 }
 
 export function BottomNav() {

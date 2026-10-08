@@ -304,6 +304,11 @@ function undoFromPatch(name) {
   return Object.fromEntries(Object.entries(files).map(([r, hunks]) => [r, (t, rr) => hunks.reduce((acc, [now, then]) => swap(rr, acc, now, then), t)]));
 }
 
+// The Home & Living PDP's gallery opens full screen (tap to open, pinch to zoom,
+// swipe between images, tap or swipe down to close): GalleryZoom and the button
+// around each gallery image. Not a cart change, but the same shared file.
+const UNDO_PDP_ZOOM = undoFromPatch('homeliving-pdp-zoom.patch');
+
 // The Home & Living PDP's delivery line: "Other delivery options are chosen at
 // checkout" has been false since Express and Scheduled were withdrawn (2fa4ed2).
 const UNDO_DELIVERY_COPY = undoFromPatch('homeliving-delivery-copy.patch');
@@ -343,7 +348,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart

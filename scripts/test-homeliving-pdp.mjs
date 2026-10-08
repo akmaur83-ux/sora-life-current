@@ -142,11 +142,12 @@ const render = (p) => app.render(p);
 await test('/homeliving/p/sage-fitted-sheet: breadcrumb back through the category, three ordered slides with thumbnails and alt text, brand, name, net_content, price with MRP and discount, both selectors, delivery, description, details, related', () => {
   assert.ok(!app.error, app.error?.message);
   const html = render('/homeliving/p/sage-fitted-sheet');
-  assert.match(html, /<div class="hl"><header class="hl-hdr">/, 'inside the shell');
+  assert.match(html, /<div class="hl"><div class="hl-top"><header class="hl-hdr">/, 'inside the shell');
   assert.match(html, /<nav class="hl-crumb" aria-label="Breadcrumb"><ol><li><a href="\/homeliving">Home &amp; Living<\/a><\/li><li><a href="\/homeliving\/category\/bedsheets">Bedsheets<\/a><\/li><li><a href="\/homeliving\/category\/fitted-sheets">Fitted Sheets<\/a><\/li><li><span aria-current="page">Sage Fitted Sheet<\/span><\/li><\/ol><\/nav>/);
-  const slides = [...html.matchAll(/<figure class="hl-gallery__slide[^"]*" id="hl-slide-(\d)"><img src="([^"]+)" alt="([^"]*)"/g)].map((m) => [m[1], m[2], m[3]]);
+  const slides = [...html.matchAll(/<figure class="hl-gallery__slide[^"]*" id="hl-slide-(\d)"><button type="button" class="hl-gallery__zoom" aria-label="View image \d of 3 full screen"><img src="([^"]+)" alt="([^"]*)"/g)].map((m) => [m[1], m[2], m[3]]);
   assert.deepEqual(slides, [['0', '/img/homeliving-product-botanical-bedsheet-set.webp', 'Sage Fitted Sheet on a king bed'], ['1', '/img/homeliving-circle-bedsheets.webp', 'Folded, showing the print'], ['2', '/img/homeliving-hero.webp', 'Sage Fitted Sheet — view 3']], 'primary first, in order, with alt text');
-  assert.match(html, /<figure class="hl-gallery__slide is-on" id="hl-slide-0"><img [^>]*loading="eager" fetchpriority="high"\/>/);
+  assert.match(html, /<figure class="hl-gallery__slide is-on" id="hl-slide-0"><button type="button" class="hl-gallery__zoom" aria-label="View image 1 of 3 full screen"><img [^>]*loading="eager" fetchpriority="high"\/><\/button><\/figure>/, 'each image is a button that opens it full screen');
+  assert.doesNotMatch(html, /class="hl-zoom/, 'the full-screen view is not rendered until an image is tapped');
   assert.equal((html.match(/class="hl-gallery__thumb( is-on)?"/g) || []).length, 3, 'a thumbnail per image');
   assert.match(html, /<a href="#hl-slide-0" role="tab" aria-selected="true" class="hl-gallery__thumb is-on">/);
   assert.match(html, /<p class="hl-pdp__brand">Meadow Weave<\/p><h1 class="hl-pdp__h serif">Sage Fitted Sheet<\/h1><p class="hl-pdp__size">Fitted sheet<\/p>/);
@@ -207,7 +208,7 @@ await test('Add to cart fills the reserved slot: the first cell of the action ro
 
 await test('unknown slug: a not-found state inside the shell, never a crash; loading says loading', async () => {
   const html = render('/homeliving/p/nope');
-  assert.match(html, /<div class="hl"><header class="hl-hdr">[\s\S]*?<span aria-current="page">Not found<\/span>/);
+  assert.match(html, /<div class="hl"><div class="hl-top"><header class="hl-hdr">[\s\S]*?<span aria-current="page">Not found<\/span>/);
   assert.match(html, /<p>There is no “nope” in the Home &amp; Living store\.<\/p><a class="hl-btn" href="\/homeliving">Back to Home &amp; Living<\/a>/);
   assert.match(html, /data-stub="footer"/);
   const loading = await buildHomeLivingApp({ initial: null });
@@ -234,7 +235,7 @@ await test('every card links here: the homepage featured row, the listing grid a
 
 await test('text rule and copy: every gallery image has alt text, every thumbnail is decorative, every label is text; no speed claim in the new code or the page', () => {
   const html = render('/homeliving/p/sage-fitted-sheet');
-  for (const m of html.matchAll(/<figure class="hl-gallery__slide[^>]*><img [^>]*>/g)) assert.match(m[0], / alt="[^"]+"/);
+  for (const m of html.matchAll(/<figure class="hl-gallery__slide[^>]*><button [^>]*><img [^>]*>/g)) assert.match(m[0], / alt="[^"]+"/);
   for (const m of html.matchAll(/class="hl-gallery__thumb[^>]*><img [^>]*>/g)) assert.match(m[0], / alt=""/);
   const t = text(html);
   for (const s of ['Sage Fitted Sheet', '₹ 999', 'M.R.P: ₹1,299', '23% OFF', 'Fitted sheet', 'Standard delivery 6-7 days Free', 'Inclusive of all taxes']) assert.ok(t.includes(s), s);
@@ -243,6 +244,63 @@ await test('text rule and copy: every gallery image has alt text, every thumbnai
   const src = stripComments(read('src/homeliving/HomeLivingProductPage.jsx'));
   assert.doesNotMatch(src, /\/img\/homeliving-|Botanical|price:\s*\d|₹\s*\d/, 'nothing hardcoded');
   assert.doesNotMatch(src, /\b(st|view)\.(price|mrp)\s*[+\-*/]|[+\-*/]\s*(st|view)\.(price|mrp)\b|Math\.round/, 'no price arithmetic in the component');
+});
+
+// ============================================================
+console.log('\n— The gallery full screen: tap to open, pinch, swipe, tap or swipe down to close —');
+// ============================================================
+
+const Z = app.modules?.pdp || {};
+await test('the gesture rules: zoom about the fingers, 1× to 4×; a zoomed image drags only as far as it overflows; a drag past the slop pans when zoomed, otherwise swipes sideways or pulls down', () => {
+  assert.equal(Z.ZOOM_MAX, 4);
+  // Zooming about a point keeps the image point under it still.
+  const at = { x: 60, y: -30 }, z = Z.zoomAbout({ scale: 1, x: 0, y: 0 }, 3, at);
+  assert.deepEqual(z, { scale: 3, x: -120, y: 60 });
+  assert.deepEqual([(at.x - z.x) / z.scale, (at.y - z.y) / z.scale], [60, -30], 'the image point under the fingers is the one that was there');
+  assert.equal(Z.zoomAbout({ scale: 1, x: 0, y: 0 }, 9, at).scale, 4, 'capped at 4×');
+  assert.deepEqual(Z.zoomAbout({ scale: 2, x: 30, y: 0 }, 0.4, at), { scale: 1, x: 0, y: 0 }, 'below 1× it rests, centred');
+  // Contained, never enlarged.
+  assert.deepEqual(Z.fitSize({ width: 1600, height: 1435 }, { width: 390, height: 844 }), { width: 390, height: 1435 * (390 / 1600) });
+  assert.deepEqual(Z.fitSize({ width: 1600, height: 1435 }, { width: 1280, height: 860 }), { width: 1600 * (860 / 1435), height: 860 });
+  assert.deepEqual(Z.fitSize({ width: 600, height: 400 }, { width: 1280, height: 860 }), { width: 600, height: 400 }, 'a small image is not blown up');
+  // At 3× a 390 × 350 image in a 390 × 844 frame overflows 390px each side and 103px top and bottom.
+  const fit = { width: 390, height: 350 }, frame = { width: 390, height: 844 };
+  assert.deepEqual(Z.clampPan({ scale: 3, x: 900, y: -400 }, fit, frame), { scale: 3, x: 390, y: -103 });
+  assert.deepEqual(Z.clampPan({ scale: 2, x: 50, y: 50 }, fit, frame), { scale: 2, x: 50, y: 0 }, 'no vertical travel while the image is shorter than the frame');
+  assert.equal(Z.gestureKind(40, 5, true), 'pan'); assert.equal(Z.gestureKind(5, 40, true), 'pan');
+  assert.equal(Z.gestureKind(-40, 10, false), 'swipe'); assert.equal(Z.gestureKind(10, 40, false), 'dismiss'); assert.equal(Z.gestureKind(10, -40, false), 'none');
+});
+
+await test('a released swipe moves one image (never past either end); a pull down past 96px closes; anything shorter springs back', () => {
+  assert.deepEqual(Z.release('swipe', -60, 0, 0, 5), { index: 1 });
+  assert.deepEqual(Z.release('swipe', 60, 0, 2, 5), { index: 1 });
+  assert.deepEqual(Z.release('swipe', -60, 0, 4, 5), {}, 'the last image stays');
+  assert.deepEqual(Z.release('swipe', 60, 0, 0, 5), {}, 'the first image stays');
+  assert.deepEqual(Z.release('swipe', -40, 0, 0, 5), {}, 'too short');
+  assert.deepEqual(Z.release('dismiss', 0, 96, 1, 5), { close: true });
+  assert.deepEqual(Z.release('dismiss', 0, 80, 1, 5), {});
+});
+
+await test('the component: opened by the image\'s own button, portalled to <body> as a modal dialog; pointer events with the frame taking every touch; a tap acts on the click that follows it; Escape, ← →, a trapped Tab, the page held still, and focus back on the image it closed on', () => {
+  const src = stripComments(read('src/homeliving/HomeLivingProductPage.jsx'));
+  assert.match(src, /<button type="button" className="hl-gallery__zoom" aria-label=\{`View image \$\{i \+ 1\} of \$\{images\.length\} full screen`\} onClick=\{\(\) => setZoom\(i\)\}>/);
+  assert.match(src, /\{zoom != null && <GalleryZoom images=\{images\} start=\{zoom\} name=\{view\.name\} onClose=\{closeZoom\} \/>\}/);
+  assert.match(src, /return createPortal\(\n\s*<div className=\{`hl-zoom\$\{moving \? ' is-moving' : ''\}`\} role="dialog" aria-modal="true"/);
+  assert.match(src, /document\.body,\n\s*\);/);
+  assert.match(src, /onPointerDown=\{onDown\} onPointerMove=\{onMove\} onPointerUp=\{onUp\} onPointerCancel=\{onUp\} onClick=\{onTap\}/);
+  assert.doesNotMatch(src, /onTouch(Start|Move|End)/, 'pointer events only');
+  assert.match(src, /if \(g\.kind === 'press'\) \{ tap\.current = performance\.now\(\) - g\.t0 <= TAP_MS \? \{ mouse: g\.mouse \} : null; return; \}/, 'a tap is not acted on at pointerup — the phone\'s click would land on the gallery under it');
+  assert.match(src, /else if \(zoomed\) setView\(REST\);\n\s*else close\(\);/, 'a tap steps out of a zoom, or closes');
+  assert.match(src, /if \(e\.key === 'Escape'\) \{ e\.preventDefault\(\); close\(\); \}/); assert.match(src, /e\.key === 'ArrowRight'\) go\(live\.current\.index \+ 1\)/); assert.match(src, /e\.key === 'Tab' && dialog\.current/);
+  assert.match(src, /root\.style\.overflow = 'hidden';/); assert.match(src, /root\.style\.overflow = was;/);
+  assert.match(src, /el\.addEventListener\('wheel', onWheel, \{ passive: false \}\);/);
+  assert.match(src, /slide\.querySelector\('button'\)\?\.focus\(\{ preventScroll: true \}\);/, 'focus returns to the image it closed on');
+  const css = read('src/styles/homeliving.css');
+  assert.match(css, /\.hl-zoom \{ position: fixed; inset: 0; z-index: 60;/, 'above the bars (20, 30) and the drawers (40, 41)');
+  assert.match(css, /\.hl-zoom__frame \{ position: absolute; inset: 0; overflow: hidden; touch-action: none;/, 'the pinch and the swipes are the gallery\'s, not the page\'s');
+  assert.match(css, /\.hl-zoom__slide \{[^}]*display: flex;/); assert.match(css, /\.hl-zoom__img \{[^}]*max-width: 100%; max-height: 100%; object-fit: contain;/);
+  assert.match(css, /@media \(hover: none\) and \(pointer: coarse\) \{ \.hl-zoom__prev, \.hl-zoom__next \{ display: none; \} \}/, 'a touch screen swipes; the arrows are for a mouse');
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.hl-zoom__track, \.hl-zoom__img, \.hl-zoom__backdrop \{ transition: none; \}/);
 });
 
 // ============================================================

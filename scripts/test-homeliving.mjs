@@ -306,9 +306,9 @@ await test('390px: the shorter portrait hero, raised utility dock, compact edito
   const homePhone = css.slice(css.indexOf('/* Homepage composition:'));
   assert.match(phone, /\.hl-hero__slide::before \{ background: linear-gradient\(180deg/);
   assert.match(phone, /\.hl-hero__slide \{ aspect-ratio: auto; height: clamp\(410px, 54svh, 480px\); min-height: 410px; max-height: 480px; \}/);
-  assert.match(phone, /\.hl-hero__txt \{ max-width: min\(100%, 300px\);[^}]*border-radius: 18px;/);
+  assert.match(phone, /\.hl-hero__txt \{ position: relative; isolation: isolate; max-width: min\(100%, 300px\);/); assert.match(phone, /\.hl-hero__txt::before \{[^}]*background: linear-gradient\(100deg,/, 'the copy on a soft wash, not a card');
   assert.match(phone, /\.hl-circles \{ display: flex;[^}]*overflow-x: auto/); assert.match(phone, /\.hl-circle \{ flex: 0 0 88px/);
-  assert.match(phone, /\.hl-row \{ display: flex;[^}]*scroll-snap-type: x mandatory/); assert.match(phone, /\.hl-card \{ flex: 0 0 168px; scroll-snap-align: start; \}/);
+  assert.match(phone, /\.hl-row \{ display: flex;[^}]*scroll-snap-type: x mandatory/); assert.match(phone, /\.hl-card \{ flex: 0 0 160px; scroll-snap-align: start; \}/);
   assert.match(homePhone, /\.hl-home \.hl-tools \{ position: relative;[^}]*width: calc\(100% - 24px\); margin: -18px auto 0;[^}]*border-radius: 18px;/, 'the delivery and search controls become one raised utility dock');
   assert.match(homePhone, /\.hl-home \.hl-trust \{ margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);[^}]*overflow: visible;/, 'the homepage trust items are fully visible in a 2×2 grid');
   assert.match(homePhone, /\.hl-home \.hl-cats \{[^}]*margin-left: 10px;[^}]*border-radius: 22px;/, 'categories sit in a compact premium module');
