@@ -1,0 +1,52 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 5e70f23..a232f92 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -200,6 +200,7 @@ export default function App() {
+         <Route index element={<FashionHome />} />
+         <Route path="men" element={<FashionDepartment key="men" department="men" />} />
+         <Route path="women" element={<FashionDepartment key="women" department="women" />} />
++        <Route path="women/sarees" element={<FashionDepartment key="sarees" department="sarees" />} />
+         <Route path="c/:slug" element={<FashionCategory />} />
+         <Route path="p/:slug" element={<FashionProductPage />} />
+         <Route path="search" element={<FashionSearch />} />
+diff --git a/src/fashion/FashionLayout.jsx b/src/fashion/FashionLayout.jsx
+index 1acd436..35e10f1 100644
+--- a/src/fashion/FashionLayout.jsx
++++ b/src/fashion/FashionLayout.jsx
+@@ -42,11 +42,25 @@ export function FashionHeader({ onMenu }) {
+     const term = q.trim();
+     navigate(term ? `/fashion/search?q=${encodeURIComponent(term)}` : '/fashion/search');
+   };
++  // The women's page: the same links over its photograph, and no delivery strip.
+   if (/^\/fashion\/women\/?$/.test(location.pathname)) return (
++    <header className="wm-header">
++      <button type="button" className="wm-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
++      <nav className="wm-header__nav" aria-label="Women's fashion"><a href="#wm-products">Shop</a><a href="#wm-categories">Categories</a><Link to="/fashion/women/sarees">Sarees</Link><Link to="/fashion/men">Men</Link></nav>
++      <FashionLogo tagline={config.header.tagline} />
++      <nav className="wm-header__actions" aria-label="Search, account, wishlist and cart">
++        <Link to="/fashion/search" aria-label="Search fashion"><Icon name="search" size={20} /></Link>
++        <Link to="/account" aria-label="Account"><Icon name="user" size={20} /></Link>
++        <Link to="/fashion/wishlist" aria-label={`Wishlist${wish.count ? `, ${wish.count} items` : ''}`}><Icon name="heart" size={20} />{wish.count > 0 && <span>{wish.count}</span>}</Link>
++        <Link to="/cart" aria-label={`Cart${cartCount ? `, ${cartCount} items` : ''}`}><Icon name="bag" size={20} />{cartCount > 0 && <span>{cartCount}</span>}</Link>
++      </nav>
++    </header>
++  );
++  if (/^\/fashion\/women\/sarees\/?$/.test(location.pathname)) return (
+     <header className="sw-header">
+       <button type="button" className="sw-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
+       <FashionLogo tagline="Tradition in every drape" />
+-      <nav className="sw-header__nav" aria-label="Saree store"><Link to="/fashion/women">Home</Link><a href="#fd-products">Shop</a><a href="#sw-collections">Collections <Icon name="chevronDown" size={12} /></a><Link to="/about">About</Link><Link to="/contact">Contact</Link></nav>
++      <nav className="sw-header__nav" aria-label="Saree store"><Link to="/fashion/women/sarees">Home</Link><a href="#fd-products">Shop</a><a href="#sw-collections">Collections <Icon name="chevronDown" size={12} /></a><Link to="/about">About</Link><Link to="/contact">Contact</Link></nav>
+       <nav className="sw-header__actions" aria-label="Search, account, wishlist and cart">
+         <Link to="/fashion/search" aria-label="Search fashion"><Icon name="search" size={19} /></Link>
+         <Link to="/account" aria-label="Account"><Icon name="user" size={19} /></Link>
+@@ -151,7 +165,7 @@ function Shell() {
+   const { pathname } = useLocation();
+   useEffect(() => { setMenu(false); }, [pathname]);
+   return (
+-    <div className={`fs${/^\/fashion\/(men|women)\/?$/.test(pathname) ? ' fs--department' : ''}${/^\/fashion\/women\/?$/.test(pathname) ? ' fs--saree' : ''}`}>
++    <div className={`fs${/^\/fashion\/(men|women|women\/sarees)\/?$/.test(pathname) ? ' fs--department' : ''}${/^\/fashion\/women\/sarees\/?$/.test(pathname) ? ' fs--saree' : ''}${/^\/fashion\/women\/?$/.test(pathname) ? ' fs--women' : ''}`}>
+       <FashionHeader onMenu={() => setMenu(true)} />
+       <Drawer open={menu} onClose={() => setMenu(false)} />
+       <main className="fs-main"><Outlet /></main>

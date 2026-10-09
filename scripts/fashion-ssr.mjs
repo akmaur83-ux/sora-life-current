@@ -130,6 +130,8 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
         ...(department ? [
           h(Route, { path: 'men', element: h(department.default, { department: 'men' }) }),
           h(Route, { path: 'women', element: h(department.default, { department: 'women' }) }),
+          // The saree store moved under Women when /fashion/women became the main women's page.
+          ...(read('src/App.jsx').includes('path="women/sarees"') ? [h(Route, { path: 'women/sarees', element: h(department.default, { department: 'sarees' }) })] : []),
         ] : []),
         h(Route, { path: 'c/:slug', element: h(listing.default) }),
         h(Route, { path: 'p/:slug', element: h(pdp.default) }),

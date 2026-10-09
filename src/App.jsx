@@ -200,6 +200,7 @@ export default function App() {
         <Route index element={<FashionHome />} />
         <Route path="men" element={<FashionDepartment key="men" department="men" />} />
         <Route path="women" element={<FashionDepartment key="women" department="women" />} />
+        <Route path="women/sarees" element={<FashionDepartment key="sarees" department="sarees" />} />
         <Route path="c/:slug" element={<FashionCategory />} />
         <Route path="p/:slug" element={<FashionProductPage />} />
         <Route path="search" element={<FashionSearch />} />

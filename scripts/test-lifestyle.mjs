@@ -25,7 +25,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule, buildLifestyleApp, loadLifestyleData, INITIAL, HOME_CATEGORIES, HOME_PRODUCTS, FASHION_CATEGORIES, FASHION_PRODUCTS } from './lifestyle-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { CART_CHANGE_EDITS, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES, HOMELIVING_CART_FILES, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS } from './storefront-settings-pin.mjs';
+import { CART_CHANGE_EDITS, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES, HOMELIVING_CART_FILES, sansCartChanges, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS } from './storefront-settings-pin.mjs';
 
 // The tree as it stood before this work: the homepage store doorway release.
 const BASELINE_SHA = '9ca51d5';
@@ -295,7 +295,8 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page and 
   const appSrc = read('src/App.jsx');
   assert.match(appSrc, /import LifestyleLayout from '\.\/lifestyle\/LifestyleLayout\.jsx';\nimport LifestyleHome from '\.\/lifestyle\/LifestyleHome\.jsx';/);
   assert.match(appSrc, /<Route path="\/lifestyle" element=\{<LifestyleLayout \/>\}>\n\s+<Route index element=\{<LifestyleHome \/>\} \/>\n\s+<\/Route>/);
-  assert.equal(appSrc
+  // The women's page added the saree store's route under Women; its recorded undo goes first.
+  assert.equal(sansCartChanges('src/App.jsx', appSrc)
     .replace("import FashionDepartment from './fashion/FashionDepartment.jsx';\n", '')
     .replace('        <Route path="men" element={<FashionDepartment key="men" department="men" />} />\n', '')
     .replace('        <Route path="women" element={<FashionDepartment key="women" department="women" />} />\n', '')

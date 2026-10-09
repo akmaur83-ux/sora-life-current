@@ -313,6 +313,12 @@ function undoFromPatch(name) {
   return Object.fromEntries(Object.entries(files).map(([r, hunks]) => [r, (t, rr) => hunks.reduce((acc, [now, then]) => swap(rr, acc, now, then), t)]));
 }
 
+// The women's page: /fashion/women became the main women's page and the saree store moved to
+// /fashion/women/sarees as it was. Its own code is the departments' (FashionDepartment.jsx,
+// departmentContent.js, fashion-departments.css, test-fashion-departments.mjs owns them); in the
+// two shared files it added a route and the page's header and shell class, all undone here.
+const UNDO_WOMEN_PAGE = undoFromPatch('fashion-women-page.patch');
+
 // The fashion PDP's thumbnails: the same fix as Home & Living's — buttons that scroll only the
 // gallery track (and Gallery exported so its suite can mount it). A shared fashion file.
 const UNDO_FASHION_PDP_THUMBS = undoFromPatch('fashion-pdp-thumbs.patch');
@@ -369,7 +375,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart

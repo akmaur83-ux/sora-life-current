@@ -93,6 +93,85 @@ function SareeDepartment({ config, products, status, listing, collectionHref }) 
   </div>;
 }
 
+// The main women's page: a full-bleed hero under its own header, shop-by-category,
+// the real catalogue (new arrivals when any are flagged), four edits, a capsule
+// wardrobe, and the way into the saree store. Every word is HTML; no image carries text.
+function WomenDepartment({ config, tree, category, categories, products, status, listing, collectionHref }) {
+  const [shelf, setShelf] = useState('');
+  // `root` names a top-level category (bags sit under Bags & Accessories, not under Women).
+  const tileHref = (item) => {
+    if (!item.root) return item.slug ? collectionHref(item.slug) : listing;
+    const node = resolveCategory(tree, item.root);
+    return node && !node.parent_id ? categoryHref(node) : listing;
+  };
+  const fresh = products.filter((view) => view.isNew);
+  const pool = fresh.length ? sortViews(fresh, 'new') : products;
+  // Filters only for Women's own sub-categories that have something in the row.
+  const shelves = (category ? tree.children(category.id) : []).filter((child) => child.is_active).map((child) => ({
+    id: child.id, name: child.name,
+    ids: new Set(categories.filter((node) => tree.ancestors(node.id).some((a) => a.id === child.id)).map((node) => node.id)),
+  })).filter((s) => pool.some((view) => s.ids.has(view.category_id)));
+  const current = shelves.find((s) => s.id === shelf);
+  const shown = (current ? pool.filter((view) => current.ids.has(view.category_id)) : pool).slice(0, 8);
+  return <div className="wm">
+    <section className="wm-hero" aria-labelledby="wm-title">
+      <EditorialImage image={config.hero} priority className="wm-hero__art" />
+      <div className="wm-hero__copy">
+        <p className="wm-eyebrow">{config.eyebrow}</p>
+        <h1 id="wm-title">{config.title.map((line) => <span key={line}>{line}</span>)}</h1>
+        <p className="wm-hero__intro">{config.intro}</p>
+        <Link to={listing} className="wm-button">{config.cta}</Link>
+      </div>
+    </section>
+
+    <section className="wm-categories wm-wrap" id="wm-categories" aria-labelledby="wm-categories-title">
+      <h2 id="wm-categories-title">Shop by category</h2>
+      <div className="wm-categories__grid">{config.categories.map((item) => <Link key={item.title} to={tileHref(item)} className="wm-category">
+        <EditorialImage image={item.image} /><span>{item.title}</span>
+      </Link>)}</div>
+    </section>
+
+    <section className="wm-products wm-wrap" id="wm-products" aria-labelledby="wm-products-title">
+      <h2 id="wm-products-title">{fresh.length ? 'New in' : 'From the collection'}</h2>
+      {shelves.length > 1 && <div className="wm-shelves" role="group" aria-label="Show a category">
+        <button type="button" aria-pressed={!current} onClick={() => setShelf('')}>All</button>
+        {shelves.map((s) => <button key={s.id} type="button" aria-pressed={current?.id === s.id} onClick={() => setShelf(s.id)}>{s.name}</button>)}
+      </div>}
+      {shown.length ? <div className="wm-products__grid">{shown.map((view) => <FashionProductCard key={view.id} view={view} />)}</div>
+        : <div className="fd-empty" role="status"><p>{status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'A new chapter in style is on its way. Explore all fashion while this collection comes together.'}</p><Link to="/fashion">Explore all fashion <Icon name="arrowRight" size={16} /></Link></div>}
+      {shown.length > 0 && <Link to={listing} className="wm-button wm-button--outline">View all</Link>}
+    </section>
+
+    <section className="wm-edits wm-wrap" aria-label="Edits">
+      {config.edits.map((item, index) => <Link key={item.title} to={tileHref(item)} className={`wm-edit wm-edit--${index + 1}`}>
+        <EditorialImage image={item.image} /><div><h2>{item.title}</h2><p>{item.text}</p>
+          {item.slug || item.root ? <span className="wm-edit__link">{item.cta} <Icon name="arrowRight" size={16} /></span> : <span className="wm-button">{item.cta}</span>}</div>
+      </Link>)}
+    </section>
+
+    <section className="wm-capsule wm-wrap" aria-labelledby="wm-capsule-title">
+      <h2 id="wm-capsule-title">The capsule edit</h2>
+      <div className="wm-capsule__grid">{config.capsule.map((item) => <Link key={item.title} to={tileHref(item)} className="wm-look">
+        <EditorialImage image={item.image} /><div><h3>{item.title}</h3><p>{item.caption}</p><span>Shop <Icon name="arrowRight" size={15} /></span></div>
+      </Link>)}</div>
+    </section>
+
+    <section className="wm-sarees wm-wrap" aria-labelledby="wm-sarees-title">
+      <EditorialImage image={config.sarees.image} />
+      <div><p className="wm-eyebrow">{config.sarees.eyebrow}</p><h2 id="wm-sarees-title">{config.sarees.title}</h2><p>{config.sarees.text}</p>
+        <Link to="/fashion/women/sarees" className="wm-button">{config.sarees.cta} <Icon name="arrowRight" size={16} /></Link></div>
+    </section>
+
+    <nav className="wm-services wm-wrap" aria-label="Shopping information">
+      {[
+        ['truck', 'Standard delivery', '6–7 business days', '/shipping'],
+        ['return', 'Returns', 'Within 7 days of delivery', '/returns'],
+        ['chat', 'Need help?', 'Contact our team', '/contact'],
+      ].map(([icon, title, description, href]) => <Link key={title} to={href}><Icon name={icon} size={24} /><span><strong>{title}</strong><small>{description}</small></span></Link>)}
+    </nav>
+  </div>;
+}
+
 export default function FashionDepartment({ department = 'men' }) {
   // Opening at the hero (or at a #section) is ScrollManager's, site-wide (main.jsx).
   const config = DEPARTMENT_CONTENT[department] || DEPARTMENT_CONTENT.men;
@@ -103,7 +182,8 @@ export default function FashionDepartment({ department = 'men' }) {
     const node = categories.find((c) => c.slug === slug);
     return node ? categoryHref(node) : listing;
   };
-  if (department === 'women') return <SareeDepartment config={config} products={products} status={status} listing={listing} collectionHref={collectionHref} />;
+  if (department === 'sarees') return <SareeDepartment config={config} products={products} status={status} listing={listing} collectionHref={collectionHref} />;
+  if (department === 'women') return <WomenDepartment config={config} tree={tree} category={category} categories={categories} products={products} status={status} listing={listing} collectionHref={collectionHref} />;
   return <div className={`fd fd--${department}`}>
     <DepartmentNav active={department} />
     <section className="fd-hero" aria-labelledby="fd-title">
