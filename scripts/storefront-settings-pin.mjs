@@ -65,6 +65,9 @@ export const HOMELIVING_CART_FILES = /^(src\/lib\/homelivingCartLine\.js|scripts
 /** Scroll on navigation, site-wide: its own files (the manager, its rules, its suite and its undo patch). */
 export const SCROLL_MANAGER_FILES = /^(src\/components\/ScrollManager\.jsx|src\/lib\/scrollOnNavigate\.js|scripts\/test-scroll-on-navigate\.mjs|scripts\/pins\/scroll-manager\.patch)$/;
 
+/** The fashion PDP's thumbnail fix — undone by sansCartChanges (scripts/pins/fashion-pdp-thumbs.patch). */
+export const FASHION_PDP_THUMBS_EDITS = /^src\/fashion\/FashionProductPage\.jsx$/;
+
 /** The shared files it edited — main.jsx (the mount) and Layout.jsx (the old reset removed), each undone by sansCartChanges. */
 export const SCROLL_MANAGER_EDITS = /^(src\/main\.jsx|src\/components\/Layout\.jsx)$/;
 
@@ -310,6 +313,10 @@ function undoFromPatch(name) {
   return Object.fromEntries(Object.entries(files).map(([r, hunks]) => [r, (t, rr) => hunks.reduce((acc, [now, then]) => swap(rr, acc, now, then), t)]));
 }
 
+// The fashion PDP's thumbnails: the same fix as Home & Living's — buttons that scroll only the
+// gallery track (and Gallery exported so its suite can mount it). A shared fashion file.
+const UNDO_FASHION_PDP_THUMBS = undoFromPatch('fashion-pdp-thumbs.patch');
+
 // The Home & Living PDP's thumbnails: buttons that scroll only the gallery track, where
 // #hl-slide-N links also jumped the page and added history. The same shared file.
 const UNDO_PDP_THUMBS = undoFromPatch('homeliving-pdp-thumbs.patch');
@@ -362,7 +369,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY,UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart

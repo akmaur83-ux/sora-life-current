@@ -1,0 +1,51 @@
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 53bfe32..82e7b2a 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -1,4 +1,4 @@
+-import { useState } from 'react';
++import { useRef, useState } from 'react';
+ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import { money } from '../lib/format.js';
+@@ -24,13 +24,26 @@ import { VariantPicker } from './FashionVariantPicker.jsx';
+ // Every price shown is the row's own figure; the order is priced server-side.
+ // ============================================================
+ 
+-function Gallery({ view }) {
++export function Gallery({ view }) {
+   const images = view.images.length ? view.images : (view.image ? [view.image] : []);
+   const [active, setActive] = useState(0);
++  const track = useRef(null);
++  /**
++   * Show image i: the track scrolls sideways to it and nothing else moves — not the
++   * window, not the URL, not history. (The thumbnails were #fs-slide-N links, and the
++   * browser's fragment jump scrolled the whole page and added a history entry per click.)
++   */
++  const show = (i) => {
++    setActive(i);
++    const el = track.current, slide = el?.children[i];
++    if (!slide) return;
++    const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
++    el.scrollTo({ left: slide.offsetLeft - el.firstElementChild.offsetLeft, behavior: reduced ? 'auto' : 'smooth' });
++  };
+   if (images.length === 0) return <div className="fs-pdp__media fs-pdp__media--none" aria-hidden="true"><b>{view.name.slice(0, 1)}</b></div>;
+   return (
+     <div className="fs-gallery">
+-      <div className="fs-gallery__track" role="group" aria-label={`${view.name} images`}>
++      <div className="fs-gallery__track" role="group" aria-label={`${view.name} images`} ref={track}>
+         {images.map((src, i) => (
+           <figure key={src + i} className={`fs-gallery__slide${i === active ? ' is-on' : ''}`} id={`fs-slide-${i}`}>
+             <img src={src} alt={i === 0 ? view.name : `${view.name} — view ${i + 1}`} width="900" height="900" decoding="async" loading={i === 0 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} />
+@@ -40,9 +53,9 @@ function Gallery({ view }) {
+       {images.length > 1 && (
+         <div className="fs-gallery__thumbs" role="tablist" aria-label="Choose image">
+           {images.map((src, i) => (
+-            <a key={src + i} href={`#fs-slide-${i}`} role="tab" aria-selected={i === active} className={`fs-gallery__thumb${i === active ? ' is-on' : ''}`} onClick={() => setActive(i)}>
++            <button key={src + i} type="button" role="tab" aria-selected={i === active} aria-controls={`fs-slide-${i}`} aria-label={`Show image ${i + 1} of ${images.length}`} className={`fs-gallery__thumb${i === active ? ' is-on' : ''}`} onClick={() => show(i)}>
+               <img src={src} alt="" width="120" height="120" loading="lazy" decoding="async" />
+-            </a>
++            </button>
+           ))}
+         </div>
+       )}

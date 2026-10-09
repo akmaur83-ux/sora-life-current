@@ -311,6 +311,34 @@ await test('gallery, brand, name, rating, price row, both selectors, delivery ru
   assert.doesNotMatch(noDesc, /About this style/, 'an empty section hides');
 });
 
+await test('gallery thumbnails are buttons that change the slide and nothing else: the track scrolls sideways (smoothly; at once under reduced motion), the window, URL and history never move', async () => {
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const { hooks, mount, findAll } = await import('./catalogue-admin-harness.mjs');
+  const { loadSource } = await import('./grocery-ssr.mjs');
+  const view = { name: 'Meadow Linen Shirt', images: ['/img/a.webp', '/img/b.webp', '/img/c.webp'] };
+  const real = loadSource(read('src/fashion/FashionProductPage.jsx'), {});
+  assert.equal(typeof real.Gallery, 'function', 'Gallery is exported');
+  const html = renderToStaticMarkup(h(real.Gallery, { view }));
+  assert.match(html, /<button type="button" role="tab" aria-selected="true" aria-controls="fs-slide-0" aria-label="Show image 1 of 3" class="fs-gallery__thumb is-on">/, 'a thumbnail is a button with a name — not a #fs-slide link');
+  assert.doesNotMatch(html, /href="#fs-slide-/, 'no fragment links: a thumbnail can never jump the page or add history');
+  let reduce = false;
+  const windowScrolls = [], trackScrolls = [];
+  const win = { matchMedia: () => ({ matches: reduce }), scrollTo: (...a) => windowScrolls.push(a), scrollBy: (...a) => windowScrolls.push(a) };
+  const { Gallery } = loadSource(read('src/fashion/FashionProductPage.jsx'), { ...hooks, window: win });
+  const handle = await mount(h(Gallery, { view }));
+  await handle.settle();
+  findAll(handle.tree, (n) => n.props?.className === 'fs-gallery__track')[0].ref.current = { firstElementChild: { offsetLeft: 8 }, children: [{ offsetLeft: 8 }, { offsetLeft: 620 }, { offsetLeft: 1232 }], scrollTo: (o) => trackScrolls.push(o) };
+  const thumbs = () => findAll(handle.tree, (n) => n.type === 'button' && n.props.role === 'tab');
+  await handle.act(() => thumbs()[2].props.onClick({ preventDefault() {} }));
+  assert.deepEqual(trackScrolls.at(-1), { left: 1224, behavior: 'smooth' });
+  assert.deepEqual(thumbs().map((t) => t.props['aria-selected']), [false, false, true]);
+  assert.match(findAll(handle.tree, (n) => n.type === 'figure' && n.props.id === 'fs-slide-2')[0].props.className, /\bis-on\b/);
+  reduce = true;
+  await handle.act(() => thumbs()[0].props.onClick({ preventDefault() {} }));
+  assert.deepEqual(trackScrolls.at(-1), { left: 0, behavior: 'auto' }, 'reduced motion: at once');
+  assert.deepEqual(windowScrolls, [], 'the page never moves');
+});
+
 await test('per-combination stock on the page: M/Sage out, M/Navy in, M/Rust low, XL/Navy not made — sizes disabled, not hidden', () => {
   const sage = app.render(`${SLUG}?size=M&colour=Sage`);
   assert.match(sage, /<p class="fs-pick__note is-out" role="status">Out of stock in this size and colour<\/p>/);

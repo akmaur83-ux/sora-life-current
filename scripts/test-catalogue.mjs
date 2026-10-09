@@ -314,7 +314,8 @@ await test(`the eight fashion pages render byte-identically from the working tre
   // the departments then pointed two tiles at their pages, and sansStorefrontChanges undoes both.
   assert.equal(heroMove(sansStorefrontChanges('src/fashion/FashionHome.jsx', read('src/fashion/FashionHome.jsx'))), atBaseline('src/fashion/FashionHome.jsx'), 'FashionHome.jsx: the hero moved, the copy reads the storefront setting and two tiles open the department pages, nothing else');
   for (const rel of ['src/fashion/FashionListing.jsx', 'src/fashion/FashionProductPage.jsx', 'src/fashion/FashionProductCard.jsx', 'src/fashion/FashionCatalogue.jsx', 'src/fashion/FashionVariantPicker.jsx']) {
-    assert.equal(read(rel), atBaseline(rel), `${rel} is byte-identical to ${BASELINE_SHA}`);
+    // The PDP's thumbnails became buttons since (test-fashion-cart.mjs); sansStorefrontChanges undoes exactly that.
+    assert.equal(sansStorefrontChanges(rel, read(rel)).replace(/\r\n/g, '\n'), atBaseline(rel).replace(/\r\n/g, '\n'), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
 });
 
