@@ -60652,7 +60652,75 @@ function FashionHeader({
     const term = q.trim();
     navigate(term ? `/fashion/search?q=${encodeURIComponent(term)}` : '/fashion/search');
   };
+  // The women's page: the same links over its photograph, and no delivery strip.
   if (/^\/fashion\/women\/?$/.test(location.pathname)) return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+    className: "wm-header",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: "wm-header__menu",
+      "aria-label": "Open menu",
+      onClick: onMenu,
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "menu",
+        size: 22
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+      className: "wm-header__nav",
+      "aria-label": "Women's fashion",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("a", {
+        href: "#wm-products",
+        children: "Shop"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+        href: "#wm-categories",
+        children: "Categories"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/fashion/women/sarees",
+        children: "Sarees"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/fashion/men",
+        children: "Men"
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionLogo, {
+      tagline: config.header.tagline
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+      className: "wm-header__actions",
+      "aria-label": "Search, account, wishlist and cart",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/fashion/search",
+        "aria-label": "Search fashion",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "search",
+          size: 20
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/account",
+        "aria-label": "Account",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "user",
+          size: 20
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/fashion/wishlist",
+        "aria-label": `Wishlist${wish.count ? `, ${wish.count} items` : ''}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "heart",
+          size: 20
+        }), wish.count > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: wish.count
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/cart",
+        "aria-label": `Cart${cartCount ? `, ${cartCount} items` : ''}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "bag",
+          size: 20
+        }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: cartCount
+        })]
+      })]
+    })]
+  });
+  if (/^\/fashion\/women\/sarees\/?$/.test(location.pathname)) return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
     className: "sw-header",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
       type: "button",
@@ -60669,7 +60737,7 @@ function FashionHeader({
       className: "sw-header__nav",
       "aria-label": "Saree store",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-        to: "/fashion/women",
+        to: "/fashion/women/sarees",
         children: "Home"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
         href: "#fd-products",
@@ -60991,7 +61059,7 @@ function Shell() {
     setMenu(false);
   }, [pathname]);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: `fs${/^\/fashion\/(men|women)\/?$/.test(pathname) ? ' fs--department' : ''}${/^\/fashion\/women\/?$/.test(pathname) ? ' fs--saree' : ''}`,
+    className: `fs${/^\/fashion\/(men|women|women\/sarees)\/?$/.test(pathname) ? ' fs--department' : ''}${/^\/fashion\/women\/sarees\/?$/.test(pathname) ? ' fs--saree' : ''}${/^\/fashion\/women\/?$/.test(pathname) ? ' fs--women' : ''}`,
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(FashionHeader, {
       onMenu: () => setMenu(true)
     }), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer$3, {
@@ -61795,7 +61863,160 @@ const DEPARTMENT_CONTENT = {
       image: photo('/img/fashion-circle-men.webp', 'Menswear finishing details')
     }]
   },
+  // /fashion/women: the main women's page. The tiles are editorial photography with
+  // HTML labels; only the product row shows prices, and those come from the catalogue.
   women: {
+    label: "Women's fashion",
+    categorySlug: 'women',
+    eyebrow: "Women's fashion",
+    title: ['Style.', 'Confidence.', 'You.'],
+    intro: 'Clothing for women who dress for themselves — easy tailoring, soft knits and everyday denim.',
+    cta: 'Explore the collection',
+    hero: artwork('women-main-hero-desktop', 'Three women in cream and black tailoring against a clear blue sky', {
+      width: 1672,
+      height: 941,
+      mobile: '/img/fashion-editorial/women-main-hero-mobile.webp',
+      srcSet: '/img/fashion-editorial/women-main-hero-desktop-1200.webp 1200w, /img/fashion-editorial/women-main-hero-desktop.webp 1672w'
+    }),
+    // A slug opens that category when it exists under Women; until then, the Women listing.
+    // `root` opens a top-level category instead (bags live under Bags & Accessories).
+    categories: [{
+      title: 'Dresses',
+      slug: 'dresses',
+      image: artwork('women-shop-dresses', 'Black sleeveless midi dress with a side slit', {
+        width: 600,
+        height: 780
+      })
+    }, {
+      title: 'Knitwear',
+      slug: 'knitwear',
+      image: artwork('women-shop-knitwear', 'Cream sweater worn with wide ivory trousers', {
+        width: 600,
+        height: 780
+      })
+    }, {
+      title: 'Shirts',
+      slug: 'shirts',
+      image: artwork('women-shop-shirts', 'Oversized pale blue shirt with black trousers', {
+        width: 600,
+        height: 780
+      })
+    }, {
+      title: 'Denim',
+      slug: 'denim',
+      image: artwork('women-shop-denim', 'Straight-leg light blue jeans with a white tank top', {
+        width: 600,
+        height: 780
+      })
+    }, {
+      title: 'Coats & jackets',
+      slug: 'coats-jackets',
+      image: artwork('women-shop-coats', 'Belted beige trench coat', {
+        width: 600,
+        height: 780
+      })
+    }, {
+      title: 'Bags',
+      root: 'bags-accessories',
+      image: artwork('women-shop-bags', 'Black leather tote bag', {
+        width: 600,
+        height: 780
+      })
+    }],
+    edits: [{
+      title: 'Soft knitwear',
+      text: 'Warm layers in quiet, neutral tones.',
+      cta: 'Shop knitwear',
+      slug: 'knitwear',
+      image: artwork('women-edit-knitwear', 'Woman in an oversized taupe roll-neck sweater', {
+        width: 900,
+        height: 1145,
+        sizes: '(max-width: 700px) 100vw, 480px'
+      })
+    }, {
+      title: 'Everyday dresses',
+      text: 'Easy shapes that move with you.',
+      cta: 'Shop dresses',
+      slug: 'dresses',
+      image: artwork('women-edit-dresses', 'Woman in a flowing ivory wrap dress', {
+        width: 900,
+        height: 675,
+        sizes: '(max-width: 700px) 100vw, 340px'
+      })
+    }, {
+      title: 'Accessories',
+      text: 'The details that finish a look.',
+      cta: 'Shop bags',
+      root: 'bags-accessories',
+      image: artwork('women-edit-accessories', 'Structured black leather handbag', {
+        width: 900,
+        height: 675,
+        sizes: '(max-width: 700px) 100vw, 340px'
+      })
+    }, {
+      title: 'Soft tailoring',
+      text: 'Relaxed suiting in ivory and cream.',
+      cta: 'Explore the collection',
+      image: artwork('women-edit-tailoring', 'Woman in an ivory suit seated against a blue sky', {
+        width: 1400,
+        height: 611,
+        srcSet: '/img/fashion-editorial/women-edit-tailoring-800.webp 800w, /img/fashion-editorial/women-edit-tailoring.webp 1400w',
+        sizes: '(max-width: 700px) 100vw, 700px'
+      })
+    }],
+    capsule: [{
+      title: 'White shirts',
+      caption: 'A classic that always works.',
+      slug: 'shirts',
+      image: artwork('women-capsule-shirts', 'Woman in a crisp white shirt and cream trousers', {
+        width: 1000,
+        height: 750,
+        sizes: '(max-width: 700px) 50vw, 25vw'
+      })
+    }, {
+      title: 'Light denim',
+      caption: 'Easy and comfortable, every day.',
+      slug: 'denim',
+      image: artwork('women-capsule-denim', 'Woman in a light denim jacket and jeans', {
+        width: 1000,
+        height: 750,
+        sizes: '(max-width: 700px) 50vw, 25vw'
+      })
+    }, {
+      title: 'Jackets',
+      caption: 'Structure for every day.',
+      slug: 'coats-jackets',
+      image: artwork('women-capsule-jackets', 'Woman in a cream blazer and neutral wide-leg trousers', {
+        width: 800,
+        height: 880,
+        sizes: '(max-width: 700px) 50vw, 25vw'
+      })
+    }, {
+      title: 'Simple dresses',
+      caption: 'Easy shapes, worn often.',
+      slug: 'dresses',
+      image: artwork('women-capsule-dresses', 'Woman in a black sleeveless midi dress against a plaster wall', {
+        width: 800,
+        height: 1088,
+        sizes: '(max-width: 700px) 50vw, 25vw'
+      })
+    }],
+    sarees: {
+      eyebrow: 'The saree store',
+      title: 'Sarees for every story',
+      text: 'Silk, cotton, georgette and handloom sarees, in a store of their own.',
+      cta: 'Visit the saree store',
+      image: artwork('women-hero-alternate', 'Woman in a plum silk saree with gold woven motifs in a carved-stone interior', {
+        width: 1600,
+        height: 900,
+        mobile: '/img/fashion-editorial/women-hero-alternate-mobile.webp',
+        srcSet: '/img/fashion-editorial/women-hero-alternate-1000.webp 1000w, /img/fashion-editorial/women-hero-alternate.webp 1600w',
+        sizes: '(max-width: 700px) 100vw, 1160px'
+      })
+    }
+  },
+  // /fashion/women/sarees: the saree store, moved here unchanged from /fashion/women.
+  sarees: {
     label: "Women's fashion",
     categorySlug: 'women',
     eyebrow: 'Timeless elegance',
@@ -62207,6 +62428,222 @@ function SareeDepartment({
     })]
   });
 }
+
+// The main women's page: a full-bleed hero under its own header, shop-by-category,
+// the real catalogue (new arrivals when any are flagged), four edits, a capsule
+// wardrobe, and the way into the saree store. Every word is HTML; no image carries text.
+function WomenDepartment({
+  config,
+  tree,
+  category,
+  categories,
+  products,
+  status,
+  listing,
+  collectionHref
+}) {
+  const [shelf, setShelf] = reactExports.useState('');
+  // `root` names a top-level category (bags sit under Bags & Accessories, not under Women).
+  const tileHref = item => {
+    if (!item.root) return item.slug ? collectionHref(item.slug) : listing;
+    const node = resolveCategory$1(tree, item.root);
+    return node && !node.parent_id ? categoryHref$3(node) : listing;
+  };
+  const fresh = products.filter(view => view.isNew);
+  const pool = fresh.length ? sortViews(fresh, 'new') : products;
+  // Filters only for Women's own sub-categories that have something in the row.
+  const shelves = (category ? tree.children(category.id) : []).filter(child => child.is_active).map(child => ({
+    id: child.id,
+    name: child.name,
+    ids: new Set(categories.filter(node => tree.ancestors(node.id).some(a => a.id === child.id)).map(node => node.id))
+  })).filter(s => pool.some(view => s.ids.has(view.category_id)));
+  const current = shelves.find(s => s.id === shelf);
+  const shown = (current ? pool.filter(view => current.ids.has(view.category_id)) : pool).slice(0, 8);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "wm",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "wm-hero",
+      "aria-labelledby": "wm-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+        image: config.hero,
+        priority: true,
+        className: "wm-hero__art"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "wm-hero__copy",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "wm-eyebrow",
+          children: config.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          id: "wm-title",
+          children: config.title.map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: line
+          }, line))
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "wm-hero__intro",
+          children: config.intro
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: listing,
+          className: "wm-button",
+          children: config.cta
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "wm-categories wm-wrap",
+      id: "wm-categories",
+      "aria-labelledby": "wm-categories-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        id: "wm-categories-title",
+        children: "Shop by category"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "wm-categories__grid",
+        children: config.categories.map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: tileHref(item),
+          className: "wm-category",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+            image: item.image
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: item.title
+          })]
+        }, item.title))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "wm-products wm-wrap",
+      id: "wm-products",
+      "aria-labelledby": "wm-products-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        id: "wm-products-title",
+        children: fresh.length ? 'New in' : 'From the collection'
+      }), shelves.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "wm-shelves",
+        role: "group",
+        "aria-label": "Show a category",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          "aria-pressed": !current,
+          onClick: () => setShelf(''),
+          children: "All"
+        }), shelves.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          "aria-pressed": current?.id === s.id,
+          onClick: () => setShelf(s.id),
+          children: s.name
+        }, s.id))]
+      }), shown.length ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "wm-products__grid",
+        children: shown.map(view => /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductCard, {
+          view: view
+        }, view.id))
+      }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fd-empty",
+        role: "status",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'A new chapter in style is on its way. Explore all fashion while this collection comes together.'
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion",
+          children: ["Explore all fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      }), shown.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: listing,
+        className: "wm-button wm-button--outline",
+        children: "View all"
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+      className: "wm-edits wm-wrap",
+      "aria-label": "Edits",
+      children: config.edits.map((item, index) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: tileHref(item),
+        className: `wm-edit wm-edit--${index + 1}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+          image: item.image
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            children: item.title
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            children: item.text
+          }), item.slug || item.root ? /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "wm-edit__link",
+            children: [item.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 16
+            })]
+          }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "wm-button",
+            children: item.cta
+          })]
+        })]
+      }, item.title))
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "wm-capsule wm-wrap",
+      "aria-labelledby": "wm-capsule-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        id: "wm-capsule-title",
+        children: "The capsule edit"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "wm-capsule__grid",
+        children: config.capsule.map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: tileHref(item),
+          className: "wm-look",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+            image: item.image
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+              children: item.title
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              children: item.caption
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              children: ["Shop ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 15
+              })]
+            })]
+          })]
+        }, item.title))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "wm-sarees wm-wrap",
+      "aria-labelledby": "wm-sarees-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+        image: config.sarees.image
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "wm-eyebrow",
+          children: config.sarees.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          id: "wm-sarees-title",
+          children: config.sarees.title
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: config.sarees.text
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion/women/sarees",
+          className: "wm-button",
+          children: [config.sarees.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+      className: "wm-services wm-wrap",
+      "aria-label": "Shopping information",
+      children: [['truck', 'Standard delivery', '6–7 business days', '/shipping'], ['return', 'Returns', 'Within 7 days of delivery', '/returns'], ['chat', 'Need help?', 'Contact our team', '/contact']].map(([icon, title, description, href]) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: href,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: icon,
+          size: 24
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: title
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("small", {
+            children: description
+          })]
+        })]
+      }, title))
+    })]
+  });
+}
 function FashionDepartment({
   department = 'men'
 }) {
@@ -62227,8 +62664,18 @@ function FashionDepartment({
     const node = categories.find(c => c.slug === slug);
     return node ? categoryHref$3(node) : listing;
   };
-  if (department === 'women') return /*#__PURE__*/jsxRuntimeExports.jsx(SareeDepartment, {
+  if (department === 'sarees') return /*#__PURE__*/jsxRuntimeExports.jsx(SareeDepartment, {
     config: config,
+    products: products,
+    status: status,
+    listing: listing,
+    collectionHref: collectionHref
+  });
+  if (department === 'women') return /*#__PURE__*/jsxRuntimeExports.jsx(WomenDepartment, {
+    config: config,
+    tree: tree,
+    category: category,
+    categories: categories,
     products: products,
     status: status,
     listing: listing,
@@ -67531,6 +67978,11 @@ function App() {
           element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionDepartment, {
             department: "women"
           }, "women")
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "women/sarees",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionDepartment, {
+            department: "sarees"
+          }, "sarees")
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "c/:slug",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionCategory, {})
