@@ -146,6 +146,19 @@ test('the women page: true copy only, the way into the sarees, and the four caps
   assert.doesNotMatch(own + readdirSync('img/fashion-editorial').join('\n'), /aeris|aurelia/i);
 });
 
+test('the women page fills the width: no box pairs aspect-ratio with a min/max height (the limit would cap or force the width)', () => {
+  // On master 5b0a64d .wm-hero had aspect-ratio 1672/941 with max-height 780px: the hero stopped at 1386px
+  // on wider windows (a white strip down the right, the header's cart count stranded in it), and its
+  // min-height 540px forced it to 959px wide on tablets.
+  const css = read('src/styles/fashion-departments.css');
+  const women = css.slice(css.indexOf("/* The women's page"));
+  for (const [rule] of women.matchAll(/[^{}]+\{[^{}]*\}/g)) {
+    if (/aspect-ratio:\s*(?!auto\b)[^;\s]/.test(rule) && /(min|max)-height:\s*(?!0[;\s]|none\b)[^;\s]/.test(rule)) assert.fail(`aspect-ratio with a min/max height: ${rule.trim()}`);
+  }
+  assert.match(women, /\.wm-hero \{[^}]*height: clamp\(540px, 56\.28vw, 780px\);/);
+  assert.match(women, /@media \(max-width: 700px\) \{[\s\S]*\.wm-hero \{ display: block; height: auto;/);
+});
+
 test('the women page row: new arrivals when any are flagged, a filter per Women sub-category on the shelf', () => {
   const sub = (id, slug, name) => ({ id, parent_id: womenCategory.id, name, slug, tagline: '', image_url: null, sort_order: 1, is_active: true });
   const product = (n, category_id, isNew) => ({ ...womenProduct, id: `00000000-0000-4000-8000-00000000090${n}`, slug: `women-piece-${n}`, name: `Women piece ${n}`, category_id, is_new: isNew });
