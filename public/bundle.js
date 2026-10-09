@@ -62827,6 +62827,23 @@ function Gallery$1({
 }) {
   const images = view.images.length ? view.images : view.image ? [view.image] : [];
   const [active, setActive] = reactExports.useState(0);
+  const track = reactExports.useRef(null);
+  /**
+   * Show image i: the track scrolls sideways to it and nothing else moves — not the
+   * window, not the URL, not history. (The thumbnails were #fs-slide-N links, and the
+   * browser's fragment jump scrolled the whole page and added a history entry per click.)
+   */
+  const show = i => {
+    setActive(i);
+    const el = track.current,
+      slide = el?.children[i];
+    if (!slide) return;
+    const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollTo({
+      left: slide.offsetLeft - el.firstElementChild.offsetLeft,
+      behavior: reduced ? 'auto' : 'smooth'
+    });
+  };
   if (images.length === 0) return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
     className: "fs-pdp__media fs-pdp__media--none",
     "aria-hidden": "true",
@@ -62840,6 +62857,7 @@ function Gallery$1({
       className: "fs-gallery__track",
       role: "group",
       "aria-label": `${view.name} images`,
+      ref: track,
       children: images.map((src, i) => /*#__PURE__*/jsxRuntimeExports.jsx("figure", {
         className: `fs-gallery__slide${i === active ? ' is-on' : ''}`,
         id: `fs-slide-${i}`,
@@ -62857,12 +62875,14 @@ function Gallery$1({
       className: "fs-gallery__thumbs",
       role: "tablist",
       "aria-label": "Choose image",
-      children: images.map((src, i) => /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-        href: `#fs-slide-${i}`,
+      children: images.map((src, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
         role: "tab",
         "aria-selected": i === active,
+        "aria-controls": `fs-slide-${i}`,
+        "aria-label": `Show image ${i + 1} of ${images.length}`,
         className: `fs-gallery__thumb${i === active ? ' is-on' : ''}`,
-        onClick: () => setActive(i),
+        onClick: () => show(i),
         children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
           src: src,
           alt: "",

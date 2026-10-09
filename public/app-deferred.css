@@ -6479,8 +6479,9 @@
 .fs-gallery__slide { flex: 0 0 100%; margin: 0; scroll-snap-align: start; aspect-ratio: 1 / 1; overflow: hidden; border-radius: var(--fs-r); background: var(--slv2-cream); }
 .fs-gallery__slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fs-gallery__thumbs { display: flex; gap: 10px; }
-.fs-gallery__thumb { width: 72px; height: 72px; border-radius: 10px; overflow: hidden; border: 2px solid transparent; background: var(--slv2-cream); }
+.fs-gallery__thumb { width: 72px; height: 72px; border-radius: 10px; overflow: hidden; border: 2px solid transparent; background: var(--slv2-cream); padding: 0; cursor: pointer; }
 .fs-gallery__thumb.is-on { border-color: var(--slv2-f700); }
+.fs-gallery__thumb:focus-visible { outline: 2px solid var(--slv2-f700); outline-offset: 2px; }
 .fs-gallery__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fs-pdp__body { min-width: 0; }
 .fs-pdp__brand { margin: 0 0 6px; font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--slv2-gold-ink); }
