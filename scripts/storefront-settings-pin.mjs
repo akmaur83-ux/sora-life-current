@@ -310,6 +310,10 @@ function undoFromPatch(name) {
   return Object.fromEntries(Object.entries(files).map(([r, hunks]) => [r, (t, rr) => hunks.reduce((acc, [now, then]) => swap(rr, acc, now, then), t)]));
 }
 
+// The Home & Living PDP's thumbnails: buttons that scroll only the gallery track, where
+// #hl-slide-N links also jumped the page and added history. The same shared file.
+const UNDO_PDP_THUMBS = undoFromPatch('homeliving-pdp-thumbs.patch');
+
 // Scroll on navigation: one ScrollManager mounted in main.jsx replaced the wellness shell's
 // own ScrollToTop in Layout.jsx. Not a cart change either; the same exact-undo mechanism.
 const UNDO_SCROLL_MANAGER = undoFromPatch('scroll-manager.patch');
@@ -358,7 +362,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM,UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY,UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart

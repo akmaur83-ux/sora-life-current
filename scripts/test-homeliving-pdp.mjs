@@ -149,7 +149,8 @@ await test('/homeliving/p/sage-fitted-sheet: breadcrumb back through the categor
   assert.match(html, /<figure class="hl-gallery__slide is-on" id="hl-slide-0"><button type="button" class="hl-gallery__zoom" aria-label="View image 1 of 3 full screen"><img [^>]*loading="eager" fetchpriority="high"\/><\/button><\/figure>/, 'each image is a button that opens it full screen');
   assert.doesNotMatch(html, /class="hl-zoom/, 'the full-screen view is not rendered until an image is tapped');
   assert.equal((html.match(/class="hl-gallery__thumb( is-on)?"/g) || []).length, 3, 'a thumbnail per image');
-  assert.match(html, /<a href="#hl-slide-0" role="tab" aria-selected="true" class="hl-gallery__thumb is-on">/);
+  assert.match(html, /<button type="button" role="tab" aria-selected="true" aria-controls="hl-slide-0" aria-label="Show image 1 of 3" class="hl-gallery__thumb is-on">/, 'a thumbnail is a button with a name — not a #hl-slide link');
+  assert.doesNotMatch(html, /href="#hl-slide-/, 'no fragment links: a thumbnail can never jump the page or add history');
   assert.match(html, /<p class="hl-pdp__brand">Meadow Weave<\/p><h1 class="hl-pdp__h serif">Sage Fitted Sheet<\/h1><p class="hl-pdp__size">Fitted sheet<\/p>/);
   assert.match(html, /<p class="hl-price hl-price--lg" data-price="999"><strong><span class="hl-price__cur">₹<\/span>999<\/strong><span class="hl-price__mrp">M\.R\.P: <s>₹1,299<\/s><\/span><span class="hl-badge">23% OFF<\/span><\/p><p class="hl-pdp__tax">Inclusive of all taxes<\/p>/);
   assert.match(html, /<legend>Colour<\/legend>/); assert.match(html, /<legend>Size<\/legend>/);
@@ -247,6 +248,34 @@ await test('text rule and copy: every gallery image has alt text, every thumbnai
 });
 
 // ============================================================
+console.log('\n— The gallery thumbnails: the slide changes, nothing else —');
+// ============================================================
+
+await test('a thumbnail shows its image and nothing else moves: the track scrolls sideways (smoothly; at once under reduced motion), the thumbnail and slide are marked, and the window is never scrolled', async () => {
+  const { hooks, mount, findAll, h } = await import('./catalogue-admin-harness.mjs');
+  const { loadSource } = await import('./grocery-ssr.mjs');
+  let reduce = false;
+  const windowScrolls = [], trackScrolls = [];
+  const win = { matchMedia: () => ({ matches: reduce }), scrollTo: (...a) => windowScrolls.push(a), scrollBy: (...a) => windowScrolls.push(a) };
+  const { Gallery } = loadSource(read('src/homeliving/HomeLivingProductPage.jsx'), { ...hooks, window: win });
+  const handle = await mount(h(Gallery, { view: by('sage-fitted-sheet') }));
+  await handle.settle();
+  const node = findAll(handle.tree, (n) => n.props?.className === 'hl-gallery__track')[0];
+  node.ref.current = { firstElementChild: { offsetLeft: 8 }, children: [{ offsetLeft: 8 }, { offsetLeft: 620 }, { offsetLeft: 1232 }], scrollTo: (o) => trackScrolls.push(o) };
+  const thumbs = () => findAll(handle.tree, (n) => n.type === 'button' && n.props.role === 'tab');
+  assert.equal(thumbs().length, 3, 'three thumbnail buttons');
+  let prevented = 0;
+  await handle.act(() => thumbs()[2].props.onClick({ preventDefault() { prevented += 1; } }));
+  assert.deepEqual(trackScrolls.at(-1), { left: 1224, behavior: 'smooth' }, 'the track, to the third slide');
+  assert.deepEqual(thumbs().map((t) => t.props['aria-selected']), [false, false, true]);
+  assert.match(findAll(handle.tree, (n) => n.type === 'figure' && n.props.id === 'hl-slide-2')[0].props.className, /\bis-on\b/);
+  reduce = true;
+  await handle.act(() => thumbs()[0].props.onClick({ preventDefault() { prevented += 1; } }));
+  assert.deepEqual(trackScrolls.at(-1), { left: 0, behavior: 'auto' }, 'reduced motion: at once');
+  assert.deepEqual(windowScrolls, [], 'the page never moves');
+});
+
+// ============================================================
 console.log('\n— The gallery full screen: tap to open, pinch, swipe, tap or swipe down to close —');
 // ============================================================
 
@@ -294,7 +323,7 @@ await test('the component: opened by the image\'s own button, portalled to <body
   assert.match(src, /if \(e\.key === 'Escape'\) \{ e\.preventDefault\(\); close\(\); \}/); assert.match(src, /e\.key === 'ArrowRight'\) go\(live\.current\.index \+ 1\)/); assert.match(src, /e\.key === 'Tab' && dialog\.current/);
   assert.match(src, /root\.style\.overflow = 'hidden';/); assert.match(src, /root\.style\.overflow = was;/);
   assert.match(src, /el\.addEventListener\('wheel', onWheel, \{ passive: false \}\);/);
-  assert.match(src, /slide\.querySelector\('button'\)\?\.focus\(\{ preventScroll: true \}\);/, 'focus returns to the image it closed on');
+  assert.match(src, /show\(i, 'auto'\)\?\.querySelector\('button'\)\?\.focus\(\{ preventScroll: true \}\);/, 'focus returns to the image it closed on, the track moved to it at once');
   const css = read('src/styles/homeliving.css');
   assert.match(css, /\.hl-zoom \{ position: fixed; inset: 0; z-index: 60;/, 'above the bars (20, 30) and the drawers (40, 41)');
   assert.match(css, /\.hl-zoom__frame \{ position: absolute; inset: 0; overflow: hidden; touch-action: none;/, 'the pinch and the swipes are the gallery\'s, not the page\'s');

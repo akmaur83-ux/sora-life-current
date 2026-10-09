@@ -237,13 +237,24 @@ export function Gallery({ view }) {
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(null);   // the image open full screen
   const track = useRef(null);
+  /**
+   * Show image i: the track scrolls sideways to it and nothing else moves — not the
+   * window, not the URL, not history. (The thumbnails were #hl-slide-N links: the
+   * browser's fragment jump also scrolled the page ~300 px, the slide under the
+   * sticky header, and added a history entry per click.)
+   */
+  const show = (i, behavior) => {
+    setActive(i);
+    const el = track.current, slide = el?.children[i];
+    if (!slide) return null;
+    const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollTo({ left: slide.offsetLeft - el.firstElementChild.offsetLeft, behavior: behavior || (reduced ? 'auto' : 'smooth') });
+    return slide;
+  };
   // Back from full screen: the gallery shows the image it closed on, and that image has focus.
   const closeZoom = (i) => {
-    setZoom(null); setActive(i);
-    const el = track.current, slide = el?.children[i];
-    if (!slide) return;
-    el.scrollTo({ left: slide.offsetLeft - el.firstElementChild.offsetLeft });
-    slide.querySelector('button')?.focus({ preventScroll: true });
+    setZoom(null);
+    show(i, 'auto')?.querySelector('button')?.focus({ preventScroll: true });
   };
   if (images.length === 0) return <div className="hl-pdp__media hl-pdp__media--none" aria-hidden="true"><b>{view.name.slice(0, 1)}</b></div>;
   return (
@@ -261,9 +272,9 @@ export function Gallery({ view }) {
       {images.length > 1 && (
         <div className="hl-gallery__thumbs" role="tablist" aria-label="Choose image">
           {images.map((img, i) => (
-            <a key={img.url + i} href={`#hl-slide-${i}`} role="tab" aria-selected={i === active} className={`hl-gallery__thumb${i === active ? ' is-on' : ''}`} onClick={() => setActive(i)}>
+            <button key={img.url + i} type="button" role="tab" aria-selected={i === active} aria-controls={`hl-slide-${i}`} aria-label={`Show image ${i + 1} of ${images.length}`} className={`hl-gallery__thumb${i === active ? ' is-on' : ''}`} onClick={() => show(i)}>
               <img src={img.url} alt="" width="120" height="120" loading="lazy" decoding="async" />
-            </a>
+            </button>
           ))}
         </div>
       )}
