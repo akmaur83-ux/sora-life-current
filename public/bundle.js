@@ -65754,17 +65754,28 @@ function Gallery({
   const [active, setActive] = reactExports.useState(0);
   const [zoom, setZoom] = reactExports.useState(null); // the image open full screen
   const track = reactExports.useRef(null);
-  // Back from full screen: the gallery shows the image it closed on, and that image has focus.
-  const closeZoom = i => {
-    setZoom(null);
+  /**
+   * Show image i: the track scrolls sideways to it and nothing else moves — not the
+   * window, not the URL, not history. (The thumbnails were #hl-slide-N links: the
+   * browser's fragment jump also scrolled the page ~300 px, the slide under the
+   * sticky header, and added a history entry per click.)
+   */
+  const show = (i, behavior) => {
     setActive(i);
     const el = track.current,
       slide = el?.children[i];
-    if (!slide) return;
+    if (!slide) return null;
+    const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     el.scrollTo({
-      left: slide.offsetLeft - el.firstElementChild.offsetLeft
+      left: slide.offsetLeft - el.firstElementChild.offsetLeft,
+      behavior: behavior || (reduced ? 'auto' : 'smooth')
     });
-    slide.querySelector('button')?.focus({
+    return slide;
+  };
+  // Back from full screen: the gallery shows the image it closed on, and that image has focus.
+  const closeZoom = i => {
+    setZoom(null);
+    show(i, 'auto')?.querySelector('button')?.focus({
       preventScroll: true
     });
   };
@@ -65810,12 +65821,14 @@ function Gallery({
       className: "hl-gallery__thumbs",
       role: "tablist",
       "aria-label": "Choose image",
-      children: images.map((img, i) => /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-        href: `#hl-slide-${i}`,
+      children: images.map((img, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
         role: "tab",
         "aria-selected": i === active,
+        "aria-controls": `hl-slide-${i}`,
+        "aria-label": `Show image ${i + 1} of ${images.length}`,
         className: `hl-gallery__thumb${i === active ? ' is-on' : ''}`,
-        onClick: () => setActive(i),
+        onClick: () => show(i),
         children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
           src: img.url,
           alt: "",
