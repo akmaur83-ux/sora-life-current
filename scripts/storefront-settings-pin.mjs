@@ -62,6 +62,12 @@ export const CART_CHANGE_EDITS = /^(src\/lib\/(store\.jsx|payments\.js|couponApi
 /** The files the Home & Living cart added: its cart line module, and the suite and undo patch that pin it. */
 export const HOMELIVING_CART_FILES = /^(src\/lib\/homelivingCartLine\.js|scripts\/test-homeliving-cart\.mjs|scripts\/pins\/homeliving-cart\.patch)$/;
 
+/** Scroll on navigation, site-wide: its own files (the manager, its rules, its suite and its undo patch). */
+export const SCROLL_MANAGER_FILES = /^(src\/components\/ScrollManager\.jsx|src\/lib\/scrollOnNavigate\.js|scripts\/test-scroll-on-navigate\.mjs|scripts\/pins\/scroll-manager\.patch)$/;
+
+/** The shared files it edited — main.jsx (the mount) and Layout.jsx (the old reset removed), each undone by sansCartChanges. */
+export const SCROLL_MANAGER_EDITS = /^(src\/main\.jsx|src\/components\/Layout\.jsx)$/;
+
 /** Rendered /fashion: the Men and Women tiles open their department pages instead of the category listings. */
 export const sansDepartmentTiles = (html) => html.replace(/<a class="fs-tile" href="\/fashion\/(men|women)">/g, '<a class="fs-tile" href="/fashion/c/$1">');
 
@@ -304,6 +310,10 @@ function undoFromPatch(name) {
   return Object.fromEntries(Object.entries(files).map(([r, hunks]) => [r, (t, rr) => hunks.reduce((acc, [now, then]) => swap(rr, acc, now, then), t)]));
 }
 
+// Scroll on navigation: one ScrollManager mounted in main.jsx replaced the wellness shell's
+// own ScrollToTop in Layout.jsx. Not a cart change either; the same exact-undo mechanism.
+const UNDO_SCROLL_MANAGER = undoFromPatch('scroll-manager.patch');
+
 // The Home & Living PDP's gallery opens full screen (tap to open, pinch to zoom,
 // swipe between images, tap or swipe down to close): GalleryZoom and the button
 // around each gallery image. Not a cart change, but the same shared file.
@@ -348,7 +358,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM,UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart

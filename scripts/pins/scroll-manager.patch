@@ -1,0 +1,53 @@
+diff --git a/src/components/Layout.jsx b/src/components/Layout.jsx
+index 453739b..bc25d5d 100644
+--- a/src/components/Layout.jsx
++++ b/src/components/Layout.jsx
+@@ -1,4 +1,3 @@
+-import { useEffect } from 'react';
+ import { useLocation, Outlet } from 'react-router-dom';
+ import Header from './Header.jsx';
+ import Footer from './Footer.jsx';
+@@ -8,12 +7,6 @@ import StorefrontMotion from './StorefrontMotion.jsx';
+ import StorefrontBackground from './StorefrontBackground.jsx';
+ import { useBootstrapReady } from '../lib/bootstrapReady.js';
+ 
+-function ScrollToTop() {
+-  const { pathname } = useLocation();
+-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' }); }, [pathname]);
+-  return null;
+-}
+-
+ export default function Layout() {
+   const { pathname } = useLocation();
+   const bootstrapReady = useBootstrapReady();
+@@ -24,7 +17,7 @@ export default function Layout() {
+   const settling = dataShapedRoute && !bootstrapReady;
+   return (
+     <>
+-      <ScrollToTop />
++      {/* Scroll on navigation is ScrollManager's (main.jsx), for every storefront. */}
+       <StorefrontMotion />
+       <StorefrontBackground />
+       <Header />
+diff --git a/src/main.jsx b/src/main.jsx
+index 0e21de3..db1cc1a 100644
+--- a/src/main.jsx
++++ b/src/main.jsx
+@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
+ import ReactDOM from 'react-dom/client';
+ import { BrowserRouter } from 'react-router-dom';
+ import App from './App.jsx';
++import ScrollManager from './components/ScrollManager.jsx';
+ import { StoreProvider } from './lib/store.jsx';
+ import { AdminAuthProvider } from './lib/adminAuth.jsx';
+ import { CustomerAuthProvider } from './lib/customerAuth.jsx';
+@@ -100,6 +101,9 @@ function Root() {
+        is unchanged. */
+     <BootstrapReadyContext.Provider value={bootstrapReady}>
+       <BrowserRouter>
++        {/* Scroll on navigation for every storefront and the admin: top on a new page,
++            back/forward restored, #hash to its anchor, query-only changes left alone. */}
++        <ScrollManager />
+         <CustomerAuthProvider>
+           <StoreProvider>
+             <AdminAuthProvider>

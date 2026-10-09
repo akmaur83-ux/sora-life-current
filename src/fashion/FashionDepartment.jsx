@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { categoryHref, resolveCategory, sortViews } from '../lib/fashion.js';
@@ -94,11 +94,7 @@ function SareeDepartment({ config, products, status, listing, collectionHref }) 
 }
 
 export default function FashionDepartment({ department = 'men' }) {
-  useEffect(() => {
-    // A doorway can sit far down the homepage. Open each edit at its hero,
-    // while preserving direct links to a section within the department.
-    if (!window.location.hash) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-  }, [department]);
+  // Opening at the hero (or at a #section) is ScrollManager's, site-wide (main.jsx).
   const config = DEPARTMENT_CONTENT[department] || DEPARTMENT_CONTENT.men;
   const { tree, views, status } = useFashionCatalogue();
   const { category, categories, products } = departmentCatalogue(tree, views, config.categorySlug);

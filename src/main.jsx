@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
+import ScrollManager from './components/ScrollManager.jsx';
 import { StoreProvider } from './lib/store.jsx';
 import { AdminAuthProvider } from './lib/adminAuth.jsx';
 import { CustomerAuthProvider } from './lib/customerAuth.jsx';
@@ -100,6 +101,9 @@ function Root() {
        is unchanged. */
     <BootstrapReadyContext.Provider value={bootstrapReady}>
       <BrowserRouter>
+        {/* Scroll on navigation for every storefront and the admin: top on a new page,
+            back/forward restored, #hash to its anchor, query-only changes left alone. */}
+        <ScrollManager />
         <CustomerAuthProvider>
           <StoreProvider>
             <AdminAuthProvider>
