@@ -4483,7 +4483,7 @@ h3 { font-size: var(--text-xl); }
 .hx-tile__panel { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 26px; padding: 32px; }
 .hx-tile--fashion .hx-tile__h { font-size: clamp(30px, 3.2vw, 46px); line-height: 1.06; }
 .hx-tile__art { position: relative; display: block; overflow: hidden; }
-.hx-tile__art .hx-tile__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
+.hx-tile__art .hx-tile__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: right top; }
 .hx-tile--small { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 24px; min-height: 208px; }
 .hx-tile--small .hx-tile__image { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; object-position: right center; }
 .hx-tile--small .hx-tile__h { font-size: clamp(22px, 2vw, 28px); line-height: 1.15; }
@@ -4491,8 +4491,10 @@ h3 { font-size: var(--text-xl); }
 
 /* ---- explore the stores: five circles ---- */
 .hx-stores { padding-block: 44px 16px; }
-.hx-stores__h { margin: 0 0 28px; font-family: var(--slv2-disp); font-size: clamp(26px, 2.6vw, 34px); font-weight: 500; line-height: 1.15; color: var(--hx-ink); }
+.hx-stores__head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+.hx-stores__h { margin: 0; font-family: var(--slv2-disp); font-size: clamp(26px, 2.6vw, 34px); font-weight: 500; line-height: 1.15; color: var(--hx-ink); }
 .hx-stores__h::after { content: ''; display: block; width: 44px; height: 3px; margin-top: 10px; border-radius: 2px; background: var(--hx-orange); }
+.hx .hx-more { display: inline-flex; align-items: center; gap: 6px; padding-block: 4px; font: 600 15px/1.2 var(--slv2-sans); color: var(--hx-orange-deep); white-space: nowrap; }
 .hx-stores__row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; margin: 0; padding: 0; list-style: none; }
 .hx-store { display: grid; justify-items: center; gap: 12px; text-align: center; }
 .hx-store__art { display: block; width: min(100%, 160px); aspect-ratio: 1; overflow: hidden; border-radius: 50%; background: #F1EFEC; }
@@ -4514,53 +4516,78 @@ h3 { font-size: var(--text-xl); }
 }
 @media (max-width: 700px) {
   .hx-wrap { padding-inline: 16px; }
-  .hx-hero__slide { align-items: flex-start; height: 520px; }
-  .hx-hero__image { top: auto; bottom: 0; width: 170%; height: auto; -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 16%); mask-image: linear-gradient(180deg, transparent 0, #000 16%); }
-  .hx-hero__slide--biosash .hx-hero__image { width: 160%; }
-  .hx-hero__copy { padding-top: 30px; }
-  .hx-hero__copy > *, .hx-hero__slide--biosash .hx-hero__copy > * { max-width: none; }
-  .hx-hero__title { margin-bottom: 20px; font-size: clamp(30px, 8.6vw, 36px); }
-  .hx .hx-btn { min-height: 46px; padding: 11px 22px; font-size: 14px; }
-  /* One row of four, as in the mockup. It scrolls sideways, each item sized so two and a half
-     show: the half item at the edge is the cue that there is more to reach. */
-  .hx-trust__list { display: flex; padding-block: 10px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
-  .hx-trust__list li { flex: 0 0 calc(100% / 2.5); justify-content: flex-start; scroll-snap-align: start; }
-  .hx-trust__list a, .hx-trust__item { gap: 10px; padding: 6px 8px; }
-  .hx-trust svg { width: 22px; height: 22px; }
-  .hx-trust strong { font-size: 13px; }
-  .hx-trust small { font-size: 12px; }
-  .hx-tiles { padding-top: 22px; }
-  /* Side by side, as in the mockup: Fashion the left half at full height, the two others
-     stacked in the right half, each half its height. In the narrower Fashion tile the
-     copy sits above the photograph. */
-  .hx-tiles__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .hx-tile--fashion { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); min-height: 340px; }
-  .hx-tile__panel { justify-content: flex-start; gap: 12px; padding: 16px 14px 14px; }
-  .hx-tile--fashion .hx-tile__h { font-size: 22px; }
-  .hx .hx-tile--fashion .hx-btn { min-height: 36px; gap: 6px; padding: 8px 12px; font-size: 12.5px; }
-  .hx-tile--small { min-height: 0; padding: 14px; }
-  .hx-tile--small .hx-tile__h { position: relative; font-size: 17px; }
-  /* Framed so each subject sits to the right of its heading in the half-width tile. */
-  .hx-tile--nutrition .hx-tile__image { object-position: 40% center; }
-  .hx-tile--living .hx-tile__image { object-position: 70% center; }
-  .hx-tile__go { width: 32px; height: 32px; }
-  .hx-tile__go svg { width: 15px; height: 15px; }
-  .hx-stores { padding-top: 34px; }
-  .hx-stores__h { margin-bottom: 20px; font-size: 26px; }
-  /* Three and a half circles in view: the half circle at the edge is the scroll cue. */
-  .hx-stores__row { display: flex; gap: 14px; margin-inline: -16px; padding: 0 16px 8px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding-inline: 16px; scrollbar-width: none; }
-  .hx-stores__row li { flex: 0 0 calc((100% - 3 * 14px) / 3.5); scroll-snap-align: start; }
-  .hx-store { gap: 8px; }
-  .hx-store__art { width: 100%; }
-  .hx-store__name { font-size: 13px; }
-  .hx-promo { padding-block: 20px 34px; }
-  .hx-promo__card { height: 250px; }
-  .hx-promo__copy { max-width: 78%; padding: 16px; background: radial-gradient(closest-side, rgba(255, 255, 255, .78), rgba(255, 255, 255, 0)); }
-  .hx-promo__h { font-size: 28px; }
-  .hx-promo__text { font-size: 14px; }
-}
-@media (max-width: 700px) and (hover: hover) and (pointer: fine) {
-  .hx-trust__list, .hx-stores__row { scrollbar-width: thin; }
+  /* The hero, as in the mockup: ONE compact block. Eyebrow, headline and button in the left
+     45%; the lineup fills the right of the same block to its edge (the photograph's empty
+     white runs under the copy); the dots at its foot, over the photograph. */
+  .hx-hero__slide { height: clamp(190px, 51vw, 340px); }
+  /* The first lineup a little larger, anchored at the foot, so it starts at the 45% line; the
+     Biosash lineup is wider and stays at the block's height, clear of its title. */
+  .hx-hero__slide--everyday .hx-hero__image { top: auto; bottom: 0; height: 116%; }
+  .hx-hero__copy > *, .hx-hero__slide--biosash .hx-hero__copy > * { max-width: 46%; }
+  .hx-hero__copy > .hx-eyebrow { max-width: 64%; }
+  .hx-hero__slide--biosash .hx-hero__copy > .hx-hero__title { max-width: 36%; }
+  .hx .hx-eyebrow { margin-bottom: 8px; font-size: 9.5px; line-height: 1.45; letter-spacing: .1em; }
+  .hx-eyebrow > span { display: block; }
+  .hx-eyebrow__dot { display: none; }
+  .hx-hero__title { margin-bottom: 12px; font-size: clamp(18px, 5.2vw, 30px); line-height: 1.12; }
+  .hx .hx-btn { min-height: 34px; gap: 6px; padding: 7px 14px; font-size: 12.5px; }
+  .hx .hx-btn svg { width: 14px; height: 14px; }
+  .hx-hero__dots { left: 50%; right: auto; bottom: 0; gap: 0; }
+  .hx-hero__dot { width: 22px; height: 22px; }
+  .hx-hero__dot::after { inset: 7px; }
+  /* One row of four across the full width, as in the mockup: each item its icon and two short
+     lines beside it (a title in two parts drops its note). Where four cannot fit (under about
+     340px) the row scrolls, the cut item at the edge its cue. */
+  .hx-trust { border-block: 0; }
+  .hx-trust__list { display: flex; justify-content: space-between; padding-block: 8px; overflow-x: auto; scrollbar-width: none; }
+  .hx-trust__list li { flex: 1 1 auto; }
+  .hx-trust__list li:first-child { justify-content: flex-start; }
+  .hx-trust__list li:last-child { justify-content: flex-end; }
+  .hx-trust__list a, .hx-trust__item { gap: 5px; min-height: 34px; padding: 0 5px; }
+  .hx-trust__list li:first-child > * { padding-left: 0; }
+  .hx-trust__list li:last-child > * { padding-right: 0; }
+  .hx-trust svg { width: 19px; height: 19px; }
+  .hx-trust strong, .hx-trust small { margin: 0; font: 500 clamp(8.5px, 2.5vw, 11px)/1.3 var(--slv2-sans); color: var(--hx-ink); white-space: nowrap; }
+  .hx-trust strong > span { display: block; }
+  .hx-trust--split small { display: none; }
+  .hx-tiles { padding-block: 8px 0; }
+  /* Side by side, as in the mockup: Fashion the wider left tile at full height, the two others
+     stacked to its right, each half its height. */
+  .hx-tiles__grid { grid-template-columns: minmax(0, 1.17fr) minmax(0, 1fr); grid-template-rows: repeat(2, clamp(72px, 19.5vw, 140px)); gap: 8px; }
+  .hx-tile { border-radius: 10px; }
+  /* Fashion is ONE tile: the portrait, on the tile's own orange, fills it from the right with
+     her head at its top edge; the headline and the white button over the orange on the left. */
+  .hx-tile--fashion { display: block; min-height: 0; }
+  .hx-tile--fashion .hx-tile__art { position: absolute; inset: 0; }
+  .hx-tile__art .hx-tile__image { inset: 0 -26% auto auto; width: auto; max-width: none; height: 168%; }
+  .hx-tile__panel { position: relative; z-index: 1; height: 100%; justify-content: center; gap: 10px; padding: 12px; }
+  .hx-tile--fashion .hx-tile__h { font-size: clamp(17px, 4.9vw, 28px); line-height: 1.05; }
+  .hx .hx-tile--fashion .hx-btn { min-height: 30px; gap: 5px; padding: 6px 11px; font-size: 11.5px; }
+  /* Each photograph whole, at the tile's height on the right, its white multiplied into the
+     tile's grey; the label at the top left, the round arrow under it. */
+  .hx-tile--small { min-height: 0; padding: 8px 10px; }
+  .hx-tile--small .hx-tile__image { inset: -8% 0 auto auto; width: auto; height: 116%; mix-blend-mode: multiply; }
+  .hx-tile--small .hx-tile__h { position: relative; font-size: clamp(13px, 3.6vw, 20px); line-height: 1.12; }
+  .hx-tile__go { position: relative; width: 24px; height: 24px; border-width: 1.2px; }
+  .hx-tile__go svg { width: 12px; height: 12px; }
+  /* Five circles in one row, the heading and "View All" on one line above them. */
+  .hx-stores { padding-block: 18px 2px; }
+  .hx-stores__head { margin-bottom: 12px; }
+  .hx-stores__h { font-size: 19px; }
+  .hx-stores__h::after { width: 26px; height: 2.5px; margin-top: 6px; }
+  .hx .hx-more { gap: 4px; font-size: 12.5px; }
+  .hx-stores__row { gap: 8px; }
+  /* Each circle its column's width; a longer name overhangs its column, centred, never widening it. */
+  .hx-store { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .hx-store__name { font-size: clamp(9.5px, 2.75vw, 13px); white-space: nowrap; }
+  /* The whole photograph, uncropped at its own 3:1: the gift box on the left, the diya and
+     marigolds on the right, the copy in the clear centre between them. */
+  .hx-promo { padding-block: 14px 26px; }
+  .hx-promo__card { height: auto; aspect-ratio: 3 / 1; border-radius: 10px; text-align: left; }
+  .hx-promo__copy { position: absolute; inset: 0 19% 0 31%; max-width: none; align-content: center; justify-items: start; gap: 4px; padding: 0; }
+  .hx-promo__h { font-size: clamp(16px, 4.7vw, 26px); }
+  .hx-promo__text { margin: 0 0 4px; font-size: clamp(9.5px, 2.7vw, 13px); line-height: 1.35; }
+  .hx.hx-promo .hx-btn { min-height: 28px; gap: 5px; padding: 5px 12px; font-size: 11.5px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hx-hero__track, .hx-tile__image, .hx-store__image, .hx-btn svg, .hx-tile__go { transition: none; }

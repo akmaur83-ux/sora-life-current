@@ -34197,7 +34197,8 @@ const HERO_AUTOPLAY_MS = 6000;
 const PHONE$1 = '(max-width: 700px)';
 const HERO_SLIDES$1 = [{
   key: 'everyday',
-  eyebrow: 'Wellness · Fashion · Home · Personal care · More',
+  // Two lines on a phone, as in the mockup; one line, dot-separated, from 701px.
+  eyebrow: ['Wellness · Fashion · Home', 'Personal care · More'],
   title: ['Everything for', 'everyday wellbeing.'],
   cta: {
     label: 'Shop now',
@@ -34210,7 +34211,7 @@ const HERO_SLIDES$1 = [{
   alt: 'Biosash and Mom’s Trust products on a stone slab with sea buckthorn berries and oranges'
 }, {
   key: 'biosash',
-  eyebrow: 'In the catalogue',
+  eyebrow: ['In the catalogue'],
   title: ['The Biosash', 'range'],
   // No brand page or brand filter exists yet, so this slide has no button.
   cta: null,
@@ -34220,24 +34221,26 @@ const HERO_SLIDES$1 = [{
   height: 900,
   alt: 'Biosash sea buckthorn juices, Berry Veda and Mom’s Trust care products with berries and marigolds'
 }];
+
+// A title in two parts is two lines on a phone, where its note gives way so every item is two lines.
 const TRUST$1 = [{
   icon: 'truck',
-  title: 'Free Standard Delivery',
+  title: ['Free Standard', 'Delivery'],
   note: 'On every order',
   to: '/shipping'
 }, {
   icon: 'shield',
-  title: 'Genuine Products',
+  title: ['Genuine', 'Products'],
   note: null,
   to: null
 }, {
   icon: 'return',
-  title: 'Easy Returns',
+  title: ['Easy Returns'],
   note: '7 days',
   to: '/returns'
 }, {
   icon: 'chat',
-  title: 'Support',
+  title: ['Support'],
   note: '9am–6pm IST',
   to: '/contact'
 }];
@@ -34376,7 +34379,13 @@ function HomeHero({
               className: "hx-wrap hx-hero__copy",
               children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
                 className: "hx-eyebrow",
-                children: s.eyebrow
+                children: s.eyebrow.map((line, j) => /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                  children: [j > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                    className: "hx-eyebrow__dot",
+                    "aria-hidden": "true",
+                    children: " \xB7 "
+                  }), line]
+                }, line))
               }), /*#__PURE__*/jsxRuntimeExports.jsxs(Title, {
                 className: "hx-hero__title",
                 children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -34419,19 +34428,23 @@ function HomeTrustStrip() {
     children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
       className: "hx-wrap hx-trust__list",
       children: TRUST$1.map(t => {
+        const title = t.title.join(' ');
         const body = /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: t.icon,
             size: 26
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-              children: t.title
+              children: t.title.map((line, j) => /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                children: [j > 0 && ' ', line]
+              }, line))
             }), t.note && /*#__PURE__*/jsxRuntimeExports.jsx("small", {
               children: t.note
             })]
           })]
         });
         return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          className: t.title.length > 1 ? 'hx-trust--split' : undefined,
           children: t.to ? /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: t.to,
             children: body
@@ -34439,7 +34452,7 @@ function HomeTrustStrip() {
             className: "hx-trust__item",
             children: body
           })
-        }, t.title);
+        }, title);
       })
     })
   });
@@ -34478,9 +34491,9 @@ function HomeTiles() {
           className: "hx-tile__art",
           children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
             src: "/img/home-tile-fashion.webp",
-            alt: "Woman in an orange knit sweater and cream trousers",
+            alt: "Woman in an orange knit sweater against an orange backdrop",
             width: 800,
-            height: 1067,
+            height: 800,
             className: "hx-tile__image"
           })
         })]
@@ -34548,10 +34561,21 @@ function ExploreStores({
     "aria-labelledby": "hx-stores-h",
     children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hx-wrap",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        className: "hx-stores__h",
-        id: "hx-stores-h",
-        children: "Explore the stores"
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-stores__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "hx-stores__h",
+          id: "hx-stores-h",
+          children: "Explore the stores"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/shop",
+          className: "hx-more",
+          "aria-label": "View all products",
+          children: ["View All ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 15
+          })]
+        })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
         className: "hx-stores__row",
         children: stores.map(s => {
