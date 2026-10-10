@@ -57,7 +57,7 @@ function contrast(a, b) {
 const IMAGES = {
   'img/home-hero-1.webp': [1536, 864], 'img/home-hero-1-800.webp': [800, 450],
   'img/home-hero-2.webp': [1600, 900], 'img/home-hero-2-800.webp': [800, 450],
-  'img/home-tile-fashion.webp': [800, 800], 'img/home-tile-nutrition.webp': [900, 563], 'img/home-tile-living.webp': [900, 563],
+  'img/home-tile-fashion.webp': [800, 1067], 'img/home-tile-nutrition.webp': [900, 563], 'img/home-tile-living.webp': [900, 563],
   'img/home-promo-festive.webp': [1600, 533], 'img/home-promo-festive-800.webp': [800, 267],
   'img/home-cat-wellness.webp': [480, 480], 'img/home-cat-personal-care.webp': [480, 480], 'img/home-cat-fashion.webp': [480, 480],
   'img/home-cat-groceries.webp': [480, 480], 'img/home-cat-home-textiles.webp': [480, 480],
@@ -81,7 +81,7 @@ const render = (C, props = {}) => (C ? renderToStaticMarkup(h(StaticRouter, { lo
 const hero = render(mod.HomeHero), trust = render(mod.HomeTrustStrip), tiles = render(mod.HomeTiles), stores = render(mod.ExploreStores), promo = render(mod.FestivePromo);
 const all = hero + trust + tiles + stores + promo;
 
-await test('the hero: two slides of the product lineup; the first is the page\'s only h1 — "Everything for everyday wellbeing." with "Shop now" to /shop — the second "The Biosash range" with no button (no brand page exists); the first photograph loads at once, the second waits', () => {
+await test('the hero: two slides of the product lineup; the first is the page\'s only h1 — "Everything for everyday wellbeing." with "Shop now" to /shop, over the wide lineup (the juices, Berry Veda and its box) — the second "The Biosash range" with no button (no brand page exists); the first photograph loads at once, the second waits', () => {
   const slides = [...hero.matchAll(/<div class="hx-hero__slide hx-hero__slide--([a-z]+)" aria-hidden="(true|false)" aria-roledescription="slide" aria-label="(\d) of 2">([\s\S]*?)<\/div><\/div>(?=<div class="hx-hero__slide|<\/div><\/div><div class="hx-hero__dots")/g)];
   assert.deepEqual(slides.map((m) => [m[1], m[2], m[3]]), [['everyday', 'false', '1'], ['biosash', 'true', '2']]);
   const [one, two] = slides.map((m) => m[4]);
@@ -89,8 +89,8 @@ await test('the hero: two slides of the product lineup; the first is the page\'s
   assert.ok(two.endsWith('<p class="hx-eyebrow"><span>In the catalogue</span></p><h2 class="hx-hero__title"><span>The Biosash</span> <span class="hx-hl">range</span></h2>'), 'slide 2: a heading, nothing after it');
   assert.doesNotMatch(two, /<a /, 'and no button');
   assert.equal((hero.match(/<h1/g) || []).length, 1, 'one h1');
-  assert.match(one, /<picture><source media="\(max-width: 700px\)" srcSet="\/img\/home-hero-1-800\.webp"\/><img alt="[^"]{30,}" width="1536" height="864" class="hx-hero__image" src="\/img\/home-hero-1\.webp" loading="eager" decoding="async" fetchPriority="high"\/><\/picture>/, 'the first photograph is the page\'s largest paint: eager, high priority');
-  assert.match(two, /<picture><source media="\(max-width: 700px\)"\/><img alt="[^"]{30,}" width="1600" height="900" class="hx-hero__image" loading="lazy" decoding="async"\/><\/picture>/, 'the second waits until it is near');
+  assert.match(one, /<picture><source media="\(max-width: 700px\)" srcSet="\/img\/home-hero-2-800\.webp"\/><img alt="Biosash sea buckthorn juices, Berry Veda[^"]+" width="1600" height="900" class="hx-hero__image" src="\/img\/home-hero-2\.webp" loading="eager" decoding="async" fetchPriority="high"\/><\/picture>/, 'slide 1 is the wide lineup, the page\'s largest paint: eager, high priority');
+  assert.match(two, /<picture><source media="\(max-width: 700px\)"\/><img alt="Biosash and Mom’s Trust products[^"]+" width="1536" height="864" class="hx-hero__image" loading="lazy" decoding="async"\/><\/picture>/, 'slide 2 the other lineup, waiting until it is near');
   assert.match(hero, /<div class="hx-hero__track" style="transform:translateX\(-0%\)">/, 'the track moves on transform');
   assert.match(hero, /<div class="hx-hero__dots" role="group" aria-label="Choose a slide"><button type="button" aria-label="Show slide 1 of 2" aria-pressed="true" class="hx-hero__dot is-on"><\/button><button type="button" aria-label="Show slide 2 of 2" aria-pressed="false" class="hx-hero__dot"><\/button><\/div>/);
 });
@@ -155,18 +155,17 @@ await test('the tiles: Fashion, large, opening the fashion chooser; Health & Nut
   assert.match(tiles, /<a class="hx-tile hx-tile--small hx-tile--nutrition" aria-labelledby="hx-nutrition-h" href="\/category\/supplements">[\s\S]*?<h2 class="hx-tile__h" id="hx-nutrition-h"><span>Health &amp;<\/span> <span>Nutrition<\/span><\/h2>/);
   assert.match(tiles, /<a class="hx-tile hx-tile--small hx-tile--living" aria-labelledby="hx-living-h" href="\/homeliving">[\s\S]*?<h2 class="hx-tile__h" id="hx-living-h"><span>Home &amp;<\/span> <span>Living<\/span><\/h2>/);
   assert.equal((tiles.match(/<img /g) || []).length, 3); assert.equal((tiles.match(/loading="lazy"/g) || []).length, 3);
-  assert.match(tiles, /<span class="hx-tile__art"><img alt="Woman in an orange knit sweater against an orange backdrop" width="800" height="800" class="hx-tile__image"/, 'the portrait, square, as the markup declares');
+  assert.match(tiles, /<span class="hx-tile__art"><img alt="Woman in an orange knit sweater against an orange backdrop" width="800" height="1067" class="hx-tile__image"/, 'the owner\'s portrait, at the size the markup declares');
 });
 
-await test('the Fashion portrait sits on the tile\'s own orange (as in the mockup): its background corners within 4 of #F47B20, its subject untouched', async () => {
+await test('the Fashion photograph is the owner\'s, as it is — shot on a solid orange within a shade of the tile\'s own, its plain left edge faded into the panel so no line shows where it begins', async () => {
   const { data, info } = await sharp(resolve(ROOT, 'img/home-tile-fashion.webp')).raw().toBuffer({ resolveWithObject: true });
   const px = (x, y) => [...data.subarray((y * info.width + x) * info.channels, (y * info.width + x) * info.channels + 3)];
-  for (const [x, y] of [[8, 8], [8, 400], [8, 790], [300, 8], [200, 600]]) {
+  for (const [x, y] of [[8, 8], [8, 400], [8, 900], [150, 60], [100, 700]]) {
     const p = px(x, y);
-    assert.ok(Math.max(...p.map((v, i) => Math.abs(v - [0xF4, 0x7B, 0x20][i]))) <= 4, `(${x}, ${y}) is ${p} — not the tile's orange`);
+    assert.ok(Math.max(...p.map((v, i) => Math.abs(v - [0xF4, 0x7B, 0x20][i]))) <= 12, `(${x}, ${y}) is ${p} — not within a shade of the tile's orange`);
   }
-  const face = px(520, 210);
-  assert.ok(face[0] > 150 && face[2] > 90 && face[0] - face[2] < 110, `the face keeps its own colour (${face})`);
+  assert.match(read('src/styles/v2-home.css'), /\.hx-tile--fashion \.hx-tile__image \{ -webkit-mask-image: linear-gradient\(90deg, transparent 0, #000 22%\); mask-image: linear-gradient\(90deg, transparent 0, #000 22%\); \}/, 'its left edge fades into the panel');
 });
 
 await test('"Explore the stores" (not a second "Shop by category"): Wellness, Personal Care, Fashion, Groceries, Home Textiles — each a circle and its name, each to its own place', () => {
@@ -212,18 +211,22 @@ await test('scoped: every selector in the new rules starts with .hx (no element,
   assert.equal(read('src/styles/v2-home.css').slice(0, base.length), base, 'the sheet before the new rules is byte-identical');
 });
 
-await test('contrast (WCAG 2.x), from the stylesheet itself: white on the deep-orange buttons ≥ 4.5:1, the deep-orange headline line on white ≥ 4.5:1, near-black on the bright-orange Fashion panel ≥ 4.5:1; the bright orange never carries white text', () => {
+await test('contrast (WCAG 2.x), from the stylesheet itself: white on the deep-orange buttons ≥ 4.5:1, the deep-orange headline line and View All on the page tint ≥ 4.5:1, near-black on the bright-orange Fashion panel ≥ 4.5:1; the bright orange never carries white text', () => {
   const token = (name) => { const m = hx.match(new RegExp(`${name}:\\s*(#[0-9A-Fa-f]{6})`)); assert.ok(m, name); return m[1]; };
-  const orange = token('--hx-orange'), deep = token('--hx-orange-deep'), ink = token('--hx-ink');
+  const orange = token('--hx-orange'), deep = token('--hx-orange-deep'), ink = token('--hx-ink'), page = token('--hx-page');
+  assert.equal(page.toUpperCase(), '#FDFBF8', 'the page is a very slight warm white, not flat pure white');
+  assert.equal(decl('.hx', 'background'), 'var(--hx-page)'); assert.match(decl('.hx-hero__slide', 'background'), /var\(--hx-page\)/);
+  assert.equal(decl('.hx-hero__image', 'mix-blend-mode'), 'multiply', 'the lineups\' white takes the tint: no white block');
   assert.equal(decl('.hx .hx-btn', 'background'), 'var(--hx-orange-deep)'); assert.equal(decl('.hx .hx-btn', 'color'), '#fff');
   assert.equal(decl('.hx .hx-hl', 'color'), 'var(--hx-orange-deep)'); assert.equal(decl('.hx .hx-more', 'color'), 'var(--hx-orange-deep)');
   assert.equal(decl('.hx-tile--fashion', 'background'), 'var(--hx-orange)'); assert.equal(decl('.hx-tile__h', 'color'), 'var(--hx-ink)');
-  const pairs = [['white on the deep-orange buttons', '#FFFFFF', deep], ['deep orange on white (headline line, View All)', deep, '#FFFFFF'], ['near-black on the bright-orange Fashion panel', ink, orange]];
+  const pairs = [['white on the deep-orange buttons', '#FFFFFF', deep], ['deep orange on the page tint (headline line, View All)', deep, page], ['near-black on the bright-orange Fashion panel', ink, orange]];
   for (const [what, fg, bg] of pairs) {
     const r = contrast(fg, bg);
     assert.ok(r >= 4.5, `${what}: ${r.toFixed(2)}:1`);
     console.log(`        ${what}: ${fg} on ${bg} = ${r.toFixed(2)}:1`);
   }
+  assert.ok(contrast(deep, '#FFFFFF') >= contrast(deep, page), 'the tint only lowers it: measured on the tint, not on white');
   assert.ok(contrast('#FFFFFF', orange) < 4.5, 'white on the bright orange would fail — which is why nothing does it');
   for (const [, sel, body] of hx.matchAll(/([^{}]+)\{([^{}]*)\}/g)) assert.ok(!(/background:\s*var\(--hx-orange\)/.test(body) && /color:\s*#fff\b/.test(body)), `${sel.trim()}: white text on the bright orange`);
 });
@@ -236,6 +239,9 @@ await test('the phone, as in the mockup: ONE compact hero block (copy in the lef
   assert.match(phone, /\.hx-hero__copy > \*, \.hx-hero__slide--biosash \.hx-hero__copy > \* \{ max-width: 46%; \}/, 'the copy in the left 45%');
   assert.doesNotMatch(phone, /\.hx-hero__image \{[^}]*width: 1[67]0%|mask-image: linear-gradient\(180deg/, 'no photograph stacked under the copy');
   assert.match(phone, /\.hx-eyebrow > span \{ display: block; \}/, 'the eyebrow in two lines');
+  assert.match(phone, /\.hx-hero__slide--biosash \.hx-hero__image \{ top: auto; bottom: 0; height: 116%; \}/, 'the narrower lineup (slide 2) enlarged to the 45% line');
+  assert.doesNotMatch(phone, /\.hx-hero__slide--everyday \.hx-hero__image/, 'the wide lineup at the block\'s height');
+  assert.match(hx, /@media \(min-width: 701px\) and \(max-width: 1023px\) \{[^}]*\.hx-hero__slide--everyday \.hx-hero__copy > \.hx-hero__title \{ max-width: 40%; \}/, 'tablets: the headline wraps clear of the wide lineup\'s props');
   assert.match(phone, /\.hx-hero__dots \{ left: 50%; right: auto; bottom: 0;/, 'the dots at the foot, over the photograph');
   // The trust strip: one row of four, never the sideways-scrolling two and a half.
   assert.match(phone, /\.hx-trust__list \{ display: flex; justify-content: space-between;/);

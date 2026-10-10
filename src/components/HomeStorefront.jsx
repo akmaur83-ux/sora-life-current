@@ -35,8 +35,9 @@ export const HERO_SLIDES = [
     eyebrow: ['Wellness · Fashion · Home', 'Personal care · More'],
     title: ['Everything for', 'everyday wellbeing.'],
     cta: { label: 'Shop now', to: '/shop' },
-    image: '/img/home-hero-1.webp', phone: '/img/home-hero-1-800.webp', width: 1536, height: 864,
-    alt: 'Biosash and Mom’s Trust products on a stone slab with sea buckthorn berries and oranges',
+    // The wider lineup leads (the owner's choice): the juices, Berry Veda and its box.
+    image: '/img/home-hero-2.webp', phone: '/img/home-hero-2-800.webp', width: 1600, height: 900,
+    alt: 'Biosash sea buckthorn juices, Berry Veda and Mom’s Trust care products with berries and marigolds',
   },
   {
     key: 'biosash',
@@ -44,8 +45,8 @@ export const HERO_SLIDES = [
     title: ['The Biosash', 'range'],
     // No brand page or brand filter exists yet, so this slide has no button.
     cta: null,
-    image: '/img/home-hero-2.webp', phone: '/img/home-hero-2-800.webp', width: 1600, height: 900,
-    alt: 'Biosash sea buckthorn juices, Berry Veda and Mom’s Trust care products with berries and marigolds',
+    image: '/img/home-hero-1.webp', phone: '/img/home-hero-1-800.webp', width: 1536, height: 864,
+    alt: 'Biosash and Mom’s Trust products on a stone slab with sea buckthorn berries and oranges',
   },
 ];
 
@@ -152,7 +153,7 @@ export function HomeTiles() {
             <h2 className="hx-tile__h" id="hx-fashion-h"><span>Fashion</span> <span>for every</span> <span>mood.</span></h2>
             <span className="hx-btn hx-btn--light" id="hx-fashion-cta">Shop Fashion <Icon name="arrowRight" size={16} /></span>
           </div>
-          <span className="hx-tile__art"><DeferredImage src="/img/home-tile-fashion.webp" alt="Woman in an orange knit sweater against an orange backdrop" width={800} height={800} className="hx-tile__image" /></span>
+          <span className="hx-tile__art"><DeferredImage src="/img/home-tile-fashion.webp" alt="Woman in an orange knit sweater against an orange backdrop" width={800} height={1067} className="hx-tile__image" /></span>
         </FashionEntryLink>
         <Link to="/category/supplements" className="hx-tile hx-tile--small hx-tile--nutrition" aria-labelledby="hx-nutrition-h">
           <DeferredImage src="/img/home-tile-nutrition.webp" alt="" width={900} height={563} className="hx-tile__image" />

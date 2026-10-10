@@ -875,9 +875,10 @@
    Orange and text, measured (WCAG 2.x): white on the deep orange #C2500A is
    4.72:1 (the buttons); the deep orange on white is 4.72:1 (the highlighted
    headline line); near-black #1D1D1B on the bright orange #F47B20 is 6.19:1
-   (the Fashion tile). The bright orange never carries white text.
+   (the Fashion tile). The bright orange never carries white text. The page is a very slight
+   warm white (#FDFBF8), not flat pure white; the deep orange on it is 4.57:1.
    ============================================================ */
-.hx { --hx-orange: #F47B20; --hx-orange-deep: #C2500A; --hx-ink: #1D1D1B; --hx-muted: #5C5853; --hx-soft: #F5F4F2; --hx-line: #ECE8E2; background: #fff; color: var(--hx-ink); }
+.hx { --hx-orange: #F47B20; --hx-orange-deep: #C2500A; --hx-ink: #1D1D1B; --hx-muted: #5C5853; --hx-soft: #F5F4F2; --hx-line: #ECE8E2; --hx-page: #FDFBF8; background: var(--hx-page); color: var(--hx-ink); }
 .hx *, .hx *::before, .hx *::after { box-sizing: border-box; }
 .hx a { color: inherit; text-decoration: none; }
 .hx-wrap { width: 100%; max-width: 1240px; margin-inline: auto; padding-inline: 28px; }
@@ -892,8 +893,8 @@
 .hx-hero { position: relative; overflow: hidden; }
 .hx-hero__viewport { overflow: hidden; touch-action: pan-y; }
 .hx-hero__track { display: flex; transition: transform .6s ease; }
-.hx-hero__slide { position: relative; display: flex; align-items: center; flex: 0 0 100%; min-width: 0; height: clamp(440px, 40vw, 600px); overflow: hidden; background: #fff; }
-.hx-hero__image { position: absolute; top: 0; right: 0; width: auto; height: 100%; max-width: none; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14%); mask-image: linear-gradient(90deg, transparent 0, #000 14%); }
+.hx-hero__slide { position: relative; display: flex; align-items: center; flex: 0 0 100%; min-width: 0; height: clamp(440px, 40vw, 600px); overflow: hidden; background: var(--hx-page); }
+.hx-hero__image { position: absolute; top: 0; right: 0; width: auto; height: 100%; max-width: none; mix-blend-mode: multiply; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14%); mask-image: linear-gradient(90deg, transparent 0, #000 14%); }
 .hx-hero__copy { position: relative; z-index: 1; }
 .hx-hero__copy > * { max-width: min(46%, 520px); }
 .hx-hero__slide--biosash .hx-hero__copy > * { max-width: min(32%, 400px); }
@@ -927,6 +928,8 @@
 .hx-tile--fashion .hx-tile__h { font-size: clamp(30px, 3.2vw, 46px); line-height: 1.06; }
 .hx-tile__art { position: relative; display: block; overflow: hidden; }
 .hx-tile__art .hx-tile__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: right top; }
+/* The portrait is shot on orange a shade off the panel's: its plain left edge fades into the panel, so no line shows where it begins. */
+.hx-tile--fashion .hx-tile__image { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22%); mask-image: linear-gradient(90deg, transparent 0, #000 22%); }
 .hx-tile--small { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 24px; min-height: 208px; }
 .hx-tile--small .hx-tile__image { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; object-position: right center; }
 .hx-tile--small .hx-tile__h { font-size: clamp(22px, 2vw, 28px); line-height: 1.15; }
@@ -957,15 +960,20 @@
   .hx .hx-btn:hover svg, .hx-tile:hover .hx-tile__go { transform: translateX(3px); }
   .hx-tile:hover .hx-tile__image, .hx-store:hover .hx-store__image { transform: scale(1.04); }
 }
+@media (min-width: 701px) and (max-width: 1023px) {
+  /* At these widths the wide lineup (slide 1) reaches further left than the copy: the headline
+     wraps ("everyday / wellbeing.") and stays clear of its props. */
+  .hx-hero__slide--everyday .hx-hero__copy > .hx-hero__title { max-width: 40%; }
+}
 @media (max-width: 700px) {
   .hx-wrap { padding-inline: 16px; }
   /* The hero, as in the mockup: ONE compact block. Eyebrow, headline and button in the left
      45%; the lineup fills the right of the same block to its edge (the photograph's empty
      white runs under the copy); the dots at its foot, over the photograph. */
   .hx-hero__slide { height: clamp(190px, 51vw, 340px); }
-  /* The first lineup a little larger, anchored at the foot, so it starts at the 45% line; the
-     Biosash lineup is wider and stays at the block's height, clear of its title. */
-  .hx-hero__slide--everyday .hx-hero__image { top: auto; bottom: 0; height: 116%; }
+  /* The narrower lineup (slide 2) a little larger, anchored at the foot, so it starts at the 45%
+     line; the wide lineup (slide 1) stays at the block's height, its props clear of the copy. */
+  .hx-hero__slide--biosash .hx-hero__image { top: auto; bottom: 0; height: 116%; }
   .hx-hero__copy > *, .hx-hero__slide--biosash .hx-hero__copy > * { max-width: 46%; }
   .hx-hero__copy > .hx-eyebrow { max-width: 64%; }
   .hx-hero__slide--biosash .hx-hero__copy > .hx-hero__title { max-width: 36%; }
@@ -998,11 +1006,11 @@
      stacked to its right, each half its height. */
   .hx-tiles__grid { grid-template-columns: minmax(0, 1.17fr) minmax(0, 1fr); grid-template-rows: repeat(2, clamp(72px, 19.5vw, 140px)); gap: 8px; }
   .hx-tile { border-radius: 10px; }
-  /* Fashion is ONE tile: the portrait, on the tile's own orange, fills it from the right with
-     her head at its top edge; the headline and the white button over the orange on the left. */
+  /* Fashion is ONE tile: the portrait (shot on orange) fills it from the right with her head at
+     its top edge; the headline and the white button over the orange on the left. */
   .hx-tile--fashion { display: block; min-height: 0; }
   .hx-tile--fashion .hx-tile__art { position: absolute; inset: 0; }
-  .hx-tile__art .hx-tile__image { inset: 0 -26% auto auto; width: auto; max-width: none; height: 168%; }
+  .hx-tile__art .hx-tile__image { inset: 0 0 auto auto; width: auto; max-width: none; height: 150%; }
   .hx-tile__panel { position: relative; z-index: 1; height: 100%; justify-content: center; gap: 10px; padding: 12px; }
   .hx-tile--fashion .hx-tile__h { font-size: clamp(17px, 4.9vw, 28px); line-height: 1.05; }
   .hx .hx-tile--fashion .hx-btn { min-height: 30px; gap: 5px; padding: 6px 11px; font-size: 11.5px; }
