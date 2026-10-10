@@ -18,6 +18,7 @@ import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT, read, has } from './grocery-ssr.mjs';
 import { atCommit } from './baseline-export.mjs';
+import { sansCartChanges } from './storefront-settings-pin.mjs';
 
 // The tree as it stood before this work: the carousel-move release.
 const BASELINE_SHA = 'b582caa';
@@ -93,7 +94,8 @@ await test('the surfaces that could not be measured offline — creator dashboar
   // …and the wellness sheets that the token also carries changed only by the axis removal (and, in v2-pdp/v2-shop, a comment).
   for (const rel of ['src/styles/v2-foundation.css', 'src/styles/v2-card.css', 'src/styles/v2-home.css', 'src/styles/v2-pdp.css', 'src/styles/v2-home-marketplace.css', 'src/styles/v2-shop.css']) {
     const norm = (t) => stripComments(t).replace(/\s*font-variation-settings:[^;]+;/g, '').replace(/\s*font-optical-sizing:[^;]+;/g, '').replace(/'Fraunces'/g, "'Playfair Display'").replace(/\s+/g, ' ');
-    assert.equal(norm(read(rel)), norm(atCommit(BASELINE_SHA, rel)), `${rel}: only the axes (and the family name) changed`);
+    // v2-home.css: the homepage rebuild's .hx rules (test-home-storefront.mjs) come off first, through their recorded undo.
+    assert.equal(norm(sansCartChanges(rel, read(rel))), norm(atCommit(BASELINE_SHA, rel)), `${rel}: only the axes (and the family name) changed`);
   }
 });
 

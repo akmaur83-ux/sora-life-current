@@ -71,6 +71,12 @@ export const FASHION_PDP_THUMBS_EDITS = /^src\/fashion\/FashionProductPage\.jsx$
 /** The homepage banner's own sheet: the full-bleed banner and the fashion category strip (test-store-doorway.mjs pins it). */
 export const FASHION_BANNER_SHEET = /^src\/styles\/fashion-banner\.css$/;
 
+/** The white/orange top of the wellness homepage: its component and its photographs (test-home-storefront.mjs owns them). */
+export const HOME_STOREFRONT_FILES = /^(src\/components\/HomeStorefront\.jsx|img\/home-[a-z0-9-]+\.webp|scripts\/pins\/home-storefront\.patch)$/;
+
+/** The homepage's own two files it edited — each undone by sansCartChanges (scripts/pins/home-storefront.patch). */
+export const HOME_STOREFRONT_EDITS = /^(src\/pages\/Home\.jsx|src\/styles\/v2-home\.css)$/;
+
 /** The shared files it edited — main.jsx (the mount) and Layout.jsx (the old reset removed), each undone by sansCartChanges. */
 export const SCROLL_MANAGER_EDITS = /^(src\/main\.jsx|src\/components\/Layout\.jsx)$/;
 
@@ -327,6 +333,11 @@ const UNDO_WOMEN_PAGE = undoFromPatch('fashion-women-page.patch');
 // store carousel in the same file is unchanged. Undone here, newest first.
 const UNDO_BANNER_STRIP = undoFromPatch('fashion-banner-strip.patch');
 
+// The white/orange top of the wellness homepage: five sections in Home.jsx in place of the hero
+// and the category strip, and their .hx rules appended to v2-home.css (test-home-storefront.mjs
+// owns them; everything else in both files is as it was). Undone here, newest first.
+const UNDO_HOME_STOREFRONT = undoFromPatch('home-storefront.patch');
+
 // The fashion PDP's thumbnails: the same fix as Home & Living's — buttons that scroll only the
 // gallery track (and Gallery exported so its suite can mount it). A shared fashion file.
 const UNDO_FASHION_PDP_THUMBS = undoFromPatch('fashion-pdp-thumbs.patch');
@@ -383,7 +394,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart

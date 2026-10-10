@@ -355,7 +355,7 @@ function homeSections(source) {
     configFile: false, babelrc: false, presets: [['@babel/preset-react', { runtime: 'classic' }]],
     plugins: [() => ({ visitor: { ImportDeclaration(p) { p.remove(); }, ExportDefaultDeclaration(p) { p.replaceWith(p.node.declaration); } } })],
   });
-  const names = ['Hero', 'HomeCategoryStrip', 'EditorialCard', 'StoryBlock', 'Newsletter', 'HomeOffers', 'HomeLeaderboard', 'MarketplaceProductRail', 'FeaturedBrands', 'DiscoveryEdit', 'MomTrustSpotlight', 'CuratedCollections', 'CreatorCommunity', 'WhySoraLife', 'ShopByCategory', 'ShopByConcerns', 'LifestyleBanner', 'StoreCarousel'];
+  const names = ['Hero', 'HomeCategoryStrip', 'HomeHero', 'HomeTrustStrip', 'HomeTiles', 'ExploreStores', 'FestivePromo', 'EditorialCard', 'StoryBlock', 'Newsletter', 'HomeOffers', 'HomeLeaderboard', 'MarketplaceProductRail', 'FeaturedBrands', 'DiscoveryEdit', 'MomTrustSpotlight', 'CuratedCollections', 'CreatorCommunity', 'WhySoraLife', 'ShopByCategory', 'ShopByConcerns', 'LifestyleBanner', 'StoreCarousel'];
   const stubs = Object.fromEntries(names.map((n) => [n, (props) => h('section', { 'data-c': n + (props?.id ? `#${props.id}` : '') })]));
   const scope = { React, ...React, ...stubs, useSyncExternalStore: () => ({ visuals: {} }), subscribeHomepage: () => () => {}, getHomepageSnapshot: () => ({}),
     sanitizeHomepageVisuals: () => ({}), watchHomepageVisuals: () => {}, products: [], categories: [], selectHomeMerchandising: () => ({ trending: [], discover: [], popular: [], brands: [], momProducts: [], collections: [], popularTitle: 'Popular' }), homepage: {} };
@@ -369,7 +369,10 @@ await test('the wellness homepage keeps every section in the same order — the 
   const after = homeSections(read('src/pages/Home.jsx'));
   const added = ['LifestyleBanner', 'StoreCarousel'];
   for (const s of added) assert.equal(after.filter((x) => x === s).length, 1, `${s} is on the homepage once`);
-  assert.deepEqual(after.filter((s) => !added.includes(s)), before, 'every other section, in order');
+  // The white/orange top of the page (test-home-storefront.mjs) took the place of the hero
+  // and the category strip: the five sections lead the page; everything else is as pinned.
+  const top = ['HomeHero', 'HomeTrustStrip', 'HomeTiles', 'ExploreStores', 'FestivePromo'];
+  assert.deepEqual(after.filter((s) => !added.includes(s)), [...top, ...before.filter((s) => s !== 'Hero' && s !== 'HomeCategoryStrip')], 'every other section, in order');
   assert.equal(after.indexOf('LifestyleBanner'), after.indexOf('HomeOffers') + 1, 'the banner sits after the offers, before the first product rail');
   assert.equal(after.indexOf('StoreCarousel'), after.indexOf('MarketplaceProductRail#popular') - 1, 'the carousel sits directly above the popular rail (test-store-doorway.mjs pins both sections)');
   const Icon = loadModule('src/components/Icon.jsx').default;

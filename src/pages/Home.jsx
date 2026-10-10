@@ -1,6 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
-import Hero from '../components/Hero.jsx';
-import HomeCategoryStrip from '../components/HomeCategoryStrip.jsx';
+import { HomeHero, HomeTrustStrip, HomeTiles, ExploreStores, FestivePromo } from '../components/HomeStorefront.jsx';
 import EditorialCard from '../components/EditorialCard.jsx';
 import StoryBlock from '../components/StoryBlock.jsx';
 import Newsletter from '../components/Newsletter.jsx';
@@ -51,11 +50,14 @@ export default function Home() {
     <div className="v2-home">
       {/* 1–2 · announcement + header are mounted by Layout via Header */}
 
-      {/* 3 · HERO — image-led, copy directly over the artwork */}
-      <Hero />
-
-      {/* 4 · CATEGORY NAVIGATION — orientation, not merchandising */}
-      <HomeCategoryStrip appearance={visuals.categoryStrip} />
+      {/* 3 · THE TOP OF THE PAGE — white with an orange accent (HomeStorefront.jsx).
+             The hero is static: the admin Hero Slides page no longer drives it,
+             and the circle row replaced the category strip. */}
+      <HomeHero />
+      <HomeTrustStrip />
+      <HomeTiles />
+      <ExploreStores />
+      <FestivePromo />
 
       {/* 5 · CAMPAIGN / PROMOTION — existing promotions runtime, untouched.
              Renders nothing when no active promotion targets `home`. */}

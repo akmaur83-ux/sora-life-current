@@ -265,20 +265,23 @@ test('D17 the footer states the marketplace positioning without inventing claims
 });
 
 test('D18 two distinct category experiences, each rendered once', () => {
-  // A: the circular quick-nav rail under the hero. B: the editorial browse
-  // further down. They are deliberately different sections, not duplicates,
-  // so each must appear exactly once and neither may replace the other.
-  const strip = src('../src/components/HomeCategoryStrip.jsx');
-  assert.match(strip, /<CategoryRail \/>/, 'the quick-nav rail keeps its original circular implementation');
-  assert.doesNotMatch(strip, /ShopByCategory/, 'the editorial rail does not live inside the quick-nav strip');
+  // A: the circular quick-nav row under the hero — since the white/orange top of
+  // the page (test-home-storefront.mjs), "Explore the stores" in HomeStorefront.jsx.
+  // B: the editorial browse further down. They are deliberately different
+  // sections, not duplicates, so each must appear exactly once and neither may
+  // replace the other.
+  const strip = src('../src/components/HomeStorefront.jsx');
+  assert.match(strip, /export function ExploreStores\(/, 'the quick-nav row is its own section');
+  assert.doesNotMatch(strip, /ShopByCategory/, 'the editorial rail does not live inside the quick-nav row');
 
   const home = src('../src/pages/Home.jsx');
-  assert.equal((home.match(/<HomeCategoryStrip/g) || []).length, 1, 'exactly one quick-nav rail');
+  assert.equal((home.match(/<ExploreStores/g) || []).length, 1, 'exactly one quick-nav row');
+  assert.doesNotMatch(home, /<HomeCategoryStrip/, 'the old strip is not on the page beside it');
   assert.equal((home.match(/<ShopByCategory\s*\/>/g) || []).length, 1, 'exactly one editorial category rail');
   assert.equal((home.match(/<ShopByConcerns/g) || []).length, 1, 'exactly one concerns section');
 
-  // Order: hero -> quick-nav rail ... editorial category -> concerns.
-  const iStrip = home.indexOf('<HomeCategoryStrip');
+  // Order: hero -> quick-nav row ... editorial category -> concerns.
+  const iStrip = home.indexOf('<ExploreStores');
   const iOffers = home.indexOf('<HomeOffers');
   const iCat = home.indexOf('<ShopByCategory');
   const iCon = home.indexOf('<ShopByConcerns');
@@ -919,11 +922,11 @@ test('D66 what is saved is exactly what is read back, plus a faithful legacy mir
 });
 
 test('D67 the round rail under the hero is not part of this system', () => {
-  // It renders real catalogue categories through its own component, and nothing
-  // in the card model can reach it.
-  const strip = src('../src/components/HomeCategoryStrip.jsx');
-  assert.match(strip, /<CategoryRail \/>/, 'the quick-nav rail keeps its original implementation');
-  assert.doesNotMatch(strip, /discovery|categoryCards|collection/i, 'and knows nothing about discovery cards');
+  // "Explore the stores" (HomeStorefront.jsx) links five fixed places — two wellness
+  // categories and three stores — and nothing in the card model can reach it.
+  const strip = src('../src/components/HomeStorefront.jsx');
+  assert.match(strip, /export const STORES = \[/, 'its five circles are its own fixed list');
+  assert.doesNotMatch(strip, /discovery|categoryCards|collection/i, 'and it knows nothing about discovery cards');
 
   const rail = src('../src/components/CategoryRail.jsx');
   assert.match(rail, /categories/, 'it reads the real catalogue categories');
@@ -931,7 +934,7 @@ test('D67 the round rail under the hero is not part of this system', () => {
     'it must never be routed through the merchandising model');
 
   const home = src('../src/pages/Home.jsx');
-  const order = ['<Hero', '<HomeCategoryStrip', '<HomeOffers', '<ShopByCategory', '<ShopByConcerns'];
+  const order = ['<HomeHero', '<ExploreStores', '<HomeOffers', '<ShopByCategory', '<ShopByConcerns'];
   let cursor = -1;
   for (const token of order) {
     const at = home.indexOf(token);
