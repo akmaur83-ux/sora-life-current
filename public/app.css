@@ -9572,12 +9572,11 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 .fsb__lede { margin: 0; font-size: 16px; line-height: 1.65; color: #50534b; }
 
 /* ---- The card: one photograph, every word on it ---------------------------------
-   Shared by the Lifestyle banner (.fsb__card--lead) and the two carousel cards.
+   The two carousel cards (the Lifestyle banner has its own .fsb-lead rules below).
    The photo fills the card; the copy and the badges both sit on it, over a long
    cream wash that fades to nothing with no stop the eye can find — never a
    panel. A card is a size container, so the carousel cards' type is set in cqw
-   and scales with the card; the banner, being page-wide, sets its own scale in
-   px and vw. ------------------------------------------------------------------- */
+   and scales with the card. ----------------------------------------------------- */
 .fsb__card {
   --fsb-cream: #f6efe3;
   --fsb-wash: linear-gradient(90deg, rgba(246, 239, 227, .9) 0%, rgba(246, 239, 227, .8) 20%, rgba(246, 239, 227, .58) 34%, rgba(246, 239, 227, .3) 47%, rgba(246, 239, 227, .1) 56%, rgba(246, 239, 227, 0) 64%);
@@ -9623,22 +9622,47 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 }
 .fsb__details svg { box-sizing: content-box; width: clamp(18px, 3.6cqw, 22px); height: clamp(18px, 3.6cqw, 22px); padding: min(1.1cqw, 9px); border-radius: 50%; background: #fffcf1d9; }
 
-/* ---- Part A: the Lifestyle banner — page-wide, the copy on the empty left 38% ----
-   The 16:9 photo shown at 16:7 (the head sits in the upper third, kept by the
-   object-position); the wash is gone by 52%, before the sofa. -------------------- */
-.fsb__card--lead { --fsb-wash: linear-gradient(90deg, rgba(246, 239, 227, .9) 0%, rgba(246, 239, 227, .8) 16%, rgba(246, 239, 227, .58) 28%, rgba(246, 239, 227, .3) 39%, rgba(246, 239, 227, .1) 46%, rgba(246, 239, 227, 0) 52%); }
-.fsb__card--lead .fsb__art { aspect-ratio: 16 / 7; }
-.fsb__card--lead .fsb__image { object-position: center 35%; }
-.fsb__card--lead .fsb__content { width: 38%; padding: clamp(28px, 3.2vw, 44px) 0 clamp(24px, 2.8vw, 36px) clamp(28px, 3.2vw, 44px); }
-.fsb__card--lead .fsb__eyebrow { margin-bottom: 12px; font-size: 13px; letter-spacing: .24em; }
-/* "Lifestyle Store" on one line in the 38% column: at 1280 that column is 419px; Playfair at the old 4.2vw (54px) needed ~470. */
-.fsb__card--lead .fsb__h { margin-bottom: 14px; font-size: clamp(36px, 3.6vw, 48px); }
-.fsb__card--lead .fsb__description { max-width: 34ch; margin-bottom: 20px; font-size: clamp(15px, 1.3vw, 17px); line-height: 1.45; }
-.fsb__card--lead .fsb__cta { gap: 12px; min-height: 48px; padding: 0 24px; font-size: 15px; }
-.fsb__card--lead .fsb__cta svg { width: 18px; height: 18px; }
-.fsb__card--lead .fsb__details { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; max-width: none; padding-top: 22px; }
-.fsb__card--lead .fsb__details li { gap: 8px; padding: 10px 6px; font-size: 12.5px; line-height: 1.3; }
-.fsb__card--lead .fsb__details svg { width: 20px; height: 20px; padding: 9px; }
+/* ---- Part A: the Lifestyle banner, in the women's page's language ---------------
+   Full-bleed and square-edged, built like the women's hero: the photograph fills the
+   banner and every word sits on it — white uppercase Inter over the sky on the left
+   of the wide shot, under a navy fade gone before the subject; on a phone, over a
+   fade at the foot of the 3:4 portrait. Nothing beneath the image. The height comes
+   from the width (aspect-ratio with a min/max height would cap or force the width). */
+.fsb-lead { --fsl-ink: #1d1d1b; background: #6c98cc; color: #fff; }
+.fsb-lead__link { position: relative; isolation: isolate; display: flex; align-items: center; height: clamp(460px, 43.75vw, 680px); overflow: hidden; color: inherit; text-decoration: none; }
+.fsb-lead__art { position: absolute; inset: 0; z-index: -2; display: block; overflow: hidden; }
+.fsb-lead__art picture { display: block; width: 100%; height: 100%; }
+.fsb-lead__image { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 75% 20%; transition: transform .6s ease; }
+.fsb-lead__link::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(36, 69, 109, .42) 0%, rgba(36, 69, 109, .3) 20%, rgba(36, 69, 109, .16) 34%, rgba(36, 69, 109, .05) 46%, rgba(36, 69, 109, 0) 56%); }
+.fsb-lead__copy { width: min(40%, 470px); margin-left: max(28px, calc((100% - 1240px) / 2)); }
+.fsb-lead__eyebrow { margin: 0 0 16px; font-size: 11px; font-weight: 500; line-height: 1.5; letter-spacing: .18em; text-transform: uppercase; color: #fff; }
+.fsb-lead__h { margin: 0; font-family: 'Inter', sans-serif; font-size: clamp(40px, 4.6vw, 68px); font-weight: 400; line-height: 1.04; letter-spacing: -.01em; text-transform: uppercase; color: #fff; }
+.fsb-lead__h span { display: block; }
+.fsb-lead__description { max-width: 340px; margin: 22px 0 28px; font-size: 14px; line-height: 1.65; color: #f5f8fc; }
+.fsb-lead__cta { display: inline-flex; align-items: center; gap: 12px; min-height: 46px; padding: 12px 26px; border: 1px solid #fff; background: #fff; color: var(--fsl-ink); font-size: 13px; font-weight: 500; line-height: 1.4; letter-spacing: .02em; }
+.fsb-lead__cta svg { flex: none; transition: transform .3s ease; }
+.fsb-lead__link:focus-visible { outline: 2px solid #fff; outline-offset: -6px; }
+
+/* ---- The fashion category strip, directly beneath the banner ----------------------
+   Women's and men's tiles in turn; --per tiles in view (the component reads it), the
+   track stepping one tile at a time on transform only. Square tiles, square arrows. --- */
+.fsb-strip { --fss-ink: #1d1d1b; --fss-muted: #66635d; --fss-soft: #f2f1ee; padding-block: 44px 56px; background: #fff; color: var(--fss-ink); }
+.fsb-strip__wrap { width: calc(100% - 56px); max-width: 1240px; margin-inline: auto; }
+.fsb-strip__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+.fsb-strip__eyebrow { margin: 0 0 8px; font-size: 11px; font-weight: 500; line-height: 1.5; letter-spacing: .18em; text-transform: uppercase; color: var(--fss-muted); }
+.fsb-strip__head h2 { margin: 0; font-family: 'Inter', sans-serif; font-size: clamp(22px, 2.3vw, 32px); font-weight: 400; line-height: 1.15; letter-spacing: .05em; text-transform: uppercase; color: var(--fss-ink); }
+.fsb-strip__arrows { display: flex; flex: none; gap: 8px; }
+.fsb-strip__arrows button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--fss-ink); background: #fff; color: var(--fss-ink); cursor: pointer; }
+.fsb-strip__arrows button:disabled { opacity: .3; cursor: default; }
+.fsb-strip__viewport { overflow: hidden; touch-action: pan-y; }
+.fsb-strip__track { --per: 5; --gap: 16px; display: flex; gap: var(--gap); margin: 0; padding: 0; list-style: none; transform: translateX(calc(var(--i, 0) * -1 * ((100% - (var(--per) - 1) * var(--gap)) / var(--per) + var(--gap)))); transition: transform .5s ease; }
+.fsb-strip__tile { flex: 0 0 calc((100% - (var(--per) - 1) * var(--gap)) / var(--per)); min-width: 0; }
+.fsb-strip__tile a { display: grid; gap: 4px; color: inherit; text-decoration: none; }
+.fsb-strip__art { display: block; aspect-ratio: 600 / 780; margin-bottom: 8px; overflow: hidden; background: var(--fss-soft); }
+.fsb-strip__image { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
+.fsb-strip__dept { font-size: 10px; font-weight: 500; line-height: 1.4; letter-spacing: .18em; text-transform: uppercase; color: var(--fss-muted); }
+.fsb-strip__name { font-size: 14px; line-height: 1.3; letter-spacing: .04em; text-transform: uppercase; }
+.fsb-strip :focus-visible { outline: 2px solid var(--fss-ink); outline-offset: 3px; }
 
 /* ---- Part B: the two store cards as one carousel, visibly smaller than the banner ---
    One slide in view; the track moves on transform only. ------------------------------ */
@@ -9654,15 +9678,37 @@ body:has(.v2-home) .ftr { margin-top: 0; }
   .fsb__card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px #513c2618; }
   .fsb__card:hover .fsb__image { transform: scale(1.025); }
   .fsb__card:hover .fsb__cta svg { transform: translateX(4px); }
+  .fsb-lead__link:hover .fsb-lead__image { transform: scale(1.02); }
+  .fsb-lead__link:hover .fsb-lead__cta svg { transform: translateX(4px); }
+  .fsb-strip__tile a:hover .fsb-strip__image { transform: scale(1.04); }
+}
+@media (max-width: 1000px) {
+  .fsb-strip__track { --per: 3; }
+}
+@media (max-width: 700px) {
+  .fsb-lead__link { align-items: flex-end; height: auto; aspect-ratio: 3 / 4; }
+  .fsb-lead__image { object-position: center top; }
+  .fsb-lead__link::after { background: linear-gradient(0deg, rgba(20, 31, 48, .8) 0%, rgba(20, 31, 48, .62) 20%, rgba(20, 31, 48, .36) 36%, rgba(20, 31, 48, .12) 48%, rgba(20, 31, 48, 0) 58%); }
+  .fsb-lead__copy { width: auto; margin: 0; padding: 0 16px 24px; }
+  .fsb-lead__eyebrow { margin-bottom: 10px; }
+  .fsb-lead__h { font-size: clamp(32px, 9vw, 40px); }
+  .fsb-lead__description { max-width: 32ch; margin: 12px 0 18px; font-size: 13px; line-height: 1.55; }
+  .fsb-lead__cta { min-height: 44px; padding: 10px 20px; }
+  .fsb-strip { padding-block: 32px 44px; }
+  .fsb-strip__wrap { width: calc(100% - 32px); }
+  .fsb-strip__head { margin-bottom: 18px; }
+  .fsb-strip__head h2 { font-size: 21px; }
+  .fsb-strip__arrows button { width: 40px; height: 40px; }
+  .fsb-strip__track { --per: 2; --gap: 12px; }
+  .fsb-strip__name { font-size: 13px; }
 }
 
 /* ---- Under 1024 ------------------------------------------------------------------
-   Every card is its 4:5 portrait, the copy in the empty upper-left over a wash that
-   fades down from the top, the badges at the foot over a wash that fades up from
-   the bottom — one photograph, nothing beneath it. The phone scale is pinned by
-   test-store-doorway.mjs: at a 358px banner the copy stack ends above 42% of the
-   card (the portrait subject begins there); on the 344px carousel cards above 45%.
-   Do not loosen it here. ----------------------------------------------------------- */
+   Each carousel card is its 4:5 portrait, the copy in the empty upper-left over a
+   wash that fades down from the top, the badges at the foot over a wash that fades
+   up from the bottom — one photograph, nothing beneath it. The phone scale is pinned
+   by test-store-doorway.mjs: on the 344px carousel cards the copy stack ends above
+   45% of the card (the sofa begins there). Do not loosen it here. -------------------- */
 @media (max-width: 1023px) {
   .fsb__card {
     --fsb-pad: clamp(18px, 5cqw, 32px);
@@ -9673,7 +9719,7 @@ body:has(.v2-home) .ftr { margin-top: 0; }
     --fsb-wash: linear-gradient(180deg, rgba(246, 239, 227, .86) 0%, rgba(246, 239, 227, .74) 16%, rgba(246, 239, 227, .52) 32%, rgba(246, 239, 227, .26) 46%, rgba(246, 239, 227, .08) 56%, rgba(246, 239, 227, 0) 64%),
                 linear-gradient(0deg, rgba(246, 239, 227, .84) 0%, rgba(246, 239, 227, .66) 10%, rgba(246, 239, 227, .44) 20%, rgba(246, 239, 227, .22) 30%, rgba(246, 239, 227, .06) 38%, rgba(246, 239, 227, 0) 44%);
   }
-  /* Every rule here is `.fsb__card .x`: it outranks the banner's own desktop rules (same specificity, later) as well as the base. */
+  /* Every rule here is `.fsb__card .x`: it outranks the cards' own desktop rules (same specificity, later) as well as the base. */
   .fsb__card .fsb__art { aspect-ratio: 4 / 5; }
   .fsb__card .fsb__image { object-position: center; }
   .fsb__card .fsb__content { width: 100%; padding: var(--fsb-pad); }
@@ -9698,6 +9744,8 @@ body:has(.v2-home) .ftr { margin-top: 0; }
 @media (prefers-reduced-motion: reduce) {
   .fsb__card, .fsb__image, .fsb__cta svg, .fsb__track { transition: none; }
   .fsb__card:hover, .fsb__card:hover .fsb__image, .fsb__card:hover .fsb__cta svg { transform: none; }
+  .fsb-lead__image, .fsb-lead__cta svg, .fsb-strip__track, .fsb-strip__image { transition: none; }
+  .fsb-lead__link:hover .fsb-lead__image, .fsb-lead__link:hover .fsb-lead__cta svg, .fsb-strip__tile a:hover .fsb-strip__image { transform: none; }
 }
 
 /* ═══ src/styles/fashion-choice.css ═══ */

@@ -38345,7 +38345,9 @@ function FashionEntryLink({
 }
 
 const TALL = '(max-width: 1023px)';
+const PHONE = '(max-width: 700px)';
 const AUTOPLAY_MS$3 = 6000;
+const STRIP_AUTOPLAY_MS = 4500;
 const LIFESTYLE = {
   key: 'lifestyle',
   to: '/lifestyle',
@@ -38353,12 +38355,86 @@ const LIFESTYLE = {
   heading: ['Lifestyle', 'Store'],
   description: 'Fashion, home, living and everyday essentials — all in one place.',
   cta: 'Explore Lifestyle',
-  wide: '/img/lifestyle-banner-wide.webp',
-  tall: '/img/lifestyle-banner-tall.webp',
-  alt: 'Camel coat and cream turtleneck, seated beside a cream sofa with green cushions, a wooden coffee table and an olive tree',
-  detailsLabel: 'What the lifestyle store brings together',
-  details: [['bag', 'Fashion & Accessories'], ['home', 'Home & Living'], ['sparkle', 'Beauty & Wellness'], ['grid', 'Everyday Essentials']]
+  // From the women's page set until a purpose-shot banner arrives: the wide tailoring editorial
+  // (sky on the left for the copy) and, on a phone, the women's hero portrait.
+  wide: '/img/fashion-editorial/women-edit-tailoring-1898.webp',
+  tall: '/img/fashion-editorial/women-main-hero-mobile.webp',
+  alt: 'Women in ivory and black tailoring against a clear blue sky'
 };
+const shopArt = name => `/img/fashion-editorial/${name}.webp`;
+/**
+ * The strip's categories: each opens /fashion/c/<slug>, the category the catalogue holds
+ * under Fashion › Women or Fashion › Men. `art: null` keeps a tile out of the strip until
+ * its photograph (`planned`, 600×780 like the women-shop set) is in img/fashion-editorial/.
+ */
+const FASHION_CATEGORIES$1 = Object.freeze({
+  women: [{
+    slug: 'dresses',
+    name: 'Dresses',
+    art: shopArt('women-shop-dresses')
+  }, {
+    slug: 'knitwear',
+    name: 'Knitwear',
+    art: shopArt('women-shop-knitwear')
+  }, {
+    slug: 'shirts',
+    name: 'Shirts',
+    art: shopArt('women-shop-shirts')
+  }, {
+    slug: 'denim',
+    name: 'Denim',
+    art: shopArt('women-shop-denim')
+  }, {
+    slug: 'coats-jackets',
+    name: 'Coats & Jackets',
+    art: shopArt('women-shop-coats')
+  }, {
+    slug: 'womens-bags',
+    name: 'Bags',
+    art: shopArt('women-shop-bags')
+  }],
+  men: [{
+    slug: 'mens-shirts',
+    name: 'Shirts',
+    art: null,
+    planned: 'men-shop-shirts'
+  }, {
+    slug: 'mens-t-shirts',
+    name: 'T-Shirts',
+    art: null,
+    planned: 'men-shop-t-shirts'
+  }, {
+    slug: 'mens-trousers',
+    name: 'Trousers',
+    art: null,
+    planned: 'men-shop-trousers'
+  }, {
+    slug: 'mens-jackets',
+    name: 'Jackets',
+    art: null,
+    planned: 'men-shop-jackets'
+  }, {
+    slug: 'mens-footwear',
+    name: 'Footwear',
+    art: null,
+    planned: 'men-shop-footwear'
+  }]
+});
+
+/** Women's and men's in turn — one of each while both last — skipping any tile without its photograph. */
+function stripTiles(categories = FASHION_CATEGORIES$1) {
+  const women = categories.women.filter(t => t.art).map(t => ({
+    ...t,
+    dept: 'Women'
+  }));
+  const men = categories.men.filter(t => t.art).map(t => ({
+    ...t,
+    dept: 'Men'
+  }));
+  const tiles = [];
+  for (let i = 0; i < Math.max(women.length, men.length); i++) tiles.push(...[women[i], men[i]].filter(Boolean));
+  return tiles;
+}
 const STORES = [{
   key: 'fashion',
   to: '/fashion',
@@ -38388,7 +38464,6 @@ const STORES = [{
 /** One photograph, every word on it. `tall` (optional) is the portrait the browser takes under 1024px. */
 function DoorwayCard({
   store,
-  modifier,
   tabIndex
 }) {
   const hId = `fsb-${store.key}-h`;
@@ -38396,7 +38471,7 @@ function DoorwayCard({
   const Entry = store.key === 'fashion' ? FashionEntryLink : Link;
   return /*#__PURE__*/jsxRuntimeExports.jsxs(Entry, {
     to: store.to,
-    className: `fsb__card fsb__card--${store.key}${modifier ? ` fsb__card--${modifier}` : ''}`,
+    className: `fsb__card fsb__card--${store.key}`,
     "aria-labelledby": `${hId} ${ctaId}`,
     tabIndex: tabIndex,
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -38419,11 +38494,7 @@ function DoorwayCard({
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "fsb__eyebrow",
           children: store.eyebrow
-        }), modifier === 'lead' ? /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-          className: "fsb__h",
-          id: hId,
-          children: store.heading.join(' ')
-        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
           className: "fsb__h",
           id: hId,
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -38575,18 +38646,242 @@ function DoorwayCarousel({
   });
 }
 
-/** The Lifestyle banner on its own — no heading. Sits after the offers. */
-function LifestyleBanner() {
+/** The strip's reduced-motion check, read when a tick fires rather than when it is scheduled. */
+function useReducedMotion$1() {
+  const reduced = reactExports.useRef(false);
+  reactExports.useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => {
+      reduced.current = mq.matches;
+    };
+    sync();
+    mq.addEventListener?.('change', sync);
+    return () => mq.removeEventListener?.('change', sync);
+  }, []);
+  return reduced;
+}
+
+/**
+ * The fashion categories, women's and men's in turn, each tile opening its own listing.
+ * How many tiles are in view is the stylesheet's (--per on the track); the track moves by
+ * whole tiles on transform only. Autoplays only when there is somewhere to go, pauses on
+ * hover and focus, never moves under prefers-reduced-motion. Arrows step a tile; a sideways
+ * swipe of 40px or more steps one too and swallows the click that would follow the tile link.
+ * Tiles outside the window are hidden from assistive technology and untabbable.
+ */
+function FashionCategoryStrip({
+  tiles = stripTiles(),
+  autoplayMs = STRIP_AUTOPLAY_MS
+}) {
+  const [index, setIndex] = reactExports.useState(0);
+  const [paused, setPaused] = reactExports.useState(false);
+  const [per, setPer] = reactExports.useState(1);
+  const track = reactExports.useRef(null);
+  const reduced = useReducedMotion$1();
+  const swipe = reactExports.useRef({
+    x: null,
+    y: null,
+    moved: false
+  });
+  const n = tiles.length;
+  reactExports.useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const measure = () => {
+      if (track.current) setPer(Math.max(1, parseInt(window.getComputedStyle(track.current).getPropertyValue('--per'), 10) || 1));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [n]);
+  const last = Math.max(0, n - per);
+  reactExports.useEffect(() => {
+    if (index > last) setIndex(last);
+  }, [index, last]);
+  reactExports.useEffect(() => {
+    if (last < 1 || paused) return undefined;
+    const t = setInterval(() => {
+      if (!reduced.current) setIndex(i => i >= last ? 0 : i + 1);
+    }, autoplayMs);
+    return () => clearInterval(t);
+  }, [last, paused, autoplayMs, reduced]);
+  if (n === 0) return null;
+  const step = d => setIndex(i => Math.min(last, Math.max(0, i + d)));
+  const onPointerDown = e => {
+    swipe.current = {
+      x: e.clientX,
+      y: e.clientY,
+      moved: false
+    };
+  };
+  const onPointerUp = e => {
+    const s = swipe.current;
+    if (s.x == null) return;
+    const dx = e.clientX - s.x,
+      dy = e.clientY - s.y;
+    swipe.current = {
+      x: null,
+      y: null,
+      moved: Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy)
+    };
+    if (swipe.current.moved) step(dx < 0 ? 1 : -1);
+  };
+  const onClickCapture = e => {
+    if (swipe.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      swipe.current.moved = false;
+    }
+  };
+  const depts = [...new Set(tiles.map(t => t.dept))];
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "v2-sec fsb fsb--lead",
-    "aria-labelledby": "fsb-lifestyle-h fsb-lifestyle-cta",
-    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "v2-wrap",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCard, {
-        store: LIFESTYLE,
-        modifier: "lead"
-      })
+    className: "fsb-strip",
+    "aria-labelledby": "fsb-strip-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fsb-strip__wrap",
+      onMouseEnter: () => setPaused(true),
+      onMouseLeave: () => setPaused(false),
+      onFocus: () => setPaused(true),
+      onBlur: () => setPaused(false),
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "fsb-strip__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "fsb-strip__eyebrow",
+            children: depts.join(' & ')
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            id: "fsb-strip-h",
+            children: "Shop fashion by category"
+          })]
+        }), last > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "fsb-strip__arrows",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            "aria-label": "Previous categories",
+            disabled: index === 0,
+            onClick: () => step(-1),
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronLeft",
+              size: 18
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            "aria-label": "Next categories",
+            disabled: index >= last,
+            onClick: () => step(1),
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chevronRight",
+              size: 18
+            })
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "fsb-strip__viewport",
+        "aria-roledescription": "carousel",
+        "aria-label": "Women's and men's categories",
+        onPointerDown: onPointerDown,
+        onPointerUp: onPointerUp,
+        onPointerCancel: () => {
+          swipe.current = {
+            x: null,
+            y: null,
+            moved: false
+          };
+        },
+        onClickCapture: onClickCapture,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "fsb-strip__track",
+          ref: track,
+          style: {
+            '--i': index
+          },
+          children: tiles.map((t, i) => {
+            const inView = i >= index && i < index + per;
+            return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+              className: "fsb-strip__tile",
+              "aria-hidden": !inView,
+              children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+                to: `/fashion/c/${t.slug}`,
+                tabIndex: inView ? undefined : -1,
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  className: "fsb-strip__art",
+                  children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+                    src: t.art,
+                    alt: "",
+                    width: 600,
+                    height: 780,
+                    className: "fsb-strip__image"
+                  })
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  className: "fsb-strip__dept",
+                  children: t.dept
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  className: "fsb-strip__name",
+                  children: t.name
+                })]
+              })
+            }, `${t.dept}-${t.slug}`);
+          })
+        })
+      })]
     })
+  });
+}
+
+/**
+ * The Lifestyle banner, full-bleed — no heading above it — and the fashion category strip
+ * directly beneath. Sits after the offers.
+ */
+function LifestyleBanner() {
+  const s = LIFESTYLE;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("section", {
+      className: "fsb-lead",
+      "aria-labelledby": "fsb-lifestyle-h fsb-lifestyle-cta",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: s.to,
+        className: "fsb-lead__link",
+        "aria-labelledby": "fsb-lifestyle-h fsb-lifestyle-cta",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "fsb-lead__art",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+            src: s.wide,
+            sources: [{
+              media: PHONE,
+              srcSet: s.tall
+            }],
+            alt: s.alt,
+            width: 1898,
+            height: 829,
+            className: "fsb-lead__image"
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "fsb-lead__copy",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "fsb-lead__eyebrow",
+            children: s.eyebrow
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+            className: "fsb-lead__h",
+            id: "fsb-lifestyle-h",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: s.heading[0]
+            }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: s.heading[1]
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "fsb-lead__description",
+            children: s.description
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "fsb-lead__cta",
+            id: "fsb-lifestyle-cta",
+            children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 16
+            })]
+          })]
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionCategoryStrip, {})]
   });
 }
 
