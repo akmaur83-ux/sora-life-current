@@ -34491,7 +34491,7 @@ function HomeTiles() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "hx-tile__art",
           children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-            src: "/img/home-tile-fashion.webp",
+            src: "/img/home-fashion-portrait-orange.webp",
             alt: "Woman in an orange knit sweater against an orange backdrop",
             width: 800,
             height: 1067,
