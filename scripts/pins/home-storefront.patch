@@ -31,7 +31,7 @@ index b67a081..4ca09c0 100644
        {/* 5 · CAMPAIGN / PROMOTION — existing promotions runtime, untouched.
               Renders nothing when no active promotion targets `home`. */}
 diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
-index b0a641b..8a18d54 100644
+index b0a641b..4d8d239 100644
 --- a/src/styles/v2-home.css
 +++ b/src/styles/v2-home.css
 @@ -867,4 +867,180 @@
@@ -94,13 +94,13 @@ index b0a641b..8a18d54 100644
 +.hx-tile__h { margin: 0; font-family: var(--slv2-disp); font-weight: 500; letter-spacing: -.01em; color: var(--hx-ink); }
 +.hx-tile__h span { display: block; }
 +.hx-tile__image { transition: transform .5s ease; }
-+.hx-tile--fashion { grid-row: 1 / 3; display: grid; grid-template-columns: 46% 54%; min-height: 432px; background: var(--hx-orange); }
++/* The panel is the portrait's own orange — sampled down its left edge (it darkens a little toward
++   the foot) — so the photograph, used exactly as supplied, meets it without a line. */
++.hx-tile--fashion { grid-row: 1 / 3; display: grid; grid-template-columns: 46% 54%; min-height: 432px; background: linear-gradient(180deg, #F17B24 0%, #F37F27 21%, #F27D25 52%, #EF771F 73%, #ED731B 94%, #EB7019 100%); }
 +.hx-tile__panel { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 26px; padding: 32px; }
 +.hx-tile--fashion .hx-tile__h { font-size: clamp(30px, 3.2vw, 46px); line-height: 1.06; }
 +.hx-tile__art { position: relative; display: block; overflow: hidden; }
 +.hx-tile__art .hx-tile__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: right top; }
-+/* The portrait is shot on orange a shade off the panel's: its plain left edge fades into the panel, so no line shows where it begins. */
-+.hx-tile--fashion .hx-tile__image { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22%); mask-image: linear-gradient(90deg, transparent 0, #000 22%); }
 +.hx-tile--small { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 24px; min-height: 208px; }
 +.hx-tile--small .hx-tile__image { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; object-position: right center; }
 +.hx-tile--small .hx-tile__h { font-size: clamp(22px, 2vw, 28px); line-height: 1.15; }
@@ -179,7 +179,7 @@ index b0a641b..8a18d54 100644
 +  .hx-tile { border-radius: 10px; }
 +  /* Fashion is ONE tile: the portrait (shot on orange) fills it from the right with her head at
 +     its top edge; the headline and the white button over the orange on the left. */
-+  .hx-tile--fashion { display: block; min-height: 0; }
++  .hx-tile--fashion { display: block; min-height: 0; background: linear-gradient(180deg, #F17B24 0%, #F37F27 30%, #F37E26 60%, #F27D25 75%, #F17B22 90%, #F07920 100%); }
 +  .hx-tile--fashion .hx-tile__art { position: absolute; inset: 0; }
 +  .hx-tile__art .hx-tile__image { inset: 0 0 auto auto; width: auto; max-width: none; height: 150%; }
 +  .hx-tile__panel { position: relative; z-index: 1; height: 100%; justify-content: center; gap: 10px; padding: 12px; }

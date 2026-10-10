@@ -57,7 +57,7 @@ function contrast(a, b) {
 const IMAGES = {
   'img/home-hero-1.webp': [1536, 864], 'img/home-hero-1-800.webp': [800, 450],
   'img/home-hero-2.webp': [1600, 900], 'img/home-hero-2-800.webp': [800, 450],
-  'img/home-tile-fashion.webp': [800, 1067], 'img/home-tile-nutrition.webp': [900, 563], 'img/home-tile-living.webp': [900, 563],
+  'img/home-fashion-portrait-orange.webp': [800, 1067], 'img/home-tile-nutrition.webp': [900, 563], 'img/home-tile-living.webp': [900, 563],
   'img/home-promo-festive.webp': [1600, 533], 'img/home-promo-festive-800.webp': [800, 267],
   'img/home-cat-wellness.webp': [480, 480], 'img/home-cat-personal-care.webp': [480, 480], 'img/home-cat-fashion.webp': [480, 480],
   'img/home-cat-groceries.webp': [480, 480], 'img/home-cat-home-textiles.webp': [480, 480],
@@ -158,14 +158,29 @@ await test('the tiles: Fashion, large, opening the fashion chooser; Health & Nut
   assert.match(tiles, /<span class="hx-tile__art"><img alt="Woman in an orange knit sweater against an orange backdrop" width="800" height="1067" class="hx-tile__image"/, 'the owner\'s portrait, at the size the markup declares');
 });
 
-await test('the Fashion photograph is the owner\'s, as it is — shot on a solid orange within a shade of the tile\'s own, its plain left edge faded into the panel so no line shows where it begins', async () => {
-  const { data, info } = await sharp(resolve(ROOT, 'img/home-tile-fashion.webp')).raw().toBuffer({ resolveWithObject: true });
+await test('the Fashion photograph is the owner\'s, exactly as supplied — solid orange edge to edge, no white in its background, no fade — under a name never used before (/img is cached for a week); the old name is gone; the panel takes the photograph\'s own orange so no line shows', async () => {
+  const src = read('src/components/HomeStorefront.jsx');
+  assert.match(src, /src="\/img\/home-fashion-portrait-orange\.webp"/, 'the tile uses the new name');
+  assert.ok(!has('img/home-tile-fashion.webp') && !src.includes('home-tile-fashion'), 'the old name — which browsers may still hold an earlier picture under — is gone');
+  const { data, info } = await sharp(resolve(ROOT, 'img/home-fashion-portrait-orange.webp')).raw().toBuffer({ resolveWithObject: true });
   const px = (x, y) => [...data.subarray((y * info.width + x) * info.channels, (y * info.width + x) * info.channels + 3)];
-  for (const [x, y] of [[8, 8], [8, 400], [8, 900], [150, 60], [100, 700]]) {
-    const p = px(x, y);
-    assert.ok(Math.max(...p.map((v, i) => Math.abs(v - [0xF4, 0x7B, 0x20][i]))) <= 12, `(${x}, ${y}) is ${p} — not within a shade of the tile's orange`);
+  // The left 40% (her sleeve begins at about 42%) is the solid background: every pixel orange, none white or grey.
+  for (let y = 0; y < info.height; y += 7) for (let x = 0; x < info.width * 0.40; x += 7) {
+    const [r, g, bl] = px(x, y);
+    assert.ok(r > 220 && g > 95 && g < 145 && bl < 60, `(${x}, ${y}) is ${[r, g, bl]} — not the solid orange`);
   }
-  assert.match(read('src/styles/v2-home.css'), /\.hx-tile--fashion \.hx-tile__image \{ -webkit-mask-image: linear-gradient\(90deg, transparent 0, #000 22%\); mask-image: linear-gradient\(90deg, transparent 0, #000 22%\); \}/, 'its left edge fades into the panel');
+  const sheet = read('src/styles/v2-home.css');
+  assert.doesNotMatch(sheet, /\.hx-tile--fashion \.hx-tile__image \{[^}]*mask-image/, 'no edge fade on the photograph');
+  // The panel's gradient follows the photograph's left edge (desktop: the photograph's top 96% spans the tile).
+  const grad = sheet.match(/\n\.hx-tile--fashion \{[^}]*background: linear-gradient\(180deg, ([^)]+)\);/);
+  assert.ok(grad, 'the panel is a gradient');
+  for (const [, hex, pct] of grad[1].matchAll(/#([0-9A-F]{6}) (\d+)%/g)) {
+    const y = Math.min(info.height - 21, Math.round((Number(pct) / 100) * 0.96 * info.height));
+    let sum = [0, 0, 0], n = 0;
+    for (let yy = y; yy < y + 20; yy++) for (let x = 0; x < 40; x++) { const p = px(x, yy); sum = sum.map((v, i) => v + p[i]); n++; }
+    const edge = sum.map((v) => v / n), stop = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    assert.ok(Math.max(...stop.map((v, i) => Math.abs(v - edge[i]))) <= 6, `#${hex} at ${pct}% vs the photograph's edge ${edge.map(Math.round)}`);
+  }
 });
 
 await test('"Explore the stores" (not a second "Shop by category"): Wellness, Personal Care, Fashion, Groceries, Home Textiles — each a circle and its name, each to its own place', () => {
@@ -219,8 +234,14 @@ await test('contrast (WCAG 2.x), from the stylesheet itself: white on the deep-o
   assert.equal(decl('.hx-hero__image', 'mix-blend-mode'), 'multiply', 'the lineups\' white takes the tint: no white block');
   assert.equal(decl('.hx .hx-btn', 'background'), 'var(--hx-orange-deep)'); assert.equal(decl('.hx .hx-btn', 'color'), '#fff');
   assert.equal(decl('.hx .hx-hl', 'color'), 'var(--hx-orange-deep)'); assert.equal(decl('.hx .hx-more', 'color'), 'var(--hx-orange-deep)');
-  assert.equal(decl('.hx-tile--fashion', 'background'), 'var(--hx-orange)'); assert.equal(decl('.hx-tile__h', 'color'), 'var(--hx-ink)');
-  const pairs = [['white on the deep-orange buttons', '#FFFFFF', deep], ['deep orange on the page tint (headline line, View All)', deep, page], ['near-black on the bright-orange Fashion panel', ink, orange]];
+  assert.equal(decl('.hx-tile__h', 'color'), 'var(--hx-ink)');
+  const stops = [...decl('.hx-tile--fashion', 'background').matchAll(/#[0-9A-F]{6}/gi)].map((m) => m[0]);
+  assert.ok(stops.length >= 4, 'the Fashion panel\'s orange stops');
+  const darkest = stops.reduce((d, c) => (contrast(ink, c) < contrast(ink, d) ? c : d));
+  assert.ok(contrast(ink, darkest) >= 4.5, `near-black on the panel's darkest orange ${darkest}: ${contrast(ink, darkest).toFixed(2)}:1`);
+  console.log(`        near-black on the Fashion panel's darkest orange: ${ink} on ${darkest} = ${contrast(ink, darkest).toFixed(2)}:1`);
+  for (const c of stops) assert.ok(contrast('#FFFFFF', c) < 4.5, `white would fail on ${c} — and nothing puts it there`);
+  const pairs = [['white on the deep-orange buttons', '#FFFFFF', deep], ['deep orange on the page tint (headline line, View All)', deep, page], ['near-black on the bright orange accent', ink, orange]];
   for (const [what, fg, bg] of pairs) {
     const r = contrast(fg, bg);
     assert.ok(r >= 4.5, `${what}: ${r.toFixed(2)}:1`);

@@ -153,7 +153,7 @@ export function HomeTiles() {
             <h2 className="hx-tile__h" id="hx-fashion-h"><span>Fashion</span> <span>for every</span> <span>mood.</span></h2>
             <span className="hx-btn hx-btn--light" id="hx-fashion-cta">Shop Fashion <Icon name="arrowRight" size={16} /></span>
           </div>
-          <span className="hx-tile__art"><DeferredImage src="/img/home-tile-fashion.webp" alt="Woman in an orange knit sweater against an orange backdrop" width={800} height={1067} className="hx-tile__image" /></span>
+          <span className="hx-tile__art"><DeferredImage src="/img/home-fashion-portrait-orange.webp" alt="Woman in an orange knit sweater against an orange backdrop" width={800} height={1067} className="hx-tile__image" /></span>
         </FashionEntryLink>
         <Link to="/category/supplements" className="hx-tile hx-tile--small hx-tile--nutrition" aria-labelledby="hx-nutrition-h">
           <DeferredImage src="/img/home-tile-nutrition.webp" alt="" width={900} height={563} className="hx-tile__image" />
