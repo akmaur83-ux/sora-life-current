@@ -1,4 +1,4 @@
-import { j as jsxRuntimeExports, bJ as HOMEPAGE_VISUAL_FIELDS, r as reactExports, bK as safeVisualUrl, bL as MAX_CONCERN_PRODUCTS, bM as searchCatalogueForPicker, bN as productGallery, bO as MAX_DISCOVERY_CARDS, bP as makeDiscoveryId, bQ as sanitizeHomepageVisuals, bR as normalizeDiscovery, a as adminGetSetting, bS as products, e as adminSetSetting, bT as discoveryPayload, bU as mergeHomepageVisuals, bt as announceHomepageSaved } from '../bundle.js';
+import { j as jsxRuntimeExports, bH as HOMEPAGE_VISUAL_FIELDS, r as reactExports, bp as safeVisualUrl, bI as MAX_CONCERN_PRODUCTS, bJ as searchCatalogueForPicker, bK as productGallery, bL as MAX_DISCOVERY_CARDS, bM as makeDiscoveryId, bN as sanitizeHomepageVisuals, bO as normalizeDiscovery, a as adminGetSetting, bP as products, e as adminSetSetting, bQ as discoveryPayload, bR as mergeHomepageVisuals, br as announceHomepageSaved } from '../bundle.js';
 import { u as uploadHomepageImage } from './homepageImageUpload.js';
 
 function ImageControl({

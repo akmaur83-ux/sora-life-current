@@ -3182,40 +3182,6 @@ let contact = {
   email: '',
   address: ''
 };
-const DEFAULT_HERO_SLIDES = [{
-  id: 'buckthorn',
-  kind: 'video',
-  src: '/media/hero.mp4',
-  poster: '/media/hero-poster.jpg',
-  kicker: 'The Power of',
-  title: 'Sea Buckthorn',
-  sub: 'Harvested from the Himalayas. Made for your wellness.',
-  lede: 'Pure nutrition. Natural radiance. Everyday wellness.',
-  cta: {
-    label: 'EXPLORE COLLECTION',
-    to: '/category/wellness'
-  },
-  position: 'center'
-}, {
-  id: 'harvest',
-  kind: 'image',
-  src: '/media/hero-slide2.jpg',
-  kicker: 'From the Himalayas',
-  title: "Nature's Orange Gold",
-  sub: 'Sun-ripened sea buckthorn, gently cold-pressed.',
-  lede: 'Nutrient-dense wellness, straight from the mountains.',
-  cta: {
-    label: 'SHOP JUICES & DRINKS',
-    to: '/category/juices-drinks'
-  },
-  position: 'center'
-}];
-let heroSlides = DEFAULT_HERO_SLIDES;
-// True only once applyHeroSlides() has replaced the built-in defaults with
-// admin-managed rows. The V2 hero uses this to decide whether slide copy is
-// approved configured content (render it) or the hardcoded marketing defaults
-// above (do not carry unverified provenance/claims into V2).
-let heroSlidesConfigured = false;
 let theme = {
   ...DEFAULT_THEME
 };
@@ -3260,8 +3226,6 @@ function applyContact(v) {
 }
 function applyHeroSlides(list) {
   if (!Array.isArray(list) || !list.length) return false;
-  heroSlides = list;
-  heroSlidesConfigured = true;
   return true;
 }
 
@@ -3890,7 +3854,7 @@ function ProductImage({
 }
 
 const NOTICE_ICONS = ['truck', 'card', 'shield'];
-const INTERVAL$1 = 5000;
+const INTERVAL = 5000;
 
 // V2 announcement bar — extracted from Header so it is its own concern.
 // Content comes entirely from the admin-editable `announcement` setting; no
@@ -3913,7 +3877,7 @@ function AnnouncementBar() {
   // no information is lost.
   reactExports.useEffect(() => {
     if (reduced || notices.length < 2) return undefined;
-    const t = setTimeout(() => setI(n => (n + 1) % notices.length), INTERVAL$1);
+    const t = setTimeout(() => setI(n => (n + 1) % notices.length), INTERVAL);
     return () => clearTimeout(t);
   }, [i, reduced, notices.length]);
   if (!notices.length) return null;
@@ -30271,7 +30235,7 @@ const GROCERY_TAGLINE = 'Good food, brighter days';
 
 /** Delivery promise. One string, used by the header badge and the trust strip. */
 const GROCERY_DELIVERY_WINDOW = '6-7 days';
-const HERO_SLIDES$2 = [{
+const HERO_SLIDES$3 = [{
   id: 'freshness',
   image: '/img/grocery-hero.webp',
   headline: 'Freshness for a Brighter Everyday',
@@ -30547,7 +30511,7 @@ const HOMELIVING_DELIVERY_WINDOW = '6-7 days';
  * (furnishings low, the copy upper-left). Both leave the top strip bare
  * for the header that floats over it.
  */
-const HERO_SLIDES$1 = [{
+const HERO_SLIDES$2 = [{
   id: 'comfort',
   image: {
     wide: '/img/homeliving-hero-wide.webp',
@@ -30562,7 +30526,7 @@ const HERO_SLIDES$1 = [{
 }];
 
 /** The four badges under the hero copy. The delivery one is the only factual claim. */
-const TRUST$1 = [{
+const TRUST$2 = [{
   icon: 'sparkle',
   title: 'Premium Fabrics',
   sub: 'Chosen for touch and wear'
@@ -34066,1209 +34030,596 @@ function Layout() {
   });
 }
 
-// Structured presentation fields inside site_settings.homepage.visuals.
-// No CSS/HTML input is accepted. Shared by the editor and storefront reader.
-const IMAGE_POSITIONS = ['left top', 'center top', 'right top', 'left center', 'center center', 'right center', 'left bottom', 'center bottom', 'right bottom'];
-const color$1 = (label, value) => ({
-  label,
-  type: 'color',
-  value
-});
-const number$1 = (label, value, min, max, step = 1) => ({
-  label,
-  type: 'number',
-  value,
-  min,
-  max,
-  step
-});
-const toggle = (label, value = false) => ({
-  label,
-  type: 'boolean',
-  value
-});
-const image$1 = label => ({
-  label,
-  type: 'image',
-  value: ''
-});
-const select$1 = (label, value, options) => ({
-  label,
-  type: 'select',
-  value,
-  options
-});
-const HOMEPAGE_VISUAL_FIELDS = {
-  categoryStrip: {
-    enabled: toggle('Enable category background', false),
-    backgroundColor: color$1('Background color', '#F7F1E7'),
-    imageUrl: image$1('Background strip image'),
-    imageSize: select$1('Background image fit', 'cover', ['cover', 'contain']),
-    imagePosition: select$1('Background image position', 'center center', IMAGE_POSITIONS),
-    imageOpacity: number$1('Background image opacity', 1, 0, 1, 0.05),
-    overlayColor: color$1('Overlay color', '#FBF8F1'),
-    overlayOpacity: number$1('Overlay strength (0 = off)', 0, 0, 1, 0.05),
-    paddingTop: number$1('Top padding (px)', 12, 0, 48),
-    paddingBottom: number$1('Bottom padding (px)', 12, 0, 48),
-    borderTop: toggle('Show top border'),
-    borderBottom: toggle('Show bottom border'),
-    borderColor: color$1('Border color', '#DED2C4'),
-    borderWidth: number$1('Border thickness (px)', 1, 0, 4),
-    radius: number$1('Corner radius (px)', 8, 0, 16),
-    textureUrl: image$1('Decorative texture'),
-    texturePosition: select$1('Texture position', 'center center', IMAGE_POSITIONS),
-    leftImage: image$1('Left decoration'),
-    rightImage: image$1('Right decoration'),
-    decorationOpacity: number$1('Decoration opacity', 0.25, 0, 1, 0.05),
-    decorationSize: number$1('Decoration width (px)', 120, 24, 240),
-    decorationPosition: select$1('Decoration vertical position', 'center', ['top', 'center', 'bottom']),
-    hideTextureMobile: toggle('Hide texture on mobile'),
-    hideLeftMobile: toggle('Hide left decoration on mobile', true),
-    hideRightMobile: toggle('Hide right decoration on mobile', true)
-  },
-  offers: {
-    backgroundColor: color$1('Section background', '#FBF8F1'),
-    frameColor: color$1('Frame interior', '#FFF8ED'),
-    frameEnabled: toggle('Show bordered frame', true),
-    borderColor: color$1('Frame border color', '#702B3B'),
-    borderWidth: number$1('Frame border thickness (px)', 1, 0, 4),
-    accentColor: color$1('Heading and accent color', '#702B3B'),
-    radius: number$1('Frame corner radius (px)', 12, 0, 16),
-    textureUrl: image$1('Frame background image / texture'),
-    textureOpacity: number$1('Texture opacity', 0.12, 0, 1, 0.01),
-    padding: number$1('Section top and bottom padding (px)', 20, 0, 48),
-    gap: number$1('Gap between promotions (px)', 16, 8, 32),
-    desktopColumns: select$1('Maximum promotions per desktop row', 2, [1, 2, 3]),
-    mobileWidth: number$1('Mobile promotion width (%)', 90, 88, 92),
-    decorationUrl: image$1('Optional decorative artwork'),
-    decorationOpacity: number$1('Artwork opacity', 0.15, 0, 1, 0.05),
-    decorationSize: number$1('Artwork width (px)', 160, 24, 240)
-  }
-};
-function safeVisualUrl(value) {
-  if (typeof value !== 'string' || !value.trim()) return '';
-  const raw = value.trim();
-  if (raw.length > 2000 || /[\s\\\u0000-\u001f\u007f]/.test(raw)) return '';
-  let url;
-  try {
-    url = new URL(raw, 'https://visual.invalid');
-  } catch {
-    return '';
-  }
-  if (url.username || url.password || url.port || /\.(svg|html?)$/i.test(url.pathname)) return '';
-  let path;
-  try {
-    path = decodeURIComponent(url.pathname);
-  } catch {
-    return '';
-  }
-  if (/[\\\u0000-\u001f\u007f]/.test(path)) return '';
-  if (raw.startsWith('/') && !raw.startsWith('//') && url.origin === 'https://visual.invalid') return raw;
-  if (!raw.startsWith('https://') || url.protocol !== 'https:') return '';
-  const host = url.hostname;
-  // Visual URLs load in <img>, never via a server fetch. Still reject local,
-  // private and literal-IP destinations rather than probing a user's LAN.
-  if (!host.includes('.') || /^(localhost|.*\.(localhost|local|internal|test|invalid|lan|home\.arpa))$/i.test(host) || /^[\d.]+$/.test(host) || host.includes(':')) return '';
-  return url.href;
-}
-function sanitizeHomepageVisuals(raw) {
-  const result = {};
-  for (const [group, fields] of Object.entries(HOMEPAGE_VISUAL_FIELDS)) {
-    result[group] = {};
-    for (const [key, field] of Object.entries(fields)) {
-      const v = raw?.[group]?.[key];
-      let clean = field.value;
-      if (field.type === 'boolean' && typeof v === 'boolean') clean = v;
-      if (field.type === 'color' && typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) clean = v;
-      if (field.type === 'image') clean = safeVisualUrl(v);
-      if (field.type === 'select' && field.options.includes(v)) clean = v;
-      if (field.type === 'number' && v !== '' && v != null && Number.isFinite(Number(v))) {
-        clean = Math.min(field.max, Math.max(field.min, Number(v)));
-      }
-      result[group][key] = clean;
-    }
-  }
-  return result;
-}
-function mergeHomepageVisuals(current, visuals) {
-  return {
-    ...(current && typeof current === 'object' ? current : {}),
-    visuals: sanitizeHomepageVisuals(visuals)
-  };
-}
-
-// Keep the placement runtime and its sort/date/active rules authoritative.
-// De-duplicate IDs only; never slice away additional posters or offer cards.
-function uniqueHomepagePromotions(promotions) {
-  const seen = new Set();
-  return promotions.filter(promo => {
-    if (seen.has(promo.id)) return false;
-    seen.add(promo.id);
-    return true;
-  });
-}
-
-const number = (label, value, min, max, step = 1) => ({
-  label,
-  type: 'number',
-  value,
-  min,
-  max,
-  step
-});
-const select = (label, value, options) => ({
-  label,
-  type: 'select',
-  value,
-  options
-});
-const color = label => ({
-  label,
-  type: 'color',
-  value: ''
-});
-const HERO_CTA_FIELDS = {
-  desktopPosition: select('Desktop position', 'flow', ['flow', 'custom']),
-  x: number('Desktop horizontal position (%)', 0, 0, 100),
-  y: number('Desktop vertical position (%)', 75, 0, 100),
-  mobilePosition: select('Mobile position', 'auto', ['auto', 'custom']),
-  mobileX: number('Mobile horizontal position (%)', 50, 0, 100),
-  mobileY: number('Mobile vertical position (%)', 95, 0, 100),
-  width: number('Button width (px; 0 = automatic)', 118, 0, 480),
-  paddingX: number('Horizontal padding (px)', 14, 4, 48),
-  paddingY: number('Vertical padding (px)', 7, 0, 24),
-  backgroundColor: color('Background color (blank = theme)'),
-  textColor: color('Text color (blank = theme)'),
-  borderColor: color('Border color (blank = theme)'),
-  borderWidth: number('Border thickness (px)', 1, 0, 6),
-  radius: number('Corner radius (px)', 2, 0, 40),
-  fontSize: number('Font size (px; 0 = responsive default)', 13, 0, 24),
-  fontWeight: select('Font weight', 700, [400, 500, 600, 700]),
-  opacity: number('Button opacity', 1, 0.3, 1, 0.05),
-  shadow: select('Button shadow', 'none', ['none', 'subtle']),
-  textureUrl: {
-    label: 'Button background texture',
-    type: 'image',
-    value: ''
-  },
-  textureOpacity: number('Texture opacity', 0.25, 0, 1, 0.05),
-  textureFit: select('Texture fit', 'cover', ['cover', 'contain']),
-  iconUrl: {
-    label: 'Button icon image',
-    type: 'image',
-    value: ''
-  },
-  iconSide: select('Icon side', 'left', ['left', 'right']),
-  iconSize: number('Icon size (px)', 16, 10, 32)
-};
-function sanitizeHeroCta(input) {
-  const raw = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
-  return Object.fromEntries(Object.entries(HERO_CTA_FIELDS).map(([key, f]) => {
-    const v = raw[key];
-    let value = f.value;
-    if (f.type === 'number' && v !== '' && (typeof v === 'number' || typeof v === 'string') && Number.isFinite(Number(v))) value = Math.min(f.max, Math.max(f.min, Number(v)));
-    if (f.type === 'select' && f.options.includes(v)) value = v;
-    if (f.type === 'color' && typeof v === 'string' && /^#[\da-f]{6}$/i.test(v)) value = v;
-    if (f.type === 'image') value = safeVisualUrl(v);
-    return [key, value];
-  }));
-}
-function mergeHeroCta(homepage, slideId, appearance) {
-  if (typeof slideId !== 'string' || !/^[\w-]{1,100}$/.test(slideId) || ['__proto__', 'constructor', 'prototype'].includes(slideId)) throw new Error('Invalid slide ID');
-  return {
-    ...homepage,
-    heroCtas: {
-      ...(homepage?.heroCtas || {}),
-      [slideId]: sanitizeHeroCta(appearance)
-    }
-  };
-}
-function heroCtaStyle(input) {
-  const a = sanitizeHeroCta(input);
-  // Auto always resolves to the current safe mobile default, including for
-  // older saved records that may contain legacy X/Y values.
-  const mobileX = a.mobilePosition === 'custom' ? a.mobileX : 50;
-  const mobileY = a.mobilePosition === 'custom' ? a.mobileY : 95;
-  return {
-    '--hcta-x': `${a.x}%`,
-    '--hcta-y': `${a.y}%`,
-    '--hcta-mobile-x': `${mobileX}%`,
-    '--hcta-mobile-y': `${mobileY}%`,
-    '--hcta-width': a.width ? `${a.width}px` : 'auto',
-    '--hcta-px': `${a.paddingX}px`,
-    '--hcta-py': `${a.paddingY}px`,
-    '--hcta-bg': a.backgroundColor || 'var(--slv2-primary, var(--slv2-f700))',
-    '--hcta-text': a.textColor || 'var(--slv2-ivory)',
-    '--hcta-border': a.borderColor || 'transparent',
-    '--hcta-border-width': `${a.borderWidth}px`,
-    '--hcta-radius': `${a.radius}px`,
-    '--hcta-font': a.fontSize ? `${a.fontSize}px` : undefined,
-    '--hcta-weight': a.fontWeight,
-    '--hcta-opacity': a.opacity,
-    '--hcta-shadow': a.shadow === 'subtle' ? '0 2px 6px rgb(0 0 0 / 16%)' : 'none',
-    '--hcta-texture-opacity': a.textureOpacity,
-    '--hcta-texture-fit': a.textureFit,
-    '--hcta-icon-size': `${a.iconSize}px`
-  };
-}
-
-function CtaImage({
-  src,
-  className
+function FashionChooser({
+  onClose
 }) {
-  const [failed, setFailed] = reactExports.useState(false);
-  return !failed && /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-    src: src,
-    className: className,
-    alt: "",
-    "aria-hidden": "true",
-    loading: "eager",
-    onError: () => setFailed(true)
-  });
-}
-function HeroCta({
-  cta,
-  appearance,
-  placement = 'flow',
-  artworkOnly = false,
-  active = true,
-  children
-}) {
-  if (!cta?.to) return null;
-  const a = sanitizeHeroCta(appearance);
-  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-    className: `hero-cta hero-cta--${placement}`,
-    style: heroCtaStyle(a),
-    "data-desktop": a.desktopPosition,
-    "data-mobile": "custom",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      to: cta.to,
-      className: "v2-btn v2-btn--sm hero-cta__button",
-      tabIndex: active ? undefined : -1,
-      children: [active && a.textureUrl && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
-        src: a.textureUrl,
-        className: "hero-cta__texture"
-      }, a.textureUrl), active && a.iconUrl && a.iconSide === 'left' && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
-        src: a.iconUrl,
-        className: "hero-cta__icon"
-      }, a.iconUrl), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "hero-cta__label",
-        children: children || cta.label
-      }), active && a.iconUrl && a.iconSide === 'right' && /*#__PURE__*/jsxRuntimeExports.jsx(CtaImage, {
-        src: a.iconUrl,
-        className: "hero-cta__icon"
-      }, a.iconUrl)]
-    })
-  });
-}
-
-// Pure, deterministic Homepage merchandising selectors.
-//
-// Every item returned here comes from the hydrated catalogue/category data.
-// The selector never creates prices, discounts, ratings, brands or categories;
-// sections whose supporting data does not exist simply receive an empty list.
-
-function eligibleProduct(product) {
-  return Boolean(product && product.id != null && product.slug && product.name && product.isActive !== false && Number(product.stock) > 0);
-}
-function stableProducts(list) {
-  return [...list].sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0) || String(a.id).localeCompare(String(b.id)));
-}
-function distinct(primary, fallback, limit, excluded = new Set()) {
-  const result = [];
-  const seen = new Set(excluded);
-  for (const product of [...primary, ...fallback]) {
-    if (!eligibleProduct(product) || seen.has(product.id)) continue;
-    seen.add(product.id);
-    result.push(product);
-    if (result.length === limit) break;
-  }
-  return result;
-}
-
-// Avoid filling a discovery rail with one category when a broad catalogue is
-// available. Category order and product order remain deterministic.
-function categoryBalanced(list, limit) {
-  const groups = new Map();
-  for (const product of list) {
-    const key = product.category || 'uncategorized';
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(product);
-  }
-  const output = [];
-  let row = 0;
-  while (output.length < limit) {
-    let added = false;
-    for (const products of groups.values()) {
-      if (products[row]) {
-        output.push(products[row]);
-        added = true;
-        if (output.length === limit) break;
-      }
-    }
-    if (!added) break;
-    row += 1;
-  }
-  return output;
-}
-
-// A broad fallback hero must not silently become a single-brand or
-// single-category takeover. Prefer real, imaged products across categories;
-// when two candidates represent the same category, brand diversity breaks the
-// tie. The output remains stable for the same hydrated catalogue.
-function selectMarketplaceHeroProducts(productList, limit = 6) {
-  const available = stableProducts((Array.isArray(productList) ? productList : []).filter(product => eligibleProduct(product) && product.image));
-  const preferred = [...available.filter(product => product.isFeatured), ...available.filter(product => product.isNew), ...available];
-  const unique = distinct(preferred, available, available.length);
-  const balanced = categoryBalanced(unique, Math.max(0, limit));
-  if (balanced.length <= 1) return balanced;
-  const result = [];
-  const remaining = [...balanced];
-  const brands = new Set();
-  while (remaining.length && result.length < limit) {
-    const nextIndex = remaining.findIndex(product => {
-      const brand = productBrandName(product);
-      return brand && !brands.has(brand.toLocaleLowerCase());
-    });
-    const [next] = remaining.splice(nextIndex >= 0 ? nextIndex : 0, 1);
-    result.push(next);
-    const brand = productBrandName(next);
-    if (brand) brands.add(brand.toLocaleLowerCase());
-  }
-  return result;
-}
-function cleanBrand(value) {
-  const brand = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
-  return brand && brand.length <= 60 ? brand : '';
-}
-function productBrandName(product) {
-  const explicit = cleanBrand(product?.brand || product?.brandName || product?.manufacturer);
-  if (explicit) return explicit;
-
-  // These two names are only inferred when they are literally present in the
-  // catalogue record (name/category) or its existing source URL.
-  const evidence = `${product?.name || ''} ${product?.category || ''}`;
-  if (/\bmom[\s-]*trust\b/i.test(evidence)) return 'Mom Trust';
-  try {
-    const host = new URL(product?.permalink || '').hostname.toLowerCase().replace(/^www\./, '');
-    if (host === 'biosash.com' || host.endsWith('.biosash.com')) return 'Biosash';
-    if (/^mom-?trust\./.test(host) || host.includes('momtrust')) return 'Mom Trust';
-  } catch {
-    // Missing/relative source URLs carry no usable brand evidence.
-  }
-  return '';
-}
-function selectHomeMerchandising(productList, categoryList) {
-  const available = stableProducts((Array.isArray(productList) ? productList : []).filter(eligibleProduct));
-  const categories = (Array.isArray(categoryList) ? categoryList : []).filter(category => category?.slug && category?.name);
-  const featured = available.filter(product => product.isFeatured);
-  const discounted = available.filter(product => product.onSale || Number(product.discountPct) > 0);
-  const trending = categoryBalanced(distinct(featured, discounted, Math.min(8, available.length)), 8);
-  const trendingFilled = distinct(trending, categoryBalanced(available, 8), Math.min(8, available.length));
-  const trendingIds = new Set(trendingFilled.map(product => product.id));
-  const newProducts = available.filter(product => product.isNew);
-  const discover = distinct(newProducts, [...available].reverse(), 5, trendingIds);
-  const discoverFilled = discover.length >= 4 ? discover : distinct(discover, available, 5);
-  const flaggedPopular = available.filter(product => product.isBestseller);
-  const popularIsVerified = flaggedPopular.length >= 4;
-  const priorIds = new Set([...trendingFilled, ...discoverFilled].map(product => product.id));
-  const popular = popularIsVerified ? distinct(flaggedPopular, [], 8) : distinct(categoryBalanced(available, 8), available, 8, priorIds);
-  const popularFilled = popular.length >= 4 ? popular : distinct(popular, available, 8);
-  const brandMap = new Map();
-  for (const product of available) {
-    const name = productBrandName(product);
-    if (!name) continue;
-    const key = name.toLocaleLowerCase();
-    if (!brandMap.has(key)) brandMap.set(key, {
-      name,
-      products: []
-    });
-    brandMap.get(key).products.push(product);
-  }
-  const brands = [...brandMap.values()].sort((a, b) => b.products.length - a.products.length || a.name.localeCompare(b.name)).slice(0, 4);
-  const collections = categories.map(category => ({
-    category,
-    products: available.filter(product => (product.categories || [product.category]).includes(category.slug)).slice(0, 4)
-  })).filter(collection => collection.products.length > 0).slice(0, 4);
-  const momCategory = categories.find(category => /mom[\s-]*trust/i.test(`${category.slug} ${category.name}`));
-  const momProducts = available.filter(product => productBrandName(product) === 'Mom Trust' || momCategory && (product.categories || [product.category]).includes(momCategory.slug)).slice(0, 6);
-  return {
-    available,
-    trending: trendingFilled,
-    discover: discoverFilled,
-    discoverLink: newProducts.length ? '/shop?filter=new' : '/shop',
-    popular: popularFilled,
-    popularTitle: popularIsVerified ? 'Bestsellers' : 'Worth discovering',
-    popularEyebrow: popularIsVerified ? 'Catalogue favourites' : 'Across the marketplace',
-    brands,
-    collections,
-    momCategory,
-    momProducts
-  };
-}
-
-const MARKETPLACE_HERO_COPY = {
-  kicker: 'SORA LIFE MARKETPLACE',
-  title: 'Discover what fits your life.',
-  cta: {
-    label: 'Explore marketplace',
-    to: '/shop'
-  }
-};
-
-// Only mobile typography responds to length; configured copy stays intact.
-const titleClass = title => `v2-hero__title${String(title || '').trim().length > 22 ? ' v2-hero__title--long' : ''}`;
-
-/**
- * Admin copy that is safe to render as a heading or as alt text.
- *
- * A slide deck can legitimately be saved mid-edit, and placeholder values have
- * reached production before — a title of "." rendered a visible stray glyph
- * over the artwork AND made it the document's only <h1>, which is worth
- * nothing to a search engine and reads as a lone full stop to a screen reader.
- * A heading has to contain a letter or a digit; punctuation alone does not
- * become one. Nothing is substituted in its place: the slide simply renders
- * without a heading until real copy is configured.
- */
-const headingText = value => {
-  const text = String(value ?? '').trim();
-  return /[\p{L}\p{N}]/u.test(text) ? text : '';
-};
-function fallbackCategoryCount(productList) {
-  const validSlugs = new Set((categories || []).filter(category => category?.slug).map(category => category.slug));
-  const slugs = new Set();
-  for (const product of productList) {
-    for (const slug of product.categories || [product.category]) {
-      if (validSlugs.has(slug)) slugs.add(slug);
-    }
-  }
-  return slugs.size;
-}
-
-// V2 note: the previous hardcoded BENEFITS strip ("Rich in 190+ Nutrients",
-// "Boosts Immunity & Wellness") was authored marketing copy baked into this
-// component, not data the storefront can substantiate. V2 does not render
-// product claims that are not bound to verified data, so it has been removed
-// rather than restyled.
-
-const INTERVAL = 6000;
-
-// Brand hero still (Himalayan sea buckthorn). Last-resort visual so a slide
-// can never render as an empty colour block — see posterFor() below.
-const FALLBACK_POSTER = '/media/hero-poster.jpg';
-
-// Admin-uploaded hero art uses its original public Storage URL. The render
-// endpoint is not assumed to be available, so remote art has no generated
-// transform URL or srcset. Local poster variants below remain optimized.
-function heroSrc(src) {
-  return src;
-}
-// Locally-shipped hero stills that have pre-built WebP renditions alongside
-// them (see media/hero-poster-<w>.webp). Keyed by the original path.
-// 640w is deliberately absent: the hero is full-bleed, so on a DPR-2 phone
-// (390 CSS px -> ~780 device px) the browser would pick 640w, then upgrade to
-// 1024w and pay for both. Starting at 1024w costs one request, 60 KB, and is
-// still smaller than the 82 KB JPEG it replaces.
-const LOCAL_HERO_VARIANTS = {
-  '/media/hero-poster.jpg': [1024, 1600]
-};
-function heroSrcSet(src) {
-  const local = LOCAL_HERO_VARIANTS[src];
-  if (local) {
-    const base = src.replace(/\.[a-z]+$/i, '');
-    return local.map(w => `${base}-${w}.webp ${w}w`).join(', ');
-  }
-  return undefined;
-}
-
-// Desktop artwork is offered through <picture>, so the BROWSER chooses by
-// media query: below 1024px the <source> never matches and only image_url is
-// fetched; at 1024px and above only the desktop file is. No JavaScript
-// decides, and no viewport downloads both. Without a desktop image the slide
-// stays the bare <img> it always was — the wrapper exists only when there is
-// a choice to offer. naturalWidth/Height on the <img> report whichever source
-// the browser chose, so the artwork-only framing follows the desktop image's
-// own ratio when one is set.
-const DESKTOP_MEDIA$1 = '(min-width: 1024px)';
-function withDesktopSource(desktopSrc, img) {
-  if (!desktopSrc) return img;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("source", {
-      media: DESKTOP_MEDIA$1,
-      srcSet: heroSrcSet(desktopSrc) || heroSrc(desktopSrc),
-      sizes: "100vw"
-    }), img]
-  });
-}
-
-// The still we can show for a slide, if any. A video slide whose poster is
-// missing used to fall through to a bare coloured <div> — that is how the
-// duplicate "Mom's Trust" slide (poster_url null, video_url returns 400)
-// rendered as a large empty block on every device.
-function stillFor(slide) {
-  // Image slides carry their URL in `src` (adminApi maps image_url -> src);
-  // video slides carry a separate poster. Check the right field for each, or
-  // an image slide gets treated as having no still and is wrongly dropped.
-  if (slide.kind === 'image') return slide.src || slide.poster || null;
-  return slide.poster || slide.image || null;
-}
-
-// A slide is only worth rendering if it can actually show something: either a
-// video we are going to play, or a still. Anything else would paint an empty
-// block, so it is dropped from the carousel rather than shown broken.
-function isRenderable(slide, canUseVideo, failed) {
-  if (slide.kind === 'video' && canUseVideo && slide.src && !failed[slide.id]) return true;
-  return Boolean(stillFor(slide));
-}
-
-/**
- * The page's one and only <h1>.
- *
- * It used to come from whichever hero slide happened to be configured, which
- * made the homepage's most important semantic element a moving target: three
- * slides meant three <h1> elements, an unconfigured deck meant none, and a
- * placeholder title meant the document was headed ".". None of that describes
- * the site.
- *
- * So the heading is stated once, here, from the configured site name plus the
- * positioning the footer already uses. It is visually hidden because the hero
- * artwork carries its own baked-in campaign headline — showing both would
- * duplicate it on screen. This is not hidden SEO text: it is the accurate,
- * plain-language title of the page, available to every screen reader and
- * unchanged by whatever campaign is running.
- */
-function PageHeading() {
-  const name = branding?.siteName || 'SORA LIFE';
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("h1", {
-    className: "sr-only",
-    children: [name, " \u2014 a marketplace for wellness, personal care and everyday essentials"]
-  });
-}
-function Hero$1() {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(PageHeading, {}), heroSlidesConfigured ? /*#__PURE__*/jsxRuntimeExports.jsx(ConfiguredHero, {}) : /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceHero, {})]
-  });
-}
-
-// ----------------------------------------------------------- marketplace fall
-function MarketplaceHero() {
-  const heroProducts = selectMarketplaceHeroProducts(products, 5);
-  if (!heroProducts.length) return null;
-  const categoryCount = fallbackCategoryCount(heroProducts);
-  const supportingCopy = categoryCount > 1 ? `Explore products across ${categoryCount} catalogue categories, all in one place.` : 'Explore the active catalogue, all in one place.';
-  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "v2-hero v2-hero--marketplace",
-    "aria-labelledby": "marketplace-hero-title",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "v2-hero__stage hm-hero",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "hm-hero__copy",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "hm-hero__kicker",
-          children: MARKETPLACE_HERO_COPY.kicker
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-          id: "marketplace-hero-title",
-          children: MARKETPLACE_HERO_COPY.title
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: supportingCopy
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: MARKETPLACE_HERO_COPY.cta.to,
-          className: "hm-hero__cta",
-          children: [MARKETPLACE_HERO_COPY.cta.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "arrowRight",
-            size: 16,
-            stroke: 1.8
-          })]
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "hm-hero__assortment",
-        "aria-label": "Products from across the marketplace",
-        children: heroProducts.map((product, index) => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-          to: `/product/${product.slug}`,
-          className: `hm-hero__product hm-hero__product--${index + 1}`,
-          "aria-label": product.name,
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-            product: product,
-            frame: "v2",
-            sizes: "(max-width: 767px) 24vw, 220px"
-          })
-        }, product.id))
-      })]
-    })
-  });
-}
-
-// ------------------------------------------------- admin-configured slides
-function ConfiguredHero() {
-  const [active, setActive] = reactExports.useState(0);
-  const [paused, setPaused] = reactExports.useState(false);
-  const [videoFailed, setVideoFailed] = reactExports.useState({}); // { [slideId]: true } — fall back to poster on load error
-  const timer = reactExports.useRef(null);
-  const sectionRef = reactExports.useRef(null);
-  const parallaxRefs = reactExports.useRef([]);
-  const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-
-  // The hero video is a ~6 MB MP4 — fine on desktop broadband, but it was
-  // the single largest cost on mobile (it dominated the phone payload for a
-  // decorative background). Phones, data-saver users and reduced-motion users
-  // get the poster still instead, which is already authored for every video
-  // slide and is ~70x smaller. Desktop behaviour is unchanged.
-  const [useVideo, setUseVideo] = reactExports.useState(() => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches && !reduced && navigator.connection?.saveData !== true);
+  const dialog = reactExports.useRef(null);
+  const titleId = reactExports.useId();
   reactExports.useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mq = window.matchMedia('(min-width: 768px)');
-    const saveData = navigator.connection?.saveData === true;
-    const evaluate = () => setUseVideo(mq.matches && !reduced && !saveData);
-    evaluate();
-    if (mq.addEventListener) mq.addEventListener('change', evaluate);else mq.addListener?.(evaluate);
+    const node = dialog.current;
+    const opener = document.activeElement;
+    const {
+      overflow,
+      paddingRight
+    } = document.body.style;
+    const gap = window.innerWidth - document.documentElement.clientWidth;
+    const padding = parseFloat(getComputedStyle(document.body).paddingRight) || 0;
+    node.showModal(); // Native top layer, focus trap and Escape handling.
+    document.body.style.overflow = 'hidden';
+    if (gap > 0) document.body.style.paddingRight = `${padding + gap}px`;
     return () => {
-      if (mq.removeEventListener) mq.removeEventListener('change', evaluate);else mq.removeListener?.(evaluate);
-    };
-  }, [reduced]);
-
-  // Only carry slides that can actually paint something. If a deck were ever
-  // configured with nothing renderable at all, keep the original list so the
-  // hero still has structure rather than collapsing to nothing.
-  const renderable = heroSlides.filter(s => isRenderable(s, useVideo, videoFailed));
-  const SLIDES = renderable.length ? renderable : heroSlides;
-  const DISPLAY_SLIDES = SLIDES;
-  const [preparedSlides, setPreparedSlides] = reactExports.useState(() => new Set(SLIDES[0]?.id ? [SLIDES[0].id] : []));
-  const loadedSlides = reactExports.useRef(new Set());
-  const prepareSlide = reactExports.useCallback(index => {
-    if (!SLIDES.length) return;
-    const target = (index + SLIDES.length) % SLIDES.length;
-    const id = SLIDES[target]?.id;
-    if (!id) return;
-    setPreparedSlides(current => {
-      if (current.has(id)) return current;
-      const nextSet = new Set(current);
-      nextSet.add(id);
-      return nextSet;
-    });
-  }, [SLIDES]);
-
-  // A dropped slide shortens the deck; keep the index inside it.
-  reactExports.useEffect(() => {
-    if (active >= SLIDES.length) setActive(0);else {
-      prepareSlide(active);
-      // A slide normally loads while hidden as the prepared neighbour. Its
-      // load event has already fired by the time it becomes active, so prepare
-      // the following slide here rather than leaving the next transition cold.
-      const id = SLIDES[active]?.id;
-      if (id && loadedSlides.current.has(id)) prepareSlide(active + 1);
-    }
-  }, [SLIDES.length, active, prepareSlide]);
-  const go = reactExports.useCallback(i => {
-    const target = (i + SLIDES.length) % SLIDES.length;
-    prepareSlide(target);
-    setActive(target);
-  }, [SLIDES.length, prepareSlide]);
-  const next = reactExports.useCallback(() => go(active + 1), [active, go]);
-  // Intrinsic ratio of each artwork-only image slide, read once it loads.
-  //
-  // The desktop stage is a 1192:470 frame with the copy laid over the
-  // artwork, and `cover` crops whatever does not fit — correct when the
-  // artwork is a background. An ARTWORK-ONLY slide is different: the creative
-  // carries its own typography, so a crop cuts words. The 1440×846 festival
-  // banner lost "Festival Season" off the top at 1440px. For those slides the
-  // desktop frame takes the artwork's own ratio (bounded, so an odd upload
-  // cannot make the hero absurdly tall) and the parallax oversize is dropped,
-  // so the whole creative is shown. Below 1024px nothing reads this.
-  const [artworkRatios, setArtworkRatios] = reactExports.useState({});
-  const noteArtworkRatio = reactExports.useCallback((id, img) => {
-    if (!img?.naturalWidth || !img?.naturalHeight) return;
-    // 1.6–2.7: wide enough for the recommended 1600×600 desktop upload (2.67).
-    const ratio = Math.min(2.7, Math.max(1.6, img.naturalWidth / img.naturalHeight));
-    setArtworkRatios(r => r[id] === ratio ? r : {
-      ...r,
-      [id]: ratio
-    });
-  }, []);
-  const mediaReady = reactExports.useCallback((id, index) => {
-    loadedSlides.current.add(id);
-    if (index === active) prepareSlide(index + 1);
-  }, [active, prepareSlide]);
-  reactExports.useEffect(() => {
-    if (paused || reduced || SLIDES.length < 2) return;
-    timer.current = setTimeout(next, INTERVAL);
-    return () => clearTimeout(timer.current);
-  }, [active, paused, reduced, next, SLIDES.length]);
-
-  // Very slow, depth-only scroll parallax on the background media — never on
-  // the text. Disabled entirely for reduced-motion and on narrow/mobile
-  // viewports (per the "reduce parallax on mobile" requirement). Applied via
-  // a rAF-throttled scroll listener to a wrapper element that sits outside
-  // the Ken-Burns-scaled media, so the two transforms never fight.
-  reactExports.useEffect(() => {
-    if (reduced) return;
-    const isMobile = () => window.innerWidth < 768;
-    if (isMobile()) return;
-    let raf = null;
-    const onScroll = () => {
-      // Below 768px the media sits in normal flow (see the mobile hero block in
-      // home.css), so an inline translate would shift it out of place. Clear it
-      // and bail if the viewport was resized down after mount.
-      if (isMobile()) {
-        parallaxRefs.current.forEach(n => {
-          if (n) n.style.transform = '';
-        });
-        return;
-      }
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = null;
-        const el = sectionRef.current;
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
-        if (rect.bottom < 0 || rect.top > window.innerHeight) return; // out of view, skip
-        const offset = Math.max(-40, Math.min(40, rect.top * -0.06));
-        // An artwork-only slide shown at its own ratio (desktop) has no
-        // oversize to move within; a translate would expose the frame edge.
-        const artworkAtOwnRatio = window.matchMedia('(min-width: 1024px)').matches;
-        parallaxRefs.current.forEach(node => {
-          if (!node) return;
-          if (artworkAtOwnRatio && node.parentElement?.classList.contains('v2-hero__media--artwork')) {
-            node.style.transform = '';
-            return;
-          }
-          node.style.transform = `translate3d(0, ${offset}px, 0)`;
-        });
+      node.close();
+      document.body.style.overflow = overflow;
+      document.body.style.paddingRight = paddingRight;
+      if (opener?.isConnected) opener.focus({
+        preventScroll: true
       });
     };
-    window.addEventListener('scroll', onScroll, {
-      passive: true
-    });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      if (raf) cancelAnimationFrame(raf);
+  }, []);
+  return /*#__PURE__*/jsxRuntimeExports.jsx("dialog", {
+    ref: dialog,
+    className: "fashion-choice",
+    "aria-labelledby": titleId,
+    onCancel: onClose,
+    onClick: event => {
+      if (event.target === event.currentTarget) onClose();
+    },
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fashion-choice__inner",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "fashion-choice__close",
+        "aria-label": "Close fashion selection",
+        onClick: onClose,
+        autoFocus: true,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "x",
+          size: 22
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fashion-choice__eyebrow",
+        children: "SORA LIFE / The fashion edit"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        id: titleId,
+        children: "Find your kind of style."
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fashion-choice__intro",
+        children: "Three worlds. A style for every you."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fashion-choice__grid",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion/men",
+          className: "fashion-choice__card fashion-choice__card--men",
+          onClick: onClose,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: "/img/fashion-editorial/men-hero-desktop-1000.webp",
+            alt: "",
+            width: "1000",
+            height: "563"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("small", {
+              children: "The everyday edit"
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+              children: ["Men\u2019s fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 22
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+              children: "Explore the collection"
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion/women",
+          className: "fashion-choice__card fashion-choice__card--women",
+          onClick: onClose,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: "/img/fashion-editorial/women-category-silk.webp",
+            alt: "",
+            width: "480",
+            height: "480"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("small", {
+              children: "Tradition meets today"
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+              children: ["Women\u2019s fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 22
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+              children: "Explore the collection"
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "fashion-choice__card fashion-choice__card--kids",
+          "aria-disabled": "true",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: "/img/fashion-circle-kids.webp",
+            alt: "",
+            width: "640",
+            height: "640"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("small", {
+              children: "Little personalities"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+              children: "Kids\u2019 fashion"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+              children: "Coming soon"
+            })]
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/fashion",
+        className: "fashion-choice__all",
+        onClick: onClose,
+        children: ["Browse all fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 15
+        })]
+      })]
+    })
+  });
+}
+
+// Only the default Fashion doorway opens the chooser. Custom admin links
+// and modified clicks retain normal link navigation and open-in-new-tab.
+function FashionEntryLink({
+  to = '/fashion',
+  children,
+  onClick,
+  ...props
+}) {
+  const [open, setOpen] = reactExports.useState(false);
+  const location = useLocation();
+  const isEntry = to === '/fashion' || to === '/fashion/';
+  reactExports.useEffect(() => {
+    setOpen(false);
+  }, [location.pathname, location.search]);
+  function activate(event) {
+    onClick?.(event);
+    if (!isEntry || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || props.target === '_blank') return;
+    event.preventDefault();
+    setOpen(true);
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+      ...props,
+      to: to,
+      onClick: activate,
+      "aria-haspopup": isEntry ? 'dialog' : undefined,
+      children: children
+    }), open && typeof document !== 'undefined' && /*#__PURE__*/reactDomExports.createPortal(/*#__PURE__*/jsxRuntimeExports.jsx(FashionChooser, {
+      onClose: () => setOpen(false)
+    }), document.body)]
+  });
+}
+
+const HERO_AUTOPLAY_MS = 6000;
+const PHONE$1 = '(max-width: 700px)';
+const HERO_SLIDES$1 = [{
+  key: 'everyday',
+  eyebrow: 'Wellness · Fashion · Home · Personal care · More',
+  title: ['Everything for', 'everyday wellbeing.'],
+  cta: {
+    label: 'Shop now',
+    to: '/shop'
+  },
+  image: '/img/home-hero-1.webp',
+  phone: '/img/home-hero-1-800.webp',
+  width: 1536,
+  height: 864,
+  alt: 'Biosash and Mom’s Trust products on a stone slab with sea buckthorn berries and oranges'
+}, {
+  key: 'biosash',
+  eyebrow: 'In the catalogue',
+  title: ['The Biosash', 'range'],
+  // No brand page or brand filter exists yet, so this slide has no button.
+  cta: null,
+  image: '/img/home-hero-2.webp',
+  phone: '/img/home-hero-2-800.webp',
+  width: 1600,
+  height: 900,
+  alt: 'Biosash sea buckthorn juices, Berry Veda and Mom’s Trust care products with berries and marigolds'
+}];
+const TRUST$1 = [{
+  icon: 'truck',
+  title: 'Free Standard Delivery',
+  note: 'On every order',
+  to: '/shipping'
+}, {
+  icon: 'shield',
+  title: 'Genuine Products',
+  note: null,
+  to: null
+}, {
+  icon: 'return',
+  title: 'Easy Returns',
+  note: '7 days',
+  to: '/returns'
+}, {
+  icon: 'chat',
+  title: 'Support',
+  note: '9am–6pm IST',
+  to: '/contact'
+}];
+const STORES$1 = [{
+  key: 'wellness',
+  name: 'Wellness',
+  to: '/category/wellness',
+  image: '/img/home-cat-wellness.webp'
+}, {
+  key: 'personal-care',
+  name: 'Personal Care',
+  to: '/category/personal-care',
+  image: '/img/home-cat-personal-care.webp'
+}, {
+  key: 'fashion',
+  name: 'Fashion',
+  to: '/fashion',
+  image: '/img/home-cat-fashion.webp'
+}, {
+  key: 'groceries',
+  name: 'Groceries',
+  to: '/grocery',
+  image: '/img/home-cat-groceries.webp'
+}, {
+  key: 'home-textiles',
+  name: 'Home Textiles',
+  to: '/homeliving',
+  image: '/img/home-cat-home-textiles.webp'
+}];
+
+/** The slides, one in view on a transform-only track; the first slide's title is the page's h1. */
+function HomeHero({
+  slides = HERO_SLIDES$1,
+  autoplayMs = HERO_AUTOPLAY_MS
+}) {
+  const [index, setIndex] = reactExports.useState(0);
+  const [paused, setPaused] = reactExports.useState(false);
+  const reduced = reactExports.useRef(false);
+  const swipe = reactExports.useRef({
+    x: null,
+    y: null,
+    moved: false
+  });
+  const n = slides.length;
+  reactExports.useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => {
+      reduced.current = mq.matches;
     };
-  }, [reduced]);
+    sync();
+    mq.addEventListener?.('change', sync);
+    return () => mq.removeEventListener?.('change', sync);
+  }, []);
+  reactExports.useEffect(() => {
+    if (n < 2 || paused) return undefined;
+    const t = setInterval(() => {
+      if (!reduced.current) setIndex(i => (i + 1) % n);
+    }, autoplayMs);
+    return () => clearInterval(t);
+  }, [n, paused, autoplayMs]);
+  if (n === 0) return null;
+  const go = d => setIndex(i => (i + d + n) % n);
+  const onPointerDown = e => {
+    swipe.current = {
+      x: e.clientX,
+      y: e.clientY,
+      moved: false
+    };
+  };
+  const onPointerUp = e => {
+    const s = swipe.current;
+    if (s.x == null) return;
+    const dx = e.clientX - s.x,
+      dy = e.clientY - s.y;
+    swipe.current = {
+      x: null,
+      y: null,
+      moved: Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy)
+    };
+    if (swipe.current.moved) go(dx < 0 ? 1 : -1);
+  };
+  const onClickCapture = e => {
+    if (swipe.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      swipe.current.moved = false;
+    }
+  };
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    ref: sectionRef,
-    className: "v2-hero",
+    className: "hx hx-hero",
+    "aria-roledescription": "carousel",
+    "aria-label": "SORA LIFE",
     onMouseEnter: () => setPaused(true),
     onMouseLeave: () => setPaused(false),
-    "aria-roledescription": "carousel",
-    "aria-label": "Sora Life featured",
-    children: [DISPLAY_SLIDES.map((s, i) => (() => {
-      const appearance = homepage.heroCtas?.[s.id];
-      const artworkOnly = ![s.kicker, s.title, s.sub, s.lede].some(value => value && /[A-Za-z0-9]/.test(value));
-      const ctaLabel = s.cta?.label;
-      const mediaPrepared = i === active || preparedSlides.has(s.id);
-      const activeVideo = i === active && s.kind === 'video' && useVideo && !videoFailed[s.id] && s.src;
-      return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: `v2-hero__slide ${i === active ? 'is-active' : ''}`,
-        "aria-hidden": i !== active,
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-          className: `v2-hero__media${artworkOnly && s.kind !== 'video' ? ' v2-hero__media--artwork' : ''}`,
-          style: artworkRatios[s.id] ? {
-            '--hero-ratio': String(artworkRatios[s.id])
-          } : undefined,
-          children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-            className: "v2-hero__par",
-            ref: el => {
-              parallaxRefs.current[i] = el;
-            },
-            children: mediaPrepared && (activeVideo ? /*#__PURE__*/jsxRuntimeExports.jsx("video", {
-              className: "v2-hero__img",
-              autoPlay: true,
-              muted: true,
-              loop: true,
-              playsInline: true,
-              preload: "metadata",
-              poster: s.poster,
-              style: {
-                objectPosition: s.position
-              },
-              onError: () => setVideoFailed(v => ({
-                ...v,
-                [s.id]: true
-              })),
-              onLoadedData: () => mediaReady(s.id, i),
-              children: /*#__PURE__*/jsxRuntimeExports.jsx("source", {
-                src: s.src,
-                type: "video/mp4"
-              })
-            }) : s.kind === 'video' ?
-            /*#__PURE__*/
-            // Video skipped on mobile, missing, or failed to load — always resolve
-            // to a real still (never an empty colour block).
-            jsxRuntimeExports.jsx("img", {
-              className: "v2-hero__img",
-              src: heroSrc(stillFor(s) || FALLBACK_POSTER),
-              srcSet: heroSrcSet(stillFor(s) || FALLBACK_POSTER),
-              sizes: "100vw",
-              alt: headingText(s.title) || headingText(s.kicker) || '',
-              style: {
-                objectPosition: s.position
-              },
-              loading: i === active ? 'eager' : 'lazy',
-              fetchPriority: i === active ? 'high' : undefined,
-              decoding: "async",
-              onLoad: () => mediaReady(s.id, i)
-            }) :
-            // A <picture> only when the slide has a desktop image. The
-            // <source> carries a media query, so the browser — not
-            // JavaScript — chooses: below 1024px the source never
-            // matches and only image_url is fetched; at 1024px and above
-            // only the desktop file is. With no desktop image this is the
-            // same bare <img> as before. naturalWidth/Height on the <img>
-            // report whichever source was chosen, so the artwork-only
-            // framing above follows the desktop image's own ratio.
-            withDesktopSource(s.desktopSrc, /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-              className: "v2-hero__img",
-              src: heroSrc(s.src),
-              srcSet: heroSrcSet(s.src),
-              sizes: "100vw",
-              alt: headingText(s.title) || headingText(s.kicker) || '',
-              style: {
-                objectPosition: s.position
-              },
-              loading: i === active ? 'eager' : 'lazy',
-              fetchPriority: i === active ? 'high' : undefined,
-              decoding: "async"
-              // A cached image can be complete before React attaches
-              // onLoad; the ref callback covers that case.
-              ,
-              ref: el => {
-                if (el && artworkOnly && el.complete) noteArtworkRatio(s.id, el);
-              },
-              onLoad: e => {
-                if (artworkOnly) noteArtworkRatio(s.id, e.currentTarget);
-                mediaReady(s.id, i);
-              }
-            })))
-          })
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "v2-hero__ui",
-          children: [headingText(s.kicker) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "v2-hero__kicker",
-            children: s.kicker
-          }), headingText(s.title) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: titleClass(s.title),
-            children: s.title
-          }), headingText(s.sub || s.lede) && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "v2-hero__sub",
-            children: s.sub || s.lede
-          }), s.cta?.to && /*#__PURE__*/jsxRuntimeExports.jsx(HeroCta, {
-            cta: s.cta,
-            appearance: appearance,
-            artworkOnly: artworkOnly,
-            active: i === active,
-            children: ctaLabel
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(HeroCta, {
-          cta: s.cta,
-          appearance: appearance,
-          placement: "overlay",
-          artworkOnly: artworkOnly,
-          active: i === active,
-          children: ctaLabel
-        })]
-      }, s.id);
-    })()), SLIDES.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-        className: "v2-hero__arrow v2-hero__arrow--prev",
-        onClick: () => go(active - 1),
-        "aria-label": "Previous slide",
-        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "chevronLeft",
-          size: 18,
-          stroke: 1.6
-        })
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-        className: "v2-hero__arrow v2-hero__arrow--next",
-        onClick: () => go(active + 1),
-        "aria-label": "Next slide",
-        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "chevronRight",
-          size: 18,
-          stroke: 1.6
-        })
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "v2-hero__dots",
-        children: DISPLAY_SLIDES.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-          className: i === active ? 'is-on' : '',
-          onClick: () => go(i),
-          "aria-label": `Go to slide ${i + 1}`,
-          "aria-current": i === active
-        }, s.id))
-      })]
-    })]
-  });
-}
-
-const CATEGORY_IMAGES = {
-  wellness: '/public/category-images/wellness.webp',
-  'body-building': '/public/category-images/body-building.webp',
-  'juices-drinks': '/public/category-images/juices-drinks.webp',
-  supplements: '/public/category-images/supplements.webp',
-  'skin-care': '/public/category-images/skin-care.webp',
-  'hair-care': '/public/category-images/hair-care.webp',
-  'bath-body': '/public/category-images/bath-body.webp',
-  'mens-care': '/public/category-images/mens-care.webp',
-  'personal-care': '/public/category-images/personal-care.webp'
-};
-const CATEGORY_MARKS = {
-  wellness: /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("path", {
-      d: "M16 28V12M16 22C6 23 5 17 5 14c7-1 11 3 11 8ZM16 17c8 0 11-5 11-10-7 0-11 4-11 10Z"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("circle", {
-      cx: "10",
-      cy: "7",
-      r: "2"
-    })]
-  }),
-  'body-building': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-      d: "m10 22 12-12M6 18l8 8M18 6l8 8M4 20l8 8M20 4l8 8M4 24l4 4M24 4l4 4"
-    })
-  }),
-  'juices-drinks': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-      d: "M10 4h7v5l3 4v15H7V13l3-4V4ZM10 8h7M7 17h13M10 21h7"
-    })
-  }),
-  supplements: /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-      d: "m7 15 8-8a6 6 0 0 1 9 9l-8 8a6 6 0 0 1-9-9ZM11 11l9 9"
-    })
-  }),
-  'skin-care': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-      d: "M6 16h20v12H6V16ZM8 12h16v4H8V12ZM10 21h12"
-    })
-  }),
-  'hair-care': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-      d: "M5 5h9v21H5V5ZM9 9h5M9 13h5M9 17h5M9 21h5"
-    })
-  }),
-  'bath-body': /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("rect", {
-      x: "5",
-      y: "14",
-      width: "23",
-      height: "14",
-      rx: "2"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-      d: "M9 19c4-4 10 4 15 0"
-    })]
-  }),
-  'mens-care': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-      d: "M7 5h19v7H7V5ZM10 8h13M12 12v5h9v-5"
-    })
-  }),
-  'personal-care': /*#__PURE__*/jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {
-    children: /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-      d: "M5 12h11l-2 16H7L5 12ZM8 8h5v4"
-    })
-  })
-};
-function CategoryMark({
-  category
-}) {
-  const mark = CATEGORY_MARKS[category.slug];
-  if (!mark) {
-    return /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "v2-cat__initials",
-      children: category.name.split(/\s+/).map(s => s[0]).slice(0, 2).join('')
-    });
-  }
-  return /*#__PURE__*/jsxRuntimeExports.jsx("svg", {
-    viewBox: "0 0 32 32",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "1.25",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    children: mark
-  });
-}
-function CategoryRail() {
-  const items = Array.isArray(categories) ? categories.filter(c => c && c.slug && c.name) : [];
-  if (items.length < 3) return null;
-  const renderCategory = (c, duplicate = false) => {
-    const image = c.image || c.image_url || CATEGORY_IMAGES[c.slug];
-    return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      to: `/category/${c.slug}`,
-      className: `v2-cat v2-cat--${c.slug}`,
-      "aria-hidden": duplicate ? 'true' : undefined,
-      tabIndex: duplicate ? -1 : undefined,
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-        className: "v2-cat__visual",
-        "aria-hidden": "true",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "v2-cat__tile",
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(CategoryMark, {
-            category: c
-          })
-        }), image && /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-          className: "v2-cat__photo",
-          src: image,
-          alt: "",
-          loading: "lazy",
-          onError: e => {
-            e.currentTarget.style.display = 'none';
-          }
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "v2-cat__lb",
-        children: c.name
-      })]
-    }, `${duplicate ? 'duplicate-' : ''}${c.slug}`);
-  };
-  return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
-    className: "v2-cats-marquee",
-    "aria-label": "Shop by category",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "v2-cats-track",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "v2-cats-set",
-        children: items.map(c => renderCategory(c))
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "v2-cats-set",
-        "aria-hidden": "true",
-        children: items.map(c => renderCategory(c, true))
-      })]
-    })
-  });
-}
-
-function HomeVisualLayers({
-  background,
-  texture,
-  left,
-  right
-}) {
-  const [mobile, setMobile] = reactExports.useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)').matches);
-  reactExports.useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
-    const mq = window.matchMedia('(max-width: 767px)');
-    const update = () => setMobile(mq.matches);
-    update();
-    if (mq.addEventListener) mq.addEventListener('change', update);else mq.addListener?.(update);
-    return () => {
-      if (mq.removeEventListener) mq.removeEventListener('change', update);else mq.removeListener?.(update);
-    };
-  }, []);
-  const layers = [background && {
-    ...background,
-    name: 'background'
-  }, texture && {
-    ...texture,
-    name: 'texture'
-  }, left && {
-    ...left,
-    name: 'left'
-  }, right && {
-    ...right,
-    name: 'right'
-  }].filter(layer => layer?.url && !(mobile && layer.hideMobile));
-  if (!layers.length) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-    className: "hp-visual-layers",
-    "aria-hidden": "true",
-    children: layers.map(layer => /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-      alt: "",
-      src: layer.url,
-      className: `hp-visual-layer hp-visual-layer--${layer.name}${layer.hideMobile ? ' hp-visual-layer--mobile-hidden' : ''}`,
-      style: {
-        opacity: layer.opacity,
-        objectFit: layer.fit || 'contain',
-        objectPosition: layer.position || 'center',
-        ...(layer.size ? {
-          width: layer.size
-        } : {})
+    onFocus: () => setPaused(true),
+    onBlur: () => setPaused(false),
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hx-hero__viewport",
+      onPointerDown: onPointerDown,
+      onPointerUp: onPointerUp,
+      onPointerCancel: () => {
+        swipe.current = {
+          x: null,
+          y: null,
+          moved: false
+        };
       },
-      loading: "lazy",
-      decoding: "async",
-      onError: e => {
-        e.currentTarget.hidden = true;
-      }
-    }, `${layer.name}:${layer.url}`))
+      onClickCapture: onClickCapture,
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hx-hero__track",
+        style: {
+          transform: `translateX(-${index * 100}%)`
+        },
+        children: slides.map((s, i) => {
+          const Title = i === 0 ? 'h1' : 'h2';
+          const current = i === index;
+          return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: `hx-hero__slide hx-hero__slide--${s.key}`,
+            "aria-hidden": !current,
+            "aria-roledescription": "slide",
+            "aria-label": `${i + 1} of ${n}`,
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+              src: s.image,
+              sources: [{
+                media: PHONE$1,
+                srcSet: s.phone
+              }],
+              alt: s.alt,
+              width: s.width,
+              height: s.height,
+              className: "hx-hero__image",
+              loading: i === 0 ? 'eager' : 'lazy',
+              fetchPriority: i === 0 ? 'high' : undefined
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              className: "hx-wrap hx-hero__copy",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+                className: "hx-eyebrow",
+                children: s.eyebrow
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs(Title, {
+                className: "hx-hero__title",
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  children: s.title[0]
+                }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  className: "hx-hl",
+                  children: s.title[1]
+                })]
+              }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+                to: s.cta.to,
+                className: "hx-btn",
+                tabIndex: current ? undefined : -1,
+                children: [s.cta.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                  name: "arrowRight",
+                  size: 17
+                })]
+              })]
+            })]
+          }, s.key);
+        })
+      })
+    }), n > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hx-hero__dots",
+      role: "group",
+      "aria-label": "Choose a slide",
+      children: slides.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        "aria-label": `Show slide ${i + 1} of ${n}`,
+        "aria-pressed": i === index,
+        className: `hx-hero__dot${i === index ? ' is-on' : ''}`,
+        onClick: () => setIndex(i)
+      }, s.key))
+    })]
   });
 }
-
-function HomeCategoryStrip({
-  appearance: a
-}) {
-  // Match CategoryRail's existing empty-state rule, without changing its links.
-  if (categories.filter(c => c?.slug && c?.name).length < 3) return null;
-  // The admin's padding arrives as custom properties rather than inline
-  // padding. An inline `padding` beats every stylesheet rule at every width,
-  // which is how a 12px value tuned for the phone's full-bleed strip was also
-  // the desktop section's padding. As a variable the stylesheet decides where
-  // it applies: below 1024px it is used as-is (identical result), and at
-  // desktop the page's section rhythm takes over.
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: "v2-home-categories hp-category-strip",
-    style: {
-      '--hp-strip-pt': `${a.paddingTop}px`,
-      '--hp-strip-pb': `${a.paddingBottom}px`,
-      backgroundColor: a.enabled ? a.backgroundColor : 'transparent',
-      borderTop: a.borderTop ? `${a.borderWidth}px solid ${a.borderColor}` : undefined,
-      borderBottom: a.borderBottom ? `${a.borderWidth}px solid ${a.borderColor}` : undefined,
-      borderRadius: a.radius
-    },
-    children: [a.enabled && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeVisualLayers, {
-        background: {
-          url: a.imageUrl,
-          fit: a.imageSize,
-          position: a.imagePosition,
-          opacity: a.imageOpacity
-        },
-        texture: {
-          url: a.textureUrl,
-          fit: 'cover',
-          position: a.texturePosition,
-          opacity: a.decorationOpacity,
-          hideMobile: a.hideTextureMobile
-        },
-        left: {
-          url: a.leftImage,
-          opacity: a.decorationOpacity,
-          size: a.decorationSize,
-          position: `left ${a.decorationPosition}`,
-          hideMobile: a.hideLeftMobile
-        },
-        right: {
-          url: a.rightImage,
-          opacity: a.decorationOpacity,
-          size: a.decorationSize,
-          position: `right ${a.decorationPosition}`,
-          hideMobile: a.hideRightMobile
-        }
-      }), a.overlayOpacity > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        "aria-hidden": "true",
-        className: "hp-category-overlay",
-        style: {
-          backgroundColor: a.overlayColor,
-          opacity: a.overlayOpacity
-        }
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "v2-wrap hp-category-strip__content",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "hm-category-head",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "v2-eyebrow",
-            children: "Shop the catalogue"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-            className: "v2-h2",
-            children: "Browse by category"
+function HomeTrustStrip() {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-trust",
+    "aria-label": "Shopping with SORA LIFE",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "hx-wrap hx-trust__list",
+      children: TRUST$1.map(t => {
+        const body = /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: t.icon,
+            size: 26
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+              children: t.title
+            }), t.note && /*#__PURE__*/jsxRuntimeExports.jsx("small", {
+              children: t.note
+            })]
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-          children: ["Swipe to explore ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            "aria-hidden": "true",
-            children: "\u2192"
+        });
+        return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: t.to ? /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: t.to,
+            children: body
+          }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hx-trust__item",
+            children: body
+          })
+        }, t.title);
+      })
+    })
+  });
+}
+function HomeTiles() {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-tiles",
+    "aria-label": "Shop the stores",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap hx-tiles__grid",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs(FashionEntryLink, {
+        to: "/fashion",
+        className: "hx-tile hx-tile--fashion",
+        "aria-labelledby": "hx-fashion-h hx-fashion-cta",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hx-tile__panel",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+            className: "hx-tile__h",
+            id: "hx-fashion-h",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: "Fashion"
+            }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: "for every"
+            }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: "mood."
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "hx-btn hx-btn--light",
+            id: "hx-fashion-cta",
+            children: ["Shop Fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 16
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "hx-tile__art",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+            src: "/img/home-tile-fashion.webp",
+            alt: "Woman in an orange knit sweater and cream trousers",
+            width: 800,
+            height: 1067,
+            className: "hx-tile__image"
+          })
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/category/supplements",
+        className: "hx-tile hx-tile--small hx-tile--nutrition",
+        "aria-labelledby": "hx-nutrition-h",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+          src: "/img/home-tile-nutrition.webp",
+          alt: "",
+          width: 900,
+          height: 563,
+          className: "hx-tile__image"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+          className: "hx-tile__h",
+          id: "hx-nutrition-h",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Health &"
+          }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Nutrition"
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "hx-tile__go",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 18
+          })
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/homeliving",
+        className: "hx-tile hx-tile--small hx-tile--living",
+        "aria-labelledby": "hx-living-h",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+          src: "/img/home-tile-living.webp",
+          alt: "",
+          width: 900,
+          height: 563,
+          className: "hx-tile__image"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+          className: "hx-tile__h",
+          id: "hx-living-h",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Home &"
+          }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Living"
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "hx-tile__go",
+          "aria-hidden": "true",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 18
+          })
+        })]
+      })]
+    })
+  });
+}
+function ExploreStores({
+  stores = STORES$1
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-stores",
+    "aria-labelledby": "hx-stores-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "hx-stores__h",
+        id: "hx-stores-h",
+        children: "Explore the stores"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hx-stores__row",
+        children: stores.map(s => {
+          const Entry = s.to === '/fashion' ? FashionEntryLink : Link;
+          return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Entry, {
+              to: s.to,
+              className: "hx-store",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-store__art",
+                children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+                  src: s.image,
+                  alt: "",
+                  width: 480,
+                  height: 480,
+                  className: "hx-store__image"
+                })
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-store__name",
+                children: s.name
+              })]
+            })
+          }, s.key);
+        })
+      })]
+    })
+  });
+}
+function FestivePromo() {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-promo",
+    "aria-labelledby": "hx-promo-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hx-wrap",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/shop",
+        className: "hx-promo__card",
+        "aria-labelledby": "hx-promo-h hx-promo-cta",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+          src: "/img/home-promo-festive.webp",
+          sources: [{
+            media: PHONE$1,
+            srcSet: '/img/home-promo-festive-800.webp'
+          }],
+          alt: "A gift box tied with an orange ribbon beside a lit diya and marigolds",
+          width: 1600,
+          height: 533,
+          className: "hx-promo__image"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hx-promo__copy",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "hx-promo__h",
+            id: "hx-promo-h",
+            children: "Festive gifting"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-promo__text",
+            children: "Wellness, beauty and home picks to give this season"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "hx-btn",
+            id: "hx-promo-cta",
+            children: ["Shop gifts ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 16
+            })]
           })]
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryRail, {})]
-    })]
+      })
+    })
   });
 }
 
@@ -35760,6 +35111,203 @@ function offerCalloutFrom(promo) {
   // Keep the approved callout treatment for explicitly labelled preview
   // artwork without inventing savings. Genuine offer wording above wins.
   return /^preview offer$/i.test(promo.badgeText || '') ? 'PREVIEW OFFER' : null;
+}
+
+// Structured presentation fields inside site_settings.homepage.visuals.
+// No CSS/HTML input is accepted. Shared by the editor and storefront reader.
+const IMAGE_POSITIONS = ['left top', 'center top', 'right top', 'left center', 'center center', 'right center', 'left bottom', 'center bottom', 'right bottom'];
+const color = (label, value) => ({
+  label,
+  type: 'color',
+  value
+});
+const number = (label, value, min, max, step = 1) => ({
+  label,
+  type: 'number',
+  value,
+  min,
+  max,
+  step
+});
+const toggle = (label, value = false) => ({
+  label,
+  type: 'boolean',
+  value
+});
+const image$1 = label => ({
+  label,
+  type: 'image',
+  value: ''
+});
+const select = (label, value, options) => ({
+  label,
+  type: 'select',
+  value,
+  options
+});
+const HOMEPAGE_VISUAL_FIELDS = {
+  categoryStrip: {
+    enabled: toggle('Enable category background', false),
+    backgroundColor: color('Background color', '#F7F1E7'),
+    imageUrl: image$1('Background strip image'),
+    imageSize: select('Background image fit', 'cover', ['cover', 'contain']),
+    imagePosition: select('Background image position', 'center center', IMAGE_POSITIONS),
+    imageOpacity: number('Background image opacity', 1, 0, 1, 0.05),
+    overlayColor: color('Overlay color', '#FBF8F1'),
+    overlayOpacity: number('Overlay strength (0 = off)', 0, 0, 1, 0.05),
+    paddingTop: number('Top padding (px)', 12, 0, 48),
+    paddingBottom: number('Bottom padding (px)', 12, 0, 48),
+    borderTop: toggle('Show top border'),
+    borderBottom: toggle('Show bottom border'),
+    borderColor: color('Border color', '#DED2C4'),
+    borderWidth: number('Border thickness (px)', 1, 0, 4),
+    radius: number('Corner radius (px)', 8, 0, 16),
+    textureUrl: image$1('Decorative texture'),
+    texturePosition: select('Texture position', 'center center', IMAGE_POSITIONS),
+    leftImage: image$1('Left decoration'),
+    rightImage: image$1('Right decoration'),
+    decorationOpacity: number('Decoration opacity', 0.25, 0, 1, 0.05),
+    decorationSize: number('Decoration width (px)', 120, 24, 240),
+    decorationPosition: select('Decoration vertical position', 'center', ['top', 'center', 'bottom']),
+    hideTextureMobile: toggle('Hide texture on mobile'),
+    hideLeftMobile: toggle('Hide left decoration on mobile', true),
+    hideRightMobile: toggle('Hide right decoration on mobile', true)
+  },
+  offers: {
+    backgroundColor: color('Section background', '#FBF8F1'),
+    frameColor: color('Frame interior', '#FFF8ED'),
+    frameEnabled: toggle('Show bordered frame', true),
+    borderColor: color('Frame border color', '#702B3B'),
+    borderWidth: number('Frame border thickness (px)', 1, 0, 4),
+    accentColor: color('Heading and accent color', '#702B3B'),
+    radius: number('Frame corner radius (px)', 12, 0, 16),
+    textureUrl: image$1('Frame background image / texture'),
+    textureOpacity: number('Texture opacity', 0.12, 0, 1, 0.01),
+    padding: number('Section top and bottom padding (px)', 20, 0, 48),
+    gap: number('Gap between promotions (px)', 16, 8, 32),
+    desktopColumns: select('Maximum promotions per desktop row', 2, [1, 2, 3]),
+    mobileWidth: number('Mobile promotion width (%)', 90, 88, 92),
+    decorationUrl: image$1('Optional decorative artwork'),
+    decorationOpacity: number('Artwork opacity', 0.15, 0, 1, 0.05),
+    decorationSize: number('Artwork width (px)', 160, 24, 240)
+  }
+};
+function safeVisualUrl(value) {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  const raw = value.trim();
+  if (raw.length > 2000 || /[\s\\\u0000-\u001f\u007f]/.test(raw)) return '';
+  let url;
+  try {
+    url = new URL(raw, 'https://visual.invalid');
+  } catch {
+    return '';
+  }
+  if (url.username || url.password || url.port || /\.(svg|html?)$/i.test(url.pathname)) return '';
+  let path;
+  try {
+    path = decodeURIComponent(url.pathname);
+  } catch {
+    return '';
+  }
+  if (/[\\\u0000-\u001f\u007f]/.test(path)) return '';
+  if (raw.startsWith('/') && !raw.startsWith('//') && url.origin === 'https://visual.invalid') return raw;
+  if (!raw.startsWith('https://') || url.protocol !== 'https:') return '';
+  const host = url.hostname;
+  // Visual URLs load in <img>, never via a server fetch. Still reject local,
+  // private and literal-IP destinations rather than probing a user's LAN.
+  if (!host.includes('.') || /^(localhost|.*\.(localhost|local|internal|test|invalid|lan|home\.arpa))$/i.test(host) || /^[\d.]+$/.test(host) || host.includes(':')) return '';
+  return url.href;
+}
+function sanitizeHomepageVisuals(raw) {
+  const result = {};
+  for (const [group, fields] of Object.entries(HOMEPAGE_VISUAL_FIELDS)) {
+    result[group] = {};
+    for (const [key, field] of Object.entries(fields)) {
+      const v = raw?.[group]?.[key];
+      let clean = field.value;
+      if (field.type === 'boolean' && typeof v === 'boolean') clean = v;
+      if (field.type === 'color' && typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)) clean = v;
+      if (field.type === 'image') clean = safeVisualUrl(v);
+      if (field.type === 'select' && field.options.includes(v)) clean = v;
+      if (field.type === 'number' && v !== '' && v != null && Number.isFinite(Number(v))) {
+        clean = Math.min(field.max, Math.max(field.min, Number(v)));
+      }
+      result[group][key] = clean;
+    }
+  }
+  return result;
+}
+function mergeHomepageVisuals(current, visuals) {
+  return {
+    ...(current && typeof current === 'object' ? current : {}),
+    visuals: sanitizeHomepageVisuals(visuals)
+  };
+}
+
+// Keep the placement runtime and its sort/date/active rules authoritative.
+// De-duplicate IDs only; never slice away additional posters or offer cards.
+function uniqueHomepagePromotions(promotions) {
+  const seen = new Set();
+  return promotions.filter(promo => {
+    if (seen.has(promo.id)) return false;
+    seen.add(promo.id);
+    return true;
+  });
+}
+
+function HomeVisualLayers({
+  background,
+  texture,
+  left,
+  right
+}) {
+  const [mobile, setMobile] = reactExports.useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)').matches);
+  reactExports.useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 767px)');
+    const update = () => setMobile(mq.matches);
+    update();
+    if (mq.addEventListener) mq.addEventListener('change', update);else mq.addListener?.(update);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', update);else mq.removeListener?.(update);
+    };
+  }, []);
+  const layers = [background && {
+    ...background,
+    name: 'background'
+  }, texture && {
+    ...texture,
+    name: 'texture'
+  }, left && {
+    ...left,
+    name: 'left'
+  }, right && {
+    ...right,
+    name: 'right'
+  }].filter(layer => layer?.url && !(mobile && layer.hideMobile));
+  if (!layers.length) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hp-visual-layers",
+    "aria-hidden": "true",
+    children: layers.map(layer => /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+      alt: "",
+      src: layer.url,
+      className: `hp-visual-layer hp-visual-layer--${layer.name}${layer.hideMobile ? ' hp-visual-layer--mobile-hidden' : ''}`,
+      style: {
+        opacity: layer.opacity,
+        objectFit: layer.fit || 'contain',
+        objectPosition: layer.position || 'center',
+        ...(layer.size ? {
+          width: layer.size
+        } : {})
+      },
+      loading: "lazy",
+      decoding: "async",
+      onError: e => {
+        e.currentTarget.hidden = true;
+      }
+    }, `${layer.name}:${layer.url}`))
+  });
 }
 
 function PromoCopyCode({
@@ -38178,169 +37726,6 @@ function HomeLeaderboard({
         })]
       })]
     })
-  });
-}
-
-function FashionChooser({
-  onClose
-}) {
-  const dialog = reactExports.useRef(null);
-  const titleId = reactExports.useId();
-  reactExports.useEffect(() => {
-    const node = dialog.current;
-    const opener = document.activeElement;
-    const {
-      overflow,
-      paddingRight
-    } = document.body.style;
-    const gap = window.innerWidth - document.documentElement.clientWidth;
-    const padding = parseFloat(getComputedStyle(document.body).paddingRight) || 0;
-    node.showModal(); // Native top layer, focus trap and Escape handling.
-    document.body.style.overflow = 'hidden';
-    if (gap > 0) document.body.style.paddingRight = `${padding + gap}px`;
-    return () => {
-      node.close();
-      document.body.style.overflow = overflow;
-      document.body.style.paddingRight = paddingRight;
-      if (opener?.isConnected) opener.focus({
-        preventScroll: true
-      });
-    };
-  }, []);
-  return /*#__PURE__*/jsxRuntimeExports.jsx("dialog", {
-    ref: dialog,
-    className: "fashion-choice",
-    "aria-labelledby": titleId,
-    onCancel: onClose,
-    onClick: event => {
-      if (event.target === event.currentTarget) onClose();
-    },
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "fashion-choice__inner",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-        type: "button",
-        className: "fashion-choice__close",
-        "aria-label": "Close fashion selection",
-        onClick: onClose,
-        autoFocus: true,
-        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "x",
-          size: 22
-        })
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "fashion-choice__eyebrow",
-        children: "SORA LIFE / The fashion edit"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        id: titleId,
-        children: "Find your kind of style."
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "fashion-choice__intro",
-        children: "Three worlds. A style for every you."
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "fashion-choice__grid",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: "/fashion/men",
-          className: "fashion-choice__card fashion-choice__card--men",
-          onClick: onClose,
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
-            src: "/img/fashion-editorial/men-hero-desktop-1000.webp",
-            alt: "",
-            width: "1000",
-            height: "563"
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("small", {
-              children: "The everyday edit"
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
-              children: ["Men\u2019s fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                name: "arrowRight",
-                size: 22
-              })]
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-              children: "Explore the collection"
-            })]
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: "/fashion/women",
-          className: "fashion-choice__card fashion-choice__card--women",
-          onClick: onClose,
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
-            src: "/img/fashion-editorial/women-category-silk.webp",
-            alt: "",
-            width: "480",
-            height: "480"
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("small", {
-              children: "Tradition meets today"
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
-              children: ["Women\u2019s fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                name: "arrowRight",
-                size: 22
-              })]
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-              children: "Explore the collection"
-            })]
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "fashion-choice__card fashion-choice__card--kids",
-          "aria-disabled": "true",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
-            src: "/img/fashion-circle-kids.webp",
-            alt: "",
-            width: "640",
-            height: "640"
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("small", {
-              children: "Little personalities"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-              children: "Kids\u2019 fashion"
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-              children: "Coming soon"
-            })]
-          })]
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: "/fashion",
-        className: "fashion-choice__all",
-        onClick: onClose,
-        children: ["Browse all fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "arrowRight",
-          size: 15
-        })]
-      })]
-    })
-  });
-}
-
-// Only the default Fashion doorway opens the chooser. Custom admin links
-// and modified clicks retain normal link navigation and open-in-new-tab.
-function FashionEntryLink({
-  to = '/fashion',
-  children,
-  onClick,
-  ...props
-}) {
-  const [open, setOpen] = reactExports.useState(false);
-  const location = useLocation();
-  const isEntry = to === '/fashion' || to === '/fashion/';
-  reactExports.useEffect(() => {
-    setOpen(false);
-  }, [location.pathname, location.search]);
-  function activate(event) {
-    onClick?.(event);
-    if (!isEntry || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || props.target === '_blank') return;
-    event.preventDefault();
-    setOpen(true);
-  }
-  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-      ...props,
-      to: to,
-      onClick: activate,
-      "aria-haspopup": isEntry ? 'dialog' : undefined,
-      children: children
-    }), open && typeof document !== 'undefined' && /*#__PURE__*/reactDomExports.createPortal(/*#__PURE__*/jsxRuntimeExports.jsx(FashionChooser, {
-      onClose: () => setOpen(false)
-    }), document.body)]
   });
 }
 
@@ -40851,6 +40236,125 @@ function ShopByConcerns({
   });
 }
 
+// Pure, deterministic Homepage merchandising selectors.
+//
+// Every item returned here comes from the hydrated catalogue/category data.
+// The selector never creates prices, discounts, ratings, brands or categories;
+// sections whose supporting data does not exist simply receive an empty list.
+
+function eligibleProduct(product) {
+  return Boolean(product && product.id != null && product.slug && product.name && product.isActive !== false && Number(product.stock) > 0);
+}
+function stableProducts(list) {
+  return [...list].sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0) || String(a.id).localeCompare(String(b.id)));
+}
+function distinct(primary, fallback, limit, excluded = new Set()) {
+  const result = [];
+  const seen = new Set(excluded);
+  for (const product of [...primary, ...fallback]) {
+    if (!eligibleProduct(product) || seen.has(product.id)) continue;
+    seen.add(product.id);
+    result.push(product);
+    if (result.length === limit) break;
+  }
+  return result;
+}
+
+// Avoid filling a discovery rail with one category when a broad catalogue is
+// available. Category order and product order remain deterministic.
+function categoryBalanced(list, limit) {
+  const groups = new Map();
+  for (const product of list) {
+    const key = product.category || 'uncategorized';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(product);
+  }
+  const output = [];
+  let row = 0;
+  while (output.length < limit) {
+    let added = false;
+    for (const products of groups.values()) {
+      if (products[row]) {
+        output.push(products[row]);
+        added = true;
+        if (output.length === limit) break;
+      }
+    }
+    if (!added) break;
+    row += 1;
+  }
+  return output;
+}
+function cleanBrand(value) {
+  const brand = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+  return brand && brand.length <= 60 ? brand : '';
+}
+function productBrandName(product) {
+  const explicit = cleanBrand(product?.brand || product?.brandName || product?.manufacturer);
+  if (explicit) return explicit;
+
+  // These two names are only inferred when they are literally present in the
+  // catalogue record (name/category) or its existing source URL.
+  const evidence = `${product?.name || ''} ${product?.category || ''}`;
+  if (/\bmom[\s-]*trust\b/i.test(evidence)) return 'Mom Trust';
+  try {
+    const host = new URL(product?.permalink || '').hostname.toLowerCase().replace(/^www\./, '');
+    if (host === 'biosash.com' || host.endsWith('.biosash.com')) return 'Biosash';
+    if (/^mom-?trust\./.test(host) || host.includes('momtrust')) return 'Mom Trust';
+  } catch {
+    // Missing/relative source URLs carry no usable brand evidence.
+  }
+  return '';
+}
+function selectHomeMerchandising(productList, categoryList) {
+  const available = stableProducts((Array.isArray(productList) ? productList : []).filter(eligibleProduct));
+  const categories = (Array.isArray(categoryList) ? categoryList : []).filter(category => category?.slug && category?.name);
+  const featured = available.filter(product => product.isFeatured);
+  const discounted = available.filter(product => product.onSale || Number(product.discountPct) > 0);
+  const trending = categoryBalanced(distinct(featured, discounted, Math.min(8, available.length)), 8);
+  const trendingFilled = distinct(trending, categoryBalanced(available, 8), Math.min(8, available.length));
+  const trendingIds = new Set(trendingFilled.map(product => product.id));
+  const newProducts = available.filter(product => product.isNew);
+  const discover = distinct(newProducts, [...available].reverse(), 5, trendingIds);
+  const discoverFilled = discover.length >= 4 ? discover : distinct(discover, available, 5);
+  const flaggedPopular = available.filter(product => product.isBestseller);
+  const popularIsVerified = flaggedPopular.length >= 4;
+  const priorIds = new Set([...trendingFilled, ...discoverFilled].map(product => product.id));
+  const popular = popularIsVerified ? distinct(flaggedPopular, [], 8) : distinct(categoryBalanced(available, 8), available, 8, priorIds);
+  const popularFilled = popular.length >= 4 ? popular : distinct(popular, available, 8);
+  const brandMap = new Map();
+  for (const product of available) {
+    const name = productBrandName(product);
+    if (!name) continue;
+    const key = name.toLocaleLowerCase();
+    if (!brandMap.has(key)) brandMap.set(key, {
+      name,
+      products: []
+    });
+    brandMap.get(key).products.push(product);
+  }
+  const brands = [...brandMap.values()].sort((a, b) => b.products.length - a.products.length || a.name.localeCompare(b.name)).slice(0, 4);
+  const collections = categories.map(category => ({
+    category,
+    products: available.filter(product => (product.categories || [product.category]).includes(category.slug)).slice(0, 4)
+  })).filter(collection => collection.products.length > 0).slice(0, 4);
+  const momCategory = categories.find(category => /mom[\s-]*trust/i.test(`${category.slug} ${category.name}`));
+  const momProducts = available.filter(product => productBrandName(product) === 'Mom Trust' || momCategory && (product.categories || [product.category]).includes(momCategory.slug)).slice(0, 6);
+  return {
+    available,
+    trending: trendingFilled,
+    discover: discoverFilled,
+    discoverLink: newProducts.length ? '/shop?filter=new' : '/shop',
+    popular: popularFilled,
+    popularTitle: popularIsVerified ? 'Bestsellers' : 'Worth discovering',
+    popularEyebrow: popularIsVerified ? 'Catalogue favourites' : 'Across the marketplace',
+    brands,
+    collections,
+    momCategory,
+    momProducts
+  };
+}
+
 // ============================================================
 // SORA LIFE — product content field shapes (migration 0025)
 //
@@ -42714,9 +42218,7 @@ function Home() {
   const story = homepage?.story;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "v2-home",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Hero$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeCategoryStrip, {
-      appearance: visuals.categoryStrip
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeHero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
     }), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
@@ -64281,7 +63783,7 @@ const AUTOPLAY_MS$2 = 6000;
  * The track slides on transform only.
  */
 function HeroCarousel$2({
-  slides = HERO_SLIDES$2,
+  slides = HERO_SLIDES$3,
   autoplayMs = AUTOPLAY_MS$2
 }) {
   const [index, setIndex] = reactExports.useState(0);
@@ -64956,7 +64458,7 @@ const HERO_TALL_MEDIA = '(max-width: 767px)';
  * wall still reads as wall.
  */
 function HeroCarousel$1({
-  slides = HERO_SLIDES$1,
+  slides = HERO_SLIDES$2,
   autoplayMs = AUTOPLAY_MS$1
 }) {
   const [index, setIndex] = reactExports.useState(0);
@@ -65064,7 +64566,7 @@ function TrustStrip() {
     children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
       className: "hl-trust",
       "aria-label": "Why shop with us",
-      children: TRUST$1.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+      children: TRUST$2.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "hl-trust__icon",
           children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -68897,5 +68399,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { adminUpdateProduct as $, fulfillmentStatusLabel as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, REWARD_OPTION_SLOTS as a$, adminCreateProduct as a0, adminListVariants as a1, adminCreateVariant as a2, adminUpdateVariant as a3, adminSetVariantActive as a4, adminDeleteVariant as a5, adminGetProgramSettings as a6, CREATOR_STATUSES as a7, money2 as a8, adminListCreators as a9, adminGetConversionAudit as aA, adminRefundConversion as aB, adminListKyc as aC, KYC_STATUSES as aD, KYC_SIGNED_URL_SECONDS as aE, adminSetKycStatus as aF, KYC_DOCUMENT_KINDS as aG, kycDocumentState as aH, adminKycDocumentUrl as aI, adminListKycAudit as aJ, getPayoutConfig as aK, adminListPayouts as aL, PAYOUT_STATUSES as aM, adminSetWithdrawalsOpen as aN, adminGetPayoutLedger as aO, adminGetPayoutAudit as aP, adminGetKycForCreator as aQ, adminReviewPayout as aR, adminMarkPayoutPaid as aS, normalizeLadder as aT, DEFAULT_BEYOND_STEP as aU, adminGetTierLadder as aV, validateLadder as aW, ladderErrorMessage as aX, rupees as aY, adminListLevelRewards as aZ, groupRewardsByLevel as a_, adminCreatorStandings as aa, adminSetProgramSettings as ab, adminCreateCreator as ac, adminSetCreatorStatus as ad, normalizeContentPatch as ae, contentScore as af, adminGetCreator as ag, adminListCodeAliases as ah, adminListCampaigns as ai, adminListLinks as aj, adminListAudit as ak, adminListAttributionEvents as al, adminUpdateCampaign as am, adminCreateCampaign as an, CAMPAIGN_STATUSES as ao, buildTrackingUrl as ap, normalizeDestination as aq, DESTINATION_TYPES as ar, CopyButton as as, adminChangeCreatorCode as at, adminUpdateCreator as au, adminCreateLink as av, adminSetLinkStatus as aw, adminListConversions as ax, CONVERSION_STATUSES as ay, adminGetConversionItems as az, Link as b, isSpotlightEligible as b$, validateRewardOption as b0, REWARD_TYPES as b1, REWARD_TYPE_LABEL as b2, adminListRewardClaims as b3, CLAIM_STATUSES as b4, CLAIM_STATUS_LABEL as b5, DEFAULT_LADDER as b6, adminSetTierLadder as b7, rewardOptionErrorMessage as b8, adminUpsertLevelReward as b9, PromoOfferCard as bA, adminListPromotions as bB, adminUpsertPromotion as bC, adminDeletePromotion as bD, adminSetPromotionActive as bE, adminReorderPromotions as bF, uploadPromoImage as bG, supabase as bH, CouponTicket as bI, HOMEPAGE_VISUAL_FIELDS as bJ, safeVisualUrl as bK, MAX_CONCERN_PRODUCTS as bL, searchCatalogueForPicker as bM, productGallery as bN, MAX_DISCOVERY_CARDS as bO, makeDiscoveryId as bP, sanitizeHomepageVisuals as bQ, normalizeDiscovery as bR, products as bS, discoveryPayload as bT, mergeHomepageVisuals as bU, normalizeFashionStorefront as bV, normalizeLifestyleStorefront as bW, mergeStorefrontCustomization as bX, buildTree as bY, validatePlacement as bZ, useSearchParams as b_, adminDeleteLevelReward as ba, adminSetRewardClaimStatus as bb, adminGetTheme as bc, sanitizeTheme$1 as bd, TOKENS as be, PRESET_LIST as bf, GROUPS as bg, DEFAULT_THEME as bh, OVERLAY_SCALES as bi, TYPE_SCALES as bj, HEX_RE as bk, adminSetTheme as bl, overlayRgba as bm, adminUpsertCategory as bn, adminDeleteCategory as bo, sanitizeHeroCta as bp, HERO_CTA_FIELDS as bq, adminUpsertHeroSlide as br, mergeHeroCta as bs, announceHomepageSaved as bt, adminDeleteHeroSlide as bu, adminReorderHeroSlides as bv, uploadImage as bw, uploadHeroVideo as bx, normalizePromo as by, PromoPoster as bz, LegalUpdated as c, categoryBySlug as c0, sanitizeCategoryConfig as c1, safeColor as c2, safeGradient as c3, makeSpotlightId as c4, validateImageUpload as c5, normalizeCategoryExperience as c6, categoryExperiencePayload as c7, categoryIsReadyButOff as c8, categoryToneTheme as c9, MIN_INTERVAL_MS as ca, MAX_INTERVAL_MS as cb, DEFAULT_ITEM_SCALE as cc, MIN_ITEM_SCALE as cd, MAX_ITEM_SCALE as ce, ITEM_OFFSET_LIMIT as cf, CategorySpotlight as cg, SOCIAL_NETWORKS as ch, POLICY_KEYS as ci, validateCompanyForSave as cj, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminListHeroSlides as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminSeedDefaultHeroSlides as p, adminImportBiosashCatalog as q, reactExports as r, money as s, adminSetProductActive as t, useParams as u, validateLegalPage as v, adminDeleteProduct as w, adminReorderProducts as x, categories as y, adminListOrders as z };
+export { adminUpdateProduct as $, fulfillmentStatusLabel as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, REWARD_OPTION_SLOTS as a$, adminCreateProduct as a0, adminListVariants as a1, adminCreateVariant as a2, adminUpdateVariant as a3, adminSetVariantActive as a4, adminDeleteVariant as a5, adminGetProgramSettings as a6, CREATOR_STATUSES as a7, money2 as a8, adminListCreators as a9, adminGetConversionAudit as aA, adminRefundConversion as aB, adminListKyc as aC, KYC_STATUSES as aD, KYC_SIGNED_URL_SECONDS as aE, adminSetKycStatus as aF, KYC_DOCUMENT_KINDS as aG, kycDocumentState as aH, adminKycDocumentUrl as aI, adminListKycAudit as aJ, getPayoutConfig as aK, adminListPayouts as aL, PAYOUT_STATUSES as aM, adminSetWithdrawalsOpen as aN, adminGetPayoutLedger as aO, adminGetPayoutAudit as aP, adminGetKycForCreator as aQ, adminReviewPayout as aR, adminMarkPayoutPaid as aS, normalizeLadder as aT, DEFAULT_BEYOND_STEP as aU, adminGetTierLadder as aV, validateLadder as aW, ladderErrorMessage as aX, rupees as aY, adminListLevelRewards as aZ, groupRewardsByLevel as a_, adminCreatorStandings as aa, adminSetProgramSettings as ab, adminCreateCreator as ac, adminSetCreatorStatus as ad, normalizeContentPatch as ae, contentScore as af, adminGetCreator as ag, adminListCodeAliases as ah, adminListCampaigns as ai, adminListLinks as aj, adminListAudit as ak, adminListAttributionEvents as al, adminUpdateCampaign as am, adminCreateCampaign as an, CAMPAIGN_STATUSES as ao, buildTrackingUrl as ap, normalizeDestination as aq, DESTINATION_TYPES as ar, CopyButton as as, adminChangeCreatorCode as at, adminUpdateCreator as au, adminCreateLink as av, adminSetLinkStatus as aw, adminListConversions as ax, CONVERSION_STATUSES as ay, adminGetConversionItems as az, Link as b, safeColor as b$, validateRewardOption as b0, REWARD_TYPES as b1, REWARD_TYPE_LABEL as b2, adminListRewardClaims as b3, CLAIM_STATUSES as b4, CLAIM_STATUS_LABEL as b5, DEFAULT_LADDER as b6, adminSetTierLadder as b7, rewardOptionErrorMessage as b8, adminUpsertLevelReward as b9, adminUpsertPromotion as bA, adminDeletePromotion as bB, adminSetPromotionActive as bC, adminReorderPromotions as bD, uploadPromoImage as bE, supabase as bF, CouponTicket as bG, HOMEPAGE_VISUAL_FIELDS as bH, MAX_CONCERN_PRODUCTS as bI, searchCatalogueForPicker as bJ, productGallery as bK, MAX_DISCOVERY_CARDS as bL, makeDiscoveryId as bM, sanitizeHomepageVisuals as bN, normalizeDiscovery as bO, products as bP, discoveryPayload as bQ, mergeHomepageVisuals as bR, normalizeFashionStorefront as bS, normalizeLifestyleStorefront as bT, mergeStorefrontCustomization as bU, buildTree as bV, validatePlacement as bW, useSearchParams as bX, isSpotlightEligible as bY, categoryBySlug as bZ, sanitizeCategoryConfig as b_, adminDeleteLevelReward as ba, adminSetRewardClaimStatus as bb, adminGetTheme as bc, sanitizeTheme$1 as bd, TOKENS as be, PRESET_LIST as bf, GROUPS as bg, DEFAULT_THEME as bh, OVERLAY_SCALES as bi, TYPE_SCALES as bj, HEX_RE as bk, adminSetTheme as bl, overlayRgba as bm, adminUpsertCategory as bn, adminDeleteCategory as bo, safeVisualUrl as bp, adminUpsertHeroSlide as bq, announceHomepageSaved as br, adminDeleteHeroSlide as bs, adminReorderHeroSlides as bt, uploadImage as bu, uploadHeroVideo as bv, normalizePromo as bw, PromoPoster as bx, PromoOfferCard as by, adminListPromotions as bz, LegalUpdated as c, safeGradient as c0, makeSpotlightId as c1, validateImageUpload as c2, normalizeCategoryExperience as c3, categoryExperiencePayload as c4, categoryIsReadyButOff as c5, categoryToneTheme as c6, MIN_INTERVAL_MS as c7, MAX_INTERVAL_MS as c8, DEFAULT_ITEM_SCALE as c9, MIN_ITEM_SCALE as ca, MAX_ITEM_SCALE as cb, ITEM_OFFSET_LIMIT as cc, CategorySpotlight as cd, SOCIAL_NETWORKS as ce, POLICY_KEYS as cf, validateCompanyForSave as cg, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminListHeroSlides as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminSeedDefaultHeroSlides as p, adminImportBiosashCatalog as q, reactExports as r, money as s, adminSetProductActive as t, useParams as u, validateLegalPage as v, adminDeleteProduct as w, adminReorderProducts as x, categories as y, adminListOrders as z };
 //# sourceMappingURL=bundle.js.map

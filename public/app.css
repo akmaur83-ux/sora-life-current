@@ -4425,6 +4425,147 @@ h3 { font-size: var(--text-xl); }
     border-radius: 0;
   }
 }
+/* ============================================================
+   The homepage top (HomeStorefront.jsx): white with an orange accent — a
+   palette of its own, scoped to .hx. No --slv2-* token is redefined and no
+   rule here reaches outside .hx, so no other page or storefront changes.
+   Orange and text, measured (WCAG 2.x): white on the deep orange #C2500A is
+   4.72:1 (the buttons); the deep orange on white is 4.72:1 (the highlighted
+   headline line); near-black #1D1D1B on the bright orange #F47B20 is 6.19:1
+   (the Fashion tile). The bright orange never carries white text.
+   ============================================================ */
+.hx { --hx-orange: #F47B20; --hx-orange-deep: #C2500A; --hx-ink: #1D1D1B; --hx-muted: #5C5853; --hx-soft: #F5F4F2; --hx-line: #ECE8E2; background: #fff; color: var(--hx-ink); }
+.hx *, .hx *::before, .hx *::after { box-sizing: border-box; }
+.hx a { color: inherit; text-decoration: none; }
+.hx-wrap { width: 100%; max-width: 1240px; margin-inline: auto; padding-inline: 28px; }
+.hx .hx-eyebrow { margin: 0 0 14px; font: 600 11px/1.6 var(--slv2-sans); letter-spacing: .16em; text-transform: uppercase; color: var(--hx-ink); }
+.hx .hx-btn { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 12px 26px; border-radius: 999px; background: var(--hx-orange-deep); color: #fff; font: 600 15px/1.2 var(--slv2-sans); white-space: nowrap; }
+.hx .hx-btn--light { background: #fff; color: var(--hx-ink); }
+.hx-btn svg { flex: none; transition: transform .3s ease; }
+.hx :focus-visible { outline: 2px solid var(--hx-orange-deep); outline-offset: 3px; }
+
+/* ---- the hero: the photograph right-aligned on white, its left edge feathered
+   into the white; the copy over the empty left. Height from the width. ---- */
+.hx-hero { position: relative; overflow: hidden; }
+.hx-hero__viewport { overflow: hidden; touch-action: pan-y; }
+.hx-hero__track { display: flex; transition: transform .6s ease; }
+.hx-hero__slide { position: relative; display: flex; align-items: center; flex: 0 0 100%; min-width: 0; height: clamp(440px, 40vw, 600px); overflow: hidden; background: #fff; }
+.hx-hero__image { position: absolute; top: 0; right: 0; width: auto; height: 100%; max-width: none; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14%); mask-image: linear-gradient(90deg, transparent 0, #000 14%); }
+.hx-hero__copy { position: relative; z-index: 1; }
+.hx-hero__copy > * { max-width: min(46%, 520px); }
+.hx-hero__slide--biosash .hx-hero__copy > * { max-width: min(32%, 400px); }
+.hx-hero__title { margin: 0 0 28px; font-family: var(--slv2-disp); font-size: clamp(38px, 4.4vw, 60px); font-weight: 500; line-height: 1.06; letter-spacing: -.02em; color: var(--hx-ink); }
+.hx-hero__title span { display: block; }
+.hx .hx-hl { color: var(--hx-orange-deep); }
+.hx-hero__dots { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; justify-content: center; gap: 4px; }
+.hx-hero__dot { position: relative; width: 28px; height: 28px; padding: 0; border: 0; background: none; cursor: pointer; }
+.hx-hero__dot::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: #CFCAC3; }
+.hx-hero__dot.is-on::after { background: var(--hx-orange); }
+
+/* ---- the trust strip: four facts in a row ---- */
+.hx-trust { border-block: 1px solid var(--hx-line); }
+.hx-trust__list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-block: 0; padding-block: 18px; list-style: none; }
+.hx-trust__list li { display: flex; justify-content: center; min-width: 0; border-right: 1px solid var(--hx-line); }
+.hx-trust__list li:last-child { border-right: 0; }
+.hx-trust__list a, .hx-trust__item { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 4px 12px; }
+.hx-trust svg { flex: none; color: var(--hx-orange-deep); }
+.hx-trust strong { display: block; font: 600 14px/1.3 var(--slv2-sans); }
+.hx-trust small { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.3; color: var(--hx-muted); }
+
+/* ---- the tiles: Fashion, large, beside two stacked ---- */
+.hx-tiles { padding-block: 32px 8px; }
+.hx-tiles__grid { display: grid; grid-template-columns: 1.15fr 1fr; grid-template-rows: repeat(2, minmax(208px, auto)); gap: 16px; }
+.hx-tile { position: relative; isolation: isolate; display: block; min-width: 0; overflow: hidden; border-radius: 16px; background: var(--hx-soft); }
+.hx-tile__h { margin: 0; font-family: var(--slv2-disp); font-weight: 500; letter-spacing: -.01em; color: var(--hx-ink); }
+.hx-tile__h span { display: block; }
+.hx-tile__image { transition: transform .5s ease; }
+.hx-tile--fashion { grid-row: 1 / 3; display: grid; grid-template-columns: 46% 54%; min-height: 432px; background: var(--hx-orange); }
+.hx-tile__panel { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 26px; padding: 32px; }
+.hx-tile--fashion .hx-tile__h { font-size: clamp(30px, 3.2vw, 46px); line-height: 1.06; }
+.hx-tile__art { position: relative; display: block; overflow: hidden; }
+.hx-tile__art .hx-tile__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
+.hx-tile--small { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 24px; min-height: 208px; }
+.hx-tile--small .hx-tile__image { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; object-position: right center; }
+.hx-tile--small .hx-tile__h { font-size: clamp(22px, 2vw, 28px); line-height: 1.15; }
+.hx-tile__go { display: grid; place-items: center; width: 42px; height: 42px; border: 1.5px solid var(--hx-ink); border-radius: 50%; transition: transform .3s ease; }
+
+/* ---- explore the stores: five circles ---- */
+.hx-stores { padding-block: 44px 16px; }
+.hx-stores__h { margin: 0 0 28px; font-family: var(--slv2-disp); font-size: clamp(26px, 2.6vw, 34px); font-weight: 500; line-height: 1.15; color: var(--hx-ink); }
+.hx-stores__h::after { content: ''; display: block; width: 44px; height: 3px; margin-top: 10px; border-radius: 2px; background: var(--hx-orange); }
+.hx-stores__row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; margin: 0; padding: 0; list-style: none; }
+.hx-store { display: grid; justify-items: center; gap: 12px; text-align: center; }
+.hx-store__art { display: block; width: min(100%, 160px); aspect-ratio: 1; overflow: hidden; border-radius: 50%; background: #F1EFEC; }
+/* The shots are on white: multiplied onto the disc, the white takes the disc's grey and the circle reads. */
+.hx-store__image { display: block; width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; transition: transform .5s ease; }
+.hx-store__name { font: 500 15px/1.3 var(--slv2-sans); }
+
+/* ---- the promo strip: the copy in the photograph's clear centre ---- */
+.hx-promo { padding-block: 28px 44px; }
+.hx-promo__card { position: relative; isolation: isolate; display: flex; align-items: center; justify-content: center; height: clamp(220px, 22vw, 300px); overflow: hidden; border-radius: 16px; background: #F6EFE6; text-align: center; }
+.hx-promo__image { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.hx-promo__copy { display: grid; justify-items: center; gap: 10px; max-width: 46%; padding: 20px; }
+.hx-promo__h { margin: 0; font-family: var(--slv2-disp); font-size: clamp(28px, 3vw, 42px); font-weight: 500; line-height: 1.1; color: var(--hx-ink); }
+.hx-promo__text { margin: 0 0 8px; font-size: 15px; line-height: 1.5; color: var(--hx-muted); }
+
+@media (hover: hover) and (pointer: fine) {
+  .hx .hx-btn:hover svg, .hx-tile:hover .hx-tile__go { transform: translateX(3px); }
+  .hx-tile:hover .hx-tile__image, .hx-store:hover .hx-store__image { transform: scale(1.04); }
+}
+@media (max-width: 700px) {
+  .hx-wrap { padding-inline: 16px; }
+  .hx-hero__slide { align-items: flex-start; height: 520px; }
+  .hx-hero__image { top: auto; bottom: 0; width: 170%; height: auto; -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 16%); mask-image: linear-gradient(180deg, transparent 0, #000 16%); }
+  .hx-hero__slide--biosash .hx-hero__image { width: 160%; }
+  .hx-hero__copy { padding-top: 30px; }
+  .hx-hero__copy > *, .hx-hero__slide--biosash .hx-hero__copy > * { max-width: none; }
+  .hx-hero__title { margin-bottom: 20px; font-size: clamp(30px, 8.6vw, 36px); }
+  .hx .hx-btn { min-height: 46px; padding: 11px 22px; font-size: 14px; }
+  /* One row of four, as in the mockup. It scrolls sideways, each item sized so two and a half
+     show: the half item at the edge is the cue that there is more to reach. */
+  .hx-trust__list { display: flex; padding-block: 10px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
+  .hx-trust__list li { flex: 0 0 calc(100% / 2.5); justify-content: flex-start; scroll-snap-align: start; }
+  .hx-trust__list a, .hx-trust__item { gap: 10px; padding: 6px 8px; }
+  .hx-trust svg { width: 22px; height: 22px; }
+  .hx-trust strong { font-size: 13px; }
+  .hx-trust small { font-size: 12px; }
+  .hx-tiles { padding-top: 22px; }
+  /* Side by side, as in the mockup: Fashion the left half at full height, the two others
+     stacked in the right half, each half its height. In the narrower Fashion tile the
+     copy sits above the photograph. */
+  .hx-tiles__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .hx-tile--fashion { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); min-height: 340px; }
+  .hx-tile__panel { justify-content: flex-start; gap: 12px; padding: 16px 14px 14px; }
+  .hx-tile--fashion .hx-tile__h { font-size: 22px; }
+  .hx .hx-tile--fashion .hx-btn { min-height: 36px; gap: 6px; padding: 8px 12px; font-size: 12.5px; }
+  .hx-tile--small { min-height: 0; padding: 14px; }
+  .hx-tile--small .hx-tile__h { position: relative; font-size: 17px; }
+  /* Framed so each subject sits to the right of its heading in the half-width tile. */
+  .hx-tile--nutrition .hx-tile__image { object-position: 40% center; }
+  .hx-tile--living .hx-tile__image { object-position: 70% center; }
+  .hx-tile__go { width: 32px; height: 32px; }
+  .hx-tile__go svg { width: 15px; height: 15px; }
+  .hx-stores { padding-top: 34px; }
+  .hx-stores__h { margin-bottom: 20px; font-size: 26px; }
+  /* Three and a half circles in view: the half circle at the edge is the scroll cue. */
+  .hx-stores__row { display: flex; gap: 14px; margin-inline: -16px; padding: 0 16px 8px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding-inline: 16px; scrollbar-width: none; }
+  .hx-stores__row li { flex: 0 0 calc((100% - 3 * 14px) / 3.5); scroll-snap-align: start; }
+  .hx-store { gap: 8px; }
+  .hx-store__art { width: 100%; }
+  .hx-store__name { font-size: 13px; }
+  .hx-promo { padding-block: 20px 34px; }
+  .hx-promo__card { height: 250px; }
+  .hx-promo__copy { max-width: 78%; padding: 16px; background: radial-gradient(closest-side, rgba(255, 255, 255, .78), rgba(255, 255, 255, 0)); }
+  .hx-promo__h { font-size: 28px; }
+  .hx-promo__text { font-size: 14px; }
+}
+@media (max-width: 700px) and (hover: hover) and (pointer: fine) {
+  .hx-trust__list, .hx-stores__row { scrollbar-width: thin; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hx-hero__track, .hx-tile__image, .hx-store__image, .hx-btn svg, .hx-tile__go { transition: none; }
+  .hx .hx-btn:hover svg, .hx-tile:hover .hx-tile__go, .hx-tile:hover .hx-tile__image, .hx-store:hover .hx-store__image { transform: none; }
+}
 
 /* ═══ src/styles/v2-shop.css ═══ */
 /* ============================================================================

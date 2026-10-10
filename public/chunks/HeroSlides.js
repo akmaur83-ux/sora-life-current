@@ -1,5 +1,81 @@
-import { bp as sanitizeHeroCta, j as jsxRuntimeExports, bq as HERO_CTA_FIELDS, r as reactExports, m as adminListHeroSlides, a as adminGetSetting, p as adminSeedDefaultHeroSlides, br as adminUpsertHeroSlide, bs as mergeHeroCta, e as adminSetSetting, bt as announceHomepageSaved, bu as adminDeleteHeroSlide, bv as adminReorderHeroSlides, bw as uploadImage, bx as uploadHeroVideo } from '../bundle.js';
+import { bp as safeVisualUrl, j as jsxRuntimeExports, r as reactExports, m as adminListHeroSlides, a as adminGetSetting, p as adminSeedDefaultHeroSlides, bq as adminUpsertHeroSlide, e as adminSetSetting, br as announceHomepageSaved, bs as adminDeleteHeroSlide, bt as adminReorderHeroSlides, bu as uploadImage, bv as uploadHeroVideo } from '../bundle.js';
 import { u as uploadHomepageImage } from './homepageImageUpload.js';
+
+const number = (label, value, min, max, step = 1) => ({
+  label,
+  type: 'number',
+  value,
+  min,
+  max,
+  step
+});
+const select = (label, value, options) => ({
+  label,
+  type: 'select',
+  value,
+  options
+});
+const color = label => ({
+  label,
+  type: 'color',
+  value: ''
+});
+const HERO_CTA_FIELDS = {
+  desktopPosition: select('Desktop position', 'flow', ['flow', 'custom']),
+  x: number('Desktop horizontal position (%)', 0, 0, 100),
+  y: number('Desktop vertical position (%)', 75, 0, 100),
+  mobilePosition: select('Mobile position', 'auto', ['auto', 'custom']),
+  mobileX: number('Mobile horizontal position (%)', 50, 0, 100),
+  mobileY: number('Mobile vertical position (%)', 95, 0, 100),
+  width: number('Button width (px; 0 = automatic)', 118, 0, 480),
+  paddingX: number('Horizontal padding (px)', 14, 4, 48),
+  paddingY: number('Vertical padding (px)', 7, 0, 24),
+  backgroundColor: color('Background color (blank = theme)'),
+  textColor: color('Text color (blank = theme)'),
+  borderColor: color('Border color (blank = theme)'),
+  borderWidth: number('Border thickness (px)', 1, 0, 6),
+  radius: number('Corner radius (px)', 2, 0, 40),
+  fontSize: number('Font size (px; 0 = responsive default)', 13, 0, 24),
+  fontWeight: select('Font weight', 700, [400, 500, 600, 700]),
+  opacity: number('Button opacity', 1, 0.3, 1, 0.05),
+  shadow: select('Button shadow', 'none', ['none', 'subtle']),
+  textureUrl: {
+    label: 'Button background texture',
+    type: 'image',
+    value: ''
+  },
+  textureOpacity: number('Texture opacity', 0.25, 0, 1, 0.05),
+  textureFit: select('Texture fit', 'cover', ['cover', 'contain']),
+  iconUrl: {
+    label: 'Button icon image',
+    type: 'image',
+    value: ''
+  },
+  iconSide: select('Icon side', 'left', ['left', 'right']),
+  iconSize: number('Icon size (px)', 16, 10, 32)
+};
+function sanitizeHeroCta(input) {
+  const raw = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+  return Object.fromEntries(Object.entries(HERO_CTA_FIELDS).map(([key, f]) => {
+    const v = raw[key];
+    let value = f.value;
+    if (f.type === 'number' && v !== '' && (typeof v === 'number' || typeof v === 'string') && Number.isFinite(Number(v))) value = Math.min(f.max, Math.max(f.min, Number(v)));
+    if (f.type === 'select' && f.options.includes(v)) value = v;
+    if (f.type === 'color' && typeof v === 'string' && /^#[\da-f]{6}$/i.test(v)) value = v;
+    if (f.type === 'image') value = safeVisualUrl(v);
+    return [key, value];
+  }));
+}
+function mergeHeroCta(homepage, slideId, appearance) {
+  if (typeof slideId !== 'string' || !/^[\w-]{1,100}$/.test(slideId) || ['__proto__', 'constructor', 'prototype'].includes(slideId)) throw new Error('Invalid slide ID');
+  return {
+    ...homepage,
+    heroCtas: {
+      ...(homepage?.heroCtas || {}),
+      [slideId]: sanitizeHeroCta(appearance)
+    }
+  };
+}
 
 const GROUPS = [['Position', ['desktopPosition', 'x', 'y', 'mobilePosition', 'mobileX', 'mobileY']], ['Button', ['width', 'paddingX', 'paddingY', 'backgroundColor', 'textColor', 'borderColor', 'borderWidth', 'radius', 'fontSize', 'fontWeight', 'opacity', 'shadow']], ['Texture', ['textureUrl', 'textureOpacity', 'textureFit']], ['Icon', ['iconUrl', 'iconSide', 'iconSize']]];
 function VisualField({
