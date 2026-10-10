@@ -14,9 +14,10 @@ import FashionEntryLink from './FashionEntryLink.jsx';
 //                 focus, still under prefers-reduced-motion, dots and a swipe.
 //                 Static: the admin Hero Slides page no longer drives it.
 // HomeTrustStrip — four facts: free standard delivery on every order,
-//                 genuine products, 7-day returns, support 9am–6pm IST.
+//                 genuine products, 7-day returns, support 9am–6pm IST. On a
+//                 phone, one row of four, each two short lines beside its icon.
 // HomeTiles     — Fashion, large, beside Health & Nutrition and Home & Living.
-// ExploreStores — five circles; a row that scrolls sideways on a phone.
+// ExploreStores — five circles in one row, "View All" beside the heading.
 // FestivePromo  — the gift-and-diya banner, its copy in the clear centre.
 //
 // Every word is HTML; no image carries text beyond product packaging.
@@ -30,7 +31,8 @@ const PHONE = '(max-width: 700px)';
 export const HERO_SLIDES = [
   {
     key: 'everyday',
-    eyebrow: 'Wellness · Fashion · Home · Personal care · More',
+    // Two lines on a phone, as in the mockup; one line, dot-separated, from 701px.
+    eyebrow: ['Wellness · Fashion · Home', 'Personal care · More'],
     title: ['Everything for', 'everyday wellbeing.'],
     cta: { label: 'Shop now', to: '/shop' },
     image: '/img/home-hero-1.webp', phone: '/img/home-hero-1-800.webp', width: 1536, height: 864,
@@ -38,7 +40,7 @@ export const HERO_SLIDES = [
   },
   {
     key: 'biosash',
-    eyebrow: 'In the catalogue',
+    eyebrow: ['In the catalogue'],
     title: ['The Biosash', 'range'],
     // No brand page or brand filter exists yet, so this slide has no button.
     cta: null,
@@ -47,11 +49,12 @@ export const HERO_SLIDES = [
   },
 ];
 
+// A title in two parts is two lines on a phone, where its note gives way so every item is two lines.
 export const TRUST = [
-  { icon: 'truck', title: 'Free Standard Delivery', note: 'On every order', to: '/shipping' },
-  { icon: 'shield', title: 'Genuine Products', note: null, to: null },
-  { icon: 'return', title: 'Easy Returns', note: '7 days', to: '/returns' },
-  { icon: 'chat', title: 'Support', note: '9am–6pm IST', to: '/contact' },
+  { icon: 'truck', title: ['Free Standard', 'Delivery'], note: 'On every order', to: '/shipping' },
+  { icon: 'shield', title: ['Genuine', 'Products'], note: null, to: null },
+  { icon: 'return', title: ['Easy Returns'], note: '7 days', to: '/returns' },
+  { icon: 'chat', title: ['Support'], note: '9am–6pm IST', to: '/contact' },
 ];
 
 export const STORES = [
@@ -106,7 +109,7 @@ export function HomeHero({ slides = HERO_SLIDES, autoplayMs = HERO_AUTOPLAY_MS }
                 <DeferredImage src={s.image} sources={[{ media: PHONE, srcSet: s.phone }]} alt={s.alt} width={s.width} height={s.height}
                   className="hx-hero__image" loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : undefined} />
                 <div className="hx-wrap hx-hero__copy">
-                  <p className="hx-eyebrow">{s.eyebrow}</p>
+                  <p className="hx-eyebrow">{s.eyebrow.map((line, j) => <span key={line}>{j > 0 && <span className="hx-eyebrow__dot" aria-hidden="true"> · </span>}{line}</span>)}</p>
                   <Title className="hx-hero__title"><span>{s.title[0]}</span> <span className="hx-hl">{s.title[1]}</span></Title>
                   {s.cta && <Link to={s.cta.to} className="hx-btn" tabIndex={current ? undefined : -1}>{s.cta.label} <Icon name="arrowRight" size={17} /></Link>}
                 </div>
@@ -131,8 +134,9 @@ export function HomeTrustStrip() {
     <section className="hx hx-trust" aria-label="Shopping with SORA LIFE">
       <ul className="hx-wrap hx-trust__list">
         {TRUST.map((t) => {
-          const body = <><Icon name={t.icon} size={26} /><span><strong>{t.title}</strong>{t.note && <small>{t.note}</small>}</span></>;
-          return <li key={t.title}>{t.to ? <Link to={t.to}>{body}</Link> : <span className="hx-trust__item">{body}</span>}</li>;
+          const title = t.title.join(' ');
+          const body = <><Icon name={t.icon} size={26} /><span><strong>{t.title.map((line, j) => <span key={line}>{j > 0 && ' '}{line}</span>)}</strong>{t.note && <small>{t.note}</small>}</span></>;
+          return <li key={title} className={t.title.length > 1 ? 'hx-trust--split' : undefined}>{t.to ? <Link to={t.to}>{body}</Link> : <span className="hx-trust__item">{body}</span>}</li>;
         })}
       </ul>
     </section>
@@ -148,7 +152,7 @@ export function HomeTiles() {
             <h2 className="hx-tile__h" id="hx-fashion-h"><span>Fashion</span> <span>for every</span> <span>mood.</span></h2>
             <span className="hx-btn hx-btn--light" id="hx-fashion-cta">Shop Fashion <Icon name="arrowRight" size={16} /></span>
           </div>
-          <span className="hx-tile__art"><DeferredImage src="/img/home-tile-fashion.webp" alt="Woman in an orange knit sweater and cream trousers" width={800} height={1067} className="hx-tile__image" /></span>
+          <span className="hx-tile__art"><DeferredImage src="/img/home-tile-fashion.webp" alt="Woman in an orange knit sweater against an orange backdrop" width={800} height={800} className="hx-tile__image" /></span>
         </FashionEntryLink>
         <Link to="/category/supplements" className="hx-tile hx-tile--small hx-tile--nutrition" aria-labelledby="hx-nutrition-h">
           <DeferredImage src="/img/home-tile-nutrition.webp" alt="" width={900} height={563} className="hx-tile__image" />
@@ -169,7 +173,10 @@ export function ExploreStores({ stores = STORES }) {
   return (
     <section className="hx hx-stores" aria-labelledby="hx-stores-h">
       <div className="hx-wrap">
-        <h2 className="hx-stores__h" id="hx-stores-h">Explore the stores</h2>
+        <div className="hx-stores__head">
+          <h2 className="hx-stores__h" id="hx-stores-h">Explore the stores</h2>
+          <Link to="/shop" className="hx-more" aria-label="View all products">View All <Icon name="arrowRight" size={15} /></Link>
+        </div>
         <ul className="hx-stores__row">
           {stores.map((s) => {
             const Entry = s.to === '/fashion' ? FashionEntryLink : Link;
