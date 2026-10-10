@@ -34204,22 +34204,23 @@ const HERO_SLIDES$1 = [{
     label: 'Shop now',
     to: '/shop'
   },
-  image: '/img/home-hero-1.webp',
-  phone: '/img/home-hero-1-800.webp',
-  width: 1536,
-  height: 864,
-  alt: 'Biosash and Mom’s Trust products on a stone slab with sea buckthorn berries and oranges'
+  // The wider lineup leads (the owner's choice): the juices, Berry Veda and its box.
+  image: '/img/home-hero-2.webp',
+  phone: '/img/home-hero-2-800.webp',
+  width: 1600,
+  height: 900,
+  alt: 'Biosash sea buckthorn juices, Berry Veda and Mom’s Trust care products with berries and marigolds'
 }, {
   key: 'biosash',
   eyebrow: ['In the catalogue'],
   title: ['The Biosash', 'range'],
   // No brand page or brand filter exists yet, so this slide has no button.
   cta: null,
-  image: '/img/home-hero-2.webp',
-  phone: '/img/home-hero-2-800.webp',
-  width: 1600,
-  height: 900,
-  alt: 'Biosash sea buckthorn juices, Berry Veda and Mom’s Trust care products with berries and marigolds'
+  image: '/img/home-hero-1.webp',
+  phone: '/img/home-hero-1-800.webp',
+  width: 1536,
+  height: 864,
+  alt: 'Biosash and Mom’s Trust products on a stone slab with sea buckthorn berries and oranges'
 }];
 
 // A title in two parts is two lines on a phone, where its note gives way so every item is two lines.
@@ -34493,7 +34494,7 @@ function HomeTiles() {
             src: "/img/home-tile-fashion.webp",
             alt: "Woman in an orange knit sweater against an orange backdrop",
             width: 800,
-            height: 800,
+            height: 1067,
             className: "hx-tile__image"
           })
         })]
