@@ -1,11 +1,17 @@
 // ============================================================
 // The homepage store doorway ("Two Worlds. A Better You.") — offline suite.
 //
-// Part A, the Lifestyle banner: one whole-card link over one photograph
-// with every word on it as HTML — a 16:9 landscape (copy on the empty left
-// 38%) from 1024px, a 4:5 portrait (copy on the empty upper-left) below,
-// the browser choosing through <picture>; four icon badges over the photo
-// on a wide screen and beneath it on a phone. Part B, the two store cards
+// Part A, the Lifestyle banner, in the women's page's language: full-bleed,
+// square-edged, uppercase Inter, one whole-banner link over one photograph
+// with every word on it as HTML — over the sky on the left of the wide
+// shot from 701px, over a fade at the foot of the 3:4 portrait below;
+// nothing beneath the image;
+// its height from the width, never aspect-ratio with a min/max height.
+// Directly beneath it, the fashion category strip: women's and men's tiles
+// in turn, each opening its own listing, a tile without its photograph left
+// out; a transform-only track that advances on its own, pauses on hover and
+// focus, never moves under reduced motion, with arrows and a swipe; no
+// rounded corner anywhere in either. Part B, the two store cards
 // as one carousel: one slide in view on a transform-only track, autoplay
 // that pauses on hover and focus and never runs under reduced motion,
 // dots, a swipe. The images (under 150 KB each), the copy, the cream wash,
@@ -44,8 +50,8 @@ console.log(`\nsource root: ${ROOT}`);
 const SPEED_CLAIMS = [/\bfast\b/i, /\bfaster\b/i, /\bexpress\b/i, /\binstant/i, /\bsecure\s+deliver/i, /\breliable\b/i, /\bsame[- ]day\b/i, /\bnext[- ]day\b/i, /\b\d+\s*mins?\b/i, /\bminutes?\b/i, /\bquick\b/i, /\brapid\b/i, /\bspeedy\b/i, /\bdoorstep\b/i];
 const PLANET_CLAIMS = [/\bplanet\b/i, /\bsustainab/i, /\beco[- ]?friendly\b/i, /\bthoughtful choices\b/i, /\bsmall choices\b/i, /\bbigger tomorrow\b/i, /\bcarbon\b/i, /\bgreen(er)? choice/i, /\bethical/i, /\bconscious/i];
 const IMAGES = {
-  'img/lifestyle-banner-wide.webp': [1600, 900],
-  'img/lifestyle-banner-tall.webp': [1000, 1250],
+  'img/fashion-editorial/women-edit-tailoring-1898.webp': [1898, 829],
+  'img/fashion-editorial/women-main-hero-mobile.webp': [900, 1200],
   'img/doorway-fashion-wide.webp': [1600, 900],
   'img/doorway-living-wide.webp': [1600, 900],
   'img/doorway-fashion-tall.webp': [1000, 1250],
@@ -94,7 +100,7 @@ function decl(css, selector, prop) {
 }
 
 // ---- the images ---------------------------------------------------------
-await test('the images: the Lifestyle banner pair and the two store cards\' pairs (16:9 landscape, 4:5 portrait), each under 150 KB, at the sizes the markup declares', () => {
+await test('the images: the banner pair from the women\'s page set (the wide tailoring shot, the women\'s hero portrait) and the two store cards\' pairs (16:9 landscape, 4:5 portrait), each under 150 KB, at the sizes the markup declares', () => {
   for (const [rel, [w, hgt]] of Object.entries(IMAGES)) {
     assert.ok(has(rel), `${rel} is missing`);
     const size = statSync(resolve(ROOT, rel)).size;
@@ -114,15 +120,20 @@ const render = (m) => safe(m.LifestyleBanner) + safe(m.StoreCarousel);
 const bannerHtml = safe(mod.LifestyleBanner);
 const carouselHtml = safe(mod.StoreCarousel);
 const html = bannerHtml + carouselHtml;
+// The banner section and the strip section LifestyleBanner renders, one after the other.
+const leadHtml = bannerHtml.match(/^<section class="fsb-lead"[\s\S]*?<\/section>/)?.[0] || '';
+const stripHtml = bannerHtml.match(/<section class="fsb-strip"[\s\S]*<\/section>$/)?.[0] || '';
 const EagerImage = ({ src, sources = [], loading, decoding, fetchPriority, ...props }) =>
-  h('picture', null, ...sources.map((s) => h('source', { key: s.media, media: s.media, srcSet: s.srcSet })), h('img', { ...props, src }));
+  sources.length ? h('picture', null, ...sources.map((s) => h('source', { key: s.media, media: s.media, srcSet: s.srcSet })), h('img', { ...props, src })) : h('img', { ...props, src });
 const eager = render(loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage: EagerImage, FashionEntryLink }));
 
-await test('two sections, placed independently: LifestyleBanner is the banner alone with no heading; StoreCarousel is the heading and lede over the two store cards; no default export; no control inside any card link', () => {
+await test('two sections, placed independently: LifestyleBanner is the full-bleed banner with no heading above it and the fashion category strip directly beneath; StoreCarousel is the heading and lede over the two store cards; no default export; no control inside any card link', () => {
   assert.equal(mod.default, undefined, 'no combined default export any more');
-  assert.match(bannerHtml, /^<section class="v2-sec fsb fsb--lead" aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta"><div class="v2-wrap"><a class="fsb__card fsb__card--lifestyle fsb__card--lead" aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta" href="\/lifestyle">/, 'the banner section is the card and nothing else');
-  assert.doesNotMatch(bannerHtml, /fsb__intro|Two Worlds|More to explore|fsb__carousel/, 'no heading on the banner');
-  assert.deepEqual([...bannerHtml.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/lifestyle']);
+  assert.match(bannerHtml, /^<section class="fsb-lead" aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta"><a class="fsb-lead__link" aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta" href="\/lifestyle">/, 'the banner section is one whole-banner link, outside any page-width wrapper');
+  assert.equal(bannerHtml, leadHtml + stripHtml, 'the strip follows the banner directly, nothing between');
+  assert.match(stripHtml, /^<section class="fsb-strip" aria-labelledby="fsb-strip-h">/);
+  assert.doesNotMatch(bannerHtml, /fsb__intro|Two Worlds|More to explore|fsb__carousel|v2-wrap/, 'no store heading and no wrapper on the banner');
+  assert.deepEqual([...leadHtml.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/lifestyle']);
   assert.match(carouselHtml, /^<section class="v2-sec fsb" aria-labelledby="fsb-h" id="more-to-explore"><div class="v2-wrap"><header class="fsb__intro"><p class="fsb__eyebrow fsb__overline">More to explore<\/p><h2 id="fsb-h">Two Worlds\. A Better You\.<\/h2><p class="fsb__lede">Fashion for your style\. Living for your space\. All at SORA LIFE\.<\/p><\/header><div class="fsb__carousel"/, 'the heading moved with the carousel');
   assert.doesNotMatch(carouselHtml, /fsb__card--lead|\/lifestyle/, 'the banner is not in the carousel section');
   assert.deepEqual([...carouselHtml.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/fashion', '/homeliving']);
@@ -138,16 +149,103 @@ await test('Home.jsx: LifestyleBanner sits directly after the offers; StoreCarou
   assert.equal(home, atCommit(BASELINE_SHA, 'src/pages/Home.jsx').replace(/\r\n/g, '\n'), 'Home.jsx is untouched since the carousel move');
 });
 
-await test('Part A: the <picture> takes the 4:5 portrait under 1024px and the landscape otherwise; eyebrow "Live beautifully", "Lifestyle Store", the subline, "Explore Lifestyle" and the four badges — all HTML', () => {
-  const lead = html.match(/<a class="fsb__card fsb__card--lifestyle fsb__card--lead"[\s\S]*?<\/a>/)[0];
-  assert.match(lead, /<div class="fsb__art"><picture><source media="\(max-width: 1023px\)"\/><img alt="[^"]{20,}" width="1600" height="900" class="fsb__image" loading="lazy" decoding="async"\/><\/picture><\/div>/, 'deferred: no src until revealed');
-  assert.ok(lead.includes('<div class="fsb__content"><div class="fsb__copy"><p class="fsb__eyebrow">Live beautifully</p><h3 class="fsb__h" id="fsb-lifestyle-h">Lifestyle Store</h3><p class="fsb__description">Fashion, home, living and everyday essentials — all in one place.</p><span class="fsb__cta" id="fsb-lifestyle-cta">Explore Lifestyle <svg'), 'the copy, in order');
-  const badges = [...lead.matchAll(/<li><svg[\s\S]*?<\/svg><span>([^<]*)<\/span><\/li>/g)].map((m) => m[1].replace(/&amp;/g, '&'));
-  assert.deepEqual(badges, ['Fashion & Accessories', 'Home & Living', 'Beauty & Wellness', 'Everyday Essentials']);
-  assert.match(lead, /<ul class="fsb__details" aria-label="[^"]+">/);
-  assert.ok(lead.indexOf('class="fsb__copy"') < lead.indexOf('class="fsb__details"'), 'the badges follow the copy in the same overlay column');
-  const el = eager.match(/<a class="fsb__card fsb__card--lifestyle fsb__card--lead"[\s\S]*?<\/a>/)[0];
-  assert.match(el, /<source media="\(max-width: 1023px\)" srcSet="\/img\/lifestyle-banner-tall\.webp"\/><img [^>]*src="\/img\/lifestyle-banner-wide\.webp"/);
+await test('Part A: the <picture> takes the women\'s hero portrait up to 700px and the wide tailoring shot above; eyebrow "Live beautifully", "Lifestyle Store", the subline and "Explore Lifestyle" — all HTML, all in the one copy column over the photograph; no details', () => {
+  assert.match(leadHtml, /<span class="fsb-lead__art"><picture><source media="\(max-width: 700px\)"\/><img alt="[^"]{20,}" width="1898" height="829" class="fsb-lead__image" loading="lazy" decoding="async"\/><\/picture><\/span>/, 'deferred: no src until revealed');
+  assert.ok(leadHtml.includes('<div class="fsb-lead__copy"><p class="fsb-lead__eyebrow">Live beautifully</p><h2 class="fsb-lead__h" id="fsb-lifestyle-h"><span>Lifestyle</span> <span>Store</span></h2><p class="fsb-lead__description">Fashion, home, living and everyday essentials — all in one place.</p><span class="fsb-lead__cta" id="fsb-lifestyle-cta">Explore Lifestyle <svg'), 'the copy, in order');
+  assert.match(leadHtml, /<\/span><\/div><\/a><\/section>$/, 'the CTA closes the copy and the copy closes the banner: nothing after it');
+  assert.doesNotMatch(leadHtml, /fsb-lead__details|<ul|<li/, 'the four details are gone');
+  assert.equal(mod.LIFESTYLE.details, undefined, 'and so is their data');
+  const el = eager.match(/<section class="fsb-lead"[\s\S]*?<\/section>/)[0];
+  assert.match(el, /<source media="\(max-width: 700px\)" srcSet="\/img\/fashion-editorial\/women-main-hero-mobile\.webp"\/><img [^>]*src="\/img\/fashion-editorial\/women-edit-tailoring-1898\.webp"/);
+});
+
+await test('the strip: women\'s and men\'s tiles in turn, each opening its own listing under a "Women" or "Men" label; a tile without its photograph stays out — today the six women\'s tiles, the five men\'s waiting for theirs', () => {
+  assert.equal(typeof mod.FashionCategoryStrip, 'function', 'the strip is its own export');
+  const cats = mod.FASHION_CATEGORIES;
+  assert.deepEqual(cats.women.map((t) => t.slug), ['dresses', 'knitwear', 'shirts', 'denim', 'coats-jackets', 'womens-bags'], 'the Women sub-categories, the women\'s page\'s five slugs and Bags');
+  assert.deepEqual(cats.men.map((t) => t.slug), ['mens-shirts', 'mens-t-shirts', 'mens-trousers', 'mens-jackets', 'mens-footwear']);
+  for (const t of cats.women) {
+    assert.match(t.art, /^\/img\/fashion-editorial\/women-shop-[a-z]+\.webp$/);
+    assert.ok(has(t.art.slice(1)), `${t.art} exists`);
+  }
+  for (const t of cats.men) {
+    assert.equal(t.art, null, `${t.name}: no photograph yet`);
+    assert.ok(!has(`img/fashion-editorial/${t.planned}.webp`), `${t.planned}.webp has landed: set the tile's art so it shows`);
+  }
+  const full = { women: cats.women, men: cats.men.map((t) => ({ ...t, art: `/img/x/${t.slug}.webp` })) };
+  assert.deepEqual(mod.stripTiles(full).map((t) => `${t.dept}:${t.slug}`), ['Women:dresses', 'Men:mens-shirts', 'Women:knitwear', 'Men:mens-t-shirts', 'Women:shirts', 'Men:mens-trousers', 'Women:denim', 'Men:mens-jackets', 'Women:coats-jackets', 'Men:mens-footwear', 'Women:womens-bags'], 'one of each in turn while both last');
+  assert.deepEqual(mod.stripTiles().map((t) => `${t.dept}:${t.slug}`), cats.women.map((t) => `Women:${t.slug}`), 'no photograph, no tile');
+  const tiles = [...stripHtml.matchAll(/<li class="fsb-strip__tile" aria-hidden="(true|false)"><a( tabindex="-1")? href="([^"]+)"><span class="fsb-strip__art"><img alt="" width="600" height="780" class="fsb-strip__image" loading="lazy" decoding="async"\/><\/span><span class="fsb-strip__dept">(Women|Men)<\/span><span class="fsb-strip__name">([^<]+)<\/span><\/a><\/li>/g)];
+  assert.equal(tiles.length, 6, 'six tiles, each the whole of its link');
+  assert.deepEqual(tiles.map((m) => m[3]), cats.women.map((t) => `/fashion/c/${t.slug}`), 'each tile opens its own listing');
+  assert.deepEqual(tiles.map((m) => m[5].replace(/&amp;/g, '&')), ['Dresses', 'Knitwear', 'Shirts', 'Denim', 'Coats & Jackets', 'Bags']);
+  assert.deepEqual(tiles.map((m) => [m[1], !!m[2]]), [['false', false], ...Array(5).fill(['true', true])], 'before measuring, one tile in view; the rest hidden and untabbable');
+  assert.match(stripHtml, /<p class="fsb-strip__eyebrow">Women<\/p><h2 id="fsb-strip-h">Shop fashion by category<\/h2>/, 'the label names only the departments on show');
+  assert.match(stripHtml, /<div class="fsb-strip__arrows"><button type="button" aria-label="Previous categories" disabled=""><svg[\s\S]*?<\/button><button type="button" aria-label="Next categories"><svg/, 'arrows, the first disabled at the start');
+  assert.match(stripHtml, /<div class="fsb-strip__viewport" aria-roledescription="carousel" aria-label="Women&#x27;s and men&#x27;s categories"><ul class="fsb-strip__track" style="--i:0">/, 'the track carries only its index; the stylesheet turns it into a transform');
+  const eagerStrip = eager.match(/<section class="fsb-strip"[\s\S]*?<\/section>/)[0];
+  assert.deepEqual([...eagerStrip.matchAll(/<img [^>]*src="([^"]+)"/g)].map((m) => m[1]), cats.women.map((t) => t.art));
+});
+
+await test('the strip carousel: steps a tile at a time on its own (wrapping after the last window), pauses on hover and on focus, never moves under prefers-reduced-motion, arrows clamp at both ends, a 40px sideways swipe steps and swallows the click; nothing to move, no autoplay and no arrows', async () => {
+  const { hooks, mount, findAll } = await import('./catalogue-admin-harness.mjs');
+  const { loadSource } = await import('./grocery-ssr.mjs');
+  let reduce = false;
+  const timers = [], listeners = {};
+  const win = {
+    matchMedia: () => ({ matches: reduce, addEventListener() {}, removeEventListener() {} }),
+    getComputedStyle: () => ({ getPropertyValue: (p) => (p === '--per' ? ' 2' : '') }),
+    addEventListener: (type, fn) => { listeners[type] = fn; }, removeEventListener() {},
+  };
+  const setInterval = (fn, ms) => { timers.push({ fn, ms, live: true }); return timers.length - 1; };
+  const clearInterval = (id) => { if (timers[id]) timers[id].live = false; };
+  const m = loadSource(read('src/components/FashionBanner.jsx'), { ...hooks, window: win, setInterval, clearInterval, Link: 'a', Icon: () => null, DeferredImage: (p) => h('img', p), FashionEntryLink: 'a' });
+  assert.equal(typeof m.FashionCategoryStrip, 'function');
+  const tiles = m.stripTiles({ women: m.FASHION_CATEGORIES.women, men: m.FASHION_CATEGORIES.men.map((t) => ({ ...t, art: `/img/x/${t.slug}.webp` })) });
+  const strip = await mount(h(m.FashionCategoryStrip, { tiles }));
+  const node = (cls) => findAll(strip.tree, (n) => n.props?.className === cls)[0];
+  const idx = () => Number(node('fsb-strip__track').props.style['--i']);
+  const live = () => timers.filter((t) => t.live);
+  const tick = () => strip.act(() => { for (const t of live()) t.fn(); });
+  node('fsb-strip__track').ref.current = {};
+  await strip.act(() => listeners.resize());
+  const shown = () => findAll(strip.tree, (n) => n.props?.className === 'fsb-strip__tile').map((n) => n.props['aria-hidden'] ? 0 : 1).join('');
+  assert.equal(shown(), '11000000000', 'the stylesheet says two in view');
+  assert.equal(live().length, 1); assert.equal(live()[0].ms, m.STRIP_AUTOPLAY_MS);
+  for (const want of [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]) { await tick(); assert.equal(idx(), want, 'one tile per tick, back to the start after the last window'); }
+  assert.equal(shown(), '11000000000');
+  await strip.act(() => node('fsb-strip__wrap').props.onMouseEnter());
+  assert.equal(live().length, 0, 'hover pauses'); await tick(); assert.equal(idx(), 0);
+  await strip.act(() => node('fsb-strip__wrap').props.onMouseLeave());
+  assert.equal(live().length, 1, 'and leaving resumes');
+  await strip.act(() => node('fsb-strip__wrap').props.onFocus());
+  assert.equal(live().length, 0, 'focus pauses'); await tick(); assert.equal(idx(), 0);
+  await strip.act(() => node('fsb-strip__wrap').props.onBlur());
+  const button = (label) => findAll(strip.tree, (n) => n.type === 'button' && n.props['aria-label'] === label)[0];
+  assert.equal(button('Previous categories').props.disabled, true);
+  await strip.act(() => button('Previous categories').props.onClick()); assert.equal(idx(), 0, 'clamped at the start');
+  await strip.act(() => button('Next categories').props.onClick()); assert.equal(idx(), 1);
+  for (let i = 0; i < 12; i++) await strip.act(() => button('Next categories').props.onClick());
+  assert.equal(idx(), 9, 'clamped at the last window'); assert.equal(button('Next categories').props.disabled, true);
+  const vp = node('fsb-strip__viewport');
+  await strip.act(() => { vp.props.onPointerDown({ clientX: 300, clientY: 10 }); vp.props.onPointerUp({ clientX: 280, clientY: 12 }); });
+  assert.equal(idx(), 9, 'a 20px drag is not a swipe');
+  await strip.act(() => { vp.props.onPointerDown({ clientX: 100, clientY: 10 }); vp.props.onPointerUp({ clientX: 160, clientY: 18 }); });
+  assert.equal(idx(), 8, 'a swipe to the right steps back');
+  let swallowed = 0;
+  vp.props.onClickCapture({ preventDefault() { swallowed++; }, stopPropagation() {} });
+  assert.equal(swallowed, 1, 'and the click it ends in does not open a tile');
+  reduce = true;
+  const still = await mount(h(m.FashionCategoryStrip, { tiles }));
+  for (let i = 0; i < 4; i++) await still.act(() => { for (const t of live()) t.fn(); });
+  assert.equal(Number(findAll(still.tree, (n) => n.props?.className === 'fsb-strip__track')[0].props.style['--i']), 0, 'reduced motion: never moves on its own');
+  reduce = false;
+  const before = live().length;
+  const two = await mount(h(m.FashionCategoryStrip, { tiles: tiles.slice(0, 1) }));
+  assert.equal(live().length, before, 'one tile: no autoplay');
+  assert.equal(findAll(two.tree, (n) => n.type === 'button').length, 0, 'and no arrows');
+  const none = await mount(h(m.FashionCategoryStrip, { tiles: [] }));
+  assert.equal(none.tree, null, 'no tiles, no section');
 });
 
 await test('Part B: the two cards as today — same copy, same badges, the same photographs — one per slide, the first current, the other hidden and untabbable; two dots as tabs outside the links', () => {
@@ -169,7 +267,7 @@ await test('Part B: the two cards as today — same copy, same badges, the same 
   const eagerSlides = [...eager.matchAll(/<div class="fsb__slide[^"]*"[\s\S]*?<source media="\(max-width: 1023px\)" srcSet="([^"]+)"\/><img [^>]*src="([^"]+)"/g)].map((m) => [m[1], m[2]]);
   assert.deepEqual(eagerSlides, [['/img/doorway-fashion-tall.webp', '/img/doorway-fashion-wide.webp'], ['/img/doorway-living-tall.webp', '/img/doorway-living-wide.webp']]);
   assert.match(car, /<div class="fsb__dots" role="tablist" aria-label="Choose a store"><button type="button" role="tab" aria-selected="true" aria-label="Fashion Store" class="fsb__dot is-on"><\/button><button type="button" role="tab" aria-selected="false" aria-label="Home &amp; Living Store" class="fsb__dot"><\/button><\/div>/, 'two dots, the first selected');
-  assert.equal((html.match(/<button/g) || []).length, 2, 'the dots are the only buttons');
+  assert.equal((carouselHtml.match(/<button/g) || []).length, 2, 'the dots are the carousel\'s only buttons');
   assert.match(car, /<div class="fsb__track" style="transform:translateX\(-0%\)">/, 'the track moves on transform');
 });
 
@@ -188,32 +286,46 @@ await test('the carousel rules: one slide → no dots; none → nothing; autopla
 
 await test('text rule and copy: every card photograph has a real description; every label is text; no speed claim and no sustainability claim in the component, the sheet or the render', () => {
   const t = text(html);
-  for (const alt of [...eager.matchAll(/alt="([^"]*)"/g)].map((m) => m[1])) assert.ok(alt.length > 20, 'a real description of the photograph');
-  assert.equal((html.match(/<img /g) || []).length, 3); assert.equal((html.match(/loading="lazy"/g) || []).length, 3);
+  // The store photographs carry a description; a strip tile's image is decorative — its department and name are its text.
+  for (const alt of [...eager.replace(/<section class="fsb-strip"[\s\S]*?<\/section>/, '').matchAll(/alt="([^"]*)"/g)].map((m) => m[1])) assert.ok(alt.length > 20, 'a real description of the photograph');
+  const tiles = mod.stripTiles ? mod.stripTiles().length : 0;
+  assert.equal((html.match(/<img /g) || []).length, 3 + tiles); assert.equal((html.match(/loading="lazy"/g) || []).length, 3 + tiles);
   assert.doesNotMatch(html, /<img[^>]+ src=/, 'deferred: no src on initial render');
   const sources = [['component', stripComments(read('src/components/FashionBanner.jsx'))], ['sheet', stripComments(read('src/styles/fashion-banner.css'))], ['render', t]];
   for (const [name, s] of sources) {
     for (const re of SPEED_CLAIMS) assert.doesNotMatch(s, re, `${name}: speed claim ${re}`);
     for (const re of PLANET_CLAIMS) assert.doesNotMatch(s, re, `${name}: sustainability claim ${re}`);
   }
-  for (const s of ['Live beautifully', 'Lifestyle Store', 'Explore Lifestyle', 'Fashion & Accessories', 'Beauty & Wellness', 'Everyday Essentials', 'Explore Fashion', 'Explore Living']) assert.ok(t.includes(s), s);
+  for (const s of ['Live beautifully', 'Lifestyle Store', 'Explore Lifestyle', 'Explore Fashion', 'Explore Living', 'Shop fashion by category', 'Women Dresses', 'Women Coats & Jackets']) assert.ok(t.includes(s), s);
 });
 
 // ---- the stylesheet ------------------------------------------------------
 const css = has('src/styles/fashion-banner.css') ? stripComments(read('src/styles/fashion-banner.css')) : '';
 const wideBlock = css.slice(0, css.indexOf('@media (hover: hover)'));
 const phoneBlock = (() => { const at = css.indexOf('@media (max-width: 1023px)'); return at < 0 ? '' : css.slice(at, css.indexOf('\n}\n', at) + 3); })();
+const smallBlock = (() => { const at = css.indexOf('@media (max-width: 700px)'); return at < 0 ? '' : css.slice(at, css.indexOf('\n}\n', at) + 3); })();
+/** The body of the first `selector {` rule in a block. */
+const ruleBody = (block, selector) => { const at = block.indexOf(`${selector} {`); return at < 0 ? '' : block.slice(at, block.indexOf('}', at)); };
 
-await test('1280 (from 1024): the banner is page-wide at 16:7 with the copy on the left 38% under a seamless wash gone by 52% and the four badges on the photo beneath the CTA; "Lifestyle Store" sized to stay on one line in Playfair; the carousel is a 760px 16:9 card — smaller than the banner in width and height', () => {
-  assert.equal(decl(wideBlock, '.fsb__card--lead .fsb__art', 'aspect-ratio'), '16 / 7');
-  assert.equal(decl(wideBlock, '.fsb__card--lead .fsb__content', 'width'), '38%');
+await test('1280 (from 701): the banner is full-bleed, its height from the width — clamp(460px, 43.75vw, 680px), never aspect-ratio with a min/max height — the copy white on the sky at the left under a seamless navy fade gone by 56%, set exactly like the women\'s hero; the carousel is a 760px 16:9 card — smaller than the banner in width and height', () => {
+  assert.equal(decl(wideBlock, '.fsb-lead__link', 'height'), 'clamp(460px, 43.75vw, 680px)');
+  assert.doesNotMatch(ruleBody(wideBlock, '.fsb-lead__link'), /aspect-ratio|max-width|min-height|max-height/, 'nothing that could cap or force the width (the women\'s hero lesson)');
+  assert.doesNotMatch(wideBlock, /\.fsb-lead \{[^}]*(max-width|margin-inline)/, 'the section is the page\'s width');
+  assert.equal(decl(wideBlock, '.fsb-lead__art', 'position'), 'absolute', 'the photograph under the copy');
+  assert.equal(decl(wideBlock, '.fsb-lead__copy', 'width'), 'min(40%, 470px)');
+  assert.equal(decl(wideBlock, '.fsb-lead__copy', 'margin-left'), 'max(28px, calc((100% - 1240px) / 2))', 'the copy lines up with the page\'s 1240px column');
+  assert.equal(decl(wideBlock, '.fsb-lead__image', 'object-fit'), 'cover');
+  const women = stripComments(read('src/styles/fashion-departments.css'));
+  for (const prop of ['font-size', 'line-height', 'letter-spacing', 'text-transform']) assert.equal(decl(wideBlock, '.fsb-lead__h', prop), decl(women, '.wm-hero h1', prop), `the headline's ${prop} is the women's hero's`);
+  for (const sel of ['.fsb-lead__eyebrow', '.fsb-lead__h', '.fsb-lead__description']) assert.match(decl(wideBlock, sel, 'color'), /^#f|^#fff/, `${sel} is white on the photograph`);
+  assert.equal(decl(wideBlock, '.fsb-lead__cta', 'background'), '#fff', 'a white button, as on the women\'s hero');
+  const fade = decl(wideBlock, '.fsb-lead__link::after', 'background');
+  assert.match(fade, /^linear-gradient\(90deg, .*rgba\(36, 69, 109, 0\) 56%\)$/, 'a navy fade from the left, gone before the subject');
+  const a = [...fade.matchAll(/rgba\(36, 69, 109, (\.\d+|0)\)/g)].map((m) => Number(m[1]));
+  assert.ok(a.length >= 5 && a.every((x, i) => i === 0 || (x <= a[i - 1] && a[i - 1] - x <= 0.3)) && a.at(-1) === 0, `the fade has no seam: ${a.join(' → ')}`);
   assert.equal(decl(wideBlock, '.fsb__art::after', 'background'), 'var(--fsb-wash)');
-  const leadWash = decl(wideBlock, '.fsb__card--lead', '--fsb-wash'), cardWash = decl(wideBlock, '.fsb__card', '--fsb-wash');
-  assert.match(leadWash, /^linear-gradient\(90deg, .*rgba\(246, 239, 227, 0\) 52%\)$/); assertSmooth(leadWash, 'banner wash');
+  const cardWash = decl(wideBlock, '.fsb__card', '--fsb-wash');
   assert.match(cardWash, /^linear-gradient\(90deg, .*rgba\(246, 239, 227, 0\) 64%\)$/); assertSmooth(cardWash, 'card wash');
-  // Playfair Display at the old clamp(40px, 4.2vw, 56px) set "Lifestyle Store" ~470px wide at 1280 against a 419px column — it wrapped. 3.6vw keeps it on one line to 1024.
-  assert.equal(decl(wideBlock, '.fsb__card--lead .fsb__h', 'font-size'), 'clamp(36px, 3.6vw, 48px)');
-  assert.equal(decl(wideBlock, '.fsb__card--lead .fsb__details', 'grid-template-columns'), 'repeat(4, minmax(0, 1fr))');
   assert.equal(decl(wideBlock, '.fsb__content', 'grid-area'), '1 / 1', 'the copy and the badges share the photo\'s cell');
   assert.equal(decl(wideBlock, '.fsb__content', 'justify-content'), 'space-between', 'copy at the top of the column, badges at its foot');
   assert.match(decl(wideBlock, '.fsb__details li', 'background'), /^rgba\(251, 248, 241, \.[4-7]\d?\)$/, 'badges are translucent pills on the photo');
@@ -221,8 +333,8 @@ await test('1280 (from 1024): the banner is page-wide at 16:7 with the copy on t
   assert.equal(decl(wideBlock, '.fsb__carousel', 'max-width'), 'min(760px, 68%)');
   assert.equal(decl(wideBlock, '.fsb__art', 'aspect-ratio'), '16 / 9');
   for (const vw of [1024, 1280, 1440]) {
-    const banner = Math.min(vw, 1440) - 64, card = Math.min(760, banner * 0.68);
-    assert.ok(card < banner && card * 9 / 16 < banner * 7 / 16, `${vw}: card ${card}×${Math.round(card * 9 / 16)} inside banner ${banner}×${Math.round(banner * 7 / 16)}`);
+    const banner = vw, bannerH = Math.min(Math.max(460, vw * 0.4375), 680), card = Math.min(760, (Math.min(vw, 1440) - 64) * 0.68);
+    assert.ok(card < banner && card * 9 / 16 < bannerH, `${vw}: card ${Math.round(card)}×${Math.round(card * 9 / 16)} inside banner ${banner}×${Math.round(bannerH)}`);
   }
   assert.equal(decl(wideBlock, '.fsb__viewport', 'overflow'), 'hidden'); assert.equal(decl(wideBlock, '.fsb__viewport', 'touch-action'), 'pan-y', 'vertical scrolling stays with the page; the swipe is ours');
   assert.match(decl(wideBlock, '.fsb__track', 'transition'), /^transform /);
@@ -230,9 +342,18 @@ await test('1280 (from 1024): the banner is page-wide at 16:7 with the copy on t
   assert.doesNotMatch(css, /\.fsb__card--lead \{ margin-bottom/, 'the banner is its own section now; no spacing to a carousel beneath');
 });
 
-await test('390 and 768: every card is its 4:5 portrait — the copy at the top of the overlay column under a wash fading down, the badges at its foot over a wash fading up, both seamless; no panel beneath the photo; the carousel inset to 96% so it reads smaller', () => {
+await test('390 and 768: each carousel card is its 4:5 portrait — the copy at the top of the overlay column under a wash fading down, the badges at its foot over a wash fading up, both seamless; the carousel inset to 96% so it reads smaller; up to 700px the banner is the 3:4 portrait with the copy on its foot over a fade — nothing beneath the image — and the strip shows two tiles (three up to 1000px)', () => {
+  assert.ok(smallBlock, 'a small-screen block');
+  assert.equal(decl(smallBlock, '.fsb-lead__link', 'aspect-ratio'), '3 / 4', 'the portrait\'s own shape');
+  assert.equal(decl(smallBlock, '.fsb-lead__link', 'height'), 'auto'); assert.equal(decl(smallBlock, '.fsb-lead__link', 'align-items'), 'flex-end', 'the copy at the foot');
+  assert.doesNotMatch(ruleBody(smallBlock, '.fsb-lead__link'), /min-height|max-height|max-width/, 'no limit that could transfer to the width');
+  assert.doesNotMatch(smallBlock, /\.fsb-lead__art \{|\.fsb-lead__link::after \{ display: none|\.fsb-lead \{/, 'the photograph stays under the copy: nothing pushed beneath it');
+  const fade = decl(smallBlock, '.fsb-lead__link::after', 'background');
+  assert.match(fade, /^linear-gradient\(0deg, rgba\(20, 31, 48, \.[6-9]\d?\) 0%, .*rgba\(20, 31, 48, 0\) 5\d%\)$/, 'a dark fade up from the foot, gone above the faces');
+  assert.equal(decl(wideBlock, '.fsb-strip__track', '--per'), '5'); assert.equal(decl(smallBlock, '.fsb-strip__track', '--per'), '2');
+  assert.match(css, /@media \(max-width: 1000px\) \{\s*\.fsb-strip__track \{ --per: 3; \}/);
   assert.ok(phoneBlock, 'a phone block');
-  assert.equal(decl(phoneBlock, '.fsb__card .fsb__art', 'aspect-ratio'), '4 / 5', 'the banner and both cards');
+  assert.equal(decl(phoneBlock, '.fsb__card .fsb__art', 'aspect-ratio'), '4 / 5', 'both cards');
   assert.equal(decl(phoneBlock, '.fsb__card .fsb__content', 'width'), '100%'); assert.equal(decl(phoneBlock, '.fsb__card .fsb__content', 'padding'), 'var(--fsb-pad)');
   assert.doesNotMatch(phoneBlock, /display: contents|grid-area: 2 \/ 1|\.fsb__slide|16 \/ 10/, 'nothing sits in a row beneath the photo any more');
   const wash = decl(phoneBlock, '.fsb__card', '--fsb-wash');
@@ -246,7 +367,7 @@ await test('390 and 768: every card is its 4:5 portrait — the copy at the top 
   assert.equal(decl(phoneBlock, '.fsb__carousel', 'max-width'), '96%');
 });
 
-await test('the phone scale is pinned: the five tokens exactly; at a 358px banner (390 viewport) the copy stack — eyebrow, one-line headline, two-line subline, CTA — ends above 42% of the 4:5 card, where the portrait subject begins; on the 96%-wide carousel cards, with a two-line headline, at or above the 46% where the sofa begins (45.6% on a 360 phone, 44% on a 390)', () => {
+await test('the phone scale is pinned: the five tokens exactly; on the 96%-wide carousel cards, with a two-line headline, the copy stack — eyebrow, headline, two-line subline, CTA — ends at or above the 46% where the sofa begins (45.6% on a 360 phone, 44% on a 390)', () => {
   const tokens = { '--fsb-pad': 'clamp(18px, 5cqw, 32px)', '--fsb-eyebrow': 'clamp(10px, 2.8cqw, 12px)', '--fsb-h': 'clamp(25px, 8.4cqw, 44px)', '--fsb-desc': 'clamp(13px, 3.8cqw, 17px)', '--fsb-cta': 'clamp(38px, 11cqw, 48px)' };
   for (const [k, v] of Object.entries(tokens)) assert.equal(decl(phoneBlock, '.fsb__card', k), v, k);
   assert.equal(decl(phoneBlock, '.fsb__card .fsb__eyebrow', 'font-size'), 'var(--fsb-eyebrow)'); assert.equal(decl(phoneBlock, '.fsb__card .fsb__h', 'font-size'), 'var(--fsb-h)');
@@ -256,26 +377,36 @@ await test('the phone scale is pinned: the five tokens exactly; at a 358px banne
     + px(tokens['--fsb-h'], W) * Number(decl(wideBlock, '.fsb__h', 'line-height')) * headlineLines + px(decl(phoneBlock, '.fsb__card .fsb__h', 'margin-bottom'), W)
     + px(tokens['--fsb-desc'], W) * Number(decl(phoneBlock, '.fsb__card .fsb__description', 'line-height')) * 2 + px(decl(phoneBlock, '.fsb__card .fsb__description', 'margin-bottom'), W)
     + px(tokens['--fsb-cta'], W);
-  for (const [vw, W] of [[360, 328], [390, 358], [768, 720]]) {
-    const need = stack(W, 1), card = W * 1.25;
-    assert.ok(need / card <= 0.42, `${vw} banner: the copy stack ends at ${((need / card) * 100).toFixed(1)}% of the card`);
-  }
   for (const [vw, W] of [[360, Math.round(328 * 0.96)], [390, Math.round(358 * 0.96)], [768, Math.round(720 * 0.96)]]) {
     const need = stack(W, 2), card = W * 1.25;
     assert.ok(need / card <= 0.46, `${vw} card: the copy stack ends at ${((need / card) * 100).toFixed(1)}% of the card`);
   }
 });
 
-await test('the display face: Playfair Display through the token, weight 400, tracking -.02em on the section heading and the card headlines; no Fraunces axis left in the sheet', () => {
+await test('the faces: Playfair Display through the token, weight 400, tracking -.02em on the store section heading and the card headlines; the banner and the strip in the women\'s page\'s uppercase Inter, weight 400; no Fraunces axis left in the sheet', () => {
   assert.match(css, /\.fsb__intro h2 \{[^}]*font-family: var\(--font-display, 'Playfair Display', Georgia, serif\);[^}]*font-weight: 400;[^}]*letter-spacing: -\.02em;/);
   assert.match(css, /\.fsb__h \{[^}]*font-family: var\(--font-display, 'Playfair Display', Georgia, serif\);[^}]*font-weight: 400;[^}]*letter-spacing: -\.02em;/);
+  for (const sel of ['.fsb-lead__h', '.fsb-strip__head h2']) assert.match(css, new RegExp(`${sel.replace(/[.]/g, '\\.')} \\{[^}]*font-family: 'Inter', sans-serif;[^}]*font-weight: 400;[^}]*text-transform: uppercase;`), sel);
+  for (const sel of ['.fsb-lead__eyebrow', '.fsb-strip__eyebrow', '.fsb-strip__dept']) assert.match(css, new RegExp(`${sel.replace(/[.]/g, '\\.')} \\{[^}]*letter-spacing: \\.18em;[^}]*text-transform: uppercase;`), sel);
   assert.doesNotMatch(css, /Fraunces|font-variation-settings|font-optical-sizing/);
+});
+
+await test('square edges: no border-radius anywhere in the banner\'s or the strip\'s rules — not the banner, not a tile, not a button — and the strip track moves on transform only, by its index, a tile at a time', () => {
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter((m) => /\.fsb-(lead|strip)/.test(m[1]));
+  assert.ok(rules.length >= 30, `the banner and strip rules (${rules.length})`);
+  for (const [, sel, body] of rules) assert.doesNotMatch(body, /radius/, `${sel.trim()} rounds a corner`);
+  assert.doesNotMatch(read('src/components/FashionBanner.jsx').slice(read('src/components/FashionBanner.jsx').indexOf('const shopArt')), /radius/i, 'no inline rounding either');
+  assert.equal(decl(wideBlock, '.fsb-strip__track', 'transform'), 'translateX(calc(var(--i, 0) * -1 * ((100% - (var(--per) - 1) * var(--gap)) / var(--per) + var(--gap))))');
+  assert.equal(decl(wideBlock, '.fsb-strip__tile', 'flex'), '0 0 calc((100% - (var(--per) - 1) * var(--gap)) / var(--per))', 'a tile is exactly one step wide');
+  assert.match(decl(wideBlock, '.fsb-strip__track', 'transition'), /^transform /);
+  assert.equal(decl(wideBlock, '.fsb-strip__viewport', 'overflow'), 'hidden'); assert.equal(decl(wideBlock, '.fsb-strip__viewport', 'touch-action'), 'pan-y', 'vertical scrolling stays with the page; the swipe is ours');
 });
 
 await test('motion: transitions on transform, opacity and box-shadow only; hover lifts only on fine pointers; reduced motion stills the cards and the track; every selector is namespaced .fsb', () => {
   for (const m of css.matchAll(/transition:\s*([^;]+);/g)) for (const part of m[1].replace(/\([^)]*\)/g, '').split(',')) assert.match(part.trim(), /^(?:transform|opacity|box-shadow|none)\b/, `transition on ${part.trim()}`);
   assert.match(css, /@media \(hover: hover\) and \(pointer: fine\) \{[^@]*\.fsb__card:hover \{ transform: translateY\(-3px\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*\.fsb__card, \.fsb__image, \.fsb__cta svg, \.fsb__track \{ transition: none; \}/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*\.fsb-lead__image, \.fsb-lead__cta svg, \.fsb-strip__track, \.fsb-strip__image \{ transition: none; \}/, 'reduced motion stills the banner and the strip');
   assert.ok(css.split('\n').filter((l) => /^[.]/.test(l)).every((l) => l.startsWith('.fsb')), 'every selector is namespaced .fsb');
 });
 

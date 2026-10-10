@@ -377,13 +377,15 @@ await test('the wellness homepage keeps every section in the same order — the 
   const FashionEntryLink = loadModule('src/components/FashionEntryLink.jsx', { Link, useLocation, Icon }).default;
   const doorway = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage, FashionEntryLink });
   const html = renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(doorway.LifestyleBanner))) + renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(doorway.StoreCarousel)));
-  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/lifestyle', '/fashion', '/homeliving'], 'the whole-card links use existing stores');
+  // Beneath the banner, the fashion category strip (test-store-doorway.mjs owns it): a tile per category, each opening its own listing.
+  const tiles = doorway.stripTiles().map((t) => `/fashion/c/${t.slug}`);
+  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/lifestyle', ...tiles, '/fashion', '/homeliving'], 'the whole-card links use existing stores; the strip\'s tiles open fashion listings');
   assert.match(html, /Two Worlds\. A Better You\./);
-  assert.equal((html.match(/<img /g) || []).length, 3);
-  assert.equal((html.match(/loading="lazy"/g) || []).length, 3);
+  assert.equal((html.match(/<img /g) || []).length, 3 + tiles.length);
+  assert.equal((html.match(/loading="lazy"/g) || []).length, 3 + tiles.length);
   assert.doesNotMatch(html, /<img[^>]+ src=/, 'the below-fold images remain deferred on initial render');
   for (const a of html.matchAll(/<a [^>]*>[\s\S]*?<\/a>/g)) assert.doesNotMatch(a[0].slice(2), /<button|<a /, 'no nested interactive controls inside the links');
-  assert.equal((html.match(/<button/g) || []).length, 2, 'the carousel dots are the only buttons');
+  assert.equal((html.match(/<button/g) || []).length, 4, 'the strip\'s two arrows and the carousel\'s two dots are the only buttons');
 });
 
 await test('the storefront stylesheet order is untouched; the fashion sheets are appended, the store one deferred', () => {
