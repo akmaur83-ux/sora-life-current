@@ -60545,17 +60545,10 @@ function FashionHeader({
       })]
     })]
   });
-  // The jewellery page: a quiet bar of true facts, then the logo, its links and the icons.
-  if (/^\/fashion\/jewellery\/?$/.test(location.pathname)) return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+  // The jewellery page: the logo, its links and the icons, floating transparent over its hero.
+  if (/^\/fashion\/jewellery\/?$/.test(location.pathname)) return /*#__PURE__*/jsxRuntimeExports.jsx("header", {
     className: "jw-header",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "jw-header__bar",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        children: "Free standard delivery on every order"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        children: "Easy returns within 7 days of delivery"
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "jw-header__row",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
         type: "button",
@@ -60627,7 +60620,7 @@ function FashionHeader({
           })]
         })]
       })]
-    })]
+    })
   });
   if (/^\/fashion\/women\/sarees\/?$/.test(location.pathname)) return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
     className: "sw-header",
@@ -62823,11 +62816,12 @@ const JEWELLERY = {
     title: ['Jewellery that tells', 'your story'],
     intro: 'Timeless designs for your most precious moments',
     cta: 'Shop the collection',
-    image: art('jewellery-hero', 'A woman in an ivory dress wearing a diamond pendant, drop earrings and a ring', {
-      width: 1600,
-      height: 667,
-      srcSet: '/img/fashion-editorial/jewellery-hero-1000.webp 1000w, /img/fashion-editorial/jewellery-hero.webp 1600w',
-      mobile: '/img/fashion-editorial/jewellery-hero-mobile.webp'
+    // The owner's terracotta portrait at its own size (736 × 1472), never upscaled: edge to edge on
+    // a phone, on the right of the desktop hero.
+    image: art('jewellery-hero-drape', 'A woman in terracotta drapery wearing a diamond necklace, drop earrings and a ring', {
+      width: 736,
+      height: 1472,
+      sizes: '(max-width: 700px) 100vw, 46vw'
     })
   },
   // Desktop: a title and a note; a phone: two short lines beside the icon.
