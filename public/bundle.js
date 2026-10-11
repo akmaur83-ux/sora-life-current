@@ -34270,6 +34270,14 @@ const STORES$1 = [{
   name: 'Home Textiles',
   to: '/homeliving',
   image: '/img/home-cat-home-textiles.webp'
+},
+// The jewellery page's rings shot, cropped square around the ring at its own resolution.
+{
+  key: 'jewellery',
+  name: 'Jewellery',
+  to: '/fashion/jewellery',
+  image: '/img/home-cat-jewellery.webp',
+  size: 344
 }];
 
 /** The slides, one in view on a transform-only track; the first slide's title is the page's h1. */
@@ -34590,8 +34598,8 @@ function ExploreStores({
                 children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
                   src: s.image,
                   alt: "",
-                  width: 480,
-                  height: 480,
+                  width: s.size || 480,
+                  height: s.size || 480,
                   className: "hx-store__image"
                 })
               }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -34601,6 +34609,79 @@ function ExploreStores({
             })
           }, s.key);
         })
+      })]
+    })
+  });
+}
+
+// The jewellery page's own words: its eyebrow, its hero line and its story's "made to be worn every day".
+const JEWELLERY_BANNER = {
+  to: '/fashion/jewellery',
+  eyebrow: 'SORA LIFE Jewellery',
+  title: ['Jewellery that', 'tells your story'],
+  text: 'Rings, necklaces, earrings and bracelets, made to be worn every day.',
+  cta: 'Explore Jewellery',
+  // The owner's photographs at their own sizes, warm ivory: the wide one from 701px (the jewellery
+  // on the right, the left 45% plain for the copy), the 4:5 portrait on a phone (the arrangement in
+  // the lower half, the copy over the clear upper half).
+  wide: {
+    src: '/img/home-jewellery-wide.webp',
+    width: 1891,
+    height: 831
+  },
+  tall: '/img/home-jewellery-portrait.webp',
+  alt: 'A gold necklace and drop earrings with clear stones on a marble tray, among white flowers and ivory satin, a hand wearing a matching ring'
+};
+
+/** Full-bleed and square-edged under the fashion category strip: one whole-banner link, every word on the photograph. */
+function JewelleryBanner({
+  banner = JEWELLERY_BANNER
+}) {
+  const b = banner;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-jewel",
+    "aria-labelledby": "hx-jewel-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: b.to,
+      className: "hx-jewel__link",
+      "aria-labelledby": "hx-jewel-h hx-jewel-cta",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "hx-jewel__art",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+          src: b.wide.src,
+          sources: [{
+            media: PHONE$1,
+            srcSet: b.tall
+          }],
+          alt: b.alt,
+          width: b.wide.width,
+          height: b.wide.height,
+          className: "hx-jewel__image"
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-jewel__copy",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-jewel__eyebrow",
+          children: b.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+          className: "hx-jewel__h",
+          id: "hx-jewel-h",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: b.title[0]
+          }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: b.title[1]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-jewel__text",
+          children: b.text
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "hx-jewel__cta",
+          id: "hx-jewel-cta",
+          children: [b.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
       })]
     })
   });
@@ -42245,7 +42326,7 @@ function Home() {
     className: "v2-home",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeHero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
       eyebrow: "Across the catalogue",
       title: "Start here",
