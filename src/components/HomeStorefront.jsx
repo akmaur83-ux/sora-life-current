@@ -17,8 +17,12 @@ import FashionEntryLink from './FashionEntryLink.jsx';
 //                 genuine products, 7-day returns, support 9am–6pm IST. On a
 //                 phone, one row of four, each two short lines beside its icon.
 // HomeTiles     — Fashion, large, beside Health & Nutrition and Home & Living.
-// ExploreStores — five circles in one row, "View All" beside the heading.
+// ExploreStores — six circles in one row, "View All" beside the heading.
 // FestivePromo  — the gift-and-diya banner, its copy in the clear centre.
+//
+// Further down the page, directly under the fashion category strip:
+// JewelleryBanner — full-bleed and square-edged like the Lifestyle banner
+//                 above it, its copy on the photograph's empty ivory.
 //
 // Every word is HTML; no image carries text beyond product packaging.
 // Orange text and fills meet WCAG AA: buttons are the deep orange
@@ -64,6 +68,8 @@ export const STORES = [
   { key: 'fashion', name: 'Fashion', to: '/fashion', image: '/img/home-cat-fashion.webp' },
   { key: 'groceries', name: 'Groceries', to: '/grocery', image: '/img/home-cat-groceries.webp' },
   { key: 'home-textiles', name: 'Home Textiles', to: '/homeliving', image: '/img/home-cat-home-textiles.webp' },
+  // The jewellery page's rings shot, cropped square around the ring at its own resolution.
+  { key: 'jewellery', name: 'Jewellery', to: '/fashion/jewellery', image: '/img/home-cat-jewellery.webp', size: 344 },
 ];
 
 /** The slides, one in view on a transform-only track; the first slide's title is the page's h1. */
@@ -184,7 +190,7 @@ export function ExploreStores({ stores = STORES }) {
             return (
               <li key={s.key}>
                 <Entry to={s.to} className="hx-store">
-                  <span className="hx-store__art"><DeferredImage src={s.image} alt="" width={480} height={480} className="hx-store__image" /></span>
+                  <span className="hx-store__art"><DeferredImage src={s.image} alt="" width={s.size || 480} height={s.size || 480} className="hx-store__image" /></span>
                   <span className="hx-store__name">{s.name}</span>
                 </Entry>
               </li>
@@ -192,6 +198,41 @@ export function ExploreStores({ stores = STORES }) {
           })}
         </ul>
       </div>
+    </section>
+  );
+}
+
+// The jewellery page's own words: its eyebrow, its hero line and its story's "made to be worn every day".
+export const JEWELLERY_BANNER = {
+  to: '/fashion/jewellery',
+  eyebrow: 'SORA LIFE Jewellery',
+  title: ['Jewellery that', 'tells your story'],
+  text: 'Rings, necklaces, earrings and bracelets, made to be worn every day.',
+  cta: 'Explore Jewellery',
+  // The owner's photographs at their own sizes, warm ivory: the wide one from 701px (the jewellery
+  // on the right, the left 45% plain for the copy), the 4:5 portrait on a phone (the arrangement in
+  // the lower half, the copy over the clear upper half).
+  wide: { src: '/img/home-jewellery-wide.webp', width: 1891, height: 831 },
+  tall: '/img/home-jewellery-portrait.webp',
+  alt: 'A gold necklace and drop earrings with clear stones on a marble tray, among white flowers and ivory satin, a hand wearing a matching ring',
+};
+
+/** Full-bleed and square-edged under the fashion category strip: one whole-banner link, every word on the photograph. */
+export function JewelleryBanner({ banner = JEWELLERY_BANNER }) {
+  const b = banner;
+  return (
+    <section className="hx hx-jewel" aria-labelledby="hx-jewel-h">
+      <Link to={b.to} className="hx-jewel__link" aria-labelledby="hx-jewel-h hx-jewel-cta">
+        <span className="hx-jewel__art">
+          <DeferredImage src={b.wide.src} sources={[{ media: PHONE, srcSet: b.tall }]} alt={b.alt} width={b.wide.width} height={b.wide.height} className="hx-jewel__image" />
+        </span>
+        <div className="hx-jewel__copy">
+          <p className="hx-jewel__eyebrow">{b.eyebrow}</p>
+          <h2 className="hx-jewel__h" id="hx-jewel-h"><span>{b.title[0]}</span> <span>{b.title[1]}</span></h2>
+          <p className="hx-jewel__text">{b.text}</p>
+          <span className="hx-jewel__cta" id="hx-jewel-cta">{b.cta} <Icon name="arrowRight" size={16} /></span>
+        </div>
+      </Link>
     </section>
   );
 }

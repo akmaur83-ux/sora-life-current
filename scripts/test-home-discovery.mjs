@@ -922,10 +922,10 @@ test('D66 what is saved is exactly what is read back, plus a faithful legacy mir
 });
 
 test('D67 the round rail under the hero is not part of this system', () => {
-  // "Explore the stores" (HomeStorefront.jsx) links five fixed places — two wellness
-  // categories and three stores — and nothing in the card model can reach it.
+  // "Explore the stores" (HomeStorefront.jsx) links six fixed places — two wellness
+  // categories, three stores and the jewellery page — and nothing in the card model can reach it.
   const strip = src('../src/components/HomeStorefront.jsx');
-  assert.match(strip, /export const STORES = \[/, 'its five circles are its own fixed list');
+  assert.match(strip, /export const STORES = \[/, 'its six circles are its own fixed list');
   assert.doesNotMatch(strip, /discovery|categoryCards|collection/i, 'and it knows nothing about discovery cards');
 
   const rail = src('../src/components/CategoryRail.jsx');

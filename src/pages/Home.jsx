@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
-import { HomeHero, HomeTrustStrip, HomeTiles, ExploreStores, FestivePromo } from '../components/HomeStorefront.jsx';
+import { HomeHero, HomeTrustStrip, HomeTiles, ExploreStores, FestivePromo, JewelleryBanner } from '../components/HomeStorefront.jsx';
 import EditorialCard from '../components/EditorialCard.jsx';
 import StoryBlock from '../components/StoryBlock.jsx';
 import Newsletter from '../components/Newsletter.jsx';
@@ -65,6 +65,9 @@ export default function Home() {
 
       {/* The doorway to the lifestyle store — one banner, no data dependency. */}
       <LifestyleBanner />
+
+      {/* The doorway to the jewellery page, directly under the fashion category strip. */}
+      <JewelleryBanner />
 
       {/* selectHomeMerchandising balances this across categories. It is NOT a
           popularity measure, and today it is not a curated one either: the live

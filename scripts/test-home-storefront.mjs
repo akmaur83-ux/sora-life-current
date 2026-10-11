@@ -6,11 +6,12 @@
 // the Fashion tile beside Health & Nutrition and Home & Living, "Explore the
 // stores", and the festive promo strip — at phone width laid out as the
 // owner's mockup (one compact hero block, one row of four trust items, the
-// tiles side by side, five circles in a row, the whole festive photograph). The copy is true (free standard
+// tiles side by side, six circles in a row, the whole festive photograph). The copy is true (free standard
 // delivery on every order, 7-day returns, support 9am–6pm IST, no
 // percentage, no health outcome); every text-on-orange pair meets WCAG AA;
 // every rule is scoped so no other page or storefront changes; everything
-// from LifestyleBanner down is as it was. NO NETWORK, NO DATABASE, NO BROWSER.
+// from LifestyleBanner down is as it was but for the jewellery banner, mounted
+// directly under it (Jewellery is also the sixth circle). NO NETWORK, NO DATABASE, NO BROWSER.
 //
 //   node scripts/test-home-storefront.mjs
 //   GROCERY_SRC_ROOT=<pre-change checkout> node scripts/test-home-storefront.mjs   (must fail)
@@ -54,6 +55,8 @@ function contrast(a, b) {
   return (x + 0.05) / (y + 0.05);
 }
 
+// The jewellery banner's two photographs (the owner's): the wide one from 701px, the 4:5 portrait on a phone.
+const JEWELLERY_PHOTOS = { 'img/home-jewellery-wide.webp': [1891, 831], 'img/home-jewellery-portrait.webp': [1122, 1402] };
 const IMAGES = {
   'img/home-hero-1.webp': [1536, 864], 'img/home-hero-1-800.webp': [800, 450],
   'img/home-hero-2.webp': [1600, 900], 'img/home-hero-2-800.webp': [800, 450],
@@ -61,9 +64,11 @@ const IMAGES = {
   'img/home-promo-festive.webp': [1600, 533], 'img/home-promo-festive-800.webp': [800, 267],
   'img/home-cat-wellness.webp': [480, 480], 'img/home-cat-personal-care.webp': [480, 480], 'img/home-cat-fashion.webp': [480, 480],
   'img/home-cat-groceries.webp': [480, 480], 'img/home-cat-home-textiles.webp': [480, 480],
+  'img/home-cat-jewellery.webp': [344, 344],
+  ...JEWELLERY_PHOTOS,
 };
 
-await test('the photographs: fourteen WebP files, each under 150 KB, at the sizes the markup declares', () => {
+await test(`the photographs: ${Object.keys(IMAGES).length} WebP files, each under 150 KB, at the sizes the markup declares`, () => {
   for (const [rel, [w, hgt]] of Object.entries(IMAGES)) {
     assert.ok(has(rel), `${rel} is missing`);
     const size = statSync(resolve(ROOT, rel)).size;
@@ -183,11 +188,29 @@ await test('the Fashion photograph is the owner\'s, exactly as supplied — soli
   }
 });
 
-await test('"Explore the stores" (not a second "Shop by category"): Wellness, Personal Care, Fashion, Groceries, Home Textiles — each a circle and its name, each to its own place', () => {
+await test('"Explore the stores" (not a second "Shop by category"): Wellness, Personal Care, Fashion, Groceries, Home Textiles, Jewellery — each a circle and its name, each to its own place', () => {
   assert.match(stores, /<div class="hx-stores__head"><h2 class="hx-stores__h" id="hx-stores-h">Explore the stores<\/h2><a class="hx-more" aria-label="View all products" href="\/shop">View All <svg/, 'the heading and "View All" on one line, as in the mockup');
-  const items = [...stores.matchAll(/<li><a (?:class="hx-store" )?(?:aria-haspopup="dialog" )?(?:class="hx-store" )?href="([^"]+)"[^>]*><span class="hx-store__art"><img alt="" width="480" height="480" class="hx-store__image" loading="lazy" decoding="async"\/><\/span><span class="hx-store__name">([^<]+)<\/span><\/a><\/li>/g)].map((m) => [m[2], m[1]]);
-  assert.deepEqual(items, [['Wellness', '/category/wellness'], ['Personal Care', '/category/personal-care'], ['Fashion', '/fashion'], ['Groceries', '/grocery'], ['Home Textiles', '/homeliving']]);
+  const items = [...stores.matchAll(/<li><a (?:class="hx-store" )?(?:aria-haspopup="dialog" )?(?:class="hx-store" )?href="([^"]+)"[^>]*><span class="hx-store__art"><img alt="" width="(\d+)" height="\2" class="hx-store__image" loading="lazy" decoding="async"\/><\/span><span class="hx-store__name">([^<]+)<\/span><\/a><\/li>/g)].map((m) => [m[3], m[1], Number(m[2])]);
+  assert.deepEqual(items.map(([name, to]) => [name, to]), [['Wellness', '/category/wellness'], ['Personal Care', '/category/personal-care'], ['Fashion', '/fashion'], ['Groceries', '/grocery'], ['Home Textiles', '/homeliving'], ['Jewellery', '/fashion/jewellery']]);
+  // Each circle declares its own photograph's size.
+  const src = read('src/components/HomeStorefront.jsx');
+  for (const [name, , size] of items) {
+    const image = src.match(new RegExp(`name: '${name}'[^\\n]*image: '/(img/home-cat-[a-z-]+\\.webp)'`))[1];
+    assert.deepEqual(IMAGES[image], [size, size], `${name}: ${image} is ${size}px square`);
+  }
   assert.doesNotMatch(all, /Shop by category/i, 'the page keeps one "Shop by category" — the one further down');
+});
+
+await test('the Jewellery circle is the jewellery page\'s rings shot (the necklace\'s fine chain is lost at circle size), cropped square around the ring, never enlarged', async () => {
+  const [rings, circle] = await Promise.all(['img/fashion-editorial/jewellery-cat-rings.webp', 'img/home-cat-jewellery.webp']
+    .map((rel) => sharp(resolve(ROOT, rel)).removeAlpha().raw().toBuffer({ resolveWithObject: true })));
+  assert.ok(circle.info.width <= rings.info.width && circle.info.height <= rings.info.height, 'no larger than its source');
+  // The crop is the shot's top-left 344px square, pixel for pixel (within WebP's re-encoding).
+  let diff = 0, n = 0;
+  for (let y = 0; y < circle.info.height; y += 4) for (let x = 0; x < circle.info.width; x += 4) {
+    for (let c = 0; c < 3; c++) { diff += Math.abs(circle.data[(y * circle.info.width + x) * 3 + c] - rings.data[(y * rings.info.width + x) * 3 + c]); n++; }
+  }
+  assert.ok(diff / n < 4, `the rings shot, as it was (mean difference ${(diff / n).toFixed(2)})`);
 });
 
 await test('the promo strip: "Festive gifting" / "Wellness, beauty and home picks to give this season" / "Shop gifts" to /shop, over the gift-and-diya photograph', () => {
@@ -252,7 +275,7 @@ await test('contrast (WCAG 2.x), from the stylesheet itself: white on the deep-o
   for (const [, sel, body] of hx.matchAll(/([^{}]+)\{([^{}]*)\}/g)) assert.ok(!(/background:\s*var\(--hx-orange\)/.test(body) && /color:\s*#fff\b/.test(body)), `${sel.trim()}: white text on the bright orange`);
 });
 
-await test('the phone, as in the mockup: ONE compact hero block (copy in the left 45%, the lineup filling the right to its edge); the trust strip one row of four across the width; the tiles side by side — Fashion one tile, its portrait filling it from the right; five circles in one row; the festive photograph whole; no rule pairs aspect-ratio with a min/max height', async () => {
+await test('the phone, as in the mockup: ONE compact hero block (copy in the left 45%, the lineup filling the right to its edge); the trust strip one row of four across the width; the tiles side by side — Fashion one tile, its portrait filling it from the right; six circles in one row, a two-word name on two lines; the festive photograph whole; no rule pairs aspect-ratio with a min/max height', async () => {
   const at = hx.indexOf('@media (max-width: 700px) {');
   const phone = hx.slice(at, hx.indexOf('\n}\n', at));
   // The hero: one block, not text stacked above a full-width photograph.
@@ -275,8 +298,10 @@ await test('the phone, as in the mockup: ONE compact hero block (copy in the lef
   assert.doesNotMatch(phone, /\.hx-tile--fashion \{[^}]*grid-row/, 'and still does on a phone');
   assert.match(phone, /\.hx-tile--fashion \{ display: block;/); assert.match(phone, /\.hx-tile--fashion \.hx-tile__art \{ position: absolute; inset: 0; \}/, 'one tile: the portrait behind the copy');
   assert.equal(decl('.hx-tile__art .hx-tile__image', 'object-position'), 'right top', 'her head at the top edge');
-  // The circles: five in one row, no sideways scroll.
-  assert.equal(decl('.hx-stores__row', 'grid-template-columns'), 'repeat(5, minmax(0, 1fr))');
+  // The circles: six in one row, no sideways scroll. Six columns leave a two-word name no room on one
+  // line, so on a phone it may break between its words rather than run into its neighbours.
+  assert.equal(decl('.hx-stores__row', 'grid-template-columns'), 'repeat(6, minmax(0, 1fr))');
+  assert.doesNotMatch(phone, /\.hx-store__name \{[^}]*white-space: nowrap/, 'names may wrap on a phone');
   assert.doesNotMatch(phone, /\.hx-stores__row \{[^}]*(display: flex|overflow-x)/, 'the row does not scroll on a phone');
   assert.doesNotMatch(hx, /\(hover: hover\) and \(pointer: fine\) \{\s*\.hx-trust__list, \.hx-stores__row/, 'no scrollbar rule: nothing scrolls');
   // The festive strip: the whole photograph (its own 3:1, so neither the box nor the diya is cut), the copy over its clear centre.
@@ -291,14 +316,63 @@ await test('the phone, as in the mockup: ONE compact hero block (copy in the lef
 });
 
 // ---- the page ----------------------------------------------------------------
-await test('Home.jsx: the five sections lead the page in the mockup\'s order, then the offers; the old hero and category strip are gone from it; everything from LifestyleBanner down is exactly as it was', () => {
+await test('Home.jsx: the five sections lead the page in the mockup\'s order, then the offers; the old hero and category strip are gone from it; from LifestyleBanner down it is exactly as it was but for the jewellery banner, directly under it', () => {
   const home = read('src/pages/Home.jsx');
-  const order = [...home.matchAll(/<(HomeHero|HomeTrustStrip|HomeTiles|ExploreStores|FestivePromo|HomeOffers|LifestyleBanner)\b/g)].map((m) => m[1]);
-  assert.deepEqual(order, ['HomeHero', 'HomeTrustStrip', 'HomeTiles', 'ExploreStores', 'FestivePromo', 'HomeOffers', 'LifestyleBanner']);
+  const order = [...home.matchAll(/<(HomeHero|HomeTrustStrip|HomeTiles|ExploreStores|FestivePromo|HomeOffers|LifestyleBanner|JewelleryBanner)\b/g)].map((m) => m[1]);
+  assert.deepEqual(order, ['HomeHero', 'HomeTrustStrip', 'HomeTiles', 'ExploreStores', 'FestivePromo', 'HomeOffers', 'LifestyleBanner', 'JewelleryBanner']);
   assert.doesNotMatch(home, /import Hero from|import HomeCategoryStrip from|<Hero \/>|<HomeCategoryStrip/);
   assert.match(home, /admin Hero Slides page no longer drives it/, 'the page says where the hero comes from now');
+  // LifestyleBanner renders the banner and the fashion category strip beneath it, so the next mount is under the strip.
+  const mount = '      <LifestyleBanner />\n\n      {/* The doorway to the jewellery page, directly under the fashion category strip. */}\n      <JewelleryBanner />\n';
+  assert.equal(home.split(mount).length - 1, 1, 'the jewellery banner is mounted once, directly after LifestyleBanner');
   const tail = (s) => s.slice(s.indexOf('      <LifestyleBanner />'));
-  assert.equal(tail(home), tail(atCommit(BASELINE_SHA, 'src/pages/Home.jsx')), 'from LifestyleBanner down, byte-identical');
+  assert.equal(tail(home).replace(mount, '      <LifestyleBanner />\n'), tail(atCommit(BASELINE_SHA, 'src/pages/Home.jsx')), 'otherwise, from LifestyleBanner down, byte-identical');
+});
+
+await test('the jewellery banner: one link to /fashion/jewellery — "SORA LIFE Jewellery" / "Jewellery that tells your story" / "Rings, necklaces, earrings and bracelets, made to be worn every day." / "Explore Jewellery" — over the owner\'s photograph, the 4:5 portrait on a phone; square-edged, near-black on the ivory', () => {
+  const html = render(mod.JewelleryBanner);
+  const [wide, tall] = Object.keys(JEWELLERY_PHOTOS);
+  const [w, hgt] = JEWELLERY_PHOTOS[wide];
+  assert.match(html, new RegExp(`^<section class="hx hx-jewel" aria-labelledby="hx-jewel-h"><a class="hx-jewel__link" aria-labelledby="hx-jewel-h hx-jewel-cta" href="/fashion/jewellery"><span class="hx-jewel__art"><picture><source media="\\(max-width: 700px\\)"/><img alt="[^"]{30,}" width="${w}" height="${hgt}" class="hx-jewel__image" loading="lazy" decoding="async"/></picture></span><div class="hx-jewel__copy"><p class="hx-jewel__eyebrow">SORA LIFE Jewellery</p><h2 class="hx-jewel__h" id="hx-jewel-h"><span>Jewellery that</span> <span>tells your story</span></h2><p class="hx-jewel__text">Rings, necklaces, earrings and bracelets, made to be worn every day.</p><span class="hx-jewel__cta" id="hx-jewel-cta">Explore Jewellery <svg`));
+  const src = read('src/components/HomeStorefront.jsx');
+  assert.match(src, new RegExp(`src: '/${wide}'`)); assert.match(src, new RegExp(`tall: '/${tall}'`));
+  // The Lifestyle banner's treatment: full-bleed (no wrap, no inset), square, the height from the width.
+  for (const [, sel, body] of hx.matchAll(/([^{}]+)\{([^{}]*)\}/g)) if (/hx-jewel/.test(sel)) assert.doesNotMatch(body, /border-radius|box-shadow/, `${sel.trim()}: square-edged, flat`);
+  assert.equal(decl('.hx-jewel__link', 'height'), 'clamp(300px, 43.94vw, 680px)', 'the wide photograph\'s own 1891:831, so it is not cropped from 683px to 1548px');
+  assert.equal(decl('.hx-jewel__h', 'text-transform'), 'uppercase');
+  assert.equal(decl('.hx-jewel__h', 'color'), 'var(--hx-ink)'); assert.equal(decl('.hx-jewel__cta', 'background'), 'var(--hx-ink)'); assert.equal(decl('.hx-jewel__cta', 'color'), '#fff');
+  const banned = [/\d+\s*%|\bper\s*cent\b|\boff\b(?!er)/i, /handcrafted|hand-?made|ethical|certified|hallmark|\b(18|22|24)\s*k|solid gold|real (gold|diamond)|lifetime|guarantee|trusted|best[- ]?sell/i];
+  for (const re of banned) assert.doesNotMatch(text(html), re, `${re}`);
+});
+
+await test('the jewellery photographs: the wide one\'s left 45% and the portrait\'s upper 40% are plain ivory (where the copy sits), the portrait is 4:5; near-black copy and the muted line clear 4.5:1 on their darkest pixel', async () => {
+  const [wide, tall] = Object.keys(JEWELLERY_PHOTOS);
+  const [tw, th] = JEWELLERY_PHOTOS[tall];
+  assert.ok(Math.abs(tw / th - 0.8) < 0.001, `${tall} is 4:5`);
+  const hex = (p) => `#${p.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+  const lum = (p) => 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2];
+  for (const [rel, area, what] of [[wide, [0, 0, 0.45, 1], 'the left 45%'], [tall, [0, 0, 1, 0.40], 'the upper 40%']]) {
+    const { data, info } = await sharp(resolve(ROOT, rel)).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    let lo = null, sum = 0, sq = 0, n = 0;
+    for (let y = Math.round(area[1] * info.height); y < area[3] * info.height; y += 3) for (let x = Math.round(area[0] * info.width); x < area[2] * info.width; x += 3) {
+      const i = (y * info.width + x) * 3, p = [data[i], data[i + 1], data[i + 2]], l = lum(p);
+      if (!lo || l < lum(lo)) lo = p;
+      sum += l; sq += l * l; n++;
+    }
+    const sd = Math.sqrt(sq / n - (sum / n) ** 2);
+    assert.ok(sum / n > 215 && sd < 8, `${rel}: ${what} is plain and light (mean ${(sum / n).toFixed(0)}, spread ${sd.toFixed(1)})`);
+    for (const [name, token] of [['the headline and button', '--hx-ink'], ['the subline', '--hx-muted']]) {
+      const fg = hx.match(new RegExp(`${token}:\\s*(#[0-9A-Fa-f]{6})`))[1];
+      const r = contrast(fg, hex(lo));
+      assert.ok(r >= 4.5, `${rel}: ${name} (${fg}) on its darkest pixel ${hex(lo)}: ${r.toFixed(2)}:1`);
+      console.log(`        ${rel}, ${what}: ${name} ${fg} on the darkest ${hex(lo)} = ${r.toFixed(2)}:1`);
+    }
+  }
+  // Desktop: the copy over the plain left; a phone: over the clear upper half, never the arrangement.
+  assert.equal(decl('.hx-jewel__copy', 'width'), 'min(40%, 470px)');
+  const at = hx.indexOf('@media (max-width: 700px) {');
+  const phone = hx.slice(at, hx.indexOf('\n}\n', at));
+  assert.match(phone, /\.hx-jewel__link \{ align-items: flex-start; height: auto; aspect-ratio: 4 \/ 5; \}/, 'the portrait whole, the copy at its top');
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
