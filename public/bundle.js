@@ -34748,7 +34748,7 @@ function StoryBlock({
   });
 }
 
-function Newsletter() {
+function Newsletter$1() {
   const [email, setEmail] = reactExports.useState('');
   const [done, setDone] = reactExports.useState(false);
   const [busy, setBusy] = reactExports.useState(false);
@@ -42296,7 +42296,7 @@ function Home() {
           story: story
         })
       })
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorCommunity, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WhySoraLife, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Newsletter, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeLeaderboard, {})]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(CreatorCommunity, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WhySoraLife, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Newsletter$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeLeaderboard, {})]
   });
 }
 
@@ -60499,6 +60499,9 @@ function FashionHeader({
         to: "/fashion/women/sarees",
         children: "Sarees"
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/fashion/jewellery",
+        children: "Jewellery"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
         to: "/fashion/men",
         children: "Men"
       })]
@@ -60538,6 +60541,90 @@ function FashionHeader({
           size: 20
         }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           children: cartCount
+        })]
+      })]
+    })]
+  });
+  // The jewellery page: a quiet bar of true facts, then the logo, its links and the icons.
+  if (/^\/fashion\/jewellery\/?$/.test(location.pathname)) return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+    className: "jw-header",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "jw-header__bar",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "Free standard delivery on every order"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "Easy returns within 7 days of delivery"
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "jw-header__row",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "jw-header__menu",
+        "aria-label": "Open menu",
+        onClick: onMenu,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "menu",
+          size: 22
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionLogo, {
+        tagline: "Jewellery"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "jw-header__nav",
+        "aria-label": "Jewellery",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/fashion/jewellery",
+          children: "Home"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+          href: "#jw-products",
+          children: "Shop"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+          href: "#jw-categories",
+          children: "Collections"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/fashion/women",
+          children: "Women"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/about",
+          children: "About"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/contact",
+          children: "Contact"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "jw-header__actions",
+        "aria-label": "Search, account, wishlist and cart",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/fashion/search",
+          "aria-label": "Search fashion",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "search",
+            size: 19
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/account",
+          "aria-label": "Account",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "user",
+            size: 19
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion/wishlist",
+          "aria-label": `Wishlist${wish.count ? `, ${wish.count} items` : ''}`,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "heart",
+            size: 19
+          }), wish.count > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: wish.count
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/cart",
+          "aria-label": `Cart${cartCount ? `, ${cartCount} items` : ''}`,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "bag",
+            size: 19
+          }), cartCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: cartCount
+          })]
         })]
       })]
     })]
@@ -60881,7 +60968,7 @@ function Shell() {
     setMenu(false);
   }, [pathname]);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: `fs${/^\/fashion\/(men|women|women\/sarees)\/?$/.test(pathname) ? ' fs--department' : ''}${/^\/fashion\/women\/sarees\/?$/.test(pathname) ? ' fs--saree' : ''}${/^\/fashion\/women\/?$/.test(pathname) ? ' fs--women' : ''}`,
+    className: `fs${/^\/fashion\/(men|women|women\/sarees)\/?$/.test(pathname) ? ' fs--department' : ''}${/^\/fashion\/women\/sarees\/?$/.test(pathname) ? ' fs--saree' : ''}${/^\/fashion\/women\/?$/.test(pathname) ? ' fs--women' : ''}${/^\/fashion\/jewellery\/?$/.test(pathname) ? ' fs--jewellery' : ''}`,
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(FashionHeader, {
       onMenu: () => setMenu(true)
     }), /*#__PURE__*/jsxRuntimeExports.jsx(Drawer$3, {
@@ -61835,6 +61922,19 @@ const DEPARTMENT_CONTENT = {
         srcSet: '/img/fashion-editorial/women-hero-alternate-1000.webp 1000w, /img/fashion-editorial/women-hero-alternate.webp 1600w',
         sizes: '(max-width: 700px) 100vw, 1160px'
       })
+    },
+    // The way into /fashion/jewellery, after the saree store's.
+    jewellery: {
+      eyebrow: 'SORA LIFE Jewellery',
+      title: 'Jewellery that tells your story',
+      text: 'Rings, necklaces, earrings and bracelets, in a store of their own.',
+      cta: 'Visit the jewellery store',
+      image: artwork('jewellery-edit-gifting', 'A diamond pendant on a fine chain, worn with an ivory silk top, beside a ribboned gift box', {
+        width: 1200,
+        height: 686,
+        srcSet: '/img/fashion-editorial/jewellery-edit-gifting-700.webp 700w, /img/fashion-editorial/jewellery-edit-gifting.webp 1200w',
+        sizes: '(max-width: 700px) 100vw, 1160px'
+      })
     }
   },
   // /fashion/women/sarees: the saree store, moved here unchanged from /fashion/women.
@@ -62253,7 +62353,7 @@ function SareeDepartment({
 
 // The main women's page: a full-bleed hero under its own header, shop-by-category,
 // the real catalogue (new arrivals when any are flagged), four edits, a capsule
-// wardrobe, and the way into the saree store. Every word is HTML; no image carries text.
+// wardrobe, and the ways into the saree and jewellery stores. Every word is HTML; no image carries text.
 function WomenDepartment({
   config,
   tree,
@@ -62442,6 +62542,29 @@ function WomenDepartment({
           to: "/fashion/women/sarees",
           className: "wm-button",
           children: [config.sarees.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "wm-sarees wm-jewellery wm-wrap",
+      "aria-labelledby": "wm-jewellery-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
+        image: config.jewellery.image
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "wm-eyebrow",
+          children: config.jewellery.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          id: "wm-jewellery-title",
+          children: config.jewellery.title
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: config.jewellery.text
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion/jewellery",
+          className: "wm-button",
+          children: [config.jewellery.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "arrowRight",
             size: 16
           })]
@@ -62679,6 +62802,480 @@ function FashionDepartment({
           size: 18
         })]
       })]
+    })]
+  });
+}
+
+// /fashion/jewellery — the SORA LIFE Jewellery page. Presentation only: the photographs are
+// editorial (the owner's, resized only), every word is HTML, and products, prices and ratings
+// come only from the real catalogue. Every statement here is true: delivery is free on every
+// order (standard), returns are accepted within 7 days of delivery, checkout offers cash on
+// delivery, support runs 9am–6pm IST. Nothing else is asserted about the pieces or the shop.
+const art = (name, alt, extra = {}) => ({
+  src: `/img/fashion-editorial/${name}.webp`,
+  alt,
+  ...extra
+});
+const JEWELLERY = {
+  categorySlug: 'jewellery',
+  hero: {
+    eyebrow: 'SORA LIFE Jewellery',
+    title: ['Jewellery that tells', 'your story'],
+    intro: 'Timeless designs for your most precious moments',
+    cta: 'Shop the collection',
+    image: art('jewellery-hero', 'A woman in an ivory dress wearing a diamond pendant, drop earrings and a ring', {
+      width: 1600,
+      height: 667,
+      srcSet: '/img/fashion-editorial/jewellery-hero-1000.webp 1000w, /img/fashion-editorial/jewellery-hero.webp 1600w',
+      mobile: '/img/fashion-editorial/jewellery-hero-mobile.webp'
+    })
+  },
+  // Desktop: a title and a note; a phone: two short lines beside the icon.
+  trust: [{
+    icon: 'truck',
+    title: 'Free Standard Delivery',
+    note: 'On every order',
+    phone: ['Free Standard', 'Delivery'],
+    to: '/shipping'
+  }, {
+    icon: 'return',
+    title: 'Easy Returns',
+    note: '7 days from delivery',
+    phone: ['Easy Returns', '7 days'],
+    to: '/returns'
+  }, {
+    icon: 'package',
+    title: 'Cash on Delivery',
+    note: 'Available',
+    phone: ['Cash on', 'Delivery'],
+    to: '/shipping'
+  }, {
+    icon: 'chat',
+    title: 'Support',
+    note: '9am–6pm IST',
+    phone: ['Support', '9am–6pm IST'],
+    to: '/contact'
+  }],
+  categories: {
+    eyebrow: 'Shop by category',
+    title: 'Find your perfect piece',
+    intro: 'Explore our collections for every occasion.',
+    // Each opens its sub-category listing under Jewellery (/fashion/c/<slug>).
+    items: [{
+      title: 'Rings',
+      slug: 'rings',
+      image: art('jewellery-cat-rings', 'A solitaire ring with a clear centre stone')
+    }, {
+      title: 'Necklaces',
+      slug: 'necklaces',
+      image: art('jewellery-cat-necklaces', 'A fine gold chain with a small pendant')
+    }, {
+      title: 'Earrings',
+      slug: 'earrings',
+      image: art('jewellery-cat-earrings', 'A pair of gold and clear-stone drop earrings')
+    }, {
+      title: 'Bracelets',
+      slug: 'bracelets',
+      image: art('jewellery-cat-bracelets', 'A slim gold bracelet with small stones')
+    }, {
+      title: 'Wedding',
+      slug: 'wedding-jewellery',
+      image: art('jewellery-cat-wedding', 'Two gold wedding bands')
+    }, {
+      title: "Men's",
+      slug: 'mens-jewellery',
+      image: art('jewellery-cat-mens', 'A black and gold ring')
+    }, {
+      title: 'Gifts',
+      slug: 'jewellery-gifts',
+      image: art('jewellery-cat-gifts', 'An ivory gift box tied with a champagne ribbon')
+    }]
+  },
+  loved: {
+    title: 'Our most loved pieces',
+    viewAll: 'View all'
+  },
+  edits: [{
+    title: ["For life's", 'special', 'moments'],
+    cta: 'Explore wedding',
+    slug: 'wedding-jewellery',
+    image: art('jewellery-edit-wedding', 'A stack of gold rings on a pale stone plinth with soft white flowers', {
+      width: 1200,
+      height: 686,
+      srcSet: '/img/fashion-editorial/jewellery-edit-wedding-700.webp 700w, /img/fashion-editorial/jewellery-edit-wedding.webp 1200w',
+      sizes: '(max-width: 700px) 100vw, 54vw'
+    })
+  }, {
+    title: ['A gift', 'to treasure'],
+    cta: 'Shop gifts',
+    slug: 'jewellery-gifts',
+    image: art('jewellery-edit-gifting', 'A diamond pendant on a fine chain, worn with an ivory silk top, beside a ribboned gift box', {
+      width: 1200,
+      height: 686,
+      srcSet: '/img/fashion-editorial/jewellery-edit-gifting-700.webp 700w, /img/fashion-editorial/jewellery-edit-gifting.webp 1200w',
+      sizes: '(max-width: 700px) 100vw, 46vw'
+    })
+  }],
+  story: {
+    eyebrow: 'Our story',
+    title: 'Made to be worn every day',
+    text: 'Pieces chosen for how they feel and how long they last, for the moments you want to remember.',
+    cta: 'Our story',
+    to: '/about',
+    image: art('jewellery-story', 'A jeweller’s hands setting a small stone at a wooden workbench', {
+      width: 800,
+      height: 960
+    })
+  },
+  newsletter: {
+    title: 'Be the first to know',
+    text: 'Subscribe to hear when new jewellery arrives. You can unsubscribe whenever you like.',
+    image: art('jewellery-news', 'Two ivory gift boxes with champagne ribbons among small white flowers', {
+      width: 1600,
+      height: 625,
+      mobile: '/img/fashion-editorial/jewellery-news-mobile.webp'
+    })
+  }
+};
+
+function Photo({
+  image,
+  priority = false,
+  className = ''
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
+    className: className,
+    children: [image.mobile && /*#__PURE__*/jsxRuntimeExports.jsx("source", {
+      media: "(max-width: 700px)",
+      srcSet: image.mobile
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+      src: image.src,
+      srcSet: image.srcSet,
+      sizes: image.sizes || '100vw',
+      alt: image.alt,
+      width: image.width || 400,
+      height: image.height || 400,
+      loading: priority ? 'eager' : 'lazy',
+      fetchpriority: priority ? 'high' : 'auto',
+      decoding: "async"
+    })]
+  });
+}
+
+// The newsletter posts to the same endpoint as the site's sign-up and, like it,
+// confirms only after the server has stored the address.
+function Newsletter({
+  content
+}) {
+  const [email, setEmail] = reactExports.useState('');
+  const [state, setState] = reactExports.useState({
+    busy: false,
+    done: false,
+    error: ''
+  });
+  const submit = async e => {
+    e.preventDefault();
+    if (state.busy) return;
+    if (!/^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/.test(email.trim())) {
+      setState({
+        busy: false,
+        done: false,
+        error: 'Please enter a valid email address.'
+      });
+      return;
+    }
+    setState({
+      busy: true,
+      done: false,
+      error: ''
+    });
+    try {
+      const res = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: email.trim()
+        })
+      });
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {/* not JSON */}
+      if (!res.ok || !data?.subscribed) {
+        setState({
+          busy: false,
+          done: false,
+          error: data?.error || 'We could not sign you up right now. Please try again.'
+        });
+        return;
+      }
+      setState({
+        busy: false,
+        done: true,
+        error: ''
+      });
+    } catch {
+      setState({
+        busy: false,
+        done: false,
+        error: 'We could not reach us just now. Please check your connection and try again.'
+      });
+    }
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "jw-news",
+    "aria-labelledby": "jw-news-title",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Photo, {
+      image: content.image,
+      className: "jw-news__art"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "jw-wrap jw-news__body",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        id: "jw-news-title",
+        children: content.title
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        children: content.text
+      }), state.done ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "jw-news__done",
+        role: "status",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "check",
+          size: 16
+        }), " You\u2019re subscribed. We\u2019ll be in touch when there\u2019s something worth sending."]
+      }) : /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+        className: "jw-news__form",
+        onSubmit: submit,
+        noValidate: true,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+          className: "jw-sr",
+          htmlFor: "jw-news-email",
+          children: "Email address"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          id: "jw-news-email",
+          type: "email",
+          placeholder: "Enter your email address",
+          value: email,
+          onChange: e => setEmail(e.target.value),
+          disabled: state.busy,
+          autoComplete: "email"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "submit",
+          className: "jw-button",
+          disabled: state.busy,
+          children: state.busy ? 'Subscribing…' : 'Subscribe'
+        })]
+      }), state.error && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "jw-news__error",
+        role: "alert",
+        children: state.error
+      })]
+    })]
+  });
+}
+function FashionJewellery({
+  content = JEWELLERY
+}) {
+  const {
+    tree,
+    views,
+    status
+  } = useFashionCatalogue();
+  // Jewellery and its active sub-categories only; the catalogue's featured order puts any
+  // product flagged bestseller first. Nothing here invents a price, a rating or a review.
+  const {
+    category,
+    categories,
+    products
+  } = departmentCatalogue(tree, views, content.categorySlug);
+  const listing = category ? categoryHref$3(category) : '#jw-products';
+  const hrefFor = slug => {
+    const node = categories.find(c => c.slug === slug);
+    return node ? categoryHref$3(node) : listing;
+  };
+  const loved = products.slice(0, 4);
+  const {
+    hero,
+    categories: cats,
+    story
+  } = content;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "jw",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "jw-hero",
+      "aria-labelledby": "jw-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Photo, {
+        image: hero.image,
+        priority: true,
+        className: "jw-hero__art"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "jw-wrap jw-hero__copy",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "jw-eyebrow",
+          children: hero.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          id: "jw-title",
+          children: hero.title.map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: line
+          }, line))
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "jw-hero__intro",
+          children: hero.intro
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: listing,
+          className: "jw-button",
+          children: [hero.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 15
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+      className: "jw-trust",
+      "aria-label": "Shopping with SORA LIFE",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "jw-wrap",
+        children: content.trust.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: t.to,
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: t.icon,
+              size: 22
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "jw-trust__full",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+                children: t.title
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("small", {
+                children: t.note
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "jw-trust__phone",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+                children: t.phone[0]
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("small", {
+                children: t.phone[1]
+              })]
+            })]
+          })
+        }, t.title))
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "jw-cats jw-wrap",
+      id: "jw-categories",
+      "aria-labelledby": "jw-cats-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "jw-head jw-head--center",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "jw-eyebrow",
+          children: cats.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          id: "jw-cats-title",
+          children: cats.title
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: cats.intro
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "jw-cats__row",
+        children: cats.items.map(item => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: hrefFor(item.slug),
+            className: "jw-cat",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Photo, {
+              image: item.image,
+              className: "jw-cat__art"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: item.title
+            })]
+          })
+        }, item.slug))
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "jw-loved jw-wrap",
+      id: "jw-products",
+      "aria-labelledby": "jw-loved-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "jw-head jw-head--split",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          id: "jw-loved-title",
+          children: content.loved.title
+        }), loved.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: listing,
+          className: "jw-more",
+          children: [content.loved.viewAll, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 14
+          })]
+        })]
+      }), loved.length ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "jw-loved__grid",
+        children: loved.map(view => /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductCard, {
+          view: view
+        }, view.id))
+      }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "jw-empty",
+        role: "status",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'Our first jewellery pieces are on their way. Explore the categories above in the meantime.'
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+          href: "#jw-categories",
+          className: "jw-more",
+          children: ["Shop by category ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 14
+          })]
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+      className: "jw-edits",
+      "aria-label": "Wedding and gifts",
+      children: content.edits.map((item, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: hrefFor(item.slug),
+        className: `jw-edit jw-edit--${i + 1}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Photo, {
+          image: item.image,
+          className: "jw-edit__art"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            children: item.title.map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: line
+            }, line))
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "jw-button",
+            children: [item.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 14
+            })]
+          })]
+        })]
+      }, item.slug))
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "jw-story jw-wrap",
+      "aria-labelledby": "jw-story-title",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "jw-story__copy",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "jw-eyebrow",
+          children: story.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          id: "jw-story-title",
+          children: story.title
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: story.text
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: story.to,
+          className: "jw-button",
+          children: [story.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 14
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Photo, {
+        image: story.image,
+        className: "jw-story__art"
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Newsletter, {
+      content: content.newsletter
     })]
   });
 }
@@ -67805,6 +68402,9 @@ function App() {
           element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionDepartment, {
             department: "sarees"
           }, "sarees")
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "jewellery",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionJewellery, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "c/:slug",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionCategory, {})
