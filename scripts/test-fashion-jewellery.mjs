@@ -241,7 +241,7 @@ await test('the hero and the phone: the portrait sharp on the right at its own s
   assert.match(phone, /\.jw-hero \{ align-items: flex-start; height: calc\(min\(174vw, 720px\) \+ 60px\); \}/);
   assert.match(phone, /\.jw-hero__art \{ left: 0; width: 100%; -webkit-mask-image: none; mask-image: none; \}/); assert.match(phone, /\.jw-hero::before \{ content: none; \}/);
   assert.match(phone, /\.jw-hero::after \{ background: linear-gradient\(180deg, #431f17[0-9a-f]{2} 0%,[^)]*#431f1700 56%\); \}/, 'phone: the warm-dark wash down from the top');
-  assert.match(phone, /\.jw-hero__copy \{ padding-top: 84px; \}/);
+  assert.match(phone, /\.jw-hero__copy \{ padding-top: 84px; padding-left: 0; \}/, 'the copy on the page\'s 16px gutter, in line with the menu and every section below');
   assert.doesNotMatch(jw, /margin-top: 112px|max-width: 1023px/, 'no cream band, no separate tablet layout');
   assert.match(phone, /\.jw-hero__copy > h1, \.jw-hero__copy > \.jw-button \{ max-width: none; \}/);
   assert.match(jw, /\.jw-trust ul \{ display: grid; grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/); assert.match(phone, /\.jw-trust__full \{ display: none; \}/);
