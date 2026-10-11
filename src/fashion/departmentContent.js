@@ -73,6 +73,13 @@ export const DEPARTMENT_CONTENT = {
         srcSet: '/img/fashion-editorial/women-hero-alternate-1000.webp 1000w, /img/fashion-editorial/women-hero-alternate.webp 1600w', sizes: '(max-width: 700px) 100vw, 1160px',
       }),
     },
+    // The way into /fashion/jewellery, after the saree store's.
+    jewellery: {
+      eyebrow: 'SORA LIFE Jewellery', title: 'Jewellery that tells your story', text: 'Rings, necklaces, earrings and bracelets, in a store of their own.', cta: 'Visit the jewellery store',
+      image: artwork('jewellery-edit-gifting', 'A diamond pendant on a fine chain, worn with an ivory silk top, beside a ribboned gift box', {
+        width: 1200, height: 686, srcSet: '/img/fashion-editorial/jewellery-edit-gifting-700.webp 700w, /img/fashion-editorial/jewellery-edit-gifting.webp 1200w', sizes: '(max-width: 700px) 100vw, 1160px',
+      }),
+    },
   },
   // /fashion/women/sarees: the saree store, moved here unchanged from /fashion/women.
   sarees: {

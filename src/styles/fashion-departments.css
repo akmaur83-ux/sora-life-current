@@ -543,3 +543,205 @@
   .wm *, .wm *::before, .wm *::after { animation: none !important; transition: none !important; }
   .wm-category:hover img, .wm-edit:hover img, .wm-look:hover img { transform: none; }
 }
+
+/* The women's page's way into the jewellery store: the saree panel's layout, in warm brown. */
+.wm-jewellery { margin-top: 6px; background: #2b1d14; color: #fff8ef; }
+.wm-jewellery img { object-position: 70% center; }
+.wm-jewellery::after { background: linear-gradient(90deg, #1f150ee6 0%, #1f150eb3 36%, transparent 70%); }
+.wm .wm-jewellery .wm-eyebrow { color: #ead6b4; }
+.wm-jewellery p:not(.wm-eyebrow) { color: #f1e6da; }
+@media (max-width: 700px) {
+  .wm-jewellery img { object-position: 64% center; }
+  .wm-jewellery::after { background: linear-gradient(0deg, #1f150ef2 0%, #1f150eb8 42%, transparent 72%); }
+}
+
+/* ============================================================
+   /fashion/jewellery (FashionJewellery.jsx): SORA LIFE Jewellery, laid out as the owner's
+   reference — ivory and gold, serif headings, square edges (only the category circles and
+   the story's arched frame are round). Scoped to .jw and .jw-header; the gold on the
+   buttons and small text is deepened to #8b6a3e so white on it, and it on the ivory,
+   both pass WCAG AA.
+   ============================================================ */
+.fs--jewellery { position: relative; background: #fbf8f4; color: #2b2620; }
+.fs--jewellery .fs-main { max-width: none; padding: 0; }
+.jw { --jw-ink: #2b2620; --jw-muted: #6b6158; --jw-gold: #8b6a3e; --jw-ivory: #fbf8f4; --jw-sand: #f4eee6; --jw-line: #e3d8ca; background: var(--jw-ivory); color: var(--jw-ink); font-family: 'Inter', sans-serif; }
+.jw *, .jw-header * { box-sizing: border-box; }
+.jw picture, .jw img { display: block; }
+.jw a { color: inherit; text-decoration: none; }
+.jw h1, .jw h2, .jw h3 { margin: 0; font-family: var(--font-display, Georgia, serif); font-weight: 400; color: inherit; }
+.jw-wrap { width: calc(100% - 56px); max-width: 1240px; margin-inline: auto; }
+.jw :focus-visible, .jw-header :focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.jw .jw-eyebrow { margin: 0 0 14px; font-size: 11px; font-weight: 600; line-height: 1.5; letter-spacing: .2em; text-transform: uppercase; color: var(--jw-gold); }
+.fs .jw .jw-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: fit-content; min-height: 44px; padding: 12px 22px; border: 1px solid var(--jw-gold); border-radius: 0; background: var(--jw-gold); color: #fff; font: 600 12px/1.3 'Inter', sans-serif; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; transition: background .2s ease, color .2s ease; }
+.jw .jw-more { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.jw-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.jw-header { position: relative; z-index: 20; background: #fbf8f4; color: #2b2620; border-bottom: 1px solid #e3d8ca; }
+.jw-header__bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 28px; margin: 0; padding: 7px 16px; background: #efe6da; font: 500 11px/1.4 'Inter', sans-serif; letter-spacing: .04em; color: #4a4036; }
+.jw-header__row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 24px; width: calc(100% - 56px); max-width: 1240px; min-height: 72px; margin: auto; }
+.jw-header__menu { display: none; width: 36px; height: 44px; padding: 0; border: 0; background: none; color: inherit; place-items: center; }
+.jw-header .fs-logo { color: #2b2620; }
+.jw-header .fs-logo__txt strong { color: #2b2620; font-size: 23px; }
+.jw-header .fs-logo__txt em { color: #8b6a3e; font-size: 7.5px; }
+.jw-header__nav { justify-self: center; display: flex; align-items: center; gap: 28px; font-size: 13px; }
+.jw-header__nav a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; text-decoration: none; }
+.jw-header__actions { display: flex; align-items: center; gap: 2px; }
+.jw-header__actions a { position: relative; display: grid; place-items: center; width: 38px; height: 44px; color: inherit; text-decoration: none; }
+.jw-header__actions span { position: absolute; right: 1px; top: 5px; display: grid; place-items: center; min-width: 16px; height: 16px; border-radius: 50%; background: #8b6a3e; color: #fff; font-size: 9px; font-weight: 600; }
+
+/* The hero: the photograph's cream left is the copy's ground; height from the width. */
+.jw-hero { position: relative; isolation: isolate; display: flex; align-items: center; height: clamp(420px, 38.6vw, 620px); overflow: hidden; background: #efe4d6; }
+.jw-hero__art { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; }
+.jw-hero__art img { width: 100%; height: 100%; object-fit: cover; object-position: 70% center; }
+.jw-hero__copy { padding-left: clamp(0px, 6.25vw, 90px); }
+.jw-hero h1 { font-size: clamp(36px, 3.9vw, 56px); line-height: 1.08; letter-spacing: -.01em; }
+.jw-hero h1 span { display: block; }
+.jw-hero__intro { max-width: 300px; margin: 18px 0 26px; font-size: 15px; line-height: 1.6; color: var(--jw-muted); }
+
+/* One trust strip of true statements. A phone shows each as two short lines. */
+.jw-trust { background: var(--jw-sand); border-bottom: 1px solid var(--jw-line); }
+.jw-trust ul { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-block: 0; padding: 16px 0; list-style: none; }
+.jw-trust li + li { border-left: 1px solid #ddd1c2; }
+.jw-trust a { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 44px; padding: 0 12px; }
+.jw-trust svg { flex: none; color: var(--jw-gold); }
+.jw-trust strong, .jw-trust small { display: block; }
+.jw-trust strong { font-size: 13px; font-weight: 600; line-height: 1.3; }
+.jw-trust small { margin-top: 2px; font-size: 12px; line-height: 1.3; color: var(--jw-muted); }
+.jw-trust__phone { display: none; }
+
+.jw-head h2 { font-size: clamp(26px, 2.5vw, 34px); line-height: 1.15; }
+.jw-head p:not(.jw-eyebrow) { margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: var(--jw-muted); }
+.jw .jw-head .jw-eyebrow { margin-bottom: 8px; }
+.jw-head--center { margin-bottom: 30px; text-align: center; }
+.jw-head--split { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+
+/* Seven circles in one row; each opens its listing. */
+.jw-cats { padding-block: 56px 40px; }
+.jw-cats__row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 20px; margin: 0; padding: 0; list-style: none; }
+.jw-cat { display: grid; justify-items: center; gap: 12px; font-size: 13px; text-align: center; }
+.jw-cat__art { width: min(100%, 140px); aspect-ratio: 1; overflow: hidden; border-radius: 50%; background: #f1e9df; }
+.jw-cat__art img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
+
+/* Four real pieces from the catalogue, or the empty state. */
+.jw-loved { padding-block: 24px 56px; scroll-margin-top: 16px; }
+.jw-loved__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.jw-loved__grid .fs-card { border: 0; border-radius: 0; box-shadow: none; background: #fff; }
+.jw-loved__grid .fs-card__media { aspect-ratio: 1; border-radius: 0; background: var(--jw-sand); }
+.jw-loved__grid .fs-card__img { height: 100%; aspect-ratio: auto; }
+.jw-loved__grid .fs-card__body { padding: 12px; }
+.jw-empty { display: grid; justify-items: center; gap: 6px; padding: 40px 24px; background: var(--jw-sand); text-align: center; }
+.jw-empty p { margin: 0; font-size: 14px; color: var(--jw-muted); }
+
+/* Two banners side by side, edge to edge: the rings' copy on the right, the gift's on the left. */
+.jw-edits { display: grid; grid-template-columns: 54fr 46fr; }
+.jw-edit { position: relative; isolation: isolate; display: flex; align-items: center; min-height: clamp(300px, 28.7vw, 440px); overflow: hidden; }
+.jw-edit__art { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; }
+.jw-edit__art img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s ease; }
+.jw-edit > div { padding: 32px clamp(24px, 4vw, 56px); }
+.jw-edit h2 { margin-bottom: 22px; font-size: clamp(26px, 2.5vw, 36px); line-height: 1.12; }
+.jw-edit h2 span { display: block; }
+.jw-edit--1 { justify-content: flex-end; }
+.jw-edit--1 > div { width: 48%; padding-left: 0; }
+.jw-edit--1 img { object-position: left center; }
+.jw .jw-edit--2 { color: #fff; }
+.jw-edit--2::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, #1e140cb3, #1e140c40 46%, transparent 64%); }
+.jw-edit--2 img { object-position: 60% center; }
+.fs .jw .jw-edit--2 .jw-button { border-color: #fff; background: #fff; color: var(--jw-ink); }
+
+/* The story beside the craftsmanship photograph in an arched frame. */
+.jw-story { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: clamp(32px, 6vw, 96px); padding-block: 72px; }
+.jw-story__copy { padding-left: clamp(0px, 6.25vw, 90px); }
+.jw-story h2 { margin-bottom: 16px; font-size: clamp(28px, 2.6vw, 38px); line-height: 1.15; }
+.jw-story__copy > p:not(.jw-eyebrow) { max-width: 420px; margin: 0 0 26px; font-size: 15px; line-height: 1.7; color: var(--jw-muted); }
+.jw-story__art { width: min(100%, 380px); aspect-ratio: 9 / 8; overflow: hidden; border-radius: 999px 999px 0 0; background: var(--jw-sand); }
+.jw-story__art img { width: 100%; height: 100%; object-fit: cover; object-position: center 45%; }
+
+/* The newsletter over the gift boxes; the copy on their clear left. */
+.jw-news { position: relative; isolation: isolate; display: flex; align-items: center; min-height: clamp(220px, 17.2vw, 280px); overflow: hidden; background: #f3e9e3; }
+.jw-news__art { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; }
+.jw-news__art img { width: 100%; height: 100%; object-fit: cover; object-position: right 65%; }
+.jw-news__body { padding-block: 36px; }
+.jw .jw-news__body > * { margin-left: clamp(0px, 6.25vw, 90px); }
+.jw-news h2 { font-size: clamp(26px, 2.4vw, 34px); line-height: 1.15; }
+.jw-news__body > p { max-width: 460px; margin-block: 6px 18px; font-size: 14px; line-height: 1.55; color: var(--jw-muted); }
+.jw-news__form { display: flex; max-width: 470px; }
+.jw-news__form input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border: 1px solid #d9cdbf; border-right: 0; border-radius: 0; background: #fff; font: 14px 'Inter', sans-serif; color: var(--jw-ink); }
+.jw-news__done, .jw-news__error { display: flex; align-items: center; gap: 8px; margin-block: 10px 0; font-size: 14px; }
+.jw-news__error { color: #9b2c1f; }
+
+@media (hover: hover) {
+  .jw-cat:hover img, .jw-edit:hover img { transform: scale(1.04); }
+  .fs .jw .jw-button:hover { background: #6f5431; border-color: #6f5431; }
+  .fs .jw .jw-edit--2 .jw-button:hover { background: transparent; color: #fff; }
+}
+@media (max-width: 700px) {
+  .jw-wrap { width: calc(100% - 32px); }
+  .jw-header__bar { gap: 0 14px; padding: 6px 12px; font-size: 10.5px; }
+  .jw-header__row { width: 100%; min-height: 60px; padding: 6px 10px; gap: 6px; }
+  .jw-header__menu { display: grid; }
+  .jw-header__nav { display: none; }
+  .jw-header .fs-logo { justify-self: start; gap: 6px; }
+  .jw-header .fs-logo > svg { display: none; }
+  .jw-header .fs-logo__txt strong { font-size: 20px; letter-spacing: .06em; }
+  .jw-header .fs-logo__txt em { font-size: 6.5px; letter-spacing: .14em; }
+  .jw-header__actions { gap: 0; }
+  .jw-header__actions a { width: 34px; }
+  .jw-header__actions svg { width: 19px; }
+  /* The phone photograph (3:4) sits under a band of its own cream, its top edge fading in, so
+     the copy has clear ground above and beside her and the headline stays two lines. */
+  .jw-hero { display: block; height: auto; background: linear-gradient(90deg, #e8d3c1, #e2cbb7 50%, #dac0ab); }
+  .jw-hero__art { position: relative; inset: auto; z-index: auto; height: auto; margin-top: 112px; -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 14%); mask-image: linear-gradient(180deg, transparent 0, #000 14%); }
+  .jw-hero__art img { height: auto; }
+  .jw-hero__copy { position: absolute; top: 0; left: 16px; right: 16px; z-index: 1; width: auto; margin: 0; padding: 22px 0 0; }
+  .jw-hero__copy > * { max-width: 56%; }
+  .jw-hero__copy > h1, .jw-hero__copy > .jw-button { max-width: none; }
+  .jw .jw-hero .jw-eyebrow { margin-bottom: 10px; font-size: 10px; }
+  .jw-hero h1 { font-size: clamp(26px, 7.4vw, 34px); }
+  .jw-hero__intro { margin: 10px 0 16px; font-size: 13px; }
+  .fs .jw .jw-button { min-height: 40px; padding: 10px 16px; font-size: 11px; }
+  .jw-trust ul { padding: 10px 0; }
+  .jw-trust li:first-child a { padding-left: 0; justify-content: flex-start; }
+  .jw-trust li:last-child a { padding-right: 0; justify-content: flex-end; }
+  .jw-trust a { gap: 5px; padding: 0 4px; }
+  .jw-trust svg { width: 18px; height: 18px; }
+  .jw-trust__full { display: none; }
+  .jw-trust__phone { display: block; }
+  .jw-trust strong, .jw-trust small { margin: 0; font-size: clamp(8.5px, 2.5vw, 11px); font-weight: 500; color: var(--jw-ink); white-space: nowrap; }
+  .jw-cats { padding-block: 40px 28px; }
+  .jw-head--center { margin-bottom: 22px; }
+  .jw-head h2 { font-size: 24px; }
+  .jw-head p:not(.jw-eyebrow) { font-size: 13px; }
+  /* One row that scrolls: four and a half circles in view, the half circle the cue. */
+  .jw-cats__row { display: flex; gap: 12px; margin-inline: -16px; padding: 0 16px 6px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding-inline: 16px; scrollbar-width: none; }
+  .jw-cats__row li { flex: 0 0 calc((100% - 4 * 12px) / 4.5); scroll-snap-align: start; }
+  .jw-cat { gap: 8px; font-size: 12px; }
+  .jw-cat__art { width: 100%; }
+  .jw-loved { padding-block: 16px 40px; }
+  .jw-loved__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .jw-loved__grid .fs-card__name { font-size: 12px; }
+  .jw-edits { grid-template-columns: 1fr; }
+  .jw-edit { min-height: 240px; }
+  .jw-edit > div { padding: 24px 18px; }
+  .jw-edit h2 { margin-bottom: 16px; font-size: 24px; }
+  .jw-edit--1 > div { width: 52%; padding-left: 0; }
+  .jw-story { grid-template-columns: 1fr; gap: 28px; padding-block: 44px; }
+  .jw-story__copy { padding-left: 0; }
+  .jw-story h2 { font-size: 26px; }
+  .jw-story__copy > p:not(.jw-eyebrow) { font-size: 14px; }
+  .jw-story__art { justify-self: center; width: min(100%, 340px); }
+  /* The phone photograph keeps its boxes low and right; the copy sits in its clear top half. */
+  .jw-news { align-items: flex-start; min-height: min(92.6vw, 560px); }
+  .jw-news__art img { object-position: center bottom; }
+  .jw-news__body { padding-block: 28px; }
+  .jw .jw-news__body > * { margin-left: 0; }
+  .jw-news h2 { font-size: 24px; }
+  .jw-news__body > p { margin-bottom: 14px; font-size: 13px; }
+  .jw-news__form input { height: 40px; }
+}
+@media (max-width: 700px) and (hover: hover) and (pointer: fine) {
+  .jw-cats__row { scrollbar-width: thin; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jw *, .jw *::before, .jw *::after { animation: none !important; transition: none !important; }
+  .jw-cat:hover img, .jw-edit:hover img { transform: none; }
+}

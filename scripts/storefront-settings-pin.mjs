@@ -77,6 +77,12 @@ export const HOME_STOREFRONT_FILES = /^(src\/components\/HomeStorefront\.jsx|img
 /** The homepage's own two files it edited — each undone by sansCartChanges (scripts/pins/home-storefront.patch). */
 export const HOME_STOREFRONT_EDITS = /^(src\/pages\/Home\.jsx|src\/styles\/v2-home\.css)$/;
 
+// The jewellery page at /fashion/jewellery (test-fashion-jewellery.mjs owns it): its own files, and
+// the shared ones it edits through its recorded undo (the route, its header and shell class, the
+// women's page link, its .jw rules appended to the departments' sheet).
+export const JEWELLERY_FILES = /^(src\/fashion\/(FashionJewellery\.jsx|jewelleryContent\.js)|scripts\/pins\/fashion-jewellery\.patch|scripts\/test-fashion-jewellery\.mjs)$/;
+export const JEWELLERY_EDITS = /^(src\/App\.jsx|src\/fashion\/(FashionLayout|FashionDepartment)\.jsx|src\/fashion\/departmentContent\.js|src\/styles\/fashion-departments\.css)$/;
+
 /** The shared files it edited — main.jsx (the mount) and Layout.jsx (the old reset removed), each undone by sansCartChanges. */
 export const SCROLL_MANAGER_EDITS = /^(src\/main\.jsx|src\/components\/Layout\.jsx)$/;
 
@@ -328,6 +334,11 @@ function undoFromPatch(name) {
 // two shared files it added a route and the page's header and shell class, all undone here.
 const UNDO_WOMEN_PAGE = undoFromPatch('fashion-women-page.patch');
 
+// The jewellery page: a route and its header and shell class (App.jsx, FashionLayout.jsx), the
+// women's page link (FashionDepartment.jsx, departmentContent.js) and its .jw rules appended to
+// fashion-departments.css. Undone here, newest first.
+const UNDO_JEWELLERY = undoFromPatch('fashion-jewellery.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -394,7 +405,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart

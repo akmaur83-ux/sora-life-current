@@ -46,7 +46,7 @@ export function FashionHeader({ onMenu }) {
   if (/^\/fashion\/women\/?$/.test(location.pathname)) return (
     <header className="wm-header">
       <button type="button" className="wm-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
-      <nav className="wm-header__nav" aria-label="Women's fashion"><a href="#wm-products">Shop</a><a href="#wm-categories">Categories</a><Link to="/fashion/women/sarees">Sarees</Link><Link to="/fashion/men">Men</Link></nav>
+      <nav className="wm-header__nav" aria-label="Women's fashion"><a href="#wm-products">Shop</a><a href="#wm-categories">Categories</a><Link to="/fashion/women/sarees">Sarees</Link><Link to="/fashion/jewellery">Jewellery</Link><Link to="/fashion/men">Men</Link></nav>
       <FashionLogo tagline={config.header.tagline} />
       <nav className="wm-header__actions" aria-label="Search, account, wishlist and cart">
         <Link to="/fashion/search" aria-label="Search fashion"><Icon name="search" size={20} /></Link>
@@ -54,6 +54,23 @@ export function FashionHeader({ onMenu }) {
         <Link to="/fashion/wishlist" aria-label={`Wishlist${wish.count ? `, ${wish.count} items` : ''}`}><Icon name="heart" size={20} />{wish.count > 0 && <span>{wish.count}</span>}</Link>
         <Link to="/cart" aria-label={`Cart${cartCount ? `, ${cartCount} items` : ''}`}><Icon name="bag" size={20} />{cartCount > 0 && <span>{cartCount}</span>}</Link>
       </nav>
+    </header>
+  );
+  // The jewellery page: a quiet bar of true facts, then the logo, its links and the icons.
+  if (/^\/fashion\/jewellery\/?$/.test(location.pathname)) return (
+    <header className="jw-header">
+      <p className="jw-header__bar"><span>Free standard delivery on every order</span><span>Easy returns within 7 days of delivery</span></p>
+      <div className="jw-header__row">
+        <button type="button" className="jw-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
+        <FashionLogo tagline="Jewellery" />
+        <nav className="jw-header__nav" aria-label="Jewellery"><Link to="/fashion/jewellery">Home</Link><a href="#jw-products">Shop</a><a href="#jw-categories">Collections</a><Link to="/fashion/women">Women</Link><Link to="/about">About</Link><Link to="/contact">Contact</Link></nav>
+        <nav className="jw-header__actions" aria-label="Search, account, wishlist and cart">
+          <Link to="/fashion/search" aria-label="Search fashion"><Icon name="search" size={19} /></Link>
+          <Link to="/account" aria-label="Account"><Icon name="user" size={19} /></Link>
+          <Link to="/fashion/wishlist" aria-label={`Wishlist${wish.count ? `, ${wish.count} items` : ''}`}><Icon name="heart" size={19} />{wish.count > 0 && <span>{wish.count}</span>}</Link>
+          <Link to="/cart" aria-label={`Cart${cartCount ? `, ${cartCount} items` : ''}`}><Icon name="bag" size={19} />{cartCount > 0 && <span>{cartCount}</span>}</Link>
+        </nav>
+      </div>
     </header>
   );
   if (/^\/fashion\/women\/sarees\/?$/.test(location.pathname)) return (
@@ -165,7 +182,7 @@ function Shell() {
   const { pathname } = useLocation();
   useEffect(() => { setMenu(false); }, [pathname]);
   return (
-    <div className={`fs${/^\/fashion\/(men|women|women\/sarees)\/?$/.test(pathname) ? ' fs--department' : ''}${/^\/fashion\/women\/sarees\/?$/.test(pathname) ? ' fs--saree' : ''}${/^\/fashion\/women\/?$/.test(pathname) ? ' fs--women' : ''}`}>
+    <div className={`fs${/^\/fashion\/(men|women|women\/sarees)\/?$/.test(pathname) ? ' fs--department' : ''}${/^\/fashion\/women\/sarees\/?$/.test(pathname) ? ' fs--saree' : ''}${/^\/fashion\/women\/?$/.test(pathname) ? ' fs--women' : ''}${/^\/fashion\/jewellery\/?$/.test(pathname) ? ' fs--jewellery' : ''}`}>
       <FashionHeader onMenu={() => setMenu(true)} />
       <Drawer open={menu} onClose={() => setMenu(false)} />
       <main className="fs-main"><Outlet /></main>

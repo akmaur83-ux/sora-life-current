@@ -121,6 +121,10 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
   const department = has('src/fashion/FashionDepartment.jsx')
     ? loadModule('src/fashion/FashionDepartment.jsx', { Link, Icon, ...rules, ...loadModule('src/fashion/departmentContent.js'), useFashionCatalogue: catalogue.useFashionCatalogue, FashionProductCard: card.default })
     : null;
+  // The jewellery page arrived with /fashion/jewellery; a tree from before it renders without the route.
+  const jewellery = department && has('src/fashion/FashionJewellery.jsx')
+    ? loadModule('src/fashion/FashionJewellery.jsx', { Link, Icon, categoryHref: rules.categoryHref, useFashionCatalogue: catalogue.useFashionCatalogue, FashionProductCard: card.default, departmentCatalogue: department.departmentCatalogue, ...loadModule('src/fashion/jewelleryContent.js') })
+    : null;
   const listing = loadModule('src/fashion/FashionListing.jsx', { Link, useParams, useSearchParams, Icon, ...rules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default });
   const pdp = loadModule('src/fashion/FashionProductPage.jsx', { Link, useNavigate, useParams, useSearchParams, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, useStore, ...pdpContent, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, Breadcrumb: listing.Breadcrumb, FashionProductCard: card.default, Stars: card.Stars, VariantPicker: picker.VariantPicker });
   const App = ({ path, initial = INITIAL }) => h(StaticRouter, { location: path },
@@ -133,9 +137,10 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
           // The saree store moved under Women when /fashion/women became the main women's page.
           ...(read('src/App.jsx').includes('path="women/sarees"') ? [h(Route, { path: 'women/sarees', element: h(department.default, { department: 'sarees' }) })] : []),
         ] : []),
+        ...(jewellery ? [h(Route, { path: 'jewellery', element: h(jewellery.default) })] : []),
         h(Route, { path: 'c/:slug', element: h(listing.default) }),
         h(Route, { path: 'p/:slug', element: h(pdp.default) }),
         h(Route, { path: 'search', element: h(listing.FashionSearch) }),
         h(Route, { path: 'wishlist', element: h(listing.FashionWishlistPage) }))));
-  return { App, rules, pdpRules, added, render: (path, initial = INITIAL) => renderToStaticMarkup(h(App, { path, initial })), modules: { catalogue, card, layout, home, listing, pdp, picker, department } };
+  return { App, rules, pdpRules, added, render: (path, initial = INITIAL) => renderToStaticMarkup(h(App, { path, initial })), modules: { catalogue, card, layout, home, listing, pdp, picker, department, jewellery } };
 }

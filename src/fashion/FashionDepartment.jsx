@@ -95,7 +95,7 @@ function SareeDepartment({ config, products, status, listing, collectionHref }) 
 
 // The main women's page: a full-bleed hero under its own header, shop-by-category,
 // the real catalogue (new arrivals when any are flagged), four edits, a capsule
-// wardrobe, and the way into the saree store. Every word is HTML; no image carries text.
+// wardrobe, and the ways into the saree and jewellery stores. Every word is HTML; no image carries text.
 function WomenDepartment({ config, tree, category, categories, products, status, listing, collectionHref }) {
   const [shelf, setShelf] = useState('');
   // `root` names a top-level category (bags sit under Bags & Accessories, not under Women).
@@ -160,6 +160,12 @@ function WomenDepartment({ config, tree, category, categories, products, status,
       <EditorialImage image={config.sarees.image} />
       <div><p className="wm-eyebrow">{config.sarees.eyebrow}</p><h2 id="wm-sarees-title">{config.sarees.title}</h2><p>{config.sarees.text}</p>
         <Link to="/fashion/women/sarees" className="wm-button">{config.sarees.cta} <Icon name="arrowRight" size={16} /></Link></div>
+    </section>
+
+    <section className="wm-sarees wm-jewellery wm-wrap" aria-labelledby="wm-jewellery-title">
+      <EditorialImage image={config.jewellery.image} />
+      <div><p className="wm-eyebrow">{config.jewellery.eyebrow}</p><h2 id="wm-jewellery-title">{config.jewellery.title}</h2><p>{config.jewellery.text}</p>
+        <Link to="/fashion/jewellery" className="wm-button">{config.jewellery.cta} <Icon name="arrowRight" size={16} /></Link></div>
     </section>
 
     <nav className="wm-services wm-wrap" aria-label="Shopping information">
