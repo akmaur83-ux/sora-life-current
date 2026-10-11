@@ -86,6 +86,9 @@ export const JEWELLERY_EDITS = /^(src\/App\.jsx|src\/fashion\/(FashionLayout|Fas
 /** The shared files it edited — main.jsx (the mount) and Layout.jsx (the old reset removed), each undone by sansCartChanges. */
 export const SCROLL_MANAGER_EDITS = /^(src\/main\.jsx|src\/components\/Layout\.jsx)$/;
 
+/** The site menu's closed panel casts no shadow (layout.css, one line) — undone by sansCartChanges (scripts/pins/drawer-shadow.patch). */
+export const DRAWER_SHADOW_EDITS = /^src\/styles\/layout\.css$/;
+
 /** Rendered /fashion: the Men and Women tiles open their department pages instead of the category listings. */
 export const sansDepartmentTiles = (html) => html.replace(/<a class="fs-tile" href="\/fashion\/(men|women)">/g, '<a class="fs-tile" href="/fashion/c/$1">');
 
@@ -344,6 +347,11 @@ const UNDO_JEWELLERY = undoFromPatch('fashion-jewellery.patch');
 // it. A payment change in the same shared files. Undone here, newest first.
 const UNDO_ORDER_NUMBER = undoFromPatch('order-number.patch');
 
+// The site menu (Header.jsx's .drawer) parks its panel off-screen when closed, and the panel's
+// 48px shadow showed down the left edge of every page: one line in layout.css drops it while
+// closed. Undone here, newest first.
+const UNDO_DRAWER_SHADOW = undoFromPatch('drawer-shadow.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -410,7 +418,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart

@@ -94,7 +94,10 @@ await test('v2-header.css: the bar links are hidden below 1100px and shown from 
   const before = atCommit(BASELINE_SHA, 'src/styles/v2-header.css');
   const block = css.slice(css.indexOf('/* ---- the other storefronts'), css.indexOf('/* Nav placeholder'));
   assert.equal(css.replace(block, ''), before, 'one appended block; every existing rule byte-identical');
-  assert.equal(read('src/styles/layout.css'), atCommit(BASELINE_SHA, 'src/styles/layout.css'), 'the drawer styles are reused, not changed');
+  // One line since: the closed panel casts no shadow (it showed down the left edge of every page),
+  // undone through its recorded patch; nothing else in the sheet moved.
+  assert.match(read('src/styles/layout.css'), /\n\.drawer:not\(\.open\) \.drawer__panel \{ box-shadow: none; \}/, 'the parked menu panel casts no shadow onto the page');
+  assert.equal(sansStorefrontChanges('src/styles/layout.css', read('src/styles/layout.css')), atCommit(BASELINE_SHA, 'src/styles/layout.css'), 'the drawer styles are reused, not changed');
 });
 
 // ============================================================

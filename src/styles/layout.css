@@ -74,6 +74,7 @@
 .drawer.open { pointer-events: auto; }
 .drawer.open .drawer__scrim { opacity: 1; }
 .drawer.open .drawer__panel { transform: none; }
+.drawer:not(.open) .drawer__panel { box-shadow: none; } /* parked off-screen, its 48px shadow would show down the left edge of every page */
 .drawer__top { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--line-soft); }
 .drawer__nav { flex: 1; overflow-y: auto; padding: var(--sp-4) var(--sp-3); }
 .drawer__link { display: block; padding: 13px 16px; font-family: var(--font-display); font-size: var(--text-lg); font-weight: 600; border-radius: var(--r-md); }
