@@ -7368,7 +7368,7 @@
   .jw-hero::before { content: none; }
   .jw-hero__art img { object-position: center top; }
   .jw-hero::after { background: linear-gradient(180deg, #431f17b3 0%, #431f1766 34%, #431f1700 56%); }
-  .jw-hero__copy { padding-top: 84px; }
+  .jw-hero__copy { padding-top: 84px; padding-left: 0; }
   .jw-hero__copy > * { max-width: 62%; }
   .jw-hero__copy > h1, .jw-hero__copy > .jw-button { max-width: none; }
   .jw .jw-hero .jw-eyebrow { margin-bottom: 10px; font-size: 10px; }
