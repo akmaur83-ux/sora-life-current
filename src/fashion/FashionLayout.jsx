@@ -56,10 +56,9 @@ export function FashionHeader({ onMenu }) {
       </nav>
     </header>
   );
-  // The jewellery page: a quiet bar of true facts, then the logo, its links and the icons.
+  // The jewellery page: the logo, its links and the icons, floating transparent over its hero.
   if (/^\/fashion\/jewellery\/?$/.test(location.pathname)) return (
     <header className="jw-header">
-      <p className="jw-header__bar"><span>Free standard delivery on every order</span><span>Easy returns within 7 days of delivery</span></p>
       <div className="jw-header__row">
         <button type="button" className="jw-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
         <FashionLogo tagline="Jewellery" />

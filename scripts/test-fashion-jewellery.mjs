@@ -79,13 +79,14 @@ const content = has('src/fashion/jewelleryContent.js') ? loadModule('src/fashion
 
 // ---- the photographs -----------------------------------------------------------
 const IMAGES = {
-  'jewellery-hero': [1600, 667], 'jewellery-hero-1000': [1000, 417], 'jewellery-hero-mobile': [800, 1067],
+  'jewellery-hero-drape': [736, 1472],
   'jewellery-cat-rings': [400, 400], 'jewellery-cat-necklaces': [400, 400], 'jewellery-cat-earrings': [400, 400], 'jewellery-cat-bracelets': [400, 400],
   'jewellery-cat-wedding': [400, 400], 'jewellery-cat-mens': [400, 400], 'jewellery-cat-gifts': [400, 400],
   'jewellery-edit-wedding': [1200, 686], 'jewellery-edit-wedding-700': [700, 400], 'jewellery-edit-gifting': [1200, 686], 'jewellery-edit-gifting-700': [700, 400],
   'jewellery-story': [800, 960], 'jewellery-news': [1600, 625], 'jewellery-news-mobile': [800, 741],
 };
-await test('the photographs: seventeen WebP files under new names, each under 150 KB, at the sizes the content declares; every image the page names exists', () => {
+await test('the photographs: fifteen WebP files under new names, each under 150 KB, at the sizes the content declares; every image the page names exists; the replaced hero photographs are deleted (no cached copy can resurface)', () => {
+  for (const old of ['jewellery-hero', 'jewellery-hero-1000', 'jewellery-hero-mobile']) assert.ok(!has(`img/fashion-editorial/${old}.webp`), `${old}.webp is still there`);
   for (const [name, [w, hgt]] of Object.entries(IMAGES)) {
     const rel = `img/fashion-editorial/${name}.webp`;
     assert.ok(has(rel), `${rel} is missing`);
@@ -102,11 +103,13 @@ await test('the photographs: seventeen WebP files under new names, each under 15
 });
 
 // ---- the route and the page -------------------------------------------------------
-await test('the route: /fashion/jewellery in App.jsx; the page has its own header — a bar of two true facts, the logo, its links, the icons — never the default header and its "Fast & reliable delivery"', () => {
+await test('the route: /fashion/jewellery in App.jsx; the page has its own header — the logo, its links and the icons, transparent over the hero, with no announcement bar — never the default header and its "Fast & reliable delivery"', () => {
   assert.match(read('src/App.jsx'), /<Route path="jewellery" element={<FashionJewellery \/>} \/>/);
   assert.match(read('src/App.jsx'), /import FashionJewellery from '\.\/fashion\/FashionJewellery\.jsx';/);
   assert.match(page, /<div class="fs fs--jewellery">/, 'its own shell class');
-  assert.match(page, /<header class="jw-header"><p class="jw-header__bar"><span>Free standard delivery on every order<\/span><span>Easy returns within 7 days of delivery<\/span><\/p>/);
+  assert.match(page, /<header class="jw-header"><div class="jw-header__row"><button type="button" class="jw-header__menu" aria-label="Open menu">/, 'the header: straight to its row');
+  assert.doesNotMatch(page, /jw-header__bar|Free standard delivery on every order/, 'no announcement bar (its facts are in the trust strip)');
+  assert.match(read('src/styles/fashion-departments.css'), /\.jw-header \{ position: absolute; inset: 0 0 auto; z-index: 20; background: transparent; color: #fff8f0; \}/, 'transparent over the hero, white');
   assert.match(page, /<nav class="jw-header__nav" aria-label="Jewellery"><a href="\/fashion\/jewellery">Home<\/a><a href="#jw-products">Shop<\/a><a href="#jw-categories">Collections<\/a><a href="\/fashion\/women">Women<\/a><a href="\/about">About<\/a><a href="\/contact">Contact<\/a><\/nav>/);
   assert.doesNotMatch(page, /fs-hdr|fs-strip|Fast &amp; reliable|Fast & reliable/, 'not the default header');
 });
@@ -211,11 +214,11 @@ await test('square edges, matching the women\'s page: the only rounding is the c
   assert.match(jw, /\.fs \.jw \.jw-button \{[^}]*border-radius: 0;/); assert.match(jw, /\.jw-news__form input \{[^}]*border-radius: 0;/);
 });
 
-await test('contrast (WCAG 2.x), from the stylesheet: white on the gold buttons, the gold eyebrows on the ivory, the muted text on the ivory and on the sand, the header bar — each at least 4.5:1', () => {
+await test('contrast (WCAG 2.x), from the stylesheet: white on the gold buttons, the gold eyebrows on the ivory, the muted text on the ivory and on the sand — each at least 4.5:1', () => {
   const token = (name) => { const m = jw.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`)); assert.ok(m, name); return m[1]; };
   const gold = token('--jw-gold'), ivory = token('--jw-ivory'), sand = token('--jw-sand'), ink = token('--jw-ink'), muted = token('--jw-muted');
   const pairs = [['white on the gold buttons', '#ffffff', gold], ['gold eyebrow on the ivory', gold, ivory], ['ink on the ivory', ink, ivory], ['muted text on the ivory', muted, ivory],
-    ['muted text on the sand (trust strip, empty state)', muted, sand], ['header bar text', '#4a4036', '#efe6da']];
+    ['muted text on the sand (trust strip, empty state)', muted, sand]];
   for (const [what, fg, bg] of pairs) {
     const r = contrast(fg, bg);
     assert.ok(r >= 4.5, `${what}: ${r.toFixed(2)}:1`);
@@ -223,11 +226,23 @@ await test('contrast (WCAG 2.x), from the stylesheet: white on the gold buttons,
   }
 });
 
-await test('the phone: the hero\'s photograph under a band of its own cream so the two-line headline and the button stay clear of her; the trust strip one row of four, two lines each; the circles one scrolling row with a half circle as the cue; two products a row; the banners stacked; no rule pairs aspect-ratio with a min/max height', () => {
+await test('the hero and the phone: the portrait sharp on the right at its own size, the same photograph blurred behind the copy (no panel, no join), white copy under a soft wash, all running up behind the transparent header; on a phone the portrait edge to edge under a warm-dark wash from the top; the trust strip one row of four, two lines each; the circles one scrolling row with a half circle as the cue; two products a row; the banners stacked; no rule pairs aspect-ratio with a min/max height', () => {
   const at = jw.indexOf('@media (max-width: 700px) {\n  .jw-wrap');
   const phone = jw.slice(at, jw.indexOf('\n}\n', at));
   assert.ok(at > 0, 'the phone block');
-  assert.match(phone, /\.jw-hero__art \{ position: relative; inset: auto; z-index: auto; height: auto; margin-top: 112px;/);
+  // Desktop: the portrait at its own size on the right, its left edge softened into the same photograph
+  // blurred behind the copy; the hero runs up behind the 72px header, the copy below it.
+  assert.match(jw, /\.jw-hero \{[^}]*height: calc\(clamp\(420px, 38\.6vw, 620px\) \+ 72px\);/);
+  assert.match(jw, /\.jw-hero__art \{ position: absolute; top: 0; right: 0; bottom: 0; z-index: -2; width: 46%; -webkit-mask-image: linear-gradient\(90deg, transparent 0, #000 36%\);/);
+  assert.match(jw, /\.jw-hero::before \{ content: ''; position: absolute; inset: -48px; z-index: -3; background: url\(\/img\/fashion-editorial\/jewellery-hero-drape\.webp\)[^;]*; filter: blur\(30px\) brightness\(\.5\); \}/, 'the same photograph, blurred, behind the copy');
+  assert.match(jw, /\.jw-hero::after \{ content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient\(180deg, #0c0203[0-9a-f]{2} 0%, #0c020300 26%\), linear-gradient\(90deg, #0c0203[0-9a-f]{2} 0%,[^)]*transparent 66%\); \}/, 'a wash for the header from the top, and one behind the copy, transparent on the portrait\'s side');
+  assert.match(jw, /\.jw-hero__copy \{ padding-top: 72px;/);
+  // A phone: the approved hero, the header floating over its dark top.
+  assert.match(phone, /\.jw-hero \{ align-items: flex-start; height: calc\(min\(174vw, 720px\) \+ 60px\); \}/);
+  assert.match(phone, /\.jw-hero__art \{ left: 0; width: 100%; -webkit-mask-image: none; mask-image: none; \}/); assert.match(phone, /\.jw-hero::before \{ content: none; \}/);
+  assert.match(phone, /\.jw-hero::after \{ background: linear-gradient\(180deg, #431f17[0-9a-f]{2} 0%,[^)]*#431f1700 56%\); \}/, 'phone: the warm-dark wash down from the top');
+  assert.match(phone, /\.jw-hero__copy \{ padding-top: 84px; \}/);
+  assert.doesNotMatch(jw, /margin-top: 112px|max-width: 1023px/, 'no cream band, no separate tablet layout');
   assert.match(phone, /\.jw-hero__copy > h1, \.jw-hero__copy > \.jw-button \{ max-width: none; \}/);
   assert.match(jw, /\.jw-trust ul \{ display: grid; grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/); assert.match(phone, /\.jw-trust__full \{ display: none; \}/);
   assert.match(phone, /\.jw-trust strong, \.jw-trust small \{[^}]*white-space: nowrap;/);

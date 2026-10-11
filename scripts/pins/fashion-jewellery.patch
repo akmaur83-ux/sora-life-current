@@ -45,7 +45,7 @@ index aa63245..1f93c9b 100644
        {[
          ['truck', 'Standard delivery', '6–7 business days', '/shipping'],
 diff --git a/src/fashion/FashionLayout.jsx b/src/fashion/FashionLayout.jsx
-index 35e10f1..c617204 100644
+index 35e10f1..b65c74f 100644
 --- a/src/fashion/FashionLayout.jsx
 +++ b/src/fashion/FashionLayout.jsx
 @@ -46,7 +46,7 @@ export function FashionHeader({ onMenu }) {
@@ -57,14 +57,13 @@ index 35e10f1..c617204 100644
        <FashionLogo tagline={config.header.tagline} />
        <nav className="wm-header__actions" aria-label="Search, account, wishlist and cart">
          <Link to="/fashion/search" aria-label="Search fashion"><Icon name="search" size={20} /></Link>
-@@ -56,6 +56,23 @@ export function FashionHeader({ onMenu }) {
+@@ -56,6 +56,22 @@ export function FashionHeader({ onMenu }) {
        </nav>
      </header>
    );
-+  // The jewellery page: a quiet bar of true facts, then the logo, its links and the icons.
++  // The jewellery page: the logo, its links and the icons, floating transparent over its hero.
 +  if (/^\/fashion\/jewellery\/?$/.test(location.pathname)) return (
 +    <header className="jw-header">
-+      <p className="jw-header__bar"><span>Free standard delivery on every order</span><span>Easy returns within 7 days of delivery</span></p>
 +      <div className="jw-header__row">
 +        <button type="button" className="jw-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
 +        <FashionLogo tagline="Jewellery" />
@@ -81,7 +80,7 @@ index 35e10f1..c617204 100644
    if (/^\/fashion\/women\/sarees\/?$/.test(location.pathname)) return (
      <header className="sw-header">
        <button type="button" className="sw-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
-@@ -165,7 +182,7 @@ function Shell() {
+@@ -165,7 +181,7 @@ function Shell() {
    const { pathname } = useLocation();
    useEffect(() => { setMenu(false); }, [pathname]);
    return (
@@ -109,10 +108,10 @@ index e0cf56f..b383f98 100644
    // /fashion/women/sarees: the saree store, moved here unchanged from /fashion/women.
    sarees: {
 diff --git a/src/styles/fashion-departments.css b/src/styles/fashion-departments.css
-index f6dd5b2..200c23e 100644
+index f6dd5b2..ed57852 100644
 --- a/src/styles/fashion-departments.css
 +++ b/src/styles/fashion-departments.css
-@@ -543,3 +543,205 @@
+@@ -543,3 +543,217 @@
    .wm *, .wm *::before, .wm *::after { animation: none !important; transition: none !important; }
    .wm-category:hover img, .wm-edit:hover img, .wm-look:hover img { transform: none; }
  }
@@ -149,27 +148,37 @@ index f6dd5b2..200c23e 100644
 +.jw .jw-more { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
 +.jw-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 +
-+.jw-header { position: relative; z-index: 20; background: #fbf8f4; color: #2b2620; border-bottom: 1px solid #e3d8ca; }
-+.jw-header__bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 28px; margin: 0; padding: 7px 16px; background: #efe6da; font: 500 11px/1.4 'Inter', sans-serif; letter-spacing: .04em; color: #4a4036; }
++/* The page's header floats transparent over the hero (which runs up behind it), white throughout, so it
++   blends into the photograph; no announcement bar (its two facts are in the trust strip). */
++.jw-header { position: absolute; inset: 0 0 auto; z-index: 20; background: transparent; color: #fff8f0; }
 +.jw-header__row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 24px; width: calc(100% - 56px); max-width: 1240px; min-height: 72px; margin: auto; }
 +.jw-header__menu { display: none; width: 36px; height: 44px; padding: 0; border: 0; background: none; color: inherit; place-items: center; }
-+.jw-header .fs-logo { color: #2b2620; }
-+.jw-header .fs-logo__txt strong { color: #2b2620; font-size: 23px; }
-+.jw-header .fs-logo__txt em { color: #8b6a3e; font-size: 7.5px; }
++.jw-header .fs-logo { color: #fff8f0; }
++.jw-header .fs-logo > svg { filter: brightness(0) invert(1); }
++.jw-header .fs-logo__txt strong { color: #fff8f0; font-size: 23px; }
++.jw-header .fs-logo__txt em { color: #ecd3a6; font-size: 7.5px; }
 +.jw-header__nav { justify-self: center; display: flex; align-items: center; gap: 28px; font-size: 13px; }
 +.jw-header__nav a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; text-decoration: none; }
 +.jw-header__actions { display: flex; align-items: center; gap: 2px; }
 +.jw-header__actions a { position: relative; display: grid; place-items: center; width: 38px; height: 44px; color: inherit; text-decoration: none; }
-+.jw-header__actions span { position: absolute; right: 1px; top: 5px; display: grid; place-items: center; min-width: 16px; height: 16px; border-radius: 50%; background: #8b6a3e; color: #fff; font-size: 9px; font-weight: 600; }
++.jw-header__actions span { position: absolute; right: 1px; top: 5px; display: grid; place-items: center; min-width: 16px; height: 16px; border-radius: 50%; background: #fff8f0; color: #2b2620; font-size: 9px; font-weight: 600; }
 +
-+/* The hero: the photograph's cream left is the copy's ground; height from the width. */
-+.jw-hero { position: relative; isolation: isolate; display: flex; align-items: center; height: clamp(420px, 38.6vw, 620px); overflow: hidden; background: #efe4d6; }
-+.jw-hero__art { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; }
-+.jw-hero__art img { width: 100%; height: 100%; object-fit: cover; object-position: 70% center; }
-+.jw-hero__copy { padding-left: clamp(0px, 6.25vw, 90px); }
-+.jw-hero h1 { font-size: clamp(36px, 3.9vw, 56px); line-height: 1.08; letter-spacing: -.01em; }
++/* The hero: the owner's terracotta portrait sharp on the right at its own size (never enlarged at DPR 1);
++   behind the copy on the left the same photograph, blurred and darkened, so the portrait's softened left
++   edge fades into its own colours — no panel, no join; white copy under a soft wash, transparent on the
++   portrait's side, and a light wash down from the top edge for the transparent header it runs up behind
++   (72px), as on the women's hero. Height from the width. */
++.jw-hero { position: relative; isolation: isolate; display: flex; align-items: center; height: calc(clamp(420px, 38.6vw, 620px) + 72px); overflow: hidden; background: #1e0705; color: #fff8f0; }
++.jw-hero__art { position: absolute; top: 0; right: 0; bottom: 0; z-index: -2; width: 46%; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 36%); mask-image: linear-gradient(90deg, transparent 0, #000 36%); }
++.jw-hero__art img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 78%; }
++.jw-hero::before { content: ''; position: absolute; inset: -48px; z-index: -3; background: url(/img/fashion-editorial/jewellery-hero-drape.webp) 30% 62% / cover no-repeat; filter: blur(30px) brightness(.5); }
++.jw-hero::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, #0c020373 0%, #0c020300 26%), linear-gradient(90deg, #0c0203a6 0%, #0c020359 42%, transparent 66%); }
++.jw-hero__copy { padding-top: 72px; padding-left: clamp(0px, 6.25vw, 90px); }
++.jw .jw-hero .jw-eyebrow { color: #dcbb8b; }
++.jw-hero h1 { font-size: clamp(36px, 3.9vw, 56px); line-height: 1.08; letter-spacing: -.01em; color: #fff8f0; }
 +.jw-hero h1 span { display: block; }
-+.jw-hero__intro { max-width: 300px; margin: 18px 0 26px; font-size: 15px; line-height: 1.6; color: var(--jw-muted); }
++.jw-hero__intro { max-width: 300px; margin: 18px 0 26px; font-size: 15px; line-height: 1.6; color: #eadbcd; }
++.fs .jw .jw-hero .jw-button { border-color: #fff; background: #fff; color: var(--jw-ink); }
 +
 +/* One trust strip of true statements. A phone shows each as two short lines. */
 +.jw-trust { background: var(--jw-sand); border-bottom: 1px solid var(--jw-line); }
@@ -245,11 +254,10 @@ index f6dd5b2..200c23e 100644
 +@media (hover: hover) {
 +  .jw-cat:hover img, .jw-edit:hover img { transform: scale(1.04); }
 +  .fs .jw .jw-button:hover { background: #6f5431; border-color: #6f5431; }
-+  .fs .jw .jw-edit--2 .jw-button:hover { background: transparent; color: #fff; }
++  .fs .jw .jw-edit--2 .jw-button:hover, .fs .jw .jw-hero .jw-button:hover { background: transparent; color: #fff; }
 +}
 +@media (max-width: 700px) {
 +  .jw-wrap { width: calc(100% - 32px); }
-+  .jw-header__bar { gap: 0 14px; padding: 6px 12px; font-size: 10.5px; }
 +  .jw-header__row { width: 100%; min-height: 60px; padding: 6px 10px; gap: 6px; }
 +  .jw-header__menu { display: grid; }
 +  .jw-header__nav { display: none; }
@@ -260,13 +268,16 @@ index f6dd5b2..200c23e 100644
 +  .jw-header__actions { gap: 0; }
 +  .jw-header__actions a { width: 34px; }
 +  .jw-header__actions svg { width: 19px; }
-+  /* The phone photograph (3:4) sits under a band of its own cream, its top edge fading in, so
-+     the copy has clear ground above and beside her and the headline stays two lines. */
-+  .jw-hero { display: block; height: auto; background: linear-gradient(90deg, #e8d3c1, #e2cbb7 50%, #dac0ab); }
-+  .jw-hero__art { position: relative; inset: auto; z-index: auto; height: auto; margin-top: 112px; -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 14%); mask-image: linear-gradient(180deg, transparent 0, #000 14%); }
-+  .jw-hero__art img { height: auto; }
-+  .jw-hero__copy { position: absolute; top: 0; left: 16px; right: 16px; z-index: 1; width: auto; margin: 0; padding: 22px 0 0; }
-+  .jw-hero__copy > * { max-width: 56%; }
++  /* A phone: the portrait edge to edge, running up behind the transparent header (60px); the copy straight
++     on its dark top under the warm-dark gradient running down from the top, transparent before it reaches
++     her face; the headline two lines. */
++  .jw-hero { align-items: flex-start; height: calc(min(174vw, 720px) + 60px); }
++  .jw-hero__art { left: 0; width: 100%; -webkit-mask-image: none; mask-image: none; }
++  .jw-hero::before { content: none; }
++  .jw-hero__art img { object-position: center top; }
++  .jw-hero::after { background: linear-gradient(180deg, #431f17b3 0%, #431f1766 34%, #431f1700 56%); }
++  .jw-hero__copy { padding-top: 84px; }
++  .jw-hero__copy > * { max-width: 62%; }
 +  .jw-hero__copy > h1, .jw-hero__copy > .jw-button { max-width: none; }
 +  .jw .jw-hero .jw-eyebrow { margin-bottom: 10px; font-size: 10px; }
 +  .jw-hero h1 { font-size: clamp(26px, 7.4vw, 34px); }
