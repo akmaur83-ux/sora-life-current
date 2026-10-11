@@ -49,7 +49,12 @@ export function makeWorld(seed = {}) {
     failNextOrderPatch: false,
     failNextRazorpayOrderCreate: false,
     beforeOrderPatch: null,
-    calls: { orderPatches: 0, txInserts: 0, consumeCoupon: 0, paymentLookups: 0, razorpayOrders: 0 },
+    // The next N order inserts hit the order_number unique index, as if
+    // another checkout had drawn the same number first. Every number the
+    // index rejected is recorded.
+    clashNextOrderNumbers: 0,
+    clashedOrderNumbers: [],
+    calls: { orderPatches: 0, txInserts: 0, consumeCoupon: 0, paymentLookups: 0, razorpayOrders: 0, orderInserts: 0 },
   };
 
   const json = (status, body) => new Response(JSON.stringify(body ?? null), {
@@ -139,9 +144,26 @@ export function makeWorld(seed = {}) {
     }
 
     if (rel === 'orders' && method === 'POST') {
+      world.calls.orderInserts += 1;
+      // Both unique indexes on orders, with PostgREST's real 23505 bodies:
+      // the column in `details`, the constraint name in `message`.
       if (body.idempotency_key
           && world.orders.some((o) => o.idempotency_key === body.idempotency_key)) {
-        return json(409, { code: '23505', message: 'duplicate key value violates unique constraint' });
+        return json(409, {
+          code: '23505',
+          details: `Key (idempotency_key)=(${body.idempotency_key}) already exists.`,
+          message: 'duplicate key value violates unique constraint "orders_idempotency_key_uniq"',
+        });
+      }
+      if (world.clashNextOrderNumbers > 0
+          || world.orders.some((o) => o.order_number === body.order_number)) {
+        if (world.clashNextOrderNumbers > 0) world.clashNextOrderNumbers -= 1;
+        world.clashedOrderNumbers.push(body.order_number);
+        return json(409, {
+          code: '23505',
+          details: `Key (order_number)=(${body.order_number}) already exists.`,
+          message: 'duplicate key value violates unique constraint "orders_order_number_key"',
+        });
       }
       const now = new Date().toISOString();
       const row = {

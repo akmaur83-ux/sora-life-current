@@ -15,6 +15,7 @@ import {
   trustedVariantPrice,
   computeCouponDiscount,
   generateInvoiceNumber,
+  generateOrderNumber,
 } from '../api/_lib/pricing.js';
 import { computeTax, resolveTaxKind, splitInclusive, getTaxConfig } from '../api/_lib/tax.js';
 
@@ -323,6 +324,30 @@ test('invoice numbers are unique across rapid generation', () => {
   const set = new Set();
   for (let i = 0; i < 500; i++) set.add(generateInvoiceNumber());
   ok(set.size > 495, `expected near-unique, got ${set.size}/500`);
+});
+
+console.log('\n— Order numbering —');
+
+test('order numbers drawn in the SAME millisecond never collide', () => {
+  // Checkouts that land in one millisecond share the timestamp part, so only
+  // the random suffix keeps them apart, and orders.order_number is unique:
+  // a repeat fails the second customer's insert. The old 3-digit Math.random
+  // suffix had 900 values, so 300 same-millisecond draws always collided.
+  const realNow = Date.now;
+  Date.now = () => 1_790_000_000_000;
+  try {
+    const set = new Set();
+    for (let i = 0; i < 300; i++) set.add(generateOrderNumber());
+    eq(set.size, 300, 'distinct order numbers within one millisecond');
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test('order numbers keep the SORA- prefix and a customer-friendly length', () => {
+  const n = generateOrderNumber();
+  ok(/^SORA-[0-9A-Z]+$/.test(n), `unexpected order number shape: ${n}`);
+  ok(n.length <= 20, `order number too long to read out: ${n} (${n.length})`);
 });
 
 test('getTaxConfig defaults to inclusive with no invented rate', () => {

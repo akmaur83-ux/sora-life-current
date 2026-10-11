@@ -613,9 +613,18 @@ export function computeOrderTotal(items, productRows, deliveryMethod, opts = {})
   };
 }
 
-/** Human-readable order reference. */
+/**
+ * Human-readable order reference: SORA-, the base36 millisecond timestamp,
+ * then a 6-character random suffix.
+ *
+ * orders.order_number is unique, so checkouts landing in the same
+ * millisecond must not draw the same suffix. The previous 3-digit
+ * Math.random suffix collided 1 time in 900 for such a pair, failing the
+ * second customer's insert; CSPRNG bytes (as for invoice numbers below) make
+ * it ~1 in 2 billion, and create-order retries once with a fresh number.
+ */
 export function generateOrderNumber() {
-  return `SORA-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 900 + 100)}`;
+  return `SORA-${Date.now().toString(36).toUpperCase()}${randomToken(6)}`;
 }
 
 /**

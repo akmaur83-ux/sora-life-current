@@ -253,6 +253,36 @@ async function returnExistingOrder(existing, idempotencyKey, sb, rz, res, body) 
   return res.status(200).json(replayPayload(ready, rz));
 }
 
+/**
+ * True when a 23505 came from the order_number unique index — two checkouts
+ * drew the same generated number — rather than from the idempotency-key
+ * index, where a resubmit of ONE checkout lost the race and must replay the
+ * winner instead. PostgREST names the column in `details` and the constraint
+ * in `message`; an idempotency key cannot contain parentheses, so it cannot
+ * spoof the `details` form.
+ */
+function isOrderNumberClash(err) {
+  const pg = err?.details;
+  if (pg?.code !== '23505') return false;
+  return /^Key \(order_number\)=/.test(pg.details || '')
+    || /"orders_order_number_key"/.test(pg.message || '');
+}
+
+/**
+ * insertOrder, retried ONCE with a freshly generated order number when the
+ * first number was already taken. Every other error, including a 23505 on the
+ * idempotency key, reaches the caller's own handling unchanged.
+ */
+async function insertOrderWithFreshNumberOnClash(row, sb) {
+  try {
+    return await insertOrder(row, sb);
+  } catch (err) {
+    if (!isOrderNumberClash(err)) throw err;
+    console.warn('[create-order] order_number already taken; retrying once with a fresh number');
+    return insertOrder({ ...row, order_number: generateOrderNumber() }, sb);
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -447,7 +477,7 @@ export default async function handler(req, res) {
     if (method === 'cod') {
       let order;
       try {
-        order = await insertOrder({
+        order = await insertOrderWithFreshNumberOnClash({
           order_number: orderNumber,
           status: 'pending',
           payment_status: 'pending',
@@ -526,7 +556,7 @@ export default async function handler(req, res) {
       // Only the insert winner may call Razorpay; a 23505 loser replays the
       // winner's row, so one submit cannot fan out into two payable orders.
       try {
-        rzOrderRow = await insertOrder(prepaidRow, sb);
+        rzOrderRow = await insertOrderWithFreshNumberOnClash(prepaidRow, sb);
       } catch (err) {
         if (err?.details?.code === '23505') {
           const winner = await findOrderByIdempotencyKey(idempotencyKey, sb);
@@ -564,7 +594,8 @@ export default async function handler(req, res) {
       shipping: totals.shipping,
       breakdown: bd,
       currency: 'INR',
-      orderNumber,
+      // The stored number: a clash retry above may have replaced orderNumber.
+      orderNumber: rzOrderRow.order_number,
     });
   } catch (err) {
     // Log detail server-side; return a generic message to the browser so no

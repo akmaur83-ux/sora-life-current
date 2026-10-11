@@ -537,6 +537,42 @@ await test('a DIFFERENT key still creates a legitimately separate order', async 
   ok(r1.body.orderNumber !== r2.body.orderNumber);
 });
 
+await test('a COD order whose number is already taken is retried once with a fresh number', async () => {
+  const w = COD_WORLD();
+  w.clashNextOrderNumbers = 1;
+  const r = mockRes();
+  await createOrderHandler({ method: 'POST', headers: { 'idempotency-key': 'submit-clash-1' }, body: codBody() }, r);
+  eq(r.statusCode, 200, 'the customer who drew a taken number still gets their order');
+  eq(w.orders.length, 1);
+  eq(w.clashedOrderNumbers.length, 1, 'one rejected attempt');
+  ok(w.orders[0].order_number !== w.clashedOrderNumbers[0], 'the retry drew a fresh number');
+  eq(r.body.orderNumber, w.orders[0].order_number, 'the customer is shown the stored number');
+  eq(r.body.duplicate, undefined, 'a number clash is not a duplicate submit');
+});
+
+await test('a second order_number clash fails cleanly: one retry, never a loop', async () => {
+  const w = COD_WORLD();
+  w.clashNextOrderNumbers = 2;
+  const r = mockRes();
+  await createOrderHandler({ method: 'POST', headers: { 'idempotency-key': 'submit-clash-2' }, body: codBody() }, r);
+  eq(r.statusCode, 500);
+  eq(w.orders.length, 0);
+  eq(w.calls.orderInserts, 2, 'the original insert plus exactly one retry');
+});
+
+await test('a same-key race is replayed, never retried with a fresh number', async () => {
+  const w = COD_WORLD();
+  const req = () => ({ method: 'POST', headers: { 'idempotency-key': 'submit-race-2' }, body: codBody() });
+  const [r1, r2] = await Promise.all([
+    (async () => { const r = mockRes(); await createOrderHandler(req(), r); return r; })(),
+    (async () => { const r = mockRes(); await createOrderHandler(req(), r); return r; })(),
+  ]);
+  eq(w.orders.length, 1);
+  eq(w.calls.orderInserts, 2, 'one insert per submit: the loser hit the KEY index and replayed');
+  eq(w.clashedOrderNumbers.length, 0);
+  eq(r1.body.orderNumber, r2.body.orderNumber);
+});
+
 await test('COD pricing is recomputed server-side, not taken from the client', async () => {
   const w = COD_WORLD();
   const r = mockRes();
@@ -632,6 +668,31 @@ await test('fresh and replay prepaid payloads both satisfy Checkout Razorpay opt
     /amount:\s*created\.amountPaise/,
     /currency:\s*created\.currency/,
   ]) ok(contract.test(checkoutSource), `Checkout consumer must retain ${contract}`);
+});
+
+await test('a prepaid order whose number is taken retries once, and Razorpay gets the stored number', async () => {
+  const w = makeWorld({ products: [ONLINE_PRODUCT] });
+  w.clashNextOrderNumbers = 1;
+  const r = mockRes();
+  await createOrderHandler({ method: 'POST', headers: { 'idempotency-key': 'online-clash-1' }, body: onlineBody() }, r);
+  eq(r.statusCode, 200);
+  eq(w.orders.length, 1);
+  eq(w.calls.razorpayOrders, 1, 'one gateway order, created after the row was stored');
+  const stored = w.orders[0].order_number;
+  ok(stored !== w.clashedOrderNumbers[0], 'the retry drew a fresh number');
+  eq(w.razorpayOrders[0].receipt, stored, 'the Razorpay receipt is the stored number');
+  eq(r.body.orderNumber, stored, 'the customer is shown the stored number, not the rejected one');
+});
+
+await test('a second prepaid order_number clash fails before any Razorpay order exists', async () => {
+  const w = makeWorld({ products: [ONLINE_PRODUCT] });
+  w.clashNextOrderNumbers = 2;
+  const r = mockRes();
+  await createOrderHandler({ method: 'POST', headers: { 'idempotency-key': 'online-clash-2' }, body: onlineBody() }, r);
+  eq(r.statusCode, 500);
+  eq(w.orders.length, 0);
+  eq(w.calls.orderInserts, 2, 'the original insert plus exactly one retry');
+  eq(w.calls.razorpayOrders, 0, 'no payable gateway order without a stored row');
 });
 
 await test('A: failed Razorpay creation leaves one reservation that a stale retry adopts', async () => {

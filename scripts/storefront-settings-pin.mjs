@@ -339,6 +339,11 @@ const UNDO_WOMEN_PAGE = undoFromPatch('fashion-women-page.patch');
 // fashion-departments.css. Undone here, newest first.
 const UNDO_JEWELLERY = undoFromPatch('fashion-jewellery.patch');
 
+// Order numbers: a CSPRNG suffix in generateOrderNumber (pricing.js), and create-order
+// retrying an insert once with a fresh number when the order_number unique index rejects
+// it. A payment change in the same shared files. Undone here, newest first.
+const UNDO_ORDER_NUMBER = undoFromPatch('order-number.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -405,7 +410,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
@@ -413,6 +418,15 @@ const CART_CHANGES = [UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, U
  */
 export function sansHomeLivingCart(rel, text) {
   const undo = UNDO_HOMELIVING_CART[rel];
+  return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
+}
+
+/**
+ * The order-number change undone on its own — for a suite whose payment-file pin
+ * predates only that change (test-store-catalogue-tax-grocery pins 7c05e7d).
+ */
+export function sansOrderNumber(rel, text) {
+  const undo = UNDO_ORDER_NUMBER[rel];
   return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
 }
 
