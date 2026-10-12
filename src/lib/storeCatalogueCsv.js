@@ -25,26 +25,42 @@
 //     publishing stays a per-product act with its image (and, for fashion,
 //     variant) checks; is_active is not a product import column
 //
-// Two files: products (one row per product) and variants (one row per size ×
-// colour, matched on the product's slug, the size and the colour).
+// Four files: products (one row per product), variants (one row per size ×
+// colour, matched on the product's slug, the size and the colour), stones (one
+// row per kind of stone in a jewellery piece) and companies (the Companies list
+// that products name as manufacturer, packer or importer; migration 0036).
 // ============================================================
 import {
   catalogueProductPayload, catalogueVariantPayload, categoryOptions, CATALOGUE_STORES,
-  PRODUCT_FIELD_RULES, VARIANT_FIELD_RULES,
+  PRODUCT_FIELD_RULES, VARIANT_FIELD_RULES, cataloguePartyPayload, catalogueStonePayload,
 } from './storeCatalogueAdmin.js';
 import { productClaimWarnings } from './claimWarnings.js';
 
-export const PRODUCT_CSV_COLUMNS = ['id', 'slug', 'name', 'brand', 'category', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', 'stock', 'is_new', 'is_bestseller', 'sort_order'];
-export const VARIANT_CSV_COLUMNS = ['product_slug', 'size', 'colour', 'colour_hex', 'sku', 'stock', 'price_override', 'is_active', 'sort_order'];
-const PRODUCT_FIELDS = ['slug', 'name', 'brand', 'category_id', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', 'stock', 'is_new', 'is_bestseller', 'sort_order'];
-const VARIANT_FIELDS = ['colour_hex', 'sku', 'stock', 'price_override', 'is_active', 'sort_order'];
-const MONEY = new Set(['mrp', 'sale_price', 'price_override']);
-const NUMBER = new Set(['mrp', 'sale_price', 'price_override', 'gst_rate', 'stock', 'sort_order']);
+// The 0036 declarations ride on the products file; a manufacturer, packer or importer
+// is written by its company name (the Companies list) and stored as that company's id.
+const DECLARATION_COLUMNS = ['country_of_origin', 'generic_name', 'manufacturer', 'packer', 'importer', 'material', 'care', 'fit', 'metal', 'purity', 'making_charge_type', 'making_charge_value', 'pricing_mode'];
+export const PRODUCT_CSV_COLUMNS = ['id', 'slug', 'name', 'brand', 'category', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', 'stock', 'is_new', 'is_bestseller', 'sort_order', ...DECLARATION_COLUMNS];
+export const VARIANT_CSV_COLUMNS = ['product_slug', 'size', 'colour', 'colour_hex', 'sku', 'stock', 'price_override', 'is_active', 'sort_order', 'gross_weight_g', 'net_metal_weight_g'];
+export const STONE_CSV_COLUMNS = ['product_slug', 'stone', 'origin', 'shape', 'stone_count', 'total_carat', 'total_weight_g', 'clarity', 'colour_grade', 'certificate_lab', 'certificate_no', 'sort_order'];
+export const COMPANY_CSV_COLUMNS = ['name', 'address', 'country', 'phone', 'email', 'gstin'];
+const PARTY_COLUMNS = { manufacturer: 'manufacturer_id', packer: 'packer_id', importer: 'importer_id' };
+const PRODUCT_FIELDS = ['slug', 'name', 'brand', 'category_id', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', 'stock', 'is_new', 'is_bestseller', 'sort_order',
+  'country_of_origin', 'generic_name', 'manufacturer_id', 'packer_id', 'importer_id', 'material', 'care', 'fit', 'metal', 'purity', 'making_charge_type', 'making_charge_value', 'pricing_mode'];
+const VARIANT_FIELDS = ['colour_hex', 'sku', 'stock', 'price_override', 'is_active', 'sort_order', 'gross_weight_g', 'net_metal_weight_g'];
+const STONE_FIELDS = ['origin', 'stone_count', 'total_carat', 'total_weight_g', 'clarity', 'colour_grade', 'certificate_lab', 'certificate_no', 'sort_order'];
+const COMPANY_FIELDS = ['address', 'country', 'phone', 'email', 'gstin'];
+const MONEY = new Set(['mrp', 'sale_price', 'price_override', 'making_charge_value']);
+const NUMBER = new Set(['mrp', 'sale_price', 'price_override', 'gst_rate', 'stock', 'sort_order', 'purity', 'making_charge_value', 'gross_weight_g', 'net_metal_weight_g', 'stone_count', 'total_carat', 'total_weight_g']);
 const BOOLEAN = new Set(['is_new', 'is_bestseller', 'is_active']);
 export const FIELD_LABELS = {
   slug: 'Slug', name: 'Name', brand: 'Brand', category_id: 'Category', description: 'Description', mrp: 'MRP', sale_price: 'Selling price',
-  sku: 'SKU', net_content: 'Pack / dimensions', hsn_code: 'HSN code', gst_rate: 'GST rate', stock: 'Stock', is_new: 'New arrival',
+  sku: 'SKU', net_content: 'Net quantity / pack', hsn_code: 'HSN code', gst_rate: 'GST rate', stock: 'Stock', is_new: 'New arrival',
   is_bestseller: 'Bestseller', sort_order: 'Display order', colour_hex: 'Colour hex', price_override: 'Price override', is_active: 'Active',
+  country_of_origin: 'Country of origin', generic_name: 'Generic name', manufacturer_id: 'Manufacturer', packer_id: 'Packer', importer_id: 'Importer',
+  material: 'Material', care: 'Care', fit: 'Fit', metal: 'Metal', purity: 'Purity', making_charge_type: 'Making charge type', making_charge_value: 'Making charges',
+  pricing_mode: 'Pricing', gross_weight_g: 'Gross weight (g)', net_metal_weight_g: 'Net metal weight (g)',
+  origin: 'Origin', stone_count: 'Count', total_carat: 'Total carat', total_weight_g: 'Total weight (g)', clarity: 'Clarity', colour_grade: 'Colour grade',
+  certificate_lab: 'Certificate lab', certificate_no: 'Certificate no.', address: 'Address', country: 'Country', phone: 'Phone', email: 'Email', gstin: 'GSTIN',
 };
 
 // ---------- parse ----------
@@ -90,14 +106,26 @@ export function categoryPaths(categories) {
   const path = (c, depth = 0) => (c.parent_id && byId.has(c.parent_id) && depth < 3 ? `${path(byId.get(c.parent_id), depth + 1)}/${c.slug}` : c.slug);
   return new Map(categories.map((c) => [c.id, path(c)]));
 }
-export function productsToCsv(products, categories) {
+const partyName = (parties, id) => (id ? (parties || []).find((p) => String(p.id) === String(id))?.name || '' : '');
+export function productsToCsv(products, categories, parties = []) {
   const paths = categoryPaths(categories);
-  return csv(PRODUCT_CSV_COLUMNS, products.map((p) => ({ ...p, category: paths.get(p.category_id) || '' })));
+  return csv(PRODUCT_CSV_COLUMNS, products.map((p) => ({
+    ...p, category: paths.get(p.category_id) || '',
+    manufacturer: partyName(parties, p.manufacturer_id), packer: partyName(parties, p.packer_id), importer: partyName(parties, p.importer_id),
+  })));
 }
 export function variantsToCsv(products) {
   const rows = [];
   for (const p of products) for (const v of p.variants || []) rows.push({ ...v, product_slug: p.slug });
   return csv(VARIANT_CSV_COLUMNS, rows);
+}
+export function stonesToCsv(products) {
+  const rows = [];
+  for (const p of products) for (const s of p.stones || []) rows.push({ ...s, product_slug: p.slug });
+  return csv(STONE_CSV_COLUMNS, rows);
+}
+export function companiesToCsv(parties) {
+  return csv(COMPANY_CSV_COLUMNS, parties || []);
 }
 
 // ---------- reading ----------
@@ -143,7 +171,7 @@ const reasons = (error) => (error?.fieldErrors ? Object.values(error.fieldErrors
 const linesOf = (map, line) => [...map.values()].find((lines) => lines.includes(line)) || [line];
 
 // ---------- plan: products ----------
-export function planProductImport(text, { store, products, categories, overwrite = false, create = false }) {
+export function planProductImport(text, { store, products, categories, parties = [], overwrite = false, create = false }) {
   const rows = parseCsv(text);
   if (!rows.length) return { ok: false, reason: 'The file is empty.', changes: [], kept: [], skipped: [] };
   const head = rows[0].map((h) => h.trim().toLowerCase());
@@ -173,6 +201,12 @@ export function planProductImport(text, { store, products, categories, overwrite
           const categoryId = resolveCategory(raw, categories);
           if (!categoryId) throw new Error(`Category "${String(raw).trim()}" is not a ${CATALOGUE_STORES[store]} category — use the path from the export, e.g. "${[...categoryPaths(categories).values()].find((p) => p.includes('/')) || [...categoryPaths(categories).values()][0] || 'parent/child'}".`);
           values.category_id = categoryId;
+        } else if (PARTY_COLUMNS[column]) {
+          // A company by its name in the Companies list (case aside), stored as its id.
+          const name = String(raw).trim();
+          const party = (parties || []).find((row) => String(row.name).trim().toLowerCase() === name.toLowerCase());
+          if (!party) throw new Error(`${column[0].toUpperCase()}${column.slice(1)} “${name}” is not in the Companies list — add it on the Companies tab (or import the companies file) first.`);
+          values[PARTY_COLUMNS[column]] = party.id;
         } else values[column] = readCell(column, raw, PRODUCT_FIELD_RULES);
       } catch (error) { problems.push(error.message); }
     }
@@ -182,7 +216,7 @@ export function planProductImport(text, { store, products, categories, overwrite
     if (!creating && !diffs.some((d) => !d.skipped)) { if (diffs.length) planned.push({ ...label, kind: 'kept', diffs, input: null }); continue; }
     // The row as it would be written: current values plus only what applies.
     const input = creating ? { slug: slugCell, stock: 0, sort_order: 0, ...applied, is_active: false } : { ...current, ...applied };
-    try { catalogueProductPayload(input, categories); }
+    try { catalogueProductPayload(input, categories, parties); }
     catch (error) { skipped.push({ line, key: label.slug, reason: reasons(error) }); continue; }
     // Claim warnings for the copy this row would write (warn, never block).
     const warnings = productClaimWarnings({ name: applied.name, description: applied.description });
@@ -263,11 +297,100 @@ export function planVariantImport(text, { store, products, overwrite = false, cr
   return { ok: true, kind: 'variants', ignored, changes, kept, skipped };
 }
 
+// ---------- plan: stones (0036) ----------
+/**
+ * One row per kind of stone in a jewellery piece, matched on the product's slug,
+ * the stone and its shape ("diamond", "round"). A stone's own values follow the
+ * same blank / fill-only / create rules as every other file.
+ */
+export function planStoneImport(text, { store, products, overwrite = false, create = false }) {
+  const rows = parseCsv(text);
+  if (!rows.length) return { ok: false, reason: 'The file is empty.', changes: [], kept: [], skipped: [] };
+  const head = rows[0].map((h) => h.trim().toLowerCase());
+  if (!head.includes('product_slug') || !head.includes('stone')) return { ok: false, reason: 'The file needs "product_slug" and "stone" columns to match stones on.', changes: [], kept: [], skipped: [] };
+  const ignored = head.filter((h) => h && !STONE_CSV_COLUMNS.includes(h));
+  const col = (name) => head.indexOf(name);
+  const cell = (cells, name) => (col(name) >= 0 ? String(cells[col(name)] ?? '').trim() : '');
+  const bySlug = new Map(products.map((p) => [p.slug, p]));
+  const planned = [], skipped = [], keyLines = new Map();
+  for (let r = 1; r < rows.length; r += 1) {
+    const cells = rows[r], line = r + 1;
+    const productSlug = cell(cells, 'product_slug'), stone = cell(cells, 'stone'), shape = cell(cells, 'shape');
+    const label = `${productSlug} · ${stone}${shape ? ` (${shape})` : ''}`;
+    const product = bySlug.get(productSlug);
+    if (!product) { skipped.push({ line, key: label, reason: `No ${CATALOGUE_STORES[store]} product has the slug "${productSlug}".` }); continue; }
+    if (!stone) { skipped.push({ line, key: label, reason: 'A row needs the stone.' }); continue; }
+    const key = `${product.id}|${stone.toLowerCase()}|${shape.toLowerCase()}`;
+    keyLines.set(key, [...(keyLines.get(key) || []), line]);
+    const current = (product.stones || []).find((s) => String(s.stone).trim().toLowerCase() === stone.toLowerCase() && String(s.shape || '').trim().toLowerCase() === shape.toLowerCase()) || null;
+    const creating = !current;
+    if (creating && !create) { skipped.push({ line, key: label, reason: 'This product has no such stone. Tick "Create new" to add it.' }); continue; }
+    const values = {};
+    for (const field of STONE_FIELDS) if (col(field) >= 0 && !blank(cells[col(field)])) values[field] = cell(cells, field);
+    const { diffs, applied } = diffRow(current, values, STONE_FIELDS, { overwrite, creating });
+    const meta = { line, productId: product.id, product: product.name, stoneId: current?.id ?? null, label };
+    if (!creating && !diffs.some((d) => !d.skipped)) { if (diffs.length) planned.push({ ...meta, kind: 'kept', diffs, input: null }); continue; }
+    const input = creating ? { stone, shape, sort_order: (product.stones || []).length, ...applied } : { ...current, ...applied };
+    try { catalogueStonePayload(input); } catch (error) { skipped.push({ line, key: label, reason: reasons(error) }); continue; }
+    planned.push({ ...meta, kind: creating ? 'create' : 'update', diffs, input, expectedUpdatedAt: current?.updated_at ?? null });
+  }
+  return finishPlan('stones', planned, skipped, keyLines, ignored, 'This stone appears more than once in the file');
+}
+
+// ---------- plan: companies (0036) ----------
+/** The Companies list: one row per company, matched on its name (case aside). */
+export function planCompanyImport(text, { parties = [], overwrite = false, create = false }) {
+  const rows = parseCsv(text);
+  if (!rows.length) return { ok: false, reason: 'The file is empty.', changes: [], kept: [], skipped: [] };
+  const head = rows[0].map((h) => h.trim().toLowerCase());
+  if (!head.includes('name')) return { ok: false, reason: 'The file needs a "name" column to match companies on.', changes: [], kept: [], skipped: [] };
+  const ignored = head.filter((h) => h && !COMPANY_CSV_COLUMNS.includes(h));
+  const col = (name) => head.indexOf(name);
+  const planned = [], skipped = [], keyLines = new Map();
+  const after = [...parties];
+  for (let r = 1; r < rows.length; r += 1) {
+    const cells = rows[r], line = r + 1;
+    const name = String(cells[col('name')] ?? '').trim();
+    if (!name) { skipped.push({ line, key: '', reason: 'A row needs the company’s name.' }); continue; }
+    keyLines.set(name.toLowerCase(), [...(keyLines.get(name.toLowerCase()) || []), line]);
+    const current = parties.find((p) => String(p.name).trim().toLowerCase() === name.toLowerCase()) || null;
+    const creating = !current;
+    if (creating && !create) { skipped.push({ line, key: name, reason: 'No company has this name. Tick "Create new" to add it.' }); continue; }
+    const values = {};
+    for (const field of COMPANY_FIELDS) {
+      if (col(field) < 0 || blank(cells[col(field)])) continue;
+      const v = String(cells[col(field)]).trim();
+      values[field] = ['country', 'gstin'].includes(field) ? v.toUpperCase() : v;
+    }
+    const { diffs, applied } = diffRow(current, values, COMPANY_FIELDS, { overwrite, creating });
+    const meta = { line, id: current?.id ?? null, name };
+    if (!creating && !diffs.some((d) => !d.skipped)) { if (diffs.length) planned.push({ ...meta, kind: 'kept', diffs, input: null }); continue; }
+    const input = creating ? { name, ...applied } : { ...current, ...applied };
+    try { cataloguePartyPayload(input, after, current?.id ?? null); } catch (error) { skipped.push({ line, key: name, reason: reasons(error) }); continue; }
+    if (creating) after.push({ id: `planned-${line}`, name });
+    planned.push({ ...meta, kind: creating ? 'create' : 'update', diffs, input, expectedUpdatedAt: current?.updated_at ?? null });
+  }
+  return finishPlan('companies', planned, skipped, keyLines, ignored, 'This company appears more than once in the file');
+}
+
+/** The common end of the stones and companies plans: a key twice in a file is never guessed between. */
+function finishPlan(kind, planned, skipped, keyLines, ignored, twiceReason) {
+  const twice = new Set([...keyLines.values()].filter((l) => l.length > 1).flat());
+  const changes = [], kept = [];
+  for (const c of planned) {
+    if (twice.has(c.line)) { skipped.push({ line: c.line, key: c.label || c.name, reason: `${twiceReason} (lines ${linesOf(keyLines, c.line).join(', ')}).` }); continue; }
+    (c.kind === 'kept' ? kept : changes).push(c);
+  }
+  skipped.sort((a, b) => a.line - b.line);
+  return { ok: true, kind, ignored, changes, kept, skipped };
+}
+
 /** "MRP: 1299 → 1199" — how a diff reads in the plan. */
-export function describeDiff(diff, categories = []) {
+export function describeDiff(diff, categories = [], parties = []) {
   const show = (field, v) => {
     if (!present(v)) return '(empty)';
     if (field === 'category_id') return categoryPaths(categories).get(v) || v;
+    if (Object.values(PARTY_COLUMNS).includes(field)) return partyName(parties, v) || v;
     if (BOOLEAN.has(field)) return v ? 'yes' : 'no';
     const s = String(v);
     return s.length > 60 ? `${s.slice(0, 57)}…` : s;

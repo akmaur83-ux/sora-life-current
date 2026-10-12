@@ -75,31 +75,33 @@ or the database would refuse it, or it breaks a rule — nothing sells above its
 (speed, sustainability or medical claims in the copy), **imports but bites later** (cannot be
 published, a declaration missing), and **worth knowing**. Exit code 1 while anything needs fixing.
 
-The products and variants are run through the admin importer's own planner, so the rows the
-validator passes are the rows the import accepts. Options:
+Every sheet is run through the admin importer's own planner, so the rows the validator passes are
+the rows the import accepts. Options:
 
 - `--categories <file>` — our category paths, one per line (`path,name` header optional), e.g.
   `jewellery/rings,Rings`. Or `--live-categories` to read the store's active categories (read-only,
   the same public read the storefront makes, using `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`).
   Without either, category paths are not checked.
-- `--existing-products` / `--existing-variants` — the admin's own exports (Store catalogue → Fashion →
-  Bulk import (CSV) → "Export current products (CSV)", and the same under "Sizes & colours (variants)"),
-  to catch a slug or SKU already taken and to see what an update would change.
+- `--existing-products` / `--existing-variants` / `--existing-companies` — the admin's own exports
+  (Store catalogue → Fashion → Bulk import (CSV) → "Export current products (CSV)", and the same under
+  "Sizes & colours (variants)" and "Companies"), to catch a slug or SKU already taken, to see what an
+  update would change, and to accept a manufacturer already in the Companies list. Without the
+  companies sheet or that export, company names are not checked.
 - `--images <folder>` — checks every product has `<slug>-1.<webp|jpg|png>` and reports names that match no product.
 - `--report out.md` — the same report as a file.
 
 ## Then, in the admin (Store catalogue → Fashion)
 
-1. **Bulk import (CSV) → Products**: choose the products CSV, tick **Create new products**, read the plan, apply.
+1. **Bulk import (CSV) → Companies**: `companies.csv`, tick **Create new**, read the plan, apply. One
+   list serves every store; the **Companies** tab edits it one company at a time.
+2. **Bulk import (CSV) → Products**: choose the products CSV, tick **Create new products**, read the plan, apply.
    Every new product is a **draft**. Leave **Overwrite existing values** off unless you mean to replace values.
-2. **Bulk import (CSV) → Sizes & colours (variants)**: the variants CSV, tick **Create new**, read the plan, apply.
-3. **Bulk images**: choose the photos named `<slug>-1.webp`, `<slug>-2.webp`…, read the plan, upload.
-4. Open each product, check it, **publish** (it needs an image and an active size/colour).
-
-The 0036 columns (country of origin, manufacturer, material, care, fit, metal, purity, weights,
-making charges, stones, companies) are checked by the validator today but **not imported yet**:
-the import lists them as "ignored". Keep them in your files; they load once migration 0036 is
-applied and the importer learns them (a separate task).
+   A manufacturer, packer or importer is read by its name in the Companies list.
+3. **Bulk import (CSV) → Sizes & colours (variants)**: the variants CSV, tick **Create new**, read the plan, apply.
+4. Jewellery: **Bulk import (CSV) → Stones (jewellery)**: `jewellery-stones.csv`, tick **Create new**, apply.
+5. **Bulk images**: choose the photos named `<slug>-1.webp`, `<slug>-2.webp`…, read the plan, upload.
+6. Open each product, check it, **publish** (it needs an image and an active size/colour). The editor
+   lists any declaration still missing — a reminder, never a block. A rate-linked product stays a draft.
 
 ## Changing the kit
 

@@ -11,11 +11,13 @@
 // a stones sheet. Companies (manufacturer / packer / importer) are one sheet
 // shared by both.
 //
-// importable: true  — the admin's CSV import reads it today.
-// importable: false — migration 0036's columns. Fill them in now; the import
-//                     lists them as "ignored" (nothing is lost — the file keeps
-//                     them) until 0036 is applied and the importer learns them.
+// importable: true — the admin's CSV import reads it. Since migration 0036 and
+// the importer update (2026-10-12) every column is; the flag stays so the suite
+// can pin the kit to the importer's own column lists, both ways.
 // ============================================================
+import { PURITY, METALS, FITS, STONE_ORIGINS, MAKING_TYPES, RATE_LINKED_NOT_LIVE } from '../../src/lib/storeCatalogueAdmin.js';
+
+export { PURITY, METALS, FITS, STONE_ORIGINS };
 
 export const KITS = {
   fashion: { label: 'Fashion', store: 'fashion', categoryRoot: null },
@@ -56,27 +58,55 @@ export const MSG = {
   override: 'Price override must be at least ₹0.01, or blank to use the product price.',
   variantSku: 'Another variant already has the SKU "…". Variant SKUs are unique across every store.',
   variantTwice: 'This variant appears more than once in the file (lines …).',
+  // Migration 0036: declarations, jewellery, stones and companies.
+  country: 'Country of origin must be a 2-letter code such as IN.',
+  genericLong: 'Generic name: keep it under 120 characters.',
+  noCompany: 'Manufacturer “…” is not in the Companies list — add it on the Companies tab (or import the companies file) first.',
+  materialTotal: 'Material percentages add up to …%, not 100%.',
+  materialLong: 'Material: keep it under 300 characters.',
+  careLong: 'Care instructions: keep it under 1000 characters.',
+  fit: `Fit must be one of ${FITS.join(', ')}.`,
+  metal: `Metal must be one of ${METALS.join(', ')}.`,
+  purityNumber: 'Purity is the fineness, a whole number such as 916 (22K) or 925 (sterling).',
+  purityGrade: '… is not a … grade. Use …',
+  purityMetal: 'Purity is only for gold, silver and platinum, not …',
+  makingType: `Making charge type must be one of ${MAKING_TYPES.join(', ')}.`,
+  makingValue: 'Making charges must be a number, 0 or more.',
+  makingPair: 'Making charges need both a type and a value.',
+  makingPercent: 'A making charge percentage cannot be over 100.',
+  pricing: 'Pricing must be one of fixed, rate_linked.',
+  rateLinked: RATE_LINKED_NOT_LIVE,
+  gross: 'Gross weight must be grams above 0, e.g. 3.250.',
+  net: 'Net metal weight must be grams above 0, e.g. 3.250.',
+  netOverGross: 'Net metal weight … g cannot be more than the gross weight … g.',
+  stoneRow: 'A row needs the stone.',
+  stoneLong: 'Keep the stone’s name under 60 characters.',
+  stoneNew: 'This product has no such stone. Tick "Create new" to add it.',
+  stoneOrigin: 'Origin must be natural, lab_grown or simulant: say which.',
+  stoneCount: 'Stone count must be a whole number, 1 or more.',
+  carat: 'Total carat must be more than 0.',
+  stoneWeight: 'Total weight must be grams above 0, e.g. 3.250.',
+  certificate: 'A certificate needs both its lab and its number.',
+  stoneTwice: 'This stone appears more than once in the file (lines …).',
+  companyRow: 'A row needs the company’s name.',
+  companyTwice: 'This company appears more than once in the file (lines …).',
+  companyAddress: 'Enter the address as it is printed on the label.',
+  companyCountry: 'Country must be a 2-letter code such as IN.',
+  phone: 'Keep the phone under 40 characters.',
+  email: 'Enter an email address like name@domain.com.',
+  gstin: 'GSTIN must be 15 characters like 27ABCDE1234F1Z5.',
 };
 
 const BOTH = ['fashion', 'jewellery'];
 const J = ['jewellery'];
 const F = ['fashion'];
 
-export const PURITY = {
-  gold: { 375: '9K', 585: '14K', 750: '18K', 833: '20K', 916: '22K', 958: '23K', 995: '24K', 999: '24K' },
-  silver: { 800: '800', 835: '835', 900: '900', 925: 'Sterling (925)', 970: '970', 990: '990', 999: 'Fine (999)' },
-  platinum: { 850: '850', 900: '900', 950: '950' },
-};
-export const METALS = ['gold', 'silver', 'platinum', 'gold_plated', 'silver_plated', 'brass', 'stainless_steel', 'other'];
-export const FITS = ['Regular', 'Slim', 'Relaxed', 'Oversized', 'Straight', 'Skinny', 'Loose', 'Tailored'];
-export const STONE_ORIGINS = ['natural', 'lab_grown', 'simulant'];
-
 /**
  * One entry per column. `required`: 'new' (needed to create the row), 'live'
  * (expected before the product goes live — warned, never enforced), or 'no'.
  */
 export const COLUMNS = [
-  // ---------- products: read by the import today ----------
+  // ---------- products ----------
   { sheet: 'products', key: 'id', kits: BOTH, importable: true, required: 'no',
     purpose: 'Updates an existing product instead of creating one. Copy it from the admin export.',
     format: 'The product’s id exactly as the export shows it.', example: { fashion: '', jewellery: '' },
@@ -150,58 +180,58 @@ export const COLUMNS = [
     purpose: 'Display order inside listings; lower comes first.', format: 'A whole number (may be negative).',
     example: { fashion: '10', jewellery: '10' }, blank: '0.', rejects: [['Not a whole number', MSG.order]] },
 
-  // ---------- products: migration 0036 (fill now; imported once 0036 and the importer update land) ----------
-  { sheet: 'products', key: 'country_of_origin', kits: BOTH, importable: false, required: 'live',
-    purpose: 'Country of origin — a declaration every listing carries.',
-    format: 'The 2-letter country code: IN, CN, BD, LK, VN, TR, IT…', example: { fashion: 'IN', jewellery: 'IN' },
-    blank: 'Not recorded (the validator warns).', rejects: [['Anything but two capital letters', 'Country of origin must be a 2-letter code such as IN. (database: catalogue_products_country_chk)']] },
-  { sheet: 'products', key: 'generic_name', kits: BOTH, importable: false, required: 'no',
+  // ---------- products: the 0036 declarations ----------
+  { sheet: 'products', key: 'country_of_origin', kits: BOTH, importable: true, required: 'live',
+    purpose: 'Country of origin — a declaration every listing carries. Shown under Product information on the product page.',
+    format: 'The 2-letter country code: IN, CN, BD, LK, VN, TR, IT… Lower case is read as upper case.', example: { fashion: 'IN', jewellery: 'IN' },
+    blank: 'Not recorded (the validator and the editor warn).', rejects: [['Anything but two letters', MSG.country]] },
+  { sheet: 'products', key: 'generic_name', kits: BOTH, importable: true, required: 'no',
     purpose: 'The common name of the item, when the product name is a style name ("Meadow" is a shirt).',
     format: 'Plain text, up to 120 characters.', example: { fashion: 'Shirt', jewellery: 'Ring' }, blank: 'The product name serves.',
-    rejects: [['Over 120 characters', 'Generic name: keep it under 120 characters. (database: catalogue_products_text_len_chk)']] },
-  { sheet: 'products', key: 'manufacturer', kits: BOTH, importable: false, required: 'live',
-    purpose: 'Manufactured by — name and address come from the companies sheet.',
-    format: 'The company’s name exactly as in companies.csv.', example: { fashion: 'Example Textiles Pvt Ltd', jewellery: 'Example Jewellers LLP' },
-    blank: 'Not recorded (the validator warns).', rejects: [['A name not in companies.csv', 'Manufacturer "…" is not in the companies sheet.']] },
-  { sheet: 'products', key: 'packer', kits: BOTH, importable: false, required: 'no',
-    purpose: 'Packed by, when a different company packs it.', format: 'A name from companies.csv.', example: { fashion: '', jewellery: '' },
-    blank: 'Not shown.', rejects: [['A name not in companies.csv', 'Packer "…" is not in the companies sheet.']] },
-  { sheet: 'products', key: 'importer', kits: BOTH, importable: false, required: 'live',
-    purpose: 'Imported by — expected whenever the country of origin is not IN.', format: 'A name from companies.csv.', example: { fashion: '', jewellery: '' },
-    blank: 'Not shown (the validator warns when the product is imported).', rejects: [['A name not in companies.csv', 'Importer "…" is not in the companies sheet.']] },
-  { sheet: 'products', key: 'material', kits: F, importable: false, required: 'live',
+    rejects: [['Over 120 characters', MSG.genericLong]] },
+  { sheet: 'products', key: 'manufacturer', kits: BOTH, importable: true, required: 'live',
+    purpose: 'Manufactured by — the name and address printed on the product page come from the Companies list.',
+    format: 'The company’s name exactly as in the Companies list (companies.csv); capitals aside.', example: { fashion: 'Example Textiles Pvt Ltd', jewellery: 'Example Jewellers LLP' },
+    blank: 'Not recorded (the validator and the editor warn).', rejects: [['A name not in the Companies list', MSG.noCompany]] },
+  { sheet: 'products', key: 'packer', kits: BOTH, importable: true, required: 'no',
+    purpose: 'Packed by, when a different company packs it.', format: 'A name from the Companies list.', example: { fashion: '', jewellery: '' },
+    blank: 'Not shown.', rejects: [['A name not in the Companies list', 'Packer “…” is not in the Companies list — add it on the Companies tab (or import the companies file) first.']] },
+  { sheet: 'products', key: 'importer', kits: BOTH, importable: true, required: 'live',
+    purpose: 'Imported by — expected whenever the country of origin is not IN.', format: 'A name from the Companies list.', example: { fashion: '', jewellery: '' },
+    blank: 'Not shown (the validator and the editor warn when the product is made outside India).', rejects: [['A name not in the Companies list', 'Importer “…” is not in the Companies list — add it on the Companies tab (or import the companies file) first.']] },
+  { sheet: 'products', key: 'material', kits: F, importable: true, required: 'live',
     purpose: 'Fabric composition.',
     format: 'Percentages that add up to 100, comma-separated: "100% linen", "60% cotton, 40% polyester". Up to 300 characters.',
-    example: { fashion: '100% linen' }, blank: 'Not recorded (the validator warns).',
-    rejects: [['Percentages that do not add up to 100', 'Material percentages add up to …%, not 100%.'], ['Over 300 characters', '(database: catalogue_products_text_len_chk)']] },
-  { sheet: 'products', key: 'care', kits: F, importable: false, required: 'live',
+    example: { fashion: '100% linen' }, blank: 'Not recorded (the validator and the editor warn).',
+    rejects: [['Percentages that do not add up to 100', MSG.materialTotal], ['Over 300 characters', MSG.materialLong]] },
+  { sheet: 'products', key: 'care', kits: F, importable: true, required: 'live',
     purpose: 'Care instructions.', format: 'Plain text, semicolons between instructions; up to 1000 characters.',
-    example: { fashion: 'Machine wash cold; do not bleach; dry in shade; warm iron' }, blank: 'Not recorded (the validator warns).',
-    rejects: [['Over 1000 characters', '(database: catalogue_products_text_len_chk)']] },
-  { sheet: 'products', key: 'fit', kits: F, importable: false, required: 'no',
-    purpose: 'How it fits.', format: `One of: ${FITS.join(', ')}.`, example: { fashion: 'Relaxed' }, blank: 'Not shown.',
-    rejects: [['A word outside the list', `Fit must be one of ${FITS.join(', ')}.`]] },
-  { sheet: 'products', key: 'metal', kits: J, importable: false, required: 'live',
+    example: { fashion: 'Machine wash cold; do not bleach; dry in shade; warm iron' }, blank: 'Not recorded (the validator and the editor warn).',
+    rejects: [['Over 1000 characters', MSG.careLong]] },
+  { sheet: 'products', key: 'fit', kits: F, importable: true, required: 'no',
+    purpose: 'How it fits.', format: `One of: ${FITS.join(', ')} (capitals aside).`, example: { fashion: 'Relaxed' }, blank: 'Not shown.',
+    rejects: [['A word outside the list', MSG.fit]] },
+  { sheet: 'products', key: 'metal', kits: J, importable: true, required: 'live',
     purpose: 'The metal the piece is made of.', format: `One of: ${METALS.join(', ')}.`, example: { jewellery: 'gold' },
-    blank: 'Not recorded (the validator warns).', rejects: [['A value outside the list', `Metal must be one of ${METALS.join(', ')}. (database: catalogue_products_metal_chk)`]] },
-  { sheet: 'products', key: 'purity', kits: J, importable: false, required: 'live',
+    blank: 'Not recorded (the validator and the editor warn).', rejects: [['A value outside the list', MSG.metal]] },
+  { sheet: 'products', key: 'purity', kits: J, importable: true, required: 'live',
     purpose: 'Purity as fineness — one purity per listing (18K and 22K are separate listings).',
     format: 'Fineness in parts per thousand. Gold: 375 (9K), 585 (14K), 750 (18K), 833 (20K), 916 (22K), 958 (23K), 995 or 999 (24K). Silver: 925 (sterling), 999 and the other BIS grades. Platinum: 850, 900, 950. Only for gold, silver and platinum.',
-    example: { jewellery: '916' }, blank: 'Not recorded (the validator warns for gold, silver and platinum).',
-    rejects: [['Not a grade for the metal, or set on a plated/base metal', 'Purity … is not a … grade. (database: catalogue_products_purity_chk)']] },
-  { sheet: 'products', key: 'making_charge_type', kits: J, importable: false, required: 'no',
-    purpose: 'How making charges are expressed, for the price breakup.', format: 'per_gram, percent or flat. Set together with making_charge_value.',
+    example: { jewellery: '916' }, blank: 'Not recorded (the validator and the editor warn for gold, silver and platinum).',
+    rejects: [['Not a whole number from 1 to 999', MSG.purityNumber], ['Not a grade of the metal', MSG.purityGrade], ['Set on a plated or base metal', MSG.purityMetal]] },
+  { sheet: 'products', key: 'making_charge_type', kits: J, importable: true, required: 'no',
+    purpose: 'How making charges are expressed, recorded with the listing. The selling price is still what customers pay.', format: 'per_gram, percent or flat. Set together with making_charge_value.',
     example: { jewellery: 'per_gram' }, blank: 'No making charges recorded (leave both blank).',
-    rejects: [['Only one of type and value', 'Making charges need both a type and a value. (database: catalogue_products_making_chk)']] },
-  { sheet: 'products', key: 'making_charge_value', kits: J, importable: false, required: 'no',
+    rejects: [['A value outside the list', MSG.makingType], ['Only one of type and value', MSG.makingPair]] },
+  { sheet: 'products', key: 'making_charge_value', kits: J, importable: true, required: 'no',
     purpose: 'Making charges: rupees per gram, a percentage, or a flat amount per piece.', format: 'A number, 0 or more; a percent is at most 100.',
-    example: { jewellery: '450' }, blank: 'Leave blank with the type.', rejects: [['Negative, or a percent over 100', '(database: catalogue_products_making_chk)']] },
-  { sheet: 'products', key: 'pricing_mode', kits: J, importable: false, required: 'no',
-    purpose: 'fixed: the price in this sheet. rate_linked: priced from the day’s metal rate — recorded only; such a product cannot go live until the rate engine exists.',
+    example: { jewellery: '450' }, blank: 'Leave blank with the type.', rejects: [['Negative or not a number', MSG.makingValue], ['A percent over 100', MSG.makingPercent]] },
+  { sheet: 'products', key: 'pricing_mode', kits: J, importable: true, required: 'no',
+    purpose: 'fixed: the price in this sheet. rate_linked: priced from the day’s metal rate — recorded only; such a product saves as a draft and cannot go live until the rate engine exists.',
     format: 'fixed or rate_linked.', example: { jewellery: 'fixed' }, blank: 'fixed.',
-    rejects: [['rate_linked on a product being published', 'A rate-linked product cannot go live yet. (database: catalogue_products_rate_linked_live_chk)']] },
+    rejects: [['Anything else', MSG.pricing], ['rate_linked on a product being published (in the editor)', MSG.rateLinked]] },
 
-  // ---------- variants: read by the import today ----------
+  // ---------- variants ----------
   { sheet: 'variants', key: 'product_slug', kits: BOTH, importable: true, required: 'new',
     purpose: 'Which product this size/colour belongs to. Import the products file first.', format: 'The product’s slug.',
     example: { fashion: 'meadow-linen-shirt-sage', jewellery: 'classic-band-ring-22k' }, blank: 'The row is skipped.',
@@ -232,35 +262,35 @@ export const COLUMNS = [
   { sheet: 'variants', key: 'sort_order', kits: BOTH, importable: true, required: 'no',
     purpose: 'The order sizes and colours are offered in; lower first.', format: 'A whole number.', example: { fashion: '2', jewellery: '3' },
     blank: 'Its position in the file.', rejects: [['Not a whole number', MSG.order]] },
-  // ---------- variants: migration 0036 ----------
-  { sheet: 'variants', key: 'gross_weight_g', kits: J, importable: false, required: 'live',
+  // ---------- variants: the 0036 weights ----------
+  { sheet: 'variants', key: 'gross_weight_g', kits: J, importable: true, required: 'live',
     purpose: 'Gross weight of the piece in grams (metal + stones). A ring’s changes with its size.', format: 'Grams, up to 3 decimals: 3.250.',
-    example: { jewellery: '3.250' }, blank: 'Not recorded (the validator warns).', rejects: [['Zero or negative', '(database: catalogue_variants_weights_chk)']] },
-  { sheet: 'variants', key: 'net_metal_weight_g', kits: J, importable: false, required: 'live',
+    example: { jewellery: '3.250' }, blank: 'Not recorded (the validator and the editor warn).', rejects: [['Zero, negative or not a number', MSG.gross]] },
+  { sheet: 'variants', key: 'net_metal_weight_g', kits: J, importable: true, required: 'live',
     purpose: 'Net weight of the metal alone in grams.', format: 'Grams, up to 3 decimals; at most the gross weight.',
-    example: { jewellery: '3.250' }, blank: 'Not recorded (the validator warns).', rejects: [['More than the gross weight, zero or negative', 'Net metal weight cannot exceed the gross weight. (database: catalogue_variants_weights_chk)']] },
+    example: { jewellery: '3.250' }, blank: 'Not recorded (the validator and the editor warn).', rejects: [['Zero, negative or not a number', MSG.net], ['More than the gross weight', MSG.netOverGross]] },
 
   // ---------- stones (jewellery, 0036) ----------
-  { sheet: 'stones', key: 'product_slug', kits: J, importable: false, required: 'new', purpose: 'The product the stones are set in.', format: 'The product’s slug.', example: { jewellery: 'solitaire-pendant-18k' }, blank: 'The row is skipped.', rejects: [['A slug not in the products sheet', 'No product in the sheet has the slug "…".']] },
-  { sheet: 'stones', key: 'stone', kits: J, importable: false, required: 'new', purpose: 'The stone.', format: 'Plain text: diamond, ruby, emerald, pearl, cubic zirconia.', example: { jewellery: 'diamond' }, blank: 'The row is refused.', rejects: [['Blank or over 60 characters', '(database: catalogue_product_stones_stone_check)']] },
-  { sheet: 'stones', key: 'origin', kits: J, importable: false, required: 'new', purpose: 'Natural, lab-grown, or a simulant (cubic zirconia, glass) — disclose which.', format: STONE_ORIGINS.join(', ') + '.', example: { jewellery: 'lab_grown' }, blank: 'The row is refused.', rejects: [['Anything else', `Origin must be one of ${STONE_ORIGINS.join(', ')}.`]] },
-  { sheet: 'stones', key: 'shape', kits: J, importable: false, required: 'no', purpose: 'Cut shape.', format: 'round, oval, pear, princess, emerald, marquise…', example: { jewellery: 'round' }, blank: 'Not shown.', rejects: [] },
-  { sheet: 'stones', key: 'stone_count', kits: J, importable: false, required: 'new', purpose: 'How many of these stones.', format: 'A whole number, 1 or more.', example: { jewellery: '1' }, blank: 'The row is refused.', rejects: [['0 or not whole', 'Stone count must be a whole number, 1 or more.']] },
-  { sheet: 'stones', key: 'total_carat', kits: J, importable: false, required: 'no', purpose: 'Total carat weight of these stones together.', format: 'Carats, up to 3 decimals: 0.250.', example: { jewellery: '0.250' }, blank: 'Not shown.', rejects: [['0 or negative', 'Total carat must be more than 0.']] },
-  { sheet: 'stones', key: 'total_weight_g', kits: J, importable: false, required: 'no', purpose: 'Total weight in grams, for stones sold by gram weight.', format: 'Grams, up to 3 decimals.', example: { jewellery: '' }, blank: 'Not shown.', rejects: [['0 or negative', 'Total weight must be more than 0.']] },
-  { sheet: 'stones', key: 'clarity', kits: J, importable: false, required: 'no', purpose: 'Clarity grade.', format: 'VVS1, VS1, SI1…', example: { jewellery: 'VS1' }, blank: 'Not shown.', rejects: [] },
-  { sheet: 'stones', key: 'colour_grade', kits: J, importable: false, required: 'no', purpose: 'Colour grade.', format: 'D–Z for diamonds.', example: { jewellery: 'F' }, blank: 'Not shown.', rejects: [] },
-  { sheet: 'stones', key: 'certificate_lab', kits: J, importable: false, required: 'no', purpose: 'The grading lab.', format: 'IGI, GIA, SGL… Set together with certificate_no.', example: { jewellery: 'IGI' }, blank: 'No certificate (leave both blank).', rejects: [['Only one of lab and number', 'A certificate needs both its lab and its number.']] },
-  { sheet: 'stones', key: 'certificate_no', kits: J, importable: false, required: 'no', purpose: 'The certificate number.', format: 'As printed on the certificate.', example: { jewellery: 'LG000000000' }, blank: 'Leave blank with the lab.', rejects: [] },
-  { sheet: 'stones', key: 'sort_order', kits: J, importable: false, required: 'no', purpose: 'Order stones are listed in.', format: 'A whole number.', example: { jewellery: '1' }, blank: '0.', rejects: [] },
+  { sheet: 'stones', key: 'product_slug', kits: J, importable: true, required: 'new', purpose: 'The product the stones are set in. Import the products file first.', format: 'The product’s slug.', example: { jewellery: 'solitaire-pendant-18k' }, blank: 'The row is skipped.', rejects: [['A slug no product has (yet)', MSG.variantProduct]] },
+  { sheet: 'stones', key: 'stone', kits: J, importable: true, required: 'new', purpose: 'The stone. With the slug and the shape, it is how a row finds the stone already on the product.', format: 'Plain text, up to 60 characters: diamond, ruby, emerald, pearl, cubic zirconia.', example: { jewellery: 'diamond' }, blank: 'The row is skipped.', rejects: [['Blank', MSG.stoneRow], ['Over 60 characters', MSG.stoneLong], ['A stone the product does not have, without “Create new”', MSG.stoneNew], ['The same stone and shape twice in the file', MSG.stoneTwice]] },
+  { sheet: 'stones', key: 'origin', kits: J, importable: true, required: 'new', purpose: 'Natural, lab-grown, or a simulant (cubic zirconia, glass) — disclosed on the product page.', format: STONE_ORIGINS.join(', ') + '.', example: { jewellery: 'lab_grown' }, blank: 'A new stone is refused; an existing one keeps its origin.', rejects: [['Anything else', MSG.stoneOrigin]] },
+  { sheet: 'stones', key: 'shape', kits: J, importable: true, required: 'no', purpose: 'Cut shape. Part of how a row is matched (two diamond rows of different shapes are two stones).', format: 'round, oval, pear, princess, emerald, marquise…', example: { jewellery: 'round' }, blank: 'Not shown.', rejects: [] },
+  { sheet: 'stones', key: 'stone_count', kits: J, importable: true, required: 'new', purpose: 'How many of these stones.', format: 'A whole number, 1 or more.', example: { jewellery: '1' }, blank: 'A new stone is refused; an existing one keeps its count.', rejects: [['0 or not whole', MSG.stoneCount]] },
+  { sheet: 'stones', key: 'total_carat', kits: J, importable: true, required: 'no', purpose: 'Total carat weight of these stones together.', format: 'Carats, up to 3 decimals: 0.250.', example: { jewellery: '0.250' }, blank: 'Not shown.', rejects: [['0, negative or not a number', MSG.carat]] },
+  { sheet: 'stones', key: 'total_weight_g', kits: J, importable: true, required: 'no', purpose: 'Total weight in grams, for stones sold by gram weight.', format: 'Grams, up to 3 decimals.', example: { jewellery: '' }, blank: 'Not shown.', rejects: [['0, negative or not a number', MSG.stoneWeight]] },
+  { sheet: 'stones', key: 'clarity', kits: J, importable: true, required: 'no', purpose: 'Clarity grade.', format: 'VVS1, VS1, SI1… Up to 20 characters.', example: { jewellery: 'VS1' }, blank: 'Not shown.', rejects: [] },
+  { sheet: 'stones', key: 'colour_grade', kits: J, importable: true, required: 'no', purpose: 'Colour grade.', format: 'D–Z for diamonds. Up to 20 characters.', example: { jewellery: 'F' }, blank: 'Not shown.', rejects: [] },
+  { sheet: 'stones', key: 'certificate_lab', kits: J, importable: true, required: 'no', purpose: 'The grading lab.', format: 'IGI, GIA, SGL… Set together with certificate_no.', example: { jewellery: 'IGI' }, blank: 'No certificate (leave both blank).', rejects: [['Only one of lab and number', MSG.certificate]] },
+  { sheet: 'stones', key: 'certificate_no', kits: J, importable: true, required: 'no', purpose: 'The certificate number.', format: 'As printed on the certificate.', example: { jewellery: 'LG000000000' }, blank: 'Leave blank with the lab.', rejects: [] },
+  { sheet: 'stones', key: 'sort_order', kits: J, importable: true, required: 'no', purpose: 'Order stones are listed in.', format: 'A whole number.', example: { jewellery: '1' }, blank: 'After the stones already on the product.', rejects: [['Not a whole number', MSG.order]] },
 
   // ---------- companies (0036) ----------
-  { sheet: 'companies', key: 'name', kits: BOTH, importable: false, required: 'new', purpose: 'The company’s legal name; products name it in manufacturer / packer / importer.', format: 'Plain text, up to 160 characters, unique in this sheet.', example: { fashion: 'Example Textiles Pvt Ltd', jewellery: 'Example Jewellers LLP' }, blank: 'The row is refused.', rejects: [['Blank, or the same name twice', 'Company names must be present and unique.']] },
-  { sheet: 'companies', key: 'address', kits: BOTH, importable: false, required: 'new', purpose: 'The address as it is printed on the label.', format: 'One line: street, city, state, PIN. Up to 400 characters.', example: { fashion: 'Plot 12, Industrial Area Phase 2, Ludhiana, Punjab 141003', jewellery: '4th Floor, 18 Zaveri Bazaar, Mumbai, Maharashtra 400002' }, blank: 'The row is refused.', rejects: [['Blank or over 400', '(database: catalogue_parties_address_check)']] },
-  { sheet: 'companies', key: 'country', kits: BOTH, importable: false, required: 'no', purpose: 'The company’s country.', format: '2-letter code.', example: { fashion: 'IN', jewellery: 'IN' }, blank: 'IN.', rejects: [['Not two capital letters', 'Country must be a 2-letter code such as IN.']] },
-  { sheet: 'companies', key: 'phone', kits: BOTH, importable: false, required: 'no', purpose: 'Consumer-care phone, when the label prints one.', format: 'As printed, up to 40 characters.', example: { fashion: '+91 161 400 0000', jewellery: '+91 22 4000 0000' }, blank: 'Not shown.', rejects: [] },
-  { sheet: 'companies', key: 'email', kits: BOTH, importable: false, required: 'no', purpose: 'Consumer-care email.', format: 'name@domain.', example: { fashion: 'care@example.com', jewellery: 'care@example.org' }, blank: 'Not shown.', rejects: [['Not an email address', 'Enter an email address like name@domain.com.']] },
-  { sheet: 'companies', key: 'gstin', kits: BOTH, importable: false, required: 'no', purpose: 'GSTIN.', format: '15 characters: 2-digit state code, PAN, entity number, Z, check character.', example: { fashion: '03ABCDE1234F1Z5', jewellery: '27ABCDE1234F1Z5' }, blank: 'Not recorded.', rejects: [['Not a GSTIN shape', 'GSTIN must be 15 characters like 27ABCDE1234F1Z5.']] },
+  { sheet: 'companies', key: 'name', kits: BOTH, importable: true, required: 'new', purpose: 'The company’s legal name; products name it in manufacturer / packer / importer. One list serves every store.', format: 'Plain text, up to 160 characters, each company once. A name already in the list (capitals aside) updates that company.', example: { fashion: 'Example Textiles Pvt Ltd', jewellery: 'Example Jewellers LLP' }, blank: 'The row is skipped.', rejects: [['Blank', MSG.companyRow], ['The same name twice in the file', MSG.companyTwice]] },
+  { sheet: 'companies', key: 'address', kits: BOTH, importable: true, required: 'new', purpose: 'The address as it is printed on the label, and on the product page.', format: 'One line: street, city, state, PIN. Up to 400 characters.', example: { fashion: 'Plot 12, Industrial Area Phase 2, Ludhiana, Punjab 141003', jewellery: '4th Floor, 18 Zaveri Bazaar, Mumbai, Maharashtra 400002' }, blank: 'A new company is refused; an existing one keeps its address.', rejects: [['Blank on a new company', MSG.companyAddress]] },
+  { sheet: 'companies', key: 'country', kits: BOTH, importable: true, required: 'no', purpose: 'The company’s country.', format: '2-letter code.', example: { fashion: 'IN', jewellery: 'IN' }, blank: 'IN.', rejects: [['Not two letters', MSG.companyCountry]] },
+  { sheet: 'companies', key: 'phone', kits: BOTH, importable: true, required: 'no', purpose: 'Consumer-care phone, when the label prints one.', format: 'As printed, up to 40 characters.', example: { fashion: '+91 161 400 0000', jewellery: '+91 22 4000 0000' }, blank: 'Not shown.', rejects: [['Over 40 characters', MSG.phone]] },
+  { sheet: 'companies', key: 'email', kits: BOTH, importable: true, required: 'no', purpose: 'Consumer-care email.', format: 'name@domain.', example: { fashion: 'care@example.com', jewellery: 'care@example.org' }, blank: 'Not shown.', rejects: [['Not an email address', MSG.email]] },
+  { sheet: 'companies', key: 'gstin', kits: BOTH, importable: true, required: 'no', purpose: 'GSTIN.', format: '15 characters: 2-digit state code, PAN, entity number, Z, check character.', example: { fashion: '03ABCDE1234F1Z5', jewellery: '27ABCDE1234F1Z5' }, blank: 'Not recorded.', rejects: [['Not a GSTIN shape', MSG.gstin]] },
 ];
 
 export const columnsFor = (sheet, kit) => COLUMNS.filter((c) => c.sheet === sheet && c.kits.includes(kit));

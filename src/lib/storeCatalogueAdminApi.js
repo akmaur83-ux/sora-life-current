@@ -5,11 +5,11 @@ import { compressToWebp } from './storeCatalogueImage.js';
 import {
   requireCatalogueStore, catalogueProductPayload, catalogueCategoryPayload, catalogueVariantPayload, assertCataloguePublishable,
   CatalogueInputError, CatalogueStaleWriteError, CatalogueRefusedError, catalogueWriteError, planDemoDelete,
-  catalogueSlug, PRODUCT_FIELD_RULES, VARIANT_FIELD_RULES, sortByFileName,
+  catalogueSlug, PRODUCT_FIELD_RULES, VARIANT_FIELD_RULES, sortByFileName, cataloguePartyPayload, catalogueStonePayload,
 } from './storeCatalogueAdmin.js';
 
 // Uses existing admin RLS. No service credentials, schema changes or wellness writes.
-const PRODUCT_SELECT = '*, variants:catalogue_variants (*), media:catalogue_product_media (*)';
+const PRODUCT_SELECT = '*, variants:catalogue_variants (*), media:catalogue_product_media (*), stones:catalogue_product_stones (*)';
 async function result(query, kind) {
   const { data, error } = await query;
   if (error) throw catalogueWriteError(error, kind);
@@ -129,15 +129,18 @@ export async function getStoreProduct(store, id) {
  */
 export async function saveStoreProduct(store, id, input, expectedUpdatedAt = null) {
   requireCatalogueStore(store);
-  const categories = await listStoreCategories(store);
+  // The Companies list is read only when the product names a company, to check it is still there.
+  const namesCompany = ['manufacturer_id', 'packer_id', 'importer_id'].some((key) => String(input[key] ?? '').trim());
+  const [categories, parties] = await Promise.all([listStoreCategories(store), namesCompany ? listStoreParties() : null]);
   const autoSlug = !String(input.slug ?? '').trim();
-  const row = await validated(() => catalogueProductPayload(input, categories), (built) => productKeyClashes(store, id, built || {
+  const row = await validated(() => catalogueProductPayload(input, categories, parties), (built) => productKeyClashes(store, id, built || {
     slug: readable(PRODUCT_FIELD_RULES.slug, autoSlug ? catalogueSlug(input.name) : input.slug),
     sku: readable(PRODUCT_FIELD_RULES.sku, input.sku),
   }, { autoSlug }));
   // First create a draft; images/variants can then be saved against its real id.
   if (!id) return result(supabase.from('catalogue_products').insert({ ...row, store, is_active: false }).select().single(), 'product');
-  if (row.is_active) assertCataloguePublishable(store, await getStoreProduct(store, id));
+  // Images and variants as stored; the pricing mode as this save sets it (switching to fixed and publishing is one save).
+  if (row.is_active) assertCataloguePublishable(store, { ...(await getStoreProduct(store, id)), pricing_mode: row.pricing_mode });
   return guardedUpdate('catalogue_products', { store, id }, row, expectedUpdatedAt, 'product');
 }
 export async function saveStoreCategory(store, id, input, expectedUpdatedAt = null) {
@@ -157,6 +160,53 @@ export async function saveStoreVariant(store, productId, id, input, expectedUpda
   if (id) return guardedUpdate('catalogue_variants', { store, product_id: productId, id }, row, expectedUpdatedAt, 'variant');
   return result(supabase.from('catalogue_variants').insert({ ...row, store, product_id: productId }).select().single(), 'variant');
 }
+// ---- Companies (0036): the manufacturer / packer / importer a listing names ---------
+// One list for every store. A company named on a product cannot be deleted (the
+// database's foreign keys restrict it); the admin is told which products to change.
+export async function listStoreParties() {
+  return (await result(supabase.from('catalogue_parties').select('*').order('name', { ascending: true }), 'company')) || [];
+}
+export async function saveStoreParty(id, input, expectedUpdatedAt = null) {
+  const parties = await listStoreParties();
+  if (id && !parties.some((p) => String(p.id) === String(id))) throw new CatalogueStaleWriteError('This company could not be found — it may have been deleted. Nothing was saved.');
+  const row = cataloguePartyPayload(input, parties, id);
+  if (id) return guardedUpdate('catalogue_parties', { id }, row, expectedUpdatedAt, 'company');
+  return result(supabase.from('catalogue_parties').insert(row).select().single(), 'company');
+}
+/** Every product (any store) that names this company, and as what. */
+export async function partyUsage(id) {
+  const uses = [];
+  for (const [field, role] of [['manufacturer_id', 'manufacturer'], ['packer_id', 'packer'], ['importer_id', 'importer']]) {
+    const rows = await result(supabase.from('catalogue_products').select('id, name, store').eq(field, id), 'company');
+    for (const row of rows || []) uses.push({ ...row, role });
+  }
+  return uses;
+}
+export async function deleteStoreParty(id, expectedUpdatedAt) {
+  const uses = await partyUsage(id);
+  if (uses.length) {
+    const names = [...new Set(uses.map((u) => `“${u.name}”`))];
+    throw new Error(`This company is named on ${uses.length} product${uses.length === 1 ? '' : 's'} (${names.slice(0, 3).join(', ')}${names.length > 3 ? ` and ${names.length - 3} more` : ''}). Choose another company on ${uses.length === 1 ? 'it' : 'them'} first.`);
+  }
+  await guardedDelete('catalogue_parties', { id }, expectedUpdatedAt, 'company');
+}
+
+// ---- Stones (0036): one row per kind of stone in a jewellery piece ------------------
+export async function saveStoreStone(store, productId, id, input, expectedUpdatedAt = null) {
+  requireCatalogueStore(store);
+  const product = await getStoreProduct(store, productId);
+  if (id && !(product.stones || []).some((s) => s.id === id)) throw new CatalogueStaleWriteError('This stone is no longer on the product. Reload to see the current stones.');
+  const row = catalogueStonePayload(input);
+  if (id) return guardedUpdate('catalogue_product_stones', { product_id: productId, id }, row, expectedUpdatedAt, 'stone');
+  return result(supabase.from('catalogue_product_stones').insert({ ...row, product_id: productId }).select().single(), 'stone');
+}
+export async function deleteStoreStone(store, productId, id, expectedUpdatedAt) {
+  requireCatalogueStore(store);
+  const product = await getStoreProduct(store, productId);
+  if (!(product.stones || []).some((s) => s.id === id)) throw new CatalogueStaleWriteError('This stone is no longer on the product. Reload to see the current stones.');
+  await guardedDelete('catalogue_product_stones', { product_id: productId, id }, expectedUpdatedAt, 'stone');
+}
+
 // ---- Images ---------------------------------------------------------------------
 // Every catalogue upload is converted to a WebP under 150 KB in the browser
 // first (storeCatalogueImage.js), then stored through the same admin-only
@@ -308,12 +358,14 @@ export async function applyCatalogueImport(store, plan, onProgress = () => {}) {
   for (const [index, change] of (plan?.changes || []).entries()) {
     try {
       if (plan.kind === 'products') await saveStoreProduct(store, change.kind === 'create' ? null : change.id, change.input, change.expectedUpdatedAt);
+      else if (plan.kind === 'stones') await saveStoreStone(store, change.productId, change.kind === 'create' ? null : change.stoneId, change.input, change.expectedUpdatedAt);
+      else if (plan.kind === 'companies') await saveStoreParty(change.kind === 'create' ? null : change.id, change.input, change.expectedUpdatedAt);
       else await saveStoreVariant(store, change.productId, change.kind === 'create' ? null : change.variantId, change.input, change.expectedUpdatedAt);
       done.push(change);
     } catch (error) {
       const reason = error.isStaleWrite ? 'Changed since this file was planned — choose the file again to plan against the current values.'
         : error.fieldErrors ? Object.values(error.fieldErrors).join(' ') : error.message;
-      failed.push({ line: change.line, key: change.slug || change.label, reason });
+      failed.push({ line: change.line, key: change.slug || change.label || change.name, reason });
     }
     onProgress(index + 1, plan.changes.length);
   }

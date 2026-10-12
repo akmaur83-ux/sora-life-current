@@ -65,7 +65,12 @@ export function loadModule(rel, deps = {}) {
 
 // ---- 2. The catalogue database -------------------------------------------------------
 const STORES = ['fashion', 'grocery', 'homeliving'];
-const ADMIN_TABLES = ['catalogue_categories', 'catalogue_products', 'catalogue_variants', 'catalogue_product_media'];
+const ADMIN_TABLES = ['catalogue_categories', 'catalogue_products', 'catalogue_variants', 'catalogue_product_media', 'catalogue_parties', 'catalogue_product_stones'];
+// Read by anyone (0034 media; 0036 companies and stones, printed on the product page).
+const PUBLIC_READ = new Set(['catalogue_product_media', 'catalogue_parties', 'catalogue_product_stones']);
+const PARTY_FKEYS = ['manufacturer_id', 'packer_id', 'importer_id'];
+const chk = (table, name) => err('23514', `new row for relation "${table}" violates check constraint "${name}"`);
+const textLen = (v) => (v == null ? 0 : String(v).length);
 const same = (a, b) => a === b || (a != null && b != null && String(a) === String(b));
 const clone = (v) => structuredClone(v);
 const err = (code, message, details = null) => ({ code, message, details, hint: null });
@@ -85,7 +90,7 @@ export function createCatalogueDb(rows = {}, { admin = true } = {}) {
   for (const t of ADMIN_TABLES) for (const row of db[t]) { row.updated_at ??= stamp(); row.created_at ??= row.updated_at; }
 
   // ---- RLS, from 0034 §6 and §8 ----
-  const visible = (table, row) => session.admin || (table === 'catalogue_product_media' ? true : row.is_active === true);
+  const visible = (table, row) => session.admin || (PUBLIC_READ.has(table) ? true : row.is_active === true);
 
   // ---- constraints (names as the database gives them) ----
   function check(table, row, id) {
@@ -103,6 +108,40 @@ export function createCatalogueDb(rows = {}, { admin = true } = {}) {
       if (row.sku != null && others.some((r) => r.store === row.store && r.sku === row.sku)) return err('23505', 'duplicate key value violates unique constraint "catalogue_products_store_sku_key"');
       const cat = db.catalogue_categories.find((c) => c.id === row.category_id);
       if (row.category_id && cat && cat.store !== row.store) return err('P0001', `catalogue_products: "${row.name}" is in the ${row.store} store but its category is in the ${cat.store} store`);
+      // 0036
+      const T = 'catalogue_products';
+      if (row.country_of_origin != null && !/^[A-Z]{2}$/.test(row.country_of_origin)) return chk(T, 'catalogue_products_country_chk');
+      if (textLen(row.generic_name) > 120 || textLen(row.material) > 300 || textLen(row.care) > 1000 || textLen(row.fit) > 40) return chk(T, 'catalogue_products_text_len_chk');
+      if (row.metal != null && !['gold', 'silver', 'platinum', 'gold_plated', 'silver_plated', 'brass', 'stainless_steel', 'other'].includes(row.metal)) return chk(T, 'catalogue_products_metal_chk');
+      if (row.purity != null && !(Number.isInteger(Number(row.purity)) && row.purity >= 1 && row.purity <= 999 && ['gold', 'silver', 'platinum'].includes(row.metal))) return chk(T, 'catalogue_products_purity_chk');
+      if ((row.making_charge_type == null) !== (row.making_charge_value == null)
+        || (row.making_charge_type != null && !['per_gram', 'percent', 'flat'].includes(row.making_charge_type))
+        || (row.making_charge_value != null && !(Number(row.making_charge_value) >= 0))
+        || (row.making_charge_type === 'percent' && Number(row.making_charge_value) > 100)) return chk(T, 'catalogue_products_making_chk');
+      if (!['fixed', 'rate_linked'].includes(row.pricing_mode ?? 'fixed')) return chk(T, 'catalogue_products_pricing_mode_chk');   // a fixture row predates the column: its default
+      if ((row.pricing_mode ?? 'fixed') !== 'fixed' && row.is_active) return chk(T, 'catalogue_products_rate_linked_live_chk');
+      for (const key of PARTY_FKEYS) {
+        if (row[key] != null && !db.catalogue_parties.some((p) => p.id === row[key])) return err('23503', `insert or update on table "catalogue_products" violates foreign key constraint "catalogue_products_${key}_fkey"`);
+      }
+    }
+    if (table === 'catalogue_parties') {
+      const T = 'catalogue_parties';
+      if (!String(row.name || '').trim() || textLen(row.name) > 160) return chk(T, 'catalogue_parties_name_check');
+      if (!String(row.address || '').trim() || textLen(row.address) > 400) return chk(T, 'catalogue_parties_address_check');
+      if (!/^[A-Z]{2}$/.test(row.country || '')) return chk(T, 'catalogue_parties_country_check');
+      if (row.phone != null && textLen(row.phone) > 40) return chk(T, 'catalogue_parties_phone_check');
+      if (row.email != null && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(row.email)) return chk(T, 'catalogue_parties_email_check');
+      if (row.gstin != null && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(row.gstin)) return chk(T, 'catalogue_parties_gstin_check');
+    }
+    if (table === 'catalogue_product_stones') {
+      const T = 'catalogue_product_stones';
+      if (!db.catalogue_products.some((p) => p.id === row.product_id)) return err('23503', 'insert or update on table "catalogue_product_stones" violates foreign key constraint "catalogue_product_stones_product_id_fkey"');
+      if (!String(row.stone || '').trim() || textLen(row.stone) > 60) return chk(T, 'catalogue_product_stones_stone_check');
+      if (!['natural', 'lab_grown', 'simulant'].includes(row.origin)) return chk(T, 'catalogue_product_stones_origin_check');
+      if (!(Number.isInteger(Number(row.stone_count)) && row.stone_count > 0)) return chk(T, 'catalogue_product_stones_stone_count_check');
+      if (row.total_carat != null && !(Number(row.total_carat) > 0)) return chk(T, 'catalogue_product_stones_total_carat_check');
+      if (row.total_weight_g != null && !(Number(row.total_weight_g) > 0)) return chk(T, 'catalogue_product_stones_total_weight_g_check');
+      if ((row.certificate_lab == null) !== (row.certificate_no == null)) return chk(T, 'catalogue_product_stones_check');
     }
     if (table === 'catalogue_categories') {
       if (!String(row.name || '').trim()) return err('23514', 'new row for relation "catalogue_categories" violates check constraint "catalogue_categories_name_check"');
@@ -118,6 +157,8 @@ export function createCatalogueDb(rows = {}, { admin = true } = {}) {
       const product = db.catalogue_products.find((p) => p.id === row.product_id);
       if (!product) return err('23503', 'insert or update on table "catalogue_variants" violates foreign key constraint "catalogue_variants_product_id_fkey"');
       if (product.store !== row.store) return err('P0001', `catalogue_variants: variant ${row.sku || row.size} is in the ${row.store} store but its product is in the ${product.store} store`);
+      const g = row.gross_weight_g, n = row.net_metal_weight_g;
+      if ((g != null && !(Number(g) > 0)) || (n != null && !(Number(n) > 0)) || (g != null && n != null && Number(n) > Number(g))) return chk('catalogue_variants', 'catalogue_variants_weights_chk');
     }
     if (table === 'catalogue_product_media') {
       if (!db.catalogue_products.some((p) => p.id === row.product_id)) return err('23503', 'insert or update on table "catalogue_product_media" violates foreign key constraint "catalogue_product_media_product_id_fkey"');
@@ -141,9 +182,12 @@ export function createCatalogueDb(rows = {}, { admin = true } = {}) {
   }
   const DEFAULTS = {
     catalogue_categories: { parent_id: null, tagline: '', image_url: null, sort_order: 0, is_active: true, is_demo: false },
-    catalogue_products: { brand: '', description: null, category_id: null, sale_price: null, images: [], rating: 0, review_count: 0, is_active: true, is_new: false, is_bestseller: false, sort_order: 0, is_demo: false, sku: null, hsn_code: null, gst_rate: null, net_content: null, stock: 0 },
-    catalogue_variants: { colour: '', colour_hex: null, sku: null, stock: 0, price_override: null, is_active: true, sort_order: 0, is_demo: false },
+    catalogue_products: { brand: '', description: null, category_id: null, sale_price: null, images: [], rating: 0, review_count: 0, is_active: true, is_new: false, is_bestseller: false, sort_order: 0, is_demo: false, sku: null, hsn_code: null, gst_rate: null, net_content: null, stock: 0,
+      country_of_origin: null, generic_name: null, manufacturer_id: null, packer_id: null, importer_id: null, material: null, care: null, fit: null, metal: null, purity: null, making_charge_type: null, making_charge_value: null, pricing_mode: 'fixed' },
+    catalogue_variants: { colour: '', colour_hex: null, sku: null, stock: 0, price_override: null, is_active: true, sort_order: 0, is_demo: false, gross_weight_g: null, net_metal_weight_g: null },
     catalogue_product_media: { storage_path: null, alt_text: '', sort_order: 0, is_primary: false },
+    catalogue_parties: { country: 'IN', phone: null, email: null, gstin: null },
+    catalogue_product_stones: { shape: null, total_carat: null, total_weight_g: null, clarity: null, colour_grade: null, certificate_lab: null, certificate_no: null, sort_order: 0 },
   };
   const derive = (table, row) => {
     if (table === 'catalogue_products') {
@@ -160,6 +204,13 @@ export function createCatalogueDb(rows = {}, { admin = true } = {}) {
     }
     if (table === 'catalogue_products' && /media:catalogue_product_media/.test(columns)) {
       out.media = clone(db.catalogue_product_media.filter((m) => m.product_id === row.id).sort((a, b) => a.sort_order - b.sort_order));
+    }
+    if (table === 'catalogue_products' && /stones:catalogue_product_stones/.test(columns)) {
+      out.stones = clone(db.catalogue_product_stones.filter((s) => s.product_id === row.id).sort((a, b) => a.sort_order - b.sort_order));
+    }
+    // to-one embeds of a company: "manufacturer:catalogue_parties!manufacturer_id (...)"
+    for (const [, alias, key] of String(columns).matchAll(/(\w+):catalogue_parties!(\w+)/g)) {
+      if (table === 'catalogue_products') out[alias] = clone(db.catalogue_parties.find((p) => p.id === row[key]) || null);
     }
     return out;
   }
@@ -210,11 +261,17 @@ export function createCatalogueDb(rows = {}, { admin = true } = {}) {
         }
         for (const p of db.catalogue_products) if (ids.has(p.category_id)) { p.category_id = null; p.updated_at = stamp(); }   // on delete set null
       }
+      if (q.table === 'catalogue_parties') {
+        const ids = new Set(targets.map((r) => r.id));
+        const key = PARTY_FKEYS.find((k) => db.catalogue_products.some((p) => ids.has(p[k])));   // on delete restrict
+        if (key) return { data: null, error: err('23503', `update or delete on table "catalogue_parties" violates foreign key constraint "catalogue_products_${key}_fkey" on table "catalogue_products"`) };
+      }
       db[q.table] = table.filter((row) => !targets.includes(row));
       if (q.table === 'catalogue_products') {
         const ids = new Set(targets.map((r) => r.id));
         db.catalogue_variants = db.catalogue_variants.filter((v) => !ids.has(v.product_id));          // on delete cascade
         db.catalogue_product_media = db.catalogue_product_media.filter((m) => !ids.has(m.product_id));  // on delete cascade
+        db.catalogue_product_stones = db.catalogue_product_stones.filter((s) => !ids.has(s.product_id));  // on delete cascade (0036)
       }
       if (q.table === 'catalogue_product_media') {
         for (const gone of targets) {

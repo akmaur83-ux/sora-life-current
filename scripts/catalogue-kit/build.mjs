@@ -37,8 +37,7 @@ export function fieldGuide() {
     '- **Fill-only by default**: a cell fills an empty field; a field that already has a value is kept unless you tick **Overwrite existing values**.',
     '- **New products arrive as drafts.** There is no is_active column for products: you publish each one in the editor once it has an image and an active size/colour.',
     '- A row with any problem is skipped whole, with its reason — never half-applied.',
-    '- **Import the products file first, then the variants file** (variants name their product by slug): Store catalogue → Fashion → Bulk import (CSV) → Products, then → Sizes & colours (variants).',
-    '- Columns marked **0036** are not imported yet: fill them in now. The import lists them as “ignored” (the file keeps them) until migration 0036 is applied and the importer learns them. The validator checks them today.',
+    '- **Import in this order: companies, products, variants, then stones** (products name their companies; variants and stones name their product by slug): Store catalogue → Fashion → Bulk import (CSV) → Companies, Products, Sizes & colours (variants), Stones (jewellery).',
     '- Every fashion and jewellery product needs **at least one size/colour row** to be published or bought. A product with “no variants” is one row with size **One size**.',
     '- Run the validator on a filled kit before importing: `node scripts/catalogue-kit/kit.mjs validate --kit fashion --products … --variants …`.',
     '',
@@ -50,7 +49,7 @@ export function fieldGuide() {
     lines.push(`## ${sheet}.csv`, '', SHEETS[sheet], '', `Used by: ${kits.map((k) => KITS[k].label).join(', ')}.`, '');
     for (const c of cols) {
       const example = Object.entries(c.example).filter(([, v]) => v !== '').map(([k, v]) => `\`${v}\`${Object.keys(c.example).length > 1 ? ` (${KITS[k].label.toLowerCase()})` : ''}`).join(' · ');
-      lines.push(`### \`${c.key}\`${c.importable ? '' : ' — 0036, not imported yet'}`);
+      lines.push(`### \`${c.key}\``);
       lines.push(`- **For:** ${c.purpose}`);
       lines.push(`- **Kits:** ${c.kits.map((k) => KITS[k].label).join(', ')} · **${REQUIRED[c.required]}**`);
       lines.push(`- **Format:** ${c.format}`);

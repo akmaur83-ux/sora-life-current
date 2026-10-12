@@ -5,7 +5,8 @@
 //   node scripts/catalogue-kit/kit.mjs build [--check]
 //   node scripts/catalogue-kit/kit.mjs validate --kit fashion|jewellery --products p.csv [--variants v.csv]
 //        [--stones s.csv] [--companies c.csv] [--categories paths.txt | --live-categories]
-//        [--existing-products export.csv] [--existing-variants export.csv] [--images folder] [--report out.md]
+//        [--existing-products export.csv] [--existing-variants export.csv] [--existing-companies export.csv]
+//        [--images folder] [--report out.md]
 //   node scripts/catalogue-kit/kit.mjs map --kit fashion|jewellery --supplier <name> --in <file.csv|.xlsx>
 //        [--sheet <name>] [--categories paths.txt | --live-categories]
 //   node scripts/catalogue-kit/kit.mjs convert --supplier <name> --in <file.csv|.xlsx> [--sheet <name>]
@@ -19,7 +20,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join, resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { templates, fieldGuide } from './build.mjs';
-import { validateKit, formatReport, readCategoriesFile, fetchLiveCategories, publicSupabaseConfig, existingFromExports } from './validate.mjs';
+import { validateKit, formatReport, readCategoriesFile, fetchLiveCategories, publicSupabaseConfig, existingFromExports, existingCompaniesFromExport } from './validate.mjs';
 import { proposeMapping, convertSupplier, reportMarkdown, openDecisions } from './map.mjs';
 import { readSheetFile, toCsv } from './sheets.mjs';
 import { columnsFor, KITS, sheetsFor } from './spec.mjs';
@@ -75,7 +76,7 @@ async function main() {
     const existing = existingFromExports(readText(opts['existing-products']), readText(opts['existing-variants']), categories || []);
     const result = validateKit({
       kit, products: readText(opts.products), variants: readText(opts.variants), stones: readText(opts.stones), companies: readText(opts.companies),
-      categories, existing, imagesDir: opts.images ? resolve(opts.images) : null,
+      categories, existing, existingCompanies: existingCompaniesFromExport(readText(opts['existing-companies'])), imagesDir: opts.images ? resolve(opts.images) : null,
     });
     process.stdout.write(formatReport(result, { kit }));
     if (opts.report) { writeFileSync(resolve(opts.report), formatReport(result, { kit, markdown: true })); console.log(`Report written to ${opts.report}`); }

@@ -1,20 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { money } from '../../lib/format.js';
-import { CATALOGUE_STORES, catalogueSlug, categoryOptions, catalogueProductHref, catalogueFailureView, versionAfterOwnWrite, gstNote, GROCERY_NOT_SOLD, GROCERY_VARIANTS_UNREAD, sortByFileName, planBulkImages } from '../../lib/storeCatalogueAdmin.js';
-import { listStoreCategories, listStoreProducts, getStoreProduct, saveStoreProduct, saveStoreCategory, saveStoreVariant, uploadStoreImage, saveStoreMedia, removeStoreMedia, addStoreImages, reorderStoreMedia, setStoreMediaPrimary, saveStoreMediaAlt, applyCatalogueImport, deleteStoreVariant, previewStoreDemoDelete, deleteStoreDemoRows, addStoreImagesByName } from '../../lib/storeCatalogueAdminApi.js';
-import { planProductImport, planVariantImport, productsToCsv, variantsToCsv, describeDiff } from '../../lib/storeCatalogueCsv.js';
+import { CATALOGUE_STORES, catalogueSlug, categoryOptions, catalogueProductHref, catalogueFailureView, versionAfterOwnWrite, gstNote, GROCERY_NOT_SOLD, GROCERY_VARIANTS_UNREAD, sortByFileName, planBulkImages,
+  METALS, METAL_LABELS, PURITY, FITS, STONE_ORIGINS, STONE_ORIGIN_LABELS, MAKING_TYPES, MAKING_LABELS, RATE_LINKED_NOT_LIVE, isJewelleryCategory, declarationWarnings } from '../../lib/storeCatalogueAdmin.js';
+import { listStoreCategories, listStoreProducts, getStoreProduct, saveStoreProduct, saveStoreCategory, saveStoreVariant, uploadStoreImage, saveStoreMedia, removeStoreMedia, addStoreImages, reorderStoreMedia, setStoreMediaPrimary, saveStoreMediaAlt, applyCatalogueImport, deleteStoreVariant, previewStoreDemoDelete, deleteStoreDemoRows, addStoreImagesByName,
+  listStoreParties, saveStoreParty, deleteStoreParty, saveStoreStone, deleteStoreStone } from '../../lib/storeCatalogueAdminApi.js';
+import { planProductImport, planVariantImport, planStoneImport, planCompanyImport, productsToCsv, variantsToCsv, stonesToCsv, companiesToCsv, describeDiff } from '../../lib/storeCatalogueCsv.js';
 import { productClaimWarnings, CLAIM_KINDS } from '../../lib/claimWarnings.js';
 
-const EMPTY_PRODUCT = { name: '', slug: '', brand: '', description: '', category_id: '', mrp: '', sale_price: '', sku: '', net_content: '', hsn_code: '', gst_rate: '', stock: 0, sort_order: 0, is_active: false, is_new: false, is_bestseller: false };
+const EMPTY_PRODUCT = { name: '', slug: '', brand: '', description: '', category_id: '', mrp: '', sale_price: '', sku: '', net_content: '', hsn_code: '', gst_rate: '', stock: 0, sort_order: 0, is_active: false, is_new: false, is_bestseller: false,
+  country_of_origin: '', generic_name: '', manufacturer_id: '', packer_id: '', importer_id: '', material: '', care: '', fit: '', metal: '', purity: '', making_charge_type: '', making_charge_value: '', pricing_mode: 'fixed' };
 const EMPTY_CATEGORY = { name: '', slug: '', parent_id: '', tagline: '', image_url: '', sort_order: 0, is_active: true };
-const EMPTY_VARIANT = { size: '', colour: '', colour_hex: '', sku: '', stock: 0, price_override: '', is_active: true, sort_order: 0 };
+const EMPTY_VARIANT = { size: '', colour: '', colour_hex: '', sku: '', stock: 0, price_override: '', is_active: true, sort_order: 0, gross_weight_g: '', net_metal_weight_g: '' };
+const EMPTY_STONE = { stone: '', origin: '', shape: '', stone_count: 1, total_carat: '', total_weight_g: '', clarity: '', colour_grade: '', certificate_lab: '', certificate_no: '', sort_order: 0 };
+const EMPTY_COMPANY = { name: '', address: '', country: 'IN', phone: '', email: '', gstin: '' };
 
 // The fields each form renders. A save error for one of these is shown beside
 // it; anything else goes in the form's banner (catalogueFailureView).
-const PRODUCT_FIELDS = (store) => ['name', 'slug', 'category_id', 'brand', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', ...(store === 'fashion' ? [] : ['stock']), 'sort_order', 'description'];
+const DECLARATION_FIELDS = ['country_of_origin', 'generic_name', 'manufacturer_id', 'packer_id', 'importer_id'];
+const PRODUCT_FIELDS = (store, jewellery = false) => ['name', 'slug', 'category_id', 'brand', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', ...(store === 'fashion' ? [] : ['stock']), 'sort_order', 'description',
+  ...DECLARATION_FIELDS, ...(store !== 'fashion' ? [] : jewellery ? ['metal', 'purity', 'making_charge_type', 'making_charge_value', 'pricing_mode'] : ['material', 'care', 'fit'])];
 const CATEGORY_FIELDS = ['name', 'slug', 'parent_id', 'sort_order', 'tagline', 'image_url'];
-const VARIANT_FIELDS = ['size', 'colour', 'colour_hex', 'sku', 'stock', 'price_override', 'sort_order'];
+const VARIANT_FIELDS = ['size', 'colour', 'colour_hex', 'sku', 'stock', 'price_override', 'sort_order', 'gross_weight_g', 'net_metal_weight_g'];
+const STONE_FIELDS = ['stone', 'origin', 'shape', 'stone_count', 'total_carat', 'total_weight_g', 'clarity', 'colour_grade', 'certificate_lab', 'certificate_no', 'sort_order'];
+const COMPANY_FIELDS = ['name', 'address', 'country', 'phone', 'email', 'gstin'];
 const IMAGE_FIELDS = ['public_url'];
 
 /** One form's save outcome: errors beside fields, a banner, and whether it was a stale write. */
@@ -35,6 +44,19 @@ function Field({ label, field, value, set, type = 'text', required = false, hint
   return <label className={`field sc-field${error ? ' sc-field--error' : ''}`}><span className="label">{label}</span>
     {multiline ? <textarea className="textarea" rows="4" aria-invalid={error ? true : undefined} aria-describedby={errorId} value={value[field] ?? ''} onChange={change} />
       : <input className="input" type={type} required={required} min={min} max={max} step={step} aria-invalid={error ? true : undefined} aria-describedby={errorId} value={value[field] ?? ''} onChange={change} />}
+    {error && <span className="hint err" id={errorId}>{error}</span>}
+    {hint && <span className="hint">{hint}</span>}
+  </label>;
+}
+/** A choice from a fixed list; '' is "not set" (empty: null leaves that option out). options: [[value, label], …]. */
+function Choice({ label, field, value, set, options, errors, form = 'sc', hint, disabled = false, empty = 'Not set' }) {
+  const error = errors?.fields?.[field];
+  const errorId = error ? `${form}-${field}-error` : undefined;
+  return <label className={`field sc-field${error ? ' sc-field--error' : ''}`}><span className="label">{label}</span>
+    <select className="select" disabled={disabled} aria-invalid={error ? true : undefined} aria-describedby={errorId} value={value[field] ?? ''} onChange={(e) => { errors?.clear(field); set({ ...value, [field]: e.target.value }); }}>
+      {empty !== null && <option value="">{empty}</option>}
+      {options.map(([v, text]) => <option key={v} value={v}>{text}</option>)}
+    </select>
     {error && <span className="hint err" id={errorId}>{error}</span>}
     {hint && <span className="hint">{hint}</span>}
   </label>;
@@ -117,18 +139,29 @@ function downloadText(name, text) {
 // CSV bulk import — the wellness pattern: export, edit, choose the file, read
 // the plan, apply. Nothing is written until Apply; storeCatalogueCsv.js plans,
 // applyCatalogueImport writes each row through the editor's own save.
-function CatalogueImport({ store, products, categories, onApplied }) {
+// What each import reads, and how its rows are matched. Stones are jewellery's,
+// so only the fashion store offers them; companies are one list for every store.
+const IMPORT_KINDS = {
+  products: { chip: 'Products', noun: 'products', heading: 'Product', match: ' Category is the path the export shows, e.g. clothing/shirts. Manufacturer, packer and importer are names from the Companies list.' },
+  variants: { chip: 'Sizes & colours (variants)', noun: 'variants', heading: 'Variant', match: ' Rows are matched on product_slug, size and colour.' },
+  stones: { chip: 'Stones (jewellery)', noun: 'stones', heading: 'Stone', match: ' Rows are matched on product_slug, stone and shape.', stores: ['fashion'] },
+  companies: { chip: 'Companies', noun: 'companies', heading: 'Company', match: ' Rows are matched on the company name. One list serves every store.' },
+};
+function CatalogueImport({ store, products, categories, parties, onApplied }) {
   const [kind, setKind] = useState('products');
   const [overwrite, setOverwrite] = useState(false), [create, setCreate] = useState(false);
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false), [progress, setProgress] = useState(''), [message, setMessage] = useState(''), [error, setError] = useState(''), [failures, setFailures] = useState([]);
   const plan = useMemo(() => {
     if (!file || file.kind !== kind) return null;
-    return kind === 'products'
-      ? planProductImport(file.text, { store, products, categories, overwrite, create })
-      : planVariantImport(file.text, { store, products, overwrite, create });
-  }, [file, kind, store, products, categories, overwrite, create]);
-  const noun = kind === 'products' ? 'products' : 'variants';
+    if (kind === 'products') return planProductImport(file.text, { store, products, categories, parties, overwrite, create });
+    if (kind === 'stones') return planStoneImport(file.text, { store, products, overwrite, create });
+    if (kind === 'companies') return planCompanyImport(file.text, { parties, overwrite, create });
+    return planVariantImport(file.text, { store, products, overwrite, create });
+  }, [file, kind, store, products, categories, parties, overwrite, create]);
+  const { noun, heading } = IMPORT_KINDS[kind];
+  const target = kind === 'companies' ? 'the Companies list' : `${CATALOGUE_STORES[store]} ${noun}`;
+  const exportCsv = () => (kind === 'products' ? productsToCsv(products, categories, parties) : kind === 'stones' ? stonesToCsv(products) : kind === 'companies' ? companiesToCsv(parties) : variantsToCsv(products));
   const creates = plan?.changes?.filter((c) => c.kind === 'create').length || 0;
   const updates = (plan?.changes?.length || 0) - creates;
   async function choose(e) {
@@ -140,7 +173,7 @@ function CatalogueImport({ store, products, categories, onApplied }) {
   }
   async function apply() {
     if (!plan?.changes?.length || busy) return;
-    if (!window.confirm(`Apply ${plan.changes.length} change${plan.changes.length === 1 ? '' : 's'} to ${CATALOGUE_STORES[store]} ${noun}?\n\n`
+    if (!window.confirm(`Apply ${plan.changes.length} change${plan.changes.length === 1 ? '' : 's'} to ${target}?\n\n`
       + `${updates} to update, ${creates} to create${kind === 'products' && creates ? ' (as drafts)' : ''}.\n`
       + `${overwrite ? 'EXISTING VALUES WILL BE OVERWRITTEN.' : 'Fill-only: existing values are kept.'}`)) return;
     setBusy(true); setMessage(''); setError(''); setFailures([]);
@@ -157,11 +190,12 @@ function CatalogueImport({ store, products, categories, onApplied }) {
   return <section className="surface sc-panel sc-import">
     <h2>Bulk import (CSV)</h2>
     <div className="adm-chipbar" aria-label="What to import">
-      {[['products', 'Products'], ['variants', 'Sizes & colours (variants)']].map(([id, label]) => <button key={id} type="button" className={`adm-chip${kind === id ? ' active' : ''}`} aria-pressed={kind === id} disabled={busy} onClick={() => { setKind(id); setFile(null); setMessage(''); setFailures([]); }}>{label}</button>)}
+      {Object.entries(IMPORT_KINDS).filter(([, k]) => !k.stores || k.stores.includes(store)).map(([id, k]) => <button key={id} type="button" className={`adm-chip${kind === id ? ' active' : ''}`} aria-pressed={kind === id} disabled={busy} onClick={() => { setKind(id); setFile(null); setMessage(''); setFailures([]); }}>{k.chip}</button>)}
     </div>
+    {kind === 'products' && <p className="hint">Import the companies first: a product row naming a manufacturer, packer or importer that is not in the Companies list is skipped.</p>}
     <ol className="sc-steps">
-      <li><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => downloadText(`sora-${store}-${noun}-${new Date().toISOString().slice(0, 10)}.csv`, kind === 'products' ? productsToCsv(products, categories) : variantsToCsv(products))}>Export current {noun} (CSV)</button></li>
-      <li>Edit it in a spreadsheet. <strong>A blank cell leaves that field alone</strong> — it never clears it.{kind === 'products' ? ' Category is the path the export shows, e.g. clothing/shirts.' : ' Rows are matched on product_slug, size and colour.'}</li>
+      <li><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => downloadText(`sora-${kind === 'companies' ? 'companies' : `${store}-${noun}`}-${new Date().toISOString().slice(0, 10)}.csv`, exportCsv())}>Export current {noun} (CSV)</button></li>
+      <li>Edit it in a spreadsheet. <strong>A blank cell leaves that field alone</strong> — it never clears it.{IMPORT_KINDS[kind].match}</li>
       <li><label className="sc-file"><span>Choose the edited file</span><input type="file" accept=".csv,text/csv" disabled={busy} onChange={choose} /></label> — you will see exactly what would change. Nothing is saved until you apply it.</li>
     </ol>
     <div className="sc-options">
@@ -173,10 +207,10 @@ function CatalogueImport({ store, products, categories, onApplied }) {
     {plan?.ok && <div className="sc-plan">
       <p className="sc-plan__summary"><strong>{file.name}</strong> — {updates} to update · {creates} to create · {plan.kept.length} kept by fill-only · {plan.skipped.length} skipped{plan.changes.some((c) => c.warnings?.length) ? ` · ${plan.changes.filter((c) => c.warnings?.length).length} with claim warnings` : ''}</p>
       {!!plan.ignored.length && <p className="hint">Columns not imported: {plan.ignored.join(', ')}.</p>}
-      {!!plan.changes.length && <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Line</th><th>{kind === 'products' ? 'Product' : 'Variant'}</th><th>What changes</th></tr></thead><tbody>
-        {plan.changes.map((c) => <tr key={c.line}><td>{c.line}</td><td>{c.kind === 'create' && <span className="badge sc-new">New</span>} <strong>{kind === 'products' ? c.name : c.label}</strong>{kind === 'products' && <span className="hint"> {c.slug}</span>}</td><td><ul className="sc-diffs">{c.diffs.map((d) => <li key={d.field} className={d.skipped ? 'is-kept' : ''}>{describeDiff(d, categories)}{d.skipped ? ' — kept (fill-only)' : ''}</li>)}</ul>{!!c.warnings?.length && <div className="sc-claims sc-claims--row"><strong>Check before applying</strong> (a warning, not a block):<ClaimList warnings={c.warnings} /></div>}</td></tr>)}
+      {!!plan.changes.length && <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Line</th><th>{heading}</th><th>What changes</th></tr></thead><tbody>
+        {plan.changes.map((c) => <tr key={c.line}><td>{c.line}</td><td>{c.kind === 'create' && <span className="badge sc-new">New</span>} <strong>{kind === 'products' || kind === 'companies' ? c.name : c.label}</strong>{kind === 'products' && <span className="hint"> {c.slug}</span>}</td><td><ul className="sc-diffs">{c.diffs.map((d) => <li key={d.field} className={d.skipped ? 'is-kept' : ''}>{describeDiff(d, categories, parties)}{d.skipped ? ' — kept (fill-only)' : ''}</li>)}</ul>{!!c.warnings?.length && <div className="sc-claims sc-claims--row"><strong>Check before applying</strong> (a warning, not a block):<ClaimList warnings={c.warnings} /></div>}</td></tr>)}
       </tbody></table></div>}
-      {!!plan.kept.length && <details className="sc-kept"><summary>{plan.kept.length} row{plan.kept.length === 1 ? '' : 's'} where every change was kept by fill-only</summary><ul className="sc-list">{plan.kept.map((c) => <li key={c.line}>Line {c.line} ({c.slug || c.label}): {c.diffs.map((d) => describeDiff(d, categories)).join('; ')}</li>)}</ul></details>}
+      {!!plan.kept.length && <details className="sc-kept"><summary>{plan.kept.length} row{plan.kept.length === 1 ? '' : 's'} where every change was kept by fill-only</summary><ul className="sc-list">{plan.kept.map((c) => <li key={c.line}>Line {c.line} ({c.slug || c.label || c.name}): {c.diffs.map((d) => describeDiff(d, categories, parties)).join('; ')}</li>)}</ul></details>}
       {!!plan.skipped.length && <div className="adm-banner err"><strong>{plan.skipped.length} row{plan.skipped.length === 1 ? '' : 's'} skipped — nothing from {plan.skipped.length === 1 ? 'it' : 'them'} will be written</strong><ul className="sc-list">{plan.skipped.map((s) => <li key={s.line}>Line {s.line}{s.key ? ` (${s.key})` : ''}: {s.reason}</li>)}</ul></div>}
       <div className="sc-actions"><button type="button" className="btn" disabled={busy || !plan.changes.length} onClick={apply}>{busy ? `Applying… ${progress}` : `Apply ${plan.changes.length} change${plan.changes.length === 1 ? '' : 's'}`}</button><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => setFile(null)}>Discard plan</button></div>
     </div>}
@@ -278,16 +312,67 @@ function DemoRows({ store, onClose, onDeleted }) {
   </section>;
 }
 
+// Companies (0036): the manufacturers, packers and importers a listing names,
+// typed once and chosen from a list. One list for every store; a company still
+// named on a product cannot be deleted (deleteStoreParty says which products).
+function CompanyEditor({ initial, onSaved, onCancel }) {
+  const [form, setForm] = useState(initial || EMPTY_COMPANY), [busy, setBusy] = useState(false);
+  const errors = useFormErrors(COMPANY_FIELDS);
+  async function save(e) {
+    e.preventDefault(); if (busy) return;
+    setBusy(true); errors.reset();
+    try { const row = await saveStoreParty(initial?.id || null, form, initial?.updated_at); onSaved(row); }
+    catch (err) { errors.capture(err); }
+    finally { setBusy(false); }
+  }
+  return <form className="surface sc-panel" onSubmit={save} noValidate><h2>{initial ? `Edit ${initial.name}` : 'Add company'}</h2>
+    <Messages error={errors.banner} stale={errors.stale} />
+    <fieldset disabled={busy}>
+      <div className="adm-grid2">
+        <Field form="co" errors={errors} label="Company name" field="name" value={form} set={setForm} required hint="As printed on the label." />
+        <Field form="co" errors={errors} label="Country" field="country" value={form} set={setForm} hint="2-letter code: IN for India." />
+        <Field form="co" errors={errors} label="Phone (optional)" field="phone" value={form} set={setForm} />
+        <Field form="co" errors={errors} label="Email (optional)" field="email" type="email" value={form} set={setForm} />
+        <Field form="co" errors={errors} label="GSTIN (optional)" field="gstin" value={form} set={setForm} hint="15 characters, e.g. 27ABCDE1234F1Z5." />
+      </div>
+      <Field form="co" errors={errors} label="Address" field="address" value={form} set={setForm} multiline hint="Street, city, state and PIN, as the label prints it. Customers see it on the product page." />
+      <div className="sc-actions"><button className="btn btn-sm" type="submit">{busy ? 'Saving…' : 'Save company'}</button><button className="btn btn-outline btn-sm" type="button" onClick={onCancel}>Cancel</button></div>
+    </fieldset>
+  </form>;
+}
+function CompaniesPanel({ store, parties, products, onChanged }) {
+  const [editing, setEditing] = useState(null), [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
+  const named = (id) => products.filter((p) => p.manufacturer_id === id || p.packer_id === id || p.importer_id === id).length;
+  async function remove(row) {
+    if (!window.confirm(`Delete ${row.name} from the Companies list? This cannot be undone.`)) return;
+    setBusy(true); setError(''); setMessage('');
+    try { await deleteStoreParty(row.id, row.updated_at); setMessage(`${row.name} deleted.`); onChanged(); }
+    catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  }
+  return <section className="sc-companies">
+    <p className="hint">The manufacturers, packers and importers your listings name. Each is typed once here and chosen from a list in the product editor. One list serves every store.</p>
+    <Messages error={error} message={message} />
+    <div className="sc-actions"><button className="btn btn-sm" disabled={!!editing || busy} onClick={() => { setEditing('new'); setMessage(''); }}>+ Add company</button></div>
+    {editing && <CompanyEditor key={editing === 'new' ? 'new' : editing.id} initial={editing === 'new' ? null : editing} onCancel={() => setEditing(null)} onSaved={(row) => { setEditing(null); setMessage(`${row.name} saved.`); onChanged(); }} />}
+    {!parties.length ? <p className="adm-empty">No companies yet. Add the manufacturer of your first listing.</p>
+      : <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Company</th><th>Country</th><th>GSTIN</th><th>Contact</th><th>{CATALOGUE_STORES[store]} products naming it</th><th></th></tr></thead><tbody>
+        {parties.map((row) => <tr key={row.id}><td><strong>{row.name}</strong><span className="hint"> {row.address}</span></td><td>{row.country}</td><td>{row.gstin || '—'}</td><td>{[row.phone, row.email].filter(Boolean).join(' · ') || '—'}</td><td>{named(row.id)}</td>
+          <td><div className="sc-actions sc-actions--row"><button type="button" className="btn btn-outline btn-sm" disabled={!!editing || busy} onClick={() => { setEditing(row); setMessage(''); setError(''); }}>Edit</button><button type="button" className="btn btn-ghost btn-sm sc-danger" disabled={!!editing || busy} onClick={() => remove(row)}>Delete</button></div></td></tr>)}
+      </tbody></table></div>}
+  </section>;
+}
+
 function CatalogueList({ store }) {
   const [params, setParams] = useSearchParams();
-  const [categories, setCategories] = useState([]), [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]), [products, setProducts] = useState([]), [parties, setParties] = useState([]);
   const [loading, setLoading] = useState(true), [loaded, setLoaded] = useState(false), [error, setError] = useState(''), [editing, setEditing] = useState(null);
   const [revision, setRevision] = useState(0);
-  const tab = ['categories', 'import', 'images'].includes(params.get('tab')) ? params.get('tab') : 'products';
+  const tab = ['categories', 'companies', 'import', 'images'].includes(params.get('tab')) ? params.get('tab') : 'products';
   const category = params.get('category') || '', search = params.get('q') || '';
   useEffect(() => {
     let current = true; setLoading(true); setError('');
-    Promise.all([listStoreCategories(store), listStoreProducts(store)]).then(([cats, rows]) => { if (current) { setCategories(cats); setProducts(rows); setLoaded(true); } })
+    Promise.all([listStoreCategories(store), listStoreProducts(store), listStoreParties()]).then(([cats, rows, companies]) => { if (current) { setCategories(cats); setProducts(rows); setParties(companies); setLoaded(true); } })
       .catch((err) => { if (current) setError(err.message); }).finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [store, revision]);
@@ -302,12 +387,13 @@ function CatalogueList({ store }) {
     <div className="adm-chipbar" aria-label="Catalogue section">
       <button className={`adm-chip${tab === 'products' ? ' active' : ''}`} onClick={() => update({ tab: '' })}>Products</button>
       <button className={`adm-chip${tab === 'categories' ? ' active' : ''}`} onClick={() => update({ tab: 'categories' })}>Categories &amp; subcategories</button>
+      <button className={`adm-chip${tab === 'companies' ? ' active' : ''}`} onClick={() => update({ tab: 'companies' })}>Companies</button>
       <button className={`adm-chip${tab === 'import' ? ' active' : ''}`} onClick={() => update({ tab: 'import' })}>Bulk import (CSV)</button>
       <button className={`adm-chip${tab === 'images' ? ' active' : ''}`} onClick={() => update({ tab: 'images' })}>Bulk images</button>
     </div>
     <Messages error={error} />
     {/* Only the first load replaces the page: a reload after an import keeps its result on screen. */}
-    {loading && !loaded ? <p role="status">Loading catalogue…</p> : error && !loaded ? <button className="btn btn-outline" onClick={() => setRevision((n) => n + 1)}>Retry loading</button> : tab === 'import' ? <CatalogueImport store={store} products={products} categories={categories} onApplied={() => setRevision((n) => n + 1)} /> : tab === 'images' ? <BulkImages store={store} products={products} onApplied={() => setRevision((n) => n + 1)} /> : tab === 'products' ? <>
+    {loading && !loaded ? <p role="status">Loading catalogue…</p> : error && !loaded ? <button className="btn btn-outline" onClick={() => setRevision((n) => n + 1)}>Retry loading</button> : tab === 'import' ? <CatalogueImport store={store} products={products} categories={categories} parties={parties} onApplied={() => setRevision((n) => n + 1)} /> : tab === 'companies' ? <CompaniesPanel store={store} parties={parties} products={products} onChanged={() => setRevision((n) => n + 1)} /> : tab === 'images' ? <BulkImages store={store} products={products} onApplied={() => setRevision((n) => n + 1)} /> : tab === 'products' ? <>
       <div className="sc-toolbar">
         <label className="sc-field"><span className="label">Search products</span><input className="input" value={search} onChange={(e) => update({ q: e.target.value })} placeholder="Name, brand or SKU" /></label>
         <label className="sc-field"><span className="label">Category / subcategory</span><select className="select" value={category} onChange={(e) => update({ category: e.target.value })}><option value="">All categories</option>{categoryOptions(categories).map((row) => <option key={row.id} value={row.id}>{row.label}</option>)}</select></label>
@@ -333,7 +419,8 @@ function CatalogueList({ store }) {
   </>;
 }
 
-function VariantsEditor({ store, product, onChanged }) {
+const weightText = (row) => (row.gross_weight_g == null && row.net_metal_weight_g == null ? '—' : `${row.gross_weight_g ?? '?'} g / ${row.net_metal_weight_g ?? '?'} g`);
+function VariantsEditor({ store, product, onChanged, jewellery = false }) {
   const [form, setForm] = useState(EMPTY_VARIANT), [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const errors = useFormErrors(VARIANT_FIELDS);
@@ -356,7 +443,7 @@ function VariantsEditor({ store, product, onChanged }) {
   return <section className="surface sc-panel"><h2>Sizes, colours &amp; stock</h2><p className="hint">{store === 'fashion' ? 'Fashion stock comes from these variants. For a single option use “One size” and its colour, or “Default”.' : 'Optional: add sizes or colours for this product. When active variants exist, their stock is used instead of product stock.'}</p>
     {store === 'grocery' && <p className="adm-banner sc-info sc-note" role="note">{GROCERY_VARIANTS_UNREAD}</p>}
     <Messages error={errors.banner} message={message} stale={errors.stale} />
-    {!!product.variants?.length && <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Size / option</th><th>Colour</th><th>Stock</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody>{product.variants.map((row) => <tr key={row.id}><td>{row.size}</td><td>{row.colour || '—'}</td><td>{row.stock}</td><td>{row.price_override == null ? 'Product price' : money(row.price_override)}</td><td>{row.is_active ? 'Active' : 'Hidden'}</td><td><div className="sc-actions sc-actions--row"><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => { setEditing(row.id); setForm(row); setMessage(''); errors.reset(); }}>Edit</button><button type="button" className="btn btn-ghost btn-sm sc-danger" disabled={busy} onClick={() => remove(row)}>Delete</button></div></td></tr>)}</tbody></table></div>}
+    {!!product.variants?.length && <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Size / option</th><th>Colour</th><th>Stock</th><th>Price</th>{jewellery && <th>Gross / net weight</th>}<th>Status</th><th></th></tr></thead><tbody>{product.variants.map((row) => <tr key={row.id}><td>{row.size}</td><td>{row.colour || '—'}</td><td>{row.stock}</td><td>{row.price_override == null ? 'Product price' : money(row.price_override)}</td>{jewellery && <td>{weightText(row)}</td>}<td>{row.is_active ? 'Active' : 'Hidden'}</td><td><div className="sc-actions sc-actions--row"><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => { setEditing(row.id); setForm(row); setMessage(''); errors.reset(); }}>Edit</button><button type="button" className="btn btn-ghost btn-sm sc-danger" disabled={busy} onClick={() => remove(row)}>Delete</button></div></td></tr>)}</tbody></table></div>}
     <form onSubmit={save} noValidate><fieldset disabled={busy}><h3>{editing ? 'Edit variant' : 'Add variant'}</h3><div className="adm-grid2">
       <Field form="var" errors={errors} label="Size / option" field="size" value={form} set={setForm} required />
       <Field form="var" errors={errors} label={`Colour${store === 'fashion' ? '' : ' (optional)'}`} field="colour" value={form} set={setForm} required={store === 'fashion'} />
@@ -365,7 +452,53 @@ function VariantsEditor({ store, product, onChanged }) {
       <Field form="var" errors={errors} label="Stock quantity" field="stock" type="number" min="0" step="1" value={form} set={setForm} required />
       <Field form="var" errors={errors} label="Price override ₹ (optional)" field="price_override" type="number" min="0.01" step="0.01" value={form} set={setForm} hint="Leave blank to use the product selling price." />
       <Field form="var" errors={errors} label="Display order" field="sort_order" type="number" step="1" value={form} set={setForm} />
+      {jewellery && <>
+        <Field form="var" errors={errors} label="Gross weight (g)" field="gross_weight_g" type="number" min="0.001" step="0.001" value={form} set={setForm} hint="The whole piece, stones included. Example: 4.250" />
+        <Field form="var" errors={errors} label="Net metal weight (g)" field="net_metal_weight_g" type="number" min="0.001" step="0.001" value={form} set={setForm} hint="The metal alone: gross weight minus the stones." />
+      </>}
     </div><Check label="Active variant" field="is_active" value={form} set={setForm} /><div className="sc-actions"><button className="btn btn-sm" type="submit">{busy ? 'Saving…' : 'Save variant'}</button>{editing && <button className="btn btn-outline btn-sm" type="button" onClick={() => { setEditing(null); setForm(EMPTY_VARIANT); errors.reset(); }}>Cancel edit</button>}</div></fieldset></form>
+  </section>;
+}
+
+// Stones (0036): one row per kind of stone in a jewellery piece. A plain metal
+// piece has none. Customers see them under Product information.
+const STONE_ORIGIN_OPTIONS = STONE_ORIGINS.map((o) => [o, STONE_ORIGIN_LABELS[o]]);
+function StonesEditor({ store, product, onChanged }) {
+  const [form, setForm] = useState(EMPTY_STONE), [editing, setEditing] = useState(null);
+  const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+  const errors = useFormErrors(STONE_FIELDS);
+  const stones = [...(product.stones || [])].sort((a, b) => a.sort_order - b.sort_order || String(a.created_at).localeCompare(String(b.created_at)));
+  const nameOf = (row) => `${row.stone}${row.shape ? ` (${row.shape})` : ''}`;
+  async function remove(row) {
+    if (!window.confirm(`Delete the ${nameOf(row)} row? This cannot be undone.`)) return;
+    setBusy(true); errors.reset(); setMessage('');
+    try { await deleteStoreStone(store, product.id, row.id, row.updated_at); if (editing === row.id) { setEditing(null); setForm(EMPTY_STONE); } await onChanged(); setMessage(`${nameOf(row)} deleted.`); }
+    catch (err) { errors.capture(err); }
+    finally { setBusy(false); }
+  }
+  async function save(e) {
+    e.preventDefault(); if (busy) return;
+    setBusy(true); errors.reset(); setMessage('');
+    try { await saveStoreStone(store, product.id, editing, form, editing ? form.updated_at : null); setForm(EMPTY_STONE); setEditing(null); await onChanged(); setMessage('Stone saved.'); }
+    catch (err) { errors.capture(err); }
+    finally { setBusy(false); }
+  }
+  return <section className="surface sc-panel"><h2>Stones</h2><p className="hint">One row per kind of stone: “diamond, round, 12 stones, 0.24 ct” is one row. Say whether each is natural, lab-grown or a simulant — customers see it. A plain metal piece has none.</p>
+    <Messages error={errors.banner} message={message} stale={errors.stale} />
+    {!!stones.length && <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Stone</th><th>Origin</th><th>Count</th><th>Carat / weight</th><th>Certificate</th><th></th></tr></thead><tbody>{stones.map((row) => <tr key={row.id}><td>{nameOf(row)}</td><td>{STONE_ORIGIN_LABELS[row.origin] || row.origin}</td><td>{row.stone_count}</td><td>{[row.total_carat != null && `${row.total_carat} ct`, row.total_weight_g != null && `${row.total_weight_g} g`].filter(Boolean).join(' · ') || '—'}</td><td>{row.certificate_lab ? `${row.certificate_lab} ${row.certificate_no}` : '—'}</td><td><div className="sc-actions sc-actions--row"><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => { setEditing(row.id); setForm(row); setMessage(''); errors.reset(); }}>Edit</button><button type="button" className="btn btn-ghost btn-sm sc-danger" disabled={busy} onClick={() => remove(row)}>Delete</button></div></td></tr>)}</tbody></table></div>}
+    <form onSubmit={save} noValidate><fieldset disabled={busy}><h3>{editing ? 'Edit stone' : 'Add stone'}</h3><div className="adm-grid2">
+      <Field form="stone" errors={errors} label="Stone" field="stone" value={form} set={setForm} required hint="Diamond, ruby, cubic zirconia, pearl…" />
+      <Choice form="stone" errors={errors} label="Origin" field="origin" value={form} set={setForm} options={STONE_ORIGIN_OPTIONS} empty="Choose: natural, lab-grown or simulant" />
+      <Field form="stone" errors={errors} label="Shape (optional)" field="shape" value={form} set={setForm} hint="Round, oval, pear…" />
+      <Field form="stone" errors={errors} label="Number of stones" field="stone_count" type="number" min="1" step="1" value={form} set={setForm} required />
+      <Field form="stone" errors={errors} label="Total carat (optional)" field="total_carat" type="number" min="0.001" step="0.001" value={form} set={setForm} hint="All the stones in this row together." />
+      <Field form="stone" errors={errors} label="Total weight g (optional)" field="total_weight_g" type="number" min="0.001" step="0.001" value={form} set={setForm} />
+      <Field form="stone" errors={errors} label="Clarity (optional)" field="clarity" value={form} set={setForm} hint="Example: VS2" />
+      <Field form="stone" errors={errors} label="Colour grade (optional)" field="colour_grade" value={form} set={setForm} hint="Example: G" />
+      <Field form="stone" errors={errors} label="Certificate lab (optional)" field="certificate_lab" value={form} set={setForm} hint="IGI, GIA, SGL… with its number below." />
+      <Field form="stone" errors={errors} label="Certificate number (optional)" field="certificate_no" value={form} set={setForm} />
+      <Field form="stone" errors={errors} label="Display order" field="sort_order" type="number" step="1" value={form} set={setForm} />
+    </div><div className="sc-actions"><button className="btn btn-sm" type="submit">{busy ? 'Saving…' : 'Save stone'}</button>{editing && <button className="btn btn-outline btn-sm" type="button" onClick={() => { setEditing(null); setForm(EMPTY_STONE); errors.reset(); }}>Cancel edit</button>}</div></fieldset></form>
   </section>;
 }
 
@@ -469,21 +602,35 @@ function ProductEditor({ store, productId }) {
   const isNew = productId === 'new';
   // Warnings from the last save (or from the draft this editor was just created as).
   const [claims, setClaims] = useState(() => location?.state?.claimWarnings || []);
-  const [categories, setCategories] = useState([]), [product, setProduct] = useState(null);
+  const [categories, setCategories] = useState([]), [product, setProduct] = useState(null), [parties, setParties] = useState([]);
   const [form, setForm] = useState({ ...EMPTY_PRODUCT, category_id: params.get('category') || '' });
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [loadError, setLoadError] = useState(''), [refreshError, setRefreshError] = useState('');
-  const errors = useFormErrors(PRODUCT_FIELDS(store));
+  // Jewellery (a fashion product under the Jewellery category) carries metal,
+  // purity, weights and stones instead of fabric and fit. The form follows the
+  // category chosen; the variant and stone panels follow the category saved.
+  const jewellery = store === 'fashion' && isJewelleryCategory(categories, form.category_id);
+  const savedJewellery = store === 'fashion' && !!product && isJewelleryCategory(categories, product.category_id);
+  const errors = useFormErrors(PRODUCT_FIELDS(store, jewellery));
   // The version of the row this form is editing, and that row's editable
   // values. Refs, not state: neither is rendered, and the token must be
   // current inside an in-flight save.
   const base = useRef(null);
   useEffect(() => {
     let current = true;
-    Promise.all([listStoreCategories(store), isNew ? Promise.resolve(null) : getStoreProduct(store, productId)]).then(([cats, row]) => {
-      if (!current) return; setCategories(cats); setProduct(row); if (row) { setForm(row); base.current = row; }
+    Promise.all([listStoreCategories(store), listStoreParties(), isNew ? Promise.resolve(null) : getStoreProduct(store, productId)]).then(([cats, companies, row]) => {
+      if (!current) return; setCategories(cats); setParties(companies); setProduct(row); if (row) { setForm(row); base.current = row; }
     }).catch((err) => { if (current) setLoadError(err.message); }).finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [store, productId, isNew]);
+  const [partiesBusy, setPartiesBusy] = useState(false);
+  async function reloadParties() {
+    setPartiesBusy(true);
+    try { setParties(await listStoreParties()); } catch (err) { setRefreshError(`The Companies list could not be reloaded: ${err.message}`); } finally { setPartiesBusy(false); }
+  }
+  const partyOptions = parties.map((p) => [p.id, `${p.name}${p.country && p.country !== 'IN' ? ` (${p.country})` : ''}`]);
+  // A purity belongs to its metal: changing the metal drops a grade the new metal does not have.
+  const setJewellery = (next) => setForm(next.metal !== form.metal && !PURITY[next.metal]?.[next.purity] ? { ...next, purity: '' } : next);
+  const warnings = product ? declarationWarnings(product, { store, jewellery: savedJewellery }) : [];
   // After this editor's own gallery or variant write. A gallery write moves the
   // product's updated_at (the images[] cache trigger), so the token is adopted
   // from the fresh row — but only when nothing this form saves has changed
@@ -526,7 +673,7 @@ function ProductEditor({ store, productId }) {
         <Field form="prod" errors={errors} label="MRP ₹" field="mrp" type="number" min="0.01" step="0.01" value={form} set={setForm} required />
         <Field form="prod" errors={errors} label="Selling price ₹ (optional)" field="sale_price" type="number" min="0.01" max={form.mrp || undefined} step="0.01" value={form} set={setForm} hint="Leave blank to sell at MRP. Discount is calculated automatically." />
         <Field form="prod" errors={errors} label="Product SKU (optional)" field="sku" value={form} set={setForm} />
-        <Field form="prod" errors={errors} label="Pack / dimensions (optional)" field="net_content" value={form} set={setForm} hint="Example: Set of 2 · 40 × 40 cm" />
+        <Field form="prod" errors={errors} label="Net quantity / pack (optional)" field="net_content" value={form} set={setForm} hint="Example: 1 piece · Set of 2 · 40 × 40 cm" />
         {store !== 'fashion' && <Field form="prod" errors={errors} label="Stock quantity (without variants)" field="stock" type="number" min="0" step="1" value={form} set={setForm} required />}
         <Field form="prod" errors={errors} label="Display order" field="sort_order" type="number" step="1" value={form} set={setForm} />
       </div>
@@ -538,10 +685,42 @@ function ProductEditor({ store, productId }) {
       <p className="adm-banner sc-info sc-note" role="note">{gstNote(store)}</p>
       {!categories.length && <p className="hint"><Link to={`/admin/store-catalogue/${store}?tab=categories`}>Create a category first</Link>.</p>}
       <Field form="prod" errors={errors} label="Description" field="description" value={form} set={setForm} multiline />
+      <h3>Label declarations</h3>
+      <p className="hint">What the product’s label carries. Customers see these under Product information on the product page.</p>
+      <div className="adm-grid2">
+        <Field form="prod" errors={errors} label="Country of origin" field="country_of_origin" value={form} set={setForm} hint="2-letter code: IN for India, CN for China, BD for Bangladesh." />
+        <Field form="prod" errors={errors} label="Generic name" field="generic_name" value={form} set={setForm} hint="What it is, in plain words: Kurta, Necklace, Bedsheet." />
+        <Choice form="prod" errors={errors} label="Manufacturer" field="manufacturer_id" value={form} set={setForm} options={partyOptions} empty="Not set" />
+        <Choice form="prod" errors={errors} label="Packer (if not the manufacturer)" field="packer_id" value={form} set={setForm} options={partyOptions} empty="Not set" />
+        <Choice form="prod" errors={errors} label="Importer (made outside India)" field="importer_id" value={form} set={setForm} options={partyOptions} empty="Not set" />
+      </div>
+      <p className="hint">Company not in the list? <a className="inline-link" href={`/admin/store-catalogue/${store}?tab=companies`} target="_blank" rel="noreferrer">Add it on the Companies tab ↗</a>, then <button type="button" className="btn btn-light btn-sm" disabled={partiesBusy} onClick={reloadParties}>{partiesBusy ? 'Reloading…' : 'reload the list'}</button></p>
+      {store === 'fashion' && !jewellery && <>
+        <h3>Fabric &amp; fit</h3>
+        <div className="adm-grid2">
+          <Field form="prod" errors={errors} label="Material" field="material" value={form} set={setForm} hint="With percentages that add up to 100: 60% cotton, 40% polyester." />
+          <Choice form="prod" errors={errors} label="Fit (optional)" field="fit" value={form} set={setForm} options={FITS.map((f) => [f, f])} />
+        </div>
+        <Field form="prod" errors={errors} label="Care instructions" field="care" value={form} set={setForm} multiline />
+      </>}
+      {jewellery && <>
+        <h3>Jewellery</h3>
+        <div className="adm-grid2">
+          <Choice form="prod" errors={errors} label="Metal" field="metal" value={form} set={setJewellery} options={METALS.map((m) => [m, METAL_LABELS[m]])} />
+          <Choice form="prod" errors={errors} label="Purity" field="purity" value={form} set={setForm} disabled={!PURITY[form.metal]} options={Object.entries(PURITY[form.metal] || {}).map(([k, v]) => [k, `${k} — ${v}`])}
+            empty={PURITY[form.metal] ? 'Not set' : 'Only gold, silver and platinum'} hint="One purity per listing: 18K and 22K are separate listings." />
+          <Choice form="prod" errors={errors} label="Making charges (optional)" field="making_charge_type" value={form} set={setForm} options={MAKING_TYPES.map((t) => [t, MAKING_LABELS[t]])} empty="None stated" />
+          <Field form="prod" errors={errors} label={form.making_charge_type === 'percent' ? 'Making charges %' : 'Making charges ₹'} field="making_charge_value" type="number" min="0" max={form.making_charge_type === 'percent' ? 100 : undefined} step="0.01" value={form} set={setForm} hint="Recorded with the listing; the price above is still what customers pay." />
+          <Choice form="prod" errors={errors} label="Pricing" field="pricing_mode" value={form} set={setForm} empty={null} options={[['fixed', 'Fixed — the price above'], ['rate_linked', 'Linked to the metal rate (draft only)']]}
+            hint={form.pricing_mode === 'rate_linked' ? RATE_LINKED_NOT_LIVE : 'Customers pay the selling price above.'} />
+        </div>
+        <p className="hint">Gross and net metal weights go on each size, below; stones have their own panel.</p>
+      </>}
+      {!!warnings.length && <div className="adm-banner sc-info" role="note"><strong>{product?.is_active ? 'Live without' : 'Before this goes live, add'}:</strong> {warnings.map((w) => w.label).join(', ')}. A reminder, not a block: saving and publishing still work.</div>}
       <div className="sc-actions"><Check label="New arrival" field="is_new" value={form} set={setForm} /><Check label="Bestseller" field="is_bestseller" value={form} set={setForm} />{!isNew && <Check label="Published / visible to customers" field="is_active" value={form} set={setForm} />}</div>
       <button className="btn" type="submit" disabled={!categories.length}>{busy ? 'Saving…' : isNew ? 'Create draft & continue' : 'Save product'}</button>
     </fieldset></form>
-    {!isNew && product && <><GalleryEditor store={store} product={product} onChanged={refresh} /><VariantsEditor store={store} product={product} onChanged={refresh} /></>}
+    {!isNew && product && <><GalleryEditor store={store} product={product} onChanged={refresh} /><VariantsEditor store={store} product={product} onChanged={refresh} jewellery={savedJewellery} />{savedJewellery && <StonesEditor store={store} product={product} onChanged={refresh} />}</>}
   </div>;
 }
 

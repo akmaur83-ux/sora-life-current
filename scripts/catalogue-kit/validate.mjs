@@ -1,33 +1,37 @@
 // ============================================================
 // The pre-import validator: every problem in a filled kit, at once.
 //
-// 1. The import's own rules — not a copy of them. The products and variants
-//    files are run through the admin importer's planner (planProductImport /
-//    planVariantImport, the code the Import tab runs), with "Create new" on,
-//    against the store's categories and, when given, the current catalogue
-//    export. Every row the import would skip is reported with the import's
-//    own reason.
-// 2. The rules the import does not enforce but that bite later: a product no
+// 1. The import's own rules — not a copy of them. Every file is run through the
+//    admin importer's planner (planCompanyImport, planProductImport,
+//    planVariantImport, planStoneImport: the code the Import tab runs), with
+//    "Create new" on, against the store's categories, the companies sheet and,
+//    when given, the current catalogue exports. Every row the import would skip
+//    is reported with the import's own reason.
+// 2. What the import cannot see in one pass: the import stops a row at its first
+//    failing cells, so a row's cross-field problems (selling price over the MRP,
+//    a purity that is not a grade of its metal, making charges without a value,
+//    net weight over gross) are listed now with the importer's own messages
+//    (declarationErrors, catalogueVariantPayload) rather than after a fix.
+// 3. The rules the import does not enforce but that bite later: a product no
 //    one can buy (no active size/colour), a size priced above its MRP, a
 //    jewellery category on a fashion row, missing images, an HSN that lost its
-//    leading 0, a number Excel turned into 1.23E+11, the declarations a live
-//    listing should carry (warned, never enforced — the owner's decision), and
-//    the 0036 columns' own rules (metal, purity, weights, stones, companies).
-// 3. The claim scan: the admin's claim list (claimWarnings.js) over every piece
+//    leading 0, a number Excel turned into 1.23E+11, and the declarations a live
+//    listing should carry (warned, never enforced — the owner's decision).
+// 4. The claim scan: the admin's claim list (claimWarnings.js) over every piece
 //    of customer-facing copy — no speed, sustainability or medical claims.
 //
 // Severities:
-//   error  — the import would skip the row, or the database would refuse it once 0036 is applied, or it breaks a rule (selling above MRP)
+//   error  — the import would skip the row, or the database would refuse it, or it breaks a rule (selling above MRP)
 //   claim  — copy that must change (speed, sustainability or medical)
 //   later  — imports, but causes trouble later (cannot be published, sold out everywhere, a declaration missing)
-//   info   — worth knowing (what is not imported yet, what was not checked)
+//   info   — worth knowing (what was not checked, what an import will do)
 // ============================================================
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, extname } from 'node:path';
-import { planProductImport, planVariantImport, PRODUCT_CSV_COLUMNS, VARIANT_CSV_COLUMNS, categoryPaths } from '../../src/lib/storeCatalogueCsv.js';
-import { planBulkImages } from '../../src/lib/storeCatalogueAdmin.js';
+import { planProductImport, planVariantImport, planStoneImport, planCompanyImport, categoryPaths } from '../../src/lib/storeCatalogueCsv.js';
+import { planBulkImages, declarationErrors, catalogueVariantPayload } from '../../src/lib/storeCatalogueAdmin.js';
 import { claimWarnings, CLAIM_KINDS } from '../../src/lib/claimWarnings.js';
-import { COLUMNS, KITS, PURITY, METALS, FITS, STONE_ORIGINS, columnsFor } from './spec.mjs';
+import { COLUMNS, KITS, PURITY, columnsFor } from './spec.mjs';
 import { readCsvBuffer, objects } from './sheets.mjs';
 import { materialTotal } from './values.mjs';
 
@@ -91,6 +95,12 @@ export function existingFromExports(productsText, variantsText, categories) {
   }
   return products;
 }
+/** The Companies list, from the admin's own export (Bulk import → Companies → Export). */
+export function existingCompaniesFromExport(text) {
+  if (!text) return [];
+  return objects(readCsvBuffer(Buffer.from(text, 'utf8'), 'existing companies')).rows
+    .filter((r) => t(r.name)).map((r) => ({ ...r, id: `existing:${t(r.name).toLowerCase()}`, name: t(r.name), updated_at: null }));
+}
 
 // ---------- helpers ----------
 const KNOWN = (sheet, kit) => new Set(columnsFor(sheet, kit).map((c) => c.key));
@@ -134,7 +144,7 @@ function imageSize(buf) {
  */
 export function validateKit({
   kit, products = null, variants = null, stones = null, companies = null,
-  categories = null, existing = [], imagesDir = null,
+  categories = null, existing = [], existingCompanies = [], imagesDir = null,
 }) {
   if (!KITS[kit]) throw new Error('Choose the fashion or the jewellery kit.');
   const problems = [];
@@ -172,18 +182,29 @@ export function validateKit({
   }
 
   // ---------- 1. the import's own rules ----------
-  const pendingNote = (sheet, ignored, importable) => {
-    const pending = ignored.filter((h) => KNOWN(sheet, kit).has(h) && !importable.includes(h));
-    if (pending.length) add('info', sheet, 1, '', `Not imported yet (migration 0036 and the importer update): ${pending.join(', ')}. The import lists them as "ignored"; keep them in the file.`);
-  };
+  // Companies first, as in the admin: the products name them. The list a product
+  // row is read against is the current one (the export) plus this companies sheet.
+  // Without either, the names cannot be checked: every name used counts as known.
+  const parties = [...existingCompanies];
+  const known = (name) => parties.some((p) => p.name.toLowerCase() === name.toLowerCase());
+  if (C) {
+    const plan = planCompanyImport(companies, { parties: existingCompanies, overwrite: false, create: true });
+    if (!plan.ok) add('error', 'companies', 0, '', plan.reason);
+    else for (const s of plan.skipped) add('error', 'companies', s.line, s.key, s.reason);
+    for (const r of C.rows) if (t(r.name) && !known(t(r.name))) parties.push({ id: `sheet:${t(r.name).toLowerCase()}`, name: t(r.name) });
+  }
+  const companiesChecked = !!C || existingCompanies.length > 0;
+  if (!companiesChecked) {
+    for (const r of P?.rows || []) for (const role of ['manufacturer', 'packer', 'importer']) if (t(r[role]) && !known(t(r[role]))) parties.push({ id: `unchecked:${t(r[role]).toLowerCase()}`, name: t(r[role]) });
+  }
+  const partyId = (name) => parties.find((p) => p.name.toLowerCase() === t(name).toLowerCase())?.id ?? null;
   const productLines = new Map();      // slug → line
   let plannedProducts = [];
   if (P) {
     for (const r of P.rows) if (t(r.slug)) productLines.set(t(r.slug), r.__line);
-    const plan = planProductImport(products, { store: KITS[kit].store, products: existing, categories: cats, overwrite: false, create: true });
+    const plan = planProductImport(products, { store: KITS[kit].store, products: existing, categories: cats, parties, overwrite: false, create: true });
     if (!plan.ok) add('error', 'products', 0, '', plan.reason);
     else {
-      pendingNote('products', plan.ignored, PRODUCT_CSV_COLUMNS);
       for (const s of plan.skipped) add('error', 'products', s.line, s.key, s.reason);
       for (const c of plan.kept) for (const d of c.diffs.filter((x) => x.skipped)) add('info', 'products', c.line, c.slug, `${d.field}: the product already has a value; the import keeps it unless "Overwrite" is ticked.`, d.field);
       const created = plan.changes.filter((c) => c.kind === 'create');
@@ -196,14 +217,13 @@ export function validateKit({
   // variant's own problems are listed now, not after its product is fixed.
   const existingSlugs = new Set(existing.map((p) => p.slug));
   const productsAfter = [
-    ...existing.map((p) => ({ ...p, variants: [...(p.variants || [])] })),
-    ...[...productLines.keys()].filter((slug) => !existingSlugs.has(slug)).map((slug) => ({ id: `new:${slug}`, slug, name: slug, variants: [], updated_at: null })),
+    ...existing.map((p) => ({ ...p, variants: [...(p.variants || [])], stones: [] })),
+    ...[...productLines.keys()].filter((slug) => !existingSlugs.has(slug)).map((slug) => ({ id: `new:${slug}`, slug, name: slug, variants: [], stones: [], updated_at: null })),
   ];
   if (V) {
     const plan = planVariantImport(variants, { store: KITS[kit].store, products: productsAfter, overwrite: false, create: true });
     if (!plan.ok) add('error', 'variants', 0, '', plan.reason);
     else {
-      pendingNote('variants', plan.ignored, VARIANT_CSV_COLUMNS);
       for (const s of plan.skipped) add('error', 'variants', s.line, s.key, s.reason);
       for (const r of objects(readCsvBuffer(Buffer.from(variants, 'utf8'))).rows) {
         const slug = t(r.product_slug);
@@ -215,10 +235,14 @@ export function validateKit({
       }
     }
   }
+  if (S) {
+    const plan = planStoneImport(stones, { store: KITS[kit].store, products: productsAfter, overwrite: false, create: true });
+    if (!plan.ok) add('error', 'stones', 0, '', plan.reason);
+    else for (const s of plan.skipped) add('error', 'stones', s.line, s.key, s.reason);
+  }
 
-  // ---------- 2. what the import does not check ----------
+  // ---------- 2 and 3. what the import does not check, or not in one pass ----------
   const productRows = P?.rows || [];
-  const companyNames = C ? new Set(C.rows.map((r) => t(r.name))) : null;
   for (const r of productRows) {
     const line = r.__line, slug = t(r.slug), key = slug || t(r.id);
     const where = (column, severity, message) => add(severity, 'products', line, key, message, column);
@@ -245,47 +269,30 @@ export function validateKit({
       if (kit === 'jewellery' && !underJewellery) where('category', 'error', `"${t(r.category)}" is not a jewellery category. Jewellery sits under jewellery/ (e.g. jewellery/rings).`);
       if (kit === 'fashion' && underJewellery) where('category', 'later', 'This is a jewellery category: use the jewellery kit, which carries metal, purity and weights.');
     }
-    // Declarations: warned, never enforced (owner, 2026-10-12).
-    const country = t(r.country_of_origin);
-    if (!country) where('country_of_origin', 'later', 'No country of origin: expected before this goes live.');
-    else if (!/^[A-Z]{2}$/.test(country)) where('country_of_origin', 'error', `"${country}" is not a 2-letter country code such as IN.`);
-    if (t(r.generic_name).length > 120) where('generic_name', 'error', 'The generic name is over 120 characters.');
-    for (const role of ['manufacturer', 'packer', 'importer']) {
-      const name = t(r[role]);
-      if (name && companyNames && !companyNames.has(name)) where(role, 'error', `${role[0].toUpperCase()}${role.slice(1)} "${name}" is not in the companies sheet.`);
+    // The 0036 fields, by the importer's own rules — every problem now, even
+    // while another cell stops the import at the row (declarationErrors).
+    const input = { ...r, manufacturer_id: undefined, packer_id: undefined, importer_id: undefined };
+    for (const [role, field] of [['manufacturer', 'manufacturer_id'], ['packer', 'packer_id'], ['importer', 'importer_id']]) input[field] = t(r[role]) ? partyId(r[role]) : null;
+    for (const [field, message] of Object.entries(declarationErrors(input, null))) {
+      if (!reported(message)) where(field.replace(/_id$/, ''), 'error', message);
     }
+    // Declarations: warned, never enforced (owner, 2026-10-12).
+    const country = t(r.country_of_origin).toUpperCase();
+    if (!country) where('country_of_origin', 'later', 'No country of origin: expected before this goes live.');
     if (!t(r.manufacturer)) where('manufacturer', 'later', 'No manufacturer: expected before this goes live.');
     if (/^[A-Z]{2}$/.test(country) && country !== 'IN' && !t(r.importer)) where('importer', 'later', `Made in ${country}: name the importer before this goes live.`);
-    if ((t(r.manufacturer) || t(r.packer) || t(r.importer)) && !companyNames) where('manufacturer', 'info', 'Company names were not checked: pass the companies sheet.');
+    if ((t(r.manufacturer) || t(r.packer) || t(r.importer)) && !companiesChecked) where('manufacturer', 'info', 'Company names were not checked: pass the companies sheet (and --existing-companies, the admin export).');
     if (kit === 'fashion') {
       const material = t(r.material);
       if (!material) where('material', 'later', 'No material composition: expected before this goes live.');
-      else {
-        const m = materialTotal(material);
-        if (!m) where('material', 'later', `"${material}" gives no percentages. Write it as "100% linen" or "60% cotton, 40% polyester".`);
-        else if (m.total !== 100) where('material', 'error', `Material percentages add up to ${m.total}%, not 100%.`);
-      }
-      if (material.length > 300) where('material', 'error', 'Material is over 300 characters.');
+      else if (!materialTotal(material)) where('material', 'later', `"${material}" gives no percentages. Write it as "100% linen" or "60% cotton, 40% polyester".`);
       if (!t(r.care)) where('care', 'later', 'No care instructions: expected before this goes live.');
-      if (t(r.care).length > 1000) where('care', 'error', 'Care is over 1000 characters.');
-      if (t(r.fit) && !FITS.includes(t(r.fit))) where('fit', 'error', `Fit "${t(r.fit)}" must be one of ${FITS.join(', ')}.`);
     }
     if (kit === 'jewellery') {
-      const metal = t(r.metal), purity = t(r.purity);
+      const metal = t(r.metal).toLowerCase();
       if (!metal) where('metal', 'later', 'No metal: expected before this goes live.');
-      else if (!METALS.includes(metal)) where('metal', 'error', `Metal "${metal}" must be one of ${METALS.join(', ')}.`);
-      if (metal && PURITY[metal]) {
-        if (!purity) where('purity', 'later', `No purity for ${metal}: expected before this goes live (e.g. ${Object.keys(PURITY[metal])[0]}).`);
-        else if (!PURITY[metal][Number(purity)]) where('purity', 'error', `Purity ${purity} is not a ${metal} grade. Use ${Object.entries(PURITY[metal]).map(([k, v]) => `${k} (${v})`).join(', ')}.`);
-      } else if (purity && METALS.includes(metal)) where('purity', 'error', `Purity is only for gold, silver and platinum, not ${metal}.`);
-      const mt = t(r.making_charge_type), mv = t(r.making_charge_value);
-      if (!!mt !== !!mv) where('making_charge_type', 'error', 'Making charges need both a type and a value.');
-      if (mt && !['per_gram', 'percent', 'flat'].includes(mt)) where('making_charge_type', 'error', `Making charge type "${mt}" must be per_gram, percent or flat.`);
-      if (mv && !(num(mv) >= 0)) where('making_charge_value', 'error', `Making charge "${mv}" is not a number, 0 or more.`);
-      if (mt === 'percent' && num(mv) > 100) where('making_charge_value', 'error', 'A making charge percentage cannot be over 100.');
-      const mode = t(r.pricing_mode) || 'fixed';
-      if (!['fixed', 'rate_linked'].includes(mode)) where('pricing_mode', 'error', `Pricing mode "${mode}" must be fixed or rate_linked.`);
-      if (mode === 'rate_linked') where('pricing_mode', 'later', 'Rate-linked: it can be saved as a draft but cannot go live until the metal-rate engine exists.');
+      else if (PURITY[metal] && !t(r.purity)) where('purity', 'later', `No purity for ${metal}: expected before this goes live (e.g. ${Object.keys(PURITY[metal])[0]}).`);
+      if (t(r.pricing_mode).toLowerCase() === 'rate_linked') where('pricing_mode', 'later', 'Rate-linked: it can be saved as a draft but cannot go live until the metal-rate engine exists.');
     }
     // 3. claims, over every piece of customer-facing copy on the row.
     for (const column of ['name', 'description', 'generic_name', 'material', 'care']) {
@@ -306,13 +313,10 @@ export function validateKit({
     if (override != null && mrp != null && override > mrp) where('price_override', 'error', `Price override ₹${override} is above the MRP ₹${mrp}: nothing may sell above its MRP.`);
     if (/^\d(?:\.\d+)?E\+\d+$/i.test(t(r.sku))) where('sku', 'error', `"${t(r.sku)}" is a number a spreadsheet shortened. Format the column as Text and type it again.`);
     if (!t(r.colour_hex)) where('colour_hex', 'later', 'No colour hex: the swatch shows a neutral beige.');
-    if (kit === 'jewellery') {
-      const gross = num(r.gross_weight_g), net = num(r.net_metal_weight_g);
-      if (t(r.gross_weight_g) && !(gross > 0)) where('gross_weight_g', 'error', `Gross weight "${t(r.gross_weight_g)}" must be a number of grams above 0.`);
-      if (t(r.net_metal_weight_g) && !(net > 0)) where('net_metal_weight_g', 'error', `Net metal weight "${t(r.net_metal_weight_g)}" must be a number of grams above 0.`);
-      if (gross > 0 && net > 0 && net > gross) where('net_metal_weight_g', 'error', `Net metal weight ${net} g cannot exceed the gross weight ${gross} g.`);
-      if (!t(r.gross_weight_g) || !t(r.net_metal_weight_g)) where('gross_weight_g', 'later', 'Gross and net metal weight are expected before this goes live.');
-    }
+    // The weights by the importer's own rules, even while another cell stops the row.
+    try { catalogueVariantPayload({ size: 'x', colour: 'x', stock: 0, gross_weight_g: r.gross_weight_g, net_metal_weight_g: r.net_metal_weight_g }, 'fashion', []); }
+    catch (error) { for (const [field, message] of Object.entries(error.fieldErrors || {})) if (!reported(message)) where(field, 'error', message); }
+    if (kit === 'jewellery' && (!t(r.gross_weight_g) || !t(r.net_metal_weight_g))) where('gross_weight_g', 'later', 'Gross and net metal weight are expected before this goes live.');
   }
   // A product nobody can buy.
   const variantRowsBySlug = new Map();
@@ -328,37 +332,8 @@ export function validateKit({
     else if (active.every((v) => Number(t(v.stock) || 0) === 0)) add('info', 'products', r.__line, slug, 'Every size is at stock 0: it will show as sold out.');
   }
 
-  // Stones.
-  if (S) {
-    const slugs = new Set([...productRows.map((r) => t(r.slug)), ...existing.map((p) => p.slug)]);
-    for (const r of S.rows) {
-      const line = r.__line, key = `${t(r.product_slug)} · ${t(r.stone)}`;
-      const where = (column, severity, message) => add(severity, 'stones', line, key, message, column);
-      if (!slugs.has(t(r.product_slug))) where('product_slug', 'error', `No product in the sheet has the slug "${t(r.product_slug)}".`);
-      if (!t(r.stone)) where('stone', 'error', 'Name the stone.');
-      if (!STONE_ORIGINS.includes(t(r.origin))) where('origin', 'error', `Origin "${t(r.origin)}" must be ${STONE_ORIGINS.join(', ')}: say whether the stone is natural, lab-grown or a simulant.`);
-      if (!/^\d+$/.test(t(r.stone_count)) || Number(t(r.stone_count)) < 1) where('stone_count', 'error', 'Stone count must be a whole number, 1 or more.');
-      for (const [column, label] of [['total_carat', 'Total carat'], ['total_weight_g', 'Total weight']]) if (t(r[column]) && !(num(r[column]) > 0)) where(column, 'error', `${label} "${t(r[column])}" must be a number above 0.`);
-      if (!!t(r.certificate_lab) !== !!t(r.certificate_no)) where('certificate_lab', 'error', 'A certificate needs both its lab and its number.');
-    }
-  }
-
-  // Companies.
-  if (C) {
-    const seen = new Map();
-    for (const r of C.rows) {
-      const line = r.__line, name = t(r.name);
-      const where = (column, severity, message) => add(severity, 'companies', line, name, message, column);
-      if (!name) where('name', 'error', 'A company needs a name.');
-      else if (seen.has(name)) where('name', 'error', `"${name}" is also on line ${seen.get(name)}: each company once.`);
-      else seen.set(name, line);
-      if (!t(r.address)) where('address', 'error', 'A company needs its address as printed on the label.');
-      if (t(r.address).length > 400) where('address', 'error', 'The address is over 400 characters.');
-      if (t(r.country) && !/^[A-Z]{2}$/.test(t(r.country))) where('country', 'error', `"${t(r.country)}" is not a 2-letter country code.`);
-      if (t(r.email) && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(t(r.email))) where('email', 'error', `"${t(r.email)}" is not an email address.`);
-      if (t(r.gstin) && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(t(r.gstin))) where('gstin', 'error', `"${t(r.gstin)}" is not a GSTIN (15 characters like 27ABCDE1234F1Z5).`);
-    }
-  }
+  // Stones and companies: the importer's planners above read every value of a
+  // row at once, so their reasons are already the whole list.
 
   // ---------- images ----------
   if (imagesDir) {

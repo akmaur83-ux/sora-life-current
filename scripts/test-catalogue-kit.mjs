@@ -20,8 +20,8 @@ import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { deflateRawSync, crc32 } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
-import { PRODUCT_CSV_COLUMNS, VARIANT_CSV_COLUMNS, planProductImport } from '../src/lib/storeCatalogueCsv.js';
-import { PRODUCT_FIELD_RULES, VARIANT_FIELD_RULES, catalogueVariantPayload, catalogueProductPayload } from '../src/lib/storeCatalogueAdmin.js';
+import { PRODUCT_CSV_COLUMNS, VARIANT_CSV_COLUMNS, STONE_CSV_COLUMNS, COMPANY_CSV_COLUMNS, planProductImport, planStoneImport, planCompanyImport } from '../src/lib/storeCatalogueCsv.js';
+import { PRODUCT_FIELD_RULES, VARIANT_FIELD_RULES, catalogueVariantPayload, catalogueProductPayload, catalogueStonePayload, cataloguePartyPayload, declarationErrors } from '../src/lib/storeCatalogueAdmin.js';
 import { COLUMNS, EXAMPLES, MSG, KITS, columnsFor } from './catalogue-kit/spec.mjs';
 import { templates, fieldGuide } from './catalogue-kit/build.mjs';
 import { validateKit, categoriesFromPaths, fetchLiveCategories, publicSupabaseConfig } from './catalogue-kit/validate.mjs';
@@ -40,6 +40,7 @@ const CATEGORIES = categoriesFromPaths(['bags-accessories,Bags & Accessories', '
 const lf = (s) => s.replace(/\r\n/g, '\n');
 const template = (name) => lf(readFileSync(join(KIT, 'templates', name), 'utf8'));
 const throwsWith = (fn) => { try { fn(); } catch (e) { return e.fieldErrors ? Object.values(e.fieldErrors).join(' ') : e.message; } return null; };
+const PARTIES = EXAMPLES.companies.map((c, i) => ({ id: `co-${i}`, ...c }));
 const tmp = mkdtempSync(join(process.env.TEMP || tmpdir(), 'catalogue-kit-'));
 
 console.log('\n— The spec, the templates and the guide —');
@@ -56,6 +57,10 @@ await test('"importable" is the importer\'s own column list, both ways: every co
   const kitVariants = new Set(COLUMNS.filter((c) => c.sheet === 'variants' && c.importable).map((c) => c.key));
   assert.deepEqual([...kitProducts].sort(), [...PRODUCT_CSV_COLUMNS].sort());
   assert.deepEqual([...kitVariants].sort(), [...VARIANT_CSV_COLUMNS].sort());
+  for (const [sheet, columns] of [['stones', STONE_CSV_COLUMNS], ['companies', COMPANY_CSV_COLUMNS]]) {
+    assert.deepEqual(COLUMNS.filter((c) => c.sheet === sheet && c.importable).map((c) => c.key).sort(), [...columns].sort(), sheet);
+  }
+  assert.ok(COLUMNS.every((c) => c.importable), 'since 0036 the import reads every column of the kit');
   for (const kit of Object.keys(KITS)) for (const c of columnsFor('products', kit)) assert.ok(c.purpose && c.format && c.blank, `${kit}.${c.key} has a purpose, a format and a blank rule`);
 });
 
@@ -69,6 +74,29 @@ await test('the guide quotes the importer\'s real messages (each triggered throu
     override: throwsWith(() => VARIANT_FIELD_RULES.price_override('0')),
     variantColour: throwsWith(() => catalogueVariantPayload({ size: 'M', colour: '', stock: 1 }, 'fashion', [])),
     categoryMissing: throwsWith(() => catalogueProductPayload({ name: 'X', mrp: 10, stock: 0, sort_order: 0 }, [])),
+    country: throwsWith(() => PRODUCT_FIELD_RULES.country_of_origin('India')), genericLong: throwsWith(() => PRODUCT_FIELD_RULES.generic_name('x'.repeat(121))),
+    materialLong: throwsWith(() => PRODUCT_FIELD_RULES.material('x'.repeat(301))), careLong: throwsWith(() => PRODUCT_FIELD_RULES.care('x'.repeat(1001))),
+    fit: throwsWith(() => PRODUCT_FIELD_RULES.fit('Baggy')), metal: throwsWith(() => PRODUCT_FIELD_RULES.metal('copper')),
+    purityNumber: throwsWith(() => PRODUCT_FIELD_RULES.purity('22K')), makingType: throwsWith(() => PRODUCT_FIELD_RULES.making_charge_type('per piece')),
+    makingValue: throwsWith(() => PRODUCT_FIELD_RULES.making_charge_value('-1')), pricing: throwsWith(() => PRODUCT_FIELD_RULES.pricing_mode('daily')),
+    makingPair: Object.values(declarationErrors({ making_charge_type: 'flat' })).join(' '),
+    makingPercent: Object.values(declarationErrors({ making_charge_type: 'percent', making_charge_value: 120 })).join(' '),
+    purityMetal: Object.values(declarationErrors({ metal: 'brass', purity: 925 })).join(' ').replace('brass.', '…'),
+    rateLinked: Object.values(declarationErrors({ pricing_mode: 'rate_linked', is_active: true })).join(' '),
+    gross: throwsWith(() => VARIANT_FIELD_RULES.gross_weight_g('0')), net: throwsWith(() => VARIANT_FIELD_RULES.net_metal_weight_g('-2')),
+    stoneLong: throwsWith(() => catalogueStonePayload({ stone: 'x'.repeat(61), origin: 'natural', stone_count: 1 })),
+    stoneOrigin: throwsWith(() => catalogueStonePayload({ stone: 'Ruby', origin: 'mined', stone_count: 1 })),
+    stoneCount: throwsWith(() => catalogueStonePayload({ stone: 'Ruby', origin: 'natural', stone_count: 0 })),
+    carat: throwsWith(() => catalogueStonePayload({ stone: 'Ruby', origin: 'natural', stone_count: 1, total_carat: '0' })),
+    stoneWeight: throwsWith(() => catalogueStonePayload({ stone: 'Ruby', origin: 'natural', stone_count: 1, total_weight_g: '0' })),
+    certificate: throwsWith(() => catalogueStonePayload({ stone: 'Ruby', origin: 'natural', stone_count: 1, certificate_lab: 'IGI' })),
+    companyAddress: throwsWith(() => cataloguePartyPayload({ name: 'X' })), companyCountry: throwsWith(() => cataloguePartyPayload({ name: 'X', address: 'Y', country: 'India' })),
+    phone: throwsWith(() => cataloguePartyPayload({ name: 'X', address: 'Y', phone: '9'.repeat(41) })), email: throwsWith(() => cataloguePartyPayload({ name: 'X', address: 'Y', email: 'nope' })),
+    gstin: throwsWith(() => cataloguePartyPayload({ name: 'X', address: 'Y', gstin: '27ABC' })),
+    noCompany: planProductImport('slug,manufacturer\nx,Nobody\n', { store: 'fashion', products: [], categories: CATEGORIES, parties: [], create: true }).skipped[0].reason.replace('Nobody', '…'),
+    stoneRow: planStoneImport('product_slug,stone\nring,\n', { store: 'fashion', products: [{ id: 'r', slug: 'ring', stones: [] }], create: true }).skipped[0].reason,
+    stoneNew: planStoneImport('product_slug,stone\nring,Ruby\n', { store: 'fashion', products: [{ id: 'r', slug: 'ring', stones: [] }] }).skipped[0].reason,
+    companyRow: planCompanyImport('name,address\n,Y\n', { create: true }).skipped[0].reason,
   };
   for (const [key, message] of Object.entries(triggered)) assert.ok(message && message.includes(MSG[key]), `MSG.${key} — the importer says "${message}"`);
   const saleOver = throwsWith(() => catalogueProductPayload({ name: 'X', category_id: CATEGORIES[0].id, mrp: 100, sale_price: 200, stock: 0, sort_order: 0 }, CATEGORIES));
@@ -99,7 +127,7 @@ await test('three example products per kit: one "One size" product, one with siz
     assert.ok(result.problems.some((p) => /Every size is at stock 0/.test(p.message)), `${kit}: the out-of-stock example is noticed`);
     // Without the example prefix, the import would create all three as drafts.
     const renamed = template(`${kit}-products.csv`).replace(/example-/g, 'real-');
-    const plan = planProductImport(renamed, { store: 'fashion', products: [], categories: CATEGORIES, create: true });
+    const plan = planProductImport(renamed, { store: 'fashion', products: [], categories: CATEGORIES, parties: PARTIES, create: true });
     assert.equal(plan.changes.filter((c) => c.kind === 'create').length, 3, `${kit}: ${JSON.stringify(plan.skipped)}`);
     assert.ok(plan.changes.every((c) => c.input.is_active === false), 'created as drafts');
   }
@@ -123,7 +151,7 @@ const has = (result, sheet, line, re, severity = 'error') => result.problems.som
 
 await test('every row the admin import would skip is reported with the import\'s own reason', () => {
   const result = bad();
-  const plan = planProductImport(BAD_PRODUCTS, { store: 'fashion', products: [], categories: CATEGORIES, create: true });
+  const plan = planProductImport(BAD_PRODUCTS, { store: 'fashion', products: [], categories: CATEGORIES, parties: PARTIES, create: true });
   assert.ok(plan.skipped.length >= 3);
   for (const s of plan.skipped) assert.ok(has(result, 'products', s.line, new RegExp(s.reason.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))), `line ${s.line}: ${s.reason}`);
   assert.equal(result.ok, false);
@@ -139,15 +167,17 @@ await test('one pass lists everything: a row\'s cell errors AND its selling pric
   assert.ok(has(result, 'variants', 3, /No Fashion product has the slug "ghost-product"/));
 });
 
-await test('what the import does not check: a size above its MRP, a spreadsheet-shortened SKU, an HSN that lost a 0, a typo\'d column, an unknown company, material not adding to 100, a fit off the list, HTML in copy, a product nobody can buy', () => {
+await test('what the import does not check: a size above its MRP, a spreadsheet-shortened SKU, an HSN that lost a 0, a typo\'d column, HTML in copy, a product nobody can buy — and the 0036 cells it reads now (an unknown company, material not adding to 100, a fit off the list)', () => {
   const result = bad();
   assert.ok(has(result, 'variants', 2, /Price override ₹1499 is above the MRP ₹999/));
   assert.ok(has(result, 'products', 3, /"1\.23E\+11" is a number a spreadsheet shortened/));
   assert.ok(has(result, 'products', 2, /dropped a leading 0/));
   assert.ok(has(result, 'products', 1, /Column "sale price" .* did you mean "sale_price"\?/));
-  assert.ok(has(result, 'products', 2, /Manufacturer "Nobody Ltd" is not in the companies sheet/));
+  assert.ok(has(result, 'products', 2, /Manufacturer “Nobody Ltd” is not in the Companies list/));
   assert.ok(has(result, 'products', 2, /add up to 60%, not 100%/));
-  assert.ok(has(result, 'products', 2, /Fit "Baggy" must be one of/));
+  assert.ok(has(result, 'products', 2, /Fit must be one of Regular, Slim/));
+  assert.ok(has(result, 'products', 2, /Country of origin must be a 2-letter code such as IN\./));
+  assert.equal(result.problems.filter((p) => p.line === 2 && p.sheet === 'products' && /Fit must be one of/.test(p.message)).length, 1, 'said once: by the import, not again by the validator');
   assert.ok(has(result, 'products', 3, /contains HTML tags/, 'later'));
   assert.ok(has(result, 'products', 5, /without one cannot be published or bought/, 'later'));
   assert.ok(has(result, 'products', 3, /Made in CN: name the importer/, 'later'));
@@ -176,14 +206,14 @@ ring-c,One size,Silver,#C0C0C0,1,2,1.5
 ring-a,diamond,mined,0,IGI,
 `;
   const r = validateKit({ kit: 'jewellery', products, variants, stones, companies: template('companies.csv'), categories: CATEGORIES });
-  assert.ok(has(r, 'products', 2, /Purity 925 is not a gold grade/));
-  assert.ok(has(r, 'products', 3, /Purity is only for gold, silver and platinum, not gold_plated/));
+  assert.ok(has(r, 'products', 2, /925 is not a gold grade\. Use 375 \(9K\)/));
+  assert.ok(has(r, 'products', 3, /Purity is only for gold, silver and platinum, not gold plated/));
   assert.ok(has(r, 'products', 3, /Making charges need both a type and a value/));
   assert.ok(has(r, 'products', 3, /Rate-linked: .*cannot go live/, 'later'));
   assert.ok(has(r, 'products', 4, /is not a jewellery category/));
-  assert.ok(has(r, 'variants', 2, /Net metal weight 3\.5 g cannot exceed the gross weight 3 g/));
+  assert.ok(has(r, 'variants', 2, /Net metal weight 3\.5 g cannot be more than the gross weight 3 g/));
   assert.ok(has(r, 'variants', 3, /Gross and net metal weight are expected/, 'later'));
-  assert.ok(has(r, 'stones', 2, /Origin "mined" must be natural, lab_grown, simulant/));
+  assert.ok(has(r, 'stones', 2, /Origin must be natural, lab_grown or simulant: say which/));
   assert.ok(has(r, 'stones', 2, /Stone count must be a whole number, 1 or more/));
   assert.ok(has(r, 'stones', 2, /needs both its lab and its number/));
 });

@@ -10,8 +10,7 @@ Each kit has a products sheet and a variants sheet; jewellery adds a stones shee
 - **Fill-only by default**: a cell fills an empty field; a field that already has a value is kept unless you tick **Overwrite existing values**.
 - **New products arrive as drafts.** There is no is_active column for products: you publish each one in the editor once it has an image and an active size/colour.
 - A row with any problem is skipped whole, with its reason — never half-applied.
-- **Import the products file first, then the variants file** (variants name their product by slug): Store catalogue → Fashion → Bulk import (CSV) → Products, then → Sizes & colours (variants).
-- Columns marked **0036** are not imported yet: fill them in now. The import lists them as “ignored” (the file keeps them) until migration 0036 is applied and the importer learns them. The validator checks them today.
+- **Import in this order: companies, products, variants, then stones** (products name their companies; variants and stones name their product by slug): Store catalogue → Fashion → Bulk import (CSV) → Companies, Products, Sizes & colours (variants), Stones (jewellery).
 - Every fashion and jewellery product needs **at least one size/colour row** to be published or bought. A product with “no variants” is one row with size **One size**.
 - Run the validator on a filled kit before importing: `node scripts/catalogue-kit/kit.mjs validate --kit fashion --products … --variants …`.
 
@@ -165,123 +164,128 @@ Used by: Fashion, Jewellery.
 - **Refused, and the message you see:**
   - Not a whole number → “Display order must be a whole number.”
 
-### `country_of_origin` — 0036, not imported yet
-- **For:** Country of origin — a declaration every listing carries.
+### `country_of_origin`
+- **For:** Country of origin — a declaration every listing carries. Shown under Product information on the product page.
 - **Kits:** Fashion, Jewellery · **Expected before it goes live (the validator warns; nothing blocks)**
-- **Format:** The 2-letter country code: IN, CN, BD, LK, VN, TR, IT…
+- **Format:** The 2-letter country code: IN, CN, BD, LK, VN, TR, IT… Lower case is read as upper case.
 - **Example:** `IN` (fashion) · `IN` (jewellery)
-- **If blank:** Not recorded (the validator warns).
+- **If blank:** Not recorded (the validator and the editor warn).
 - **Refused, and the message you see:**
-  - Anything but two capital letters → “Country of origin must be a 2-letter code such as IN. (database: catalogue_products_country_chk)”
+  - Anything but two letters → “Country of origin must be a 2-letter code such as IN.”
 
-### `generic_name` — 0036, not imported yet
+### `generic_name`
 - **For:** The common name of the item, when the product name is a style name ("Meadow" is a shirt).
 - **Kits:** Fashion, Jewellery · **Optional**
 - **Format:** Plain text, up to 120 characters.
 - **Example:** `Shirt` (fashion) · `Ring` (jewellery)
 - **If blank:** The product name serves.
 - **Refused, and the message you see:**
-  - Over 120 characters → “Generic name: keep it under 120 characters. (database: catalogue_products_text_len_chk)”
+  - Over 120 characters → “Generic name: keep it under 120 characters.”
 
-### `manufacturer` — 0036, not imported yet
-- **For:** Manufactured by — name and address come from the companies sheet.
+### `manufacturer`
+- **For:** Manufactured by — the name and address printed on the product page come from the Companies list.
 - **Kits:** Fashion, Jewellery · **Expected before it goes live (the validator warns; nothing blocks)**
-- **Format:** The company’s name exactly as in companies.csv.
+- **Format:** The company’s name exactly as in the Companies list (companies.csv); capitals aside.
 - **Example:** `Example Textiles Pvt Ltd` (fashion) · `Example Jewellers LLP` (jewellery)
-- **If blank:** Not recorded (the validator warns).
+- **If blank:** Not recorded (the validator and the editor warn).
 - **Refused, and the message you see:**
-  - A name not in companies.csv → “Manufacturer "…" is not in the companies sheet.”
+  - A name not in the Companies list → “Manufacturer “…” is not in the Companies list — add it on the Companies tab (or import the companies file) first.”
 
-### `packer` — 0036, not imported yet
+### `packer`
 - **For:** Packed by, when a different company packs it.
 - **Kits:** Fashion, Jewellery · **Optional**
-- **Format:** A name from companies.csv.
+- **Format:** A name from the Companies list.
 - **Example:** _(leave blank)_
 - **If blank:** Not shown.
 - **Refused, and the message you see:**
-  - A name not in companies.csv → “Packer "…" is not in the companies sheet.”
+  - A name not in the Companies list → “Packer “…” is not in the Companies list — add it on the Companies tab (or import the companies file) first.”
 
-### `importer` — 0036, not imported yet
+### `importer`
 - **For:** Imported by — expected whenever the country of origin is not IN.
 - **Kits:** Fashion, Jewellery · **Expected before it goes live (the validator warns; nothing blocks)**
-- **Format:** A name from companies.csv.
+- **Format:** A name from the Companies list.
 - **Example:** _(leave blank)_
-- **If blank:** Not shown (the validator warns when the product is imported).
+- **If blank:** Not shown (the validator and the editor warn when the product is made outside India).
 - **Refused, and the message you see:**
-  - A name not in companies.csv → “Importer "…" is not in the companies sheet.”
+  - A name not in the Companies list → “Importer “…” is not in the Companies list — add it on the Companies tab (or import the companies file) first.”
 
-### `material` — 0036, not imported yet
+### `material`
 - **For:** Fabric composition.
 - **Kits:** Fashion · **Expected before it goes live (the validator warns; nothing blocks)**
 - **Format:** Percentages that add up to 100, comma-separated: "100% linen", "60% cotton, 40% polyester". Up to 300 characters.
 - **Example:** `100% linen`
-- **If blank:** Not recorded (the validator warns).
+- **If blank:** Not recorded (the validator and the editor warn).
 - **Refused, and the message you see:**
   - Percentages that do not add up to 100 → “Material percentages add up to …%, not 100%.”
-  - Over 300 characters → “(database: catalogue_products_text_len_chk)”
+  - Over 300 characters → “Material: keep it under 300 characters.”
 
-### `care` — 0036, not imported yet
+### `care`
 - **For:** Care instructions.
 - **Kits:** Fashion · **Expected before it goes live (the validator warns; nothing blocks)**
 - **Format:** Plain text, semicolons between instructions; up to 1000 characters.
 - **Example:** `Machine wash cold; do not bleach; dry in shade; warm iron`
-- **If blank:** Not recorded (the validator warns).
+- **If blank:** Not recorded (the validator and the editor warn).
 - **Refused, and the message you see:**
-  - Over 1000 characters → “(database: catalogue_products_text_len_chk)”
+  - Over 1000 characters → “Care instructions: keep it under 1000 characters.”
 
-### `fit` — 0036, not imported yet
+### `fit`
 - **For:** How it fits.
 - **Kits:** Fashion · **Optional**
-- **Format:** One of: Regular, Slim, Relaxed, Oversized, Straight, Skinny, Loose, Tailored.
+- **Format:** One of: Regular, Slim, Relaxed, Oversized, Straight, Skinny, Loose, Tailored (capitals aside).
 - **Example:** `Relaxed`
 - **If blank:** Not shown.
 - **Refused, and the message you see:**
   - A word outside the list → “Fit must be one of Regular, Slim, Relaxed, Oversized, Straight, Skinny, Loose, Tailored.”
 
-### `metal` — 0036, not imported yet
+### `metal`
 - **For:** The metal the piece is made of.
 - **Kits:** Jewellery · **Expected before it goes live (the validator warns; nothing blocks)**
 - **Format:** One of: gold, silver, platinum, gold_plated, silver_plated, brass, stainless_steel, other.
 - **Example:** `gold`
-- **If blank:** Not recorded (the validator warns).
+- **If blank:** Not recorded (the validator and the editor warn).
 - **Refused, and the message you see:**
-  - A value outside the list → “Metal must be one of gold, silver, platinum, gold_plated, silver_plated, brass, stainless_steel, other. (database: catalogue_products_metal_chk)”
+  - A value outside the list → “Metal must be one of gold, silver, platinum, gold_plated, silver_plated, brass, stainless_steel, other.”
 
-### `purity` — 0036, not imported yet
+### `purity`
 - **For:** Purity as fineness — one purity per listing (18K and 22K are separate listings).
 - **Kits:** Jewellery · **Expected before it goes live (the validator warns; nothing blocks)**
 - **Format:** Fineness in parts per thousand. Gold: 375 (9K), 585 (14K), 750 (18K), 833 (20K), 916 (22K), 958 (23K), 995 or 999 (24K). Silver: 925 (sterling), 999 and the other BIS grades. Platinum: 850, 900, 950. Only for gold, silver and platinum.
 - **Example:** `916`
-- **If blank:** Not recorded (the validator warns for gold, silver and platinum).
+- **If blank:** Not recorded (the validator and the editor warn for gold, silver and platinum).
 - **Refused, and the message you see:**
-  - Not a grade for the metal, or set on a plated/base metal → “Purity … is not a … grade. (database: catalogue_products_purity_chk)”
+  - Not a whole number from 1 to 999 → “Purity is the fineness, a whole number such as 916 (22K) or 925 (sterling).”
+  - Not a grade of the metal → “… is not a … grade. Use …”
+  - Set on a plated or base metal → “Purity is only for gold, silver and platinum, not …”
 
-### `making_charge_type` — 0036, not imported yet
-- **For:** How making charges are expressed, for the price breakup.
+### `making_charge_type`
+- **For:** How making charges are expressed, recorded with the listing. The selling price is still what customers pay.
 - **Kits:** Jewellery · **Optional**
 - **Format:** per_gram, percent or flat. Set together with making_charge_value.
 - **Example:** `per_gram`
 - **If blank:** No making charges recorded (leave both blank).
 - **Refused, and the message you see:**
-  - Only one of type and value → “Making charges need both a type and a value. (database: catalogue_products_making_chk)”
+  - A value outside the list → “Making charge type must be one of per_gram, percent, flat.”
+  - Only one of type and value → “Making charges need both a type and a value.”
 
-### `making_charge_value` — 0036, not imported yet
+### `making_charge_value`
 - **For:** Making charges: rupees per gram, a percentage, or a flat amount per piece.
 - **Kits:** Jewellery · **Optional**
 - **Format:** A number, 0 or more; a percent is at most 100.
 - **Example:** `450`
 - **If blank:** Leave blank with the type.
 - **Refused, and the message you see:**
-  - Negative, or a percent over 100 → “(database: catalogue_products_making_chk)”
+  - Negative or not a number → “Making charges must be a number, 0 or more.”
+  - A percent over 100 → “A making charge percentage cannot be over 100.”
 
-### `pricing_mode` — 0036, not imported yet
-- **For:** fixed: the price in this sheet. rate_linked: priced from the day’s metal rate — recorded only; such a product cannot go live until the rate engine exists.
+### `pricing_mode`
+- **For:** fixed: the price in this sheet. rate_linked: priced from the day’s metal rate — recorded only; such a product saves as a draft and cannot go live until the rate engine exists.
 - **Kits:** Jewellery · **Optional**
 - **Format:** fixed or rate_linked.
 - **Example:** `fixed`
 - **If blank:** fixed.
 - **Refused, and the message you see:**
-  - rate_linked on a product being published → “A rate-linked product cannot go live yet. (database: catalogue_products_rate_linked_live_chk)”
+  - Anything else → “Pricing must be one of fixed, rate_linked.”
+  - rate_linked on a product being published (in the editor) → “A rate-linked product cannot go live yet: its price needs the metal-rate engine. Keep it as a draft, or set the pricing to fixed.”
 
 ## variants.csv
 
@@ -373,23 +377,24 @@ Used by: Fashion, Jewellery.
 - **Refused, and the message you see:**
   - Not a whole number → “Display order must be a whole number.”
 
-### `gross_weight_g` — 0036, not imported yet
+### `gross_weight_g`
 - **For:** Gross weight of the piece in grams (metal + stones). A ring’s changes with its size.
 - **Kits:** Jewellery · **Expected before it goes live (the validator warns; nothing blocks)**
 - **Format:** Grams, up to 3 decimals: 3.250.
 - **Example:** `3.250`
-- **If blank:** Not recorded (the validator warns).
+- **If blank:** Not recorded (the validator and the editor warn).
 - **Refused, and the message you see:**
-  - Zero or negative → “(database: catalogue_variants_weights_chk)”
+  - Zero, negative or not a number → “Gross weight must be grams above 0, e.g. 3.250.”
 
-### `net_metal_weight_g` — 0036, not imported yet
+### `net_metal_weight_g`
 - **For:** Net weight of the metal alone in grams.
 - **Kits:** Jewellery · **Expected before it goes live (the validator warns; nothing blocks)**
 - **Format:** Grams, up to 3 decimals; at most the gross weight.
 - **Example:** `3.250`
-- **If blank:** Not recorded (the validator warns).
+- **If blank:** Not recorded (the validator and the editor warn).
 - **Refused, and the message you see:**
-  - More than the gross weight, zero or negative → “Net metal weight cannot exceed the gross weight. (database: catalogue_variants_weights_chk)”
+  - Zero, negative or not a number → “Net metal weight must be grams above 0, e.g. 3.250.”
+  - More than the gross weight → “Net metal weight … g cannot be more than the gross weight … g.”
 
 ## stones.csv
 
@@ -397,82 +402,85 @@ Jewellery only. One row per kind of stone in a piece (a ring with diamonds and a
 
 Used by: Jewellery.
 
-### `product_slug` — 0036, not imported yet
-- **For:** The product the stones are set in.
+### `product_slug`
+- **For:** The product the stones are set in. Import the products file first.
 - **Kits:** Jewellery · **Required for a new row**
 - **Format:** The product’s slug.
 - **Example:** `solitaire-pendant-18k`
 - **If blank:** The row is skipped.
 - **Refused, and the message you see:**
-  - A slug not in the products sheet → “No product in the sheet has the slug "…".”
+  - A slug no product has (yet) → “No Fashion product has the slug "…".”
 
-### `stone` — 0036, not imported yet
-- **For:** The stone.
+### `stone`
+- **For:** The stone. With the slug and the shape, it is how a row finds the stone already on the product.
 - **Kits:** Jewellery · **Required for a new row**
-- **Format:** Plain text: diamond, ruby, emerald, pearl, cubic zirconia.
+- **Format:** Plain text, up to 60 characters: diamond, ruby, emerald, pearl, cubic zirconia.
 - **Example:** `diamond`
-- **If blank:** The row is refused.
+- **If blank:** The row is skipped.
 - **Refused, and the message you see:**
-  - Blank or over 60 characters → “(database: catalogue_product_stones_stone_check)”
+  - Blank → “A row needs the stone.”
+  - Over 60 characters → “Keep the stone’s name under 60 characters.”
+  - A stone the product does not have, without “Create new” → “This product has no such stone. Tick "Create new" to add it.”
+  - The same stone and shape twice in the file → “This stone appears more than once in the file (lines …).”
 
-### `origin` — 0036, not imported yet
-- **For:** Natural, lab-grown, or a simulant (cubic zirconia, glass) — disclose which.
+### `origin`
+- **For:** Natural, lab-grown, or a simulant (cubic zirconia, glass) — disclosed on the product page.
 - **Kits:** Jewellery · **Required for a new row**
 - **Format:** natural, lab_grown, simulant.
 - **Example:** `lab_grown`
-- **If blank:** The row is refused.
+- **If blank:** A new stone is refused; an existing one keeps its origin.
 - **Refused, and the message you see:**
-  - Anything else → “Origin must be one of natural, lab_grown, simulant.”
+  - Anything else → “Origin must be natural, lab_grown or simulant: say which.”
 
-### `shape` — 0036, not imported yet
-- **For:** Cut shape.
+### `shape`
+- **For:** Cut shape. Part of how a row is matched (two diamond rows of different shapes are two stones).
 - **Kits:** Jewellery · **Optional**
 - **Format:** round, oval, pear, princess, emerald, marquise…
 - **Example:** `round`
 - **If blank:** Not shown.
 
-### `stone_count` — 0036, not imported yet
+### `stone_count`
 - **For:** How many of these stones.
 - **Kits:** Jewellery · **Required for a new row**
 - **Format:** A whole number, 1 or more.
 - **Example:** `1`
-- **If blank:** The row is refused.
+- **If blank:** A new stone is refused; an existing one keeps its count.
 - **Refused, and the message you see:**
   - 0 or not whole → “Stone count must be a whole number, 1 or more.”
 
-### `total_carat` — 0036, not imported yet
+### `total_carat`
 - **For:** Total carat weight of these stones together.
 - **Kits:** Jewellery · **Optional**
 - **Format:** Carats, up to 3 decimals: 0.250.
 - **Example:** `0.250`
 - **If blank:** Not shown.
 - **Refused, and the message you see:**
-  - 0 or negative → “Total carat must be more than 0.”
+  - 0, negative or not a number → “Total carat must be more than 0.”
 
-### `total_weight_g` — 0036, not imported yet
+### `total_weight_g`
 - **For:** Total weight in grams, for stones sold by gram weight.
 - **Kits:** Jewellery · **Optional**
 - **Format:** Grams, up to 3 decimals.
 - **Example:** _(leave blank)_
 - **If blank:** Not shown.
 - **Refused, and the message you see:**
-  - 0 or negative → “Total weight must be more than 0.”
+  - 0, negative or not a number → “Total weight must be grams above 0, e.g. 3.250.”
 
-### `clarity` — 0036, not imported yet
+### `clarity`
 - **For:** Clarity grade.
 - **Kits:** Jewellery · **Optional**
-- **Format:** VVS1, VS1, SI1…
+- **Format:** VVS1, VS1, SI1… Up to 20 characters.
 - **Example:** `VS1`
 - **If blank:** Not shown.
 
-### `colour_grade` — 0036, not imported yet
+### `colour_grade`
 - **For:** Colour grade.
 - **Kits:** Jewellery · **Optional**
-- **Format:** D–Z for diamonds.
+- **Format:** D–Z for diamonds. Up to 20 characters.
 - **Example:** `F`
 - **If blank:** Not shown.
 
-### `certificate_lab` — 0036, not imported yet
+### `certificate_lab`
 - **For:** The grading lab.
 - **Kits:** Jewellery · **Optional**
 - **Format:** IGI, GIA, SGL… Set together with certificate_no.
@@ -481,19 +489,21 @@ Used by: Jewellery.
 - **Refused, and the message you see:**
   - Only one of lab and number → “A certificate needs both its lab and its number.”
 
-### `certificate_no` — 0036, not imported yet
+### `certificate_no`
 - **For:** The certificate number.
 - **Kits:** Jewellery · **Optional**
 - **Format:** As printed on the certificate.
 - **Example:** `LG000000000`
 - **If blank:** Leave blank with the lab.
 
-### `sort_order` — 0036, not imported yet
+### `sort_order`
 - **For:** Order stones are listed in.
 - **Kits:** Jewellery · **Optional**
 - **Format:** A whole number.
 - **Example:** `1`
-- **If blank:** 0.
+- **If blank:** After the stones already on the product.
+- **Refused, and the message you see:**
+  - Not a whole number → “Display order must be a whole number.”
 
 ## companies.csv
 
@@ -501,41 +511,44 @@ One row per company a listing names as manufacturer, packer or importer. Shared 
 
 Used by: Fashion, Jewellery.
 
-### `name` — 0036, not imported yet
-- **For:** The company’s legal name; products name it in manufacturer / packer / importer.
+### `name`
+- **For:** The company’s legal name; products name it in manufacturer / packer / importer. One list serves every store.
 - **Kits:** Fashion, Jewellery · **Required for a new row**
-- **Format:** Plain text, up to 160 characters, unique in this sheet.
+- **Format:** Plain text, up to 160 characters, each company once. A name already in the list (capitals aside) updates that company.
 - **Example:** `Example Textiles Pvt Ltd` (fashion) · `Example Jewellers LLP` (jewellery)
-- **If blank:** The row is refused.
+- **If blank:** The row is skipped.
 - **Refused, and the message you see:**
-  - Blank, or the same name twice → “Company names must be present and unique.”
+  - Blank → “A row needs the company’s name.”
+  - The same name twice in the file → “This company appears more than once in the file (lines …).”
 
-### `address` — 0036, not imported yet
-- **For:** The address as it is printed on the label.
+### `address`
+- **For:** The address as it is printed on the label, and on the product page.
 - **Kits:** Fashion, Jewellery · **Required for a new row**
 - **Format:** One line: street, city, state, PIN. Up to 400 characters.
 - **Example:** `Plot 12, Industrial Area Phase 2, Ludhiana, Punjab 141003` (fashion) · `4th Floor, 18 Zaveri Bazaar, Mumbai, Maharashtra 400002` (jewellery)
-- **If blank:** The row is refused.
+- **If blank:** A new company is refused; an existing one keeps its address.
 - **Refused, and the message you see:**
-  - Blank or over 400 → “(database: catalogue_parties_address_check)”
+  - Blank on a new company → “Enter the address as it is printed on the label.”
 
-### `country` — 0036, not imported yet
+### `country`
 - **For:** The company’s country.
 - **Kits:** Fashion, Jewellery · **Optional**
 - **Format:** 2-letter code.
 - **Example:** `IN` (fashion) · `IN` (jewellery)
 - **If blank:** IN.
 - **Refused, and the message you see:**
-  - Not two capital letters → “Country must be a 2-letter code such as IN.”
+  - Not two letters → “Country must be a 2-letter code such as IN.”
 
-### `phone` — 0036, not imported yet
+### `phone`
 - **For:** Consumer-care phone, when the label prints one.
 - **Kits:** Fashion, Jewellery · **Optional**
 - **Format:** As printed, up to 40 characters.
 - **Example:** `+91 161 400 0000` (fashion) · `+91 22 4000 0000` (jewellery)
 - **If blank:** Not shown.
+- **Refused, and the message you see:**
+  - Over 40 characters → “Keep the phone under 40 characters.”
 
-### `email` — 0036, not imported yet
+### `email`
 - **For:** Consumer-care email.
 - **Kits:** Fashion, Jewellery · **Optional**
 - **Format:** name@domain.
@@ -544,7 +557,7 @@ Used by: Fashion, Jewellery.
 - **Refused, and the message you see:**
   - Not an email address → “Enter an email address like name@domain.com.”
 
-### `gstin` — 0036, not imported yet
+### `gstin`
 - **For:** GSTIN.
 - **Kits:** Fashion, Jewellery · **Optional**
 - **Format:** 15 characters: 2-digit state code, PAN, entity number, Z, check character.
