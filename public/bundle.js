@@ -60895,7 +60895,7 @@ function FashionHeader({
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "truck",
           size: 20
-        }), " Fast & reliable delivery"]
+        }), " Delivery in 6\u20137 business days"]
       })]
     })]
   });
@@ -61430,7 +61430,7 @@ function FashionProductCard({
       }), layout === 'list' && view.brand && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "fs-card__brand",
         children: view.brand
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      }), view.reviewCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
         className: "fs-rating",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
           children: view.rating.toFixed(1)
@@ -63931,7 +63931,7 @@ function FashionProductPage() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
           className: "fs-pdp__h serif",
           children: view.name
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        }), view.reviewCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
           className: "fs-rating",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
             children: view.rating.toFixed(1)
