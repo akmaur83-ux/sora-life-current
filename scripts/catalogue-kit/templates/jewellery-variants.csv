@@ -1,0 +1,11 @@
+﻿product_slug,size,colour,colour_hex,sku,stock,price_override,is_active,sort_order,gross_weight_g,net_metal_weight_g
+example-solitaire-pendant-18k,One size,Yellow gold,#D4AF37,AA-PD-18K-003-YG,3,,yes,0,2.150,2.100
+example-classic-band-ring-22k,10,Yellow gold,#D4AF37,AA-RG-22K-014-YG-10,2,,yes,0,3.100,3.100
+example-classic-band-ring-22k,10,Rose gold,#B76E79,AA-RG-22K-014-RG-10,3,,yes,1,3.100,3.100
+example-classic-band-ring-22k,12,Yellow gold,#D4AF37,AA-RG-22K-014-YG-12,3,27499,yes,2,3.250,3.250
+example-classic-band-ring-22k,12,Rose gold,#B76E79,AA-RG-22K-014-RG-12,2,27499,yes,3,3.250,3.250
+example-classic-band-ring-22k,14,Yellow gold,#D4AF37,AA-RG-22K-014-YG-14,2,27999,yes,4,3.400,3.400
+example-classic-band-ring-22k,14,Rose gold,#B76E79,AA-RG-22K-014-RG-14,3,27999,yes,5,3.400,3.400
+example-classic-band-ring-22k,16,Yellow gold,#D4AF37,AA-RG-22K-014-YG-16,3,28499,yes,6,3.550,3.550
+example-classic-band-ring-22k,16,Rose gold,#B76E79,AA-RG-22K-014-RG-16,2,28499,yes,7,3.550,3.550
+example-drop-earrings-silver,One size,Silver,#C0C0C0,AA-ER-925-021-SV,0,,yes,0,6.200,5.900

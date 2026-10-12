@@ -1,0 +1,13 @@
+﻿product_slug,size,colour,colour_hex,sku,stock,price_override,is_active,sort_order
+example-canvas-tote-natural,One size,Natural,#E8DCC4,CEL-BG-0031-NT,25,,yes,0
+example-linen-shirt,S,White,#F4F2EC,CEL-SH-0147-WH-S,8,,yes,0
+example-linen-shirt,S,Sage,#8FA58A,CEL-SH-0147-SA-S,10,,yes,1
+example-linen-shirt,M,White,#F4F2EC,CEL-SH-0147-WH-M,12,,yes,2
+example-linen-shirt,M,Sage,#8FA58A,CEL-SH-0147-SA-M,14,,yes,3
+example-linen-shirt,L,White,#F4F2EC,CEL-SH-0147-WH-L,10,,yes,4
+example-linen-shirt,L,Sage,#8FA58A,CEL-SH-0147-SA-L,12,,yes,5
+example-linen-shirt,XL,White,#F4F2EC,CEL-SH-0147-WH-XL,4,2199,yes,6
+example-linen-shirt,XL,Sage,#8FA58A,CEL-SH-0147-SA-XL,6,2199,yes,7
+example-cable-knit-cardigan,S,Cream,#EFE6D2,CEL-KN-0208-CR-S,0,,yes,0
+example-cable-knit-cardigan,M,Cream,#EFE6D2,CEL-KN-0208-CR-M,0,,yes,1
+example-cable-knit-cardigan,L,Cream,#EFE6D2,CEL-KN-0208-CR-L,0,,yes,2
