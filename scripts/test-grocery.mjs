@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, buildGroceryApp, loadModule, loadGroceryData, CATEGORIES, PRODUCTS } from './grocery-ssr.mjs';
-import { CART_CHANGE_EDITS, FASHION_DEPARTMENT_FILES, sansHomeLivingCart, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, HOME_STOREFRONT_FILES, JEWELLERY_FILES } from './storefront-settings-pin.mjs';
+import { CART_CHANGE_EDITS, FASHION_DEPARTMENT_FILES, sansHomeLivingCart, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, HOME_STOREFRONT_FILES, JEWELLERY_FILES, CATALOGUE_DECLARATION_MIGRATION } from './storefront-settings-pin.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // The tip before the grocery store existed (the Phase 2 bundle commit). Pinned,
@@ -521,7 +521,7 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
 
 await test('no migration beyond 0034, no dependency change since the baseline', () => {
   const changed = execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean);
-  assert.ok(!changed.some((f) => /^supabase\/migrations\/(?!0034_catalogue_multistore\.sql$|rollback\/0034_|0035_homeliving_store\.sql$|rollback\/0035_)/.test(f)), 'no migration other than 0034 (the catalogue) and 0035 (the Home & Living store), with their rollbacks');
+  assert.ok(!changed.some((f) => /^supabase\/migrations\/(?!0034_catalogue_multistore\.sql$|rollback\/0034_|0035_homeliving_store\.sql$|rollback\/0035_)/.test(f) && !CATALOGUE_DECLARATION_MIGRATION.test(f)), 'no migration other than 0034 (the catalogue), 0035 (the Home & Living store) and 0036 (the catalogue declarations), with their rollbacks');
   assert.ok(!changed.some((f) => /^package(-lock)?\.json$/.test(f)), 'no dependency change');
 });
 

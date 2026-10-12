@@ -89,6 +89,9 @@ export const JEWELLERY_EDITS = /^(src\/App\.jsx|src\/fashion\/(FashionLayout|Fas
 /** The shared files it edited — main.jsx (the mount) and Layout.jsx (the old reset removed), each undone by sansCartChanges. */
 export const SCROLL_MANAGER_EDITS = /^(src\/main\.jsx|src\/components\/Layout\.jsx)$/;
 
+/** Migration 0036 (catalogue declarations), applied by the owner on 2026-10-12: the schema file and its rollback, nothing else under supabase/. */
+export const CATALOGUE_DECLARATION_MIGRATION = /^supabase\/migrations\/(0036_catalogue_declarations\.sql|rollback\/0036_catalogue_declarations_down\.sql)$/;
+
 /** The site menu's closed panel casts no shadow (layout.css, one line) — undone by sansCartChanges (scripts/pins/drawer-shadow.patch). */
 export const DRAWER_SHADOW_EDITS = /^src\/styles\/layout\.css$/;
 

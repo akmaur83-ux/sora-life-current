@@ -22,7 +22,7 @@ import { resolve } from 'node:path';
 import sharp from 'sharp';
 import { ROOT, read, buildHomeLivingApp } from './homeliving-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { CART_CHANGE_EDITS, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_EDITS, FASHION_DEPARTMENT_FILES, HOMELIVING_CART_FILES, STOREFRONT_ADMIN_FILES, STOREFRONT_SETTINGS_READS, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, FASHION_BANNER_SHEET, HOME_STOREFRONT_FILES, HOME_STOREFRONT_EDITS, JEWELLERY_FILES, DRAWER_SHADOW_EDITS } from './storefront-settings-pin.mjs';
+import { CART_CHANGE_EDITS, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_EDITS, FASHION_DEPARTMENT_FILES, HOMELIVING_CART_FILES, STOREFRONT_ADMIN_FILES, STOREFRONT_SETTINGS_READS, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, FASHION_BANNER_SHEET, HOME_STOREFRONT_FILES, HOME_STOREFRONT_EDITS, JEWELLERY_FILES, DRAWER_SHADOW_EDITS, CATALOGUE_DECLARATION_MIGRATION } from './storefront-settings-pin.mjs';
 
 // The tip before this work: the typeface release.
 const BASELINE_SHA = '24bb729';
@@ -257,7 +257,7 @@ await test('isolation: the store\'s own homepage files, its sheet, the two photo
   // .vercelignore is deploy configuration (f927077), not storefront code.
   // An approved cart change may edit a shared cart file only because the byte checks below undo it (sansCartChanges).
   // The Home & Living cart's own new files (test-homeliving-cart.mjs).
-  const bad = [...changed].filter((f) => !allowed.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !STOREFRONT_SETTINGS_READS.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !FASHION_DEPARTMENT_EDITS.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !HOMELIVING_CART_FILES.test(f) && !SCROLL_MANAGER_FILES.test(f) && !SCROLL_MANAGER_EDITS.test(f) && !FASHION_PDP_THUMBS_EDITS.test(f) && !FASHION_RATING_ROW_EDITS.test(f) && !FASHION_BANNER_SHEET.test(f) && !HOME_STOREFRONT_FILES.test(f) && !JEWELLERY_FILES.test(f) && !HOME_STOREFRONT_EDITS.test(f) && !DRAWER_SHADOW_EDITS.test(f));
+  const bad = [...changed].filter((f) => !allowed.test(f) && !CATALOGUE_DECLARATION_MIGRATION.test(f) && !STOREFRONT_ADMIN_FILES.test(f) && !STOREFRONT_SETTINGS_READS.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !FASHION_DEPARTMENT_EDITS.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !HOMELIVING_CART_FILES.test(f) && !SCROLL_MANAGER_FILES.test(f) && !SCROLL_MANAGER_EDITS.test(f) && !FASHION_PDP_THUMBS_EDITS.test(f) && !FASHION_RATING_ROW_EDITS.test(f) && !FASHION_BANNER_SHEET.test(f) && !HOME_STOREFRONT_FILES.test(f) && !JEWELLERY_FILES.test(f) && !HOME_STOREFRONT_EDITS.test(f) && !DRAWER_SHADOW_EDITS.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   // Scroll on navigation (test-scroll-on-navigate.mjs) replaced the wellness shell's own reset with one manager mounted in
   // main.jsx; its new files are its own, and these two are byte-identical to the baseline once its recorded undo is applied.
@@ -278,7 +278,7 @@ await test('isolation: the store\'s own homepage files, its sheet, the two photo
       : t);
     assert.equal(sansDelivery(sansStorefrontChanges(rel, read(rel)).replace(/\r\n/g, '\n')), sansDelivery(atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n')), `${rel} is byte-identical to ${BASELINE_SHA}`);
   }
-  assert.ok(![...changed].some((f) => /^supabase\//.test(f)), 'no migration');
+  assert.ok(![...changed].some((f) => /^supabase\//.test(f) && !CATALOGUE_DECLARATION_MIGRATION.test(f)), 'no migration but 0036 (the catalogue declarations)');
   const untracked = execFileSync('git', ['status', '--porcelain'], { cwd: REPO, encoding: 'utf8' }).split('\n').map((l) => l.slice(3).replace(/^"|"$/g, '')).filter(Boolean);
   assert.ok(!untracked.some((f) => /^package(-lock)?\.json$/.test(f)), 'no dependency change');
 });
