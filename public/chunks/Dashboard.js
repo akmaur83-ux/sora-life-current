@@ -1,19 +1,17 @@
-import { r as reactExports, j as jsxRuntimeExports, b as Link, i as adminListProducts, k as adminListCategories, m as adminListHeroSlides, o as adminSeedDefaultCategories, p as adminSeedDefaultHeroSlides, q as adminImportBiosashCatalog } from '../bundle.js';
+import { r as reactExports, j as jsxRuntimeExports, b as Link, i as adminListProducts, k as adminListCategories, m as adminSeedDefaultCategories, o as adminImportBiosashCatalog } from '../bundle.js';
 
 function Dashboard() {
   const [loading, setLoading] = reactExports.useState(true);
   const [products, setProducts] = reactExports.useState([]);
   const [categories, setCategories] = reactExports.useState([]);
-  const [slides, setSlides] = reactExports.useState([]);
   const [importing, setImporting] = reactExports.useState(false);
   const [importMsg, setImportMsg] = reactExports.useState('');
   const [progress, setProgress] = reactExports.useState(null);
   async function load() {
     setLoading(true);
-    const [p, c, h] = await Promise.all([adminListProducts().catch(() => []), adminListCategories().catch(() => []), adminListHeroSlides().catch(() => [])]);
+    const [p, c] = await Promise.all([adminListProducts().catch(() => []), adminListCategories().catch(() => [])]);
     setProducts(p);
     setCategories(c);
-    setSlides(h);
     setLoading(false);
   }
   reactExports.useEffect(() => {
@@ -24,12 +22,11 @@ function Dashboard() {
     setImportMsg('');
     try {
       await adminSeedDefaultCategories();
-      await adminSeedDefaultHeroSlides();
       const n = await adminImportBiosashCatalog((done, total) => setProgress({
         done,
         total
       }));
-      setImportMsg(`Imported/updated ${n} real Biosash products, seeded default categories and hero slides.`);
+      setImportMsg(`Imported/updated ${n} real Biosash products, seeded default categories.`);
       await load();
     } catch (e) {
       setImportMsg('Import failed: ' + (e.message || String(e)));
@@ -92,13 +89,6 @@ function Dashboard() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           children: "Categories"
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "adm__stat",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-          children: loading ? '—' : slides.length
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          children: "Hero slides"
-        })]
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "surface pad-lg",
@@ -123,10 +113,6 @@ function Dashboard() {
           className: "btn btn-outline btn-sm",
           to: "/admin/products",
           children: "Manage products"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-          className: "btn btn-outline btn-sm",
-          to: "/admin/hero-slides",
-          children: "Manage hero slides"
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
           className: "btn btn-outline btn-sm",
           to: "/admin/categories",

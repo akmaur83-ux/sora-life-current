@@ -1,4 +1,4 @@
-import { j as jsxRuntimeExports, bH as HOMEPAGE_VISUAL_FIELDS, r as reactExports, bp as safeVisualUrl, bI as MAX_CONCERN_PRODUCTS, bJ as searchCatalogueForPicker, bK as productGallery, bL as MAX_DISCOVERY_CARDS, bM as makeDiscoveryId, bN as sanitizeHomepageVisuals, bO as normalizeDiscovery, a as adminGetSetting, bP as products, e as adminSetSetting, bQ as discoveryPayload, bR as mergeHomepageVisuals, br as announceHomepageSaved } from '../bundle.js';
+import { j as jsxRuntimeExports, by as HOMEPAGE_VISUAL_FIELDS, r as reactExports, bz as safeVisualUrl, bA as MAX_CONCERN_PRODUCTS, bB as searchCatalogueForPicker, bC as productGallery, bD as MAX_DISCOVERY_CARDS, bE as makeDiscoveryId, bF as sanitizeHomepageVisuals, bG as normalizeDiscovery, a as adminGetSetting, bH as products, e as adminSetSetting, bI as discoveryPayload, bJ as mergeHomepageVisuals, bK as announceHomepageSaved } from '../bundle.js';
 import { u as uploadHomepageImage } from './homepageImageUpload.js';
 
 function ImageControl({
@@ -94,10 +94,10 @@ function HomepageVisualControls({
     children: Object.entries(HOMEPAGE_VISUAL_FIELDS).map(([group, fields]) => /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "surface",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        children: group === 'categoryStrip' ? 'Category strip appearance' : 'Offers appearance'
+        children: "Offers appearance"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "hint",
-        children: group === 'categoryStrip' ? 'Decorate the strip behind the existing category images and links. Enable the background to show images and decorations. Height always follows the categories.' : 'Style the curated Homepage promotions gallery. Only existing active, in-window Homepage promotions appear; these settings never create offers or change prices.'
+        children: "Style the curated Homepage promotions gallery. Only existing active, in-window Homepage promotions appear; these settings never create offers or change prices."
       }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "hp-admin-fields",
         children: Object.entries(fields).map(([key, field]) => {
@@ -595,8 +595,6 @@ function DiscoveryCardControls({
 
 function HomepageSettings() {
   const [notices, setNotices] = reactExports.useState(['', '', '']);
-  const [bsTitle, setBsTitle] = reactExports.useState('Bestsellers');
-  const [bsSub, setBsSub] = reactExports.useState('Our most loved products by our customers');
   const [loading, setLoading] = reactExports.useState(true);
   const [saving, setSaving] = reactExports.useState(false);
   const [msg, setMsg] = reactExports.useState('');
@@ -617,8 +615,6 @@ function HomepageSettings() {
           setNotices(ann.notices || ['', '', '']);
         }
         if (hp) {
-          setBsTitle(hp.bestseller_title || 'Bestsellers');
-          setBsSub(hp.bestseller_subtitle || '');
           setVisuals(sanitizeHomepageVisuals(hp.visuals));
           const cards = normalizeDiscovery(hp.discovery);
           setCategoryCards(cards.categoryCards);
@@ -647,7 +643,7 @@ function HomepageSettings() {
     try {
       // Preserve existing story/editorial/unknown keys instead of replacing the
       // entire homepage JSON with just the fields this editor knows about.
-      const [currentAnnouncement, currentHomepage] = await Promise.all([adminGetSetting('announcement'), adminGetSetting('homepage')]);
+      const [currentAnnouncement, savedHomepage] = await Promise.all([adminGetSetting('announcement'), adminGetSetting('homepage')]);
       // `free_shipping_threshold` is retired — shipping is a flat per-method
       // fee with no basket-value threshold. It is dropped rather than
       // preserved, so saving this page scrubs the stale key that migration
@@ -660,13 +656,22 @@ function HomepageSettings() {
         ...keptAnnouncement,
         notices: notices.filter(Boolean)
       });
+      // Retired controls write nothing a page reads, so their stored values are
+      // dropped here too (every visitor downloads this record): the Bestsellers
+      // title and subtitle, and the Hero Slides page's per-slide button styling.
+      // The category strip's visuals go with the sanitiser below, which keeps
+      // only the Offers group.
+      const {
+        bestseller_title: _bt,
+        bestseller_subtitle: _bs,
+        heroCtas: _hc,
+        ...currentHomepage
+      } = savedHomepage || {};
       // Sanitised on the way out too: an unusable image URL, a malformed id,
       // a duplicate or a slug that is not a product never reaches storage.
       const cleanDiscovery = discoveryPayload(categoryCards, concernCards);
       const next = mergeHomepageVisuals({
         ...currentHomepage,
-        bestseller_title: bsTitle,
-        bestseller_subtitle: bsSub,
         discovery: cleanDiscovery
       }, visuals);
       await adminSetSetting('homepage', next);
@@ -692,7 +697,7 @@ function HomepageSettings() {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
           children: "Homepage"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: "Homepage copy, appearance, the offers gallery and the two discovery rails."
+          children: "The announcement bar, the offers gallery\u2019s appearance and the two discovery rails."
         })]
       })
     }), err && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -722,31 +727,6 @@ function HomepageSettings() {
             })
           })]
         }, i))]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "surface",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-          children: "Bestsellers section"
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "field",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-            className: "label",
-            children: "Title"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-            className: "input",
-            value: bsTitle,
-            onChange: e => setBsTitle(e.target.value)
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "field",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-            className: "label",
-            children: "Subtitle"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-            className: "input",
-            value: bsSub,
-            onChange: e => setBsSub(e.target.value)
-          })]
-        })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx(HomepageVisualControls, {
         value: visuals,
         onChange: setVisuals,

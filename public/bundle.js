@@ -2782,50 +2782,6 @@ const TOKENS = [
   default: '#F0C169',
   css: ['--st-annbar-accent']
 },
-// ---- Homepage ----
-{
-  key: 'hero_overlay',
-  group: 'Homepage',
-  label: 'Hero overlay (extra dark tint)',
-  type: 'overlay',
-  default: 'none',
-  css: ['--st-hero-overlay']
-}, {
-  key: 'category_bg',
-  group: 'Homepage',
-  label: 'Category section background',
-  type: 'color',
-  default: '#1A3226',
-  css: ['--st-category-bg']
-}, {
-  key: 'category_title',
-  group: 'Homepage',
-  label: 'Category title color',
-  type: 'color',
-  default: '#F0F6F2',
-  css: ['--st-category-title']
-}, {
-  key: 'category_subtitle',
-  group: 'Homepage',
-  label: 'Category subtitle color',
-  type: 'color',
-  default: '#BEDACD',
-  css: ['--st-category-subtitle']
-}, {
-  key: 'category_hover',
-  group: 'Homepage',
-  label: 'Category hover color',
-  type: 'color',
-  default: '#F6D79A',
-  css: ['--st-category-hover']
-}, {
-  key: 'category_circle',
-  group: 'Homepage',
-  label: 'Category circle background',
-  type: 'color',
-  default: '#FFFFFF',
-  css: ['--st-category-circle']
-},
 // ---- Product cards ----
 {
   key: 'discount_bg',
@@ -3011,7 +2967,11 @@ const TOKENS = [
   default: '#F0C169',
   css: ['--st-footer-accent']
 }];
-const GROUPS = ['Brand', 'Header', 'Homepage', 'Product cards', 'Buttons', 'Typography', 'Surfaces', 'Footer'];
+
+// The Homepage group (hero overlay and five category-strip colours) was retired: the
+// hero and the strip it styled are no longer on any page. The stored theme may still
+// carry those keys; sanitizeTheme drops them on read and the RPC keeps them untouched.
+const GROUPS = ['Brand', 'Header', 'Product cards', 'Buttons', 'Typography', 'Surfaces', 'Footer'];
 const TOKEN_BY_KEY = Object.fromEntries(TOKENS.map(t => [t.key, t]));
 
 // SORA Classic == the exact current storefront. Every default equals the value
@@ -3034,7 +2994,6 @@ const PRESETS = {
     id: 'forest_gold',
     name: 'Forest & Gold',
     theme: preset({
-      category_bg: '#1A3226',
       discount_bg: '#E8B04B',
       discount_text: '#14261C',
       brand_accent: '#E8B04B',
@@ -3048,7 +3007,6 @@ const PRESETS = {
     id: 'forest_orange',
     name: 'Forest & Orange',
     theme: preset({
-      category_bg: '#1A3226',
       discount_bg: '#D08E2C',
       discount_text: '#2A1B02',
       brand_accent: '#D08E2C',
@@ -3062,10 +3020,6 @@ const PRESETS = {
     id: 'warm_luxe',
     name: 'Warm Luxe',
     theme: preset({
-      category_bg: '#2C3A32',
-      category_title: '#FBF8F1',
-      category_subtitle: '#D9C7A6',
-      category_hover: '#E8B04B',
       discount_bg: '#B4761F',
       discount_text: '#FBF8F1',
       annbar_bg: '#2C3A32',
@@ -3147,7 +3101,7 @@ function applyTheme(theme, root) {
 
 // ============================================================
 // SITE SETTINGS — live-bound module, admin-editable via Supabase
-// `site_settings` + `hero_slides` tables. Every default below is
+// `site_settings`. Every default below is
 // EXACTLY the value already hardcoded across the storefront today,
 // so nothing visually changes until an admin edits something.
 // ============================================================
@@ -3173,10 +3127,10 @@ let announcement = {
   // still replace this list wholesale via applyAnnouncement().
   'EXPLORE WELLNESS, PERSONAL CARE & MORE']
 };
-let homepage = {
-  bestsellerTitle: 'Bestsellers',
-  bestsellerSubtitle: 'Our most loved products by our customers'
-};
+
+// The saved `homepage` record (discovery rails, offers appearance, the fashion and
+// lifestyle storefronts, category spotlights). Empty until it loads.
+let homepage = {};
 let contact = {
   phone: '',
   email: '',
@@ -3223,10 +3177,6 @@ function applyContact(v) {
     ...contact,
     ...v
   };
-}
-function applyHeroSlides(list) {
-  if (!Array.isArray(list) || !list.length) return false;
-  return true;
 }
 
 function SparrowMark({
@@ -35264,7 +35214,6 @@ function offerCalloutFrom(promo) {
 
 // Structured presentation fields inside site_settings.homepage.visuals.
 // No CSS/HTML input is accepted. Shared by the editor and storefront reader.
-const IMAGE_POSITIONS = ['left top', 'center top', 'right top', 'left center', 'center center', 'right center', 'left bottom', 'center bottom', 'right bottom'];
 const color = (label, value) => ({
   label,
   type: 'color',
@@ -35295,33 +35244,6 @@ const select = (label, value, options) => ({
   options
 });
 const HOMEPAGE_VISUAL_FIELDS = {
-  categoryStrip: {
-    enabled: toggle('Enable category background', false),
-    backgroundColor: color('Background color', '#F7F1E7'),
-    imageUrl: image$1('Background strip image'),
-    imageSize: select('Background image fit', 'cover', ['cover', 'contain']),
-    imagePosition: select('Background image position', 'center center', IMAGE_POSITIONS),
-    imageOpacity: number('Background image opacity', 1, 0, 1, 0.05),
-    overlayColor: color('Overlay color', '#FBF8F1'),
-    overlayOpacity: number('Overlay strength (0 = off)', 0, 0, 1, 0.05),
-    paddingTop: number('Top padding (px)', 12, 0, 48),
-    paddingBottom: number('Bottom padding (px)', 12, 0, 48),
-    borderTop: toggle('Show top border'),
-    borderBottom: toggle('Show bottom border'),
-    borderColor: color('Border color', '#DED2C4'),
-    borderWidth: number('Border thickness (px)', 1, 0, 4),
-    radius: number('Corner radius (px)', 8, 0, 16),
-    textureUrl: image$1('Decorative texture'),
-    texturePosition: select('Texture position', 'center center', IMAGE_POSITIONS),
-    leftImage: image$1('Left decoration'),
-    rightImage: image$1('Right decoration'),
-    decorationOpacity: number('Decoration opacity', 0.25, 0, 1, 0.05),
-    decorationSize: number('Decoration width (px)', 120, 24, 240),
-    decorationPosition: select('Decoration vertical position', 'center', ['top', 'center', 'bottom']),
-    hideTextureMobile: toggle('Hide texture on mobile'),
-    hideLeftMobile: toggle('Hide left decoration on mobile', true),
-    hideRightMobile: toggle('Hide right decoration on mobile', true)
-  },
   offers: {
     backgroundColor: color('Section background', '#FBF8F1'),
     frameColor: color('Frame interior', '#FFF8ED'),
@@ -36290,10 +36212,6 @@ const IMAGE_UPLOAD_TYPES = Object.freeze({
 });
 Object.keys(IMAGE_UPLOAD_TYPES).join(',');
 const IMAGE_UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
-const VIDEO_UPLOAD_TYPES = Object.freeze({
-  'video/mp4': 'mp4',
-  'video/webm': 'webm'
-});
 const ascii = (bytes, start, length) => String.fromCharCode(...bytes.slice(start, start + length));
 const startsWith = (bytes, signature, offset = 0) => signature.every((value, index) => bytes[offset + index] === value);
 function sniffUploadImageType(bytes) {
@@ -36378,29 +36296,6 @@ async function validateImageUpload(file, {
   return {
     mime: detectedType,
     extension: IMAGE_UPLOAD_TYPES[detectedType]
-  };
-}
-async function validateVideoUpload(file, {
-  maxBytes = 100 * 1024 * 1024
-} = {}) {
-  if (!file || !VIDEO_UPLOAD_TYPES[file.type]) throw new Error('Please choose an MP4 or WebM video.');
-  if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('The selected video is empty.');
-  if (file.size > maxBytes) throw new Error(`Video is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Keep it under ${Math.floor(maxBytes / 1024 / 1024)} MB.`);
-  if (typeof file.slice !== 'function') throw new Error('The selected video cannot be read.');
-  let bytes;
-  try {
-    bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
-  } catch {
-    throw new Error('The selected video could not be read.');
-  }
-  const mp4 = bytes.length >= 12 && ascii(bytes, 4, 4) === 'ftyp';
-  const webm = bytes.length >= 4 && startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3]);
-  if (file.type === 'video/mp4' && !mp4 || file.type === 'video/webm' && !webm) {
-    throw new Error('The video contents do not match its declared file type.');
-  }
-  return {
-    mime: file.type,
-    extension: VIDEO_UPLOAD_TYPES[file.type]
   };
 }
 class MediaOperationError extends Error {
@@ -40765,7 +40660,7 @@ function contentScore(product) {
 // admin CRUD. Every write here is also enforced server-side by
 // Postgres RLS (see supabase/migrations/0001_admin_extensions.sql):
 // only a session whose auth.uid() exists in public.admin_users can
-// write to products/categories/hero_slides/site_settings/storage.
+// write to products/categories/site_settings/storage.
 // This file does not "trust" the client — it's a thin wrapper.
 // ============================================================
 
@@ -40944,33 +40839,6 @@ async function fetchPublicCategories() {
     tone: c.tone || 'forest',
     icon: 'leaf',
     image: c.image_url || null
-  }));
-}
-async function fetchPublicHeroSlides() {
-  const {
-    data,
-    error
-  } = await supabase.from('hero_slides').select('*').eq('is_active', true).order('sort_order', {
-    ascending: true
-  });
-  if (error) throw error;
-  return (data || []).map(s => ({
-    id: s.id,
-    kind: s.kind,
-    src: s.kind === 'video' ? s.video_url : s.image_url,
-    // Optional artwork for >= 1024px (0029). Image slides only; null means
-    // every viewport shows image_url, exactly as before the column existed.
-    desktopSrc: s.kind === 'video' ? null : s.desktop_image_url || null,
-    poster: s.poster_url || undefined,
-    kicker: s.kicker || '',
-    title: s.title || '',
-    sub: s.subtitle || '',
-    lede: s.lede || '',
-    cta: {
-      label: s.cta_label || 'SHOP NOW',
-      to: s.cta_link || '/shop'
-    },
-    position: 'center'
   }));
 }
 async function fetchPublicSettings() {
@@ -41373,93 +41241,6 @@ async function adminSeedDefaultCategories() {
 }
 
 // ---------------------------------------------------------------
-// ADMIN: hero slides
-// ---------------------------------------------------------------
-async function adminListHeroSlides() {
-  const {
-    data,
-    error
-  } = await supabase.from('hero_slides').select('*').order('sort_order', {
-    ascending: true
-  });
-  if (error) throw error;
-  return data || [];
-}
-async function adminUpsertHeroSlide(slide) {
-  const row = {
-    kind: slide.kind || 'image',
-    image_url: slide.image_url || null,
-    desktop_image_url: slide.desktop_image_url || null,
-    video_url: slide.video_url || null,
-    poster_url: slide.poster_url || null,
-    kicker: slide.kicker || '',
-    title: slide.title || '',
-    subtitle: slide.subtitle || '',
-    lede: slide.lede || '',
-    cta_label: slide.cta_label || 'SHOP NOW',
-    cta_link: slide.cta_link || '/shop',
-    sort_order: Number(slide.sort_order) || 0,
-    is_active: slide.is_active !== false
-  };
-  if (slide.id) {
-    const {
-      data,
-      error
-    } = await supabase.from('hero_slides').update(row).eq('id', slide.id).select().single();
-    if (error) throw error;
-    return data;
-  }
-  const {
-    data,
-    error
-  } = await supabase.from('hero_slides').insert(row).select().single();
-  if (error) throw error;
-  return data;
-}
-async function adminDeleteHeroSlide(id) {
-  const {
-    error
-  } = await supabase.from('hero_slides').delete().eq('id', id);
-  if (error) throw error;
-}
-async function adminReorderHeroSlides(idsInOrder) {
-  await Promise.all(idsInOrder.map((id, i) => supabase.from('hero_slides').update({
-    sort_order: i
-  }).eq('id', id)));
-}
-const DEFAULT_HERO_SEED = [{
-  kind: 'video',
-  video_url: '/media/hero.mp4',
-  poster_url: '/media/hero-poster.jpg',
-  kicker: 'The Power of',
-  title: 'Sea Buckthorn',
-  subtitle: 'Harvested from the Himalayas. Made for your wellness.',
-  lede: 'Pure nutrition. Natural radiance. Everyday wellness.',
-  cta_label: 'EXPLORE COLLECTION',
-  cta_link: '/category/wellness',
-  sort_order: 0
-}, {
-  kind: 'image',
-  image_url: '/media/hero-slide2.jpg',
-  kicker: 'From the Himalayas',
-  title: "Nature's Orange Gold",
-  subtitle: 'Sun-ripened sea buckthorn, gently cold-pressed.',
-  lede: 'Nutrient-dense wellness, straight from the mountains.',
-  cta_label: 'SHOP JUICES & DRINKS',
-  cta_link: '/category/juices-drinks',
-  sort_order: 1
-}];
-async function adminSeedDefaultHeroSlides() {
-  const existing = await adminListHeroSlides();
-  if (existing.length > 0) return 0;
-  const {
-    error
-  } = await supabase.from('hero_slides').insert(DEFAULT_HERO_SEED);
-  if (error) throw error;
-  return DEFAULT_HERO_SEED.length;
-}
-
-// ---------------------------------------------------------------
 // ADMIN: site settings (branding / announcement / homepage / contact)
 // ---------------------------------------------------------------
 async function adminGetSetting(key) {
@@ -41509,21 +41290,6 @@ async function uploadToBucket(bucket, file, folder, opts = {}) {
 async function uploadImage(file, folder = 'products') {
   const validated = await validateImageUpload(file);
   return uploadToBucket('product-images', file, folder, {
-    extension: validated.extension,
-    contentType: validated.mime
-  });
-}
-const MAX_HERO_VIDEO_BYTES = 100 * 1024 * 1024; // 100MB — generous local guard; Supabase project limits still apply
-
-async function validateHeroVideo(file) {
-  return validateVideoUpload(file, {
-    maxBytes: MAX_HERO_VIDEO_BYTES
-  });
-}
-async function uploadHeroVideo(file) {
-  const validated = await validateHeroVideo(file);
-  return uploadToBucket('hero-media', file, 'video', {
-    cacheControl: '31536000',
     extension: validated.extension,
     contentType: validated.mime
   });
@@ -68542,7 +68308,6 @@ const Payouts = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Payouts.js
 const CreatorTiers = /*#__PURE__*/reactExports.lazy(() => import('./chunks/CreatorTiers.js'));
 const Appearance = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Appearance.js'));
 const Categories = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Categories.js'));
-const HeroSlides = /*#__PURE__*/reactExports.lazy(() => import('./chunks/HeroSlides.js'));
 const Promotions = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Promotions.js'));
 const Coupons = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Coupons.js'));
 const HomepageSettings = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Homepage.js'));
@@ -68728,9 +68493,6 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "categories",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(Categories, {})
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
-          path: "hero-slides",
-          element: /*#__PURE__*/jsxRuntimeExports.jsx(HeroSlides, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "promotions",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(Promotions, {})
@@ -69322,7 +69084,7 @@ function withTimeout(promise, ms) {
 
 /**
  * The app mounts synchronously with the built-in default data (catalog,
- * categories, hero slides, branding all have complete defaults baked into
+ * categories, branding all have complete defaults baked into
  * their modules) — first paint has ZERO network dependency, on every route.
  * The Supabase-backed live data is fetched here in the background, AFTER
  * mount, and — only if something actually changed — triggers exactly one
@@ -69336,7 +69098,7 @@ function Root() {
     let cancelled = false;
     (async () => {
       try {
-        const [catalog, categories, heroSlides, settings, variants, media, promotions] = await Promise.all([withTimeout(fetchPublicCatalog().catch(() => null), 4000), withTimeout(fetchPublicCategories().catch(() => null), 4000), withTimeout(fetchPublicHeroSlides().catch(() => null), 4000), withTimeout(fetchPublicSettings().catch(() => null), 4000), withTimeout(fetchPublicVariants().catch(() => null), 4000), withTimeout(fetchPublicProductMedia().catch(() => null), 4000), withTimeout(fetchPublicPromotions().catch(() => null), 4000)]);
+        const [catalog, categories, settings, variants, media, promotions] = await Promise.all([withTimeout(fetchPublicCatalog().catch(() => null), 4000), withTimeout(fetchPublicCategories().catch(() => null), 4000), withTimeout(fetchPublicSettings().catch(() => null), 4000), withTimeout(fetchPublicVariants().catch(() => null), 4000), withTimeout(fetchPublicProductMedia().catch(() => null), 4000), withTimeout(fetchPublicPromotions().catch(() => null), 4000)]);
         if (cancelled) return;
         let changed = false;
         if (catalog && applyCatalog(catalog, 'supabase')) changed = true;
@@ -69345,7 +69107,6 @@ function Root() {
         if (variants && applyVariants(variants)) changed = true;
         if (media && applyProductMedia(media)) changed = true;
         if (categories && applyCategories(categories)) changed = true;
-        if (heroSlides && applyHeroSlides(heroSlides)) changed = true;
         // A successful promotions fetch (even []) replaces the local sample
         // fallback — an empty table then correctly shows no promo sections.
         if (promotions && applyPromotions(promotions)) changed = true;
@@ -69411,5 +69172,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { adminUpdateProduct as $, fulfillmentStatusLabel as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, REWARD_OPTION_SLOTS as a$, adminCreateProduct as a0, adminListVariants as a1, adminCreateVariant as a2, adminUpdateVariant as a3, adminSetVariantActive as a4, adminDeleteVariant as a5, adminGetProgramSettings as a6, CREATOR_STATUSES as a7, money2 as a8, adminListCreators as a9, adminGetConversionAudit as aA, adminRefundConversion as aB, adminListKyc as aC, KYC_STATUSES as aD, KYC_SIGNED_URL_SECONDS as aE, adminSetKycStatus as aF, KYC_DOCUMENT_KINDS as aG, kycDocumentState as aH, adminKycDocumentUrl as aI, adminListKycAudit as aJ, getPayoutConfig as aK, adminListPayouts as aL, PAYOUT_STATUSES as aM, adminSetWithdrawalsOpen as aN, adminGetPayoutLedger as aO, adminGetPayoutAudit as aP, adminGetKycForCreator as aQ, adminReviewPayout as aR, adminMarkPayoutPaid as aS, normalizeLadder as aT, DEFAULT_BEYOND_STEP as aU, adminGetTierLadder as aV, validateLadder as aW, ladderErrorMessage as aX, rupees as aY, adminListLevelRewards as aZ, groupRewardsByLevel as a_, adminCreatorStandings as aa, adminSetProgramSettings as ab, adminCreateCreator as ac, adminSetCreatorStatus as ad, normalizeContentPatch as ae, contentScore as af, adminGetCreator as ag, adminListCodeAliases as ah, adminListCampaigns as ai, adminListLinks as aj, adminListAudit as ak, adminListAttributionEvents as al, adminUpdateCampaign as am, adminCreateCampaign as an, CAMPAIGN_STATUSES as ao, buildTrackingUrl as ap, normalizeDestination as aq, DESTINATION_TYPES as ar, CopyButton as as, adminChangeCreatorCode as at, adminUpdateCreator as au, adminCreateLink as av, adminSetLinkStatus as aw, adminListConversions as ax, CONVERSION_STATUSES as ay, adminGetConversionItems as az, Link as b, safeColor as b$, validateRewardOption as b0, REWARD_TYPES as b1, REWARD_TYPE_LABEL as b2, adminListRewardClaims as b3, CLAIM_STATUSES as b4, CLAIM_STATUS_LABEL as b5, DEFAULT_LADDER as b6, adminSetTierLadder as b7, rewardOptionErrorMessage as b8, adminUpsertLevelReward as b9, adminUpsertPromotion as bA, adminDeletePromotion as bB, adminSetPromotionActive as bC, adminReorderPromotions as bD, uploadPromoImage as bE, supabase as bF, CouponTicket as bG, HOMEPAGE_VISUAL_FIELDS as bH, MAX_CONCERN_PRODUCTS as bI, searchCatalogueForPicker as bJ, productGallery as bK, MAX_DISCOVERY_CARDS as bL, makeDiscoveryId as bM, sanitizeHomepageVisuals as bN, normalizeDiscovery as bO, products as bP, discoveryPayload as bQ, mergeHomepageVisuals as bR, normalizeFashionStorefront as bS, normalizeLifestyleStorefront as bT, mergeStorefrontCustomization as bU, buildTree as bV, validatePlacement as bW, useSearchParams as bX, isSpotlightEligible as bY, categoryBySlug as bZ, sanitizeCategoryConfig as b_, adminDeleteLevelReward as ba, adminSetRewardClaimStatus as bb, adminGetTheme as bc, sanitizeTheme$1 as bd, TOKENS as be, PRESET_LIST as bf, GROUPS as bg, DEFAULT_THEME as bh, OVERLAY_SCALES as bi, TYPE_SCALES as bj, HEX_RE as bk, adminSetTheme as bl, overlayRgba as bm, adminUpsertCategory as bn, adminDeleteCategory as bo, safeVisualUrl as bp, adminUpsertHeroSlide as bq, announceHomepageSaved as br, adminDeleteHeroSlide as bs, adminReorderHeroSlides as bt, uploadImage as bu, uploadHeroVideo as bv, normalizePromo as bw, PromoPoster as bx, PromoOfferCard as by, adminListPromotions as bz, LegalUpdated as c, safeGradient as c0, makeSpotlightId as c1, validateImageUpload as c2, normalizeCategoryExperience as c3, categoryExperiencePayload as c4, categoryIsReadyButOff as c5, categoryToneTheme as c6, MIN_INTERVAL_MS as c7, MAX_INTERVAL_MS as c8, DEFAULT_ITEM_SCALE as c9, MIN_ITEM_SCALE as ca, MAX_ITEM_SCALE as cb, ITEM_OFFSET_LIMIT as cc, CategorySpotlight as cd, SOCIAL_NETWORKS as ce, POLICY_KEYS as cf, validateCompanyForSave as cg, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminListHeroSlides as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminSeedDefaultHeroSlides as p, adminImportBiosashCatalog as q, reactExports as r, money as s, adminSetProductActive as t, useParams as u, validateLegalPage as v, adminDeleteProduct as w, adminReorderProducts as x, categories as y, adminListOrders as z };
+export { adminListVariants as $, adminUpdateOrderFulfillment as A, adminListProductMedia as B, CONTACT_FIELDS as C, adminCommitStagedProductMedia as D, validateMediaFile as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, mediaFailureMessage as H, adminReorderProductMedia as I, adminSetPrimaryMedia as J, adminEnsurePrimaryMedia as K, LEGAL_PAGES as L, adminUpdateProductMedia as M, NavLink as N, Outlet as O, adminReplaceProductMedia as P, adminDeleteProductMedia as Q, adminDiscoverMedia as R, adminImportMedia as S, validateContent as T, CONTENT_FIELDS as U, fieldPopulated as V, CONTENT_LABELS as W, useNavigate as X, useLocation as Y, adminUpdateProduct as Z, adminCreateProduct as _, adminGetSetting as a, REWARD_TYPES as a$, adminCreateVariant as a0, adminUpdateVariant as a1, adminSetVariantActive as a2, adminDeleteVariant as a3, adminGetProgramSettings as a4, CREATOR_STATUSES as a5, money2 as a6, adminListCreators as a7, adminCreatorStandings as a8, adminSetProgramSettings as a9, adminListKyc as aA, KYC_STATUSES as aB, KYC_SIGNED_URL_SECONDS as aC, adminSetKycStatus as aD, KYC_DOCUMENT_KINDS as aE, kycDocumentState as aF, adminKycDocumentUrl as aG, adminListKycAudit as aH, getPayoutConfig as aI, adminListPayouts as aJ, PAYOUT_STATUSES as aK, adminSetWithdrawalsOpen as aL, adminGetPayoutLedger as aM, adminGetPayoutAudit as aN, adminGetKycForCreator as aO, adminReviewPayout as aP, adminMarkPayoutPaid as aQ, normalizeLadder as aR, DEFAULT_BEYOND_STEP as aS, adminGetTierLadder as aT, validateLadder as aU, ladderErrorMessage as aV, rupees as aW, adminListLevelRewards as aX, groupRewardsByLevel as aY, REWARD_OPTION_SLOTS as aZ, validateRewardOption as a_, adminCreateCreator as aa, adminSetCreatorStatus as ab, normalizeContentPatch as ac, contentScore as ad, adminGetCreator as ae, adminListCodeAliases as af, adminListCampaigns as ag, adminListLinks as ah, adminListAudit as ai, adminListAttributionEvents as aj, adminUpdateCampaign as ak, adminCreateCampaign as al, CAMPAIGN_STATUSES as am, buildTrackingUrl as an, normalizeDestination as ao, DESTINATION_TYPES as ap, CopyButton as aq, adminChangeCreatorCode as ar, adminUpdateCreator as as, adminCreateLink as at, adminSetLinkStatus as au, adminListConversions as av, CONVERSION_STATUSES as aw, adminGetConversionItems as ax, adminGetConversionAudit as ay, adminRefundConversion as az, Link as b, categoryIsReadyButOff as b$, REWARD_TYPE_LABEL as b0, adminListRewardClaims as b1, CLAIM_STATUSES as b2, CLAIM_STATUS_LABEL as b3, DEFAULT_LADDER as b4, adminSetTierLadder as b5, rewardOptionErrorMessage as b6, adminUpsertLevelReward as b7, adminDeleteLevelReward as b8, adminSetRewardClaimStatus as b9, MAX_CONCERN_PRODUCTS as bA, searchCatalogueForPicker as bB, productGallery as bC, MAX_DISCOVERY_CARDS as bD, makeDiscoveryId as bE, sanitizeHomepageVisuals as bF, normalizeDiscovery as bG, products as bH, discoveryPayload as bI, mergeHomepageVisuals as bJ, announceHomepageSaved as bK, normalizeFashionStorefront as bL, normalizeLifestyleStorefront as bM, mergeStorefrontCustomization as bN, buildTree as bO, validatePlacement as bP, uploadImage as bQ, useSearchParams as bR, isSpotlightEligible as bS, categoryBySlug as bT, sanitizeCategoryConfig as bU, safeColor as bV, safeGradient as bW, makeSpotlightId as bX, validateImageUpload as bY, normalizeCategoryExperience as bZ, categoryExperiencePayload as b_, adminGetTheme as ba, sanitizeTheme$1 as bb, TOKENS as bc, PRESET_LIST as bd, GROUPS as be, DEFAULT_THEME as bf, OVERLAY_SCALES as bg, TYPE_SCALES as bh, HEX_RE as bi, adminSetTheme as bj, overlayRgba as bk, adminUpsertCategory as bl, adminDeleteCategory as bm, normalizePromo as bn, PromoPoster as bo, PromoOfferCard as bp, adminListPromotions as bq, adminUpsertPromotion as br, adminDeletePromotion as bs, adminSetPromotionActive as bt, adminReorderPromotions as bu, uploadPromoImage as bv, supabase as bw, CouponTicket as bx, HOMEPAGE_VISUAL_FIELDS as by, safeVisualUrl as bz, LegalUpdated as c, categoryToneTheme as c0, MIN_INTERVAL_MS as c1, MAX_INTERVAL_MS as c2, DEFAULT_ITEM_SCALE as c3, MIN_ITEM_SCALE as c4, MAX_ITEM_SCALE as c5, ITEM_OFFSET_LIMIT as c6, CategorySpotlight as c7, SOCIAL_NETWORKS as c8, POLICY_KEYS as c9, validateCompanyForSave as ca, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminSeedDefaultCategories as m, normalizeLegalPage as n, adminImportBiosashCatalog as o, money as p, adminSetProductActive as q, reactExports as r, adminDeleteProduct as s, adminReorderProducts as t, useParams as u, validateLegalPage as v, categories as w, adminListOrders as x, fulfillmentStatusLabel as y, validateFulfillmentInput as z };
 //# sourceMappingURL=bundle.js.map

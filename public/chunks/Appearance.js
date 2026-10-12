@@ -1,4 +1,4 @@
-import { r as reactExports, bc as adminGetTheme, bd as sanitizeTheme, be as TOKENS, bf as PRESET_LIST, j as jsxRuntimeExports, bg as GROUPS, bh as DEFAULT_THEME, bi as OVERLAY_SCALES, bj as TYPE_SCALES, bk as HEX_RE, bl as adminSetTheme, bm as overlayRgba } from '../bundle.js';
+import { r as reactExports, ba as adminGetTheme, bb as sanitizeTheme, bc as TOKENS, bd as PRESET_LIST, j as jsxRuntimeExports, be as GROUPS, bf as DEFAULT_THEME, bg as OVERLAY_SCALES, bh as TYPE_SCALES, bi as HEX_RE, bj as adminSetTheme, bk as overlayRgba } from '../bundle.js';
 
 const upperHex = v => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toUpperCase() : v;
 const isValid = (tok, v) => tok.type === 'overlay' ? OVERLAY_SCALES.includes(v) : tok.type === 'scale' ? TYPE_SCALES.includes(v) : HEX_RE.test(v || '');
@@ -21,7 +21,7 @@ function Appearance() {
   const [busy, setBusy] = reactExports.useState(false);
   const [err, setErr] = reactExports.useState('');
   const [msg, setMsg] = reactExports.useState('');
-  const [openGroup, setOpenGroup] = reactExports.useState('Homepage');
+  const [openGroup, setOpenGroup] = reactExports.useState('Brand');
   const load = reactExports.useCallback(async () => {
     setLoading(true);
     const t = await adminGetTheme();

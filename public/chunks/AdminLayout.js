@@ -41,9 +41,6 @@ const NAV = [{
   to: '/admin/categories',
   label: 'Categories'
 }, {
-  to: '/admin/hero-slides',
-  label: 'Hero Slides'
-}, {
   to: '/admin/promotions',
   label: 'Promotions'
 }, {
