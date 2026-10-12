@@ -35,10 +35,8 @@ function ImageControl({ id, label, value, onChange, onUploading }) {
 export default function HomepageVisualControls({ value, onChange, onUploading }) {
   return <div className="hp-admin-visuals">
     {Object.entries(HOMEPAGE_VISUAL_FIELDS).map(([group, fields]) => <section className="surface" key={group}>
-      <h2>{group === 'categoryStrip' ? 'Category strip appearance' : 'Offers appearance'}</h2>
-      <p className="hint">{group === 'categoryStrip'
-        ? 'Decorate the strip behind the existing category images and links. Enable the background to show images and decorations. Height always follows the categories.'
-        : 'Style the curated Homepage promotions gallery. Only existing active, in-window Homepage promotions appear; these settings never create offers or change prices.'}</p>
+      <h2>Offers appearance</h2>
+      <p className="hint">Style the curated Homepage promotions gallery. Only existing active, in-window Homepage promotions appear; these settings never create offers or change prices.</p>
       <div className="hp-admin-fields">
         {Object.entries(fields).map(([key, field]) => {
           const id = `homepage-${group}-${key}`;

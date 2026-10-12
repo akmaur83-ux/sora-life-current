@@ -9,8 +9,6 @@ import { announceHomepageSaved } from '../../lib/homepageVisualSync.js';
 
 export default function HomepageSettings() {
   const [notices, setNotices] = useState(['', '', '']);
-  const [bsTitle, setBsTitle] = useState('Bestsellers');
-  const [bsSub, setBsSub] = useState('Our most loved products by our customers');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
@@ -30,8 +28,6 @@ export default function HomepageSettings() {
         const hp = await adminGetSetting('homepage');
         if (ann) { setNotices(ann.notices || ['', '', '']); }
         if (hp) {
-          setBsTitle(hp.bestseller_title || 'Bestsellers');
-          setBsSub(hp.bestseller_subtitle || '');
           setVisuals(sanitizeHomepageVisuals(hp.visuals));
           const cards = normalizeDiscovery(hp.discovery);
           setCategoryCards(cards.categoryCards);
@@ -57,17 +53,23 @@ export default function HomepageSettings() {
     try {
       // Preserve existing story/editorial/unknown keys instead of replacing the
       // entire homepage JSON with just the fields this editor knows about.
-      const [currentAnnouncement, currentHomepage] = await Promise.all([adminGetSetting('announcement'), adminGetSetting('homepage')]);
+      const [currentAnnouncement, savedHomepage] = await Promise.all([adminGetSetting('announcement'), adminGetSetting('homepage')]);
       // `free_shipping_threshold` is retired — shipping is a flat per-method
       // fee with no basket-value threshold. It is dropped rather than
       // preserved, so saving this page scrubs the stale key that migration
       // 0001 seeded into site_settings.
       const { free_shipping_threshold: _retiredThreshold, ...keptAnnouncement } = currentAnnouncement || {};
       await adminSetSetting('announcement', { ...keptAnnouncement, notices: notices.filter(Boolean) });
+      // Retired controls write nothing a page reads, so their stored values are
+      // dropped here too (every visitor downloads this record): the Bestsellers
+      // title and subtitle, and the Hero Slides page's per-slide button styling.
+      // The category strip's visuals go with the sanitiser below, which keeps
+      // only the Offers group.
+      const { bestseller_title: _bt, bestseller_subtitle: _bs, heroCtas: _hc, ...currentHomepage } = savedHomepage || {};
       // Sanitised on the way out too: an unusable image URL, a malformed id,
       // a duplicate or a slug that is not a product never reaches storage.
       const cleanDiscovery = discoveryPayload(categoryCards, concernCards);
-      const next = mergeHomepageVisuals({ ...currentHomepage, bestseller_title: bsTitle, bestseller_subtitle: bsSub, discovery: cleanDiscovery }, visuals);
+      const next = mergeHomepageVisuals({ ...currentHomepage, discovery: cleanDiscovery }, visuals);
       await adminSetSetting('homepage', next);
       setVisuals(next.visuals);
       setCategoryCards(cleanDiscovery.categoryCards);
@@ -82,7 +84,7 @@ export default function HomepageSettings() {
 
   return (
     <div className="adm-form">
-      <div className="adm__head"><div><h1>Homepage</h1><p>Homepage copy, appearance, the offers gallery and the two discovery rails.</p></div></div>
+      <div className="adm__head"><div><h1>Homepage</h1><p>The announcement bar, the offers gallery’s appearance and the two discovery rails.</p></div></div>
       {err && <div className="adm-banner err">{err}</div>}
       {msg && <div className="adm-banner ok">{msg}</div>}
 
@@ -95,12 +97,6 @@ export default function HomepageSettings() {
               <input className="input" value={notices[i] || ''} onChange={(e) => setNotices((n) => { const c = [...n]; c[i] = e.target.value; return c; })} />
             </div>
           ))}
-        </div>
-
-        <div className="surface">
-          <h2>Bestsellers section</h2>
-          <div className="field"><label className="label">Title</label><input className="input" value={bsTitle} onChange={(e) => setBsTitle(e.target.value)} /></div>
-          <div className="field"><label className="label">Subtitle</label><input className="input" value={bsSub} onChange={(e) => setBsSub(e.target.value)} /></div>
         </div>
 
         <HomepageVisualControls value={visuals} onChange={setVisuals} onUploading={(delta) => setUploads((n) => n + delta)} />

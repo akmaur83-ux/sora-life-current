@@ -81,9 +81,9 @@ try {
 
   await check('Admin file pickers do not advertise wildcard image or video types', () => {
     const paths = [
-      'src/admin/pages/Branding.jsx', 'src/admin/pages/HeroSlides.jsx',
+      'src/admin/pages/Branding.jsx',
       'src/admin/pages/Promotions.jsx', 'src/admin/components/MediaGallery.jsx',
-      'src/admin/components/HomepageVisualControls.jsx', 'src/admin/components/HeroCtaAppearanceControls.jsx',
+      'src/admin/components/HomepageVisualControls.jsx',
     ];
     const source = paths.map((path) => readFileSync(path, 'utf8')).join('\n');
     assert.doesNotMatch(source, /accept="(?:image|video)\/\*"/);

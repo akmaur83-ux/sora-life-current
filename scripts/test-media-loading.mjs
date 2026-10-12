@@ -6,8 +6,6 @@ const check = (name, fn) => { fn(); console.log(`PASS ${name}`); };
 
 const deferred = read('src/components/DeferredImage.jsx');
 const productImage = read('src/components/ProductImage.jsx');
-const hero = read('src/components/Hero.jsx');
-const heroCta = read('src/components/HeroCta.jsx');
 const visualLayers = read('src/components/HomeVisualLayers.jsx');
 const mainGallery = read('src/components/ProductGallery.jsx');
 const lightbox = read('src/components/pdp/ProductLightbox.jsx');
@@ -42,26 +40,6 @@ check('card derivatives fall back to originals while PDP main and zoom stay orig
   assert.match(mainGallery, /frame="v2"\s*loading="eager"\s*fetchPriority="high"/);
   assert.match(mainGallery, /sizes="84px" frame="v2" variant="card"/);
   assert.doesNotMatch(lightbox, /variant="card"/);
-});
-
-check('configured hero prepares only active and justified adjacent media', () => {
-  assert.match(hero, /preparedSlides/);
-  assert.match(hero, /mediaPrepared && \(activeVideo/);
-  assert.match(hero, /prepareSlide\(active\);/);
-  assert.match(hero, /loadedSlides\.current\.has\(id\)[\s\S]*?prepareSlide\(active \+ 1\)/);
-  assert.match(hero, /loadedSlides\.current\.add\(id\)[\s\S]*?index === active[\s\S]*?prepareSlide\(index \+ 1\)/);
-  assert.match(hero, /loadedSlides\.current\.has\(id\)/);
-  assert.match(hero, /onLoad=\{\(\) => mediaReady\(s\.id, i\)\}/);
-  assert.doesNotMatch(hero, /SLIDES\.forEach\([^)]*prepareSlide/);
-  assert.match(hero, /i === active && s\.kind === 'video'/);
-  assert.doesNotMatch(hero, /fetchpriority=/, 'React must receive the canonical fetchPriority prop');
-  assert.match(hero, /else mq\.addListener\?\.\([^)]+\)/);
-  assert.match(hero, /else mq\.removeListener\?\.\([^)]+\)/);
-});
-
-check('inactive slide CTA media does not mount', () => {
-  assert.match(heroCta, /active && a\.textureUrl/);
-  assert.match(heroCta, /active && a\.iconUrl/);
 });
 
 check('mobile-hidden visual layers are removed before their URL is assigned', () => {

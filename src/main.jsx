@@ -8,12 +8,12 @@ import { AdminAuthProvider } from './lib/adminAuth.jsx';
 import { CustomerAuthProvider } from './lib/customerAuth.jsx';
 import { applyCatalog, applyVariants, applyProductMedia } from './data/products.js';
 import { applyCategories } from './data/categories.js';
-import { applyBranding, applyAnnouncement, applyHomepage, applyContact, applyHeroSlides, applyStorefrontTheme } from './lib/settings.js';
+import { applyBranding, applyAnnouncement, applyHomepage, applyContact, applyStorefrontTheme } from './lib/settings.js';
 import { applyPromotions } from './lib/promotions.js';
 import { BootstrapReadyContext } from './lib/bootstrapReady.js';
 import { scheduleDeferredStyles } from './lib/deferredStyles.js';
 import {
-  fetchPublicCatalog, fetchPublicCategories, fetchPublicHeroSlides, fetchPublicSettings,
+  fetchPublicCatalog, fetchPublicCategories, fetchPublicSettings,
   fetchPublicVariants, fetchPublicProductMedia, fetchPublicPromotions,
 } from './lib/adminApi.js';
 
@@ -37,7 +37,7 @@ function withTimeout(promise, ms) {
 
 /**
  * The app mounts synchronously with the built-in default data (catalog,
- * categories, hero slides, branding all have complete defaults baked into
+ * categories, branding all have complete defaults baked into
  * their modules) — first paint has ZERO network dependency, on every route.
  * The Supabase-backed live data is fetched here in the background, AFTER
  * mount, and — only if something actually changed — triggers exactly one
@@ -52,10 +52,9 @@ function Root() {
     let cancelled = false;
     (async () => {
       try {
-        const [catalog, categories, heroSlides, settings, variants, media, promotions] = await Promise.all([
+        const [catalog, categories, settings, variants, media, promotions] = await Promise.all([
           withTimeout(fetchPublicCatalog().catch(() => null), 4000),
           withTimeout(fetchPublicCategories().catch(() => null), 4000),
-          withTimeout(fetchPublicHeroSlides().catch(() => null), 4000),
           withTimeout(fetchPublicSettings().catch(() => null), 4000),
           withTimeout(fetchPublicVariants().catch(() => null), 4000),
           withTimeout(fetchPublicProductMedia().catch(() => null), 4000),
@@ -70,7 +69,6 @@ function Root() {
         if (variants && applyVariants(variants)) changed = true;
         if (media && applyProductMedia(media)) changed = true;
         if (categories && applyCategories(categories)) changed = true;
-        if (heroSlides && applyHeroSlides(heroSlides)) changed = true;
         // A successful promotions fetch (even []) replaces the local sample
         // fallback — an empty table then correctly shows no promo sections.
         if (promotions && applyPromotions(promotions)) changed = true;

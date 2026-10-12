@@ -1,6 +1,5 @@
 // Structured presentation fields inside site_settings.homepage.visuals.
 // No CSS/HTML input is accepted. Shared by the editor and storefront reader.
-export const IMAGE_POSITIONS = ['left top', 'center top', 'right top', 'left center', 'center center', 'right center', 'left bottom', 'center bottom', 'right bottom'];
 const color = (label, value) => ({ label, type: 'color', value });
 const number = (label, value, min, max, step = 1) => ({ label, type: 'number', value, min, max, step });
 const toggle = (label, value = false) => ({ label, type: 'boolean', value });
@@ -8,33 +7,6 @@ const image = (label) => ({ label, type: 'image', value: '' });
 const select = (label, value, options) => ({ label, type: 'select', value, options });
 
 export const HOMEPAGE_VISUAL_FIELDS = {
-  categoryStrip: {
-    enabled: toggle('Enable category background', false),
-    backgroundColor: color('Background color', '#F7F1E7'),
-    imageUrl: image('Background strip image'),
-    imageSize: select('Background image fit', 'cover', ['cover', 'contain']),
-    imagePosition: select('Background image position', 'center center', IMAGE_POSITIONS),
-    imageOpacity: number('Background image opacity', 1, 0, 1, 0.05),
-    overlayColor: color('Overlay color', '#FBF8F1'),
-    overlayOpacity: number('Overlay strength (0 = off)', 0, 0, 1, 0.05),
-    paddingTop: number('Top padding (px)', 12, 0, 48),
-    paddingBottom: number('Bottom padding (px)', 12, 0, 48),
-    borderTop: toggle('Show top border'),
-    borderBottom: toggle('Show bottom border'),
-    borderColor: color('Border color', '#DED2C4'),
-    borderWidth: number('Border thickness (px)', 1, 0, 4),
-    radius: number('Corner radius (px)', 8, 0, 16),
-    textureUrl: image('Decorative texture'),
-    texturePosition: select('Texture position', 'center center', IMAGE_POSITIONS),
-    leftImage: image('Left decoration'),
-    rightImage: image('Right decoration'),
-    decorationOpacity: number('Decoration opacity', 0.25, 0, 1, 0.05),
-    decorationSize: number('Decoration width (px)', 120, 24, 240),
-    decorationPosition: select('Decoration vertical position', 'center', ['top', 'center', 'bottom']),
-    hideTextureMobile: toggle('Hide texture on mobile'),
-    hideLeftMobile: toggle('Hide left decoration on mobile', true),
-    hideRightMobile: toggle('Hide right decoration on mobile', true),
-  },
   offers: {
     backgroundColor: color('Section background', '#FBF8F1'),
     frameColor: color('Frame interior', '#FFF8ED'),

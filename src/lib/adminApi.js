@@ -3,7 +3,7 @@
 // admin CRUD. Every write here is also enforced server-side by
 // Postgres RLS (see supabase/migrations/0001_admin_extensions.sql):
 // only a session whose auth.uid() exists in public.admin_users can
-// write to products/categories/hero_slides/site_settings/storage.
+// write to products/categories/site_settings/storage.
 // This file does not "trust" the client — it's a thin wrapper.
 // ============================================================
 import { supabase } from './supabase.js';
@@ -11,7 +11,7 @@ import { BIOSASH_PRODUCTS } from '../data/biosash.js';
 import { normalizeContentPatch } from './productContent.js';
 import {
   MediaOperationError, persistUploadedMedia, removeMediaObject, settlePrimaryMedia, commitStagedMedia,
-  IMAGE_UPLOAD_TYPES, IMAGE_UPLOAD_MAX_BYTES, validateImageMetadata, validateImageUpload, validateVideoUpload,
+  IMAGE_UPLOAD_TYPES, IMAGE_UPLOAD_MAX_BYTES, validateImageMetadata, validateImageUpload,
 } from './productMediaOperations.js';
 
 
@@ -186,30 +186,6 @@ export async function fetchPublicCategories() {
   return (data || []).map((c) => ({
     slug: c.slug, name: c.name, tagline: c.tagline || '', blurb: c.blurb || '',
     tone: c.tone || 'forest', icon: 'leaf', image: c.image_url || null,
-  }));
-}
-
-export async function fetchPublicHeroSlides() {
-  const { data, error } = await supabase
-    .from('hero_slides')
-    .select('*')
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true });
-  if (error) throw error;
-  return (data || []).map((s) => ({
-    id: s.id,
-    kind: s.kind,
-    src: s.kind === 'video' ? s.video_url : s.image_url,
-    // Optional artwork for >= 1024px (0029). Image slides only; null means
-    // every viewport shows image_url, exactly as before the column existed.
-    desktopSrc: s.kind === 'video' ? null : (s.desktop_image_url || null),
-    poster: s.poster_url || undefined,
-    kicker: s.kicker || '',
-    title: s.title || '',
-    sub: s.subtitle || '',
-    lede: s.lede || '',
-    cta: { label: s.cta_label || 'SHOP NOW', to: s.cta_link || '/shop' },
-    position: 'center',
   }));
 }
 
@@ -517,62 +493,6 @@ export async function adminSeedDefaultCategories() {
 }
 
 // ---------------------------------------------------------------
-// ADMIN: hero slides
-// ---------------------------------------------------------------
-export async function adminListHeroSlides() {
-  const { data, error } = await supabase.from('hero_slides').select('*').order('sort_order', { ascending: true });
-  if (error) throw error;
-  return data || [];
-}
-
-export async function adminUpsertHeroSlide(slide) {
-  const row = {
-    kind: slide.kind || 'image',
-    image_url: slide.image_url || null,
-    desktop_image_url: slide.desktop_image_url || null,
-    video_url: slide.video_url || null,
-    poster_url: slide.poster_url || null,
-    kicker: slide.kicker || '',
-    title: slide.title || '',
-    subtitle: slide.subtitle || '',
-    lede: slide.lede || '',
-    cta_label: slide.cta_label || 'SHOP NOW',
-    cta_link: slide.cta_link || '/shop',
-    sort_order: Number(slide.sort_order) || 0,
-    is_active: slide.is_active !== false,
-  };
-  if (slide.id) {
-    const { data, error } = await supabase.from('hero_slides').update(row).eq('id', slide.id).select().single();
-    if (error) throw error;
-    return data;
-  }
-  const { data, error } = await supabase.from('hero_slides').insert(row).select().single();
-  if (error) throw error;
-  return data;
-}
-
-export async function adminDeleteHeroSlide(id) {
-  const { error } = await supabase.from('hero_slides').delete().eq('id', id);
-  if (error) throw error;
-}
-
-export async function adminReorderHeroSlides(idsInOrder) {
-  await Promise.all(idsInOrder.map((id, i) => supabase.from('hero_slides').update({ sort_order: i }).eq('id', id)));
-}
-
-const DEFAULT_HERO_SEED = [
-  { kind: 'video', video_url: '/media/hero.mp4', poster_url: '/media/hero-poster.jpg', kicker: 'The Power of', title: 'Sea Buckthorn', subtitle: 'Harvested from the Himalayas. Made for your wellness.', lede: 'Pure nutrition. Natural radiance. Everyday wellness.', cta_label: 'EXPLORE COLLECTION', cta_link: '/category/wellness', sort_order: 0 },
-  { kind: 'image', image_url: '/media/hero-slide2.jpg', kicker: 'From the Himalayas', title: "Nature's Orange Gold", subtitle: 'Sun-ripened sea buckthorn, gently cold-pressed.', lede: 'Nutrient-dense wellness, straight from the mountains.', cta_label: 'SHOP JUICES & DRINKS', cta_link: '/category/juices-drinks', sort_order: 1 },
-];
-export async function adminSeedDefaultHeroSlides() {
-  const existing = await adminListHeroSlides();
-  if (existing.length > 0) return 0;
-  const { error } = await supabase.from('hero_slides').insert(DEFAULT_HERO_SEED);
-  if (error) throw error;
-  return DEFAULT_HERO_SEED.length;
-}
-
-// ---------------------------------------------------------------
 // ADMIN: site settings (branding / announcement / homepage / contact)
 // ---------------------------------------------------------------
 export async function adminGetSetting(key) {
@@ -612,19 +532,6 @@ async function uploadToBucket(bucket, file, folder, opts = {}) {
 export async function uploadImage(file, folder = 'products') {
   const validated = await validateImageUpload(file);
   return uploadToBucket('product-images', file, folder, { extension: validated.extension, contentType: validated.mime });
-}
-
-const MAX_HERO_VIDEO_BYTES = 100 * 1024 * 1024; // 100MB — generous local guard; Supabase project limits still apply
-
-export async function validateHeroVideo(file) {
-  return validateVideoUpload(file, { maxBytes: MAX_HERO_VIDEO_BYTES });
-}
-
-export async function uploadHeroVideo(file) {
-  const validated = await validateHeroVideo(file);
-  return uploadToBucket('hero-media', file, 'video', {
-    cacheControl: '31536000', extension: validated.extension, contentType: validated.mime,
-  });
 }
 
 function cryptoRandomId() {

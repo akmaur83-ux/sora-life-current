@@ -37,14 +37,6 @@ export const TOKENS = [
   { key: 'annbar_text',      group: 'Header',   label: 'Announcement text',     type: 'color', default: '#F0F6F2', css: ['--st-annbar-text'] },
   { key: 'annbar_accent',    group: 'Header',   label: 'Announcement accent',   type: 'color', default: '#F0C169', css: ['--st-annbar-accent'] },
 
-  // ---- Homepage ----
-  { key: 'hero_overlay',     group: 'Homepage', label: 'Hero overlay (extra dark tint)', type: 'overlay', default: 'none', css: ['--st-hero-overlay'] },
-  { key: 'category_bg',      group: 'Homepage', label: 'Category section background', type: 'color', default: '#1A3226', css: ['--st-category-bg'] },
-  { key: 'category_title',   group: 'Homepage', label: 'Category title color',  type: 'color', default: '#F0F6F2', css: ['--st-category-title'] },
-  { key: 'category_subtitle', group: 'Homepage', label: 'Category subtitle color', type: 'color', default: '#BEDACD', css: ['--st-category-subtitle'] },
-  { key: 'category_hover',   group: 'Homepage', label: 'Category hover color',  type: 'color', default: '#F6D79A', css: ['--st-category-hover'] },
-  { key: 'category_circle',  group: 'Homepage', label: 'Category circle background', type: 'color', default: '#FFFFFF', css: ['--st-category-circle'] },
-
   // ---- Product cards ----
   { key: 'discount_bg',      group: 'Product cards', label: 'Discount badge background', type: 'color', default: '#E8B04B', css: ['--st-discount-bg'] },
   { key: 'discount_text',    group: 'Product cards', label: 'Discount badge text',      type: 'color', default: '#14261C', css: ['--st-discount-text'] },
@@ -81,7 +73,10 @@ export const TOKENS = [
   { key: 'footer_accent',    group: 'Footer',   label: 'Footer accent',     type: 'color', default: '#F0C169', css: ['--st-footer-accent'] },
 ];
 
-export const GROUPS = ['Brand', 'Header', 'Homepage', 'Product cards', 'Buttons', 'Typography', 'Surfaces', 'Footer'];
+// The Homepage group (hero overlay and five category-strip colours) was retired: the
+// hero and the strip it styled are no longer on any page. The stored theme may still
+// carry those keys; sanitizeTheme drops them on read and the RPC keeps them untouched.
+export const GROUPS = ['Brand', 'Header', 'Product cards', 'Buttons', 'Typography', 'Surfaces', 'Footer'];
 
 export const TOKEN_BY_KEY = Object.fromEntries(TOKENS.map((t) => [t.key, t]));
 
@@ -98,7 +93,7 @@ export const PRESETS = {
   forest_gold: {
     id: 'forest_gold', name: 'Forest & Gold',
     theme: preset({
-      category_bg: '#1A3226', discount_bg: '#E8B04B', discount_text: '#14261C',
+      discount_bg: '#E8B04B', discount_text: '#14261C',
       brand_accent: '#E8B04B', brand_highlight: '#D08E2C', btn_hover: '#E8B04B',
       annbar_accent: '#F0C169', footer_accent: '#F0C169',
     }),
@@ -106,7 +101,7 @@ export const PRESETS = {
   forest_orange: {
     id: 'forest_orange', name: 'Forest & Orange',
     theme: preset({
-      category_bg: '#1A3226', discount_bg: '#D08E2C', discount_text: '#2A1B02',
+      discount_bg: '#D08E2C', discount_text: '#2A1B02',
       brand_accent: '#D08E2C', brand_highlight: '#B4552E', btn_hover: '#D08E2C',
       annbar_accent: '#F0C169', footer_accent: '#E8B04B',
     }),
@@ -114,8 +109,7 @@ export const PRESETS = {
   warm_luxe: {
     id: 'warm_luxe', name: 'Warm Luxe',
     theme: preset({
-      category_bg: '#2C3A32', category_title: '#FBF8F1', category_subtitle: '#D9C7A6',
-      category_hover: '#E8B04B', discount_bg: '#B4761F', discount_text: '#FBF8F1',
+      discount_bg: '#B4761F', discount_text: '#FBF8F1',
       annbar_bg: '#2C3A32', footer_bg: '#2C3A32', brand_accent: '#E8B04B', btn_hover: '#B4761F',
       section_bg: '#F7F1E6',
     }),

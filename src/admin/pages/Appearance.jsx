@@ -38,7 +38,7 @@ export default function Appearance() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
-  const [openGroup, setOpenGroup] = useState('Homepage');
+  const [openGroup, setOpenGroup] = useState('Brand');
 
   const load = useCallback(async () => {
     setLoading(true);

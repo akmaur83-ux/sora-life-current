@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { adminListProducts, adminListCategories, adminListHeroSlides, adminImportBiosashCatalog, adminSeedDefaultCategories, adminSeedDefaultHeroSlides } from '../../lib/adminApi.js';
+import { adminListProducts, adminListCategories, adminImportBiosashCatalog, adminSeedDefaultCategories } from '../../lib/adminApi.js';
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [slides, setSlides] = useState([]);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState('');
   const [progress, setProgress] = useState(null);
 
   async function load() {
     setLoading(true);
-    const [p, c, h] = await Promise.all([
+    const [p, c] = await Promise.all([
       adminListProducts().catch(() => []),
       adminListCategories().catch(() => []),
-      adminListHeroSlides().catch(() => []),
     ]);
-    setProducts(p); setCategories(c); setSlides(h);
+    setProducts(p); setCategories(c);
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
@@ -28,9 +26,8 @@ export default function Dashboard() {
     setImportMsg('');
     try {
       await adminSeedDefaultCategories();
-      await adminSeedDefaultHeroSlides();
       const n = await adminImportBiosashCatalog((done, total) => setProgress({ done, total }));
-      setImportMsg(`Imported/updated ${n} real Biosash products, seeded default categories and hero slides.`);
+      setImportMsg(`Imported/updated ${n} real Biosash products, seeded default categories.`);
       await load();
     } catch (e) {
       setImportMsg('Import failed: ' + (e.message || String(e)));
@@ -69,7 +66,6 @@ export default function Dashboard() {
         <div className="adm__stat"><strong>{loading ? '—' : products.length}</strong><span>Products</span></div>
         <div className="adm__stat"><strong>{loading ? '—' : active}</strong><span>Active products</span></div>
         <div className="adm__stat"><strong>{loading ? '—' : categories.length}</strong><span>Categories</span></div>
-        <div className="adm__stat"><strong>{loading ? '—' : slides.length}</strong><span>Hero slides</span></div>
       </div>
 
       <div className="surface pad-lg">
@@ -77,7 +73,6 @@ export default function Dashboard() {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Link className="btn btn-outline btn-sm" to="/admin/products/new">+ Add product</Link>
           <Link className="btn btn-outline btn-sm" to="/admin/products">Manage products</Link>
-          <Link className="btn btn-outline btn-sm" to="/admin/hero-slides">Manage hero slides</Link>
           <Link className="btn btn-outline btn-sm" to="/admin/categories">Manage categories</Link>
           <Link className="btn btn-outline btn-sm" to="/admin/branding">Branding</Link>
         </div>

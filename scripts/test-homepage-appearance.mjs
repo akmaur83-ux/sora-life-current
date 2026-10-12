@@ -57,19 +57,13 @@ const PromoPoster = component('../src/components/promo/PromoPoster.jsx', 'PromoP
 const PromoOfferCard = ({ promo }) => h('article', { className: 'promo-offer' }, promo.title);
 const HomeVisualLayers = component('../src/components/HomeVisualLayers.jsx', 'HomeVisualLayers', { DeferredImage });
 const HomeOffers = component('../src/components/promo/HomeOffers.jsx', 'HomeOffers', { ...appearance, promosForPlacement, HomeVisualLayers, PromoPoster, PromoOfferCard, PromoArtwork });
-const CategoryRail = component('../src/components/CategoryRail.jsx', 'CategoryRail', { Link, categories, DeferredImage });
-// The strip now renders the large image-led category cards instead of the
-// small circular marquee; the admin appearance wrapper it is tested for is
-// unchanged.
 const ProductImage = () => h('span');
 const ShopByCategory = component('../src/components/HomeDiscoveryRails.jsx', 'ShopByCategory',
   { Link, Icon, ProductImage, DeferredImage, selectCategoryCards, selectConcernCards: () => [] });
-const HomeCategoryStrip = component('../src/components/HomeCategoryStrip.jsx', 'HomeCategoryStrip', { categories, CategoryRail, HomeVisualLayers });
 const defaults = appearance.sanitizeHomepageVisuals();
 const promo = (id, extra = {}) => ({ id, title: `Promotion ${id}`, type: 'poster', placements: ['home'], is_active: true, sort_order: 0, image_url: `/public/${id}.png`, ...extra });
 const offers = (rows, config = defaults.offers) => { applyPromotions(rows); return renderToStaticMarkup(h(HomeOffers, { appearance: config })); };
 const ids = (html) => [...html.matchAll(/data-promotion-id="([^"]+)"/g)].map((m) => m[1]);
-const strip = (config = defaults.categoryStrip) => renderToStaticMarkup(h(HomeCategoryStrip, { appearance: config }));
 
 await check('two active Homepage posters both render', () => assert.deepEqual(ids(offers([promo('a'), promo('b')])), ['a', 'b']));
 await check('three promotions are retained without a slice limit', () => assert.deepEqual(ids(offers([promo('a'), promo('b'), promo('c')])), ['a', 'b', 'c']));
@@ -136,50 +130,10 @@ await check('P5 the real DeferredImage defers the sources too: nothing is fetche
   const bare = renderToStaticMarkup(h(RealDeferredImage, { src: '/m.png', alt: '', loading: 'eager' }));
   assert.doesNotMatch(bare, /<picture/);
 });
-await check('P7 hero storage URLs stay direct while local poster renditions and desktop picture selection remain intact', () => {
-  // The real helper from Hero.jsx, with the module's other dependencies
-  // stubbed — none of them is involved in choosing an image.
-  const noop = () => null;
-  const { heroSrc, heroSrcSet, withDesktopSource } = component('../src/components/Hero.jsx',
-    '{ heroSrc, heroSrcSet, withDesktopSource }', {
-      Link, Icon, ProductImage: noop, HeroCta: noop, branding: {}, heroSlides: [], heroSlidesConfigured: false,
-      homepage: {}, products: [], categories: [], selectMarketplaceHeroProducts: () => [],
-    });
-  const img = h('img', { className: 'v2-hero__img', src: '/m.png', alt: '' });
-  const sb = 'https://gbcnvrymoarcqrvdnnvb.supabase.co/storage/v1/object/public/product-images/hero/d.png';
-
-  const bare = renderToStaticMarkup(withDesktopSource(null, img));
-  assert.doesNotMatch(bare, /<picture/, 'no desktop image → the bare <img>, byte for byte');
-  assert.match(bare, /<img class="v2-hero__img" src="\/m\.png"/);
-
-  assert.equal(heroSrc(sb, 1600), sb, 'the public object URL is the image src without a render-endpoint rewrite');
-  assert.equal(heroSrcSet(sb), undefined, 'remote Storage art has no generated transformed srcset candidates');
-  const remoteImg = renderToStaticMarkup(h('img', { src: heroSrc(sb, 1600), srcSet: heroSrcSet(sb), alt: '' }));
-  assert.match(remoteImg, /src="https:\/\/gbcnvrymoarcqrvdnnvb\.supabase\.co\/storage\/v1\/object\/public\/product-images\/hero\/d\.png"/);
-  assert.doesNotMatch(remoteImg, /srcSet=|render\/image\/public|[?&](?:width|quality)=/, 'the remote <img> has no transformed candidates');
-
-  const pic = renderToStaticMarkup(withDesktopSource(sb, img));
-  assert.match(pic, /^<picture><source media="\(min-width: 1024px\)"/, 'the source leads, keyed on the desktop boundary');
-  assert.match(pic, /srcSet="https:\/\/gbcnvrymoarcqrvdnnvb\.supabase\.co\/storage\/v1\/object\/public\/product-images\/hero\/d\.png"/, 'desktop art also keeps its original public object URL');
-  assert.doesNotMatch(pic, /render\/image\/public|[?&](?:width|quality)=|\s(?:640|1024|1600|1920)w/, 'the desktop source has no generated Supabase renditions');
-  assert.match(pic, /sizes="100vw"/);
-  assert.match(pic, /<img class="v2-hero__img" src="\/m\.png"/, 'image_url stays the <img>');
-  assert.ok(pic.indexOf('<source') < pic.indexOf('<img'), 'the desktop source still precedes the default image');
-
-  const localPoster = '/media/hero-poster.jpg';
-  const localSrcSet = '/media/hero-poster-1024.webp 1024w, /media/hero-poster-1600.webp 1600w';
-  assert.equal(heroSrcSet(localPoster), localSrcSet, 'the shipped poster keeps both pre-built WebP variants');
-  const localImg = renderToStaticMarkup(h('img', { src: heroSrc(localPoster, 1600), srcSet: heroSrcSet(localPoster), sizes: '100vw', alt: '' }));
-  assert.match(localImg, /srcSet="\/media\/hero-poster-1024\.webp 1024w, \/media\/hero-poster-1600\.webp 1600w"/);
-  const local = renderToStaticMarkup(withDesktopSource(localPoster, img));
-  assert.match(local, /<source media="\(min-width: 1024px\)" srcSet="\/media\/hero-poster-1024\.webp 1024w, \/media\/hero-poster-1600\.webp 1600w" sizes="100vw"/,
-    'desktop <picture> keeps the local poster rendition srcset');
-  assert.match(local, /<img class="v2-hero__img" src="\/m\.png"/, 'desktop <picture> retains its default image');
-});
 await check('P6 the media query is the ONE boundary, and it is the stylesheet\'s desktop boundary', () => {
-  // Both artwork renderers name the same query, and it is min-width 1024 —
+  // The artwork renderer names the query, and it is min-width 1024 —
   // the breakpoint every desktop rule in this project uses.
-  for (const f of ['../src/components/promo/PromoArtwork.jsx', '../src/components/Hero.jsx']) {
+  for (const f of ['../src/components/promo/PromoArtwork.jsx']) {
     assert.match(read(f), /DESKTOP_MEDIA = '\(min-width: 1024px\)'/, `${f} declares the boundary`);
   }
   assert.doesNotMatch(read('../src/components/promo/PromoArtwork.jsx'), /matchMedia|innerWidth/, 'no JavaScript chooses the artwork');
@@ -189,19 +143,13 @@ await check('unsafe poster URL falls back to configured copy', () => assert.does
 await check('maximum columns clamp to actual item count', () => assert.match(offers([promo('a'), promo('b')], { ...defaults.offers, desktopColumns: 3 }), /--hp-offers-columns:2/));
 await check('mobile extra posters expose discoverable controls', () => assert.match(offers([promo('a'), promo('b')]), /Show promotion 2: Promotion b/));
 
-const categoryLinks = (html) => [...html.matchAll(/href="(\/category\/[^\"]+)"/g)].map((m) => m[1]);
-const originalLinks = categoryLinks(renderToStaticMarkup(h(CategoryRail)));
-await check('category strip keeps every existing link, including marquee copies', () => assert.deepEqual(categoryLinks(strip()), originalLinks));
-await check('every real category remains reachable', () => { for (const c of categories) assert.ok(originalLinks.includes(`/category/${c.slug}`)); });
-await check('no configured category background works without an image layer', () => { const html = strip(); assert.match(html, /Shop by category/); assert.doesNotMatch(html, /hp-visual-layer--background/); });
-await check('configured background retains all category links and image sources', () => {
-  const html = strip({ ...defaults.categoryStrip, enabled: true, imageUrl: '/public/strip.png', imageSize: 'contain' });
-  assert.match(html, /src="\/public\/strip.png"/); assert.match(html, /object-fit:contain/); assert.deepEqual(categoryLinks(html), originalLinks);
-});
-await check('disabling category background suppresses decoration layers', () => assert.doesNotMatch(strip({ ...defaults.categoryStrip, imageUrl: '/public/strip.png', leftImage: '/public/left.png' }), /hp-visual-layers/));
-await check('fewer than three categories leave no empty section', () => {
-  const C = component('../src/components/HomeCategoryStrip.jsx', 'HomeCategoryStrip', { categories: [], CategoryRail, HomeVisualLayers });
-  assert.equal(renderToStaticMarkup(h(C, { appearance: defaults.categoryStrip })), '');
+await check('the category strip is retired: its visuals are not offered, and a saved strip record is dropped', () => {
+  assert.deepEqual(Object.keys(appearance.HOMEPAGE_VISUAL_FIELDS), ['offers']);
+  const clean = appearance.sanitizeHomepageVisuals({ categoryStrip: { enabled: true, imageUrl: '/public/strip.png' }, offers: { gap: 24 } });
+  assert.deepEqual(Object.keys(clean), ['offers']);
+  assert.equal(clean.offers.gap, 24);
+  assert.equal(appearance.mergeHomepageVisuals({ visuals: { categoryStrip: { enabled: true } } }, clean).visuals.categoryStrip, undefined);
+  assert.doesNotMatch(read('../src/admin/components/HomepageVisualControls.jsx'), /categoryStrip|Category strip/);
 });
 await check('legacy settings without visuals receive complete safe defaults', () => assert.deepEqual(appearance.sanitizeHomepageVisuals({}), defaults));
 await check('numeric editor defaults satisfy their min, max and step constraints', () => {
@@ -275,6 +223,12 @@ await check('decorations cannot intercept category or promotion interaction', ()
 await check('Homepage save merges existing settings and broadcasts only after save', () => {
   const source = read('../src/admin/pages/Homepage.jsx'); assert.match(source, /mergeHomepageVisuals\(\{ \.\.\.currentHomepage/); assert.match(source, /await adminSetSetting\('homepage', next\);[\s\S]*announceHomepageSaved\(next\)/);
 });
+await check('the retired Bestsellers fields and hero-slide button styling are no longer offered, and saving drops their stored values', () => {
+  const source = read('../src/admin/pages/Homepage.jsx');
+  assert.doesNotMatch(source, /Bestsellers section|bsTitle|bsSub/);
+  assert.match(source, /const \{ bestseller_title: _bt, bestseller_subtitle: _bs, heroCtas: _hc, \.\.\.currentHomepage \} = savedHomepage \|\| \{\};/);
+  assert.doesNotMatch(source, /bestseller_title: bsTitle|bestseller_subtitle: bsSub/);
+});
 // Drive the real editor callbacks with deferred uploads and React-style state
 // updates. No storage request or settings save is made by this harness.
 function editorHarness() {
@@ -312,12 +266,12 @@ function editorHarness() {
     },
   };
 }
-await check('upload completion preserves newer edits in the same and other appearance groups', async () => {
+await check('upload completion preserves newer edits made while it ran', async () => {
   const editor = editorHarness();
-  const upload = editor.startUpload('homepage-categoryStrip-imageUrl');
+  const upload = editor.startUpload('homepage-offers-decorationUrl');
   editor.edit('homepage-offers-gap', '24');
-  editor.edit('homepage-categoryStrip-paddingTop', '20');
-  const expected = { ...editor.state, categoryStrip: { ...editor.state.categoryStrip, imageUrl: '/public/upload.png' } };
+  editor.edit('homepage-offers-padding', '20');
+  const expected = { ...editor.state, offers: { ...editor.state.offers, decorationUrl: '/public/upload.png' } };
   assert.equal(editor.uploads, 1);
   editor.pending[0]('/public/upload.png');
   await upload;
@@ -327,13 +281,12 @@ await check('upload completion preserves newer edits in the same and other appea
 });
 await check('concurrent uploads completing out of order retain both images and newer settings', async () => {
   const editor = editorHarness();
-  const first = editor.startUpload('homepage-categoryStrip-leftImage');
+  const first = editor.startUpload('homepage-offers-decorationUrl');
   const second = editor.startUpload('homepage-offers-textureUrl');
   editor.edit('homepage-offers-gap', '24');
-  editor.edit('homepage-categoryStrip-paddingBottom', '18');
+  editor.edit('homepage-offers-padding', '18');
   const expected = { ...editor.state,
-    categoryStrip: { ...editor.state.categoryStrip, leftImage: '/public/left.png' },
-    offers: { ...editor.state.offers, textureUrl: '/public/texture.png' },
+    offers: { ...editor.state.offers, decorationUrl: '/public/left.png', textureUrl: '/public/texture.png' },
   };
   assert.equal(editor.uploads, 2);
   editor.pending[1]('/public/texture.png');
