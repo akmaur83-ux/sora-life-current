@@ -1,0 +1,115 @@
+diff --git a/src/components/Footer.jsx b/src/components/Footer.jsx
+index eebbbe9..c5f9c8c 100644
+--- a/src/components/Footer.jsx
++++ b/src/components/Footer.jsx
+@@ -3,8 +3,8 @@ import Icon from './Icon.jsx';
+ import Logo from './Logo.jsx';
+ import { categories } from '../data/categories.js';
+ import { branding } from '../lib/settings.js';
+-import { companyInfo, socialLinks, telHref } from '../lib/company.js';
+-import { useLegalPage } from '../lib/legalPagesApi.js';
++import { hasContactChannel, socialLinks, telHref } from '../lib/company.js';
++import { useConsumerCare } from '../lib/consumerCare.js';
+ 
+ // ============================================================
+ // Footer.
+@@ -16,10 +16,13 @@ import { useLegalPage } from '../lib/legalPagesApi.js';
+ // Optional contact/social details are sanitized and render only when an admin
+ // has configured them. The trust row states operational facts implemented by
+ // server pricing, checkout and customer order history — not marketing claims.
++//
++// Consumer care is on every page, every store: the business name, address,
++// phone, email and hours the Contact & help page publishes (consumerCare.js),
++// each shown only when the admin has set it.
+ // ============================================================
+ export default function Footer() {
+-  const { page } = useLegalPage('contact');
+-  const info = companyInfo({ ...page, social: companyInfo().social });
++  const info = useConsumerCare();
+   const socials = socialLinks(info);
+   const name = branding?.siteName || 'SORA LIFE';
+ 
+@@ -30,11 +33,19 @@ export default function Footer() {
+           <div className="ftr__brand">
+             <Logo light />
+             <p>A marketplace for wellness, personal care and everyday essentials.</p>
+-            {(info.email || info.phone) && (
+-              <div className="ftr__contact" aria-label="Store contact details">
+-                {info.email && <a href={`mailto:${info.email}`}>{info.email}</a>}
+-                {info.phone && <a href={telHref(info.phone)}>{info.phone}</a>}
+-              </div>
++            {hasContactChannel(info) && (
++              <section className="ftr__care" id="consumer-care" aria-labelledby="ftr-care-h">
++                <h4 id="ftr-care-h">Consumer care</h4>
++                {info.legalName && <p className="ftr__care-name">{info.legalName}</p>}
++                {info.address && <address className="ftr__care-address">{info.address}</address>}
++                {(info.email || info.phone) && (
++                  <div className="ftr__contact" aria-label="Store contact details">
++                    {info.phone && <a href={telHref(info.phone)}>{info.phone}</a>}
++                    {info.email && <a href={`mailto:${info.email}`}>{info.email}</a>}
++                  </div>
++                )}
++                {info.hours && <p className="ftr__care-hours">{info.hours}</p>}
++              </section>
+             )}
+             {socials.length > 0 && (
+               <div className="ftr__social" aria-label="Official social profiles">
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 4a88b87..6b34d06 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -12,6 +12,7 @@ import { CategoryChips } from './FashionLayout.jsx';
+ import { Breadcrumb } from './FashionListing.jsx';
+ import FashionProductCard, { Stars } from './FashionProductCard.jsx';
+ import { VariantPicker } from './FashionVariantPicker.jsx';
++import ProductInformation from '../components/ProductInformation.jsx';
+ 
+ // ============================================================
+ // /fashion/p/<slug> — the product page.
+@@ -161,6 +162,7 @@ export default function FashionProductPage() {
+               </dl>
+             </section>
+           )}
++          <ProductInformation store="fashion" productId={view.id} variant={st.variant} prefix="fs" />
+         </div>
+       </div>
+ 
+diff --git a/src/homeliving/HomeLivingProductPage.jsx b/src/homeliving/HomeLivingProductPage.jsx
+index 5a2c1e9..40b5945 100644
+--- a/src/homeliving/HomeLivingProductPage.jsx
++++ b/src/homeliving/HomeLivingProductPage.jsx
+@@ -9,6 +9,7 @@ import { breadcrumbFor } from '../lib/homelivingListing.js';
+ import { readSelection, writeSelection, selectionState, relatedFor } from '../lib/homelivingPdp.js';
+ import { Breadcrumb } from './HomeLivingCategory.jsx';
+ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
++import ProductInformation from '../components/ProductInformation.jsx';
+ 
+ // ============================================================
+ // /homeliving/p/<slug> — the product page.
+@@ -427,6 +428,8 @@ export default function HomeLivingProductPage() {
+               {view.sku && <div><dt>SKU</dt><dd>{view.sku}</dd></div>}
+             </dl>
+           </section>
++          {/* Net quantity is the Size row above. */}
++          <ProductInformation store="homeliving" productId={view.id} variant={st.variant} prefix="hl" netQuantity={false} />
+         </div>
+       </div>
+ 
+diff --git a/src/styles/info.css b/src/styles/info.css
+index a294c36..c1193e3 100644
+--- a/src/styles/info.css
++++ b/src/styles/info.css
+@@ -162,6 +162,13 @@ a.info-channel:hover { background:var(--info-soft); }
+ .ftr__contact { display:flex; flex-direction:column; align-items:flex-start; gap:5px; margin-top:18px; }
+ .ftr__contact a { overflow-wrap:anywhere; font-size:12px; color:rgba(255,255,255,.82); }
+ .ftr__contact a:hover { color:var(--st-footer-accent, var(--honey-300)); }
++/* Consumer care, under the brand line on every store's footer. */
++.ftr__care { margin-top:18px; }
++.ftr__care h4 { margin:0 0 8px; color:#fff; font-family:var(--slv2-sans); font-size:10px; font-weight:750; letter-spacing:.14em; text-transform:uppercase; }
++.ftr__brand .ftr__care p, .ftr__care address { margin:0 0 4px; max-width:34ch; color:rgba(255,255,255,.82); font-size:12px; font-style:normal; line-height:1.6; }
++.ftr__brand .ftr__care .ftr__care-name { color:#fff; font-weight:650; }
++.ftr__care address { white-space:pre-line; }
++.ftr__care .ftr__contact { margin:6px 0 4px; }
+ .ftr__social { margin-top:15px; }
+ .ftr__social-link { display:grid; width:38px; height:38px; place-items:center; border:1px solid rgba(255,255,255,.24); border-radius:2px; color:#fff; }
+ .ftr__social-link:hover { border-color:var(--st-footer-accent, var(--honey-300)); color:var(--st-footer-accent, var(--honey-300)); }

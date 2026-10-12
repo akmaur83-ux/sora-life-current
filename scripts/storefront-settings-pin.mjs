@@ -92,6 +92,11 @@ export const SCROLL_MANAGER_EDITS = /^(src\/main\.jsx|src\/components\/Layout\.j
 /** Migration 0036 (catalogue declarations), applied by the owner on 2026-10-12: the schema file and its rollback, nothing else under supabase/. */
 export const CATALOGUE_DECLARATION_MIGRATION = /^supabase\/migrations\/(0036_catalogue_declarations\.sql|rollback\/0036_catalogue_declarations_down\.sql)$/;
 
+/** Product information and consumer care (test-product-declarations.mjs owns them): the section, its read, its rules, the consumer-care hook and the recorded patch. */
+export const PRODUCT_INFORMATION_FILES = /^(src\/components\/ProductInformation\.jsx|src\/lib\/(productDeclarations|productDeclarationsApi|consumerCare)\.js|scripts\/test-product-declarations\.mjs|scripts\/pins\/product-information\.patch)$/;
+/** The shared files it edited — the two product pages (the section after Details), the footer (consumer care) and its sheet — each undone by sansCartChanges (scripts/pins/product-information.patch). */
+export const PRODUCT_INFORMATION_EDITS = /^(src\/fashion\/FashionProductPage\.jsx|src\/homeliving\/HomeLivingProductPage\.jsx|src\/components\/Footer\.jsx|src\/styles\/info\.css)$/;
+
 /** The site menu's closed panel casts no shadow (layout.css, one line) — undone by sansCartChanges (scripts/pins/drawer-shadow.patch). */
 export const DRAWER_SHADOW_EDITS = /^src\/styles\/layout\.css$/;
 
@@ -371,6 +376,12 @@ const UNDO_FASHION_STRIP_SAREE = undoFromPatch('fashion-strip-saree.patch');
 // card keeps its image square without the row (fashion.css, align-content). Undone here, newest first.
 const UNDO_FASHION_RATING_ROW = undoFromPatch('fashion-rating-row.patch');
 
+// Product information: the fashion and Home & Living product pages show what a listing declares
+// (migration 0036) after Details, and the shared footer shows the consumer-care contact on every
+// store (Footer.jsx, its .ftr__care rules in info.css). The section and its read are new files
+// (test-product-declarations.mjs owns them). Undone here, newest first.
+const UNDO_PRODUCT_INFORMATION = undoFromPatch('product-information.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -437,7 +448,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
