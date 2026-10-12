@@ -68,6 +68,9 @@ export const SCROLL_MANAGER_FILES = /^(src\/components\/ScrollManager\.jsx|src\/
 /** The fashion PDP's thumbnail fix — undone by sansCartChanges (scripts/pins/fashion-pdp-thumbs.patch). */
 export const FASHION_PDP_THUMBS_EDITS = /^src\/fashion\/FashionProductPage\.jsx$/;
 
+/** The shared fashion card shows no rating row until a product has reviews — undone by sansCartChanges (scripts/pins/fashion-rating-row.patch). */
+export const FASHION_RATING_ROW_EDITS = /^src\/fashion\/FashionProductCard\.jsx$/;
+
 /** The homepage banner's own sheet: the full-bleed banner and the fashion category strip (test-store-doorway.mjs pins it). */
 export const FASHION_BANNER_SHEET = /^src\/styles\/fashion-banner\.css$/;
 
