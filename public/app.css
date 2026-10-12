@@ -7429,6 +7429,13 @@ a.info-channel:hover { background:var(--info-soft); }
 .ftr__contact { display:flex; flex-direction:column; align-items:flex-start; gap:5px; margin-top:18px; }
 .ftr__contact a { overflow-wrap:anywhere; font-size:12px; color:rgba(255,255,255,.82); }
 .ftr__contact a:hover { color:var(--st-footer-accent, var(--honey-300)); }
+/* Consumer care, under the brand line on every store's footer. */
+.ftr__care { margin-top:18px; }
+.ftr__care h4 { margin:0 0 8px; color:#fff; font-family:var(--slv2-sans); font-size:10px; font-weight:750; letter-spacing:.14em; text-transform:uppercase; }
+.ftr__brand .ftr__care p, .ftr__care address { margin:0 0 4px; max-width:34ch; color:rgba(255,255,255,.82); font-size:12px; font-style:normal; line-height:1.6; }
+.ftr__brand .ftr__care .ftr__care-name { color:#fff; font-weight:650; }
+.ftr__care address { white-space:pre-line; }
+.ftr__care .ftr__contact { margin:6px 0 4px; }
 .ftr__social { margin-top:15px; }
 .ftr__social-link { display:grid; width:38px; height:38px; place-items:center; border:1px solid rgba(255,255,255,.24); border-radius:2px; color:#fff; }
 .ftr__social-link:hover { border-color:var(--st-footer-accent, var(--honey-300)); color:var(--st-footer-accent, var(--honey-300)); }

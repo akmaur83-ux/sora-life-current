@@ -33217,14 +33217,40 @@ function useLegalPage(id) {
   };
 }
 
-function Footer() {
-  const {
-    page
-  } = useLegalPage('contact');
-  const info = companyInfo({
-    ...page,
+// ============================================================
+// The store's consumer-care contact — who a customer can reach about a
+// purchase — exactly as the Contact & help page publishes it (the admin's
+// Contact page, falling back to the contact settings). The footer shows it on
+// every page; a product page repeats it beside the listing's declarations.
+//
+// One read of that page per visit, shared by every caller, so a product page
+// does not ask twice. Every value is optional and none is ever invented
+// (company.js): an unset one is simply absent.
+// ============================================================
+let shared = null;
+function contactPage() {
+  if (!shared) shared = fetchLegalPage('contact').catch(() => null);
+  return shared;
+}
+function useConsumerCare() {
+  const [page, setPage] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    contactPage().then(loaded => {
+      if (live && loaded) setPage(loaded);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return companyInfo({
+    ...(page || defaultLegalPage('contact', contact, branding.siteName)),
     social: companyInfo().social
   });
+}
+
+function Footer() {
+  const info = useConsumerCare();
   const socials = socialLinks(info);
   const name = branding?.siteName || 'SORA LIFE';
   return /*#__PURE__*/jsxRuntimeExports.jsx("footer", {
@@ -33239,15 +33265,32 @@ function Footer() {
             light: true
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
             children: "A marketplace for wellness, personal care and everyday essentials."
-          }), (info.email || info.phone) && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            className: "ftr__contact",
-            "aria-label": "Store contact details",
-            children: [info.email && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-              href: `mailto:${info.email}`,
-              children: info.email
-            }), info.phone && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-              href: telHref(info.phone),
-              children: info.phone
+          }), hasContactChannel(info) && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+            className: "ftr__care",
+            id: "consumer-care",
+            "aria-labelledby": "ftr-care-h",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
+              id: "ftr-care-h",
+              children: "Consumer care"
+            }), info.legalName && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "ftr__care-name",
+              children: info.legalName
+            }), info.address && /*#__PURE__*/jsxRuntimeExports.jsx("address", {
+              className: "ftr__care-address",
+              children: info.address
+            }), (info.email || info.phone) && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+              className: "ftr__contact",
+              "aria-label": "Store contact details",
+              children: [info.phone && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+                href: telHref(info.phone),
+                children: info.phone
+              }), info.email && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+                href: `mailto:${info.email}`,
+                children: info.email
+              })]
+            }), info.hours && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              className: "ftr__care-hours",
+              children: info.hours
             })]
           }), socials.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
             className: "ftr__social",
@@ -60411,7 +60454,7 @@ const DEFAULT_LIFESTYLE_STOREFRONT = Object.freeze({
   }
 });
 const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-const text = (value, fallback, max = 140) => {
+const text$1 = (value, fallback, max = 140) => {
   if (typeof value !== 'string') return fallback;
   const clean = value.trim().replace(/\s+/g, ' ');
   return clean ? clean.slice(0, max) : fallback;
@@ -60430,24 +60473,24 @@ function normalizeFashionStorefront(value) {
   const d = DEFAULT_FASHION_STOREFRONT;
   return {
     header: {
-      tagline: text(header.tagline, d.header.tagline, 60),
-      searchPlaceholder: text(header.searchPlaceholder, d.header.searchPlaceholder, 90)
+      tagline: text$1(header.tagline, d.header.tagline, 60),
+      searchPlaceholder: text$1(header.searchPlaceholder, d.header.searchPlaceholder, 90)
     },
     hero: {
-      eyebrow: text(hero.eyebrow, d.hero.eyebrow, 70),
-      title: text(hero.title, d.hero.title, 90),
-      subtitle: text(hero.subtitle, d.hero.subtitle, 140),
-      ctaLabel: text(hero.ctaLabel, d.hero.ctaLabel, 40),
+      eyebrow: text$1(hero.eyebrow, d.hero.eyebrow, 70),
+      title: text$1(hero.title, d.hero.title, 90),
+      subtitle: text$1(hero.subtitle, d.hero.subtitle, 140),
+      ctaLabel: text$1(hero.ctaLabel, d.hero.ctaLabel, 40),
       ctaLink: link(hero.ctaLink, d.hero.ctaLink),
-      note: text(hero.note, d.hero.note, 60),
+      note: text$1(hero.note, d.hero.note, 60),
       image: image(hero.image, d.hero.image)
     },
     sections: {
-      categoriesTitle: text(sections.categoriesTitle, d.sections.categoriesTitle, 70),
-      categoriesCta: text(sections.categoriesCta, d.sections.categoriesCta, 30),
-      brandsTitle: text(sections.brandsTitle, d.sections.brandsTitle, 80),
-      brandsCta: text(sections.brandsCta, d.sections.brandsCta, 30),
-      productsTitle: text(sections.productsTitle, d.sections.productsTitle, 70)
+      categoriesTitle: text$1(sections.categoriesTitle, d.sections.categoriesTitle, 70),
+      categoriesCta: text$1(sections.categoriesCta, d.sections.categoriesCta, 30),
+      brandsTitle: text$1(sections.brandsTitle, d.sections.brandsTitle, 80),
+      brandsCta: text$1(sections.brandsCta, d.sections.brandsCta, 30),
+      productsTitle: text$1(sections.productsTitle, d.sections.productsTitle, 70)
     }
   };
 }
@@ -60457,30 +60500,30 @@ function normalizeLifestyleSlide(value, fallback) {
     id: fallback.id,
     tall: image(slide.tall, fallback.tall),
     wide: image(slide.wide, fallback.wide),
-    alt: text(slide.alt, fallback.alt, 180),
-    eyebrowOne: text(slide.eyebrowOne, fallback.eyebrowOne, 50),
-    eyebrowTwo: text(slide.eyebrowTwo, fallback.eyebrowTwo, 50),
-    headlineOne: text(slide.headlineOne, fallback.headlineOne, 60),
-    headlineTwo: text(slide.headlineTwo, fallback.headlineTwo, 60),
-    subtitle: text(slide.subtitle, fallback.subtitle, 160),
-    ctaLabel: text(slide.ctaLabel, fallback.ctaLabel, 45),
+    alt: text$1(slide.alt, fallback.alt, 180),
+    eyebrowOne: text$1(slide.eyebrowOne, fallback.eyebrowOne, 50),
+    eyebrowTwo: text$1(slide.eyebrowTwo, fallback.eyebrowTwo, 50),
+    headlineOne: text$1(slide.headlineOne, fallback.headlineOne, 60),
+    headlineTwo: text$1(slide.headlineTwo, fallback.headlineTwo, 60),
+    subtitle: text$1(slide.subtitle, fallback.subtitle, 160),
+    ctaLabel: text$1(slide.ctaLabel, fallback.ctaLabel, 45),
     ctaLink: link(slide.ctaLink, fallback.ctaLink),
-    note: text(slide.note, fallback.note, 70)
+    note: text$1(slide.note, fallback.note, 70)
   };
 }
 function normalizeBanner(value, fallback) {
   const banner = object(value);
   return {
     image: image(banner.image, fallback.image),
-    alt: text(banner.alt, fallback.alt, 180),
-    eyebrowOne: text(banner.eyebrowOne, fallback.eyebrowOne, 50),
-    eyebrowTwo: text(banner.eyebrowTwo, fallback.eyebrowTwo, 50),
-    headlineOne: text(banner.headlineOne, fallback.headlineOne, 60),
-    headlineTwo: text(banner.headlineTwo, fallback.headlineTwo, 60),
-    subtitle: text(banner.subtitle, fallback.subtitle, 160),
-    ctaLabel: text(banner.ctaLabel, fallback.ctaLabel, 45),
+    alt: text$1(banner.alt, fallback.alt, 180),
+    eyebrowOne: text$1(banner.eyebrowOne, fallback.eyebrowOne, 50),
+    eyebrowTwo: text$1(banner.eyebrowTwo, fallback.eyebrowTwo, 50),
+    headlineOne: text$1(banner.headlineOne, fallback.headlineOne, 60),
+    headlineTwo: text$1(banner.headlineTwo, fallback.headlineTwo, 60),
+    subtitle: text$1(banner.subtitle, fallback.subtitle, 160),
+    ctaLabel: text$1(banner.ctaLabel, fallback.ctaLabel, 45),
     ctaLink: link(banner.ctaLink, fallback.ctaLink),
-    note: text(banner.note, fallback.note, 70)
+    note: text$1(banner.note, fallback.note, 70)
   };
 }
 function normalizeLifestyleStorefront(value) {
@@ -60492,20 +60535,20 @@ function normalizeLifestyleStorefront(value) {
   const incomingSlides = Array.isArray(root.heroSlides) ? root.heroSlides : [];
   return {
     header: {
-      tagline: text(header.tagline, d.header.tagline, 60)
+      tagline: text$1(header.tagline, d.header.tagline, 60)
     },
     heroSlides: d.heroSlides.map((fallback, index) => normalizeLifestyleSlide(incomingSlides[index], fallback)),
     fashionBanner: normalizeBanner(root.fashionBanner, d.fashionBanner),
     sections: {
-      fashionCategoriesTitle: text(sections.fashionCategoriesTitle, d.sections.fashionCategoriesTitle, 80),
-      fashionCategoriesCta: text(sections.fashionCategoriesCta, d.sections.fashionCategoriesCta, 30),
-      trendingTitle: text(sections.trendingTitle, d.sections.trendingTitle, 70),
-      trendingCta: text(sections.trendingCta, d.sections.trendingCta, 30)
+      fashionCategoriesTitle: text$1(sections.fashionCategoriesTitle, d.sections.fashionCategoriesTitle, 80),
+      fashionCategoriesCta: text$1(sections.fashionCategoriesCta, d.sections.fashionCategoriesCta, 30),
+      trendingTitle: text$1(sections.trendingTitle, d.sections.trendingTitle, 70),
+      trendingCta: text$1(sections.trendingCta, d.sections.trendingCta, 30)
     },
     promo: {
       image: image(promo.image, d.promo.image),
-      headline: text(promo.headline, d.promo.headline, 100),
-      ctaLabel: text(promo.ctaLabel, d.promo.ctaLabel, 45),
+      headline: text$1(promo.headline, d.promo.headline, 100),
+      ctaLabel: text$1(promo.ctaLabel, d.promo.ctaLabel, 45),
       ctaLink: link(promo.ctaLink, d.promo.ctaLink)
     }
   };
@@ -63763,6 +63806,264 @@ function FashionWishlistPage() {
   });
 }
 
+// ============================================================
+// A listing's declarations (migration 0036), read on their own for the product
+// page's "Product information" — never part of the catalogue read the store
+// pages are built from, so a failure here hides one section and nothing else.
+//
+// Public reads under the existing RLS: the product (active), its companies and
+// stones (public read, 0036) and its sizes' weights (active variants).
+// ============================================================
+const PARTY = 'name, address, country';
+const DECLARATION_SELECT = ['id, net_content, country_of_origin, generic_name, material, care, fit, metal, purity', `manufacturer:catalogue_parties!manufacturer_id (${PARTY})`, `packer:catalogue_parties!packer_id (${PARTY})`, `importer:catalogue_parties!importer_id (${PARTY})`, 'stones:catalogue_product_stones (stone, origin, shape, stone_count, total_carat, total_weight_g, clarity, colour_grade, certificate_lab, certificate_no, sort_order)', 'weights:catalogue_variants (id, gross_weight_g, net_metal_weight_g, is_active)'].join(', ');
+
+/** One product's declarations, or null. */
+async function getProductDeclarations(store, productId) {
+  if (!store || productId == null || productId === '') return null;
+  const {
+    data,
+    error
+  } = await supabase.from('catalogue_products').select(DECLARATION_SELECT).eq('store', store).eq('id', String(productId)).maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+// ============================================================
+// "Product information" on a product page: what a listing declares (migration
+// 0036) turned into the rows the page shows — generic name, net quantity,
+// country of origin, fabric, fit and care, metal and purity, weights, stones,
+// and who made, packed and imported it.
+//
+// Only what is recorded is shown. A missing value is a missing row, never a
+// placeholder or a guess (the footer's rule, company.js): the admin warns about
+// a listing that lacks its declarations, the page does not paper over it.
+//
+// React-free, so the rules run in Node. The grade and label tables are copied
+// from the admin's storeCatalogueAdmin.js rather than imported, so the
+// storefront does not carry the admin's rules module;
+// test-product-declarations.mjs pins that the copies agree.
+// ============================================================
+
+const PURITY_GRADES = {
+  gold: {
+    375: '9K',
+    585: '14K',
+    750: '18K',
+    833: '20K',
+    916: '22K',
+    958: '23K',
+    995: '24K',
+    999: '24K'
+  },
+  silver: {
+    800: '800',
+    835: '835',
+    900: '900',
+    925: 'Sterling (925)',
+    970: '970',
+    990: '990',
+    999: 'Fine (999)'
+  },
+  platinum: {
+    850: '850',
+    900: '900',
+    950: '950'
+  }
+};
+const METAL_NAMES = {
+  gold: 'Gold',
+  silver: 'Silver',
+  platinum: 'Platinum',
+  gold_plated: 'Gold plated',
+  silver_plated: 'Silver plated',
+  brass: 'Brass',
+  stainless_steel: 'Stainless steel',
+  other: 'Other'
+};
+const STONE_ORIGIN_NAMES = {
+  natural: 'Natural',
+  lab_grown: 'Lab-grown',
+  simulant: 'Simulant'
+};
+const text = v => v == null ? '' : String(v).trim();
+const sentence = v => {
+  const t = text(v);
+  return t ? t[0].toUpperCase() + t.slice(1) : '';
+};
+const grams = v => `${Number(v).toLocaleString('en-IN', {
+  maximumFractionDigits: 3
+})} g`;
+
+/** "IN" → "India". A code the browser cannot name is shown as the code; anything else, not at all. */
+function countryName(code) {
+  const c = text(code).toUpperCase();
+  if (!/^[A-Z]{2}$/.test(c)) return '';
+  try {
+    return new Intl.DisplayNames(['en'], {
+      type: 'region'
+    }).of(c) || c;
+  } catch {
+    return c;
+  }
+}
+
+/** "18K gold (750)", "Sterling silver (925)", "Gold plated". "Other" says nothing, so it is not shown. */
+function metalText(metal, purity) {
+  const m = text(metal).toLowerCase();
+  if (!METAL_NAMES[m] || m === 'other') return '';
+  const p = text(purity) === '' ? null : Number(purity);
+  const grade = p != null ? PURITY_GRADES[m]?.[p] : null;
+  if (!grade) return METAL_NAMES[m];
+  if (m === 'gold') return `${grade} gold (${p})`;
+  if (m === 'silver') return p === 925 ? 'Sterling silver (925)' : p === 999 ? 'Fine silver (999)' : `Silver (${p})`;
+  return `Platinum (${p})`;
+}
+
+/** One kind of stone: "Diamond, lab-grown · Round · 1 stone · 0.25 ct · Clarity VS1 · Colour F · IGI certificate LG123". */
+function stoneText(s) {
+  const name = sentence(s?.stone);
+  if (!name) return '';
+  const origin = STONE_ORIGIN_NAMES[text(s.origin)];
+  const count = Number(s.stone_count);
+  return [origin ? `${name}, ${origin.toLowerCase()}` : name, sentence(s.shape), Number.isInteger(count) && count > 0 ? `${count} ${count === 1 ? 'stone' : 'stones'}` : '', s.total_carat != null && text(s.total_carat) !== '' ? `${Number(s.total_carat)} ct` : '', s.total_weight_g != null && text(s.total_weight_g) !== '' ? grams(s.total_weight_g) : '', text(s.clarity) ? `Clarity ${text(s.clarity)}` : '', text(s.colour_grade) ? `Colour ${text(s.colour_grade)}` : '', text(s.certificate_lab) && text(s.certificate_no) ? `${text(s.certificate_lab)} certificate ${text(s.certificate_no)}` : ''].filter(Boolean).join(' · ');
+}
+
+/** A company as the label prints it: name, address, and its country when it is not India. */
+function partyText(p) {
+  if (!p || !text(p.name)) return '';
+  const country = text(p.country).toUpperCase();
+  return [text(p.name), text(p.address), country && country !== 'IN' ? countryName(country) : ''].filter(Boolean).join(', ');
+}
+
+/**
+ * The weights of the size the customer chose. Before a choice: the weights
+ * every size shares, or a note that they differ. A chosen size with none
+ * recorded shows none.
+ */
+function weightRows(variants, chosen = null) {
+  const live = (variants || []).filter(v => v && v.is_active !== false);
+  const has = v => v && (v.gross_weight_g != null || v.net_metal_weight_g != null);
+  let pick = null;
+  if (chosen) {
+    pick = live.find(v => String(v.id) === String(chosen.id)) || null;
+    if (!has(pick)) return [];
+  } else {
+    const weighed = live.filter(has);
+    if (!weighed.length) return [];
+    const same = key => new Set(live.map(v => v[key] == null ? '' : String(Number(v[key])))).size === 1;
+    if (!(same('gross_weight_g') && same('net_metal_weight_g'))) return [{
+      key: 'weight',
+      label: 'Weight',
+      value: 'Differs by size: choose a size to see it.'
+    }];
+    pick = weighed[0];
+  }
+  return [pick.gross_weight_g != null && {
+    key: 'gross_weight',
+    label: 'Gross weight',
+    value: grams(pick.gross_weight_g)
+  }, pick.net_metal_weight_g != null && {
+    key: 'net_metal_weight',
+    label: 'Net metal weight',
+    value: grams(pick.net_metal_weight_g)
+  }].filter(Boolean);
+}
+
+/**
+ * The rows of "Product information", in the order a label reads: [{ key, label, value }].
+ * `decl`: the row getProductDeclarations() reads. `variant`: the size × colour chosen.
+ * `netQuantity: false` where the page already shows net_content (Home & Living's "Size").
+ */
+function declarationRows(decl, {
+  variant = null,
+  netQuantity = true
+} = {}) {
+  if (!decl) return [];
+  const rows = [];
+  const add = (key, label, value) => {
+    if (value) rows.push({
+      key,
+      label,
+      value
+    });
+  };
+  add('generic_name', 'Generic name', text(decl.generic_name));
+  if (netQuantity) add('net_content', 'Net quantity', text(decl.net_content));
+  add('country_of_origin', 'Country of origin', countryName(decl.country_of_origin));
+  add('material', 'Material', text(decl.material));
+  add('fit', 'Fit', text(decl.fit));
+  add('care', 'Care', text(decl.care));
+  add('metal', 'Metal', metalText(decl.metal, decl.purity));
+  rows.push(...weightRows(decl.weights, variant));
+  [...(decl.stones || [])].sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0)).forEach((s, i) => add(`stone-${i}`, 'Stone', stoneText(s)));
+  add('manufacturer', 'Manufactured by', partyText(decl.manufacturer));
+  add('packer', 'Packed by', partyText(decl.packer));
+  add('importer', 'Imported by', partyText(decl.importer));
+  return rows;
+}
+
+function ProductInformation({
+  store,
+  productId,
+  variant = null,
+  prefix = 'fs',
+  netQuantity = true
+}) {
+  const [decl, setDecl] = reactExports.useState(null);
+  const care = useConsumerCare();
+  reactExports.useEffect(() => {
+    let live = true;
+    setDecl(null);
+    getProductDeclarations(store, productId).then(row => {
+      if (live) setDecl(row);
+    }, () => {
+      if (live) setDecl(null);
+    });
+    return () => {
+      live = false;
+    };
+  }, [store, productId]);
+  const rows = declarationRows(decl, {
+    variant,
+    netQuantity
+  });
+  if (!rows.length) return null;
+  const contacts = [care.legalName && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+    children: care.legalName
+  }, "name"), care.phone && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+    href: telHref(care.phone),
+    children: care.phone
+  }, "phone"), care.email && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+    href: `mailto:${care.email}`,
+    children: care.email
+  }, "email")].filter(Boolean);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `${prefix}-pdp__section`,
+    "aria-labelledby": `${prefix}-info-h`,
+    "data-section": "product-information",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      className: `${prefix}-pdp__h2`,
+      id: `${prefix}-info-h`,
+      children: "Product information"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+      className: `${prefix}-pdp__details`,
+      children: [rows.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: r.label
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: r.value
+        })]
+      }, r.key)), (care.phone || care.email) && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+          children: "Consumer care"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+          children: contacts.flatMap((c, i) => i ? [' · ', c] : [c])
+        })]
+      })]
+    })]
+  });
+}
+
 function Gallery$1({
   view
 }) {
@@ -64045,6 +64346,11 @@ function FashionProductPage() {
               })]
             })]
           })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductInformation, {
+          store: "fashion",
+          productId: view.id,
+          variant: st.variant,
+          prefix: "fs"
         })]
       })]
     }), related.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
@@ -67090,6 +67396,12 @@ function HomeLivingProductPage() {
               })]
             })]
           })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductInformation, {
+          store: "homeliving",
+          productId: view.id,
+          variant: st.variant,
+          prefix: "hl",
+          netQuantity: false
         })]
       })]
     }), related.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {

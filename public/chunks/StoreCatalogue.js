@@ -127,6 +127,132 @@ const colourHex = value => {
   return hex;
 };
 
+// ---- Declarations and jewellery (migration 0036) ---------------------------------
+// What a listing declares (country of origin, who made, packed or imported it),
+// a garment's material, care and fit, and a jewellery piece's metal, purity,
+// making charges, pricing mode, weights and stones. Formats are enforced here and
+// by the database; COMPLETENESS is only ever warned about (declarationWarnings):
+// the owner's rule, so a live product is never locked until someone backfills it.
+const METALS = ['gold', 'silver', 'platinum', 'gold_plated', 'silver_plated', 'brass', 'stainless_steel', 'other'];
+const METAL_LABELS = {
+  gold: 'Gold',
+  silver: 'Silver',
+  platinum: 'Platinum',
+  gold_plated: 'Gold plated',
+  silver_plated: 'Silver plated',
+  brass: 'Brass',
+  stainless_steel: 'Stainless steel',
+  other: 'Other'
+};
+/** BIS fineness (parts per thousand) → how the grade reads. Only gold, silver and platinum carry a purity. */
+const PURITY = {
+  gold: {
+    375: '9K',
+    585: '14K',
+    750: '18K',
+    833: '20K',
+    916: '22K',
+    958: '23K',
+    995: '24K',
+    999: '24K'
+  },
+  silver: {
+    800: '800',
+    835: '835',
+    900: '900',
+    925: 'Sterling (925)',
+    970: '970',
+    990: '990',
+    999: 'Fine (999)'
+  },
+  platinum: {
+    850: '850',
+    900: '900',
+    950: '950'
+  }
+};
+const FITS = ['Regular', 'Slim', 'Relaxed', 'Oversized', 'Straight', 'Skinny', 'Loose', 'Tailored'];
+const STONE_ORIGINS = ['natural', 'lab_grown', 'simulant'];
+const STONE_ORIGIN_LABELS = {
+  natural: 'Natural',
+  lab_grown: 'Lab-grown',
+  simulant: 'Simulant'
+};
+const MAKING_TYPES = ['per_gram', 'percent', 'flat'];
+const MAKING_LABELS = {
+  per_gram: '₹ per gram',
+  percent: 'Percent of metal value',
+  flat: 'Flat ₹ per piece'
+};
+const PRICING_MODES = ['fixed', 'rate_linked'];
+const RATE_LINKED_NOT_LIVE = 'A rate-linked product cannot go live yet: its price needs the metal-rate engine. Keep it as a draft, or set the pricing to fixed.';
+
+/** Fabric percentages ("60% cotton, 40% polyester"): the parts and their total, or null when the text gives none. */
+function materialTotal(value) {
+  const parts = [...String(value || '').matchAll(/(\d+(?:\.\d+)?)\s*%/g)].map(m => Number(m[1]));
+  return parts.length ? {
+    parts,
+    total: Math.round(parts.reduce((a, b) => a + b, 0) * 100) / 100
+  } : null;
+}
+/** The Jewellery category, or one under it: the fashion store's jewellery, which carries metal, purity and weights. */
+function isJewelleryCategory(categories, categoryId) {
+  if (!categoryId) return false;
+  const path = buildTree(categories).ancestors(categoryId);
+  return path.length > 0 && path[0].slug === 'jewellery';
+}
+const limited = (value, max, label) => {
+  const result = text(value) || null;
+  if (result && result.length > max) throw new Error(`${label}: keep it under ${max} characters.`);
+  return result;
+};
+const grams = (value, label) => {
+  if (value == null || text(value) === '') return null;
+  const n = Number(text(value));
+  if (!Number.isFinite(n) || n <= 0 || n > 99999.999) throw new Error(`${label} must be grams above 0, e.g. 3.250.`);
+  return Math.round(n * 1000) / 1000;
+};
+const pick = (list, label) => value => {
+  const result = text(value);
+  if (!result) return null;
+  const hit = list.find(x => x.toLowerCase() === result.toLowerCase());
+  if (!hit) throw new Error(`${label} must be one of ${list.join(', ')}.`);
+  return hit;
+};
+const DECLARATION_RULES = {
+  country_of_origin: v => {
+    const code = text(v).toUpperCase();
+    if (!code) return null;
+    if (!/^[A-Z]{2}$/.test(code)) throw new Error('Country of origin must be a 2-letter code such as IN.');
+    return code;
+  },
+  generic_name: v => limited(v, 120, 'Generic name'),
+  material: v => {
+    const material = limited(v, 300, 'Material');
+    const m = materialTotal(material);
+    if (m && m.total !== 100) throw new Error(`Material percentages add up to ${m.total}%, not 100%.`);
+    return material;
+  },
+  care: v => limited(v, 1000, 'Care instructions'),
+  fit: pick(FITS, 'Fit'),
+  metal: v => {
+    const m = pick(METALS, 'Metal')(v);
+    return m && m.toLowerCase();
+  },
+  purity: v => {
+    if (v == null || text(v) === '') return null;
+    const n = Number(text(v));
+    if (!Number.isInteger(n) || n < 1 || n > 999) throw new Error('Purity is the fineness, a whole number such as 916 (22K) or 925 (sterling).');
+    return n;
+  },
+  making_charge_type: pick(MAKING_TYPES, 'Making charge type'),
+  making_charge_value: v => amount(v, 'Making charges must be a number, 0 or more.', {
+    optional: true,
+    min: 0
+  }),
+  pricing_mode: v => pick(PRICING_MODES, 'Pricing')(v) || 'fixed'
+};
+
 // One rule per field: how a value is read, and what is wrong with it. The
 // payload builders below use them, and so does the CSV planner — so a cell is
 // read exactly as the editor reads the same field.
@@ -150,7 +276,8 @@ const PRODUCT_FIELD_RULES = {
   stock: v => wholeNumber(v ?? 0, 'Stock must be a whole number, 0 or more.'),
   sort_order: v => displayOrder(v),
   is_new: v => v === true,
-  is_bestseller: v => v === true
+  is_bestseller: v => v === true,
+  ...DECLARATION_RULES
 };
 const VARIANT_FIELD_RULES = {
   colour_hex: v => colourHex(v),
@@ -160,7 +287,9 @@ const VARIANT_FIELD_RULES = {
     optional: true
   }),
   is_active: v => v !== false,
-  sort_order: v => displayOrder(v)
+  sort_order: v => displayOrder(v),
+  gross_weight_g: v => grams(v, 'Gross weight'),
+  net_metal_weight_g: v => grams(v, 'Net metal weight')
 };
 const P = PRODUCT_FIELD_RULES,
   V = VARIANT_FIELD_RULES;
@@ -171,7 +300,17 @@ function categoryOptions(categories) {
     label: tree.ancestors(row.id).map(item => item.name).join(' / ')
   })).sort((a, b) => a.label.localeCompare(b.label));
 }
-function catalogueProductPayload(input, categories) {
+/** A company chosen as manufacturer / packer / importer: its id, checked against the Companies list when given. */
+function partyRef(value, parties, label) {
+  const id = text(value) || null;
+  if (id && parties && !parties.some(p => String(p.id) === id)) throw new Error(`${label}: choose a company from the Companies list.`);
+  return id;
+}
+/**
+ * `parties`: the Companies list, to check a chosen manufacturer / packer / importer
+ * exists (the database's foreign keys check it again).
+ */
+function catalogueProductPayload(input, categories, parties = null) {
   const c = collector();
   const name = text(input.name);
   if (!name) c.fail('name', 'Enter a product name.');
@@ -198,6 +337,118 @@ function catalogueProductPayload(input, categories) {
     is_active: input.is_active === true,
     is_new: P.is_new(input.is_new),
     is_bestseller: P.is_bestseller(input.is_bestseller)
+  };
+  Object.assign(row, declarationFields(input, parties, c, row.is_active));
+  c.done();
+  return row;
+}
+
+/** The 0036 fields of a product row, read and cross-checked; problems go to the collector. */
+function declarationFields(input, parties, c, isActive) {
+  const row = {};
+  for (const field of ['country_of_origin', 'generic_name', 'material', 'care', 'fit', 'metal', 'purity', 'making_charge_type', 'making_charge_value', 'pricing_mode']) {
+    row[field] = c.take(field, () => P[field](input[field]));
+  }
+  row.manufacturer_id = c.take('manufacturer_id', () => partyRef(input.manufacturer_id, parties, 'Manufacturer'));
+  row.packer_id = c.take('packer_id', () => partyRef(input.packer_id, parties, 'Packer'));
+  row.importer_id = c.take('importer_id', () => partyRef(input.importer_id, parties, 'Importer'));
+  if (row.purity != null && row.metal !== undefined) {
+    if (!PURITY[row.metal]) c.fail('purity', `Purity is only for gold, silver and platinum${row.metal ? `, not ${METAL_LABELS[row.metal].toLowerCase()}` : ': choose the metal first'}.`);else if (!PURITY[row.metal][row.purity]) c.fail('purity', `${row.purity} is not a ${row.metal} grade. Use ${Object.entries(PURITY[row.metal]).map(([k, v]) => `${k} (${v})`).join(', ')}.`);
+  }
+  if (row.making_charge_type !== undefined && row.making_charge_value !== undefined && row.making_charge_type == null !== (row.making_charge_value == null)) {
+    c.fail('making_charge_value', 'Making charges need both a type and a value.');
+  }
+  if (row.making_charge_type === 'percent' && row.making_charge_value > 100) c.fail('making_charge_value', 'A making charge percentage cannot be over 100.');
+  if (row.pricing_mode === 'rate_linked' && isActive) c.fail('pricing_mode', RATE_LINKED_NOT_LIVE);
+  return row;
+}
+
+/**
+ * What a listing should declare before it goes live, and does not yet. A WARNING
+ * list — nothing here stops a save or a publish (the owner's rule: a catalogue
+ * must never lock up waiting for a backfill). `jewellery`: the product sits under
+ * the Jewellery category.
+ */
+function declarationWarnings(product, {
+  store = 'fashion',
+  jewellery = false
+} = {}) {
+  const missing = [];
+  const add = (field, label) => missing.push({
+    field,
+    label
+  });
+  if (!text(product?.country_of_origin)) add('country_of_origin', 'country of origin');
+  if (!product?.manufacturer_id) add('manufacturer_id', 'manufacturer');
+  if (text(product?.country_of_origin) && text(product.country_of_origin) !== 'IN' && !product.importer_id) add('importer_id', 'importer (it is made outside India)');
+  if (!text(product?.net_content)) add('net_content', 'net quantity');
+  if (store === 'fashion' && !jewellery) {
+    if (!text(product?.material)) add('material', 'material');
+    if (!text(product?.care)) add('care', 'care instructions');
+  }
+  if (jewellery) {
+    if (!product?.metal) add('metal', 'metal');else if (PURITY[product.metal] && product.purity == null) add('purity', 'purity');
+    const sizes = (product?.variants || []).filter(v => v.is_active !== false);
+    if (sizes.some(v => v.gross_weight_g == null || v.net_metal_weight_g == null)) add('variants', 'gross and net weight on every size');
+  }
+  return missing;
+}
+
+/** A company the catalogue names as manufacturer, packer or importer. Names are unique, case aside. */
+function cataloguePartyPayload(input, parties = [], id = null) {
+  const c = collector();
+  const name = text(input.name);
+  if (!name) c.fail('name', 'Enter the company’s name.');else if (name.length > 160) c.fail('name', 'Keep the company name under 160 characters.');else if (parties.some(p => String(p.id) !== String(id) && text(p.name).toLowerCase() === name.toLowerCase())) c.fail('name', 'Another company already has this name. Each company once.');
+  const address = text(input.address);
+  if (!address) c.fail('address', 'Enter the address as it is printed on the label.');else if (address.length > 400) c.fail('address', 'Keep the address under 400 characters.');
+  const country = text(input.country).toUpperCase() || 'IN';
+  if (!/^[A-Z]{2}$/.test(country)) c.fail('country', 'Country must be a 2-letter code such as IN.');
+  const phone = text(input.phone) || null;
+  if (phone && phone.length > 40) c.fail('phone', 'Keep the phone under 40 characters.');
+  const email = text(input.email) || null;
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) c.fail('email', 'Enter an email address like name@domain.com.');
+  const gstin = text(input.gstin).toUpperCase() || null;
+  if (gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin)) c.fail('gstin', 'GSTIN must be 15 characters like 27ABCDE1234F1Z5.');
+  c.done();
+  return {
+    name,
+    address,
+    country,
+    phone,
+    email,
+    gstin
+  };
+}
+
+/** One kind of stone in a jewellery piece. */
+function catalogueStonePayload(input) {
+  const c = collector();
+  const stone = text(input.stone);
+  if (!stone) c.fail('stone', 'Name the stone: diamond, ruby, cubic zirconia…');else if (stone.length > 60) c.fail('stone', 'Keep the stone’s name under 60 characters.');
+  const origin = text(input.origin);
+  if (!STONE_ORIGINS.includes(origin)) c.fail('origin', 'Origin must be natural, lab_grown or simulant: say which.');
+  const count = Number(text(input.stone_count));
+  if (!Number.isInteger(count) || count < 1) c.fail('stone_count', 'Stone count must be a whole number, 1 or more.');
+  const caratText = text(input.total_carat),
+    weightText = text(input.total_weight_g);
+  const total_carat = caratText === '' ? null : Number(caratText);
+  if (total_carat != null && !(Number.isFinite(total_carat) && total_carat > 0 && total_carat < 10000)) c.fail('total_carat', 'Total carat must be more than 0.');
+  const total_weight_g = c.take('total_weight_g', () => grams(weightText, 'Total weight'));
+  const lab = text(input.certificate_lab) || null,
+    number = text(input.certificate_no) || null;
+  if (!!lab !== !!number) c.fail(lab ? 'certificate_no' : 'certificate_lab', 'A certificate needs both its lab and its number.');
+  const row = {
+    stone,
+    origin,
+    stone_count: count,
+    shape: c.take('shape', () => limited(input.shape, 40, 'Shape')),
+    total_carat: total_carat == null ? null : Math.round(total_carat * 1000) / 1000,
+    total_weight_g,
+    clarity: c.take('clarity', () => limited(input.clarity, 20, 'Clarity')),
+    colour_grade: c.take('colour_grade', () => limited(input.colour_grade, 20, 'Colour grade')),
+    certificate_lab: c.take('certificate_lab', () => limited(lab, 40, 'Certificate lab')),
+    certificate_no: c.take('certificate_no', () => limited(number, 60, 'Certificate number')),
+    sort_order: c.take('sort_order', () => displayOrder(input.sort_order))
   };
   c.done();
   return row;
@@ -251,8 +502,14 @@ function catalogueVariantPayload(input, store, siblings = []) {
     stock: c.take('stock', () => V.stock(input.stock)),
     price_override: c.take('price_override', () => V.price_override(input.price_override)),
     is_active: V.is_active(input.is_active),
-    sort_order: c.take('sort_order', () => V.sort_order(input.sort_order))
+    sort_order: c.take('sort_order', () => V.sort_order(input.sort_order)),
+    // 0036: a jewellery piece's weights (a ring's change with its size).
+    gross_weight_g: c.take('gross_weight_g', () => V.gross_weight_g(input.gross_weight_g)),
+    net_metal_weight_g: c.take('net_metal_weight_g', () => V.net_metal_weight_g(input.net_metal_weight_g))
   };
+  if (row.gross_weight_g != null && row.net_metal_weight_g != null && row.net_metal_weight_g > row.gross_weight_g) {
+    c.fail('net_metal_weight_g', `Net metal weight ${row.net_metal_weight_g} g cannot be more than the gross weight ${row.gross_weight_g} g.`);
+  }
   c.done();
   return row;
 }
@@ -260,6 +517,7 @@ function assertCataloguePublishable(store, product) {
   requireCatalogueStore(store);
   if (!(product.images || []).some(url => safeVisualUrl(url))) throw new Error('Add a product image before publishing.');
   if (store === 'fashion' && !(product.variants || []).some(row => row.is_active !== false)) throw new Error('Add at least one active size/colour variant with stock before publishing. Zero stock is allowed for sold-out products.');
+  if (product.pricing_mode === 'rate_linked') throw new Error(RATE_LINKED_NOT_LIVE);
 }
 /** The storefront page for a product, or null where the store has none (grocery has no product pages yet). */
 function catalogueProductHref(store, slug) {
@@ -293,7 +551,31 @@ const CONSTRAINT_FIELDS = {
   catalogue_variants_colour_chk: ['colour', 'Enter a colour. Fashion variants need one.'],
   catalogue_variants_colour_hex_check: ['colour_hex', 'Colour hex must look like #123ABC.'],
   catalogue_variants_stock_check: ['stock', 'Stock cannot be negative.'],
-  catalogue_variants_price_override_check: ['price_override', 'Price override cannot be negative.']
+  catalogue_variants_price_override_check: ['price_override', 'Price override cannot be negative.'],
+  // 0036 (default names for its column and table checks and foreign keys).
+  catalogue_products_country_chk: ['country_of_origin', 'Country of origin must be a 2-letter code such as IN.'],
+  catalogue_products_text_len_chk: ['generic_name', 'Generic name, material or care is too long: 120, 300 and 1000 characters at most.'],
+  catalogue_products_metal_chk: ['metal', `Metal must be one of ${METALS.join(', ')}.`],
+  catalogue_products_purity_chk: ['purity', 'Purity must be a grade of gold, silver or platinum.'],
+  catalogue_products_making_chk: ['making_charge_value', 'Making charges need both a type and a value; a percentage is at most 100.'],
+  catalogue_products_pricing_mode_chk: ['pricing_mode', 'Pricing must be fixed or rate_linked.'],
+  catalogue_products_rate_linked_live_chk: ['pricing_mode', RATE_LINKED_NOT_LIVE],
+  catalogue_products_manufacturer_id_fkey: ['manufacturer_id', 'That company is no longer in the Companies list. Choose another.'],
+  catalogue_products_packer_id_fkey: ['packer_id', 'That company is no longer in the Companies list. Choose another.'],
+  catalogue_products_importer_id_fkey: ['importer_id', 'That company is no longer in the Companies list. Choose another.'],
+  catalogue_variants_weights_chk: ['net_metal_weight_g', 'Weights must be above 0, and the net metal weight cannot be more than the gross weight.'],
+  catalogue_parties_name_check: ['name', 'Enter the company’s name (under 160 characters).'],
+  catalogue_parties_address_check: ['address', 'Enter the address (under 400 characters).'],
+  catalogue_parties_country_check: ['country', 'Country must be a 2-letter code such as IN.'],
+  catalogue_parties_phone_check: ['phone', 'Keep the phone under 40 characters.'],
+  catalogue_parties_email_check: ['email', 'Enter an email address like name@domain.com.'],
+  catalogue_parties_gstin_check: ['gstin', 'GSTIN must be 15 characters like 27ABCDE1234F1Z5.'],
+  catalogue_product_stones_stone_check: ['stone', 'Name the stone (under 60 characters).'],
+  catalogue_product_stones_origin_check: ['origin', 'Origin must be natural, lab_grown or simulant: say which.'],
+  catalogue_product_stones_stone_count_check: ['stone_count', 'Stone count must be a whole number, 1 or more.'],
+  catalogue_product_stones_total_carat_check: ['total_carat', 'Total carat must be more than 0.'],
+  catalogue_product_stones_total_weight_g_check: ['total_weight_g', 'Total weight must be grams above 0.'],
+  catalogue_product_stones_check: ['certificate_no', 'A certificate needs both its lab and its number.']
 };
 function catalogueWriteError(error, kind = 'row') {
   if (!error || error instanceof CatalogueInputError || error.isStaleWrite || error.isRefused) return error;
@@ -323,7 +605,7 @@ function catalogueWriteError(error, kind = 'row') {
 // After its OWN gallery write the editor re-reads the product and adopts the
 // new token only if nothing it edits has changed — if another admin saved
 // the product in between, the old token stays and the next save is refused.
-const PRODUCT_EDITABLE_FIELDS = ['name', 'slug', 'category_id', 'brand', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', 'stock', 'sort_order', 'is_active', 'is_new', 'is_bestseller'];
+const PRODUCT_EDITABLE_FIELDS = ['name', 'slug', 'category_id', 'brand', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', 'stock', 'sort_order', 'is_active', 'is_new', 'is_bestseller', 'country_of_origin', 'generic_name', 'manufacturer_id', 'packer_id', 'importer_id', 'material', 'care', 'fit', 'metal', 'purity', 'making_charge_type', 'making_charge_value', 'pricing_mode'];
 const same = (a, b) => a == null && b == null || a != null && b != null && String(a) === String(b);
 function versionAfterOwnWrite(base, fresh, fields = PRODUCT_EDITABLE_FIELDS) {
   if (!base || !fresh) return base?.updated_at ?? null;
@@ -653,7 +935,7 @@ async function compressToWebp(file, {
 }
 
 // Uses existing admin RLS. No service credentials, schema changes or wellness writes.
-const PRODUCT_SELECT = '*, variants:catalogue_variants (*), media:catalogue_product_media (*)';
+const PRODUCT_SELECT = '*, variants:catalogue_variants (*), media:catalogue_product_media (*), stones:catalogue_product_stones (*)';
 async function result(query, kind) {
   const {
     data,
@@ -795,9 +1077,11 @@ async function getStoreProduct(store, id) {
  */
 async function saveStoreProduct(store, id, input, expectedUpdatedAt = null) {
   requireCatalogueStore(store);
-  const categories = await listStoreCategories(store);
+  // The Companies list is read only when the product names a company, to check it is still there.
+  const namesCompany = ['manufacturer_id', 'packer_id', 'importer_id'].some(key => String(input[key] ?? '').trim());
+  const [categories, parties] = await Promise.all([listStoreCategories(store), namesCompany ? listStoreParties() : null]);
   const autoSlug = !String(input.slug ?? '').trim();
-  const row = await validated(() => catalogueProductPayload(input, categories), built => productKeyClashes(store, id, built || {
+  const row = await validated(() => catalogueProductPayload(input, categories, parties), built => productKeyClashes(store, id, built || {
     slug: readable(PRODUCT_FIELD_RULES.slug, autoSlug ? catalogueSlug(input.name) : input.slug),
     sku: readable(PRODUCT_FIELD_RULES.sku, input.sku)
   }, {
@@ -809,7 +1093,11 @@ async function saveStoreProduct(store, id, input, expectedUpdatedAt = null) {
     store,
     is_active: false
   }).select().single(), 'product');
-  if (row.is_active) assertCataloguePublishable(store, await getStoreProduct(store, id));
+  // Images and variants as stored; the pricing mode as this save sets it (switching to fixed and publishing is one save).
+  if (row.is_active) assertCataloguePublishable(store, {
+    ...(await getStoreProduct(store, id)),
+    pricing_mode: row.pricing_mode
+  });
   return guardedUpdate('catalogue_products', {
     store,
     id
@@ -848,6 +1136,71 @@ async function saveStoreVariant(store, productId, id, input, expectedUpdatedAt =
     product_id: productId
   }).select().single(), 'variant');
 }
+// ---- Companies (0036): the manufacturer / packer / importer a listing names ---------
+// One list for every store. A company named on a product cannot be deleted (the
+// database's foreign keys restrict it); the admin is told which products to change.
+async function listStoreParties() {
+  return (await result(supabase.from('catalogue_parties').select('*').order('name', {
+    ascending: true
+  }), 'company')) || [];
+}
+async function saveStoreParty(id, input, expectedUpdatedAt = null) {
+  const parties = await listStoreParties();
+  if (id && !parties.some(p => String(p.id) === String(id))) throw new CatalogueStaleWriteError('This company could not be found — it may have been deleted. Nothing was saved.');
+  const row = cataloguePartyPayload(input, parties, id);
+  if (id) return guardedUpdate('catalogue_parties', {
+    id
+  }, row, expectedUpdatedAt, 'company');
+  return result(supabase.from('catalogue_parties').insert(row).select().single(), 'company');
+}
+/** Every product (any store) that names this company, and as what. */
+async function partyUsage(id) {
+  const uses = [];
+  for (const [field, role] of [['manufacturer_id', 'manufacturer'], ['packer_id', 'packer'], ['importer_id', 'importer']]) {
+    const rows = await result(supabase.from('catalogue_products').select('id, name, store').eq(field, id), 'company');
+    for (const row of rows || []) uses.push({
+      ...row,
+      role
+    });
+  }
+  return uses;
+}
+async function deleteStoreParty(id, expectedUpdatedAt) {
+  const uses = await partyUsage(id);
+  if (uses.length) {
+    const names = [...new Set(uses.map(u => `“${u.name}”`))];
+    throw new Error(`This company is named on ${uses.length} product${uses.length === 1 ? '' : 's'} (${names.slice(0, 3).join(', ')}${names.length > 3 ? ` and ${names.length - 3} more` : ''}). Choose another company on ${uses.length === 1 ? 'it' : 'them'} first.`);
+  }
+  await guardedDelete('catalogue_parties', {
+    id
+  }, expectedUpdatedAt, 'company');
+}
+
+// ---- Stones (0036): one row per kind of stone in a jewellery piece ------------------
+async function saveStoreStone(store, productId, id, input, expectedUpdatedAt = null) {
+  requireCatalogueStore(store);
+  const product = await getStoreProduct(store, productId);
+  if (id && !(product.stones || []).some(s => s.id === id)) throw new CatalogueStaleWriteError('This stone is no longer on the product. Reload to see the current stones.');
+  const row = catalogueStonePayload(input);
+  if (id) return guardedUpdate('catalogue_product_stones', {
+    product_id: productId,
+    id
+  }, row, expectedUpdatedAt, 'stone');
+  return result(supabase.from('catalogue_product_stones').insert({
+    ...row,
+    product_id: productId
+  }).select().single(), 'stone');
+}
+async function deleteStoreStone(store, productId, id, expectedUpdatedAt) {
+  requireCatalogueStore(store);
+  const product = await getStoreProduct(store, productId);
+  if (!(product.stones || []).some(s => s.id === id)) throw new CatalogueStaleWriteError('This stone is no longer on the product. Reload to see the current stones.');
+  await guardedDelete('catalogue_product_stones', {
+    product_id: productId,
+    id
+  }, expectedUpdatedAt, 'stone');
+}
+
 // ---- Images ---------------------------------------------------------------------
 // Every catalogue upload is converted to a WebP under 150 KB in the browser
 // first (storeCatalogueImage.js), then stored through the same admin-only
@@ -1098,13 +1451,13 @@ async function applyCatalogueImport(store, plan, onProgress = () => {}) {
     failed = [];
   for (const [index, change] of (plan?.changes || []).entries()) {
     try {
-      if (plan.kind === 'products') await saveStoreProduct(store, change.kind === 'create' ? null : change.id, change.input, change.expectedUpdatedAt);else await saveStoreVariant(store, change.productId, change.kind === 'create' ? null : change.variantId, change.input, change.expectedUpdatedAt);
+      if (plan.kind === 'products') await saveStoreProduct(store, change.kind === 'create' ? null : change.id, change.input, change.expectedUpdatedAt);else if (plan.kind === 'stones') await saveStoreStone(store, change.productId, change.kind === 'create' ? null : change.stoneId, change.input, change.expectedUpdatedAt);else if (plan.kind === 'companies') await saveStoreParty(change.kind === 'create' ? null : change.id, change.input, change.expectedUpdatedAt);else await saveStoreVariant(store, change.productId, change.kind === 'create' ? null : change.variantId, change.input, change.expectedUpdatedAt);
       done.push(change);
     } catch (error) {
       const reason = error.isStaleWrite ? 'Changed since this file was planned — choose the file again to plan against the current values.' : error.fieldErrors ? Object.values(error.fieldErrors).join(' ') : error.message;
       failed.push({
         line: change.line,
-        key: change.slug || change.label,
+        key: change.slug || change.label || change.name,
         reason
       });
     }
@@ -1332,15 +1685,30 @@ function productClaimWarnings(product) {
 //     publishing stays a per-product act with its image (and, for fashion,
 //     variant) checks; is_active is not a product import column
 //
-// Two files: products (one row per product) and variants (one row per size ×
-// colour, matched on the product's slug, the size and the colour).
+// Four files: products (one row per product), variants (one row per size ×
+// colour, matched on the product's slug, the size and the colour), stones (one
+// row per kind of stone in a jewellery piece) and companies (the Companies list
+// that products name as manufacturer, packer or importer; migration 0036).
 // ============================================================
-const PRODUCT_CSV_COLUMNS = ['id', 'slug', 'name', 'brand', 'category', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', 'stock', 'is_new', 'is_bestseller', 'sort_order'];
-const VARIANT_CSV_COLUMNS = ['product_slug', 'size', 'colour', 'colour_hex', 'sku', 'stock', 'price_override', 'is_active', 'sort_order'];
-const PRODUCT_FIELDS$1 = ['slug', 'name', 'brand', 'category_id', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', 'stock', 'is_new', 'is_bestseller', 'sort_order'];
-const VARIANT_FIELDS$1 = ['colour_hex', 'sku', 'stock', 'price_override', 'is_active', 'sort_order'];
-const MONEY = new Set(['mrp', 'sale_price', 'price_override']);
-const NUMBER = new Set(['mrp', 'sale_price', 'price_override', 'gst_rate', 'stock', 'sort_order']);
+
+// The 0036 declarations ride on the products file; a manufacturer, packer or importer
+// is written by its company name (the Companies list) and stored as that company's id.
+const DECLARATION_COLUMNS = ['country_of_origin', 'generic_name', 'manufacturer', 'packer', 'importer', 'material', 'care', 'fit', 'metal', 'purity', 'making_charge_type', 'making_charge_value', 'pricing_mode'];
+const PRODUCT_CSV_COLUMNS = ['id', 'slug', 'name', 'brand', 'category', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', 'stock', 'is_new', 'is_bestseller', 'sort_order', ...DECLARATION_COLUMNS];
+const VARIANT_CSV_COLUMNS = ['product_slug', 'size', 'colour', 'colour_hex', 'sku', 'stock', 'price_override', 'is_active', 'sort_order', 'gross_weight_g', 'net_metal_weight_g'];
+const STONE_CSV_COLUMNS = ['product_slug', 'stone', 'origin', 'shape', 'stone_count', 'total_carat', 'total_weight_g', 'clarity', 'colour_grade', 'certificate_lab', 'certificate_no', 'sort_order'];
+const COMPANY_CSV_COLUMNS = ['name', 'address', 'country', 'phone', 'email', 'gstin'];
+const PARTY_COLUMNS = {
+  manufacturer: 'manufacturer_id',
+  packer: 'packer_id',
+  importer: 'importer_id'
+};
+const PRODUCT_FIELDS$1 = ['slug', 'name', 'brand', 'category_id', 'description', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', 'stock', 'is_new', 'is_bestseller', 'sort_order', 'country_of_origin', 'generic_name', 'manufacturer_id', 'packer_id', 'importer_id', 'material', 'care', 'fit', 'metal', 'purity', 'making_charge_type', 'making_charge_value', 'pricing_mode'];
+const VARIANT_FIELDS$1 = ['colour_hex', 'sku', 'stock', 'price_override', 'is_active', 'sort_order', 'gross_weight_g', 'net_metal_weight_g'];
+const STONE_FIELDS$1 = ['origin', 'stone_count', 'total_carat', 'total_weight_g', 'clarity', 'colour_grade', 'certificate_lab', 'certificate_no', 'sort_order'];
+const COMPANY_FIELDS$1 = ['address', 'country', 'phone', 'email', 'gstin'];
+const MONEY = new Set(['mrp', 'sale_price', 'price_override', 'making_charge_value']);
+const NUMBER = new Set(['mrp', 'sale_price', 'price_override', 'gst_rate', 'stock', 'sort_order', 'purity', 'making_charge_value', 'gross_weight_g', 'net_metal_weight_g', 'stone_count', 'total_carat', 'total_weight_g']);
 const BOOLEAN = new Set(['is_new', 'is_bestseller', 'is_active']);
 const FIELD_LABELS = {
   slug: 'Slug',
@@ -1351,7 +1719,7 @@ const FIELD_LABELS = {
   mrp: 'MRP',
   sale_price: 'Selling price',
   sku: 'SKU',
-  net_content: 'Pack / dimensions',
+  net_content: 'Net quantity / pack',
   hsn_code: 'HSN code',
   gst_rate: 'GST rate',
   stock: 'Stock',
@@ -1360,7 +1728,35 @@ const FIELD_LABELS = {
   sort_order: 'Display order',
   colour_hex: 'Colour hex',
   price_override: 'Price override',
-  is_active: 'Active'
+  is_active: 'Active',
+  country_of_origin: 'Country of origin',
+  generic_name: 'Generic name',
+  manufacturer_id: 'Manufacturer',
+  packer_id: 'Packer',
+  importer_id: 'Importer',
+  material: 'Material',
+  care: 'Care',
+  fit: 'Fit',
+  metal: 'Metal',
+  purity: 'Purity',
+  making_charge_type: 'Making charge type',
+  making_charge_value: 'Making charges',
+  pricing_mode: 'Pricing',
+  gross_weight_g: 'Gross weight (g)',
+  net_metal_weight_g: 'Net metal weight (g)',
+  origin: 'Origin',
+  stone_count: 'Count',
+  total_carat: 'Total carat',
+  total_weight_g: 'Total weight (g)',
+  clarity: 'Clarity',
+  colour_grade: 'Colour grade',
+  certificate_lab: 'Certificate lab',
+  certificate_no: 'Certificate no.',
+  address: 'Address',
+  country: 'Country',
+  phone: 'Phone',
+  email: 'Email',
+  gstin: 'GSTIN'
 };
 
 // ---------- parse ----------
@@ -1427,11 +1823,15 @@ function categoryPaths(categories) {
   const path = (c, depth = 0) => c.parent_id && byId.has(c.parent_id) && depth < 3 ? `${path(byId.get(c.parent_id), depth + 1)}/${c.slug}` : c.slug;
   return new Map(categories.map(c => [c.id, path(c)]));
 }
-function productsToCsv(products, categories) {
+const partyName = (parties, id) => id ? (parties || []).find(p => String(p.id) === String(id))?.name || '' : '';
+function productsToCsv(products, categories, parties = []) {
   const paths = categoryPaths(categories);
   return csv(PRODUCT_CSV_COLUMNS, products.map(p => ({
     ...p,
-    category: paths.get(p.category_id) || ''
+    category: paths.get(p.category_id) || '',
+    manufacturer: partyName(parties, p.manufacturer_id),
+    packer: partyName(parties, p.packer_id),
+    importer: partyName(parties, p.importer_id)
   })));
 }
 function variantsToCsv(products) {
@@ -1441,6 +1841,17 @@ function variantsToCsv(products) {
     product_slug: p.slug
   });
   return csv(VARIANT_CSV_COLUMNS, rows);
+}
+function stonesToCsv(products) {
+  const rows = [];
+  for (const p of products) for (const s of p.stones || []) rows.push({
+    ...s,
+    product_slug: p.slug
+  });
+  return csv(STONE_CSV_COLUMNS, rows);
+}
+function companiesToCsv(parties) {
+  return csv(COMPANY_CSV_COLUMNS, parties || []);
 }
 
 // ---------- reading ----------
@@ -1510,6 +1921,7 @@ function planProductImport(text, {
   store,
   products,
   categories,
+  parties = [],
   overwrite = false,
   create = false
 }) {
@@ -1579,6 +1991,12 @@ function planProductImport(text, {
           const categoryId = resolveCategory(raw, categories);
           if (!categoryId) throw new Error(`Category "${String(raw).trim()}" is not a ${CATALOGUE_STORES[store]} category — use the path from the export, e.g. "${[...categoryPaths(categories).values()].find(p => p.includes('/')) || [...categoryPaths(categories).values()][0] || 'parent/child'}".`);
           values.category_id = categoryId;
+        } else if (PARTY_COLUMNS[column]) {
+          // A company by its name in the Companies list (case aside), stored as its id.
+          const name = String(raw).trim();
+          const party = (parties || []).find(row => String(row.name).trim().toLowerCase() === name.toLowerCase());
+          if (!party) throw new Error(`${column[0].toUpperCase()}${column.slice(1)} “${name}” is not in the Companies list — add it on the Companies tab (or import the companies file) first.`);
+          values[PARTY_COLUMNS[column]] = party.id;
         } else values[column] = readCell(column, raw, PRODUCT_FIELD_RULES);
       } catch (error) {
         problems.push(error.message);
@@ -1626,7 +2044,7 @@ function planProductImport(text, {
       ...applied
     };
     try {
-      catalogueProductPayload(input, categories);
+      catalogueProductPayload(input, categories, parties);
     } catch (error) {
       skipped.push({
         line,
@@ -1881,11 +2299,276 @@ function planVariantImport(text, {
   };
 }
 
+// ---------- plan: stones (0036) ----------
+/**
+ * One row per kind of stone in a jewellery piece, matched on the product's slug,
+ * the stone and its shape ("diamond", "round"). A stone's own values follow the
+ * same blank / fill-only / create rules as every other file.
+ */
+function planStoneImport(text, {
+  store,
+  products,
+  overwrite = false,
+  create = false
+}) {
+  const rows = parseCsv(text);
+  if (!rows.length) return {
+    ok: false,
+    reason: 'The file is empty.',
+    changes: [],
+    kept: [],
+    skipped: []
+  };
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  if (!head.includes('product_slug') || !head.includes('stone')) return {
+    ok: false,
+    reason: 'The file needs "product_slug" and "stone" columns to match stones on.',
+    changes: [],
+    kept: [],
+    skipped: []
+  };
+  const ignored = head.filter(h => h && !STONE_CSV_COLUMNS.includes(h));
+  const col = name => head.indexOf(name);
+  const cell = (cells, name) => col(name) >= 0 ? String(cells[col(name)] ?? '').trim() : '';
+  const bySlug = new Map(products.map(p => [p.slug, p]));
+  const planned = [],
+    skipped = [],
+    keyLines = new Map();
+  for (let r = 1; r < rows.length; r += 1) {
+    const cells = rows[r],
+      line = r + 1;
+    const productSlug = cell(cells, 'product_slug'),
+      stone = cell(cells, 'stone'),
+      shape = cell(cells, 'shape');
+    const label = `${productSlug} · ${stone}${shape ? ` (${shape})` : ''}`;
+    const product = bySlug.get(productSlug);
+    if (!product) {
+      skipped.push({
+        line,
+        key: label,
+        reason: `No ${CATALOGUE_STORES[store]} product has the slug "${productSlug}".`
+      });
+      continue;
+    }
+    if (!stone) {
+      skipped.push({
+        line,
+        key: label,
+        reason: 'A row needs the stone.'
+      });
+      continue;
+    }
+    const key = `${product.id}|${stone.toLowerCase()}|${shape.toLowerCase()}`;
+    keyLines.set(key, [...(keyLines.get(key) || []), line]);
+    const current = (product.stones || []).find(s => String(s.stone).trim().toLowerCase() === stone.toLowerCase() && String(s.shape || '').trim().toLowerCase() === shape.toLowerCase()) || null;
+    const creating = !current;
+    if (creating && !create) {
+      skipped.push({
+        line,
+        key: label,
+        reason: 'This product has no such stone. Tick "Create new" to add it.'
+      });
+      continue;
+    }
+    const values = {};
+    for (const field of STONE_FIELDS$1) if (col(field) >= 0 && !blank(cells[col(field)])) values[field] = cell(cells, field);
+    const {
+      diffs,
+      applied
+    } = diffRow(current, values, STONE_FIELDS$1, {
+      overwrite,
+      creating
+    });
+    const meta = {
+      line,
+      productId: product.id,
+      product: product.name,
+      stoneId: current?.id ?? null,
+      label
+    };
+    if (!creating && !diffs.some(d => !d.skipped)) {
+      if (diffs.length) planned.push({
+        ...meta,
+        kind: 'kept',
+        diffs,
+        input: null
+      });
+      continue;
+    }
+    const input = creating ? {
+      stone,
+      shape,
+      sort_order: (product.stones || []).length,
+      ...applied
+    } : {
+      ...current,
+      ...applied
+    };
+    try {
+      catalogueStonePayload(input);
+    } catch (error) {
+      skipped.push({
+        line,
+        key: label,
+        reason: reasons(error)
+      });
+      continue;
+    }
+    planned.push({
+      ...meta,
+      kind: creating ? 'create' : 'update',
+      diffs,
+      input,
+      expectedUpdatedAt: current?.updated_at ?? null
+    });
+  }
+  return finishPlan('stones', planned, skipped, keyLines, ignored, 'This stone appears more than once in the file');
+}
+
+// ---------- plan: companies (0036) ----------
+/** The Companies list: one row per company, matched on its name (case aside). */
+function planCompanyImport(text, {
+  parties = [],
+  overwrite = false,
+  create = false
+}) {
+  const rows = parseCsv(text);
+  if (!rows.length) return {
+    ok: false,
+    reason: 'The file is empty.',
+    changes: [],
+    kept: [],
+    skipped: []
+  };
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  if (!head.includes('name')) return {
+    ok: false,
+    reason: 'The file needs a "name" column to match companies on.',
+    changes: [],
+    kept: [],
+    skipped: []
+  };
+  const ignored = head.filter(h => h && !COMPANY_CSV_COLUMNS.includes(h));
+  const col = name => head.indexOf(name);
+  const planned = [],
+    skipped = [],
+    keyLines = new Map();
+  const after = [...parties];
+  for (let r = 1; r < rows.length; r += 1) {
+    const cells = rows[r],
+      line = r + 1;
+    const name = String(cells[col('name')] ?? '').trim();
+    if (!name) {
+      skipped.push({
+        line,
+        key: '',
+        reason: 'A row needs the company’s name.'
+      });
+      continue;
+    }
+    keyLines.set(name.toLowerCase(), [...(keyLines.get(name.toLowerCase()) || []), line]);
+    const current = parties.find(p => String(p.name).trim().toLowerCase() === name.toLowerCase()) || null;
+    const creating = !current;
+    if (creating && !create) {
+      skipped.push({
+        line,
+        key: name,
+        reason: 'No company has this name. Tick "Create new" to add it.'
+      });
+      continue;
+    }
+    const values = {};
+    for (const field of COMPANY_FIELDS$1) {
+      if (col(field) < 0 || blank(cells[col(field)])) continue;
+      const v = String(cells[col(field)]).trim();
+      values[field] = ['country', 'gstin'].includes(field) ? v.toUpperCase() : v;
+    }
+    const {
+      diffs,
+      applied
+    } = diffRow(current, values, COMPANY_FIELDS$1, {
+      overwrite,
+      creating
+    });
+    const meta = {
+      line,
+      id: current?.id ?? null,
+      name
+    };
+    if (!creating && !diffs.some(d => !d.skipped)) {
+      if (diffs.length) planned.push({
+        ...meta,
+        kind: 'kept',
+        diffs,
+        input: null
+      });
+      continue;
+    }
+    const input = creating ? {
+      name,
+      ...applied
+    } : {
+      ...current,
+      ...applied
+    };
+    try {
+      cataloguePartyPayload(input, after, current?.id ?? null);
+    } catch (error) {
+      skipped.push({
+        line,
+        key: name,
+        reason: reasons(error)
+      });
+      continue;
+    }
+    if (creating) after.push({
+      id: `planned-${line}`,
+      name
+    });
+    planned.push({
+      ...meta,
+      kind: creating ? 'create' : 'update',
+      diffs,
+      input,
+      expectedUpdatedAt: current?.updated_at ?? null
+    });
+  }
+  return finishPlan('companies', planned, skipped, keyLines, ignored, 'This company appears more than once in the file');
+}
+
+/** The common end of the stones and companies plans: a key twice in a file is never guessed between. */
+function finishPlan(kind, planned, skipped, keyLines, ignored, twiceReason) {
+  const twice = new Set([...keyLines.values()].filter(l => l.length > 1).flat());
+  const changes = [],
+    kept = [];
+  for (const c of planned) {
+    if (twice.has(c.line)) {
+      skipped.push({
+        line: c.line,
+        key: c.label || c.name,
+        reason: `${twiceReason} (lines ${linesOf(keyLines, c.line).join(', ')}).`
+      });
+      continue;
+    }
+    (c.kind === 'kept' ? kept : changes).push(c);
+  }
+  skipped.sort((a, b) => a.line - b.line);
+  return {
+    ok: true,
+    kind,
+    ignored,
+    changes,
+    kept,
+    skipped
+  };
+}
+
 /** "MRP: 1299 → 1199" — how a diff reads in the plan. */
-function describeDiff(diff, categories = []) {
+function describeDiff(diff, categories = [], parties = []) {
   const show = (field, v) => {
     if (!present(v)) return '(empty)';
     if (field === 'category_id') return categoryPaths(categories).get(v) || v;
+    if (Object.values(PARTY_COLUMNS).includes(field)) return partyName(parties, v) || v;
     if (BOOLEAN.has(field)) return v ? 'yes' : 'no';
     const s = String(v);
     return s.length > 60 ? `${s.slice(0, 57)}…` : s;
@@ -1909,7 +2592,20 @@ const EMPTY_PRODUCT = {
   sort_order: 0,
   is_active: false,
   is_new: false,
-  is_bestseller: false
+  is_bestseller: false,
+  country_of_origin: '',
+  generic_name: '',
+  manufacturer_id: '',
+  packer_id: '',
+  importer_id: '',
+  material: '',
+  care: '',
+  fit: '',
+  metal: '',
+  purity: '',
+  making_charge_type: '',
+  making_charge_value: '',
+  pricing_mode: 'fixed'
 };
 const EMPTY_CATEGORY = {
   name: '',
@@ -1928,14 +2624,40 @@ const EMPTY_VARIANT = {
   stock: 0,
   price_override: '',
   is_active: true,
+  sort_order: 0,
+  gross_weight_g: '',
+  net_metal_weight_g: ''
+};
+const EMPTY_STONE = {
+  stone: '',
+  origin: '',
+  shape: '',
+  stone_count: 1,
+  total_carat: '',
+  total_weight_g: '',
+  clarity: '',
+  colour_grade: '',
+  certificate_lab: '',
+  certificate_no: '',
   sort_order: 0
+};
+const EMPTY_COMPANY = {
+  name: '',
+  address: '',
+  country: 'IN',
+  phone: '',
+  email: '',
+  gstin: ''
 };
 
 // The fields each form renders. A save error for one of these is shown beside
 // it; anything else goes in the form's banner (catalogueFailureView).
-const PRODUCT_FIELDS = store => ['name', 'slug', 'category_id', 'brand', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', ...(store === 'fashion' ? [] : ['stock']), 'sort_order', 'description'];
+const DECLARATION_FIELDS = ['country_of_origin', 'generic_name', 'manufacturer_id', 'packer_id', 'importer_id'];
+const PRODUCT_FIELDS = (store, jewellery = false) => ['name', 'slug', 'category_id', 'brand', 'mrp', 'sale_price', 'sku', 'net_content', 'hsn_code', 'gst_rate', ...(store === 'fashion' ? [] : ['stock']), 'sort_order', 'description', ...DECLARATION_FIELDS, ...(store !== 'fashion' ? [] : jewellery ? ['metal', 'purity', 'making_charge_type', 'making_charge_value', 'pricing_mode'] : ['material', 'care', 'fit'])];
 const CATEGORY_FIELDS = ['name', 'slug', 'parent_id', 'sort_order', 'tagline', 'image_url'];
-const VARIANT_FIELDS = ['size', 'colour', 'colour_hex', 'sku', 'stock', 'price_override', 'sort_order'];
+const VARIANT_FIELDS = ['size', 'colour', 'colour_hex', 'sku', 'stock', 'price_override', 'sort_order', 'gross_weight_g', 'net_metal_weight_g'];
+const STONE_FIELDS = ['stone', 'origin', 'shape', 'stone_count', 'total_carat', 'total_weight_g', 'clarity', 'colour_grade', 'certificate_lab', 'certificate_no', 'sort_order'];
+const COMPANY_FIELDS = ['name', 'address', 'country', 'phone', 'email', 'gstin'];
 const IMAGE_FIELDS = ['public_url'];
 
 /** One form's save outcome: errors beside fields, a banner, and whether it was a stale write. */
@@ -2006,6 +2728,56 @@ function Field({
       "aria-describedby": errorId,
       value: value[field] ?? '',
       onChange: change
+    }), error && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "hint err",
+      id: errorId,
+      children: error
+    }), hint && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "hint",
+      children: hint
+    })]
+  });
+}
+/** A choice from a fixed list; '' is "not set" (empty: null leaves that option out). options: [[value, label], …]. */
+function Choice({
+  label,
+  field,
+  value,
+  set,
+  options,
+  errors,
+  form = 'sc',
+  hint,
+  disabled = false,
+  empty = 'Not set'
+}) {
+  const error = errors?.fields?.[field];
+  const errorId = error ? `${form}-${field}-error` : undefined;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+    className: `field sc-field${error ? ' sc-field--error' : ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "label",
+      children: label
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("select", {
+      className: "select",
+      disabled: disabled,
+      "aria-invalid": error ? true : undefined,
+      "aria-describedby": errorId,
+      value: value[field] ?? '',
+      onChange: e => {
+        errors?.clear(field);
+        set({
+          ...value,
+          [field]: e.target.value
+        });
+      },
+      children: [empty !== null && /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+        value: "",
+        children: empty
+      }), options.map(([v, text]) => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+        value: v,
+        children: text
+      }, v))]
     }), error && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
       className: "hint err",
       id: errorId,
@@ -2303,10 +3075,40 @@ function downloadText(name, text) {
 // CSV bulk import — the wellness pattern: export, edit, choose the file, read
 // the plan, apply. Nothing is written until Apply; storeCatalogueCsv.js plans,
 // applyCatalogueImport writes each row through the editor's own save.
+// What each import reads, and how its rows are matched. Stones are jewellery's,
+// so only the fashion store offers them; companies are one list for every store.
+const IMPORT_KINDS = {
+  products: {
+    chip: 'Products',
+    noun: 'products',
+    heading: 'Product',
+    match: ' Category is the path the export shows, e.g. clothing/shirts. Manufacturer, packer and importer are names from the Companies list.'
+  },
+  variants: {
+    chip: 'Sizes & colours (variants)',
+    noun: 'variants',
+    heading: 'Variant',
+    match: ' Rows are matched on product_slug, size and colour.'
+  },
+  stones: {
+    chip: 'Stones (jewellery)',
+    noun: 'stones',
+    heading: 'Stone',
+    match: ' Rows are matched on product_slug, stone and shape.',
+    stores: ['fashion']
+  },
+  companies: {
+    chip: 'Companies',
+    noun: 'companies',
+    heading: 'Company',
+    match: ' Rows are matched on the company name. One list serves every store.'
+  }
+};
 function CatalogueImport({
   store,
   products,
   categories,
+  parties,
   onApplied
 }) {
   const [kind, setKind] = reactExports.useState('products');
@@ -2320,20 +3122,38 @@ function CatalogueImport({
     [failures, setFailures] = reactExports.useState([]);
   const plan = reactExports.useMemo(() => {
     if (!file || file.kind !== kind) return null;
-    return kind === 'products' ? planProductImport(file.text, {
+    if (kind === 'products') return planProductImport(file.text, {
       store,
       products,
       categories,
+      parties,
       overwrite,
       create
-    }) : planVariantImport(file.text, {
+    });
+    if (kind === 'stones') return planStoneImport(file.text, {
       store,
       products,
       overwrite,
       create
     });
-  }, [file, kind, store, products, categories, overwrite, create]);
-  const noun = kind === 'products' ? 'products' : 'variants';
+    if (kind === 'companies') return planCompanyImport(file.text, {
+      parties,
+      overwrite,
+      create
+    });
+    return planVariantImport(file.text, {
+      store,
+      products,
+      overwrite,
+      create
+    });
+  }, [file, kind, store, products, categories, parties, overwrite, create]);
+  const {
+    noun,
+    heading
+  } = IMPORT_KINDS[kind];
+  const target = kind === 'companies' ? 'the Companies list' : `${CATALOGUE_STORES[store]} ${noun}`;
+  const exportCsv = () => kind === 'products' ? productsToCsv(products, categories, parties) : kind === 'stones' ? stonesToCsv(products) : kind === 'companies' ? companiesToCsv(parties) : variantsToCsv(products);
   const creates = plan?.changes?.filter(c => c.kind === 'create').length || 0;
   const updates = (plan?.changes?.length || 0) - creates;
   async function choose(e) {
@@ -2355,7 +3175,7 @@ function CatalogueImport({
   }
   async function apply() {
     if (!plan?.changes?.length || busy) return;
-    if (!window.confirm(`Apply ${plan.changes.length} change${plan.changes.length === 1 ? '' : 's'} to ${CATALOGUE_STORES[store]} ${noun}?\n\n` + `${updates} to update, ${creates} to create${kind === 'products' && creates ? ' (as drafts)' : ''}.\n` + `${overwrite ? 'EXISTING VALUES WILL BE OVERWRITTEN.' : 'Fill-only: existing values are kept.'}`)) return;
+    if (!window.confirm(`Apply ${plan.changes.length} change${plan.changes.length === 1 ? '' : 's'} to ${target}?\n\n` + `${updates} to update, ${creates} to create${kind === 'products' && creates ? ' (as drafts)' : ''}.\n` + `${overwrite ? 'EXISTING VALUES WILL BE OVERWRITTEN.' : 'Fill-only: existing values are kept.'}`)) return;
     setBusy(true);
     setMessage('');
     setError('');
@@ -2384,7 +3204,7 @@ function CatalogueImport({
     }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm-chipbar",
       "aria-label": "What to import",
-      children: [['products', 'Products'], ['variants', 'Sizes & colours (variants)']].map(([id, label]) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      children: Object.entries(IMPORT_KINDS).filter(([, k]) => !k.stores || k.stores.includes(store)).map(([id, k]) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
         type: "button",
         className: `adm-chip${kind === id ? ' active' : ''}`,
         "aria-pressed": kind === id,
@@ -2395,8 +3215,11 @@ function CatalogueImport({
           setMessage('');
           setFailures([]);
         },
-        children: label
+        children: k.chip
       }, id))
+    }), kind === 'products' && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hint",
+      children: "Import the companies first: a product row naming a manufacturer, packer or importer that is not in the Companies list is skipped."
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("ol", {
       className: "sc-steps",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("li", {
@@ -2404,13 +3227,13 @@ function CatalogueImport({
           type: "button",
           className: "btn btn-outline btn-sm",
           disabled: busy,
-          onClick: () => downloadText(`sora-${store}-${noun}-${new Date().toISOString().slice(0, 10)}.csv`, kind === 'products' ? productsToCsv(products, categories) : variantsToCsv(products)),
+          onClick: () => downloadText(`sora-${kind === 'companies' ? 'companies' : `${store}-${noun}`}-${new Date().toISOString().slice(0, 10)}.csv`, exportCsv()),
           children: ["Export current ", noun, " (CSV)"]
         })
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
         children: ["Edit it in a spreadsheet. ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
           children: "A blank cell leaves that field alone"
-        }), " \u2014 it never clears it.", kind === 'products' ? ' Category is the path the export shows, e.g. clothing/shirts.' : ' Rows are matched on product_slug, size and colour.']
+        }), " \u2014 it never clears it.", IMPORT_KINDS[kind].match]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
           className: "sc-file",
@@ -2484,7 +3307,7 @@ function CatalogueImport({
               children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
                 children: "Line"
               }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
-                children: kind === 'products' ? 'Product' : 'Variant'
+                children: heading
               }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
                 children: "What changes"
               })]
@@ -2498,7 +3321,7 @@ function CatalogueImport({
                   className: "badge sc-new",
                   children: "New"
                 }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-                  children: kind === 'products' ? c.name : c.label
+                  children: kind === 'products' || kind === 'companies' ? c.name : c.label
                 }), kind === 'products' && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
                   className: "hint",
                   children: [" ", c.slug]
@@ -2508,7 +3331,7 @@ function CatalogueImport({
                   className: "sc-diffs",
                   children: c.diffs.map(d => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
                     className: d.skipped ? 'is-kept' : '',
-                    children: [describeDiff(d, categories), d.skipped ? ' — kept (fill-only)' : '']
+                    children: [describeDiff(d, categories, parties), d.skipped ? ' — kept (fill-only)' : '']
                   }, d.field))
                 }), !!c.warnings?.length && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
                   className: "sc-claims sc-claims--row",
@@ -2529,7 +3352,7 @@ function CatalogueImport({
         }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
           className: "sc-list",
           children: plan.kept.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-            children: ["Line ", c.line, " (", c.slug || c.label, "): ", c.diffs.map(d => describeDiff(d, categories)).join('; ')]
+            children: ["Line ", c.line, " (", c.slug || c.label || c.name, "): ", c.diffs.map(d => describeDiff(d, categories, parties)).join('; ')]
           }, c.line))
         })]
       }), !!plan.skipped.length && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -2901,28 +3724,254 @@ function DemoRows({
     })]
   });
 }
+
+// Companies (0036): the manufacturers, packers and importers a listing names,
+// typed once and chosen from a list. One list for every store; a company still
+// named on a product cannot be deleted (deleteStoreParty says which products).
+function CompanyEditor({
+  initial,
+  onSaved,
+  onCancel
+}) {
+  const [form, setForm] = reactExports.useState(initial || EMPTY_COMPANY),
+    [busy, setBusy] = reactExports.useState(false);
+  const errors = useFormErrors(COMPANY_FIELDS);
+  async function save(e) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    errors.reset();
+    try {
+      const row = await saveStoreParty(initial?.id || null, form, initial?.updated_at);
+      onSaved(row);
+    } catch (err) {
+      errors.capture(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+    className: "surface sc-panel",
+    onSubmit: save,
+    noValidate: true,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      children: initial ? `Edit ${initial.name}` : 'Add company'
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Messages, {
+      error: errors.banner,
+      stale: errors.stale
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+      disabled: busy,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "adm-grid2",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+          form: "co",
+          errors: errors,
+          label: "Company name",
+          field: "name",
+          value: form,
+          set: setForm,
+          required: true,
+          hint: "As printed on the label."
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+          form: "co",
+          errors: errors,
+          label: "Country",
+          field: "country",
+          value: form,
+          set: setForm,
+          hint: "2-letter code: IN for India."
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+          form: "co",
+          errors: errors,
+          label: "Phone (optional)",
+          field: "phone",
+          value: form,
+          set: setForm
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+          form: "co",
+          errors: errors,
+          label: "Email (optional)",
+          field: "email",
+          type: "email",
+          value: form,
+          set: setForm
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+          form: "co",
+          errors: errors,
+          label: "GSTIN (optional)",
+          field: "gstin",
+          value: form,
+          set: setForm,
+          hint: "15 characters, e.g. 27ABCDE1234F1Z5."
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+        form: "co",
+        errors: errors,
+        label: "Address",
+        field: "address",
+        value: form,
+        set: setForm,
+        multiline: true,
+        hint: "Street, city, state and PIN, as the label prints it. Customers see it on the product page."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "sc-actions",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          className: "btn btn-sm",
+          type: "submit",
+          children: busy ? 'Saving…' : 'Save company'
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          className: "btn btn-outline btn-sm",
+          type: "button",
+          onClick: onCancel,
+          children: "Cancel"
+        })]
+      })]
+    })]
+  });
+}
+function CompaniesPanel({
+  store,
+  parties,
+  products,
+  onChanged
+}) {
+  const [editing, setEditing] = reactExports.useState(null),
+    [busy, setBusy] = reactExports.useState(false),
+    [message, setMessage] = reactExports.useState(''),
+    [error, setError] = reactExports.useState('');
+  const named = id => products.filter(p => p.manufacturer_id === id || p.packer_id === id || p.importer_id === id).length;
+  async function remove(row) {
+    if (!window.confirm(`Delete ${row.name} from the Companies list? This cannot be undone.`)) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      await deleteStoreParty(row.id, row.updated_at);
+      setMessage(`${row.name} deleted.`);
+      onChanged();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "sc-companies",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hint",
+      children: "The manufacturers, packers and importers your listings name. Each is typed once here and chosen from a list in the product editor. One list serves every store."
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Messages, {
+      error: error,
+      message: message
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "sc-actions",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        className: "btn btn-sm",
+        disabled: !!editing || busy,
+        onClick: () => {
+          setEditing('new');
+          setMessage('');
+        },
+        children: "+ Add company"
+      })
+    }), editing && /*#__PURE__*/jsxRuntimeExports.jsx(CompanyEditor, {
+      initial: editing === 'new' ? null : editing,
+      onCancel: () => setEditing(null),
+      onSaved: row => {
+        setEditing(null);
+        setMessage(`${row.name} saved.`);
+        onChanged();
+      }
+    }, editing === 'new' ? 'new' : editing.id), !parties.length ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "adm-empty",
+      children: "No companies yet. Add the manufacturer of your first listing."
+    }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "adm-table-wrap",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+        className: "adm-table",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Company"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Country"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "GSTIN"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Contact"
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("th", {
+              children: [CATALOGUE_STORES[store], " products naming it"]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {})]
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+          children: parties.map(row => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+                children: row.name
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                className: "hint",
+                children: [" ", row.address]
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: row.country
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: row.gstin || '—'
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: [row.phone, row.email].filter(Boolean).join(' · ') || '—'
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: named(row.id)
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+                className: "sc-actions sc-actions--row",
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+                  type: "button",
+                  className: "btn btn-outline btn-sm",
+                  disabled: !!editing || busy,
+                  onClick: () => {
+                    setEditing(row);
+                    setMessage('');
+                    setError('');
+                  },
+                  children: "Edit"
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+                  type: "button",
+                  className: "btn btn-ghost btn-sm sc-danger",
+                  disabled: !!editing || busy,
+                  onClick: () => remove(row),
+                  children: "Delete"
+                })]
+              })
+            })]
+          }, row.id))
+        })]
+      })
+    })]
+  });
+}
 function CatalogueList({
   store
 }) {
   const [params, setParams] = useSearchParams();
   const [categories, setCategories] = reactExports.useState([]),
-    [products, setProducts] = reactExports.useState([]);
+    [products, setProducts] = reactExports.useState([]),
+    [parties, setParties] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true),
     [loaded, setLoaded] = reactExports.useState(false),
     [error, setError] = reactExports.useState(''),
     [editing, setEditing] = reactExports.useState(null);
   const [revision, setRevision] = reactExports.useState(0);
-  const tab = ['categories', 'import', 'images'].includes(params.get('tab')) ? params.get('tab') : 'products';
+  const tab = ['categories', 'companies', 'import', 'images'].includes(params.get('tab')) ? params.get('tab') : 'products';
   const category = params.get('category') || '',
     search = params.get('q') || '';
   reactExports.useEffect(() => {
     let current = true;
     setLoading(true);
     setError('');
-    Promise.all([listStoreCategories(store), listStoreProducts(store)]).then(([cats, rows]) => {
+    Promise.all([listStoreCategories(store), listStoreProducts(store), listStoreParties()]).then(([cats, rows, companies]) => {
       if (current) {
         setCategories(cats);
         setProducts(rows);
+        setParties(companies);
         setLoaded(true);
       }
     }).catch(err => {
@@ -2964,6 +4013,12 @@ function CatalogueList({
         }),
         children: "Categories & subcategories"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        className: `adm-chip${tab === 'companies' ? ' active' : ''}`,
+        onClick: () => update({
+          tab: 'companies'
+        }),
+        children: "Companies"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
         className: `adm-chip${tab === 'import' ? ' active' : ''}`,
         onClick: () => update({
           tab: 'import'
@@ -2989,7 +4044,13 @@ function CatalogueList({
       store: store,
       products: products,
       categories: categories,
+      parties: parties,
       onApplied: () => setRevision(n => n + 1)
+    }) : tab === 'companies' ? /*#__PURE__*/jsxRuntimeExports.jsx(CompaniesPanel, {
+      store: store,
+      parties: parties,
+      products: products,
+      onChanged: () => setRevision(n => n + 1)
     }) : tab === 'images' ? /*#__PURE__*/jsxRuntimeExports.jsx(BulkImages, {
       store: store,
       products: products,
@@ -3205,10 +4266,12 @@ function CatalogueList({
     })]
   });
 }
+const weightText = row => row.gross_weight_g == null && row.net_metal_weight_g == null ? '—' : `${row.gross_weight_g ?? '?'} g / ${row.net_metal_weight_g ?? '?'} g`;
 function VariantsEditor({
   store,
   product,
-  onChanged
+  onChanged,
+  jewellery = false
 }) {
   const [form, setForm] = reactExports.useState(EMPTY_VARIANT),
     [editing, setEditing] = reactExports.useState(null);
@@ -3283,6 +4346,8 @@ function VariantsEditor({
               children: "Stock"
             }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
               children: "Price"
+            }), jewellery && /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Gross / net weight"
             }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
               children: "Status"
             }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {})]
@@ -3297,6 +4362,8 @@ function VariantsEditor({
               children: row.stock
             }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
               children: row.price_override == null ? 'Product price' : money(row.price_override)
+            }), jewellery && /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: weightText(row)
             }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
               children: row.is_active ? 'Active' : 'Hidden'
             }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
@@ -3397,6 +4464,30 @@ function VariantsEditor({
             step: "1",
             value: form,
             set: setForm
+          }), jewellery && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+              form: "var",
+              errors: errors,
+              label: "Gross weight (g)",
+              field: "gross_weight_g",
+              type: "number",
+              min: "0.001",
+              step: "0.001",
+              value: form,
+              set: setForm,
+              hint: "The whole piece, stones included. Example: 4.250"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+              form: "var",
+              errors: errors,
+              label: "Net metal weight (g)",
+              field: "net_metal_weight_g",
+              type: "number",
+              min: "0.001",
+              step: "0.001",
+              value: form,
+              set: setForm,
+              hint: "The metal alone: gross weight minus the stones."
+            })]
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Check, {
           label: "Active variant",
@@ -3415,6 +4506,255 @@ function VariantsEditor({
             onClick: () => {
               setEditing(null);
               setForm(EMPTY_VARIANT);
+              errors.reset();
+            },
+            children: "Cancel edit"
+          })]
+        })]
+      })
+    })]
+  });
+}
+
+// Stones (0036): one row per kind of stone in a jewellery piece. A plain metal
+// piece has none. Customers see them under Product information.
+const STONE_ORIGIN_OPTIONS = STONE_ORIGINS.map(o => [o, STONE_ORIGIN_LABELS[o]]);
+function StonesEditor({
+  store,
+  product,
+  onChanged
+}) {
+  const [form, setForm] = reactExports.useState(EMPTY_STONE),
+    [editing, setEditing] = reactExports.useState(null);
+  const [busy, setBusy] = reactExports.useState(false),
+    [message, setMessage] = reactExports.useState('');
+  const errors = useFormErrors(STONE_FIELDS);
+  const stones = [...(product.stones || [])].sort((a, b) => a.sort_order - b.sort_order || String(a.created_at).localeCompare(String(b.created_at)));
+  const nameOf = row => `${row.stone}${row.shape ? ` (${row.shape})` : ''}`;
+  async function remove(row) {
+    if (!window.confirm(`Delete the ${nameOf(row)} row? This cannot be undone.`)) return;
+    setBusy(true);
+    errors.reset();
+    setMessage('');
+    try {
+      await deleteStoreStone(store, product.id, row.id, row.updated_at);
+      if (editing === row.id) {
+        setEditing(null);
+        setForm(EMPTY_STONE);
+      }
+      await onChanged();
+      setMessage(`${nameOf(row)} deleted.`);
+    } catch (err) {
+      errors.capture(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function save(e) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    errors.reset();
+    setMessage('');
+    try {
+      await saveStoreStone(store, product.id, editing, form, editing ? form.updated_at : null);
+      setForm(EMPTY_STONE);
+      setEditing(null);
+      await onChanged();
+      setMessage('Stone saved.');
+    } catch (err) {
+      errors.capture(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "surface sc-panel",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      children: "Stones"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hint",
+      children: "One row per kind of stone: \u201Cdiamond, round, 12 stones, 0.24 ct\u201D is one row. Say whether each is natural, lab-grown or a simulant \u2014 customers see it. A plain metal piece has none."
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Messages, {
+      error: errors.banner,
+      message: message,
+      stale: errors.stale
+    }), !!stones.length && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "adm-table-wrap",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+        className: "adm-table",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Stone"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Origin"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Count"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Carat / weight"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+              children: "Certificate"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {})]
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+          children: stones.map(row => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: nameOf(row)
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: STONE_ORIGIN_LABELS[row.origin] || row.origin
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: row.stone_count
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: [row.total_carat != null && `${row.total_carat} ct`, row.total_weight_g != null && `${row.total_weight_g} g`].filter(Boolean).join(' · ') || '—'
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: row.certificate_lab ? `${row.certificate_lab} ${row.certificate_no}` : '—'
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+              children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+                className: "sc-actions sc-actions--row",
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+                  type: "button",
+                  className: "btn btn-outline btn-sm",
+                  disabled: busy,
+                  onClick: () => {
+                    setEditing(row.id);
+                    setForm(row);
+                    setMessage('');
+                    errors.reset();
+                  },
+                  children: "Edit"
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+                  type: "button",
+                  className: "btn btn-ghost btn-sm sc-danger",
+                  disabled: busy,
+                  onClick: () => remove(row),
+                  children: "Delete"
+                })]
+              })
+            })]
+          }, row.id))
+        })]
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("form", {
+      onSubmit: save,
+      noValidate: true,
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+        disabled: busy,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+          children: editing ? 'Edit stone' : 'Add stone'
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "adm-grid2",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "stone",
+            errors: errors,
+            label: "Stone",
+            field: "stone",
+            value: form,
+            set: setForm,
+            required: true,
+            hint: "Diamond, ruby, cubic zirconia, pearl\u2026"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Choice, {
+            form: "stone",
+            errors: errors,
+            label: "Origin",
+            field: "origin",
+            value: form,
+            set: setForm,
+            options: STONE_ORIGIN_OPTIONS,
+            empty: "Choose: natural, lab-grown or simulant"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "stone",
+            errors: errors,
+            label: "Shape (optional)",
+            field: "shape",
+            value: form,
+            set: setForm,
+            hint: "Round, oval, pear\u2026"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "stone",
+            errors: errors,
+            label: "Number of stones",
+            field: "stone_count",
+            type: "number",
+            min: "1",
+            step: "1",
+            value: form,
+            set: setForm,
+            required: true
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "stone",
+            errors: errors,
+            label: "Total carat (optional)",
+            field: "total_carat",
+            type: "number",
+            min: "0.001",
+            step: "0.001",
+            value: form,
+            set: setForm,
+            hint: "All the stones in this row together."
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "stone",
+            errors: errors,
+            label: "Total weight g (optional)",
+            field: "total_weight_g",
+            type: "number",
+            min: "0.001",
+            step: "0.001",
+            value: form,
+            set: setForm
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "stone",
+            errors: errors,
+            label: "Clarity (optional)",
+            field: "clarity",
+            value: form,
+            set: setForm,
+            hint: "Example: VS2"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "stone",
+            errors: errors,
+            label: "Colour grade (optional)",
+            field: "colour_grade",
+            value: form,
+            set: setForm,
+            hint: "Example: G"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "stone",
+            errors: errors,
+            label: "Certificate lab (optional)",
+            field: "certificate_lab",
+            value: form,
+            set: setForm,
+            hint: "IGI, GIA, SGL\u2026 with its number below."
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "stone",
+            errors: errors,
+            label: "Certificate number (optional)",
+            field: "certificate_no",
+            value: form,
+            set: setForm
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "stone",
+            errors: errors,
+            label: "Display order",
+            field: "sort_order",
+            type: "number",
+            step: "1",
+            value: form,
+            set: setForm
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "sc-actions",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            className: "btn btn-sm",
+            type: "submit",
+            children: busy ? 'Saving…' : 'Save stone'
+          }), editing && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            className: "btn btn-outline btn-sm",
+            type: "button",
+            onClick: () => {
+              setEditing(null);
+              setForm(EMPTY_STONE);
               errors.reset();
             },
             children: "Cancel edit"
@@ -3734,7 +5074,8 @@ function ProductEditor({
   // Warnings from the last save (or from the draft this editor was just created as).
   const [claims, setClaims] = reactExports.useState(() => location?.state?.claimWarnings || []);
   const [categories, setCategories] = reactExports.useState([]),
-    [product, setProduct] = reactExports.useState(null);
+    [product, setProduct] = reactExports.useState(null),
+    [parties, setParties] = reactExports.useState([]);
   const [form, setForm] = reactExports.useState({
     ...EMPTY_PRODUCT,
     category_id: params.get('category') || ''
@@ -3744,16 +5085,22 @@ function ProductEditor({
     [message, setMessage] = reactExports.useState(''),
     [loadError, setLoadError] = reactExports.useState(''),
     [refreshError, setRefreshError] = reactExports.useState('');
-  const errors = useFormErrors(PRODUCT_FIELDS(store));
+  // Jewellery (a fashion product under the Jewellery category) carries metal,
+  // purity, weights and stones instead of fabric and fit. The form follows the
+  // category chosen; the variant and stone panels follow the category saved.
+  const jewellery = store === 'fashion' && isJewelleryCategory(categories, form.category_id);
+  const savedJewellery = store === 'fashion' && !!product && isJewelleryCategory(categories, product.category_id);
+  const errors = useFormErrors(PRODUCT_FIELDS(store, jewellery));
   // The version of the row this form is editing, and that row's editable
   // values. Refs, not state: neither is rendered, and the token must be
   // current inside an in-flight save.
   const base = reactExports.useRef(null);
   reactExports.useEffect(() => {
     let current = true;
-    Promise.all([listStoreCategories(store), isNew ? Promise.resolve(null) : getStoreProduct(store, productId)]).then(([cats, row]) => {
+    Promise.all([listStoreCategories(store), listStoreParties(), isNew ? Promise.resolve(null) : getStoreProduct(store, productId)]).then(([cats, companies, row]) => {
       if (!current) return;
       setCategories(cats);
+      setParties(companies);
       setProduct(row);
       if (row) {
         setForm(row);
@@ -3768,6 +5115,27 @@ function ProductEditor({
       current = false;
     };
   }, [store, productId, isNew]);
+  const [partiesBusy, setPartiesBusy] = reactExports.useState(false);
+  async function reloadParties() {
+    setPartiesBusy(true);
+    try {
+      setParties(await listStoreParties());
+    } catch (err) {
+      setRefreshError(`The Companies list could not be reloaded: ${err.message}`);
+    } finally {
+      setPartiesBusy(false);
+    }
+  }
+  const partyOptions = parties.map(p => [p.id, `${p.name}${p.country && p.country !== 'IN' ? ` (${p.country})` : ''}`]);
+  // A purity belongs to its metal: changing the metal drops a grade the new metal does not have.
+  const setJewellery = next => setForm(next.metal !== form.metal && !PURITY[next.metal]?.[next.purity] ? {
+    ...next,
+    purity: ''
+  } : next);
+  const warnings = product ? declarationWarnings(product, {
+    store,
+    jewellery: savedJewellery
+  }) : [];
   // After this editor's own gallery or variant write. A gallery write moves the
   // product's updated_at (the images[] cache trigger), so the token is adopted
   // from the fresh row — but only when nothing this form saves has changed
@@ -3926,11 +5294,11 @@ function ProductEditor({
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
             form: "prod",
             errors: errors,
-            label: "Pack / dimensions (optional)",
+            label: "Net quantity / pack (optional)",
             field: "net_content",
             value: form,
             set: setForm,
-            hint: "Example: Set of 2 \xB7 40 \xD7 40 cm"
+            hint: "Example: 1 piece \xB7 Set of 2 \xB7 40 \xD7 40 cm"
           }), store !== 'fashion' && /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
             form: "prod",
             errors: errors,
@@ -3995,6 +5363,169 @@ function ProductEditor({
           value: form,
           set: setForm,
           multiline: true
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+          children: "Label declarations"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hint",
+          children: "What the product\u2019s label carries. Customers see these under Product information on the product page."
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "adm-grid2",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "prod",
+            errors: errors,
+            label: "Country of origin",
+            field: "country_of_origin",
+            value: form,
+            set: setForm,
+            hint: "2-letter code: IN for India, CN for China, BD for Bangladesh."
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "prod",
+            errors: errors,
+            label: "Generic name",
+            field: "generic_name",
+            value: form,
+            set: setForm,
+            hint: "What it is, in plain words: Kurta, Necklace, Bedsheet."
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Choice, {
+            form: "prod",
+            errors: errors,
+            label: "Manufacturer",
+            field: "manufacturer_id",
+            value: form,
+            set: setForm,
+            options: partyOptions,
+            empty: "Not set"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Choice, {
+            form: "prod",
+            errors: errors,
+            label: "Packer (if not the manufacturer)",
+            field: "packer_id",
+            value: form,
+            set: setForm,
+            options: partyOptions,
+            empty: "Not set"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Choice, {
+            form: "prod",
+            errors: errors,
+            label: "Importer (made outside India)",
+            field: "importer_id",
+            value: form,
+            set: setForm,
+            options: partyOptions,
+            empty: "Not set"
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "hint",
+          children: ["Company not in the list? ", /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+            className: "inline-link",
+            href: `/admin/store-catalogue/${store}?tab=companies`,
+            target: "_blank",
+            rel: "noreferrer",
+            children: "Add it on the Companies tab \u2197"
+          }), ", then ", /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: "btn btn-light btn-sm",
+            disabled: partiesBusy,
+            onClick: reloadParties,
+            children: partiesBusy ? 'Reloading…' : 'reload the list'
+          })]
+        }), store === 'fashion' && !jewellery && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+            children: "Fabric & fit"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: "adm-grid2",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+              form: "prod",
+              errors: errors,
+              label: "Material",
+              field: "material",
+              value: form,
+              set: setForm,
+              hint: "With percentages that add up to 100: 60% cotton, 40% polyester."
+            }), /*#__PURE__*/jsxRuntimeExports.jsx(Choice, {
+              form: "prod",
+              errors: errors,
+              label: "Fit (optional)",
+              field: "fit",
+              value: form,
+              set: setForm,
+              options: FITS.map(f => [f, f])
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+            form: "prod",
+            errors: errors,
+            label: "Care instructions",
+            field: "care",
+            value: form,
+            set: setForm,
+            multiline: true
+          })]
+        }), jewellery && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+            children: "Jewellery"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: "adm-grid2",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Choice, {
+              form: "prod",
+              errors: errors,
+              label: "Metal",
+              field: "metal",
+              value: form,
+              set: setJewellery,
+              options: METALS.map(m => [m, METAL_LABELS[m]])
+            }), /*#__PURE__*/jsxRuntimeExports.jsx(Choice, {
+              form: "prod",
+              errors: errors,
+              label: "Purity",
+              field: "purity",
+              value: form,
+              set: setForm,
+              disabled: !PURITY[form.metal],
+              options: Object.entries(PURITY[form.metal] || {}).map(([k, v]) => [k, `${k} — ${v}`]),
+              empty: PURITY[form.metal] ? 'Not set' : 'Only gold, silver and platinum',
+              hint: "One purity per listing: 18K and 22K are separate listings."
+            }), /*#__PURE__*/jsxRuntimeExports.jsx(Choice, {
+              form: "prod",
+              errors: errors,
+              label: "Making charges (optional)",
+              field: "making_charge_type",
+              value: form,
+              set: setForm,
+              options: MAKING_TYPES.map(t => [t, MAKING_LABELS[t]]),
+              empty: "None stated"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+              form: "prod",
+              errors: errors,
+              label: form.making_charge_type === 'percent' ? 'Making charges %' : 'Making charges ₹',
+              field: "making_charge_value",
+              type: "number",
+              min: "0",
+              max: form.making_charge_type === 'percent' ? 100 : undefined,
+              step: "0.01",
+              value: form,
+              set: setForm,
+              hint: "Recorded with the listing; the price above is still what customers pay."
+            }), /*#__PURE__*/jsxRuntimeExports.jsx(Choice, {
+              form: "prod",
+              errors: errors,
+              label: "Pricing",
+              field: "pricing_mode",
+              value: form,
+              set: setForm,
+              empty: null,
+              options: [['fixed', 'Fixed — the price above'], ['rate_linked', 'Linked to the metal rate (draft only)']],
+              hint: form.pricing_mode === 'rate_linked' ? RATE_LINKED_NOT_LIVE : 'Customers pay the selling price above.'
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hint",
+            children: "Gross and net metal weights go on each size, below; stones have their own panel."
+          })]
+        }), !!warnings.length && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "adm-banner sc-info",
+          role: "note",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+            children: [product?.is_active ? 'Live without' : 'Before this goes live, add', ":"]
+          }), " ", warnings.map(w => w.label).join(', '), ". A reminder, not a block: saving and publishing still work."]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "sc-actions",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(Check, {
@@ -4026,6 +5557,11 @@ function ProductEditor({
         product: product,
         onChanged: refresh
       }), /*#__PURE__*/jsxRuntimeExports.jsx(VariantsEditor, {
+        store: store,
+        product: product,
+        onChanged: refresh,
+        jewellery: savedJewellery
+      }), savedJewellery && /*#__PURE__*/jsxRuntimeExports.jsx(StonesEditor, {
         store: store,
         product: product,
         onChanged: refresh
