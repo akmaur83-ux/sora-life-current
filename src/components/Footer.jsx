@@ -3,8 +3,8 @@ import Icon from './Icon.jsx';
 import Logo from './Logo.jsx';
 import { categories } from '../data/categories.js';
 import { branding } from '../lib/settings.js';
-import { companyInfo, socialLinks, telHref } from '../lib/company.js';
-import { useLegalPage } from '../lib/legalPagesApi.js';
+import { hasContactChannel, socialLinks, telHref } from '../lib/company.js';
+import { useConsumerCare } from '../lib/consumerCare.js';
 
 // ============================================================
 // Footer.
@@ -16,10 +16,13 @@ import { useLegalPage } from '../lib/legalPagesApi.js';
 // Optional contact/social details are sanitized and render only when an admin
 // has configured them. The trust row states operational facts implemented by
 // server pricing, checkout and customer order history — not marketing claims.
+//
+// Consumer care is on every page, every store: the business name, address,
+// phone, email and hours the Contact & help page publishes (consumerCare.js),
+// each shown only when the admin has set it.
 // ============================================================
 export default function Footer() {
-  const { page } = useLegalPage('contact');
-  const info = companyInfo({ ...page, social: companyInfo().social });
+  const info = useConsumerCare();
   const socials = socialLinks(info);
   const name = branding?.siteName || 'SORA LIFE';
 
@@ -30,11 +33,19 @@ export default function Footer() {
           <div className="ftr__brand">
             <Logo light />
             <p>A marketplace for wellness, personal care and everyday essentials.</p>
-            {(info.email || info.phone) && (
-              <div className="ftr__contact" aria-label="Store contact details">
-                {info.email && <a href={`mailto:${info.email}`}>{info.email}</a>}
-                {info.phone && <a href={telHref(info.phone)}>{info.phone}</a>}
-              </div>
+            {hasContactChannel(info) && (
+              <section className="ftr__care" id="consumer-care" aria-labelledby="ftr-care-h">
+                <h4 id="ftr-care-h">Consumer care</h4>
+                {info.legalName && <p className="ftr__care-name">{info.legalName}</p>}
+                {info.address && <address className="ftr__care-address">{info.address}</address>}
+                {(info.email || info.phone) && (
+                  <div className="ftr__contact" aria-label="Store contact details">
+                    {info.phone && <a href={telHref(info.phone)}>{info.phone}</a>}
+                    {info.email && <a href={`mailto:${info.email}`}>{info.email}</a>}
+                  </div>
+                )}
+                {info.hours && <p className="ftr__care-hours">{info.hours}</p>}
+              </section>
             )}
             {socials.length > 0 && (
               <div className="ftr__social" aria-label="Official social profiles">

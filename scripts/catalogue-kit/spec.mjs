@@ -154,7 +154,7 @@ export const COLUMNS = [
     example: { fashion: 'CEL-SH-0147', jewellery: 'AA-RG-22K-014' }, blank: 'No product SKU.',
     rejects: [['Other characters, or over 64', MSG.skuRule], ['A SKU another product has', MSG.skuTaken]] },
   { sheet: 'products', key: 'net_content', kits: BOTH, importable: true, required: 'live',
-    purpose: 'Net quantity — the Legal Metrology declaration (number of pieces in the pack). Not yet shown on fashion pages.',
+    purpose: 'Net quantity — the Legal Metrology declaration (number of pieces in the pack). Shown under Product information on the product page.',
     format: 'Plain text with the count: "1 N", "1 pair", "Set of 2".', example: { fashion: '1 N', jewellery: '1 N' },
     blank: 'Nothing recorded (the validator warns: expected before going live).', rejects: [] },
   { sheet: 'products', key: 'hsn_code', kits: BOTH, importable: true, required: 'live',

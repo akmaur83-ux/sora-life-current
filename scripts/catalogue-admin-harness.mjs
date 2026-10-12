@@ -199,8 +199,9 @@ export function createCatalogueDb(rows = {}, { admin = true } = {}) {
 
   function embed(table, row, columns) {
     const out = clone(row);
-    if (table === 'catalogue_products' && /variants:catalogue_variants/.test(columns)) {
-      out.variants = clone(db.catalogue_variants.filter((v) => v.product_id === row.id && visible('catalogue_variants', v)).sort((a, b) => a.sort_order - b.sort_order));
+    // "variants:catalogue_variants (…)", or another alias ("weights:" on the product page's declarations read).
+    for (const [, alias] of String(columns).matchAll(/(\w+):catalogue_variants\b/g)) {
+      if (table === 'catalogue_products') out[alias] = clone(db.catalogue_variants.filter((v) => v.product_id === row.id && visible('catalogue_variants', v)).sort((a, b) => a.sort_order - b.sort_order));
     }
     if (table === 'catalogue_products' && /media:catalogue_product_media/.test(columns)) {
       out.media = clone(db.catalogue_product_media.filter((m) => m.product_id === row.id).sort((a, b) => a.sort_order - b.sort_order));
@@ -208,9 +209,12 @@ export function createCatalogueDb(rows = {}, { admin = true } = {}) {
     if (table === 'catalogue_products' && /stones:catalogue_product_stones/.test(columns)) {
       out.stones = clone(db.catalogue_product_stones.filter((s) => s.product_id === row.id).sort((a, b) => a.sort_order - b.sort_order));
     }
-    // to-one embeds of a company: "manufacturer:catalogue_parties!manufacturer_id (...)"
-    for (const [, alias, key] of String(columns).matchAll(/(\w+):catalogue_parties!(\w+)/g)) {
-      if (table === 'catalogue_products') out[alias] = clone(db.catalogue_parties.find((p) => p.id === row[key]) || null);
+    // to-one embeds of a company, projected as PostgREST does: "manufacturer:catalogue_parties!manufacturer_id (name, address)"
+    for (const [, alias, key, list] of String(columns).matchAll(/(\w+):catalogue_parties!(\w+)\s*(?:\(([^)]*)\))?/g)) {
+      if (table !== 'catalogue_products') continue;
+      const party = db.catalogue_parties.find((p) => p.id === row[key]) || null;
+      const keep = list && list.trim() !== '*' ? list.split(',').map((c) => c.trim()).filter(Boolean) : null;
+      out[alias] = party && keep ? Object.fromEntries(keep.map((c) => [c, clone(party[c] ?? null)])) : clone(party);
     }
     return out;
   }

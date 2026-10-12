@@ -126,7 +126,9 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
     ? loadModule('src/fashion/FashionJewellery.jsx', { Link, Icon, categoryHref: rules.categoryHref, useFashionCatalogue: catalogue.useFashionCatalogue, FashionProductCard: card.default, departmentCatalogue: department.departmentCatalogue, ...loadModule('src/fashion/jewelleryContent.js') })
     : null;
   const listing = loadModule('src/fashion/FashionListing.jsx', { Link, useParams, useSearchParams, Icon, ...rules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default });
-  const pdp = loadModule('src/fashion/FashionProductPage.jsx', { Link, useNavigate, useParams, useSearchParams, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, useStore, ...pdpContent, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, Breadcrumb: listing.Breadcrumb, FashionProductCard: card.default, Stars: card.Stars, VariantPicker: picker.VariantPicker });
+  // Product information reads after mount (an effect), so a server render has none: the same null as the real one here.
+  const ProductInformation = () => null;
+  const pdp = loadModule('src/fashion/FashionProductPage.jsx', { Link, useNavigate, useParams, useSearchParams, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, useStore, ...pdpContent, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, Breadcrumb: listing.Breadcrumb, FashionProductCard: card.default, Stars: card.Stars, VariantPicker: picker.VariantPicker, ProductInformation });
   const App = ({ path, initial = INITIAL }) => h(StaticRouter, { location: path },
     h(Routes, null,
       h(Route, { path: '/fashion', element: h(layout.default, { initial }) },

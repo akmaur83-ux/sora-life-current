@@ -498,7 +498,7 @@ const walk = (el, hit, out = []) => {
 const rules = loadModule('src/lib/homelivingPdp.js', {});
 const listing = has('src/lib/homelivingListing.js') ? loadModule('src/lib/homelivingListing.js', {}) : {};
 const pageWith = (slug, query, recorded) => loadModule('src/homeliving/HomeLivingProductPage.jsx', {
-  Link: (p) => React.createElement('a', p), Icon: () => null, money: (n) => `₹${n}`, Breadcrumb: () => null, HomeLivingProductCard: () => null,
+  Link: (p) => React.createElement('a', p), Icon: () => null, money: (n) => `₹${n}`, Breadcrumb: () => null, HomeLivingProductCard: () => null, ProductInformation: () => null,
   useParams: () => ({ slug }), useSearchParams: () => [new URLSearchParams(query), () => {}], useMemo: (f) => f(),
   useHomeLivingCatalogue: () => ({ status: 'ready', categories: PDP.categories, products: VIEWS }),
   HOMELIVING_DELIVERY_WINDOW: '6-7 days', breadcrumbFor: listing.breadcrumbFor || (() => []), ...rules,

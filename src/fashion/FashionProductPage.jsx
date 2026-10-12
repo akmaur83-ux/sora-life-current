@@ -12,6 +12,7 @@ import { CategoryChips } from './FashionLayout.jsx';
 import { Breadcrumb } from './FashionListing.jsx';
 import FashionProductCard, { Stars } from './FashionProductCard.jsx';
 import { VariantPicker } from './FashionVariantPicker.jsx';
+import ProductInformation from '../components/ProductInformation.jsx';
 
 // ============================================================
 // /fashion/p/<slug> — the product page.
@@ -161,6 +162,7 @@ export default function FashionProductPage() {
               </dl>
             </section>
           )}
+          <ProductInformation store="fashion" productId={view.id} variant={st.variant} prefix="fs" />
         </div>
       </div>
 

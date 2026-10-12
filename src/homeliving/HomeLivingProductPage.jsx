@@ -9,6 +9,7 @@ import { breadcrumbFor } from '../lib/homelivingListing.js';
 import { readSelection, writeSelection, selectionState, relatedFor } from '../lib/homelivingPdp.js';
 import { Breadcrumb } from './HomeLivingCategory.jsx';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
+import ProductInformation from '../components/ProductInformation.jsx';
 
 // ============================================================
 // /homeliving/p/<slug> — the product page.
@@ -427,6 +428,8 @@ export default function HomeLivingProductPage() {
               {view.sku && <div><dt>SKU</dt><dd>{view.sku}</dd></div>}
             </dl>
           </section>
+          {/* Net quantity is the Size row above. */}
+          <ProductInformation store="homeliving" productId={view.id} variant={st.variant} prefix="hl" netQuantity={false} />
         </div>
       </div>
 

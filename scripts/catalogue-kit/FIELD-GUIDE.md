@@ -104,7 +104,7 @@ Used by: Fashion, Jewellery.
   - A SKU another product has → “Another product would have the SKU "…".”
 
 ### `net_content`
-- **For:** Net quantity — the Legal Metrology declaration (number of pieces in the pack). Not yet shown on fashion pages.
+- **For:** Net quantity — the Legal Metrology declaration (number of pieces in the pack). Shown under Product information on the product page.
 - **Kits:** Fashion, Jewellery · **Expected before it goes live (the validator warns; nothing blocks)**
 - **Format:** Plain text with the count: "1 N", "1 pair", "Set of 2".
 - **Example:** `1 N` (fashion) · `1 N` (jewellery)

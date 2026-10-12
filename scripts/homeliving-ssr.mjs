@@ -118,7 +118,9 @@ export async function buildHomeLivingApp({ cartCount = 0, initial = INITIAL, onA
   const rules = has('src/lib/homelivingListing.js') ? loadModule('src/lib/homelivingListing.js', {}) : {};
   const category = has('src/homeliving/HomeLivingCategory.jsx') ? loadModule('src/homeliving/HomeLivingCategory.jsx', { Link, useParams, useSearchParams, Icon, useHomeLivingCatalogue: data.useHomeLivingCatalogue, ...rules, HomeLivingProductCard: card.default }) : null;
   const pdpRules = has('src/lib/homelivingPdp.js') ? loadModule('src/lib/homelivingPdp.js', {}) : {};
-  const pdp = has('src/homeliving/HomeLivingProductPage.jsx') ? loadModule('src/homeliving/HomeLivingProductPage.jsx', { Link, useParams, useSearchParams, Icon, money, useStore, HOMELIVING_DELIVERY_WINDOW: data.HOMELIVING_DELIVERY_WINDOW, useHomeLivingCatalogue: data.useHomeLivingCatalogue, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, Breadcrumb: category?.Breadcrumb, HomeLivingProductCard: card.default }) : null;
+  // Product information reads after mount (an effect), so a server render has none: the same null as the real one here.
+  const ProductInformation = () => null;
+  const pdp = has('src/homeliving/HomeLivingProductPage.jsx') ? loadModule('src/homeliving/HomeLivingProductPage.jsx', { Link, useParams, useSearchParams, Icon, money, useStore, HOMELIVING_DELIVERY_WINDOW: data.HOMELIVING_DELIVERY_WINDOW, useHomeLivingCatalogue: data.useHomeLivingCatalogue, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, Breadcrumb: category?.Breadcrumb, HomeLivingProductCard: card.default, ProductInformation }) : null;
   const App = ({ path }) => h(StaticRouter, { location: path },
     h(Routes, null,
       h(Route, { path: '/homeliving', element: h(layout.default) },
