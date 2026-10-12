@@ -134,7 +134,7 @@
 
 /* ---- Product cards ---------------------------------------------------------- */
 .fs-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.fs-card { display: grid; grid-template-rows: auto auto; background: var(--slv2-paper); border: 1px solid var(--fs-line); border-radius: var(--fs-r); overflow: hidden; box-shadow: var(--fs-shadow); }
+.fs-card { display: grid; grid-template-rows: auto auto; align-content: start; background: var(--slv2-paper); border: 1px solid var(--fs-line); border-radius: var(--fs-r); overflow: hidden; box-shadow: var(--fs-shadow); }
 .fs-card__media { position: relative; aspect-ratio: 1 / 1; background: var(--slv2-cream); }
 .fs-card__img { display: block; width: 100%; height: 100%; }
 .fs-card__img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s ease; }

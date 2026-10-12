@@ -213,7 +213,9 @@ await test('/fashion: tiles, benefits, hero with an image slot, four category ca
   assert.ok(!app.error, app.error?.message);
   const html = app.render('/fashion');
   assert.match(html, /placeholder="Search for fashion, lifestyle and more…"/);
-  assert.match(html, /class="fs-strip"[\s\S]*?Delivering across India[\s\S]*?Fast &amp; reliable delivery/);
+  // The true delivery time, not a speed claim (it read "Fast & reliable delivery" until 2026-10-11).
+  assert.match(html, /class="fs-strip"[\s\S]*?Delivering across India[\s\S]*?Delivery in 6–7 business days<\/span>/);
+  assert.doesNotMatch(html, /fast\s*(&amp;|&)\s*reliable|reliable delivery/i);
   assert.equal((html.match(/class="fs-chip"/g) || []).length, 4, 'four level-1 chips');
   assert.deepEqual([...html.matchAll(/class="fs-tile__name">([^<]+)</g)].map((m) => m[1]), ['Men', 'Women', 'Kids', 'Beauty', 'Footwear', 'Bags &amp; Accessories']);
   assert.match(html, /fs-benefits__signin[\s\S]*?<strong>Sign in<\/strong> for exclusive benefits/);
@@ -270,6 +272,24 @@ await test('the product card: badge, heart, quick-add, price with MRP struck, na
   assert.match(html, /\(3\.2K\)/);
   const out = app.render('/fashion', { categories: CATEGORIES, products: [{ ...PRODUCTS[4], fashion_variants: PRODUCTS[4].fashion_variants.map((x) => ({ ...x, stock: 0 })) }] });
   assert.match(out, /class="fs-card is-out"[\s\S]*?<span class="fs-badge fs-badge--out">Sold out<\/span>/);
+});
+
+await test('no reviews yet, no rating row: an unreviewed product shows no "0.0 ☆☆☆☆☆ (0)" on its card or on its page, a reviewed one keeps its row, and a card without the row keeps its image square', () => {
+  const unreviewed = { ...PRODUCTS[0], rating: 0, review_count: 0 };
+  const data = { categories: CATEGORIES, products: [unreviewed, ...PRODUCTS.slice(1)] };
+  const html = app.render('/fashion', data);
+  const start = html.indexOf(`data-product="${unreviewed.slug}"`);
+  assert.ok(start > 0, 'the card renders');
+  const card = html.slice(start, html.indexOf('<article', start + 1));
+  assert.match(card, /<h3 class="fs-card__name">/);
+  assert.doesNotMatch(card, /fs-rating|fs-stars|0\.0/, 'no rating row on the card');
+  assert.match(html, /<p class="fs-rating"><b>4\.5<\/b><span class="fs-stars"/, 'a reviewed product keeps its row');
+  const pdp = app.render(`/fashion/p/${unreviewed.slug}`, data);
+  const head = pdp.slice(pdp.indexOf('<h1 class="fs-pdp__h serif">'), pdp.indexOf('<p class="fs-price fs-price--lg"'));
+  assert.ok(head.length > 0, 'the product page renders its title and price');
+  assert.doesNotMatch(head, /fs-rating|fs-stars|0\.0/, 'no rating row on the product page');
+  // Cards in a row share its height: without align-content the shorter body would stretch the image track.
+  assert.match(read('src/styles/fashion.css'), /\n\.fs-card \{ display: grid; grid-template-rows: auto auto; align-content: start;/);
 });
 
 await test('/fashion/c/<slug> at every level: breadcrumb, chips, sub-categories, count, sort, view toggle, filter panel, grid', () => {

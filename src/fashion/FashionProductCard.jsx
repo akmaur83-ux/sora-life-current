@@ -10,8 +10,8 @@ import { VariantSheet } from './FashionVariantPicker.jsx';
 
 // ============================================================
 // Fashion product card — image, discount badge, wishlist heart, quick-add,
-// price with the MRP struck through, name, rating with review count, and
-// colour swatches with a "+N" overflow.
+// price with the MRP struck through, name, rating with review count (once
+// there are reviews), and colour swatches with a "+N" overflow.
 //
 // Quick-add is real: a product with one size × colour goes straight into
 // the cart; one with several opens the size/colour sheet. The line the
@@ -65,11 +65,14 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
         </p>
         <h3 className="fs-card__name"><Link to={href}>{view.name}</Link></h3>
         {layout === 'list' && view.brand && <p className="fs-card__brand">{view.brand}</p>}
-        <p className="fs-rating">
-          <b>{view.rating.toFixed(1)}</b>
-          <Stars value={view.rating} />
-          <span className="fs-rating__count">({view.reviewCount >= 1000 ? `${(view.reviewCount / 1000).toFixed(view.reviewCount >= 10000 ? 0 : 1).replace(/\.0$/, '')}K` : view.reviewCount})</span>
-        </p>
+        {/* No reviews yet: no rating row at all, rather than "0.0 ☆☆☆☆☆ (0)". */}
+        {view.reviewCount > 0 && (
+          <p className="fs-rating">
+            <b>{view.rating.toFixed(1)}</b>
+            <Stars value={view.rating} />
+            <span className="fs-rating__count">({view.reviewCount >= 1000 ? `${(view.reviewCount / 1000).toFixed(view.reviewCount >= 10000 ? 0 : 1).replace(/\.0$/, '')}K` : view.reviewCount})</span>
+          </p>
+        )}
         {shown.length > 1 && (
           <p className="fs-swatches" aria-label={`${view.swatches.length} colours`}>
             {shown.map((s) => <span key={s.colour} className={`fs-swatch${s.stock === 0 ? ' is-out' : ''}`} style={{ background: s.hex || '#D9CBB0' }} title={s.colour} />)}

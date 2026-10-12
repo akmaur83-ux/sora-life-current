@@ -159,6 +159,16 @@ test('the women page fills the width: no box pairs aspect-ratio with a min/max h
   assert.match(women, /@media \(max-width: 700px\) \{[\s\S]*\.wm-hero \{ display: block; height: auto;/);
 });
 
+test('the saree page fills the width too: its hero takes its height from the width (min-height 480px with aspect-ratio 2077/757 forced it 1317px wide, a sideways scroll below that)', () => {
+  const css = read('src/styles/fashion-departments.css');
+  const hero = css.match(/\n\.sw-hero \{[^}]*\}/)[0];
+  assert.doesNotMatch(hero, /aspect-ratio|min-height|max-height/, 'no aspect-ratio and no min/max height on the saree hero');
+  assert.match(hero, /height: clamp\(480px, 36\.45vw, 760px\);/, 'the photograph\'s own 2077:757 between 480px and 760px tall');
+  for (const [rule] of css.matchAll(/[^{}]+\{[^{}]*\}/g)) {
+    if (/\.sw-/.test(rule) && /aspect-ratio:\s*(?!auto\b)[^;\s]/.test(rule) && /(min|max)-height:\s*(?!0[;\s]|none\b)[^;\s]/.test(rule)) assert.fail(`aspect-ratio with a min/max height: ${rule.trim()}`);
+  }
+});
+
 test('the women page row: new arrivals when any are flagged, a filter per Women sub-category on the shelf', () => {
   const sub = (id, slug, name) => ({ id, parent_id: womenCategory.id, name, slug, tagline: '', image_url: null, sort_order: 1, is_active: true });
   const product = (n, category_id, isNew) => ({ ...womenProduct, id: `00000000-0000-4000-8000-00000000090${n}`, slug: `women-piece-${n}`, name: `Women piece ${n}`, category_id, is_new: isNew });

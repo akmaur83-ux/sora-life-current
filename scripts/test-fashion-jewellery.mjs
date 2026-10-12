@@ -21,6 +21,7 @@ import React from 'react';
 import { buildFashionApp, loadModule, INITIAL, ROOT, read, has } from './fashion-ssr.mjs';
 import { loadSource } from './grocery-ssr.mjs';
 import { atCommit } from './baseline-export.mjs';
+import { sansFashionStripSaree } from './storefront-settings-pin.mjs';
 
 // The tree before this page: the Fashion portrait renamed (16e5395).
 const BASELINE_SHA = '16e5395';
@@ -200,7 +201,8 @@ const rulesOf = (css) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => [
 await test('scoped and appended: every new rule is .jw, .jw-header, .fs--jewellery or the women\'s .wm-jewellery panel; the sheet before them is exactly as it was', () => {
   assert.ok(jw, 'the jewellery block');
   const base = atCommit(BASELINE_SHA, SHEET).replace(/\r\n/g, '\n');
-  assert.equal(sheet.slice(0, base.length), base, 'everything before the block is byte-identical');
+  // The saree hero's height fix (2026-10-11) came after this page: undone first, through its recorded patch.
+  assert.equal(sansFashionStripSaree(SHEET, sheet).slice(0, base.length), base, 'everything before the block is byte-identical');
   const rules = rulesOf(jw);
   assert.ok(rules.length >= 90, `the rules (${rules.length})`);
   for (const [sel] of rules) for (const part of sel.replace(/^@media[^{]*/, '').split(',').map((p) => p.trim()).filter(Boolean)) {
@@ -278,7 +280,8 @@ await test('the shared files change exactly as scripts/pins/fashion-jewellery.pa
   flush();
   assert.deepEqual(Object.keys(files).sort(), ['src/App.jsx', 'src/fashion/FashionDepartment.jsx', 'src/fashion/FashionLayout.jsx', 'src/fashion/departmentContent.js', 'src/styles/fashion-departments.css']);
   for (const [r, hunks] of Object.entries(files)) {
-    let t = read(r);
+    // The two later fashion fixes (strip copy, saree hero height) are undone first, through their own patch.
+    let t = sansFashionStripSaree(r, read(r));
     for (const [now, then] of hunks) { assert.equal(t.split(now).length - 1, 1, `${r}: a recorded hunk`); t = t.replace(now, then); }
     assert.equal(t, atCommit(BASELINE_SHA, r).replace(/\r\n/g, '\n'), `${r}: undone, as it was`);
   }

@@ -1,0 +1,62 @@
+diff --git a/src/fashion/FashionProductCard.jsx b/src/fashion/FashionProductCard.jsx
+index c9d69ae..0f64aac 100644
+--- a/src/fashion/FashionProductCard.jsx
++++ b/src/fashion/FashionProductCard.jsx
+@@ -10,8 +10,8 @@ import { VariantSheet } from './FashionVariantPicker.jsx';
+ 
+ // ============================================================
+ // Fashion product card — image, discount badge, wishlist heart, quick-add,
+-// price with the MRP struck through, name, rating with review count, and
+-// colour swatches with a "+N" overflow.
++// price with the MRP struck through, name, rating with review count (once
++// there are reviews), and colour swatches with a "+N" overflow.
+ //
+ // Quick-add is real: a product with one size × colour goes straight into
+ // the cart; one with several opens the size/colour sheet. The line the
+@@ -65,11 +65,14 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
+         </p>
+         <h3 className="fs-card__name"><Link to={href}>{view.name}</Link></h3>
+         {layout === 'list' && view.brand && <p className="fs-card__brand">{view.brand}</p>}
+-        <p className="fs-rating">
+-          <b>{view.rating.toFixed(1)}</b>
+-          <Stars value={view.rating} />
+-          <span className="fs-rating__count">({view.reviewCount >= 1000 ? `${(view.reviewCount / 1000).toFixed(view.reviewCount >= 10000 ? 0 : 1).replace(/\.0$/, '')}K` : view.reviewCount})</span>
+-        </p>
++        {/* No reviews yet: no rating row at all, rather than "0.0 ☆☆☆☆☆ (0)". */}
++        {view.reviewCount > 0 && (
++          <p className="fs-rating">
++            <b>{view.rating.toFixed(1)}</b>
++            <Stars value={view.rating} />
++            <span className="fs-rating__count">({view.reviewCount >= 1000 ? `${(view.reviewCount / 1000).toFixed(view.reviewCount >= 10000 ? 0 : 1).replace(/\.0$/, '')}K` : view.reviewCount})</span>
++          </p>
++        )}
+         {shown.length > 1 && (
+           <p className="fs-swatches" aria-label={`${view.swatches.length} colours`}>
+             {shown.map((s) => <span key={s.colour} className={`fs-swatch${s.stock === 0 ? ' is-out' : ''}`} style={{ background: s.hex || '#D9CBB0' }} title={s.colour} />)}
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 82e7b2a..4a88b87 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -121,7 +121,8 @@ export default function FashionProductPage() {
+         <div className="fs-pdp__body">
+           {view.brand && <p className="fs-pdp__brand">{view.brand}</p>}
+           <h1 className="fs-pdp__h serif">{view.name}</h1>
+-          <p className="fs-rating"><b>{view.rating.toFixed(1)}</b><Stars value={view.rating} size={15} /><span className="fs-rating__count">({view.reviewCount.toLocaleString('en-IN')} {view.reviewCount === 1 ? 'review' : 'reviews'})</span></p>
++          {/* No reviews yet: no rating row, rather than "0.0 ☆☆☆☆☆ (0 reviews)" (as on the card). */}
++          {view.reviewCount > 0 && <p className="fs-rating"><b>{view.rating.toFixed(1)}</b><Stars value={view.rating} size={15} /><span className="fs-rating__count">({view.reviewCount.toLocaleString('en-IN')} {view.reviewCount === 1 ? 'review' : 'reviews'})</span></p>}
+ 
+           <p className="fs-price fs-price--lg" data-price={st.price}>
+             <strong><span className="fs-price__cur">₹</span>{money(st.price).replace(/^₹\s?/, '')}</strong>
+diff --git a/src/styles/fashion.css b/src/styles/fashion.css
+index 0bb267a..e56442b 100644
+--- a/src/styles/fashion.css
++++ b/src/styles/fashion.css
+@@ -134,7 +134,7 @@
+ 
+ /* ---- Product cards ---------------------------------------------------------- */
+ .fs-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+-.fs-card { display: grid; grid-template-rows: auto auto; background: var(--slv2-paper); border: 1px solid var(--fs-line); border-radius: var(--fs-r); overflow: hidden; box-shadow: var(--fs-shadow); }
++.fs-card { display: grid; grid-template-rows: auto auto; align-content: start; background: var(--slv2-paper); border: 1px solid var(--fs-line); border-radius: var(--fs-r); overflow: hidden; box-shadow: var(--fs-shadow); }
+ .fs-card__media { position: relative; aspect-ratio: 1 / 1; background: var(--slv2-cream); }
+ .fs-card__img { display: block; width: 100%; height: 100%; }
+ .fs-card__img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s ease; }

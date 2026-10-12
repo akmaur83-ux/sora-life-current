@@ -92,6 +92,9 @@ export const DRAWER_SHADOW_EDITS = /^src\/styles\/layout\.css$/;
 /** Rendered /fashion: the Men and Women tiles open their department pages instead of the category listings. */
 export const sansDepartmentTiles = (html) => html.replace(/<a class="fs-tile" href="\/fashion\/(men|women)">/g, '<a class="fs-tile" href="/fashion/c/$1">');
 
+/** Rendered fashion shell: the delivery strip's true wording (2026-10-11) back to the speed claim it replaced. */
+export const sansStripCopy = (html) => html.replaceAll('Delivery in 6–7 business days</span>', 'Fast &amp; reliable delivery</span>');
+
 const q = (s) => { assert.ok(!/['\\\n]/.test(s), `default needs escaping: ${s}`); return `'${s}'`; };
 const pair = (a, b) => `[${q(a)}, ${q(b)}]`;
 const lines = (indent, entries) => entries.map(([k, v]) => `${indent}${k}: ${v},\n`).join('');
@@ -352,6 +355,16 @@ const UNDO_ORDER_NUMBER = undoFromPatch('order-number.patch');
 // closed. Undone here, newest first.
 const UNDO_DRAWER_SHADOW = undoFromPatch('drawer-shadow.patch');
 
+// Two fashion fixes: the shell's delivery strip says "Delivery in 6–7 business days" where it
+// claimed "Fast & reliable delivery" (FashionLayout.jsx), and the saree hero takes its height from the width
+// (fashion-departments.css) — its min-height with aspect-ratio forced it 1317px wide. Undone here, newest first.
+const UNDO_FASHION_STRIP_SAREE = undoFromPatch('fashion-strip-saree.patch');
+
+// No rating row until a product has reviews: the shared fashion card and the fashion product page showed
+// "0.0 ☆☆☆☆☆ (0)" for every unreviewed product (FashionProductCard.jsx, FashionProductPage.jsx), and the
+// card keeps its image square without the row (fashion.css, align-content). Undone here, newest first.
+const UNDO_FASHION_RATING_ROW = undoFromPatch('fashion-rating-row.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -418,7 +431,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
@@ -426,6 +439,15 @@ const CART_CHANGES = [UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UND
  */
 export function sansHomeLivingCart(rel, text) {
   const undo = UNDO_HOMELIVING_CART[rel];
+  return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
+}
+
+/**
+ * The two fashion fixes (strip copy, saree hero height) undone on their own — for a suite that checks an
+ * older change's own patch (test-fashion-jewellery) and must undo the newer one first.
+ */
+export function sansFashionStripSaree(rel, text) {
+  const undo = UNDO_FASHION_STRIP_SAREE[rel];
   return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
 }
 

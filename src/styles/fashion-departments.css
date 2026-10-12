@@ -210,7 +210,7 @@
 .sw-header__actions a { position: relative; display: grid; place-items: center; width: 36px; height: 44px; text-decoration: none; }
 .sw-header__actions span { position: absolute; right: 0; top: 4px; border-radius: 50%; min-width: 15px; height: 15px; display: grid; place-items: center; background: #f9f3ea; color: #372639; font-size: 9px; }
 .sw-header__menu { display: none; border: 0; background: none; color: inherit; padding: 0; width: 36px; height: 44px; place-items: center; }
-.sw-hero { isolation: isolate; position: relative; display: flex; align-items: center; aspect-ratio: 2077/757; min-height: 480px; max-height: 760px; background: #251e19; color: #fff9f0; overflow: hidden; }
+.sw-hero { isolation: isolate; position: relative; display: flex; align-items: center; height: clamp(480px, 36.45vw, 760px); background: #251e19; color: #fff9f0; overflow: hidden; }
 .sw-hero__art { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; animation: sw-image-in .65s ease-out; }
 .sw-hero__art img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .sw-hero::after { position: absolute; inset: 0; content: ''; z-index: -1; background: linear-gradient(90deg, #1814113b, transparent 63%), linear-gradient(180deg, #1613116b, transparent 24%); }

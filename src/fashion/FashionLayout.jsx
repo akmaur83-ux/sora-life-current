@@ -116,7 +116,7 @@ export function FashionHeader({ onMenu }) {
       <div className="fs-strip" aria-label="Delivery">
         <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> Delivering across India</span>
         <span className="fs-strip__sep" aria-hidden="true" />
-        <span className="fs-strip__fast"><Icon name="truck" size={20} /> Fast &amp; reliable delivery</span>
+        <span className="fs-strip__fast"><Icon name="truck" size={20} /> Delivery in 6–7 business days</span>
       </div>
     </header>
   );

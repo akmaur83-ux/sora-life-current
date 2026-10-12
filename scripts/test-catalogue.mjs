@@ -23,7 +23,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ROOT, read, has, h, loadModule, loadGroceryData, CATEGORIES, PRODUCTS, noSupabase } from './grocery-ssr.mjs';
-import { sansDepartmentTiles, sansStorefrontChanges } from './storefront-settings-pin.mjs';
+import { sansDepartmentTiles, sansStorefrontChanges, sansStripCopy } from './storefront-settings-pin.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // The tip before the data layer moved (the grocery bundle commit). Pinned so the
@@ -298,7 +298,7 @@ await test(`the eight fashion pages render byte-identically from the working tre
   // now; strip it here so this stays a data-layer comparison.
   const SHIP_LIST = /<ul class="fs-pdp__ship">[\s\S]*?<\/ul>/;
   // The fashion departments point the Men and Women tiles at their pages (test-fashion-departments.mjs).
-  const normalise = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(sansDepartmentTiles(html).replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, OLD_BACK))[1].replace(SHIP_LIST, 'SHIP')]));
+  const normalise = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(sansStripCopy(sansDepartmentTiles(html)).replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, OLD_BACK))[1].replace(SHIP_LIST, 'SHIP')]));
   const heroes = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(html)[0]]));
   assert.deepEqual(normalise(now), normalise(then), 'identical markup for every page, the campaign hero aside');
   assert.deepEqual(heroes(now), heroes(then), 'the campaign hero block itself is byte-identical — only its position changed');

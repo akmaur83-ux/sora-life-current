@@ -121,7 +121,8 @@ export default function FashionProductPage() {
         <div className="fs-pdp__body">
           {view.brand && <p className="fs-pdp__brand">{view.brand}</p>}
           <h1 className="fs-pdp__h serif">{view.name}</h1>
-          <p className="fs-rating"><b>{view.rating.toFixed(1)}</b><Stars value={view.rating} size={15} /><span className="fs-rating__count">({view.reviewCount.toLocaleString('en-IN')} {view.reviewCount === 1 ? 'review' : 'reviews'})</span></p>
+          {/* No reviews yet: no rating row, rather than "0.0 ☆☆☆☆☆ (0 reviews)" (as on the card). */}
+          {view.reviewCount > 0 && <p className="fs-rating"><b>{view.rating.toFixed(1)}</b><Stars value={view.rating} size={15} /><span className="fs-rating__count">({view.reviewCount.toLocaleString('en-IN')} {view.reviewCount === 1 ? 'review' : 'reviews'})</span></p>}
 
           <p className="fs-price fs-price--lg" data-price={st.price}>
             <strong><span className="fs-price__cur">₹</span>{money(st.price).replace(/^₹\s?/, '')}</strong>
