@@ -53,7 +53,9 @@ async function main() {
   const opts = args(rest);
   if (command === 'build') {
     const files = [...templates(), { path: 'FIELD-GUIDE.md', text: fieldGuide() }];
-    const stale = files.filter((f) => !existsSync(join(HERE, f.path)) || readFileSync(join(HERE, f.path), 'utf8') !== f.text);
+    // Line endings aside: a Windows checkout (core.autocrlf) holds these files with CRLF.
+    const lf = (s) => s.replace(/\r\n/g, '\n');
+    const stale = files.filter((f) => !existsSync(join(HERE, f.path)) || lf(readFileSync(join(HERE, f.path), 'utf8')) !== f.text);
     if (opts.check) {
       if (stale.length) { console.error(`Out of date: ${stale.map((f) => f.path).join(', ')}. Run: node scripts/catalogue-kit/kit.mjs build`); process.exit(1); }
       console.log('Templates and FIELD-GUIDE.md match spec.mjs.');

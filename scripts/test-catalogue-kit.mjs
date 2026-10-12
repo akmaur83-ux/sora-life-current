@@ -36,15 +36,17 @@ async function test(name, fn) {
   catch (e) { console.log(`  FAIL  ${name}\n        ${String(e.message).split('\n')[0]}`); failed += 1; }
 }
 const CATEGORIES = categoriesFromPaths(['bags-accessories,Bags & Accessories', 'clothing/men/mens-shirts,Shirts', 'clothing/women,Women', 'jewellery/necklaces,Necklaces', 'jewellery/rings,Rings', 'jewellery/earrings,Earrings']);
-const template = (name) => readFileSync(join(KIT, 'templates', name), 'utf8');
+// A Windows checkout (core.autocrlf) holds the kit's files with CRLF; the importer and the kit read either.
+const lf = (s) => s.replace(/\r\n/g, '\n');
+const template = (name) => lf(readFileSync(join(KIT, 'templates', name), 'utf8'));
 const throwsWith = (fn) => { try { fn(); } catch (e) { return e.fieldErrors ? Object.values(e.fieldErrors).join(' ') : e.message; } return null; };
 const tmp = mkdtempSync(join(process.env.TEMP || tmpdir(), 'catalogue-kit-'));
 
 console.log('\n— The spec, the templates and the guide —');
 
 await test('the templates and FIELD-GUIDE.md are exactly what spec.mjs builds (kit.mjs build --check)', () => {
-  for (const f of templates()) assert.equal(readFileSync(join(KIT, f.path), 'utf8'), f.text, `${f.path} is out of date — run kit.mjs build`);
-  assert.equal(readFileSync(join(KIT, 'FIELD-GUIDE.md'), 'utf8'), fieldGuide(), 'FIELD-GUIDE.md is out of date — run kit.mjs build');
+  for (const f of templates()) assert.equal(lf(readFileSync(join(KIT, f.path), 'utf8')), f.text, `${f.path} is out of date — run kit.mjs build`);
+  assert.equal(lf(readFileSync(join(KIT, 'FIELD-GUIDE.md'), 'utf8')), fieldGuide(), 'FIELD-GUIDE.md is out of date — run kit.mjs build');
   const run = spawnSync(process.execPath, [join(KIT, 'kit.mjs'), 'build', '--check'], { cwd: ROOT, encoding: 'utf8' });
   assert.equal(run.status, 0, run.stderr);
 });
