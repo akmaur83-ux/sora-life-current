@@ -28,7 +28,7 @@
 // proves nothing else in it moved.
 // ============================================================
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { DEFAULT_FASHION_STOREFRONT as F, DEFAULT_LIFESTYLE_STOREFRONT as L } from '../src/lib/storefrontCustomization.js';
 
 /**
@@ -96,6 +96,21 @@ export const CATALOGUE_DECLARATION_MIGRATION = /^supabase\/migrations\/(0036_cat
 export const PRODUCT_INFORMATION_FILES = /^(src\/components\/ProductInformation\.jsx|src\/lib\/(productDeclarations|productDeclarationsApi|consumerCare)\.js|scripts\/test-product-declarations\.mjs|scripts\/pins\/product-information\.patch)$/;
 /** The shared files it edited — the two product pages (the section after Details), the footer (consumer care) and its sheet — each undone by sansCartChanges (scripts/pins/product-information.patch). */
 export const PRODUCT_INFORMATION_EDITS = /^(src\/fashion\/FashionProductPage\.jsx|src\/homeliving\/HomeLivingProductPage\.jsx|src\/components\/Footer\.jsx|src\/styles\/info\.css)$/;
+
+/**
+ * The retired admin controls (52d3d12): the Hero Slides page and the carousel it fed, the hero buttons'
+ * styling, the category strip — DELETED, nothing read them. Admitted only while each stays deleted.
+ */
+export const RETIRED_CONTROL_FILES = /^(src\/admin\/pages\/HeroSlides\.jsx|src\/admin\/components\/HeroCtaAppearanceControls\.jsx|src\/lib\/heroCtaAppearance\.js|src\/components\/(Hero|HeroCta|HomeCategoryStrip)\.jsx|scripts\/test-hero-cta-appearance\.mjs)$/;
+/**
+ * The shared files the retirement edited that these suites had not admitted before — each byte-checked
+ * through sansCartChanges (scripts/pins/retire-dead-controls.patch) where it is admitted. The patch also
+ * undoes its edits to App.jsx, main.jsx, settings.js and AdminLayout.jsx, admitted already by older pins.
+ */
+export const RETIRED_CONTROL_EDITS = /^(src\/lib\/(adminApi|theme|homepageAppearance)\.js|src\/admin\/pages\/(Dashboard|Homepage|Appearance)\.jsx|src\/admin\/components\/HomepageVisualControls\.jsx)$/;
+/** A changed path the retirement accounts for: a retired file that is gone, the recorded patch, or one of its edits. */
+export const retiredControl = (f) => (RETIRED_CONTROL_FILES.test(f) && !existsSync(new URL(`../${f}`, import.meta.url)))
+  || f === 'scripts/pins/retire-dead-controls.patch' || RETIRED_CONTROL_EDITS.test(f);
 
 /** The site menu's closed panel casts no shadow (layout.css, one line) — undone by sansCartChanges (scripts/pins/drawer-shadow.patch). */
 export const DRAWER_SHADOW_EDITS = /^src\/styles\/layout\.css$/;
@@ -382,6 +397,13 @@ const UNDO_FASHION_RATING_ROW = undoFromPatch('fashion-rating-row.patch');
 // (test-product-declarations.mjs owns them). Undone here, newest first.
 const UNDO_PRODUCT_INFORMATION = undoFromPatch('product-information.patch');
 
+// The retired admin controls: the Hero Slides route, menu entry and dashboard links (App.jsx,
+// AdminLayout.jsx, Dashboard.jsx), its page-load fetch (main.jsx, adminApi.js, settings.js), the
+// Bestsellers fields and category-strip visuals (Homepage.jsx, homepageAppearance.js,
+// HomepageVisualControls.jsx) and the theme's Homepage group (theme.js, Appearance.jsx).
+// Undone here, newest first.
+const UNDO_RETIRED_CONTROLS = undoFromPatch('retire-dead-controls.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -448,7 +470,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
@@ -474,6 +496,15 @@ export function sansFashionStripSaree(rel, text) {
  */
 export function sansOrderNumber(rel, text) {
   const undo = UNDO_ORDER_NUMBER[rel];
+  return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
+}
+
+/**
+ * The retired-controls change undone on its own — for a suite that checks an older change's own
+ * patch (test-fashion-jewellery) and must undo this newer one first.
+ */
+export function sansRetiredControls(rel, text) {
+  const undo = UNDO_RETIRED_CONTROLS[rel];
   return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
 }
 

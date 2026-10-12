@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, buildGroceryApp, loadModule, loadGroceryData, CATEGORIES, PRODUCTS } from './grocery-ssr.mjs';
-import { CART_CHANGE_EDITS, FASHION_DEPARTMENT_FILES, sansHomeLivingCart, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, HOME_STOREFRONT_FILES, JEWELLERY_FILES, CATALOGUE_DECLARATION_MIGRATION, PRODUCT_INFORMATION_FILES, PRODUCT_INFORMATION_EDITS } from './storefront-settings-pin.mjs';
+import { CART_CHANGE_EDITS, FASHION_DEPARTMENT_FILES, sansHomeLivingCart, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, HOME_STOREFRONT_FILES, JEWELLERY_FILES, CATALOGUE_DECLARATION_MIGRATION, PRODUCT_INFORMATION_FILES, PRODUCT_INFORMATION_EDITS, retiredControl } from './storefront-settings-pin.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // The tip before the grocery store existed (the Phase 2 bundle commit). Pinned,
@@ -506,12 +506,12 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
   const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$|FashionHome\.jsx$)|src\/pages\/(?!Home\.jsx$|Legal\.jsx$|Checkout\.jsx$)|src\/components\/(?!Header\.jsx$|FashionBanner\.jsx$|Hero\.jsx$|pdp\/ProductDeliveryInfo\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/(?!_lib\/pricing\.js$|_lib\/couponQuote\.js$))/;
   // The fashion departments added two pages and the doorway chooser (test-fashion-departments.mjs owns them).
   // An approved cart change may touch a payment file only because the plumbing test byte-checks it through the undo.
-  const bad = [...changed].filter((f) => untouchable.test(f) && !PRODUCT_INFORMATION_FILES.test(f) && !PRODUCT_INFORMATION_EDITS.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !SCROLL_MANAGER_FILES.test(f) && !SCROLL_MANAGER_EDITS.test(f) && !FASHION_PDP_THUMBS_EDITS.test(f) && !FASHION_RATING_ROW_EDITS.test(f) && !HOME_STOREFRONT_FILES.test(f) && !JEWELLERY_FILES.test(f));
+  const bad = [...changed].filter((f) => untouchable.test(f) && !PRODUCT_INFORMATION_FILES.test(f) && !PRODUCT_INFORMATION_EDITS.test(f) && !retiredControl(f) && !FASHION_DEPARTMENT_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !SCROLL_MANAGER_FILES.test(f) && !SCROLL_MANAGER_EDITS.test(f) && !FASHION_PDP_THUMBS_EDITS.test(f) && !FASHION_RATING_ROW_EDITS.test(f) && !HOME_STOREFRONT_FILES.test(f) && !JEWELLERY_FILES.test(f));
   assert.deepEqual(bad, [], `untouchable files changed: ${bad.join(', ')}`);
   // Scroll on navigation (test-scroll-on-navigate.mjs) replaced the wellness shell's own reset with one manager mounted in
   // main.jsx; its new files are its own, and these two are byte-identical to the baseline once its recorded undo is applied.
   // The fashion PDP's thumbnails became buttons (test-fashion-cart.mjs); that file too, through its undo.
-  for (const rel of ['src/main.jsx', 'src/components/Layout.jsx', 'src/fashion/FashionProductPage.jsx', 'src/components/Footer.jsx', 'src/styles/info.css', 'src/fashion/FashionProductCard.jsx']) assert.equal(sansStorefrontChanges(rel, read(rel)).replace(/\r\n/g, '\n'), atBaseline(rel), `${rel} is byte-identical to ${BASELINE_SHA} once the scroll change is undone`);
+  for (const rel of ['src/main.jsx', 'src/components/Layout.jsx', 'src/fashion/FashionProductPage.jsx', 'src/components/Footer.jsx', 'src/styles/info.css', 'src/lib/adminApi.js', 'src/lib/theme.js', 'src/lib/homepageAppearance.js', 'src/admin/pages/Dashboard.jsx', 'src/admin/pages/Homepage.jsx', 'src/admin/pages/Appearance.jsx', 'src/admin/components/HomepageVisualControls.jsx', 'src/fashion/FashionProductCard.jsx']) assert.equal(sansStorefrontChanges(rel, read(rel)).replace(/\r\n/g, '\n'), atBaseline(rel), `${rel} is byte-identical to ${BASELINE_SHA} once the scroll change is undone`);
   // src/pages/Home.jsx mounts the store doorways (test-store-doorway.mjs pins its exact diff) and src/pages/Legal.jsx carries the shipping-policy
   // rewrite (a651320, pinned by test-company-surfaces.mjs). Checkout.jsx and api/_lib/pricing.js carry the
   // Express/Scheduled withdrawal, compared above with that one declaration normalised out; everything else

@@ -21,7 +21,7 @@ import React from 'react';
 import { buildFashionApp, loadModule, INITIAL, ROOT, read, has } from './fashion-ssr.mjs';
 import { loadSource } from './grocery-ssr.mjs';
 import { atCommit } from './baseline-export.mjs';
-import { sansFashionStripSaree } from './storefront-settings-pin.mjs';
+import { sansFashionStripSaree, sansRetiredControls } from './storefront-settings-pin.mjs';
 
 // The tree before this page: the Fashion portrait renamed (16e5395).
 const BASELINE_SHA = '16e5395';
@@ -280,8 +280,9 @@ await test('the shared files change exactly as scripts/pins/fashion-jewellery.pa
   flush();
   assert.deepEqual(Object.keys(files).sort(), ['src/App.jsx', 'src/fashion/FashionDepartment.jsx', 'src/fashion/FashionLayout.jsx', 'src/fashion/departmentContent.js', 'src/styles/fashion-departments.css']);
   for (const [r, hunks] of Object.entries(files)) {
-    // The two later fashion fixes (strip copy, saree hero height) are undone first, through their own patch.
-    let t = sansFashionStripSaree(r, read(r));
+    // The later changes are undone first, newest first, each through its own patch: the retired admin
+    // controls, then the two fashion fixes (strip copy, saree hero height).
+    let t = sansFashionStripSaree(r, sansRetiredControls(r, read(r)));
     for (const [now, then] of hunks) { assert.equal(t.split(now).length - 1, 1, `${r}: a recorded hunk`); t = t.replace(now, then); }
     assert.equal(t, atCommit(BASELINE_SHA, r).replace(/\r\n/g, '\n'), `${r}: undone, as it was`);
   }
