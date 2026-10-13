@@ -4,13 +4,16 @@
 -- The storefront copy and images an admin edits no longer live in the shared
 -- `homepage` site setting. Each store has two records:
 --
---   storefront_drafts     what the admin is editing. Admin-only. Saved through
---                         admin_save_storefront_draft(), which refuses a save made
---                         against an older version (another tab or admin saved since).
---   storefront_published  what the site shows. Public read. Changed only by
---                         admin_publish_storefront(), which copies a draft the admin
---                         names by its version. The site's build reads these rows and
---                         bakes them into the page, so visitors never fetch them.
+--   storefront_drafts     what the admin is editing. Admin-only. Every change moves its
+--                         version on by one, so a save made against an older version
+--                         (another tab or admin saved since) is refused.
+--   storefront_published  what the site shows. Public read; an admin may set it only to
+--                         the current draft, exactly. The site's build reads these rows
+--                         and bakes them into the page, so visitors never fetch them.
+--
+-- The admin saves and publishes through admin_save_storefront_draft() and
+-- admin_publish_storefront(). Both run as the CALLER: every write goes through the
+-- admin-only RLS policies below, and nothing runs as the table owner.
 --
 -- Seeded from today's saved Fashion and Lifestyle storefronts
 -- (site_settings.homepage.fashion_storefront / lifestyle_storefront), so the first
@@ -44,11 +47,38 @@ alter table public.storefront_drafts enable row level security;
 drop policy if exists "storefront_drafts admin read" on public.storefront_drafts;
 create policy "storefront_drafts admin read" on public.storefront_drafts
   for select using (public.is_sora_admin());
--- No insert, update or delete policy: a draft changes only through
--- admin_save_storefront_draft(), so every save is version-checked.
+drop policy if exists "storefront_drafts admin update" on public.storefront_drafts;
+create policy "storefront_drafts admin update" on public.storefront_drafts
+  for update using (public.is_sora_admin()) with check (public.is_sora_admin());
+-- No insert or delete policy: the five rows are seeded below and stay.
+revoke all on public.storefront_drafts from anon;
+grant select, update on public.storefront_drafts to authenticated;
+
+-- Every change to a draft, however it is made, moves its version on by exactly one.
+-- A change that does not (an editor that opened an older version) is refused.
+create or replace function public.storefront_drafts_next_version()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if new.store <> old.store then
+    raise exception 'a draft belongs to its store' using errcode = '22023';
+  end if;
+  if new.version <> old.version + 1 then
+    raise exception 'stale: this storefront was saved elsewhere since it was opened' using errcode = '40001';
+  end if;
+  new.updated_at := now();
+  new.updated_by := auth.uid();
+  return new;
+end $$;
+drop trigger if exists storefront_drafts_next_version on public.storefront_drafts;
+create trigger storefront_drafts_next_version
+  before update on public.storefront_drafts
+  for each row execute function public.storefront_drafts_next_version();
 
 -- ------------------------------------------------------------
--- 2. Published — public read, one row per store.
+-- 2. Published — public read, one row per store; an admin publishes the current draft only.
 -- ------------------------------------------------------------
 create table if not exists public.storefront_published (
   store          text primary key check (store in ('wellness', 'fashion', 'homeliving', 'grocery', 'lifestyle')),
@@ -62,15 +92,44 @@ alter table public.storefront_published enable row level security;
 drop policy if exists "storefront_published public read" on public.storefront_published;
 create policy "storefront_published public read" on public.storefront_published
   for select using (true);
--- No write policy: a published record changes only through admin_publish_storefront().
+drop policy if exists "storefront_published admin update" on public.storefront_published;
+create policy "storefront_published admin update" on public.storefront_published
+  for update using (public.is_sora_admin()) with check (public.is_sora_admin());
+-- No insert or delete policy: the five rows are seeded below and stay.
+grant select on public.storefront_published to anon, authenticated;
+grant update on public.storefront_published to authenticated;
+
+-- A published record is always a saved draft, exactly: the store's current draft, at its version.
+create or replace function public.storefront_published_is_draft()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if new.store <> old.store then
+    raise exception 'a published record belongs to its store' using errcode = '22023';
+  end if;
+  if not exists (select 1 from public.storefront_drafts d
+                  where d.store = new.store and d.version = new.draft_version and d.content = new.content) then
+    raise exception 'stale: this storefront was saved elsewhere since it was opened' using errcode = '40001';
+  end if;
+  new.published_at := now();
+  new.published_by := auth.uid();
+  return new;
+end $$;
+drop trigger if exists storefront_published_is_draft on public.storefront_published;
+create trigger storefront_published_is_draft
+  before update on public.storefront_published
+  for each row execute function public.storefront_published_is_draft();
 
 -- ------------------------------------------------------------
 -- 3. Save a draft — admin only, refused if the draft moved since it was opened.
+--    Runs as the caller: the write goes through the admin update policy above.
 -- ------------------------------------------------------------
 create or replace function public.admin_save_storefront_draft(p_store text, p_content jsonb, p_expected_version integer)
 returns integer
 language plpgsql
-security definer
+security invoker
 set search_path = public, pg_temp
 as $$
 declare
@@ -83,7 +142,7 @@ begin
     raise exception 'invalid content: a storefront draft is one JSON object' using errcode = '22023';
   end if;
   update public.storefront_drafts
-     set content = p_content, version = version + 1, updated_at = now(), updated_by = auth.uid()
+     set content = p_content, version = version + 1
    where store = p_store and version = p_expected_version
   returning version into v_version;
   if v_version is null then
@@ -99,17 +158,18 @@ grant execute on function public.admin_save_storefront_draft(text, jsonb, intege
 
 -- ------------------------------------------------------------
 -- 4. Publish — admin only: copies the draft the admin names by its version.
+--    Runs as the caller: the write goes through the admin update policy above.
 -- ------------------------------------------------------------
 create or replace function public.admin_publish_storefront(p_store text, p_expected_version integer)
 returns jsonb
 language plpgsql
-security definer
+security invoker
 set search_path = public, pg_temp
 as $$
 declare
   v_content jsonb;
   v_version integer;
-  v_at timestamptz := now();
+  v_at timestamptz;
 begin
   if not public.is_sora_admin() then
     raise exception 'admin only' using errcode = '42501';
@@ -123,8 +183,12 @@ begin
     raise exception 'stale: this storefront was saved elsewhere since it was opened' using errcode = '40001';
   end if;
   update public.storefront_published
-     set content = v_content, draft_version = v_version, published_at = v_at, published_by = auth.uid()
-   where store = p_store;
+     set content = v_content, draft_version = v_version
+   where store = p_store
+  returning published_at into v_at;
+  if v_at is null then
+    raise exception 'unknown store: %', p_store using errcode = '22023';
+  end if;
   return jsonb_build_object('store', p_store, 'version', v_version, 'published_at', v_at);
 end $$;
 revoke all on function public.admin_publish_storefront(text, integer) from public, anon;
@@ -157,5 +221,8 @@ union all select 'fashion carried over (expect true if it was ever saved)',
 union all select 'lifestyle carried over (expect true if it was ever saved)',
                  (select (content <> '{}'::jsonb)::text from public.storefront_published where store = 'lifestyle')
 union all select 'RLS on both tables (expect 2)', count(*)::text
-  from pg_class where relname in ('storefront_drafts', 'storefront_published') and relrowsecurity;
+  from pg_class where relname in ('storefront_drafts', 'storefront_published') and relrowsecurity
+union all select 'functions running as their owner (expect 0)', count(*)::text
+  from pg_proc where proname in ('admin_save_storefront_draft', 'admin_publish_storefront',
+                                 'storefront_drafts_next_version', 'storefront_published_is_draft') and prosecdef;
 -- ============================================================

@@ -9,5 +9,7 @@ drop function if exists public.admin_publish_storefront(text, integer);
 drop function if exists public.admin_save_storefront_draft(text, jsonb, integer);
 drop table if exists public.storefront_published;
 drop table if exists public.storefront_drafts;
+drop function if exists public.storefront_published_is_draft();
+drop function if exists public.storefront_drafts_next_version();
 notify pgrst, 'reload schema';
 -- ============================================================

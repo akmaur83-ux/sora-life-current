@@ -360,16 +360,26 @@ await test('draft preview is an admin\'s only: drafts are admin-read in the data
   assert.match(main, /Draft preview — not live/);
   const sql = read('supabase/migrations/0037_storefront_content.sql');
   assert.match(sql, /create policy "storefront_drafts admin read" on public\.storefront_drafts\s+for select using \(public\.is_sora_admin\(\)\);/);
-  assert.doesNotMatch(sql, /on public\.storefront_drafts\s+for (insert|update|delete|all)/, 'no write policy: only the version-checked function writes');
-  assert.doesNotMatch(sql, /on public\.storefront_published\s+for (insert|update|delete|all)/, 'no write policy: only the publish function writes');
   assert.match(sql, /create policy "storefront_published public read" on public\.storefront_published\s+for select using \(true\);/);
+  // Writes: an admin's own session, through admin-only RLS — never a function running as the table owner.
+  for (const table of ['storefront_drafts', 'storefront_published']) {
+    const writes = [...sql.matchAll(new RegExp(`create policy "[^"]+" on public\\.${table}\\s+for (\\w+)([^;]*);`, 'g'))].filter((m) => m[1] !== 'select');
+    assert.deepEqual(writes.map((m) => m[1]), ['update'], `${table}: one write policy, update only (no insert, no delete)`);
+    assert.equal(writes[0][2].trim(), 'using (public.is_sora_admin()) with check (public.is_sora_admin())', `${table}: admin-only in USING and WITH CHECK`);
+  }
+  assert.doesNotMatch(sql, /security definer/i, 'nothing runs as its owner');
   for (const fn of ['admin_save_storefront_draft', 'admin_publish_storefront']) {
     const body = sql.slice(sql.indexOf(`create or replace function public.${fn}`));
-    assert.match(body.slice(0, 900), /security definer[\s\S]*if not public\.is_sora_admin\(\) then\s+raise exception 'admin only'/, fn);
+    assert.match(body.slice(0, 900), /security invoker[\s\S]*if not public\.is_sora_admin\(\) then\s+raise exception 'admin only'/, fn);
     assert.match(sql, new RegExp(`revoke all on function public\\.${fn}\\([^)]*\\) from public, anon;`), fn);
   }
   assert.match(sql, /where store = p_store and version = p_expected_version/, 'a save is refused if the draft moved');
   assert.match(sql, /if v_version <> p_expected_version then\s+raise exception 'stale/, 'a publish names the version it publishes');
+  // However a row is changed (the functions, or an admin's direct write), the version check holds.
+  assert.match(sql, /if new\.version <> old\.version \+ 1 then\s+raise exception 'stale/, 'every draft change moves the version on by exactly one');
+  assert.match(sql, /before update on public\.storefront_drafts\s+for each row execute function public\.storefront_drafts_next_version\(\);/);
+  assert.match(sql, /where d\.store = new\.store and d\.version = new\.draft_version and d\.content = new\.content\) then\s+raise exception 'stale/, 'a published record is exactly a saved draft');
+  assert.match(sql, /before update on public\.storefront_published\s+for each row execute function public\.storefront_published_is_draft\(\);/);
   assert.match(sql, /'fashion_storefront'[\s\S]*'lifestyle_storefront'/, 'seeded from what the site shows today');
   assert.match(read('supabase/migrations/0038_drop_hero_slides.sql'), /^drop table if exists public\.hero_slides;$/m);
 });
