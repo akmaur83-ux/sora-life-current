@@ -137,7 +137,9 @@ if (isMain) {
       console.error(`\nPublish-time content FAILED — this deployment stops here and the live site is unchanged.\n${error.message}\n`);
       // Anything a failed run left half-written goes with it (it never writes index.html before the end).
       if (existsSync(join(root, 'img', '.published-tmp'))) rmSync(join(root, 'img', '.published-tmp'), { recursive: true, force: true });
-      process.exit(1);
+      // Set, not process.exit(): exiting while a fetch's socket is still closing aborts Node on Windows
+      // (a libuv assertion, exit 127). The process ends on its own a moment later, with code 1.
+      process.exitCode = 1;
     },
   );
 }
