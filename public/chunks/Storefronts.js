@@ -1,24 +1,123 @@
-import { r as reactExports, bL as normalizeFashionStorefront, bM as normalizeLifestyleStorefront, a as adminGetSetting, j as jsxRuntimeExports, b as Link, bN as mergeStorefrontCustomization, e as adminSetSetting, bK as announceHomepageSaved, bz as safeVisualUrl } from '../bundle.js';
-import { u as uploadHomepageImage } from './homepageImageUpload.js';
+import { bw as supabase, r as reactExports, bL as normalizeFashionStorefront, bM as normalizeLifestyleStorefront, j as jsxRuntimeExports, b as Link, bN as STOREFRONT_LABELS, bO as validateStorefrontContent, bz as safeVisualUrl } from '../bundle.js';
+import { u as uploadStorefrontImage } from './storeCatalogueAdminApi.js';
 
+// ============================================================
+// Admin side of the storefront content (migration 0037): read the drafts and
+// what is published, save a draft against the version the editor opened, and
+// publish through the server, which starts the site's rebuild.
+//
+// Every write is an admin-checked database function or the admin-checked
+// /api/admin/publish-storefront route; this module holds no secret. The deploy
+// hook that rebuilds the site is known only to that server route.
+// ============================================================
+
+/** The draft moved since the editor opened it: nothing was saved. */
+class StorefrontStaleError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'StorefrontStaleError';
+    this.isStaleWrite = true;
+  }
+}
+
+/** { drafts: { store: { content, version, updated_at } }, published: { store: { draft_version, published_at } } } */
+async function adminLoadStorefronts() {
+  const [drafts, published] = await Promise.all([supabase.from('storefront_drafts').select('store, content, version, updated_at'), supabase.from('storefront_published').select('store, draft_version, published_at')]);
+  if (drafts.error) throw drafts.error;
+  if (published.error) throw published.error;
+  if (!drafts.data?.length) throw new Error('No storefront drafts are readable. Sign in with an admin account; if you are one, migration 0037 has not been applied yet.');
+  return {
+    drafts: Object.fromEntries(drafts.data.map(row => [row.store, row])),
+    published: Object.fromEntries((published.data || []).map(row => [row.store, row]))
+  };
+}
+
+/** Save a draft; resolves with its new version. Refused (StorefrontStaleError) if it moved since `expectedVersion`. */
+async function adminSaveStorefrontDraft(store, content, expectedVersion) {
+  const {
+    data,
+    error
+  } = await supabase.rpc('admin_save_storefront_draft', {
+    p_store: store,
+    p_content: content,
+    p_expected_version: expectedVersion
+  });
+  if (error) {
+    const message = String(error.message || '');
+    if (/^stale/.test(message)) throw new StorefrontStaleError('This storefront was saved elsewhere since you opened it. Nothing was saved — reload to see that version, then reapply your changes.');
+    if (/admin only/.test(message) || error.code === '42501') throw new Error('The database refused the save: this account is not an admin.');
+    throw error;
+  }
+  return Number(data);
+}
+
+/** Publish a saved draft (by its version) and start the rebuild. Resolves with { version, publishedAt }. */
+async function publishStorefront(store, version, {
+  fetchImpl = globalThis.fetch
+} = {}) {
+  const {
+    data
+  } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  if (!token) throw new Error('Your admin session has ended. Sign in again, then publish.');
+  let response;
+  try {
+    response = await fetchImpl('/api/admin/publish-storefront', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        store,
+        version
+      })
+    });
+  } catch {
+    throw new Error('Publishing could not reach the server. Nothing was changed; try again.');
+  }
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.ok) {
+    const error = new Error(body.error || `Publishing failed (HTTP ${response.status}).`);
+    if (response.status === 409) error.isStaleWrite = true;
+    throw error;
+  }
+  return body;
+}
+
+const STORES = {
+  fashion: {
+    normalize: normalizeFashionStorefront,
+    path: '/fashion'
+  },
+  lifestyle: {
+    normalize: normalizeLifestyleStorefront,
+    path: '/lifestyle'
+  }
+};
 function Field({
   id,
   label,
   value,
   onChange,
   multiline = false,
-  hint = ''
+  hint = '',
+  error = ''
 }) {
   const control = multiline ? /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
     id: id,
     className: "input",
     rows: "3",
     value: value,
+    "aria-invalid": error ? true : undefined,
+    "aria-describedby": error ? `${id}-error` : undefined,
     onChange: event => onChange(event.target.value)
   }) : /*#__PURE__*/jsxRuntimeExports.jsx("input", {
     id: id,
     className: "input",
     value: value,
+    "aria-invalid": error ? true : undefined,
+    "aria-describedby": error ? `${id}-error` : undefined,
     onChange: event => onChange(event.target.value)
   });
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -27,7 +126,12 @@ function Field({
       className: "label",
       htmlFor: id,
       children: label
-    }), control, hint && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+    }), control, error && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "error-text",
+      id: `${id}-error`,
+      role: "alert",
+      children: error
+    }), hint && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
       className: "hint",
       children: hint
     })]
@@ -38,22 +142,27 @@ function ImageField({
   label,
   value,
   onChange,
-  onUploading
+  onUploading,
+  error = ''
 }) {
   const [busy, setBusy] = reactExports.useState(false);
-  const [error, setError] = reactExports.useState('');
+  const [problem, setProblem] = reactExports.useState('');
+  const [note, setNote] = reactExports.useState('');
   const preview = safeVisualUrl(value);
   async function upload(event) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
     setBusy(true);
-    setError('');
+    setProblem('');
+    setNote('');
     onUploading(1);
     try {
-      onChange(await uploadHomepageImage(file));
+      const image = await uploadStorefrontImage(file);
+      onChange(image.url);
+      setNote(`Converted to WebP, ${Math.round(image.bytes / 1000)} KB.`);
     } catch (uploadError) {
-      setError(uploadError.message || 'Upload failed.');
+      setProblem(uploadError.message || 'Upload failed.');
     } finally {
       setBusy(false);
       onUploading(-1);
@@ -70,15 +179,17 @@ function ImageField({
       className: "input",
       value: value,
       disabled: busy,
+      "aria-invalid": error ? true : undefined,
       onChange: event => {
         onChange(event.target.value);
-        setError('');
+        setProblem('');
+        setNote('');
       }
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hp-admin-image__actions",
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
         className: "btn btn-sm",
-        children: [busy ? 'Uploading…' : 'Upload image', /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+        children: [busy ? 'Converting and uploading…' : 'Upload image', /*#__PURE__*/jsxRuntimeExports.jsx("input", {
           type: "file",
           accept: "image/png,image/jpeg,image/webp",
           disabled: busy,
@@ -90,21 +201,25 @@ function ImageField({
         disabled: busy || !value,
         onClick: () => {
           onChange('');
-          setError('');
+          setProblem('');
+          setNote('');
         },
         children: "Use built-in image"
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
       className: "hint",
-      children: "PNG, JPEG or WebP, up to 6 MB. Upload first, then save the storefront."
-    }), value && !preview && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-      className: "error-text",
-      role: "alert",
-      children: "Enter a public HTTPS image URL or a local image path."
+      children: "JPEG, PNG or WebP. Every upload is converted to a WebP under 150 KB first. Upload, save the draft, then publish."
     }), error && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
       className: "error-text",
       role: "alert",
       children: error
+    }), problem && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "error-text",
+      role: "alert",
+      children: problem
+    }), note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hint",
+      children: note
     }), preview && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
       className: "hp-admin-image__preview",
       src: preview,
@@ -115,7 +230,8 @@ function ImageField({
 function FashionEditor({
   value,
   onChange,
-  onUploading
+  onUploading,
+  errors
 }) {
   const patch = (group, key, next) => onChange(current => ({
     ...current,
@@ -124,6 +240,14 @@ function FashionEditor({
       [key]: next
     }
   }));
+  const f = (group, key, label, extra = {}) => /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+    id: `fashion-${group}-${key}`,
+    label: label,
+    value: value[group][key],
+    onChange: next => patch(group, key, next),
+    error: errors[`${group}.${key}`],
+    ...extra
+  }, key);
   return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "surface",
@@ -131,17 +255,7 @@ function FashionEditor({
         children: "Header"
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "adm-grid2",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-tagline",
-          label: "Logo tagline",
-          value: value.header.tagline,
-          onChange: next => patch('header', 'tagline', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-search",
-          label: "Search placeholder",
-          value: value.header.searchPlaceholder,
-          onChange: next => patch('header', 'searchPlaceholder', next)
-        })]
+        children: [f('header', 'tagline', 'Logo tagline'), f('header', 'searchPlaceholder', 'Search placeholder')]
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "surface",
@@ -152,40 +266,12 @@ function FashionEditor({
         label: "Hero image",
         value: value.hero.image,
         onChange: next => patch('hero', 'image', next),
-        onUploading: onUploading
+        onUploading: onUploading,
+        error: errors['hero.image']
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "adm-grid2",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-hero-eyebrow",
-          label: "Eyebrow",
-          value: value.hero.eyebrow,
-          onChange: next => patch('hero', 'eyebrow', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-hero-title",
-          label: "Title",
-          value: value.hero.title,
-          onChange: next => patch('hero', 'title', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-hero-subtitle",
-          label: "Subtitle",
-          value: value.hero.subtitle,
-          onChange: next => patch('hero', 'subtitle', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-hero-note",
-          label: "Offer note",
-          value: value.hero.note,
-          onChange: next => patch('hero', 'note', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-hero-cta",
-          label: "Button label",
-          value: value.hero.ctaLabel,
-          onChange: next => patch('hero', 'ctaLabel', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-hero-link",
-          label: "Button route",
-          value: value.hero.ctaLink,
-          onChange: next => patch('hero', 'ctaLink', next),
-          hint: "Use an internal route beginning with /."
+        children: [f('hero', 'eyebrow', 'Eyebrow'), f('hero', 'title', 'Title'), f('hero', 'subtitle', 'Subtitle'), f('hero', 'note', 'Offer note'), f('hero', 'ctaLabel', 'Button label'), f('hero', 'ctaLink', 'Button route', {
+          hint: 'A page of this site, starting with /.'
         })]
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
@@ -194,49 +280,27 @@ function FashionEditor({
         children: "Section headings"
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "adm-grid2",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-category-title",
-          label: "Category heading",
-          value: value.sections.categoriesTitle,
-          onChange: next => patch('sections', 'categoriesTitle', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-category-cta",
-          label: "Category link label",
-          value: value.sections.categoriesCta,
-          onChange: next => patch('sections', 'categoriesCta', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-brand-title",
-          label: "Brand heading",
-          value: value.sections.brandsTitle,
-          onChange: next => patch('sections', 'brandsTitle', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-brand-cta",
-          label: "Brand link label",
-          value: value.sections.brandsCta,
-          onChange: next => patch('sections', 'brandsCta', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "fashion-product-title",
-          label: "Product heading",
-          value: value.sections.productsTitle,
-          onChange: next => patch('sections', 'productsTitle', next)
-        })]
+        children: [f('sections', 'categoriesTitle', 'Category heading'), f('sections', 'categoriesCta', 'Category link label'), f('sections', 'brandsTitle', 'Brand heading'), f('sections', 'brandsCta', 'Brand link label'), f('sections', 'productsTitle', 'Product heading')]
       })]
     })]
   });
 }
+const BANNER_FIELDS = [['eyebrowOne', 'Eyebrow line 1'], ['eyebrowTwo', 'Eyebrow line 2'], ['headlineOne', 'Headline line 1'], ['headlineTwo', 'Headline line 2'], ['subtitle', 'Subtitle'], ['note', 'Decorative note'], ['ctaLabel', 'Button label'], ['ctaLink', 'Button route']];
 function LifestyleSlide({
   index,
   value,
   onChange,
-  onUploading
+  onUploading,
+  errors
 }) {
   const set = (key, next) => onChange(current => ({
     ...current,
-    heroSlides: current.heroSlides.map((slide, slideIndex) => slideIndex === index ? {
+    heroSlides: current.heroSlides.map((slide, i) => i === index ? {
       ...slide,
       [key]: next
     } : slide)
   }));
+  const e = key => errors[`heroSlides.${index}.${key}`];
   return /*#__PURE__*/jsxRuntimeExports.jsxs("details", {
     className: "surface adm-storefronts__slide",
     open: index === 0,
@@ -249,27 +313,31 @@ function LifestyleSlide({
         label: "Mobile portrait image",
         value: value.tall,
         onChange: next => set('tall', next),
-        onUploading: onUploading
+        onUploading: onUploading,
+        error: e('tall')
       }), /*#__PURE__*/jsxRuntimeExports.jsx(ImageField, {
         id: `lifestyle-slide-${index}-wide`,
         label: "Desktop wide image",
         value: value.wide,
         onChange: next => set('wide', next),
-        onUploading: onUploading
+        onUploading: onUploading,
+        error: e('wide')
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
       id: `lifestyle-slide-${index}-alt`,
       label: "Image description",
       value: value.alt,
-      onChange: next => set('alt', next)
+      onChange: next => set('alt', next),
+      error: e('alt')
     }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm-grid2",
-      children: [['eyebrowOne', 'Eyebrow line 1'], ['eyebrowTwo', 'Eyebrow line 2'], ['headlineOne', 'Headline line 1'], ['headlineTwo', 'Headline line 2'], ['subtitle', 'Subtitle'], ['note', 'Decorative note'], ['ctaLabel', 'Button label'], ['ctaLink', 'Button route']].map(([key, label]) => /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+      children: BANNER_FIELDS.map(([key, label]) => /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
         id: `lifestyle-slide-${index}-${key}`,
         label: label,
         value: value[key],
         onChange: next => set(key, next),
-        hint: key === 'ctaLink' ? 'Use an internal route beginning with /.' : ''
+        error: e(key),
+        hint: key === 'ctaLink' ? 'A page of this site, starting with /.' : ''
       }, key))
     })]
   });
@@ -277,7 +345,8 @@ function LifestyleSlide({
 function LifestyleEditor({
   value,
   onChange,
-  onUploading
+  onUploading,
+  errors
 }) {
   const patch = (group, key, next) => onChange(current => ({
     ...current,
@@ -286,22 +355,26 @@ function LifestyleEditor({
       [key]: next
     }
   }));
+  const f = (group, key, label, extra = {}) => /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
+    id: `lifestyle-${group}-${key}`,
+    label: label,
+    value: value[group][key],
+    onChange: next => patch(group, key, next),
+    error: errors[`${group}.${key}`],
+    ...extra
+  }, key);
   return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "surface",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
         children: "Header"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-        id: "lifestyle-tagline",
-        label: "Logo tagline",
-        value: value.header.tagline,
-        onChange: next => patch('header', 'tagline', next)
-      })]
+      }), f('header', 'tagline', 'Logo tagline')]
     }), value.heroSlides.map((slide, index) => /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleSlide, {
       index: index,
       value: slide,
       onChange: onChange,
-      onUploading: onUploading
+      onUploading: onUploading,
+      errors: errors
     }, slide.id)), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "surface",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
@@ -311,21 +384,13 @@ function LifestyleEditor({
         label: "Banner image",
         value: value.fashionBanner.image,
         onChange: next => patch('fashionBanner', 'image', next),
-        onUploading: onUploading
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-        id: "lifestyle-banner-alt",
-        label: "Image description",
-        value: value.fashionBanner.alt,
-        onChange: next => patch('fashionBanner', 'alt', next)
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        onUploading: onUploading,
+        error: errors['fashionBanner.image']
+      }), f('fashionBanner', 'alt', 'Image description'), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "adm-grid2",
-        children: [['eyebrowOne', 'Eyebrow line 1'], ['eyebrowTwo', 'Eyebrow line 2'], ['headlineOne', 'Headline line 1'], ['headlineTwo', 'Headline line 2'], ['subtitle', 'Subtitle'], ['note', 'Decorative note'], ['ctaLabel', 'Button label'], ['ctaLink', 'Button route']].map(([key, label]) => /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: `lifestyle-banner-${key}`,
-          label: label,
-          value: value.fashionBanner[key],
-          onChange: next => patch('fashionBanner', key, next),
-          hint: key === 'ctaLink' ? 'Use an internal route beginning with /.' : ''
-        }, key))
+        children: BANNER_FIELDS.map(([key, label]) => f('fashionBanner', key, label, key === 'ctaLink' ? {
+          hint: 'A page of this site, starting with /.'
+        } : {}))
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "surface",
@@ -333,27 +398,7 @@ function LifestyleEditor({
         children: "Section headings"
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "adm-grid2",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "lifestyle-category-title",
-          label: "Fashion category heading",
-          value: value.sections.fashionCategoriesTitle,
-          onChange: next => patch('sections', 'fashionCategoriesTitle', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "lifestyle-category-cta",
-          label: "Fashion category link label",
-          value: value.sections.fashionCategoriesCta,
-          onChange: next => patch('sections', 'fashionCategoriesCta', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "lifestyle-trending-title",
-          label: "Trending heading",
-          value: value.sections.trendingTitle,
-          onChange: next => patch('sections', 'trendingTitle', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "lifestyle-trending-cta",
-          label: "Trending link label",
-          value: value.sections.trendingCta,
-          onChange: next => patch('sections', 'trendingCta', next)
-        })]
+        children: [f('sections', 'fashionCategoriesTitle', 'Fashion category heading'), f('sections', 'fashionCategoriesCta', 'Fashion category link label'), f('sections', 'trendingTitle', 'Trending heading'), f('sections', 'trendingCta', 'Trending link label')]
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "surface",
@@ -364,105 +409,161 @@ function LifestyleEditor({
         label: "Promo image",
         value: value.promo.image,
         onChange: next => patch('promo', 'image', next),
-        onUploading: onUploading
+        onUploading: onUploading,
+        error: errors['promo.image']
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "adm-grid2",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "lifestyle-promo-title",
-          label: "Headline",
-          value: value.promo.headline,
-          onChange: next => patch('promo', 'headline', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "lifestyle-promo-cta",
-          label: "Button label",
-          value: value.promo.ctaLabel,
-          onChange: next => patch('promo', 'ctaLabel', next)
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(Field, {
-          id: "lifestyle-promo-link",
-          label: "Button route",
-          value: value.promo.ctaLink,
-          onChange: next => patch('promo', 'ctaLink', next),
-          hint: "Use an internal route beginning with /."
+        children: [f('promo', 'headline', 'Headline'), f('promo', 'ctaLabel', 'Button label'), f('promo', 'ctaLink', 'Button route', {
+          hint: 'A page of this site, starting with /.'
         })]
       })]
     })]
   });
 }
+const when = iso => iso ? new Date(iso).toLocaleString('en-IN', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit'
+}) : '';
 function Storefronts() {
   const [tab, setTab] = reactExports.useState('fashion');
-  const [fashion, setFashion] = reactExports.useState(() => normalizeFashionStorefront());
-  const [lifestyle, setLifestyle] = reactExports.useState(() => normalizeLifestyleStorefront());
+  const [forms, setForms] = reactExports.useState({
+    fashion: normalizeFashionStorefront(),
+    lifestyle: normalizeLifestyleStorefront()
+  });
+  const [savedForms, setSavedForms] = reactExports.useState({});
+  const [drafts, setDrafts] = reactExports.useState({});
+  const [published, setPublished] = reactExports.useState({});
+  const [errors, setErrors] = reactExports.useState({});
   const [loading, setLoading] = reactExports.useState(true);
-  const [saving, setSaving] = reactExports.useState(false);
+  const [busy, setBusy] = reactExports.useState('');
   const [uploads, setUploads] = reactExports.useState(0);
   const [message, setMessage] = reactExports.useState('');
   const [error, setError] = reactExports.useState('');
+  const [stale, setStale] = reactExports.useState(false);
+  async function load() {
+    setLoading(true);
+    setError('');
+    setStale(false);
+    try {
+      const loaded = await adminLoadStorefronts();
+      const next = Object.fromEntries(Object.entries(STORES).map(([store, {
+        normalize
+      }]) => [store, normalize(loaded.drafts[store]?.content)]));
+      setForms(next);
+      setSavedForms(Object.fromEntries(Object.entries(next).map(([store, form]) => [store, JSON.stringify(form)])));
+      setDrafts(loaded.drafts);
+      setPublished(loaded.published);
+    } catch (loadError) {
+      setError(loadError.message || String(loadError));
+    }
+    setLoading(false);
+  }
   reactExports.useEffect(() => {
-    (async () => {
-      try {
-        const homepage = await adminGetSetting('homepage');
-        setFashion(normalizeFashionStorefront(homepage?.fashion_storefront));
-        setLifestyle(normalizeLifestyleStorefront(homepage?.lifestyle_storefront));
-      } catch (loadError) {
-        setError(loadError.message || String(loadError));
-      }
-      setLoading(false);
-    })();
+    load();
   }, []);
+  const dirty = savedForms[tab] !== undefined && JSON.stringify(forms[tab]) !== savedForms[tab];
+  const draft = drafts[tab];
+  const live = published[tab];
+  const upToDate = draft && live && Number(live.draft_version) === Number(draft.version);
+  const setForm = update => {
+    setErrors({});
+    setForms(all => ({
+      ...all,
+      [tab]: typeof update === 'function' ? update(all[tab]) : update
+    }));
+  };
   async function save(event) {
     event.preventDefault();
-    if (uploads) return;
-    setSaving(true);
-    setError('');
+    if (uploads || busy || !draft) return;
     setMessage('');
+    setError('');
+    setStale(false);
+    const {
+      errors: found
+    } = validateStorefrontContent(tab, forms[tab]);
+    if (Object.keys(found).length) {
+      setErrors(found);
+      setError('Fix the fields marked below. Nothing was saved.');
+      return;
+    }
+    setBusy('save');
     try {
-      const current = await adminGetSetting('homepage');
-      const next = mergeStorefrontCustomization(current, fashion, lifestyle);
-      await adminSetSetting('homepage', next);
-      setFashion(next.fashion_storefront);
-      setLifestyle(next.lifestyle_storefront);
-      announceHomepageSaved(next);
-      setMessage('Saved. Open storefront tabs update automatically.');
+      const version = await adminSaveStorefrontDraft(tab, forms[tab], draft.version);
+      setDrafts(all => ({
+        ...all,
+        [tab]: {
+          ...all[tab],
+          content: forms[tab],
+          version
+        }
+      }));
+      setSavedForms(all => ({
+        ...all,
+        [tab]: JSON.stringify(forms[tab])
+      }));
+      setMessage(`Draft saved (version ${version}). Preview it, then publish when it is ready — visitors still see the published version.`);
     } catch (saveError) {
       setError(saveError.message || String(saveError));
+      setStale(!!saveError.isStaleWrite);
     }
-    setSaving(false);
+    setBusy('');
+  }
+  async function publish() {
+    if (busy || dirty || !draft) return;
+    if (!window.confirm(`Publish the ${STOREFRONT_LABELS[tab]} storefront (draft version ${draft.version})?\n\nThe site rebuilds with it; visitors see it in 1–2 minutes. If the rebuild fails, the current site stays as it is.`)) return;
+    setBusy('publish');
+    setMessage('');
+    setError('');
+    setStale(false);
+    try {
+      const result = await publishStorefront(tab, draft.version);
+      setPublished(all => ({
+        ...all,
+        [tab]: {
+          ...all[tab],
+          draft_version: result.version,
+          published_at: result.publishedAt
+        }
+      }));
+      setMessage(`Published version ${result.version}. The site is rebuilding: it shows on ${STORES[tab].path} in 1–2 minutes. If the rebuild fails, the current site stays as it is.`);
+    } catch (publishError) {
+      setError(publishError.message || String(publishError));
+      setStale(!!publishError.isStaleWrite);
+    }
+    setBusy('');
   }
   if (loading) return /*#__PURE__*/jsxRuntimeExports.jsx("p", {
     className: "muted",
     children: "Loading\u2026"
   });
+  const Editor = tab === 'fashion' ? FashionEditor : LifestyleEditor;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "adm-form adm-storefronts",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm__head",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
           children: "Fashion & Lifestyle"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: "Customize storefront copy and campaign images without changing products, prices or commerce behavior."
+          children: "Edit a draft, preview it, then publish. Products, prices, cart and checkout are not touched."
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "adm-storefronts__preview",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("a", {
-          className: "btn btn-outline btn-sm",
-          href: "/fashion",
-          target: "_blank",
-          rel: "noreferrer",
-          children: "Preview Fashion"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-          className: "btn btn-outline btn-sm",
-          href: "/lifestyle",
-          target: "_blank",
-          rel: "noreferrer",
-          children: "Preview Lifestyle"
+      })
+    }), error && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "adm-banner err",
+      role: "alert",
+      children: [error, stale && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+        children: [" ", /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "btn btn-sm btn-light",
+          onClick: load,
+          children: "Reload and discard my edits"
         })]
       })]
-    }), error && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "adm-banner err",
-      children: error
     }), message && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm-banner ok",
+      role: "status",
       children: message
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "surface sc-panel",
@@ -482,45 +583,62 @@ function Storefronts() {
           children: "Manage Home & Living products"
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm-chipbar",
       role: "tablist",
       "aria-label": "Storefront editor",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-        className: `adm-chip${tab === 'fashion' ? ' active' : ''}`,
+      children: Object.keys(STORES).map(store => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+        className: `adm-chip${tab === store ? ' active' : ''}`,
         type: "button",
         role: "tab",
-        "aria-selected": tab === 'fashion',
-        onClick: () => setTab('fashion'),
-        children: "Fashion Store"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-        className: `adm-chip${tab === 'lifestyle' ? ' active' : ''}`,
-        type: "button",
-        role: "tab",
-        "aria-selected": tab === 'lifestyle',
-        onClick: () => setTab('lifestyle'),
-        children: "Lifestyle Store"
-      })]
+        "aria-selected": tab === store,
+        disabled: !!busy,
+        onClick: () => {
+          setTab(store);
+          setErrors({});
+          setMessage('');
+          setError('');
+        },
+        children: [STOREFRONT_LABELS[store], " Store"]
+      }, store))
+    }), draft && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "hint adm-storefronts__status",
+      role: "status",
+      children: ["Draft version ", draft.version, dirty ? ' — unsaved changes' : '', " \xB7 ", live ? `Published version ${live.draft_version}${live.published_at ? `, ${when(live.published_at)}` : ''}` : 'Not published yet', !dirty && !upToDate && live ? ' · the draft has changes not yet published' : '']
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
       onSubmit: save,
-      children: [tab === 'fashion' ? /*#__PURE__*/jsxRuntimeExports.jsx(FashionEditor, {
-        value: fashion,
-        onChange: setFashion,
-        onUploading: delta => setUploads(count => count + delta)
-      }) : /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleEditor, {
-        value: lifestyle,
-        onChange: setLifestyle,
-        onUploading: delta => setUploads(count => count + delta)
+      noValidate: true,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Editor, {
+        value: forms[tab],
+        onChange: setForm,
+        onUploading: delta => setUploads(count => count + delta),
+        errors: errors
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "adm-storefronts__actions",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
           className: "btn",
           type: "submit",
-          disabled: saving || uploads > 0,
-          children: saving ? 'Saving…' : uploads ? 'Uploading images…' : 'Save both storefronts'
+          disabled: !!busy || uploads > 0 || !draft,
+          children: busy === 'save' ? 'Saving…' : uploads ? 'Uploading images…' : 'Save draft'
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+          className: `btn btn-outline${dirty ? ' is-disabled' : ''}`,
+          href: `${STORES[tab].path}?preview=draft`,
+          target: "_blank",
+          rel: "noreferrer",
+          "aria-disabled": dirty || undefined,
+          onClick: event => {
+            if (dirty) event.preventDefault();
+          },
+          children: "Preview the saved draft"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          className: "btn btn-outline",
+          type: "button",
+          disabled: !!busy || dirty || uploads > 0 || !draft,
+          onClick: publish,
+          children: busy === 'publish' ? 'Publishing…' : upToDate ? 'Publish again' : 'Publish'
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "hint",
-          children: "Saving keeps catalogue, pricing, cart and checkout data untouched."
+          children: dirty ? 'Save the draft before previewing or publishing.' : 'Preview shows the saved draft to you only; publishing makes it the live version.'
         })]
       })]
     })]
