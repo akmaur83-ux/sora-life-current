@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, buildGroceryApp, loadModule, loadGroceryData, CATEGORIES, PRODUCTS } from './grocery-ssr.mjs';
-import { CART_CHANGE_EDITS, FASHION_DEPARTMENT_FILES, sansHomeLivingCart, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, HOME_STOREFRONT_FILES, JEWELLERY_FILES, CATALOGUE_DECLARATION_MIGRATION, PRODUCT_INFORMATION_FILES, PRODUCT_INFORMATION_EDITS, retiredControl } from './storefront-settings-pin.mjs';
+import { CART_CHANGE_EDITS, FASHION_DEPARTMENT_FILES, sansHomeLivingCart, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, HOME_STOREFRONT_FILES, JEWELLERY_FILES, CATALOGUE_DECLARATION_MIGRATION, PRODUCT_INFORMATION_FILES, PRODUCT_INFORMATION_EDITS, retiredControl, storefrontContentChange, STOREFRONT_CONTENT_MIGRATION } from './storefront-settings-pin.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // The tip before the grocery store existed (the Phase 2 bundle commit). Pinned,
@@ -506,7 +506,7 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
   const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$|FashionHome\.jsx$)|src\/pages\/(?!Home\.jsx$|Legal\.jsx$|Checkout\.jsx$)|src\/components\/(?!Header\.jsx$|FashionBanner\.jsx$|Hero\.jsx$|pdp\/ProductDeliveryInfo\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/(?!_lib\/pricing\.js$|_lib\/couponQuote\.js$))/;
   // The fashion departments added two pages and the doorway chooser (test-fashion-departments.mjs owns them).
   // An approved cart change may touch a payment file only because the plumbing test byte-checks it through the undo.
-  const bad = [...changed].filter((f) => untouchable.test(f) && !PRODUCT_INFORMATION_FILES.test(f) && !PRODUCT_INFORMATION_EDITS.test(f) && !retiredControl(f) && !FASHION_DEPARTMENT_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !SCROLL_MANAGER_FILES.test(f) && !SCROLL_MANAGER_EDITS.test(f) && !FASHION_PDP_THUMBS_EDITS.test(f) && !FASHION_RATING_ROW_EDITS.test(f) && !HOME_STOREFRONT_FILES.test(f) && !JEWELLERY_FILES.test(f));
+  const bad = [...changed].filter((f) => untouchable.test(f) && !PRODUCT_INFORMATION_FILES.test(f) && !PRODUCT_INFORMATION_EDITS.test(f) && !retiredControl(f) && !storefrontContentChange(f) && !FASHION_DEPARTMENT_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !SCROLL_MANAGER_FILES.test(f) && !SCROLL_MANAGER_EDITS.test(f) && !FASHION_PDP_THUMBS_EDITS.test(f) && !FASHION_RATING_ROW_EDITS.test(f) && !HOME_STOREFRONT_FILES.test(f) && !JEWELLERY_FILES.test(f));
   assert.deepEqual(bad, [], `untouchable files changed: ${bad.join(', ')}`);
   // Scroll on navigation (test-scroll-on-navigate.mjs) replaced the wellness shell's own reset with one manager mounted in
   // main.jsx; its new files are its own, and these two are byte-identical to the baseline once its recorded undo is applied.
@@ -515,13 +515,14 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
   // src/pages/Home.jsx mounts the store doorways (test-store-doorway.mjs pins its exact diff) and src/pages/Legal.jsx carries the shipping-policy
   // rewrite (a651320, pinned by test-company-surfaces.mjs). Checkout.jsx and api/_lib/pricing.js carry the
   // Express/Scheduled withdrawal, compared above with that one declaration normalised out; everything else
-  // under src/pages and the whole of api/ is untouched.
-  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'api', ':(exclude)api/_lib/pricing.js', ':(exclude)api/_lib/couponQuote.js', ':(exclude)api/_lib/supabaseAdmin.js', ':(exclude)api/razorpay/create-order.js', 'src/pages', ':(exclude)src/pages/Home.jsx', ':(exclude)src/pages/Legal.jsx', ':(exclude)src/pages/Checkout.jsx', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
+  // under src/pages and the whole of api/ is untouched — but for the storefront publish endpoint, a new file
+  // (test-storefront-publish.mjs owns it).
+  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'api', ':(exclude)api/_lib/pricing.js', ':(exclude)api/_lib/couponQuote.js', ':(exclude)api/_lib/supabaseAdmin.js', ':(exclude)api/razorpay/create-order.js', ':(exclude)api/admin/publish-storefront.js', 'src/pages', ':(exclude)src/pages/Home.jsx', ':(exclude)src/pages/Legal.jsx', ':(exclude)src/pages/Checkout.jsx', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
 });
 
 await test('no migration beyond 0034, no dependency change since the baseline', () => {
   const changed = execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean);
-  assert.ok(!changed.some((f) => /^supabase\/migrations\/(?!0034_catalogue_multistore\.sql$|rollback\/0034_|0035_homeliving_store\.sql$|rollback\/0035_)/.test(f) && !CATALOGUE_DECLARATION_MIGRATION.test(f)), 'no migration other than 0034 (the catalogue), 0035 (the Home & Living store) and 0036 (the catalogue declarations), with their rollbacks');
+  assert.ok(!changed.some((f) => /^supabase\/migrations\/(?!0034_catalogue_multistore\.sql$|rollback\/0034_|0035_homeliving_store\.sql$|rollback\/0035_)/.test(f) && !CATALOGUE_DECLARATION_MIGRATION.test(f) && !STOREFRONT_CONTENT_MIGRATION.test(f)), 'no migration other than 0034 (the catalogue), 0035 (the Home & Living store) and 0036 (the catalogue declarations), with their rollbacks');
   assert.ok(!changed.some((f) => /^package(-lock)?\.json$/.test(f)), 'no dependency change');
 });
 

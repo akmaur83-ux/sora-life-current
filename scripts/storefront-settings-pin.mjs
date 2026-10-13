@@ -112,6 +112,33 @@ export const RETIRED_CONTROL_EDITS = /^(src\/lib\/(adminApi|theme|homepageAppear
 export const retiredControl = (f) => (RETIRED_CONTROL_FILES.test(f) && !existsSync(new URL(`../${f}`, import.meta.url)))
   || f === 'scripts/pins/retire-dead-controls.patch' || RETIRED_CONTROL_EDITS.test(f);
 
+/**
+ * Publish-time storefront content (8c993ca; test-storefront-publish.mjs owns it): the content rules and
+ * the admin's save and publish calls, the build step, the publish endpoint, migrations 0037 and 0038
+ * with their rollbacks, the suite and the recorded patch.
+ */
+export const STOREFRONT_CONTENT_FILES = /^(src\/lib\/storefrontContent(Api)?\.js|build\/publish-content\.mjs|api\/admin\/publish-storefront\.js|scripts\/test-storefront-publish\.mjs|scripts\/pins\/storefront-content\.patch)$/;
+/** Its migrations — the drafts and published records (0037) and hero_slides dropped (0038) — with their rollbacks; nothing else under supabase/. */
+export const STOREFRONT_CONTENT_MIGRATION = /^supabase\/migrations\/((0037_storefront_content|0038_drop_hero_slides)\.sql|rollback\/(0037_storefront_content|0038_drop_hero_slides)_down\.sql)$/;
+/**
+ * The shared files it edited that these suites had not admitted before — the ignore list, the page's marker and
+ * the build command — each byte-checked through sansCartChanges (scripts/pins/storefront-content.patch) where
+ * it is admitted. The patch also undoes its edits to main.jsx, settings.js, adminApi.js and the admin files,
+ * admitted already by older pins.
+ */
+export const STOREFRONT_CONTENT_EDITS = /^(\.gitignore|index\.html|vercel\.json)$/;
+/**
+ * The dead homepage code cleared beside it (4e72220): the unused category rail, the retired hero's stylesheet,
+ * the old hero media and the script that checked that poster — DELETED, admitted only while each stays deleted.
+ */
+export const DEAD_HOMEPAGE_FILES = /^(src\/components\/CategoryRail\.jsx|src\/styles\/hero-cta\.css|media\/hero(-poster(-1024|-1600)?|-slide2)?\.(mp4|jpg|webp)|scripts\/verify-picture\.mjs)$/;
+/** The sheets it pruned and the CSS build list — each byte-checked through sansCartChanges (scripts/pins/dead-homepage-code.patch). */
+export const DEAD_HOMEPAGE_EDITS = /^(build\/build-css\.mjs|src\/styles\/(components|home|homepage-appearance|layout|storefront-motion|storefront-refinements|v2-home-marketplace|v2-home)\.css)$/;
+/** A changed path either change accounts for: an own file or migration, a deleted file that is gone, a recorded patch, or one of their edits. */
+export const storefrontContentChange = (f) => STOREFRONT_CONTENT_FILES.test(f) || STOREFRONT_CONTENT_MIGRATION.test(f) || STOREFRONT_CONTENT_EDITS.test(f)
+  || (DEAD_HOMEPAGE_FILES.test(f) && !existsSync(new URL(`../${f}`, import.meta.url)))
+  || f === 'scripts/pins/dead-homepage-code.patch' || DEAD_HOMEPAGE_EDITS.test(f);
+
 /** The site menu's closed panel casts no shadow (layout.css, one line) — undone by sansCartChanges (scripts/pins/drawer-shadow.patch). */
 export const DRAWER_SHADOW_EDITS = /^src\/styles\/layout\.css$/;
 
@@ -404,6 +431,17 @@ const UNDO_PRODUCT_INFORMATION = undoFromPatch('product-information.patch');
 // Undone here, newest first.
 const UNDO_RETIRED_CONTROLS = undoFromPatch('retire-dead-controls.patch');
 
+// Publish-time storefront content: the page's marker (index.html), the build command (vercel.json), the
+// published images kept out of git (.gitignore), the page-load read and the draft preview (settings.js,
+// main.jsx, adminApi.js) and the admin's per-store editor (Storefronts.jsx, admin.css,
+// storefrontCustomization.js, storeCatalogueAdminApi.js). Undone here, newest first.
+const UNDO_STOREFRONT_CONTENT = undoFromPatch('storefront-content.patch');
+
+// The dead homepage code: every rule that named only a class no page renders (the v2 hero carousel, the
+// category rail, the hero CTA, the category strip, the old Bestsellers block) and hero-cta.css in the CSS
+// build list. Undone here, newest first.
+const UNDO_DEAD_HOMEPAGE_CODE = undoFromPatch('dead-homepage-code.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -470,7 +508,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
@@ -506,6 +544,15 @@ export function sansOrderNumber(rel, text) {
 export function sansRetiredControls(rel, text) {
   const undo = UNDO_RETIRED_CONTROLS[rel];
   return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
+}
+
+/**
+ * The dead-homepage-code change undone on its own — for a suite that compares the start of v2-home.css
+ * with its baseline (test-home-storefront) and must undo this newer change first.
+ */
+export function sansDeadHomepageCode(rel, text) {
+  const undo = UNDO_DEAD_HOMEPAGE_CODE[rel];
+  return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text.replace(/\r\n/g, '\n');
 }
 
 /** The file as it stood before the approved cart changes, LF-normalised; anything they did not touch comes back as given. */

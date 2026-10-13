@@ -1,0 +1,1430 @@
+diff --git a/build/build-css.mjs b/build/build-css.mjs
+index ecd5631..52c7a3a 100644
+--- a/build/build-css.mjs
++++ b/build/build-css.mjs
+@@ -64,7 +64,6 @@ const STOREFRONT = [
+   'src/styles/coupons.css',
+   'src/styles/info.css',
+   'src/styles/homepage-appearance.css',
+-  'src/styles/hero-cta.css',
+   'src/styles/v2-home-marketplace.css',
+   'src/styles/v2-home-discovery.css',
+   // The dark leaderboard block and the .sl-dark tokens the portal reuses.
+diff --git a/src/styles/components.css b/src/styles/components.css
+index c34d8f9..9424e2e 100644
+--- a/src/styles/components.css
++++ b/src/styles/components.css
+@@ -139,8 +139,8 @@
+    but the card inside kept its own content height — so cards in one row ended
+    at different heights. Making the wrapper a flex column and the card fill it
+    restores equal-height rows without touching the grid definitions. */
+-.pgrid > .reveal, .rail > .reveal, .bh-grid > .reveal { display: flex; flex-direction: column; }
+-.pgrid > .reveal > .pcard, .rail > .reveal > .pcard, .bh-grid > .reveal > .pcard { flex: 1; }
++.pgrid > .reveal, .rail > .reveal { display: flex; flex-direction: column; }
++.pgrid > .reveal > .pcard, .rail > .reveal > .pcard { flex: 1; }
+ 
+ .pcard {
+   position: relative; display: flex; flex-direction: column; height: 100%;
+diff --git a/src/styles/home.css b/src/styles/home.css
+index 01d2d97..e9aee35 100644
+--- a/src/styles/home.css
++++ b/src/styles/home.css
+@@ -63,229 +63,16 @@
+ @media (max-width: 1160px) { .hdr__search { width: 180px; } .hdr__link { padding: 9px 8px; font-size: 0.78rem; } }
+ @media (max-width: 1040px) { .hdr__nav { display: none; } }
+ 
+-/* ============ HERO ============ */
+-.bh-hero { position: relative; height: clamp(460px, 52vw, 620px); overflow: hidden; background: var(--forest-800); }
+-.bh-hero__media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+-.bh-hero__scrim { position: absolute; inset: 0; background:
+-  var(--st-hero-overlay, transparent),
+-  linear-gradient(100deg, rgba(244,238,225,0.94) 0%, rgba(244,238,225,0.72) 26%, rgba(244,238,225,0.25) 46%, rgba(244,238,225,0) 62%); }
+-.bh-hero__inner { position: relative; height: 100%; display: flex; align-items: center; }
+-.bh-hero__copy { max-width: 620px; }
+-.bh-hero__kicker { font-family: var(--font-display); font-size: clamp(1.4rem, 2.6vw, 2rem); color: var(--forest-700); font-weight: 500; margin-bottom: -6px; }
+-.bh-hero__title { font-family: var(--font-display); font-weight: 600; font-size: clamp(3.2rem, 8vw, 6rem); line-height: 0.98; color: var(--forest-800); letter-spacing: -0.02em; margin-bottom: 18px; }
+-.bh-hero__sub { font-size: clamp(1.05rem, 2vw, 1.5rem); color: var(--ink-900); font-weight: 500; margin-bottom: 10px; }
+-.bh-hero__lede { font-size: var(--text-lg); color: var(--ink-700); margin-bottom: var(--sp-6); }
+-.bh-hero__cta { letter-spacing: 0.08em; font-size: 0.85rem; border-radius: var(--r-md); }
+-.bh-hero__benefits { display: flex; align-items: center; gap: 22px; margin-top: var(--sp-10); }
+-.bh-hero__benefit { position: relative; display: flex; align-items: center; gap: 11px; font-size: var(--text-sm); font-weight: 600; color: var(--forest-800); line-height: 1.2; }
+-.bh-hero__benefit svg { color: var(--forest-600); flex-shrink: 0; }
+-.bh-hero__bdiv { position: absolute; right: -22px; width: 1px; height: 30px; background: var(--forest-700); opacity: 0.22; }
+-.bh-hero__dots { position: absolute; bottom: 22px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; z-index: 2; }
+-.bh-hero__dots span { width: 8px; height: 8px; border-radius: 999px; background: rgba(30,58,47,0.3); transition: all var(--t) var(--ease); }
+-.bh-hero__dots span.active { width: 22px; background: var(--forest-700); }
+-/* Mobile hero layout lives in the MOBILE HERO block below the carousel rules,
+-   so it can also neutralise the Ken-Burns / parallax transforms. */
+-
+-/* ============ CATEGORY CIRCLES ============ */
+-/* Forest-green brand strip, matching the top utility/announcement bar (.annbar
+-   uses --forest-800 / --forest-50). Circles stay light so images read clearly. */
+-.bh-cats { border-bottom: 1px solid var(--forest-900); background: var(--st-category-bg, var(--forest-800)); }
+-.bh-cats__row { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--sp-3); padding-block: var(--sp-8); }
+-.bh-cat { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
+-.bh-cat__circle { width: 92px; height: 92px; border-radius: 999px; overflow: hidden; background: var(--st-category-circle, var(--tone-tint, var(--cream))); display: grid; place-items: center; transition: transform var(--t-slow) var(--ease-luxury), box-shadow var(--t-slow) var(--ease-luxury); }
+-.bh-cat__circle .pimg { width: 100%; height: 100%; aspect-ratio: 1; border-radius: 999px; }
+-.bh-cat__circle .pimg img { padding: 10px; background: transparent; mix-blend-mode: multiply; transition: transform var(--t-slower) var(--ease-luxury); }
+-.bh-cat:hover .bh-cat__circle { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+-.bh-cat:hover .bh-cat__circle .pimg img { transform: scale(1.08); }
+-.bh-cat__name { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--st-category-title, var(--forest-50)); transition: color var(--t) var(--ease-soft); }
+-.bh-cat:hover .bh-cat__name { color: var(--st-category-hover, var(--honey-300)); }
+-.bh-cat__view { font-size: var(--text-xs); color: var(--st-category-subtitle, var(--forest-200)); }
+-/* Readable focus ring on the green strip (global ring is a green glow that would
+-   blend into --forest-800). */
+-.bh-cat:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(240, 246, 242, 0.55); border-radius: var(--r-md); }
+-@media (max-width: 1040px) { .bh-cats__row { grid-template-columns: repeat(4, 1fr); gap: var(--sp-5) var(--sp-3); } }
+-@media (max-width: 560px) {
+-  .bh-cats__row { grid-auto-flow: column; grid-auto-columns: 33%; grid-template-columns: none; overflow-x: auto; gap: var(--sp-3); scroll-snap-type: x mandatory; margin-inline: calc(-1 * var(--sp-4)); padding-inline: var(--sp-4); }
+-  .bh-cat { scroll-snap-align: start; }
+-  .bh-cat__circle { width: 78px; height: 78px; }
+-}
+-
+-/* ============ BESTSELLERS ============ */
+-.bh-best { background: var(--cream); }
+-.bh-best__head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-6); margin-bottom: var(--sp-6); }
+-.bh-best__title { font-size: clamp(1.8rem, 3vw, 2.4rem); }
+-.bh-best__head .muted { margin-top: 4px; }
+-.bh-best__all { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; color: var(--forest-700); white-space: nowrap; }
+-.bh-best__all:hover { gap: 10px; }
+-.bh-best__wrap { position: relative; }
+-.bh-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--sp-4); }
+-.bh-best__arrow { position: absolute; right: -18px; top: 38%; width: 40px; height: 40px; border-radius: 999px; background: var(--paper); box-shadow: var(--shadow-md); display: grid; place-items: center; color: var(--forest-700); z-index: 3; }
+-.bh-best__arrow:hover { background: var(--forest-700); color: #fff; }
+-@media (max-width: 1200px) { .bh-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .bh-best__arrow { display: none; } }
+-@media (max-width: 900px) {
+-  .bh-grid { grid-auto-flow: column; grid-auto-columns: 46%; grid-template-columns: none; overflow-x: auto; scroll-snap-type: x mandatory; gap: var(--sp-3); margin-inline: calc(-1 * var(--sp-4)); padding-inline: var(--sp-4); padding-bottom: 8px; }
+-  .bh-grid > * { scroll-snap-align: start; }
+-}
+-@media (max-width: 560px) { .bh-grid { grid-auto-columns: 62%; } }
+-
+ /* Card image sits in a soft frame. object-fit: contain is now the global
+    default on .pimg img (see components.css), so the previous `!important`
+    override is gone — only the breathing room is set here. */
+-.bh-best .pcard__media .pimg, .bh-edit .pimg, .bh-cat .pimg { background: var(--paper); }
+ .pcard__media .pimg img { padding: 10px; }
+ 
+-/* ============ EDITORIAL CARDS ============ */
+-.bh-edit-wrap { padding-block: var(--sp-10) var(--sp-16); background: var(--cream); }
+-.bh-edit { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-5); }
+-.bh-editcard { position: relative; display: flex; align-items: stretch; min-height: 210px; border-radius: var(--r-lg); overflow: hidden; background: linear-gradient(120deg, var(--tone-tint, var(--forest-50)), var(--paper)); border: 1px solid var(--line-soft); transition: transform var(--t-slow) var(--ease-luxury), box-shadow var(--t-slow) var(--ease-luxury); }
+-.bh-editcard:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
+-.bh-editcard__body { padding: var(--sp-6); display: flex; flex-direction: column; justify-content: center; max-width: 62%; z-index: 1; }
+-.bh-editcard__body h3 { font-size: var(--text-xl); margin-bottom: 8px; }
+-.bh-editcard__body p { color: var(--ink-700); font-size: var(--text-sm); margin-bottom: 16px; }
+-.bh-editcard__cta { display: inline-flex; align-items: center; gap: 7px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; color: var(--forest-700); transition: gap var(--t) var(--ease-luxury); }
+-.bh-editcard:hover .bh-editcard__cta { gap: 11px; }
+-.bh-editcard__img { position: absolute; right: -6px; bottom: -6px; width: 46%; max-width: 190px; transition: transform var(--t-slower) var(--ease-luxury); }
+-.bh-editcard:hover .bh-editcard__img { transform: scale(1.05) translateY(-3px); }
+-.bh-editcard__img .pimg { aspect-ratio: 1; background: transparent; }
+-.bh-editcard__img .pimg img { mix-blend-mode: multiply; }
+-@media (max-width: 900px) { .bh-edit { grid-template-columns: 1fr; } .bh-editcard { min-height: 170px; } }
+-
+-/* ============ WELLNESS PROMISE STRIP ============ */
+-.bh-promise { border-top: 1px solid var(--line-soft); background: var(--paper); }
+-.bh-promise__in { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-5); padding-block: var(--sp-8); }
+-.bh-promise__item { display: flex; align-items: center; gap: 14px; }
+-.bh-promise__ic { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 999px; background: var(--forest-50); color: var(--forest-600); flex-shrink: 0; }
+-.bh-promise__item strong { display: block; font-size: var(--text-base); }
+-.bh-promise__item em { font-style: normal; font-size: var(--text-xs); color: var(--color-text-muted); }
+-@media (max-width: 760px) { .bh-promise__in { grid-template-columns: 1fr 1fr; gap: var(--sp-5) var(--sp-4); } }
+-
+ /* ============ OFFICIAL LOGO (raster) ============ */
+ .logo--img { display: inline-flex; align-items: center; }
+ .logo__img { height: 50px; width: auto; max-width: 175px; object-fit: contain; display: block; }
+ @media (max-width: 900px) { .logo__img { height: 36px; max-width: 128px; } }
+ 
+-/* ============ HERO CAROUSEL ============ */
+-.bh-hero--carousel { position: relative; }
+-.bh-slide { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity 1200ms var(--ease-luxury); }
+-.bh-slide.is-active { opacity: 1; visibility: visible; z-index: 1; }
+-
+-/* Cinematic slow scale ("Ken Burns") on the active slide's media only —
+-   subtle, continuous, never restarts mid-view so it never feels like a
+-   slideshow effect. Purely transform, GPU-composited. */
+-/* Oversized wrapper so the JS scroll-parallax translate (±40px) never
+-   reveals an edge; the Ken-Burns scale lives on .bh-hero__media inside it,
+-   so the two transforms apply to different elements and never conflict. */
+-.bh-hero__parallax { position: absolute; inset: -48px 0; will-change: transform; }
+-.bh-hero__media { transform: scale(1); transition: transform var(--t) var(--ease); }
+-.bh-slide.is-active .bh-hero__media { animation: heroKenBurns 14s var(--ease-luxury) forwards; }
+-@keyframes heroKenBurns { from { transform: scale(1.0); } to { transform: scale(1.045); } }
+-
+-/* Text stagger: each line reveals slightly after the previous, all subtle
+-   fade-up — never a single-block reveal, never a large travel distance. */
+-.bh-slide .bh-hero__kicker,
+-.bh-slide .bh-hero__title,
+-.bh-slide .bh-hero__sub,
+-.bh-slide .bh-hero__lede,
+-.bh-slide .bh-hero__cta,
+-.bh-slide .bh-hero__benefits {
+-  opacity: 0; transform: translateY(16px);
+-  transition: opacity 900ms var(--ease-luxury), transform 900ms var(--ease-luxury);
+-}
+-.bh-slide.is-active .bh-hero__kicker { transition-delay: 120ms; }
+-.bh-slide.is-active .bh-hero__title { transition-delay: 220ms; }
+-.bh-slide.is-active .bh-hero__sub { transition-delay: 340ms; }
+-.bh-slide.is-active .bh-hero__lede { transition-delay: 420ms; }
+-.bh-slide.is-active .bh-hero__cta { transition-delay: 500ms; }
+-.bh-slide.is-active .bh-hero__benefits { transition-delay: 580ms; }
+-.bh-slide.is-active .bh-hero__kicker,
+-.bh-slide.is-active .bh-hero__title,
+-.bh-slide.is-active .bh-hero__sub,
+-.bh-slide.is-active .bh-hero__lede,
+-.bh-slide.is-active .bh-hero__cta,
+-.bh-slide.is-active .bh-hero__benefits { opacity: 1; transform: none; }
+-
+-.bh-hero__cta svg { transition: transform var(--t) var(--ease-soft); }
+-.bh-hero__cta:hover svg { transform: translateX(3px); }
+-
+-.bh-hero__arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; width: 46px; height: 46px; border-radius: 999px; background: rgba(251,248,241,0.82); backdrop-filter: blur(3px); color: var(--forest-800); display: grid; place-items: center; box-shadow: var(--shadow-sm); transition: background var(--t) var(--ease), transform var(--t) var(--ease); }
+-.bh-hero__arrow:hover { background: #fff; transform: translateY(-50%) scale(1.06); }
+-.bh-hero__arrow--prev { left: 20px; }
+-.bh-hero__arrow--next { right: 20px; }
+-
+-.bh-hero__dots { position: absolute; bottom: 22px; left: 0; right: 0; z-index: 3; display: flex; justify-content: center; gap: 9px; }
+-.bh-hero__dots button { width: 9px; height: 9px; padding: 0; border-radius: 999px; background: rgba(30,58,47,0.32); transition: width var(--t) var(--ease), background var(--t) var(--ease); }
+-.bh-hero__dots button:hover { background: rgba(30,58,47,0.55); }
+-.bh-hero__dots button.active { width: 26px; background: var(--forest-700); }
+-@media (max-width: 760px) { .bh-hero__arrow { display: none; } }
+-
+-/* ============ MOBILE HERO — CINEMATIC OVERLAY ============
+-   Previous approach stacked the media (object-fit: contain, in normal flow)
+-   above the copy in a separate cream band below it, with every slide sharing
+-   one CSS grid cell via `grid-area: 1/1` for the crossfade. Because inactive
+-   slides were `position: relative` (in normal flow) rather than absolute,
+-   ALL of them — not just the active one — contributed to that shared cell's
+-   height: the row sized itself to the TALLEST slide (the portrait-cropped
+-   "Nature's Orange Gold" image needed far more height than the short,
+-   landscape Sea Buckthorn poster). The active slide's copy then sat
+-   vertically centered in that oversized shared box, floating well below its
+-   own much-shorter image with a large blank cream gap in between — the
+-   "image, then empty space, then text" bug.
+-
+-   The fix is to stop treating mobile as a different layout family. Inherit
+-   the desktop overlay system as-is (absolute-positioned crossfade,
+-   object-fit: cover, Ken Burns, the oversized parallax wrapper) so image and
+-   text are one composited visual again, and only retune what a narrow/tall
+-   viewport actually needs: a compact bounded height, a bottom-weighted
+-   vertical scrim instead of desktop's left-weighted horizontal one, and a
+-   bottom-anchored copy block instead of a vertically centered one. */
+-@media (max-width: 760px) {
+-  /* Compact and bounded — a gentle multiple of the viewport width rather
+-     than a tall vh-based box, so a cover-cropped landscape/portrait photo
+-     isn't zoomed in so far that its subject gets cropped away. Floors at
+-     500px on typical phones, scales up to a 600px ceiling on larger ones. */
+-  .bh-hero { height: clamp(500px, 122vw, 600px); }
+-
+-  /* Bottom-anchored, photographic wash: fully transparent over the top ~1/3
+-     of the frame (where the subject — berries, or her face — reads clearly),
+-     graduating to a soft cream wash exactly where the copy sits. Same cream
+-     family as the desktop scrim (rgba(244,238,225,*)) reoriented vertically
+-     — no new colour introduced, no hard-edged rectangle. */
+-  .bh-hero__scrim {
+-    background: linear-gradient(
+-      to bottom,
+-      rgba(244,238,225,0) 0%,
+-      rgba(244,238,225,0) 30%,
+-      rgba(244,238,225,0.36) 46%,
+-      rgba(244,238,225,0.74) 60%,
+-      rgba(244,238,225,0.92) 75%,
+-      rgba(244,238,225,0.97) 100%
+-    );
+-  }
+-
+-  .bh-hero__inner {
+-    align-items: flex-end;
+-    /* Clears the dots row (bottom: 22px + ~26px active-dot width) plus the
+-       device safe area, so content never sits under a notch/home-indicator
+-       and never collides with the fixed bottom tab bar below the hero. */
+-    padding-bottom: calc(var(--sp-8) + 26px + env(safe-area-inset-bottom));
+-  }
+-  .bh-hero__copy { max-width: none; }
+-
+-  /* Every hero photo places its subject (berries, her face, the fruit) in
+-     the upper 2/3 of the frame and something unremarkable — sky, a table
+-     edge — at the very bottom. On a compact box that subject sits close
+-     to where bottom-anchored text needs to start, so the copy block is
+-     tightened here (gaps only, not font sizes — type scale is untouched)
+-     to clear it with room to spare. The full lede line is desktop-only:
+-     it mostly restates the kicker/sub, and dropping it on mobile is what
+-     buys the vertical room, not the gap-tightening alone. */
+-  .bh-hero__title { margin-bottom: 10px; }
+-  .bh-hero__sub { margin-bottom: var(--sp-4); }
+-  .bh-hero__lede { display: none; }
+-  .bh-hero__benefits { flex-wrap: wrap; gap: 12px 24px; margin-top: var(--sp-4); }
+-  .bh-hero__bdiv { display: none; }
+-}
+-
+ /* ============ PREMIUM PRICING ============ */
+ .price { display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+ .price .now { font-family: var(--font-display); font-weight: 600; color: var(--price-now-strong); }
+@@ -300,23 +87,6 @@
+    the NEW badge (.badge-new) is a separate class and is untouched. */
+ .badge-sale { background: var(--st-discount-bg, var(--honey-500)); color: var(--st-discount-text, var(--forest-900)); letter-spacing: 0.08em; box-shadow: var(--shadow-xs); font-weight: 700; }
+ 
+-
+-/* Hero pagination dots were 9x9 — visually right, far too small to tap.
+-   The dot keeps its size; an invisible 44px hit area is centred on it. */
+-.bh-hero__dots button { position: relative; }
+-.bh-hero__dots button::after {
+-  content: ""; position: absolute; top: 50%; left: 50%;
+-  width: 44px; height: 44px; transform: translate(-50%, -50%);
+-}
+-
+-/* At 320px the bestsellers header could not fit "Bestsellers" plus the
+-   nowrap "View all" link on one row, pushing the page into horizontal
+-   scroll. Let the header wrap on narrow phones. */
+-@media (max-width: 380px) {
+-  .bh-best__head { flex-wrap: wrap; gap: var(--sp-3); }
+-  .bh-best__all { margin-left: auto; }
+-}
+-
+ /* The header search was a fixed 260px. Combined with non-shrinking 44px icon
+    buttons (needed for tap targets) the header row could not fit at ~1280px —
+    a very common laptop width — and pushed the page into horizontal scroll.
+@@ -375,12 +145,5 @@
+    rhythm so a phone user reaches products quickly. Ticker untouched.
+    ============================================================ */
+ @media (max-width: 768px) {
+-  .pcard__media .pimg img { padding: 6px; }   /* less letterbox on mobile cards */
+-  .bh-cats__row { padding-block: var(--sp-5); }
+-  .bh-best__head { margin-bottom: var(--sp-4); }
+-}
+-@media (max-width: 560px) {
+-  .bh-cat__circle { width: 72px; height: 72px; }
+-  .bh-cat__name { font-size: 0.68rem; }
+-  .bh-edit-wrap { padding-block: var(--sp-8) var(--sp-10); }
++  .pcard__media .pimg img { padding: 6px; }
+ }
+diff --git a/src/styles/homepage-appearance.css b/src/styles/homepage-appearance.css
+index 5bc67a9..fb75c37 100644
+--- a/src/styles/homepage-appearance.css
++++ b/src/styles/homepage-appearance.css
+@@ -1,8 +1,5 @@
+ /* Homepage appearance only: no shared theme, Hero, card or checkout overrides. */
+-.v2-home .hp-category-strip { position:relative; isolation:isolate; overflow:hidden; margin:14px 0 0; }
+-.hp-category-strip__content { position:relative; z-index:2; }
+-.hp-visual-layers, .hp-category-overlay { position:absolute; inset:0; overflow:hidden; border-radius:inherit; pointer-events:none; z-index:0; }
+-.hp-category-overlay { z-index:1; }
++.hp-visual-layers { position:absolute; inset:0; overflow:hidden; border-radius:inherit; pointer-events:none; z-index:0; }
+ .hp-visual-layer { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+ .hp-visual-layer--right { left:auto; }
+ .hp-visual-layer--left { right:auto; }
+@@ -48,18 +45,8 @@
+ .hp-admin-image__actions label { position:relative; overflow:hidden; cursor:pointer; }
+ .hp-admin-image__actions input { position:absolute; inset:0; opacity:0; width:100%; cursor:pointer; }
+ .hp-admin-image__preview { display:block; max-width:100%; width:auto; max-height:140px; object-fit:contain; margin-top:10px; border:1px solid #ded2c4; border-radius:4px; }
+-/* Mobile category strip + offers: full bleed, zero dead gap */
++/* Mobile offers: full bleed, zero dead gap */
+ @media (max-width: 767px) {
+-  .v2-home .hp-category-strip {
+-    width: 100%;
+-    margin: 0;
+-    border-radius: 0;
+-  }
+-
+-  .v2-home .hp-category-strip + .hp-offers,
+-  .v2-home .hp-category-strip + section {
+-    margin-top: 0 !important;
+-  }
+ 
+   .v2-home .hp-offers {
+     margin-top: 0 !important;
+diff --git a/src/styles/layout.css b/src/styles/layout.css
+index 35f8b88..b794d74 100644
+--- a/src/styles/layout.css
++++ b/src/styles/layout.css
+@@ -219,7 +219,7 @@
+ 
+   /* Small buttons stay visually small but remain comfortably tappable. */
+   .btn-sm { min-height: 44px; }
+-  .sec-link, .bh-best__all { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
++  .sec-link { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+ }
+ 
+ /* PDP shows a fixed ~82px buy bar (and hides the tab bar). Reserve that height
+diff --git a/src/styles/storefront-motion.css b/src/styles/storefront-motion.css
+index 1435739..ee537be 100644
+--- a/src/styles/storefront-motion.css
++++ b/src/styles/storefront-motion.css
+@@ -3,16 +3,6 @@
+ @media (prefers-reduced-motion: no-preference) {
+   .sl-motion { --sl-motion-ease: cubic-bezier(.16, 1, .3, 1); }
+ 
+-  .sl-motion .v2-hero__slide.is-active .v2-hero__img {
+-    animation: sl-cinema 4.5s var(--sl-motion-ease) both;
+-  }
+-  .sl-motion .v2-hero__slide.is-active .v2-hero__ui > * {
+-    animation: sl-copy-rise .9s var(--sl-motion-ease) both;
+-  }
+-  .sl-motion .v2-hero__slide.is-active .v2-hero__ui > :nth-child(2) { animation-delay: .08s; }
+-  .sl-motion .v2-hero__slide.is-active .v2-hero__ui > :nth-child(3) { animation-delay: .16s; }
+-  .sl-motion .v2-hero__slide.is-active .v2-hero__ui > :nth-child(4) { animation-delay: .24s; }
+-
+   .sl-motion .hd-tile.sl-arrived .hd-tile__media {
+     animation: sl-art-turn 1s var(--sl-motion-ease);
+   }
+@@ -34,7 +24,7 @@
+     box-shadow: 0 20px 35px -24px rgb(17 39 30 / 55%);
+   }
+ 
+-  .sl-motion :is(.v2-pc__cta, .v2-more, .hm-hero__cta, .hm-collection__link, .hm-brand__link, .v2-btn) svg {
++  .sl-motion :is(.v2-pc__cta, .v2-more, .hm-collection__link, .hm-brand__link, .v2-btn) svg {
+     transition: transform .45s var(--sl-motion-ease);
+   }
+   .sl-motion :is(.v2-pc__cta, .v2-btn):active:not(:disabled) svg { transform: scale(.8) rotate(-12deg); }
+@@ -48,12 +38,10 @@
+     .sl-motion .hm-collection:hover .v2-pimg:nth-child(1) { transform: translateY(-8px) rotate(-6deg); }
+     .sl-motion .hm-collection:hover .v2-pimg:nth-child(2) { transform: translateY(-14px); }
+     .sl-motion .hm-collection:hover .v2-pimg:nth-child(3) { transform: translateY(-8px) rotate(6deg); }
+-    .sl-motion :is(.v2-more, .hm-hero__cta, .hm-collection, .hm-brand, .v2-btn):hover svg { transform: translateX(5px); }
++    .sl-motion :is(.v2-more, .hm-collection, .hm-brand, .v2-btn):hover svg { transform: translateX(5px); }
+     .sl-motion .v2-pc__cta:hover:not(:disabled) svg { transform: translateY(-2px) rotate(-10deg); }
+   }
+ 
+-  @keyframes sl-cinema { from { scale: 1.045; } to { scale: 1; } }
+-  @keyframes sl-copy-rise { from { opacity: .3; translate: 0 26px; } to { opacity: 1; translate: 0; } }
+   @keyframes sl-art-turn { from { transform: perspective(800px) rotateY(-22deg) scale(.94); } to { transform: none; } }
+   @keyframes sl-icon-orbit { from { transform: perspective(300px) rotateY(-180deg) scale(.7); } to { transform: none; } }
+   @keyframes sl-title-focus { from { opacity: .5; translate: 0 12px; } to { opacity: 1; translate: 0; } }
+diff --git a/src/styles/storefront-refinements.css b/src/styles/storefront-refinements.css
+index e708f11..3958e9c 100644
+--- a/src/styles/storefront-refinements.css
++++ b/src/styles/storefront-refinements.css
+@@ -210,8 +210,6 @@
+ 
+   /* Section context, supporting copy, and small editorial labels. */
+   .v2-eyebrow,
+-  .v2-home .hm-hero__kicker,
+-  .v2-home .hm-category-head > span,
+   .v2-home .hm-brand__body > span:first-child,
+   .v2-home .hm-collection__body > span:first-child {
+     font-size: 10px;
+@@ -219,8 +217,6 @@
+   }
+ 
+   .v2-more { font-size: 11.5px; }
+-  .v2-home .hm-hero__copy > p:not(.hm-hero__kicker) { font-size: 12.5px; line-height: 1.45; }
+-  .v2-home .hm-hero__cta { font-size: 10.5px; }
+   .v2-home .hm-heading__copy,
+   .v2-home .hm-creator p:not(.v2-eyebrow) { font-size: 13px; line-height: 1.5; }
+   .v2-home .hm-mom__body > p:not(.v2-eyebrow) { font-size: 14px; }
+@@ -413,24 +409,12 @@
+    A pre-launch audit hit-tested every interactive control at 360/390/430.
+    The header's menu / search / cart already clear 44x44 through
+    .v2-iconbtn::after, and the drawer links are 43px, so this covers the
+-   three that genuinely fell short on a phone. Each grows the tappable
++   ones that genuinely fell short on a phone. Each grows the tappable
+    region with a transparent pseudo-element; no control changes size,
+    colour or position, so the card grid and hero art direction are
+    untouched.
+    ------------------------------------------------------------------ */
+ 
+-/* Carousel dots paint as 2px rules — a 2px-tall tap target. The dots sit
+-   12px from the bottom of the hero, which has overflow:hidden, so a centred
+-   expander loses its lower half; this one is anchored to the hero's bottom
+-   edge and grows upward over the artwork, where there is room. Height only —
+-   the 5px gap between dots is preserved, so neighbouring regions cannot
+-   overlap and steal each other's taps. */
+-.v2-hero__dots > button { position:relative; }
+-.v2-hero__dots > button::after {
+-  content:""; position:absolute;
+-  bottom:-12px; top:auto; left:0; right:0; height:46px;
+-}
+-
+ /* "Add to cart" is 34px tall on phones (42/46 at the larger breakpoints, which
+    already pass). The card body's own bottom padding absorbs the 5px, so
+    nothing is clipped by .v2-pc's overflow:hidden. */
+diff --git a/src/styles/v2-home-marketplace.css b/src/styles/v2-home-marketplace.css
+index 683b154..71ac2c1 100644
+--- a/src/styles/v2-home-marketplace.css
++++ b/src/styles/v2-home-marketplace.css
+@@ -52,135 +52,6 @@
+   padding-bottom:4px;
+ }
+ 
+-/* ------------------------------------------------ marketplace fallback hero */
+-.v2-home .v2-hero--marketplace {
+-  border:0;
+-  border-radius:2px;
+-  background:var(--hm-green);
+-}
+-.v2-home .v2-hero--marketplace .hm-hero {
+-  display:grid;
+-  grid-template-columns:minmax(0, .82fr) minmax(0, 1.18fr);
+-  min-height:430px;
+-  aspect-ratio:auto;
+-  border:0;
+-  border-radius:2px;
+-  background:var(--hm-green);
+-}
+-.v2-home .hm-hero__copy {
+-  position:relative;
+-  z-index:2;
+-  display:flex;
+-  min-width:0;
+-  flex-direction:column;
+-  align-items:flex-start;
+-  justify-content:center;
+-  padding:52px 42px 54px 58px;
+-  color:#F6F8F6;
+-}
+-.v2-home .hm-hero__kicker {
+-  margin:0 0 16px;
+-  color:var(--hm-lime);
+-  font:750 11px/1.2 var(--slv2-sans);
+-  letter-spacing:.17em;
+-  text-transform:uppercase;
+-}
+-.v2-home .hm-hero__copy h1 {
+-  max-width:10ch;
+-  margin:0;
+-  color:#FFFFFF;
+-  font:750 clamp(44px, 4.5vw, 66px)/.96 var(--slv2-sans);
+-  letter-spacing:-.055em;
+-  text-wrap:balance;
+-}
+-.v2-home .hm-hero__copy > p:not(.hm-hero__kicker) {
+-  max-width:38ch;
+-  margin:22px 0 26px;
+-  color:#D5DFD9;
+-  font:450 14px/1.55 var(--slv2-sans);
+-}
+-.v2-home .hm-hero__cta {
+-  display:inline-flex;
+-  min-height:44px;
+-  align-items:center;
+-  justify-content:center;
+-  gap:10px;
+-  padding:0 18px;
+-  color:#102019;
+-  background:var(--hm-lime);
+-  border:1px solid var(--hm-lime);
+-  border-radius:2px;
+-  text-decoration:none;
+-  font:750 12px/1 var(--slv2-sans);
+-  letter-spacing:.025em;
+-}
+-.v2-home .hm-hero__cta:hover { background:#E5F99A; border-color:#E5F99A; }
+-.v2-home .hm-hero__assortment {
+-  display:grid;
+-  min-width:0;
+-  grid-template-columns:1.3fr 1fr 1fr;
+-  grid-template-rows:1fr 1fr;
+-  gap:2px;
+-  padding:2px;
+-  background:#FFFFFF;
+-}
+-.v2-home .hm-hero__product {
+-  position:relative;
+-  min-width:0;
+-  overflow:hidden;
+-  background:var(--hm-product-bg, #EEF1ED);
+-  text-decoration:none;
+-}
+-.v2-home .hm-hero__product:nth-child(2) { --hm-product-bg:#E5ECFF; }
+-.v2-home .hm-hero__product:nth-child(3) { --hm-product-bg:#F5E9DA; }
+-.v2-home .hm-hero__product:nth-child(4) { --hm-product-bg:#F0E4EC; }
+-.v2-home .hm-hero__product:nth-child(5) { --hm-product-bg:#E6F0E9; }
+-.v2-home .hm-hero__product:nth-child(6) { --hm-product-bg:#F2EEDF; }
+-.v2-home .hm-hero__product--1 { grid-row:1 / -1; }
+-.v2-home .hm-hero__product .v2-pimg {
+-  width:100%;
+-  height:100%;
+-  aspect-ratio:auto;
+-  border:0;
+-  border-radius:0;
+-  background:var(--hm-product-bg);
+-}
+-.v2-home .hm-hero__product .v2-pimg img {
+-  object-fit:contain;
+-  padding:clamp(8px, 1.5vw, 22px);
+-  transition:transform .25s ease;
+-}
+-.v2-home .hm-hero__product:hover .v2-pimg img { transform:scale(1.025); }
+-
+-/* ------------------------------------------------------- category discovery */
+-.v2-home .hp-category-strip {
+-  margin:0;
+-  /* The admin's values (HomeCategoryStrip sets them as custom properties).
+-     These used to be inline padding, which silently beat every rule below. */
+-  padding-top:var(--hp-strip-pt, 30px);
+-  padding-bottom:var(--hp-strip-pb, 28px);
+-  background-color:var(--hm-paper);
+-  border-bottom:1px solid var(--hm-line);
+-  border-radius:0;
+-}
+-.v2-home .hm-category-head {
+-  display:flex;
+-  align-items:flex-end;
+-  justify-content:space-between;
+-  gap:16px;
+-  margin-bottom:17px;
+-}
+-.v2-home .hm-category-head > span {
+-  flex:none;
+-  color:var(--hm-muted);
+-  font:650 10px/1.3 var(--slv2-sans);
+-  letter-spacing:.04em;
+-}
+-/* The quick-navigation category rail keeps its ORIGINAL circular styling
+-   from v2-home.css. The marketplace pass had re-skinned it into square
+-   cards; that role is now filled by the separate editorial "Shop by
+-   Category" rail further down the page, so the two stay distinct. */
+-
+ /* --------------------------------------------------------- section rhythm */
+ .v2-home .hm-section,
+ .v2-home .v2-sec.hm-section { margin-top:0; padding-block:48px; }
+@@ -200,7 +71,7 @@
+ /* ---------------------------------------------------------- current offers */
+ .v2-home .hp-offers {
+   margin:0;
+-  /* The admin's value, via HomeOffers — see the note on .hp-category-strip. */
++  /* The admin's value, via HomeOffers: a custom property the component sets inline. */
+   padding-block:var(--hp-offers-pad, 42px);
+   border-bottom:1px solid var(--hm-line);
+ }
+@@ -399,30 +270,6 @@
+ .v2-home .nl__input .input { border-radius:2px; }
+ 
+ @media (max-width: 767px) {
+-  .v2-home .v2-hero--marketplace { margin-top:0; }
+-  .v2-home .v2-hero--marketplace .hm-hero {
+-    grid-template-columns:minmax(0, 1.05fr) minmax(0, .95fr);
+-    height:224px;
+-    min-height:224px;
+-    max-height:224px;
+-  }
+-  .v2-home .hm-hero__copy { padding:20px 10px 20px 16px; }
+-  .v2-home .hm-hero__kicker { margin-bottom:9px; font-size:7.5px; letter-spacing:.13em; }
+-  .v2-home .hm-hero__copy h1 { max-width:10ch; font-size:clamp(25px, 7.2vw, 30px); line-height:.98; letter-spacing:-.045em; }
+-  .v2-home .hm-hero__copy > p:not(.hm-hero__kicker) { margin:10px 0 12px; font-size:10.5px; line-height:1.35; }
+-  .v2-home .hm-hero__cta { min-height:36px; gap:6px; padding:0 11px; font-size:9.5px; }
+-  .v2-home .hm-hero__cta svg { width:13px; height:13px; }
+-  .v2-home .hm-hero__assortment { grid-template-columns:1.08fr .92fr; grid-template-rows:1fr 1fr; }
+-  .v2-home .hm-hero__product--1 { grid-row:1 / -1; }
+-  .v2-home .hm-hero__product:nth-child(n+4) { display:none; }
+-  .v2-home .hm-hero__product .v2-pimg img { padding:5px; }
+-
+-  /* No padding here: the admin's --hp-strip-pt/pb apply, as they always
+-     effectively did (the old padding-block was dead under the inline style). */
+-  .v2-home .hp-category-strip { width:100%; }
+-  .v2-home .hp-category-strip__content { padding-inline:16px; }
+-  .v2-home .hm-category-head { margin-bottom:14px; }
+-  .v2-home .hm-category-head > span { font-size:9px; }
+ 
+   /* No padding here either: --hp-offers-pad applies (this 32px was dead under
+      the inline style, and homepage-appearance.css zeroes the top anyway). */
+@@ -454,12 +301,6 @@
+ }
+ 
+ @media (max-width: 359px) {
+-  .v2-home .v2-hero--marketplace .hm-hero { grid-template-columns:1.1fr .9fr; }
+-  .v2-home .hm-hero__copy { padding-left:13px; }
+-  .v2-home .hm-hero__copy h1 { font-size:24px; }
+-  .v2-home .hm-hero__copy > p:not(.hm-hero__kicker) { font-size:10px; }
+-  .v2-home .hm-hero__cta { padding-inline:9px; }
+-  .v2-home .hm-category-head > span { display:none; }
+   .v2-home .hm-brands,
+   .v2-home .hm-collections { gap:6px; }
+   .v2-home .hm-brand__body,
+@@ -472,7 +313,6 @@
+ @media (min-width: 768px) {
+   .v2-home .v2-h2 { font-size:32px; }
+   .v2-home .v2-sechead { margin-bottom:24px; }
+-  .v2-home .hm-category-head > span { display:none; }
+   .v2-home .hm-section,
+   .v2-home .v2-sec.hm-section { padding-block:58px; }
+   .v2-home .hm-heading__copy { font-size:13px; }
+@@ -507,7 +347,6 @@
+ 
+ @media (min-width: 1024px) {
+   .v2-home .v2-h2 { font-size:38px; }
+-  .v2-home .v2-hero--marketplace .hm-hero { min-height:470px; }
+ 
+   /* ---- ONE SECTION INTERVAL ---------------------------------------
+      Every section on the desktop page carries the same 72px above and
+@@ -521,29 +360,11 @@
+      interval between them (36 + 36 = 72) and carry the full 72 outward. */
+   .v2-home .hm-section,
+   .v2-home .v2-sec.hm-section,
+-  .v2-home .hp-category-strip,
+   .v2-home .hp-offers,
+   .v2-home .nl { padding-block:72px; }
+   .v2-home .hd-section { padding-block:72px 36px; }
+   .v2-home .hd-section + .hd-section { padding-block:36px 72px; }
+ 
+-  /* ---- BROWSE BY CATEGORY: a row, not a marquee ---------------------
+-     Ten categories fit across 1240px, so the infinite scroller has nothing
+-     to scroll and its duplicate set is just twenty tiles instead of ten. At
+-     this width the rail is a single static row of larger circles spread
+-     across the container — the tile size, not the padding, is what gives
+-     the section its height. Below 1024px the marquee is untouched. */
+-  .v2-home .v2-cats-marquee { padding-inline:0; -webkit-mask-image:none; mask-image:none; }
+-  .v2-home .v2-cats-track { width:100%; animation:none; will-change:auto; }
+-  .v2-home .v2-cats-set { width:100%; gap:16px; padding-right:0; }
+-  .v2-home .v2-cats-set[aria-hidden="true"] { display:none; }
+-  /* Equal shares of the row, so a long label ("Juices & Drinks") widens no
+-     tile and the tenth cannot be pushed past the edge. */
+-  .v2-home .v2-cat { flex:1 1 0; min-width:0; width:auto; gap:12px; }
+-  .v2-home .v2-cat__visual { width:108px; height:108px; flex-basis:108px; }
+-  .v2-home .v2-cat__lb { font-size:13px; }
+-  .v2-home .hm-category-head { margin-bottom:26px; }
+-
+   /* ---- CURRENT OFFERS, one poster: a proper width under the heading ----
+      A single portrait poster used to sit as a 620px column in the middle of
+      a 1240px frame, so the frame — not the poster — was the section's shape,
+@@ -573,7 +394,6 @@
+ }
+ 
+ @media (prefers-reduced-motion: reduce) {
+-  .v2-home .hm-hero__product .v2-pimg img,
+   .v2-home .hm-brand__media img { transition:none; }
+ }
+ 
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index 7f30fb5..ad3fbff 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -1,335 +1,15 @@
+ /* ============================================================================
+    SORA LIFE V2 — HOMEPAGE
+-   Hero, category rail, product rails, editorial, story, trust strip.
++   Product rails, editorial, story, trust strip.
+    Image-led surfaces get --slv2-r-art (4px). Everything structural is 2px.
+    ========================================================================= */
+ 
+ .v2-home { background:var(--slv2-ivory); padding-bottom:40px; }
+ 
+-/* ------------------------------------------------------------------ hero */
+-.v2-hero {
+-  position:relative; overflow:hidden;
+-  margin-inline:var(--slv2-gutter); margin-top:16px;
+-  border:1px solid var(--slv2-line);
+-  border-radius:var(--slv2-r-art);
+-  background:var(--slv2-cream);
+-}
+-.v2-hero__slide { position:relative; display:none; }
+-.v2-hero__slide.is-active { display:block; }
+-.v2-hero__media {
+-  position:relative; width:100%; aspect-ratio:358 / 292; overflow:hidden; background:var(--slv2-sand);
+-}
+-/* The parallax wrapper is inset so its ±40px transform stays inside the
+-   overflow-hidden frame and can never expose an edge. */
+-.v2-hero__par { position:absolute; inset:-44px 0; }
+-.v2-hero__img { width:100%; height:100%; object-fit:cover; display:block; }
+-/* Copy sits directly on the artwork: no scrim, panel or frosted haze. */
+-.v2-hero__ui {
+-  position:absolute; inset:0; z-index:3;
+-  display:flex; flex-direction:column; justify-content:center;
+-  width:70%; padding:20px 16px;
+-}
+-.v2-hero__kicker {
+-  font-family:var(--slv2-sans);
+-  font-size:9.5px; font-weight:600; letter-spacing:.18em; text-transform:uppercase;
+-  color:var(--slv2-gold-ink); margin:0 0 6px;
+-}
+-.v2-hero__title {
+-  font-family:var(--slv2-sans);
+-  font-size:27px; font-weight:400; line-height:1.09; letter-spacing:-.014em;
+-  margin:0 0 8px; color:var(--slv2-f900); text-wrap:balance; white-space:pre-line;
+-}
+-.v2-hero__sub {
+-  font-family:var(--slv2-sans);
+-  font-size:12px; line-height:1.5; color:var(--slv2-ink-2);
+-  margin:0 0 14px; max-width:26ch;
+-  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+-}
+-.v2-hero__ui .v2-btn { white-space:nowrap; }
+-.v2-hero__sub-compact, .v2-hero__cta-compact { display:none; }
+-.v2-hero__dots { position:absolute; left:0; right:0; bottom:12px; z-index:4; display:flex; justify-content:center; gap:5px; }
+-.v2-hero__dots button {
+-  width:12px; height:2px; border-radius:0; border:0; padding:0; cursor:pointer;
+-  background:rgba(22,33,27,.26); transition:width .2s ease, background .2s ease;
+-}
+-.v2-hero__dots button.is-on { background:var(--slv2-f700); width:24px; }
+-.v2-hero__dots button:focus-visible { outline:2px solid var(--slv2-f500); outline-offset:3px; }
+-.v2-hero__arrow { display:none; }
+-
+-@media (max-width: 767px) {
+-  /* Preserve the landscape canvas, with enough height for narrow phones. */
+-  .v2-home .v2-hero__media {
+-    aspect-ratio:358 / 200; height:auto; min-height:clamp(205px, 58vw, 225px); max-height:225px;
+-  }
+-  .v2-home .v2-hero { margin-top:12px; }
+-  .v2-hero__par { inset:0; }
+-  .v2-hero:not(.v2-hero--product) .v2-hero__img { object-position:36% center !important; }
+-  /* One copy scale for collection, configured and product-led slides. */
+-  .v2-home .v2-hero .v2-hero__ui {
+-    width:47%; padding:14px 0 14px 12px;
+-    justify-content:center; transform:none;
+-  }
+-  .v2-home .v2-hero__slide--collection .v2-hero__ui,
+-  .v2-home .v2-hero--product .v2-hero__ui { width:52%; }
+-  .v2-home .v2-hero .v2-hero__ui > * { flex-shrink:0; }
+-  .v2-home .v2-hero .v2-hero__kicker {
+-    font-size:8px; font-weight:600; line-height:1.3; letter-spacing:.09em;
+-    margin:0 0 6px; color:var(--slv2-f900);
+-  }
+-  .v2-home .v2-hero .v2-hero__title {
+-    font-family:var(--slv2-disp); font-size:clamp(24px, 6.5vw, 27px);
+-    font-weight:400; line-height:1.06; letter-spacing:-.01em;
+-    margin:0 0 7px; max-width:none; width:auto;
+-    text-shadow:0 1px 1px rgba(255,255,255,.35);
+-  }
+-  .v2-home .v2-hero .v2-hero__title--long { font-size:clamp(22px, 6vw, 24px); }
+-  .v2-home .v2-hero .v2-hero__sub {
+-    max-width:23ch; margin:0 0 10px;
+-    font-size:clamp(11.5px, 3.15vw, 13px); font-weight:500; line-height:1.35; letter-spacing:0;
+-    color:var(--slv2-f900); -webkit-line-clamp:3;
+-    text-shadow:0 1px 1px rgba(255,255,255,.75);
+-  }
+-  .v2-home .v2-hero__slide--collection .v2-hero__img {
+-    object-position:left top !important;
+-  }
+-  .v2-home .v2-hero__sub-full, .v2-home .v2-hero__cta-full { display:none; }
+-  .v2-home .v2-hero__sub-compact, .v2-home .v2-hero__cta-compact { display:inline; }
+-  .v2-home .v2-hero .v2-btn {
+-    height:36px; max-width:100%; padding:0 10px;
+-    font-size:10px; font-weight:600; line-height:1.2; letter-spacing:.01em;
+-    white-space:normal; text-align:center;
+-  }
+-  /* Keep one compact copy stack. The narrow CTA clears the artwork's low,
+-     leftmost package instead of being pushed to the bottom of the slide. */
+-  .v2-home .v2-hero__slide--collection .v2-hero__ui { justify-content:flex-start; padding-top:4px; }
+-  .v2-home .v2-hero__slide--collection .v2-hero__kicker {
+-    width:max-content; white-space:nowrap; font-size:7.5px; margin-bottom:3px;
+-  }
+-  .v2-home .v2-hero__slide--collection .v2-hero__title {
+-    font-size:clamp(22px, 6.25vw, 26px); width:100%;
+-    line-height:1.1; letter-spacing:0; margin-bottom:4px;
+-  }
+-  .v2-home .v2-hero__slide--collection .v2-hero__sub {
+-    font-size:clamp(11.5px, 3vw, 12.5px); line-height:1.25; margin-bottom:0;
+-  }
+-  .v2-home .v2-hero__slide--collection .v2-hero__ui > div:last-child { margin-top:8px; }
+-  .v2-home .v2-hero__slide--collection .v2-btn {
+-    width:auto; height:36px; padding-inline:12px; white-space:nowrap;
+-  }
+-}
+-
+-@media (min-width: 768px) {
+-  .v2-hero { margin-inline:auto; max-width:var(--slv2-container); width:calc(100% - 2 * var(--slv2-gutter)); margin-top:24px; }
+-  .v2-hero__media { aspect-ratio:2 / 1; }
+-  .v2-hero__ui { width:58%; padding:0 44px; }
+-  .v2-hero__title { font-size:38px; }
+-  .v2-hero__sub { font-size:14px; max-width:34ch; }
+-  .v2-hero__kicker { font-size:11px; }
+-}
+-@media (min-width: 1024px) {
+-  .v2-hero__media { aspect-ratio:1192 / 470; }
+-  /* An artwork-only slide — one whose creative carries its own typography —
+-     is framed at the artwork's own ratio (Hero.jsx sets --hero-ratio from the
+-     loaded image, bounded to 1.6–2.6) with no parallax oversize, so nothing
+-     of the designed banner is cropped. Slides with overlay copy keep the
+-     stage above; for them the artwork is a background and cover is right. */
+-  .v2-hero__media--artwork { aspect-ratio:var(--hero-ratio, 1192 / 470); }
+-  .v2-hero__media--artwork .v2-hero__par { inset:0; }
+-  .v2-hero__ui { width:52%; padding:0 64px; }
+-  .v2-hero__title { font-size:52px; line-height:1.04; letter-spacing:-.022em; margin-bottom:14px; }
+-  .v2-hero__sub { font-size:16px; margin-bottom:26px; }
+-  .v2-hero__arrow {
+-    display:grid; place-items:center; position:absolute; top:50%; z-index:5;
+-    width:36px; height:36px; transform:translateY(-50%);
+-    background:rgba(251,248,241,.9); border:1px solid var(--slv2-line);
+-    border-radius:var(--slv2-r-ui); color:var(--slv2-ink-2); cursor:pointer; padding:0;
+-  }
+-  .v2-hero__arrow--prev { left:16px; }
+-  .v2-hero__arrow--next { right:16px; }
+-  .v2-hero__arrow:hover { background:var(--slv2-ivory); color:var(--slv2-f700); }
+-  .v2-hero__arrow:focus-visible { outline:2px solid var(--slv2-f500); outline-offset:2px; }
+-}
+-/* Keep collection copy clear of the low, leftmost package in this artwork.
+-   Tablet uses the existing compact copy; the desktop canvas stays unchanged. */
+-@media (min-width: 768px) and (max-width: 1023px) {
+-  .v2-home .v2-hero__slide--collection .v2-hero__ui { padding-left:28px; }
+-  .v2-home .v2-hero__slide--collection .v2-hero__sub { max-width:15ch; }
+-  .v2-home .v2-hero__slide--collection .v2-hero__sub-full,
+-  .v2-home .v2-hero__slide--collection .v2-hero__cta-full { display:none; }
+-  .v2-home .v2-hero__slide--collection .v2-hero__sub-compact,
+-  .v2-home .v2-hero__slide--collection .v2-hero__cta-compact { display:inline; }
+-  .v2-home .v2-hero__slide--collection .v2-btn { padding-inline:12px; font-size:11px; }
+-}
+-@media (min-width: 1024px) {
+-  .v2-home .v2-hero__slide--collection .v2-hero__sub { max-width:25ch; }
+-}
+-@media (prefers-reduced-motion: reduce) { .v2-hero__dots button { transition:none; } }
+-
+-/* ------------------------------------------------ PRODUCT-LED HERO (V2)
+-   Copy left, product central-right, warm ivory environment, travertine
+-   plinth, restrained botanical depth. The environment is CSS; the product is
+-   the real catalogue image. Artwork radius is capped at --slv2-r-art (4px).
+-   ---------------------------------------------------------------------- */
+-.v2-hero--product { background:transparent; border:0; }
+-.v2-hero__stage {
+-  position:relative; overflow:hidden;
+-  border:1px solid var(--slv2-line);
+-  border-radius:var(--slv2-r-art);
+-  aspect-ratio:358 / 300;
+-  background:var(--slv2-cream);
+-}
++/* ------------------------------------------------------------ promo slot */
+ @media (max-width: 767px) {
+-  .v2-home .v2-hero__stage {
+-    aspect-ratio:358 / 200; height:auto; min-height:clamp(205px, 58vw, 225px); max-height:225px;
+-  }
+-}
+-.v2-hero__ground {
+-  position:absolute; inset:0; z-index:0;
+-  background:
+-    radial-gradient(72% 54% at 22% 8%, rgba(255,255,255,.85), transparent 70%),
+-    radial-gradient(122% 100% at 70% 14%, #FDFAF3 0%, #F5ECDC 44%, #EADCC4 100%);
+-}
+-/* botanical depth — soft, behind the product plane, never overlapping copy */
+-.v2-hero__leaf {
+-  position:absolute; z-index:1; border-radius:0 70% 0 70%;
+-  background:linear-gradient(148deg, #A9BC95 0%, #7C9866 52%, #5C7A4E 100%);
+-  /* heavily softened: this is depth behind the product plane, not a graphic */
+-  filter:blur(6px); opacity:.24;
+-}
+-.v2-hero__leaf--a { width:17%; aspect-ratio:1/2.1; right:3%;  bottom:40%; transform:rotate(28deg) scaleX(-1); }
+-.v2-hero__leaf--b { width:11%; aspect-ratio:1/2.1; right:26%; bottom:56%; transform:rotate(-16deg); opacity:.15; }
+-/* travertine plinth — the product is grounded on this, never floating */
+-/* travertine slab: a light top face, a darker front face and a soft cast
+-   shadow — enough to read as stone, restrained enough to stay background */
+-.v2-hero__plinth {
+-  position:absolute; z-index:2; left:74%; bottom:11%; transform:translateX(-50%);
+-  width:50%; height:9%; border-radius:var(--slv2-r-ui);
+-  background:
+-    linear-gradient(180deg, #F5EDDC 0%, #EFE4CE 38%, #DFCFAF 39%, #CDB693 100%);
+-  box-shadow:0 18px 26px -16px rgba(84,62,28,.55);
+-}
+-.v2-hero__plinth::after { content:""; position:absolute; inset:0 0 auto; height:1.5px; background:rgba(255,255,255,.66); }
+-.v2-hero__contact {
+-  position:absolute; z-index:3; left:74%; bottom:12%; transform:translateX(-50%);
+-  width:34%; height:9%;
+-  background:radial-gradient(50% 100% at 50% 62%, rgba(74,54,22,.34), transparent 72%);
+-}
+-.v2-hero__productwrap {
+-  position:absolute; z-index:4; left:74%; bottom:16.5%; transform:translateX(-50%);
+-  width:48%; height:68%;
+-  display:flex; align-items:flex-end; justify-content:center;
+-}
+-.v2-hero__product { width:100%; height:100%; display:block; }
+-.v2-hero__product picture, .v2-hero__product img { width:100%; height:100%; display:block; }
+-.v2-hero__product img {
+-  object-fit:contain; object-position:center bottom;
+-  /* drops the asset's white studio background into the cream ground without
+-     editing the file or altering the packaging */
+-  mix-blend-mode:multiply;
+-}
+-.v2-hero--product .v2-hero__ui {
+-  position:absolute; inset:0; z-index:5;
+-  display:flex; flex-direction:column; justify-content:center;
+-  width:50%; padding:20px 0 20px 16px;
+-}
+-/* Product names are long. At phone widths the display face is stepped down so
+-   a two-word product name holds two lines instead of three, which keeps the
+-   copy block clear of the product. */
+-.v2-hero--product .v2-hero__title { font-size:23px; }
+-@media (max-width: 359px) { .v2-hero--product .v2-hero__title { font-size:21px; } }
+-@media (max-width: 767px) {
+-  .v2-home .v2-hero__productwrap { left:76%; width:44%; }
+-}
+-.v2-hero__meta {
+-  font-family:var(--slv2-sans);
+-  font-size:10.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+-  color:var(--slv2-ink-4); margin:0 0 14px;
+-}
+-@media (min-width: 768px) {
+-  .v2-hero__stage { aspect-ratio:2 / 1; }
+-  .v2-hero--product .v2-hero__ui { width:40%; padding:0 0 0 44px; }
+-  .v2-hero--product .v2-hero__title { font-size:38px; }
+-  .v2-hero__productwrap { left:64%; width:38%; height:72%; bottom:16%; }
+-  .v2-hero__plinth  { left:64%; width:40%; height:8%; }
+-  .v2-hero__contact { left:64%; width:28%; bottom:10%; }
+-  .v2-hero__meta { font-size:12px; margin-bottom:22px; }
+-}
+-@media (min-width: 1024px) {
+-  .v2-hero__stage { aspect-ratio:1192 / 470; }
+-  /* copy 38% / imagery 62% — inside the approved 35–42 / 58–65 band */
+-  .v2-hero--product .v2-hero__ui { width:38%; padding:0 0 0 64px; }
+-  .v2-hero--product .v2-hero__title { font-size:50px; }
+-  .v2-hero__productwrap { left:66%; width:34%; height:74%; bottom:17.5%; }
+-  .v2-hero__plinth  { left:66%; width:34%; height:7.5%; bottom:12%; }
+-  .v2-hero__contact { left:66%; width:24%; bottom:11%; }
+-  .v2-hero__leaf--a { right:4%;  bottom:38%; width:11%; }
+-  .v2-hero__leaf--b { right:22%; bottom:56%; width:7%;  opacity:.13; }
+-}
+-/* Reduced transparency / forced colours: multiply can wash out, so fall back
+-   to the plain asset on its own white plate rather than a muddy composite. */
+-@media (prefers-contrast: more) {
+-  .v2-hero__product img { mix-blend-mode:normal; }
+-}
+-
+-/* -------------------------------------------------------- category rail */
+-.v2-cats { display:flex; gap:12px; }
+-.v2-cat { width:66px; flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center; text-decoration:none; }
+-.v2-cat__tile {
+-  width:62px; height:62px; display:grid; place-items:center;
+-  background:var(--slv2-cream); border:1px solid var(--slv2-line);
+-  border-radius:var(--slv2-r-ui); color:var(--slv2-f600);
+-  transition:border-color .18s ease, background .18s ease;
+-}
+-.v2-cat:hover .v2-cat__tile { background:var(--slv2-f50); border-color:var(--slv2-f100); }
+-.v2-cat__lb {
+-  font-family:var(--slv2-sans);
+-  font-size:9.5px; font-weight:500; line-height:1.28; color:var(--slv2-ink-2);
+-}
+-.v2-cat__initials { font:400 22px/1 var(--slv2-disp); }
+-.v2-cat__photo { display:none; }
+-@media (max-width: 767px) {
+-  .v2-home .v2-home-categories { margin-top:14px; }
+-  .v2-home .v2-cats { gap:8px; padding-block:2px; scroll-padding-inline:var(--slv2-gutter); }
+-  .v2-home .v2-cat {
+-    --v2-cat-paper:var(--slv2-cream);
+-    position:relative; display:grid; grid-template-columns:minmax(0, 1fr);
+-    grid-template-rows:52px minmax(0, 1fr); align-items:center;
+-    width:clamp(90px, calc((100vw - 2 * var(--slv2-gutter) - 24px) / 3), 128px);
+-    height:90px; padding:4px 6px; gap:4px;
+-    text-align:center; background:var(--v2-cat-paper); border:1px solid var(--slv2-line);
+-    border-radius:var(--slv2-r-ui); color:var(--slv2-accent-primary);
+-  }
+-  .v2-home .v2-cat--wellness { --v2-cat-paper:var(--slv2-olive-50); }
+-  .v2-home .v2-cat--body-building { --v2-cat-paper:#EDEAE2; }
+-  .v2-home .v2-cat--juices-drinks { --v2-cat-paper:var(--slv2-gold-100); }
+-  .v2-home .v2-cat--supplements { --v2-cat-paper:#ECEBE2; }
+-  .v2-home .v2-cat--skin-care { --v2-cat-paper:#F3E8E1; }
+-  .v2-home .v2-cat--hair-care { --v2-cat-paper:#EEE8DF; }
+-  .v2-home .v2-cat--bath-body { --v2-cat-paper:#E8EEEA; }
+-  .v2-home .v2-cat--mens-care { --v2-cat-paper:#E7E8E2; }
+-  .v2-home .v2-cat--personal-care { --v2-cat-paper:#F0EBDF; }
+-  .v2-home .v2-cat__tile { width:38px; height:38px; background:none; border:0; color:inherit; }
+-  .v2-home .v2-cat__tile svg { width:38px; height:38px; }
+-  .v2-home .v2-cat__visual { display:grid; place-items:center; width:100%; height:52px; }
+-  .v2-home .v2-cat__photo { display:block; width:52px; height:52px; background:transparent; }
+-  .v2-home .v2-cat__photo img { object-fit:contain; padding:0; }
+-  .v2-home .v2-cat__visual:has(.v2-cat__photo img) .v2-cat__tile { display:none; }
+-  .v2-home .v2-cat__photo:has(.v2-pimg__fallback) { display:none; }
+-  .v2-home .v2-cat__lb {
+-    font-size:11px; font-weight:500; line-height:1.2; letter-spacing:0;
+-    align-self:center; overflow-wrap:normal; color:var(--slv2-ink);
+-  }
+-  .v2-home .v2-cat:hover { border-color:var(--slv2-accent-primary); }
+-  .v2-home .v2-cat:focus-visible { outline-offset:-3px; }
+   .v2-home .v2-promo-slot .promo-section { padding-top:24px; }
+ }
+-@media (min-width: 768px) {
+-  .v2-cats { display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; overflow:visible; margin-inline:0; padding-inline:0; }
+-  .v2-cat { width:auto; padding:20px 10px 16px; border:1px solid var(--slv2-line); border-radius:var(--slv2-r-ui); background:var(--slv2-cream); gap:12px; }
+-  .v2-cat__tile { width:auto; height:auto; border:0; background:none; }
+-  .v2-cat__lb { font-size:13px; font-weight:600; }
+-}
+-@media (min-width: 1024px) { .v2-cats { grid-template-columns:repeat(8, 1fr); } }
+ 
+ /* ------------------------------------------------------- bestsellers grid */
+ .v2-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px 12px; }
+@@ -472,402 +152,7 @@
+ .v2-promo-slot .promo-code__copy,
+ .v2-promo-slot .promo-offer__cta { border-radius:var(--slv2-r-ui); }
+ /* .promo-poster__leaf is decorative artwork, not UI — its organic shape stays. */
+-/* =========================================================
+-   HOME CATEGORY CIRCLES — fixed curated product imagery
+-   ========================================================= */
+-
+-@media (max-width: 767px) {
+-  .v2-home .v2-cats {
+-    display:flex;
+-    gap:14px;
+-    padding-block:4px;
+-    align-items:flex-start;
+-  }
+-
+-  .v2-home .v2-cat {
+-    position:relative;
+-    flex:0 0 78px;
+-    width:78px;
+-    min-height:0;
+-    padding:0;
+-    display:flex;
+-    flex-direction:column;
+-    align-items:center;
+-    gap:7px;
+-
+-    background:transparent;
+-    border:0;
+-    border-radius:0;
+-    text-align:center;
+-    color:var(--slv2-ink);
+-  }
+-
+-  .v2-home .v2-cat::before,
+-  .v2-home .v2-cat::after {
+-    display:none;
+-  }
+-
+-  .v2-home .v2-cat__visual {
+-    position:relative;
+-    width:74px;
+-    height:74px;
+-    flex:0 0 74px;
+-    border-radius:50%;
+-    overflow:hidden;
+-    background:#fff;
+-    border:1px solid var(--slv2-line);
+-  }
+-
+-  .v2-home .v2-cat__photo {
+-    position:absolute;
+-    inset:0;
+-    z-index:2;
+-    width:100%;
+-    height:100%;
+-    display:block;
+-    object-fit:contain;
+-    object-position:center;
+-    padding:2px;
+-    border-radius:50%;
+-    background:#fff;
+-  }
+ 
+-  .v2-home .v2-cat__tile {
+-    position:absolute;
+-    inset:0;
+-    z-index:1;
+-    width:100%;
+-    height:100%;
+-    display:grid;
+-    place-items:center;
+-    border:0;
+-    border-radius:50%;
+-    background:var(--slv2-cream);
+-  }
+-
+-  .v2-home .v2-cat__tile svg {
+-    width:28px;
+-    height:28px;
+-  }
+-
+-  .v2-home .v2-cat__lb {
+-    width:100%;
+-    font-size:11px;
+-    font-weight:500;
+-    line-height:1.2;
+-    letter-spacing:0;
+-    color:var(--slv2-ink);
+-    text-align:center;
+-  }
+-}
+-/* =========================================
+-   DESKTOP CATEGORY CIRCLES
+-   Keep mobile design unchanged
+-   ========================================= */
+-
+-@media (min-width: 768px) {
+-  .v2-home .v2-cats {
+-    display:grid;
+-    grid-template-columns:repeat(9, minmax(0, 1fr));
+-    gap:18px;
+-    align-items:start;
+-  }
+-
+-  .v2-home .v2-cat {
+-    width:auto;
+-    min-height:0;
+-    padding:0;
+-    display:flex;
+-    flex-direction:column;
+-    align-items:center;
+-    gap:9px;
+-
+-    background:transparent;
+-    border:0;
+-    border-radius:0;
+-    box-shadow:none;
+-    text-align:center;
+-  }
+-
+-  .v2-home .v2-cat::before,
+-  .v2-home .v2-cat::after {
+-    display:none;
+-  }
+-
+-  .v2-home .v2-cat__visual {
+-    position:relative;
+-    width:92px;
+-    height:92px;
+-    flex:0 0 92px;
+-    border-radius:50%;
+-    overflow:hidden;
+-    background:#fff;
+-    border:1px solid var(--slv2-line);
+-  }
+-
+-  .v2-home .v2-cat__photo {
+-    position:absolute;
+-    inset:0;
+-    z-index:2;
+-    width:100%;
+-    height:100%;
+-    display:block;
+-    object-fit:contain;
+-    object-position:center;
+-    padding:2px;
+-    background:#fff;
+-    border-radius:50%;
+-  }
+-
+-  .v2-home .v2-cat__tile {
+-    position:absolute;
+-    inset:0;
+-    z-index:1;
+-    width:100%;
+-    height:100%;
+-    padding:0;
+-    display:grid;
+-    place-items:center;
+-    border:0;
+-    border-radius:50%;
+-    background:var(--slv2-cream);
+-  }
+-
+-  .v2-home .v2-cat__lb {
+-    width:100%;
+-    font-size:11.5px;
+-    font-weight:500;
+-    line-height:1.25;
+-    text-align:center;
+-    color:var(--slv2-ink);
+-  }
+-}
+-/* ===== CONTINUOUS CATEGORY MARQUEE ===== */
+-
+-.v2-home .v2-cats-marquee {
+-  width:100%;
+-  overflow:hidden;
+-}
+-
+-.v2-home .v2-cats-track {
+-  display:flex;
+-  width:max-content;
+-  animation:v2CategoryMarquee 28s linear infinite;
+-  will-change:transform;
+-}
+-
+-.v2-home .v2-cats-set {
+-  display:flex;
+-  align-items:flex-start;
+-  gap:14px;
+-  padding-right:14px;
+-}
+-
+-@keyframes v2CategoryMarquee {
+-  from {
+-    transform:translateX(0);
+-  }
+-
+-  to {
+-    transform:translateX(-50%);
+-  }
+-}
+-
+-.v2-home .v2-cats-marquee:hover .v2-cats-track,
+-.v2-home .v2-cats-marquee:focus-within .v2-cats-track {
+-  animation-play-state:paused;
+-}
+-
+-@media (min-width:768px) {
+-  .v2-home .v2-cats-set {
+-    gap:24px;
+-    padding-right:24px;
+-  }
+-
+-  .v2-home .v2-cats-track {
+-    animation-duration:36s;
+-  }
+-}
+-
+-@media (prefers-reduced-motion:reduce) {
+-  .v2-home .v2-cats-track {
+-    animation:none;
+-  }
+-}
+-/* Polish moving category rail edges */
+-.v2-home .v2-cats-marquee {
+-  padding-inline:10px;
+-  box-sizing:border-box;
+-  -webkit-mask-image:linear-gradient(
+-    to right,
+-    transparent 0,
+-    #000 18px,
+-    #000 calc(100% - 18px),
+-    transparent 100%
+-  );
+-  mask-image:linear-gradient(
+-    to right,
+-    transparent 0,
+-    #000 18px,
+-    #000 calc(100% - 18px),
+-    transparent 100%
+-  );
+-}
+-
+-@media (max-width:767px) {
+-  .v2-home .v2-cat__lb {
+-    font-size:10.5px;
+-    line-height:1.2;
+-    white-space:nowrap;
+-  }
+-}
+-/* Mobile marquee label clipping fix */
+-@media (max-width:767px) {
+-  .v2-home .v2-cat {
+-    flex:0 0 96px;
+-    width:96px;
+-    overflow:visible;
+-  }
+-
+-  .v2-home .v2-cat__visual {
+-    width:74px;
+-    height:74px;
+-    flex:0 0 74px;
+-  }
+-
+-  .v2-home .v2-cat__lb {
+-    width:96px;
+-    max-width:96px;
+-    min-height:26px;
+-    font-size:10.5px;
+-    line-height:1.18;
+-    white-space:normal;
+-    overflow:visible;
+-    text-overflow:clip;
+-    text-align:center;
+-  }
+-
+-  .v2-home .v2-cats-set {
+-    gap:8px;
+-    padding-right:8px;
+-  }
+-
+-  .v2-home .v2-cats-marquee {
+-    padding-inline:16px;
+-  }
+-}
+-/* Mobile marquee edge polish — hide partial category cards cleanly */
+-@media (max-width:767px) {
+-  .v2-home .v2-cats-marquee {
+-    position:relative;
+-    padding-inline:22px;
+-    overflow:hidden;
+-
+-    -webkit-mask-image:linear-gradient(
+-      to right,
+-      transparent 0,
+-      transparent 10px,
+-      #000 42px,
+-      #000 calc(100% - 42px),
+-      transparent calc(100% - 10px),
+-      transparent 100%
+-    );
+-
+-    mask-image:linear-gradient(
+-      to right,
+-      transparent 0,
+-      transparent 10px,
+-      #000 42px,
+-      #000 calc(100% - 42px),
+-      transparent calc(100% - 10px),
+-      transparent 100%
+-    );
+-  }
+-
+-  .v2-home .v2-cat {
+-    flex:0 0 94px;
+-    width:94px;
+-  }
+-
+-  .v2-home .v2-cat__lb {
+-    width:94px;
+-    max-width:94px;
+-    white-space:normal;
+-    overflow:visible;
+-    text-overflow:clip;
+-    text-align:center;
+-  }
+-
+-  .v2-home .v2-cats-set {
+-    gap:10px;
+-    padding-right:10px;
+-  }
+-}
+-/* Extra breathing room for mobile moving categories */
+-@media (max-width:767px) {
+-  .v2-home .v2-cats-marquee {
+-    min-height:112px;
+-    padding-bottom:14px;
+-  }
+-
+-  .v2-home .v2-cats-set {
+-    align-items:flex-start;
+-  }
+-
+-  .v2-home .v2-cat__lb {
+-    min-height:28px;
+-    padding-top:2px;
+-  }
+-}
+-/* ===== FINAL MOBILE HERO TYPOGRAPHY + HEIGHT ===== */
+-@media (max-width:767px) {
+-
+-  /* All Home hero types use one clean font system */
+-  .v2-home .v2-hero__title,
+-  .v2-home .v2-hero--product .v2-hero__title,
+-  .v2-home .v2-hero__slide--collection .v2-hero__title {
+-    font-family:var(--slv2-sans);
+-    font-weight:600;
+-    line-height:1.08;
+-    letter-spacing:-.018em;
+-  }
+-
+-  /* Normal/configured slides */
+-  .v2-home .v2-hero:not(.v2-hero--product) .v2-hero__title {
+-    font-size:clamp(21px, 6vw, 24px);
+-  }
+-
+-  /* Collection slide */
+-  .v2-home .v2-hero__slide--collection .v2-hero__title {
+-    font-size:clamp(22px, 6.2vw, 25px);
+-  }
+-
+-  /* Product-led hero */
+-  .v2-home .v2-hero--product .v2-hero__title {
+-    font-size:clamp(21px, 6vw, 24px);
+-  }
+-
+-  /* Make ALL mobile hero canvases shorter */
+-  .v2-home .v2-hero__media,
+-  .v2-home .v2-hero__stage {
+-    aspect-ratio:auto;
+-    height:clamp(195px, 54vw, 210px);
+-    min-height:0;
+-    max-height:210px;
+-  }
+-}
+-/* Mobile hero — true edge-to-edge */
+-@media (max-width: 767px) {
+-  .v2-home .v2-hero {
+-    width: 100%;
+-    max-width: none;
+-    margin-left: 0;
+-    margin-right: 0;
+-    border-left: 0;
+-    border-right: 0;
+-    border-radius: 0;
+-  }
+-}
+ /* ============================================================
+    The homepage top (HomeStorefront.jsx): white with an orange accent — a
+    palette of its own, scoped to .hx. No --slv2-* token is redefined and no

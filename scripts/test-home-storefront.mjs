@@ -25,6 +25,7 @@ import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule, loadSource } from './grocery-ssr.mjs';
 import sharp from 'sharp';
 import { atCommit } from './baseline-export.mjs';
+import { sansDeadHomepageCode } from './storefront-settings-pin.mjs';
 
 // The tree before this work: the homepage banner and the fashion category strip.
 const BASELINE_SHA = '2d22a4e';
@@ -246,7 +247,8 @@ await test('scoped: every selector in the new rules starts with .hx (no element,
     assert.doesNotMatch(body, /--slv2-[a-z0-9-]+\s*:/, `${sel.trim()} redefines a --slv2 token`);
   }
   const base = atCommit(BASELINE_SHA, 'src/styles/v2-home.css').replace(/\r\n/g, '\n');
-  assert.equal(read('src/styles/v2-home.css').slice(0, base.length), base, 'the sheet before the new rules is byte-identical');
+  // The dead homepage code cleared since (4e72220) is undone first, through its recorded patch.
+  assert.equal(sansDeadHomepageCode('src/styles/v2-home.css', read('src/styles/v2-home.css')).slice(0, base.length), base, 'the sheet before the new rules is byte-identical');
 });
 
 await test('contrast (WCAG 2.x), from the stylesheet itself: white on the deep-orange buttons ≥ 4.5:1, the deep-orange headline line and View All on the page tint ≥ 4.5:1, near-black on the bright-orange Fashion panel ≥ 4.5:1; the bright orange never carries white text', () => {
