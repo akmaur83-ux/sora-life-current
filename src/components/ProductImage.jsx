@@ -5,7 +5,7 @@ import { productCardImageUrl } from '../lib/productImageVariants.js';
 import { useDeferredMedia } from './DeferredImage.jsx';
 
 // Default sizes hint tuned for the product grid (2-up on phones, up to ~240px
-// tiles on desktop). Detail/hero contexts pass a larger `sizes`.
+// tiles on desktop). Detail contexts pass a larger `sizes`.
 const GRID_SIZES = '(max-width: 640px) 46vw, (max-width: 1024px) 30vw, 240px';
 
 // If the source is a local /img/<name>.<png|jpg> that the optimizer has covered,
@@ -57,21 +57,16 @@ export default function ProductImage({
   }, [originalSrc, cardSrc]);
 
   const v2 = frame === 'v2';
-  const hero = frame === 'hero';
   // V2 media frames are square and sharp. `contain` is deliberate for today's
   // largely plain-background catalogue — `cover` would crop real labels. Once a
   // product receives upgraded editorial photography (stone plinth, warm cream
   // environment, botanical context) pass fit="cover" for that instance.
-  // `hero` is the product-led hero layer: no frame, no ground of its own —
-  // the product sits directly on the hero's editorial environment.
-  const wrapClass = hero
-    ? `v2-hero__product ${className}`.trim()
-    : v2
-      ? `v2-pimg ${fit === 'cover' ? 'v2-pimg--cover' : ''} ${className}`.trim()
-      : `pimg ${className}`.trim();
+  const wrapClass = v2
+    ? `v2-pimg ${fit === 'cover' ? 'v2-pimg--cover' : ''} ${className}`.trim()
+    : `pimg ${className}`.trim();
 
   if (!product) {
-    return <div className={wrapClass} style={(v2 || hero) ? undefined : { background: 'var(--cream)' }} />;
+    return <div className={wrapClass} style={v2 ? undefined : { background: 'var(--cream)' }} />;
   }
 
   const cat = categoryBySlug[product.category];
@@ -111,7 +106,6 @@ export default function ProductImage({
 
   // Fallback: warm neutral ground plus the brand and category wordmark. Never a
   // grey box, never a broken-image glyph, and never invented packaging.
-  if (hero) return null;   // hero degrades to environment-only; no placeholder product
   if (v2) {
     return (
       <div className={wrapClass}>

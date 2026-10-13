@@ -24,6 +24,16 @@ check('the unused category rail and the hero stylesheet stay deleted', () => {
   assert.doesNotMatch(read('../build/build-css.mjs'), /hero-cta\.css/, 'and the CSS build no longer lists it');
 });
 
+check('nothing still points at the retired hero: no motion selector, no hero frame, no hero media, no capture of it', () => {
+  const motion = read('../src/components/StorefrontMotion.jsx');
+  assert.doesNotMatch(motion, /\.v2-hero|\.hm-category-head|const hero\b/);
+  const image = read('../src/components/ProductImage.jsx');
+  assert.doesNotMatch(image, /v2-hero|frame === 'hero'/);
+  for (const gone of ['../media/home-hero-juice.jpg', '../media/home-hero-seedoil.jpg', '../media/hero.mp4', '../scripts/capture-home.mjs', '../scripts/verify-picture.mjs']) {
+    assert.ok(!existsSync(new URL(gone, import.meta.url)), gone);
+  }
+});
+
 check('no homepage rule styles the retired rail or carousel', () => {
   for (const [name, css] of Object.entries(sheets)) {
     assert.doesNotMatch(rules(css), /\.(v2-cats?|v2-cat__[a-z-]+|v2-cats-[a-z]+|v2-hero(__[a-z-]+|--[a-z-]+)?|hm-hero__[a-z-]+|hp-category-strip[a-z_-]*|hero-cta[a-z_-]*)(?![A-Za-z0-9_-])/, `${name}.css`);
