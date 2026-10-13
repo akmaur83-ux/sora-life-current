@@ -52,135 +52,6 @@
   padding-bottom:4px;
 }
 
-/* ------------------------------------------------ marketplace fallback hero */
-.v2-home .v2-hero--marketplace {
-  border:0;
-  border-radius:2px;
-  background:var(--hm-green);
-}
-.v2-home .v2-hero--marketplace .hm-hero {
-  display:grid;
-  grid-template-columns:minmax(0, .82fr) minmax(0, 1.18fr);
-  min-height:430px;
-  aspect-ratio:auto;
-  border:0;
-  border-radius:2px;
-  background:var(--hm-green);
-}
-.v2-home .hm-hero__copy {
-  position:relative;
-  z-index:2;
-  display:flex;
-  min-width:0;
-  flex-direction:column;
-  align-items:flex-start;
-  justify-content:center;
-  padding:52px 42px 54px 58px;
-  color:#F6F8F6;
-}
-.v2-home .hm-hero__kicker {
-  margin:0 0 16px;
-  color:var(--hm-lime);
-  font:750 11px/1.2 var(--slv2-sans);
-  letter-spacing:.17em;
-  text-transform:uppercase;
-}
-.v2-home .hm-hero__copy h1 {
-  max-width:10ch;
-  margin:0;
-  color:#FFFFFF;
-  font:750 clamp(44px, 4.5vw, 66px)/.96 var(--slv2-sans);
-  letter-spacing:-.055em;
-  text-wrap:balance;
-}
-.v2-home .hm-hero__copy > p:not(.hm-hero__kicker) {
-  max-width:38ch;
-  margin:22px 0 26px;
-  color:#D5DFD9;
-  font:450 14px/1.55 var(--slv2-sans);
-}
-.v2-home .hm-hero__cta {
-  display:inline-flex;
-  min-height:44px;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-  padding:0 18px;
-  color:#102019;
-  background:var(--hm-lime);
-  border:1px solid var(--hm-lime);
-  border-radius:2px;
-  text-decoration:none;
-  font:750 12px/1 var(--slv2-sans);
-  letter-spacing:.025em;
-}
-.v2-home .hm-hero__cta:hover { background:#E5F99A; border-color:#E5F99A; }
-.v2-home .hm-hero__assortment {
-  display:grid;
-  min-width:0;
-  grid-template-columns:1.3fr 1fr 1fr;
-  grid-template-rows:1fr 1fr;
-  gap:2px;
-  padding:2px;
-  background:#FFFFFF;
-}
-.v2-home .hm-hero__product {
-  position:relative;
-  min-width:0;
-  overflow:hidden;
-  background:var(--hm-product-bg, #EEF1ED);
-  text-decoration:none;
-}
-.v2-home .hm-hero__product:nth-child(2) { --hm-product-bg:#E5ECFF; }
-.v2-home .hm-hero__product:nth-child(3) { --hm-product-bg:#F5E9DA; }
-.v2-home .hm-hero__product:nth-child(4) { --hm-product-bg:#F0E4EC; }
-.v2-home .hm-hero__product:nth-child(5) { --hm-product-bg:#E6F0E9; }
-.v2-home .hm-hero__product:nth-child(6) { --hm-product-bg:#F2EEDF; }
-.v2-home .hm-hero__product--1 { grid-row:1 / -1; }
-.v2-home .hm-hero__product .v2-pimg {
-  width:100%;
-  height:100%;
-  aspect-ratio:auto;
-  border:0;
-  border-radius:0;
-  background:var(--hm-product-bg);
-}
-.v2-home .hm-hero__product .v2-pimg img {
-  object-fit:contain;
-  padding:clamp(8px, 1.5vw, 22px);
-  transition:transform .25s ease;
-}
-.v2-home .hm-hero__product:hover .v2-pimg img { transform:scale(1.025); }
-
-/* ------------------------------------------------------- category discovery */
-.v2-home .hp-category-strip {
-  margin:0;
-  /* The admin's values (HomeCategoryStrip sets them as custom properties).
-     These used to be inline padding, which silently beat every rule below. */
-  padding-top:var(--hp-strip-pt, 30px);
-  padding-bottom:var(--hp-strip-pb, 28px);
-  background-color:var(--hm-paper);
-  border-bottom:1px solid var(--hm-line);
-  border-radius:0;
-}
-.v2-home .hm-category-head {
-  display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
-  gap:16px;
-  margin-bottom:17px;
-}
-.v2-home .hm-category-head > span {
-  flex:none;
-  color:var(--hm-muted);
-  font:650 10px/1.3 var(--slv2-sans);
-  letter-spacing:.04em;
-}
-/* The quick-navigation category rail keeps its ORIGINAL circular styling
-   from v2-home.css. The marketplace pass had re-skinned it into square
-   cards; that role is now filled by the separate editorial "Shop by
-   Category" rail further down the page, so the two stay distinct. */
-
 /* --------------------------------------------------------- section rhythm */
 .v2-home .hm-section,
 .v2-home .v2-sec.hm-section { margin-top:0; padding-block:48px; }
@@ -200,7 +71,7 @@
 /* ---------------------------------------------------------- current offers */
 .v2-home .hp-offers {
   margin:0;
-  /* The admin's value, via HomeOffers — see the note on .hp-category-strip. */
+  /* The admin's value, via HomeOffers: a custom property the component sets inline. */
   padding-block:var(--hp-offers-pad, 42px);
   border-bottom:1px solid var(--hm-line);
 }
@@ -399,30 +270,6 @@
 .v2-home .nl__input .input { border-radius:2px; }
 
 @media (max-width: 767px) {
-  .v2-home .v2-hero--marketplace { margin-top:0; }
-  .v2-home .v2-hero--marketplace .hm-hero {
-    grid-template-columns:minmax(0, 1.05fr) minmax(0, .95fr);
-    height:224px;
-    min-height:224px;
-    max-height:224px;
-  }
-  .v2-home .hm-hero__copy { padding:20px 10px 20px 16px; }
-  .v2-home .hm-hero__kicker { margin-bottom:9px; font-size:7.5px; letter-spacing:.13em; }
-  .v2-home .hm-hero__copy h1 { max-width:10ch; font-size:clamp(25px, 7.2vw, 30px); line-height:.98; letter-spacing:-.045em; }
-  .v2-home .hm-hero__copy > p:not(.hm-hero__kicker) { margin:10px 0 12px; font-size:10.5px; line-height:1.35; }
-  .v2-home .hm-hero__cta { min-height:36px; gap:6px; padding:0 11px; font-size:9.5px; }
-  .v2-home .hm-hero__cta svg { width:13px; height:13px; }
-  .v2-home .hm-hero__assortment { grid-template-columns:1.08fr .92fr; grid-template-rows:1fr 1fr; }
-  .v2-home .hm-hero__product--1 { grid-row:1 / -1; }
-  .v2-home .hm-hero__product:nth-child(n+4) { display:none; }
-  .v2-home .hm-hero__product .v2-pimg img { padding:5px; }
-
-  /* No padding here: the admin's --hp-strip-pt/pb apply, as they always
-     effectively did (the old padding-block was dead under the inline style). */
-  .v2-home .hp-category-strip { width:100%; }
-  .v2-home .hp-category-strip__content { padding-inline:16px; }
-  .v2-home .hm-category-head { margin-bottom:14px; }
-  .v2-home .hm-category-head > span { font-size:9px; }
 
   /* No padding here either: --hp-offers-pad applies (this 32px was dead under
      the inline style, and homepage-appearance.css zeroes the top anyway). */
@@ -454,12 +301,6 @@
 }
 
 @media (max-width: 359px) {
-  .v2-home .v2-hero--marketplace .hm-hero { grid-template-columns:1.1fr .9fr; }
-  .v2-home .hm-hero__copy { padding-left:13px; }
-  .v2-home .hm-hero__copy h1 { font-size:24px; }
-  .v2-home .hm-hero__copy > p:not(.hm-hero__kicker) { font-size:10px; }
-  .v2-home .hm-hero__cta { padding-inline:9px; }
-  .v2-home .hm-category-head > span { display:none; }
   .v2-home .hm-brands,
   .v2-home .hm-collections { gap:6px; }
   .v2-home .hm-brand__body,
@@ -472,7 +313,6 @@
 @media (min-width: 768px) {
   .v2-home .v2-h2 { font-size:32px; }
   .v2-home .v2-sechead { margin-bottom:24px; }
-  .v2-home .hm-category-head > span { display:none; }
   .v2-home .hm-section,
   .v2-home .v2-sec.hm-section { padding-block:58px; }
   .v2-home .hm-heading__copy { font-size:13px; }
@@ -507,7 +347,6 @@
 
 @media (min-width: 1024px) {
   .v2-home .v2-h2 { font-size:38px; }
-  .v2-home .v2-hero--marketplace .hm-hero { min-height:470px; }
 
   /* ---- ONE SECTION INTERVAL ---------------------------------------
      Every section on the desktop page carries the same 72px above and
@@ -521,28 +360,10 @@
      interval between them (36 + 36 = 72) and carry the full 72 outward. */
   .v2-home .hm-section,
   .v2-home .v2-sec.hm-section,
-  .v2-home .hp-category-strip,
   .v2-home .hp-offers,
   .v2-home .nl { padding-block:72px; }
   .v2-home .hd-section { padding-block:72px 36px; }
   .v2-home .hd-section + .hd-section { padding-block:36px 72px; }
-
-  /* ---- BROWSE BY CATEGORY: a row, not a marquee ---------------------
-     Ten categories fit across 1240px, so the infinite scroller has nothing
-     to scroll and its duplicate set is just twenty tiles instead of ten. At
-     this width the rail is a single static row of larger circles spread
-     across the container — the tile size, not the padding, is what gives
-     the section its height. Below 1024px the marquee is untouched. */
-  .v2-home .v2-cats-marquee { padding-inline:0; -webkit-mask-image:none; mask-image:none; }
-  .v2-home .v2-cats-track { width:100%; animation:none; will-change:auto; }
-  .v2-home .v2-cats-set { width:100%; gap:16px; padding-right:0; }
-  .v2-home .v2-cats-set[aria-hidden="true"] { display:none; }
-  /* Equal shares of the row, so a long label ("Juices & Drinks") widens no
-     tile and the tenth cannot be pushed past the edge. */
-  .v2-home .v2-cat { flex:1 1 0; min-width:0; width:auto; gap:12px; }
-  .v2-home .v2-cat__visual { width:108px; height:108px; flex-basis:108px; }
-  .v2-home .v2-cat__lb { font-size:13px; }
-  .v2-home .hm-category-head { margin-bottom:26px; }
 
   /* ---- CURRENT OFFERS, one poster: a proper width under the heading ----
      A single portrait poster used to sit as a 620px column in the middle of
@@ -573,7 +394,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .v2-home .hm-hero__product .v2-pimg img,
   .v2-home .hm-brand__media img { transition:none; }
 }
 

@@ -64,7 +64,6 @@ const STOREFRONT = [
   'src/styles/coupons.css',
   'src/styles/info.css',
   'src/styles/homepage-appearance.css',
-  'src/styles/hero-cta.css',
   'src/styles/v2-home-marketplace.css',
   'src/styles/v2-home-discovery.css',
   // The dark leaderboard block and the .sl-dark tokens the portal reuses.

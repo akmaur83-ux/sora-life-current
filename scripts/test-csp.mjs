@@ -27,7 +27,7 @@ const directives = Object.fromEntries(
 
 console.log('\n— media-src fix (the hero video) —');
 has(!!directives['media-src'], 'media-src directive exists');
-has(directives['media-src']?.includes("'self'"), "media-src allows 'self' (bundled hero.mp4)");
+has(directives['media-src']?.includes("'self'"), "media-src allows 'self' (bundled media)");
 has(directives['media-src']?.includes('https://*.supabase.co'), 'media-src allows https://*.supabase.co (Supabase-hosted hero video)');
 has(!directives['media-src']?.includes("'unsafe-inline'") && !directives['media-src']?.includes('*'),
   'media-src stays tight (no wildcard / unsafe-inline)');

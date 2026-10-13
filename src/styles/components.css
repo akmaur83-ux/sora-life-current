@@ -139,8 +139,8 @@
    but the card inside kept its own content height — so cards in one row ended
    at different heights. Making the wrapper a flex column and the card fill it
    restores equal-height rows without touching the grid definitions. */
-.pgrid > .reveal, .rail > .reveal, .bh-grid > .reveal { display: flex; flex-direction: column; }
-.pgrid > .reveal > .pcard, .rail > .reveal > .pcard, .bh-grid > .reveal > .pcard { flex: 1; }
+.pgrid > .reveal, .rail > .reveal { display: flex; flex-direction: column; }
+.pgrid > .reveal > .pcard, .rail > .reveal > .pcard { flex: 1; }
 
 .pcard {
   position: relative; display: flex; flex-direction: column; height: 100%;

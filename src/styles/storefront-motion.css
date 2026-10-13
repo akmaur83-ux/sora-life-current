@@ -3,16 +3,6 @@
 @media (prefers-reduced-motion: no-preference) {
   .sl-motion { --sl-motion-ease: cubic-bezier(.16, 1, .3, 1); }
 
-  .sl-motion .v2-hero__slide.is-active .v2-hero__img {
-    animation: sl-cinema 4.5s var(--sl-motion-ease) both;
-  }
-  .sl-motion .v2-hero__slide.is-active .v2-hero__ui > * {
-    animation: sl-copy-rise .9s var(--sl-motion-ease) both;
-  }
-  .sl-motion .v2-hero__slide.is-active .v2-hero__ui > :nth-child(2) { animation-delay: .08s; }
-  .sl-motion .v2-hero__slide.is-active .v2-hero__ui > :nth-child(3) { animation-delay: .16s; }
-  .sl-motion .v2-hero__slide.is-active .v2-hero__ui > :nth-child(4) { animation-delay: .24s; }
-
   .sl-motion .hd-tile.sl-arrived .hd-tile__media {
     animation: sl-art-turn 1s var(--sl-motion-ease);
   }
@@ -34,7 +24,7 @@
     box-shadow: 0 20px 35px -24px rgb(17 39 30 / 55%);
   }
 
-  .sl-motion :is(.v2-pc__cta, .v2-more, .hm-hero__cta, .hm-collection__link, .hm-brand__link, .v2-btn) svg {
+  .sl-motion :is(.v2-pc__cta, .v2-more, .hm-collection__link, .hm-brand__link, .v2-btn) svg {
     transition: transform .45s var(--sl-motion-ease);
   }
   .sl-motion :is(.v2-pc__cta, .v2-btn):active:not(:disabled) svg { transform: scale(.8) rotate(-12deg); }
@@ -48,12 +38,10 @@
     .sl-motion .hm-collection:hover .v2-pimg:nth-child(1) { transform: translateY(-8px) rotate(-6deg); }
     .sl-motion .hm-collection:hover .v2-pimg:nth-child(2) { transform: translateY(-14px); }
     .sl-motion .hm-collection:hover .v2-pimg:nth-child(3) { transform: translateY(-8px) rotate(6deg); }
-    .sl-motion :is(.v2-more, .hm-hero__cta, .hm-collection, .hm-brand, .v2-btn):hover svg { transform: translateX(5px); }
+    .sl-motion :is(.v2-more, .hm-collection, .hm-brand, .v2-btn):hover svg { transform: translateX(5px); }
     .sl-motion .v2-pc__cta:hover:not(:disabled) svg { transform: translateY(-2px) rotate(-10deg); }
   }
 
-  @keyframes sl-cinema { from { scale: 1.045; } to { scale: 1; } }
-  @keyframes sl-copy-rise { from { opacity: .3; translate: 0 26px; } to { opacity: 1; translate: 0; } }
   @keyframes sl-art-turn { from { transform: perspective(800px) rotateY(-22deg) scale(.94); } to { transform: none; } }
   @keyframes sl-icon-orbit { from { transform: perspective(300px) rotateY(-180deg) scale(.7); } to { transform: none; } }
   @keyframes sl-title-focus { from { opacity: .5; translate: 0 12px; } to { opacity: 1; translate: 0; } }

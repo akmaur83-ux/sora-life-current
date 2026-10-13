@@ -10,7 +10,7 @@
 // Supabase, no orders.
 // ============================================================
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { products, searchProducts, getByCategory } from '../src/data/products.js';
@@ -928,10 +928,8 @@ test('D67 the round rail under the hero is not part of this system', () => {
   assert.match(strip, /export const STORES = \[/, 'its six circles are its own fixed list');
   assert.doesNotMatch(strip, /discovery|categoryCards|collection/i, 'and it knows nothing about discovery cards');
 
-  const rail = src('../src/components/CategoryRail.jsx');
-  assert.match(rail, /categories/, 'it reads the real catalogue categories');
-  assert.doesNotMatch(rail, /homeDiscovery|categoryCards|\?collection=/,
-    'it must never be routed through the merchandising model');
+  // The old category rail (CategoryRail.jsx) rendered nowhere and was deleted.
+  assert.ok(!existsSync(new URL('../src/components/CategoryRail.jsx', import.meta.url)), 'the unused category rail stays deleted');
 
   const home = src('../src/pages/Home.jsx');
   const order = ['<HomeHero', '<ExploreStores', '<HomeOffers', '<ShopByCategory', '<ShopByConcerns'];

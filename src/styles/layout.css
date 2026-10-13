@@ -219,7 +219,7 @@
 
   /* Small buttons stay visually small but remain comfortably tappable. */
   .btn-sm { min-height: 44px; }
-  .sec-link, .bh-best__all { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+  .sec-link { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
 }
 
 /* PDP shows a fixed ~82px buy bar (and hides the tab bar). Reserve that height

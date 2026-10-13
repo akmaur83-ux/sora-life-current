@@ -63,228 +63,15 @@
 @media (max-width: 1160px) { .hdr__search { width: 180px; } .hdr__link { padding: 9px 8px; font-size: 0.78rem; } }
 @media (max-width: 1040px) { .hdr__nav { display: none; } }
 
-/* ============ HERO ============ */
-.bh-hero { position: relative; height: clamp(460px, 52vw, 620px); overflow: hidden; background: var(--forest-800); }
-.bh-hero__media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.bh-hero__scrim { position: absolute; inset: 0; background:
-  var(--st-hero-overlay, transparent),
-  linear-gradient(100deg, rgba(244,238,225,0.94) 0%, rgba(244,238,225,0.72) 26%, rgba(244,238,225,0.25) 46%, rgba(244,238,225,0) 62%); }
-.bh-hero__inner { position: relative; height: 100%; display: flex; align-items: center; }
-.bh-hero__copy { max-width: 620px; }
-.bh-hero__kicker { font-family: var(--font-display); font-size: clamp(1.4rem, 2.6vw, 2rem); color: var(--forest-700); font-weight: 500; margin-bottom: -6px; }
-.bh-hero__title { font-family: var(--font-display); font-weight: 600; font-size: clamp(3.2rem, 8vw, 6rem); line-height: 0.98; color: var(--forest-800); letter-spacing: -0.02em; margin-bottom: 18px; }
-.bh-hero__sub { font-size: clamp(1.05rem, 2vw, 1.5rem); color: var(--ink-900); font-weight: 500; margin-bottom: 10px; }
-.bh-hero__lede { font-size: var(--text-lg); color: var(--ink-700); margin-bottom: var(--sp-6); }
-.bh-hero__cta { letter-spacing: 0.08em; font-size: 0.85rem; border-radius: var(--r-md); }
-.bh-hero__benefits { display: flex; align-items: center; gap: 22px; margin-top: var(--sp-10); }
-.bh-hero__benefit { position: relative; display: flex; align-items: center; gap: 11px; font-size: var(--text-sm); font-weight: 600; color: var(--forest-800); line-height: 1.2; }
-.bh-hero__benefit svg { color: var(--forest-600); flex-shrink: 0; }
-.bh-hero__bdiv { position: absolute; right: -22px; width: 1px; height: 30px; background: var(--forest-700); opacity: 0.22; }
-.bh-hero__dots { position: absolute; bottom: 22px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; z-index: 2; }
-.bh-hero__dots span { width: 8px; height: 8px; border-radius: 999px; background: rgba(30,58,47,0.3); transition: all var(--t) var(--ease); }
-.bh-hero__dots span.active { width: 22px; background: var(--forest-700); }
-/* Mobile hero layout lives in the MOBILE HERO block below the carousel rules,
-   so it can also neutralise the Ken-Burns / parallax transforms. */
-
-/* ============ CATEGORY CIRCLES ============ */
-/* Forest-green brand strip, matching the top utility/announcement bar (.annbar
-   uses --forest-800 / --forest-50). Circles stay light so images read clearly. */
-.bh-cats { border-bottom: 1px solid var(--forest-900); background: var(--st-category-bg, var(--forest-800)); }
-.bh-cats__row { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--sp-3); padding-block: var(--sp-8); }
-.bh-cat { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
-.bh-cat__circle { width: 92px; height: 92px; border-radius: 999px; overflow: hidden; background: var(--st-category-circle, var(--tone-tint, var(--cream))); display: grid; place-items: center; transition: transform var(--t-slow) var(--ease-luxury), box-shadow var(--t-slow) var(--ease-luxury); }
-.bh-cat__circle .pimg { width: 100%; height: 100%; aspect-ratio: 1; border-radius: 999px; }
-.bh-cat__circle .pimg img { padding: 10px; background: transparent; mix-blend-mode: multiply; transition: transform var(--t-slower) var(--ease-luxury); }
-.bh-cat:hover .bh-cat__circle { transform: translateY(-4px); box-shadow: var(--shadow-md); }
-.bh-cat:hover .bh-cat__circle .pimg img { transform: scale(1.08); }
-.bh-cat__name { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--st-category-title, var(--forest-50)); transition: color var(--t) var(--ease-soft); }
-.bh-cat:hover .bh-cat__name { color: var(--st-category-hover, var(--honey-300)); }
-.bh-cat__view { font-size: var(--text-xs); color: var(--st-category-subtitle, var(--forest-200)); }
-/* Readable focus ring on the green strip (global ring is a green glow that would
-   blend into --forest-800). */
-.bh-cat:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(240, 246, 242, 0.55); border-radius: var(--r-md); }
-@media (max-width: 1040px) { .bh-cats__row { grid-template-columns: repeat(4, 1fr); gap: var(--sp-5) var(--sp-3); } }
-@media (max-width: 560px) {
-  .bh-cats__row { grid-auto-flow: column; grid-auto-columns: 33%; grid-template-columns: none; overflow-x: auto; gap: var(--sp-3); scroll-snap-type: x mandatory; margin-inline: calc(-1 * var(--sp-4)); padding-inline: var(--sp-4); }
-  .bh-cat { scroll-snap-align: start; }
-  .bh-cat__circle { width: 78px; height: 78px; }
-}
-
-/* ============ BESTSELLERS ============ */
-.bh-best { background: var(--cream); }
-.bh-best__head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-6); margin-bottom: var(--sp-6); }
-.bh-best__title { font-size: clamp(1.8rem, 3vw, 2.4rem); }
-.bh-best__head .muted { margin-top: 4px; }
-.bh-best__all { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; color: var(--forest-700); white-space: nowrap; }
-.bh-best__all:hover { gap: 10px; }
-.bh-best__wrap { position: relative; }
-.bh-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--sp-4); }
-.bh-best__arrow { position: absolute; right: -18px; top: 38%; width: 40px; height: 40px; border-radius: 999px; background: var(--paper); box-shadow: var(--shadow-md); display: grid; place-items: center; color: var(--forest-700); z-index: 3; }
-.bh-best__arrow:hover { background: var(--forest-700); color: #fff; }
-@media (max-width: 1200px) { .bh-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .bh-best__arrow { display: none; } }
-@media (max-width: 900px) {
-  .bh-grid { grid-auto-flow: column; grid-auto-columns: 46%; grid-template-columns: none; overflow-x: auto; scroll-snap-type: x mandatory; gap: var(--sp-3); margin-inline: calc(-1 * var(--sp-4)); padding-inline: var(--sp-4); padding-bottom: 8px; }
-  .bh-grid > * { scroll-snap-align: start; }
-}
-@media (max-width: 560px) { .bh-grid { grid-auto-columns: 62%; } }
-
 /* Card image sits in a soft frame. object-fit: contain is now the global
    default on .pimg img (see components.css), so the previous `!important`
    override is gone — only the breathing room is set here. */
-.bh-best .pcard__media .pimg, .bh-edit .pimg, .bh-cat .pimg { background: var(--paper); }
 .pcard__media .pimg img { padding: 10px; }
-
-/* ============ EDITORIAL CARDS ============ */
-.bh-edit-wrap { padding-block: var(--sp-10) var(--sp-16); background: var(--cream); }
-.bh-edit { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-5); }
-.bh-editcard { position: relative; display: flex; align-items: stretch; min-height: 210px; border-radius: var(--r-lg); overflow: hidden; background: linear-gradient(120deg, var(--tone-tint, var(--forest-50)), var(--paper)); border: 1px solid var(--line-soft); transition: transform var(--t-slow) var(--ease-luxury), box-shadow var(--t-slow) var(--ease-luxury); }
-.bh-editcard:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
-.bh-editcard__body { padding: var(--sp-6); display: flex; flex-direction: column; justify-content: center; max-width: 62%; z-index: 1; }
-.bh-editcard__body h3 { font-size: var(--text-xl); margin-bottom: 8px; }
-.bh-editcard__body p { color: var(--ink-700); font-size: var(--text-sm); margin-bottom: 16px; }
-.bh-editcard__cta { display: inline-flex; align-items: center; gap: 7px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; color: var(--forest-700); transition: gap var(--t) var(--ease-luxury); }
-.bh-editcard:hover .bh-editcard__cta { gap: 11px; }
-.bh-editcard__img { position: absolute; right: -6px; bottom: -6px; width: 46%; max-width: 190px; transition: transform var(--t-slower) var(--ease-luxury); }
-.bh-editcard:hover .bh-editcard__img { transform: scale(1.05) translateY(-3px); }
-.bh-editcard__img .pimg { aspect-ratio: 1; background: transparent; }
-.bh-editcard__img .pimg img { mix-blend-mode: multiply; }
-@media (max-width: 900px) { .bh-edit { grid-template-columns: 1fr; } .bh-editcard { min-height: 170px; } }
-
-/* ============ WELLNESS PROMISE STRIP ============ */
-.bh-promise { border-top: 1px solid var(--line-soft); background: var(--paper); }
-.bh-promise__in { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-5); padding-block: var(--sp-8); }
-.bh-promise__item { display: flex; align-items: center; gap: 14px; }
-.bh-promise__ic { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 999px; background: var(--forest-50); color: var(--forest-600); flex-shrink: 0; }
-.bh-promise__item strong { display: block; font-size: var(--text-base); }
-.bh-promise__item em { font-style: normal; font-size: var(--text-xs); color: var(--color-text-muted); }
-@media (max-width: 760px) { .bh-promise__in { grid-template-columns: 1fr 1fr; gap: var(--sp-5) var(--sp-4); } }
 
 /* ============ OFFICIAL LOGO (raster) ============ */
 .logo--img { display: inline-flex; align-items: center; }
 .logo__img { height: 50px; width: auto; max-width: 175px; object-fit: contain; display: block; }
 @media (max-width: 900px) { .logo__img { height: 36px; max-width: 128px; } }
-
-/* ============ HERO CAROUSEL ============ */
-.bh-hero--carousel { position: relative; }
-.bh-slide { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity 1200ms var(--ease-luxury); }
-.bh-slide.is-active { opacity: 1; visibility: visible; z-index: 1; }
-
-/* Cinematic slow scale ("Ken Burns") on the active slide's media only —
-   subtle, continuous, never restarts mid-view so it never feels like a
-   slideshow effect. Purely transform, GPU-composited. */
-/* Oversized wrapper so the JS scroll-parallax translate (±40px) never
-   reveals an edge; the Ken-Burns scale lives on .bh-hero__media inside it,
-   so the two transforms apply to different elements and never conflict. */
-.bh-hero__parallax { position: absolute; inset: -48px 0; will-change: transform; }
-.bh-hero__media { transform: scale(1); transition: transform var(--t) var(--ease); }
-.bh-slide.is-active .bh-hero__media { animation: heroKenBurns 14s var(--ease-luxury) forwards; }
-@keyframes heroKenBurns { from { transform: scale(1.0); } to { transform: scale(1.045); } }
-
-/* Text stagger: each line reveals slightly after the previous, all subtle
-   fade-up — never a single-block reveal, never a large travel distance. */
-.bh-slide .bh-hero__kicker,
-.bh-slide .bh-hero__title,
-.bh-slide .bh-hero__sub,
-.bh-slide .bh-hero__lede,
-.bh-slide .bh-hero__cta,
-.bh-slide .bh-hero__benefits {
-  opacity: 0; transform: translateY(16px);
-  transition: opacity 900ms var(--ease-luxury), transform 900ms var(--ease-luxury);
-}
-.bh-slide.is-active .bh-hero__kicker { transition-delay: 120ms; }
-.bh-slide.is-active .bh-hero__title { transition-delay: 220ms; }
-.bh-slide.is-active .bh-hero__sub { transition-delay: 340ms; }
-.bh-slide.is-active .bh-hero__lede { transition-delay: 420ms; }
-.bh-slide.is-active .bh-hero__cta { transition-delay: 500ms; }
-.bh-slide.is-active .bh-hero__benefits { transition-delay: 580ms; }
-.bh-slide.is-active .bh-hero__kicker,
-.bh-slide.is-active .bh-hero__title,
-.bh-slide.is-active .bh-hero__sub,
-.bh-slide.is-active .bh-hero__lede,
-.bh-slide.is-active .bh-hero__cta,
-.bh-slide.is-active .bh-hero__benefits { opacity: 1; transform: none; }
-
-.bh-hero__cta svg { transition: transform var(--t) var(--ease-soft); }
-.bh-hero__cta:hover svg { transform: translateX(3px); }
-
-.bh-hero__arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; width: 46px; height: 46px; border-radius: 999px; background: rgba(251,248,241,0.82); backdrop-filter: blur(3px); color: var(--forest-800); display: grid; place-items: center; box-shadow: var(--shadow-sm); transition: background var(--t) var(--ease), transform var(--t) var(--ease); }
-.bh-hero__arrow:hover { background: #fff; transform: translateY(-50%) scale(1.06); }
-.bh-hero__arrow--prev { left: 20px; }
-.bh-hero__arrow--next { right: 20px; }
-
-.bh-hero__dots { position: absolute; bottom: 22px; left: 0; right: 0; z-index: 3; display: flex; justify-content: center; gap: 9px; }
-.bh-hero__dots button { width: 9px; height: 9px; padding: 0; border-radius: 999px; background: rgba(30,58,47,0.32); transition: width var(--t) var(--ease), background var(--t) var(--ease); }
-.bh-hero__dots button:hover { background: rgba(30,58,47,0.55); }
-.bh-hero__dots button.active { width: 26px; background: var(--forest-700); }
-@media (max-width: 760px) { .bh-hero__arrow { display: none; } }
-
-/* ============ MOBILE HERO — CINEMATIC OVERLAY ============
-   Previous approach stacked the media (object-fit: contain, in normal flow)
-   above the copy in a separate cream band below it, with every slide sharing
-   one CSS grid cell via `grid-area: 1/1` for the crossfade. Because inactive
-   slides were `position: relative` (in normal flow) rather than absolute,
-   ALL of them — not just the active one — contributed to that shared cell's
-   height: the row sized itself to the TALLEST slide (the portrait-cropped
-   "Nature's Orange Gold" image needed far more height than the short,
-   landscape Sea Buckthorn poster). The active slide's copy then sat
-   vertically centered in that oversized shared box, floating well below its
-   own much-shorter image with a large blank cream gap in between — the
-   "image, then empty space, then text" bug.
-
-   The fix is to stop treating mobile as a different layout family. Inherit
-   the desktop overlay system as-is (absolute-positioned crossfade,
-   object-fit: cover, Ken Burns, the oversized parallax wrapper) so image and
-   text are one composited visual again, and only retune what a narrow/tall
-   viewport actually needs: a compact bounded height, a bottom-weighted
-   vertical scrim instead of desktop's left-weighted horizontal one, and a
-   bottom-anchored copy block instead of a vertically centered one. */
-@media (max-width: 760px) {
-  /* Compact and bounded — a gentle multiple of the viewport width rather
-     than a tall vh-based box, so a cover-cropped landscape/portrait photo
-     isn't zoomed in so far that its subject gets cropped away. Floors at
-     500px on typical phones, scales up to a 600px ceiling on larger ones. */
-  .bh-hero { height: clamp(500px, 122vw, 600px); }
-
-  /* Bottom-anchored, photographic wash: fully transparent over the top ~1/3
-     of the frame (where the subject — berries, or her face — reads clearly),
-     graduating to a soft cream wash exactly where the copy sits. Same cream
-     family as the desktop scrim (rgba(244,238,225,*)) reoriented vertically
-     — no new colour introduced, no hard-edged rectangle. */
-  .bh-hero__scrim {
-    background: linear-gradient(
-      to bottom,
-      rgba(244,238,225,0) 0%,
-      rgba(244,238,225,0) 30%,
-      rgba(244,238,225,0.36) 46%,
-      rgba(244,238,225,0.74) 60%,
-      rgba(244,238,225,0.92) 75%,
-      rgba(244,238,225,0.97) 100%
-    );
-  }
-
-  .bh-hero__inner {
-    align-items: flex-end;
-    /* Clears the dots row (bottom: 22px + ~26px active-dot width) plus the
-       device safe area, so content never sits under a notch/home-indicator
-       and never collides with the fixed bottom tab bar below the hero. */
-    padding-bottom: calc(var(--sp-8) + 26px + env(safe-area-inset-bottom));
-  }
-  .bh-hero__copy { max-width: none; }
-
-  /* Every hero photo places its subject (berries, her face, the fruit) in
-     the upper 2/3 of the frame and something unremarkable — sky, a table
-     edge — at the very bottom. On a compact box that subject sits close
-     to where bottom-anchored text needs to start, so the copy block is
-     tightened here (gaps only, not font sizes — type scale is untouched)
-     to clear it with room to spare. The full lede line is desktop-only:
-     it mostly restates the kicker/sub, and dropping it on mobile is what
-     buys the vertical room, not the gap-tightening alone. */
-  .bh-hero__title { margin-bottom: 10px; }
-  .bh-hero__sub { margin-bottom: var(--sp-4); }
-  .bh-hero__lede { display: none; }
-  .bh-hero__benefits { flex-wrap: wrap; gap: 12px 24px; margin-top: var(--sp-4); }
-  .bh-hero__bdiv { display: none; }
-}
 
 /* ============ PREMIUM PRICING ============ */
 .price { display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
@@ -299,23 +86,6 @@
    dark text for high contrast (~7.7:1). Only the % OFF (.badge-sale) changes;
    the NEW badge (.badge-new) is a separate class and is untouched. */
 .badge-sale { background: var(--st-discount-bg, var(--honey-500)); color: var(--st-discount-text, var(--forest-900)); letter-spacing: 0.08em; box-shadow: var(--shadow-xs); font-weight: 700; }
-
-
-/* Hero pagination dots were 9x9 — visually right, far too small to tap.
-   The dot keeps its size; an invisible 44px hit area is centred on it. */
-.bh-hero__dots button { position: relative; }
-.bh-hero__dots button::after {
-  content: ""; position: absolute; top: 50%; left: 50%;
-  width: 44px; height: 44px; transform: translate(-50%, -50%);
-}
-
-/* At 320px the bestsellers header could not fit "Bestsellers" plus the
-   nowrap "View all" link on one row, pushing the page into horizontal
-   scroll. Let the header wrap on narrow phones. */
-@media (max-width: 380px) {
-  .bh-best__head { flex-wrap: wrap; gap: var(--sp-3); }
-  .bh-best__all { margin-left: auto; }
-}
 
 /* The header search was a fixed 260px. Combined with non-shrinking 44px icon
    buttons (needed for tap targets) the header row could not fit at ~1280px —
@@ -375,12 +145,5 @@
    rhythm so a phone user reaches products quickly. Ticker untouched.
    ============================================================ */
 @media (max-width: 768px) {
-  .pcard__media .pimg img { padding: 6px; }   /* less letterbox on mobile cards */
-  .bh-cats__row { padding-block: var(--sp-5); }
-  .bh-best__head { margin-bottom: var(--sp-4); }
-}
-@media (max-width: 560px) {
-  .bh-cat__circle { width: 72px; height: 72px; }
-  .bh-cat__name { font-size: 0.68rem; }
-  .bh-edit-wrap { padding-block: var(--sp-8) var(--sp-10); }
+  .pcard__media .pimg img { padding: 6px; }
 }
