@@ -128,16 +128,20 @@ export const STOREFRONT_CONTENT_MIGRATION = /^supabase\/migrations\/((0037_store
  */
 export const STOREFRONT_CONTENT_EDITS = /^(\.gitignore|index\.html|vercel\.json)$/;
 /**
- * The dead homepage code cleared beside it (4e72220): the unused category rail, the retired hero's stylesheet,
- * the old hero media and the script that checked that poster — DELETED, admitted only while each stays deleted.
+ * The dead homepage code cleared beside it (4e72220, 34b4300): the unused category rail, the retired hero's
+ * stylesheet, the old hero media, two unused hero photographs, the script that checked that poster and the one that
+ * captured the old hero — DELETED, admitted only while each stays deleted.
  */
-export const DEAD_HOMEPAGE_FILES = /^(src\/components\/CategoryRail\.jsx|src\/styles\/hero-cta\.css|media\/hero(-poster(-1024|-1600)?|-slide2)?\.(mp4|jpg|webp)|scripts\/verify-picture\.mjs)$/;
+export const DEAD_HOMEPAGE_FILES = /^(src\/components\/CategoryRail\.jsx|src\/styles\/hero-cta\.css|media\/hero(-poster(-1024|-1600)?|-slide2)?\.(mp4|jpg|webp)|media\/home-hero-(juice|seedoil)\.jpg|scripts\/(verify-picture|capture-home)\.mjs)$/;
 /** The sheets it pruned and the CSS build list — each byte-checked through sansCartChanges (scripts/pins/dead-homepage-code.patch). */
 export const DEAD_HOMEPAGE_EDITS = /^(build\/build-css\.mjs|src\/styles\/(components|home|homepage-appearance|layout|storefront-motion|storefront-refinements|v2-home-marketplace|v2-home)\.css)$/;
-/** A changed path either change accounts for: an own file or migration, a deleted file that is gone, a recorded patch, or one of their edits. */
+/** The two components that still pointed at the retired hero (34b4300) — each byte-checked through sansCartChanges (scripts/pins/retired-hero-pointers.patch). */
+export const RETIRED_HERO_POINTER_EDITS = /^src\/components\/(StorefrontMotion|ProductImage)\.jsx$/;
+/** A changed path these changes account for: an own file or migration, a deleted file that is gone, a recorded patch, or one of their edits. */
 export const storefrontContentChange = (f) => STOREFRONT_CONTENT_FILES.test(f) || STOREFRONT_CONTENT_MIGRATION.test(f) || STOREFRONT_CONTENT_EDITS.test(f)
   || (DEAD_HOMEPAGE_FILES.test(f) && !existsSync(new URL(`../${f}`, import.meta.url)))
-  || f === 'scripts/pins/dead-homepage-code.patch' || DEAD_HOMEPAGE_EDITS.test(f);
+  || f === 'scripts/pins/dead-homepage-code.patch' || DEAD_HOMEPAGE_EDITS.test(f)
+  || f === 'scripts/pins/retired-hero-pointers.patch' || RETIRED_HERO_POINTER_EDITS.test(f);
 
 /** The site menu's closed panel casts no shadow (layout.css, one line) — undone by sansCartChanges (scripts/pins/drawer-shadow.patch). */
 export const DRAWER_SHADOW_EDITS = /^src\/styles\/layout\.css$/;
@@ -442,6 +446,11 @@ const UNDO_STOREFRONT_CONTENT = undoFromPatch('storefront-content.patch');
 // build list. Undone here, newest first.
 const UNDO_DEAD_HOMEPAGE_CODE = undoFromPatch('dead-homepage-code.patch');
 
+// The last pointers at the retired hero: the reveal selectors and entrance timing for .v2-hero and
+// .hm-category-head (StorefrontMotion.jsx) and the unused frame="hero" branch (ProductImage.jsx).
+// Undone here, newest first.
+const UNDO_RETIRED_HERO_POINTERS = undoFromPatch('retired-hero-pointers.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -508,7 +517,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
