@@ -189,6 +189,13 @@ export async function fetchPublicCategories() {
   }));
 }
 
+/** Draft preview (?preview=draft): the storefront drafts. Admin-read only (RLS), so anyone else gets []. */
+export async function fetchStorefrontDraftsForPreview() {
+  const { data, error } = await supabase.from('storefront_drafts').select('store, content');
+  if (error) throw error;
+  return data || [];
+}
+
 export async function fetchPublicSettings() {
   const { data, error } = await supabase.from('site_settings').select('key, value');
   if (error) throw error;

@@ -1,9 +1,11 @@
 import { safeVisualUrl } from './homepageAppearance.js';
 
-// Presentation-only settings for the two editorial storefronts. They live
-// inside the existing public `homepage` site_settings record, so this feature
-// needs no table, RLS or schema change. Defaults match the current hardcoded
-// storefronts exactly: nothing changes visually until an admin saves.
+// Presentation-only settings for the two editorial storefronts: their built-in
+// defaults, and the lenient normalisers the storefront reads them through (a value
+// that does not fit falls back to its default, so a page can never break on one).
+// The admin saves them as per-store drafts and publishes them (storefrontContent.js,
+// migration 0037); the site's build bakes the published copy into the page.
+// Defaults match the original hardcoded storefronts exactly.
 
 export const DEFAULT_FASHION_STOREFRONT = Object.freeze({
   header: {
@@ -181,10 +183,3 @@ export function normalizeLifestyleStorefront(value) {
   };
 }
 
-export function mergeStorefrontCustomization(homepage, fashion, lifestyle) {
-  return {
-    ...object(homepage),
-    fashion_storefront: normalizeFashionStorefront(fashion),
-    lifestyle_storefront: normalizeLifestyleStorefront(lifestyle),
-  };
-}

@@ -30,9 +30,19 @@ export let announcement = {
   ],
 };
 
-// The saved `homepage` record (discovery rails, offers appearance, the fashion and
-// lifestyle storefronts, category spotlights). Empty until it loads.
-export let homepage = {};
+// The fashion and lifestyle storefronts are not read from the homepage record any more:
+// they are the content PUBLISHED for those stores (migration 0037), which the site's build
+// writes into index.html (build/publish-content.mjs). It is read here, before the first
+// render, so a visitor never sees the built-in version first.
+import { readInlinedContent } from './storefrontContent.js';
+const PUBLISHED_HOMEPAGE_KEYS = { fashion: 'fashion_storefront', lifestyle: 'lifestyle_storefront' };
+const inlined = readInlinedContent();
+const publishedKeys = (stores) => Object.fromEntries(Object.entries(PUBLISHED_HOMEPAGE_KEYS)
+  .filter(([store]) => stores?.[store] && typeof stores[store] === 'object').map(([store, key]) => [key, stores[store]]));
+
+// The saved `homepage` record (discovery rails, offers appearance, category spotlights),
+// plus the two published storefronts above. The rest is empty until it loads.
+export let homepage = { ...publishedKeys(inlined?.stores) };
 
 export let contact = { phone: '', email: '', address: '' };
 
@@ -59,8 +69,22 @@ export function subscribeHomepage(listener) {
 }
 export function applyHomepage(v) {
   if (v && typeof v === 'object') {
-    homepage = { ...homepage, ...v };
+    // The record's own copies of the two storefronts are stale: the published ones win.
+    const { fashion_storefront: _fashion, lifestyle_storefront: _lifestyle, ...rest } = v;
+    homepage = { ...homepage, ...rest };
     homepageListeners.forEach((listener) => listener());
   }
+}
+/**
+ * Draft preview (?preview=draft, an admin only — the drafts are admin-read): the saved
+ * drafts replace the published storefronts in this tab until it is reloaded without it.
+ */
+export function applyStorefrontDrafts(rows) {
+  const stores = Object.fromEntries((Array.isArray(rows) ? rows : []).filter((r) => r && typeof r.store === 'string').map((r) => [r.store, r.content]));
+  const next = publishedKeys(stores);
+  if (!Object.keys(next).length) return false;
+  homepage = { ...homepage, ...next };
+  homepageListeners.forEach((listener) => listener());
+  return true;
 }
 export function applyContact(v) { if (v && typeof v === 'object') contact = { ...contact, ...v }; }

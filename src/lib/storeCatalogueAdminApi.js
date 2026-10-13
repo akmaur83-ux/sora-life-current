@@ -236,6 +236,17 @@ export async function uploadStoreImage(store, file) {
   return (await uploadStoreImageFile(store, file)).url;
 }
 /**
+ * Storefront art (the Fashion and Lifestyle editors): the same WebP conversion — never a raw
+ * upload — into the same admin-only bucket, under storefront/. The build copies it into the
+ * deployment when it is published (build/publish-content.mjs).
+ */
+export async function uploadStorefrontImage(file) {
+  const webp = await compressToWebp(file);
+  let url;
+  try { url = await uploadImage(webp.file, 'storefront'); } catch (error) { throw catalogueWriteError(error, 'image'); }
+  return { url, bytes: webp.bytes, width: webp.width, height: webp.height };
+}
+/**
  * Add several images to a product's gallery, one at a time, in file-name order
  * (sortByFileName), whatever order they were chosen in. A file that fails
  * (unreadable, cannot fit 150 KB, upload refused) is reported and the rest go

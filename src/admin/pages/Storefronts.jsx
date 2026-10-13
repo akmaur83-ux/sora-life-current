@@ -1,215 +1,228 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { adminGetSetting, adminSetSetting } from '../../lib/adminApi.js';
 import { safeVisualUrl } from '../../lib/homepageAppearance.js';
-import { uploadHomepageImage } from '../../lib/homepageImageUpload.js';
-import { announceHomepageSaved } from '../../lib/homepageVisualSync.js';
-import {
-  mergeStorefrontCustomization,
-  normalizeFashionStorefront,
-  normalizeLifestyleStorefront,
-} from '../../lib/storefrontCustomization.js';
+import { uploadStorefrontImage } from '../../lib/storeCatalogueAdminApi.js';
+import { normalizeFashionStorefront, normalizeLifestyleStorefront } from '../../lib/storefrontCustomization.js';
+import { validateStorefrontContent, STOREFRONT_LABELS } from '../../lib/storefrontContent.js';
+import { adminLoadStorefronts, adminSaveStorefrontDraft, publishStorefront } from '../../lib/storefrontContentApi.js';
 
-function Field({ id, label, value, onChange, multiline = false, hint = '' }) {
+// ============================================================
+// ADMIN — Fashion & Lifestyle storefronts: edit a draft, preview it, publish it.
+//
+// A draft is saved against the version this page opened (migration 0037): a
+// draft saved elsewhere since is refused, not overwritten. Every field is
+// checked before saving — a bad value is refused beside its field, never
+// replaced quietly. Publish copies the saved draft and rebuilds the site with
+// it baked in, so visitors never see the old version first (live in 1–2
+// minutes; if the rebuild fails, the current site stays as it is).
+// ============================================================
+
+const STORES = { fashion: { normalize: normalizeFashionStorefront, path: '/fashion' }, lifestyle: { normalize: normalizeLifestyleStorefront, path: '/lifestyle' } };
+
+function Field({ id, label, value, onChange, multiline = false, hint = '', error = '' }) {
   const control = multiline
-    ? <textarea id={id} className="input" rows="3" value={value} onChange={(event) => onChange(event.target.value)} />
-    : <input id={id} className="input" value={value} onChange={(event) => onChange(event.target.value)} />;
+    ? <textarea id={id} className="input" rows="3" value={value} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} onChange={(event) => onChange(event.target.value)} />
+    : <input id={id} className="input" value={value} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} onChange={(event) => onChange(event.target.value)} />;
   return (
     <div className="field">
       <label className="label" htmlFor={id}>{label}</label>
       {control}
+      {error && <p className="error-text" id={`${id}-error`} role="alert">{error}</p>}
       {hint && <p className="hint">{hint}</p>}
     </div>
   );
 }
 
-function ImageField({ id, label, value, onChange, onUploading }) {
+function ImageField({ id, label, value, onChange, onUploading, error = '' }) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [problem, setProblem] = useState('');
+  const [note, setNote] = useState('');
   const preview = safeVisualUrl(value);
   async function upload(event) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    setBusy(true); setError(''); onUploading(1);
-    try { onChange(await uploadHomepageImage(file)); }
-    catch (uploadError) { setError(uploadError.message || 'Upload failed.'); }
+    setBusy(true); setProblem(''); setNote(''); onUploading(1);
+    try {
+      const image = await uploadStorefrontImage(file);
+      onChange(image.url);
+      setNote(`Converted to WebP, ${Math.round(image.bytes / 1000)} KB.`);
+    } catch (uploadError) { setProblem(uploadError.message || 'Upload failed.'); }
     finally { setBusy(false); onUploading(-1); }
   }
   return (
     <div className="field hp-admin-image">
       <label className="label" htmlFor={id}>{label}</label>
-      <input id={id} className="input" value={value} disabled={busy} onChange={(event) => { onChange(event.target.value); setError(''); }} />
+      <input id={id} className="input" value={value} disabled={busy} aria-invalid={error ? true : undefined} onChange={(event) => { onChange(event.target.value); setProblem(''); setNote(''); }} />
       <div className="hp-admin-image__actions">
-        <label className="btn btn-sm">{busy ? 'Uploading…' : 'Upload image'}
+        <label className="btn btn-sm">{busy ? 'Converting and uploading…' : 'Upload image'}
           <input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={upload} />
         </label>
-        <button className="btn btn-sm" type="button" disabled={busy || !value} onClick={() => { onChange(''); setError(''); }}>Use built-in image</button>
+        <button className="btn btn-sm" type="button" disabled={busy || !value} onClick={() => { onChange(''); setProblem(''); setNote(''); }}>Use built-in image</button>
       </div>
-      <p className="hint">PNG, JPEG or WebP, up to 6 MB. Upload first, then save the storefront.</p>
-      {value && !preview && <p className="error-text" role="alert">Enter a public HTTPS image URL or a local image path.</p>}
+      <p className="hint">JPEG, PNG or WebP. Every upload is converted to a WebP under 150 KB first. Upload, save the draft, then publish.</p>
       {error && <p className="error-text" role="alert">{error}</p>}
+      {problem && <p className="error-text" role="alert">{problem}</p>}
+      {note && <p className="hint">{note}</p>}
       {preview && <img className="hp-admin-image__preview" src={preview} alt={`${label} preview`} />}
     </div>
   );
 }
 
-function FashionEditor({ value, onChange, onUploading }) {
+function FashionEditor({ value, onChange, onUploading, errors }) {
   const patch = (group, key, next) => onChange((current) => ({ ...current, [group]: { ...current[group], [key]: next } }));
+  const f = (group, key, label, extra = {}) => <Field key={key} id={`fashion-${group}-${key}`} label={label} value={value[group][key]} onChange={(next) => patch(group, key, next)} error={errors[`${group}.${key}`]} {...extra} />;
   return (
     <>
       <section className="surface">
         <h2>Header</h2>
-        <div className="adm-grid2">
-          <Field id="fashion-tagline" label="Logo tagline" value={value.header.tagline} onChange={(next) => patch('header', 'tagline', next)} />
-          <Field id="fashion-search" label="Search placeholder" value={value.header.searchPlaceholder} onChange={(next) => patch('header', 'searchPlaceholder', next)} />
-        </div>
+        <div className="adm-grid2">{f('header', 'tagline', 'Logo tagline')}{f('header', 'searchPlaceholder', 'Search placeholder')}</div>
       </section>
       <section className="surface">
         <h2>Hero</h2>
-        <ImageField id="fashion-hero-image" label="Hero image" value={value.hero.image} onChange={(next) => patch('hero', 'image', next)} onUploading={onUploading} />
+        <ImageField id="fashion-hero-image" label="Hero image" value={value.hero.image} onChange={(next) => patch('hero', 'image', next)} onUploading={onUploading} error={errors['hero.image']} />
         <div className="adm-grid2">
-          <Field id="fashion-hero-eyebrow" label="Eyebrow" value={value.hero.eyebrow} onChange={(next) => patch('hero', 'eyebrow', next)} />
-          <Field id="fashion-hero-title" label="Title" value={value.hero.title} onChange={(next) => patch('hero', 'title', next)} />
-          <Field id="fashion-hero-subtitle" label="Subtitle" value={value.hero.subtitle} onChange={(next) => patch('hero', 'subtitle', next)} />
-          <Field id="fashion-hero-note" label="Offer note" value={value.hero.note} onChange={(next) => patch('hero', 'note', next)} />
-          <Field id="fashion-hero-cta" label="Button label" value={value.hero.ctaLabel} onChange={(next) => patch('hero', 'ctaLabel', next)} />
-          <Field id="fashion-hero-link" label="Button route" value={value.hero.ctaLink} onChange={(next) => patch('hero', 'ctaLink', next)} hint="Use an internal route beginning with /." />
+          {f('hero', 'eyebrow', 'Eyebrow')}{f('hero', 'title', 'Title')}{f('hero', 'subtitle', 'Subtitle')}{f('hero', 'note', 'Offer note')}
+          {f('hero', 'ctaLabel', 'Button label')}{f('hero', 'ctaLink', 'Button route', { hint: 'A page of this site, starting with /.' })}
         </div>
       </section>
       <section className="surface">
         <h2>Section headings</h2>
         <div className="adm-grid2">
-          <Field id="fashion-category-title" label="Category heading" value={value.sections.categoriesTitle} onChange={(next) => patch('sections', 'categoriesTitle', next)} />
-          <Field id="fashion-category-cta" label="Category link label" value={value.sections.categoriesCta} onChange={(next) => patch('sections', 'categoriesCta', next)} />
-          <Field id="fashion-brand-title" label="Brand heading" value={value.sections.brandsTitle} onChange={(next) => patch('sections', 'brandsTitle', next)} />
-          <Field id="fashion-brand-cta" label="Brand link label" value={value.sections.brandsCta} onChange={(next) => patch('sections', 'brandsCta', next)} />
-          <Field id="fashion-product-title" label="Product heading" value={value.sections.productsTitle} onChange={(next) => patch('sections', 'productsTitle', next)} />
+          {f('sections', 'categoriesTitle', 'Category heading')}{f('sections', 'categoriesCta', 'Category link label')}
+          {f('sections', 'brandsTitle', 'Brand heading')}{f('sections', 'brandsCta', 'Brand link label')}{f('sections', 'productsTitle', 'Product heading')}
         </div>
       </section>
     </>
   );
 }
 
-function LifestyleSlide({ index, value, onChange, onUploading }) {
-  const set = (key, next) => onChange((current) => ({
-    ...current,
-    heroSlides: current.heroSlides.map((slide, slideIndex) => (slideIndex === index ? { ...slide, [key]: next } : slide)),
-  }));
+const BANNER_FIELDS = [
+  ['eyebrowOne', 'Eyebrow line 1'], ['eyebrowTwo', 'Eyebrow line 2'], ['headlineOne', 'Headline line 1'], ['headlineTwo', 'Headline line 2'],
+  ['subtitle', 'Subtitle'], ['note', 'Decorative note'], ['ctaLabel', 'Button label'], ['ctaLink', 'Button route'],
+];
+
+function LifestyleSlide({ index, value, onChange, onUploading, errors }) {
+  const set = (key, next) => onChange((current) => ({ ...current, heroSlides: current.heroSlides.map((slide, i) => (i === index ? { ...slide, [key]: next } : slide)) }));
+  const e = (key) => errors[`heroSlides.${index}.${key}`];
   return (
     <details className="surface adm-storefronts__slide" open={index === 0}>
       <summary>Hero slide {index + 1}: {value.headlineOne} {value.headlineTwo}</summary>
       <div className="adm-storefronts__imagegrid">
-        <ImageField id={`lifestyle-slide-${index}-tall`} label="Mobile portrait image" value={value.tall} onChange={(next) => set('tall', next)} onUploading={onUploading} />
-        <ImageField id={`lifestyle-slide-${index}-wide`} label="Desktop wide image" value={value.wide} onChange={(next) => set('wide', next)} onUploading={onUploading} />
+        <ImageField id={`lifestyle-slide-${index}-tall`} label="Mobile portrait image" value={value.tall} onChange={(next) => set('tall', next)} onUploading={onUploading} error={e('tall')} />
+        <ImageField id={`lifestyle-slide-${index}-wide`} label="Desktop wide image" value={value.wide} onChange={(next) => set('wide', next)} onUploading={onUploading} error={e('wide')} />
       </div>
-      <Field id={`lifestyle-slide-${index}-alt`} label="Image description" value={value.alt} onChange={(next) => set('alt', next)} />
+      <Field id={`lifestyle-slide-${index}-alt`} label="Image description" value={value.alt} onChange={(next) => set('alt', next)} error={e('alt')} />
       <div className="adm-grid2">
-        {[
-          ['eyebrowOne', 'Eyebrow line 1'], ['eyebrowTwo', 'Eyebrow line 2'],
-          ['headlineOne', 'Headline line 1'], ['headlineTwo', 'Headline line 2'],
-          ['subtitle', 'Subtitle'], ['note', 'Decorative note'],
-          ['ctaLabel', 'Button label'], ['ctaLink', 'Button route'],
-        ].map(([key, label]) => <Field key={key} id={`lifestyle-slide-${index}-${key}`} label={label} value={value[key]} onChange={(next) => set(key, next)} hint={key === 'ctaLink' ? 'Use an internal route beginning with /.' : ''} />)}
+        {BANNER_FIELDS.map(([key, label]) => <Field key={key} id={`lifestyle-slide-${index}-${key}`} label={label} value={value[key]} onChange={(next) => set(key, next)} error={e(key)} hint={key === 'ctaLink' ? 'A page of this site, starting with /.' : ''} />)}
       </div>
     </details>
   );
 }
 
-function LifestyleEditor({ value, onChange, onUploading }) {
+function LifestyleEditor({ value, onChange, onUploading, errors }) {
   const patch = (group, key, next) => onChange((current) => ({ ...current, [group]: { ...current[group], [key]: next } }));
+  const f = (group, key, label, extra = {}) => <Field key={key} id={`lifestyle-${group}-${key}`} label={label} value={value[group][key]} onChange={(next) => patch(group, key, next)} error={errors[`${group}.${key}`]} {...extra} />;
   return (
     <>
-      <section className="surface">
-        <h2>Header</h2>
-        <Field id="lifestyle-tagline" label="Logo tagline" value={value.header.tagline} onChange={(next) => patch('header', 'tagline', next)} />
-      </section>
-      {value.heroSlides.map((slide, index) => <LifestyleSlide key={slide.id} index={index} value={slide} onChange={onChange} onUploading={onUploading} />)}
+      <section className="surface"><h2>Header</h2>{f('header', 'tagline', 'Logo tagline')}</section>
+      {value.heroSlides.map((slide, index) => <LifestyleSlide key={slide.id} index={index} value={slide} onChange={onChange} onUploading={onUploading} errors={errors} />)}
       <section className="surface">
         <h2>Fashion doorway banner</h2>
-        <ImageField id="lifestyle-banner-image" label="Banner image" value={value.fashionBanner.image} onChange={(next) => patch('fashionBanner', 'image', next)} onUploading={onUploading} />
-        <Field id="lifestyle-banner-alt" label="Image description" value={value.fashionBanner.alt} onChange={(next) => patch('fashionBanner', 'alt', next)} />
-        <div className="adm-grid2">
-          {[
-            ['eyebrowOne', 'Eyebrow line 1'], ['eyebrowTwo', 'Eyebrow line 2'],
-            ['headlineOne', 'Headline line 1'], ['headlineTwo', 'Headline line 2'],
-            ['subtitle', 'Subtitle'], ['note', 'Decorative note'],
-            ['ctaLabel', 'Button label'], ['ctaLink', 'Button route'],
-          ].map(([key, label]) => <Field key={key} id={`lifestyle-banner-${key}`} label={label} value={value.fashionBanner[key]} onChange={(next) => patch('fashionBanner', key, next)} hint={key === 'ctaLink' ? 'Use an internal route beginning with /.' : ''} />)}
-        </div>
+        <ImageField id="lifestyle-banner-image" label="Banner image" value={value.fashionBanner.image} onChange={(next) => patch('fashionBanner', 'image', next)} onUploading={onUploading} error={errors['fashionBanner.image']} />
+        {f('fashionBanner', 'alt', 'Image description')}
+        <div className="adm-grid2">{BANNER_FIELDS.map(([key, label]) => f('fashionBanner', key, label, key === 'ctaLink' ? { hint: 'A page of this site, starting with /.' } : {}))}</div>
       </section>
       <section className="surface">
         <h2>Section headings</h2>
         <div className="adm-grid2">
-          <Field id="lifestyle-category-title" label="Fashion category heading" value={value.sections.fashionCategoriesTitle} onChange={(next) => patch('sections', 'fashionCategoriesTitle', next)} />
-          <Field id="lifestyle-category-cta" label="Fashion category link label" value={value.sections.fashionCategoriesCta} onChange={(next) => patch('sections', 'fashionCategoriesCta', next)} />
-          <Field id="lifestyle-trending-title" label="Trending heading" value={value.sections.trendingTitle} onChange={(next) => patch('sections', 'trendingTitle', next)} />
-          <Field id="lifestyle-trending-cta" label="Trending link label" value={value.sections.trendingCta} onChange={(next) => patch('sections', 'trendingCta', next)} />
+          {f('sections', 'fashionCategoriesTitle', 'Fashion category heading')}{f('sections', 'fashionCategoriesCta', 'Fashion category link label')}
+          {f('sections', 'trendingTitle', 'Trending heading')}{f('sections', 'trendingCta', 'Trending link label')}
         </div>
       </section>
       <section className="surface">
         <h2>Home &amp; Living promo</h2>
-        <ImageField id="lifestyle-promo-image" label="Promo image" value={value.promo.image} onChange={(next) => patch('promo', 'image', next)} onUploading={onUploading} />
-        <div className="adm-grid2">
-          <Field id="lifestyle-promo-title" label="Headline" value={value.promo.headline} onChange={(next) => patch('promo', 'headline', next)} />
-          <Field id="lifestyle-promo-cta" label="Button label" value={value.promo.ctaLabel} onChange={(next) => patch('promo', 'ctaLabel', next)} />
-          <Field id="lifestyle-promo-link" label="Button route" value={value.promo.ctaLink} onChange={(next) => patch('promo', 'ctaLink', next)} hint="Use an internal route beginning with /." />
-        </div>
+        <ImageField id="lifestyle-promo-image" label="Promo image" value={value.promo.image} onChange={(next) => patch('promo', 'image', next)} onUploading={onUploading} error={errors['promo.image']} />
+        <div className="adm-grid2">{f('promo', 'headline', 'Headline')}{f('promo', 'ctaLabel', 'Button label')}{f('promo', 'ctaLink', 'Button route', { hint: 'A page of this site, starting with /.' })}</div>
       </section>
     </>
   );
 }
 
+const when = (iso) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
+
 export default function Storefronts() {
   const [tab, setTab] = useState('fashion');
-  const [fashion, setFashion] = useState(() => normalizeFashionStorefront());
-  const [lifestyle, setLifestyle] = useState(() => normalizeLifestyleStorefront());
+  const [forms, setForms] = useState({ fashion: normalizeFashionStorefront(), lifestyle: normalizeLifestyleStorefront() });
+  const [savedForms, setSavedForms] = useState({});
+  const [drafts, setDrafts] = useState({});
+  const [published, setPublished] = useState({});
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState('');
   const [uploads, setUploads] = useState(0);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [stale, setStale] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const homepage = await adminGetSetting('homepage');
-        setFashion(normalizeFashionStorefront(homepage?.fashion_storefront));
-        setLifestyle(normalizeLifestyleStorefront(homepage?.lifestyle_storefront));
-      } catch (loadError) { setError(loadError.message || String(loadError)); }
-      setLoading(false);
-    })();
-  }, []);
+  async function load() {
+    setLoading(true); setError(''); setStale(false);
+    try {
+      const loaded = await adminLoadStorefronts();
+      const next = Object.fromEntries(Object.entries(STORES).map(([store, { normalize }]) => [store, normalize(loaded.drafts[store]?.content)]));
+      setForms(next);
+      setSavedForms(Object.fromEntries(Object.entries(next).map(([store, form]) => [store, JSON.stringify(form)])));
+      setDrafts(loaded.drafts);
+      setPublished(loaded.published);
+    } catch (loadError) { setError(loadError.message || String(loadError)); }
+    setLoading(false);
+  }
+  useEffect(() => { load(); }, []);
+
+  const dirty = savedForms[tab] !== undefined && JSON.stringify(forms[tab]) !== savedForms[tab];
+  const draft = drafts[tab];
+  const live = published[tab];
+  const upToDate = draft && live && Number(live.draft_version) === Number(draft.version);
+  const setForm = (update) => { setErrors({}); setForms((all) => ({ ...all, [tab]: typeof update === 'function' ? update(all[tab]) : update })); };
 
   async function save(event) {
     event.preventDefault();
-    if (uploads) return;
-    setSaving(true); setError(''); setMessage('');
+    if (uploads || busy || !draft) return;
+    setMessage(''); setError(''); setStale(false);
+    const { errors: found } = validateStorefrontContent(tab, forms[tab]);
+    if (Object.keys(found).length) { setErrors(found); setError('Fix the fields marked below. Nothing was saved.'); return; }
+    setBusy('save');
     try {
-      const current = await adminGetSetting('homepage');
-      const next = mergeStorefrontCustomization(current, fashion, lifestyle);
-      await adminSetSetting('homepage', next);
-      setFashion(next.fashion_storefront);
-      setLifestyle(next.lifestyle_storefront);
-      announceHomepageSaved(next);
-      setMessage('Saved. Open storefront tabs update automatically.');
-    } catch (saveError) { setError(saveError.message || String(saveError)); }
-    setSaving(false);
+      const version = await adminSaveStorefrontDraft(tab, forms[tab], draft.version);
+      setDrafts((all) => ({ ...all, [tab]: { ...all[tab], content: forms[tab], version } }));
+      setSavedForms((all) => ({ ...all, [tab]: JSON.stringify(forms[tab]) }));
+      setMessage(`Draft saved (version ${version}). Preview it, then publish when it is ready — visitors still see the published version.`);
+    } catch (saveError) { setError(saveError.message || String(saveError)); setStale(!!saveError.isStaleWrite); }
+    setBusy('');
+  }
+
+  async function publish() {
+    if (busy || dirty || !draft) return;
+    if (!window.confirm(`Publish the ${STOREFRONT_LABELS[tab]} storefront (draft version ${draft.version})?\n\nThe site rebuilds with it; visitors see it in 1–2 minutes. If the rebuild fails, the current site stays as it is.`)) return;
+    setBusy('publish'); setMessage(''); setError(''); setStale(false);
+    try {
+      const result = await publishStorefront(tab, draft.version);
+      setPublished((all) => ({ ...all, [tab]: { ...all[tab], draft_version: result.version, published_at: result.publishedAt } }));
+      setMessage(`Published version ${result.version}. The site is rebuilding: it shows on ${STORES[tab].path} in 1–2 minutes. If the rebuild fails, the current site stays as it is.`);
+    } catch (publishError) { setError(publishError.message || String(publishError)); setStale(!!publishError.isStaleWrite); }
+    setBusy('');
   }
 
   if (loading) return <p className="muted">Loading…</p>;
 
+  const Editor = tab === 'fashion' ? FashionEditor : LifestyleEditor;
   return (
     <div className="adm-form adm-storefronts">
       <div className="adm__head">
-        <div><h1>Fashion &amp; Lifestyle</h1><p>Customize storefront copy and campaign images without changing products, prices or commerce behavior.</p></div>
-        <div className="adm-storefronts__preview">
-          <a className="btn btn-outline btn-sm" href="/fashion" target="_blank" rel="noreferrer">Preview Fashion</a>
-          <a className="btn btn-outline btn-sm" href="/lifestyle" target="_blank" rel="noreferrer">Preview Lifestyle</a>
-        </div>
+        <div><h1>Fashion &amp; Lifestyle</h1><p>Edit a draft, preview it, then publish. Products, prices, cart and checkout are not touched.</p></div>
       </div>
-      {error && <div className="adm-banner err">{error}</div>}
-      {message && <div className="adm-banner ok">{message}</div>}
+      {error && <div className="adm-banner err" role="alert">{error}{stale && <> <button type="button" className="btn btn-sm btn-light" onClick={load}>Reload and discard my edits</button></>}</div>}
+      {message && <div className="adm-banner ok" role="status">{message}</div>}
       <div className="surface sc-panel">
         <h2>Products &amp; categories</h2>
         <p>Add products to a specific category, manage images, prices, stock and variants. Lifestyle shows products from both stores.</p>
@@ -219,16 +232,20 @@ export default function Storefronts() {
         </div>
       </div>
       <div className="adm-chipbar" role="tablist" aria-label="Storefront editor">
-        <button className={`adm-chip${tab === 'fashion' ? ' active' : ''}`} type="button" role="tab" aria-selected={tab === 'fashion'} onClick={() => setTab('fashion')}>Fashion Store</button>
-        <button className={`adm-chip${tab === 'lifestyle' ? ' active' : ''}`} type="button" role="tab" aria-selected={tab === 'lifestyle'} onClick={() => setTab('lifestyle')}>Lifestyle Store</button>
+        {Object.keys(STORES).map((store) => <button key={store} className={`adm-chip${tab === store ? ' active' : ''}`} type="button" role="tab" aria-selected={tab === store} disabled={!!busy} onClick={() => { setTab(store); setErrors({}); setMessage(''); setError(''); }}>{STOREFRONT_LABELS[store]} Store</button>)}
       </div>
-      <form onSubmit={save}>
-        {tab === 'fashion'
-          ? <FashionEditor value={fashion} onChange={setFashion} onUploading={(delta) => setUploads((count) => count + delta)} />
-          : <LifestyleEditor value={lifestyle} onChange={setLifestyle} onUploading={(delta) => setUploads((count) => count + delta)} />}
+      {draft && (
+        <p className="hint adm-storefronts__status" role="status">
+          Draft version {draft.version}{dirty ? ' — unsaved changes' : ''} · {live ? `Published version ${live.draft_version}${live.published_at ? `, ${when(live.published_at)}` : ''}` : 'Not published yet'}{!dirty && !upToDate && live ? ' · the draft has changes not yet published' : ''}
+        </p>
+      )}
+      <form onSubmit={save} noValidate>
+        <Editor value={forms[tab]} onChange={setForm} onUploading={(delta) => setUploads((count) => count + delta)} errors={errors} />
         <div className="adm-storefronts__actions">
-          <button className="btn" type="submit" disabled={saving || uploads > 0}>{saving ? 'Saving…' : uploads ? 'Uploading images…' : 'Save both storefronts'}</button>
-          <span className="hint">Saving keeps catalogue, pricing, cart and checkout data untouched.</span>
+          <button className="btn" type="submit" disabled={!!busy || uploads > 0 || !draft}>{busy === 'save' ? 'Saving…' : uploads ? 'Uploading images…' : 'Save draft'}</button>
+          <a className={`btn btn-outline${dirty ? ' is-disabled' : ''}`} href={`${STORES[tab].path}?preview=draft`} target="_blank" rel="noreferrer" aria-disabled={dirty || undefined} onClick={(event) => { if (dirty) event.preventDefault(); }}>Preview the saved draft</a>
+          <button className="btn btn-outline" type="button" disabled={!!busy || dirty || uploads > 0 || !draft} onClick={publish}>{busy === 'publish' ? 'Publishing…' : upToDate ? 'Publish again' : 'Publish'}</button>
+          <span className="hint">{dirty ? 'Save the draft before previewing or publishing.' : 'Preview shows the saved draft to you only; publishing makes it the live version.'}</span>
         </div>
       </form>
     </div>

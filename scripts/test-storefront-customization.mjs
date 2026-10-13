@@ -7,7 +7,6 @@ import { buildLifestyleApp } from './lifestyle-ssr.mjs';
 import {
   DEFAULT_FASHION_STOREFRONT,
   DEFAULT_LIFESTYLE_STOREFRONT,
-  mergeStorefrontCustomization,
   normalizeFashionStorefront,
   normalizeLifestyleStorefront,
 } from '../src/lib/storefrontCustomization.js';
@@ -30,21 +29,15 @@ await test('built-in defaults preserve the current storefront content before an 
   assert.equal(DEFAULT_LIFESTYLE_STOREFRONT.heroSlides[0].wide, '/img/doorway-living-wide.webp');
 });
 
-await test('saved values are sanitized, internal CTA routes stay internal and unknown homepage settings survive', () => {
-  const next = mergeStorefrontCustomization(
-    { bestseller_title: 'Keep me', visuals: { offers: { enabled: true } }, unknown_future_key: 17 },
-    { header: { tagline: '  Custom Fashion  ' }, hero: { ctaLink: 'https://evil.example', image: 'javascript:alert(1)' } },
-    { heroSlides: [{ headlineOne: 'Custom Home', ctaLink: '//evil.example' }], promo: { ctaLink: '/homeliving/sale' } },
-  );
-  assert.equal(next.bestseller_title, 'Keep me');
-  assert.deepEqual(next.visuals, { offers: { enabled: true } });
-  assert.equal(next.unknown_future_key, 17);
-  assert.equal(next.fashion_storefront.header.tagline, 'Custom Fashion');
-  assert.equal(next.fashion_storefront.hero.ctaLink, DEFAULT_FASHION_STOREFRONT.hero.ctaLink);
-  assert.equal(next.fashion_storefront.hero.image, DEFAULT_FASHION_STOREFRONT.hero.image);
-  assert.equal(next.lifestyle_storefront.heroSlides[0].headlineOne, 'Custom Home');
-  assert.equal(next.lifestyle_storefront.heroSlides[0].ctaLink, DEFAULT_LIFESTYLE_STOREFRONT.heroSlides[0].ctaLink);
-  assert.equal(next.lifestyle_storefront.promo.ctaLink, '/homeliving/sale');
+await test('the storefront reads saved values leniently: a value that does not fit falls back to its default, never breaks the page', () => {
+  const fashion = normalizeFashionStorefront({ header: { tagline: '  Custom Fashion  ' }, hero: { ctaLink: 'https://evil.example', image: 'javascript:alert(1)' } });
+  const lifestyle = normalizeLifestyleStorefront({ heroSlides: [{ headlineOne: 'Custom Home', ctaLink: '//evil.example' }], promo: { ctaLink: '/homeliving/sale' } });
+  assert.equal(fashion.header.tagline, 'Custom Fashion');
+  assert.equal(fashion.hero.ctaLink, DEFAULT_FASHION_STOREFRONT.hero.ctaLink);
+  assert.equal(fashion.hero.image, DEFAULT_FASHION_STOREFRONT.hero.image);
+  assert.equal(lifestyle.heroSlides[0].headlineOne, 'Custom Home');
+  assert.equal(lifestyle.heroSlides[0].ctaLink, DEFAULT_LIFESTYLE_STOREFRONT.heroSlides[0].ctaLink);
+  assert.equal(lifestyle.promo.ctaLink, '/homeliving/sale');
 });
 
 await test('Fashion renders saved header, hero and section copy without changing its catalogue', async () => {
@@ -74,20 +67,20 @@ await test('Lifestyle renders saved header, slide, banner, headings and promo', 
   assert.ok(html.includes('Botanical Bedsheet'), 'combined catalogue still renders');
 });
 
-await test('the protected admin editor is routed, navigable, image-enabled and saves through the existing homepage setting', () => {
+await test('the protected admin editor is routed and navigable, saves version-checked drafts, previews them, publishes them, and converts every upload', () => {
   const app = read('src/App.jsx');
   const nav = read('src/admin/AdminLayout.jsx');
   const page = read('src/admin/pages/Storefronts.jsx');
   assert.match(app, /const Storefronts = lazy\(\(\) => import\('\.\/admin\/pages\/Storefronts\.jsx'\)\);/);
   assert.match(app, /<Route path="storefronts" element=\{<Storefronts \/>\} \/>/);
   assert.match(nav, /to: '\/admin\/storefronts', label: 'Fashion & Lifestyle'/);
-  assert.match(page, /adminGetSetting\('homepage'\)/);
-  assert.match(page, /adminSetSetting\('homepage', next\)/);
-  assert.match(page, /mergeStorefrontCustomization\(current, fashion, lifestyle\)/);
-  assert.match(page, /uploadHomepageImage\(file\)/);
-  assert.match(page, /announceHomepageSaved\(next\)/);
-  assert.match(page, /href="\/fashion"[\s\S]*href="\/lifestyle"/);
-  assert.doesNotMatch(page, /adminSetSetting\('(fashion|lifestyle)/, 'no new top-level public setting/RLS requirement');
+  assert.match(page, /await adminLoadStorefronts\(\)/);
+  assert.match(page, /validateStorefrontContent\(tab, forms\[tab\]\)/, 'every field is checked before a save');
+  assert.match(page, /await adminSaveStorefrontDraft\(tab, forms\[tab\], draft\.version\)/, 'saved against the version it opened');
+  assert.match(page, /await publishStorefront\(tab, draft\.version\)/, 'publishes the saved draft it names');
+  assert.match(page, /STORES\[tab\]\.path\}\?preview=draft/, 'the preview link opens the store with ?preview=draft');
+  assert.match(page, /await uploadStorefrontImage\(file\)/, 'uploads go through the WebP converter');
+  assert.doesNotMatch(page, /uploadHomepageImage|adminSetSetting\('homepage'|announceHomepageSaved/, 'nothing is written to the shared homepage record');
 });
 
 if (process.exitCode) process.exit(process.exitCode);

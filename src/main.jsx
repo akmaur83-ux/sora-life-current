@@ -8,13 +8,13 @@ import { AdminAuthProvider } from './lib/adminAuth.jsx';
 import { CustomerAuthProvider } from './lib/customerAuth.jsx';
 import { applyCatalog, applyVariants, applyProductMedia } from './data/products.js';
 import { applyCategories } from './data/categories.js';
-import { applyBranding, applyAnnouncement, applyHomepage, applyContact, applyStorefrontTheme } from './lib/settings.js';
+import { applyBranding, applyAnnouncement, applyHomepage, applyContact, applyStorefrontTheme, applyStorefrontDrafts } from './lib/settings.js';
 import { applyPromotions } from './lib/promotions.js';
 import { BootstrapReadyContext } from './lib/bootstrapReady.js';
 import { scheduleDeferredStyles } from './lib/deferredStyles.js';
 import {
   fetchPublicCatalog, fetchPublicCategories, fetchPublicSettings,
-  fetchPublicVariants, fetchPublicProductMedia, fetchPublicPromotions,
+  fetchPublicVariants, fetchPublicProductMedia, fetchPublicPromotions, fetchStorefrontDraftsForPreview,
 } from './lib/adminApi.js';
 
 // Admin / passport / creator styles are no longer linked from index.html.
@@ -47,6 +47,7 @@ function withTimeout(promise, ms) {
 function Root() {
   const [, bump] = useState(0);
   const [bootstrapReady, setBootstrapReady] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +79,12 @@ function Root() {
           if (settings.announcement) { applyAnnouncement(settings.announcement); changed = true; }
           if (settings.homepage) { applyHomepage(settings.homepage); changed = true; }
           if (settings.contact) { applyContact(settings.contact); changed = true; }
+        }
+        // ?preview=draft: an admin sees the saved storefront drafts in this tab. The drafts are
+        // admin-read, so anyone else gets nothing back and keeps the published version.
+        if (new URLSearchParams(window.location.search).get('preview') === 'draft') {
+          const drafts = await fetchStorefrontDraftsForPreview().catch(() => []);
+          if (!cancelled && applyStorefrontDrafts(drafts)) { setPreviewing(true); changed = true; }
         }
         if (changed && !cancelled) bump((n) => n + 1);
       } catch {
@@ -112,6 +119,7 @@ function Root() {
           </StoreProvider>
         </CustomerAuthProvider>
       </BrowserRouter>
+      {previewing && <div role="status" style={{ position: 'fixed', left: 12, bottom: 12, zIndex: 9999, padding: '8px 14px', borderRadius: 999, background: '#1D1D1B', color: '#fff', font: '600 13px/1.2 Inter, system-ui, sans-serif', boxShadow: '0 4px 14px rgb(0 0 0 / 20%)' }}>Draft preview — not live</div>}
     </BootstrapReadyContext.Provider>
   );
 }

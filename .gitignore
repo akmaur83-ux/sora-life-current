@@ -9,5 +9,8 @@ dist
 .env*
 .mcp.json
 .build-check
+# Written by build/publish-content.mjs on each deploy; never committed.
+img/published/
+img/.published-tmp/
 .flake-reports
 .creator-qa
