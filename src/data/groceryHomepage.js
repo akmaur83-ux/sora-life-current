@@ -50,6 +50,30 @@ export const PROMO = {
   href: '/grocery/category/everyday-staples',
 };
 
+/** The three facts above the hero. The delivery one is the only factual claim. */
+export const TRUST = [
+  { icon: 'truck', title: 'Standard Delivery', sub: GROCERY_DELIVERY_WINDOW },
+  { icon: 'leaf', title: 'Fresh Products', sub: 'Sourced with care' },
+  { icon: 'shield', title: 'Trusted Quality', sub: 'Good food, safer lives' },
+];
+
+/**
+ * What the admin edits (Storefronts → Grocery): the homepage's sections in the schema's shape
+ * (storefrontContent.js), built from the content above. What is published replaces them field by
+ * field; a field that breaks its rule stays as it is here. `icon` and `id` ride along.
+ */
+const HERO = HERO_SLIDES[0];
+export const GROCERY_SECTIONS = Object.freeze({
+  trust: { hidden: false, items: TRUST.map((t) => ({ ...t, hidden: false })) },
+  hero: {
+    id: HERO.id, hidden: false, headline: HERO.headline, sub: HERO.sub, cta: HERO.cta, link: HERO.href, note: HERO.note,
+    picture: { colour: '', phone: HERO.image, desktop: HERO.image }, position: 'left',
+  },
+  categories: { hidden: false },
+  daily: { hidden: false, title: DAILY_ESSENTIALS.title, sub: DAILY_ESSENTIALS.sub, more: 'See all', link: DAILY_ESSENTIALS.seeAll },
+  promo: { hidden: false, headline: PROMO.headline, sub: PROMO.sub, cta: PROMO.cta, link: PROMO.href, picture: { colour: '', phone: PROMO.image, desktop: PROMO.image } },
+});
+
 export const categoryHref = (c) => `/grocery/category/${c.slug}`;
 
 // ---- Row shapes ----------------------------------------------------------------

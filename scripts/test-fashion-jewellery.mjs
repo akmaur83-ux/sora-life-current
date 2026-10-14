@@ -158,7 +158,9 @@ await test('the newsletter posts to the site\'s sign-up and confirms ONLY after 
   let reply = null;
   const fetch = async (url, init) => { calls.push([url, JSON.parse(init.body)]); if (reply === 'throw') throw new Error('offline'); return reply; };
   const m = loadSource(read('src/fashion/FashionJewellery.jsx'), { ...hooks, fetch, Link: 'a', Icon: () => null, categoryHref: (c) => `/fashion/c/${c.slug}`,
-    useFashionCatalogue: () => ({ tree: null, views: [], status: 'ready' }), departmentCatalogue: () => ({ category: null, categories: [], products: [] }), FashionProductCard: () => null, JEWELLERY: content });
+    useFashionCatalogue: () => ({ tree: null, views: [], status: 'ready' }), departmentCatalogue: () => ({ category: null, categories: [], products: [] }), FashionProductCard: () => null, JEWELLERY: content,
+    // The page's sections as built in (nothing published), read without the real React the harness replaces.
+    JEWELLERY_SECTIONS: loadModule('src/fashion/jewelleryContent.js').JEWELLERY_SECTIONS, useStorefrontSection: (_store, _path, built) => built });
   const run = async (email, r) => {
     reply = r;
     const tree = await mount(h(m.default));

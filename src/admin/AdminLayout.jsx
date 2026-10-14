@@ -19,7 +19,7 @@ const NAV = [
   { to: '/admin/promotions', label: 'Promotions' },
   { to: '/admin/coupons', label: 'Coupons' },
   { to: '/admin/homepage', label: 'Homepage' },
-  { to: '/admin/storefronts', label: 'Fashion & Lifestyle' },
+  { to: '/admin/storefronts', label: 'Storefronts' },
   { to: '/admin/store-catalogue/fashion', label: 'Fashion Products' },
   { to: '/admin/store-catalogue/homeliving', label: 'Home & Living Products' },
   { to: '/admin/store-catalogue/grocery', label: 'Grocery Products' },

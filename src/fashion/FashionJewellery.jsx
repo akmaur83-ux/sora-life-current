@@ -5,7 +5,8 @@ import { categoryHref } from '../lib/fashion.js';
 import { useFashionCatalogue } from './FashionCatalogue.jsx';
 import FashionProductCard from './FashionProductCard.jsx';
 import { departmentCatalogue } from './FashionDepartment.jsx';
-import { JEWELLERY } from './jewelleryContent.js';
+import { JEWELLERY, JEWELLERY_SECTIONS } from './jewelleryContent.js';
+import { useStorefrontSection, filledLines, positionAttr, imageFor, linkOr } from '../lib/storefrontSections.js';
 
 // ============================================================
 // /fashion/jewellery — SORA LIFE Jewellery, laid out as the owner's reference
@@ -60,7 +61,17 @@ function Newsletter({ content }) {
   </section>;
 }
 
+const visible = (entry) => !entry.hidden;
+/** A replaced hero photograph also replaces the blurred copy of it behind the copy (.jw-hero::before). */
+const heroLook = (hero) => {
+  const image = imageFor(hero);
+  return image.src === hero.image.src ? {} : { 'data-art': '', style: { '--jw-hero-art': `url(${JSON.stringify(image.src)})` } };
+};
+
+// Every section is the admin's (Storefronts → Fashion → Jewellery page): `s` is the page's sections as
+// published over their built-in content (JEWELLERY_SECTIONS), and a hidden one is left out.
 export default function FashionJewellery({ content = JEWELLERY }) {
+  const s = useStorefrontSection('fashion', 'jewellery', JEWELLERY_SECTIONS);
   const { tree, views, status } = useFashionCatalogue();
   // Jewellery and its active sub-categories only; the catalogue's featured order puts any
   // product flagged bestseller first. Nothing here invents a price, a rating or a review.
@@ -68,52 +79,51 @@ export default function FashionJewellery({ content = JEWELLERY }) {
   const listing = category ? categoryHref(category) : '#jw-products';
   const hrefFor = (slug) => { const node = categories.find((c) => c.slug === slug); return node ? categoryHref(node) : listing; };
   const loved = products.slice(0, 4);
-  const { hero, categories: cats, story } = content;
   return <div className="jw">
-    <section className="jw-hero" aria-labelledby="jw-title">
-      <Photo image={hero.image} priority className="jw-hero__art" />
+    {!s.hero.hidden && <section className="jw-hero" {...positionAttr(s.hero.position)} {...heroLook(s.hero)} aria-labelledby="jw-title">
+      <Photo image={imageFor(s.hero)} priority className="jw-hero__art" />
       <div className="jw-wrap jw-hero__copy">
-        <p className="jw-eyebrow">{hero.eyebrow}</p>
-        <h1 id="jw-title">{hero.title.map((line) => <span key={line}>{line}</span>)}</h1>
-        <p className="jw-hero__intro">{hero.intro}</p>
-        <Link to={listing} className="jw-button">{hero.cta} <Icon name="arrowRight" size={15} /></Link>
+        <p className="jw-eyebrow">{s.hero.eyebrow}</p>
+        <h1 id="jw-title">{filledLines(s.hero.title).map((line) => <span key={line}>{line}</span>)}</h1>
+        <p className="jw-hero__intro">{s.hero.intro}</p>
+        <Link to={linkOr(s.hero.link, listing)} className="jw-button">{s.hero.cta} <Icon name="arrowRight" size={15} /></Link>
       </div>
-    </section>
+    </section>}
 
-    <nav className="jw-trust" aria-label="Shopping with SORA LIFE">
-      <ul className="jw-wrap">{content.trust.map((t) => <li key={t.title}><Link to={t.to}>
+    {!s.trust.hidden && <nav className="jw-trust" aria-label="Shopping with SORA LIFE">
+      <ul className="jw-wrap">{s.trust.items.filter(visible).map((t) => <li key={t.title}><Link to={t.link}>
         <Icon name={t.icon} size={22} />
         <span className="jw-trust__full"><strong>{t.title}</strong><small>{t.note}</small></span>
         <span className="jw-trust__phone"><strong>{t.phone[0]}</strong><small>{t.phone[1]}</small></span>
       </Link></li>)}</ul>
-    </nav>
+    </nav>}
 
-    <section className="jw-cats jw-wrap" id="jw-categories" aria-labelledby="jw-cats-title">
-      <header className="jw-head jw-head--center"><p className="jw-eyebrow">{cats.eyebrow}</p><h2 id="jw-cats-title">{cats.title}</h2><p>{cats.intro}</p></header>
-      <ul className="jw-cats__row">{cats.items.map((item) => <li key={item.slug}><Link to={hrefFor(item.slug)} className="jw-cat">
-        <Photo image={item.image} className="jw-cat__art" /><span>{item.title}</span>
+    {!s.categories.hidden && <section className="jw-cats jw-wrap" id="jw-categories" aria-labelledby="jw-cats-title">
+      <header className="jw-head jw-head--center"><p className="jw-eyebrow">{s.categories.eyebrow}</p><h2 id="jw-cats-title">{s.categories.title}</h2><p>{s.categories.intro}</p></header>
+      <ul className="jw-cats__row">{s.categories.items.filter(visible).map((item) => <li key={item.slug}><Link to={linkOr(item.link, hrefFor(item.slug))} className="jw-cat">
+        <Photo image={imageFor(item)} className="jw-cat__art" /><span>{item.title}</span>
       </Link></li>)}</ul>
-    </section>
+    </section>}
 
-    <section className="jw-loved jw-wrap" id="jw-products" aria-labelledby="jw-loved-title">
-      <header className="jw-head jw-head--split"><h2 id="jw-loved-title">{content.loved.title}</h2>
-        {loved.length > 0 && <Link to={listing} className="jw-more">{content.loved.viewAll} <Icon name="arrowRight" size={14} /></Link>}</header>
+    {!s.loved.hidden && <section className="jw-loved jw-wrap" id="jw-products" aria-labelledby="jw-loved-title">
+      <header className="jw-head jw-head--split"><h2 id="jw-loved-title">{s.loved.title}</h2>
+        {loved.length > 0 && <Link to={listing} className="jw-more">{s.loved.viewAll} <Icon name="arrowRight" size={14} /></Link>}</header>
       {loved.length ? <div className="jw-loved__grid">{loved.map((view) => <FashionProductCard key={view.id} view={view} />)}</div>
         : <div className="jw-empty" role="status"><p>{status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'Our first jewellery pieces are on their way. Explore the categories above in the meantime.'}</p>
           <a href="#jw-categories" className="jw-more">Shop by category <Icon name="arrowRight" size={14} /></a></div>}
-    </section>
+    </section>}
 
-    <section className="jw-edits" aria-label="Wedding and gifts">{content.edits.map((item, i) => <Link key={item.slug} to={hrefFor(item.slug)} className={`jw-edit jw-edit--${i + 1}`}>
-      <Photo image={item.image} className="jw-edit__art" />
-      <div><h2>{item.title.map((line) => <span key={line}>{line}</span>)}</h2><span className="jw-button">{item.cta} <Icon name="arrowRight" size={14} /></span></div>
-    </Link>)}</section>
+    {!s.edits.hidden && <section className="jw-edits" aria-label="Wedding and gifts">{s.edits.items.filter(visible).map((item, i) => <Link key={item.slug} to={linkOr(item.link, hrefFor(item.slug))} className={`jw-edit jw-edit--${i + 1}`}>
+      <Photo image={imageFor(item)} className="jw-edit__art" />
+      <div><h2>{filledLines(item.title).map((line) => <span key={line}>{line}</span>)}</h2><span className="jw-button">{item.cta} <Icon name="arrowRight" size={14} /></span></div>
+    </Link>)}</section>}
 
-    <section className="jw-story jw-wrap" aria-labelledby="jw-story-title">
-      <div className="jw-story__copy"><p className="jw-eyebrow">{story.eyebrow}</p><h2 id="jw-story-title">{story.title}</h2><p>{story.text}</p>
-        <Link to={story.to} className="jw-button">{story.cta} <Icon name="arrowRight" size={14} /></Link></div>
-      <Photo image={story.image} className="jw-story__art" />
-    </section>
+    {!s.story.hidden && <section className="jw-story jw-wrap" aria-labelledby="jw-story-title">
+      <div className="jw-story__copy"><p className="jw-eyebrow">{s.story.eyebrow}</p><h2 id="jw-story-title">{s.story.title}</h2><p>{s.story.text}</p>
+        <Link to={s.story.link} className="jw-button">{s.story.cta} <Icon name="arrowRight" size={14} /></Link></div>
+      <Photo image={imageFor(s.story)} className="jw-story__art" />
+    </section>}
 
-    <Newsletter content={content.newsletter} />
+    {!s.newsletter.hidden && <Newsletter content={{ title: s.newsletter.title, text: s.newsletter.text, image: imageFor(s.newsletter) }} />}
   </div>;
 }

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
-import { DAILY_ESSENTIALS, GROCERY_DELIVERY_WINDOW, HERO_SLIDES, PROMO, categoryHref, useGroceryCatalogue } from '../data/groceryHomepage.js';
+import { DAILY_ESSENTIALS, GROCERY_SECTIONS, categoryHref, useGroceryCatalogue } from '../data/groceryHomepage.js';
+import { useStorefrontSection, positionAttr } from '../lib/storefrontSections.js';
 import GroceryProductCard from './GroceryProductCard.jsx';
 
 // ============================================================
@@ -14,18 +15,27 @@ import GroceryProductCard from './GroceryProductCard.jsx';
 // nothing to show says so rather than inventing tiles.
 // ============================================================
 
-const TRUST = [
-  ['truck', 'Standard Delivery', GROCERY_DELIVERY_WINDOW],
-  ['leaf', 'Fresh Products', 'Sourced with care'],
-  ['shield', 'Trusted Quality', 'Good food, safer lives'],
-];
+// Every section is the admin's (Storefronts → Grocery), read over its built-in content
+// (GROCERY_SECTIONS); a hidden one is left out.
+const visible = (entry) => !entry.hidden;
+/** A section's colour matched to its photograph — only when the admin set one with it. */
+const tone = (colour) => (colour ? { 'data-tone': '', style: { '--sf-tone': colour } } : {});
+/** The phone photograph under 700px when there is a separate one; else the one image, as it always was. */
+const PHONE = '(max-width: 700px)';
+const photo = (phone, desktop, img) => (phone && phone !== desktop ? <picture><source media={PHONE} srcSet={phone} />{img}</picture> : img);
+
 function TrustStrip() {
+  const trust = useStorefrontSection('grocery', 'trust', GROCERY_SECTIONS.trust);
+  if (trust.hidden) return null;
   return (
     <ul className="gs-trust" aria-label="Why shop with us">
-      {TRUST.map(([icon, a, b]) => <li key={a}><Icon name={icon} size={28} /><span><strong>{a}</strong><em>{b}</em></span></li>)}
+      {trust.items.filter(visible).map((t) => <li key={t.title}><Icon name={t.icon} size={28} /><span><strong>{t.title}</strong><em>{t.sub}</em></span></li>)}
     </ul>
   );
 }
+
+/** The hero as the carousel's one slide. */
+export const heroSlideOf = (h) => ({ id: h.id, image: h.picture.desktop, phone: h.picture.phone, headline: h.headline, sub: h.sub, cta: h.cta, href: h.link, note: h.note, colour: h.picture.colour, position: h.position });
 
 export const AUTOPLAY_MS = 6000;
 
@@ -34,7 +44,9 @@ export const AUTOPLAY_MS = 6000;
  * pauses on hover and focus, and never moves under prefers-reduced-motion.
  * The track slides on transform only.
  */
-export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS }) {
+export function HeroCarousel({ slides: given, autoplayMs = AUTOPLAY_MS }) {
+  const hero = useStorefrontSection('grocery', 'hero', GROCERY_SECTIONS.hero);
+  const slides = given || (hero.hidden ? [] : [heroSlideOf(hero)]);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const reduced = useRef(false);
@@ -57,8 +69,8 @@ export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS })
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
       <div className="gs-hero__track" style={{ transform: `translateX(-${index * 100}%)` }}>
         {slides.map((s, i) => (
-          <article key={s.id} className={`gs-hero__slide${i === index ? ' is-on' : ''}`} aria-hidden={i !== index} aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>
-            <img className="gs-hero__img" src={s.image} alt="" width="1600" height="900" decoding="async" fetchpriority={i === 0 ? 'high' : 'auto'} loading={i === 0 ? 'eager' : 'lazy'} />
+          <article key={s.id} className={`gs-hero__slide${i === index ? ' is-on' : ''}`} {...positionAttr(s.position)} {...tone(s.colour)} aria-hidden={i !== index} aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>
+            {photo(s.phone, s.image, <img className="gs-hero__img" src={s.image} alt="" width="1600" height="900" decoding="async" fetchpriority={i === 0 ? 'high' : 'auto'} loading={i === 0 ? 'eager' : 'lazy'} />)}
             <div className="gs-hero__txt">
               <h1 className="gs-hero__h serif">{s.headline}</h1>
               <p className="gs-hero__sub">{s.sub}</p>
@@ -78,7 +90,8 @@ export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS })
 }
 
 function CategoryCircles({ categories }) {
-  if (categories.length === 0) return null;
+  const section = useStorefrontSection('grocery', 'categories', GROCERY_SECTIONS.categories);
+  if (categories.length === 0 || section.hidden) return null;
   return (
     <nav className="gs-circles" aria-label="Shop by category">
       {categories.map((c) => (
@@ -92,13 +105,14 @@ function CategoryCircles({ categories }) {
 }
 
 function DailyEssentials({ products, status }) {
-  const { title, sub, seeAll, limit } = DAILY_ESSENTIALS;
-  const row = products.slice(0, limit);
+  const { hidden, title, sub, more, link } = useStorefrontSection('grocery', 'daily', GROCERY_SECTIONS.daily);
+  const row = products.slice(0, DAILY_ESSENTIALS.limit);
+  if (hidden) return null;
   return (
     <section className="gs-sec" aria-labelledby="gs-daily-h">
       <header className="gs-sec__head">
         <div><h2 className="gs-sec__h serif" id="gs-daily-h">{title}</h2>{sub && <p className="gs-sec__sub">{sub}</p>}</div>
-        <Link to={seeAll} className="gs-sec__link">See all <Icon name="arrowRight" size={16} /></Link>
+        <Link to={link} className="gs-sec__link">{more} <Icon name="arrowRight" size={16} /></Link>
       </header>
       {row.length === 0 ? (
         <p className="gs-empty">{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The grocery catalogue could not be loaded. Please try again shortly.' : 'The grocery store is being stocked — products appear here as they go live.'}</p>
@@ -112,13 +126,16 @@ function DailyEssentials({ products, status }) {
 }
 
 function PromoStrip() {
+  const promo = useStorefrontSection('grocery', 'promo', GROCERY_SECTIONS.promo);
+  if (promo.hidden) return null;
+  const { colour, phone, desktop } = promo.picture;
   return (
-    <section className="gs-promo" aria-labelledby="gs-promo-h">
-      <div className="gs-promo__art" aria-hidden="true"><img src={PROMO.image} alt="" loading="lazy" decoding="async" width="1200" height="675" /></div>
+    <section className="gs-promo" {...tone(colour)} aria-labelledby="gs-promo-h">
+      <div className="gs-promo__art" aria-hidden="true">{photo(phone, desktop, <img src={desktop} alt="" loading="lazy" decoding="async" width="1200" height="675" />)}</div>
       <div className="gs-promo__txt">
-        <h2 className="gs-promo__h serif" id="gs-promo-h">{PROMO.headline}</h2>
-        <p className="gs-promo__sub">{PROMO.sub}</p>
-        <Link to={PROMO.href} className="gs-promo__cta">{PROMO.cta} <Icon name="arrowRight" size={16} /></Link>
+        <h2 className="gs-promo__h serif" id="gs-promo-h">{promo.headline}</h2>
+        <p className="gs-promo__sub">{promo.sub}</p>
+        <Link to={promo.link} className="gs-promo__cta">{promo.cta} <Icon name="arrowRight" size={16} /></Link>
       </div>
     </section>
   );

@@ -47,9 +47,12 @@ const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0x20, 0, 0, 0]), B
 console.log('\n— The rules —');
 
 await test('the schema is the storefront\'s own: the same fields, and the same lengths its normalisers keep', () => {
-  const keysOf = (spec, value) => (spec.type === 'group' ? Object.keys(spec.fields).sort() : null);
-  assert.deepEqual(keysOf(content.STOREFRONT_SCHEMAS.fashion), Object.keys(DEFAULT_FASHION_STOREFRONT).sort());
+  // The Fashion and Lifestyle home pages are the keys their normalisers keep; the Fashion record also
+  // carries the sections of its other pages (test-storefront-sections.mjs pins those).
+  const keysOf = (spec, only) => (spec.type === 'group' ? Object.keys(spec.fields).filter((k) => !only || only.includes(k)).sort() : null);
+  assert.deepEqual(keysOf(content.STOREFRONT_SCHEMAS.fashion, content.STOREFRONT_HOME_KEYS.fashion), Object.keys(DEFAULT_FASHION_STOREFRONT).sort());
   assert.deepEqual(keysOf(content.STOREFRONT_SCHEMAS.lifestyle), Object.keys(DEFAULT_LIFESTYLE_STOREFRONT).sort());
+  const homeOnly = (spec, keys) => ({ ...spec, fields: Object.fromEntries(Object.entries(spec.fields).filter(([k]) => keys.includes(k))) });
   const check = (store, spec, defaults, normalize, path = []) => {
     for (const [key, field] of Object.entries(spec.fields)) {
       const at = [...path, key];
@@ -74,7 +77,7 @@ await test('the schema is the storefront\'s own: the same fields, and the same l
       }
     }
   };
-  check('fashion', content.STOREFRONT_SCHEMAS.fashion, DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront);
+  check('fashion', homeOnly(content.STOREFRONT_SCHEMAS.fashion, content.STOREFRONT_HOME_KEYS.fashion), DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront);
   check('lifestyle', content.STOREFRONT_SCHEMAS.lifestyle, DEFAULT_LIFESTYLE_STOREFRONT, normalizeLifestyleStorefront);
 });
 
@@ -98,7 +101,7 @@ await test('the built-in content passes; a bad value is rejected with its field,
   for (const link of ['//evil.example/x', '/ok path', '/x\\y']) assert.ok(content.validateStorefrontContent('fashion', { hero: { ctaLink: link } }).errors['hero.ctaLink'], link);
   assert.deepEqual(content.validateStorefrontContent('fashion', { hero: { ctaLink: '/fashion/c/clothing?sort=new' } }).errors, {});
   assert.ok(content.validateStorefrontContent('lifestyle', { heroSlides: [{}, {}, {}, {}] }).errors.heroSlides, 'at most three slides');
-  assert.ok(content.validateStorefrontContent('wellness', { hero: {} }).errors.hero, 'a store with no editable fields takes nothing yet');
+  assert.ok(content.validateStorefrontContent('wellness', { banner: {} }).errors.banner, 'a field the store does not have is refused');
   assert.ok(content.validateStorefrontContent('nowhere', {}).errors['']);
 });
 

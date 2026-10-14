@@ -44,6 +44,16 @@ const publishedKeys = (stores) => Object.fromEntries(Object.entries(PUBLISHED_HO
 // plus the two published storefronts above. The rest is empty until it loads.
 export let homepage = { ...publishedKeys(inlined?.stores) };
 
+// Every store's published content, as the build wrote it — the sections each page lets an
+// admin edit read theirs from here (useStorefrontSection), field by field, before the first render.
+let storefronts = inlined?.stores && typeof inlined.stores === 'object' ? { ...inlined.stores } : {};
+const storefrontListeners = new Set();
+export const getStorefrontsSnapshot = () => storefronts;
+export function subscribeStorefronts(listener) {
+  storefrontListeners.add(listener);
+  return () => storefrontListeners.delete(listener);
+}
+
 export let contact = { phone: '', email: '', address: '' };
 
 // ---- Storefront theme (admin-customizable appearance) ----
@@ -80,11 +90,16 @@ export function applyHomepage(v) {
  * drafts replace the published storefronts in this tab until it is reloaded without it.
  */
 export function applyStorefrontDrafts(rows) {
-  const stores = Object.fromEntries((Array.isArray(rows) ? rows : []).filter((r) => r && typeof r.store === 'string').map((r) => [r.store, r.content]));
+  const stores = Object.fromEntries((Array.isArray(rows) ? rows : [])
+    .filter((r) => r && typeof r.store === 'string' && r.content && typeof r.content === 'object').map((r) => [r.store, r.content]));
+  if (!Object.keys(stores).length) return false;
+  storefronts = { ...storefronts, ...stores };
+  storefrontListeners.forEach((listener) => listener());
   const next = publishedKeys(stores);
-  if (!Object.keys(next).length) return false;
-  homepage = { ...homepage, ...next };
-  homepageListeners.forEach((listener) => listener());
+  if (Object.keys(next).length) {
+    homepage = { ...homepage, ...next };
+    homepageListeners.forEach((listener) => listener());
+  }
   return true;
 }
 export function applyContact(v) { if (v && typeof v === 'object') contact = { ...contact, ...v }; }

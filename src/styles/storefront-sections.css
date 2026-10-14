@@ -1,0 +1,130 @@
+/* ============================================================
+   Storefront sections an admin edits (Storefronts in the admin; storefrontContent.js).
+
+   Two settings change how a section looks, never what it is:
+     data-pos   the copy's place over its photograph, from presets — left (built in, no
+                attribute), centre, right. Wide screens only: on a phone each section keeps
+                the layout it was designed with.
+     data-tone  the background colour matched to a photograph the admin replaced, set with
+                it (--sf-tone). Where a section's photograph fades into its background, the
+                fade takes the same colour.
+   With nothing published no element carries these attributes, so no rule here matches and
+   every page is exactly as it was. Every selector is scoped to its section's own class.
+   ============================================================ */
+
+/* ---- Wellness homepage: the hero ---------------------------------------- */
+.hx .hx-hero__slide[data-tone] { background: var(--sf-tone); }
+@media (min-width: 701px) {
+  .hx-hero__slide[data-pos="right"] .hx-hero__image { right: auto; left: 0; -webkit-mask-image: linear-gradient(270deg, transparent 0, #000 14%); mask-image: linear-gradient(270deg, transparent 0, #000 14%); }
+  .hx-hero__slide[data-pos] .hx-hero__copy { display: grid; }
+  .hx-hero__slide[data-pos="right"] .hx-hero__copy { justify-content: end; }
+  .hx-hero__slide[data-pos="center"] .hx-hero__copy { justify-content: center; text-align: center; }
+  .hx-hero__slide[data-pos] .hx-hero__copy > *, .hx-hero__slide[data-pos] .hx-hero__copy > .hx-hero__title { max-width: min(520px, 44vw); justify-self: start; }
+  .hx-hero__slide[data-pos="center"] .hx-hero__copy > *, .hx-hero__slide[data-pos="center"] .hx-hero__copy > .hx-hero__title { max-width: min(640px, 70vw); justify-self: center; }
+  .hx-hero__slide[data-pos="center"] .hx-hero__image { left: 0; right: 0; width: 100%; object-fit: cover; -webkit-mask-image: none; mask-image: none; }
+  .hx-hero__slide[data-pos="center"]::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--sf-tone, #FDFBF8) 72%, transparent) 0%, transparent 72%); }
+}
+
+/* ---- Wellness homepage: the Lifestyle banner -------------------------------- */
+@media (min-width: 701px) {
+  .fsb-lead[data-pos="right"] .fsb-lead__copy { margin-left: auto; margin-right: max(28px, calc((100% - 1240px) / 2)); }
+  .fsb-lead[data-pos="right"] .fsb-lead__image { object-position: 25% 20%; }
+  .fsb-lead[data-pos="right"] .fsb-lead__link::after { background: linear-gradient(270deg, rgba(36, 69, 109, .42) 0%, rgba(36, 69, 109, .3) 20%, rgba(36, 69, 109, .16) 34%, rgba(36, 69, 109, .05) 46%, rgba(36, 69, 109, 0) 56%); }
+  .fsb-lead[data-pos="center"] .fsb-lead__copy { width: min(60%, 640px); margin-inline: auto; text-align: center; }
+  .fsb-lead[data-pos="center"] .fsb-lead__description { margin-inline: auto; }
+  .fsb-lead[data-pos="center"] .fsb-lead__image { object-position: center 20%; }
+  .fsb-lead[data-pos="center"] .fsb-lead__link::after { background: radial-gradient(ellipse at center, rgba(36, 69, 109, .44) 0%, rgba(36, 69, 109, .18) 45%, rgba(36, 69, 109, 0) 75%); }
+}
+
+/* ---- Wellness homepage: the jewellery banner -------------------------------- */
+@media (min-width: 701px) {
+  .hx-jewel[data-pos="right"] .hx-jewel__copy { margin-left: auto; margin-right: max(28px, calc((100% - 1240px) / 2)); }
+  .hx-jewel[data-pos="right"] .hx-jewel__image { object-position: left center; }
+  .hx-jewel[data-pos="center"] .hx-jewel__copy { width: min(60%, 640px); margin-inline: auto; text-align: center; }
+  .hx-jewel[data-pos="center"] .hx-jewel__text { margin-inline: auto; }
+  .hx-jewel[data-pos="center"] .hx-jewel__image { object-position: center; }
+}
+
+/* ---- Fashion: the women's hero ---------------------------------------------- */
+@media (min-width: 701px) {
+  .wm-hero[data-pos="right"] .wm-hero__copy { margin-left: auto; margin-right: max(28px, calc((100% - 1240px) / 2)); }
+  .wm-hero[data-pos="right"] .wm-hero__art img { object-position: 30% 15%; }
+  .wm-hero[data-pos="right"]::after { background: linear-gradient(270deg, #24456d61, transparent 52%), linear-gradient(180deg, #1b2c4552, transparent 24%); }
+  .wm-hero[data-pos="center"] .wm-hero__copy { width: min(60%, 640px); margin-inline: auto; text-align: center; }
+  .wm-hero[data-pos="center"] .wm-hero__intro { margin-inline: auto; }
+  .wm-hero[data-pos="center"] .wm-hero__art img { object-position: center 15%; }
+  .wm-hero[data-pos="center"]::after { background: radial-gradient(ellipse at center, #24456d66 0%, #24456d22 45%, transparent 75%), linear-gradient(180deg, #1b2c4552, transparent 24%); }
+}
+
+/* ---- Fashion: the men's hero ------------------------------------------------- */
+@media (min-width: 601px) {
+  .fd-hero[data-pos="right"] .fd-hero__photo { inset: 0 38% 0 0; }
+  .fd-hero[data-pos="right"]::before { background: linear-gradient(270deg, #eeeae3 0%, #eeeae3 32%, #eeeae3ad 44%, #eeeae300 65%); }
+  .fd-hero[data-pos="right"] .fd-hero__copy { justify-self: end; }
+  .fd-hero[data-pos="right"] .fd-hero__edition { left: auto; right: 48px; }
+  .fd-hero[data-pos="right"] .fd-hero__number { right: auto; left: 30px; }
+  .fd-hero[data-pos="center"] .fd-hero__photo { inset: 0; }
+  .fd-hero[data-pos="center"]::before { background: radial-gradient(ellipse at center, #eeeae3eb 0%, #eeeae3b0 45%, #eeeae300 78%); }
+  .fd-hero[data-pos="center"] .fd-hero__copy { justify-self: center; text-align: center; }
+  .fd-hero[data-pos="center"] .fd-hero__intro { margin-inline: auto; }
+}
+
+/* ---- Fashion: the saree hero ------------------------------------------------- */
+@media (min-width: 701px) {
+  .sw-hero[data-pos="right"] .sw-hero__copy { margin-left: auto; margin-right: max(28px, calc((100% - 1160px) / 2)); }
+  .sw-hero[data-pos="right"]::after { background: linear-gradient(270deg, #1814113b, transparent 63%), linear-gradient(180deg, #1613116b, transparent 24%); }
+  .sw-hero[data-pos="center"] .sw-hero__copy { width: min(60%, 640px); margin-inline: auto; text-align: center; }
+  .sw-hero[data-pos="center"] .sw-hero__intro { margin-inline: auto; }
+  .sw-hero[data-pos="center"]::after { background: radial-gradient(ellipse at center, #18141166 0%, #18141122 50%, transparent 78%), linear-gradient(180deg, #1613116b, transparent 24%); }
+}
+
+/* ---- Fashion: the jewellery page's hero -------------------------------------- */
+/* A replaced photograph also replaces the blurred copy of it behind the copy. */
+.jw-hero[data-art]::before { background-image: var(--jw-hero-art); }
+@media (min-width: 701px) {
+  .jw-hero[data-pos="right"] .jw-hero__art { right: auto; left: 0; -webkit-mask-image: linear-gradient(270deg, transparent 0, #000 36%); mask-image: linear-gradient(270deg, transparent 0, #000 36%); }
+  .jw-hero[data-pos="right"]::after { background: linear-gradient(180deg, #0c020373 0%, #0c020300 26%), linear-gradient(270deg, #0c0203a6 0%, #0c020359 42%, transparent 66%); }
+  .jw-hero[data-pos] .jw-hero__copy { display: grid; padding-left: 0; }
+  .jw-hero[data-pos="right"] .jw-hero__copy { justify-content: end; padding-right: clamp(0px, 6.25vw, 90px); }
+  .jw-hero[data-pos="right"] .jw-hero__copy > * { justify-self: start; }
+  .jw-hero[data-pos="center"] .jw-hero__art { left: 0; width: 100%; -webkit-mask-image: none; mask-image: none; }
+  .jw-hero[data-pos="center"]::after { background: linear-gradient(180deg, #0c020373 0%, #0c020300 26%), radial-gradient(ellipse at center, #0c0203a6 0%, #0c020340 48%, transparent 78%); }
+  .jw-hero[data-pos="center"] .jw-hero__copy { justify-content: center; text-align: center; }
+  .jw-hero[data-pos="center"] .jw-hero__copy > * { justify-self: center; }
+  .jw-hero[data-pos="center"] .jw-hero__intro { margin-inline: auto; }
+}
+
+/* ---- Home & Living: the hero and the promo ----------------------------------- */
+.hl-hero__slide[data-tone] { background: var(--sf-tone); }
+.hl-hero__slide[data-tone]::before { background: linear-gradient(90deg, color-mix(in srgb, var(--sf-tone) 50%, transparent) 0%, color-mix(in srgb, var(--sf-tone) 42%, transparent) 28%, transparent 50%); }
+.hl-promo[data-tone] { background: var(--sf-tone); }
+.hl-promo[data-tone] .hl-promo__art::after { background: linear-gradient(90deg, transparent 70%, var(--sf-tone) 100%); }
+@media (min-width: 768px) {
+  .hl-hero__slide[data-pos="right"] .hl-hero__txt { margin-left: auto; }
+  .hl-hero__slide[data-pos="right"]::before { background: linear-gradient(270deg, rgba(251, 248, 241, .5) 0%, rgba(251, 248, 241, .42) 28%, rgba(251, 248, 241, 0) 50%); }
+  .hl-hero__slide[data-pos="right"][data-tone]::before { background: linear-gradient(270deg, color-mix(in srgb, var(--sf-tone) 50%, transparent) 0%, color-mix(in srgb, var(--sf-tone) 42%, transparent) 28%, transparent 50%); }
+  .hl-hero__slide[data-pos="center"] .hl-hero__txt { max-width: 56%; margin-inline: auto; text-align: center; }
+  .hl-hero__slide[data-pos="center"]::before { background: radial-gradient(ellipse at center, rgba(251, 248, 241, .62) 0%, rgba(251, 248, 241, .3) 45%, rgba(251, 248, 241, 0) 75%); }
+  .hl-hero__slide[data-pos="center"][data-tone]::before { background: radial-gradient(ellipse at center, color-mix(in srgb, var(--sf-tone) 62%, transparent) 0%, color-mix(in srgb, var(--sf-tone) 30%, transparent) 45%, transparent 75%); }
+}
+@media (max-width: 767px) {
+  .hl-hero__slide[data-tone]::before { background: linear-gradient(180deg, color-mix(in srgb, var(--sf-tone) 8%, transparent) 0%, color-mix(in srgb, var(--sf-tone) 20%, transparent) 38%, transparent 68%); }
+  .hl-hero__slide[data-tone] .hl-hero__txt::before { background: linear-gradient(100deg, color-mix(in srgb, var(--sf-tone) 56%, transparent) 0%, color-mix(in srgb, var(--sf-tone) 40%, transparent) 55%, transparent 100%); }
+}
+
+/* ---- Grocery: the hero and the promo ------------------------------------------ */
+.gs-hero__slide[data-tone] { background: var(--sf-tone); }
+.gs-hero__slide[data-tone]::before { background: linear-gradient(90deg, color-mix(in srgb, var(--sf-tone) 92%, transparent) 0%, color-mix(in srgb, var(--sf-tone) 62%, transparent) 40%, transparent 62%); }
+.gs-promo[data-tone] { background: var(--sf-tone); }
+@media (min-width: 600px) {
+  .gs-hero__slide[data-pos="right"] .gs-hero__txt { margin-left: auto; }
+  .gs-hero__slide[data-pos="right"]::before { background: linear-gradient(270deg, rgba(251, 248, 241, .92) 0%, rgba(251, 248, 241, .62) 40%, rgba(251, 248, 241, 0) 62%); }
+  .gs-hero__slide[data-pos="right"][data-tone]::before { background: linear-gradient(270deg, color-mix(in srgb, var(--sf-tone) 92%, transparent) 0%, color-mix(in srgb, var(--sf-tone) 62%, transparent) 40%, transparent 62%); }
+  .gs-hero__slide[data-pos="right"] .gs-hero__note { right: auto; left: 40px; text-align: left; }
+  .gs-hero__slide[data-pos="center"] .gs-hero__txt { max-width: 60%; margin-inline: auto; text-align: center; }
+  .gs-hero__slide[data-pos="center"]::before { background: radial-gradient(ellipse at center, rgba(251, 248, 241, .9) 0%, rgba(251, 248, 241, .55) 45%, rgba(251, 248, 241, 0) 78%); }
+  .gs-hero__slide[data-pos="center"][data-tone]::before { background: radial-gradient(ellipse at center, color-mix(in srgb, var(--sf-tone) 90%, transparent) 0%, color-mix(in srgb, var(--sf-tone) 55%, transparent) 45%, transparent 78%); }
+}
+@media (max-width: 599px) {
+  .gs-hero__slide[data-tone]::before { background: linear-gradient(180deg, color-mix(in srgb, var(--sf-tone) 94%, transparent) 0%, color-mix(in srgb, var(--sf-tone) 80%, transparent) 42%, color-mix(in srgb, var(--sf-tone) 10%, transparent) 100%); }
+}

@@ -81,6 +81,26 @@ export const PROMO = {
   ],
 };
 
+/**
+ * What the admin edits (Storefronts → Home & Living): the homepage's sections in the schema's
+ * shape (storefrontContent.js), built from the content above. What is published replaces them
+ * field by field; a field that breaks its rule stays as it is here. `icon` and `id` ride along.
+ */
+const HERO = HERO_SLIDES[0];
+export const HOMELIVING_SECTIONS = Object.freeze({
+  hero: {
+    id: HERO.id, hidden: false, eyebrow: HERO.eyebrow, headline: HERO.headline, sub: HERO.sub, cta: HERO.cta, link: HERO.href, note: HERO.note,
+    picture: { colour: '', phone: HERO.image.tall, desktop: HERO.image.wide }, position: 'left',
+  },
+  trust: { hidden: false, items: TRUST.map((t) => ({ ...t, hidden: false })) },
+  categories: { hidden: false, eyebrow: CATEGORY_SECTION.eyebrow, title: CATEGORY_SECTION.title, more: 'View all', link: CATEGORY_SECTION.viewAll },
+  featured: { hidden: false, title: FEATURED.title, sub: FEATURED.sub, more: 'View all', link: FEATURED.seeAll },
+  promo: {
+    hidden: false, eyebrow: PROMO.eyebrow, headline: PROMO.headline, sub: PROMO.sub, cta: PROMO.cta, link: PROMO.href,
+    picture: { colour: '', phone: PROMO.image, desktop: PROMO.image }, badges: PROMO.badges.map((b) => ({ ...b, hidden: false })),
+  },
+});
+
 export const categoryHref = (c) => `/homeliving/category/${c.slug}`;
 
 // ---- Row shapes ----------------------------------------------------------------

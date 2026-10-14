@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
-import { CATEGORY_SECTION, FEATURED, HERO_SLIDES, PROMO, TRUST, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
+import { FEATURED, HOMELIVING_SECTIONS, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
+import { useStorefrontSection, positionAttr } from '../lib/storefrontSections.js';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
 import { BottomNav, DeliveryRow, SearchBar } from './HomeLivingLayout.jsx';
 
@@ -23,6 +24,14 @@ export const AUTOPLAY_MS = 6000;
 /** Below this the hero shows the 4:5 portrait; from it up, the 3:2 landscape. */
 export const HERO_TALL_MEDIA = '(max-width: 767px)';
 
+// Every section is the admin's (Storefronts → Home & Living), read over its built-in content
+// (HOMELIVING_SECTIONS); a hidden one is left out.
+const visible = (entry) => !entry.hidden;
+/** The hero as the carousel's one slide. */
+export const heroSlideOf = (h) => ({ id: h.id, image: { wide: h.picture.desktop, tall: h.picture.phone }, eyebrow: h.eyebrow, headline: h.headline, sub: h.sub, cta: h.cta, href: h.link, note: h.note, colour: h.picture.colour, position: h.position });
+/** A slide's wash colour (only when the admin set one with its photograph) and its copy position. */
+const slideLook = (s) => ({ ...positionAttr(s.position), ...(s.colour ? { 'data-tone': '', style: { '--sf-tone': s.colour } } : {}) });
+
 /**
  * Full-width carousel. Autoplays only when there is more than one slide,
  * pauses on hover and focus, and never moves under prefers-reduced-motion.
@@ -32,7 +41,9 @@ export const HERO_TALL_MEDIA = '(max-width: 767px)';
  * portrait, clear of the furnishings, over a wash light enough that the
  * wall still reads as wall.
  */
-export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS }) {
+export function HeroCarousel({ slides: given, autoplayMs = AUTOPLAY_MS }) {
+  const hero = useStorefrontSection('homeliving', 'hero', HOMELIVING_SECTIONS.hero);
+  const slides = given || (hero.hidden ? [] : [heroSlideOf(hero)]);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const reduced = useRef(false);
@@ -55,7 +66,7 @@ export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS })
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
       <div className="hl-hero__track" style={{ transform: `translateX(-${index * 100}%)` }}>
         {slides.map((s, i) => (
-          <article key={s.id} className={`hl-hero__slide${i === index ? ' is-on' : ''}`} aria-hidden={i !== index} aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>
+          <article key={s.id} className={`hl-hero__slide${i === index ? ' is-on' : ''}`} {...slideLook(s)} aria-hidden={i !== index} aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>
             <picture>
               <source media={HERO_TALL_MEDIA} srcSet={s.image.tall} />
               <img className="hl-hero__img" src={s.image.wide} alt="" width="1536" height="1024" decoding="async" fetchpriority={i === 0 ? 'high' : 'auto'} loading={i === 0 ? 'eager' : 'lazy'} />
@@ -85,10 +96,12 @@ export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS })
 
 /** One quiet row under the hero: a small icon, the label, the sub-label; it scrolls sideways on a phone if it will not fit. */
 function TrustStrip() {
+  const trust = useStorefrontSection('homeliving', 'trust', HOMELIVING_SECTIONS.trust);
+  if (trust.hidden) return null;
   return (
     <div className="hl-wrap">
       <ul className="hl-trust" aria-label="Why shop with us">
-        {TRUST.map((t) => (
+        {trust.items.filter(visible).map((t) => (
           <li key={t.title}>
             <span className="hl-trust__icon"><Icon name={t.icon} size={18} /></span>
             <span className="hl-trust__txt"><strong>{t.title}</strong><em>{t.sub}</em></span>
@@ -108,6 +121,7 @@ function TrustStrip() {
  * row as not-at-end, the way a phone first sees it.
  */
 function CategoryCircles({ categories }) {
+  const section = useStorefrontSection('homeliving', 'categories', HOMELIVING_SECTIONS.categories);
   const track = useRef(null);
   const [edge, setEdge] = useState({ start: true, end: false });
   const measure = useCallback(() => {
@@ -129,15 +143,15 @@ function CategoryCircles({ categories }) {
     const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     el.scrollBy({ left: Math.round(el.clientWidth * 0.8), behavior: reduced ? 'auto' : 'smooth' });
   };
-  if (categories.length === 0) return null;
+  if (categories.length === 0 || section.hidden) return null;
   return (
     <section className="hl-wrap hl-sec hl-cats" aria-labelledby="hl-cats-h">
       <header className="hl-sec__head hl-cats__head">
         <div>
-          <p className="hl-eyebrow">{CATEGORY_SECTION.eyebrow}</p>
-          <h2 className="hl-sec__h hl-sec__h--rule serif" id="hl-cats-h">{CATEGORY_SECTION.title}</h2>
+          <p className="hl-eyebrow">{section.eyebrow}</p>
+          <h2 className="hl-sec__h hl-sec__h--rule serif" id="hl-cats-h">{section.title}</h2>
         </div>
-        <Link to={CATEGORY_SECTION.viewAll} className="hl-sec__link">View all <Icon name="arrowRight" size={16} /></Link>
+        <Link to={section.link} className="hl-sec__link">{section.more} <Icon name="arrowRight" size={16} /></Link>
       </header>
       <div className={`hl-circles__scroller${edge.start ? ' is-start' : ''}${edge.end ? ' is-end' : ''}`}>
         <nav className="hl-circles" aria-label="Shop by category" ref={track} onScroll={measure}>
@@ -155,13 +169,14 @@ function CategoryCircles({ categories }) {
 }
 
 function FeaturedRow({ products, status }) {
-  const { title, sub, seeAll, limit } = FEATURED;
-  const row = products.slice(0, limit);
+  const { hidden, title, sub, more, link } = useStorefrontSection('homeliving', 'featured', HOMELIVING_SECTIONS.featured);
+  const row = products.slice(0, FEATURED.limit);
+  if (hidden) return null;
   return (
     <section className="hl-wrap hl-sec" aria-labelledby="hl-featured-h">
       <header className="hl-sec__head">
         <div><h2 className="hl-sec__h serif" id="hl-featured-h">{title}</h2>{sub && <p className="hl-sec__sub">{sub}</p>}</div>
-        <Link to={seeAll} className="hl-sec__link">View all <Icon name="arrowRight" size={16} /></Link>
+        <Link to={link} className="hl-sec__link">{more} <Icon name="arrowRight" size={16} /></Link>
       </header>
       {row.length === 0 ? (
         <p className="hl-empty">{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : 'The Home & Living store is being stocked — products appear here as they go live.'}</p>
@@ -175,18 +190,22 @@ function FeaturedRow({ products, status }) {
 }
 
 function PromoStrip() {
+  const promo = useStorefrontSection('homeliving', 'promo', HOMELIVING_SECTIONS.promo);
+  if (promo.hidden) return null;
+  const { colour, phone, desktop } = promo.picture;
+  const img = <img src={desktop} alt="" loading="lazy" decoding="async" width="1200" height="400" />;
   return (
-    <section className="hl-promo" aria-labelledby="hl-promo-h">
-      <div className="hl-promo__art" aria-hidden="true"><img src={PROMO.image} alt="" loading="lazy" decoding="async" width="1200" height="400" /></div>
+    <section className="hl-promo" {...(colour ? { 'data-tone': '', style: { '--sf-tone': colour } } : {})} aria-labelledby="hl-promo-h">
+      <div className="hl-promo__art" aria-hidden="true">{phone !== desktop ? <picture><source media={HERO_TALL_MEDIA} srcSet={phone} />{img}</picture> : img}</div>
       <div className="hl-wrap hl-promo__inner">
         <div className="hl-promo__txt">
-          <p className="hl-eyebrow">{PROMO.eyebrow}</p>
-          <h2 className="hl-promo__h serif" id="hl-promo-h">{PROMO.headline}</h2>
-          <p className="hl-promo__sub">{PROMO.sub}</p>
-          <Link to={PROMO.href} className="hl-cta">{PROMO.cta} <Icon name="arrowRight" size={16} /></Link>
+          <p className="hl-eyebrow">{promo.eyebrow}</p>
+          <h2 className="hl-promo__h serif" id="hl-promo-h">{promo.headline}</h2>
+          <p className="hl-promo__sub">{promo.sub}</p>
+          <Link to={promo.link} className="hl-cta">{promo.cta} <Icon name="arrowRight" size={16} /></Link>
         </div>
         <ul className="hl-promo__badges" aria-label="Why it matters">
-          {PROMO.badges.map((b) => <li key={b.title}><span className="hl-trust__icon"><Icon name={b.icon} size={22} /></span><span>{b.title}</span></li>)}
+          {promo.badges.filter(visible).map((b) => <li key={b.title}><span className="hl-trust__icon"><Icon name={b.icon} size={22} /></span><span>{b.title}</span></li>)}
         </ul>
       </div>
     </section>

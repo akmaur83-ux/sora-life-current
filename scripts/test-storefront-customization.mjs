@@ -73,7 +73,7 @@ await test('the protected admin editor is routed and navigable, saves version-ch
   const page = read('src/admin/pages/Storefronts.jsx');
   assert.match(app, /const Storefronts = lazy\(\(\) => import\('\.\/admin\/pages\/Storefronts\.jsx'\)\);/);
   assert.match(app, /<Route path="storefronts" element=\{<Storefronts \/>\} \/>/);
-  assert.match(nav, /to: '\/admin\/storefronts', label: 'Fashion & Lifestyle'/);
+  assert.match(nav, /to: '\/admin\/storefronts', label: 'Storefronts'/, 'one menu entry, for every store');
   assert.match(page, /await adminLoadStorefronts\(\)/);
   assert.match(page, /validateStorefrontContent\(tab, forms\[tab\]\)/, 'every field is checked before a save');
   assert.match(page, /await adminSaveStorefrontDraft\(tab, forms\[tab\], draft\.version\)/, 'saved against the version it opened');

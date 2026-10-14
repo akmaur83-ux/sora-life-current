@@ -3,6 +3,8 @@
 // come only from the real catalogue. Every statement here is true: delivery is free on every
 // order (standard), returns are accepted within 7 days of delivery, checkout offers cash on
 // delivery, support runs 9am–6pm IST. Nothing else is asserted about the pieces or the shop.
+import { shot } from '../lib/storefrontSections.js';
+
 const art = (name, alt, extra = {}) => ({ src: `/img/fashion-editorial/${name}.webp`, alt, ...extra });
 
 export const JEWELLERY = {
@@ -63,3 +65,19 @@ export const JEWELLERY = {
     }),
   },
 };
+
+// ---- What the admin edits (Storefronts → Fashion → Jewellery page) -------------------------------
+// The page's sections in the schema's shape (storefrontContent.js), built from the content above.
+// What is published replaces them field by field; a field that breaks its rule stays as it is here.
+// An empty link means the page's own (the listing a tile or button opens today).
+const edited = (image) => ({ image, picture: shot(image), alt: image.alt });
+const J = JEWELLERY;
+export const JEWELLERY_SECTIONS = Object.freeze({
+  hero: { hidden: false, eyebrow: J.hero.eyebrow, title: [...J.hero.title], intro: J.hero.intro, cta: J.hero.cta, link: '', ...edited(J.hero.image), position: 'left' },
+  trust: { hidden: false, items: J.trust.map((t) => ({ ...t, hidden: false, phone: [...t.phone], link: t.to })) },
+  categories: { hidden: false, eyebrow: J.categories.eyebrow, title: J.categories.title, intro: J.categories.intro, items: J.categories.items.map((c) => ({ ...c, hidden: false, link: '', ...edited(c.image) })) },
+  loved: { hidden: false, title: J.loved.title, viewAll: J.loved.viewAll },
+  edits: { hidden: false, items: J.edits.map((e) => ({ ...e, hidden: false, title: [0, 1, 2].map((i) => e.title[i] || ''), link: '', ...edited(e.image) })) },
+  story: { hidden: false, eyebrow: J.story.eyebrow, title: J.story.title, text: J.story.text, cta: J.story.cta, link: J.story.to, ...edited(J.story.image) },
+  newsletter: { hidden: false, title: J.newsletter.title, text: J.newsletter.text, ...edited(J.newsletter.image) },
+});

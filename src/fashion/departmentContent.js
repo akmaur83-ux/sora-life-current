@@ -1,5 +1,7 @@
 // Presentation only. Supplied editorial artwork is independent of inventory.
 // Product images/prices continue to come from the existing catalogue.
+import { shot } from '../lib/storefrontSections.js';
+
 const photo = (fallback, alt, src = '') => ({ src, fallback, alt });
 const artwork = (name, alt, extra = {}) => ({
   src: `/img/fashion-editorial/${name}.webp`,
@@ -111,3 +113,54 @@ export const DEPARTMENT_CONTENT = {
     promo: artwork('women-editorial-banarasi', 'Gold brocade across folded plum silk', { width: 1200, height: 649 }),
   },
 };
+
+// ---- What the admin edits (Storefronts → Fashion) ---------------------------------------------
+// Each page's sections in the schema's shape (storefrontContent.js), built from the content above.
+// What is published replaces them field by field; a field that breaks its rule stays as it is here.
+// An empty link means the page's own (the catalogue listing the tile or button opens today).
+// `image`, `icon`, `slug` and `root` ride along for the page; the admin never edits them.
+const edited = (image) => ({ image, picture: shot(image), alt: image.alt });
+const item = (entry) => ({ ...entry, hidden: false, link: '', ...edited(entry.image) });
+const facts = (rows) => ({ hidden: false, items: rows.map(([icon, title, text, link = '']) => ({ hidden: false, icon, title, text, link })) });
+const W = DEPARTMENT_CONTENT.women;
+const M = DEPARTMENT_CONTENT.men;
+const S = DEPARTMENT_CONTENT.sarees;
+
+export const DEPARTMENT_SECTIONS = Object.freeze({
+  women: {
+    hero: { hidden: false, eyebrow: W.eyebrow, title: [...W.title], intro: W.intro, cta: W.cta, link: '', ...edited(W.hero), position: 'left' },
+    categories: { hidden: false, title: 'Shop by category', items: W.categories.map(item) },
+    products: { hidden: false, newTitle: 'New in', title: 'From the collection', viewAll: 'View all' },
+    edits: { hidden: false, items: W.edits.map(item) },
+    capsule: { hidden: false, title: 'The capsule edit', cta: 'Shop', items: W.capsule.map(item) },
+    sarees: { hidden: false, eyebrow: W.sarees.eyebrow, title: W.sarees.title, text: W.sarees.text, cta: W.sarees.cta, link: '/fashion/women/sarees', ...edited(W.sarees.image) },
+    jewellery: { hidden: false, eyebrow: W.jewellery.eyebrow, title: W.jewellery.title, text: W.jewellery.text, cta: W.jewellery.cta, link: '/fashion/jewellery', ...edited(W.jewellery.image) },
+    services: facts([
+      ['truck', 'Standard delivery', '6–7 business days', '/shipping'],
+      ['return', 'Returns', 'Within 7 days of delivery', '/returns'],
+      ['chat', 'Need help?', 'Contact our team', '/contact'],
+    ]),
+  },
+  men: {
+    hero: { hidden: false, eyebrow: M.eyebrow, title: [...M.title], intro: M.intro, cta: M.cta, link: '', note: M.heroNote, ...edited(M.hero), position: 'left' },
+    highlights: facts([['sparkle', 'Everyday style', 'Find your own rhythm'], ['star', 'The wardrobe edit', 'Pieces to make yours'], ['grid', 'Mix. Match. Repeat.', 'A fresh perspective'], ['bag', 'Your next favourite', 'Explore the collection']]),
+    collections: { hidden: false, eyebrow: 'Shop by collection', title: M.collectionTitle, more: 'Explore all', items: M.collections.map(item) },
+    editorial: { hidden: false, items: M.editorial.map((entry) => ({ ...item(entry), cta: 'Discover the edit' })) },
+    products: { hidden: false, eyebrow: 'Curated for you', title: M.productsTitle, more: 'Explore all' },
+    looks: { hidden: false, eyebrow: 'Wear it your way', title: 'Shop the look', more: 'Explore all', items: M.looks.map(item) },
+    closing: { hidden: false, eyebrow: `SORA LIFE / ${M.label}`, title: 'Good style. Your rules.', cta: 'Find your next favourite', link: '' },
+  },
+  sarees: {
+    hero: { hidden: false, eyebrow: S.eyebrow, title: [...S.title], intro: S.intro, cta: S.cta, link: '', position: 'left', slides: [S.hero, S.alternateHero].map(edited) },
+    collections: { hidden: false, eyebrow: 'Shop by category', title: ['Explore Our', 'Collections'], text: ['Discover sarees for every mood,', 'occasion and style.'], viewAll: 'View all', items: S.collections.map(item) },
+    editorial: { hidden: false, items: S.editorial.map(item) },
+    products: { hidden: false, eyebrow: 'The wardrobe edit', title: S.productsTitle, text: ['Explore the styles currently available', 'in our catalogue.'] },
+    promo: { hidden: false, eyebrow: 'A timeless expression', title: ['A little tradition.', 'A story of your own.'], cta: 'Explore the collection', link: '', ...edited(S.promo) },
+    services: facts([
+      ['truck', 'Free standard shipping', 'Choose Standard at checkout', '/shipping'],
+      ['lock', 'Secure checkout', 'View payment options at checkout', '/terms'],
+      ['return', 'Returns & refunds', 'Read our return policy', '/returns'],
+      ['chat', 'Dedicated support', 'We’re here to help you', '/contact'],
+    ]),
+  },
+});

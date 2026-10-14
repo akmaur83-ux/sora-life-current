@@ -108,7 +108,9 @@ await test('the hero carousel: autoplays only with more than one slide, pauses o
   const win = { matchMedia: () => ({ matches: reduce, addEventListener() {}, removeEventListener() {} }) };
   const setInterval = (fn, ms) => { timers.push({ fn, ms, live: true }); return timers.length - 1; };
   const clearInterval = (id) => { if (timers[id]) timers[id].live = false; };
-  const m = loadSource(read('src/components/HomeStorefront.jsx'), { ...hooks, window: win, setInterval, clearInterval, Link: 'a', Icon: () => null, DeferredImage: (p) => h('img', p), FashionEntryLink: 'a' });
+  const m = loadSource(read('src/components/HomeStorefront.jsx'), { ...hooks, window: win, setInterval, clearInterval, Link: 'a', Icon: () => null, DeferredImage: (p) => h('img', p), FashionEntryLink: 'a',
+    // The hero as built in (nothing published), read without the real React the harness replaces.
+    useStorefrontSection: (_store, _path, built) => built });
   assert.equal(typeof m.HomeHero, 'function');
   const live = () => timers.filter((t) => t.live);
   const tree = await mount(h(m.HomeHero));

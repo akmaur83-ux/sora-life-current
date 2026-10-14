@@ -76,6 +76,9 @@ const STOREFRONT = [
   // fashion store is on the critical path — its sheet is deferred below.
   'src/styles/fashion-banner.css',
   'src/styles/fashion-choice.css',
+  // Last: what an admin sets on an editable section (text position, a photograph's colour).
+  // It matches only those settings' attributes, so with nothing published it changes nothing.
+  'src/styles/storefront-sections.css',
 ];
 
 // Routes outside the shop: /admin, /passport, /creator. No customer browsing

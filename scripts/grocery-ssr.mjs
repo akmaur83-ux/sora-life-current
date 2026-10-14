@@ -18,6 +18,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { transformSync } from '@babel/core';
 import * as ReactRouter from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
+// What a storefront section reads its published content through (useStorefrontSection and
+// its helpers): in every module's scope, as the real import would give it. Nothing is published
+// in a test unless the test applies it, so each section renders its built-in content.
+import * as STOREFRONT_SECTIONS from '../src/lib/storefrontSections.js';
 
 export const ROOT = process.env.GROCERY_SRC_ROOT
   ? resolve(process.env.GROCERY_SRC_ROOT)
@@ -52,7 +56,7 @@ export function loadSource(source, deps = {}) {
       },
     } })],
   });
-  const scope = { React, ...React, ...deps };
+  const scope = { React, ...React, ...STOREFRONT_SECTIONS, ...deps };
   const body = `${code}\n; return { ${names.map(([e, l]) => `${JSON.stringify(e)}: ${l}`).join(', ')} };`;
   return new Function(...Object.keys(scope), body)(...Object.values(scope));
 }

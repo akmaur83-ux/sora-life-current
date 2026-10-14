@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import DeferredImage from './DeferredImage.jsx';
 import FashionEntryLink from './FashionEntryLink.jsx';
+import { useStorefrontSection, positionAttr } from '../lib/storefrontSections.js';
 
 // ============================================================
 // The homepage doorways to the other stores. No catalogue dependency.
@@ -105,6 +106,31 @@ export const STORES = [
     details: [['leaf', 'Soft textures'], ['home', 'Calm spaces'], ['grid', 'Everyday living']],
   },
 ];
+
+// The Lifestyle banner and the store carousel are the admin's (Storefronts → Wellness homepage):
+// these are their built-in content in the schema's shape (storefrontContent.js). What is published
+// replaces it field by field; a field that breaks its rule stays as it is here.
+export const LIFESTYLE_SECTION = Object.freeze({
+  hidden: false, eyebrow: LIFESTYLE.eyebrow, title: [...LIFESTYLE.heading], text: LIFESTYLE.description,
+  cta: LIFESTYLE.cta, link: LIFESTYLE.to, picture: { phone: LIFESTYLE.tall, desktop: LIFESTYLE.wide }, alt: LIFESTYLE.alt, position: 'left',
+});
+export const lifestyleOf = (s) => ({
+  ...LIFESTYLE, to: s.link, eyebrow: s.eyebrow, heading: s.title, description: s.text, cta: s.cta,
+  wide: s.picture.desktop, tall: s.picture.phone, alt: s.alt, position: s.position,
+});
+
+export const STORE_CAROUSEL_SECTION = Object.freeze({
+  hidden: false, eyebrow: 'More to explore', title: 'Two Worlds. A Better You.', text: 'Fashion for your style. Living for your space. All at SORA LIFE.',
+  cards: STORES.map((s) => ({
+    ...s, hidden: false, title: [...s.heading], text: s.description, link: s.to, picture: { phone: s.tall, desktop: s.wide },
+    details: s.details.map(([, label]) => label), icons: s.details.map(([icon]) => icon),
+  })),
+});
+/** The cards as DoorwayCarousel takes them: the hidden ones left out. */
+export const storeCardsOf = (section) => section.cards.filter((c) => !c.hidden).map((c) => ({
+  ...c, heading: c.title, description: c.text, to: c.link, wide: c.picture.desktop, tall: c.picture.phone,
+  details: c.details.map((label, i) => [c.icons[i], label]),
+}));
 
 /** One photograph, every word on it. `tall` (optional) is the portrait the browser takes under 1024px. */
 function DoorwayCard({ store, tabIndex }) {
@@ -300,10 +326,11 @@ export function FashionCategoryStrip({ tiles = stripTiles(), autoplayMs = STRIP_
  * directly beneath. Sits after the offers.
  */
 export function LifestyleBanner() {
-  const s = LIFESTYLE;
+  const section = useStorefrontSection('wellness', 'lifestyleBanner', LIFESTYLE_SECTION);
+  const s = lifestyleOf(section);
   return (
     <>
-      <section className="fsb-lead" aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta">
+      {!section.hidden && <section className="fsb-lead" {...positionAttr(s.position)} aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta">
         <Link to={s.to} className="fsb-lead__link" aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta">
           <span className="fsb-lead__art">
             <DeferredImage src={s.wide} sources={[{ media: PHONE, srcSet: s.tall }]} alt={s.alt} width={1898} height={829} className="fsb-lead__image" />
@@ -315,7 +342,7 @@ export function LifestyleBanner() {
             <span className="fsb-lead__cta" id="fsb-lifestyle-cta">{s.cta} <Icon name="arrowRight" size={16} /></span>
           </div>
         </Link>
-      </section>
+      </section>}
       <FashionCategoryStrip />
     </>
   );
@@ -323,15 +350,18 @@ export function LifestyleBanner() {
 
 /** The two store cards under their heading. Sits just above the popular rail. */
 export function StoreCarousel() {
+  const section = useStorefrontSection('wellness', 'storeCarousel', STORE_CAROUSEL_SECTION);
+  const cards = storeCardsOf(section);
+  if (section.hidden || cards.length === 0) return null;
   return (
     <section className="v2-sec fsb" aria-labelledby="fsb-h" id="more-to-explore">
       <div className="v2-wrap">
         <header className="fsb__intro">
-          <p className="fsb__eyebrow fsb__overline">More to explore</p>
-          <h2 id="fsb-h">Two Worlds. A Better You.</h2>
-          <p className="fsb__lede">Fashion for your style. Living for your space. All at SORA LIFE.</p>
+          <p className="fsb__eyebrow fsb__overline">{section.eyebrow}</p>
+          <h2 id="fsb-h">{section.title}</h2>
+          <p className="fsb__lede">{section.text}</p>
         </header>
-        <DoorwayCarousel />
+        <DoorwayCarousel stores={cards} />
       </div>
     </section>
   );

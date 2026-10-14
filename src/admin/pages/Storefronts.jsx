@@ -3,11 +3,15 @@ import { Link } from 'react-router-dom';
 import { safeVisualUrl } from '../../lib/homepageAppearance.js';
 import { uploadStorefrontImage } from '../../lib/storeCatalogueAdminApi.js';
 import { normalizeFashionStorefront, normalizeLifestyleStorefront } from '../../lib/storefrontCustomization.js';
-import { validateStorefrontContent, STOREFRONT_LABELS } from '../../lib/storefrontContent.js';
+import { validateStorefrontContent, STOREFRONT_LABELS, STOREFRONT_CONTENT_STORES, sectionSpec, sectionContent } from '../../lib/storefrontContent.js';
 import { adminLoadStorefronts, adminSaveStorefrontDraft, publishStorefront } from '../../lib/storefrontContentApi.js';
+import StorefrontSectionEditor from '../components/StorefrontSectionEditor.jsx';
+import { SECTION_PAGES } from '../storefrontSections.js';
 
 // ============================================================
-// ADMIN — Fashion & Lifestyle storefronts: edit a draft, preview it, publish it.
+// ADMIN — the storefronts: edit a draft, preview it, publish it. One record per
+// store — the wellness homepage, Fashion (its home page, strips, and the women's,
+// men's, saree and jewellery pages), Home & Living, Grocery and Lifestyle.
 //
 // A draft is saved against the version this page opened (migration 0037): a
 // draft saved elsewhere since is refused, not overwritten. Every field is
@@ -17,7 +21,39 @@ import { adminLoadStorefronts, adminSaveStorefrontDraft, publishStorefront } fro
 // minutes; if the rebuild fails, the current site stays as it is).
 // ============================================================
 
-const STORES = { fashion: { normalize: normalizeFashionStorefront, path: '/fashion' }, lifestyle: { normalize: normalizeLifestyleStorefront, path: '/lifestyle' } };
+// The Fashion and Lifestyle home pages keep their own forms (every field filled from the built-in
+// content); every other section is sparse — an empty field is the built-in value.
+const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+const STORES = {
+  wellness: { form: (content) => ({ ...content }), path: '/' },
+  fashion: { form: (content) => ({ ...content, ...normalizeFashionStorefront(content) }), path: '/fashion' },
+  homeliving: { form: (content) => ({ ...content }), path: '/homeliving' },
+  grocery: { form: (content) => ({ ...content }), path: '/grocery' },
+  lifestyle: { form: (content) => normalizeLifestyleStorefront(content), path: '/lifestyle' },
+};
+
+/** The store's content with the value at a dotted section path replaced. */
+function setIn(content, path, value) {
+  const [key, ...rest] = path.split('.');
+  const base = isObject(content) ? content : {};
+  return { ...base, [key]: rest.length ? setIn(base[key], rest.join('.'), value) : value };
+}
+
+/** Every editable section of a store, page by page, each with a link to preview that page's saved draft. */
+function SectionPages({ store, value, onChange, onUploading, errors, dirty }) {
+  return SECTION_PAGES[store].map((page) => (
+    <section key={page.title} className="adm-sf-page">
+      <div className="adm-sf-page__head">
+        <h2>{page.title}</h2>
+        <a className={`btn btn-sm btn-outline${dirty ? ' is-disabled' : ''}`} href={`${page.href}?preview=draft`} target="_blank" rel="noreferrer" aria-disabled={dirty || undefined} onClick={(event) => { if (dirty) event.preventDefault(); }}>Preview this page</a>
+      </div>
+      {page.sections.map(({ path, defaults }) => (
+        <StorefrontSectionEditor key={path} id={`${store}-${path.replace(/\./g, '-')}`} spec={sectionSpec(store, path)} path={path} value={sectionContent(value, path)} builtIn={defaults}
+          errors={errors} onUploading={onUploading} onChange={(next) => onChange((current) => setIn(current, path, next))} />
+      ))}
+    </section>
+  ));
+}
 
 function Field({ id, label, value, onChange, multiline = false, hint = '', error = '' }) {
   const control = multiline
@@ -153,7 +189,7 @@ const when = (iso) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numer
 
 export default function Storefronts() {
   const [tab, setTab] = useState('fashion');
-  const [forms, setForms] = useState({ fashion: normalizeFashionStorefront(), lifestyle: normalizeLifestyleStorefront() });
+  const [forms, setForms] = useState(() => Object.fromEntries(STOREFRONT_CONTENT_STORES.map((store) => [store, STORES[store].form({})])));
   const [savedForms, setSavedForms] = useState({});
   const [drafts, setDrafts] = useState({});
   const [published, setPublished] = useState({});
@@ -169,7 +205,7 @@ export default function Storefronts() {
     setLoading(true); setError(''); setStale(false);
     try {
       const loaded = await adminLoadStorefronts();
-      const next = Object.fromEntries(Object.entries(STORES).map(([store, { normalize }]) => [store, normalize(loaded.drafts[store]?.content)]));
+      const next = Object.fromEntries(Object.entries(STORES).map(([store, { form }]) => [store, form(isObject(loaded.drafts[store]?.content) ? loaded.drafts[store].content : {})]));
       setForms(next);
       setSavedForms(Object.fromEntries(Object.entries(next).map(([store, form]) => [store, JSON.stringify(form)])));
       setDrafts(loaded.drafts);
@@ -215,11 +251,12 @@ export default function Storefronts() {
 
   if (loading) return <p className="muted">Loading…</p>;
 
-  const Editor = tab === 'fashion' ? FashionEditor : LifestyleEditor;
+  const Editor = { fashion: FashionEditor, lifestyle: LifestyleEditor }[tab];
+  const uploading = (delta) => setUploads((count) => count + delta);
   return (
     <div className="adm-form adm-storefronts">
       <div className="adm__head">
-        <div><h1>Fashion &amp; Lifestyle</h1><p>Edit a draft, preview it, then publish. Products, prices, cart and checkout are not touched.</p></div>
+        <div><h1>Storefronts</h1><p>Every store's copy, photographs, links and sections: edit a draft, preview it, then publish. Products, prices, cart and checkout are not touched.</p></div>
       </div>
       {error && <div className="adm-banner err" role="alert">{error}{stale && <> <button type="button" className="btn btn-sm btn-light" onClick={load}>Reload and discard my edits</button></>}</div>}
       {message && <div className="adm-banner ok" role="status">{message}</div>}
@@ -232,7 +269,7 @@ export default function Storefronts() {
         </div>
       </div>
       <div className="adm-chipbar" role="tablist" aria-label="Storefront editor">
-        {Object.keys(STORES).map((store) => <button key={store} className={`adm-chip${tab === store ? ' active' : ''}`} type="button" role="tab" aria-selected={tab === store} disabled={!!busy} onClick={() => { setTab(store); setErrors({}); setMessage(''); setError(''); }}>{STOREFRONT_LABELS[store]} Store</button>)}
+        {Object.keys(STORES).map((store) => <button key={store} className={`adm-chip${tab === store ? ' active' : ''}`} type="button" role="tab" aria-selected={tab === store} disabled={!!busy} onClick={() => { setTab(store); setErrors({}); setMessage(''); setError(''); }}>{STOREFRONT_LABELS[store]}</button>)}
       </div>
       {draft && (
         <p className="hint adm-storefronts__status" role="status">
@@ -240,7 +277,8 @@ export default function Storefronts() {
         </p>
       )}
       <form onSubmit={save} noValidate>
-        <Editor value={forms[tab]} onChange={setForm} onUploading={(delta) => setUploads((count) => count + delta)} errors={errors} />
+        {Editor && <Editor value={forms[tab]} onChange={setForm} onUploading={uploading} errors={errors} />}
+        <SectionPages store={tab} value={forms[tab]} onChange={setForm} onUploading={uploading} errors={errors} dirty={dirty} />
         <div className="adm-storefronts__actions">
           <button className="btn" type="submit" disabled={!!busy || uploads > 0 || !draft}>{busy === 'save' ? 'Saving…' : uploads ? 'Uploading images…' : 'Save draft'}</button>
           <a className={`btn btn-outline${dirty ? ' is-disabled' : ''}`} href={`${STORES[tab].path}?preview=draft`} target="_blank" rel="noreferrer" aria-disabled={dirty || undefined} onClick={(event) => { if (dirty) event.preventDefault(); }}>Preview the saved draft</a>

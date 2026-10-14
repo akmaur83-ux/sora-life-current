@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import DeferredImage from './DeferredImage.jsx';
 import FashionEntryLink from './FashionEntryLink.jsx';
+import { useStorefrontSection, filledLines, positionAttr } from '../lib/storefrontSections.js';
 
 // ============================================================
 // The top of the wellness homepage: white, with an orange accent — a
@@ -72,8 +73,39 @@ export const STORES = [
   { key: 'jewellery', name: 'Jewellery', to: '/fashion/jewellery', image: '/img/home-cat-jewellery.webp', size: 344 },
 ];
 
+// The hero and the jewellery banner are the admin's (Storefronts → Wellness homepage): these are
+// their built-in content in the schema's shape (storefrontContent.js). What is published replaces
+// it field by field; a field that breaks its rule stays as it is here.
+export const HERO_SECTION = Object.freeze({
+  hidden: false,
+  slides: HERO_SLIDES.map((s) => ({
+    ...s, hidden: false,
+    eyebrow: [s.eyebrow[0] || '', s.eyebrow[1] || ''],
+    title: [s.title[0], s.title[1]],
+    ctaLabel: s.cta?.label || '', ctaLink: s.cta?.to || '',
+    picture: { colour: '', phone: s.phone, desktop: s.image },
+    position: 'left',
+  })),
+});
+
+/** The hero's slides as HomeHero renders them: the hidden ones left out, a button only with a label and a link. */
+export function heroSlidesOf(section) {
+  if (section.hidden) return [];
+  return section.slides.filter((s) => !s.hidden).map((s) => ({
+    ...s,
+    eyebrow: filledLines(s.eyebrow),
+    cta: s.ctaLabel && s.ctaLink ? { label: s.ctaLabel, to: s.ctaLink } : null,
+    image: s.picture.desktop, phone: s.picture.phone, colour: s.picture.colour,
+  }));
+}
+
+/** A slide's page colour (only when the admin set one with its photograph) and its copy position. */
+const slideLook = (s) => ({ ...positionAttr(s.position), ...(s.colour ? { 'data-tone': '', style: { '--sf-tone': s.colour } } : {}) });
+
 /** The slides, one in view on a transform-only track; the first slide's title is the page's h1. */
-export function HomeHero({ slides = HERO_SLIDES, autoplayMs = HERO_AUTOPLAY_MS }) {
+export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
+  const section = useStorefrontSection('wellness', 'hero', HERO_SECTION);
+  const slides = given || heroSlidesOf(section);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const reduced = useRef(false);
@@ -112,7 +144,7 @@ export function HomeHero({ slides = HERO_SLIDES, autoplayMs = HERO_AUTOPLAY_MS }
             const Title = i === 0 ? 'h1' : 'h2';
             const current = i === index;
             return (
-              <div key={s.key} className={`hx-hero__slide hx-hero__slide--${s.key}`} aria-hidden={!current} aria-roledescription="slide" aria-label={`${i + 1} of ${n}`}>
+              <div key={s.key} className={`hx-hero__slide hx-hero__slide--${s.key}`} {...slideLook(s)} aria-hidden={!current} aria-roledescription="slide" aria-label={`${i + 1} of ${n}`}>
                 <DeferredImage src={s.image} sources={[{ media: PHONE, srcSet: s.phone }]} alt={s.alt} width={s.width} height={s.height}
                   className="hx-hero__image" loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : undefined} />
                 <div className="hx-wrap hx-hero__copy">
@@ -217,11 +249,25 @@ export const JEWELLERY_BANNER = {
   alt: 'A gold necklace and drop earrings with clear stones on a marble tray, among white flowers and ivory satin, a hand wearing a matching ring',
 };
 
+export const JEWELLERY_BANNER_SECTION = Object.freeze({
+  hidden: false, eyebrow: JEWELLERY_BANNER.eyebrow, title: [...JEWELLERY_BANNER.title], text: JEWELLERY_BANNER.text,
+  cta: JEWELLERY_BANNER.cta, link: JEWELLERY_BANNER.to, picture: { phone: JEWELLERY_BANNER.tall, desktop: JEWELLERY_BANNER.wide.src },
+  alt: JEWELLERY_BANNER.alt, position: 'left',
+});
+
+/** The banner as JewelleryBanner renders it, from its section. */
+export const jewelleryBannerOf = (s) => ({
+  to: s.link, eyebrow: s.eyebrow, title: s.title, text: s.text, cta: s.cta,
+  wide: { ...JEWELLERY_BANNER.wide, src: s.picture.desktop }, tall: s.picture.phone, alt: s.alt, position: s.position,
+});
+
 /** Full-bleed and square-edged under the fashion category strip: one whole-banner link, every word on the photograph. */
-export function JewelleryBanner({ banner = JEWELLERY_BANNER }) {
-  const b = banner;
+export function JewelleryBanner({ banner }) {
+  const section = useStorefrontSection('wellness', 'jewelleryBanner', JEWELLERY_BANNER_SECTION);
+  if (!banner && section.hidden) return null;
+  const b = banner || jewelleryBannerOf(section);
   return (
-    <section className="hx hx-jewel" aria-labelledby="hx-jewel-h">
+    <section className="hx hx-jewel" {...positionAttr(b.position)} aria-labelledby="hx-jewel-h">
       <Link to={b.to} className="hx-jewel__link" aria-labelledby="hx-jewel-h hx-jewel-cta">
         <span className="hx-jewel__art">
           <DeferredImage src={b.wide.src} sources={[{ media: PHONE, srcSet: b.tall }]} alt={b.alt} width={b.wide.width} height={b.wide.height} className="hx-jewel__image" />

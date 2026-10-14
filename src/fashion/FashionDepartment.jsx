@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { categoryHref, resolveCategory, sortViews } from '../lib/fashion.js';
 import { useFashionCatalogue } from './FashionCatalogue.jsx';
 import FashionProductCard from './FashionProductCard.jsx';
-import { DEPARTMENT_CONTENT } from './departmentContent.js';
+import { DEPARTMENT_CONTENT, DEPARTMENT_SECTIONS } from './departmentContent.js';
+import { useStorefrontSection, filledLines, positionAttr, imageFor, linkOr } from '../lib/storefrontSections.js';
 
 // Use the existing category tree, including active descendants. Missing
 // departments never fall back to showing another department's products.
@@ -37,69 +38,72 @@ function DepartmentNav({ active }) {
   </nav>;
 }
 
-function SectionHead({ eyebrow, title, href, id }) {
+function SectionHead({ eyebrow, title, href, id, more = 'Explore all' }) {
   return <header className="fd-section-head"><div><p className="fd-eyebrow">{eyebrow}</p><h2 id={id}>{title}</h2></div>
-    <Link to={href}>Explore all <Icon name="arrowRight" size={17} /></Link></header>;
+    <Link to={href}>{more} <Icon name="arrowRight" size={17} /></Link></header>;
 }
 
-function SareeDepartment({ config, products, status, listing, collectionHref }) {
+/** Lines set with a line break between them (and `gap` after each break), the empty ones left out. */
+const brLines = (lines, gap = '') => filledLines(lines).map((line, i) => <Fragment key={i}>{i > 0 && <br />}{i > 0 && gap}{line}</Fragment>);
+const visible = (entry) => !entry.hidden;
+
+// Every section below is the admin's (Storefronts → Fashion): `s` is the page's sections as
+// published over their built-in content (DEPARTMENT_SECTIONS), and a hidden one is left out.
+function SareeDepartment({ sections: s, products, status, listing, collectionHref }) {
   const [slide, setSlide] = useState(0);
   const productRail = useRef(null);
-  const slides = [config.hero, config.alternateHero];
+  const slides = s.hero.slides.map(imageFor);
   const step = (direction) => setSlide((index) => (index + direction + slides.length) % slides.length);
   const scrollProducts = (direction) => {
     const rail = productRail.current;
     if (rail) rail.scrollBy({ left: direction * rail.clientWidth, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   };
   return <div className="sw">
-    <section className="sw-hero" aria-label="Saree collection" aria-roledescription="carousel">
+    {!s.hero.hidden && <section className="sw-hero" {...positionAttr(s.hero.position)} aria-label="Saree collection" aria-roledescription="carousel">
       <EditorialImage key={slide} image={slides[slide]} priority className="sw-hero__art" />
       <div className="sw-hero__copy">
-        <p className="sw-eyebrow">{config.eyebrow}</p>
-        <h1>{config.title.map((line) => <span key={line}>{line}</span>)}</h1>
-        <p className="sw-hero__intro">{config.intro}</p>
-        <Link to={listing} className="sw-button">{config.cta}<Icon name="arrowRight" size={17} /></Link>
+        <p className="sw-eyebrow">{s.hero.eyebrow}</p>
+        <h1>{filledLines(s.hero.title).map((line) => <span key={line}>{line}</span>)}</h1>
+        <p className="sw-hero__intro">{s.hero.intro}</p>
+        <Link to={linkOr(s.hero.link, listing)} className="sw-button">{s.hero.cta}<Icon name="arrowRight" size={17} /></Link>
       </div>
       <div className="sw-hero__controls">
         <div className="sw-hero__dots" aria-label="Choose a collection image">{slides.map((_, index) => <button key={index} type="button" aria-label={`Show collection image ${index + 1}`} aria-pressed={slide === index} onClick={() => setSlide(index)}>0{index + 1}</button>)}</div>
         <div className="sw-arrows"><button type="button" aria-label="Previous collection image" onClick={() => step(-1)}><Icon name="chevronLeft" size={18} /></button><button type="button" aria-label="Next collection image" onClick={() => step(1)}><Icon name="chevronRight" size={18} /></button></div>
       </div>
-    </section>
+    </section>}
 
-    <section className="sw-collections sw-wrap" id="sw-collections" aria-labelledby="sw-collections-title">
-      <div className="sw-collections__intro"><p className="sw-eyebrow">Shop by category</p><h2 id="sw-collections-title">Explore Our<br /> Collections</h2><p>Discover sarees for every mood,<br />occasion and style.</p><Link to={listing} className="sw-inline-link">View all <Icon name="arrowRight" size={16} /></Link></div>
-      <div className="sw-collections__grid">{config.collections.map((item) => <Link key={item.slug} to={collectionHref(item.slug)} className="sw-collection"><EditorialImage image={item.image} /><strong>{item.title}</strong><span>{item.caption}</span></Link>)}</div>
-    </section>
+    {!s.collections.hidden && <section className="sw-collections sw-wrap" id="sw-collections" aria-labelledby="sw-collections-title">
+      <div className="sw-collections__intro"><p className="sw-eyebrow">{s.collections.eyebrow}</p><h2 id="sw-collections-title">{brLines(s.collections.title, ' ')}</h2><p>{brLines(s.collections.text)}</p><Link to={listing} className="sw-inline-link">{s.collections.viewAll} <Icon name="arrowRight" size={16} /></Link></div>
+      <div className="sw-collections__grid">{s.collections.items.filter(visible).map((item) => <Link key={item.slug} to={linkOr(item.link, collectionHref(item.slug))} className="sw-collection"><EditorialImage image={imageFor(item)} /><strong>{item.title}</strong><span>{item.caption}</span></Link>)}</div>
+    </section>}
 
-    <section className="sw-editorials" aria-label="Featured saree collections">{config.editorial.map((item, index) => <Link key={item.slug} to={collectionHref(item.slug)} className={`sw-editorial sw-editorial--${index + 1}`}>
-      <EditorialImage image={item.image} /><div><p className="sw-eyebrow">{item.eyebrow}</p><h2>{item.title}</h2><p>{item.text}</p><span className="sw-button sw-button--outline">{item.cta}<Icon name="arrowRight" size={15} /></span></div>
-    </Link>)}</section>
+    {!s.editorial.hidden && <section className="sw-editorials" aria-label="Featured saree collections">{s.editorial.items.filter(visible).map((item, index) => <Link key={item.slug} to={linkOr(item.link, collectionHref(item.slug))} className={`sw-editorial sw-editorial--${index + 1}`}>
+      <EditorialImage image={imageFor(item)} /><div><p className="sw-eyebrow">{item.eyebrow}</p><h2>{item.title}</h2><p>{item.text}</p><span className="sw-button sw-button--outline">{item.cta}<Icon name="arrowRight" size={15} /></span></div>
+    </Link>)}</section>}
 
-    <section className="sw-products sw-wrap" id="fd-products" aria-labelledby="sw-products-title">
-      <header className="sw-section-head"><div><p className="sw-eyebrow">The wardrobe edit</p><h2 id="sw-products-title">{config.productsTitle}</h2><p>Explore the styles currently available<br />in our catalogue.</p></div><div className="sw-arrows"><button type="button" aria-label="Previous products" onClick={() => scrollProducts(-1)} disabled={products.length < 3}><Icon name="chevronLeft" size={16} /></button><button type="button" aria-label="Next products" onClick={() => scrollProducts(1)} disabled={products.length < 3}><Icon name="chevronRight" size={16} /></button></div></header>
+    {!s.products.hidden && <section className="sw-products sw-wrap" id="fd-products" aria-labelledby="sw-products-title">
+      <header className="sw-section-head"><div><p className="sw-eyebrow">{s.products.eyebrow}</p><h2 id="sw-products-title">{s.products.title}</h2><p>{brLines(s.products.text)}</p></div><div className="sw-arrows"><button type="button" aria-label="Previous products" onClick={() => scrollProducts(-1)} disabled={products.length < 3}><Icon name="chevronLeft" size={16} /></button><button type="button" aria-label="Next products" onClick={() => scrollProducts(1)} disabled={products.length < 3}><Icon name="chevronRight" size={16} /></button></div></header>
       {products.length ? <div className="sw-products__rail" ref={productRail}>{products.slice(0, 8).map((view) => <FashionProductCard key={view.id} view={view} />)}</div>
         : <div className="fd-empty" role="status"><p>{status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'A new chapter in style is on its way. Explore all fashion while this collection comes together.'}</p><Link to="/fashion">Explore all fashion <Icon name="arrowRight" size={16} /></Link></div>}
-    </section>
+    </section>}
 
-    <section className="sw-promo" aria-labelledby="sw-promo-title"><EditorialImage image={config.promo} /><div><p className="sw-eyebrow">A timeless expression</p><h2 id="sw-promo-title">A little tradition.<br />A story of your own.</h2></div><Link to={listing} className="sw-button sw-button--outline">Explore the collection <Icon name="arrowRight" size={16} /></Link></section>
-    <nav className="sw-services sw-wrap" aria-label="Shopping information">
-      {[
-        ['truck', 'Free standard shipping', 'Choose Standard at checkout', '/shipping'],
-        ['lock', 'Secure checkout', 'View payment options at checkout', '/terms'],
-        ['return', 'Returns & refunds', 'Read our return policy', '/returns'],
-        ['chat', 'Dedicated support', 'We’re here to help you', '/contact'],
-      ].map(([icon, title, description, href]) => <Link key={title} to={href}><Icon name={icon} size={27} /><span><strong>{title}</strong><small>{description}</small></span></Link>)}
-    </nav>
+    {!s.promo.hidden && <section className="sw-promo" aria-labelledby="sw-promo-title"><EditorialImage image={imageFor(s.promo)} /><div><p className="sw-eyebrow">{s.promo.eyebrow}</p><h2 id="sw-promo-title">{brLines(s.promo.title)}</h2></div><Link to={linkOr(s.promo.link, listing)} className="sw-button sw-button--outline">{s.promo.cta} <Icon name="arrowRight" size={16} /></Link></section>}
+    {!s.services.hidden && <nav className="sw-services sw-wrap" aria-label="Shopping information">
+      {s.services.items.filter(visible).map((item) => <Link key={item.title} to={item.link}><Icon name={item.icon} size={27} /><span><strong>{item.title}</strong><small>{item.text}</small></span></Link>)}
+    </nav>}
   </div>;
 }
 
 // The main women's page: a full-bleed hero under its own header, shop-by-category,
 // the real catalogue (new arrivals when any are flagged), four edits, a capsule
 // wardrobe, and the ways into the saree and jewellery stores. Every word is HTML; no image carries text.
-function WomenDepartment({ config, tree, category, categories, products, status, listing, collectionHref }) {
+function WomenDepartment({ sections: s, tree, category, categories, products, status, listing, collectionHref }) {
   const [shelf, setShelf] = useState('');
-  // `root` names a top-level category (bags sit under Bags & Accessories, not under Women).
+  // A link the admin set wins; else `root` names a top-level category (bags sit under Bags &
+  // Accessories, not under Women), else the slug's category, else the Women listing.
   const tileHref = (item) => {
+    if (item.link) return item.link;
     if (!item.root) return item.slug ? collectionHref(item.slug) : listing;
     const node = resolveCategory(tree, item.root);
     return node && !node.parent_id ? categoryHref(node) : listing;
@@ -114,73 +118,71 @@ function WomenDepartment({ config, tree, category, categories, products, status,
   const current = shelves.find((s) => s.id === shelf);
   const shown = (current ? pool.filter((view) => current.ids.has(view.category_id)) : pool).slice(0, 8);
   return <div className="wm">
-    <section className="wm-hero" aria-labelledby="wm-title">
-      <EditorialImage image={config.hero} priority className="wm-hero__art" />
+    {!s.hero.hidden && <section className="wm-hero" {...positionAttr(s.hero.position)} aria-labelledby="wm-title">
+      <EditorialImage image={imageFor(s.hero)} priority className="wm-hero__art" />
       <div className="wm-hero__copy">
-        <p className="wm-eyebrow">{config.eyebrow}</p>
-        <h1 id="wm-title">{config.title.map((line) => <span key={line}>{line}</span>)}</h1>
-        <p className="wm-hero__intro">{config.intro}</p>
-        <Link to={listing} className="wm-button">{config.cta}</Link>
+        <p className="wm-eyebrow">{s.hero.eyebrow}</p>
+        <h1 id="wm-title">{filledLines(s.hero.title).map((line) => <span key={line}>{line}</span>)}</h1>
+        <p className="wm-hero__intro">{s.hero.intro}</p>
+        <Link to={linkOr(s.hero.link, listing)} className="wm-button">{s.hero.cta}</Link>
       </div>
-    </section>
+    </section>}
 
-    <section className="wm-categories wm-wrap" id="wm-categories" aria-labelledby="wm-categories-title">
-      <h2 id="wm-categories-title">Shop by category</h2>
-      <div className="wm-categories__grid">{config.categories.map((item) => <Link key={item.title} to={tileHref(item)} className="wm-category">
-        <EditorialImage image={item.image} /><span>{item.title}</span>
+    {!s.categories.hidden && <section className="wm-categories wm-wrap" id="wm-categories" aria-labelledby="wm-categories-title">
+      <h2 id="wm-categories-title">{s.categories.title}</h2>
+      <div className="wm-categories__grid">{s.categories.items.filter(visible).map((item) => <Link key={item.title} to={tileHref(item)} className="wm-category">
+        <EditorialImage image={imageFor(item)} /><span>{item.title}</span>
       </Link>)}</div>
-    </section>
+    </section>}
 
-    <section className="wm-products wm-wrap" id="wm-products" aria-labelledby="wm-products-title">
-      <h2 id="wm-products-title">{fresh.length ? 'New in' : 'From the collection'}</h2>
+    {!s.products.hidden && <section className="wm-products wm-wrap" id="wm-products" aria-labelledby="wm-products-title">
+      <h2 id="wm-products-title">{fresh.length ? s.products.newTitle : s.products.title}</h2>
       {shelves.length > 1 && <div className="wm-shelves" role="group" aria-label="Show a category">
         <button type="button" aria-pressed={!current} onClick={() => setShelf('')}>All</button>
         {shelves.map((s) => <button key={s.id} type="button" aria-pressed={current?.id === s.id} onClick={() => setShelf(s.id)}>{s.name}</button>)}
       </div>}
       {shown.length ? <div className="wm-products__grid">{shown.map((view) => <FashionProductCard key={view.id} view={view} />)}</div>
         : <div className="fd-empty" role="status"><p>{status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'A new chapter in style is on its way. Explore all fashion while this collection comes together.'}</p><Link to="/fashion">Explore all fashion <Icon name="arrowRight" size={16} /></Link></div>}
-      {shown.length > 0 && <Link to={listing} className="wm-button wm-button--outline">View all</Link>}
-    </section>
+      {shown.length > 0 && <Link to={listing} className="wm-button wm-button--outline">{s.products.viewAll}</Link>}
+    </section>}
 
-    <section className="wm-edits wm-wrap" aria-label="Edits">
-      {config.edits.map((item, index) => <Link key={item.title} to={tileHref(item)} className={`wm-edit wm-edit--${index + 1}`}>
-        <EditorialImage image={item.image} /><div><h2>{item.title}</h2><p>{item.text}</p>
+    {!s.edits.hidden && <section className="wm-edits wm-wrap" aria-label="Edits">
+      {s.edits.items.filter(visible).map((item, index) => <Link key={item.title} to={tileHref(item)} className={`wm-edit wm-edit--${index + 1}`}>
+        <EditorialImage image={imageFor(item)} /><div><h2>{item.title}</h2><p>{item.text}</p>
           {item.slug || item.root ? <span className="wm-edit__link">{item.cta} <Icon name="arrowRight" size={16} /></span> : <span className="wm-button">{item.cta}</span>}</div>
       </Link>)}
-    </section>
+    </section>}
 
-    <section className="wm-capsule wm-wrap" aria-labelledby="wm-capsule-title">
-      <h2 id="wm-capsule-title">The capsule edit</h2>
-      <div className="wm-capsule__grid">{config.capsule.map((item) => <Link key={item.title} to={tileHref(item)} className="wm-look">
-        <EditorialImage image={item.image} /><div><h3>{item.title}</h3><p>{item.caption}</p><span>Shop <Icon name="arrowRight" size={15} /></span></div>
+    {!s.capsule.hidden && <section className="wm-capsule wm-wrap" aria-labelledby="wm-capsule-title">
+      <h2 id="wm-capsule-title">{s.capsule.title}</h2>
+      <div className="wm-capsule__grid">{s.capsule.items.filter(visible).map((item) => <Link key={item.title} to={tileHref(item)} className="wm-look">
+        <EditorialImage image={imageFor(item)} /><div><h3>{item.title}</h3><p>{item.caption}</p><span>{s.capsule.cta} <Icon name="arrowRight" size={15} /></span></div>
       </Link>)}</div>
-    </section>
+    </section>}
 
-    <section className="wm-sarees wm-wrap" aria-labelledby="wm-sarees-title">
-      <EditorialImage image={config.sarees.image} />
-      <div><p className="wm-eyebrow">{config.sarees.eyebrow}</p><h2 id="wm-sarees-title">{config.sarees.title}</h2><p>{config.sarees.text}</p>
-        <Link to="/fashion/women/sarees" className="wm-button">{config.sarees.cta} <Icon name="arrowRight" size={16} /></Link></div>
-    </section>
+    {!s.sarees.hidden && <section className="wm-sarees wm-wrap" aria-labelledby="wm-sarees-title">
+      <EditorialImage image={imageFor(s.sarees)} />
+      <div><p className="wm-eyebrow">{s.sarees.eyebrow}</p><h2 id="wm-sarees-title">{s.sarees.title}</h2><p>{s.sarees.text}</p>
+        <Link to={s.sarees.link} className="wm-button">{s.sarees.cta} <Icon name="arrowRight" size={16} /></Link></div>
+    </section>}
 
-    <section className="wm-sarees wm-jewellery wm-wrap" aria-labelledby="wm-jewellery-title">
-      <EditorialImage image={config.jewellery.image} />
-      <div><p className="wm-eyebrow">{config.jewellery.eyebrow}</p><h2 id="wm-jewellery-title">{config.jewellery.title}</h2><p>{config.jewellery.text}</p>
-        <Link to="/fashion/jewellery" className="wm-button">{config.jewellery.cta} <Icon name="arrowRight" size={16} /></Link></div>
-    </section>
+    {!s.jewellery.hidden && <section className="wm-sarees wm-jewellery wm-wrap" aria-labelledby="wm-jewellery-title">
+      <EditorialImage image={imageFor(s.jewellery)} />
+      <div><p className="wm-eyebrow">{s.jewellery.eyebrow}</p><h2 id="wm-jewellery-title">{s.jewellery.title}</h2><p>{s.jewellery.text}</p>
+        <Link to={s.jewellery.link} className="wm-button">{s.jewellery.cta} <Icon name="arrowRight" size={16} /></Link></div>
+    </section>}
 
-    <nav className="wm-services wm-wrap" aria-label="Shopping information">
-      {[
-        ['truck', 'Standard delivery', '6–7 business days', '/shipping'],
-        ['return', 'Returns', 'Within 7 days of delivery', '/returns'],
-        ['chat', 'Need help?', 'Contact our team', '/contact'],
-      ].map(([icon, title, description, href]) => <Link key={title} to={href}><Icon name={icon} size={24} /><span><strong>{title}</strong><small>{description}</small></span></Link>)}
-    </nav>
+    {!s.services.hidden && <nav className="wm-services wm-wrap" aria-label="Shopping information">
+      {s.services.items.filter(visible).map((item) => <Link key={item.title} to={item.link}><Icon name={item.icon} size={24} /><span><strong>{item.title}</strong><small>{item.text}</small></span></Link>)}
+    </nav>}
   </div>;
 }
 
 export default function FashionDepartment({ department = 'men' }) {
   // Opening at the hero (or at a #section) is ScrollManager's, site-wide (main.jsx).
   const config = DEPARTMENT_CONTENT[department] || DEPARTMENT_CONTENT.men;
+  const page = DEPARTMENT_SECTIONS[department] ? department : 'men';
+  const s = useStorefrontSection('fashion', page, DEPARTMENT_SECTIONS[page]);
   const { tree, views, status } = useFashionCatalogue();
   const { category, categories, products } = departmentCatalogue(tree, views, config.categorySlug);
   const listing = category ? categoryHref(category) : '#fd-products';
@@ -188,48 +190,48 @@ export default function FashionDepartment({ department = 'men' }) {
     const node = categories.find((c) => c.slug === slug);
     return node ? categoryHref(node) : listing;
   };
-  if (department === 'sarees') return <SareeDepartment config={config} products={products} status={status} listing={listing} collectionHref={collectionHref} />;
-  if (department === 'women') return <WomenDepartment config={config} tree={tree} category={category} categories={categories} products={products} status={status} listing={listing} collectionHref={collectionHref} />;
+  if (department === 'sarees') return <SareeDepartment sections={s} products={products} status={status} listing={listing} collectionHref={collectionHref} />;
+  if (department === 'women') return <WomenDepartment sections={s} tree={tree} category={category} categories={categories} products={products} status={status} listing={listing} collectionHref={collectionHref} />;
   return <div className={`fd fd--${department}`}>
     <DepartmentNav active={department} />
-    <section className="fd-hero" aria-labelledby="fd-title">
-      <div className="fd-hero__photo"><EditorialImage key={department} image={config.hero} priority /></div>
+    {!s.hero.hidden && <section className="fd-hero" {...positionAttr(s.hero.position)} aria-labelledby="fd-title">
+      <div className="fd-hero__photo"><EditorialImage key={department} image={imageFor(s.hero)} priority /></div>
       <div className="fd-hero__copy">
-        <p className="fd-eyebrow">{config.eyebrow}</p>
-        <h1 id="fd-title">{config.title.map((line) => <span key={line}>{line}</span>)}</h1>
-        <p className="fd-hero__intro">{config.intro}</p>
-        <Link to={listing} className="fd-cta">{config.cta} <Icon name="arrowRight" size={19} /></Link>
+        <p className="fd-eyebrow">{s.hero.eyebrow}</p>
+        <h1 id="fd-title">{filledLines(s.hero.title).map((line) => <span key={line}>{line}</span>)}</h1>
+        <p className="fd-hero__intro">{s.hero.intro}</p>
+        <Link to={linkOr(s.hero.link, listing)} className="fd-cta">{s.hero.cta} <Icon name="arrowRight" size={19} /></Link>
       </div>
-      <span className="fd-hero__edition">{config.heroNote}</span>
+      <span className="fd-hero__edition">{s.hero.note}</span>
       <span className="fd-hero__number" aria-hidden="true">{department === 'men' ? '01' : '02'}</span>
-    </section>
+    </section>}
 
-    {department === 'men' && <nav className="fd-highlights" aria-label="Explore menswear">
-      {[["sparkle", "Everyday style", "Find your own rhythm"], ["star", "The wardrobe edit", "Pieces to make yours"], ["grid", "Mix. Match. Repeat.", "A fresh perspective"], ["bag", "Your next favourite", "Explore the collection"]].map(([icon, label, sub]) =>
-        <Link key={label} to={listing}><Icon name={icon} size={28} /><span><strong>{label}</strong><small>{sub}</small></span></Link>)}
+    {department === 'men' && !s.highlights.hidden && <nav className="fd-highlights" aria-label="Explore menswear">
+      {s.highlights.items.filter(visible).map((item) =>
+        <Link key={item.title} to={linkOr(item.link, listing)}><Icon name={item.icon} size={28} /><span><strong>{item.title}</strong><small>{item.text}</small></span></Link>)}
     </nav>}
 
-    <section className="fd-section fd-collections" aria-labelledby="fd-collections-title">
-      <SectionHead eyebrow="Shop by collection" title={config.collectionTitle} href={listing} id="fd-collections-title" />
-      <div className="fd-collections__grid">{config.collections.map((item) => <Link key={item.title} to={collectionHref(item.slug)} className="fd-collection">
-        <span className="fd-collection__photo"><EditorialImage image={item.image} /></span><strong>{item.title}</strong><Icon name="arrowRight" size={17} />
+    {!s.collections.hidden && <section className="fd-section fd-collections" aria-labelledby="fd-collections-title">
+      <SectionHead eyebrow={s.collections.eyebrow} title={s.collections.title} more={s.collections.more} href={listing} id="fd-collections-title" />
+      <div className="fd-collections__grid">{s.collections.items.filter(visible).map((item) => <Link key={item.title} to={linkOr(item.link, collectionHref(item.slug))} className="fd-collection">
+        <span className="fd-collection__photo"><EditorialImage image={imageFor(item)} /></span><strong>{item.title}</strong><Icon name="arrowRight" size={17} />
       </Link>)}</div>
-    </section>
+    </section>}
 
-    <section className="fd-editorials" aria-label="The style edits">{config.editorial.map((item, i) => <Link key={item.title} to={listing} className={`fd-editorial fd-editorial--${i + 1}`}>
-      <EditorialImage image={item.image} /><div><p className="fd-eyebrow">{item.eyebrow}</p><h2>{item.title}</h2><p>{item.text}</p><span className="fd-text-link">Discover the edit <Icon name="arrowRight" size={16} /></span></div>
-    </Link>)}</section>
+    {!s.editorial.hidden && <section className="fd-editorials" aria-label="The style edits">{s.editorial.items.filter(visible).map((item, i) => <Link key={item.title} to={linkOr(item.link, listing)} className={`fd-editorial fd-editorial--${i + 1}`}>
+      <EditorialImage image={imageFor(item)} /><div><p className="fd-eyebrow">{item.eyebrow}</p><h2>{item.title}</h2><p>{item.text}</p><span className="fd-text-link">{item.cta} <Icon name="arrowRight" size={16} /></span></div>
+    </Link>)}</section>}
 
-    <section className="fd-section" aria-labelledby="fd-products-title" id="fd-products">
-      <SectionHead eyebrow="Curated for you" title={config.productsTitle} href={listing} id="fd-products-title" />
+    {!s.products.hidden && <section className="fd-section" aria-labelledby="fd-products-title" id="fd-products">
+      <SectionHead eyebrow={s.products.eyebrow} title={s.products.title} more={s.products.more} href={listing} id="fd-products-title" />
       {products.length ? <div className="fd-products">{products.slice(0, 8).map((view) => <FashionProductCard key={view.id} view={view} />)}</div>
         : <div className="fd-empty" role="status"><Icon name="bag" size={28} /><p>{status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'A new chapter in style is on its way. Explore all fashion while this collection comes together.'}</p><Link to="/fashion">Explore all fashion <Icon name="arrowRight" size={16} /></Link></div>}
-    </section>
+    </section>}
 
-    <section className="fd-section fd-looks" aria-labelledby="fd-looks-title">
-      <SectionHead eyebrow={department === 'men' ? 'Wear it your way' : 'The styling journal'} title={department === 'men' ? 'Shop the look' : 'A little inspiration'} href={listing} id="fd-looks-title" />
-      <div className="fd-looks__grid">{config.looks.map((look) => <Link key={look.title} to={listing}><EditorialImage image={look.image} /><span>{look.title}<Icon name="arrowRight" size={17} /></span></Link>)}</div>
-    </section>
-    <section className="fd-closing"><p className="fd-eyebrow">SORA LIFE / {config.label}</p><h2>{department === 'men' ? 'Good style. Your rules.' : 'Your story. Beautifully worn.'}</h2><Link to={listing} className="fd-cta">Find your next favourite <Icon name="arrowRight" size={18} /></Link></section>
+    {!s.looks.hidden && <section className="fd-section fd-looks" aria-labelledby="fd-looks-title">
+      <SectionHead eyebrow={s.looks.eyebrow} title={s.looks.title} more={s.looks.more} href={listing} id="fd-looks-title" />
+      <div className="fd-looks__grid">{s.looks.items.filter(visible).map((look) => <Link key={look.title} to={linkOr(look.link, listing)}><EditorialImage image={imageFor(look)} /><span>{look.title}<Icon name="arrowRight" size={17} /></span></Link>)}</div>
+    </section>}
+    {!s.closing.hidden && <section className="fd-closing"><p className="fd-eyebrow">{s.closing.eyebrow}</p><h2>{s.closing.title}</h2><Link to={linkOr(s.closing.link, listing)} className="fd-cta">{s.closing.cta} <Icon name="arrowRight" size={18} /></Link></section>}
   </div>;
 }

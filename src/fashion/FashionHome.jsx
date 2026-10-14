@@ -9,6 +9,7 @@ import FashionProductCard from './FashionProductCard.jsx';
 import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
 import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
 import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
+import { useStorefrontSection } from '../lib/storefrontSections.js';
 
 // ============================================================
 // /fashion — circular category tiles, the benefits strip, the hero (image
@@ -47,17 +48,24 @@ const BENEFITS = [
   ['package', 'Cash on', 'delivery'],
   ['tag', 'Coupons', '& offers'],
 ];
+/** The benefits strip — the admin's (Storefronts → Fashion → strips); this is its built-in content. */
+export const BENEFITS_STRIP = Object.freeze({
+  hidden: false, signIn: 'Sign in', signInText: 'for exclusive benefits', account: 'Your account', accountText: 'orders & addresses',
+  items: BENEFITS.map(([icon, line1, line2]) => ({ hidden: false, icon, line1, line2 })),
+});
 function Benefits() {
   const { session } = useCustomerAuth();
+  const strip = useStorefrontSection('fashion', 'strips.benefits', BENEFITS_STRIP);
+  if (strip.hidden) return null;
   return (
     <section className="fs-benefits" aria-label="Benefits">
       <Link to="/account" className="fs-benefits__signin">
         <Icon name="gift" size={30} />
-        <span>{session ? <><strong>Your account</strong> orders &amp; addresses</> : <><strong>Sign in</strong> for exclusive benefits</>}</span>
+        <span>{session ? <><strong>{strip.account}</strong> {strip.accountText}</> : <><strong>{strip.signIn}</strong> {strip.signInText}</>}</span>
         <Icon name="chevronRight" size={18} />
       </Link>
       <ul className="fs-benefits__list">
-        {BENEFITS.map(([icon, a, b]) => <li key={a}><Icon name={icon} size={26} /><span>{a}<br />{b}</span></li>)}
+        {strip.items.filter((item) => !item.hidden).map((item) => <li key={item.line1}><Icon name={item.icon} size={26} /><span>{item.line1}<br />{item.line2}</span></li>)}
       </ul>
     </section>
   );

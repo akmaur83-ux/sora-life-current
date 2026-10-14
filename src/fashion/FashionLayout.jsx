@@ -10,6 +10,7 @@ import { useFashionWishlist } from '../lib/fashionWishlist.js';
 import { FashionCatalogueProvider, useFashionCatalogue } from './FashionCatalogue.jsx';
 import { categoryHref, resolveCategory } from '../lib/fashion.js';
 import { normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
+import { useStorefrontSection } from '../lib/storefrontSections.js';
 
 // ============================================================
 // The fashion store shell — its own header (logo, search, account,
@@ -19,6 +20,9 @@ import { normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
 // ============================================================
 
 const SEARCH_PLACEHOLDER = 'Search for fashion, lifestyle and more…';
+
+/** The delivery strip under the search bar — the admin's (Storefronts → Fashion → strips); this is its built-in content. */
+export const DELIVERY_STRIP = Object.freeze({ hidden: false, location: 'Delivering across India', promise: 'Delivery in 6–7 business days' });
 
 function FashionLogo({ tagline }) {
   return (
@@ -36,6 +40,7 @@ export function FashionHeader({ onMenu }) {
   const location = useLocation();
   const homepage = useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
   const config = normalizeFashionStorefront(homepage.fashion_storefront);
+  const strip = useStorefrontSection('fashion', 'strips.delivery', DELIVERY_STRIP);
   const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') || '');
   const submit = (e) => {
     e.preventDefault();
@@ -113,11 +118,11 @@ export function FashionHeader({ onMenu }) {
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={config.header.searchPlaceholder || SEARCH_PLACEHOLDER} aria-label="Search fashion" />
         <button type="submit" className="fs-search__go" aria-label="Search"><Icon name="search" size={22} /></button>
       </form>
-      <div className="fs-strip" aria-label="Delivery">
-        <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> Delivering across India</span>
+      {!strip.hidden && <div className="fs-strip" aria-label="Delivery">
+        <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> {strip.location}</span>
         <span className="fs-strip__sep" aria-hidden="true" />
-        <span className="fs-strip__fast"><Icon name="truck" size={20} /> Delivery in 6–7 business days</span>
-      </div>
+        <span className="fs-strip__fast"><Icon name="truck" size={20} /> {strip.promise}</span>
+      </div>}
     </header>
   );
 }
