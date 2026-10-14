@@ -421,7 +421,8 @@ await test('the storefront stylesheet order is untouched; the fashion sheets are
   const after = read('build/build-css.mjs');
   const sf = list(after, 'STOREFRONT');
   assert.deepEqual(sf.slice(0, WELLNESS_CASCADE.length), WELLNESS_CASCADE, 'the cascade the wellness store loads is the same list, in the same order');
-  assert.deepEqual(sf.slice(WELLNESS_CASCADE.length), ['src/styles/fashion-banner.css', 'src/styles/fashion-choice.css']);
+  // Then the sheet for what an admin sets on an editable section (test-storefront-sections.mjs owns it), last.
+  assert.deepEqual(sf.slice(WELLNESS_CASCADE.length), ['src/styles/fashion-banner.css', 'src/styles/fashion-choice.css', 'src/styles/storefront-sections.css']);
   // Deferred, after the creator sheets; a later store (grocery) may follow it.
   const deferred = list(after, 'DEFERRED');
   assert.equal(deferred.indexOf('src/styles/fashion-departments.css'), deferred.indexOf('src/styles/fashion.css') + 1);
