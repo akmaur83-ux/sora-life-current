@@ -137,11 +137,24 @@ export const DEAD_HOMEPAGE_FILES = /^(src\/components\/CategoryRail\.jsx|src\/st
 export const DEAD_HOMEPAGE_EDITS = /^(build\/build-css\.mjs|src\/styles\/(components|home|homepage-appearance|layout|storefront-motion|storefront-refinements|v2-home-marketplace|v2-home)\.css)$/;
 /** The two components that still pointed at the retired hero (34b4300) — each byte-checked through sansCartChanges (scripts/pins/retired-hero-pointers.patch). */
 export const RETIRED_HERO_POINTER_EDITS = /^src\/components\/(StorefrontMotion|ProductImage)\.jsx$/;
+/**
+ * The editable storefront sections (88629a2; test-storefront-sections.mjs owns them): the page-side reading, the
+ * admin's section editor and its registry, the sheet for position presets and matched colours, the render dump,
+ * the suite and the recorded patch.
+ */
+export const STOREFRONT_SECTIONS_FILES = /^(src\/lib\/storefrontSections\.js|src\/styles\/storefront-sections\.css|src\/admin\/components\/StorefrontSectionEditor\.jsx|src\/admin\/storefrontSections\.js|scripts\/(storefront-sections-dump|test-storefront-sections)\.mjs|scripts\/pins\/storefront-sections\.patch)$/;
+/**
+ * The shared files it edited — each section reading its published content over its built-in content — each
+ * byte-checked through sansCartChanges (scripts/pins/storefront-sections.patch) where it is admitted.
+ */
+export const STOREFRONT_SECTIONS_EDITS = /^(build\/build-css\.mjs|src\/admin\/(AdminLayout\.jsx|admin\.css|pages\/Storefronts\.jsx)|src\/components\/(FashionBanner|HomeStorefront)\.jsx|src\/data\/(grocery|homeliving)Homepage\.js|src\/fashion\/(FashionDepartment|FashionHome|FashionJewellery|FashionLayout)\.jsx|src\/fashion\/(department|jewellery)Content\.js|src\/grocery\/GroceryHome\.jsx|src\/homeliving\/HomeLivingHome\.jsx|src\/lib\/settings\.js)$/;
+
 /** A changed path these changes account for: an own file or migration, a deleted file that is gone, a recorded patch, or one of their edits. */
 export const storefrontContentChange = (f) => STOREFRONT_CONTENT_FILES.test(f) || STOREFRONT_CONTENT_MIGRATION.test(f) || STOREFRONT_CONTENT_EDITS.test(f)
   || (DEAD_HOMEPAGE_FILES.test(f) && !existsSync(new URL(`../${f}`, import.meta.url)))
   || f === 'scripts/pins/dead-homepage-code.patch' || DEAD_HOMEPAGE_EDITS.test(f)
-  || f === 'scripts/pins/retired-hero-pointers.patch' || RETIRED_HERO_POINTER_EDITS.test(f);
+  || f === 'scripts/pins/retired-hero-pointers.patch' || RETIRED_HERO_POINTER_EDITS.test(f)
+  || STOREFRONT_SECTIONS_FILES.test(f) || STOREFRONT_SECTIONS_EDITS.test(f);
 
 /** The site menu's closed panel casts no shadow (layout.css, one line) — undone by sansCartChanges (scripts/pins/drawer-shadow.patch). */
 export const DRAWER_SHADOW_EDITS = /^src\/styles\/layout\.css$/;
@@ -451,6 +464,12 @@ const UNDO_DEAD_HOMEPAGE_CODE = undoFromPatch('dead-homepage-code.patch');
 // Undone here, newest first.
 const UNDO_RETIRED_HERO_POINTERS = undoFromPatch('retired-hero-pointers.patch');
 
+// The editable storefront sections: each of the eight pages' sections reads its published content over
+// the built-in content beside it (the components, departmentContent.js, jewelleryContent.js, the two
+// homepage data files), the snapshot of every store's content (settings.js), the editor on the admin's
+// Storefronts page and its menu entry, and the new sheet in the CSS build list. Undone here, newest first.
+const UNDO_STOREFRONT_SECTIONS = undoFromPatch('storefront-sections.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -517,7 +536,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
@@ -562,6 +581,15 @@ export function sansRetiredControls(rel, text) {
 export function sansDeadHomepageCode(rel, text) {
   const undo = UNDO_DEAD_HOMEPAGE_CODE[rel];
   return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text.replace(/\r\n/g, '\n');
+}
+
+/**
+ * The editable-sections change undone on its own — for a suite that checks an older change's own patch
+ * (test-fashion-jewellery) and must undo this newer one first.
+ */
+export function sansStorefrontSections(rel, text) {
+  const undo = UNDO_STOREFRONT_SECTIONS[rel];
+  return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
 }
 
 /** The file as it stood before the approved cart changes, LF-normalised; anything they did not touch comes back as given. */

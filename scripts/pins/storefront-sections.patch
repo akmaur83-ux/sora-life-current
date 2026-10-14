@@ -1,0 +1,1342 @@
+diff --git a/build/build-css.mjs b/build/build-css.mjs
+index 52c7a3a..8490cc6 100644
+--- a/build/build-css.mjs
++++ b/build/build-css.mjs
+@@ -76,6 +76,9 @@ const STOREFRONT = [
+   // fashion store is on the critical path — its sheet is deferred below.
+   'src/styles/fashion-banner.css',
+   'src/styles/fashion-choice.css',
++  // Last: what an admin sets on an editable section (text position, a photograph's colour).
++  // It matches only those settings' attributes, so with nothing published it changes nothing.
++  'src/styles/storefront-sections.css',
+ ];
+ 
+ // Routes outside the shop: /admin, /passport, /creator. No customer browsing
+diff --git a/src/admin/AdminLayout.jsx b/src/admin/AdminLayout.jsx
+index f45d229..310465d 100644
+--- a/src/admin/AdminLayout.jsx
++++ b/src/admin/AdminLayout.jsx
+@@ -19,7 +19,7 @@ const NAV = [
+   { to: '/admin/promotions', label: 'Promotions' },
+   { to: '/admin/coupons', label: 'Coupons' },
+   { to: '/admin/homepage', label: 'Homepage' },
+-  { to: '/admin/storefronts', label: 'Fashion & Lifestyle' },
++  { to: '/admin/storefronts', label: 'Storefronts' },
+   { to: '/admin/store-catalogue/fashion', label: 'Fashion Products' },
+   { to: '/admin/store-catalogue/homeliving', label: 'Home & Living Products' },
+   { to: '/admin/store-catalogue/grocery', label: 'Grocery Products' },
+diff --git a/src/admin/admin.css b/src/admin/admin.css
+index e435358..fc66d6c 100644
+--- a/src/admin/admin.css
++++ b/src/admin/admin.css
+@@ -66,6 +66,29 @@
+ .adm-storefronts__slide summary { cursor: pointer; font-family: var(--font-display); font-weight: 700; font-size: var(--text-lg); }
+ .adm-storefronts__slide[open] summary { margin-bottom: var(--sp-5); }
+ .adm-storefronts__imagegrid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
++/* Section editor (StorefrontSectionEditor.jsx): a page heading, then one collapsible panel per section. */
++.adm-sf-page { margin-top: var(--sp-6); }
++.adm-sf-page__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: var(--sp-3); }
++.adm-sf-page__head .is-disabled { opacity: 0.5; pointer-events: none; }
++.adm-sf-section > summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; cursor: pointer; font-size: var(--text-lg); }
++.adm-sf-section[open] > summary { margin-bottom: var(--sp-4); }
++.adm-sf-section.has-errors { border-color: #b3261e; }
++.adm-sf-badge { padding: 2px 8px; border-radius: 999px; background: var(--line-soft, #ece6da); font-size: 12px; font-weight: 600; }
++.adm-sf-badge.is-error { background: #fde7e6; color: #8c1d18; }
++.adm-sf-group { display: grid; gap: var(--sp-3); }
++.adm-sf-hide { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
++.adm-sf-lines, .adm-sf-photos { margin: 0; padding: var(--sp-3); border: 1px solid var(--line-soft, #ece6da); border-radius: var(--r-md, 8px); }
++.adm-sf-photos__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-4); align-items: start; }
++.adm-sf-slot .hp-admin-image__preview { max-height: 120px; }
++.adm-sf-slot .hp-admin-image__preview.is-builtin { opacity: 0.55; }
++.adm-sf-colour { display: flex; gap: 8px; align-items: center; }
++.adm-sf-colour input[type="color"] { width: 44px; height: 40px; padding: 2px; border: 1px solid var(--line-soft, #ece6da); border-radius: 6px; background: none; }
++.adm-sf-list { display: grid; gap: var(--sp-2); }
++.adm-sf-item { padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line-soft, #ece6da); border-radius: var(--r-md, 8px); }
++.adm-sf-item > summary { cursor: pointer; font-weight: 600; }
++.adm-sf-item[open] > summary { margin-bottom: var(--sp-3); }
++.adm-sf-claim { color: #8a5300; }
++.adm-sf-section input::placeholder { color: #9a948a; }
+ .adm-preview-price { display: flex; align-items: baseline; gap: 10px; padding: 12px 16px; background: var(--forest-50); border-radius: var(--r-sm); margin-top: 8px; }
+ .adm-preview-price .now { font-family: var(--font-display); font-weight: 700; font-size: var(--text-xl); color: var(--forest-700); }
+ .adm-preview-price .was { text-decoration: line-through; color: var(--ink-400); font-size: var(--text-sm); }
+diff --git a/src/admin/pages/Storefronts.jsx b/src/admin/pages/Storefronts.jsx
+index 70e2512..e7f6334 100644
+--- a/src/admin/pages/Storefronts.jsx
++++ b/src/admin/pages/Storefronts.jsx
+@@ -3,11 +3,15 @@ import { Link } from 'react-router-dom';
+ import { safeVisualUrl } from '../../lib/homepageAppearance.js';
+ import { uploadStorefrontImage } from '../../lib/storeCatalogueAdminApi.js';
+ import { normalizeFashionStorefront, normalizeLifestyleStorefront } from '../../lib/storefrontCustomization.js';
+-import { validateStorefrontContent, STOREFRONT_LABELS } from '../../lib/storefrontContent.js';
++import { validateStorefrontContent, STOREFRONT_LABELS, STOREFRONT_CONTENT_STORES, sectionSpec, sectionContent } from '../../lib/storefrontContent.js';
+ import { adminLoadStorefronts, adminSaveStorefrontDraft, publishStorefront } from '../../lib/storefrontContentApi.js';
++import StorefrontSectionEditor from '../components/StorefrontSectionEditor.jsx';
++import { SECTION_PAGES } from '../storefrontSections.js';
+ 
+ // ============================================================
+-// ADMIN — Fashion & Lifestyle storefronts: edit a draft, preview it, publish it.
++// ADMIN — the storefronts: edit a draft, preview it, publish it. One record per
++// store — the wellness homepage, Fashion (its home page, strips, and the women's,
++// men's, saree and jewellery pages), Home & Living, Grocery and Lifestyle.
+ //
+ // A draft is saved against the version this page opened (migration 0037): a
+ // draft saved elsewhere since is refused, not overwritten. Every field is
+@@ -17,7 +21,39 @@ import { adminLoadStorefronts, adminSaveStorefrontDraft, publishStorefront } fro
+ // minutes; if the rebuild fails, the current site stays as it is).
+ // ============================================================
+ 
+-const STORES = { fashion: { normalize: normalizeFashionStorefront, path: '/fashion' }, lifestyle: { normalize: normalizeLifestyleStorefront, path: '/lifestyle' } };
++// The Fashion and Lifestyle home pages keep their own forms (every field filled from the built-in
++// content); every other section is sparse — an empty field is the built-in value.
++const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
++const STORES = {
++  wellness: { form: (content) => ({ ...content }), path: '/' },
++  fashion: { form: (content) => ({ ...content, ...normalizeFashionStorefront(content) }), path: '/fashion' },
++  homeliving: { form: (content) => ({ ...content }), path: '/homeliving' },
++  grocery: { form: (content) => ({ ...content }), path: '/grocery' },
++  lifestyle: { form: (content) => normalizeLifestyleStorefront(content), path: '/lifestyle' },
++};
++
++/** The store's content with the value at a dotted section path replaced. */
++function setIn(content, path, value) {
++  const [key, ...rest] = path.split('.');
++  const base = isObject(content) ? content : {};
++  return { ...base, [key]: rest.length ? setIn(base[key], rest.join('.'), value) : value };
++}
++
++/** Every editable section of a store, page by page, each with a link to preview that page's saved draft. */
++function SectionPages({ store, value, onChange, onUploading, errors, dirty }) {
++  return SECTION_PAGES[store].map((page) => (
++    <section key={page.title} className="adm-sf-page">
++      <div className="adm-sf-page__head">
++        <h2>{page.title}</h2>
++        <a className={`btn btn-sm btn-outline${dirty ? ' is-disabled' : ''}`} href={`${page.href}?preview=draft`} target="_blank" rel="noreferrer" aria-disabled={dirty || undefined} onClick={(event) => { if (dirty) event.preventDefault(); }}>Preview this page</a>
++      </div>
++      {page.sections.map(({ path, defaults }) => (
++        <StorefrontSectionEditor key={path} id={`${store}-${path.replace(/\./g, '-')}`} spec={sectionSpec(store, path)} path={path} value={sectionContent(value, path)} builtIn={defaults}
++          errors={errors} onUploading={onUploading} onChange={(next) => onChange((current) => setIn(current, path, next))} />
++      ))}
++    </section>
++  ));
++}
+ 
+ function Field({ id, label, value, onChange, multiline = false, hint = '', error = '' }) {
+   const control = multiline
+@@ -153,7 +189,7 @@ const when = (iso) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numer
+ 
+ export default function Storefronts() {
+   const [tab, setTab] = useState('fashion');
+-  const [forms, setForms] = useState({ fashion: normalizeFashionStorefront(), lifestyle: normalizeLifestyleStorefront() });
++  const [forms, setForms] = useState(() => Object.fromEntries(STOREFRONT_CONTENT_STORES.map((store) => [store, STORES[store].form({})])));
+   const [savedForms, setSavedForms] = useState({});
+   const [drafts, setDrafts] = useState({});
+   const [published, setPublished] = useState({});
+@@ -169,7 +205,7 @@ export default function Storefronts() {
+     setLoading(true); setError(''); setStale(false);
+     try {
+       const loaded = await adminLoadStorefronts();
+-      const next = Object.fromEntries(Object.entries(STORES).map(([store, { normalize }]) => [store, normalize(loaded.drafts[store]?.content)]));
++      const next = Object.fromEntries(Object.entries(STORES).map(([store, { form }]) => [store, form(isObject(loaded.drafts[store]?.content) ? loaded.drafts[store].content : {})]));
+       setForms(next);
+       setSavedForms(Object.fromEntries(Object.entries(next).map(([store, form]) => [store, JSON.stringify(form)])));
+       setDrafts(loaded.drafts);
+@@ -215,11 +251,12 @@ export default function Storefronts() {
+ 
+   if (loading) return <p className="muted">Loading…</p>;
+ 
+-  const Editor = tab === 'fashion' ? FashionEditor : LifestyleEditor;
++  const Editor = { fashion: FashionEditor, lifestyle: LifestyleEditor }[tab];
++  const uploading = (delta) => setUploads((count) => count + delta);
+   return (
+     <div className="adm-form adm-storefronts">
+       <div className="adm__head">
+-        <div><h1>Fashion &amp; Lifestyle</h1><p>Edit a draft, preview it, then publish. Products, prices, cart and checkout are not touched.</p></div>
++        <div><h1>Storefronts</h1><p>Every store's copy, photographs, links and sections: edit a draft, preview it, then publish. Products, prices, cart and checkout are not touched.</p></div>
+       </div>
+       {error && <div className="adm-banner err" role="alert">{error}{stale && <> <button type="button" className="btn btn-sm btn-light" onClick={load}>Reload and discard my edits</button></>}</div>}
+       {message && <div className="adm-banner ok" role="status">{message}</div>}
+@@ -232,7 +269,7 @@ export default function Storefronts() {
+         </div>
+       </div>
+       <div className="adm-chipbar" role="tablist" aria-label="Storefront editor">
+-        {Object.keys(STORES).map((store) => <button key={store} className={`adm-chip${tab === store ? ' active' : ''}`} type="button" role="tab" aria-selected={tab === store} disabled={!!busy} onClick={() => { setTab(store); setErrors({}); setMessage(''); setError(''); }}>{STOREFRONT_LABELS[store]} Store</button>)}
++        {Object.keys(STORES).map((store) => <button key={store} className={`adm-chip${tab === store ? ' active' : ''}`} type="button" role="tab" aria-selected={tab === store} disabled={!!busy} onClick={() => { setTab(store); setErrors({}); setMessage(''); setError(''); }}>{STOREFRONT_LABELS[store]}</button>)}
+       </div>
+       {draft && (
+         <p className="hint adm-storefronts__status" role="status">
+@@ -240,7 +277,8 @@ export default function Storefronts() {
+         </p>
+       )}
+       <form onSubmit={save} noValidate>
+-        <Editor value={forms[tab]} onChange={setForm} onUploading={(delta) => setUploads((count) => count + delta)} errors={errors} />
++        {Editor && <Editor value={forms[tab]} onChange={setForm} onUploading={uploading} errors={errors} />}
++        <SectionPages store={tab} value={forms[tab]} onChange={setForm} onUploading={uploading} errors={errors} dirty={dirty} />
+         <div className="adm-storefronts__actions">
+           <button className="btn" type="submit" disabled={!!busy || uploads > 0 || !draft}>{busy === 'save' ? 'Saving…' : uploads ? 'Uploading images…' : 'Save draft'}</button>
+           <a className={`btn btn-outline${dirty ? ' is-disabled' : ''}`} href={`${STORES[tab].path}?preview=draft`} target="_blank" rel="noreferrer" aria-disabled={dirty || undefined} onClick={(event) => { if (dirty) event.preventDefault(); }}>Preview the saved draft</a>
+diff --git a/src/components/FashionBanner.jsx b/src/components/FashionBanner.jsx
+index 4cfcd2e..92ece2a 100644
+--- a/src/components/FashionBanner.jsx
++++ b/src/components/FashionBanner.jsx
+@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
+ import Icon from './Icon.jsx';
+ import DeferredImage from './DeferredImage.jsx';
+ import FashionEntryLink from './FashionEntryLink.jsx';
++import { useStorefrontSection, positionAttr } from '../lib/storefrontSections.js';
+ 
+ // ============================================================
+ // The homepage doorways to the other stores. No catalogue dependency.
+@@ -106,6 +107,31 @@ export const STORES = [
+   },
+ ];
+ 
++// The Lifestyle banner and the store carousel are the admin's (Storefronts → Wellness homepage):
++// these are their built-in content in the schema's shape (storefrontContent.js). What is published
++// replaces it field by field; a field that breaks its rule stays as it is here.
++export const LIFESTYLE_SECTION = Object.freeze({
++  hidden: false, eyebrow: LIFESTYLE.eyebrow, title: [...LIFESTYLE.heading], text: LIFESTYLE.description,
++  cta: LIFESTYLE.cta, link: LIFESTYLE.to, picture: { phone: LIFESTYLE.tall, desktop: LIFESTYLE.wide }, alt: LIFESTYLE.alt, position: 'left',
++});
++export const lifestyleOf = (s) => ({
++  ...LIFESTYLE, to: s.link, eyebrow: s.eyebrow, heading: s.title, description: s.text, cta: s.cta,
++  wide: s.picture.desktop, tall: s.picture.phone, alt: s.alt, position: s.position,
++});
++
++export const STORE_CAROUSEL_SECTION = Object.freeze({
++  hidden: false, eyebrow: 'More to explore', title: 'Two Worlds. A Better You.', text: 'Fashion for your style. Living for your space. All at SORA LIFE.',
++  cards: STORES.map((s) => ({
++    ...s, hidden: false, title: [...s.heading], text: s.description, link: s.to, picture: { phone: s.tall, desktop: s.wide },
++    details: s.details.map(([, label]) => label), icons: s.details.map(([icon]) => icon),
++  })),
++});
++/** The cards as DoorwayCarousel takes them: the hidden ones left out. */
++export const storeCardsOf = (section) => section.cards.filter((c) => !c.hidden).map((c) => ({
++  ...c, heading: c.title, description: c.text, to: c.link, wide: c.picture.desktop, tall: c.picture.phone,
++  details: c.details.map((label, i) => [c.icons[i], label]),
++}));
++
+ /** One photograph, every word on it. `tall` (optional) is the portrait the browser takes under 1024px. */
+ function DoorwayCard({ store, tabIndex }) {
+   const hId = `fsb-${store.key}-h`;
+@@ -300,10 +326,11 @@ export function FashionCategoryStrip({ tiles = stripTiles(), autoplayMs = STRIP_
+  * directly beneath. Sits after the offers.
+  */
+ export function LifestyleBanner() {
+-  const s = LIFESTYLE;
++  const section = useStorefrontSection('wellness', 'lifestyleBanner', LIFESTYLE_SECTION);
++  const s = lifestyleOf(section);
+   return (
+     <>
+-      <section className="fsb-lead" aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta">
++      {!section.hidden && <section className="fsb-lead" {...positionAttr(s.position)} aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta">
+         <Link to={s.to} className="fsb-lead__link" aria-labelledby="fsb-lifestyle-h fsb-lifestyle-cta">
+           <span className="fsb-lead__art">
+             <DeferredImage src={s.wide} sources={[{ media: PHONE, srcSet: s.tall }]} alt={s.alt} width={1898} height={829} className="fsb-lead__image" />
+@@ -315,7 +342,7 @@ export function LifestyleBanner() {
+             <span className="fsb-lead__cta" id="fsb-lifestyle-cta">{s.cta} <Icon name="arrowRight" size={16} /></span>
+           </div>
+         </Link>
+-      </section>
++      </section>}
+       <FashionCategoryStrip />
+     </>
+   );
+@@ -323,15 +350,18 @@ export function LifestyleBanner() {
+ 
+ /** The two store cards under their heading. Sits just above the popular rail. */
+ export function StoreCarousel() {
++  const section = useStorefrontSection('wellness', 'storeCarousel', STORE_CAROUSEL_SECTION);
++  const cards = storeCardsOf(section);
++  if (section.hidden || cards.length === 0) return null;
+   return (
+     <section className="v2-sec fsb" aria-labelledby="fsb-h" id="more-to-explore">
+       <div className="v2-wrap">
+         <header className="fsb__intro">
+-          <p className="fsb__eyebrow fsb__overline">More to explore</p>
+-          <h2 id="fsb-h">Two Worlds. A Better You.</h2>
+-          <p className="fsb__lede">Fashion for your style. Living for your space. All at SORA LIFE.</p>
++          <p className="fsb__eyebrow fsb__overline">{section.eyebrow}</p>
++          <h2 id="fsb-h">{section.title}</h2>
++          <p className="fsb__lede">{section.text}</p>
+         </header>
+-        <DoorwayCarousel />
++        <DoorwayCarousel stores={cards} />
+       </div>
+     </section>
+   );
+diff --git a/src/components/HomeStorefront.jsx b/src/components/HomeStorefront.jsx
+index fd5e21a..d48cb87 100644
+--- a/src/components/HomeStorefront.jsx
++++ b/src/components/HomeStorefront.jsx
+@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
+ import Icon from './Icon.jsx';
+ import DeferredImage from './DeferredImage.jsx';
+ import FashionEntryLink from './FashionEntryLink.jsx';
++import { useStorefrontSection, filledLines, positionAttr } from '../lib/storefrontSections.js';
+ 
+ // ============================================================
+ // The top of the wellness homepage: white, with an orange accent — a
+@@ -72,8 +73,39 @@ export const STORES = [
+   { key: 'jewellery', name: 'Jewellery', to: '/fashion/jewellery', image: '/img/home-cat-jewellery.webp', size: 344 },
+ ];
+ 
++// The hero and the jewellery banner are the admin's (Storefronts → Wellness homepage): these are
++// their built-in content in the schema's shape (storefrontContent.js). What is published replaces
++// it field by field; a field that breaks its rule stays as it is here.
++export const HERO_SECTION = Object.freeze({
++  hidden: false,
++  slides: HERO_SLIDES.map((s) => ({
++    ...s, hidden: false,
++    eyebrow: [s.eyebrow[0] || '', s.eyebrow[1] || ''],
++    title: [s.title[0], s.title[1]],
++    ctaLabel: s.cta?.label || '', ctaLink: s.cta?.to || '',
++    picture: { colour: '', phone: s.phone, desktop: s.image },
++    position: 'left',
++  })),
++});
++
++/** The hero's slides as HomeHero renders them: the hidden ones left out, a button only with a label and a link. */
++export function heroSlidesOf(section) {
++  if (section.hidden) return [];
++  return section.slides.filter((s) => !s.hidden).map((s) => ({
++    ...s,
++    eyebrow: filledLines(s.eyebrow),
++    cta: s.ctaLabel && s.ctaLink ? { label: s.ctaLabel, to: s.ctaLink } : null,
++    image: s.picture.desktop, phone: s.picture.phone, colour: s.picture.colour,
++  }));
++}
++
++/** A slide's page colour (only when the admin set one with its photograph) and its copy position. */
++const slideLook = (s) => ({ ...positionAttr(s.position), ...(s.colour ? { 'data-tone': '', style: { '--sf-tone': s.colour } } : {}) });
++
+ /** The slides, one in view on a transform-only track; the first slide's title is the page's h1. */
+-export function HomeHero({ slides = HERO_SLIDES, autoplayMs = HERO_AUTOPLAY_MS }) {
++export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
++  const section = useStorefrontSection('wellness', 'hero', HERO_SECTION);
++  const slides = given || heroSlidesOf(section);
+   const [index, setIndex] = useState(0);
+   const [paused, setPaused] = useState(false);
+   const reduced = useRef(false);
+@@ -112,7 +144,7 @@ export function HomeHero({ slides = HERO_SLIDES, autoplayMs = HERO_AUTOPLAY_MS }
+             const Title = i === 0 ? 'h1' : 'h2';
+             const current = i === index;
+             return (
+-              <div key={s.key} className={`hx-hero__slide hx-hero__slide--${s.key}`} aria-hidden={!current} aria-roledescription="slide" aria-label={`${i + 1} of ${n}`}>
++              <div key={s.key} className={`hx-hero__slide hx-hero__slide--${s.key}`} {...slideLook(s)} aria-hidden={!current} aria-roledescription="slide" aria-label={`${i + 1} of ${n}`}>
+                 <DeferredImage src={s.image} sources={[{ media: PHONE, srcSet: s.phone }]} alt={s.alt} width={s.width} height={s.height}
+                   className="hx-hero__image" loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : undefined} />
+                 <div className="hx-wrap hx-hero__copy">
+@@ -217,11 +249,25 @@ export const JEWELLERY_BANNER = {
+   alt: 'A gold necklace and drop earrings with clear stones on a marble tray, among white flowers and ivory satin, a hand wearing a matching ring',
+ };
+ 
++export const JEWELLERY_BANNER_SECTION = Object.freeze({
++  hidden: false, eyebrow: JEWELLERY_BANNER.eyebrow, title: [...JEWELLERY_BANNER.title], text: JEWELLERY_BANNER.text,
++  cta: JEWELLERY_BANNER.cta, link: JEWELLERY_BANNER.to, picture: { phone: JEWELLERY_BANNER.tall, desktop: JEWELLERY_BANNER.wide.src },
++  alt: JEWELLERY_BANNER.alt, position: 'left',
++});
++
++/** The banner as JewelleryBanner renders it, from its section. */
++export const jewelleryBannerOf = (s) => ({
++  to: s.link, eyebrow: s.eyebrow, title: s.title, text: s.text, cta: s.cta,
++  wide: { ...JEWELLERY_BANNER.wide, src: s.picture.desktop }, tall: s.picture.phone, alt: s.alt, position: s.position,
++});
++
+ /** Full-bleed and square-edged under the fashion category strip: one whole-banner link, every word on the photograph. */
+-export function JewelleryBanner({ banner = JEWELLERY_BANNER }) {
+-  const b = banner;
++export function JewelleryBanner({ banner }) {
++  const section = useStorefrontSection('wellness', 'jewelleryBanner', JEWELLERY_BANNER_SECTION);
++  if (!banner && section.hidden) return null;
++  const b = banner || jewelleryBannerOf(section);
+   return (
+-    <section className="hx hx-jewel" aria-labelledby="hx-jewel-h">
++    <section className="hx hx-jewel" {...positionAttr(b.position)} aria-labelledby="hx-jewel-h">
+       <Link to={b.to} className="hx-jewel__link" aria-labelledby="hx-jewel-h hx-jewel-cta">
+         <span className="hx-jewel__art">
+           <DeferredImage src={b.wide.src} sources={[{ media: PHONE, srcSet: b.tall }]} alt={b.alt} width={b.wide.width} height={b.wide.height} className="hx-jewel__image" />
+diff --git a/src/data/groceryHomepage.js b/src/data/groceryHomepage.js
+index 5bdf937..da90d5c 100644
+--- a/src/data/groceryHomepage.js
++++ b/src/data/groceryHomepage.js
+@@ -50,6 +50,30 @@ export const PROMO = {
+   href: '/grocery/category/everyday-staples',
+ };
+ 
++/** The three facts above the hero. The delivery one is the only factual claim. */
++export const TRUST = [
++  { icon: 'truck', title: 'Standard Delivery', sub: GROCERY_DELIVERY_WINDOW },
++  { icon: 'leaf', title: 'Fresh Products', sub: 'Sourced with care' },
++  { icon: 'shield', title: 'Trusted Quality', sub: 'Good food, safer lives' },
++];
++
++/**
++ * What the admin edits (Storefronts → Grocery): the homepage's sections in the schema's shape
++ * (storefrontContent.js), built from the content above. What is published replaces them field by
++ * field; a field that breaks its rule stays as it is here. `icon` and `id` ride along.
++ */
++const HERO = HERO_SLIDES[0];
++export const GROCERY_SECTIONS = Object.freeze({
++  trust: { hidden: false, items: TRUST.map((t) => ({ ...t, hidden: false })) },
++  hero: {
++    id: HERO.id, hidden: false, headline: HERO.headline, sub: HERO.sub, cta: HERO.cta, link: HERO.href, note: HERO.note,
++    picture: { colour: '', phone: HERO.image, desktop: HERO.image }, position: 'left',
++  },
++  categories: { hidden: false },
++  daily: { hidden: false, title: DAILY_ESSENTIALS.title, sub: DAILY_ESSENTIALS.sub, more: 'See all', link: DAILY_ESSENTIALS.seeAll },
++  promo: { hidden: false, headline: PROMO.headline, sub: PROMO.sub, cta: PROMO.cta, link: PROMO.href, picture: { colour: '', phone: PROMO.image, desktop: PROMO.image } },
++});
++
+ export const categoryHref = (c) => `/grocery/category/${c.slug}`;
+ 
+ // ---- Row shapes ----------------------------------------------------------------
+diff --git a/src/data/homelivingHomepage.js b/src/data/homelivingHomepage.js
+index 9ec9be5..e86d685 100644
+--- a/src/data/homelivingHomepage.js
++++ b/src/data/homelivingHomepage.js
+@@ -81,6 +81,26 @@ export const PROMO = {
+   ],
+ };
+ 
++/**
++ * What the admin edits (Storefronts → Home & Living): the homepage's sections in the schema's
++ * shape (storefrontContent.js), built from the content above. What is published replaces them
++ * field by field; a field that breaks its rule stays as it is here. `icon` and `id` ride along.
++ */
++const HERO = HERO_SLIDES[0];
++export const HOMELIVING_SECTIONS = Object.freeze({
++  hero: {
++    id: HERO.id, hidden: false, eyebrow: HERO.eyebrow, headline: HERO.headline, sub: HERO.sub, cta: HERO.cta, link: HERO.href, note: HERO.note,
++    picture: { colour: '', phone: HERO.image.tall, desktop: HERO.image.wide }, position: 'left',
++  },
++  trust: { hidden: false, items: TRUST.map((t) => ({ ...t, hidden: false })) },
++  categories: { hidden: false, eyebrow: CATEGORY_SECTION.eyebrow, title: CATEGORY_SECTION.title, more: 'View all', link: CATEGORY_SECTION.viewAll },
++  featured: { hidden: false, title: FEATURED.title, sub: FEATURED.sub, more: 'View all', link: FEATURED.seeAll },
++  promo: {
++    hidden: false, eyebrow: PROMO.eyebrow, headline: PROMO.headline, sub: PROMO.sub, cta: PROMO.cta, link: PROMO.href,
++    picture: { colour: '', phone: PROMO.image, desktop: PROMO.image }, badges: PROMO.badges.map((b) => ({ ...b, hidden: false })),
++  },
++});
++
+ export const categoryHref = (c) => `/homeliving/category/${c.slug}`;
+ 
+ // ---- Row shapes ----------------------------------------------------------------
+diff --git a/src/fashion/FashionDepartment.jsx b/src/fashion/FashionDepartment.jsx
+index 1f93c9b..eebbc00 100644
+--- a/src/fashion/FashionDepartment.jsx
++++ b/src/fashion/FashionDepartment.jsx
+@@ -1,10 +1,11 @@
+-import { useRef, useState } from 'react';
++import { Fragment, useRef, useState } from 'react';
+ import { Link } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import { categoryHref, resolveCategory, sortViews } from '../lib/fashion.js';
+ import { useFashionCatalogue } from './FashionCatalogue.jsx';
+ import FashionProductCard from './FashionProductCard.jsx';
+-import { DEPARTMENT_CONTENT } from './departmentContent.js';
++import { DEPARTMENT_CONTENT, DEPARTMENT_SECTIONS } from './departmentContent.js';
++import { useStorefrontSection, filledLines, positionAttr, imageFor, linkOr } from '../lib/storefrontSections.js';
+ 
+ // Use the existing category tree, including active descendants. Missing
+ // departments never fall back to showing another department's products.
+@@ -37,69 +38,72 @@ function DepartmentNav({ active }) {
+   </nav>;
+ }
+ 
+-function SectionHead({ eyebrow, title, href, id }) {
++function SectionHead({ eyebrow, title, href, id, more = 'Explore all' }) {
+   return <header className="fd-section-head"><div><p className="fd-eyebrow">{eyebrow}</p><h2 id={id}>{title}</h2></div>
+-    <Link to={href}>Explore all <Icon name="arrowRight" size={17} /></Link></header>;
++    <Link to={href}>{more} <Icon name="arrowRight" size={17} /></Link></header>;
+ }
+ 
+-function SareeDepartment({ config, products, status, listing, collectionHref }) {
++/** Lines set with a line break between them (and `gap` after each break), the empty ones left out. */
++const brLines = (lines, gap = '') => filledLines(lines).map((line, i) => <Fragment key={i}>{i > 0 && <br />}{i > 0 && gap}{line}</Fragment>);
++const visible = (entry) => !entry.hidden;
++
++// Every section below is the admin's (Storefronts → Fashion): `s` is the page's sections as
++// published over their built-in content (DEPARTMENT_SECTIONS), and a hidden one is left out.
++function SareeDepartment({ sections: s, products, status, listing, collectionHref }) {
+   const [slide, setSlide] = useState(0);
+   const productRail = useRef(null);
+-  const slides = [config.hero, config.alternateHero];
++  const slides = s.hero.slides.map(imageFor);
+   const step = (direction) => setSlide((index) => (index + direction + slides.length) % slides.length);
+   const scrollProducts = (direction) => {
+     const rail = productRail.current;
+     if (rail) rail.scrollBy({ left: direction * rail.clientWidth, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+   };
+   return <div className="sw">
+-    <section className="sw-hero" aria-label="Saree collection" aria-roledescription="carousel">
++    {!s.hero.hidden && <section className="sw-hero" {...positionAttr(s.hero.position)} aria-label="Saree collection" aria-roledescription="carousel">
+       <EditorialImage key={slide} image={slides[slide]} priority className="sw-hero__art" />
+       <div className="sw-hero__copy">
+-        <p className="sw-eyebrow">{config.eyebrow}</p>
+-        <h1>{config.title.map((line) => <span key={line}>{line}</span>)}</h1>
+-        <p className="sw-hero__intro">{config.intro}</p>
+-        <Link to={listing} className="sw-button">{config.cta}<Icon name="arrowRight" size={17} /></Link>
++        <p className="sw-eyebrow">{s.hero.eyebrow}</p>
++        <h1>{filledLines(s.hero.title).map((line) => <span key={line}>{line}</span>)}</h1>
++        <p className="sw-hero__intro">{s.hero.intro}</p>
++        <Link to={linkOr(s.hero.link, listing)} className="sw-button">{s.hero.cta}<Icon name="arrowRight" size={17} /></Link>
+       </div>
+       <div className="sw-hero__controls">
+         <div className="sw-hero__dots" aria-label="Choose a collection image">{slides.map((_, index) => <button key={index} type="button" aria-label={`Show collection image ${index + 1}`} aria-pressed={slide === index} onClick={() => setSlide(index)}>0{index + 1}</button>)}</div>
+         <div className="sw-arrows"><button type="button" aria-label="Previous collection image" onClick={() => step(-1)}><Icon name="chevronLeft" size={18} /></button><button type="button" aria-label="Next collection image" onClick={() => step(1)}><Icon name="chevronRight" size={18} /></button></div>
+       </div>
+-    </section>
++    </section>}
+ 
+-    <section className="sw-collections sw-wrap" id="sw-collections" aria-labelledby="sw-collections-title">
+-      <div className="sw-collections__intro"><p className="sw-eyebrow">Shop by category</p><h2 id="sw-collections-title">Explore Our<br /> Collections</h2><p>Discover sarees for every mood,<br />occasion and style.</p><Link to={listing} className="sw-inline-link">View all <Icon name="arrowRight" size={16} /></Link></div>
+-      <div className="sw-collections__grid">{config.collections.map((item) => <Link key={item.slug} to={collectionHref(item.slug)} className="sw-collection"><EditorialImage image={item.image} /><strong>{item.title}</strong><span>{item.caption}</span></Link>)}</div>
+-    </section>
++    {!s.collections.hidden && <section className="sw-collections sw-wrap" id="sw-collections" aria-labelledby="sw-collections-title">
++      <div className="sw-collections__intro"><p className="sw-eyebrow">{s.collections.eyebrow}</p><h2 id="sw-collections-title">{brLines(s.collections.title, ' ')}</h2><p>{brLines(s.collections.text)}</p><Link to={listing} className="sw-inline-link">{s.collections.viewAll} <Icon name="arrowRight" size={16} /></Link></div>
++      <div className="sw-collections__grid">{s.collections.items.filter(visible).map((item) => <Link key={item.slug} to={linkOr(item.link, collectionHref(item.slug))} className="sw-collection"><EditorialImage image={imageFor(item)} /><strong>{item.title}</strong><span>{item.caption}</span></Link>)}</div>
++    </section>}
+ 
+-    <section className="sw-editorials" aria-label="Featured saree collections">{config.editorial.map((item, index) => <Link key={item.slug} to={collectionHref(item.slug)} className={`sw-editorial sw-editorial--${index + 1}`}>
+-      <EditorialImage image={item.image} /><div><p className="sw-eyebrow">{item.eyebrow}</p><h2>{item.title}</h2><p>{item.text}</p><span className="sw-button sw-button--outline">{item.cta}<Icon name="arrowRight" size={15} /></span></div>
+-    </Link>)}</section>
++    {!s.editorial.hidden && <section className="sw-editorials" aria-label="Featured saree collections">{s.editorial.items.filter(visible).map((item, index) => <Link key={item.slug} to={linkOr(item.link, collectionHref(item.slug))} className={`sw-editorial sw-editorial--${index + 1}`}>
++      <EditorialImage image={imageFor(item)} /><div><p className="sw-eyebrow">{item.eyebrow}</p><h2>{item.title}</h2><p>{item.text}</p><span className="sw-button sw-button--outline">{item.cta}<Icon name="arrowRight" size={15} /></span></div>
++    </Link>)}</section>}
+ 
+-    <section className="sw-products sw-wrap" id="fd-products" aria-labelledby="sw-products-title">
+-      <header className="sw-section-head"><div><p className="sw-eyebrow">The wardrobe edit</p><h2 id="sw-products-title">{config.productsTitle}</h2><p>Explore the styles currently available<br />in our catalogue.</p></div><div className="sw-arrows"><button type="button" aria-label="Previous products" onClick={() => scrollProducts(-1)} disabled={products.length < 3}><Icon name="chevronLeft" size={16} /></button><button type="button" aria-label="Next products" onClick={() => scrollProducts(1)} disabled={products.length < 3}><Icon name="chevronRight" size={16} /></button></div></header>
++    {!s.products.hidden && <section className="sw-products sw-wrap" id="fd-products" aria-labelledby="sw-products-title">
++      <header className="sw-section-head"><div><p className="sw-eyebrow">{s.products.eyebrow}</p><h2 id="sw-products-title">{s.products.title}</h2><p>{brLines(s.products.text)}</p></div><div className="sw-arrows"><button type="button" aria-label="Previous products" onClick={() => scrollProducts(-1)} disabled={products.length < 3}><Icon name="chevronLeft" size={16} /></button><button type="button" aria-label="Next products" onClick={() => scrollProducts(1)} disabled={products.length < 3}><Icon name="chevronRight" size={16} /></button></div></header>
+       {products.length ? <div className="sw-products__rail" ref={productRail}>{products.slice(0, 8).map((view) => <FashionProductCard key={view.id} view={view} />)}</div>
+         : <div className="fd-empty" role="status"><p>{status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'A new chapter in style is on its way. Explore all fashion while this collection comes together.'}</p><Link to="/fashion">Explore all fashion <Icon name="arrowRight" size={16} /></Link></div>}
+-    </section>
+-
+-    <section className="sw-promo" aria-labelledby="sw-promo-title"><EditorialImage image={config.promo} /><div><p className="sw-eyebrow">A timeless expression</p><h2 id="sw-promo-title">A little tradition.<br />A story of your own.</h2></div><Link to={listing} className="sw-button sw-button--outline">Explore the collection <Icon name="arrowRight" size={16} /></Link></section>
+-    <nav className="sw-services sw-wrap" aria-label="Shopping information">
+-      {[
+-        ['truck', 'Free standard shipping', 'Choose Standard at checkout', '/shipping'],
+-        ['lock', 'Secure checkout', 'View payment options at checkout', '/terms'],
+-        ['return', 'Returns & refunds', 'Read our return policy', '/returns'],
+-        ['chat', 'Dedicated support', 'We’re here to help you', '/contact'],
+-      ].map(([icon, title, description, href]) => <Link key={title} to={href}><Icon name={icon} size={27} /><span><strong>{title}</strong><small>{description}</small></span></Link>)}
+-    </nav>
++    </section>}
++
++    {!s.promo.hidden && <section className="sw-promo" aria-labelledby="sw-promo-title"><EditorialImage image={imageFor(s.promo)} /><div><p className="sw-eyebrow">{s.promo.eyebrow}</p><h2 id="sw-promo-title">{brLines(s.promo.title)}</h2></div><Link to={linkOr(s.promo.link, listing)} className="sw-button sw-button--outline">{s.promo.cta} <Icon name="arrowRight" size={16} /></Link></section>}
++    {!s.services.hidden && <nav className="sw-services sw-wrap" aria-label="Shopping information">
++      {s.services.items.filter(visible).map((item) => <Link key={item.title} to={item.link}><Icon name={item.icon} size={27} /><span><strong>{item.title}</strong><small>{item.text}</small></span></Link>)}
++    </nav>}
+   </div>;
+ }
+ 
+ // The main women's page: a full-bleed hero under its own header, shop-by-category,
+ // the real catalogue (new arrivals when any are flagged), four edits, a capsule
+ // wardrobe, and the ways into the saree and jewellery stores. Every word is HTML; no image carries text.
+-function WomenDepartment({ config, tree, category, categories, products, status, listing, collectionHref }) {
++function WomenDepartment({ sections: s, tree, category, categories, products, status, listing, collectionHref }) {
+   const [shelf, setShelf] = useState('');
+-  // `root` names a top-level category (bags sit under Bags & Accessories, not under Women).
++  // A link the admin set wins; else `root` names a top-level category (bags sit under Bags &
++  // Accessories, not under Women), else the slug's category, else the Women listing.
+   const tileHref = (item) => {
++    if (item.link) return item.link;
+     if (!item.root) return item.slug ? collectionHref(item.slug) : listing;
+     const node = resolveCategory(tree, item.root);
+     return node && !node.parent_id ? categoryHref(node) : listing;
+@@ -114,73 +118,71 @@ function WomenDepartment({ config, tree, category, categories, products, status,
+   const current = shelves.find((s) => s.id === shelf);
+   const shown = (current ? pool.filter((view) => current.ids.has(view.category_id)) : pool).slice(0, 8);
+   return <div className="wm">
+-    <section className="wm-hero" aria-labelledby="wm-title">
+-      <EditorialImage image={config.hero} priority className="wm-hero__art" />
++    {!s.hero.hidden && <section className="wm-hero" {...positionAttr(s.hero.position)} aria-labelledby="wm-title">
++      <EditorialImage image={imageFor(s.hero)} priority className="wm-hero__art" />
+       <div className="wm-hero__copy">
+-        <p className="wm-eyebrow">{config.eyebrow}</p>
+-        <h1 id="wm-title">{config.title.map((line) => <span key={line}>{line}</span>)}</h1>
+-        <p className="wm-hero__intro">{config.intro}</p>
+-        <Link to={listing} className="wm-button">{config.cta}</Link>
++        <p className="wm-eyebrow">{s.hero.eyebrow}</p>
++        <h1 id="wm-title">{filledLines(s.hero.title).map((line) => <span key={line}>{line}</span>)}</h1>
++        <p className="wm-hero__intro">{s.hero.intro}</p>
++        <Link to={linkOr(s.hero.link, listing)} className="wm-button">{s.hero.cta}</Link>
+       </div>
+-    </section>
++    </section>}
+ 
+-    <section className="wm-categories wm-wrap" id="wm-categories" aria-labelledby="wm-categories-title">
+-      <h2 id="wm-categories-title">Shop by category</h2>
+-      <div className="wm-categories__grid">{config.categories.map((item) => <Link key={item.title} to={tileHref(item)} className="wm-category">
+-        <EditorialImage image={item.image} /><span>{item.title}</span>
++    {!s.categories.hidden && <section className="wm-categories wm-wrap" id="wm-categories" aria-labelledby="wm-categories-title">
++      <h2 id="wm-categories-title">{s.categories.title}</h2>
++      <div className="wm-categories__grid">{s.categories.items.filter(visible).map((item) => <Link key={item.title} to={tileHref(item)} className="wm-category">
++        <EditorialImage image={imageFor(item)} /><span>{item.title}</span>
+       </Link>)}</div>
+-    </section>
++    </section>}
+ 
+-    <section className="wm-products wm-wrap" id="wm-products" aria-labelledby="wm-products-title">
+-      <h2 id="wm-products-title">{fresh.length ? 'New in' : 'From the collection'}</h2>
++    {!s.products.hidden && <section className="wm-products wm-wrap" id="wm-products" aria-labelledby="wm-products-title">
++      <h2 id="wm-products-title">{fresh.length ? s.products.newTitle : s.products.title}</h2>
+       {shelves.length > 1 && <div className="wm-shelves" role="group" aria-label="Show a category">
+         <button type="button" aria-pressed={!current} onClick={() => setShelf('')}>All</button>
+         {shelves.map((s) => <button key={s.id} type="button" aria-pressed={current?.id === s.id} onClick={() => setShelf(s.id)}>{s.name}</button>)}
+       </div>}
+       {shown.length ? <div className="wm-products__grid">{shown.map((view) => <FashionProductCard key={view.id} view={view} />)}</div>
+         : <div className="fd-empty" role="status"><p>{status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'A new chapter in style is on its way. Explore all fashion while this collection comes together.'}</p><Link to="/fashion">Explore all fashion <Icon name="arrowRight" size={16} /></Link></div>}
+-      {shown.length > 0 && <Link to={listing} className="wm-button wm-button--outline">View all</Link>}
+-    </section>
++      {shown.length > 0 && <Link to={listing} className="wm-button wm-button--outline">{s.products.viewAll}</Link>}
++    </section>}
+ 
+-    <section className="wm-edits wm-wrap" aria-label="Edits">
+-      {config.edits.map((item, index) => <Link key={item.title} to={tileHref(item)} className={`wm-edit wm-edit--${index + 1}`}>
+-        <EditorialImage image={item.image} /><div><h2>{item.title}</h2><p>{item.text}</p>
++    {!s.edits.hidden && <section className="wm-edits wm-wrap" aria-label="Edits">
++      {s.edits.items.filter(visible).map((item, index) => <Link key={item.title} to={tileHref(item)} className={`wm-edit wm-edit--${index + 1}`}>
++        <EditorialImage image={imageFor(item)} /><div><h2>{item.title}</h2><p>{item.text}</p>
+           {item.slug || item.root ? <span className="wm-edit__link">{item.cta} <Icon name="arrowRight" size={16} /></span> : <span className="wm-button">{item.cta}</span>}</div>
+       </Link>)}
+-    </section>
++    </section>}
+ 
+-    <section className="wm-capsule wm-wrap" aria-labelledby="wm-capsule-title">
+-      <h2 id="wm-capsule-title">The capsule edit</h2>
+-      <div className="wm-capsule__grid">{config.capsule.map((item) => <Link key={item.title} to={tileHref(item)} className="wm-look">
+-        <EditorialImage image={item.image} /><div><h3>{item.title}</h3><p>{item.caption}</p><span>Shop <Icon name="arrowRight" size={15} /></span></div>
++    {!s.capsule.hidden && <section className="wm-capsule wm-wrap" aria-labelledby="wm-capsule-title">
++      <h2 id="wm-capsule-title">{s.capsule.title}</h2>
++      <div className="wm-capsule__grid">{s.capsule.items.filter(visible).map((item) => <Link key={item.title} to={tileHref(item)} className="wm-look">
++        <EditorialImage image={imageFor(item)} /><div><h3>{item.title}</h3><p>{item.caption}</p><span>{s.capsule.cta} <Icon name="arrowRight" size={15} /></span></div>
+       </Link>)}</div>
+-    </section>
+-
+-    <section className="wm-sarees wm-wrap" aria-labelledby="wm-sarees-title">
+-      <EditorialImage image={config.sarees.image} />
+-      <div><p className="wm-eyebrow">{config.sarees.eyebrow}</p><h2 id="wm-sarees-title">{config.sarees.title}</h2><p>{config.sarees.text}</p>
+-        <Link to="/fashion/women/sarees" className="wm-button">{config.sarees.cta} <Icon name="arrowRight" size={16} /></Link></div>
+-    </section>
+-
+-    <section className="wm-sarees wm-jewellery wm-wrap" aria-labelledby="wm-jewellery-title">
+-      <EditorialImage image={config.jewellery.image} />
+-      <div><p className="wm-eyebrow">{config.jewellery.eyebrow}</p><h2 id="wm-jewellery-title">{config.jewellery.title}</h2><p>{config.jewellery.text}</p>
+-        <Link to="/fashion/jewellery" className="wm-button">{config.jewellery.cta} <Icon name="arrowRight" size={16} /></Link></div>
+-    </section>
+-
+-    <nav className="wm-services wm-wrap" aria-label="Shopping information">
+-      {[
+-        ['truck', 'Standard delivery', '6–7 business days', '/shipping'],
+-        ['return', 'Returns', 'Within 7 days of delivery', '/returns'],
+-        ['chat', 'Need help?', 'Contact our team', '/contact'],
+-      ].map(([icon, title, description, href]) => <Link key={title} to={href}><Icon name={icon} size={24} /><span><strong>{title}</strong><small>{description}</small></span></Link>)}
+-    </nav>
++    </section>}
++
++    {!s.sarees.hidden && <section className="wm-sarees wm-wrap" aria-labelledby="wm-sarees-title">
++      <EditorialImage image={imageFor(s.sarees)} />
++      <div><p className="wm-eyebrow">{s.sarees.eyebrow}</p><h2 id="wm-sarees-title">{s.sarees.title}</h2><p>{s.sarees.text}</p>
++        <Link to={s.sarees.link} className="wm-button">{s.sarees.cta} <Icon name="arrowRight" size={16} /></Link></div>
++    </section>}
++
++    {!s.jewellery.hidden && <section className="wm-sarees wm-jewellery wm-wrap" aria-labelledby="wm-jewellery-title">
++      <EditorialImage image={imageFor(s.jewellery)} />
++      <div><p className="wm-eyebrow">{s.jewellery.eyebrow}</p><h2 id="wm-jewellery-title">{s.jewellery.title}</h2><p>{s.jewellery.text}</p>
++        <Link to={s.jewellery.link} className="wm-button">{s.jewellery.cta} <Icon name="arrowRight" size={16} /></Link></div>
++    </section>}
++
++    {!s.services.hidden && <nav className="wm-services wm-wrap" aria-label="Shopping information">
++      {s.services.items.filter(visible).map((item) => <Link key={item.title} to={item.link}><Icon name={item.icon} size={24} /><span><strong>{item.title}</strong><small>{item.text}</small></span></Link>)}
++    </nav>}
+   </div>;
+ }
+ 
+ export default function FashionDepartment({ department = 'men' }) {
+   // Opening at the hero (or at a #section) is ScrollManager's, site-wide (main.jsx).
+   const config = DEPARTMENT_CONTENT[department] || DEPARTMENT_CONTENT.men;
++  const page = DEPARTMENT_SECTIONS[department] ? department : 'men';
++  const s = useStorefrontSection('fashion', page, DEPARTMENT_SECTIONS[page]);
+   const { tree, views, status } = useFashionCatalogue();
+   const { category, categories, products } = departmentCatalogue(tree, views, config.categorySlug);
+   const listing = category ? categoryHref(category) : '#fd-products';
+@@ -188,48 +190,48 @@ export default function FashionDepartment({ department = 'men' }) {
+     const node = categories.find((c) => c.slug === slug);
+     return node ? categoryHref(node) : listing;
+   };
+-  if (department === 'sarees') return <SareeDepartment config={config} products={products} status={status} listing={listing} collectionHref={collectionHref} />;
+-  if (department === 'women') return <WomenDepartment config={config} tree={tree} category={category} categories={categories} products={products} status={status} listing={listing} collectionHref={collectionHref} />;
++  if (department === 'sarees') return <SareeDepartment sections={s} products={products} status={status} listing={listing} collectionHref={collectionHref} />;
++  if (department === 'women') return <WomenDepartment sections={s} tree={tree} category={category} categories={categories} products={products} status={status} listing={listing} collectionHref={collectionHref} />;
+   return <div className={`fd fd--${department}`}>
+     <DepartmentNav active={department} />
+-    <section className="fd-hero" aria-labelledby="fd-title">
+-      <div className="fd-hero__photo"><EditorialImage key={department} image={config.hero} priority /></div>
++    {!s.hero.hidden && <section className="fd-hero" {...positionAttr(s.hero.position)} aria-labelledby="fd-title">
++      <div className="fd-hero__photo"><EditorialImage key={department} image={imageFor(s.hero)} priority /></div>
+       <div className="fd-hero__copy">
+-        <p className="fd-eyebrow">{config.eyebrow}</p>
+-        <h1 id="fd-title">{config.title.map((line) => <span key={line}>{line}</span>)}</h1>
+-        <p className="fd-hero__intro">{config.intro}</p>
+-        <Link to={listing} className="fd-cta">{config.cta} <Icon name="arrowRight" size={19} /></Link>
++        <p className="fd-eyebrow">{s.hero.eyebrow}</p>
++        <h1 id="fd-title">{filledLines(s.hero.title).map((line) => <span key={line}>{line}</span>)}</h1>
++        <p className="fd-hero__intro">{s.hero.intro}</p>
++        <Link to={linkOr(s.hero.link, listing)} className="fd-cta">{s.hero.cta} <Icon name="arrowRight" size={19} /></Link>
+       </div>
+-      <span className="fd-hero__edition">{config.heroNote}</span>
++      <span className="fd-hero__edition">{s.hero.note}</span>
+       <span className="fd-hero__number" aria-hidden="true">{department === 'men' ? '01' : '02'}</span>
+-    </section>
++    </section>}
+ 
+-    {department === 'men' && <nav className="fd-highlights" aria-label="Explore menswear">
+-      {[["sparkle", "Everyday style", "Find your own rhythm"], ["star", "The wardrobe edit", "Pieces to make yours"], ["grid", "Mix. Match. Repeat.", "A fresh perspective"], ["bag", "Your next favourite", "Explore the collection"]].map(([icon, label, sub]) =>
+-        <Link key={label} to={listing}><Icon name={icon} size={28} /><span><strong>{label}</strong><small>{sub}</small></span></Link>)}
++    {department === 'men' && !s.highlights.hidden && <nav className="fd-highlights" aria-label="Explore menswear">
++      {s.highlights.items.filter(visible).map((item) =>
++        <Link key={item.title} to={linkOr(item.link, listing)}><Icon name={item.icon} size={28} /><span><strong>{item.title}</strong><small>{item.text}</small></span></Link>)}
+     </nav>}
+ 
+-    <section className="fd-section fd-collections" aria-labelledby="fd-collections-title">
+-      <SectionHead eyebrow="Shop by collection" title={config.collectionTitle} href={listing} id="fd-collections-title" />
+-      <div className="fd-collections__grid">{config.collections.map((item) => <Link key={item.title} to={collectionHref(item.slug)} className="fd-collection">
+-        <span className="fd-collection__photo"><EditorialImage image={item.image} /></span><strong>{item.title}</strong><Icon name="arrowRight" size={17} />
++    {!s.collections.hidden && <section className="fd-section fd-collections" aria-labelledby="fd-collections-title">
++      <SectionHead eyebrow={s.collections.eyebrow} title={s.collections.title} more={s.collections.more} href={listing} id="fd-collections-title" />
++      <div className="fd-collections__grid">{s.collections.items.filter(visible).map((item) => <Link key={item.title} to={linkOr(item.link, collectionHref(item.slug))} className="fd-collection">
++        <span className="fd-collection__photo"><EditorialImage image={imageFor(item)} /></span><strong>{item.title}</strong><Icon name="arrowRight" size={17} />
+       </Link>)}</div>
+-    </section>
++    </section>}
+ 
+-    <section className="fd-editorials" aria-label="The style edits">{config.editorial.map((item, i) => <Link key={item.title} to={listing} className={`fd-editorial fd-editorial--${i + 1}`}>
+-      <EditorialImage image={item.image} /><div><p className="fd-eyebrow">{item.eyebrow}</p><h2>{item.title}</h2><p>{item.text}</p><span className="fd-text-link">Discover the edit <Icon name="arrowRight" size={16} /></span></div>
+-    </Link>)}</section>
++    {!s.editorial.hidden && <section className="fd-editorials" aria-label="The style edits">{s.editorial.items.filter(visible).map((item, i) => <Link key={item.title} to={linkOr(item.link, listing)} className={`fd-editorial fd-editorial--${i + 1}`}>
++      <EditorialImage image={imageFor(item)} /><div><p className="fd-eyebrow">{item.eyebrow}</p><h2>{item.title}</h2><p>{item.text}</p><span className="fd-text-link">{item.cta} <Icon name="arrowRight" size={16} /></span></div>
++    </Link>)}</section>}
+ 
+-    <section className="fd-section" aria-labelledby="fd-products-title" id="fd-products">
+-      <SectionHead eyebrow="Curated for you" title={config.productsTitle} href={listing} id="fd-products-title" />
++    {!s.products.hidden && <section className="fd-section" aria-labelledby="fd-products-title" id="fd-products">
++      <SectionHead eyebrow={s.products.eyebrow} title={s.products.title} more={s.products.more} href={listing} id="fd-products-title" />
+       {products.length ? <div className="fd-products">{products.slice(0, 8).map((view) => <FashionProductCard key={view.id} view={view} />)}</div>
+         : <div className="fd-empty" role="status"><Icon name="bag" size={28} /><p>{status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'A new chapter in style is on its way. Explore all fashion while this collection comes together.'}</p><Link to="/fashion">Explore all fashion <Icon name="arrowRight" size={16} /></Link></div>}
+-    </section>
++    </section>}
+ 
+-    <section className="fd-section fd-looks" aria-labelledby="fd-looks-title">
+-      <SectionHead eyebrow={department === 'men' ? 'Wear it your way' : 'The styling journal'} title={department === 'men' ? 'Shop the look' : 'A little inspiration'} href={listing} id="fd-looks-title" />
+-      <div className="fd-looks__grid">{config.looks.map((look) => <Link key={look.title} to={listing}><EditorialImage image={look.image} /><span>{look.title}<Icon name="arrowRight" size={17} /></span></Link>)}</div>
+-    </section>
+-    <section className="fd-closing"><p className="fd-eyebrow">SORA LIFE / {config.label}</p><h2>{department === 'men' ? 'Good style. Your rules.' : 'Your story. Beautifully worn.'}</h2><Link to={listing} className="fd-cta">Find your next favourite <Icon name="arrowRight" size={18} /></Link></section>
++    {!s.looks.hidden && <section className="fd-section fd-looks" aria-labelledby="fd-looks-title">
++      <SectionHead eyebrow={s.looks.eyebrow} title={s.looks.title} more={s.looks.more} href={listing} id="fd-looks-title" />
++      <div className="fd-looks__grid">{s.looks.items.filter(visible).map((look) => <Link key={look.title} to={linkOr(look.link, listing)}><EditorialImage image={imageFor(look)} /><span>{look.title}<Icon name="arrowRight" size={17} /></span></Link>)}</div>
++    </section>}
++    {!s.closing.hidden && <section className="fd-closing"><p className="fd-eyebrow">{s.closing.eyebrow}</p><h2>{s.closing.title}</h2><Link to={linkOr(s.closing.link, listing)} className="fd-cta">{s.closing.cta} <Icon name="arrowRight" size={18} /></Link></section>}
+   </div>;
+ }
+diff --git a/src/fashion/FashionHome.jsx b/src/fashion/FashionHome.jsx
+index 004a24f..fe18692 100644
+--- a/src/fashion/FashionHome.jsx
++++ b/src/fashion/FashionHome.jsx
+@@ -9,6 +9,7 @@ import FashionProductCard from './FashionProductCard.jsx';
+ import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
+ import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+ import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
++import { useStorefrontSection } from '../lib/storefrontSections.js';
+ 
+ // ============================================================
+ // /fashion — circular category tiles, the benefits strip, the hero (image
+@@ -47,17 +48,24 @@ const BENEFITS = [
+   ['package', 'Cash on', 'delivery'],
+   ['tag', 'Coupons', '& offers'],
+ ];
++/** The benefits strip — the admin's (Storefronts → Fashion → strips); this is its built-in content. */
++export const BENEFITS_STRIP = Object.freeze({
++  hidden: false, signIn: 'Sign in', signInText: 'for exclusive benefits', account: 'Your account', accountText: 'orders & addresses',
++  items: BENEFITS.map(([icon, line1, line2]) => ({ hidden: false, icon, line1, line2 })),
++});
+ function Benefits() {
+   const { session } = useCustomerAuth();
++  const strip = useStorefrontSection('fashion', 'strips.benefits', BENEFITS_STRIP);
++  if (strip.hidden) return null;
+   return (
+     <section className="fs-benefits" aria-label="Benefits">
+       <Link to="/account" className="fs-benefits__signin">
+         <Icon name="gift" size={30} />
+-        <span>{session ? <><strong>Your account</strong> orders &amp; addresses</> : <><strong>Sign in</strong> for exclusive benefits</>}</span>
++        <span>{session ? <><strong>{strip.account}</strong> {strip.accountText}</> : <><strong>{strip.signIn}</strong> {strip.signInText}</>}</span>
+         <Icon name="chevronRight" size={18} />
+       </Link>
+       <ul className="fs-benefits__list">
+-        {BENEFITS.map(([icon, a, b]) => <li key={a}><Icon name={icon} size={26} /><span>{a}<br />{b}</span></li>)}
++        {strip.items.filter((item) => !item.hidden).map((item) => <li key={item.line1}><Icon name={item.icon} size={26} /><span>{item.line1}<br />{item.line2}</span></li>)}
+       </ul>
+     </section>
+   );
+diff --git a/src/fashion/FashionJewellery.jsx b/src/fashion/FashionJewellery.jsx
+index 972adac..3fd7648 100644
+--- a/src/fashion/FashionJewellery.jsx
++++ b/src/fashion/FashionJewellery.jsx
+@@ -5,7 +5,8 @@ import { categoryHref } from '../lib/fashion.js';
+ import { useFashionCatalogue } from './FashionCatalogue.jsx';
+ import FashionProductCard from './FashionProductCard.jsx';
+ import { departmentCatalogue } from './FashionDepartment.jsx';
+-import { JEWELLERY } from './jewelleryContent.js';
++import { JEWELLERY, JEWELLERY_SECTIONS } from './jewelleryContent.js';
++import { useStorefrontSection, filledLines, positionAttr, imageFor, linkOr } from '../lib/storefrontSections.js';
+ 
+ // ============================================================
+ // /fashion/jewellery — SORA LIFE Jewellery, laid out as the owner's reference
+@@ -60,7 +61,17 @@ function Newsletter({ content }) {
+   </section>;
+ }
+ 
++const visible = (entry) => !entry.hidden;
++/** A replaced hero photograph also replaces the blurred copy of it behind the copy (.jw-hero::before). */
++const heroLook = (hero) => {
++  const image = imageFor(hero);
++  return image.src === hero.image.src ? {} : { 'data-art': '', style: { '--jw-hero-art': `url(${JSON.stringify(image.src)})` } };
++};
++
++// Every section is the admin's (Storefronts → Fashion → Jewellery page): `s` is the page's sections as
++// published over their built-in content (JEWELLERY_SECTIONS), and a hidden one is left out.
+ export default function FashionJewellery({ content = JEWELLERY }) {
++  const s = useStorefrontSection('fashion', 'jewellery', JEWELLERY_SECTIONS);
+   const { tree, views, status } = useFashionCatalogue();
+   // Jewellery and its active sub-categories only; the catalogue's featured order puts any
+   // product flagged bestseller first. Nothing here invents a price, a rating or a review.
+@@ -68,52 +79,51 @@ export default function FashionJewellery({ content = JEWELLERY }) {
+   const listing = category ? categoryHref(category) : '#jw-products';
+   const hrefFor = (slug) => { const node = categories.find((c) => c.slug === slug); return node ? categoryHref(node) : listing; };
+   const loved = products.slice(0, 4);
+-  const { hero, categories: cats, story } = content;
+   return <div className="jw">
+-    <section className="jw-hero" aria-labelledby="jw-title">
+-      <Photo image={hero.image} priority className="jw-hero__art" />
++    {!s.hero.hidden && <section className="jw-hero" {...positionAttr(s.hero.position)} {...heroLook(s.hero)} aria-labelledby="jw-title">
++      <Photo image={imageFor(s.hero)} priority className="jw-hero__art" />
+       <div className="jw-wrap jw-hero__copy">
+-        <p className="jw-eyebrow">{hero.eyebrow}</p>
+-        <h1 id="jw-title">{hero.title.map((line) => <span key={line}>{line}</span>)}</h1>
+-        <p className="jw-hero__intro">{hero.intro}</p>
+-        <Link to={listing} className="jw-button">{hero.cta} <Icon name="arrowRight" size={15} /></Link>
++        <p className="jw-eyebrow">{s.hero.eyebrow}</p>
++        <h1 id="jw-title">{filledLines(s.hero.title).map((line) => <span key={line}>{line}</span>)}</h1>
++        <p className="jw-hero__intro">{s.hero.intro}</p>
++        <Link to={linkOr(s.hero.link, listing)} className="jw-button">{s.hero.cta} <Icon name="arrowRight" size={15} /></Link>
+       </div>
+-    </section>
++    </section>}
+ 
+-    <nav className="jw-trust" aria-label="Shopping with SORA LIFE">
+-      <ul className="jw-wrap">{content.trust.map((t) => <li key={t.title}><Link to={t.to}>
++    {!s.trust.hidden && <nav className="jw-trust" aria-label="Shopping with SORA LIFE">
++      <ul className="jw-wrap">{s.trust.items.filter(visible).map((t) => <li key={t.title}><Link to={t.link}>
+         <Icon name={t.icon} size={22} />
+         <span className="jw-trust__full"><strong>{t.title}</strong><small>{t.note}</small></span>
+         <span className="jw-trust__phone"><strong>{t.phone[0]}</strong><small>{t.phone[1]}</small></span>
+       </Link></li>)}</ul>
+-    </nav>
++    </nav>}
+ 
+-    <section className="jw-cats jw-wrap" id="jw-categories" aria-labelledby="jw-cats-title">
+-      <header className="jw-head jw-head--center"><p className="jw-eyebrow">{cats.eyebrow}</p><h2 id="jw-cats-title">{cats.title}</h2><p>{cats.intro}</p></header>
+-      <ul className="jw-cats__row">{cats.items.map((item) => <li key={item.slug}><Link to={hrefFor(item.slug)} className="jw-cat">
+-        <Photo image={item.image} className="jw-cat__art" /><span>{item.title}</span>
++    {!s.categories.hidden && <section className="jw-cats jw-wrap" id="jw-categories" aria-labelledby="jw-cats-title">
++      <header className="jw-head jw-head--center"><p className="jw-eyebrow">{s.categories.eyebrow}</p><h2 id="jw-cats-title">{s.categories.title}</h2><p>{s.categories.intro}</p></header>
++      <ul className="jw-cats__row">{s.categories.items.filter(visible).map((item) => <li key={item.slug}><Link to={linkOr(item.link, hrefFor(item.slug))} className="jw-cat">
++        <Photo image={imageFor(item)} className="jw-cat__art" /><span>{item.title}</span>
+       </Link></li>)}</ul>
+-    </section>
++    </section>}
+ 
+-    <section className="jw-loved jw-wrap" id="jw-products" aria-labelledby="jw-loved-title">
+-      <header className="jw-head jw-head--split"><h2 id="jw-loved-title">{content.loved.title}</h2>
+-        {loved.length > 0 && <Link to={listing} className="jw-more">{content.loved.viewAll} <Icon name="arrowRight" size={14} /></Link>}</header>
++    {!s.loved.hidden && <section className="jw-loved jw-wrap" id="jw-products" aria-labelledby="jw-loved-title">
++      <header className="jw-head jw-head--split"><h2 id="jw-loved-title">{s.loved.title}</h2>
++        {loved.length > 0 && <Link to={listing} className="jw-more">{s.loved.viewAll} <Icon name="arrowRight" size={14} /></Link>}</header>
+       {loved.length ? <div className="jw-loved__grid">{loved.map((view) => <FashionProductCard key={view.id} view={view} />)}</div>
+         : <div className="jw-empty" role="status"><p>{status === 'loading' ? 'Loading the collection…' : status === 'error' ? 'The collection is unavailable right now. Please try again shortly.' : 'Our first jewellery pieces are on their way. Explore the categories above in the meantime.'}</p>
+           <a href="#jw-categories" className="jw-more">Shop by category <Icon name="arrowRight" size={14} /></a></div>}
+-    </section>
++    </section>}
+ 
+-    <section className="jw-edits" aria-label="Wedding and gifts">{content.edits.map((item, i) => <Link key={item.slug} to={hrefFor(item.slug)} className={`jw-edit jw-edit--${i + 1}`}>
+-      <Photo image={item.image} className="jw-edit__art" />
+-      <div><h2>{item.title.map((line) => <span key={line}>{line}</span>)}</h2><span className="jw-button">{item.cta} <Icon name="arrowRight" size={14} /></span></div>
+-    </Link>)}</section>
++    {!s.edits.hidden && <section className="jw-edits" aria-label="Wedding and gifts">{s.edits.items.filter(visible).map((item, i) => <Link key={item.slug} to={linkOr(item.link, hrefFor(item.slug))} className={`jw-edit jw-edit--${i + 1}`}>
++      <Photo image={imageFor(item)} className="jw-edit__art" />
++      <div><h2>{filledLines(item.title).map((line) => <span key={line}>{line}</span>)}</h2><span className="jw-button">{item.cta} <Icon name="arrowRight" size={14} /></span></div>
++    </Link>)}</section>}
+ 
+-    <section className="jw-story jw-wrap" aria-labelledby="jw-story-title">
+-      <div className="jw-story__copy"><p className="jw-eyebrow">{story.eyebrow}</p><h2 id="jw-story-title">{story.title}</h2><p>{story.text}</p>
+-        <Link to={story.to} className="jw-button">{story.cta} <Icon name="arrowRight" size={14} /></Link></div>
+-      <Photo image={story.image} className="jw-story__art" />
+-    </section>
++    {!s.story.hidden && <section className="jw-story jw-wrap" aria-labelledby="jw-story-title">
++      <div className="jw-story__copy"><p className="jw-eyebrow">{s.story.eyebrow}</p><h2 id="jw-story-title">{s.story.title}</h2><p>{s.story.text}</p>
++        <Link to={s.story.link} className="jw-button">{s.story.cta} <Icon name="arrowRight" size={14} /></Link></div>
++      <Photo image={imageFor(s.story)} className="jw-story__art" />
++    </section>}
+ 
+-    <Newsletter content={content.newsletter} />
++    {!s.newsletter.hidden && <Newsletter content={{ title: s.newsletter.title, text: s.newsletter.text, image: imageFor(s.newsletter) }} />}
+   </div>;
+ }
+diff --git a/src/fashion/FashionLayout.jsx b/src/fashion/FashionLayout.jsx
+index 7d2c1bc..86392bf 100644
+--- a/src/fashion/FashionLayout.jsx
++++ b/src/fashion/FashionLayout.jsx
+@@ -10,6 +10,7 @@ import { useFashionWishlist } from '../lib/fashionWishlist.js';
+ import { FashionCatalogueProvider, useFashionCatalogue } from './FashionCatalogue.jsx';
+ import { categoryHref, resolveCategory } from '../lib/fashion.js';
+ import { normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
++import { useStorefrontSection } from '../lib/storefrontSections.js';
+ 
+ // ============================================================
+ // The fashion store shell — its own header (logo, search, account,
+@@ -20,6 +21,9 @@ import { normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
+ 
+ const SEARCH_PLACEHOLDER = 'Search for fashion, lifestyle and more…';
+ 
++/** The delivery strip under the search bar — the admin's (Storefronts → Fashion → strips); this is its built-in content. */
++export const DELIVERY_STRIP = Object.freeze({ hidden: false, location: 'Delivering across India', promise: 'Delivery in 6–7 business days' });
++
+ function FashionLogo({ tagline }) {
+   return (
+     <Link to="/fashion" className="fs-logo" aria-label={`${branding.siteName} fashion home`}>
+@@ -36,6 +40,7 @@ export function FashionHeader({ onMenu }) {
+   const location = useLocation();
+   const homepage = useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+   const config = normalizeFashionStorefront(homepage.fashion_storefront);
++  const strip = useStorefrontSection('fashion', 'strips.delivery', DELIVERY_STRIP);
+   const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') || '');
+   const submit = (e) => {
+     e.preventDefault();
+@@ -113,11 +118,11 @@ export function FashionHeader({ onMenu }) {
+         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={config.header.searchPlaceholder || SEARCH_PLACEHOLDER} aria-label="Search fashion" />
+         <button type="submit" className="fs-search__go" aria-label="Search"><Icon name="search" size={22} /></button>
+       </form>
+-      <div className="fs-strip" aria-label="Delivery">
+-        <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> Delivering across India</span>
++      {!strip.hidden && <div className="fs-strip" aria-label="Delivery">
++        <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> {strip.location}</span>
+         <span className="fs-strip__sep" aria-hidden="true" />
+-        <span className="fs-strip__fast"><Icon name="truck" size={20} /> Delivery in 6–7 business days</span>
+-      </div>
++        <span className="fs-strip__fast"><Icon name="truck" size={20} /> {strip.promise}</span>
++      </div>}
+     </header>
+   );
+ }
+diff --git a/src/fashion/departmentContent.js b/src/fashion/departmentContent.js
+index b383f98..c0010d9 100644
+--- a/src/fashion/departmentContent.js
++++ b/src/fashion/departmentContent.js
+@@ -1,5 +1,7 @@
+ // Presentation only. Supplied editorial artwork is independent of inventory.
+ // Product images/prices continue to come from the existing catalogue.
++import { shot } from '../lib/storefrontSections.js';
++
+ const photo = (fallback, alt, src = '') => ({ src, fallback, alt });
+ const artwork = (name, alt, extra = {}) => ({
+   src: `/img/fashion-editorial/${name}.webp`,
+@@ -111,3 +113,54 @@ export const DEPARTMENT_CONTENT = {
+     promo: artwork('women-editorial-banarasi', 'Gold brocade across folded plum silk', { width: 1200, height: 649 }),
+   },
+ };
++
++// ---- What the admin edits (Storefronts → Fashion) ---------------------------------------------
++// Each page's sections in the schema's shape (storefrontContent.js), built from the content above.
++// What is published replaces them field by field; a field that breaks its rule stays as it is here.
++// An empty link means the page's own (the catalogue listing the tile or button opens today).
++// `image`, `icon`, `slug` and `root` ride along for the page; the admin never edits them.
++const edited = (image) => ({ image, picture: shot(image), alt: image.alt });
++const item = (entry) => ({ ...entry, hidden: false, link: '', ...edited(entry.image) });
++const facts = (rows) => ({ hidden: false, items: rows.map(([icon, title, text, link = '']) => ({ hidden: false, icon, title, text, link })) });
++const W = DEPARTMENT_CONTENT.women;
++const M = DEPARTMENT_CONTENT.men;
++const S = DEPARTMENT_CONTENT.sarees;
++
++export const DEPARTMENT_SECTIONS = Object.freeze({
++  women: {
++    hero: { hidden: false, eyebrow: W.eyebrow, title: [...W.title], intro: W.intro, cta: W.cta, link: '', ...edited(W.hero), position: 'left' },
++    categories: { hidden: false, title: 'Shop by category', items: W.categories.map(item) },
++    products: { hidden: false, newTitle: 'New in', title: 'From the collection', viewAll: 'View all' },
++    edits: { hidden: false, items: W.edits.map(item) },
++    capsule: { hidden: false, title: 'The capsule edit', cta: 'Shop', items: W.capsule.map(item) },
++    sarees: { hidden: false, eyebrow: W.sarees.eyebrow, title: W.sarees.title, text: W.sarees.text, cta: W.sarees.cta, link: '/fashion/women/sarees', ...edited(W.sarees.image) },
++    jewellery: { hidden: false, eyebrow: W.jewellery.eyebrow, title: W.jewellery.title, text: W.jewellery.text, cta: W.jewellery.cta, link: '/fashion/jewellery', ...edited(W.jewellery.image) },
++    services: facts([
++      ['truck', 'Standard delivery', '6–7 business days', '/shipping'],
++      ['return', 'Returns', 'Within 7 days of delivery', '/returns'],
++      ['chat', 'Need help?', 'Contact our team', '/contact'],
++    ]),
++  },
++  men: {
++    hero: { hidden: false, eyebrow: M.eyebrow, title: [...M.title], intro: M.intro, cta: M.cta, link: '', note: M.heroNote, ...edited(M.hero), position: 'left' },
++    highlights: facts([['sparkle', 'Everyday style', 'Find your own rhythm'], ['star', 'The wardrobe edit', 'Pieces to make yours'], ['grid', 'Mix. Match. Repeat.', 'A fresh perspective'], ['bag', 'Your next favourite', 'Explore the collection']]),
++    collections: { hidden: false, eyebrow: 'Shop by collection', title: M.collectionTitle, more: 'Explore all', items: M.collections.map(item) },
++    editorial: { hidden: false, items: M.editorial.map((entry) => ({ ...item(entry), cta: 'Discover the edit' })) },
++    products: { hidden: false, eyebrow: 'Curated for you', title: M.productsTitle, more: 'Explore all' },
++    looks: { hidden: false, eyebrow: 'Wear it your way', title: 'Shop the look', more: 'Explore all', items: M.looks.map(item) },
++    closing: { hidden: false, eyebrow: `SORA LIFE / ${M.label}`, title: 'Good style. Your rules.', cta: 'Find your next favourite', link: '' },
++  },
++  sarees: {
++    hero: { hidden: false, eyebrow: S.eyebrow, title: [...S.title], intro: S.intro, cta: S.cta, link: '', position: 'left', slides: [S.hero, S.alternateHero].map(edited) },
++    collections: { hidden: false, eyebrow: 'Shop by category', title: ['Explore Our', 'Collections'], text: ['Discover sarees for every mood,', 'occasion and style.'], viewAll: 'View all', items: S.collections.map(item) },
++    editorial: { hidden: false, items: S.editorial.map(item) },
++    products: { hidden: false, eyebrow: 'The wardrobe edit', title: S.productsTitle, text: ['Explore the styles currently available', 'in our catalogue.'] },
++    promo: { hidden: false, eyebrow: 'A timeless expression', title: ['A little tradition.', 'A story of your own.'], cta: 'Explore the collection', link: '', ...edited(S.promo) },
++    services: facts([
++      ['truck', 'Free standard shipping', 'Choose Standard at checkout', '/shipping'],
++      ['lock', 'Secure checkout', 'View payment options at checkout', '/terms'],
++      ['return', 'Returns & refunds', 'Read our return policy', '/returns'],
++      ['chat', 'Dedicated support', 'We’re here to help you', '/contact'],
++    ]),
++  },
++});
+diff --git a/src/fashion/jewelleryContent.js b/src/fashion/jewelleryContent.js
+index cfad7f1..ba07ef2 100644
+--- a/src/fashion/jewelleryContent.js
++++ b/src/fashion/jewelleryContent.js
+@@ -3,6 +3,8 @@
+ // come only from the real catalogue. Every statement here is true: delivery is free on every
+ // order (standard), returns are accepted within 7 days of delivery, checkout offers cash on
+ // delivery, support runs 9am–6pm IST. Nothing else is asserted about the pieces or the shop.
++import { shot } from '../lib/storefrontSections.js';
++
+ const art = (name, alt, extra = {}) => ({ src: `/img/fashion-editorial/${name}.webp`, alt, ...extra });
+ 
+ export const JEWELLERY = {
+@@ -63,3 +65,19 @@ export const JEWELLERY = {
+     }),
+   },
+ };
++
++// ---- What the admin edits (Storefronts → Fashion → Jewellery page) -------------------------------
++// The page's sections in the schema's shape (storefrontContent.js), built from the content above.
++// What is published replaces them field by field; a field that breaks its rule stays as it is here.
++// An empty link means the page's own (the listing a tile or button opens today).
++const edited = (image) => ({ image, picture: shot(image), alt: image.alt });
++const J = JEWELLERY;
++export const JEWELLERY_SECTIONS = Object.freeze({
++  hero: { hidden: false, eyebrow: J.hero.eyebrow, title: [...J.hero.title], intro: J.hero.intro, cta: J.hero.cta, link: '', ...edited(J.hero.image), position: 'left' },
++  trust: { hidden: false, items: J.trust.map((t) => ({ ...t, hidden: false, phone: [...t.phone], link: t.to })) },
++  categories: { hidden: false, eyebrow: J.categories.eyebrow, title: J.categories.title, intro: J.categories.intro, items: J.categories.items.map((c) => ({ ...c, hidden: false, link: '', ...edited(c.image) })) },
++  loved: { hidden: false, title: J.loved.title, viewAll: J.loved.viewAll },
++  edits: { hidden: false, items: J.edits.map((e) => ({ ...e, hidden: false, title: [0, 1, 2].map((i) => e.title[i] || ''), link: '', ...edited(e.image) })) },
++  story: { hidden: false, eyebrow: J.story.eyebrow, title: J.story.title, text: J.story.text, cta: J.story.cta, link: J.story.to, ...edited(J.story.image) },
++  newsletter: { hidden: false, title: J.newsletter.title, text: J.newsletter.text, ...edited(J.newsletter.image) },
++});
+diff --git a/src/grocery/GroceryHome.jsx b/src/grocery/GroceryHome.jsx
+index 48a916b..2b2ed22 100644
+--- a/src/grocery/GroceryHome.jsx
++++ b/src/grocery/GroceryHome.jsx
+@@ -1,7 +1,8 @@
+ import { useEffect, useRef, useState } from 'react';
+ import { Link } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+-import { DAILY_ESSENTIALS, GROCERY_DELIVERY_WINDOW, HERO_SLIDES, PROMO, categoryHref, useGroceryCatalogue } from '../data/groceryHomepage.js';
++import { DAILY_ESSENTIALS, GROCERY_SECTIONS, categoryHref, useGroceryCatalogue } from '../data/groceryHomepage.js';
++import { useStorefrontSection, positionAttr } from '../lib/storefrontSections.js';
+ import GroceryProductCard from './GroceryProductCard.jsx';
+ 
+ // ============================================================
+@@ -14,19 +15,28 @@ import GroceryProductCard from './GroceryProductCard.jsx';
+ // nothing to show says so rather than inventing tiles.
+ // ============================================================
+ 
+-const TRUST = [
+-  ['truck', 'Standard Delivery', GROCERY_DELIVERY_WINDOW],
+-  ['leaf', 'Fresh Products', 'Sourced with care'],
+-  ['shield', 'Trusted Quality', 'Good food, safer lives'],
+-];
++// Every section is the admin's (Storefronts → Grocery), read over its built-in content
++// (GROCERY_SECTIONS); a hidden one is left out.
++const visible = (entry) => !entry.hidden;
++/** A section's colour matched to its photograph — only when the admin set one with it. */
++const tone = (colour) => (colour ? { 'data-tone': '', style: { '--sf-tone': colour } } : {});
++/** The phone photograph under 700px when there is a separate one; else the one image, as it always was. */
++const PHONE = '(max-width: 700px)';
++const photo = (phone, desktop, img) => (phone && phone !== desktop ? <picture><source media={PHONE} srcSet={phone} />{img}</picture> : img);
++
+ function TrustStrip() {
++  const trust = useStorefrontSection('grocery', 'trust', GROCERY_SECTIONS.trust);
++  if (trust.hidden) return null;
+   return (
+     <ul className="gs-trust" aria-label="Why shop with us">
+-      {TRUST.map(([icon, a, b]) => <li key={a}><Icon name={icon} size={28} /><span><strong>{a}</strong><em>{b}</em></span></li>)}
++      {trust.items.filter(visible).map((t) => <li key={t.title}><Icon name={t.icon} size={28} /><span><strong>{t.title}</strong><em>{t.sub}</em></span></li>)}
+     </ul>
+   );
+ }
+ 
++/** The hero as the carousel's one slide. */
++export const heroSlideOf = (h) => ({ id: h.id, image: h.picture.desktop, phone: h.picture.phone, headline: h.headline, sub: h.sub, cta: h.cta, href: h.link, note: h.note, colour: h.picture.colour, position: h.position });
++
+ export const AUTOPLAY_MS = 6000;
+ 
+ /**
+@@ -34,7 +44,9 @@ export const AUTOPLAY_MS = 6000;
+  * pauses on hover and focus, and never moves under prefers-reduced-motion.
+  * The track slides on transform only.
+  */
+-export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS }) {
++export function HeroCarousel({ slides: given, autoplayMs = AUTOPLAY_MS }) {
++  const hero = useStorefrontSection('grocery', 'hero', GROCERY_SECTIONS.hero);
++  const slides = given || (hero.hidden ? [] : [heroSlideOf(hero)]);
+   const [index, setIndex] = useState(0);
+   const [paused, setPaused] = useState(false);
+   const reduced = useRef(false);
+@@ -57,8 +69,8 @@ export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS })
+       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
+       <div className="gs-hero__track" style={{ transform: `translateX(-${index * 100}%)` }}>
+         {slides.map((s, i) => (
+-          <article key={s.id} className={`gs-hero__slide${i === index ? ' is-on' : ''}`} aria-hidden={i !== index} aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>
+-            <img className="gs-hero__img" src={s.image} alt="" width="1600" height="900" decoding="async" fetchpriority={i === 0 ? 'high' : 'auto'} loading={i === 0 ? 'eager' : 'lazy'} />
++          <article key={s.id} className={`gs-hero__slide${i === index ? ' is-on' : ''}`} {...positionAttr(s.position)} {...tone(s.colour)} aria-hidden={i !== index} aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>
++            {photo(s.phone, s.image, <img className="gs-hero__img" src={s.image} alt="" width="1600" height="900" decoding="async" fetchpriority={i === 0 ? 'high' : 'auto'} loading={i === 0 ? 'eager' : 'lazy'} />)}
+             <div className="gs-hero__txt">
+               <h1 className="gs-hero__h serif">{s.headline}</h1>
+               <p className="gs-hero__sub">{s.sub}</p>
+@@ -78,7 +90,8 @@ export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS })
+ }
+ 
+ function CategoryCircles({ categories }) {
+-  if (categories.length === 0) return null;
++  const section = useStorefrontSection('grocery', 'categories', GROCERY_SECTIONS.categories);
++  if (categories.length === 0 || section.hidden) return null;
+   return (
+     <nav className="gs-circles" aria-label="Shop by category">
+       {categories.map((c) => (
+@@ -92,13 +105,14 @@ function CategoryCircles({ categories }) {
+ }
+ 
+ function DailyEssentials({ products, status }) {
+-  const { title, sub, seeAll, limit } = DAILY_ESSENTIALS;
+-  const row = products.slice(0, limit);
++  const { hidden, title, sub, more, link } = useStorefrontSection('grocery', 'daily', GROCERY_SECTIONS.daily);
++  const row = products.slice(0, DAILY_ESSENTIALS.limit);
++  if (hidden) return null;
+   return (
+     <section className="gs-sec" aria-labelledby="gs-daily-h">
+       <header className="gs-sec__head">
+         <div><h2 className="gs-sec__h serif" id="gs-daily-h">{title}</h2>{sub && <p className="gs-sec__sub">{sub}</p>}</div>
+-        <Link to={seeAll} className="gs-sec__link">See all <Icon name="arrowRight" size={16} /></Link>
++        <Link to={link} className="gs-sec__link">{more} <Icon name="arrowRight" size={16} /></Link>
+       </header>
+       {row.length === 0 ? (
+         <p className="gs-empty">{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The grocery catalogue could not be loaded. Please try again shortly.' : 'The grocery store is being stocked — products appear here as they go live.'}</p>
+@@ -112,13 +126,16 @@ function DailyEssentials({ products, status }) {
+ }
+ 
+ function PromoStrip() {
++  const promo = useStorefrontSection('grocery', 'promo', GROCERY_SECTIONS.promo);
++  if (promo.hidden) return null;
++  const { colour, phone, desktop } = promo.picture;
+   return (
+-    <section className="gs-promo" aria-labelledby="gs-promo-h">
+-      <div className="gs-promo__art" aria-hidden="true"><img src={PROMO.image} alt="" loading="lazy" decoding="async" width="1200" height="675" /></div>
++    <section className="gs-promo" {...tone(colour)} aria-labelledby="gs-promo-h">
++      <div className="gs-promo__art" aria-hidden="true">{photo(phone, desktop, <img src={desktop} alt="" loading="lazy" decoding="async" width="1200" height="675" />)}</div>
+       <div className="gs-promo__txt">
+-        <h2 className="gs-promo__h serif" id="gs-promo-h">{PROMO.headline}</h2>
+-        <p className="gs-promo__sub">{PROMO.sub}</p>
+-        <Link to={PROMO.href} className="gs-promo__cta">{PROMO.cta} <Icon name="arrowRight" size={16} /></Link>
++        <h2 className="gs-promo__h serif" id="gs-promo-h">{promo.headline}</h2>
++        <p className="gs-promo__sub">{promo.sub}</p>
++        <Link to={promo.link} className="gs-promo__cta">{promo.cta} <Icon name="arrowRight" size={16} /></Link>
+       </div>
+     </section>
+   );
+diff --git a/src/homeliving/HomeLivingHome.jsx b/src/homeliving/HomeLivingHome.jsx
+index 1ac7f71..17abb70 100644
+--- a/src/homeliving/HomeLivingHome.jsx
++++ b/src/homeliving/HomeLivingHome.jsx
+@@ -1,7 +1,8 @@
+ import { useCallback, useEffect, useRef, useState } from 'react';
+ import { Link } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+-import { CATEGORY_SECTION, FEATURED, HERO_SLIDES, PROMO, TRUST, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
++import { FEATURED, HOMELIVING_SECTIONS, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
++import { useStorefrontSection, positionAttr } from '../lib/storefrontSections.js';
+ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
+ import { BottomNav, DeliveryRow, SearchBar } from './HomeLivingLayout.jsx';
+ 
+@@ -23,6 +24,14 @@ export const AUTOPLAY_MS = 6000;
+ /** Below this the hero shows the 4:5 portrait; from it up, the 3:2 landscape. */
+ export const HERO_TALL_MEDIA = '(max-width: 767px)';
+ 
++// Every section is the admin's (Storefronts → Home & Living), read over its built-in content
++// (HOMELIVING_SECTIONS); a hidden one is left out.
++const visible = (entry) => !entry.hidden;
++/** The hero as the carousel's one slide. */
++export const heroSlideOf = (h) => ({ id: h.id, image: { wide: h.picture.desktop, tall: h.picture.phone }, eyebrow: h.eyebrow, headline: h.headline, sub: h.sub, cta: h.cta, href: h.link, note: h.note, colour: h.picture.colour, position: h.position });
++/** A slide's wash colour (only when the admin set one with its photograph) and its copy position. */
++const slideLook = (s) => ({ ...positionAttr(s.position), ...(s.colour ? { 'data-tone': '', style: { '--sf-tone': s.colour } } : {}) });
++
+ /**
+  * Full-width carousel. Autoplays only when there is more than one slide,
+  * pauses on hover and focus, and never moves under prefers-reduced-motion.
+@@ -32,7 +41,9 @@ export const HERO_TALL_MEDIA = '(max-width: 767px)';
+  * portrait, clear of the furnishings, over a wash light enough that the
+  * wall still reads as wall.
+  */
+-export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS }) {
++export function HeroCarousel({ slides: given, autoplayMs = AUTOPLAY_MS }) {
++  const hero = useStorefrontSection('homeliving', 'hero', HOMELIVING_SECTIONS.hero);
++  const slides = given || (hero.hidden ? [] : [heroSlideOf(hero)]);
+   const [index, setIndex] = useState(0);
+   const [paused, setPaused] = useState(false);
+   const reduced = useRef(false);
+@@ -55,7 +66,7 @@ export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS })
+       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
+       <div className="hl-hero__track" style={{ transform: `translateX(-${index * 100}%)` }}>
+         {slides.map((s, i) => (
+-          <article key={s.id} className={`hl-hero__slide${i === index ? ' is-on' : ''}`} aria-hidden={i !== index} aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>
++          <article key={s.id} className={`hl-hero__slide${i === index ? ' is-on' : ''}`} {...slideLook(s)} aria-hidden={i !== index} aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>
+             <picture>
+               <source media={HERO_TALL_MEDIA} srcSet={s.image.tall} />
+               <img className="hl-hero__img" src={s.image.wide} alt="" width="1536" height="1024" decoding="async" fetchpriority={i === 0 ? 'high' : 'auto'} loading={i === 0 ? 'eager' : 'lazy'} />
+@@ -85,10 +96,12 @@ export function HeroCarousel({ slides = HERO_SLIDES, autoplayMs = AUTOPLAY_MS })
+ 
+ /** One quiet row under the hero: a small icon, the label, the sub-label; it scrolls sideways on a phone if it will not fit. */
+ function TrustStrip() {
++  const trust = useStorefrontSection('homeliving', 'trust', HOMELIVING_SECTIONS.trust);
++  if (trust.hidden) return null;
+   return (
+     <div className="hl-wrap">
+       <ul className="hl-trust" aria-label="Why shop with us">
+-        {TRUST.map((t) => (
++        {trust.items.filter(visible).map((t) => (
+           <li key={t.title}>
+             <span className="hl-trust__icon"><Icon name={t.icon} size={18} /></span>
+             <span className="hl-trust__txt"><strong>{t.title}</strong><em>{t.sub}</em></span>
+@@ -108,6 +121,7 @@ function TrustStrip() {
+  * row as not-at-end, the way a phone first sees it.
+  */
+ function CategoryCircles({ categories }) {
++  const section = useStorefrontSection('homeliving', 'categories', HOMELIVING_SECTIONS.categories);
+   const track = useRef(null);
+   const [edge, setEdge] = useState({ start: true, end: false });
+   const measure = useCallback(() => {
+@@ -129,15 +143,15 @@ function CategoryCircles({ categories }) {
+     const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+     el.scrollBy({ left: Math.round(el.clientWidth * 0.8), behavior: reduced ? 'auto' : 'smooth' });
+   };
+-  if (categories.length === 0) return null;
++  if (categories.length === 0 || section.hidden) return null;
+   return (
+     <section className="hl-wrap hl-sec hl-cats" aria-labelledby="hl-cats-h">
+       <header className="hl-sec__head hl-cats__head">
+         <div>
+-          <p className="hl-eyebrow">{CATEGORY_SECTION.eyebrow}</p>
+-          <h2 className="hl-sec__h hl-sec__h--rule serif" id="hl-cats-h">{CATEGORY_SECTION.title}</h2>
++          <p className="hl-eyebrow">{section.eyebrow}</p>
++          <h2 className="hl-sec__h hl-sec__h--rule serif" id="hl-cats-h">{section.title}</h2>
+         </div>
+-        <Link to={CATEGORY_SECTION.viewAll} className="hl-sec__link">View all <Icon name="arrowRight" size={16} /></Link>
++        <Link to={section.link} className="hl-sec__link">{section.more} <Icon name="arrowRight" size={16} /></Link>
+       </header>
+       <div className={`hl-circles__scroller${edge.start ? ' is-start' : ''}${edge.end ? ' is-end' : ''}`}>
+         <nav className="hl-circles" aria-label="Shop by category" ref={track} onScroll={measure}>
+@@ -155,13 +169,14 @@ function CategoryCircles({ categories }) {
+ }
+ 
+ function FeaturedRow({ products, status }) {
+-  const { title, sub, seeAll, limit } = FEATURED;
+-  const row = products.slice(0, limit);
++  const { hidden, title, sub, more, link } = useStorefrontSection('homeliving', 'featured', HOMELIVING_SECTIONS.featured);
++  const row = products.slice(0, FEATURED.limit);
++  if (hidden) return null;
+   return (
+     <section className="hl-wrap hl-sec" aria-labelledby="hl-featured-h">
+       <header className="hl-sec__head">
+         <div><h2 className="hl-sec__h serif" id="hl-featured-h">{title}</h2>{sub && <p className="hl-sec__sub">{sub}</p>}</div>
+-        <Link to={seeAll} className="hl-sec__link">View all <Icon name="arrowRight" size={16} /></Link>
++        <Link to={link} className="hl-sec__link">{more} <Icon name="arrowRight" size={16} /></Link>
+       </header>
+       {row.length === 0 ? (
+         <p className="hl-empty">{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : 'The Home & Living store is being stocked — products appear here as they go live.'}</p>
+@@ -175,18 +190,22 @@ function FeaturedRow({ products, status }) {
+ }
+ 
+ function PromoStrip() {
++  const promo = useStorefrontSection('homeliving', 'promo', HOMELIVING_SECTIONS.promo);
++  if (promo.hidden) return null;
++  const { colour, phone, desktop } = promo.picture;
++  const img = <img src={desktop} alt="" loading="lazy" decoding="async" width="1200" height="400" />;
+   return (
+-    <section className="hl-promo" aria-labelledby="hl-promo-h">
+-      <div className="hl-promo__art" aria-hidden="true"><img src={PROMO.image} alt="" loading="lazy" decoding="async" width="1200" height="400" /></div>
++    <section className="hl-promo" {...(colour ? { 'data-tone': '', style: { '--sf-tone': colour } } : {})} aria-labelledby="hl-promo-h">
++      <div className="hl-promo__art" aria-hidden="true">{phone !== desktop ? <picture><source media={HERO_TALL_MEDIA} srcSet={phone} />{img}</picture> : img}</div>
+       <div className="hl-wrap hl-promo__inner">
+         <div className="hl-promo__txt">
+-          <p className="hl-eyebrow">{PROMO.eyebrow}</p>
+-          <h2 className="hl-promo__h serif" id="hl-promo-h">{PROMO.headline}</h2>
+-          <p className="hl-promo__sub">{PROMO.sub}</p>
+-          <Link to={PROMO.href} className="hl-cta">{PROMO.cta} <Icon name="arrowRight" size={16} /></Link>
++          <p className="hl-eyebrow">{promo.eyebrow}</p>
++          <h2 className="hl-promo__h serif" id="hl-promo-h">{promo.headline}</h2>
++          <p className="hl-promo__sub">{promo.sub}</p>
++          <Link to={promo.link} className="hl-cta">{promo.cta} <Icon name="arrowRight" size={16} /></Link>
+         </div>
+         <ul className="hl-promo__badges" aria-label="Why it matters">
+-          {PROMO.badges.map((b) => <li key={b.title}><span className="hl-trust__icon"><Icon name={b.icon} size={22} /></span><span>{b.title}</span></li>)}
++          {promo.badges.filter(visible).map((b) => <li key={b.title}><span className="hl-trust__icon"><Icon name={b.icon} size={22} /></span><span>{b.title}</span></li>)}
+         </ul>
+       </div>
+     </section>
+diff --git a/src/lib/settings.js b/src/lib/settings.js
+index 912ff79..956eb2a 100644
+--- a/src/lib/settings.js
++++ b/src/lib/settings.js
+@@ -44,6 +44,16 @@ const publishedKeys = (stores) => Object.fromEntries(Object.entries(PUBLISHED_HO
+ // plus the two published storefronts above. The rest is empty until it loads.
+ export let homepage = { ...publishedKeys(inlined?.stores) };
+ 
++// Every store's published content, as the build wrote it — the sections each page lets an
++// admin edit read theirs from here (useStorefrontSection), field by field, before the first render.
++let storefronts = inlined?.stores && typeof inlined.stores === 'object' ? { ...inlined.stores } : {};
++const storefrontListeners = new Set();
++export const getStorefrontsSnapshot = () => storefronts;
++export function subscribeStorefronts(listener) {
++  storefrontListeners.add(listener);
++  return () => storefrontListeners.delete(listener);
++}
++
+ export let contact = { phone: '', email: '', address: '' };
+ 
+ // ---- Storefront theme (admin-customizable appearance) ----
+@@ -80,11 +90,16 @@ export function applyHomepage(v) {
+  * drafts replace the published storefronts in this tab until it is reloaded without it.
+  */
+ export function applyStorefrontDrafts(rows) {
+-  const stores = Object.fromEntries((Array.isArray(rows) ? rows : []).filter((r) => r && typeof r.store === 'string').map((r) => [r.store, r.content]));
++  const stores = Object.fromEntries((Array.isArray(rows) ? rows : [])
++    .filter((r) => r && typeof r.store === 'string' && r.content && typeof r.content === 'object').map((r) => [r.store, r.content]));
++  if (!Object.keys(stores).length) return false;
++  storefronts = { ...storefronts, ...stores };
++  storefrontListeners.forEach((listener) => listener());
+   const next = publishedKeys(stores);
+-  if (!Object.keys(next).length) return false;
+-  homepage = { ...homepage, ...next };
+-  homepageListeners.forEach((listener) => listener());
++  if (Object.keys(next).length) {
++    homepage = { ...homepage, ...next };
++    homepageListeners.forEach((listener) => listener());
++  }
+   return true;
+ }
+ export function applyContact(v) { if (v && typeof v === 'object') contact = { ...contact, ...v }; }
