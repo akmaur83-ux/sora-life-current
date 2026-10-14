@@ -33,17 +33,17 @@ var react_production_min = {};
 var l$1=Symbol.for("react.element"),n$1=Symbol.for("react.portal"),p$2=Symbol.for("react.fragment"),q$1=Symbol.for("react.strict_mode"),r=Symbol.for("react.profiler"),t=Symbol.for("react.provider"),u=Symbol.for("react.context"),v$1=Symbol.for("react.forward_ref"),w=Symbol.for("react.suspense"),x=Symbol.for("react.memo"),y=Symbol.for("react.lazy"),z$1=Symbol.iterator;function A$1(a){if(null===a||"object"!==typeof a)return null;a=z$1&&a[z$1]||a["@@iterator"];return "function"===typeof a?a:null}
 var B$1={isMounted:function(){return !1},enqueueForceUpdate:function(){},enqueueReplaceState:function(){},enqueueSetState:function(){}},C$1=Object.assign,D$1={};function E$1(a,b,e){this.props=a;this.context=b;this.refs=D$1;this.updater=e||B$1;}E$1.prototype.isReactComponent={};
 E$1.prototype.setState=function(a,b){if("object"!==typeof a&&"function"!==typeof a&&null!=a)throw Error("setState(...): takes an object of state variables to update or a function which returns an object of state variables.");this.updater.enqueueSetState(this,a,b,"setState");};E$1.prototype.forceUpdate=function(a){this.updater.enqueueForceUpdate(this,a,"forceUpdate");};function F(){}F.prototype=E$1.prototype;function G$1(a,b,e){this.props=a;this.context=b;this.refs=D$1;this.updater=e||B$1;}var H$1=G$1.prototype=new F;
-H$1.constructor=G$1;C$1(H$1,E$1.prototype);H$1.isPureReactComponent=!0;var I$1=Array.isArray,J=Object.prototype.hasOwnProperty,K$1={current:null},L$1={key:!0,ref:!0,__self:!0,__source:!0};
-function M$1(a,b,e){var d,c={},k=null,h=null;if(null!=b)for(d in void 0!==b.ref&&(h=b.ref),void 0!==b.key&&(k=""+b.key),b)J.call(b,d)&&!L$1.hasOwnProperty(d)&&(c[d]=b[d]);var g=arguments.length-2;if(1===g)c.children=e;else if(1<g){for(var f=Array(g),m=0;m<g;m++)f[m]=arguments[m+2];c.children=f;}if(a&&a.defaultProps)for(d in g=a.defaultProps,g)void 0===c[d]&&(c[d]=g[d]);return {$$typeof:l$1,type:a,key:k,ref:h,props:c,_owner:K$1.current}}
+H$1.constructor=G$1;C$1(H$1,E$1.prototype);H$1.isPureReactComponent=!0;var I$1=Array.isArray,J$1=Object.prototype.hasOwnProperty,K$1={current:null},L$1={key:!0,ref:!0,__self:!0,__source:!0};
+function M$2(a,b,e){var d,c={},k=null,h=null;if(null!=b)for(d in void 0!==b.ref&&(h=b.ref),void 0!==b.key&&(k=""+b.key),b)J$1.call(b,d)&&!L$1.hasOwnProperty(d)&&(c[d]=b[d]);var g=arguments.length-2;if(1===g)c.children=e;else if(1<g){for(var f=Array(g),m=0;m<g;m++)f[m]=arguments[m+2];c.children=f;}if(a&&a.defaultProps)for(d in g=a.defaultProps,g)void 0===c[d]&&(c[d]=g[d]);return {$$typeof:l$1,type:a,key:k,ref:h,props:c,_owner:K$1.current}}
 function N$1(a,b){return {$$typeof:l$1,type:a.type,key:b,ref:a.ref,props:a.props,_owner:a._owner}}function O$1(a){return "object"===typeof a&&null!==a&&a.$$typeof===l$1}function escape(a){var b={"=":"=0",":":"=2"};return "$"+a.replace(/[=:]/g,function(a){return b[a]})}var P$2=/\/+/g;function Q$1(a,b){return "object"===typeof a&&null!==a&&null!=a.key?escape(""+a.key):b.toString(36)}
 function R$1(a,b,e,d,c){var k=typeof a;if("undefined"===k||"boolean"===k)a=null;var h=!1;if(null===a)h=!0;else switch(k){case "string":case "number":h=!0;break;case "object":switch(a.$$typeof){case l$1:case n$1:h=!0;}}if(h)return h=a,c=c(h),a=""===d?"."+Q$1(h,0):d,I$1(c)?(e="",null!=a&&(e=a.replace(P$2,"$&/")+"/"),R$1(c,b,e,"",function(a){return a})):null!=c&&(O$1(c)&&(c=N$1(c,e+(!c.key||h&&h.key===c.key?"":(""+c.key).replace(P$2,"$&/")+"/")+a)),b.push(c)),1;h=0;d=""===d?".":d+":";if(I$1(a))for(var g=0;g<a.length;g++){k=
 a[g];var f=d+Q$1(k,g);h+=R$1(k,b,e,f,c);}else if(f=A$1(a),"function"===typeof f)for(a=f.call(a),g=0;!(k=a.next()).done;)k=k.value,f=d+Q$1(k,g++),h+=R$1(k,b,e,f,c);else if("object"===k)throw b=String(a),Error("Objects are not valid as a React child (found: "+("[object Object]"===b?"object with keys {"+Object.keys(a).join(", ")+"}":b)+"). If you meant to render a collection of children, use an array instead.");return h}
-function S$1(a,b,e){if(null==a)return a;var d=[],c=0;R$1(a,d,"","",function(a){return b.call(e,a,c++)});return d}function T$1(a){if(-1===a._status){var b=a._result;b=b();b.then(function(b){if(0===a._status||-1===a._status)a._status=1,a._result=b;},function(b){if(0===a._status||-1===a._status)a._status=2,a._result=b;});-1===a._status&&(a._status=0,a._result=b);}if(1===a._status)return a._result.default;throw a._result;}
-var U$1={current:null},V$1={transition:null},W$1={ReactCurrentDispatcher:U$1,ReactCurrentBatchConfig:V$1,ReactCurrentOwner:K$1};function X$1(){throw Error("act(...) is not supported in production builds of React.");}
-react_production_min.Children={map:S$1,forEach:function(a,b,e){S$1(a,function(){b.apply(this,arguments);},e);},count:function(a){var b=0;S$1(a,function(){b++;});return b},toArray:function(a){return S$1(a,function(a){return a})||[]},only:function(a){if(!O$1(a))throw Error("React.Children.only expected to receive a single React element child.");return a}};react_production_min.Component=E$1;react_production_min.Fragment=p$2;react_production_min.Profiler=r;react_production_min.PureComponent=G$1;react_production_min.StrictMode=q$1;react_production_min.Suspense=w;
-react_production_min.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED=W$1;react_production_min.act=X$1;
-react_production_min.cloneElement=function(a,b,e){if(null===a||void 0===a)throw Error("React.cloneElement(...): The argument must be a React element, but you passed "+a+".");var d=C$1({},a.props),c=a.key,k=a.ref,h=a._owner;if(null!=b){void 0!==b.ref&&(k=b.ref,h=K$1.current);void 0!==b.key&&(c=""+b.key);if(a.type&&a.type.defaultProps)var g=a.type.defaultProps;for(f in b)J.call(b,f)&&!L$1.hasOwnProperty(f)&&(d[f]=void 0===b[f]&&void 0!==g?g[f]:b[f]);}var f=arguments.length-2;if(1===f)d.children=e;else if(1<f){g=Array(f);
-for(var m=0;m<f;m++)g[m]=arguments[m+2];d.children=g;}return {$$typeof:l$1,type:a.type,key:c,ref:k,props:d,_owner:h}};react_production_min.createContext=function(a){a={$$typeof:u,_currentValue:a,_currentValue2:a,_threadCount:0,Provider:null,Consumer:null,_defaultValue:null,_globalName:null};a.Provider={$$typeof:t,_context:a};return a.Consumer=a};react_production_min.createElement=M$1;react_production_min.createFactory=function(a){var b=M$1.bind(null,a);b.type=a;return b};react_production_min.createRef=function(){return {current:null}};
+function S$2(a,b,e){if(null==a)return a;var d=[],c=0;R$1(a,d,"","",function(a){return b.call(e,a,c++)});return d}function T$1(a){if(-1===a._status){var b=a._result;b=b();b.then(function(b){if(0===a._status||-1===a._status)a._status=1,a._result=b;},function(b){if(0===a._status||-1===a._status)a._status=2,a._result=b;});-1===a._status&&(a._status=0,a._result=b);}if(1===a._status)return a._result.default;throw a._result;}
+var U$1={current:null},V$1={transition:null},W$2={ReactCurrentDispatcher:U$1,ReactCurrentBatchConfig:V$1,ReactCurrentOwner:K$1};function X$1(){throw Error("act(...) is not supported in production builds of React.");}
+react_production_min.Children={map:S$2,forEach:function(a,b,e){S$2(a,function(){b.apply(this,arguments);},e);},count:function(a){var b=0;S$2(a,function(){b++;});return b},toArray:function(a){return S$2(a,function(a){return a})||[]},only:function(a){if(!O$1(a))throw Error("React.Children.only expected to receive a single React element child.");return a}};react_production_min.Component=E$1;react_production_min.Fragment=p$2;react_production_min.Profiler=r;react_production_min.PureComponent=G$1;react_production_min.StrictMode=q$1;react_production_min.Suspense=w;
+react_production_min.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED=W$2;react_production_min.act=X$1;
+react_production_min.cloneElement=function(a,b,e){if(null===a||void 0===a)throw Error("React.cloneElement(...): The argument must be a React element, but you passed "+a+".");var d=C$1({},a.props),c=a.key,k=a.ref,h=a._owner;if(null!=b){void 0!==b.ref&&(k=b.ref,h=K$1.current);void 0!==b.key&&(c=""+b.key);if(a.type&&a.type.defaultProps)var g=a.type.defaultProps;for(f in b)J$1.call(b,f)&&!L$1.hasOwnProperty(f)&&(d[f]=void 0===b[f]&&void 0!==g?g[f]:b[f]);}var f=arguments.length-2;if(1===f)d.children=e;else if(1<f){g=Array(f);
+for(var m=0;m<f;m++)g[m]=arguments[m+2];d.children=g;}return {$$typeof:l$1,type:a.type,key:c,ref:k,props:d,_owner:h}};react_production_min.createContext=function(a){a={$$typeof:u,_currentValue:a,_currentValue2:a,_threadCount:0,Provider:null,Consumer:null,_defaultValue:null,_globalName:null};a.Provider={$$typeof:t,_context:a};return a.Consumer=a};react_production_min.createElement=M$2;react_production_min.createFactory=function(a){var b=M$2.bind(null,a);b.type=a;return b};react_production_min.createRef=function(){return {current:null}};
 react_production_min.forwardRef=function(a){return {$$typeof:v$1,render:a}};react_production_min.isValidElement=O$1;react_production_min.lazy=function(a){return {$$typeof:y,_payload:{_status:-1,_result:a},_init:T$1}};react_production_min.memo=function(a,b){return {$$typeof:x,type:a,compare:void 0===b?null:b}};react_production_min.startTransition=function(a){var b=V$1.transition;V$1.transition={};try{a();}finally{V$1.transition=b;}};react_production_min.unstable_act=X$1;react_production_min.useCallback=function(a,b){return U$1.current.useCallback(a,b)};react_production_min.useContext=function(a){return U$1.current.useContext(a)};
 react_production_min.useDebugValue=function(){};react_production_min.useDeferredValue=function(a){return U$1.current.useDeferredValue(a)};react_production_min.useEffect=function(a,b){return U$1.current.useEffect(a,b)};react_production_min.useId=function(){return U$1.current.useId()};react_production_min.useImperativeHandle=function(a,b,e){return U$1.current.useImperativeHandle(a,b,e)};react_production_min.useInsertionEffect=function(a,b){return U$1.current.useInsertionEffect(a,b)};react_production_min.useLayoutEffect=function(a,b){return U$1.current.useLayoutEffect(a,b)};
 react_production_min.useMemo=function(a,b){return U$1.current.useMemo(a,b)};react_production_min.useReducer=function(a,b,e){return U$1.current.useReducer(a,b,e)};react_production_min.useRef=function(a){return U$1.current.useRef(a)};react_production_min.useState=function(a){return U$1.current.useState(a)};react_production_min.useSyncExternalStore=function(a,b,e){return U$1.current.useSyncExternalStore(a,b,e)};react_production_min.useTransition=function(){return U$1.current.useTransition()};react_production_min.version="18.3.1";
@@ -253,26 +253,26 @@ h=h.next;if(null===h)if(h=e.shared.pending,null===h)break;else r=h,h=r.next,r.ne
 function sh(a,b,c){a=b.effects;b.effects=null;if(null!==a)for(b=0;b<a.length;b++){var d=a[b],e=d.callback;if(null!==e){d.callback=null;d=c;if("function"!==typeof e)throw Error(p$1(191,e));e.call(d);}}}var th={},uh=Uf(th),vh=Uf(th),wh=Uf(th);function xh(a){if(a===th)throw Error(p$1(174));return a}
 function yh(a,b){G(wh,b);G(vh,a);G(uh,th);a=b.nodeType;switch(a){case 9:case 11:b=(b=b.documentElement)?b.namespaceURI:lb(null,"");break;default:a=8===a?b.parentNode:b,b=a.namespaceURI||null,a=a.tagName,b=lb(b,a);}E(uh);G(uh,b);}function zh(){E(uh);E(vh);E(wh);}function Ah(a){xh(wh.current);var b=xh(uh.current);var c=lb(b,a.type);b!==c&&(G(vh,a),G(uh,c));}function Bh(a){vh.current===a&&(E(uh),E(vh));}var L=Uf(0);
 function Ch(a){for(var b=a;null!==b;){if(13===b.tag){var c=b.memoizedState;if(null!==c&&(c=c.dehydrated,null===c||"$?"===c.data||"$!"===c.data))return b}else if(19===b.tag&&void 0!==b.memoizedProps.revealOrder){if(0!==(b.flags&128))return b}else if(null!==b.child){b.child.return=b;b=b.child;continue}if(b===a)break;for(;null===b.sibling;){if(null===b.return||b.return===a)return null;b=b.return;}b.sibling.return=b.return;b=b.sibling;}return null}var Dh=[];
-function Eh(){for(var a=0;a<Dh.length;a++)Dh[a]._workInProgressVersionPrimary=null;Dh.length=0;}var Fh=ua.ReactCurrentDispatcher,Gh=ua.ReactCurrentBatchConfig,Hh=0,M=null,N=null,O=null,Ih=!1,Jh=!1,Kh=0,Lh=0;function P$1(){throw Error(p$1(321));}function Mh(a,b){if(null===b)return !1;for(var c=0;c<b.length&&c<a.length;c++)if(!He(a[c],b[c]))return !1;return !0}
-function Nh(a,b,c,d,e,f){Hh=f;M=b;b.memoizedState=null;b.updateQueue=null;b.lanes=0;Fh.current=null===a||null===a.memoizedState?Oh:Ph;a=c(d,e);if(Jh){f=0;do{Jh=!1;Kh=0;if(25<=f)throw Error(p$1(301));f+=1;O=N=null;b.updateQueue=null;Fh.current=Qh;a=c(d,e);}while(Jh)}Fh.current=Rh;b=null!==N&&null!==N.next;Hh=0;O=N=M=null;Ih=!1;if(b)throw Error(p$1(300));return a}function Sh(){var a=0!==Kh;Kh=0;return a}
-function Th(){var a={memoizedState:null,baseState:null,baseQueue:null,queue:null,next:null};null===O?M.memoizedState=O=a:O=O.next=a;return O}function Uh(){if(null===N){var a=M.alternate;a=null!==a?a.memoizedState:null;}else a=N.next;var b=null===O?M.memoizedState:O.next;if(null!==b)O=b,N=a;else {if(null===a)throw Error(p$1(310));N=a;a={memoizedState:N.memoizedState,baseState:N.baseState,baseQueue:N.baseQueue,queue:N.queue,next:null};null===O?M.memoizedState=O=a:O=O.next=a;}return O}
+function Eh(){for(var a=0;a<Dh.length;a++)Dh[a]._workInProgressVersionPrimary=null;Dh.length=0;}var Fh=ua.ReactCurrentDispatcher,Gh=ua.ReactCurrentBatchConfig,Hh=0,M$1=null,N=null,O=null,Ih=!1,Jh=!1,Kh=0,Lh=0;function P$1(){throw Error(p$1(321));}function Mh(a,b){if(null===b)return !1;for(var c=0;c<b.length&&c<a.length;c++)if(!He(a[c],b[c]))return !1;return !0}
+function Nh(a,b,c,d,e,f){Hh=f;M$1=b;b.memoizedState=null;b.updateQueue=null;b.lanes=0;Fh.current=null===a||null===a.memoizedState?Oh:Ph;a=c(d,e);if(Jh){f=0;do{Jh=!1;Kh=0;if(25<=f)throw Error(p$1(301));f+=1;O=N=null;b.updateQueue=null;Fh.current=Qh;a=c(d,e);}while(Jh)}Fh.current=Rh;b=null!==N&&null!==N.next;Hh=0;O=N=M$1=null;Ih=!1;if(b)throw Error(p$1(300));return a}function Sh(){var a=0!==Kh;Kh=0;return a}
+function Th(){var a={memoizedState:null,baseState:null,baseQueue:null,queue:null,next:null};null===O?M$1.memoizedState=O=a:O=O.next=a;return O}function Uh(){if(null===N){var a=M$1.alternate;a=null!==a?a.memoizedState:null;}else a=N.next;var b=null===O?M$1.memoizedState:O.next;if(null!==b)O=b,N=a;else {if(null===a)throw Error(p$1(310));N=a;a={memoizedState:N.memoizedState,baseState:N.baseState,baseQueue:N.baseQueue,queue:N.queue,next:null};null===O?M$1.memoizedState=O=a:O=O.next=a;}return O}
 function Vh(a,b){return "function"===typeof b?b(a):b}
 function Wh(a){var b=Uh(),c=b.queue;if(null===c)throw Error(p$1(311));c.lastRenderedReducer=a;var d=N,e=d.baseQueue,f=c.pending;if(null!==f){if(null!==e){var g=e.next;e.next=f.next;f.next=g;}d.baseQueue=e=f;c.pending=null;}if(null!==e){f=e.next;d=d.baseState;var h=g=null,k=null,l=f;do{var m=l.lane;if((Hh&m)===m)null!==k&&(k=k.next={lane:0,action:l.action,hasEagerState:l.hasEagerState,eagerState:l.eagerState,next:null}),d=l.hasEagerState?l.eagerState:a(d,l.action);else {var q={lane:m,action:l.action,hasEagerState:l.hasEagerState,
-eagerState:l.eagerState,next:null};null===k?(h=k=q,g=d):k=k.next=q;M.lanes|=m;rh|=m;}l=l.next;}while(null!==l&&l!==f);null===k?g=d:k.next=h;He(d,b.memoizedState)||(dh=!0);b.memoizedState=d;b.baseState=g;b.baseQueue=k;c.lastRenderedState=d;}a=c.interleaved;if(null!==a){e=a;do f=e.lane,M.lanes|=f,rh|=f,e=e.next;while(e!==a)}else null===e&&(c.lanes=0);return [b.memoizedState,c.dispatch]}
+eagerState:l.eagerState,next:null};null===k?(h=k=q,g=d):k=k.next=q;M$1.lanes|=m;rh|=m;}l=l.next;}while(null!==l&&l!==f);null===k?g=d:k.next=h;He(d,b.memoizedState)||(dh=!0);b.memoizedState=d;b.baseState=g;b.baseQueue=k;c.lastRenderedState=d;}a=c.interleaved;if(null!==a){e=a;do f=e.lane,M$1.lanes|=f,rh|=f,e=e.next;while(e!==a)}else null===e&&(c.lanes=0);return [b.memoizedState,c.dispatch]}
 function Xh(a){var b=Uh(),c=b.queue;if(null===c)throw Error(p$1(311));c.lastRenderedReducer=a;var d=c.dispatch,e=c.pending,f=b.memoizedState;if(null!==e){c.pending=null;var g=e=e.next;do f=a(f,g.action),g=g.next;while(g!==e);He(f,b.memoizedState)||(dh=!0);b.memoizedState=f;null===b.baseQueue&&(b.baseState=f);c.lastRenderedState=f;}return [f,d]}function Yh(){}
-function Zh(a,b){var c=M,d=Uh(),e=b(),f=!He(d.memoizedState,e);f&&(d.memoizedState=e,dh=!0);d=d.queue;$h(ai.bind(null,c,d,a),[a]);if(d.getSnapshot!==b||f||null!==O&&O.memoizedState.tag&1){c.flags|=2048;bi(9,ci.bind(null,c,d,e,b),void 0,null);if(null===Q)throw Error(p$1(349));0!==(Hh&30)||di(c,b,e);}return e}function di(a,b,c){a.flags|=16384;a={getSnapshot:b,value:c};b=M.updateQueue;null===b?(b={lastEffect:null,stores:null},M.updateQueue=b,b.stores=[a]):(c=b.stores,null===c?b.stores=[a]:c.push(a));}
+function Zh(a,b){var c=M$1,d=Uh(),e=b(),f=!He(d.memoizedState,e);f&&(d.memoizedState=e,dh=!0);d=d.queue;$h(ai.bind(null,c,d,a),[a]);if(d.getSnapshot!==b||f||null!==O&&O.memoizedState.tag&1){c.flags|=2048;bi(9,ci.bind(null,c,d,e,b),void 0,null);if(null===Q)throw Error(p$1(349));0!==(Hh&30)||di(c,b,e);}return e}function di(a,b,c){a.flags|=16384;a={getSnapshot:b,value:c};b=M$1.updateQueue;null===b?(b={lastEffect:null,stores:null},M$1.updateQueue=b,b.stores=[a]):(c=b.stores,null===c?b.stores=[a]:c.push(a));}
 function ci(a,b,c,d){b.value=c;b.getSnapshot=d;ei(b)&&fi(a);}function ai(a,b,c){return c(function(){ei(b)&&fi(a);})}function ei(a){var b=a.getSnapshot;a=a.value;try{var c=b();return !He(a,c)}catch(d){return !0}}function fi(a){var b=ih(a,1);null!==b&&gi(b,a,1,-1);}
-function hi(a){var b=Th();"function"===typeof a&&(a=a());b.memoizedState=b.baseState=a;a={pending:null,interleaved:null,lanes:0,dispatch:null,lastRenderedReducer:Vh,lastRenderedState:a};b.queue=a;a=a.dispatch=ii.bind(null,M,a);return [b.memoizedState,a]}
-function bi(a,b,c,d){a={tag:a,create:b,destroy:c,deps:d,next:null};b=M.updateQueue;null===b?(b={lastEffect:null,stores:null},M.updateQueue=b,b.lastEffect=a.next=a):(c=b.lastEffect,null===c?b.lastEffect=a.next=a:(d=c.next,c.next=a,a.next=d,b.lastEffect=a));return a}function ji(){return Uh().memoizedState}function ki(a,b,c,d){var e=Th();M.flags|=a;e.memoizedState=bi(1|b,c,void 0,void 0===d?null:d);}
-function li(a,b,c,d){var e=Uh();d=void 0===d?null:d;var f=void 0;if(null!==N){var g=N.memoizedState;f=g.destroy;if(null!==d&&Mh(d,g.deps)){e.memoizedState=bi(b,c,f,d);return}}M.flags|=a;e.memoizedState=bi(1|b,c,f,d);}function mi(a,b){return ki(8390656,8,a,b)}function $h(a,b){return li(2048,8,a,b)}function ni(a,b){return li(4,2,a,b)}function oi(a,b){return li(4,4,a,b)}
+function hi(a){var b=Th();"function"===typeof a&&(a=a());b.memoizedState=b.baseState=a;a={pending:null,interleaved:null,lanes:0,dispatch:null,lastRenderedReducer:Vh,lastRenderedState:a};b.queue=a;a=a.dispatch=ii.bind(null,M$1,a);return [b.memoizedState,a]}
+function bi(a,b,c,d){a={tag:a,create:b,destroy:c,deps:d,next:null};b=M$1.updateQueue;null===b?(b={lastEffect:null,stores:null},M$1.updateQueue=b,b.lastEffect=a.next=a):(c=b.lastEffect,null===c?b.lastEffect=a.next=a:(d=c.next,c.next=a,a.next=d,b.lastEffect=a));return a}function ji(){return Uh().memoizedState}function ki(a,b,c,d){var e=Th();M$1.flags|=a;e.memoizedState=bi(1|b,c,void 0,void 0===d?null:d);}
+function li(a,b,c,d){var e=Uh();d=void 0===d?null:d;var f=void 0;if(null!==N){var g=N.memoizedState;f=g.destroy;if(null!==d&&Mh(d,g.deps)){e.memoizedState=bi(b,c,f,d);return}}M$1.flags|=a;e.memoizedState=bi(1|b,c,f,d);}function mi(a,b){return ki(8390656,8,a,b)}function $h(a,b){return li(2048,8,a,b)}function ni(a,b){return li(4,2,a,b)}function oi(a,b){return li(4,4,a,b)}
 function pi(a,b){if("function"===typeof b)return a=a(),b(a),function(){b(null);};if(null!==b&&void 0!==b)return a=a(),b.current=a,function(){b.current=null;}}function qi(a,b,c){c=null!==c&&void 0!==c?c.concat([a]):null;return li(4,4,pi.bind(null,b,a),c)}function ri(){}function si(a,b){var c=Uh();b=void 0===b?null:b;var d=c.memoizedState;if(null!==d&&null!==b&&Mh(b,d[1]))return d[0];c.memoizedState=[a,b];return a}
-function ti(a,b){var c=Uh();b=void 0===b?null:b;var d=c.memoizedState;if(null!==d&&null!==b&&Mh(b,d[1]))return d[0];a=a();c.memoizedState=[a,b];return a}function ui(a,b,c){if(0===(Hh&21))return a.baseState&&(a.baseState=!1,dh=!0),a.memoizedState=c;He(c,b)||(c=yc(),M.lanes|=c,rh|=c,a.baseState=!0);return b}function vi(a,b){var c=C;C=0!==c&&4>c?c:4;a(!0);var d=Gh.transition;Gh.transition={};try{a(!1),b();}finally{C=c,Gh.transition=d;}}function wi(){return Uh().memoizedState}
+function ti(a,b){var c=Uh();b=void 0===b?null:b;var d=c.memoizedState;if(null!==d&&null!==b&&Mh(b,d[1]))return d[0];a=a();c.memoizedState=[a,b];return a}function ui(a,b,c){if(0===(Hh&21))return a.baseState&&(a.baseState=!1,dh=!0),a.memoizedState=c;He(c,b)||(c=yc(),M$1.lanes|=c,rh|=c,a.baseState=!0);return b}function vi(a,b){var c=C;C=0!==c&&4>c?c:4;a(!0);var d=Gh.transition;Gh.transition={};try{a(!1),b();}finally{C=c,Gh.transition=d;}}function wi(){return Uh().memoizedState}
 function xi(a,b,c){var d=yi(a);c={lane:d,action:c,hasEagerState:!1,eagerState:null,next:null};if(zi(a))Ai(b,c);else if(c=hh(a,b,c,d),null!==c){var e=R();gi(c,a,d,e);Bi(c,b,d);}}
 function ii(a,b,c){var d=yi(a),e={lane:d,action:c,hasEagerState:!1,eagerState:null,next:null};if(zi(a))Ai(b,e);else {var f=a.alternate;if(0===a.lanes&&(null===f||0===f.lanes)&&(f=b.lastRenderedReducer,null!==f))try{var g=b.lastRenderedState,h=f(g,c);e.hasEagerState=!0;e.eagerState=h;if(He(h,g)){var k=b.interleaved;null===k?(e.next=e,gh(b)):(e.next=k.next,k.next=e);b.interleaved=e;return}}catch(l){}finally{}c=hh(a,b,e,d);null!==c&&(e=R(),gi(c,a,d,e),Bi(c,b,d));}}
-function zi(a){var b=a.alternate;return a===M||null!==b&&b===M}function Ai(a,b){Jh=Ih=!0;var c=a.pending;null===c?b.next=b:(b.next=c.next,c.next=b);a.pending=b;}function Bi(a,b,c){if(0!==(c&4194240)){var d=b.lanes;d&=a.pendingLanes;c|=d;b.lanes=c;Cc(a,c);}}
+function zi(a){var b=a.alternate;return a===M$1||null!==b&&b===M$1}function Ai(a,b){Jh=Ih=!0;var c=a.pending;null===c?b.next=b:(b.next=c.next,c.next=b);a.pending=b;}function Bi(a,b,c){if(0!==(c&4194240)){var d=b.lanes;d&=a.pendingLanes;c|=d;b.lanes=c;Cc(a,c);}}
 var Rh={readContext:eh,useCallback:P$1,useContext:P$1,useEffect:P$1,useImperativeHandle:P$1,useInsertionEffect:P$1,useLayoutEffect:P$1,useMemo:P$1,useReducer:P$1,useRef:P$1,useState:P$1,useDebugValue:P$1,useDeferredValue:P$1,useTransition:P$1,useMutableSource:P$1,useSyncExternalStore:P$1,useId:P$1,unstable_isNewReconciler:!1},Oh={readContext:eh,useCallback:function(a,b){Th().memoizedState=[a,void 0===b?null:b];return a},useContext:eh,useEffect:mi,useImperativeHandle:function(a,b,c){c=null!==c&&void 0!==c?c.concat([a]):null;return ki(4194308,
-4,pi.bind(null,b,a),c)},useLayoutEffect:function(a,b){return ki(4194308,4,a,b)},useInsertionEffect:function(a,b){return ki(4,2,a,b)},useMemo:function(a,b){var c=Th();b=void 0===b?null:b;a=a();c.memoizedState=[a,b];return a},useReducer:function(a,b,c){var d=Th();b=void 0!==c?c(b):b;d.memoizedState=d.baseState=b;a={pending:null,interleaved:null,lanes:0,dispatch:null,lastRenderedReducer:a,lastRenderedState:b};d.queue=a;a=a.dispatch=xi.bind(null,M,a);return [d.memoizedState,a]},useRef:function(a){var b=
-Th();a={current:a};return b.memoizedState=a},useState:hi,useDebugValue:ri,useDeferredValue:function(a){return Th().memoizedState=a},useTransition:function(){var a=hi(!1),b=a[0];a=vi.bind(null,a[1]);Th().memoizedState=a;return [b,a]},useMutableSource:function(){},useSyncExternalStore:function(a,b,c){var d=M,e=Th();if(I){if(void 0===c)throw Error(p$1(407));c=c();}else {c=b();if(null===Q)throw Error(p$1(349));0!==(Hh&30)||di(d,b,c);}e.memoizedState=c;var f={value:c,getSnapshot:b};e.queue=f;mi(ai.bind(null,d,
+4,pi.bind(null,b,a),c)},useLayoutEffect:function(a,b){return ki(4194308,4,a,b)},useInsertionEffect:function(a,b){return ki(4,2,a,b)},useMemo:function(a,b){var c=Th();b=void 0===b?null:b;a=a();c.memoizedState=[a,b];return a},useReducer:function(a,b,c){var d=Th();b=void 0!==c?c(b):b;d.memoizedState=d.baseState=b;a={pending:null,interleaved:null,lanes:0,dispatch:null,lastRenderedReducer:a,lastRenderedState:b};d.queue=a;a=a.dispatch=xi.bind(null,M$1,a);return [d.memoizedState,a]},useRef:function(a){var b=
+Th();a={current:a};return b.memoizedState=a},useState:hi,useDebugValue:ri,useDeferredValue:function(a){return Th().memoizedState=a},useTransition:function(){var a=hi(!1),b=a[0];a=vi.bind(null,a[1]);Th().memoizedState=a;return [b,a]},useMutableSource:function(){},useSyncExternalStore:function(a,b,c){var d=M$1,e=Th();if(I){if(void 0===c)throw Error(p$1(407));c=c();}else {c=b();if(null===Q)throw Error(p$1(349));0!==(Hh&30)||di(d,b,c);}e.memoizedState=c;var f={value:c,getSnapshot:b};e.queue=f;mi(ai.bind(null,d,
 f,a),[a]);d.flags|=2048;bi(9,ci.bind(null,d,f,c,b),void 0,null);return c},useId:function(){var a=Th(),b=Q.identifierPrefix;if(I){var c=sg;var d=rg;c=(d&~(1<<32-oc(d)-1)).toString(32)+c;b=":"+b+"R"+c;c=Kh++;0<c&&(b+="H"+c.toString(32));b+=":";}else c=Lh++,b=":"+b+"r"+c.toString(32)+":";return a.memoizedState=b},unstable_isNewReconciler:!1},Ph={readContext:eh,useCallback:si,useContext:eh,useEffect:$h,useImperativeHandle:qi,useInsertionEffect:ni,useLayoutEffect:oi,useMemo:ti,useReducer:Wh,useRef:ji,useState:function(){return Wh(Vh)},
 useDebugValue:ri,useDeferredValue:function(a){var b=Uh();return ui(b,N.memoizedState,a)},useTransition:function(){var a=Wh(Vh)[0],b=Uh().memoizedState;return [a,b]},useMutableSource:Yh,useSyncExternalStore:Zh,useId:wi,unstable_isNewReconciler:!1},Qh={readContext:eh,useCallback:si,useContext:eh,useEffect:$h,useImperativeHandle:qi,useInsertionEffect:ni,useLayoutEffect:oi,useMemo:ti,useReducer:Xh,useRef:ji,useState:function(){return Xh(Vh)},useDebugValue:ri,useDeferredValue:function(a){var b=Uh();return null===
 N?b.memoizedState=a:ui(b,N.memoizedState,a)},useTransition:function(){var a=Xh(Vh)[0],b=Uh().memoizedState;return [a,b]},useMutableSource:Yh,useSyncExternalStore:Zh,useId:wi,unstable_isNewReconciler:!1};function Ci(a,b){if(a&&a.defaultProps){b=A({},b);a=a.defaultProps;for(var c in a)void 0===b[c]&&(b[c]=a[c]);return b}return b}function Di(a,b,c,d){b=a.memoizedState;c=c(d,b);c=null===c||void 0===c?b:A({},b,c);a.memoizedState=c;0===a.lanes&&(a.updateQueue.baseState=c);}
@@ -317,47 +317,47 @@ Bj=function(a,b,c,d){var e=a.memoizedProps;if(e!==d){a=b.stateNode;xh(uh.current
 (c||(c={}),c[g]="");}else "dangerouslySetInnerHTML"!==l&&"children"!==l&&"suppressContentEditableWarning"!==l&&"suppressHydrationWarning"!==l&&"autoFocus"!==l&&(ea.hasOwnProperty(l)?f||(f=[]):(f=f||[]).push(l,null));for(l in d){var k=d[l];h=null!=e?e[l]:void 0;if(d.hasOwnProperty(l)&&k!==h&&(null!=k||null!=h))if("style"===l)if(h){for(g in h)!h.hasOwnProperty(g)||k&&k.hasOwnProperty(g)||(c||(c={}),c[g]="");for(g in k)k.hasOwnProperty(g)&&h[g]!==k[g]&&(c||(c={}),c[g]=k[g]);}else c||(f||(f=[]),f.push(l,
 c)),c=k;else "dangerouslySetInnerHTML"===l?(k=k?k.__html:void 0,h=h?h.__html:void 0,null!=k&&h!==k&&(f=f||[]).push(l,k)):"children"===l?"string"!==typeof k&&"number"!==typeof k||(f=f||[]).push(l,""+k):"suppressContentEditableWarning"!==l&&"suppressHydrationWarning"!==l&&(ea.hasOwnProperty(l)?(null!=k&&"onScroll"===l&&D("scroll",a),f||h===k||(f=[])):(f=f||[]).push(l,k));}c&&(f=f||[]).push("style",c);var l=f;if(b.updateQueue=l)b.flags|=4;}};Cj=function(a,b,c,d){c!==d&&(b.flags|=4);};
 function Dj(a,b){if(!I)switch(a.tailMode){case "hidden":b=a.tail;for(var c=null;null!==b;)null!==b.alternate&&(c=b),b=b.sibling;null===c?a.tail=null:c.sibling=null;break;case "collapsed":c=a.tail;for(var d=null;null!==c;)null!==c.alternate&&(d=c),c=c.sibling;null===d?b||null===a.tail?a.tail=null:a.tail.sibling=null:d.sibling=null;}}
-function S(a){var b=null!==a.alternate&&a.alternate.child===a.child,c=0,d=0;if(b)for(var e=a.child;null!==e;)c|=e.lanes|e.childLanes,d|=e.subtreeFlags&14680064,d|=e.flags&14680064,e.return=a,e=e.sibling;else for(e=a.child;null!==e;)c|=e.lanes|e.childLanes,d|=e.subtreeFlags,d|=e.flags,e.return=a,e=e.sibling;a.subtreeFlags|=d;a.childLanes=c;return b}
-function Ej(a,b,c){var d=b.pendingProps;wg(b);switch(b.tag){case 2:case 16:case 15:case 0:case 11:case 7:case 8:case 12:case 9:case 14:return S(b),null;case 1:return Zf(b.type)&&$f(),S(b),null;case 3:d=b.stateNode;zh();E(Wf);E(H);Eh();d.pendingContext&&(d.context=d.pendingContext,d.pendingContext=null);if(null===a||null===a.child)Gg(b)?b.flags|=4:null===a||a.memoizedState.isDehydrated&&0===(b.flags&256)||(b.flags|=1024,null!==zg&&(Fj(zg),zg=null));Aj(a,b);S(b);return null;case 5:Bh(b);var e=xh(wh.current);
-c=b.type;if(null!==a&&null!=b.stateNode)Bj(a,b,c,d,e),a.ref!==b.ref&&(b.flags|=512,b.flags|=2097152);else {if(!d){if(null===b.stateNode)throw Error(p$1(166));S(b);return null}a=xh(uh.current);if(Gg(b)){d=b.stateNode;c=b.type;var f=b.memoizedProps;d[Of]=b;d[Pf]=f;a=0!==(b.mode&1);switch(c){case "dialog":D("cancel",d);D("close",d);break;case "iframe":case "object":case "embed":D("load",d);break;case "video":case "audio":for(e=0;e<lf.length;e++)D(lf[e],d);break;case "source":D("error",d);break;case "img":case "image":case "link":D("error",
+function S$1(a){var b=null!==a.alternate&&a.alternate.child===a.child,c=0,d=0;if(b)for(var e=a.child;null!==e;)c|=e.lanes|e.childLanes,d|=e.subtreeFlags&14680064,d|=e.flags&14680064,e.return=a,e=e.sibling;else for(e=a.child;null!==e;)c|=e.lanes|e.childLanes,d|=e.subtreeFlags,d|=e.flags,e.return=a,e=e.sibling;a.subtreeFlags|=d;a.childLanes=c;return b}
+function Ej(a,b,c){var d=b.pendingProps;wg(b);switch(b.tag){case 2:case 16:case 15:case 0:case 11:case 7:case 8:case 12:case 9:case 14:return S$1(b),null;case 1:return Zf(b.type)&&$f(),S$1(b),null;case 3:d=b.stateNode;zh();E(Wf);E(H);Eh();d.pendingContext&&(d.context=d.pendingContext,d.pendingContext=null);if(null===a||null===a.child)Gg(b)?b.flags|=4:null===a||a.memoizedState.isDehydrated&&0===(b.flags&256)||(b.flags|=1024,null!==zg&&(Fj(zg),zg=null));Aj(a,b);S$1(b);return null;case 5:Bh(b);var e=xh(wh.current);
+c=b.type;if(null!==a&&null!=b.stateNode)Bj(a,b,c,d,e),a.ref!==b.ref&&(b.flags|=512,b.flags|=2097152);else {if(!d){if(null===b.stateNode)throw Error(p$1(166));S$1(b);return null}a=xh(uh.current);if(Gg(b)){d=b.stateNode;c=b.type;var f=b.memoizedProps;d[Of]=b;d[Pf]=f;a=0!==(b.mode&1);switch(c){case "dialog":D("cancel",d);D("close",d);break;case "iframe":case "object":case "embed":D("load",d);break;case "video":case "audio":for(e=0;e<lf.length;e++)D(lf[e],d);break;case "source":D("error",d);break;case "img":case "image":case "link":D("error",
 d);D("load",d);break;case "details":D("toggle",d);break;case "input":Za(d,f);D("invalid",d);break;case "select":d._wrapperState={wasMultiple:!!f.multiple};D("invalid",d);break;case "textarea":hb(d,f),D("invalid",d);}ub(c,f);e=null;for(var g in f)if(f.hasOwnProperty(g)){var h=f[g];"children"===g?"string"===typeof h?d.textContent!==h&&(!0!==f.suppressHydrationWarning&&Af(d.textContent,h,a),e=["children",h]):"number"===typeof h&&d.textContent!==""+h&&(!0!==f.suppressHydrationWarning&&Af(d.textContent,
 h,a),e=["children",""+h]):ea.hasOwnProperty(g)&&null!=h&&"onScroll"===g&&D("scroll",d);}switch(c){case "input":Va(d);db(d,f,!0);break;case "textarea":Va(d);jb(d);break;case "select":case "option":break;default:"function"===typeof f.onClick&&(d.onclick=Bf);}d=e;b.updateQueue=d;null!==d&&(b.flags|=4);}else {g=9===e.nodeType?e:e.ownerDocument;"http://www.w3.org/1999/xhtml"===a&&(a=kb(c));"http://www.w3.org/1999/xhtml"===a?"script"===c?(a=g.createElement("div"),a.innerHTML="<script>\x3c/script>",a=a.removeChild(a.firstChild)):
 "string"===typeof d.is?a=g.createElement(c,{is:d.is}):(a=g.createElement(c),"select"===c&&(g=a,d.multiple?g.multiple=!0:d.size&&(g.size=d.size))):a=g.createElementNS(a,c);a[Of]=b;a[Pf]=d;zj(a,b,!1,!1);b.stateNode=a;a:{g=vb(c,d);switch(c){case "dialog":D("cancel",a);D("close",a);e=d;break;case "iframe":case "object":case "embed":D("load",a);e=d;break;case "video":case "audio":for(e=0;e<lf.length;e++)D(lf[e],a);e=d;break;case "source":D("error",a);e=d;break;case "img":case "image":case "link":D("error",
 a);D("load",a);e=d;break;case "details":D("toggle",a);e=d;break;case "input":Za(a,d);e=Ya(a,d);D("invalid",a);break;case "option":e=d;break;case "select":a._wrapperState={wasMultiple:!!d.multiple};e=A({},d,{value:void 0});D("invalid",a);break;case "textarea":hb(a,d);e=gb(a,d);D("invalid",a);break;default:e=d;}ub(c,e);h=e;for(f in h)if(h.hasOwnProperty(f)){var k=h[f];"style"===f?sb(a,k):"dangerouslySetInnerHTML"===f?(k=k?k.__html:void 0,null!=k&&nb(a,k)):"children"===f?"string"===typeof k?("textarea"!==
 c||""!==k)&&ob(a,k):"number"===typeof k&&ob(a,""+k):"suppressContentEditableWarning"!==f&&"suppressHydrationWarning"!==f&&"autoFocus"!==f&&(ea.hasOwnProperty(f)?null!=k&&"onScroll"===f&&D("scroll",a):null!=k&&ta(a,f,k,g));}switch(c){case "input":Va(a);db(a,d,!1);break;case "textarea":Va(a);jb(a);break;case "option":null!=d.value&&a.setAttribute("value",""+Sa(d.value));break;case "select":a.multiple=!!d.multiple;f=d.value;null!=f?fb(a,!!d.multiple,f,!1):null!=d.defaultValue&&fb(a,!!d.multiple,d.defaultValue,
-!0);break;default:"function"===typeof e.onClick&&(a.onclick=Bf);}switch(c){case "button":case "input":case "select":case "textarea":d=!!d.autoFocus;break a;case "img":d=!0;break a;default:d=!1;}}d&&(b.flags|=4);}null!==b.ref&&(b.flags|=512,b.flags|=2097152);}S(b);return null;case 6:if(a&&null!=b.stateNode)Cj(a,b,a.memoizedProps,d);else {if("string"!==typeof d&&null===b.stateNode)throw Error(p$1(166));c=xh(wh.current);xh(uh.current);if(Gg(b)){d=b.stateNode;c=b.memoizedProps;d[Of]=b;if(f=d.nodeValue!==c)if(a=
-xg,null!==a)switch(a.tag){case 3:Af(d.nodeValue,c,0!==(a.mode&1));break;case 5:!0!==a.memoizedProps.suppressHydrationWarning&&Af(d.nodeValue,c,0!==(a.mode&1));}f&&(b.flags|=4);}else d=(9===c.nodeType?c:c.ownerDocument).createTextNode(d),d[Of]=b,b.stateNode=d;}S(b);return null;case 13:E(L);d=b.memoizedState;if(null===a||null!==a.memoizedState&&null!==a.memoizedState.dehydrated){if(I&&null!==yg&&0!==(b.mode&1)&&0===(b.flags&128))Hg(),Ig(),b.flags|=98560,f=!1;else if(f=Gg(b),null!==d&&null!==d.dehydrated){if(null===
-a){if(!f)throw Error(p$1(318));f=b.memoizedState;f=null!==f?f.dehydrated:null;if(!f)throw Error(p$1(317));f[Of]=b;}else Ig(),0===(b.flags&128)&&(b.memoizedState=null),b.flags|=4;S(b);f=!1;}else null!==zg&&(Fj(zg),zg=null),f=!0;if(!f)return b.flags&65536?b:null}if(0!==(b.flags&128))return b.lanes=c,b;d=null!==d;d!==(null!==a&&null!==a.memoizedState)&&d&&(b.child.flags|=8192,0!==(b.mode&1)&&(null===a||0!==(L.current&1)?0===T&&(T=3):tj()));null!==b.updateQueue&&(b.flags|=4);S(b);return null;case 4:return zh(),
-Aj(a,b),null===a&&sf(b.stateNode.containerInfo),S(b),null;case 10:return ah(b.type._context),S(b),null;case 17:return Zf(b.type)&&$f(),S(b),null;case 19:E(L);f=b.memoizedState;if(null===f)return S(b),null;d=0!==(b.flags&128);g=f.rendering;if(null===g)if(d)Dj(f,!1);else {if(0!==T||null!==a&&0!==(a.flags&128))for(a=b.child;null!==a;){g=Ch(a);if(null!==g){b.flags|=128;Dj(f,!1);d=g.updateQueue;null!==d&&(b.updateQueue=d,b.flags|=4);b.subtreeFlags=0;d=c;for(c=b.child;null!==c;)f=c,a=d,f.flags&=14680066,
+!0);break;default:"function"===typeof e.onClick&&(a.onclick=Bf);}switch(c){case "button":case "input":case "select":case "textarea":d=!!d.autoFocus;break a;case "img":d=!0;break a;default:d=!1;}}d&&(b.flags|=4);}null!==b.ref&&(b.flags|=512,b.flags|=2097152);}S$1(b);return null;case 6:if(a&&null!=b.stateNode)Cj(a,b,a.memoizedProps,d);else {if("string"!==typeof d&&null===b.stateNode)throw Error(p$1(166));c=xh(wh.current);xh(uh.current);if(Gg(b)){d=b.stateNode;c=b.memoizedProps;d[Of]=b;if(f=d.nodeValue!==c)if(a=
+xg,null!==a)switch(a.tag){case 3:Af(d.nodeValue,c,0!==(a.mode&1));break;case 5:!0!==a.memoizedProps.suppressHydrationWarning&&Af(d.nodeValue,c,0!==(a.mode&1));}f&&(b.flags|=4);}else d=(9===c.nodeType?c:c.ownerDocument).createTextNode(d),d[Of]=b,b.stateNode=d;}S$1(b);return null;case 13:E(L);d=b.memoizedState;if(null===a||null!==a.memoizedState&&null!==a.memoizedState.dehydrated){if(I&&null!==yg&&0!==(b.mode&1)&&0===(b.flags&128))Hg(),Ig(),b.flags|=98560,f=!1;else if(f=Gg(b),null!==d&&null!==d.dehydrated){if(null===
+a){if(!f)throw Error(p$1(318));f=b.memoizedState;f=null!==f?f.dehydrated:null;if(!f)throw Error(p$1(317));f[Of]=b;}else Ig(),0===(b.flags&128)&&(b.memoizedState=null),b.flags|=4;S$1(b);f=!1;}else null!==zg&&(Fj(zg),zg=null),f=!0;if(!f)return b.flags&65536?b:null}if(0!==(b.flags&128))return b.lanes=c,b;d=null!==d;d!==(null!==a&&null!==a.memoizedState)&&d&&(b.child.flags|=8192,0!==(b.mode&1)&&(null===a||0!==(L.current&1)?0===T&&(T=3):tj()));null!==b.updateQueue&&(b.flags|=4);S$1(b);return null;case 4:return zh(),
+Aj(a,b),null===a&&sf(b.stateNode.containerInfo),S$1(b),null;case 10:return ah(b.type._context),S$1(b),null;case 17:return Zf(b.type)&&$f(),S$1(b),null;case 19:E(L);f=b.memoizedState;if(null===f)return S$1(b),null;d=0!==(b.flags&128);g=f.rendering;if(null===g)if(d)Dj(f,!1);else {if(0!==T||null!==a&&0!==(a.flags&128))for(a=b.child;null!==a;){g=Ch(a);if(null!==g){b.flags|=128;Dj(f,!1);d=g.updateQueue;null!==d&&(b.updateQueue=d,b.flags|=4);b.subtreeFlags=0;d=c;for(c=b.child;null!==c;)f=c,a=d,f.flags&=14680066,
 g=f.alternate,null===g?(f.childLanes=0,f.lanes=a,f.child=null,f.subtreeFlags=0,f.memoizedProps=null,f.memoizedState=null,f.updateQueue=null,f.dependencies=null,f.stateNode=null):(f.childLanes=g.childLanes,f.lanes=g.lanes,f.child=g.child,f.subtreeFlags=0,f.deletions=null,f.memoizedProps=g.memoizedProps,f.memoizedState=g.memoizedState,f.updateQueue=g.updateQueue,f.type=g.type,a=g.dependencies,f.dependencies=null===a?null:{lanes:a.lanes,firstContext:a.firstContext}),c=c.sibling;G(L,L.current&1|2);return b.child}a=
-a.sibling;}null!==f.tail&&B()>Gj&&(b.flags|=128,d=!0,Dj(f,!1),b.lanes=4194304);}else {if(!d)if(a=Ch(g),null!==a){if(b.flags|=128,d=!0,c=a.updateQueue,null!==c&&(b.updateQueue=c,b.flags|=4),Dj(f,!0),null===f.tail&&"hidden"===f.tailMode&&!g.alternate&&!I)return S(b),null}else 2*B()-f.renderingStartTime>Gj&&1073741824!==c&&(b.flags|=128,d=!0,Dj(f,!1),b.lanes=4194304);f.isBackwards?(g.sibling=b.child,b.child=g):(c=f.last,null!==c?c.sibling=g:b.child=g,f.last=g);}if(null!==f.tail)return b=f.tail,f.rendering=
-b,f.tail=b.sibling,f.renderingStartTime=B(),b.sibling=null,c=L.current,G(L,d?c&1|2:c&1),b;S(b);return null;case 22:case 23:return Hj(),d=null!==b.memoizedState,null!==a&&null!==a.memoizedState!==d&&(b.flags|=8192),d&&0!==(b.mode&1)?0!==(fj&1073741824)&&(S(b),b.subtreeFlags&6&&(b.flags|=8192)):S(b),null;case 24:return null;case 25:return null}throw Error(p$1(156,b.tag));}
+a.sibling;}null!==f.tail&&B()>Gj&&(b.flags|=128,d=!0,Dj(f,!1),b.lanes=4194304);}else {if(!d)if(a=Ch(g),null!==a){if(b.flags|=128,d=!0,c=a.updateQueue,null!==c&&(b.updateQueue=c,b.flags|=4),Dj(f,!0),null===f.tail&&"hidden"===f.tailMode&&!g.alternate&&!I)return S$1(b),null}else 2*B()-f.renderingStartTime>Gj&&1073741824!==c&&(b.flags|=128,d=!0,Dj(f,!1),b.lanes=4194304);f.isBackwards?(g.sibling=b.child,b.child=g):(c=f.last,null!==c?c.sibling=g:b.child=g,f.last=g);}if(null!==f.tail)return b=f.tail,f.rendering=
+b,f.tail=b.sibling,f.renderingStartTime=B(),b.sibling=null,c=L.current,G(L,d?c&1|2:c&1),b;S$1(b);return null;case 22:case 23:return Hj(),d=null!==b.memoizedState,null!==a&&null!==a.memoizedState!==d&&(b.flags|=8192),d&&0!==(b.mode&1)?0!==(fj&1073741824)&&(S$1(b),b.subtreeFlags&6&&(b.flags|=8192)):S$1(b),null;case 24:return null;case 25:return null}throw Error(p$1(156,b.tag));}
 function Ij(a,b){wg(b);switch(b.tag){case 1:return Zf(b.type)&&$f(),a=b.flags,a&65536?(b.flags=a&-65537|128,b):null;case 3:return zh(),E(Wf),E(H),Eh(),a=b.flags,0!==(a&65536)&&0===(a&128)?(b.flags=a&-65537|128,b):null;case 5:return Bh(b),null;case 13:E(L);a=b.memoizedState;if(null!==a&&null!==a.dehydrated){if(null===b.alternate)throw Error(p$1(340));Ig();}a=b.flags;return a&65536?(b.flags=a&-65537|128,b):null;case 19:return E(L),null;case 4:return zh(),null;case 10:return ah(b.type._context),null;case 22:case 23:return Hj(),
-null;case 24:return null;default:return null}}var Jj=!1,U=!1,Kj="function"===typeof WeakSet?WeakSet:Set,V=null;function Lj(a,b){var c=a.ref;if(null!==c)if("function"===typeof c)try{c(null);}catch(d){W(a,b,d);}else c.current=null;}function Mj(a,b,c){try{c();}catch(d){W(a,b,d);}}var Nj=!1;
+null;case 24:return null;default:return null}}var Jj=!1,U=!1,Kj="function"===typeof WeakSet?WeakSet:Set,V=null;function Lj(a,b){var c=a.ref;if(null!==c)if("function"===typeof c)try{c(null);}catch(d){W$1(a,b,d);}else c.current=null;}function Mj(a,b,c){try{c();}catch(d){W$1(a,b,d);}}var Nj=!1;
 function Oj(a,b){Cf=dd;a=Me();if(Ne(a)){if("selectionStart"in a)var c={start:a.selectionStart,end:a.selectionEnd};else a:{c=(c=a.ownerDocument)&&c.defaultView||window;var d=c.getSelection&&c.getSelection();if(d&&0!==d.rangeCount){c=d.anchorNode;var e=d.anchorOffset,f=d.focusNode;d=d.focusOffset;try{c.nodeType,f.nodeType;}catch(F){c=null;break a}var g=0,h=-1,k=-1,l=0,m=0,q=a,r=null;b:for(;;){for(var y;;){q!==c||0!==e&&3!==q.nodeType||(h=g+e);q!==f||0!==d&&3!==q.nodeType||(k=g+d);3===q.nodeType&&(g+=
 q.nodeValue.length);if(null===(y=q.firstChild))break;r=q;q=y;}for(;;){if(q===a)break b;r===c&&++l===e&&(h=g);r===f&&++m===d&&(k=g);if(null!==(y=q.nextSibling))break;q=r;r=q.parentNode;}q=y;}c=-1===h||-1===k?null:{start:h,end:k};}else c=null;}c=c||{start:0,end:0};}else c=null;Df={focusedElem:a,selectionRange:c};dd=!1;for(V=b;null!==V;)if(b=V,a=b.child,0!==(b.subtreeFlags&1028)&&null!==a)a.return=b,V=a;else for(;null!==V;){b=V;try{var n=b.alternate;if(0!==(b.flags&1024))switch(b.tag){case 0:case 11:case 15:break;
-case 1:if(null!==n){var t=n.memoizedProps,J=n.memoizedState,x=b.stateNode,w=x.getSnapshotBeforeUpdate(b.elementType===b.type?t:Ci(b.type,t),J);x.__reactInternalSnapshotBeforeUpdate=w;}break;case 3:var u=b.stateNode.containerInfo;1===u.nodeType?u.textContent="":9===u.nodeType&&u.documentElement&&u.removeChild(u.documentElement);break;case 5:case 6:case 4:case 17:break;default:throw Error(p$1(163));}}catch(F){W(b,b.return,F);}a=b.sibling;if(null!==a){a.return=b.return;V=a;break}V=b.return;}n=Nj;Nj=!1;return n}
+case 1:if(null!==n){var t=n.memoizedProps,J=n.memoizedState,x=b.stateNode,w=x.getSnapshotBeforeUpdate(b.elementType===b.type?t:Ci(b.type,t),J);x.__reactInternalSnapshotBeforeUpdate=w;}break;case 3:var u=b.stateNode.containerInfo;1===u.nodeType?u.textContent="":9===u.nodeType&&u.documentElement&&u.removeChild(u.documentElement);break;case 5:case 6:case 4:case 17:break;default:throw Error(p$1(163));}}catch(F){W$1(b,b.return,F);}a=b.sibling;if(null!==a){a.return=b.return;V=a;break}V=b.return;}n=Nj;Nj=!1;return n}
 function Pj(a,b,c){var d=b.updateQueue;d=null!==d?d.lastEffect:null;if(null!==d){var e=d=d.next;do{if((e.tag&a)===a){var f=e.destroy;e.destroy=void 0;void 0!==f&&Mj(b,c,f);}e=e.next;}while(e!==d)}}function Qj(a,b){b=b.updateQueue;b=null!==b?b.lastEffect:null;if(null!==b){var c=b=b.next;do{if((c.tag&a)===a){var d=c.create;c.destroy=d();}c=c.next;}while(c!==b)}}function Rj(a){var b=a.ref;if(null!==b){var c=a.stateNode;switch(a.tag){case 5:a=c;break;default:a=c;}"function"===typeof b?b(a):b.current=a;}}
 function Sj(a){var b=a.alternate;null!==b&&(a.alternate=null,Sj(b));a.child=null;a.deletions=null;a.sibling=null;5===a.tag&&(b=a.stateNode,null!==b&&(delete b[Of],delete b[Pf],delete b[of],delete b[Qf],delete b[Rf]));a.stateNode=null;a.return=null;a.dependencies=null;a.memoizedProps=null;a.memoizedState=null;a.pendingProps=null;a.stateNode=null;a.updateQueue=null;}function Tj(a){return 5===a.tag||3===a.tag||4===a.tag}
 function Uj(a){a:for(;;){for(;null===a.sibling;){if(null===a.return||Tj(a.return))return null;a=a.return;}a.sibling.return=a.return;for(a=a.sibling;5!==a.tag&&6!==a.tag&&18!==a.tag;){if(a.flags&2)continue a;if(null===a.child||4===a.tag)continue a;else a.child.return=a,a=a.child;}if(!(a.flags&2))return a.stateNode}}
 function Vj(a,b,c){var d=a.tag;if(5===d||6===d)a=a.stateNode,b?8===c.nodeType?c.parentNode.insertBefore(a,b):c.insertBefore(a,b):(8===c.nodeType?(b=c.parentNode,b.insertBefore(a,c)):(b=c,b.appendChild(a)),c=c._reactRootContainer,null!==c&&void 0!==c||null!==b.onclick||(b.onclick=Bf));else if(4!==d&&(a=a.child,null!==a))for(Vj(a,b,c),a=a.sibling;null!==a;)Vj(a,b,c),a=a.sibling;}
 function Wj(a,b,c){var d=a.tag;if(5===d||6===d)a=a.stateNode,b?c.insertBefore(a,b):c.appendChild(a);else if(4!==d&&(a=a.child,null!==a))for(Wj(a,b,c),a=a.sibling;null!==a;)Wj(a,b,c),a=a.sibling;}var X=null,Xj=!1;function Yj(a,b,c){for(c=c.child;null!==c;)Zj(a,b,c),c=c.sibling;}
 function Zj(a,b,c){if(lc&&"function"===typeof lc.onCommitFiberUnmount)try{lc.onCommitFiberUnmount(kc,c);}catch(h){}switch(c.tag){case 5:U||Lj(c,b);case 6:var d=X,e=Xj;X=null;Yj(a,b,c);X=d;Xj=e;null!==X&&(Xj?(a=X,c=c.stateNode,8===a.nodeType?a.parentNode.removeChild(c):a.removeChild(c)):X.removeChild(c.stateNode));break;case 18:null!==X&&(Xj?(a=X,c=c.stateNode,8===a.nodeType?Kf(a.parentNode,c):1===a.nodeType&&Kf(a,c),bd(a)):Kf(X,c.stateNode));break;case 4:d=X;e=Xj;X=c.stateNode.containerInfo;Xj=!0;
-Yj(a,b,c);X=d;Xj=e;break;case 0:case 11:case 14:case 15:if(!U&&(d=c.updateQueue,null!==d&&(d=d.lastEffect,null!==d))){e=d=d.next;do{var f=e,g=f.destroy;f=f.tag;void 0!==g&&(0!==(f&2)?Mj(c,b,g):0!==(f&4)&&Mj(c,b,g));e=e.next;}while(e!==d)}Yj(a,b,c);break;case 1:if(!U&&(Lj(c,b),d=c.stateNode,"function"===typeof d.componentWillUnmount))try{d.props=c.memoizedProps,d.state=c.memoizedState,d.componentWillUnmount();}catch(h){W(c,b,h);}Yj(a,b,c);break;case 21:Yj(a,b,c);break;case 22:c.mode&1?(U=(d=U)||null!==
+Yj(a,b,c);X=d;Xj=e;break;case 0:case 11:case 14:case 15:if(!U&&(d=c.updateQueue,null!==d&&(d=d.lastEffect,null!==d))){e=d=d.next;do{var f=e,g=f.destroy;f=f.tag;void 0!==g&&(0!==(f&2)?Mj(c,b,g):0!==(f&4)&&Mj(c,b,g));e=e.next;}while(e!==d)}Yj(a,b,c);break;case 1:if(!U&&(Lj(c,b),d=c.stateNode,"function"===typeof d.componentWillUnmount))try{d.props=c.memoizedProps,d.state=c.memoizedState,d.componentWillUnmount();}catch(h){W$1(c,b,h);}Yj(a,b,c);break;case 21:Yj(a,b,c);break;case 22:c.mode&1?(U=(d=U)||null!==
 c.memoizedState,Yj(a,b,c),U=d):Yj(a,b,c);break;default:Yj(a,b,c);}}function ak(a){var b=a.updateQueue;if(null!==b){a.updateQueue=null;var c=a.stateNode;null===c&&(c=a.stateNode=new Kj);b.forEach(function(b){var d=bk.bind(null,a,b);c.has(b)||(c.add(b),b.then(d,d));});}}
-function ck(a,b){var c=b.deletions;if(null!==c)for(var d=0;d<c.length;d++){var e=c[d];try{var f=a,g=b,h=g;a:for(;null!==h;){switch(h.tag){case 5:X=h.stateNode;Xj=!1;break a;case 3:X=h.stateNode.containerInfo;Xj=!0;break a;case 4:X=h.stateNode.containerInfo;Xj=!0;break a}h=h.return;}if(null===X)throw Error(p$1(160));Zj(f,g,e);X=null;Xj=!1;var k=e.alternate;null!==k&&(k.return=null);e.return=null;}catch(l){W(e,b,l);}}if(b.subtreeFlags&12854)for(b=b.child;null!==b;)dk(b,a),b=b.sibling;}
-function dk(a,b){var c=a.alternate,d=a.flags;switch(a.tag){case 0:case 11:case 14:case 15:ck(b,a);ek(a);if(d&4){try{Pj(3,a,a.return),Qj(3,a);}catch(t){W(a,a.return,t);}try{Pj(5,a,a.return);}catch(t){W(a,a.return,t);}}break;case 1:ck(b,a);ek(a);d&512&&null!==c&&Lj(c,c.return);break;case 5:ck(b,a);ek(a);d&512&&null!==c&&Lj(c,c.return);if(a.flags&32){var e=a.stateNode;try{ob(e,"");}catch(t){W(a,a.return,t);}}if(d&4&&(e=a.stateNode,null!=e)){var f=a.memoizedProps,g=null!==c?c.memoizedProps:f,h=a.type,k=a.updateQueue;
+function ck(a,b){var c=b.deletions;if(null!==c)for(var d=0;d<c.length;d++){var e=c[d];try{var f=a,g=b,h=g;a:for(;null!==h;){switch(h.tag){case 5:X=h.stateNode;Xj=!1;break a;case 3:X=h.stateNode.containerInfo;Xj=!0;break a;case 4:X=h.stateNode.containerInfo;Xj=!0;break a}h=h.return;}if(null===X)throw Error(p$1(160));Zj(f,g,e);X=null;Xj=!1;var k=e.alternate;null!==k&&(k.return=null);e.return=null;}catch(l){W$1(e,b,l);}}if(b.subtreeFlags&12854)for(b=b.child;null!==b;)dk(b,a),b=b.sibling;}
+function dk(a,b){var c=a.alternate,d=a.flags;switch(a.tag){case 0:case 11:case 14:case 15:ck(b,a);ek(a);if(d&4){try{Pj(3,a,a.return),Qj(3,a);}catch(t){W$1(a,a.return,t);}try{Pj(5,a,a.return);}catch(t){W$1(a,a.return,t);}}break;case 1:ck(b,a);ek(a);d&512&&null!==c&&Lj(c,c.return);break;case 5:ck(b,a);ek(a);d&512&&null!==c&&Lj(c,c.return);if(a.flags&32){var e=a.stateNode;try{ob(e,"");}catch(t){W$1(a,a.return,t);}}if(d&4&&(e=a.stateNode,null!=e)){var f=a.memoizedProps,g=null!==c?c.memoizedProps:f,h=a.type,k=a.updateQueue;
 a.updateQueue=null;if(null!==k)try{"input"===h&&"radio"===f.type&&null!=f.name&&ab(e,f);vb(h,g);var l=vb(h,f);for(g=0;g<k.length;g+=2){var m=k[g],q=k[g+1];"style"===m?sb(e,q):"dangerouslySetInnerHTML"===m?nb(e,q):"children"===m?ob(e,q):ta(e,m,q,l);}switch(h){case "input":bb(e,f);break;case "textarea":ib(e,f);break;case "select":var r=e._wrapperState.wasMultiple;e._wrapperState.wasMultiple=!!f.multiple;var y=f.value;null!=y?fb(e,!!f.multiple,y,!1):r!==!!f.multiple&&(null!=f.defaultValue?fb(e,!!f.multiple,
-f.defaultValue,!0):fb(e,!!f.multiple,f.multiple?[]:"",!1));}e[Pf]=f;}catch(t){W(a,a.return,t);}}break;case 6:ck(b,a);ek(a);if(d&4){if(null===a.stateNode)throw Error(p$1(162));e=a.stateNode;f=a.memoizedProps;try{e.nodeValue=f;}catch(t){W(a,a.return,t);}}break;case 3:ck(b,a);ek(a);if(d&4&&null!==c&&c.memoizedState.isDehydrated)try{bd(b.containerInfo);}catch(t){W(a,a.return,t);}break;case 4:ck(b,a);ek(a);break;case 13:ck(b,a);ek(a);e=a.child;e.flags&8192&&(f=null!==e.memoizedState,e.stateNode.isHidden=f,!f||
+f.defaultValue,!0):fb(e,!!f.multiple,f.multiple?[]:"",!1));}e[Pf]=f;}catch(t){W$1(a,a.return,t);}}break;case 6:ck(b,a);ek(a);if(d&4){if(null===a.stateNode)throw Error(p$1(162));e=a.stateNode;f=a.memoizedProps;try{e.nodeValue=f;}catch(t){W$1(a,a.return,t);}}break;case 3:ck(b,a);ek(a);if(d&4&&null!==c&&c.memoizedState.isDehydrated)try{bd(b.containerInfo);}catch(t){W$1(a,a.return,t);}break;case 4:ck(b,a);ek(a);break;case 13:ck(b,a);ek(a);e=a.child;e.flags&8192&&(f=null!==e.memoizedState,e.stateNode.isHidden=f,!f||
 null!==e.alternate&&null!==e.alternate.memoizedState||(fk=B()));d&4&&ak(a);break;case 22:m=null!==c&&null!==c.memoizedState;a.mode&1?(U=(l=U)||m,ck(b,a),U=l):ck(b,a);ek(a);if(d&8192){l=null!==a.memoizedState;if((a.stateNode.isHidden=l)&&!m&&0!==(a.mode&1))for(V=a,m=a.child;null!==m;){for(q=V=m;null!==V;){r=V;y=r.child;switch(r.tag){case 0:case 11:case 14:case 15:Pj(4,r,r.return);break;case 1:Lj(r,r.return);var n=r.stateNode;if("function"===typeof n.componentWillUnmount){d=r;c=r.return;try{b=d,n.props=
-b.memoizedProps,n.state=b.memoizedState,n.componentWillUnmount();}catch(t){W(d,c,t);}}break;case 5:Lj(r,r.return);break;case 22:if(null!==r.memoizedState){gk(q);continue}}null!==y?(y.return=r,V=y):gk(q);}m=m.sibling;}a:for(m=null,q=a;;){if(5===q.tag){if(null===m){m=q;try{e=q.stateNode,l?(f=e.style,"function"===typeof f.setProperty?f.setProperty("display","none","important"):f.display="none"):(h=q.stateNode,k=q.memoizedProps.style,g=void 0!==k&&null!==k&&k.hasOwnProperty("display")?k.display:null,h.style.display=
-rb("display",g));}catch(t){W(a,a.return,t);}}}else if(6===q.tag){if(null===m)try{q.stateNode.nodeValue=l?"":q.memoizedProps;}catch(t){W(a,a.return,t);}}else if((22!==q.tag&&23!==q.tag||null===q.memoizedState||q===a)&&null!==q.child){q.child.return=q;q=q.child;continue}if(q===a)break a;for(;null===q.sibling;){if(null===q.return||q.return===a)break a;m===q&&(m=null);q=q.return;}m===q&&(m=null);q.sibling.return=q.return;q=q.sibling;}}break;case 19:ck(b,a);ek(a);d&4&&ak(a);break;case 21:break;default:ck(b,
-a),ek(a);}}function ek(a){var b=a.flags;if(b&2){try{a:{for(var c=a.return;null!==c;){if(Tj(c)){var d=c;break a}c=c.return;}throw Error(p$1(160));}switch(d.tag){case 5:var e=d.stateNode;d.flags&32&&(ob(e,""),d.flags&=-33);var f=Uj(a);Wj(a,f,e);break;case 3:case 4:var g=d.stateNode.containerInfo,h=Uj(a);Vj(a,h,g);break;default:throw Error(p$1(161));}}catch(k){W(a,a.return,k);}a.flags&=-3;}b&4096&&(a.flags&=-4097);}function hk(a,b,c){V=a;ik(a);}
+b.memoizedProps,n.state=b.memoizedState,n.componentWillUnmount();}catch(t){W$1(d,c,t);}}break;case 5:Lj(r,r.return);break;case 22:if(null!==r.memoizedState){gk(q);continue}}null!==y?(y.return=r,V=y):gk(q);}m=m.sibling;}a:for(m=null,q=a;;){if(5===q.tag){if(null===m){m=q;try{e=q.stateNode,l?(f=e.style,"function"===typeof f.setProperty?f.setProperty("display","none","important"):f.display="none"):(h=q.stateNode,k=q.memoizedProps.style,g=void 0!==k&&null!==k&&k.hasOwnProperty("display")?k.display:null,h.style.display=
+rb("display",g));}catch(t){W$1(a,a.return,t);}}}else if(6===q.tag){if(null===m)try{q.stateNode.nodeValue=l?"":q.memoizedProps;}catch(t){W$1(a,a.return,t);}}else if((22!==q.tag&&23!==q.tag||null===q.memoizedState||q===a)&&null!==q.child){q.child.return=q;q=q.child;continue}if(q===a)break a;for(;null===q.sibling;){if(null===q.return||q.return===a)break a;m===q&&(m=null);q=q.return;}m===q&&(m=null);q.sibling.return=q.return;q=q.sibling;}}break;case 19:ck(b,a);ek(a);d&4&&ak(a);break;case 21:break;default:ck(b,
+a),ek(a);}}function ek(a){var b=a.flags;if(b&2){try{a:{for(var c=a.return;null!==c;){if(Tj(c)){var d=c;break a}c=c.return;}throw Error(p$1(160));}switch(d.tag){case 5:var e=d.stateNode;d.flags&32&&(ob(e,""),d.flags&=-33);var f=Uj(a);Wj(a,f,e);break;case 3:case 4:var g=d.stateNode.containerInfo,h=Uj(a);Vj(a,h,g);break;default:throw Error(p$1(161));}}catch(k){W$1(a,a.return,k);}a.flags&=-3;}b&4096&&(a.flags&=-4097);}function hk(a,b,c){V=a;ik(a);}
 function ik(a,b,c){for(var d=0!==(a.mode&1);null!==V;){var e=V,f=e.child;if(22===e.tag&&d){var g=null!==e.memoizedState||Jj;if(!g){var h=e.alternate,k=null!==h&&null!==h.memoizedState||U;h=Jj;var l=U;Jj=g;if((U=k)&&!l)for(V=e;null!==V;)g=V,k=g.child,22===g.tag&&null!==g.memoizedState?jk(e):null!==k?(k.return=g,V=k):jk(e);for(;null!==f;)V=f,ik(f),f=f.sibling;V=e;Jj=h;U=l;}kk(a);}else 0!==(e.subtreeFlags&8772)&&null!==f?(f.return=e,V=f):kk(a);}}
 function kk(a){for(;null!==V;){var b=V;if(0!==(b.flags&8772)){var c=b.alternate;try{if(0!==(b.flags&8772))switch(b.tag){case 0:case 11:case 15:U||Qj(5,b);break;case 1:var d=b.stateNode;if(b.flags&4&&!U)if(null===c)d.componentDidMount();else {var e=b.elementType===b.type?c.memoizedProps:Ci(b.type,c.memoizedProps);d.componentDidUpdate(e,c.memoizedState,d.__reactInternalSnapshotBeforeUpdate);}var f=b.updateQueue;null!==f&&sh(b,f,d);break;case 3:var g=b.updateQueue;if(null!==g){c=null;if(null!==b.child)switch(b.child.tag){case 5:c=
 b.child.stateNode;break;case 1:c=b.child.stateNode;}sh(b,g,c);}break;case 5:var h=b.stateNode;if(null===c&&b.flags&4){c=h;var k=b.memoizedProps;switch(b.type){case "button":case "input":case "select":case "textarea":k.autoFocus&&c.focus();break;case "img":k.src&&(c.src=k.src);}}break;case 6:break;case 4:break;case 12:break;case 13:if(null===b.memoizedState){var l=b.alternate;if(null!==l){var m=l.memoizedState;if(null!==m){var q=m.dehydrated;null!==q&&bd(q);}}}break;case 19:case 17:case 21:case 22:case 23:case 25:break;
-default:throw Error(p$1(163));}U||b.flags&512&&Rj(b);}catch(r){W(b,b.return,r);}}if(b===a){V=null;break}c=b.sibling;if(null!==c){c.return=b.return;V=c;break}V=b.return;}}function gk(a){for(;null!==V;){var b=V;if(b===a){V=null;break}var c=b.sibling;if(null!==c){c.return=b.return;V=c;break}V=b.return;}}
-function jk(a){for(;null!==V;){var b=V;try{switch(b.tag){case 0:case 11:case 15:var c=b.return;try{Qj(4,b);}catch(k){W(b,c,k);}break;case 1:var d=b.stateNode;if("function"===typeof d.componentDidMount){var e=b.return;try{d.componentDidMount();}catch(k){W(b,e,k);}}var f=b.return;try{Rj(b);}catch(k){W(b,f,k);}break;case 5:var g=b.return;try{Rj(b);}catch(k){W(b,g,k);}}}catch(k){W(b,b.return,k);}if(b===a){V=null;break}var h=b.sibling;if(null!==h){h.return=b.return;V=h;break}V=b.return;}}
+default:throw Error(p$1(163));}U||b.flags&512&&Rj(b);}catch(r){W$1(b,b.return,r);}}if(b===a){V=null;break}c=b.sibling;if(null!==c){c.return=b.return;V=c;break}V=b.return;}}function gk(a){for(;null!==V;){var b=V;if(b===a){V=null;break}var c=b.sibling;if(null!==c){c.return=b.return;V=c;break}V=b.return;}}
+function jk(a){for(;null!==V;){var b=V;try{switch(b.tag){case 0:case 11:case 15:var c=b.return;try{Qj(4,b);}catch(k){W$1(b,c,k);}break;case 1:var d=b.stateNode;if("function"===typeof d.componentDidMount){var e=b.return;try{d.componentDidMount();}catch(k){W$1(b,e,k);}}var f=b.return;try{Rj(b);}catch(k){W$1(b,f,k);}break;case 5:var g=b.return;try{Rj(b);}catch(k){W$1(b,g,k);}}}catch(k){W$1(b,b.return,k);}if(b===a){V=null;break}var h=b.sibling;if(null!==h){h.return=b.return;V=h;break}V=b.return;}}
 var lk=Math.ceil,mk=ua.ReactCurrentDispatcher,nk=ua.ReactCurrentOwner,ok=ua.ReactCurrentBatchConfig,K=0,Q=null,Y=null,Z=0,fj=0,ej=Uf(0),T=0,pk=null,rh=0,qk=0,rk=0,sk=null,tk=null,fk=0,Gj=Infinity,uk=null,Oi=!1,Pi=null,Ri=null,vk=!1,wk=null,xk=0,yk=0,zk=null,Ak=-1,Bk=0;function R(){return 0!==(K&6)?B():-1!==Ak?Ak:Ak=B()}
 function yi(a){if(0===(a.mode&1))return 1;if(0!==(K&2)&&0!==Z)return Z&-Z;if(null!==Kg.transition)return 0===Bk&&(Bk=yc()),Bk;a=C;if(0!==a)return a;a=window.event;a=void 0===a?16:jd(a.type);return a}function gi(a,b,c,d){if(50<yk)throw yk=0,zk=null,Error(p$1(185));Ac(a,c,d);if(0===(K&2)||a!==Q)a===Q&&(0===(K&2)&&(qk|=c),4===T&&Ck(a,Z)),Dk(a,d),1===c&&0===K&&0===(b.mode&1)&&(Gj=B()+500,fg&&jg());}
 function Dk(a,b){var c=a.callbackNode;wc(a,b);var d=uc(a,a===Q?Z:0);if(0===d)null!==c&&bc(c),a.callbackNode=null,a.callbackPriority=0;else if(b=d&-d,a.callbackPriority!==b){null!=c&&bc(c);if(1===b)0===a.tag?ig(Ek.bind(null,a)):hg(Ek.bind(null,a)),Jf(function(){0===(K&6)&&jg();}),c=null;else {switch(Dc(d)){case 1:c=fc;break;case 4:c=gc;break;case 16:c=hc;break;case 536870912:c=jc;break;default:c=hc;}c=Fk(c,Gk.bind(null,a));}a.callbackPriority=b;a.callbackNode=c;}}
@@ -370,7 +370,7 @@ function Ck(a,b){b&=~rk;b&=~qk;a.suspendedLanes|=b;a.pingedLanes&=~b;for(a=a.exp
 function Qk(a,b){var c=K;K|=1;try{return a(b)}finally{K=c,0===K&&(Gj=B()+500,fg&&jg());}}function Rk(a){null!==wk&&0===wk.tag&&0===(K&6)&&Hk();var b=K;K|=1;var c=ok.transition,d=C;try{if(ok.transition=null,C=1,a)return a()}finally{C=d,ok.transition=c,K=b,0===(K&6)&&jg();}}function Hj(){fj=ej.current;E(ej);}
 function Kk(a,b){a.finishedWork=null;a.finishedLanes=0;var c=a.timeoutHandle;-1!==c&&(a.timeoutHandle=-1,Gf(c));if(null!==Y)for(c=Y.return;null!==c;){var d=c;wg(d);switch(d.tag){case 1:d=d.type.childContextTypes;null!==d&&void 0!==d&&$f();break;case 3:zh();E(Wf);E(H);Eh();break;case 5:Bh(d);break;case 4:zh();break;case 13:E(L);break;case 19:E(L);break;case 10:ah(d.type._context);break;case 22:case 23:Hj();}c=c.return;}Q=a;Y=a=Pg(a.current,null);Z=fj=b;T=0;pk=null;rk=qk=rh=0;tk=sk=null;if(null!==fh){for(b=
 0;b<fh.length;b++)if(c=fh[b],d=c.interleaved,null!==d){c.interleaved=null;var e=d.next,f=c.pending;if(null!==f){var g=f.next;f.next=e;d.next=g;}c.pending=d;}fh=null;}return a}
-function Mk(a,b){do{var c=Y;try{$g();Fh.current=Rh;if(Ih){for(var d=M.memoizedState;null!==d;){var e=d.queue;null!==e&&(e.pending=null);d=d.next;}Ih=!1;}Hh=0;O=N=M=null;Jh=!1;Kh=0;nk.current=null;if(null===c||null===c.return){T=1;pk=b;Y=null;break}a:{var f=a,g=c.return,h=c,k=b;b=Z;h.flags|=32768;if(null!==k&&"object"===typeof k&&"function"===typeof k.then){var l=k,m=h,q=m.tag;if(0===(m.mode&1)&&(0===q||11===q||15===q)){var r=m.alternate;r?(m.updateQueue=r.updateQueue,m.memoizedState=r.memoizedState,
+function Mk(a,b){do{var c=Y;try{$g();Fh.current=Rh;if(Ih){for(var d=M$1.memoizedState;null!==d;){var e=d.queue;null!==e&&(e.pending=null);d=d.next;}Ih=!1;}Hh=0;O=N=M$1=null;Jh=!1;Kh=0;nk.current=null;if(null===c||null===c.return){T=1;pk=b;Y=null;break}a:{var f=a,g=c.return,h=c,k=b;b=Z;h.flags|=32768;if(null!==k&&"object"===typeof k&&"function"===typeof k.then){var l=k,m=h,q=m.tag;if(0===(m.mode&1)&&(0===q||11===q||15===q)){var r=m.alternate;r?(m.updateQueue=r.updateQueue,m.memoizedState=r.memoizedState,
 m.lanes=r.lanes):(m.updateQueue=null,m.memoizedState=null);}var y=Ui(g);if(null!==y){y.flags&=-257;Vi(y,g,h,f,b);y.mode&1&&Si(f,l,b);b=y;k=l;var n=b.updateQueue;if(null===n){var t=new Set;t.add(k);b.updateQueue=t;}else n.add(k);break a}else {if(0===(b&1)){Si(f,l,b);tj();break a}k=Error(p$1(426));}}else if(I&&h.mode&1){var J=Ui(g);if(null!==J){0===(J.flags&65536)&&(J.flags|=256);Vi(J,g,h,f,b);Jg(Ji(k,h));break a}}f=k=Ji(k,h);4!==T&&(T=2);null===sk?sk=[f]:sk.push(f);f=g;do{switch(f.tag){case 3:f.flags|=65536;
 b&=-b;f.lanes|=b;var x=Ni(f,k,b);ph(f,x);break a;case 1:h=k;var w=f.type,u=f.stateNode;if(0===(f.flags&128)&&("function"===typeof w.getDerivedStateFromError||null!==u&&"function"===typeof u.componentDidCatch&&(null===Ri||!Ri.has(u)))){f.flags|=65536;b&=-b;f.lanes|=b;var F=Qi(f,h,b);ph(f,F);break a}}f=f.return;}while(null!==f)}Sk(c);}catch(na){b=na;Y===c&&null!==c&&(Y=c=c.return);continue}break}while(1)}function Jk(){var a=mk.current;mk.current=Rh;return null===a?Rh:a}
 function tj(){if(0===T||3===T||2===T)T=4;null===Q||0===(rh&268435455)&&0===(qk&268435455)||Ck(Q,Z);}function Ik(a,b){var c=K;K|=2;var d=Jk();if(Q!==a||Z!==b)uk=null,Kk(a,b);do try{Tk();break}catch(e){Mk(a,e);}while(1);$g();K=c;mk.current=d;if(null!==Y)throw Error(p$1(261));Q=null;Z=0;return T}function Tk(){for(;null!==Y;)Uk(Y);}function Lk(){for(;null!==Y&&!cc();)Uk(Y);}function Uk(a){var b=Vk(a.alternate,a,fj);a.memoizedProps=a.pendingProps;null===b?Sk(a):Y=b;nk.current=null;}
@@ -379,8 +379,8 @@ function Wk(a,b,c,d){do Hk();while(null!==wk);if(0!==(K&6))throw Error(p$1(327))
 var g=C;C=1;var h=K;K|=4;nk.current=null;Oj(a,c);dk(c,a);Oe(Df);dd=!!Cf;Df=Cf=null;a.current=c;hk(c);dc();K=h;C=g;ok.transition=f;}else a.current=c;vk&&(vk=!1,wk=a,xk=e);f=a.pendingLanes;0===f&&(Ri=null);mc(c.stateNode);Dk(a,B());if(null!==b)for(d=a.onRecoverableError,c=0;c<b.length;c++)e=b[c],d(e.value,{componentStack:e.stack,digest:e.digest});if(Oi)throw Oi=!1,a=Pi,Pi=null,a;0!==(xk&1)&&0!==a.tag&&Hk();f=a.pendingLanes;0!==(f&1)?a===zk?yk++:(yk=0,zk=a):yk=0;jg();return null}
 function Hk(){if(null!==wk){var a=Dc(xk),b=ok.transition,c=C;try{ok.transition=null;C=16>a?16:a;if(null===wk)var d=!1;else {a=wk;wk=null;xk=0;if(0!==(K&6))throw Error(p$1(331));var e=K;K|=4;for(V=a.current;null!==V;){var f=V,g=f.child;if(0!==(V.flags&16)){var h=f.deletions;if(null!==h){for(var k=0;k<h.length;k++){var l=h[k];for(V=l;null!==V;){var m=V;switch(m.tag){case 0:case 11:case 15:Pj(8,m,f);}var q=m.child;if(null!==q)q.return=m,V=q;else for(;null!==V;){m=V;var r=m.sibling,y=m.return;Sj(m);if(m===
 l){V=null;break}if(null!==r){r.return=y;V=r;break}V=y;}}}var n=f.alternate;if(null!==n){var t=n.child;if(null!==t){n.child=null;do{var J=t.sibling;t.sibling=null;t=J;}while(null!==t)}}V=f;}}if(0!==(f.subtreeFlags&2064)&&null!==g)g.return=f,V=g;else b:for(;null!==V;){f=V;if(0!==(f.flags&2048))switch(f.tag){case 0:case 11:case 15:Pj(9,f,f.return);}var x=f.sibling;if(null!==x){x.return=f.return;V=x;break b}V=f.return;}}var w=a.current;for(V=w;null!==V;){g=V;var u=g.child;if(0!==(g.subtreeFlags&2064)&&null!==
-u)u.return=g,V=u;else b:for(g=w;null!==V;){h=V;if(0!==(h.flags&2048))try{switch(h.tag){case 0:case 11:case 15:Qj(9,h);}}catch(na){W(h,h.return,na);}if(h===g){V=null;break b}var F=h.sibling;if(null!==F){F.return=h.return;V=F;break b}V=h.return;}}K=e;jg();if(lc&&"function"===typeof lc.onPostCommitFiberRoot)try{lc.onPostCommitFiberRoot(kc,a);}catch(na){}d=!0;}return d}finally{C=c,ok.transition=b;}}return !1}function Xk(a,b,c){b=Ji(c,b);b=Ni(a,b,1);a=nh(a,b,1);b=R();null!==a&&(Ac(a,1,b),Dk(a,b));}
-function W(a,b,c){if(3===a.tag)Xk(a,a,c);else for(;null!==b;){if(3===b.tag){Xk(b,a,c);break}else if(1===b.tag){var d=b.stateNode;if("function"===typeof b.type.getDerivedStateFromError||"function"===typeof d.componentDidCatch&&(null===Ri||!Ri.has(d))){a=Ji(c,a);a=Qi(b,a,1);b=nh(b,a,1);a=R();null!==b&&(Ac(b,1,a),Dk(b,a));break}}b=b.return;}}
+u)u.return=g,V=u;else b:for(g=w;null!==V;){h=V;if(0!==(h.flags&2048))try{switch(h.tag){case 0:case 11:case 15:Qj(9,h);}}catch(na){W$1(h,h.return,na);}if(h===g){V=null;break b}var F=h.sibling;if(null!==F){F.return=h.return;V=F;break b}V=h.return;}}K=e;jg();if(lc&&"function"===typeof lc.onPostCommitFiberRoot)try{lc.onPostCommitFiberRoot(kc,a);}catch(na){}d=!0;}return d}finally{C=c,ok.transition=b;}}return !1}function Xk(a,b,c){b=Ji(c,b);b=Ni(a,b,1);a=nh(a,b,1);b=R();null!==a&&(Ac(a,1,b),Dk(a,b));}
+function W$1(a,b,c){if(3===a.tag)Xk(a,a,c);else for(;null!==b;){if(3===b.tag){Xk(b,a,c);break}else if(1===b.tag){var d=b.stateNode;if("function"===typeof b.type.getDerivedStateFromError||"function"===typeof d.componentDidCatch&&(null===Ri||!Ri.has(d))){a=Ji(c,a);a=Qi(b,a,1);b=nh(b,a,1);a=R();null!==b&&(Ac(b,1,a),Dk(b,a));break}}b=b.return;}}
 function Ti(a,b,c){var d=a.pingCache;null!==d&&d.delete(b);b=R();a.pingedLanes|=a.suspendedLanes&c;Q===a&&(Z&c)===c&&(4===T||3===T&&(Z&130023424)===Z&&500>B()-fk?Kk(a,0):rk|=c);Dk(a,b);}function Yk(a,b){0===b&&(0===(a.mode&1)?b=1:(b=sc,sc<<=1,0===(sc&130023424)&&(sc=4194304)));var c=R();a=ih(a,b);null!==a&&(Ac(a,b,c),Dk(a,c));}function uj(a){var b=a.memoizedState,c=0;null!==b&&(c=b.retryLane);Yk(a,c);}
 function bk(a,b){var c=0;switch(a.tag){case 13:var d=a.stateNode;var e=a.memoizedState;null!==e&&(c=e.retryLane);break;case 19:d=a.stateNode;break;default:throw Error(p$1(314));}null!==d&&d.delete(b);Yk(a,c);}var Vk;
 Vk=function(a,b,c){if(null!==a)if(a.memoizedProps!==b.pendingProps||Wf.current)dh=!0;else {if(0===(a.lanes&c)&&0===(b.flags&128))return dh=!1,yj(a,b,c);dh=0!==(a.flags&131072)?!0:!1;}else dh=!1,I&&0!==(b.flags&1048576)&&ug(b,ng,b.index);b.lanes=0;switch(b.tag){case 2:var d=b.type;ij(a,b);a=b.pendingProps;var e=Yf(b,H.current);ch(b,c);e=Nh(null,b,d,a,e,c);var f=Sh();b.flags|=1;"object"===typeof e&&null!==e&&"function"===typeof e.render&&void 0===e.$$typeof?(b.tag=1,b.memoizedState=null,b.updateQueue=
@@ -2996,6 +2996,27 @@ function normalizeLifestyleStorefront(value) {
   };
 }
 
+// ============================================================
+// Storefront content — what an admin edits, publishes, and the site bakes in.
+//
+// One record per store (migration 0037): a DRAFT the admin edits (version-
+// checked) and a PUBLISHED copy. The site's build (build/publish-content.mjs)
+// reads the published records, checks them with validateStorefrontContent()
+// below, copies their uploaded images into the deployment and writes them into
+// index.html as one JSON block. The page reads that block before its first
+// render (readInlinedContent), so a visitor never sees built-in content first
+// and never downloads a replaced image: there is no fetch to wait for.
+//
+// Two readings of the same schema:
+//   validateStorefrontContent — STRICT. A value that breaks a rule is refused by
+//     the editor before it is saved and by the build before it is published.
+//   readSection — LENIENT, for the page. Each field that does not pass its rule
+//     falls back to the built-in value; a page never renders a broken one.
+// An empty field means "the built-in value" (the section's defaults, which live
+// beside the component that renders them).
+// ============================================================
+
+const STOREFRONT_CONTENT_STORES = Object.freeze(['wellness', 'fashion', 'homeliving', 'grocery', 'lifestyle']);
 const STOREFRONT_LABELS = Object.freeze({
   wellness: 'Wellness homepage',
   fashion: 'Fashion',
@@ -3004,25 +3025,69 @@ const STOREFRONT_LABELS = Object.freeze({
   lifestyle: 'Lifestyle'
 });
 const INLINE_ID = 'sora-content';
-const text$1 = max => ({
+
+/** Text position presets for copy laid over a photograph (wide screens; a phone keeps the layout it has). */
+const POSITIONS = Object.freeze(['left', 'center', 'right']);
+const POSITION_LABELS = Object.freeze({
+  left: 'Left',
+  center: 'Centre',
+  right: 'Right'
+});
+
+// Field builders. The label is the admin's; the rules ignore it.
+const text$1 = (max, label) => ({
   type: 'text',
-  max
+  max,
+  label
 });
-const link = () => ({
+const link = (label = 'Link') => ({
   type: 'link',
-  max: 240
+  max: 240,
+  label
 });
-const image = () => ({
-  type: 'image'
+const image = label => ({
+  type: 'image',
+  label
 });
-const group = fields => ({
+const group = (fields, label) => ({
   type: 'group',
-  fields
+  fields,
+  label
 });
-const list$2 = (length, fields) => ({
+const list$2 = (length, fields, label, itemLabel) => ({
   type: 'list',
   length,
-  fields
+  fields,
+  label,
+  itemLabel
+});
+/** Show or hide: `hidden: true` takes the section (or the item) off the page. */
+const hidden = () => ({
+  type: 'bool',
+  label: 'Hide'
+});
+/** A preset, never free placement. */
+const position = () => ({
+  type: 'enum',
+  options: POSITIONS,
+  label: 'Text position'
+});
+/** A fixed number of lines (a headline set in lines); an empty line is the built-in line. */
+const lines = (length, max, label) => ({
+  type: 'lines',
+  length,
+  max,
+  label
+});
+/** Two uploads, phone and desktop, set together. */
+const pic = (label = 'Photograph') => ({
+  type: 'pic',
+  label
+});
+/** A photograph and the background colour matched to it, set together: phone, desktop and the colour. */
+const tone$1 = (label = 'Photograph and its background colour') => ({
+  type: 'tone',
+  label
 });
 
 // Mirrors normalizeFashionStorefront / normalizeLifestyleStorefront exactly (field names and
@@ -3043,10 +3108,404 @@ const SLIDE = {
   ctaLink: link(),
   note: text$1(70)
 };
+
+// ---- Sections shared in shape ---------------------------------------------------------------
+/** A banner: copy over one photograph, one link. */
+const banner = (label, extra = {}) => group({
+  hidden: hidden(),
+  eyebrow: text$1(60, 'Eyebrow'),
+  title: lines(2, 40, 'Headline'),
+  text: text$1(200, 'Subline'),
+  cta: text$1(40, 'Button label'),
+  link: link('Button link'),
+  picture: pic(),
+  alt: text$1(180, 'Photograph description'),
+  ...extra
+}, label);
+/** A tile in a grid: a name, where it goes, its photograph. */
+const tile = (extra = {}) => ({
+  hidden: hidden(),
+  title: text$1(40, 'Name'),
+  ...extra,
+  link: link('Opens'),
+  picture: pic(),
+  alt: text$1(180, 'Photograph description')
+});
+/** A row of shopping facts (delivery, returns, support): words and where each goes. */
+const facts$1 = (length, label, withLink = true) => group({
+  hidden: hidden(),
+  items: list$2(length, {
+    hidden: hidden(),
+    title: text$1(40, 'Title'),
+    text: text$1(60, 'Line under it'),
+    ...(withLink ? {
+      link: link('Opens')
+    } : {})
+  }, 'Items', 'Item')
+}, label);
+
+// ---- The stores ---------------------------------------------------------------------------
+const WELLNESS = {
+  hero: group({
+    hidden: hidden(),
+    slides: list$2(2, {
+      hidden: hidden(),
+      eyebrow: lines(2, 50, 'Eyebrow (two parts)'),
+      title: lines(2, 40, 'Headline (the second line is the orange one)'),
+      ctaLabel: text$1(40, 'Button label (no label, no button)'),
+      ctaLink: link('Button link'),
+      picture: tone$1('Photograph and the page colour it sits on'),
+      alt: text$1(180, 'Photograph description'),
+      position: position()
+    }, 'Slides', 'Slide')
+  }, 'Hero'),
+  lifestyleBanner: banner('Lifestyle banner', {
+    position: position()
+  }),
+  jewelleryBanner: banner('Jewellery banner', {
+    position: position()
+  }),
+  storeCarousel: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: text$1(80, 'Heading'),
+    text: text$1(200, 'Subline'),
+    cards: list$2(2, {
+      hidden: hidden(),
+      eyebrow: text$1(60, 'Eyebrow'),
+      title: lines(2, 40, 'Headline'),
+      text: text$1(200, 'Subline'),
+      cta: text$1(40, 'Button label'),
+      link: link('Card link'),
+      picture: pic(),
+      alt: text$1(180, 'Photograph description'),
+      details: lines(3, 40, 'Three short features')
+    }, 'Store cards', 'Card')
+  }, 'Store carousel')
+};
+const FASHION_STRIPS = group({
+  delivery: group({
+    hidden: hidden(),
+    location: text$1(60, 'Where we deliver'),
+    promise: text$1(60, 'Delivery time')
+  }, 'Delivery strip (under the search bar)'),
+  benefits: group({
+    hidden: hidden(),
+    signIn: text$1(30, 'Sign-in title'),
+    signInText: text$1(60, 'Sign-in line'),
+    account: text$1(30, 'Signed-in title'),
+    accountText: text$1(60, 'Signed-in line'),
+    items: list$2(4, {
+      hidden: hidden(),
+      line1: text$1(30, 'First line'),
+      line2: text$1(30, 'Second line')
+    }, 'Benefits', 'Benefit')
+  }, 'Benefits strip (on /fashion)')
+}, 'Fashion strips');
+const WOMEN = group({
+  hero: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: lines(3, 30, 'Headline'),
+    intro: text$1(200, 'Subline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link (empty: the Women listing)'),
+    picture: pic(),
+    alt: text$1(180, 'Photograph description'),
+    position: position()
+  }, 'Hero'),
+  categories: group({
+    hidden: hidden(),
+    title: text$1(60, 'Heading'),
+    items: list$2(6, tile(), 'Category tiles', 'Tile')
+  }, 'Shop by category'),
+  products: group({
+    hidden: hidden(),
+    newTitle: text$1(60, 'Heading when new pieces are flagged'),
+    title: text$1(60, 'Heading otherwise'),
+    viewAll: text$1(30, 'View-all label')
+  }, 'Product row'),
+  edits: group({
+    hidden: hidden(),
+    items: list$2(4, {
+      ...tile({
+        text: text$1(120, 'Line')
+      }),
+      cta: text$1(40, 'Link label')
+    }, 'Edits', 'Edit')
+  }, 'Edits'),
+  capsule: group({
+    hidden: hidden(),
+    title: text$1(60, 'Heading'),
+    cta: text$1(30, 'Link label'),
+    items: list$2(4, tile({
+      caption: text$1(80, 'Caption')
+    }), 'Looks', 'Look')
+  }, 'The capsule edit'),
+  sarees: banner('Saree store banner', {
+    title: text$1(80, 'Headline')
+  }),
+  jewellery: banner('Jewellery store banner', {
+    title: text$1(80, 'Headline')
+  }),
+  services: facts$1(3, 'Shopping information')
+}, "Women's page");
+const MEN = group({
+  hero: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: lines(2, 30, 'Headline'),
+    intro: text$1(200, 'Subline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link (empty: the Men listing)'),
+    note: text$1(40, 'Edition note'),
+    picture: pic(),
+    alt: text$1(180, 'Photograph description'),
+    position: position()
+  }, 'Hero'),
+  highlights: facts$1(4, 'Highlights'),
+  collections: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: text$1(80, 'Heading'),
+    more: text$1(30, 'Explore-all label'),
+    items: list$2(3, tile(), 'Collections', 'Collection')
+  }, 'Collections'),
+  editorial: group({
+    hidden: hidden(),
+    items: list$2(2, {
+      ...tile({
+        eyebrow: text$1(60, 'Eyebrow'),
+        text: text$1(160, 'Line')
+      }),
+      cta: text$1(40, 'Link label')
+    }, 'Edits', 'Edit')
+  }, 'Style edits'),
+  products: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: text$1(80, 'Heading'),
+    more: text$1(30, 'Explore-all label')
+  }, 'Product row'),
+  looks: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: text$1(80, 'Heading'),
+    more: text$1(30, 'Explore-all label'),
+    items: list$2(4, tile(), 'Looks', 'Look')
+  }, 'Shop the look'),
+  closing: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: text$1(80, 'Heading'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link (empty: the Men listing)')
+  }, 'Closing')
+}, "Men's page");
+const SAREES = group({
+  hero: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: lines(2, 40, 'Headline'),
+    intro: text$1(200, 'Subline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link (empty: the Women listing)'),
+    position: position(),
+    slides: list$2(2, {
+      picture: pic(),
+      alt: text$1(180, 'Photograph description')
+    }, 'Photographs (the arrows step between them)', 'Photograph')
+  }, 'Hero'),
+  collections: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: lines(2, 40, 'Heading'),
+    text: lines(2, 60, 'Subline'),
+    viewAll: text$1(30, 'View-all label'),
+    items: list$2(6, tile({
+      caption: text$1(60, 'Caption')
+    }), 'Collections', 'Collection')
+  }, 'Collections'),
+  editorial: group({
+    hidden: hidden(),
+    items: list$2(2, {
+      ...tile({
+        eyebrow: text$1(60, 'Eyebrow'),
+        text: text$1(160, 'Line')
+      }),
+      cta: text$1(40, 'Button label')
+    }, 'Edits', 'Edit')
+  }, 'Featured edits'),
+  products: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: text$1(80, 'Heading'),
+    text: lines(2, 60, 'Subline')
+  }, 'Product row'),
+  promo: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: lines(2, 40, 'Headline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link (empty: the Women listing)'),
+    picture: pic(),
+    alt: text$1(180, 'Photograph description')
+  }, 'Closing banner'),
+  services: facts$1(4, 'Shopping information')
+}, 'Saree page');
+const JEWELLERY$1 = group({
+  hero: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: lines(2, 40, 'Headline'),
+    intro: text$1(200, 'Subline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link (empty: the Jewellery listing)'),
+    picture: pic(),
+    alt: text$1(180, 'Photograph description'),
+    position: position()
+  }, 'Hero'),
+  trust: group({
+    hidden: hidden(),
+    items: list$2(4, {
+      hidden: hidden(),
+      title: text$1(40, 'Title'),
+      note: text$1(40, 'Line under it'),
+      phone: lines(2, 30, 'On a phone (two lines)'),
+      link: link('Opens')
+    }, 'Items', 'Item')
+  }, 'Trust strip'),
+  categories: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: text$1(80, 'Heading'),
+    intro: text$1(160, 'Subline'),
+    items: list$2(7, tile(), 'Category circles', 'Circle')
+  }, 'Shop by category'),
+  loved: group({
+    hidden: hidden(),
+    title: text$1(80, 'Heading'),
+    viewAll: text$1(30, 'View-all label')
+  }, 'Product row'),
+  edits: group({
+    hidden: hidden(),
+    items: list$2(2, {
+      hidden: hidden(),
+      title: lines(3, 30, 'Headline'),
+      cta: text$1(40, 'Button label'),
+      link: link('Opens'),
+      picture: pic(),
+      alt: text$1(180, 'Photograph description')
+    }, 'Banners', 'Banner')
+  }, 'Wedding and gifts banners'),
+  story: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: text$1(80, 'Heading'),
+    text: text$1(240, 'Text'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link'),
+    picture: pic(),
+    alt: text$1(180, 'Photograph description')
+  }, 'Story'),
+  newsletter: group({
+    hidden: hidden(),
+    title: text$1(80, 'Heading'),
+    text: text$1(200, 'Text'),
+    picture: pic(),
+    alt: text$1(180, 'Photograph description')
+  }, 'Newsletter')
+}, 'Jewellery page');
+const HOMELIVING = {
+  hero: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    headline: text$1(60, 'Headline'),
+    sub: text$1(200, 'Subline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link'),
+    note: text$1(60, 'Script note'),
+    picture: tone$1('Photograph and the wash colour behind the copy'),
+    position: position()
+  }, 'Hero'),
+  trust: group({
+    hidden: hidden(),
+    items: list$2(4, {
+      hidden: hidden(),
+      title: text$1(40, 'Title'),
+      sub: text$1(60, 'Line under it')
+    }, 'Items', 'Item')
+  }, 'Trust strip'),
+  categories: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: text$1(80, 'Heading'),
+    more: text$1(30, 'View-all label'),
+    link: link('View-all link')
+  }, 'Category circles'),
+  featured: group({
+    hidden: hidden(),
+    title: text$1(80, 'Heading'),
+    sub: text$1(120, 'Subline'),
+    more: text$1(30, 'View-all label'),
+    link: link('View-all link')
+  }, 'Featured row'),
+  promo: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    headline: text$1(80, 'Headline'),
+    sub: text$1(200, 'Subline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link'),
+    picture: tone$1('Photograph and the panel colour it fades into'),
+    badges: list$2(3, {
+      hidden: hidden(),
+      title: text$1(40, 'Badge')
+    }, 'Badges', 'Badge')
+  }, 'Promo banner')
+};
+const GROCERY = {
+  trust: group({
+    hidden: hidden(),
+    items: list$2(3, {
+      hidden: hidden(),
+      title: text$1(40, 'Title'),
+      sub: text$1(60, 'Line under it')
+    }, 'Items', 'Item')
+  }, 'Trust strip'),
+  hero: group({
+    hidden: hidden(),
+    headline: text$1(80, 'Headline'),
+    sub: text$1(200, 'Subline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link'),
+    note: text$1(60, 'Script note'),
+    picture: tone$1('Photograph and the wash colour behind the copy'),
+    position: position()
+  }, 'Hero'),
+  categories: group({
+    hidden: hidden()
+  }, 'Category circles'),
+  daily: group({
+    hidden: hidden(),
+    title: text$1(80, 'Heading'),
+    sub: text$1(120, 'Subline'),
+    more: text$1(30, 'See-all label'),
+    link: link('See-all link')
+  }, 'Daily essentials'),
+  promo: group({
+    hidden: hidden(),
+    headline: text$1(80, 'Headline'),
+    sub: text$1(200, 'Subline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link'),
+    picture: tone$1('Photograph and the panel colour beside it')
+  }, 'Promo banner')
+};
 const STOREFRONT_SCHEMAS = Object.freeze({
-  wellness: group({}),
-  homeliving: group({}),
-  grocery: group({}),
+  wellness: group(WELLNESS),
+  homeliving: group(HOMELIVING),
+  grocery: group(GROCERY),
   fashion: group({
     header: group({
       tagline: text$1(60),
@@ -3067,7 +3526,12 @@ const STOREFRONT_SCHEMAS = Object.freeze({
       brandsTitle: text$1(80),
       brandsCta: text$1(30),
       productsTitle: text$1(70)
-    })
+    }),
+    strips: FASHION_STRIPS,
+    women: WOMEN,
+    men: MEN,
+    sarees: SAREES,
+    jewellery: JEWELLERY$1
   }),
   lifestyle: group({
     header: group({
@@ -3089,8 +3553,16 @@ const STOREFRONT_SCHEMAS = Object.freeze({
     })
   })
 });
+/** The keys the Fashion and Lifestyle home pages have always had (storefrontCustomization.js normalises them). */
+Object.freeze({
+  fashion: Object.freeze(['header', 'hero', 'sections']),
+  lifestyle: Object.freeze(Object.keys(DEFAULT_LIFESTYLE_STOREFRONT))
+});
 const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const STORAGE_PATH = '/storage/v1/object/public/product-images/';
+const COLOUR = /^#[0-9a-fA-F]{6}$/;
+const CONTROL = /[\u0000-\u001f\u007f]/;
+const LINK = /^\/(?!\/)[^\s\\]*$/;
 
 /** An image uploaded through the admin: a Supabase project's product-images object, https, nothing else. */
 function isUploadedImage(value) {
@@ -3105,13 +3577,24 @@ function isUploadedImage(value) {
   if (url.href !== value) return false;
   return url.protocol === 'https:' && /^[a-z0-9]+\.supabase\.co$/.test(url.hostname) && !url.port && !url.username && url.pathname.startsWith(STORAGE_PATH) && /^[A-Za-z0-9/_.-]+$/.test(url.pathname.slice(STORAGE_PATH.length)) && !url.pathname.includes('..') && !url.search && !url.hash && safeVisualUrl(value) === url.href;
 }
+
+/** A photograph the site ships: an image file under /img/, nothing else. */
+const SHIPPED = /^\/img\/[A-Za-z0-9/_.-]+\.(webp|png|jpe?g|avif)$/;
 function checkImage(value, mode) {
   const local = safeVisualUrl(value);
-  if (local && value.startsWith('/') && !value.startsWith('//')) return null; // a file the site ships
+  if (local && value.startsWith('/') && !value.startsWith('//')) {
+    // a file the site ships
+    // The editor takes only an /img/ image; the build keeps letting through any safe path an older editor saved.
+    return mode === 'published' || SHIPPED.test(value) && !value.includes('..') ? null : 'Use an image uploaded here, or a path the site ships (/img/…).';
+  }
   if (isUploadedImage(value)) return null; // uploaded here
   if (mode === 'published' && local) return null; // an older saved URL; left as it is
   return 'Use an image uploaded here, or a path the site ships (/img/…).';
 }
+
+/** The field names an image-pair value carries. */
+const PIC_KEYS = Object.freeze(['phone', 'desktop']);
+const TONE_KEYS = Object.freeze(['colour', 'phone', 'desktop']);
 
 /**
  * Strict check of one store's content. Returns { value, errors }: `value` holds
@@ -3131,6 +3614,50 @@ function validateStorefrontContent(store, raw, {
     errors: {
       '': `Unknown storefront "${store}".`
     }
+  };
+  const textRule = (spec, input, path) => {
+    if (typeof input !== 'string') {
+      errors[path] = 'Expected text.';
+      return undefined;
+    }
+    const value = input.trim();
+    if (CONTROL.test(value)) {
+      errors[path] = 'Remove the control characters.';
+      return undefined;
+    }
+    if (value && value.length > spec.max) errors[path] = `Keep it to ${spec.max} characters (it has ${value.length}).`;
+    return value;
+  };
+  const imagePair = (keys, input, path, colour) => {
+    if (!isObject(input)) {
+      errors[path] = 'Expected a photograph.';
+      return {};
+    }
+    const out = {};
+    for (const [key, v] of Object.entries(input)) {
+      if (!keys.includes(key)) {
+        errors[`${path}.${key}`] = 'Not a field of this storefront.';
+        continue;
+      }
+      if (typeof v !== 'string') {
+        errors[`${path}.${key}`] = 'Expected text.';
+        continue;
+      }
+      const value = v.trim();
+      out[key] = value;
+      if (!value) continue;
+      if (key === 'colour') {
+        if (!COLOUR.test(value)) errors[`${path}.colour`] = 'Use a colour like #F4EFE6.';
+        continue;
+      }
+      const problem = checkImage(value, mode);
+      if (problem) errors[`${path}.${key}`] = problem;
+    }
+    const set = keys.filter(k => out[k]);
+    if (set.length && set.length !== keys.length) {
+      errors[path] = colour ? 'Set the photograph (phone and desktop) and its background colour together, or leave all three empty.' : 'Upload both photographs, phone and desktop, or leave both empty.';
+    }
+    return out;
   };
   const walk = (spec, input, path) => {
     const at = key => path ? `${path}.${key}` : key;
@@ -3158,19 +3685,37 @@ function validateStorefrontContent(store, raw, {
       if (input.length > spec.length) errors[path] = `At most ${spec.length} entries.`;
       return input.slice(0, spec.length).map((entry, i) => walk(group(spec.fields), entry, `${path}.${i}`));
     }
+    if (spec.type === 'bool') {
+      if (typeof input !== 'boolean') {
+        errors[path] = 'Expected on or off.';
+        return undefined;
+      }
+      return input;
+    }
+    if (spec.type === 'pic') return imagePair(PIC_KEYS, input, path, false);
+    if (spec.type === 'tone') return imagePair(TONE_KEYS, input, path, true);
+    if (spec.type === 'lines') {
+      if (!Array.isArray(input)) {
+        errors[path] = 'Expected lines of text.';
+        return [];
+      }
+      if (input.length > spec.length) errors[path] = `At most ${spec.length} lines.`;
+      return input.slice(0, spec.length).map((line, i) => textRule(spec, line, `${path}.${i}`) ?? '');
+    }
     if (typeof input !== 'string') {
       errors[path] = 'Expected text.';
       return undefined;
     }
     const value = input.trim();
     if (spec.type === 'id') return value;
-    if (/[\u0000-\u001f\u007f]/.test(value)) {
+    if (CONTROL.test(value)) {
       errors[path] = 'Remove the control characters.';
       return undefined;
     }
     if (!value) return '';
+    if (spec.type === 'enum' && !spec.options.includes(value)) errors[path] = `Choose one of: ${spec.options.join(', ')}.`;
     if (spec.type === 'text' && value.length > spec.max) errors[path] = `Keep it to ${spec.max} characters (it has ${value.length}).`;
-    if (spec.type === 'link' && (!/^\/(?!\/)[^\s\\]*$/.test(value) || value.length > spec.max)) errors[path] = 'Use a page of this site, starting with / (e.g. /fashion/c/clothing).';
+    if (spec.type === 'link' && (!LINK.test(value) || value.length > spec.max)) errors[path] = 'Use a page of this site, starting with / (e.g. /fashion/c/clothing).';
     if (spec.type === 'image') {
       const problem = checkImage(value, mode);
       if (problem) errors[path] = problem;
@@ -3182,6 +3727,82 @@ function validateStorefrontContent(store, raw, {
     value,
     errors
   };
+}
+
+// ---- The page's reading: lenient, field by field -----------------------------------------------
+const goodText = (v, max) => typeof v === 'string' && !!v.trim() && v.trim().length <= max && !CONTROL.test(v);
+const goodImage = v => typeof v === 'string' && !!v.trim() && checkImage(v.trim(), 'published') === null;
+const goodLink = (v, max) => typeof v === 'string' && LINK.test(v.trim()) && v.trim().length <= max && !!v.trim();
+
+/**
+ * One field (or group, or list) as the page should render it: the published value where it
+ * passes its rule, the built-in value where it does not. Never throws; never returns a value
+ * that broke a rule. `defaults` carries the section's built-in content in the schema's shape
+ * (plus anything only the component uses, which passes through untouched).
+ */
+function readSection(spec, raw, defaults) {
+  if (!spec) return defaults;
+  switch (spec.type) {
+    case 'group':
+      {
+        const base = isObject(defaults) ? defaults : {};
+        const source = isObject(raw) ? raw : {};
+        const out = {
+          ...base
+        };
+        for (const [key, field] of Object.entries(spec.fields)) out[key] = readSection(field, source[key], base[key]);
+        return out;
+      }
+    case 'list':
+      {
+        const base = Array.isArray(defaults) ? defaults : [];
+        const source = Array.isArray(raw) ? raw : [];
+        return base.map((item, i) => readSection(group(spec.fields), source[i], item));
+      }
+    case 'lines':
+      {
+        const base = Array.isArray(defaults) ? defaults : [];
+        const source = Array.isArray(raw) ? raw : [];
+        return base.map((line, i) => goodText(source[i], spec.max) ? source[i].trim() : line);
+      }
+    case 'text':
+      return goodText(raw, spec.max) ? raw.trim() : defaults;
+    case 'link':
+      return goodLink(raw, spec.max) ? raw.trim() : defaults;
+    case 'image':
+      return goodImage(raw) ? raw.trim() : defaults;
+    case 'bool':
+      return typeof raw === 'boolean' ? raw : defaults ?? false;
+    case 'enum':
+      return typeof raw === 'string' && spec.options.includes(raw.trim()) ? raw.trim() : defaults;
+    case 'pic':
+      return isObject(raw) && goodImage(raw.phone) && goodImage(raw.desktop) ? {
+        phone: raw.phone.trim(),
+        desktop: raw.desktop.trim()
+      } : defaults;
+    case 'tone':
+      return isObject(raw) && goodImage(raw.phone) && goodImage(raw.desktop) && typeof raw.colour === 'string' && COLOUR.test(raw.colour.trim()) ? {
+        colour: raw.colour.trim(),
+        phone: raw.phone.trim(),
+        desktop: raw.desktop.trim()
+      } : defaults;
+    default:
+      return defaults;
+  }
+}
+
+/** The schema at a dotted path inside a store ("women.hero"), or null. */
+function sectionSpec(store, path) {
+  let spec = STOREFRONT_SCHEMAS[store] || null;
+  for (const key of String(path || '').split('.').filter(Boolean)) spec = spec?.type === 'group' ? spec.fields[key] || null : null;
+  return spec;
+}
+
+/** The raw value at a dotted path inside a store's content, or undefined. */
+function sectionContent(content, path) {
+  let node = content;
+  for (const key of String(path || '').split('.').filter(Boolean)) node = isObject(node) ? node[key] : undefined;
+  return node;
 }
 
 /** What the build wrote into the page: { stores: { fashion: {...}, ... }, versions }, or null. Never throws. */
@@ -3652,6 +4273,18 @@ const publishedKeys = stores => Object.fromEntries(Object.entries(PUBLISHED_HOME
 let homepage = {
   ...publishedKeys(inlined?.stores)
 };
+
+// Every store's published content, as the build wrote it — the sections each page lets an
+// admin edit read theirs from here (useStorefrontSection), field by field, before the first render.
+let storefronts = inlined?.stores && typeof inlined.stores === 'object' ? {
+  ...inlined.stores
+} : {};
+const storefrontListeners = new Set();
+const getStorefrontsSnapshot = () => storefronts;
+function subscribeStorefronts(listener) {
+  storefrontListeners.add(listener);
+  return () => storefrontListeners.delete(listener);
+}
 let contact = {
   phone: '',
   email: '',
@@ -3704,14 +4337,21 @@ function applyHomepage(v) {
  * drafts replace the published storefronts in this tab until it is reloaded without it.
  */
 function applyStorefrontDrafts(rows) {
-  const stores = Object.fromEntries((Array.isArray(rows) ? rows : []).filter(r => r && typeof r.store === 'string').map(r => [r.store, r.content]));
-  const next = publishedKeys(stores);
-  if (!Object.keys(next).length) return false;
-  homepage = {
-    ...homepage,
-    ...next
+  const stores = Object.fromEntries((Array.isArray(rows) ? rows : []).filter(r => r && typeof r.store === 'string' && r.content && typeof r.content === 'object').map(r => [r.store, r.content]));
+  if (!Object.keys(stores).length) return false;
+  storefronts = {
+    ...storefronts,
+    ...stores
   };
-  homepageListeners.forEach(listener => listener());
+  storefrontListeners.forEach(listener => listener());
+  const next = publishedKeys(stores);
+  if (Object.keys(next).length) {
+    homepage = {
+      ...homepage,
+      ...next
+    };
+    homepageListeners.forEach(listener => listener());
+  }
   return true;
 }
 function applyContact(v) {
@@ -30745,6 +31385,74 @@ const PROMO$2 = {
   cta: 'Shop Fresh',
   href: '/grocery/category/everyday-staples'
 };
+
+/** The three facts above the hero. The delivery one is the only factual claim. */
+const TRUST$2 = [{
+  icon: 'truck',
+  title: 'Standard Delivery',
+  sub: GROCERY_DELIVERY_WINDOW
+}, {
+  icon: 'leaf',
+  title: 'Fresh Products',
+  sub: 'Sourced with care'
+}, {
+  icon: 'shield',
+  title: 'Trusted Quality',
+  sub: 'Good food, safer lives'
+}];
+
+/**
+ * What the admin edits (Storefronts → Grocery): the homepage's sections in the schema's shape
+ * (storefrontContent.js), built from the content above. What is published replaces them field by
+ * field; a field that breaks its rule stays as it is here. `icon` and `id` ride along.
+ */
+const HERO$2 = HERO_SLIDES$3[0];
+const GROCERY_SECTIONS = Object.freeze({
+  trust: {
+    hidden: false,
+    items: TRUST$2.map(t => ({
+      ...t,
+      hidden: false
+    }))
+  },
+  hero: {
+    id: HERO$2.id,
+    hidden: false,
+    headline: HERO$2.headline,
+    sub: HERO$2.sub,
+    cta: HERO$2.cta,
+    link: HERO$2.href,
+    note: HERO$2.note,
+    picture: {
+      colour: '',
+      phone: HERO$2.image,
+      desktop: HERO$2.image
+    },
+    position: 'left'
+  },
+  categories: {
+    hidden: false
+  },
+  daily: {
+    hidden: false,
+    title: DAILY_ESSENTIALS.title,
+    sub: DAILY_ESSENTIALS.sub,
+    more: 'See all',
+    link: DAILY_ESSENTIALS.seeAll
+  },
+  promo: {
+    hidden: false,
+    headline: PROMO$2.headline,
+    sub: PROMO$2.sub,
+    cta: PROMO$2.cta,
+    link: PROMO$2.href,
+    picture: {
+      colour: '',
+      phone: PROMO$2.image,
+      desktop: PROMO$2.image
+    }
+  }
+});
 const categoryHref$2 = c => `/grocery/category/${c.slug}`;
 
 // ---- Row shapes ----------------------------------------------------------------
@@ -31014,7 +31722,7 @@ const HERO_SLIDES$2 = [{
 }];
 
 /** The four badges under the hero copy. The delivery one is the only factual claim. */
-const TRUST$2 = [{
+const TRUST$1 = [{
   icon: 'sparkle',
   title: 'Premium Fabrics',
   sub: 'Chosen for touch and wear'
@@ -31060,6 +31768,69 @@ const PROMO$1 = {
     title: 'Beautiful Homes, Happier Lives'
   }]
 };
+
+/**
+ * What the admin edits (Storefronts → Home & Living): the homepage's sections in the schema's
+ * shape (storefrontContent.js), built from the content above. What is published replaces them
+ * field by field; a field that breaks its rule stays as it is here. `icon` and `id` ride along.
+ */
+const HERO$1 = HERO_SLIDES$2[0];
+const HOMELIVING_SECTIONS = Object.freeze({
+  hero: {
+    id: HERO$1.id,
+    hidden: false,
+    eyebrow: HERO$1.eyebrow,
+    headline: HERO$1.headline,
+    sub: HERO$1.sub,
+    cta: HERO$1.cta,
+    link: HERO$1.href,
+    note: HERO$1.note,
+    picture: {
+      colour: '',
+      phone: HERO$1.image.tall,
+      desktop: HERO$1.image.wide
+    },
+    position: 'left'
+  },
+  trust: {
+    hidden: false,
+    items: TRUST$1.map(t => ({
+      ...t,
+      hidden: false
+    }))
+  },
+  categories: {
+    hidden: false,
+    eyebrow: CATEGORY_SECTION.eyebrow,
+    title: CATEGORY_SECTION.title,
+    more: 'View all',
+    link: CATEGORY_SECTION.viewAll
+  },
+  featured: {
+    hidden: false,
+    title: FEATURED.title,
+    sub: FEATURED.sub,
+    more: 'View all',
+    link: FEATURED.seeAll
+  },
+  promo: {
+    hidden: false,
+    eyebrow: PROMO$1.eyebrow,
+    headline: PROMO$1.headline,
+    sub: PROMO$1.sub,
+    cta: PROMO$1.cta,
+    link: PROMO$1.href,
+    picture: {
+      colour: '',
+      phone: PROMO$1.image,
+      desktop: PROMO$1.image
+    },
+    badges: PROMO$1.badges.map(b => ({
+      ...b,
+      hidden: false
+    }))
+  }
+});
 const categoryHref$1 = c => `/homeliving/category/${c.slug}`;
 
 // ---- Row shapes ----------------------------------------------------------------
@@ -34723,8 +35494,74 @@ function FashionEntryLink({
   });
 }
 
+// ============================================================
+// The page side of storefront content: a section reads what is published for
+// it — field by field, through its schema — over its built-in content.
+//
+//   const hero = useStorefrontSection('fashion', 'women.hero', WOMEN_HERO);
+//
+// A field that is missing or breaks its rule comes back as the built-in value
+// (readSection); with nothing published the section is exactly its defaults, so
+// a page renders as it always has. In an admin's ?preview=draft tab the drafts
+// stand in for the published content (settings.js → applyStorefrontDrafts).
+// ============================================================
+
+/** A section's content as the page renders it. `defaults` must be a module-level constant. */
+function useStorefrontSection(store, path, defaults) {
+  const stores = reactExports.useSyncExternalStore(subscribeStorefronts, getStorefrontsSnapshot, getStorefrontsSnapshot);
+  const raw = sectionContent(stores?.[store], path);
+  return reactExports.useMemo(() => raw === undefined ? defaults : readSection(sectionSpec(store, path), raw, defaults), [store, path, raw, defaults]);
+}
+
+/** Lines of a headline with the empty ones left out (an empty extra line is "none"). */
+const filledLines = lines => Array.isArray(lines) ? lines.filter(line => typeof line === 'string' && line) : [];
+
+/** Copy position as a data attribute: nothing for the built-in place (left), so a default page renders as before. */
+const positionAttr = position => position && position !== 'left' ? {
+  'data-pos': position
+} : {};
+
+/** A built-in editorial image as the section's photograph pair: its phone variant when it has one. */
+const shot = image => ({
+  phone: image.mobile || image.src || image.fallback,
+  desktop: image.src || image.fallback
+});
+
+/**
+ * The image an item renders. Until both photographs are replaced it is the built-in image object
+ * itself (its srcset, sizes and intrinsic size intact) — only its description may change; once
+ * replaced, it is the uploaded pair: the desktop file, and the phone file under 700px.
+ */
+function imageFor(item) {
+  const builtIn = shot(item.image);
+  if (item.picture.desktop === builtIn.desktop && item.picture.phone === builtIn.phone) {
+    return item.alt === item.image.alt ? item.image : {
+      ...item.image,
+      alt: item.alt
+    };
+  }
+  const {
+    desktop,
+    phone
+  } = item.picture;
+  return {
+    src: desktop,
+    fallback: desktop,
+    alt: item.alt,
+    width: item.image.width,
+    height: item.image.height,
+    sizes: item.image.sizes,
+    ...(phone !== desktop ? {
+      mobile: phone
+    } : {})
+  };
+}
+
+/** A link the admin set, or the page's own when the field is left empty. */
+const linkOr = (link, fallback) => link ? link : fallback;
+
 const HERO_AUTOPLAY_MS = 6000;
-const PHONE$1 = '(max-width: 700px)';
+const PHONE$2 = '(max-width: 700px)';
 const HERO_SLIDES$1 = [{
   key: 'everyday',
   // Two lines on a phone, as in the mockup; one line, dot-separated, from 701px.
@@ -34754,7 +35591,7 @@ const HERO_SLIDES$1 = [{
 }];
 
 // A title in two parts is two lines on a phone, where its note gives way so every item is two lines.
-const TRUST$1 = [{
+const TRUST = [{
   icon: 'truck',
   title: ['Free Standard', 'Delivery'],
   note: 'On every order',
@@ -34810,11 +35647,61 @@ const STORES$1 = [{
   size: 344
 }];
 
+// The hero and the jewellery banner are the admin's (Storefronts → Wellness homepage): these are
+// their built-in content in the schema's shape (storefrontContent.js). What is published replaces
+// it field by field; a field that breaks its rule stays as it is here.
+const HERO_SECTION = Object.freeze({
+  hidden: false,
+  slides: HERO_SLIDES$1.map(s => ({
+    ...s,
+    hidden: false,
+    eyebrow: [s.eyebrow[0] || '', s.eyebrow[1] || ''],
+    title: [s.title[0], s.title[1]],
+    ctaLabel: s.cta?.label || '',
+    ctaLink: s.cta?.to || '',
+    picture: {
+      colour: '',
+      phone: s.phone,
+      desktop: s.image
+    },
+    position: 'left'
+  }))
+});
+
+/** The hero's slides as HomeHero renders them: the hidden ones left out, a button only with a label and a link. */
+function heroSlidesOf(section) {
+  if (section.hidden) return [];
+  return section.slides.filter(s => !s.hidden).map(s => ({
+    ...s,
+    eyebrow: filledLines(s.eyebrow),
+    cta: s.ctaLabel && s.ctaLink ? {
+      label: s.ctaLabel,
+      to: s.ctaLink
+    } : null,
+    image: s.picture.desktop,
+    phone: s.picture.phone,
+    colour: s.picture.colour
+  }));
+}
+
+/** A slide's page colour (only when the admin set one with its photograph) and its copy position. */
+const slideLook$1 = s => ({
+  ...positionAttr(s.position),
+  ...(s.colour ? {
+    'data-tone': '',
+    style: {
+      '--sf-tone': s.colour
+    }
+  } : {})
+});
+
 /** The slides, one in view on a transform-only track; the first slide's title is the page's h1. */
 function HomeHero({
-  slides = HERO_SLIDES$1,
+  slides: given,
   autoplayMs = HERO_AUTOPLAY_MS
 }) {
+  const section = useStorefrontSection('wellness', 'hero', HERO_SECTION);
+  const slides = given || heroSlidesOf(section);
   const [index, setIndex] = reactExports.useState(0);
   const [paused, setPaused] = reactExports.useState(false);
   const reduced = reactExports.useRef(false);
@@ -34899,13 +35786,14 @@ function HomeHero({
           const current = i === index;
           return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
             className: `hx-hero__slide hx-hero__slide--${s.key}`,
+            ...slideLook$1(s),
             "aria-hidden": !current,
             "aria-roledescription": "slide",
             "aria-label": `${i + 1} of ${n}`,
             children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
               src: s.image,
               sources: [{
-                media: PHONE$1,
+                media: PHONE$2,
                 srcSet: s.phone
               }],
               alt: s.alt,
@@ -34966,7 +35854,7 @@ function HomeTrustStrip() {
     "aria-label": "Shopping with SORA LIFE",
     children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
       className: "hx-wrap hx-trust__list",
-      children: TRUST$1.map(t => {
+      children: TRUST.map(t => {
         const title = t.title.join(' ');
         const body = /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -35162,14 +36050,47 @@ const JEWELLERY_BANNER = {
   tall: '/img/home-jewellery-portrait.webp',
   alt: 'A gold necklace and drop earrings with clear stones on a marble tray, among white flowers and ivory satin, a hand wearing a matching ring'
 };
+const JEWELLERY_BANNER_SECTION = Object.freeze({
+  hidden: false,
+  eyebrow: JEWELLERY_BANNER.eyebrow,
+  title: [...JEWELLERY_BANNER.title],
+  text: JEWELLERY_BANNER.text,
+  cta: JEWELLERY_BANNER.cta,
+  link: JEWELLERY_BANNER.to,
+  picture: {
+    phone: JEWELLERY_BANNER.tall,
+    desktop: JEWELLERY_BANNER.wide.src
+  },
+  alt: JEWELLERY_BANNER.alt,
+  position: 'left'
+});
+
+/** The banner as JewelleryBanner renders it, from its section. */
+const jewelleryBannerOf = s => ({
+  to: s.link,
+  eyebrow: s.eyebrow,
+  title: s.title,
+  text: s.text,
+  cta: s.cta,
+  wide: {
+    ...JEWELLERY_BANNER.wide,
+    src: s.picture.desktop
+  },
+  tall: s.picture.phone,
+  alt: s.alt,
+  position: s.position
+});
 
 /** Full-bleed and square-edged under the fashion category strip: one whole-banner link, every word on the photograph. */
 function JewelleryBanner({
-  banner = JEWELLERY_BANNER
+  banner
 }) {
-  const b = banner;
+  const section = useStorefrontSection('wellness', 'jewelleryBanner', JEWELLERY_BANNER_SECTION);
+  if (!banner && section.hidden) return null;
+  const b = banner || jewelleryBannerOf(section);
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "hx hx-jewel",
+    ...positionAttr(b.position),
     "aria-labelledby": "hx-jewel-h",
     children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
       to: b.to,
@@ -35180,7 +36101,7 @@ function JewelleryBanner({
         children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
           src: b.wide.src,
           sources: [{
-            media: PHONE$1,
+            media: PHONE$2,
             srcSet: b.tall
           }],
           alt: b.alt,
@@ -35229,7 +36150,7 @@ function FestivePromo() {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
           src: "/img/home-promo-festive.webp",
           sources: [{
-            media: PHONE$1,
+            media: PHONE$2,
             srcSet: '/img/home-promo-festive-800.webp'
           }],
           alt: "A gift box tied with an orange ribbon beside a lit diya and marigolds",
@@ -38197,7 +39118,7 @@ function HomeLeaderboard({
 }
 
 const TALL = '(max-width: 1023px)';
-const PHONE = '(max-width: 700px)';
+const PHONE$1 = '(max-width: 700px)';
 const AUTOPLAY_MS$3 = 6000;
 const STRIP_AUTOPLAY_MS = 4500;
 const LIFESTYLE = {
@@ -38312,6 +39233,65 @@ const STORES = [{
   detailsLabel: 'Explore home and living',
   details: [['leaf', 'Soft textures'], ['home', 'Calm spaces'], ['grid', 'Everyday living']]
 }];
+
+// The Lifestyle banner and the store carousel are the admin's (Storefronts → Wellness homepage):
+// these are their built-in content in the schema's shape (storefrontContent.js). What is published
+// replaces it field by field; a field that breaks its rule stays as it is here.
+const LIFESTYLE_SECTION = Object.freeze({
+  hidden: false,
+  eyebrow: LIFESTYLE.eyebrow,
+  title: [...LIFESTYLE.heading],
+  text: LIFESTYLE.description,
+  cta: LIFESTYLE.cta,
+  link: LIFESTYLE.to,
+  picture: {
+    phone: LIFESTYLE.tall,
+    desktop: LIFESTYLE.wide
+  },
+  alt: LIFESTYLE.alt,
+  position: 'left'
+});
+const lifestyleOf = s => ({
+  ...LIFESTYLE,
+  to: s.link,
+  eyebrow: s.eyebrow,
+  heading: s.title,
+  description: s.text,
+  cta: s.cta,
+  wide: s.picture.desktop,
+  tall: s.picture.phone,
+  alt: s.alt,
+  position: s.position
+});
+const STORE_CAROUSEL_SECTION = Object.freeze({
+  hidden: false,
+  eyebrow: 'More to explore',
+  title: 'Two Worlds. A Better You.',
+  text: 'Fashion for your style. Living for your space. All at SORA LIFE.',
+  cards: STORES.map(s => ({
+    ...s,
+    hidden: false,
+    title: [...s.heading],
+    text: s.description,
+    link: s.to,
+    picture: {
+      phone: s.tall,
+      desktop: s.wide
+    },
+    details: s.details.map(([, label]) => label),
+    icons: s.details.map(([icon]) => icon)
+  }))
+});
+/** The cards as DoorwayCarousel takes them: the hidden ones left out. */
+const storeCardsOf = section => section.cards.filter(c => !c.hidden).map(c => ({
+  ...c,
+  heading: c.title,
+  description: c.text,
+  to: c.link,
+  wide: c.picture.desktop,
+  tall: c.picture.phone,
+  details: c.details.map((label, i) => [c.icons[i], label])
+}));
 
 /** One photograph, every word on it. `tall` (optional) is the portrait the browser takes under 1024px. */
 function DoorwayCard({
@@ -38685,10 +39665,12 @@ function FashionCategoryStrip({
  * directly beneath. Sits after the offers.
  */
 function LifestyleBanner() {
-  const s = LIFESTYLE;
+  const section = useStorefrontSection('wellness', 'lifestyleBanner', LIFESTYLE_SECTION);
+  const s = lifestyleOf(section);
   return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    children: [!section.hidden && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
       className: "fsb-lead",
+      ...positionAttr(s.position),
       "aria-labelledby": "fsb-lifestyle-h fsb-lifestyle-cta",
       children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: s.to,
@@ -38699,7 +39681,7 @@ function LifestyleBanner() {
           children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
             src: s.wide,
             sources: [{
-              media: PHONE,
+              media: PHONE$1,
               srcSet: s.tall
             }],
             alt: s.alt,
@@ -38739,6 +39721,9 @@ function LifestyleBanner() {
 
 /** The two store cards under their heading. Sits just above the popular rail. */
 function StoreCarousel() {
+  const section = useStorefrontSection('wellness', 'storeCarousel', STORE_CAROUSEL_SECTION);
+  const cards = storeCardsOf(section);
+  if (section.hidden || cards.length === 0) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "v2-sec fsb",
     "aria-labelledby": "fsb-h",
@@ -38749,15 +39734,17 @@ function StoreCarousel() {
         className: "fsb__intro",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "fsb__eyebrow fsb__overline",
-          children: "More to explore"
+          children: section.eyebrow
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           id: "fsb-h",
-          children: "Two Worlds. A Better You."
+          children: section.title
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "fsb__lede",
-          children: "Fashion for your style. Living for your space. All at SORA LIFE."
+          children: section.text
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCarousel, {})]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCarousel, {
+        stores: cards
+      })]
     })
   });
 }
@@ -60557,6 +61544,13 @@ function useFashionCatalogue() {
 }
 
 const SEARCH_PLACEHOLDER$2 = 'Search for fashion, lifestyle and more…';
+
+/** The delivery strip under the search bar — the admin's (Storefronts → Fashion → strips); this is its built-in content. */
+const DELIVERY_STRIP = Object.freeze({
+  hidden: false,
+  location: 'Delivering across India',
+  promise: 'Delivery in 6–7 business days'
+});
 function FashionLogo({
   tagline
 }) {
@@ -60587,6 +61581,7 @@ function FashionHeader({
   const location = useLocation();
   const homepage = reactExports.useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
   const config = normalizeFashionStorefront(homepage.fashion_storefront);
+  const strip = useStorefrontSection('fashion', 'strips.delivery', DELIVERY_STRIP);
   const [q, setQ] = reactExports.useState(() => new URLSearchParams(location.search).get('q') || '');
   const submit = e => {
     e.preventDefault();
@@ -60916,7 +61911,7 @@ function FashionHeader({
           size: 22
         })
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    }), !strip.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-strip",
       "aria-label": "Delivery",
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
@@ -60924,7 +61919,7 @@ function FashionHeader({
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "mapPin",
           size: 18
-        }), " Delivering across India"]
+        }), " ", strip.location]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "fs-strip__sep",
         "aria-hidden": "true"
@@ -60933,7 +61928,7 @@ function FashionHeader({
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "truck",
           size: 20
-        }), " Delivery in 6\u20137 business days"]
+        }), " ", strip.promise]
       })]
     })]
   });
@@ -61568,10 +62563,26 @@ function CategoryTiles({
   });
 }
 const BENEFITS = [['truck', 'Free standard', 'delivery*'], ['card', 'UPI & cards', 'at checkout'], ['package', 'Cash on', 'delivery'], ['tag', 'Coupons', '& offers']];
+/** The benefits strip — the admin's (Storefronts → Fashion → strips); this is its built-in content. */
+const BENEFITS_STRIP = Object.freeze({
+  hidden: false,
+  signIn: 'Sign in',
+  signInText: 'for exclusive benefits',
+  account: 'Your account',
+  accountText: 'orders & addresses',
+  items: BENEFITS.map(([icon, line1, line2]) => ({
+    hidden: false,
+    icon,
+    line1,
+    line2
+  }))
+});
 function Benefits() {
   const {
     session
   } = useCustomerAuth();
+  const strip = useStorefrontSection('fashion', 'strips.benefits', BENEFITS_STRIP);
+  if (strip.hidden) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "fs-benefits",
     "aria-label": "Benefits",
@@ -61584,12 +62595,12 @@ function Benefits() {
       }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
         children: session ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-            children: "Your account"
-          }), " orders & addresses"]
+            children: strip.account
+          }), " ", strip.accountText]
         }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-            children: "Sign in"
-          }), " for exclusive benefits"]
+            children: strip.signIn
+          }), " ", strip.signInText]
         })
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
         name: "chevronRight",
@@ -61597,14 +62608,14 @@ function Benefits() {
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
       className: "fs-benefits__list",
-      children: BENEFITS.map(([icon, a, b]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+      children: strip.items.filter(item => !item.hidden).map(item => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: icon,
+          name: item.icon,
           size: 26
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-          children: [a, /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), b]
+          children: [item.line1, /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), item.line2]
         })]
-      }, a))
+      }, item.line1))
     })]
   });
 }
@@ -61818,7 +62829,7 @@ function FashionHome() {
 
 // Presentation only. Supplied editorial artwork is independent of inventory.
 // Product images/prices continue to come from the existing catalogue.
-const photo = (fallback, alt, src = '') => ({
+const photo$1 = (fallback, alt, src = '') => ({
   src,
   fallback,
   alt
@@ -61849,39 +62860,39 @@ const DEPARTMENT_CONTENT = {
     collections: [{
       title: 'Shirts',
       slug: 'mens-shirts',
-      image: photo('/img/demo-mens-shirt.webp', 'A sage shirt')
+      image: photo$1('/img/demo-mens-shirt.webp', 'A sage shirt')
     }, {
       title: 'T-shirts',
       slug: 'mens-t-shirts',
-      image: photo('/img/fashion-circle-men.webp', 'Relaxed menswear')
+      image: photo$1('/img/fashion-circle-men.webp', 'Relaxed menswear')
     }, {
       title: 'Trousers',
       slug: 'mens-trousers',
-      image: photo('/img/fashion-card-clothing.webp', 'Everyday clothing')
+      image: photo$1('/img/fashion-card-clothing.webp', 'Everyday clothing')
     }],
     editorial: [{
       eyebrow: 'Less effort. More style.',
       title: 'Make it your uniform.',
       text: 'Build a wardrobe that works together.',
-      image: photo('/img/fashion-circle-men.webp', 'Casual menswear edit')
+      image: photo$1('/img/fashion-circle-men.webp', 'Casual menswear edit')
     }, {
       eyebrow: 'The details matter',
       title: 'Keep it effortless.',
       text: 'Fresh combinations for your everyday rotation.',
-      image: photo('/img/demo-mens-shirt.webp', 'Linen shirt detail')
+      image: photo$1('/img/demo-mens-shirt.webp', 'Linen shirt detail')
     }],
     looks: [{
       title: 'The daily layer',
-      image: photo('/img/fashion-circle-men.webp', 'Layered menswear styling')
+      image: photo$1('/img/fashion-circle-men.webp', 'Layered menswear styling')
     }, {
       title: 'Quiet confidence',
-      image: photo('/img/demo-mens-shirt.webp', 'Neutral menswear essential')
+      image: photo$1('/img/demo-mens-shirt.webp', 'Neutral menswear essential')
     }, {
       title: 'Easy weekends',
-      image: photo('/img/fashion-card-clothing.webp', 'Weekend clothing edit')
+      image: photo$1('/img/fashion-card-clothing.webp', 'Weekend clothing edit')
     }, {
       title: 'Finishing touches',
-      image: photo('/img/fashion-circle-men.webp', 'Menswear finishing details')
+      image: photo$1('/img/fashion-circle-men.webp', 'Menswear finishing details')
     }]
   },
   // /fashion/women: the main women's page. The tiles are editorial photography with
@@ -62136,6 +63147,177 @@ const DEPARTMENT_CONTENT = {
   }
 };
 
+// ---- What the admin edits (Storefronts → Fashion) ---------------------------------------------
+// Each page's sections in the schema's shape (storefrontContent.js), built from the content above.
+// What is published replaces them field by field; a field that breaks its rule stays as it is here.
+// An empty link means the page's own (the catalogue listing the tile or button opens today).
+// `image`, `icon`, `slug` and `root` ride along for the page; the admin never edits them.
+const edited$1 = image => ({
+  image,
+  picture: shot(image),
+  alt: image.alt
+});
+const item = entry => ({
+  ...entry,
+  hidden: false,
+  link: '',
+  ...edited$1(entry.image)
+});
+const facts = rows => ({
+  hidden: false,
+  items: rows.map(([icon, title, text, link = '']) => ({
+    hidden: false,
+    icon,
+    title,
+    text,
+    link
+  }))
+});
+const W = DEPARTMENT_CONTENT.women;
+const M = DEPARTMENT_CONTENT.men;
+const S = DEPARTMENT_CONTENT.sarees;
+const DEPARTMENT_SECTIONS = Object.freeze({
+  women: {
+    hero: {
+      hidden: false,
+      eyebrow: W.eyebrow,
+      title: [...W.title],
+      intro: W.intro,
+      cta: W.cta,
+      link: '',
+      ...edited$1(W.hero),
+      position: 'left'
+    },
+    categories: {
+      hidden: false,
+      title: 'Shop by category',
+      items: W.categories.map(item)
+    },
+    products: {
+      hidden: false,
+      newTitle: 'New in',
+      title: 'From the collection',
+      viewAll: 'View all'
+    },
+    edits: {
+      hidden: false,
+      items: W.edits.map(item)
+    },
+    capsule: {
+      hidden: false,
+      title: 'The capsule edit',
+      cta: 'Shop',
+      items: W.capsule.map(item)
+    },
+    sarees: {
+      hidden: false,
+      eyebrow: W.sarees.eyebrow,
+      title: W.sarees.title,
+      text: W.sarees.text,
+      cta: W.sarees.cta,
+      link: '/fashion/women/sarees',
+      ...edited$1(W.sarees.image)
+    },
+    jewellery: {
+      hidden: false,
+      eyebrow: W.jewellery.eyebrow,
+      title: W.jewellery.title,
+      text: W.jewellery.text,
+      cta: W.jewellery.cta,
+      link: '/fashion/jewellery',
+      ...edited$1(W.jewellery.image)
+    },
+    services: facts([['truck', 'Standard delivery', '6–7 business days', '/shipping'], ['return', 'Returns', 'Within 7 days of delivery', '/returns'], ['chat', 'Need help?', 'Contact our team', '/contact']])
+  },
+  men: {
+    hero: {
+      hidden: false,
+      eyebrow: M.eyebrow,
+      title: [...M.title],
+      intro: M.intro,
+      cta: M.cta,
+      link: '',
+      note: M.heroNote,
+      ...edited$1(M.hero),
+      position: 'left'
+    },
+    highlights: facts([['sparkle', 'Everyday style', 'Find your own rhythm'], ['star', 'The wardrobe edit', 'Pieces to make yours'], ['grid', 'Mix. Match. Repeat.', 'A fresh perspective'], ['bag', 'Your next favourite', 'Explore the collection']]),
+    collections: {
+      hidden: false,
+      eyebrow: 'Shop by collection',
+      title: M.collectionTitle,
+      more: 'Explore all',
+      items: M.collections.map(item)
+    },
+    editorial: {
+      hidden: false,
+      items: M.editorial.map(entry => ({
+        ...item(entry),
+        cta: 'Discover the edit'
+      }))
+    },
+    products: {
+      hidden: false,
+      eyebrow: 'Curated for you',
+      title: M.productsTitle,
+      more: 'Explore all'
+    },
+    looks: {
+      hidden: false,
+      eyebrow: 'Wear it your way',
+      title: 'Shop the look',
+      more: 'Explore all',
+      items: M.looks.map(item)
+    },
+    closing: {
+      hidden: false,
+      eyebrow: `SORA LIFE / ${M.label}`,
+      title: 'Good style. Your rules.',
+      cta: 'Find your next favourite',
+      link: ''
+    }
+  },
+  sarees: {
+    hero: {
+      hidden: false,
+      eyebrow: S.eyebrow,
+      title: [...S.title],
+      intro: S.intro,
+      cta: S.cta,
+      link: '',
+      position: 'left',
+      slides: [S.hero, S.alternateHero].map(edited$1)
+    },
+    collections: {
+      hidden: false,
+      eyebrow: 'Shop by category',
+      title: ['Explore Our', 'Collections'],
+      text: ['Discover sarees for every mood,', 'occasion and style.'],
+      viewAll: 'View all',
+      items: S.collections.map(item)
+    },
+    editorial: {
+      hidden: false,
+      items: S.editorial.map(item)
+    },
+    products: {
+      hidden: false,
+      eyebrow: 'The wardrobe edit',
+      title: S.productsTitle,
+      text: ['Explore the styles currently available', 'in our catalogue.']
+    },
+    promo: {
+      hidden: false,
+      eyebrow: 'A timeless expression',
+      title: ['A little tradition.', 'A story of your own.'],
+      cta: 'Explore the collection',
+      link: '',
+      ...edited$1(S.promo)
+    },
+    services: facts([['truck', 'Free standard shipping', 'Choose Standard at checkout', '/shipping'], ['lock', 'Secure checkout', 'View payment options at checkout', '/terms'], ['return', 'Returns & refunds', 'Read our return policy', '/returns'], ['chat', 'Dedicated support', 'We’re here to help you', '/contact']])
+  }
+});
+
 function departmentCatalogue(tree, views, slug) {
   const category = resolveCategory$1(tree, slug);
   const belongs = node => !!category && tree.ancestors(node.id).some(p => p.id === category.id) && tree.ancestors(node.id).every(p => p.is_active);
@@ -62202,7 +63384,8 @@ function SectionHead({
   eyebrow,
   title,
   href,
-  id
+  id,
+  more = 'Explore all'
 }) {
   return /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
     className: "fd-section-head",
@@ -62216,15 +63399,24 @@ function SectionHead({
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
       to: href,
-      children: ["Explore all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+      children: [more, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
         name: "arrowRight",
         size: 17
       })]
     })]
   });
 }
+
+/** Lines set with a line break between them (and `gap` after each break), the empty ones left out. */
+const brLines = (lines, gap = '') => filledLines(lines).map((line, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
+  children: [i > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), i > 0 && gap, line]
+}, i));
+const visible$3 = entry => !entry.hidden;
+
+// Every section below is the admin's (Storefronts → Fashion): `s` is the page's sections as
+// published over their built-in content (DEPARTMENT_SECTIONS), and a hidden one is left out.
 function SareeDepartment({
-  config,
+  sections: s,
   products,
   status,
   listing,
@@ -62232,7 +63424,7 @@ function SareeDepartment({
 }) {
   const [slide, setSlide] = reactExports.useState(0);
   const productRail = reactExports.useRef(null);
-  const slides = [config.hero, config.alternateHero];
+  const slides = s.hero.slides.map(imageFor);
   const step = direction => setSlide(index => (index + direction + slides.length) % slides.length);
   const scrollProducts = direction => {
     const rail = productRail.current;
@@ -62243,8 +63435,9 @@ function SareeDepartment({
   };
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "sw",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    children: [!s.hero.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "sw-hero",
+      ...positionAttr(s.hero.position),
       "aria-label": "Saree collection",
       "aria-roledescription": "carousel",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
@@ -62255,18 +63448,18 @@ function SareeDepartment({
         className: "sw-hero__copy",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "sw-eyebrow",
-          children: config.eyebrow
+          children: s.hero.eyebrow
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-          children: config.title.map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: filledLines(s.hero.title).map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
             children: line
           }, line))
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "sw-hero__intro",
-          children: config.intro
+          children: s.hero.intro
         }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: listing,
+          to: linkOr(s.hero.link, listing),
           className: "sw-button",
-          children: [config.cta, /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          children: [s.hero.cta, /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "arrowRight",
             size: 17
           })]
@@ -62304,7 +63497,7 @@ function SareeDepartment({
           })]
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.collections.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "sw-collections sw-wrap",
       id: "sw-collections",
       "aria-labelledby": "sw-collections-title",
@@ -62312,27 +63505,27 @@ function SareeDepartment({
         className: "sw-collections__intro",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "sw-eyebrow",
-          children: "Shop by category"
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+          children: s.collections.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           id: "sw-collections-title",
-          children: ["Explore Our", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), " Collections"]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-          children: ["Discover sarees for every mood,", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "occasion and style."]
+          children: brLines(s.collections.title, ' ')
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: brLines(s.collections.text)
         }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
           to: listing,
           className: "sw-inline-link",
-          children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          children: [s.collections.viewAll, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "arrowRight",
             size: 16
           })]
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "sw-collections__grid",
-        children: config.collections.map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: collectionHref(item.slug),
+        children: s.collections.items.filter(visible$3).map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: linkOr(item.link, collectionHref(item.slug)),
           className: "sw-collection",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-            image: item.image
+            image: imageFor(item)
           }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
             children: item.title
           }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -62340,14 +63533,14 @@ function SareeDepartment({
           })]
         }, item.slug))
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    }), !s.editorial.hidden && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
       className: "sw-editorials",
       "aria-label": "Featured saree collections",
-      children: config.editorial.map((item, index) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: collectionHref(item.slug),
+      children: s.editorial.items.filter(visible$3).map((item, index) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: linkOr(item.link, collectionHref(item.slug)),
         className: `sw-editorial sw-editorial--${index + 1}`,
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-          image: item.image
+          image: imageFor(item)
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
             className: "sw-eyebrow",
@@ -62365,7 +63558,7 @@ function SareeDepartment({
           })]
         })]
       }, item.slug))
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.products.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "sw-products sw-wrap",
       id: "fd-products",
       "aria-labelledby": "sw-products-title",
@@ -62374,12 +63567,12 @@ function SareeDepartment({
         children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
             className: "sw-eyebrow",
-            children: "The wardrobe edit"
+            children: s.products.eyebrow
           }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
             id: "sw-products-title",
-            children: config.productsTitle
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-            children: ["Explore the styles currently available", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "in our catalogue."]
+            children: s.products.title
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            children: brLines(s.products.text)
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "sw-arrows",
@@ -62422,43 +63615,43 @@ function SareeDepartment({
           })]
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.promo.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "sw-promo",
       "aria-labelledby": "sw-promo-title",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-        image: config.promo
+        image: imageFor(s.promo)
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "sw-eyebrow",
-          children: "A timeless expression"
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+          children: s.promo.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           id: "sw-promo-title",
-          children: ["A little tradition.", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "A story of your own."]
+          children: brLines(s.promo.title)
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: listing,
+        to: linkOr(s.promo.link, listing),
         className: "sw-button sw-button--outline",
-        children: ["Explore the collection ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [s.promo.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "arrowRight",
           size: 16
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+    }), !s.services.hidden && /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
       className: "sw-services sw-wrap",
       "aria-label": "Shopping information",
-      children: [['truck', 'Free standard shipping', 'Choose Standard at checkout', '/shipping'], ['lock', 'Secure checkout', 'View payment options at checkout', '/terms'], ['return', 'Returns & refunds', 'Read our return policy', '/returns'], ['chat', 'Dedicated support', 'We’re here to help you', '/contact']].map(([icon, title, description, href]) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: href,
+      children: s.services.items.filter(visible$3).map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: item.link,
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: icon,
+          name: item.icon,
           size: 27
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-            children: title
+            children: item.title
           }), /*#__PURE__*/jsxRuntimeExports.jsx("small", {
-            children: description
+            children: item.text
           })]
         })]
-      }, title))
+      }, item.title))
     })]
   });
 }
@@ -62467,7 +63660,7 @@ function SareeDepartment({
 // the real catalogue (new arrivals when any are flagged), four edits, a capsule
 // wardrobe, and the ways into the saree and jewellery stores. Every word is HTML; no image carries text.
 function WomenDepartment({
-  config,
+  sections: s,
   tree,
   category,
   categories,
@@ -62477,8 +63670,10 @@ function WomenDepartment({
   collectionHref
 }) {
   const [shelf, setShelf] = reactExports.useState('');
-  // `root` names a top-level category (bags sit under Bags & Accessories, not under Women).
+  // A link the admin set wins; else `root` names a top-level category (bags sit under Bags &
+  // Accessories, not under Women), else the slug's category, else the Women listing.
   const tileHref = item => {
+    if (item.link) return item.link;
     if (!item.root) return item.slug ? collectionHref(item.slug) : listing;
     const node = resolveCategory$1(tree, item.root);
     return node && !node.parent_id ? categoryHref$3(node) : listing;
@@ -62495,58 +63690,59 @@ function WomenDepartment({
   const shown = (current ? pool.filter(view => current.ids.has(view.category_id)) : pool).slice(0, 8);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "wm",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    children: [!s.hero.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "wm-hero",
+      ...positionAttr(s.hero.position),
       "aria-labelledby": "wm-title",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-        image: config.hero,
+        image: imageFor(s.hero),
         priority: true,
         className: "wm-hero__art"
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "wm-hero__copy",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "wm-eyebrow",
-          children: config.eyebrow
+          children: s.hero.eyebrow
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
           id: "wm-title",
-          children: config.title.map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: filledLines(s.hero.title).map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
             children: line
           }, line))
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "wm-hero__intro",
-          children: config.intro
+          children: s.hero.intro
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-          to: listing,
+          to: linkOr(s.hero.link, listing),
           className: "wm-button",
-          children: config.cta
+          children: s.hero.cta
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.categories.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "wm-categories wm-wrap",
       id: "wm-categories",
       "aria-labelledby": "wm-categories-title",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
         id: "wm-categories-title",
-        children: "Shop by category"
+        children: s.categories.title
       }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "wm-categories__grid",
-        children: config.categories.map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        children: s.categories.items.filter(visible$3).map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
           to: tileHref(item),
           className: "wm-category",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-            image: item.image
+            image: imageFor(item)
           }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
             children: item.title
           })]
         }, item.title))
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.products.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "wm-products wm-wrap",
       id: "wm-products",
       "aria-labelledby": "wm-products-title",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
         id: "wm-products-title",
-        children: fresh.length ? 'New in' : 'From the collection'
+        children: fresh.length ? s.products.newTitle : s.products.title
       }), shelves.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "wm-shelves",
         role: "group",
@@ -62582,16 +63778,16 @@ function WomenDepartment({
       }), shown.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
         to: listing,
         className: "wm-button wm-button--outline",
-        children: "View all"
+        children: s.products.viewAll
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    }), !s.edits.hidden && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
       className: "wm-edits wm-wrap",
       "aria-label": "Edits",
-      children: config.edits.map((item, index) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      children: s.edits.items.filter(visible$3).map((item, index) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: tileHref(item),
         className: `wm-edit wm-edit--${index + 1}`,
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-          image: item.image
+          image: imageFor(item)
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
             children: item.title
@@ -62609,26 +63805,26 @@ function WomenDepartment({
           })]
         })]
       }, item.title))
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.capsule.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "wm-capsule wm-wrap",
       "aria-labelledby": "wm-capsule-title",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
         id: "wm-capsule-title",
-        children: "The capsule edit"
+        children: s.capsule.title
       }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "wm-capsule__grid",
-        children: config.capsule.map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        children: s.capsule.items.filter(visible$3).map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
           to: tileHref(item),
           className: "wm-look",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-            image: item.image
+            image: imageFor(item)
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
               children: item.title
             }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
               children: item.caption
             }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              children: ["Shop ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              children: [s.capsule.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
                 name: "arrowRight",
                 size: 15
               })]
@@ -62636,68 +63832,68 @@ function WomenDepartment({
           })]
         }, item.title))
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.sarees.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "wm-sarees wm-wrap",
       "aria-labelledby": "wm-sarees-title",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-        image: config.sarees.image
+        image: imageFor(s.sarees)
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "wm-eyebrow",
-          children: config.sarees.eyebrow
+          children: s.sarees.eyebrow
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           id: "wm-sarees-title",
-          children: config.sarees.title
+          children: s.sarees.title
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: config.sarees.text
+          children: s.sarees.text
         }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: "/fashion/women/sarees",
+          to: s.sarees.link,
           className: "wm-button",
-          children: [config.sarees.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          children: [s.sarees.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "arrowRight",
             size: 16
           })]
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.jewellery.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "wm-sarees wm-jewellery wm-wrap",
       "aria-labelledby": "wm-jewellery-title",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-        image: config.jewellery.image
+        image: imageFor(s.jewellery)
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "wm-eyebrow",
-          children: config.jewellery.eyebrow
+          children: s.jewellery.eyebrow
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           id: "wm-jewellery-title",
-          children: config.jewellery.title
+          children: s.jewellery.title
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: config.jewellery.text
+          children: s.jewellery.text
         }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: "/fashion/jewellery",
+          to: s.jewellery.link,
           className: "wm-button",
-          children: [config.jewellery.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          children: [s.jewellery.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "arrowRight",
             size: 16
           })]
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+    }), !s.services.hidden && /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
       className: "wm-services wm-wrap",
       "aria-label": "Shopping information",
-      children: [['truck', 'Standard delivery', '6–7 business days', '/shipping'], ['return', 'Returns', 'Within 7 days of delivery', '/returns'], ['chat', 'Need help?', 'Contact our team', '/contact']].map(([icon, title, description, href]) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: href,
+      children: s.services.items.filter(visible$3).map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: item.link,
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: icon,
+          name: item.icon,
           size: 24
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-            children: title
+            children: item.title
           }), /*#__PURE__*/jsxRuntimeExports.jsx("small", {
-            children: description
+            children: item.text
           })]
         })]
-      }, title))
+      }, item.title))
     })]
   });
 }
@@ -62706,6 +63902,8 @@ function FashionDepartment({
 }) {
   // Opening at the hero (or at a #section) is ScrollManager's, site-wide (main.jsx).
   const config = DEPARTMENT_CONTENT[department] || DEPARTMENT_CONTENT.men;
+  const page = DEPARTMENT_SECTIONS[department] ? department : 'men';
+  const s = useStorefrontSection('fashion', page, DEPARTMENT_SECTIONS[page]);
   const {
     tree,
     views,
@@ -62722,14 +63920,14 @@ function FashionDepartment({
     return node ? categoryHref$3(node) : listing;
   };
   if (department === 'sarees') return /*#__PURE__*/jsxRuntimeExports.jsx(SareeDepartment, {
-    config: config,
+    sections: s,
     products: products,
     status: status,
     listing: listing,
     collectionHref: collectionHref
   });
   if (department === 'women') return /*#__PURE__*/jsxRuntimeExports.jsx(WomenDepartment, {
-    config: config,
+    sections: s,
     tree: tree,
     category: category,
     categories: categories,
@@ -62742,77 +63940,79 @@ function FashionDepartment({
     className: `fd fd--${department}`,
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(DepartmentNav, {
       active: department
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.hero.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "fd-hero",
+      ...positionAttr(s.hero.position),
       "aria-labelledby": "fd-title",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "fd-hero__photo",
         children: /*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-          image: config.hero,
+          image: imageFor(s.hero),
           priority: true
         }, department)
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "fd-hero__copy",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "fd-eyebrow",
-          children: config.eyebrow
+          children: s.hero.eyebrow
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
           id: "fd-title",
-          children: config.title.map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: filledLines(s.hero.title).map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
             children: line
           }, line))
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "fd-hero__intro",
-          children: config.intro
+          children: s.hero.intro
         }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: listing,
+          to: linkOr(s.hero.link, listing),
           className: "fd-cta",
-          children: [config.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          children: [s.hero.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "arrowRight",
             size: 19
           })]
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "fd-hero__edition",
-        children: config.heroNote
+        children: s.hero.note
       }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "fd-hero__number",
         "aria-hidden": "true",
         children: department === 'men' ? '01' : '02'
       })]
-    }), department === 'men' && /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+    }), department === 'men' && !s.highlights.hidden && /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
       className: "fd-highlights",
       "aria-label": "Explore menswear",
-      children: [["sparkle", "Everyday style", "Find your own rhythm"], ["star", "The wardrobe edit", "Pieces to make yours"], ["grid", "Mix. Match. Repeat.", "A fresh perspective"], ["bag", "Your next favourite", "Explore the collection"]].map(([icon, label, sub]) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: listing,
+      children: s.highlights.items.filter(visible$3).map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: linkOr(item.link, listing),
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: icon,
+          name: item.icon,
           size: 28
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-            children: label
+            children: item.title
           }), /*#__PURE__*/jsxRuntimeExports.jsx("small", {
-            children: sub
+            children: item.text
           })]
         })]
-      }, label))
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      }, item.title))
+    }), !s.collections.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "fd-section fd-collections",
       "aria-labelledby": "fd-collections-title",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHead, {
-        eyebrow: "Shop by collection",
-        title: config.collectionTitle,
+        eyebrow: s.collections.eyebrow,
+        title: s.collections.title,
+        more: s.collections.more,
         href: listing,
         id: "fd-collections-title"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "fd-collections__grid",
-        children: config.collections.map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: collectionHref(item.slug),
+        children: s.collections.items.filter(visible$3).map(item => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: linkOr(item.link, collectionHref(item.slug)),
           className: "fd-collection",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
             className: "fd-collection__photo",
             children: /*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-              image: item.image
+              image: imageFor(item)
             })
           }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
             children: item.title
@@ -62822,14 +64022,14 @@ function FashionDepartment({
           })]
         }, item.title))
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    }), !s.editorial.hidden && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
       className: "fd-editorials",
       "aria-label": "The style edits",
-      children: config.editorial.map((item, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: listing,
+      children: s.editorial.items.filter(visible$3).map((item, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: linkOr(item.link, listing),
         className: `fd-editorial fd-editorial--${i + 1}`,
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-          image: item.image
+          image: imageFor(item)
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
             className: "fd-eyebrow",
@@ -62840,20 +64040,21 @@ function FashionDepartment({
             children: item.text
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             className: "fd-text-link",
-            children: ["Discover the edit ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            children: [item.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
               name: "arrowRight",
               size: 16
             })]
           })]
         })]
       }, item.title))
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.products.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "fd-section",
       "aria-labelledby": "fd-products-title",
       id: "fd-products",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHead, {
-        eyebrow: "Curated for you",
-        title: config.productsTitle,
+        eyebrow: s.products.eyebrow,
+        title: s.products.title,
+        more: s.products.more,
         href: listing,
         id: "fd-products-title"
       }), products.length ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -62877,20 +64078,21 @@ function FashionDepartment({
           })]
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.looks.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "fd-section fd-looks",
       "aria-labelledby": "fd-looks-title",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHead, {
-        eyebrow: department === 'men' ? 'Wear it your way' : 'The styling journal',
-        title: department === 'men' ? 'Shop the look' : 'A little inspiration',
+        eyebrow: s.looks.eyebrow,
+        title: s.looks.title,
+        more: s.looks.more,
         href: listing,
         id: "fd-looks-title"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "fd-looks__grid",
-        children: config.looks.map(look => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: listing,
+        children: s.looks.items.filter(visible$3).map(look => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: linkOr(look.link, listing),
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(EditorialImage, {
-            image: look.image
+            image: imageFor(look)
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             children: [look.title, /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
               name: "arrowRight",
@@ -62899,17 +64101,17 @@ function FashionDepartment({
           })]
         }, look.title))
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.closing.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "fd-closing",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "fd-eyebrow",
-        children: ["SORA LIFE / ", config.label]
+        children: s.closing.eyebrow
       }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        children: department === 'men' ? 'Good style. Your rules.' : 'Your story. Beautifully worn.'
+        children: s.closing.title
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: listing,
+        to: linkOr(s.closing.link, listing),
         className: "fd-cta",
-        children: ["Find your next favourite ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [s.closing.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "arrowRight",
           size: 18
         })]
@@ -63051,6 +64253,80 @@ const JEWELLERY = {
   }
 };
 
+// ---- What the admin edits (Storefronts → Fashion → Jewellery page) -------------------------------
+// The page's sections in the schema's shape (storefrontContent.js), built from the content above.
+// What is published replaces them field by field; a field that breaks its rule stays as it is here.
+// An empty link means the page's own (the listing a tile or button opens today).
+const edited = image => ({
+  image,
+  picture: shot(image),
+  alt: image.alt
+});
+const J = JEWELLERY;
+const JEWELLERY_SECTIONS = Object.freeze({
+  hero: {
+    hidden: false,
+    eyebrow: J.hero.eyebrow,
+    title: [...J.hero.title],
+    intro: J.hero.intro,
+    cta: J.hero.cta,
+    link: '',
+    ...edited(J.hero.image),
+    position: 'left'
+  },
+  trust: {
+    hidden: false,
+    items: J.trust.map(t => ({
+      ...t,
+      hidden: false,
+      phone: [...t.phone],
+      link: t.to
+    }))
+  },
+  categories: {
+    hidden: false,
+    eyebrow: J.categories.eyebrow,
+    title: J.categories.title,
+    intro: J.categories.intro,
+    items: J.categories.items.map(c => ({
+      ...c,
+      hidden: false,
+      link: '',
+      ...edited(c.image)
+    }))
+  },
+  loved: {
+    hidden: false,
+    title: J.loved.title,
+    viewAll: J.loved.viewAll
+  },
+  edits: {
+    hidden: false,
+    items: J.edits.map(e => ({
+      ...e,
+      hidden: false,
+      title: [0, 1, 2].map(i => e.title[i] || ''),
+      link: '',
+      ...edited(e.image)
+    }))
+  },
+  story: {
+    hidden: false,
+    eyebrow: J.story.eyebrow,
+    title: J.story.title,
+    text: J.story.text,
+    cta: J.story.cta,
+    link: J.story.to,
+    ...edited(J.story.image)
+  },
+  newsletter: {
+    hidden: false,
+    title: J.newsletter.title,
+    text: J.newsletter.text,
+    ...edited(J.newsletter.image)
+  }
+});
+
 function Photo({
   image,
   priority = false,
@@ -63187,9 +64463,24 @@ function Newsletter({
     })]
   });
 }
+const visible$2 = entry => !entry.hidden;
+/** A replaced hero photograph also replaces the blurred copy of it behind the copy (.jw-hero::before). */
+const heroLook = hero => {
+  const image = imageFor(hero);
+  return image.src === hero.image.src ? {} : {
+    'data-art': '',
+    style: {
+      '--jw-hero-art': `url(${JSON.stringify(image.src)})`
+    }
+  };
+};
+
+// Every section is the admin's (Storefronts → Fashion → Jewellery page): `s` is the page's sections as
+// published over their built-in content (JEWELLERY_SECTIONS), and a hidden one is left out.
 function FashionJewellery({
   content = JEWELLERY
 }) {
+  const s = useStorefrontSection('fashion', 'jewellery', JEWELLERY_SECTIONS);
   const {
     tree,
     views,
@@ -63208,50 +64499,47 @@ function FashionJewellery({
     return node ? categoryHref$3(node) : listing;
   };
   const loved = products.slice(0, 4);
-  const {
-    hero,
-    categories: cats,
-    story
-  } = content;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "jw",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    children: [!s.hero.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "jw-hero",
+      ...positionAttr(s.hero.position),
+      ...heroLook(s.hero),
       "aria-labelledby": "jw-title",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Photo, {
-        image: hero.image,
+        image: imageFor(s.hero),
         priority: true,
         className: "jw-hero__art"
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "jw-wrap jw-hero__copy",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "jw-eyebrow",
-          children: hero.eyebrow
+          children: s.hero.eyebrow
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
           id: "jw-title",
-          children: hero.title.map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: filledLines(s.hero.title).map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
             children: line
           }, line))
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "jw-hero__intro",
-          children: hero.intro
+          children: s.hero.intro
         }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: listing,
+          to: linkOr(s.hero.link, listing),
           className: "jw-button",
-          children: [hero.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          children: [s.hero.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "arrowRight",
             size: 15
           })]
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+    }), !s.trust.hidden && /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
       className: "jw-trust",
       "aria-label": "Shopping with SORA LIFE",
       children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
         className: "jw-wrap",
-        children: content.trust.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: s.trust.items.filter(visible$2).map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
           children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: t.to,
+            to: t.link,
             children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
               name: t.icon,
               size: 22
@@ -63273,7 +64561,7 @@ function FashionJewellery({
           })
         }, t.title))
       })
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.categories.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "jw-cats jw-wrap",
       id: "jw-categories",
       "aria-labelledby": "jw-cats-title",
@@ -63281,21 +64569,21 @@ function FashionJewellery({
         className: "jw-head jw-head--center",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "jw-eyebrow",
-          children: cats.eyebrow
+          children: s.categories.eyebrow
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           id: "jw-cats-title",
-          children: cats.title
+          children: s.categories.title
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: cats.intro
+          children: s.categories.intro
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
         className: "jw-cats__row",
-        children: cats.items.map(item => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: s.categories.items.filter(visible$2).map(item => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
           children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: hrefFor(item.slug),
+            to: linkOr(item.link, hrefFor(item.slug)),
             className: "jw-cat",
             children: [/*#__PURE__*/jsxRuntimeExports.jsx(Photo, {
-              image: item.image,
+              image: imageFor(item),
               className: "jw-cat__art"
             }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
               children: item.title
@@ -63303,7 +64591,7 @@ function FashionJewellery({
           })
         }, item.slug))
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.loved.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "jw-loved jw-wrap",
       id: "jw-products",
       "aria-labelledby": "jw-loved-title",
@@ -63311,11 +64599,11 @@ function FashionJewellery({
         className: "jw-head jw-head--split",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           id: "jw-loved-title",
-          children: content.loved.title
+          children: s.loved.title
         }), loved.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
           to: listing,
           className: "jw-more",
-          children: [content.loved.viewAll, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          children: [s.loved.viewAll, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "arrowRight",
             size: 14
           })]
@@ -63339,18 +64627,18 @@ function FashionJewellery({
           })]
         })]
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    }), !s.edits.hidden && /*#__PURE__*/jsxRuntimeExports.jsx("section", {
       className: "jw-edits",
       "aria-label": "Wedding and gifts",
-      children: content.edits.map((item, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: hrefFor(item.slug),
+      children: s.edits.items.filter(visible$2).map((item, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: linkOr(item.link, hrefFor(item.slug)),
         className: `jw-edit jw-edit--${i + 1}`,
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Photo, {
-          image: item.image,
+          image: imageFor(item),
           className: "jw-edit__art"
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-            children: item.title.map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: filledLines(item.title).map(line => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
               children: line
             }, line))
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
@@ -63362,33 +64650,37 @@ function FashionJewellery({
           })]
         })]
       }, item.slug))
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    }), !s.story.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "jw-story jw-wrap",
       "aria-labelledby": "jw-story-title",
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "jw-story__copy",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "jw-eyebrow",
-          children: story.eyebrow
+          children: s.story.eyebrow
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           id: "jw-story-title",
-          children: story.title
+          children: s.story.title
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: story.text
+          children: s.story.text
         }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: story.to,
+          to: s.story.link,
           className: "jw-button",
-          children: [story.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          children: [s.story.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "arrowRight",
             size: 14
           })]
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Photo, {
-        image: story.image,
+        image: imageFor(s.story),
         className: "jw-story__art"
       })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(Newsletter, {
-      content: content.newsletter
+    }), !s.newsletter.hidden && /*#__PURE__*/jsxRuntimeExports.jsx(Newsletter, {
+      content: {
+        title: s.newsletter.title,
+        text: s.newsletter.text,
+        image: imageFor(s.newsletter)
+      }
     })]
   });
 }
@@ -64754,25 +66046,56 @@ function GroceryProductCard({
   });
 }
 
-const TRUST = [['truck', 'Standard Delivery', GROCERY_DELIVERY_WINDOW], ['leaf', 'Fresh Products', 'Sourced with care'], ['shield', 'Trusted Quality', 'Good food, safer lives']];
+const visible$1 = entry => !entry.hidden;
+/** A section's colour matched to its photograph — only when the admin set one with it. */
+const tone = colour => colour ? {
+  'data-tone': '',
+  style: {
+    '--sf-tone': colour
+  }
+} : {};
+/** The phone photograph under 700px when there is a separate one; else the one image, as it always was. */
+const PHONE = '(max-width: 700px)';
+const photo = (phone, desktop, img) => phone && phone !== desktop ? /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
+  children: [/*#__PURE__*/jsxRuntimeExports.jsx("source", {
+    media: PHONE,
+    srcSet: phone
+  }), img]
+}) : img;
 function TrustStrip$1() {
+  const trust = useStorefrontSection('grocery', 'trust', GROCERY_SECTIONS.trust);
+  if (trust.hidden) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
     className: "gs-trust",
     "aria-label": "Why shop with us",
-    children: TRUST.map(([icon, a, b]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+    children: trust.items.filter(visible$1).map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: icon,
+        name: t.icon,
         size: 28
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-          children: a
+          children: t.title
         }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-          children: b
+          children: t.sub
         })]
       })]
-    }, a))
+    }, t.title))
   });
 }
+
+/** The hero as the carousel's one slide. */
+const heroSlideOf$1 = h => ({
+  id: h.id,
+  image: h.picture.desktop,
+  phone: h.picture.phone,
+  headline: h.headline,
+  sub: h.sub,
+  cta: h.cta,
+  href: h.link,
+  note: h.note,
+  colour: h.picture.colour,
+  position: h.position
+});
 const AUTOPLAY_MS$2 = 6000;
 
 /**
@@ -64781,9 +66104,11 @@ const AUTOPLAY_MS$2 = 6000;
  * The track slides on transform only.
  */
 function HeroCarousel$2({
-  slides = HERO_SLIDES$3,
+  slides: given,
   autoplayMs = AUTOPLAY_MS$2
 }) {
+  const hero = useStorefrontSection('grocery', 'hero', GROCERY_SECTIONS.hero);
+  const slides = given || (hero.hidden ? [] : [heroSlideOf$1(hero)]);
   const [index, setIndex] = reactExports.useState(0);
   const [paused, setPaused] = reactExports.useState(false);
   const reduced = reactExports.useRef(false);
@@ -64820,10 +66145,12 @@ function HeroCarousel$2({
       },
       children: slides.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
         className: `gs-hero__slide${i === index ? ' is-on' : ''}`,
+        ...positionAttr(s.position),
+        ...tone(s.colour),
         "aria-hidden": i !== index,
         "aria-roledescription": "slide",
         "aria-label": `${i + 1} of ${slides.length}`,
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+        children: [photo(s.phone, s.image, /*#__PURE__*/jsxRuntimeExports.jsx("img", {
           className: "gs-hero__img",
           src: s.image,
           alt: "",
@@ -64832,7 +66159,7 @@ function HeroCarousel$2({
           decoding: "async",
           fetchpriority: i === 0 ? 'high' : 'auto',
           loading: i === 0 ? 'eager' : 'lazy'
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        })), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "gs-hero__txt",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
             className: "gs-hero__h serif",
@@ -64873,7 +66200,8 @@ function HeroCarousel$2({
 function CategoryCircles$1({
   categories
 }) {
-  if (categories.length === 0) return null;
+  const section = useStorefrontSection('grocery', 'categories', GROCERY_SECTIONS.categories);
+  if (categories.length === 0 || section.hidden) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
     className: "gs-circles",
     "aria-label": "Shop by category",
@@ -64905,12 +66233,14 @@ function DailyEssentials({
   status
 }) {
   const {
+    hidden,
     title,
     sub,
-    seeAll,
-    limit
-  } = DAILY_ESSENTIALS;
-  const row = products.slice(0, limit);
+    more,
+    link
+  } = useStorefrontSection('grocery', 'daily', GROCERY_SECTIONS.daily);
+  const row = products.slice(0, DAILY_ESSENTIALS.limit);
+  if (hidden) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "gs-sec",
     "aria-labelledby": "gs-daily-h",
@@ -64926,9 +66256,9 @@ function DailyEssentials({
           children: sub
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: seeAll,
+        to: link,
         className: "gs-sec__link",
-        children: ["See all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [more, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "arrowRight",
           size: 16
         })]
@@ -64946,33 +66276,41 @@ function DailyEssentials({
   });
 }
 function PromoStrip$2() {
+  const promo = useStorefrontSection('grocery', 'promo', GROCERY_SECTIONS.promo);
+  if (promo.hidden) return null;
+  const {
+    colour,
+    phone,
+    desktop
+  } = promo.picture;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "gs-promo",
+    ...tone(colour),
     "aria-labelledby": "gs-promo-h",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "gs-promo__art",
       "aria-hidden": "true",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-        src: PROMO$2.image,
+      children: photo(phone, desktop, /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+        src: desktop,
         alt: "",
         loading: "lazy",
         decoding: "async",
         width: "1200",
         height: "675"
-      })
+      }))
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "gs-promo__txt",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
         className: "gs-promo__h serif",
         id: "gs-promo-h",
-        children: PROMO$2.headline
+        children: promo.headline
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "gs-promo__sub",
-        children: PROMO$2.sub
+        children: promo.sub
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: PROMO$2.href,
+        to: promo.link,
         className: "gs-promo__cta",
-        children: [PROMO$2.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [promo.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "arrowRight",
           size: 16
         })]
@@ -65446,6 +66784,36 @@ const AUTOPLAY_MS$1 = 6000;
 /** Below this the hero shows the 4:5 portrait; from it up, the 3:2 landscape. */
 const HERO_TALL_MEDIA = '(max-width: 767px)';
 
+// Every section is the admin's (Storefronts → Home & Living), read over its built-in content
+// (HOMELIVING_SECTIONS); a hidden one is left out.
+const visible = entry => !entry.hidden;
+/** The hero as the carousel's one slide. */
+const heroSlideOf = h => ({
+  id: h.id,
+  image: {
+    wide: h.picture.desktop,
+    tall: h.picture.phone
+  },
+  eyebrow: h.eyebrow,
+  headline: h.headline,
+  sub: h.sub,
+  cta: h.cta,
+  href: h.link,
+  note: h.note,
+  colour: h.picture.colour,
+  position: h.position
+});
+/** A slide's wash colour (only when the admin set one with its photograph) and its copy position. */
+const slideLook = s => ({
+  ...positionAttr(s.position),
+  ...(s.colour ? {
+    'data-tone': '',
+    style: {
+      '--sf-tone': s.colour
+    }
+  } : {})
+});
+
 /**
  * Full-width carousel. Autoplays only when there is more than one slide,
  * pauses on hover and focus, and never moves under prefers-reduced-motion.
@@ -65456,9 +66824,11 @@ const HERO_TALL_MEDIA = '(max-width: 767px)';
  * wall still reads as wall.
  */
 function HeroCarousel$1({
-  slides = HERO_SLIDES$2,
+  slides: given,
   autoplayMs = AUTOPLAY_MS$1
 }) {
+  const hero = useStorefrontSection('homeliving', 'hero', HOMELIVING_SECTIONS.hero);
+  const slides = given || (hero.hidden ? [] : [heroSlideOf(hero)]);
   const [index, setIndex] = reactExports.useState(0);
   const [paused, setPaused] = reactExports.useState(false);
   const reduced = reactExports.useRef(false);
@@ -65495,6 +66865,7 @@ function HeroCarousel$1({
       },
       children: slides.map((s, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
         className: `hl-hero__slide${i === index ? ' is-on' : ''}`,
+        ...slideLook(s),
         "aria-hidden": i !== index,
         "aria-roledescription": "slide",
         "aria-label": `${i + 1} of ${slides.length}`,
@@ -65559,12 +66930,14 @@ function HeroCarousel$1({
 
 /** One quiet row under the hero: a small icon, the label, the sub-label; it scrolls sideways on a phone if it will not fit. */
 function TrustStrip() {
+  const trust = useStorefrontSection('homeliving', 'trust', HOMELIVING_SECTIONS.trust);
+  if (trust.hidden) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
     className: "hl-wrap",
     children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
       className: "hl-trust",
       "aria-label": "Why shop with us",
-      children: TRUST$2.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+      children: trust.items.filter(visible).map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "hl-trust__icon",
           children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -65595,6 +66968,7 @@ function TrustStrip() {
 function CategoryCircles({
   categories
 }) {
+  const section = useStorefrontSection('homeliving', 'categories', HOMELIVING_SECTIONS.categories);
   const track = reactExports.useRef(null);
   const [edge, setEdge] = reactExports.useState({
     start: true,
@@ -65625,7 +66999,7 @@ function CategoryCircles({
       behavior: reduced ? 'auto' : 'smooth'
     });
   };
-  if (categories.length === 0) return null;
+  if (categories.length === 0 || section.hidden) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "hl-wrap hl-sec hl-cats",
     "aria-labelledby": "hl-cats-h",
@@ -65634,16 +67008,16 @@ function CategoryCircles({
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "hl-eyebrow",
-          children: CATEGORY_SECTION.eyebrow
+          children: section.eyebrow
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           className: "hl-sec__h hl-sec__h--rule serif",
           id: "hl-cats-h",
-          children: CATEGORY_SECTION.title
+          children: section.title
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: CATEGORY_SECTION.viewAll,
+        to: section.link,
         className: "hl-sec__link",
-        children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [section.more, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "arrowRight",
           size: 16
         })]
@@ -65696,12 +67070,14 @@ function FeaturedRow({
   status
 }) {
   const {
+    hidden,
     title,
     sub,
-    seeAll,
-    limit
-  } = FEATURED;
-  const row = products.slice(0, limit);
+    more,
+    link
+  } = useStorefrontSection('homeliving', 'featured', HOMELIVING_SECTIONS.featured);
+  const row = products.slice(0, FEATURED.limit);
+  if (hidden) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "hl-wrap hl-sec",
     "aria-labelledby": "hl-featured-h",
@@ -65717,9 +67093,9 @@ function FeaturedRow({
           children: sub
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: seeAll,
+        to: link,
         className: "hl-sec__link",
-        children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        children: [more, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "arrowRight",
           size: 16
         })]
@@ -65737,38 +67113,57 @@ function FeaturedRow({
   });
 }
 function PromoStrip$1() {
+  const promo = useStorefrontSection('homeliving', 'promo', HOMELIVING_SECTIONS.promo);
+  if (promo.hidden) return null;
+  const {
+    colour,
+    phone,
+    desktop
+  } = promo.picture;
+  const img = /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+    src: desktop,
+    alt: "",
+    loading: "lazy",
+    decoding: "async",
+    width: "1200",
+    height: "400"
+  });
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "hl-promo",
+    ...(colour ? {
+      'data-tone': '',
+      style: {
+        '--sf-tone': colour
+      }
+    } : {}),
     "aria-labelledby": "hl-promo-h",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "hl-promo__art",
       "aria-hidden": "true",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-        src: PROMO$1.image,
-        alt: "",
-        loading: "lazy",
-        decoding: "async",
-        width: "1200",
-        height: "400"
-      })
+      children: phone !== desktop ? /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("source", {
+          media: HERO_TALL_MEDIA,
+          srcSet: phone
+        }), img]
+      }) : img
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hl-wrap hl-promo__inner",
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "hl-promo__txt",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "hl-eyebrow",
-          children: PROMO$1.eyebrow
+          children: promo.eyebrow
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           className: "hl-promo__h serif",
           id: "hl-promo-h",
-          children: PROMO$1.headline
+          children: promo.headline
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "hl-promo__sub",
-          children: PROMO$1.sub
+          children: promo.sub
         }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: PROMO$1.href,
+          to: promo.link,
           className: "hl-cta",
-          children: [PROMO$1.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          children: [promo.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "arrowRight",
             size: 16
           })]
@@ -65776,7 +67171,7 @@ function PromoStrip$1() {
       }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
         className: "hl-promo__badges",
         "aria-label": "Why it matters",
-        children: PROMO$1.badges.map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        children: promo.badges.filter(visible).map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
             className: "hl-trust__icon",
             children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -69426,5 +70821,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { adminListVariants as $, adminUpdateOrderFulfillment as A, adminListProductMedia as B, CONTACT_FIELDS as C, adminCommitStagedProductMedia as D, validateMediaFile as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, mediaFailureMessage as H, adminReorderProductMedia as I, adminSetPrimaryMedia as J, adminEnsurePrimaryMedia as K, LEGAL_PAGES as L, adminUpdateProductMedia as M, NavLink as N, Outlet as O, adminReplaceProductMedia as P, adminDeleteProductMedia as Q, adminDiscoverMedia as R, adminImportMedia as S, validateContent as T, CONTENT_FIELDS as U, fieldPopulated as V, CONTENT_LABELS as W, useNavigate as X, useLocation as Y, adminUpdateProduct as Z, adminCreateProduct as _, adminGetSetting as a, REWARD_TYPES as a$, adminCreateVariant as a0, adminUpdateVariant as a1, adminSetVariantActive as a2, adminDeleteVariant as a3, adminGetProgramSettings as a4, CREATOR_STATUSES as a5, money2 as a6, adminListCreators as a7, adminCreatorStandings as a8, adminSetProgramSettings as a9, adminListKyc as aA, KYC_STATUSES as aB, KYC_SIGNED_URL_SECONDS as aC, adminSetKycStatus as aD, KYC_DOCUMENT_KINDS as aE, kycDocumentState as aF, adminKycDocumentUrl as aG, adminListKycAudit as aH, getPayoutConfig as aI, adminListPayouts as aJ, PAYOUT_STATUSES as aK, adminSetWithdrawalsOpen as aL, adminGetPayoutLedger as aM, adminGetPayoutAudit as aN, adminGetKycForCreator as aO, adminReviewPayout as aP, adminMarkPayoutPaid as aQ, normalizeLadder as aR, DEFAULT_BEYOND_STEP as aS, adminGetTierLadder as aT, validateLadder as aU, ladderErrorMessage as aV, rupees as aW, adminListLevelRewards as aX, groupRewardsByLevel as aY, REWARD_OPTION_SLOTS as aZ, validateRewardOption as a_, adminCreateCreator as aa, adminSetCreatorStatus as ab, normalizeContentPatch as ac, contentScore as ad, adminGetCreator as ae, adminListCodeAliases as af, adminListCampaigns as ag, adminListLinks as ah, adminListAudit as ai, adminListAttributionEvents as aj, adminUpdateCampaign as ak, adminCreateCampaign as al, CAMPAIGN_STATUSES as am, buildTrackingUrl as an, normalizeDestination as ao, DESTINATION_TYPES as ap, CopyButton as aq, adminChangeCreatorCode as ar, adminUpdateCreator as as, adminCreateLink as at, adminSetLinkStatus as au, adminListConversions as av, CONVERSION_STATUSES as aw, adminGetConversionItems as ax, adminGetConversionAudit as ay, adminRefundConversion as az, Link as b, categoryExperiencePayload as b$, REWARD_TYPE_LABEL as b0, adminListRewardClaims as b1, CLAIM_STATUSES as b2, CLAIM_STATUS_LABEL as b3, DEFAULT_LADDER as b4, adminSetTierLadder as b5, rewardOptionErrorMessage as b6, adminUpsertLevelReward as b7, adminDeleteLevelReward as b8, adminSetRewardClaimStatus as b9, MAX_CONCERN_PRODUCTS as bA, searchCatalogueForPicker as bB, productGallery as bC, MAX_DISCOVERY_CARDS as bD, makeDiscoveryId as bE, sanitizeHomepageVisuals as bF, normalizeDiscovery as bG, products as bH, discoveryPayload as bI, mergeHomepageVisuals as bJ, announceHomepageSaved as bK, normalizeFashionStorefront as bL, normalizeLifestyleStorefront as bM, STOREFRONT_LABELS as bN, validateStorefrontContent as bO, useSearchParams as bP, buildTree as bQ, validatePlacement as bR, uploadImage as bS, isSpotlightEligible as bT, categoryBySlug as bU, sanitizeCategoryConfig as bV, safeColor as bW, safeGradient as bX, makeSpotlightId as bY, validateImageUpload as bZ, normalizeCategoryExperience as b_, adminGetTheme as ba, sanitizeTheme$1 as bb, TOKENS as bc, PRESET_LIST as bd, GROUPS as be, DEFAULT_THEME as bf, OVERLAY_SCALES as bg, TYPE_SCALES as bh, HEX_RE as bi, adminSetTheme as bj, overlayRgba as bk, adminUpsertCategory as bl, adminDeleteCategory as bm, normalizePromo as bn, PromoPoster as bo, PromoOfferCard as bp, adminListPromotions as bq, adminUpsertPromotion as br, adminDeletePromotion as bs, adminSetPromotionActive as bt, adminReorderPromotions as bu, uploadPromoImage as bv, supabase as bw, CouponTicket as bx, HOMEPAGE_VISUAL_FIELDS as by, safeVisualUrl as bz, LegalUpdated as c, categoryIsReadyButOff as c0, categoryToneTheme as c1, MIN_INTERVAL_MS as c2, MAX_INTERVAL_MS as c3, DEFAULT_ITEM_SCALE as c4, MIN_ITEM_SCALE as c5, MAX_ITEM_SCALE as c6, ITEM_OFFSET_LIMIT as c7, CategorySpotlight as c8, SOCIAL_NETWORKS as c9, POLICY_KEYS as ca, validateCompanyForSave as cb, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminSeedDefaultCategories as m, normalizeLegalPage as n, adminImportBiosashCatalog as o, money as p, adminSetProductActive as q, reactExports as r, adminDeleteProduct as s, adminReorderProducts as t, useParams as u, validateLegalPage as v, categories as w, adminListOrders as x, fulfillmentStatusLabel as y, validateFulfillmentInput as z };
+export { adminListVariants as $, adminUpdateOrderFulfillment as A, adminListProductMedia as B, CONTACT_FIELDS as C, adminCommitStagedProductMedia as D, validateMediaFile as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, mediaFailureMessage as H, adminReorderProductMedia as I, adminSetPrimaryMedia as J, adminEnsurePrimaryMedia as K, LEGAL_PAGES as L, adminUpdateProductMedia as M, NavLink as N, Outlet as O, adminReplaceProductMedia as P, adminDeleteProductMedia as Q, adminDiscoverMedia as R, adminImportMedia as S, validateContent as T, CONTENT_FIELDS as U, fieldPopulated as V, CONTENT_LABELS as W, useNavigate as X, useLocation as Y, adminUpdateProduct as Z, adminCreateProduct as _, adminGetSetting as a, REWARD_TYPES as a$, adminCreateVariant as a0, adminUpdateVariant as a1, adminSetVariantActive as a2, adminDeleteVariant as a3, adminGetProgramSettings as a4, CREATOR_STATUSES as a5, money2 as a6, adminListCreators as a7, adminCreatorStandings as a8, adminSetProgramSettings as a9, adminListKyc as aA, KYC_STATUSES as aB, KYC_SIGNED_URL_SECONDS as aC, adminSetKycStatus as aD, KYC_DOCUMENT_KINDS as aE, kycDocumentState as aF, adminKycDocumentUrl as aG, adminListKycAudit as aH, getPayoutConfig as aI, adminListPayouts as aJ, PAYOUT_STATUSES as aK, adminSetWithdrawalsOpen as aL, adminGetPayoutLedger as aM, adminGetPayoutAudit as aN, adminGetKycForCreator as aO, adminReviewPayout as aP, adminMarkPayoutPaid as aQ, normalizeLadder as aR, DEFAULT_BEYOND_STEP as aS, adminGetTierLadder as aT, validateLadder as aU, ladderErrorMessage as aV, rupees as aW, adminListLevelRewards as aX, groupRewardsByLevel as aY, REWARD_OPTION_SLOTS as aZ, validateRewardOption as a_, adminCreateCreator as aa, adminSetCreatorStatus as ab, normalizeContentPatch as ac, contentScore as ad, adminGetCreator as ae, adminListCodeAliases as af, adminListCampaigns as ag, adminListLinks as ah, adminListAudit as ai, adminListAttributionEvents as aj, adminUpdateCampaign as ak, adminCreateCampaign as al, CAMPAIGN_STATUSES as am, buildTrackingUrl as an, normalizeDestination as ao, DESTINATION_TYPES as ap, CopyButton as aq, adminChangeCreatorCode as ar, adminUpdateCreator as as, adminCreateLink as at, adminSetLinkStatus as au, adminListConversions as av, CONVERSION_STATUSES as aw, adminGetConversionItems as ax, adminGetConversionAudit as ay, adminRefundConversion as az, Link as b, sectionContent as b$, REWARD_TYPE_LABEL as b0, adminListRewardClaims as b1, CLAIM_STATUSES as b2, CLAIM_STATUS_LABEL as b3, DEFAULT_LADDER as b4, adminSetTierLadder as b5, rewardOptionErrorMessage as b6, adminUpsertLevelReward as b7, adminDeleteLevelReward as b8, adminSetRewardClaimStatus as b9, MAX_CONCERN_PRODUCTS as bA, searchCatalogueForPicker as bB, productGallery as bC, MAX_DISCOVERY_CARDS as bD, makeDiscoveryId as bE, sanitizeHomepageVisuals as bF, normalizeDiscovery as bG, products as bH, discoveryPayload as bI, mergeHomepageVisuals as bJ, announceHomepageSaved as bK, POSITION_LABELS as bL, HERO_SECTION as bM, LIFESTYLE_SECTION as bN, JEWELLERY_BANNER_SECTION as bO, STORE_CAROUSEL_SECTION as bP, DELIVERY_STRIP as bQ, BENEFITS_STRIP as bR, DEPARTMENT_SECTIONS as bS, JEWELLERY_SECTIONS as bT, HOMELIVING_SECTIONS as bU, GROCERY_SECTIONS as bV, STOREFRONT_CONTENT_STORES as bW, STOREFRONT_LABELS as bX, normalizeFashionStorefront as bY, normalizeLifestyleStorefront as bZ, sectionSpec as b_, adminGetTheme as ba, sanitizeTheme$1 as bb, TOKENS as bc, PRESET_LIST as bd, GROUPS as be, DEFAULT_THEME as bf, OVERLAY_SCALES as bg, TYPE_SCALES as bh, HEX_RE as bi, adminSetTheme as bj, overlayRgba as bk, adminUpsertCategory as bl, adminDeleteCategory as bm, normalizePromo as bn, PromoPoster as bo, PromoOfferCard as bp, adminListPromotions as bq, adminUpsertPromotion as br, adminDeletePromotion as bs, adminSetPromotionActive as bt, adminReorderPromotions as bu, uploadPromoImage as bv, supabase as bw, CouponTicket as bx, HOMEPAGE_VISUAL_FIELDS as by, safeVisualUrl as bz, LegalUpdated as c, validateStorefrontContent as c0, useSearchParams as c1, buildTree as c2, validatePlacement as c3, uploadImage as c4, isSpotlightEligible as c5, categoryBySlug as c6, sanitizeCategoryConfig as c7, safeColor as c8, safeGradient as c9, makeSpotlightId as ca, validateImageUpload as cb, normalizeCategoryExperience as cc, categoryExperiencePayload as cd, categoryIsReadyButOff as ce, categoryToneTheme as cf, MIN_INTERVAL_MS as cg, MAX_INTERVAL_MS as ch, DEFAULT_ITEM_SCALE as ci, MIN_ITEM_SCALE as cj, MAX_ITEM_SCALE as ck, ITEM_OFFSET_LIMIT as cl, CategorySpotlight as cm, SOCIAL_NETWORKS as cn, POLICY_KEYS as co, validateCompanyForSave as cp, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminSeedDefaultCategories as m, normalizeLegalPage as n, adminImportBiosashCatalog as o, money as p, adminSetProductActive as q, reactExports as r, adminDeleteProduct as s, adminReorderProducts as t, useParams as u, validateLegalPage as v, categories as w, adminListOrders as x, fulfillmentStatusLabel as y, validateFulfillmentInput as z };
 //# sourceMappingURL=bundle.js.map

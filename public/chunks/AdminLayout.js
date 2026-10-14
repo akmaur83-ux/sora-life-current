@@ -51,7 +51,7 @@ const NAV = [{
   label: 'Homepage'
 }, {
   to: '/admin/storefronts',
-  label: 'Fashion & Lifestyle'
+  label: 'Storefronts'
 }, {
   to: '/admin/store-catalogue/fashion',
   label: 'Fashion Products'

@@ -1,4 +1,4 @@
-import { bQ as buildTree, bz as safeVisualUrl, bR as validatePlacement, bw as supabase, bS as uploadImage } from '../bundle.js';
+import { c2 as buildTree, bz as safeVisualUrl, c3 as validatePlacement, bw as supabase, c4 as uploadImage } from '../bundle.js';
 
 // ============================================================
 // Catalogue images: every upload becomes a WebP under 150 KB, in the browser,
@@ -1579,5 +1579,104 @@ async function deleteStoreDemoRows(store, reviewed) {
   return summary;
 }
 
-export { applyCatalogueImport as A, addStoreImagesByName as B, CATALOGUE_STORES as C, deleteStoreDemoRows as D, deleteStoreParty as E, FITS as F, GROCERY_NOT_SOLD as G, deleteStoreVariant as H, saveStoreVariant as I, STONE_ORIGINS as J, deleteStoreStone as K, saveStoreStone as L, METALS as M, sortByFileName as N, addStoreImages as O, PRODUCT_FIELD_RULES as P, saveStoreMediaAlt as Q, RATE_LINKED_NOT_LIVE as R, STONE_ORIGIN_LABELS as S, removeStoreMedia as T, saveStoreMedia as U, VARIANT_FIELD_RULES as V, setStoreMediaPrimary as W, uploadStoreImage as X, saveStoreParty as Y, reorderStoreMedia as Z, catalogueVariantPayload as a, catalogueStonePayload as b, catalogueProductPayload as c, cataloguePartyPayload as d, categoryOptions as e, listStoreProducts as f, listStoreParties as g, catalogueProductHref as h, isJewelleryCategory as i, getStoreProduct as j, declarationWarnings as k, listStoreCategories as l, catalogueSlug as m, gstNote as n, METAL_LABELS as o, PURITY as p, MAKING_TYPES as q, MAKING_LABELS as r, catalogueFailureView as s, planBulkImages as t, uploadStorefrontImage as u, previewStoreDemoDelete as v, GROCERY_VARIANTS_UNREAD as w, versionAfterOwnWrite as x, saveStoreProduct as y, saveStoreCategory as z };
-//# sourceMappingURL=storeCatalogueAdminApi.js.map
+// ============================================================
+// Claim warnings — WARN, never block.
+//
+// Product copy is screened for three kinds of claim SORA LIFE cannot back
+// without proof it does not hold today:
+//   * medical or treatment claims — the Biosash ingest screen's vocabulary
+//     (scripts/ingest-biosash-content.mjs, DISEASE_TERMS + TREATMENT_TERMS),
+//     matched the same way: whole words, case-insensitive, an optional
+//     plural, deliberately blunt ("treats" flags even when innocent)
+//   * speed claims — delivery and dispatch promises (standard delivery is
+//     6–7 days; Express and Scheduled were withdrawn) and "instant results"
+//   * sustainability claims — eco, organic, biodegradable, recycled, carbon
+//     neutral… each needs a certificate or evidence behind it
+//
+// The result says which word matched and shows it in context, so the admin
+// can judge; nothing here stops a save or an import.
+// test-store-catalogue-claims.mjs pins that the medical list still contains
+// every term the ingest screen uses.
+// ============================================================
+
+const MEDICAL_TERMS = [
+// Named conditions (the ingest screen's DISEASE_TERMS).
+'impotence', 'impotency', 'erectile dysfunction', 'premature ejaculation', 'infertility', 'libido', 'sexual weakness', 'sexual dysfunction', 'aphrodisiac', 'arthritis', 'osteoarthritis', 'rheumatism', 'rheumatoid', 'gout', 'diabetes', 'diabetic', 'blood sugar', 'insulin', 'cancer', 'tumour', 'tumor', 'carcinogen', 'chemotherapy', 'blood pressure', 'hypertension', 'hypotension', 'cholesterol', 'asthma', 'bronchitis', 'tuberculosis', 'pneumonia', 'ulcer', 'piles', 'haemorrhoid', 'hemorrhoid', 'constipation', 'jaundice', 'hepatitis', 'liver disease', 'kidney stone', 'renal', 'thyroid', 'anaemia', 'anemia', 'osteoporosis', 'depression', 'anxiety disorder', 'insomnia', 'alzheimer', 'dementia', 'infection', 'inflammatory disease', 'immunity booster', 'menopause', 'menstrual disorder', 'leucorrhoea', 'leukorrhea', 'obesity', 'stroke', 'heart disease', 'cardiac', 'migraine', 'epilepsy',
+// Treatment language (the ingest screen's TREATMENT_TERMS).
+'cure', 'cures', 'curing', 'treat', 'treats', 'treating', 'treatment of', 'remedy', 'remedies', 'heals', 'healing of', 'prevents disease', 'medicine for', 'medicinal use', 'therapeutic', 'clinically proven', 'doctor recommended', 'prescription'];
+const SUSTAINABILITY_TERMS = ['eco-friendly', 'eco friendly', 'environment-friendly', 'environment friendly', 'environmentally friendly', 'earth-friendly', 'earth friendly', 'planet-friendly', 'planet friendly', 'sustainable', 'sustainably', 'sustainability', 'biodegradable', 'compostable', 'recyclable', 'recycled', 'upcycled', 'organic', 'carbon neutral', 'carbon-neutral', 'net zero', 'net-zero', 'zero waste', 'zero-waste', 'plastic-free', 'plastic free', 'chemical-free', 'chemical free', 'toxin-free', 'non-toxic', 'ethically sourced', 'ethically made', 'fair trade', 'fairtrade', 'renewable', 'low impact', 'low-impact', 'green choice'];
+
+// Speed is phrased too many ways for a word list; each pattern names what it caught.
+const SPEED_PATTERNS = [/\b(?:fast|faster|fastest|quick|quicker|express|speedy|rapid|super[- ]?fast|lightning[- ]?fast|instant)(?:\s*(?:&|and)\s*[a-z]+)?\s+(?:delivery|deliveries|shipping|dispatch)\b/i, /\bsame[- ]day\b/i, /\bnext[- ]day\b/i, /\bovernight\s+(?:delivery|shipping|dispatch)\b/i, /\bdeliver(?:ed|s|y)?\s+(?:in|within)\s+(?:\d+|one|two|three)\s*(?:-\s*\d+\s*)?(?:hours?|hrs?|days?|business days?)\b/i, /\b(?:within|in)\s+(?:24|48|72)\s*(?:hours?|hrs?)\b/i, /\b(?:ships?|dispatched|dispatches)\s+(?:today|same day|immediately|within\s+\d+)/i, /\binstant(?:ly)?\s+(?:results?|relief|effect)\b/i, /\bresults?\s+in\s+\d+\s*(?:minutes?|hours?|days?)\b/i];
+const CLAIM_KINDS = {
+  medical: 'Medical or treatment claim',
+  speed: 'Speed claim',
+  sustainability: 'Sustainability claim'
+};
+const escape = term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const termPattern = term => new RegExp(`(^|[^a-z])(${escape(term)}(?:e?s)?)(?=[^a-z]|$)`, 'i');
+const MEDICAL = MEDICAL_TERMS.map(term => [term, termPattern(term)]);
+const GREEN = SUSTAINABILITY_TERMS.map(term => [term, termPattern(term)]);
+
+/** The match with about 30 characters either side, cut at whole words. */
+function excerpt(text, index, length) {
+  const start = Math.max(0, index - 30),
+    end = Math.min(text.length, index + length + 30);
+  let slice = text.slice(start, end);
+  const inWord = i => /\S/.test(text[i - 1] || '') && /\S/.test(text[i] || '');
+  if (start > 0 && inWord(start)) slice = slice.replace(/^\S*\s*/, ''); // began mid-word: drop the fragment
+  if (end < text.length && inWord(end)) slice = slice.replace(/\s*\S*$/, '');
+  return `${start > 0 ? '…' : ''}${slice.replace(/\s+/g, ' ').trim()}${end < text.length ? '…' : ''}`;
+}
+
+/** Every claim in one piece of text: [{ kind, term, excerpt }], one per distinct term, in reading order. */
+function claimWarnings(text) {
+  const source = String(text || '');
+  if (!source.trim()) return [];
+  const found = [];
+  const add = (kind, match, offset) => {
+    const term = match.trim().toLowerCase();
+    if (found.some(f => f.kind === kind && f.term === term)) return;
+    found.push({
+      kind,
+      term,
+      at: offset,
+      excerpt: excerpt(source, offset, match.length)
+    });
+  };
+  for (const [, re] of MEDICAL) {
+    const m = re.exec(source);
+    if (m) add('medical', m[2], m.index + m[1].length);
+  }
+  for (const re of SPEED_PATTERNS) {
+    const m = re.exec(source);
+    if (m) add('speed', m[0], m.index);
+  }
+  for (const [, re] of GREEN) {
+    const m = re.exec(source);
+    if (m) add('sustainability', m[2], m.index + m[1].length);
+  }
+  // A longer term already covers a shorter one at the same place ("treatment of" / "treat").
+  const kept = found.filter(f => !found.some(g => g !== f && g.kind === f.kind && g.term.length > f.term.length && g.at <= f.at && f.at < g.at + g.term.length));
+  return kept.sort((a, b) => a.at - b.at).map(({
+    kind,
+    term,
+    excerpt: e
+  }) => ({
+    kind,
+    term,
+    excerpt: e
+  }));
+}
+
+/** Warnings for a product's customer-facing copy, each tagged with the field it came from. */
+function productClaimWarnings(product) {
+  return [['name', 'Name'], ['description', 'Description']].flatMap(([field, label]) => claimWarnings(product?.[field]).map(w => ({
+    ...w,
+    field,
+    label
+  })));
+}
+
+export { saveStoreParty as $, versionAfterOwnWrite as A, saveStoreProduct as B, CLAIM_KINDS as C, saveStoreCategory as D, applyCatalogueImport as E, FITS as F, GROCERY_NOT_SOLD as G, addStoreImagesByName as H, deleteStoreDemoRows as I, deleteStoreParty as J, deleteStoreVariant as K, saveStoreVariant as L, METALS as M, STONE_ORIGINS as N, deleteStoreStone as O, PRODUCT_FIELD_RULES as P, saveStoreStone as Q, RATE_LINKED_NOT_LIVE as R, STONE_ORIGIN_LABELS as S, sortByFileName as T, addStoreImages as U, VARIANT_FIELD_RULES as V, saveStoreMediaAlt as W, removeStoreMedia as X, saveStoreMedia as Y, setStoreMediaPrimary as Z, uploadStoreImage as _, CATALOGUE_STORES as a, reorderStoreMedia as a0, catalogueProductPayload as b, claimWarnings as c, catalogueVariantPayload as d, catalogueStonePayload as e, cataloguePartyPayload as f, categoryOptions as g, listStoreProducts as h, listStoreParties as i, catalogueProductHref as j, isJewelleryCategory as k, listStoreCategories as l, getStoreProduct as m, declarationWarnings as n, catalogueSlug as o, productClaimWarnings as p, gstNote as q, METAL_LABELS as r, PURITY as s, MAKING_TYPES as t, uploadStorefrontImage as u, MAKING_LABELS as v, catalogueFailureView as w, planBulkImages as x, previewStoreDemoDelete as y, GROCERY_VARIANTS_UNREAD as z };
+//# sourceMappingURL=claimWarnings.js.map

@@ -1,5 +1,5 @@
-import { bw as supabase, r as reactExports, bL as normalizeFashionStorefront, bM as normalizeLifestyleStorefront, j as jsxRuntimeExports, b as Link, bN as STOREFRONT_LABELS, bO as validateStorefrontContent, bz as safeVisualUrl } from '../bundle.js';
-import { u as uploadStorefrontImage } from './storeCatalogueAdminApi.js';
+import { bw as supabase, j as jsxRuntimeExports, bL as POSITION_LABELS, r as reactExports, bz as safeVisualUrl, bM as HERO_SECTION, bN as LIFESTYLE_SECTION, bO as JEWELLERY_BANNER_SECTION, bP as STORE_CAROUSEL_SECTION, bQ as DELIVERY_STRIP, bR as BENEFITS_STRIP, bS as DEPARTMENT_SECTIONS, bT as JEWELLERY_SECTIONS, bU as HOMELIVING_SECTIONS, bV as GROCERY_SECTIONS, bW as STOREFRONT_CONTENT_STORES, b as Link, bX as STOREFRONT_LABELS, bY as normalizeFashionStorefront, bZ as normalizeLifestyleStorefront, b_ as sectionSpec, b$ as sectionContent, c0 as validateStorefrontContent } from '../bundle.js';
+import { c as claimWarnings, C as CLAIM_KINDS, u as uploadStorefrontImage } from './claimWarnings.js';
 
 // ============================================================
 // Admin side of the storefront content (migration 0037): read the drafts and
@@ -85,16 +85,613 @@ async function publishStorefront(store, version, {
   return body;
 }
 
+const isObject$1 = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+function Claims({
+  text
+}) {
+  const found = claimWarnings(text);
+  if (!found.length) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+    className: "hint adm-sf-claim",
+    role: "note",
+    children: ["Check before publishing \u2014 ", found.map(f => `${CLAIM_KINDS[f.kind] || f.kind}: “${f.term}” (${f.excerpt})`).join('; '), "."]
+  });
+}
+function TextInput({
+  id,
+  label,
+  value,
+  placeholder,
+  error,
+  onChange,
+  hint
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "field",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+      className: "label",
+      htmlFor: id,
+      children: label
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+      id: id,
+      className: "input",
+      value: value,
+      placeholder: placeholder,
+      "aria-invalid": error ? true : undefined,
+      "aria-describedby": error ? `${id}-error` : undefined,
+      onChange: e => onChange(e.target.value)
+    }), error && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "error-text",
+      id: `${id}-error`,
+      role: "alert",
+      children: error
+    }), hint && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hint",
+      children: hint
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Claims, {
+      text: value
+    })]
+  });
+}
+
+/** One upload slot: the current file (or the built-in one, greyed), a button that converts and uploads. */
+function UploadSlot({
+  id,
+  label,
+  value,
+  builtIn,
+  error,
+  onChange,
+  onUploading
+}) {
+  const [busy, setBusy] = reactExports.useState(false);
+  const [problem, setProblem] = reactExports.useState('');
+  const [note, setNote] = reactExports.useState('');
+  const preview = safeVisualUrl(value) || safeVisualUrl(builtIn);
+  async function upload(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    setProblem('');
+    setNote('');
+    onUploading(1);
+    try {
+      const image = await uploadStorefrontImage(file);
+      onChange(image.url);
+      setNote(`Converted to WebP, ${Math.round(image.bytes / 1000)} KB, ${image.width}×${image.height}.`);
+    } catch (uploadError) {
+      setProblem(uploadError.message || 'Upload failed.');
+    } finally {
+      setBusy(false);
+      onUploading(-1);
+    }
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "field adm-sf-slot",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "label",
+      id: `${id}-label`,
+      children: label
+    }), preview && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+      className: `hp-admin-image__preview${value ? '' : ' is-builtin'}`,
+      src: preview,
+      alt: ""
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hint",
+      children: value ? 'Uploaded.' : 'Built-in photograph.'
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hp-admin-image__actions",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        className: "btn btn-sm",
+        "aria-labelledby": `${id}-label`,
+        children: [busy ? 'Converting and uploading…' : value ? 'Replace' : 'Upload', /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          id: id,
+          type: "file",
+          accept: "image/png,image/jpeg,image/webp",
+          disabled: busy,
+          onChange: upload
+        })]
+      })
+    }), error && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "error-text",
+      role: "alert",
+      children: error
+    }), problem && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "error-text",
+      role: "alert",
+      children: problem
+    }), note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hint",
+      children: note
+    })]
+  });
+}
+
+/** Phone and desktop photographs together — and, for a `tone`, the background colour matched to them. */
+function PhotoPair({
+  id,
+  spec,
+  value,
+  builtIn,
+  path,
+  errors,
+  onChange,
+  onUploading
+}) {
+  const v = isObject$1(value) ? value : {};
+  const set = (key, next) => onChange({
+    ...v,
+    [key]: next
+  });
+  const tone = spec.type === 'tone';
+  const anySet = ['phone', 'desktop', ...(tone ? ['colour'] : [])].some(k => v[k]);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+    className: "adm-sf-photos",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+      className: "label",
+      children: spec.label
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hint",
+      children: tone ? 'Upload both photographs and pick the colour behind them together — the colour fills the space the photograph fades into. Every upload is converted to a WebP under 150 KB.' : 'Upload both: a phone photograph (portrait) and a desktop one (wide). Every upload is converted to a WebP under 150 KB.'
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "adm-sf-photos__grid",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(UploadSlot, {
+        id: `${id}-phone`,
+        label: "Phone",
+        value: v.phone || '',
+        builtIn: builtIn?.phone,
+        error: errors[`${path}.phone`],
+        onChange: next => set('phone', next),
+        onUploading: onUploading
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(UploadSlot, {
+        id: `${id}-desktop`,
+        label: "Desktop",
+        value: v.desktop || '',
+        builtIn: builtIn?.desktop,
+        error: errors[`${path}.desktop`],
+        onChange: next => set('desktop', next),
+        onUploading: onUploading
+      }), tone && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "field",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+          className: "label",
+          htmlFor: `${id}-colour`,
+          children: "Background colour"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "adm-sf-colour",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+            type: "color",
+            "aria-label": "Pick the colour",
+            value: /^#[0-9a-fA-F]{6}$/.test(v.colour || '') ? v.colour : builtIn?.colour || '#FDFBF8',
+            onChange: e => set('colour', e.target.value.toUpperCase())
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+            id: `${id}-colour`,
+            className: "input",
+            value: v.colour || '',
+            placeholder: "#F4EFE6",
+            onChange: e => set('colour', e.target.value.trim())
+          })]
+        }), errors[`${path}.colour`] && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "error-text",
+          role: "alert",
+          children: errors[`${path}.colour`]
+        })]
+      })]
+    }), errors[path] && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "error-text",
+      role: "alert",
+      children: errors[path]
+    }), anySet && /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      type: "button",
+      className: "btn btn-sm btn-light",
+      onClick: () => onChange(tone ? {
+        colour: '',
+        phone: '',
+        desktop: ''
+      } : {
+        phone: '',
+        desktop: ''
+      }),
+      children: ["Use the built-in photograph", tone ? ' and colour' : '']
+    })]
+  });
+}
+function Field$1({
+  id,
+  name,
+  spec,
+  value,
+  builtIn,
+  path,
+  errors,
+  onChange,
+  onUploading
+}) {
+  const label = spec.label || name;
+  switch (spec.type) {
+    case 'bool':
+      return /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        className: "adm-sf-hide",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          type: "checkbox",
+          checked: value === true,
+          onChange: e => onChange(e.target.checked)
+        }), " Hide it on the site"]
+      });
+    case 'text':
+      return /*#__PURE__*/jsxRuntimeExports.jsx(TextInput, {
+        id: id,
+        label: label,
+        value: typeof value === 'string' ? value : '',
+        placeholder: builtIn || '',
+        error: errors[path],
+        onChange: onChange,
+        hint: `Up to ${spec.max} characters. Empty: the built-in text.`
+      });
+    case 'link':
+      return /*#__PURE__*/jsxRuntimeExports.jsx(TextInput, {
+        id: id,
+        label: label,
+        value: typeof value === 'string' ? value : '',
+        placeholder: builtIn || 'The page’s own link',
+        error: errors[path],
+        onChange: onChange,
+        hint: "A page of this site, starting with / (e.g. /fashion/c/dresses). Empty: the built-in link."
+      });
+    case 'enum':
+      return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "field",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+          className: "label",
+          htmlFor: id,
+          children: label
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("select", {
+          id: id,
+          className: "input",
+          value: typeof value === 'string' ? value : '',
+          onChange: e => onChange(e.target.value),
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("option", {
+            value: "",
+            children: ["Built-in (", POSITION_LABELS[builtIn] || builtIn || 'Left', ")"]
+          }), spec.options.map(o => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+            value: o,
+            children: POSITION_LABELS[o] || o
+          }, o))]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hint",
+          children: "Where the copy sits over the photograph on wide screens. A phone keeps its own layout."
+        }), errors[path] && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "error-text",
+          role: "alert",
+          children: errors[path]
+        })]
+      });
+    case 'lines':
+      {
+        const lines = Array.isArray(value) ? value : [];
+        const set = (i, next) => {
+          const out = Array.from({
+            length: spec.length
+          }, (_, k) => typeof lines[k] === 'string' ? lines[k] : '');
+          out[i] = next;
+          onChange(out);
+        };
+        return /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+          className: "adm-sf-lines",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+            className: "label",
+            children: label
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "adm-grid2",
+            children: Array.from({
+              length: spec.length
+            }, (_, i) => /*#__PURE__*/jsxRuntimeExports.jsx(TextInput, {
+              id: `${id}-${i}`,
+              label: `Line ${i + 1}`,
+              value: typeof lines[i] === 'string' ? lines[i] : '',
+              placeholder: builtIn?.[i] || '',
+              error: errors[`${path}.${i}`],
+              onChange: next => set(i, next)
+            }, i))
+          }), errors[path] && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "error-text",
+            role: "alert",
+            children: errors[path]
+          })]
+        });
+      }
+    case 'pic':
+    case 'tone':
+      return /*#__PURE__*/jsxRuntimeExports.jsx(PhotoPair, {
+        id: id,
+        spec: spec,
+        value: value,
+        builtIn: builtIn,
+        path: path,
+        errors: errors,
+        onChange: onChange,
+        onUploading: onUploading
+      });
+    case 'group':
+      return /*#__PURE__*/jsxRuntimeExports.jsx(Group, {
+        id: id,
+        spec: spec,
+        value: value,
+        builtIn: builtIn,
+        path: path,
+        errors: errors,
+        onChange: onChange,
+        onUploading: onUploading
+      });
+    case 'list':
+      {
+        const items = Array.isArray(value) ? value : [];
+        const base = Array.isArray(builtIn) ? builtIn : [];
+        const set = (i, next) => {
+          const out = Array.from({
+            length: Math.max(items.length, i + 1)
+          }, (_, k) => isObject$1(items[k]) ? items[k] : {});
+          out[i] = next;
+          onChange(out);
+        };
+        const itemSpec = {
+          type: 'group',
+          fields: spec.fields
+        };
+        return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "adm-sf-list",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "label",
+            children: label
+          }), base.slice(0, spec.length).map((def, i) => {
+            const name = def.title ? Array.isArray(def.title) ? def.title.filter(Boolean).join(' ') : def.title : def.line1 || '';
+            const off = items[i]?.hidden === true;
+            return /*#__PURE__*/jsxRuntimeExports.jsxs("details", {
+              className: "adm-sf-item",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("summary", {
+                children: [spec.itemLabel || 'Item', " ", i + 1, name ? `: ${name}` : '', off ? ' — hidden' : '']
+              }), /*#__PURE__*/jsxRuntimeExports.jsx(Group, {
+                id: `${id}-${i}`,
+                spec: itemSpec,
+                value: items[i],
+                builtIn: def,
+                path: `${path}.${i}`,
+                errors: errors,
+                onChange: next => set(i, next),
+                onUploading: onUploading
+              })]
+            }, i);
+          })]
+        });
+      }
+    default:
+      return null;
+  }
+}
+function Group({
+  id,
+  spec,
+  value,
+  builtIn,
+  path,
+  errors,
+  onChange,
+  onUploading
+}) {
+  const v = isObject$1(value) ? value : {};
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "adm-sf-group",
+    children: Object.entries(spec.fields).map(([key, field]) => /*#__PURE__*/jsxRuntimeExports.jsx(Field$1, {
+      id: `${id}-${key}`,
+      name: key,
+      spec: field,
+      value: v[key],
+      builtIn: builtIn?.[key],
+      path: `${path}.${key}`,
+      errors: errors,
+      onChange: next => onChange({
+        ...v,
+        [key]: next
+      }),
+      onUploading: onUploading
+    }, key))
+  });
+}
+
+/** A section's panel: its name, whether it is hidden, and every field under it. */
+function StorefrontSectionEditor({
+  id,
+  spec,
+  path,
+  value,
+  builtIn,
+  errors,
+  onChange,
+  onUploading
+}) {
+  const marked = Object.keys(errors).some(key => key === path || key.startsWith(`${path}.`));
+  const hidden = isObject$1(value) && value.hidden === true;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("details", {
+    className: `surface adm-sf-section${marked ? ' has-errors' : ''}`,
+    open: marked || undefined,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("summary", {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+        children: spec.label
+      }), hidden ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "adm-sf-badge",
+        children: "Hidden"
+      }) : null, marked ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "adm-sf-badge is-error",
+        children: "Check the marked fields"
+      }) : null]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Group, {
+      id: id,
+      spec: spec,
+      value: value,
+      builtIn: builtIn,
+      path: path,
+      errors: errors,
+      onChange: onChange,
+      onUploading: onUploading
+    })]
+  });
+}
+
+// ============================================================
+// ADMIN — the storefront sections an admin edits, page by page, each with
+// its built-in content (the defaults beside the component that renders it).
+// The fields, their labels and their rules are the schema's
+// (storefrontContent.js → STOREFRONT_SCHEMAS); this only says where each
+// section lives and what it shows when a field is left empty.
+// ============================================================
+
+const each = (prefix, sections) => Object.entries(sections).map(([key, defaults]) => ({
+  path: `${prefix}${key}`,
+  defaults
+}));
+const SECTION_PAGES = Object.freeze({
+  wellness: [{
+    title: 'Wellness homepage',
+    href: '/',
+    sections: [{
+      path: 'hero',
+      defaults: HERO_SECTION
+    }, {
+      path: 'lifestyleBanner',
+      defaults: LIFESTYLE_SECTION
+    }, {
+      path: 'jewelleryBanner',
+      defaults: JEWELLERY_BANNER_SECTION
+    }, {
+      path: 'storeCarousel',
+      defaults: STORE_CAROUSEL_SECTION
+    }]
+  }],
+  fashion: [{
+    title: 'Fashion strips',
+    href: '/fashion',
+    sections: [{
+      path: 'strips.delivery',
+      defaults: DELIVERY_STRIP
+    }, {
+      path: 'strips.benefits',
+      defaults: BENEFITS_STRIP
+    }]
+  }, {
+    title: "Women's page",
+    href: '/fashion/women',
+    sections: each('women.', DEPARTMENT_SECTIONS.women)
+  }, {
+    title: "Men's page",
+    href: '/fashion/men',
+    sections: each('men.', DEPARTMENT_SECTIONS.men)
+  }, {
+    title: 'Saree page',
+    href: '/fashion/women/sarees',
+    sections: each('sarees.', DEPARTMENT_SECTIONS.sarees)
+  }, {
+    title: 'Jewellery page',
+    href: '/fashion/jewellery',
+    sections: each('jewellery.', JEWELLERY_SECTIONS)
+  }],
+  homeliving: [{
+    title: 'Home & Living homepage',
+    href: '/homeliving',
+    sections: each('', HOMELIVING_SECTIONS)
+  }],
+  grocery: [{
+    title: 'Grocery homepage',
+    href: '/grocery',
+    sections: each('', GROCERY_SECTIONS)
+  }],
+  lifestyle: []
+});
+
+const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const STORES = {
+  wellness: {
+    form: content => ({
+      ...content
+    }),
+    path: '/'
+  },
   fashion: {
-    normalize: normalizeFashionStorefront,
+    form: content => ({
+      ...content,
+      ...normalizeFashionStorefront(content)
+    }),
     path: '/fashion'
   },
+  homeliving: {
+    form: content => ({
+      ...content
+    }),
+    path: '/homeliving'
+  },
+  grocery: {
+    form: content => ({
+      ...content
+    }),
+    path: '/grocery'
+  },
   lifestyle: {
-    normalize: normalizeLifestyleStorefront,
+    form: content => normalizeLifestyleStorefront(content),
     path: '/lifestyle'
   }
 };
+
+/** The store's content with the value at a dotted section path replaced. */
+function setIn(content, path, value) {
+  const [key, ...rest] = path.split('.');
+  const base = isObject(content) ? content : {};
+  return {
+    ...base,
+    [key]: rest.length ? setIn(base[key], rest.join('.'), value) : value
+  };
+}
+
+/** Every editable section of a store, page by page, each with a link to preview that page's saved draft. */
+function SectionPages({
+  store,
+  value,
+  onChange,
+  onUploading,
+  errors,
+  dirty
+}) {
+  return SECTION_PAGES[store].map(page => /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "adm-sf-page",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "adm-sf-page__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        children: page.title
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+        className: `btn btn-sm btn-outline${dirty ? ' is-disabled' : ''}`,
+        href: `${page.href}?preview=draft`,
+        target: "_blank",
+        rel: "noreferrer",
+        "aria-disabled": dirty || undefined,
+        onClick: event => {
+          if (dirty) event.preventDefault();
+        },
+        children: "Preview this page"
+      })]
+    }), page.sections.map(({
+      path,
+      defaults
+    }) => /*#__PURE__*/jsxRuntimeExports.jsx(StorefrontSectionEditor, {
+      id: `${store}-${path.replace(/\./g, '-')}`,
+      spec: sectionSpec(store, path),
+      path: path,
+      value: sectionContent(value, path),
+      builtIn: defaults,
+      errors: errors,
+      onUploading: onUploading,
+      onChange: next => onChange(current => setIn(current, path, next))
+    }, path))]
+  }, page.title));
+}
 function Field({
   id,
   label,
@@ -428,10 +1025,7 @@ const when = iso => iso ? new Date(iso).toLocaleString('en-IN', {
 }) : '';
 function Storefronts() {
   const [tab, setTab] = reactExports.useState('fashion');
-  const [forms, setForms] = reactExports.useState({
-    fashion: normalizeFashionStorefront(),
-    lifestyle: normalizeLifestyleStorefront()
-  });
+  const [forms, setForms] = reactExports.useState(() => Object.fromEntries(STOREFRONT_CONTENT_STORES.map(store => [store, STORES[store].form({})])));
   const [savedForms, setSavedForms] = reactExports.useState({});
   const [drafts, setDrafts] = reactExports.useState({});
   const [published, setPublished] = reactExports.useState({});
@@ -449,8 +1043,8 @@ function Storefronts() {
     try {
       const loaded = await adminLoadStorefronts();
       const next = Object.fromEntries(Object.entries(STORES).map(([store, {
-        normalize
-      }]) => [store, normalize(loaded.drafts[store]?.content)]));
+        form
+      }]) => [store, form(isObject(loaded.drafts[store]?.content) ? loaded.drafts[store].content : {})]));
       setForms(next);
       setSavedForms(Object.fromEntries(Object.entries(next).map(([store, form]) => [store, JSON.stringify(form)])));
       setDrafts(loaded.drafts);
@@ -538,16 +1132,20 @@ function Storefronts() {
     className: "muted",
     children: "Loading\u2026"
   });
-  const Editor = tab === 'fashion' ? FashionEditor : LifestyleEditor;
+  const Editor = {
+    fashion: FashionEditor,
+    lifestyle: LifestyleEditor
+  }[tab];
+  const uploading = delta => setUploads(count => count + delta);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "adm-form adm-storefronts",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm__head",
       children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-          children: "Fashion & Lifestyle"
+          children: "Storefronts"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: "Edit a draft, preview it, then publish. Products, prices, cart and checkout are not touched."
+          children: "Every store's copy, photographs, links and sections: edit a draft, preview it, then publish. Products, prices, cart and checkout are not touched."
         })]
       })
     }), error && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -587,7 +1185,7 @@ function Storefronts() {
       className: "adm-chipbar",
       role: "tablist",
       "aria-label": "Storefront editor",
-      children: Object.keys(STORES).map(store => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      children: Object.keys(STORES).map(store => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
         className: `adm-chip${tab === store ? ' active' : ''}`,
         type: "button",
         role: "tab",
@@ -599,7 +1197,7 @@ function Storefronts() {
           setMessage('');
           setError('');
         },
-        children: [STOREFRONT_LABELS[store], " Store"]
+        children: STOREFRONT_LABELS[store]
       }, store))
     }), draft && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
       className: "hint adm-storefronts__status",
@@ -608,11 +1206,18 @@ function Storefronts() {
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
       onSubmit: save,
       noValidate: true,
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Editor, {
+      children: [Editor && /*#__PURE__*/jsxRuntimeExports.jsx(Editor, {
         value: forms[tab],
         onChange: setForm,
-        onUploading: delta => setUploads(count => count + delta),
+        onUploading: uploading,
         errors: errors
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(SectionPages, {
+        store: tab,
+        value: forms[tab],
+        onChange: setForm,
+        onUploading: uploading,
+        errors: errors,
+        dirty: dirty
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "adm-storefronts__actions",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
