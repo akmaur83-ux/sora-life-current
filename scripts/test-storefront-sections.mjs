@@ -199,7 +199,10 @@ await test(`with nothing published, every page renders exactly as it did before 
   const then = dump({ FASHION_SRC_ROOT: baselineDir, GROCERY_SRC_ROOT: baselineDir });
   assert.deepEqual(Object.keys(now), Object.keys(then));
   assert.equal(Object.keys(now).length, 15);
-  for (const page of Object.keys(then)) assert.equal(now[page], then[page], page);
+  // The fashion category strip under the Lifestyle banner is not an editable section; it gained the
+  // men's five photographed tiles since (test-store-doorway.mjs pins it), so it is left out of the comparison.
+  const sansStrip = (page, html) => (page === '/#lifestyleBanner' ? html.replace(/<section class="fsb-strip"[\s\S]*?<\/section>/, '') : html);
+  for (const page of Object.keys(then)) assert.equal(sansStrip(page, now[page]), sansStrip(page, then[page]), page);
 });
 
 const PUBLISHED = { stores: {

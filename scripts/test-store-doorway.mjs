@@ -160,7 +160,7 @@ await test('Part A: the <picture> takes the women\'s hero portrait up to 700px a
   assert.match(el, /<source media="\(max-width: 700px\)" srcSet="\/img\/fashion-editorial\/women-main-hero-mobile\.webp"\/><img [^>]*src="\/img\/fashion-editorial\/women-edit-tailoring-1898\.webp"/);
 });
 
-await test('the strip: women\'s and men\'s tiles in turn, each opening its own listing under a "Women" or "Men" label; a tile without its photograph stays out — today the six women\'s tiles, the five men\'s waiting for theirs', () => {
+await test('the strip: women\'s and men\'s tiles in turn, each opening its own listing under a "Women" or "Men" label; a tile without its photograph stays out — today all eleven, the men\'s five photographed too', () => {
   assert.equal(typeof mod.FashionCategoryStrip, 'function', 'the strip is its own export');
   const cats = mod.FASHION_CATEGORIES;
   assert.deepEqual(cats.women.map((t) => t.slug), ['dresses', 'knitwear', 'shirts', 'denim', 'coats-jackets', 'womens-bags'], 'the Women sub-categories, the women\'s page\'s five slugs and Bags');
@@ -170,22 +170,23 @@ await test('the strip: women\'s and men\'s tiles in turn, each opening its own l
     assert.ok(has(t.art.slice(1)), `${t.art} exists`);
   }
   for (const t of cats.men) {
-    assert.equal(t.art, null, `${t.name}: no photograph yet`);
-    assert.ok(!has(`img/fashion-editorial/${t.planned}.webp`), `${t.planned}.webp has landed: set the tile's art so it shows`);
+    assert.match(t.art, /^\/img\/fashion-editorial\/men-shop-[a-z-]+\.webp$/);
+    assert.ok(has(t.art.slice(1)), `${t.art} exists`);
   }
-  const full = { women: cats.women, men: cats.men.map((t) => ({ ...t, art: `/img/x/${t.slug}.webp` })) };
-  assert.deepEqual(mod.stripTiles(full).map((t) => `${t.dept}:${t.slug}`), ['Women:dresses', 'Men:mens-shirts', 'Women:knitwear', 'Men:mens-t-shirts', 'Women:shirts', 'Men:mens-trousers', 'Women:denim', 'Men:mens-jackets', 'Women:coats-jackets', 'Men:mens-footwear', 'Women:womens-bags'], 'one of each in turn while both last');
-  assert.deepEqual(mod.stripTiles().map((t) => `${t.dept}:${t.slug}`), cats.women.map((t) => `Women:${t.slug}`), 'no photograph, no tile');
+  const order = ['Women:dresses', 'Men:mens-shirts', 'Women:knitwear', 'Men:mens-t-shirts', 'Women:shirts', 'Men:mens-trousers', 'Women:denim', 'Men:mens-jackets', 'Women:coats-jackets', 'Men:mens-footwear', 'Women:womens-bags'];
+  assert.deepEqual(mod.stripTiles().map((t) => `${t.dept}:${t.slug}`), order, 'one of each in turn while both last');
+  const without = { women: cats.women, men: cats.men.map((t, i) => (i === 0 ? { ...t, art: null } : t)) };
+  assert.deepEqual(mod.stripTiles(without).map((t) => `${t.dept}:${t.slug}`), ['Women:dresses', 'Men:mens-t-shirts', 'Women:knitwear', 'Men:mens-trousers', 'Women:shirts', 'Men:mens-jackets', 'Women:denim', 'Men:mens-footwear', 'Women:coats-jackets', 'Women:womens-bags'], 'no photograph, no tile — the rest still in turn');
   const tiles = [...stripHtml.matchAll(/<li class="fsb-strip__tile" aria-hidden="(true|false)"><a( tabindex="-1")? href="([^"]+)"><span class="fsb-strip__art"><img alt="" width="600" height="780" class="fsb-strip__image" loading="lazy" decoding="async"\/><\/span><span class="fsb-strip__dept">(Women|Men)<\/span><span class="fsb-strip__name">([^<]+)<\/span><\/a><\/li>/g)];
-  assert.equal(tiles.length, 6, 'six tiles, each the whole of its link');
-  assert.deepEqual(tiles.map((m) => m[3]), cats.women.map((t) => `/fashion/c/${t.slug}`), 'each tile opens its own listing');
-  assert.deepEqual(tiles.map((m) => m[5].replace(/&amp;/g, '&')), ['Dresses', 'Knitwear', 'Shirts', 'Denim', 'Coats & Jackets', 'Bags']);
-  assert.deepEqual(tiles.map((m) => [m[1], !!m[2]]), [['false', false], ...Array(5).fill(['true', true])], 'before measuring, one tile in view; the rest hidden and untabbable');
-  assert.match(stripHtml, /<p class="fsb-strip__eyebrow">Women<\/p><h2 id="fsb-strip-h">Shop fashion by category<\/h2>/, 'the label names only the departments on show');
+  assert.equal(tiles.length, 11, 'eleven tiles, each the whole of its link');
+  assert.deepEqual(tiles.map((m) => m[3]), order.map((k) => `/fashion/c/${k.split(':')[1]}`), 'each tile opens its own listing');
+  assert.deepEqual(tiles.map((m) => `${m[4]} ${m[5].replace(/&amp;/g, '&')}`), ['Women Dresses', 'Men Shirts', 'Women Knitwear', 'Men T-Shirts', 'Women Shirts', 'Men Trousers', 'Women Denim', 'Men Jackets', 'Women Coats & Jackets', 'Men Footwear', 'Women Bags']);
+  assert.deepEqual(tiles.map((m) => [m[1], !!m[2]]), [['false', false], ...Array(10).fill(['true', true])], 'before measuring, one tile in view; the rest hidden and untabbable');
+  assert.match(stripHtml, /<p class="fsb-strip__eyebrow">Women &amp; Men<\/p><h2 id="fsb-strip-h">Shop fashion by category<\/h2>/, 'the label names only the departments on show');
   assert.match(stripHtml, /<div class="fsb-strip__arrows"><button type="button" aria-label="Previous categories" disabled=""><svg[\s\S]*?<\/button><button type="button" aria-label="Next categories"><svg/, 'arrows, the first disabled at the start');
   assert.match(stripHtml, /<div class="fsb-strip__viewport" aria-roledescription="carousel" aria-label="Women&#x27;s and men&#x27;s categories"><ul class="fsb-strip__track" style="--i:0">/, 'the track carries only its index; the stylesheet turns it into a transform');
   const eagerStrip = eager.match(/<section class="fsb-strip"[\s\S]*?<\/section>/)[0];
-  assert.deepEqual([...eagerStrip.matchAll(/<img [^>]*src="([^"]+)"/g)].map((m) => m[1]), cats.women.map((t) => t.art));
+  assert.deepEqual([...eagerStrip.matchAll(/<img [^>]*src="([^"]+)"/g)].map((m) => m[1]), mod.stripTiles().map((t) => t.art), 'each tile its own photograph, women\'s and men\'s in turn');
 });
 
 await test('the strip carousel: steps a tile at a time on its own (wrapping after the last window), pauses on hover and on focus, never moves under prefers-reduced-motion, arrows clamp at both ends, a 40px sideways swipe steps and swallows the click; nothing to move, no autoplay and no arrows', async () => {
