@@ -84,6 +84,30 @@ const WELLNESS = {
       position: position(),
     }, 'Slides', 'Slide'),
   }, 'Hero'),
+  trust: group({
+    hidden: hidden(),
+    items: list(4, {
+      hidden: hidden(), title: lines(2, 30, 'Title (a phone shows it as these two lines)'),
+      note: text(40, 'Line under it (a phone shows it only under a one-line title)'), link: link('Opens (empty: the built-in page, or none)'),
+    }, 'Items', 'Item'),
+  }, 'Trust strip'),
+  tiles: group({
+    hidden: hidden(),
+    fashion: group({
+      hidden: hidden(), title: lines(3, 24, 'Headline'), cta: text(30, 'Button label'), link: link('Opens'),
+      picture: tone('Photograph and the panel colour matched to it'), alt: text(180, 'Photograph description'),
+    }, 'Fashion tile (the large one)'),
+    nutrition: group({ hidden: hidden(), title: lines(2, 24, 'Headline'), link: link('Opens'), picture: tone('Photograph and the tile colour behind it') }, 'Health & Nutrition tile'),
+    living: group({ hidden: hidden(), title: lines(2, 24, 'Headline'), link: link('Opens'), picture: tone('Photograph and the tile colour behind it') }, 'Home & Living tile'),
+  }, 'Store tiles'),
+  stores: group({
+    hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'), link: link('View-all link'),
+    items: list(6, { hidden: hidden(), name: text(30, 'Name'), link: link('Opens'), picture: tone('Photograph and the circle colour behind it') }, 'Circles', 'Circle'),
+  }, 'Explore the stores'),
+  promo: group({
+    hidden: hidden(), title: text(60, 'Headline'), text: text(160, 'Subline'), cta: text(40, 'Button label'), link: link('Opens'),
+    picture: pic(), alt: text(180, 'Photograph description'), position: position(),
+  }, 'Festive promo'),
   lifestyleBanner: banner('Lifestyle banner', { position: position() }),
   jewelleryBanner: banner('Jewellery banner', { position: position() }),
   storeCarousel: group({

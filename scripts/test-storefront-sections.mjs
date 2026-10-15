@@ -13,7 +13,7 @@
 //   * the page's reading: every field that breaks its rule falls back to the
 //     built-in value, field by field — never rendered broken;
 //   * the build copies a section's uploaded photographs like any other;
-//   * with nothing published, all eleven renders equal the tree before the
+//   * with nothing published, all fifteen renders equal the tree before the
 //     sections were editable, byte for byte; with content published, each page
 //     shows it: copy, photographs (phone and desktop), links, hidden sections
 //     and tiles, the position preset and the matched colour;
@@ -54,6 +54,10 @@ const grocery = loadGroceryData();
 
 const SECTIONS = [
   ['wellness', 'hero', wellness.HERO_SECTION],
+  ['wellness', 'trust', wellness.TRUST_SECTION],
+  ['wellness', 'tiles', wellness.TILES_SECTION],
+  ['wellness', 'stores', wellness.STORES_SECTION],
+  ['wellness', 'promo', wellness.FESTIVE_SECTION],
   ['wellness', 'lifestyleBanner', doorway.LIFESTYLE_SECTION],
   ['wellness', 'jewelleryBanner', wellness.JEWELLERY_BANNER_SECTION],
   ['wellness', 'storeCarousel', doorway.STORE_CAROUSEL_SECTION],
@@ -80,9 +84,9 @@ console.log('\n— Each section and its built-in content —');
 
 await test('every editable section the schema defines has its built-in content, and the admin lists every one of them', () => {
   assert.deepEqual(SECTIONS.map(([s, p]) => `${s}:${p}`).sort(), schemaSections());
-  assert.equal(SECTIONS.length, 44, 'forty-four sections across eight pages');
+  assert.equal(SECTIONS.length, 48, 'forty-eight sections across eight pages');
   const registry = read('src/admin/storefrontSections.js');
-  for (const name of ['HERO_SECTION', 'LIFESTYLE_SECTION', 'JEWELLERY_BANNER_SECTION', 'STORE_CAROUSEL_SECTION', 'DELIVERY_STRIP', 'BENEFITS_STRIP', 'JEWELLERY_SECTIONS', 'HOMELIVING_SECTIONS', 'GROCERY_SECTIONS']) assert.match(registry, new RegExp(`\\b${name}\\b`), name);
+  for (const name of ['HERO_SECTION', 'TRUST_SECTION', 'TILES_SECTION', 'STORES_SECTION', 'FESTIVE_SECTION','LIFESTYLE_SECTION', 'JEWELLERY_BANNER_SECTION', 'STORE_CAROUSEL_SECTION', 'DELIVERY_STRIP', 'BENEFITS_STRIP', 'JEWELLERY_SECTIONS', 'HOMELIVING_SECTIONS', 'GROCERY_SECTIONS']) assert.match(registry, new RegExp(`\\b${name}\\b`), name);
   for (const page of ['women', 'men', 'sarees']) assert.match(registry, new RegExp(`each\\('${page}\\.', DEPARTMENT_SECTIONS\\.${page}\\)`), page);
   assert.match(registry, /each\('jewellery\.', JEWELLERY_SECTIONS\)/);
   assert.match(registry, /each\('', HOMELIVING_SECTIONS\)/); assert.match(registry, /each\('', GROCERY_SECTIONS\)/);
@@ -97,7 +101,7 @@ await test('the built-in content has every field of its schema, the same counts,
       case 'pic': assert.ok(value.phone && value.desktop, `${at} has both photographs`); break;
       case 'tone': assert.ok(value.phone && value.desktop && value.colour === '', `${at} has both photographs and no colour of its own`); break;
       case 'bool': assert.equal(value, false, `${at} is shown`); break;
-      case 'enum': assert.equal(value, 'left', `${at} is the built-in position`); break;
+      case 'enum': assert.ok(spec.options.includes(value), `${at} is a preset`); break;
       default: assert.equal(typeof value, 'string', `${at} is text`);
     }
   };
@@ -194,13 +198,17 @@ const now = dump({});
 await test(`with nothing published, every page renders exactly as it did before the sections were editable (${BASELINE_SHA}), byte for byte`, () => {
   const then = dump({ FASHION_SRC_ROOT: baselineDir, GROCERY_SRC_ROOT: baselineDir });
   assert.deepEqual(Object.keys(now), Object.keys(then));
-  assert.equal(Object.keys(now).length, 11);
+  assert.equal(Object.keys(now).length, 15);
   for (const page of Object.keys(then)) assert.equal(now[page], then[page], page);
 });
 
 const PUBLISHED = { stores: {
   wellness: {
     hero: { slides: [{ title: ['Published', 'hero'], ctaLabel: 'Go there', ctaLink: '/shop?edit=1', picture: { colour: '#F4EFE6', phone: U('hp'), desktop: U('hd') }, position: 'right' }, { hidden: true }] },
+    trust: { items: [{ title: ['Published', 'trust'] }, { link: '/about' }, {}, { hidden: true }] },
+    tiles: { fashion: { title: ['Dressed', 'for', 'today.'], cta: 'See fashion', picture: { colour: '#1D2A44', phone: U('fp'), desktop: U('fd') } }, living: { hidden: true } },
+    stores: { title: 'Published stores', items: [{ name: 'Wellbeing', picture: { colour: '#EEE8DD', phone: U('cp'), desktop: U('cd') } }, { hidden: true }] },
+    promo: { title: 'Published gifting', position: 'left', link: '/shop?gift=1' },
     lifestyleBanner: { hidden: true },
     jewelleryBanner: { eyebrow: 'Published jewels', position: 'center', picture: { phone: U('jp'), desktop: U('jd') }, link: '/fashion/jewellery?edit=1' },
     storeCarousel: { title: 'Published worlds', cards: [{}, { hidden: true }] },
@@ -241,6 +249,29 @@ await test('the wellness homepage: the hero\'s copy, button, photographs, matche
   // Its photograph loads as it scrolls near (DeferredImage), so it is read from what the banner is given.
   const banner = wellness.jewelleryBannerOf(content.readSection(content.sectionSpec('wellness', 'jewelleryBanner'), PUBLISHED.stores.wellness.jewelleryBanner, wellness.JEWELLERY_BANNER_SECTION));
   assert.equal(banner.wide.src, U('jd')); assert.equal(banner.tall, U('jp'));
+  // The trust strip: a new title (two lines on a phone), a link added, a hidden item, the rest even.
+  const trust = pub['/#trust'];
+  assert.match(trust, /<ul class="hx-wrap hx-trust__list" data-count="3" style="--hx-trust-n:3">/);
+  assert.match(trust, /<li class="hx-trust--split"><a href="\/shipping">[\s\S]*?<strong><span>Published<\/span><span> trust<\/span><\/strong><small>On every order<\/small>/, 'an empty line under it is the built-in one');
+  assert.match(trust, /<a href="\/about">[\s\S]*?Genuine/, 'a link where there was none');
+  assert.doesNotMatch(trust, /Support/, 'the hidden item');
+  // The tiles: the large one's headline, button, photographs and a dark panel colour (light copy); a hidden tile closed up.
+  const tiles = pub['/#tiles'];
+  assert.match(tiles, /<div class="hx-wrap hx-tiles__grid" data-without="living">/);
+  assert.match(tiles, /class="hx-tile hx-tile--fashion" data-tone="" data-tone-dark="" style="--sf-tone:#1D2A44"/);
+  assert.match(tiles, /<h2 class="hx-tile__h" id="hx-fashion-h"><span>Dressed<\/span> <span>for<\/span> <span>today\.<\/span><\/h2>/);
+  assert.match(tiles, />See fashion </); assert.doesNotMatch(tiles, /hx-tile--living/);
+  const fashionTile = content.readSection(content.sectionSpec('wellness', 'tiles'), PUBLISHED.stores.wellness.tiles, wellness.TILES_SECTION).fashion.picture;
+  assert.deepEqual(fashionTile, { colour: '#1D2A44', phone: U('fp'), desktop: U('fd') });
+  // The circles: a heading, a renamed circle on its own colour, a hidden one, the row even.
+  const stores = pub['/#stores'];
+  assert.match(stores, /<h2 class="hx-stores__h" id="hx-stores-h">Published stores<\/h2>/);
+  assert.match(stores, /<ul class="hx-stores__row" data-count="5" style="--hx-stores-n:5">/);
+  assert.match(stores, /<span class="hx-store__art" data-tone="" style="--sf-tone:#EEE8DD">[\s\S]*?<span class="hx-store__name">Wellbeing<\/span>/);
+  assert.doesNotMatch(stores, /Personal Care/, 'the hidden circle');
+  // The festive promo: its headline, link and the copy moved left of its built-in centre.
+  const promo = pub['/#promo'];
+  assert.match(promo, /<section class="hx hx-promo" data-pos="left"/); assert.match(promo, /Published gifting/); assert.match(promo, /href="\/shop\?gift=1"/);
   const carousel = pub['/#storeCarousel'];
   assert.match(carousel, /<h2 id="fsb-h">Published worlds<\/h2>/);
   assert.equal((carousel.match(/fsb__card fsb__card--/g) || []).length, 1); assert.doesNotMatch(carousel, /fsb__dots/);
@@ -312,7 +343,7 @@ await test('nothing the storefront renders imports the editor, the admin registr
   const css = read('src/styles/storefront-sections.css').replace(/\/\*[\s\S]*?\*\//g, '');
   const selectors = [...css.matchAll(/([^{}]+)\{[^{}]*\}/g)].flatMap(([, sel]) => sel.split(','));
   assert.ok(selectors.length > 40);
-  for (const sel of selectors) assert.match(sel, /\[data-(pos|tone|art)\b/, sel.trim());
+  for (const sel of selectors) assert.match(sel, /\[data-(pos|tone|tone-dark|art|count|without)\b/, sel.trim());
   assert.doesNotMatch(css, /url\(|expression|@import/, 'no file of its own: a replaced photograph arrives as a checked custom property');
   assert.match(read('build/build-css.mjs'), /'src\/styles\/fashion-choice\.css',\n[\s\S]*'src\/styles\/storefront-sections\.css',\n\];/, 'the last sheet of the storefront cascade');
 });

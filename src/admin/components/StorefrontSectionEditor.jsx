@@ -160,7 +160,7 @@ function Field({ id, name, spec, value, builtIn, path, errors, onChange, onUploa
         <div className="adm-sf-list">
           <p className="label">{label}</p>
           {base.slice(0, spec.length).map((def, i) => {
-            const name = def.title ? (Array.isArray(def.title) ? def.title.filter(Boolean).join(' ') : def.title) : def.line1 || '';
+            const name = def.title ? (Array.isArray(def.title) ? def.title.filter(Boolean).join(' ') : def.title) : def.name || def.line1 || '';
             const off = items[i]?.hidden === true;
             return (
               <details key={i} className="adm-sf-item">

@@ -168,7 +168,8 @@ await test('the tiles: Fashion, large, opening the fashion chooser; Health & Nut
 
 await test('the Fashion photograph is the owner\'s, exactly as supplied — solid orange edge to edge, no white in its background, no fade — under a name never used before (/img is cached for a week); the old name is gone; the panel takes the photograph\'s own orange so no line shows', async () => {
   const src = read('src/components/HomeStorefront.jsx');
-  assert.match(src, /src="\/img\/home-fashion-portrait-orange\.webp"/, 'the tile uses the new name');
+  // The tile's built-in photograph (the admin may replace it; storefrontContent.js → wellness.tiles).
+  assert.match(src, /picture: tileArt\('\/img\/home-fashion-portrait-orange\.webp'\)/, 'the tile uses the new name');
   assert.ok(!has('img/home-tile-fashion.webp') && !src.includes('home-tile-fashion'), 'the old name — which browsers may still hold an earlier picture under — is gone');
   const { data, info } = await sharp(resolve(ROOT, 'img/home-fashion-portrait-orange.webp')).raw().toBuffer({ resolveWithObject: true });
   const px = (x, y) => [...data.subarray((y * info.width + x) * info.channels, (y * info.width + x) * info.channels + 3)];

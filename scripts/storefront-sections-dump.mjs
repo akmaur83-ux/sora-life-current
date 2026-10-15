@@ -2,7 +2,8 @@
 // Every page with sections an admin can edit, rendered and printed as JSON:
 // the fashion home page (its strips), the women's, men's, saree and jewellery
 // pages, the grocery and Home & Living homepages, and the wellness homepage's
-// hero, Lifestyle banner, jewellery banner and store carousel.
+// hero, trust strip, store tiles, store circles, festive promo, Lifestyle
+// banner, jewellery banner and store carousel.
 //
 //   node scripts/storefront-sections-dump.mjs                      nothing published
 //   STOREFRONT_PUBLISHED=<file.json> node scripts/...               { stores: {...} } published
@@ -43,6 +44,10 @@ const wellness = loadModule('src/components/HomeStorefront.jsx', { Link, Icon, D
 const doorway = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage, FashionEntryLink });
 const section = (Component) => renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(Component)));
 out['/#hero'] = section(wellness.HomeHero);
+out['/#trust'] = section(wellness.HomeTrustStrip);
+out['/#tiles'] = section(wellness.HomeTiles);
+out['/#stores'] = section(wellness.ExploreStores);
+out['/#promo'] = section(wellness.FestivePromo);
 out['/#lifestyleBanner'] = section(doorway.LifestyleBanner);
 out['/#jewelleryBanner'] = section(wellness.JewelleryBanner);
 out['/#storeCarousel'] = section(doorway.StoreCarousel);

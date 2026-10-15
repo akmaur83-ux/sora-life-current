@@ -24,8 +24,26 @@ export function useStorefrontSection(store, path, defaults) {
 /** Lines of a headline with the empty ones left out (an empty extra line is "none"). */
 export const filledLines = (lines) => (Array.isArray(lines) ? lines.filter((line) => typeof line === 'string' && line) : []);
 
-/** Copy position as a data attribute: nothing for the built-in place (left), so a default page renders as before. */
-export const positionAttr = (position) => (position && position !== 'left' ? { 'data-pos': position } : {});
+/** Copy position as a data attribute: nothing for the section's built-in place, so a default page renders as before. */
+export const positionAttr = (position, builtIn = 'left') => (position && position !== builtIn ? { 'data-pos': position } : {});
+
+/** True when white text reads better than near-black on the colour (relative luminance under the 0.179 crossover). */
+export function isDarkColour(hex) {
+  const n = parseInt(String(hex).slice(1), 16);
+  const lin = [n >> 16, (n >> 8) & 255, n & 255].map((v) => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2] < 0.179;
+}
+
+/**
+ * A photograph's matched colour as attributes: nothing when the admin set none (the built-in look);
+ * else the colour (--sf-tone) and, on a dark one, a marker that turns the copy over it light.
+ */
+export const toneAttrs = (colour) => (colour
+  ? { 'data-tone': '', ...(isDarkColour(colour) ? { 'data-tone-dark': '' } : {}), style: { '--sf-tone': colour } }
+  : {});
+
+/** A phone photograph as a <picture> source — only when it differs from the desktop one, so a default image renders as before. */
+export const phoneSources = (phone, desktop, media = '(max-width: 700px)') => (phone && phone !== desktop ? { sources: [{ media, srcSet: phone }] } : {});
 
 /** A built-in editorial image as the section's photograph pair: its phone variant when it has one. */
 export const shot = (image) => ({ phone: image.mobile || image.src || image.fallback, desktop: image.src || image.fallback });
