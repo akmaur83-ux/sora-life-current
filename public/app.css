@@ -8816,7 +8816,8 @@ body:has(.v2-home) .ftr { margin-top: 0; }
                 the layout it was designed with.
      data-tone  the background colour matched to a photograph the admin replaced, set with
                 it (--sf-tone). Where a section's photograph fades into its background, the
-                fade takes the same colour.
+                fade takes the same colour; on a dark one (data-tone-dark) the copy turns light.
+     data-count / data-without  a row with items hidden closes up (set only when some are).
    With nothing published no element carries these attributes, so no rule here matches and
    every page is exactly as it was. Every selector is scoped to its section's own class.
    ============================================================ */
@@ -8832,6 +8833,36 @@ body:has(.v2-home) .ftr { margin-top: 0; }
   .hx-hero__slide[data-pos="center"] .hx-hero__copy > *, .hx-hero__slide[data-pos="center"] .hx-hero__copy > .hx-hero__title { max-width: min(640px, 70vw); justify-self: center; }
   .hx-hero__slide[data-pos="center"] .hx-hero__image { left: 0; right: 0; width: 100%; object-fit: cover; -webkit-mask-image: none; mask-image: none; }
   .hx-hero__slide[data-pos="center"]::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--sf-tone, #FDFBF8) 72%, transparent) 0%, transparent 72%); }
+}
+
+/* ---- Wellness homepage: the trust strip ---------------------------------------- */
+/* Fewer than four items: even columns for those left (data-count is set only then). */
+.hx-trust__list[data-count] { grid-template-columns: repeat(var(--hx-trust-n), minmax(0, 1fr)); }
+
+/* ---- Wellness homepage: the three store tiles ------------------------------------ */
+.hx-tile--fashion[data-tone], .hx-tile--small[data-tone] { background: var(--sf-tone); }
+.hx-tile[data-tone-dark] .hx-tile__h { color: #fff; }
+.hx-tile--small[data-tone-dark] .hx-tile__go { border-color: #fff; color: #fff; }
+/* A hidden tile's place is closed up (data-without names the hidden ones). */
+.hx-tiles__grid[data-without~="fashion"] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(208px, auto); }
+.hx-tiles__grid[data-without~="nutrition"] .hx-tile--small, .hx-tiles__grid[data-without~="living"] .hx-tile--small { grid-row: 1 / 3; }
+.hx-tiles__grid[data-without~="fashion"] .hx-tile--small { grid-row: auto; }
+.hx-tiles__grid[data-without~="fashion"][data-without~="nutrition"], .hx-tiles__grid[data-without~="fashion"][data-without~="living"], .hx-tiles__grid[data-without~="nutrition"][data-without~="living"] { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 700px) {
+  .hx-tiles__grid[data-without~="fashion"] { grid-template-rows: clamp(72px, 19.5vw, 140px); }
+}
+
+/* ---- Wellness homepage: the store circles ---------------------------------------- */
+.hx-store__art[data-tone] { background: var(--sf-tone); }
+/* Fewer than six circles: even columns for those left (data-count is set only then). */
+.hx-stores__row[data-count] { grid-template-columns: repeat(var(--hx-stores-n), minmax(0, 1fr)); }
+
+/* ---- Wellness homepage: the festive promo (its copy is centred when built in) ------- */
+@media (min-width: 701px) {
+  .hx-promo[data-pos="left"] .hx-promo__card { justify-content: flex-start; text-align: left; }
+  .hx-promo[data-pos="left"] .hx-promo__copy { justify-items: start; margin-left: 4%; }
+  .hx-promo[data-pos="right"] .hx-promo__card { justify-content: flex-end; text-align: left; }
+  .hx-promo[data-pos="right"] .hx-promo__copy { justify-items: start; margin-right: 4%; }
 }
 
 /* ---- Wellness homepage: the Lifestyle banner -------------------------------- */

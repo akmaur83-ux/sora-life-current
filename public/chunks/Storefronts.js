@@ -1,4 +1,4 @@
-import { bw as supabase, j as jsxRuntimeExports, bL as POSITION_LABELS, r as reactExports, bz as safeVisualUrl, bM as HERO_SECTION, bN as LIFESTYLE_SECTION, bO as JEWELLERY_BANNER_SECTION, bP as STORE_CAROUSEL_SECTION, bQ as DELIVERY_STRIP, bR as BENEFITS_STRIP, bS as DEPARTMENT_SECTIONS, bT as JEWELLERY_SECTIONS, bU as HOMELIVING_SECTIONS, bV as GROCERY_SECTIONS, bW as STOREFRONT_CONTENT_STORES, b as Link, bX as STOREFRONT_LABELS, bY as normalizeFashionStorefront, bZ as normalizeLifestyleStorefront, b_ as sectionSpec, b$ as sectionContent, c0 as validateStorefrontContent } from '../bundle.js';
+import { bw as supabase, j as jsxRuntimeExports, bL as POSITION_LABELS, r as reactExports, bz as safeVisualUrl, bM as HERO_SECTION, bN as TRUST_SECTION, bO as TILES_SECTION, bP as STORES_SECTION, bQ as FESTIVE_SECTION, bR as LIFESTYLE_SECTION, bS as JEWELLERY_BANNER_SECTION, bT as STORE_CAROUSEL_SECTION, bU as DELIVERY_STRIP, bV as BENEFITS_STRIP, bW as DEPARTMENT_SECTIONS, bX as JEWELLERY_SECTIONS, bY as HOMELIVING_SECTIONS, bZ as GROCERY_SECTIONS, b_ as STOREFRONT_CONTENT_STORES, b as Link, b$ as STOREFRONT_LABELS, c0 as normalizeFashionStorefront, c1 as normalizeLifestyleStorefront, c2 as sectionSpec, c3 as sectionContent, c4 as validateStorefrontContent } from '../bundle.js';
 import { c as claimWarnings, C as CLAIM_KINDS, u as uploadStorefrontImage } from './claimWarnings.js';
 
 // ============================================================
@@ -445,7 +445,7 @@ function Field$1({
             className: "label",
             children: label
           }), base.slice(0, spec.length).map((def, i) => {
-            const name = def.title ? Array.isArray(def.title) ? def.title.filter(Boolean).join(' ') : def.title : def.line1 || '';
+            const name = def.title ? Array.isArray(def.title) ? def.title.filter(Boolean).join(' ') : def.title : def.name || def.line1 || '';
             const off = items[i]?.hidden === true;
             return /*#__PURE__*/jsxRuntimeExports.jsxs("details", {
               className: "adm-sf-item",
@@ -557,6 +557,18 @@ const SECTION_PAGES = Object.freeze({
     sections: [{
       path: 'hero',
       defaults: HERO_SECTION
+    }, {
+      path: 'trust',
+      defaults: TRUST_SECTION
+    }, {
+      path: 'tiles',
+      defaults: TILES_SECTION
+    }, {
+      path: 'stores',
+      defaults: STORES_SECTION
+    }, {
+      path: 'promo',
+      defaults: FESTIVE_SECTION
     }, {
       path: 'lifestyleBanner',
       defaults: LIFESTYLE_SECTION

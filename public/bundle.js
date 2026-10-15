@@ -3159,6 +3159,60 @@ const WELLNESS = {
       position: position()
     }, 'Slides', 'Slide')
   }, 'Hero'),
+  trust: group({
+    hidden: hidden(),
+    items: list$2(4, {
+      hidden: hidden(),
+      title: lines(2, 30, 'Title (a phone shows it as these two lines)'),
+      note: text$1(40, 'Line under it (a phone shows it only under a one-line title)'),
+      link: link('Opens (empty: the built-in page, or none)')
+    }, 'Items', 'Item')
+  }, 'Trust strip'),
+  tiles: group({
+    hidden: hidden(),
+    fashion: group({
+      hidden: hidden(),
+      title: lines(3, 24, 'Headline'),
+      cta: text$1(30, 'Button label'),
+      link: link('Opens'),
+      picture: tone$1('Photograph and the panel colour matched to it'),
+      alt: text$1(180, 'Photograph description')
+    }, 'Fashion tile (the large one)'),
+    nutrition: group({
+      hidden: hidden(),
+      title: lines(2, 24, 'Headline'),
+      link: link('Opens'),
+      picture: tone$1('Photograph and the tile colour behind it')
+    }, 'Health & Nutrition tile'),
+    living: group({
+      hidden: hidden(),
+      title: lines(2, 24, 'Headline'),
+      link: link('Opens'),
+      picture: tone$1('Photograph and the tile colour behind it')
+    }, 'Home & Living tile')
+  }, 'Store tiles'),
+  stores: group({
+    hidden: hidden(),
+    title: text$1(60, 'Heading'),
+    more: text$1(30, 'View-all label'),
+    link: link('View-all link'),
+    items: list$2(6, {
+      hidden: hidden(),
+      name: text$1(30, 'Name'),
+      link: link('Opens'),
+      picture: tone$1('Photograph and the circle colour behind it')
+    }, 'Circles', 'Circle')
+  }, 'Explore the stores'),
+  promo: group({
+    hidden: hidden(),
+    title: text$1(60, 'Headline'),
+    text: text$1(160, 'Subline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Opens'),
+    picture: pic(),
+    alt: text$1(180, 'Photograph description'),
+    position: position()
+  }, 'Festive promo'),
   lifestyleBanner: banner('Lifestyle banner', {
     position: position()
   }),
@@ -35516,9 +35570,41 @@ function useStorefrontSection(store, path, defaults) {
 /** Lines of a headline with the empty ones left out (an empty extra line is "none"). */
 const filledLines = lines => Array.isArray(lines) ? lines.filter(line => typeof line === 'string' && line) : [];
 
-/** Copy position as a data attribute: nothing for the built-in place (left), so a default page renders as before. */
-const positionAttr = position => position && position !== 'left' ? {
+/** Copy position as a data attribute: nothing for the section's built-in place, so a default page renders as before. */
+const positionAttr = (position, builtIn = 'left') => position && position !== builtIn ? {
   'data-pos': position
+} : {};
+
+/** True when white text reads better than near-black on the colour (relative luminance under the 0.179 crossover). */
+function isDarkColour(hex) {
+  const n = parseInt(String(hex).slice(1), 16);
+  const lin = [n >> 16, n >> 8 & 255, n & 255].map(v => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2] < 0.179;
+}
+
+/**
+ * A photograph's matched colour as attributes: nothing when the admin set none (the built-in look);
+ * else the colour (--sf-tone) and, on a dark one, a marker that turns the copy over it light.
+ */
+const toneAttrs = colour => colour ? {
+  'data-tone': '',
+  ...(isDarkColour(colour) ? {
+    'data-tone-dark': ''
+  } : {}),
+  style: {
+    '--sf-tone': colour
+  }
+} : {};
+
+/** A phone photograph as a <picture> source — only when it differs from the desktop one, so a default image renders as before. */
+const phoneSources = (phone, desktop, media = '(max-width: 700px)') => phone && phone !== desktop ? {
+  sources: [{
+    media,
+    srcSet: phone
+  }]
 } : {};
 
 /** A built-in editorial image as the section's photograph pair: its phone variant when it has one. */
@@ -35848,21 +35934,95 @@ function HomeHero({
     })]
   });
 }
+
+// The trust strip, the three store tiles, the store circles and the festive promo are the admin's too
+// (Storefronts → Wellness homepage). Their built-in content, in the schema's shape:
+const TRUST_SECTION = Object.freeze({
+  hidden: false,
+  items: TRUST.map(t => ({
+    ...t,
+    hidden: false,
+    title: [t.title[0], t.title[1] || ''],
+    note: t.note || '',
+    link: t.to || ''
+  }))
+});
+const tileArt = src => ({
+  colour: '',
+  phone: src,
+  desktop: src
+});
+const TILES_SECTION = Object.freeze({
+  hidden: false,
+  fashion: {
+    hidden: false,
+    title: ['Fashion', 'for every', 'mood.'],
+    cta: 'Shop Fashion',
+    link: '/fashion',
+    picture: tileArt('/img/home-fashion-portrait-orange.webp'),
+    alt: 'Woman in an orange knit sweater against an orange backdrop'
+  },
+  nutrition: {
+    hidden: false,
+    title: ['Health &', 'Nutrition'],
+    link: '/category/supplements',
+    picture: tileArt('/img/home-tile-nutrition.webp')
+  },
+  living: {
+    hidden: false,
+    title: ['Home &', 'Living'],
+    link: '/homeliving',
+    picture: tileArt('/img/home-tile-living.webp')
+  }
+});
+const STORES_SECTION = Object.freeze({
+  hidden: false,
+  title: 'Explore the stores',
+  more: 'View All',
+  link: '/shop',
+  items: STORES$1.map(s => ({
+    ...s,
+    hidden: false,
+    link: s.to,
+    picture: tileArt(s.image)
+  }))
+});
+const visible$4 = entry => !entry.hidden;
+/** Lines set as spans with a space between them, the empty ones left out. */
+const spans = lines => filledLines(lines).map((line, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
+  children: [i > 0 && ' ', /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+    children: line
+  })]
+}, i));
+/** The fashion chooser for /fashion (as the built-in tile and circle open it); a plain link anywhere else. */
+const entryFor = to => to === '/fashion' ? FashionEntryLink : Link;
 function HomeTrustStrip() {
+  const section = useStorefrontSection('wellness', 'trust', TRUST_SECTION);
+  const items = section.hidden ? [] : section.items.filter(visible$4);
+  if (!items.length) return null;
+  // Fewer than four: the row keeps its columns even (only then is the count set).
+  const count = items.length === TRUST.length ? {} : {
+    'data-count': items.length,
+    style: {
+      '--hx-trust-n': items.length
+    }
+  };
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "hx hx-trust",
     "aria-label": "Shopping with SORA LIFE",
     children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
       className: "hx-wrap hx-trust__list",
-      children: TRUST.map(t => {
-        const title = t.title.join(' ');
+      ...count,
+      children: items.map(t => {
+        const lines = filledLines(t.title);
+        const title = lines.join(' ');
         const body = /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: t.icon,
             size: 26
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-              children: t.title.map((line, j) => /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              children: lines.map((line, j) => /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
                 children: [j > 0 && ' ', line]
               }, line))
             }), t.note && /*#__PURE__*/jsxRuntimeExports.jsx("small", {
@@ -35871,9 +36031,9 @@ function HomeTrustStrip() {
           })]
         });
         return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-          className: t.title.length > 1 ? 'hx-trust--split' : undefined,
-          children: t.to ? /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-            to: t.to,
+          className: lines.length > 1 ? 'hx-trust--split' : undefined,
+          children: t.link ? /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: t.link,
             children: body
           }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
             className: "hx-trust__item",
@@ -35885,31 +36045,63 @@ function HomeTrustStrip() {
   });
 }
 function HomeTiles() {
+  const section = useStorefrontSection('wellness', 'tiles', TILES_SECTION);
+  const {
+    fashion,
+    nutrition,
+    living
+  } = section;
+  const hiddenTiles = ['fashion', 'nutrition', 'living'].filter(key => section[key].hidden);
+  if (section.hidden || hiddenTiles.length === 3) return null;
+  const Fashion = entryFor(fashion.link);
+  const small = (key, tile) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+    to: tile.link,
+    className: `hx-tile hx-tile--small hx-tile--${key}`,
+    ...toneAttrs(tile.picture.colour),
+    "aria-labelledby": `hx-${key}-h`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+      src: tile.picture.desktop,
+      ...phoneSources(tile.picture.phone, tile.picture.desktop),
+      alt: "",
+      width: 900,
+      height: 563,
+      className: "hx-tile__image"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      className: "hx-tile__h",
+      id: `hx-${key}-h`,
+      children: spans(tile.title)
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "hx-tile__go",
+      "aria-hidden": "true",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "arrowRight",
+        size: 18
+      })
+    })]
+  });
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "hx hx-tiles",
     "aria-label": "Shop the stores",
     children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hx-wrap hx-tiles__grid",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs(FashionEntryLink, {
-        to: "/fashion",
+      ...(hiddenTiles.length ? {
+        'data-without': hiddenTiles.join(' ')
+      } : {}),
+      children: [!fashion.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs(Fashion, {
+        to: fashion.link,
         className: "hx-tile hx-tile--fashion",
+        ...toneAttrs(fashion.picture.colour),
         "aria-labelledby": "hx-fashion-h hx-fashion-cta",
         children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "hx-tile__panel",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
             className: "hx-tile__h",
             id: "hx-fashion-h",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              children: "Fashion"
-            }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              children: "for every"
-            }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              children: "mood."
-            })]
+            children: spans(fashion.title)
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             className: "hx-btn hx-btn--light",
             id: "hx-fashion-cta",
-            children: ["Shop Fashion ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            children: [fashion.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
               name: "arrowRight",
               size: 16
             })]
@@ -35917,72 +36109,36 @@ function HomeTiles() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "hx-tile__art",
           children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-            src: "/img/home-fashion-portrait-orange.webp",
-            alt: "Woman in an orange knit sweater against an orange backdrop",
+            src: fashion.picture.desktop,
+            ...phoneSources(fashion.picture.phone, fashion.picture.desktop),
+            alt: fashion.alt,
             width: 800,
             height: 1067,
             className: "hx-tile__image"
           })
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: "/category/supplements",
-        className: "hx-tile hx-tile--small hx-tile--nutrition",
-        "aria-labelledby": "hx-nutrition-h",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-          src: "/img/home-tile-nutrition.webp",
-          alt: "",
-          width: 900,
-          height: 563,
-          className: "hx-tile__image"
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
-          className: "hx-tile__h",
-          id: "hx-nutrition-h",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: "Health &"
-          }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: "Nutrition"
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "hx-tile__go",
-          "aria-hidden": "true",
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "arrowRight",
-            size: 18
-          })
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: "/homeliving",
-        className: "hx-tile hx-tile--small hx-tile--living",
-        "aria-labelledby": "hx-living-h",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-          src: "/img/home-tile-living.webp",
-          alt: "",
-          width: 900,
-          height: 563,
-          className: "hx-tile__image"
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
-          className: "hx-tile__h",
-          id: "hx-living-h",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: "Home &"
-          }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: "Living"
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "hx-tile__go",
-          "aria-hidden": "true",
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "arrowRight",
-            size: 18
-          })
-        })]
-      })]
+      }), !nutrition.hidden && small('nutrition', nutrition), !living.hidden && small('living', living)]
     })
   });
 }
+
+/** The six circles: `stores` (as built in, or a test's) or the published section over the built-in one. */
 function ExploreStores({
-  stores = STORES$1
+  stores: given
 }) {
+  const section = useStorefrontSection('wellness', 'stores', STORES_SECTION);
+  const circles = given ? given.map(s => ({
+    ...s,
+    link: s.to,
+    picture: tileArt(s.image)
+  })) : section.hidden ? [] : section.items.filter(visible$4);
+  if (!circles.length) return null;
+  const count = given || circles.length === STORES$1.length ? {} : {
+    'data-count': circles.length,
+    style: {
+      '--hx-stores-n': circles.length
+    }
+  };
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "hx hx-stores",
     "aria-labelledby": "hx-stores-h",
@@ -35993,28 +36149,31 @@ function ExploreStores({
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           className: "hx-stores__h",
           id: "hx-stores-h",
-          children: "Explore the stores"
+          children: section.title
         }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: "/shop",
+          to: section.link,
           className: "hx-more",
-          "aria-label": "View all products",
-          children: ["View All ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          "aria-label": section.link === STORES_SECTION.link ? 'View all products' : undefined,
+          children: [section.more, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "arrowRight",
             size: 15
           })]
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
         className: "hx-stores__row",
-        children: stores.map(s => {
-          const Entry = s.to === '/fashion' ? FashionEntryLink : Link;
+        ...count,
+        children: circles.map(s => {
+          const Entry = entryFor(s.link);
           return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
             children: /*#__PURE__*/jsxRuntimeExports.jsxs(Entry, {
-              to: s.to,
+              to: s.link,
               className: "hx-store",
               children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
                 className: "hx-store__art",
+                ...toneAttrs(s.picture.colour),
                 children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-                  src: s.image,
+                  src: s.picture.desktop,
+                  ...phoneSources(s.picture.phone, s.picture.desktop),
                   alt: "",
                   width: s.size || 480,
                   height: s.size || 480,
@@ -36137,23 +36296,41 @@ function JewelleryBanner({
     })
   });
 }
+
+/** The festive promo's built-in content; its copy's built-in place is the centre. */
+const FESTIVE_SECTION = Object.freeze({
+  hidden: false,
+  title: 'Festive gifting',
+  text: 'Wellness, beauty and home picks to give this season',
+  cta: 'Shop gifts',
+  link: '/shop',
+  picture: {
+    phone: '/img/home-promo-festive-800.webp',
+    desktop: '/img/home-promo-festive.webp'
+  },
+  alt: 'A gift box tied with an orange ribbon beside a lit diya and marigolds',
+  position: 'center'
+});
 function FestivePromo() {
+  const promo = useStorefrontSection('wellness', 'promo', FESTIVE_SECTION);
+  if (promo.hidden) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "hx hx-promo",
+    ...positionAttr(promo.position, FESTIVE_SECTION.position),
     "aria-labelledby": "hx-promo-h",
     children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "hx-wrap",
       children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-        to: "/shop",
+        to: promo.link,
         className: "hx-promo__card",
         "aria-labelledby": "hx-promo-h hx-promo-cta",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-          src: "/img/home-promo-festive.webp",
+          src: promo.picture.desktop,
           sources: [{
             media: PHONE$2,
-            srcSet: '/img/home-promo-festive-800.webp'
+            srcSet: promo.picture.phone
           }],
-          alt: "A gift box tied with an orange ribbon beside a lit diya and marigolds",
+          alt: promo.alt,
           width: 1600,
           height: 533,
           className: "hx-promo__image"
@@ -36162,14 +36339,14 @@ function FestivePromo() {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
             className: "hx-promo__h",
             id: "hx-promo-h",
-            children: "Festive gifting"
+            children: promo.title
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
             className: "hx-promo__text",
-            children: "Wellness, beauty and home picks to give this season"
+            children: promo.text
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             className: "hx-btn",
             id: "hx-promo-cta",
-            children: ["Shop gifts ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            children: [promo.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
               name: "arrowRight",
               size: 16
             })]
@@ -70821,5 +70998,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { adminListVariants as $, adminUpdateOrderFulfillment as A, adminListProductMedia as B, CONTACT_FIELDS as C, adminCommitStagedProductMedia as D, validateMediaFile as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, mediaFailureMessage as H, adminReorderProductMedia as I, adminSetPrimaryMedia as J, adminEnsurePrimaryMedia as K, LEGAL_PAGES as L, adminUpdateProductMedia as M, NavLink as N, Outlet as O, adminReplaceProductMedia as P, adminDeleteProductMedia as Q, adminDiscoverMedia as R, adminImportMedia as S, validateContent as T, CONTENT_FIELDS as U, fieldPopulated as V, CONTENT_LABELS as W, useNavigate as X, useLocation as Y, adminUpdateProduct as Z, adminCreateProduct as _, adminGetSetting as a, REWARD_TYPES as a$, adminCreateVariant as a0, adminUpdateVariant as a1, adminSetVariantActive as a2, adminDeleteVariant as a3, adminGetProgramSettings as a4, CREATOR_STATUSES as a5, money2 as a6, adminListCreators as a7, adminCreatorStandings as a8, adminSetProgramSettings as a9, adminListKyc as aA, KYC_STATUSES as aB, KYC_SIGNED_URL_SECONDS as aC, adminSetKycStatus as aD, KYC_DOCUMENT_KINDS as aE, kycDocumentState as aF, adminKycDocumentUrl as aG, adminListKycAudit as aH, getPayoutConfig as aI, adminListPayouts as aJ, PAYOUT_STATUSES as aK, adminSetWithdrawalsOpen as aL, adminGetPayoutLedger as aM, adminGetPayoutAudit as aN, adminGetKycForCreator as aO, adminReviewPayout as aP, adminMarkPayoutPaid as aQ, normalizeLadder as aR, DEFAULT_BEYOND_STEP as aS, adminGetTierLadder as aT, validateLadder as aU, ladderErrorMessage as aV, rupees as aW, adminListLevelRewards as aX, groupRewardsByLevel as aY, REWARD_OPTION_SLOTS as aZ, validateRewardOption as a_, adminCreateCreator as aa, adminSetCreatorStatus as ab, normalizeContentPatch as ac, contentScore as ad, adminGetCreator as ae, adminListCodeAliases as af, adminListCampaigns as ag, adminListLinks as ah, adminListAudit as ai, adminListAttributionEvents as aj, adminUpdateCampaign as ak, adminCreateCampaign as al, CAMPAIGN_STATUSES as am, buildTrackingUrl as an, normalizeDestination as ao, DESTINATION_TYPES as ap, CopyButton as aq, adminChangeCreatorCode as ar, adminUpdateCreator as as, adminCreateLink as at, adminSetLinkStatus as au, adminListConversions as av, CONVERSION_STATUSES as aw, adminGetConversionItems as ax, adminGetConversionAudit as ay, adminRefundConversion as az, Link as b, sectionContent as b$, REWARD_TYPE_LABEL as b0, adminListRewardClaims as b1, CLAIM_STATUSES as b2, CLAIM_STATUS_LABEL as b3, DEFAULT_LADDER as b4, adminSetTierLadder as b5, rewardOptionErrorMessage as b6, adminUpsertLevelReward as b7, adminDeleteLevelReward as b8, adminSetRewardClaimStatus as b9, MAX_CONCERN_PRODUCTS as bA, searchCatalogueForPicker as bB, productGallery as bC, MAX_DISCOVERY_CARDS as bD, makeDiscoveryId as bE, sanitizeHomepageVisuals as bF, normalizeDiscovery as bG, products as bH, discoveryPayload as bI, mergeHomepageVisuals as bJ, announceHomepageSaved as bK, POSITION_LABELS as bL, HERO_SECTION as bM, LIFESTYLE_SECTION as bN, JEWELLERY_BANNER_SECTION as bO, STORE_CAROUSEL_SECTION as bP, DELIVERY_STRIP as bQ, BENEFITS_STRIP as bR, DEPARTMENT_SECTIONS as bS, JEWELLERY_SECTIONS as bT, HOMELIVING_SECTIONS as bU, GROCERY_SECTIONS as bV, STOREFRONT_CONTENT_STORES as bW, STOREFRONT_LABELS as bX, normalizeFashionStorefront as bY, normalizeLifestyleStorefront as bZ, sectionSpec as b_, adminGetTheme as ba, sanitizeTheme$1 as bb, TOKENS as bc, PRESET_LIST as bd, GROUPS as be, DEFAULT_THEME as bf, OVERLAY_SCALES as bg, TYPE_SCALES as bh, HEX_RE as bi, adminSetTheme as bj, overlayRgba as bk, adminUpsertCategory as bl, adminDeleteCategory as bm, normalizePromo as bn, PromoPoster as bo, PromoOfferCard as bp, adminListPromotions as bq, adminUpsertPromotion as br, adminDeletePromotion as bs, adminSetPromotionActive as bt, adminReorderPromotions as bu, uploadPromoImage as bv, supabase as bw, CouponTicket as bx, HOMEPAGE_VISUAL_FIELDS as by, safeVisualUrl as bz, LegalUpdated as c, validateStorefrontContent as c0, useSearchParams as c1, buildTree as c2, validatePlacement as c3, uploadImage as c4, isSpotlightEligible as c5, categoryBySlug as c6, sanitizeCategoryConfig as c7, safeColor as c8, safeGradient as c9, makeSpotlightId as ca, validateImageUpload as cb, normalizeCategoryExperience as cc, categoryExperiencePayload as cd, categoryIsReadyButOff as ce, categoryToneTheme as cf, MIN_INTERVAL_MS as cg, MAX_INTERVAL_MS as ch, DEFAULT_ITEM_SCALE as ci, MIN_ITEM_SCALE as cj, MAX_ITEM_SCALE as ck, ITEM_OFFSET_LIMIT as cl, CategorySpotlight as cm, SOCIAL_NETWORKS as cn, POLICY_KEYS as co, validateCompanyForSave as cp, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminSeedDefaultCategories as m, normalizeLegalPage as n, adminImportBiosashCatalog as o, money as p, adminSetProductActive as q, reactExports as r, adminDeleteProduct as s, adminReorderProducts as t, useParams as u, validateLegalPage as v, categories as w, adminListOrders as x, fulfillmentStatusLabel as y, validateFulfillmentInput as z };
+export { adminListVariants as $, adminUpdateOrderFulfillment as A, adminListProductMedia as B, CONTACT_FIELDS as C, adminCommitStagedProductMedia as D, validateMediaFile as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, mediaFailureMessage as H, adminReorderProductMedia as I, adminSetPrimaryMedia as J, adminEnsurePrimaryMedia as K, LEGAL_PAGES as L, adminUpdateProductMedia as M, NavLink as N, Outlet as O, adminReplaceProductMedia as P, adminDeleteProductMedia as Q, adminDiscoverMedia as R, adminImportMedia as S, validateContent as T, CONTENT_FIELDS as U, fieldPopulated as V, CONTENT_LABELS as W, useNavigate as X, useLocation as Y, adminUpdateProduct as Z, adminCreateProduct as _, adminGetSetting as a, REWARD_TYPES as a$, adminCreateVariant as a0, adminUpdateVariant as a1, adminSetVariantActive as a2, adminDeleteVariant as a3, adminGetProgramSettings as a4, CREATOR_STATUSES as a5, money2 as a6, adminListCreators as a7, adminCreatorStandings as a8, adminSetProgramSettings as a9, adminListKyc as aA, KYC_STATUSES as aB, KYC_SIGNED_URL_SECONDS as aC, adminSetKycStatus as aD, KYC_DOCUMENT_KINDS as aE, kycDocumentState as aF, adminKycDocumentUrl as aG, adminListKycAudit as aH, getPayoutConfig as aI, adminListPayouts as aJ, PAYOUT_STATUSES as aK, adminSetWithdrawalsOpen as aL, adminGetPayoutLedger as aM, adminGetPayoutAudit as aN, adminGetKycForCreator as aO, adminReviewPayout as aP, adminMarkPayoutPaid as aQ, normalizeLadder as aR, DEFAULT_BEYOND_STEP as aS, adminGetTierLadder as aT, validateLadder as aU, ladderErrorMessage as aV, rupees as aW, adminListLevelRewards as aX, groupRewardsByLevel as aY, REWARD_OPTION_SLOTS as aZ, validateRewardOption as a_, adminCreateCreator as aa, adminSetCreatorStatus as ab, normalizeContentPatch as ac, contentScore as ad, adminGetCreator as ae, adminListCodeAliases as af, adminListCampaigns as ag, adminListLinks as ah, adminListAudit as ai, adminListAttributionEvents as aj, adminUpdateCampaign as ak, adminCreateCampaign as al, CAMPAIGN_STATUSES as am, buildTrackingUrl as an, normalizeDestination as ao, DESTINATION_TYPES as ap, CopyButton as aq, adminChangeCreatorCode as ar, adminUpdateCreator as as, adminCreateLink as at, adminSetLinkStatus as au, adminListConversions as av, CONVERSION_STATUSES as aw, adminGetConversionItems as ax, adminGetConversionAudit as ay, adminRefundConversion as az, Link as b, STOREFRONT_LABELS as b$, REWARD_TYPE_LABEL as b0, adminListRewardClaims as b1, CLAIM_STATUSES as b2, CLAIM_STATUS_LABEL as b3, DEFAULT_LADDER as b4, adminSetTierLadder as b5, rewardOptionErrorMessage as b6, adminUpsertLevelReward as b7, adminDeleteLevelReward as b8, adminSetRewardClaimStatus as b9, MAX_CONCERN_PRODUCTS as bA, searchCatalogueForPicker as bB, productGallery as bC, MAX_DISCOVERY_CARDS as bD, makeDiscoveryId as bE, sanitizeHomepageVisuals as bF, normalizeDiscovery as bG, products as bH, discoveryPayload as bI, mergeHomepageVisuals as bJ, announceHomepageSaved as bK, POSITION_LABELS as bL, HERO_SECTION as bM, TRUST_SECTION as bN, TILES_SECTION as bO, STORES_SECTION as bP, FESTIVE_SECTION as bQ, LIFESTYLE_SECTION as bR, JEWELLERY_BANNER_SECTION as bS, STORE_CAROUSEL_SECTION as bT, DELIVERY_STRIP as bU, BENEFITS_STRIP as bV, DEPARTMENT_SECTIONS as bW, JEWELLERY_SECTIONS as bX, HOMELIVING_SECTIONS as bY, GROCERY_SECTIONS as bZ, STOREFRONT_CONTENT_STORES as b_, adminGetTheme as ba, sanitizeTheme$1 as bb, TOKENS as bc, PRESET_LIST as bd, GROUPS as be, DEFAULT_THEME as bf, OVERLAY_SCALES as bg, TYPE_SCALES as bh, HEX_RE as bi, adminSetTheme as bj, overlayRgba as bk, adminUpsertCategory as bl, adminDeleteCategory as bm, normalizePromo as bn, PromoPoster as bo, PromoOfferCard as bp, adminListPromotions as bq, adminUpsertPromotion as br, adminDeletePromotion as bs, adminSetPromotionActive as bt, adminReorderPromotions as bu, uploadPromoImage as bv, supabase as bw, CouponTicket as bx, HOMEPAGE_VISUAL_FIELDS as by, safeVisualUrl as bz, LegalUpdated as c, normalizeFashionStorefront as c0, normalizeLifestyleStorefront as c1, sectionSpec as c2, sectionContent as c3, validateStorefrontContent as c4, useSearchParams as c5, buildTree as c6, validatePlacement as c7, uploadImage as c8, isSpotlightEligible as c9, categoryBySlug as ca, sanitizeCategoryConfig as cb, safeColor as cc, safeGradient as cd, makeSpotlightId as ce, validateImageUpload as cf, normalizeCategoryExperience as cg, categoryExperiencePayload as ch, categoryIsReadyButOff as ci, categoryToneTheme as cj, MIN_INTERVAL_MS as ck, MAX_INTERVAL_MS as cl, DEFAULT_ITEM_SCALE as cm, MIN_ITEM_SCALE as cn, MAX_ITEM_SCALE as co, ITEM_OFFSET_LIMIT as cp, CategorySpotlight as cq, SOCIAL_NETWORKS as cr, POLICY_KEYS as cs, validateCompanyForSave as ct, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminSeedDefaultCategories as m, normalizeLegalPage as n, adminImportBiosashCatalog as o, money as p, adminSetProductActive as q, reactExports as r, adminDeleteProduct as s, adminReorderProducts as t, useParams as u, validateLegalPage as v, categories as w, adminListOrders as x, fulfillmentStatusLabel as y, validateFulfillmentInput as z };
 //# sourceMappingURL=bundle.js.map
