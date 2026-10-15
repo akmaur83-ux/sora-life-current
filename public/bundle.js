@@ -39314,8 +39314,9 @@ const LIFESTYLE = {
 const shopArt = name => `/img/fashion-editorial/${name}.webp`;
 /**
  * The strip's categories: each opens /fashion/c/<slug>, the category the catalogue holds
- * under Fashion › Women or Fashion › Men. `art: null` keeps a tile out of the strip until
- * its photograph (`planned`, 600×780 like the women-shop set) is in img/fashion-editorial/.
+ * under Fashion › Women or Fashion › Men. Each photograph is 600×780 on the same light-grey
+ * studio ground (the men's set's backdrop lifted to the women's tone); `art: null` would keep
+ * a tile out of the strip until it has one.
  */
 const FASHION_CATEGORIES$1 = Object.freeze({
   women: [{
@@ -39346,28 +39347,23 @@ const FASHION_CATEGORIES$1 = Object.freeze({
   men: [{
     slug: 'mens-shirts',
     name: 'Shirts',
-    art: null,
-    planned: 'men-shop-shirts'
+    art: shopArt('men-shop-shirts')
   }, {
     slug: 'mens-t-shirts',
     name: 'T-Shirts',
-    art: null,
-    planned: 'men-shop-t-shirts'
+    art: shopArt('men-shop-t-shirts')
   }, {
     slug: 'mens-trousers',
     name: 'Trousers',
-    art: null,
-    planned: 'men-shop-trousers'
+    art: shopArt('men-shop-trousers')
   }, {
     slug: 'mens-jackets',
     name: 'Jackets',
-    art: null,
-    planned: 'men-shop-jackets'
+    art: shopArt('men-shop-jackets')
   }, {
     slug: 'mens-footwear',
     name: 'Footwear',
-    art: null,
-    planned: 'men-shop-footwear'
+    art: shopArt('men-shop-footwear')
   }]
 });
 
