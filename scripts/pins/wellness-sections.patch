@@ -1,0 +1,188 @@
+diff --git a/src/components/HomeStorefront.jsx b/src/components/HomeStorefront.jsx
+index d48cb87..bc30414 100644
+--- a/src/components/HomeStorefront.jsx
++++ b/src/components/HomeStorefront.jsx
+@@ -1,9 +1,9 @@
+-import { useEffect, useRef, useState } from 'react';
++import { Fragment, useEffect, useRef, useState } from 'react';
+ import { Link } from 'react-router-dom';
+ import Icon from './Icon.jsx';
+ import DeferredImage from './DeferredImage.jsx';
+ import FashionEntryLink from './FashionEntryLink.jsx';
+-import { useStorefrontSection, filledLines, positionAttr } from '../lib/storefrontSections.js';
++import { useStorefrontSection, filledLines, positionAttr, toneAttrs, phoneSources } from '../lib/storefrontSections.js';
+ 
+ // ============================================================
+ // The top of the wellness homepage: white, with an orange accent — a
+@@ -168,14 +168,49 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
+   );
+ }
+ 
++// The trust strip, the three store tiles, the store circles and the festive promo are the admin's too
++// (Storefronts → Wellness homepage). Their built-in content, in the schema's shape:
++export const TRUST_SECTION = Object.freeze({
++  hidden: false,
++  items: TRUST.map((t) => ({ ...t, hidden: false, title: [t.title[0], t.title[1] || ''], note: t.note || '', link: t.to || '' })),
++});
++
++const tileArt = (src) => ({ colour: '', phone: src, desktop: src });
++export const TILES_SECTION = Object.freeze({
++  hidden: false,
++  fashion: {
++    hidden: false, title: ['Fashion', 'for every', 'mood.'], cta: 'Shop Fashion', link: '/fashion',
++    picture: tileArt('/img/home-fashion-portrait-orange.webp'), alt: 'Woman in an orange knit sweater against an orange backdrop',
++  },
++  nutrition: { hidden: false, title: ['Health &', 'Nutrition'], link: '/category/supplements', picture: tileArt('/img/home-tile-nutrition.webp') },
++  living: { hidden: false, title: ['Home &', 'Living'], link: '/homeliving', picture: tileArt('/img/home-tile-living.webp') },
++});
++
++export const STORES_SECTION = Object.freeze({
++  hidden: false, title: 'Explore the stores', more: 'View All', link: '/shop',
++  items: STORES.map((s) => ({ ...s, hidden: false, link: s.to, picture: tileArt(s.image) })),
++});
++
++const visible = (entry) => !entry.hidden;
++/** Lines set as spans with a space between them, the empty ones left out. */
++const spans = (lines) => filledLines(lines).map((line, i) => <Fragment key={i}>{i > 0 && ' '}<span>{line}</span></Fragment>);
++/** The fashion chooser for /fashion (as the built-in tile and circle open it); a plain link anywhere else. */
++const entryFor = (to) => (to === '/fashion' ? FashionEntryLink : Link);
++
+ export function HomeTrustStrip() {
++  const section = useStorefrontSection('wellness', 'trust', TRUST_SECTION);
++  const items = section.hidden ? [] : section.items.filter(visible);
++  if (!items.length) return null;
++  // Fewer than four: the row keeps its columns even (only then is the count set).
++  const count = items.length === TRUST.length ? {} : { 'data-count': items.length, style: { '--hx-trust-n': items.length } };
+   return (
+     <section className="hx hx-trust" aria-label="Shopping with SORA LIFE">
+-      <ul className="hx-wrap hx-trust__list">
+-        {TRUST.map((t) => {
+-          const title = t.title.join(' ');
+-          const body = <><Icon name={t.icon} size={26} /><span><strong>{t.title.map((line, j) => <span key={line}>{j > 0 && ' '}{line}</span>)}</strong>{t.note && <small>{t.note}</small>}</span></>;
+-          return <li key={title} className={t.title.length > 1 ? 'hx-trust--split' : undefined}>{t.to ? <Link to={t.to}>{body}</Link> : <span className="hx-trust__item">{body}</span>}</li>;
++      <ul className="hx-wrap hx-trust__list" {...count}>
++        {items.map((t) => {
++          const lines = filledLines(t.title);
++          const title = lines.join(' ');
++          const body = <><Icon name={t.icon} size={26} /><span><strong>{lines.map((line, j) => <span key={line}>{j > 0 && ' '}{line}</span>)}</strong>{t.note && <small>{t.note}</small>}</span></>;
++          return <li key={title} className={lines.length > 1 ? 'hx-trust--split' : undefined}>{t.link ? <Link to={t.link}>{body}</Link> : <span className="hx-trust__item">{body}</span>}</li>;
+         })}
+       </ul>
+     </section>
+@@ -183,46 +218,58 @@ export function HomeTrustStrip() {
+ }
+ 
+ export function HomeTiles() {
++  const section = useStorefrontSection('wellness', 'tiles', TILES_SECTION);
++  const { fashion, nutrition, living } = section;
++  const hiddenTiles = ['fashion', 'nutrition', 'living'].filter((key) => section[key].hidden);
++  if (section.hidden || hiddenTiles.length === 3) return null;
++  const Fashion = entryFor(fashion.link);
++  const small = (key, tile) => (
++    <Link to={tile.link} className={`hx-tile hx-tile--small hx-tile--${key}`} {...toneAttrs(tile.picture.colour)} aria-labelledby={`hx-${key}-h`}>
++      <DeferredImage src={tile.picture.desktop} {...phoneSources(tile.picture.phone, tile.picture.desktop)} alt="" width={900} height={563} className="hx-tile__image" />
++      <h2 className="hx-tile__h" id={`hx-${key}-h`}>{spans(tile.title)}</h2>
++      <span className="hx-tile__go" aria-hidden="true"><Icon name="arrowRight" size={18} /></span>
++    </Link>
++  );
+   return (
+     <section className="hx hx-tiles" aria-label="Shop the stores">
+-      <div className="hx-wrap hx-tiles__grid">
+-        <FashionEntryLink to="/fashion" className="hx-tile hx-tile--fashion" aria-labelledby="hx-fashion-h hx-fashion-cta">
++      {/* A hidden tile's place is closed up (storefront-sections.css); only then is it named here. */}
++      <div className="hx-wrap hx-tiles__grid" {...(hiddenTiles.length ? { 'data-without': hiddenTiles.join(' ') } : {})}>
++        {!fashion.hidden && <Fashion to={fashion.link} className="hx-tile hx-tile--fashion" {...toneAttrs(fashion.picture.colour)} aria-labelledby="hx-fashion-h hx-fashion-cta">
+           <div className="hx-tile__panel">
+-            <h2 className="hx-tile__h" id="hx-fashion-h"><span>Fashion</span> <span>for every</span> <span>mood.</span></h2>
+-            <span className="hx-btn hx-btn--light" id="hx-fashion-cta">Shop Fashion <Icon name="arrowRight" size={16} /></span>
++            <h2 className="hx-tile__h" id="hx-fashion-h">{spans(fashion.title)}</h2>
++            <span className="hx-btn hx-btn--light" id="hx-fashion-cta">{fashion.cta} <Icon name="arrowRight" size={16} /></span>
+           </div>
+-          <span className="hx-tile__art"><DeferredImage src="/img/home-fashion-portrait-orange.webp" alt="Woman in an orange knit sweater against an orange backdrop" width={800} height={1067} className="hx-tile__image" /></span>
+-        </FashionEntryLink>
+-        <Link to="/category/supplements" className="hx-tile hx-tile--small hx-tile--nutrition" aria-labelledby="hx-nutrition-h">
+-          <DeferredImage src="/img/home-tile-nutrition.webp" alt="" width={900} height={563} className="hx-tile__image" />
+-          <h2 className="hx-tile__h" id="hx-nutrition-h"><span>Health &amp;</span> <span>Nutrition</span></h2>
+-          <span className="hx-tile__go" aria-hidden="true"><Icon name="arrowRight" size={18} /></span>
+-        </Link>
+-        <Link to="/homeliving" className="hx-tile hx-tile--small hx-tile--living" aria-labelledby="hx-living-h">
+-          <DeferredImage src="/img/home-tile-living.webp" alt="" width={900} height={563} className="hx-tile__image" />
+-          <h2 className="hx-tile__h" id="hx-living-h"><span>Home &amp;</span> <span>Living</span></h2>
+-          <span className="hx-tile__go" aria-hidden="true"><Icon name="arrowRight" size={18} /></span>
+-        </Link>
++          <span className="hx-tile__art"><DeferredImage src={fashion.picture.desktop} {...phoneSources(fashion.picture.phone, fashion.picture.desktop)} alt={fashion.alt} width={800} height={1067} className="hx-tile__image" /></span>
++        </Fashion>}
++        {!nutrition.hidden && small('nutrition', nutrition)}
++        {!living.hidden && small('living', living)}
+       </div>
+     </section>
+   );
+ }
+ 
+-export function ExploreStores({ stores = STORES }) {
++/** The six circles: `stores` (as built in, or a test's) or the published section over the built-in one. */
++export function ExploreStores({ stores: given }) {
++  const section = useStorefrontSection('wellness', 'stores', STORES_SECTION);
++  const circles = given
++    ? given.map((s) => ({ ...s, link: s.to, picture: tileArt(s.image) }))
++    : (section.hidden ? [] : section.items.filter(visible));
++  if (!circles.length) return null;
++  const count = given || circles.length === STORES.length ? {} : { 'data-count': circles.length, style: { '--hx-stores-n': circles.length } };
+   return (
+     <section className="hx hx-stores" aria-labelledby="hx-stores-h">
+       <div className="hx-wrap">
+         <div className="hx-stores__head">
+-          <h2 className="hx-stores__h" id="hx-stores-h">Explore the stores</h2>
+-          <Link to="/shop" className="hx-more" aria-label="View all products">View All <Icon name="arrowRight" size={15} /></Link>
++          <h2 className="hx-stores__h" id="hx-stores-h">{section.title}</h2>
++          <Link to={section.link} className="hx-more" aria-label={section.link === STORES_SECTION.link ? 'View all products' : undefined}>{section.more} <Icon name="arrowRight" size={15} /></Link>
+         </div>
+-        <ul className="hx-stores__row">
+-          {stores.map((s) => {
+-            const Entry = s.to === '/fashion' ? FashionEntryLink : Link;
++        <ul className="hx-stores__row" {...count}>
++          {circles.map((s) => {
++            const Entry = entryFor(s.link);
+             return (
+               <li key={s.key}>
+-                <Entry to={s.to} className="hx-store">
+-                  <span className="hx-store__art"><DeferredImage src={s.image} alt="" width={s.size || 480} height={s.size || 480} className="hx-store__image" /></span>
++                <Entry to={s.link} className="hx-store">
++                  <span className="hx-store__art" {...toneAttrs(s.picture.colour)}><DeferredImage src={s.picture.desktop} {...phoneSources(s.picture.phone, s.picture.desktop)} alt="" width={s.size || 480} height={s.size || 480} className="hx-store__image" /></span>
+                   <span className="hx-store__name">{s.name}</span>
+                 </Entry>
+               </li>
+@@ -283,17 +330,26 @@ export function JewelleryBanner({ banner }) {
+   );
+ }
+ 
++/** The festive promo's built-in content; its copy's built-in place is the centre. */
++export const FESTIVE_SECTION = Object.freeze({
++  hidden: false, title: 'Festive gifting', text: 'Wellness, beauty and home picks to give this season', cta: 'Shop gifts', link: '/shop',
++  picture: { phone: '/img/home-promo-festive-800.webp', desktop: '/img/home-promo-festive.webp' },
++  alt: 'A gift box tied with an orange ribbon beside a lit diya and marigolds', position: 'center',
++});
++
+ export function FestivePromo() {
++  const promo = useStorefrontSection('wellness', 'promo', FESTIVE_SECTION);
++  if (promo.hidden) return null;
+   return (
+-    <section className="hx hx-promo" aria-labelledby="hx-promo-h">
++    <section className="hx hx-promo" {...positionAttr(promo.position, FESTIVE_SECTION.position)} aria-labelledby="hx-promo-h">
+       <div className="hx-wrap">
+-        <Link to="/shop" className="hx-promo__card" aria-labelledby="hx-promo-h hx-promo-cta">
+-          <DeferredImage src="/img/home-promo-festive.webp" sources={[{ media: PHONE, srcSet: '/img/home-promo-festive-800.webp' }]}
+-            alt="A gift box tied with an orange ribbon beside a lit diya and marigolds" width={1600} height={533} className="hx-promo__image" />
++        <Link to={promo.link} className="hx-promo__card" aria-labelledby="hx-promo-h hx-promo-cta">
++          <DeferredImage src={promo.picture.desktop} sources={[{ media: PHONE, srcSet: promo.picture.phone }]}
++            alt={promo.alt} width={1600} height={533} className="hx-promo__image" />
+           <div className="hx-promo__copy">
+-            <h2 className="hx-promo__h" id="hx-promo-h">Festive gifting</h2>
+-            <p className="hx-promo__text">Wellness, beauty and home picks to give this season</p>
+-            <span className="hx-btn" id="hx-promo-cta">Shop gifts <Icon name="arrowRight" size={16} /></span>
++            <h2 className="hx-promo__h" id="hx-promo-h">{promo.title}</h2>
++            <p className="hx-promo__text">{promo.text}</p>
++            <span className="hx-btn" id="hx-promo-cta">{promo.cta} <Icon name="arrowRight" size={16} /></span>
+           </div>
+         </Link>
+       </div>
