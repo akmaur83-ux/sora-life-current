@@ -142,7 +142,7 @@ export const RETIRED_HERO_POINTER_EDITS = /^src\/components\/(StorefrontMotion|P
  * admin's section editor and its registry, the sheet for position presets and matched colours, the render dump,
  * the suite and the recorded patch.
  */
-export const STOREFRONT_SECTIONS_FILES = /^(src\/lib\/storefrontSections\.js|src\/styles\/storefront-sections\.css|src\/admin\/components\/StorefrontSectionEditor\.jsx|src\/admin\/storefrontSections\.js|scripts\/(storefront-sections-dump|test-storefront-sections)\.mjs|scripts\/pins\/(storefront|wellness)-sections\.patch)$/;
+export const STOREFRONT_SECTIONS_FILES = /^(src\/lib\/storefrontSections\.js|src\/styles\/storefront-sections\.css|src\/admin\/components\/StorefrontSectionEditor\.jsx|src\/admin\/storefrontSections\.js|scripts\/(storefront-sections-dump|test-storefront-sections)\.mjs|scripts\/pins\/((storefront|wellness)-sections|men-shop-tiles)\.patch)$/;
 /**
  * The shared files it edited — each section reading its published content over its built-in content — each
  * byte-checked through sansCartChanges (scripts/pins/storefront-sections.patch) where it is admitted.
@@ -474,6 +474,10 @@ const UNDO_STOREFRONT_SECTIONS = undoFromPatch('storefront-sections.patch');
 // the festive promo read their published content too (HomeStorefront.jsx). Undone here, newest first.
 const UNDO_WELLNESS_SECTIONS = undoFromPatch('wellness-sections.patch');
 
+// The men's five category photographs (7673aa5): their tiles in the fashion category strip under the
+// Lifestyle banner (FashionBanner.jsx). Undone here, newest first.
+const UNDO_MEN_SHOP_TILES = undoFromPatch('men-shop-tiles.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -540,7 +544,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
@@ -592,7 +596,7 @@ export function sansDeadHomepageCode(rel, text) {
  * (test-fashion-jewellery) and must undo this newer one first.
  */
 export function sansStorefrontSections(rel, text) {
-  const undos = [UNDO_WELLNESS_SECTIONS[rel], UNDO_STOREFRONT_SECTIONS[rel]].filter(Boolean);
+  const undos = [UNDO_MEN_SHOP_TILES[rel], UNDO_WELLNESS_SECTIONS[rel], UNDO_STOREFRONT_SECTIONS[rel]].filter(Boolean);
   return undos.length ? undos.reduce((t, undo) => undo(t, rel), text.replace(/\r\n/g, '\n')) : text;
 }
 
