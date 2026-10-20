@@ -12,7 +12,7 @@
 // order id, the server-computed amount, and the PUBLIC key id. The key
 // secret never leaves the server.
 // ============================================================
-import { validateCartPayload, computeOrderTotal, generateOrderNumber } from '../_lib/pricing.js';
+import { validateCartPayload, computeOrderTotal, generateOrderNumber, DELIVERY_FEES } from '../_lib/pricing.js';
 import { getTaxConfig } from '../_lib/tax.js';
 import { getRazorpayCredentials, createRazorpayOrder } from '../_lib/razorpay.js';
 import {
@@ -122,6 +122,76 @@ function readIdempotencyKey(req, body) {
   return /^[A-Za-z0-9_-]{8,100}$/.test(clean) ? clean : null;
 }
 
+/**
+ * Only the customer/shipping fields an order needs, length-capped. Stored in
+ * the orders.customer jsonb column, so adding fields here needs no schema
+ * migration. `apartment` (address line 2) and `landmark` were previously
+ * dropped and are now persisted for delivery.
+ */
+function safeCustomerFrom(customer) {
+  return {
+    email: str(customer?.email, 200),
+    phone: str(customer?.phone, 40),
+    firstName: str(customer?.firstName, 80),
+    lastName: str(customer?.lastName, 80),
+    address: str(customer?.address, 300),
+    apartment: str(customer?.apartment, 300),
+    landmark: str(customer?.landmark, 200),
+    city: str(customer?.city, 120),
+    state: str(customer?.state, 120),
+    pin: str(customer?.pin, 20),
+  };
+}
+
+/**
+ * Is this request the submission the stored order was created from?
+ *
+ * A key identifies ONE submission. Replaying it for a different one handed
+ * back the first order unchanged: a corrected address was silently dropped
+ * and shipped to the old one, and a switch to Cash on delivery reopened
+ * Razorpay. So a replay must carry the same basket, delivery, customer,
+ * payment method and coupon; anything else is refused, never merged.
+ *
+ * Compared from the stored row alone, in the form create-order wrote it, so
+ * no lookup is needed and a genuine retry of the same request always matches.
+ */
+function replayMatches(order, body) {
+  const parsed = validateCartPayload(body?.items);
+  if (!parsed.ok) return false;
+
+  const method = body?.paymentMethod === 'cod' ? 'cod' : 'razorpay';
+  if ((order?.payment_method === 'cod' ? 'cod' : 'razorpay') !== method) return false;
+
+  const delivery = Object.prototype.hasOwnProperty.call(DELIVERY_FEES, body?.delivery) ? body.delivery : 'std';
+  if ((order?.delivery_method || 'std') !== delivery) return false;
+
+  // Absent (rather than null) only on a deployment without 0006's columns,
+  // where there is nothing stored to compare against.
+  if (order?.coupon_code !== undefined) {
+    const code = typeof body?.couponCode === 'string' ? body.couponCode.trim().toUpperCase().slice(0, 40) : '';
+    if (String(order.coupon_code || '').toUpperCase() !== code) return false;
+  }
+
+  const stored = order?.customer || {};
+  const given = safeCustomerFrom(body?.customer);
+  if (Object.keys(given).some((k) => (stored[k] ?? '') !== given[k])) return false;
+
+  const lines = Array.isArray(order?.items) ? order.items : [];
+  if (lines.length !== parsed.items.length) return false;
+  return parsed.items.every((item) => lines.some((l) => (l.catalogue || null) === (item.catalogue || null)
+    && (String(l.product_id) === item.id || (l.biosash_id != null && String(l.biosash_id) === item.id))
+    && (l.variant_id == null ? null : String(l.variant_id)) === (item.variantId || null)
+    && Number(l.qty) === item.qty));
+}
+
+/** The refusal for a key replayed with a different order. Nothing is created or changed. */
+function refuseChangedReplay(res) {
+  return res.status(409).json({
+    error: 'Your order details changed since you last pressed Pay. Please refresh the page and place your order again.',
+    idempotencyConflict: true,
+  });
+}
+
 const PREPAID_RESERVATION_STALE_MS = 15_000;
 const PREPAID_REPLAY_DELAYS_MS = [0, 10, 25, 50, 100, 200];
 
@@ -218,6 +288,7 @@ function replayPayload(order, rz) {
 }
 
 async function returnExistingOrder(existing, idempotencyKey, sb, rz, res, body) {
+  if (!replayMatches(existing, body)) return refuseChangedReplay(res);
   let ready = existing;
   let adopted = false;
   if (ready?.payment_method !== 'cod') {
@@ -419,22 +490,8 @@ export default async function handler(req, res) {
     }
     const orderNumber = generateOrderNumber();
 
-    // Only keep the customer/shipping fields we actually need, length-capped.
-    // Stored in the orders.customer jsonb column, so adding fields here needs
-    // no schema migration. `apartment` (address line 2) and `landmark` were
-    // previously dropped here and are now persisted for delivery.
-    const safeCustomer = {
-      email: str(customer?.email, 200),
-      phone: str(customer?.phone, 40),
-      firstName: str(customer?.firstName, 80),
-      lastName: str(customer?.lastName, 80),
-      address: str(customer?.address, 300),
-      apartment: str(customer?.apartment, 300),
-      landmark: str(customer?.landmark, 200),
-      city: str(customer?.city, 120),
-      state: str(customer?.state, 120),
-      pin: str(customer?.pin, 20),
-    };
+    // Only keep the customer/shipping fields we actually need (safeCustomerFrom).
+    const safeCustomer = safeCustomerFrom(customer);
 
     // Enforced for BOTH payment methods: a prepaid order with no address is
     // just as undeliverable as a COD one, and the browser's own validation is
@@ -498,6 +555,7 @@ export default async function handler(req, res) {
         if (err?.details?.code === '23505' && idempotencyKey) {
           const winner = await findOrderByIdempotencyKey(idempotencyKey, sb);
           if (winner) {
+            if (!replayMatches(winner, body)) return refuseChangedReplay(res);
             return res.status(200).json({
               paymentMethod: 'cod',
               orderNumber: winner.order_number,

@@ -8,7 +8,7 @@ import { useStore } from '../lib/store.jsx';
 import { useCustomerAuth } from '../lib/customerAuth.jsx';
 import { getProfile, listAddresses, createAddress, updateAddress, setDefaultAddress } from '../lib/customerData.js';
 import { money } from '../lib/format.js';
-import { loadRazorpayScript, createPaymentOrder, verifyPayment, newIdempotencyKey } from '../lib/payments.js';
+import { loadRazorpayScript, createPaymentOrder, verifyPayment, keyForSubmission } from '../lib/payments.js';
 import { useCartQuote } from '../lib/cartQuote.js';
 
 // Fields that come from a saved address. Editing any of these by hand clears
@@ -203,7 +203,8 @@ export default function Checkout() {
   // Server-side companion to that lock. The ref above only protects one tab
   // in one page session; this key lets the server recognise a resubmitted
   // request (retry after a dropped connection, back button) as the same
-  // order rather than a new one.
+  // order rather than a new one. Held as { key, submission }: it follows the
+  // order being submitted, not the visit (keyForSubmission in payments.js).
   const submitKey = useRef(null);
   const [placed, setPlaced] = useState(false);
   // Generated once when the order is placed. It used to be computed inline
@@ -320,20 +321,25 @@ export default function Checkout() {
     setPayNotice('');
 
     try {
-      // One key for this submit, reused if the request itself is retried, so
-      // a flaky connection cannot turn one COD order into two.
-      if (!submitKey.current) submitKey.current = newIdempotencyKey();
-
-      // The server prices the cart itself; we only send ids + quantities.
-      const created = await createPaymentOrder({
+      // The order exactly as it will be sent. Its key is reused only while
+      // this stays the same, so a flaky connection cannot turn one order into
+      // two — and a corrected address, a switch to Cash on delivery or an
+      // edited basket is a new order, never a replay of the last one.
+      const request = {
         items: cart,
         delivery,
         customer: form,
         paymentMethod: pay === 'cod' ? 'cod' : 'online',
-        idempotencyKey: submitKey.current,
         // The code only. create-order revalidates it against this buyer and
         // this basket and computes the discount itself.
         couponCode,
+      };
+      submitKey.current = keyForSubmission(submitKey.current, JSON.stringify(request));
+
+      // The server prices the cart itself; we only send ids + quantities.
+      const created = await createPaymentOrder({
+        ...request,
+        idempotencyKey: submitKey.current.key,
         // What the customer was last shown, so a drift is logged server-side.
         quotedTotals: quote.breakdown
           ? { grandTotal: quote.breakdown.grandTotal, couponDiscount: quote.breakdown.couponDiscount }
@@ -422,6 +428,15 @@ export default function Checkout() {
         // without the coupon, and must not collapse into this one.
         submitKey.current = null;
         setPayError(`${err.message} Your total has been updated — please review it and try again.`);
+        return;
+      }
+
+      // The server holds this key for a different order. keyForSubmission
+      // makes that unreachable from this page, but if it ever happens the
+      // next attempt must be a new order, not the same refusal again.
+      if (err.data?.idempotencyConflict) {
+        submitKey.current = null;
+        setPayError('Your order details changed since your last attempt. Please press the button again to place the updated order.');
         return;
       }
 

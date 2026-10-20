@@ -83,6 +83,23 @@ export function newIdempotencyKey() {
 }
 
 /**
+ * The key for THIS submission: the one already held while nothing the order
+ * is made of has changed, a fresh one the moment anything has.
+ *
+ * A key identifies one submission, not one visit to the checkout. Holding a
+ * single key for the whole visit meant that after a closed payment window the
+ * next Pay replayed the FIRST order — an address corrected in the meantime
+ * was dropped, and choosing Cash on delivery reopened Razorpay. `submission`
+ * is the order request itself (items, delivery, customer, payment method,
+ * coupon), so a retry of the same request still collapses into one order.
+ *
+ * `held` is { key, submission } or null; so is the result.
+ */
+export function keyForSubmission(held, submission) {
+  return held && held.submission === submission ? held : { key: newIdempotencyKey(), submission };
+}
+
+/**
  * Ask the server to price the cart and open a payable order.
  * Only ids + quantities are sent — never prices or totals.
  */
