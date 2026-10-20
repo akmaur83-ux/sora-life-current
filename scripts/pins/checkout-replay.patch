@@ -1,0 +1,231 @@
+diff --git a/api/razorpay/create-order.js b/api/razorpay/create-order.js
+index f77f628..2a423c7 100644
+--- a/api/razorpay/create-order.js
++++ b/api/razorpay/create-order.js
+@@ -12,7 +12,7 @@
+ // order id, the server-computed amount, and the PUBLIC key id. The key
+ // secret never leaves the server.
+ // ============================================================
+-import { validateCartPayload, computeOrderTotal, generateOrderNumber } from '../_lib/pricing.js';
++import { validateCartPayload, computeOrderTotal, generateOrderNumber, DELIVERY_FEES } from '../_lib/pricing.js';
+ import { getTaxConfig } from '../_lib/tax.js';
+ import { getRazorpayCredentials, createRazorpayOrder } from '../_lib/razorpay.js';
+ import {
+@@ -122,6 +122,76 @@ function readIdempotencyKey(req, body) {
+   return /^[A-Za-z0-9_-]{8,100}$/.test(clean) ? clean : null;
+ }
+ 
++/**
++ * Only the customer/shipping fields an order needs, length-capped. Stored in
++ * the orders.customer jsonb column, so adding fields here needs no schema
++ * migration. `apartment` (address line 2) and `landmark` were previously
++ * dropped and are now persisted for delivery.
++ */
++function safeCustomerFrom(customer) {
++  return {
++    email: str(customer?.email, 200),
++    phone: str(customer?.phone, 40),
++    firstName: str(customer?.firstName, 80),
++    lastName: str(customer?.lastName, 80),
++    address: str(customer?.address, 300),
++    apartment: str(customer?.apartment, 300),
++    landmark: str(customer?.landmark, 200),
++    city: str(customer?.city, 120),
++    state: str(customer?.state, 120),
++    pin: str(customer?.pin, 20),
++  };
++}
++
++/**
++ * Is this request the submission the stored order was created from?
++ *
++ * A key identifies ONE submission. Replaying it for a different one handed
++ * back the first order unchanged: a corrected address was silently dropped
++ * and shipped to the old one, and a switch to Cash on delivery reopened
++ * Razorpay. So a replay must carry the same basket, delivery, customer,
++ * payment method and coupon; anything else is refused, never merged.
++ *
++ * Compared from the stored row alone, in the form create-order wrote it, so
++ * no lookup is needed and a genuine retry of the same request always matches.
++ */
++function replayMatches(order, body) {
++  const parsed = validateCartPayload(body?.items);
++  if (!parsed.ok) return false;
++
++  const method = body?.paymentMethod === 'cod' ? 'cod' : 'razorpay';
++  if ((order?.payment_method === 'cod' ? 'cod' : 'razorpay') !== method) return false;
++
++  const delivery = Object.prototype.hasOwnProperty.call(DELIVERY_FEES, body?.delivery) ? body.delivery : 'std';
++  if ((order?.delivery_method || 'std') !== delivery) return false;
++
++  // Absent (rather than null) only on a deployment without 0006's columns,
++  // where there is nothing stored to compare against.
++  if (order?.coupon_code !== undefined) {
++    const code = typeof body?.couponCode === 'string' ? body.couponCode.trim().toUpperCase().slice(0, 40) : '';
++    if (String(order.coupon_code || '').toUpperCase() !== code) return false;
++  }
++
++  const stored = order?.customer || {};
++  const given = safeCustomerFrom(body?.customer);
++  if (Object.keys(given).some((k) => (stored[k] ?? '') !== given[k])) return false;
++
++  const lines = Array.isArray(order?.items) ? order.items : [];
++  if (lines.length !== parsed.items.length) return false;
++  return parsed.items.every((item) => lines.some((l) => (l.catalogue || null) === (item.catalogue || null)
++    && (String(l.product_id) === item.id || (l.biosash_id != null && String(l.biosash_id) === item.id))
++    && (l.variant_id == null ? null : String(l.variant_id)) === (item.variantId || null)
++    && Number(l.qty) === item.qty));
++}
++
++/** The refusal for a key replayed with a different order. Nothing is created or changed. */
++function refuseChangedReplay(res) {
++  return res.status(409).json({
++    error: 'Your order details changed since you last pressed Pay. Please refresh the page and place your order again.',
++    idempotencyConflict: true,
++  });
++}
++
+ const PREPAID_RESERVATION_STALE_MS = 15_000;
+ const PREPAID_REPLAY_DELAYS_MS = [0, 10, 25, 50, 100, 200];
+ 
+@@ -218,6 +288,7 @@ function replayPayload(order, rz) {
+ }
+ 
+ async function returnExistingOrder(existing, idempotencyKey, sb, rz, res, body) {
++  if (!replayMatches(existing, body)) return refuseChangedReplay(res);
+   let ready = existing;
+   let adopted = false;
+   if (ready?.payment_method !== 'cod') {
+@@ -419,22 +490,8 @@ export default async function handler(req, res) {
+     }
+     const orderNumber = generateOrderNumber();
+ 
+-    // Only keep the customer/shipping fields we actually need, length-capped.
+-    // Stored in the orders.customer jsonb column, so adding fields here needs
+-    // no schema migration. `apartment` (address line 2) and `landmark` were
+-    // previously dropped here and are now persisted for delivery.
+-    const safeCustomer = {
+-      email: str(customer?.email, 200),
+-      phone: str(customer?.phone, 40),
+-      firstName: str(customer?.firstName, 80),
+-      lastName: str(customer?.lastName, 80),
+-      address: str(customer?.address, 300),
+-      apartment: str(customer?.apartment, 300),
+-      landmark: str(customer?.landmark, 200),
+-      city: str(customer?.city, 120),
+-      state: str(customer?.state, 120),
+-      pin: str(customer?.pin, 20),
+-    };
++    // Only keep the customer/shipping fields we actually need (safeCustomerFrom).
++    const safeCustomer = safeCustomerFrom(customer);
+ 
+     // Enforced for BOTH payment methods: a prepaid order with no address is
+     // just as undeliverable as a COD one, and the browser's own validation is
+@@ -498,6 +555,7 @@ export default async function handler(req, res) {
+         if (err?.details?.code === '23505' && idempotencyKey) {
+           const winner = await findOrderByIdempotencyKey(idempotencyKey, sb);
+           if (winner) {
++            if (!replayMatches(winner, body)) return refuseChangedReplay(res);
+             return res.status(200).json({
+               paymentMethod: 'cod',
+               orderNumber: winner.order_number,
+diff --git a/src/lib/payments.js b/src/lib/payments.js
+index dfa3e1b..9324c99 100644
+--- a/src/lib/payments.js
++++ b/src/lib/payments.js
+@@ -82,6 +82,23 @@ export function newIdempotencyKey() {
+   return `k-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+ }
+ 
++/**
++ * The key for THIS submission: the one already held while nothing the order
++ * is made of has changed, a fresh one the moment anything has.
++ *
++ * A key identifies one submission, not one visit to the checkout. Holding a
++ * single key for the whole visit meant that after a closed payment window the
++ * next Pay replayed the FIRST order — an address corrected in the meantime
++ * was dropped, and choosing Cash on delivery reopened Razorpay. `submission`
++ * is the order request itself (items, delivery, customer, payment method,
++ * coupon), so a retry of the same request still collapses into one order.
++ *
++ * `held` is { key, submission } or null; so is the result.
++ */
++export function keyForSubmission(held, submission) {
++  return held && held.submission === submission ? held : { key: newIdempotencyKey(), submission };
++}
++
+ /**
+  * Ask the server to price the cart and open a payable order.
+  * Only ids + quantities are sent — never prices or totals.
+diff --git a/src/pages/Checkout.jsx b/src/pages/Checkout.jsx
+index 2cb4394..8e303a8 100644
+--- a/src/pages/Checkout.jsx
++++ b/src/pages/Checkout.jsx
+@@ -8,7 +8,7 @@ import { useStore } from '../lib/store.jsx';
+ import { useCustomerAuth } from '../lib/customerAuth.jsx';
+ import { getProfile, listAddresses, createAddress, updateAddress, setDefaultAddress } from '../lib/customerData.js';
+ import { money } from '../lib/format.js';
+-import { loadRazorpayScript, createPaymentOrder, verifyPayment, newIdempotencyKey } from '../lib/payments.js';
++import { loadRazorpayScript, createPaymentOrder, verifyPayment, keyForSubmission } from '../lib/payments.js';
+ import { useCartQuote } from '../lib/cartQuote.js';
+ 
+ // Fields that come from a saved address. Editing any of these by hand clears
+@@ -203,7 +203,8 @@ export default function Checkout() {
+   // Server-side companion to that lock. The ref above only protects one tab
+   // in one page session; this key lets the server recognise a resubmitted
+   // request (retry after a dropped connection, back button) as the same
+-  // order rather than a new one.
++  // order rather than a new one. Held as { key, submission }: it follows the
++  // order being submitted, not the visit (keyForSubmission in payments.js).
+   const submitKey = useRef(null);
+   const [placed, setPlaced] = useState(false);
+   // Generated once when the order is placed. It used to be computed inline
+@@ -320,20 +321,25 @@ export default function Checkout() {
+     setPayNotice('');
+ 
+     try {
+-      // One key for this submit, reused if the request itself is retried, so
+-      // a flaky connection cannot turn one COD order into two.
+-      if (!submitKey.current) submitKey.current = newIdempotencyKey();
+-
+-      // The server prices the cart itself; we only send ids + quantities.
+-      const created = await createPaymentOrder({
++      // The order exactly as it will be sent. Its key is reused only while
++      // this stays the same, so a flaky connection cannot turn one order into
++      // two — and a corrected address, a switch to Cash on delivery or an
++      // edited basket is a new order, never a replay of the last one.
++      const request = {
+         items: cart,
+         delivery,
+         customer: form,
+         paymentMethod: pay === 'cod' ? 'cod' : 'online',
+-        idempotencyKey: submitKey.current,
+         // The code only. create-order revalidates it against this buyer and
+         // this basket and computes the discount itself.
+         couponCode,
++      };
++      submitKey.current = keyForSubmission(submitKey.current, JSON.stringify(request));
++
++      // The server prices the cart itself; we only send ids + quantities.
++      const created = await createPaymentOrder({
++        ...request,
++        idempotencyKey: submitKey.current.key,
+         // What the customer was last shown, so a drift is logged server-side.
+         quotedTotals: quote.breakdown
+           ? { grandTotal: quote.breakdown.grandTotal, couponDiscount: quote.breakdown.couponDiscount }
+@@ -425,6 +431,15 @@ export default function Checkout() {
+         return;
+       }
+ 
++      // The server holds this key for a different order. keyForSubmission
++      // makes that unreachable from this page, but if it ever happens the
++      // next attempt must be a new order, not the same refusal again.
++      if (err.data?.idempotencyConflict) {
++        submitKey.current = null;
++        setPayError('Your order details changed since your last attempt. Please press the button again to place the updated order.');
++        return;
++      }
++
+       setPayError(err.message || 'We could not start your payment. Please try again.');
+     }
+   };

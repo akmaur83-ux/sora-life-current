@@ -24,7 +24,7 @@ import {
   read, createCatalogueDb, catalogueFixtures, loadCatalogueAdmin, openPage,
   fieldByLabel, formOf, change, submit, findAll, textOf,
 } from './catalogue-admin-harness.mjs';
-import { sansOrderNumber, STOREFRONT_CONTENT_FILES } from './storefront-settings-pin.mjs';
+import { sansOrderNumber, sansCheckoutReplay, STOREFRONT_CONTENT_FILES } from './storefront-settings-pin.mjs';
 
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -102,14 +102,15 @@ await test('the note is true: checkout still sets gst_rate null on fashion and H
   const hl = pricing.indexOf("if (item.catalogue === 'homeliving')");
   assert.ok(hl > 0);
   assert.match(pricing.slice(hl, hl + 6000), /gst_rate: null,/);
-  // And this work did not touch it. The order-number change since is allowed only
-  // where undoing it (sansOrderNumber) gives back 7c05e7d's bytes.
+  // And this work did not touch it. The order-number and checkout-replay changes since
+  // are allowed only where undoing them (sansCheckoutReplay, then sansOrderNumber)
+  // gives back 7c05e7d's bytes.
   const at7c05e7d = (rel) => execFileSync('git', ['show', `7c05e7d:${rel}`], { cwd: REPO, encoding: 'utf8' });
   const changed = execFileSync('git', ['diff', '--name-only', '7c05e7d', '--', 'api/', 'src/lib/store.jsx', 'src/lib/payments.js', 'src/pages/Checkout.jsx', 'src/pages/Cart.jsx'], { cwd: REPO, encoding: 'utf8' })
     .trim().split('\n').filter(Boolean)
     // The storefront publish endpoint is new since (test-storefront-publish.mjs owns it).
     .filter((rel) => !STOREFRONT_CONTENT_FILES.test(rel))
-    .filter((rel) => sansOrderNumber(rel, readFileSync(resolve(REPO, rel), 'utf8')).replace(/\r\n/g, '\n') !== at7c05e7d(rel).replace(/\r\n/g, '\n'))
+    .filter((rel) => sansOrderNumber(rel, sansCheckoutReplay(rel, readFileSync(resolve(REPO, rel), 'utf8'))).replace(/\r\n/g, '\n') !== at7c05e7d(rel).replace(/\r\n/g, '\n'))
     .join('\n');
   assert.equal(changed, '', 'no pricing, cart, checkout or payment file changed');
 });
