@@ -38,8 +38,9 @@ import { getWebhookSecret, verifyWebhookSignature } from '../_lib/razorpay.js';
 import { invoicePatchForPaidTransition } from '../_lib/pricing.js';
 import {
   getSupabaseConfig, findOrderByRazorpayOrderId, updateOrderById,
-  recordPaymentTransaction, consumeCouponForOrder, setConversionStatus,
+  recordPaymentTransaction, setConversionStatus, settleOrderHolds, releaseOrderHolds,
 } from '../_lib/supabaseAdmin.js';
+import { stockLines } from '../_lib/orderHolds.js';
 
 // Razorpay must be verified against raw bytes, so the platform body parser
 // is disabled for this route.
@@ -156,6 +157,9 @@ export default async function handler(req, res) {
       }
       // A failed payment never qualifies its conversion. Non-fatal.
       await setConversionStatus(order.id, 'cancelled', 'payment_failed', sb).catch(() => {});
+      // It lets go of the order's stock and coupon use at once (0039). A retry
+      // in the same window that then succeeds takes them again on capture.
+      await releaseOrderHolds(order.id, sb);
       return res.status(200).json({ received: true, orderNumber: order.order_number, status: 'failed' });
     }
 
@@ -194,10 +198,11 @@ export default async function handler(req, res) {
         return res.status(200).json({ received: true, alreadyPaid: true, orderNumber: order.order_number });
       }
 
-      // Consume the coupon (if any) now that payment is confirmed. Idempotent
-      // per order in the DB, so this webhook and the /verify callback firing
-      // for the same order cannot double-consume. Non-fatal.
-      await consumeCouponForOrder(order, sb).catch(() => {});
+      // Take what the order was holding — its stock and its coupon use —
+      // now that payment is confirmed (0039; before 0039, consume_coupon as
+      // always). Idempotent per order in the DB, so this webhook and the
+      // /verify callback cannot take twice. Non-fatal.
+      await settleOrderHolds(order, stockLines(order.items), sb);
       // Qualify the creator conversion. Idempotent + non-fatal; a retried
       // webhook or the /verify callback for the same order just no-ops.
       await setConversionStatus(order.id, 'eligible', 'payment_captured', sb).catch(() => {});

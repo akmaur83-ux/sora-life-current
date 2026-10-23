@@ -100,11 +100,20 @@ export function keyForSubmission(held, submission) {
 }
 
 /**
+ * Finish with the held key: the next submission gets a new one, whatever it
+ * contains, and names this one as the checkout it replaces — so the server
+ * lets go of the stock and coupon use that order was holding.
+ */
+export function retireKey(held) {
+  return held ? { key: held.key, submission: null } : null;
+}
+
+/**
  * Ask the server to price the cart and open a payable order.
  * Only ids + quantities are sent — never prices or totals.
  */
 export async function createPaymentOrder({
-  items, delivery, customer, paymentMethod, idempotencyKey, couponCode, quotedTotals,
+  items, delivery, customer, paymentMethod, idempotencyKey, supersedesKey, couponCode, quotedTotals,
 }) {
   const authHeaders = await customerAuthHeader();
   return postJson('/api/razorpay/create-order', {
@@ -131,6 +140,11 @@ export async function createPaymentOrder({
     // between what the customer was shown and what they are charged appears in
     // the logs instead of only in their bank statement.
     quotedTotals: quotedTotals || null,
+    // The key of the checkout this one replaces (a changed address, basket,
+    // payment method or coupon). Its order lets go of what it was holding
+    // now, instead of when its hold lapses. Absent on a first attempt, so
+    // that body is byte-for-byte what it always was.
+    ...(supersedesKey ? { supersedesKey } : {}),
     // Opaque, self-assigned browser id used ONLY to resolve creator attribution
     // server-side. Carries no internal creator/campaign/link id and no PII.
     visitorId: getVisitorId(),

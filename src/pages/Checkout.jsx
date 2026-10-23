@@ -8,7 +8,7 @@ import { useStore } from '../lib/store.jsx';
 import { useCustomerAuth } from '../lib/customerAuth.jsx';
 import { getProfile, listAddresses, createAddress, updateAddress, setDefaultAddress } from '../lib/customerData.js';
 import { money } from '../lib/format.js';
-import { loadRazorpayScript, createPaymentOrder, verifyPayment, keyForSubmission } from '../lib/payments.js';
+import { loadRazorpayScript, createPaymentOrder, verifyPayment, keyForSubmission, retireKey } from '../lib/payments.js';
 import { useCartQuote } from '../lib/cartQuote.js';
 
 // Fields that come from a saved address. Editing any of these by hand clears
@@ -334,12 +334,17 @@ export default function Checkout() {
         // this basket and computes the discount itself.
         couponCode,
       };
-      submitKey.current = keyForSubmission(submitKey.current, JSON.stringify(request));
+      const previous = submitKey.current;
+      submitKey.current = keyForSubmission(previous, JSON.stringify(request));
+      // A new key replaces the last attempt's: its order lets go of the stock
+      // and coupon use it was holding.
+      const supersedesKey = previous && previous.key !== submitKey.current.key ? previous.key : null;
 
       // The server prices the cart itself; we only send ids + quantities.
       const created = await createPaymentOrder({
         ...request,
         idempotencyKey: submitKey.current.key,
+        supersedesKey,
         // What the customer was last shown, so a drift is logged server-side.
         quotedTotals: quote.breakdown
           ? { grandTotal: quote.breakdown.grandTotal, couponDiscount: quote.breakdown.couponDiscount }
@@ -366,6 +371,10 @@ export default function Checkout() {
         name: 'Sora Life',
         description: `Order ${created.orderNumber}`,
         theme: { color: '#1E3A2F' },
+        // The window closes before this order's hold on its stock and coupon
+        // runs out, so a payment can never begin on an order that no longer
+        // holds what it is paying for (api/_lib/orderHolds.js).
+        ...(created.checkoutTimeout > 0 ? { timeout: created.checkoutTimeout } : {}),
         prefill: {
           name: `${form.firstName} ${form.lastName}`.trim(),
           email: form.email,
@@ -426,7 +435,7 @@ export default function Checkout() {
         dispatch({ type: 'CLEAR_COUPON' });
         // A fresh key: the next attempt is a genuinely different order, priced
         // without the coupon, and must not collapse into this one.
-        submitKey.current = null;
+        submitKey.current = retireKey(submitKey.current);
         setPayError(`${err.message} Your total has been updated — please review it and try again.`);
         return;
       }
@@ -435,8 +444,17 @@ export default function Checkout() {
       // makes that unreachable from this page, but if it ever happens the
       // next attempt must be a new order, not the same refusal again.
       if (err.data?.idempotencyConflict) {
-        submitKey.current = null;
+        submitKey.current = retireKey(submitKey.current);
         setPayError('Your order details changed since your last attempt. Please press the button again to place the updated order.');
+        return;
+      }
+
+      // Someone else holds or bought the last units, or this checkout's
+      // 30-minute hold ran out. Nothing was charged; the next press is a new
+      // order, priced and held afresh.
+      if (err.data?.stockRefused || err.data?.reservationExpired) {
+        submitKey.current = retireKey(submitKey.current);
+        setPayError(err.message);
         return;
       }
 

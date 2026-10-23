@@ -27,8 +27,12 @@
 import {
   getRazorpayCredentials, verifyPaymentSignature, fetchRazorpayPayment, isCapturedPayment,
 } from '../_lib/razorpay.js';
-import { getSupabaseConfig, findOrderByRazorpayOrderId, updateOrderById, consumeCouponForOrder, setConversionStatus } from '../_lib/supabaseAdmin.js';
+import {
+  getSupabaseConfig, findOrderByRazorpayOrderId, updateOrderById, setConversionStatus,
+  settleOrderHolds, releaseOrderHolds,
+} from '../_lib/supabaseAdmin.js';
 import { invoicePatchForPaidTransition } from '../_lib/pricing.js';
+import { stockLines } from '../_lib/orderHolds.js';
 import { enforceRateLimit } from '../_lib/rateLimit.js';
 
 function fail(res, status, message) {
@@ -137,6 +141,9 @@ export default async function handler(req, res) {
           razorpay_payment_id: paymentId,
           failure_reason: 'payment_failed',
         }, sb, { unlessPaid: true }).catch(() => {});
+        // A genuine failure lets go of the order's stock and coupon use at
+        // once (0039). A retry that then succeeds takes them again on payment.
+        await releaseOrderHolds(order.id, sb);
         return fail(res, 400, "Payment wasn't completed. You have not been charged by Sora Life.");
       }
       // `authorized` / `created` / `pending`: the funds are held but not
@@ -173,10 +180,12 @@ export default async function handler(req, res) {
       });
     }
 
-    // Order is now definitively paid -> consume its coupon (if any). Atomic
-    // and idempotent per order in the DB, and non-fatal here: a coupon-ledger
-    // issue must never fail a payment that already succeeded.
-    await consumeCouponForOrder(order, sb).catch(() => {});
+    // Order is now definitively paid -> take what it was holding: its stock
+    // and its coupon use (0039; before 0039, consume_coupon as always).
+    // Idempotent per order in the DB, and non-fatal here: nothing may fail a
+    // payment that already succeeded. Anything that ran out is written to
+    // the order's hold_warnings for the admin.
+    await settleOrderHolds(order, stockLines(order.items), sb);
     // Creator attribution: a paid order qualifies its conversion. Idempotent
     // and non-fatal (a retried verify just no-ops).
     await setConversionStatus(order.id, 'eligible', 'payment_verified', sb).catch(() => {});

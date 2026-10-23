@@ -534,6 +534,111 @@ export async function consumeCouponForOrder(order, cfg) {
   }
 }
 
+// ============================================================
+// Order holds (migration 0039): stock and coupon uses held for an order.
+//
+// Until 0039 is applied the functions do not exist and PostgREST answers
+// 404 / PGRST202. Each helper then says so ({ skipped }) and the caller
+// behaves exactly as checkout did before 0039: no stock moves, and the coupon
+// is consumed by consume_coupon on payment (COD: on placement).
+// ============================================================
+
+/** True when the failure means "this function does not exist yet". */
+function isMissingFunction(err) {
+  const code = err?.details?.code;
+  return err?.status === 404 || code === 'PGRST202' || code === '42883';
+}
+
+/** A jsonb result as PostgREST delivers it: the object, or (defensively) wrapped. */
+function rpcObject(out, fn) {
+  if (Array.isArray(out)) return out[0] && typeof out[0] === 'object' ? (out[0][fn] ?? out[0]) : null;
+  if (out && typeof out === 'object' && fn in out) return out[fn];
+  return out && typeof out === 'object' ? out : null;
+}
+
+/**
+ * Hold (online payment) or take (cash on delivery) what an order needs, right
+ * after its row is written. Returns the database's verdict —
+ *   { ok: true, reserved_until }                              placed
+ *   { ok: false, reason, line?, available? }                  refused; nothing written
+ * — or { skipped: true } before 0039. Any other failure THROWS: the caller
+ * cannot know what was held, and a retry of the same submit asks again
+ * (the function is idempotent per order).
+ */
+export async function reserveOrderHolds({ orderId, commit, holdMinutes, couponCode, userId, lines }, cfg) {
+  try {
+    const out = await callRpc('reserve_order_holds', {
+      p_order_id: orderId,
+      p_commit: Boolean(commit),
+      p_hold_minutes: commit ? null : holdMinutes,
+      p_coupon_code: couponCode || null,
+      p_user_id: userId || null,
+      p_lines: Array.isArray(lines) ? lines : [],
+    }, cfg);
+    return rpcObject(out, 'reserve_order_holds') || { ok: false, reason: 'unknown' };
+  } catch (err) {
+    if (isMissingFunction(err)) {
+      console.warn('[holds] reserve_order_holds not present — run migration 0039. Placing the order without holds.');
+      return { skipped: true };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Take an online order's holds now that it is PAID. Non-fatal by contract:
+ * the money has moved, so nothing here may fail the payment confirmation.
+ * Before 0039 it consumes the coupon exactly as consumeCouponForOrder did.
+ */
+export async function settleOrderHolds(order, lines, cfg) {
+  if (!order?.id) return { status: 'skipped' };
+  try {
+    const out = rpcObject(await callRpc('settle_order_holds', {
+      p_order_id: order.id,
+      p_coupon_code: order.coupon_code || null,
+      p_user_id: order.user_id || null,
+      p_lines: Array.isArray(lines) ? lines : [],
+    }, cfg), 'settle_order_holds') || {};
+    if (Array.isArray(out.warnings) && out.warnings.length) {
+      // Written to orders.hold_warnings too, where the admin sees it.
+      console.warn('[holds] paid order not fully honoured:', order.order_number, JSON.stringify(out.warnings));
+    }
+    return { status: 'settled', ...out };
+  } catch (err) {
+    if (isMissingFunction(err)) {
+      const consumed = await consumeCouponForOrder(order, cfg);
+      return { status: 'legacy', coupon: consumed.status };
+    }
+    console.warn('[holds] settle failed:', err?.message);
+    return { status: 'error' };
+  }
+}
+
+/**
+ * Let go of an unpaid order's live holds: its payment failed, or the customer
+ * started a changed checkout. Non-fatal; an unreleased hold lapses anyway.
+ */
+export async function releaseOrderHolds(orderId, cfg) {
+  if (!orderId) return 0;
+  try {
+    const out = await callRpc('release_order_holds', { p_order_id: orderId }, cfg);
+    return Number(Array.isArray(out) ? out[0] : out) || 0;
+  } catch (err) {
+    if (!isMissingFunction(err)) console.warn('[holds] release failed:', err?.message);
+    return 0;
+  }
+}
+
+/**
+ * Remove an order row that was never placed: written a moment ago, then
+ * refused its holds (the reservation writes nothing on a refusal). Guarded to
+ * an unpaid row, so it can never touch an order that has taken money.
+ */
+export async function deleteUnplacedOrder(orderId, cfg) {
+  if (!orderId) return;
+  await rest(`orders?id=eq.${encodeURIComponent(orderId)}&payment_status=eq.pending`, { ...cfg, method: 'DELETE' });
+}
+
 /**
  * Creator Program Part 2 — record an attributed-sale conversion for an order.
  *

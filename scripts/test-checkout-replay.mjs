@@ -48,7 +48,8 @@ const CUSTOMER = {
 
 /** The harness, plus the fashion view reads it does not speak. */
 function world(seed = {}) {
-  const w = makeWorld({ products: PRODUCTS, variants: VARIANTS, coupons: COUPONS, ...seed });
+  // The fashion options are counted stock (0039 holds them), so the double holds them too.
+  const w = makeWorld({ products: PRODUCTS, variants: VARIANTS, catalogueVariants: FASHION_VARIANTS, coupons: COUPONS, ...seed });
   const inner = globalThis.fetch;
   globalThis.fetch = async (input, init = {}) => {
     const url = new URL(typeof input === 'string' ? input : input.url);
@@ -207,15 +208,16 @@ await test('K2 Checkout keys the exact request it sends, and resets the key on e
   const checkout = code('src/pages/Checkout.jsx');
   assert.match(checkout, /const request = \{\n\s+items: cart,\n\s+delivery,\n\s+customer: form,\n\s+paymentMethod: pay === 'cod' \? 'cod' : 'online',\n\s+couponCode,\n\s+\};/,
     'one request object: items, delivery, customer, payment method, coupon');
-  assert.match(checkout, /submitKey\.current = keyForSubmission\(submitKey\.current, JSON\.stringify\(request\)\);/);
-  assert.match(checkout, /createPaymentOrder\(\{\n\s+\.\.\.request,\n\s+idempotencyKey: submitKey\.current\.key,/, 'what is sent is what was keyed');
+  assert.match(checkout, /const previous = submitKey\.current;\n\s+submitKey\.current = keyForSubmission\(previous, JSON\.stringify\(request\)\);/);
+  assert.match(checkout, /createPaymentOrder\(\{\n\s+\.\.\.request,\n\s+idempotencyKey: submitKey\.current\.key,\n\s+supersedesKey,/, 'what is sent is what was keyed, naming the key it replaces');
   const assignments = checkout.match(/submitKey\.current = [^;]+;/g) || [];
   assert.deepEqual(assignments, [
-    'submitKey.current = keyForSubmission(submitKey.current, JSON.stringify(request));',
-    'submitKey.current = null;',
-    'submitKey.current = null;',
-  ], 'minted in one place; cleared only after a coupon refusal or a key conflict');
-  assert.match(checkout, /err\.data\?\.idempotencyConflict\) \{\n\s+submitKey\.current = null;/);
+    'submitKey.current = keyForSubmission(previous, JSON.stringify(request));',
+    'submitKey.current = retireKey(submitKey.current);',
+    'submitKey.current = retireKey(submitKey.current);',
+    'submitKey.current = retireKey(submitKey.current);',
+  ], 'minted in one place; retired only after a coupon refusal, a key conflict, or a stock or lapsed-hold refusal');
+  assert.match(checkout, /err\.data\?\.idempotencyConflict\) \{\n\s+submitKey\.current = retireKey\(submitKey\.current\);/);
   assert.doesNotMatch(checkout, /newIdempotencyKey/, 'no second way to mint a key');
 });
 

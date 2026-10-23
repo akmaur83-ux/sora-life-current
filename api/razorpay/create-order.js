@@ -19,10 +19,13 @@ import {
   getSupabaseConfig, fetchCartRows, insertOrder, getUserIdFromToken,
   fetchCouponRowByCode, recordConversion,
   findOrderByIdempotencyKey, consumeCouponForOrder, updateOrderById,
+  reserveOrderHolds, releaseOrderHolds, deleteUnplacedOrder,
 } from '../_lib/supabaseAdmin.js';
 import { enforceRateLimit } from '../_lib/rateLimit.js';
 import { computeConversionBase, readVisitorId } from '../_lib/attribution.js';
 import { loadBuyerContext, judgeCoupon } from '../_lib/couponQuote.js';
+import { COUPON_REASONS, reasonMessage } from '../_lib/coupons.js';
+import { HOLD_MINUTES, stockLines, paymentWindowSeconds, stockRefusalMessage } from '../_lib/orderHolds.js';
 
 /**
  * Warn when the total the browser was last quoted differs from the total
@@ -116,10 +119,57 @@ function validateDeliveryDetails(customer) {
  * a genuinely new order gets a new one.
  */
 function readIdempotencyKey(req, body) {
-  const raw = req.headers?.['idempotency-key'] || body?.idempotencyKey;
+  return cleanKey(req.headers?.['idempotency-key'] || body?.idempotencyKey);
+}
+
+function cleanKey(raw) {
   if (typeof raw !== 'string') return null;
   const clean = raw.trim().slice(0, 100);
   return /^[A-Za-z0-9_-]{8,100}$/.test(clean) ? clean : null;
+}
+
+/**
+ * Hold (online) or take (cash on delivery) what a just-written order needs —
+ * migration 0039. Returns { verdict } when the order stands, or { response }
+ * to send when it does not:
+ *   refused  the stock or the coupon use is not there. The reservation wrote
+ *            nothing, and the never-placed row is removed, so the customer's
+ *            next attempt starts clean.
+ *   unknown  the call failed without an answer. The row stays: a retry of the
+ *            same submit replays it and asks again (reserve is idempotent).
+ * Before 0039 the verdict is { skipped } and the order stands as it always did.
+ */
+async function holdForOrder(order, { commit, couponCode, userId, lines }, res, sb) {
+  const held = stockLines(lines);
+  let verdict;
+  try {
+    verdict = await reserveOrderHolds({
+      orderId: order.id, commit, holdMinutes: HOLD_MINUTES, couponCode, userId, lines: held,
+    }, sb);
+  } catch (err) {
+    console.error('[create-order] reserve failed:', err?.message);
+    return { response: fail(res, 503, 'We could not place your order. Please try again.') };
+  }
+  if (verdict?.skipped || verdict?.ok) return { verdict };
+
+  await deleteUnplacedOrder(order.id, sb).catch((err) => console.error('[create-order] could not remove refused order:', err?.message));
+  if (verdict?.reason === 'stock') {
+    const line = held.find((l) => l.line === Number(verdict.line));
+    return { response: res.status(409).json({ error: stockRefusalMessage(line, Number(verdict.available) || 0), stockRefused: true }) };
+  }
+  // A coupon refusal reads exactly like create-order's own revalidation, so
+  // the checkout drops the code and shows the new total the same way.
+  const reason = verdict?.reason === 'user_limit' ? COUPON_REASONS.USER_LIMIT
+    : verdict?.reason === 'exhausted' ? COUPON_REASONS.EXHAUSTED : COUPON_REASONS.INACTIVE;
+  return { response: res.status(409).json({ error: reasonMessage(reason, null), couponRejected: true, reason }) };
+}
+
+/** A replayed online order whose hold has (nearly) lapsed: it is placed afresh, at today's price. */
+function refuseLapsedReplay(res) {
+  return res.status(409).json({
+    error: 'This checkout was held for 30 minutes and has expired. Please press Pay again to place it afresh.',
+    reservationExpired: true,
+  });
 }
 
 /**
@@ -283,6 +333,7 @@ function replayPayload(order, rz) {
     payload.amountPaise = Number(order.amount_paise);
     payload.currency = order.currency || 'INR';
     payload.razorpayOrderId = order.razorpay_order_id;
+    payload.checkoutTimeout = paymentWindowSeconds(order.reserved_until);
   }
   return payload;
 }
@@ -290,6 +341,18 @@ function replayPayload(order, rz) {
 async function returnExistingOrder(existing, idempotencyKey, sb, rz, res, body) {
   if (!replayMatches(existing, body)) return refuseChangedReplay(res);
   let ready = existing;
+  // An unpaid order must hold what it needs before it is handed back: its
+  // first attempt may have ended before the reservation answered. Asking
+  // again is safe — reserve_order_holds is idempotent per order.
+  if (ready.payment_status !== 'paid') {
+    const isCod = ready.payment_method === 'cod';
+    const held = await holdForOrder(ready, {
+      commit: isCod, couponCode: ready.coupon_code, userId: ready.user_id, lines: ready.items,
+    }, res, sb);
+    if (held.response) return held.response;
+    if (held.verdict && 'reserved_until' in held.verdict) ready = { ...ready, reserved_until: held.verdict.reserved_until };
+    if (!isCod && paymentWindowSeconds(ready.reserved_until) === 0) return refuseLapsedReplay(res);
+  }
   let adopted = false;
   if (ready?.payment_method !== 'cod') {
     if (!rz.configured) {
@@ -529,6 +592,20 @@ export default async function handler(req, res) {
     // burned a number on every abandoned or failed payment attempt and left
     // the matching invoiced_at unset.
 
+    // The customer changed their checkout (address, basket, payment method,
+    // coupon), so the browser minted a new key and names the old one. The
+    // order that key opened is abandoned: it lets go of its stock and coupon
+    // use now rather than when its hold lapses — otherwise a one-per-customer
+    // code would refuse this very customer's corrected order. Paid and COD
+    // orders hold nothing that can be let go, and are left alone.
+    const supersededKey = cleanKey(body?.supersedesKey);
+    if (supersededKey && supersededKey !== idempotencyKey) {
+      const abandoned = await findOrderByIdempotencyKey(supersededKey, sb);
+      if (abandoned && abandoned.payment_status !== 'paid' && abandoned.payment_method !== 'cod') {
+        await releaseOrderHolds(abandoned.id, sb);
+      }
+    }
+
     // ---- Cash on delivery: no Razorpay involved. Recorded as a pending,
     // unpaid order so it still gets a server-computed, auditable amount.
     if (method === 'cod') {
@@ -570,12 +647,20 @@ export default async function handler(req, res) {
         throw err;
       }
 
-      // COD orders were never consuming their coupon: consumption only ran on
-      // the Razorpay verify/webhook paths, so a COD customer could reuse a
-      // single-use code indefinitely and blow straight past its usage cap.
-      // The DB function is atomic and idempotent per order, and non-fatal here
-      // — a coupon-ledger hiccup must not lose an order that already exists.
-      await consumeCouponForOrder({ ...order, coupon_code: bd.coupon?.code ?? null }, sb).catch(() => {});
+      // A COD order is a real commitment of its units (the owner's rule): its
+      // stock is taken and its coupon use counted now, under the same row
+      // locks that hold an online order's — so the last unit, or the last use
+      // of a code, cannot go to two orders at once. Cancelling it puts both
+      // back (0039's cancel trigger).
+      const held = await holdForOrder(order, {
+        commit: true, couponCode: bd.coupon?.code ?? null, userId, lines: totals.lines,
+      }, res, sb);
+      if (held.response) return held.response;
+      // Before 0039: count the coupon as COD always has. consume_coupon is
+      // atomic and idempotent per order, and non-fatal here.
+      if (held.verdict?.skipped) {
+        await consumeCouponForOrder({ ...order, coupon_code: bd.coupon?.code ?? null }, sb).catch(() => {});
+      }
 
       // Attribution snapshot (pending until the order qualifies). Non-fatal.
       await attributeOrder(order, totals, body, userId, sb);
@@ -608,6 +693,15 @@ export default async function handler(req, res) {
 
     let rzOrderRow;
     let rzOrder;
+    // What this order holds, and until when (null before 0039).
+    let reservedUntil = null;
+    const holdOnline = async (row) => {
+      const held = await holdForOrder(row, {
+        commit: false, couponCode: bd.coupon?.code ?? null, userId, lines: totals.lines,
+      }, res, sb);
+      if (!held.response) reservedUntil = held.verdict?.reserved_until ?? null;
+      return held.response || null;
+    };
 
     if (idempotencyKey) {
       // Claim the unique key in Postgres BEFORE creating an external order.
@@ -623,6 +717,11 @@ export default async function handler(req, res) {
         throw err;
       }
 
+      // Held before any Razorpay order exists: an order refused its stock or
+      // its coupon use never becomes payable.
+      const refused = await holdOnline(rzOrderRow);
+      if (refused) return refused;
+
       rzOrder = await createRazorpayOrderFromPersisted(rzOrderRow, rz);
       rzOrderRow = await linkRazorpayOrder(rzOrderRow, rzOrder.id, idempotencyKey, sb);
     } else {
@@ -636,6 +735,8 @@ export default async function handler(req, res) {
         keySecret: rz.keySecret,
       });
       rzOrderRow = await insertOrder({ ...prepaidRow, razorpay_order_id: rzOrder.id }, sb);
+      const refused = await holdOnline(rzOrderRow);
+      if (refused) return refused;
     }
 
     // Attribution snapshot (pending; flips to eligible when payment verifies).
@@ -654,6 +755,9 @@ export default async function handler(req, res) {
       currency: 'INR',
       // The stored number: a clash retry above may have replaced orderNumber.
       orderNumber: rzOrderRow.order_number,
+      // How long the Razorpay window may stay open, so a payment cannot
+      // begin after this order's hold has run out (orderHolds.js).
+      checkoutTimeout: paymentWindowSeconds(reservedUntil),
     });
   } catch (err) {
     // Log detail server-side; return a generic message to the browser so no

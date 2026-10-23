@@ -133,9 +133,11 @@ console.log('\n— Coupon usage enforcement —');
 console.log('\n— Routes consume coupon only after payment is confirmed —');
 for (const file of ['api/razorpay/verify.js', 'api/razorpay/webhook.js']) {
   const src = readFileSync(file, 'utf8');
-  // The CALL site (has a paren) — not the import, which is `consumeCouponForOrder,`.
-  const idx = src.indexOf('consumeCouponForOrder(');
-  if (idx === -1) { bad(`${file}: consumeCouponForOrder not called`); continue; }
+  // The CALL site (has a paren) — not the import. Since 0039 the paid
+  // transition takes the order's holds (settleOrderHolds), which counts the
+  // coupon use — or, before 0039 is applied, calls consumeCouponForOrder.
+  const idx = src.indexOf('settleOrderHolds(');
+  if (idx === -1) { bad(`${file}: settleOrderHolds not called`); continue; }
   // The nearest preceding payment_status assignment must be 'paid', and the
   // call must not sit inside a failure branch.
   const before = src.slice(0, idx);

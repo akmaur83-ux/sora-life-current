@@ -34,6 +34,21 @@ function formatAddress(c = {}) {
   ].filter(Boolean).join('\n');
 }
 
+// What a paid (or un-cancelled) order could not be given, written by 0039's
+// settle_order_holds when the payment landed after its hold had run out.
+function holdWarnings(o) {
+  return Array.isArray(o?.hold_warnings) ? o.hold_warnings.filter((w) => w && typeof w === 'object') : [];
+}
+
+function holdWarningText(w) {
+  if (w.kind === 'stock') {
+    return `${w.label || 'An item'}: ${w.short} of the ${w.qty} ordered had run out when the payment came in.`;
+  }
+  const why = w.reason === 'user_limit' ? 'already used by this customer'
+    : w.reason === 'exhausted' ? 'fully claimed' : 'switched off';
+  return `Coupon ${w.code || ''} was ${why} by then. The discount was still given and not counted.`;
+}
+
 function hasAddress(c = {}) {
   return Boolean(c.address || c.city || c.pin);
 }
@@ -155,6 +170,7 @@ export default function Orders() {
                         <span className={`badge ${STATUS_BADGE[o.payment_status] || 'badge-soft'}`}>
                           {o.payment_status}
                         </span>
+                        {holdWarnings(o).length > 0 && <span className="badge badge-sale" style={{ marginLeft: 6 }}>Check stock</span>}
                       </td>
                       <td>
                         <span className={`badge ${FULFILLMENT_BADGE[o.fulfillment_status] || 'badge-soft'}`}>
@@ -171,6 +187,14 @@ export default function Orders() {
                     {open && (
                       <tr className="adm-order-detail">
                         <td colSpan={8}>
+                          {holdWarnings(o).length > 0 && (
+                            <div className="adm-banner err" role="alert">
+                              <strong>Paid, but not everything could be honoured.</strong> Restock or refund before shipping.
+                              <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+                                {holdWarnings(o).map((w, i) => <li key={i}>{holdWarningText(w)}</li>)}
+                              </ul>
+                            </div>
+                          )}
                           <div className="adm-order-detail__grid">
                             {/* Delivery / shipping */}
                             <section className="adm-order-block">
