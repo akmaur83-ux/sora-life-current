@@ -25,7 +25,7 @@ import * as ReactRouter from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, h, loadModule, loadSource, buildGroceryApp } from './grocery-ssr.mjs';
 import { REPO, exportBaseline, atCommit } from './baseline-export.mjs';
-import { sansDepartmentTiles, sansStorefrontChanges, sansStripCopy, CATALOGUE_DECLARATION_MIGRATION, STOREFRONT_CONTENT_MIGRATION } from './storefront-settings-pin.mjs';
+import { sansDepartmentTiles, sansStorefrontChanges, sansStripCopy, CATALOGUE_DECLARATION_MIGRATION, STOREFRONT_CONTENT_MIGRATION, ORDER_HOLDS_FILES } from './storefront-settings-pin.mjs';
 
 // The tip before the store switcher (the catalogue bundle commit).
 const BASELINE_SHA = 'd6a0c20';
@@ -194,7 +194,7 @@ await test('cart, checkout, coupons, auth, payments and the data layer are byte-
     assert.equal(sansDelivery(sansStorefrontChanges(rel, read(rel))), sansDelivery(atCommit(BASELINE_SHA, rel)), `${rel}: nothing beyond the delivery withdrawal changed since ${BASELINE_SHA}`);
   }
   const changed = execFileSync('git', ['diff', '--name-only', BASELINE_SHA], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean);
-  assert.ok(!changed.some((f) => /^supabase\/(?!migrations\/(0035_|rollback\/0035_))/.test(f) && !CATALOGUE_DECLARATION_MIGRATION.test(f) && !STOREFRONT_CONTENT_MIGRATION.test(f)), 'no migration beyond 0035 (the Home & Living store) but 0036 (the catalogue declarations)');
+  assert.ok(!changed.some((f) => /^supabase\/(?!migrations\/(0035_|rollback\/0035_))/.test(f) && !CATALOGUE_DECLARATION_MIGRATION.test(f) && !STOREFRONT_CONTENT_MIGRATION.test(f) && !ORDER_HOLDS_FILES.test(f)), 'no migration beyond 0035 (the Home & Living store) but 0036 (the catalogue declarations)');
   assert.ok(!changed.some((f) => /^package(-lock)?\.json$/.test(f)), 'no dependency change');
 });
 

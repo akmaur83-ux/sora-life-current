@@ -57,7 +57,13 @@ export const FASHION_DEPARTMENT_EDITS = /^(src\/App\.jsx|src\/fashion\/(FashionH
  * by sansCartChanges. A suite may allow one in its changed-file list only where
  * it also byte-checks that file through sansStorefrontChanges.
  */
-export const CART_CHANGE_EDITS = /^(src\/lib\/(store\.jsx|payments\.js|couponApi\.js|homelivingPdp\.js)|api\/_lib\/(pricing|supabaseAdmin|couponQuote)\.js|api\/razorpay\/create-order\.js|src\/homeliving\/HomeLivingProduct(Card|Page)\.jsx|src\/data\/homelivingHomepage\.js|src\/components\/CartCoupons\.jsx|src\/pages\/Checkout\.jsx)$/;
+export const CART_CHANGE_EDITS = /^(src\/lib\/(store\.jsx|payments\.js|couponApi\.js|homelivingPdp\.js)|api\/_lib\/(pricing|supabaseAdmin|couponQuote)\.js|api\/razorpay\/(create-order|verify|webhook)\.js|src\/admin\/pages\/Orders\.jsx|src\/homeliving\/HomeLivingProduct(Card|Page)\.jsx|src\/data\/homelivingHomepage\.js|src\/components\/CartCoupons\.jsx|src\/pages\/Checkout\.jsx)$/;
+
+/**
+ * Order holds (money-path fix 6+3; test-order-holds.mjs owns them): what an order holds and for how
+ * long (api/_lib/orderHolds.js), the suite, the recorded patch, and migration 0039 with its rollback.
+ */
+export const ORDER_HOLDS_FILES = /^(api\/_lib\/orderHolds\.js|scripts\/test-order-holds\.mjs|scripts\/pins\/order-holds\.patch|supabase\/migrations\/(0039_order_holds\.sql|rollback\/0039_order_holds_down\.sql))$/;
 
 /** The files the Home & Living cart added: its cart line module, and the suite and undo patch that pin it. */
 export const HOMELIVING_CART_FILES = /^(src\/lib\/homelivingCartLine\.js|scripts\/test-homeliving-cart\.mjs|scripts\/pins\/homeliving-cart\.patch)$/;
@@ -483,6 +489,12 @@ const UNDO_MEN_SHOP_TILES = undoFromPatch('men-shop-tiles.patch');
 // request. A payment change in the shared files. Undone here, newest first.
 const UNDO_CHECKOUT_REPLAY = undoFromPatch('checkout-replay.patch');
 
+// Order holds (money-path fix 6+3, migration 0039): create-order holds or takes stock and the coupon
+// use, verify and the webhook settle or release them, the browser names the key it replaces and
+// gives Razorpay its time limit, the admin sees what a late payment could not be given. Undone here,
+// newest first.
+const UNDO_ORDER_HOLDS = undoFromPatch('order-holds.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -549,7 +561,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_CHECKOUT_REPLAY, UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_ORDER_HOLDS, UNDO_CHECKOUT_REPLAY, UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
@@ -579,12 +591,12 @@ export function sansOrderNumber(rel, text) {
 }
 
 /**
- * The checkout-replay change undone on its own — for that same suite, whose pin predates it too:
- * undo this first, then sansOrderNumber.
+ * The checkout-replay and order-holds changes undone on their own, newest first — for that same suite,
+ * whose pin predates them too: undo these first, then sansOrderNumber.
  */
 export function sansCheckoutReplay(rel, text) {
-  const undo = UNDO_CHECKOUT_REPLAY[rel];
-  return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
+  const undos = [UNDO_ORDER_HOLDS[rel], UNDO_CHECKOUT_REPLAY[rel]].filter(Boolean);
+  return undos.length ? undos.reduce((t, undo) => undo(t, rel), text.replace(/\r\n/g, '\n')) : text;
 }
 
 /**
