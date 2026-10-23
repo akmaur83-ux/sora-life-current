@@ -21,6 +21,19 @@ function formatAddress(c = {}) {
   const cityPin = [cityLine, c.pin].filter(Boolean).join(' - ');
   return [name, c.address, c.apartment, c.landmark && `Landmark: ${c.landmark}`, cityPin, c.phone && `Phone: ${c.phone}`].filter(Boolean).join('\n');
 }
+
+// What a paid (or un-cancelled) order could not be given, written by 0039's
+// settle_order_holds when the payment landed after its hold had run out.
+function holdWarnings(o) {
+  return Array.isArray(o?.hold_warnings) ? o.hold_warnings.filter(w => w && typeof w === 'object') : [];
+}
+function holdWarningText(w) {
+  if (w.kind === 'stock') {
+    return `${w.label || 'An item'}: ${w.short} of the ${w.qty} ordered had run out when the payment came in.`;
+  }
+  const why = w.reason === 'user_limit' ? 'already used by this customer' : w.reason === 'exhausted' ? 'fully claimed' : 'switched off';
+  return `Coupon ${w.code || ''} was ${why} by then. The discount was still given and not counted.`;
+}
 function hasAddress(c = {}) {
   return Boolean(c.address || c.city || c.pin);
 }
@@ -169,11 +182,17 @@ function Orders() {
                   })
                 }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
                   children: o.payment_method === 'cod' ? 'Cash on delivery' : 'Razorpay'
-                }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
-                  children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                }), /*#__PURE__*/jsxRuntimeExports.jsxs("td", {
+                  children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
                     className: `badge ${STATUS_BADGE[o.payment_status] || 'badge-soft'}`,
                     children: o.payment_status
-                  })
+                  }), holdWarnings(o).length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                    className: "badge badge-sale",
+                    style: {
+                      marginLeft: 6
+                    },
+                    children: "Check stock"
+                  })]
                 }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
                   children: /*#__PURE__*/jsxRuntimeExports.jsx("span", {
                     className: `badge ${FULFILLMENT_BADGE[o.fulfillment_status] || 'badge-soft'}`,
@@ -188,9 +207,23 @@ function Orders() {
                 })]
               }), open && /*#__PURE__*/jsxRuntimeExports.jsx("tr", {
                 className: "adm-order-detail",
-                children: /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                children: /*#__PURE__*/jsxRuntimeExports.jsxs("td", {
                   colSpan: 8,
-                  children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+                  children: [holdWarnings(o).length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+                    className: "adm-banner err",
+                    role: "alert",
+                    children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+                      children: "Paid, but not everything could be honoured."
+                    }), " Restock or refund before shipping.", /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+                      style: {
+                        margin: '8px 0 0',
+                        paddingLeft: 18
+                      },
+                      children: holdWarnings(o).map((w, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+                        children: holdWarningText(w)
+                      }, i))
+                    })]
+                  }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
                     className: "adm-order-detail__grid",
                     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
                       className: "adm-order-block",
@@ -459,7 +492,7 @@ function Orders() {
                         })]
                       })]
                     })]
-                  })
+                  })]
                 })
               })]
             }, o.id);

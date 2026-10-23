@@ -49086,6 +49086,18 @@ function keyForSubmission(held, submission) {
 }
 
 /**
+ * Finish with the held key: the next submission gets a new one, whatever it
+ * contains, and names this one as the checkout it replaces — so the server
+ * lets go of the stock and coupon use that order was holding.
+ */
+function retireKey(held) {
+  return held ? {
+    key: held.key,
+    submission: null
+  } : null;
+}
+
+/**
  * Ask the server to price the cart and open a payable order.
  * Only ids + quantities are sent — never prices or totals.
  */
@@ -49095,6 +49107,7 @@ async function createPaymentOrder({
   customer,
   paymentMethod,
   idempotencyKey,
+  supersedesKey,
   couponCode,
   quotedTotals
 }) {
@@ -49125,6 +49138,13 @@ async function createPaymentOrder({
     // between what the customer was shown and what they are charged appears in
     // the logs instead of only in their bank statement.
     quotedTotals: quotedTotals || null,
+    // The key of the checkout this one replaces (a changed address, basket,
+    // payment method or coupon). Its order lets go of what it was holding
+    // now, instead of when its hold lapses. Absent on a first attempt, so
+    // that body is byte-for-byte what it always was.
+    ...(supersedesKey ? {
+      supersedesKey
+    } : {}),
     // Opaque, self-assigned browser id used ONLY to resolve creator attribution
     // server-side. Carries no internal creator/campaign/link id and no PII.
     visitorId: getVisitorId()
@@ -49591,12 +49611,17 @@ function Checkout() {
         // this basket and computes the discount itself.
         couponCode
       };
-      submitKey.current = keyForSubmission(submitKey.current, JSON.stringify(request));
+      const previous = submitKey.current;
+      submitKey.current = keyForSubmission(previous, JSON.stringify(request));
+      // A new key replaces the last attempt's: its order lets go of the stock
+      // and coupon use it was holding.
+      const supersedesKey = previous && previous.key !== submitKey.current.key ? previous.key : null;
 
       // The server prices the cart itself; we only send ids + quantities.
       const created = await createPaymentOrder({
         ...request,
         idempotencyKey: submitKey.current.key,
+        supersedesKey,
         // What the customer was last shown, so a drift is logged server-side.
         quotedTotals: quote.breakdown ? {
           grandTotal: quote.breakdown.grandTotal,
@@ -49624,6 +49649,12 @@ function Checkout() {
         theme: {
           color: '#1E3A2F'
         },
+        // The window closes before this order's hold on its stock and coupon
+        // runs out, so a payment can never begin on an order that no longer
+        // holds what it is paying for (api/_lib/orderHolds.js).
+        ...(created.checkoutTimeout > 0 ? {
+          timeout: created.checkoutTimeout
+        } : {}),
         prefill: {
           name: `${form.firstName} ${form.lastName}`.trim(),
           email: form.email,
@@ -49683,7 +49714,7 @@ function Checkout() {
         });
         // A fresh key: the next attempt is a genuinely different order, priced
         // without the coupon, and must not collapse into this one.
-        submitKey.current = null;
+        submitKey.current = retireKey(submitKey.current);
         setPayError(`${err.message} Your total has been updated — please review it and try again.`);
         return;
       }
@@ -49692,8 +49723,17 @@ function Checkout() {
       // makes that unreachable from this page, but if it ever happens the
       // next attempt must be a new order, not the same refusal again.
       if (err.data?.idempotencyConflict) {
-        submitKey.current = null;
+        submitKey.current = retireKey(submitKey.current);
         setPayError('Your order details changed since your last attempt. Please press the button again to place the updated order.');
+        return;
+      }
+
+      // Someone else holds or bought the last units, or this checkout's
+      // 30-minute hold ran out. Nothing was charged; the next press is a new
+      // order, priced and held afresh.
+      if (err.data?.stockRefused || err.data?.reservationExpired) {
+        submitKey.current = retireKey(submitKey.current);
+        setPayError(err.message);
         return;
       }
       setPayError(err.message || 'We could not start your payment. Please try again.');
