@@ -24,7 +24,7 @@ import {
   read, createCatalogueDb, catalogueFixtures, loadCatalogueAdmin, openPage,
   fieldByLabel, formOf, change, submit, findAll, textOf,
 } from './catalogue-admin-harness.mjs';
-import { sansOrderNumber, sansCheckoutReplay, STOREFRONT_CONTENT_FILES, ORDER_HOLDS_FILES } from './storefront-settings-pin.mjs';
+import { sansOrderNumber, sansCheckoutReplay, STOREFRONT_CONTENT_FILES, ORDER_HOLDS_FILES, ORDER_CONFIRMATION_FILES } from './storefront-settings-pin.mjs';
 
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -110,7 +110,7 @@ await test('the note is true: checkout still sets gst_rate null on fashion and H
     .trim().split('\n').filter(Boolean)
     // The storefront publish endpoint is new since (test-storefront-publish.mjs owns it), and so is
     // the order-holds module (test-order-holds.mjs owns it).
-    .filter((rel) => !STOREFRONT_CONTENT_FILES.test(rel) && !ORDER_HOLDS_FILES.test(rel))
+    .filter((rel) => !STOREFRONT_CONTENT_FILES.test(rel) && !ORDER_HOLDS_FILES.test(rel) && !ORDER_CONFIRMATION_FILES.test(rel))
     .filter((rel) => sansOrderNumber(rel, sansCheckoutReplay(rel, readFileSync(resolve(REPO, rel), 'utf8'))).replace(/\r\n/g, '\n') !== at7c05e7d(rel).replace(/\r\n/g, '\n'))
     .join('\n');
   assert.equal(changed, '', 'no pricing, cart, checkout or payment file changed');

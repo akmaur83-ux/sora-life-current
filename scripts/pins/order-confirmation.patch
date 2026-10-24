@@ -1,0 +1,278 @@
+diff --git a/api/razorpay/create-order.js b/api/razorpay/create-order.js
+index 47d8979..a9a81ba 100644
+--- a/api/razorpay/create-order.js
++++ b/api/razorpay/create-order.js
+@@ -340,6 +340,19 @@ function replayPayload(order, rz) {
+ 
+ async function returnExistingOrder(existing, idempotencyKey, sb, rz, res, body) {
+   if (!replayMatches(existing, body)) return refuseChangedReplay(res);
++  // Already paid (a retry after the money moved but before the browser heard
++  // so, or a second tab): say so, and hand back nothing payable. Replaying the
++  // gateway order reopened Razorpay for an order that had been paid.
++  if (existing.payment_status === 'paid') {
++    return res.status(200).json({
++      alreadyPaid: true,
++      paymentMethod: existing.payment_method === 'cod' ? 'cod' : 'razorpay',
++      orderNumber: existing.order_number,
++      amount: Number(existing.amount_paise) / 100,
++      breakdown: existing.billing ?? null,
++      duplicate: true,
++    });
++  }
+   let ready = existing;
+   // An unpaid order must hold what it needs before it is handed back: its
+   // first attempt may have ended before the reservation answered. Asking
+diff --git a/src/admin/pages/Orders.jsx b/src/admin/pages/Orders.jsx
+index f18ecc4..31546a4 100644
+--- a/src/admin/pages/Orders.jsx
++++ b/src/admin/pages/Orders.jsx
+@@ -1,6 +1,6 @@
+ import { useEffect, useState, Fragment } from 'react';
+ import { Link } from 'react-router-dom';
+-import { adminListOrders, adminUpdateOrderFulfillment } from '../../lib/adminApi.js';
++import { adminListOrders, adminUpdateOrderFulfillment, adminMarkCodCollected } from '../../lib/adminApi.js';
+ import { money } from '../../lib/format.js';
+ import { FULFILLMENT_STATUSES, fulfillmentStatusLabel, validateFulfillmentInput } from '../../lib/orderFulfillment.js';
+ 
+@@ -246,6 +246,7 @@ export default function Orders() {
+                                 )}
+                                 {o.failure_reason && <div><dt>Failure</dt><dd>{o.failure_reason}</dd></div>}
+                               </dl>
++                              <CashCollected order={o} onUpdated={updateOrder} />
+                               <Link to={`/invoice/${o.order_number}`} className="btn btn-sm" style={{ marginTop: 10 }}>
+                                 Open invoice
+                               </Link>
+@@ -370,6 +371,39 @@ export default function Orders() {
+   );
+ }
+ 
++// A cash-on-delivery order is unpaid until the cash is collected. This records
++// that moment: the order becomes paid and gets its invoice number (the server
++// route checks the admin and writes once, so a second click changes nothing).
++// Shown only for an unpaid COD order that is not cancelled.
++function CashCollected({ order, onUpdated }) {
++  const [busy, setBusy] = useState(false);
++  const [error, setError] = useState('');
++  if (order.payment_method !== 'cod' || order.payment_status === 'paid' || order.fulfillment_status === 'cancelled') return null;
++
++  async function record() {
++    if (busy) return;
++    // eslint-disable-next-line no-alert
++    if (!window.confirm(`Record that the cash for order ${order.order_number} has been collected? It will be marked paid and issued its invoice number.`)) return;
++    setBusy(true); setError('');
++    try {
++      onUpdated(await adminMarkCodCollected(order.order_number));
++    } catch (err) {
++      setError(err?.message || 'The payment could not be recorded.');
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  return (
++    <div style={{ marginTop: 10 }}>
++      <button type="button" className="btn btn-sm btn-light" disabled={busy} onClick={record}>
++        {busy ? 'Recording…' : 'Mark cash collected'}
++      </button>
++      {error && <p className="error-text" role="alert">{error}</p>}
++    </div>
++  );
++}
++
+ function FulfillmentEditor({ order, onUpdated }) {
+   const [form, setForm] = useState(() => ({
+     fulfillmentStatus: order.fulfillment_status || '',
+diff --git a/src/lib/adminApi.js b/src/lib/adminApi.js
+index 09cb224..92559e2 100644
+--- a/src/lib/adminApi.js
++++ b/src/lib/adminApi.js
+@@ -454,6 +454,31 @@ export async function adminUpdateOrderFulfillment(orderId, input, actions = {})
+   return data;
+ }
+ 
++/**
++ * Record that a cash-on-delivery order's cash has been collected: it becomes
++ * paid and is issued its invoice number. Goes through the admin-checked
++ * /api/admin/mark-cod-collected route with the admin's own session; no secret
++ * is held here. Resolves with the order's new payment fields.
++ */
++export async function adminMarkCodCollected(orderNumber, { fetchImpl = globalThis.fetch } = {}) {
++  const { data } = await supabase.auth.getSession();
++  const token = data?.session?.access_token;
++  if (!token) throw new Error('Your admin session has ended. Sign in again, then try.');
++  let response;
++  try {
++    response = await fetchImpl('/api/admin/mark-cod-collected', {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
++      body: JSON.stringify({ orderNumber }),
++    });
++  } catch {
++    throw new Error('Could not reach the server. Nothing was recorded; try again.');
++  }
++  const body = await response.json().catch(() => ({}));
++  if (!response.ok || !body.ok) throw new Error(body.error || `Recording the payment failed (HTTP ${response.status}).`);
++  return body.order;
++}
++
+ // ---------------------------------------------------------------
+ // ADMIN: categories
+ // ---------------------------------------------------------------
+diff --git a/src/pages/Checkout.jsx b/src/pages/Checkout.jsx
+index 20c818a..deab1ee 100644
+--- a/src/pages/Checkout.jsx
++++ b/src/pages/Checkout.jsx
+@@ -217,6 +217,11 @@ export default function Checkout() {
+   // which becomes 0 right after CLEAR_CART fires below and would make
+   // the confirmation screen show "Total paid ₹0".
+   const [orderTotal, setOrderTotal] = useState(null);
++  // An online order whose payment Razorpay accepted but our server could not
++  // yet confirm (still authorised, or the confirmation call failed). The order
++  // exists and the payment is moving; the webhook settles it. The customer is
++  // told exactly that — never "not placed", which invited a second payment.
++  const [confirming, setConfirming] = useState(false);
+   // The authoritative itemised breakdown returned by create-order. Until the
+   // order is priced server-side the summary falls back to a local estimate;
+   // tax and fees are never guessed in the browser.
+@@ -240,7 +245,6 @@ export default function Checkout() {
+   // larger baskets and quoted a cheaper total than the server actually charged.
+   const deliveryFee = DELIVERY.find((d) => d.id === delivery)?.price || 0;
+   const shipBase = deliveryFee;
+-  const total = Math.max(0, subtotal + shipBase);
+ 
+   // Live server pricing for the chosen delivery method, including the coupon
+   // carried over from the cart. Changing the selection re-quotes, so the
+@@ -248,22 +252,41 @@ export default function Checkout() {
+   // for create-order to correct it.
+   const quote = useCartQuote(cartDetailed, couponCode, delivery);
+ 
++  // The figure on the Pay button is the figure that will be charged: the
++  // order's own breakdown once create-order has priced it, the live quote's
++  // before that, and no figure at all until the server has answered. It used
++  // to show the local estimate, which knows nothing of coupons or tax — "Pay
++  // ₹1,000" over a ₹900 charge.
++  const charged = serverBreakdown?.grandTotal
++    ?? (quote.breakdown && !quote.stale ? quote.breakdown.grandTotal : null);
++
+   if (placed) {
+     return (
+       <div className="v2-checkout-root v2-checkout-confirm-root">
+       <div className="v2-wrap section">
+         <div className={`confirm confirm__enter ${celebrate ? 'confirm--celebrate' : ''}`}>
+           <OrderCelebration />
+-          <span className="eyebrow confirm__reveal" style={{ '--d': '400ms' }}>Order confirmed</span>
+-          <h1 className="serif confirm__reveal" style={{ '--d': '480ms' }}>Thank you — your ritual is on its way.</h1>
+-          <p className="muted confirm__reveal" style={{ '--d': '550ms' }}>A confirmation has been sent to your email. Order <strong>#{orderNo}</strong>.</p>
++          <span className="eyebrow confirm__reveal" style={{ '--d': '400ms' }}>{confirming ? 'Payment received' : 'Order confirmed'}</span>
++          <h1 className="serif confirm__reveal" style={{ '--d': '480ms' }}>
++            {confirming ? 'Thank you — we are confirming your payment.' : 'Thank you — your ritual is on its way.'}
++          </h1>
++          {/* No email is sent from this site, so nothing here says one was.
++              The order number is what the customer needs to follow it. */}
++          <p className="muted confirm__reveal" style={{ '--d': '550ms' }}>
++            {confirming
++              ? <>Razorpay has your payment and we are confirming it with your bank. This usually takes a few minutes and happens on its own — please do not pay again. Your order number is <strong>#{orderNo}</strong>.</>
++              : <>Your order number is <strong>#{orderNo}</strong>. Keep it to track your order.</>}
++          </p>
+           <div className="confirm__card confirm__reveal" style={{ '--d': '620ms' }}>
+             <div className="confirm__row"><span>Estimated delivery</span><strong>{DELIVERY.find((d) => d.id === delivery)?.eta}</strong></div>
+-            <div className="confirm__row"><span>Total paid</span><strong>{money(orderTotal)}</strong></div>
+-            <div className="confirm__row"><span>Payment</span><strong>{pay === 'cod' ? 'Cash on delivery' : pay.toUpperCase()}</strong></div>
++            <div className="confirm__row"><span>{pay === 'cod' ? 'To pay on delivery' : confirming ? 'Amount' : 'Total paid'}</span><strong>{money(orderTotal)}</strong></div>
++            <div className="confirm__row"><span>Payment</span><strong>{pay === 'cod' ? 'Cash on delivery' : confirming ? 'Being confirmed' : 'Paid online'}</strong></div>
+           </div>
+           <div className="confirm__actions">
+-            <Link to="/account/orders" className="btn confirm__reveal confirm__reveal--btn" style={{ '--d': '700ms' }}>Track my order</Link>
++            {/* The Purchase Passport works for every buyer: a signed-in
++                customer sees their own order, a guest confirms the email
++                they ordered with. /account/orders was a dead end for guests. */}
++            <Link to={`/passport/${orderNo}`} className="btn confirm__reveal confirm__reveal--btn" style={{ '--d': '700ms' }}>Track my order</Link>
+             <Link to="/shop" className="btn btn-outline confirm__reveal confirm__reveal--btn" style={{ '--d': '780ms' }}>Continue shopping</Link>
+           </div>
+         </div>
+@@ -291,10 +314,13 @@ export default function Checkout() {
+   // Reached ONLY after the server has confirmed the order is genuinely
+   // paid (or is a recorded COD order). This is the single place the cart is
+   // cleared and the confirmation/celebration is shown.
+-  const completeOrder = (orderNumber, amount) => {
++  // `confirming`: Razorpay accepted the payment but the server has not yet
++  // confirmed it; the order stands and the webhook finishes it.
++  const completeOrder = (orderNumber, amount, { confirming: stillConfirming = false } = {}) => {
+     inFlight.current = false;
+     setOrderNo(orderNumber);
+     setOrderTotal(amount);
++    setConfirming(stillConfirming);
+     dispatch({ type: 'CLEAR_CART' });
+     setPlaced(true);
+     window.scrollTo(0, 0);
+@@ -353,7 +379,9 @@ export default function Checkout() {
+ 
+       if (created.breakdown) setServerBreakdown(created.breakdown);
+ 
+-      if (created.paymentMethod === 'cod') {
++      // Already paid — a retry after the money moved, or a second tab. It is
++      // done: show it, never a second payment window.
++      if (created.alreadyPaid || created.paymentMethod === 'cod') {
+         completeOrder(created.orderNumber, created.amount);
+         return;
+       }
+@@ -380,28 +408,37 @@ export default function Checkout() {
+           email: form.email,
+           contact: form.phone,
+         },
+-        // Razorpay says the payment succeeded — but only our server decides.
++        // Razorpay calls this only for a payment it accepted: from here the
++        // order exists and its money is moving. Only our server says it is
++        // PAID; until it does, the customer is told it is being confirmed.
+         handler: async (response) => {
+           try {
+             const result = await verifyPayment(response);
+             if (result?.verified) {
+               completeOrder(result.orderNumber, result.amount);
+             } else if (result?.pending) {
+-              // Razorpay has the money authorised but not yet captured. This
+-              // is not a failure — telling the customer their order was not
+-              // placed here would invite a second payment for the same cart.
+-              inFlight.current = false; setProcessing(false);
+-              setPayNotice(
+-                result.error
+-                || 'Your payment is still being confirmed. We will update your order shortly — please do not pay again.'
+-              );
++              // Authorised, not yet captured. Not a failure: the order is
++              // placed and the webhook settles it. It used to sit under a
++              // "Payment cancelled" heading, inviting a second payment.
++              completeOrder(result.orderNumber || created.orderNumber, created.amount, { confirming: true });
+             } else {
+               inFlight.current = false; setProcessing(false);
+               setPayError('We could not verify this payment. Your order has not been placed.');
+             }
+           } catch (err) {
+-            inFlight.current = false; setProcessing(false);
+-            setPayError(err.message || 'We could not confirm your payment. Please contact support before paying again.');
++            // A 4xx (but a rate limit) is the server's examined refusal — a
++            // signature, order or amount that does not match, or a payment
++            // the bank declined: nothing was placed, and it says so.
++            if (err.status >= 400 && err.status < 500 && err.status !== 429) {
++              inFlight.current = false; setProcessing(false);
++              setPayError(err.message || 'We could not verify this payment. Your order has not been placed.');
++              return;
++            }
++            // Anything else — the server or its lookup of the payment did not
++            // answer — leaves an accepted payment unconfirmed, not failed. It
++            // used to say "your order has not been placed" over money already
++            // taken, and Try again reopened Razorpay for it.
++            completeOrder(created.orderNumber, created.amount, { confirming: true });
+           }
+         },
+         modal: {
+@@ -610,8 +647,8 @@ export default function Checkout() {
+                   {processing
+                     ? <><span className="spinner" /> Processing…</>
+                     : pay === 'cod'
+-                      ? <><Icon name="lock" size={17} /> Place order · {money(total)}</>
+-                      : <><Icon name="lock" size={17} /> Pay {money(total)}</>}
++                      ? <><Icon name="lock" size={17} /> Place order{charged != null && ` · ${money(charged)}`}</>
++                      : <><Icon name="lock" size={17} /> Pay{charged != null && ` ${money(charged)}`}</>}
+                 </button>
+               </div>
+             </section>

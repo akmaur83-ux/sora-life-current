@@ -65,6 +65,12 @@ export const CART_CHANGE_EDITS = /^(src\/lib\/(store\.jsx|payments\.js|couponApi
  */
 export const ORDER_HOLDS_FILES = /^(api\/_lib\/orderHolds\.js|scripts\/test-order-holds\.mjs|scripts\/pins\/order-holds\.patch|supabase\/migrations\/(0039_order_holds\.sql|rollback\/0039_order_holds_down\.sql))$/;
 
+/**
+ * Order confirmation (money-path fix 5+7+11; test-order-confirmation.mjs owns them): the admin route
+ * that records a COD order's cash as collected, the suite and the recorded patch.
+ */
+export const ORDER_CONFIRMATION_FILES = /^(api\/admin\/mark-cod-collected\.js|scripts\/test-order-confirmation\.mjs|scripts\/pins\/order-confirmation\.patch)$/;
+
 /** The files the Home & Living cart added: its cart line module, and the suite and undo patch that pin it. */
 export const HOMELIVING_CART_FILES = /^(src\/lib\/homelivingCartLine\.js|scripts\/test-homeliving-cart\.mjs|scripts\/pins\/homeliving-cart\.patch)$/;
 
@@ -495,6 +501,11 @@ const UNDO_CHECKOUT_REPLAY = undoFromPatch('checkout-replay.patch');
 // newest first.
 const UNDO_ORDER_HOLDS = undoFromPatch('order-holds.patch');
 
+// Order confirmation (money-path fix 5+7+11): the admin records a COD order's cash as collected
+// (Orders page + adminApi.js), a paid order is never replayed as payable (create-order), and Checkout
+// shows the server's amount and tells the truth after payment. Undone here, newest first.
+const UNDO_ORDER_CONFIRMATION = undoFromPatch('order-confirmation.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -561,7 +572,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_ORDER_HOLDS, UNDO_CHECKOUT_REPLAY, UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_ORDER_CONFIRMATION, UNDO_ORDER_HOLDS, UNDO_CHECKOUT_REPLAY, UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
@@ -591,11 +602,11 @@ export function sansOrderNumber(rel, text) {
 }
 
 /**
- * The checkout-replay and order-holds changes undone on their own, newest first — for that same suite,
- * whose pin predates them too: undo these first, then sansOrderNumber.
+ * The checkout-replay, order-holds and order-confirmation changes undone on their own, newest first — for
+ * that same suite, whose pin predates them too: undo these first, then sansOrderNumber.
  */
 export function sansCheckoutReplay(rel, text) {
-  const undos = [UNDO_ORDER_HOLDS[rel], UNDO_CHECKOUT_REPLAY[rel]].filter(Boolean);
+  const undos = [UNDO_ORDER_CONFIRMATION[rel], UNDO_ORDER_HOLDS[rel], UNDO_CHECKOUT_REPLAY[rel]].filter(Boolean);
   return undos.length ? undos.reduce((t, undo) => undo(t, rel), text.replace(/\r\n/g, '\n')) : text;
 }
 
