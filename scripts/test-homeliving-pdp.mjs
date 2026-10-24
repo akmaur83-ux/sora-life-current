@@ -18,7 +18,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { ROOT, read, loadModule, buildHomeLivingApp, loadHomeLivingData, CATEGORIES, PRODUCTS, PDP, PDP_PRODUCTS } from './homeliving-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { CART_CHANGE_EDITS, ORDER_HOLDS_FILES, ORDER_CONFIRMATION_FILES, ADMIN_SAVES_FILES, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES, HOMELIVING_CART_FILES, STOREFRONT_ADMIN_FILES, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, HOME_STOREFRONT_FILES, JEWELLERY_FILES, CATALOGUE_DECLARATION_MIGRATION, PRODUCT_INFORMATION_FILES, PRODUCT_INFORMATION_EDITS, retiredControl, storefrontContentChange, STOREFRONT_CONTENT_MIGRATION } from './storefront-settings-pin.mjs';
+import { SITE_NAME_EDITS, CART_CHANGE_EDITS, ORDER_HOLDS_FILES, ORDER_CONFIRMATION_FILES, ADMIN_SAVES_FILES, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES, HOMELIVING_CART_FILES, STOREFRONT_ADMIN_FILES, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, HOME_STOREFRONT_FILES, JEWELLERY_FILES, CATALOGUE_DECLARATION_MIGRATION, PRODUCT_INFORMATION_FILES, PRODUCT_INFORMATION_EDITS, retiredControl, storefrontContentChange, STOREFRONT_CONTENT_MIGRATION } from './storefront-settings-pin.mjs';
 
 // The tip before the product page (the listing's bundle commit).
 const BASELINE_SHA = '99c4282';
@@ -390,7 +390,11 @@ await test('App.jsx: p/:slug is a child of the Home & Living route; nothing else
   // .vercelignore is deploy configuration (f927077), not storefront code.
   // An approved cart change may edit a shared cart file only because the byte checks below undo it (sansCartChanges).
   // The Home & Living cart's own new files (test-homeliving-cart.mjs).
-  const bad = [...changed].filter((f) => !allowed.test(f) && !CATALOGUE_DECLARATION_MIGRATION.test(f) && !STOREFRONT_CONTENT_MIGRATION.test(f) && !PRODUCT_INFORMATION_FILES.test(f) && !PRODUCT_INFORMATION_EDITS.test(f) && !retiredControl(f) && !storefrontContentChange(f) && !STOREFRONT_ADMIN_FILES.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !ORDER_HOLDS_FILES.test(f) && !ORDER_CONFIRMATION_FILES.test(f) && !ADMIN_SAVES_FILES.test(f) && !HOMELIVING_CART_FILES.test(f) && !SCROLL_MANAGER_FILES.test(f) && !SCROLL_MANAGER_EDITS.test(f) && !FASHION_PDP_THUMBS_EDITS.test(f) && !FASHION_RATING_ROW_EDITS.test(f) && !HOME_STOREFRONT_FILES.test(f) && !JEWELLERY_FILES.test(f));
+  const unaccounted = [...changed].filter((f) => !allowed.test(f) && !CATALOGUE_DECLARATION_MIGRATION.test(f) && !STOREFRONT_CONTENT_MIGRATION.test(f) && !PRODUCT_INFORMATION_FILES.test(f) && !PRODUCT_INFORMATION_EDITS.test(f) && !retiredControl(f) && !storefrontContentChange(f) && !STOREFRONT_ADMIN_FILES.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !ORDER_HOLDS_FILES.test(f) && !ORDER_CONFIRMATION_FILES.test(f) && !ADMIN_SAVES_FILES.test(f) && !HOMELIVING_CART_FILES.test(f) && !SCROLL_MANAGER_FILES.test(f) && !SCROLL_MANAGER_EDITS.test(f) && !FASHION_PDP_THUMBS_EDITS.test(f) && !FASHION_RATING_ROW_EDITS.test(f) && !HOME_STOREFRONT_FILES.test(f) && !JEWELLERY_FILES.test(f));
+  // The site name (test-site-name.mjs) changed the text of shared files: each is let through only because,
+  // with that change's recorded undo applied, it is the baseline byte for byte.
+  for (const rel of unaccounted.filter((f) => SITE_NAME_EDITS.test(f))) assert.equal(sansStorefrontChanges(rel, read(rel)).replace(/\r\n/g, '\n'), atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n'), `${rel}: only the site name changed`);
+  const bad = unaccounted.filter((f) => !SITE_NAME_EDITS.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   // Scroll on navigation (test-scroll-on-navigate.mjs) replaced the wellness shell's own reset with one manager mounted in
   // main.jsx; its new files are its own, and these two are byte-identical to the baseline once its recorded undo is applied.

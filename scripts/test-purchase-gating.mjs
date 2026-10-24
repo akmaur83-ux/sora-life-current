@@ -275,7 +275,7 @@ test('L2.7 sign-in distinguishes a failed check from an unauthorized account', (
   const auth = src('../src/lib/adminAuth.jsx');
   assert.match(auth, /could not verify your admin access/i,
     'a failed check must not claim the account is unauthorized');
-  assert.match(auth, /not authorized as a SORA LIFE admin/,
+  assert.match(auth, /not authorized as a SORA LIFESTYLE admin/,
     'a genuine denial keeps its original message');
 });
 

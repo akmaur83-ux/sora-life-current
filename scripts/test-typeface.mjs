@@ -18,7 +18,7 @@ import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT, read, has } from './grocery-ssr.mjs';
 import { atCommit } from './baseline-export.mjs';
-import { sansCartChanges } from './storefront-settings-pin.mjs';
+import { sansCartChanges, sansSiteName } from './storefront-settings-pin.mjs';
 
 // The tree as it stood before this work: the carousel-move release.
 const BASELINE_SHA = 'b582caa';
@@ -90,7 +90,7 @@ await test('the optical-weight map on the measured storefront sheets: the .serif
 });
 
 await test('the surfaces that could not be measured offline — creator dashboard and tiers, coupons, cart and checkout, the creator programme and passport — are byte-identical to the baseline: the token alone changes their face', () => {
-  for (const rel of UNTOUCHED) assert.equal(read(rel), atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n'), `${rel} changed`);
+  for (const rel of UNTOUCHED) assert.equal(sansSiteName(rel, read(rel)), atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n'), `${rel} changed`);
   // …and the wellness sheets that the token also carries changed only by the axis removal (and, in v2-pdp/v2-shop, a comment).
   for (const rel of ['src/styles/v2-foundation.css', 'src/styles/v2-card.css', 'src/styles/v2-home.css', 'src/styles/v2-pdp.css', 'src/styles/v2-home-marketplace.css', 'src/styles/v2-shop.css']) {
     const norm = (t) => stripComments(t).replace(/\s*font-variation-settings:[^;]+;/g, '').replace(/\s*font-optical-sizing:[^;]+;/g, '').replace(/'Fraunces'/g, "'Playfair Display'").replace(/\s+/g, ' ');

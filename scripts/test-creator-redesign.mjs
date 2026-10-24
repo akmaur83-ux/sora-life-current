@@ -277,7 +277,7 @@ await test('creators are not offered controls the backend refuses', () => {
   // creator_partners is admin-write only, so an editable rate or status
   // field on the profile would be a control that always fails.
   assert.doesNotMatch(js(profile), /<input|<textarea|<select/, 'profile must stay read-only');
-  assert.match(js(profile), /Set by SORA LIFE — not editable here\./);
+  assert.match(js(profile), /Set by SORA LIFESTYLE — not editable here\./);
 });
 
 // ============================================================

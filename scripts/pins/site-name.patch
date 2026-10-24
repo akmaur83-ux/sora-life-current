@@ -1,0 +1,1199 @@
+diff --git a/api/razorpay/verify.js b/api/razorpay/verify.js
+index a5f5821..fb78ef4 100644
+--- a/api/razorpay/verify.js
++++ b/api/razorpay/verify.js
+@@ -100,7 +100,7 @@ export default async function handler(req, res) {
+         payment_status: 'failed',
+         failure_reason: 'signature_verification_failed',
+       }, sb, { unlessPaid: true }).catch(() => {});
+-      return fail(res, 400, 'We could not verify this payment. You have not been charged by Sora Life.');
++      return fail(res, 400, 'We could not verify this payment. You have not been charged by Sora Lifestyle.');
+     }
+ 
+     // The signature is genuine. Now ask Razorpay what actually happened to
+@@ -120,7 +120,7 @@ export default async function handler(req, res) {
+     // cheaper) payment could settle this one.
+     if (payment?.order_id && payment.order_id !== orderId) {
+       console.error('[verify] payment/order mismatch for order', order.order_number);
+-      return fail(res, 400, 'We could not verify this payment. You have not been charged by Sora Life.');
++      return fail(res, 400, 'We could not verify this payment. You have not been charged by Sora Lifestyle.');
+     }
+     const paidPaise = Number(payment?.amount);
+     if (Number.isFinite(paidPaise) && Number(order.amount_paise) !== paidPaise) {
+@@ -130,7 +130,7 @@ export default async function handler(req, res) {
+         payment_status: 'failed',
+         failure_reason: 'amount_mismatch',
+       }, sb, { unlessPaid: true }).catch(() => {});
+-      return fail(res, 400, 'We could not verify this payment. You have not been charged by Sora Life.');
++      return fail(res, 400, 'We could not verify this payment. You have not been charged by Sora Lifestyle.');
+     }
+ 
+     if (!isCapturedPayment(payment)) {
+@@ -144,7 +144,7 @@ export default async function handler(req, res) {
+         // A genuine failure lets go of the order's stock and coupon use at
+         // once (0039). A retry that then succeeds takes them again on payment.
+         await releaseOrderHolds(order.id, sb);
+-        return fail(res, 400, "Payment wasn't completed. You have not been charged by Sora Life.");
++        return fail(res, 400, "Payment wasn't completed. You have not been charged by Sora Lifestyle.");
+       }
+       // `authorized` / `created` / `pending`: the funds are held but not
+       // taken. Not an error and not a payment — the webhook finishes this.
+diff --git a/index.html b/index.html
+index 30688fd..fc3aadd 100644
+--- a/index.html
++++ b/index.html
+@@ -4,8 +4,8 @@
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+     <meta name="theme-color" content="#1E3A2F" />
+-    <title>Sora Life — Modern Wellness, Beauty & Everyday Care</title>
+-    <meta name="description" content="Sora Life — premium health, wellness, beauty and personal-care essentials for modern living." />
++    <title>Sora Lifestyle — Modern Wellness, Beauty & Everyday Care</title>
++    <meta name="description" content="Sora Lifestyle — premium health, wellness, beauty and personal-care essentials for modern living." />
+     <link rel="preconnect" href="https://fonts.googleapis.com" />
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+     <!-- Inter widened to 800 for the Creator Program's display weights. Same
+@@ -35,7 +35,7 @@
+       <div style="min-height:100vh;display:grid;place-items:center;background:#FBF8F1;font-family:'Playfair Display',Georgia,serif;color:#1E3A2F;">
+         <div style="text-align:center;">
+           <div style="width:34px;height:34px;margin:0 auto 14px;border:2.5px solid #E1EEE7;border-top-color:#1E3A2F;border-radius:999px;animation:sl-spin 0.8s linear infinite;"></div>
+-          <span style="font-size:0.95rem;letter-spacing:0.04em;">SORA LIFE</span>
++          <span style="font-size:0.95rem;letter-spacing:0.04em;">SORA LIFESTYLE</span>
+         </div>
+       </div>
+     </div>
+diff --git a/src/App.jsx b/src/App.jsx
+index 6d5839a..5626204 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -34,7 +34,7 @@ import HomeLivingProductPage from './homeliving/HomeLivingProductPage.jsx';
+ import LifestyleLayout from './lifestyle/LifestyleLayout.jsx';
+ import LifestyleHome from './lifestyle/LifestyleHome.jsx';
+ import { useAdminAuth } from './lib/adminAuth.jsx';
+-import { branding } from './lib/settings.js';
++import { branding, titleWithSiteName } from './lib/settings.js';
+ import { DEFERRED_ROUTES, loadDeferredStyles } from './lib/deferredStyles.js';
+ 
+ 
+@@ -124,15 +124,20 @@ function useBrandingEffects() {
+     document.documentElement.style.setProperty('--color-primary', branding.primaryColor);
+     document.documentElement.style.setProperty('--color-primary-hover', branding.primaryColor);
+     document.documentElement.style.setProperty('--color-accent', branding.accentColor);
+-    if (branding.faviconUrl) {
++  }, []);
++  // The saved name and favicon arrive with the settings, after the first
++  // render, so these follow them rather than running once at start-up.
++  const { faviconUrl, siteName } = branding;
++  useEffect(() => {
++    if (faviconUrl) {
+       let link = document.querySelector('link[rel="icon"]');
+       if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
+-      link.href = branding.faviconUrl;
+-    }
+-    if (branding.siteName) {
+-      document.title = document.title.replace(/^Sora Life|^SORA LIFE/, branding.siteName);
++      link.href = faviconUrl;
+     }
+-  }, []);
++  }, [faviconUrl]);
++  useEffect(() => {
++    if (siteName) document.title = titleWithSiteName(document.title, siteName);
++  }, [siteName]);
+ }
+ 
+ export default function App() {
+diff --git a/src/admin/components/BulkPackshotImport.jsx b/src/admin/components/BulkPackshotImport.jsx
+index 891373c..a5f23ca 100644
+--- a/src/admin/components/BulkPackshotImport.jsx
++++ b/src/admin/components/BulkPackshotImport.jsx
+@@ -189,7 +189,7 @@ export default function BulkPackshotImport({ onImported }) {
+       <h2 className="adm-cx__h2">Bulk import spotlight packshots</h2>
+       <p className="hint">
+         Select a folder of packshots named after their product — <code>aloe-vera-protein-shampoo.png</code>.
+-        Each file is uploaded to SORA LIFE’s own media storage and assigned as that product’s
++        Each file is uploaded to SORA LIFESTYLE’s own media storage and assigned as that product’s
+         spotlight image. Files are matched on the exact product slug; nothing is guessed.
+       </p>
+       <p className="hint">
+diff --git a/src/admin/pages/Appearance.jsx b/src/admin/pages/Appearance.jsx
+index 94ce788..171596f 100644
+--- a/src/admin/pages/Appearance.jsx
++++ b/src/admin/pages/Appearance.jsx
+@@ -182,7 +182,7 @@ function StorefrontPreview({ theme }) {
+         <span className="ap-pv__annbar-acc">✦</span> FREE STANDARD SHIPPING
+       </div>
+       <div className="ap-pv__hdr">
+-        <strong>SORA LIFE</strong>
++        <strong>SORA LIFESTYLE</strong>
+         <nav>Wellness · Skin · Hair</nav>
+         <span className="ap-pv__hdr-ic">♡ ⌕ ⛬</span>
+       </div>
+@@ -212,7 +212,7 @@ function StorefrontPreview({ theme }) {
+         </div>
+       </div>
+       <div className="ap-pv__footer">
+-        <span>© SORA LIFE</span> <span className="ap-pv__footer-acc">Wellness · Support</span>
++        <span>© SORA LIFESTYLE</span> <span className="ap-pv__footer-acc">Wellness · Support</span>
+       </div>
+     </div>
+   );
+diff --git a/src/admin/pages/Branding.jsx b/src/admin/pages/Branding.jsx
+index 5d1397b..27b3de6 100644
+--- a/src/admin/pages/Branding.jsx
++++ b/src/admin/pages/Branding.jsx
+@@ -33,7 +33,7 @@ export default function Branding() {
+     setSaving(true); setErr(''); setMsg('');
+     try {
+       await adminSetSetting('branding', form);
+-      setMsg('Saved. Reload the storefront to see logo/color changes (they apply at page load).');
++      setMsg('Saved. Reload the storefront to see the change (it applies at page load).');
+     } catch (ex) { setErr(ex.message || String(ex)); }
+     setSaving(false);
+   }
+@@ -42,13 +42,13 @@ export default function Branding() {
+ 
+   return (
+     <div className="adm-form">
+-      <div className="adm__head"><div><h1>Branding</h1><p>Logo, site name, tagline, favicon and brand colors.</p></div></div>
++      <div className="adm__head"><div><h1>Branding</h1><p>Logo, site name, tagline and favicon.</p></div></div>
+       {err && <div className="adm-banner err">{err}</div>}
+       {msg && <div className="adm-banner ok">{msg}</div>}
+       {loadErr && (
+         <div className="adm-banner err" role="alert">
+           The saved branding could not be loaded ({loadErr}). It can't be edited until it loads, so the
+-          default logo, name and colors can't be saved over the live ones. Reload the page to try again.
++          default logo and name can't be saved over the live ones. Reload the page to try again.
+         </div>
+       )}
+ 
+@@ -77,22 +77,7 @@ export default function Branding() {
+ 
+         <div className="surface">
+           <h2>Brand colors</h2>
+-          <div className="adm-grid2">
+-            <div className="field">
+-              <label className="label">Primary color</label>
+-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+-                <input type="color" value={form.primary_color} onChange={(e) => set('primary_color', e.target.value)} style={{ width: 44, height: 40, border: 'none', background: 'none' }} />
+-                <input className="input" value={form.primary_color} onChange={(e) => set('primary_color', e.target.value)} />
+-              </div>
+-            </div>
+-            <div className="field">
+-              <label className="label">Accent color</label>
+-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+-                <input type="color" value={form.accent_color} onChange={(e) => set('accent_color', e.target.value)} style={{ width: 44, height: 40, border: 'none', background: 'none' }} />
+-                <input className="input" value={form.accent_color} onChange={(e) => set('accent_color', e.target.value)} />
+-              </div>
+-            </div>
+-          </div>
++          <p className="muted">Set in Appearance (Primary brand color and Accent): the storefront takes its colors from there, not from this page.</p>
+         </div>
+ 
+         <div className="surface">
+diff --git a/src/admin/pages/CreatorDetail.jsx b/src/admin/pages/CreatorDetail.jsx
+index 2a62ad2..c3dd33e 100644
+--- a/src/admin/pages/CreatorDetail.jsx
++++ b/src/admin/pages/CreatorDetail.jsx
+@@ -318,7 +318,7 @@ export default function CreatorDetail() {
+                   <input className="input" value={linkForm.destination_path} disabled={linkForm.destination_type === 'homepage'}
+                     placeholder="/product/biosash-sea-buckthorn-juice"
+                     onChange={(e) => setLinkForm((f) => ({ ...f, destination_path: e.target.value }))} />
+-                  <p className="hint">Internal SORA LIFE paths only — external URLs are rejected.</p></div>
++                  <p className="hint">Internal SORA LIFESTYLE paths only — external URLs are rejected.</p></div>
+               </div>
+ 
+               <div className="field">
+diff --git a/src/admin/pages/CreatorTiers.jsx b/src/admin/pages/CreatorTiers.jsx
+index 03d6828..ef06599 100644
+--- a/src/admin/pages/CreatorTiers.jsx
++++ b/src/admin/pages/CreatorTiers.jsx
+@@ -251,7 +251,7 @@ function RewardSlot({ level, slot, row, onError, onFlash, onSaved }) {
+       </div>
+       <div className="field">
+         <label className="label">Label</label>
+-        <input className="input" value={form.label} maxLength={120} onChange={(e) => set('label', e.target.value)} placeholder="e.g. SORA LIFE gift box" />
++        <input className="input" value={form.label} maxLength={120} onChange={(e) => set('label', e.target.value)} placeholder="e.g. SORA LIFESTYLE gift box" />
+       </div>
+       <div className="adm-grid2">
+         <div className="field">
+diff --git a/src/admin/pages/Dashboard.jsx b/src/admin/pages/Dashboard.jsx
+index cf1d602..b16e217 100644
+--- a/src/admin/pages/Dashboard.jsx
++++ b/src/admin/pages/Dashboard.jsx
+@@ -52,7 +52,7 @@ export default function Dashboard() {
+       <div className="adm__head">
+         <div>
+           <h1>Dashboard</h1>
+-          <p>Overview of your Sora Life storefront data.</p>
++          <p>Overview of your Sora Lifestyle storefront data.</p>
+         </div>
+       </div>
+ 
+diff --git a/src/admin/pages/LegalPages.jsx b/src/admin/pages/LegalPages.jsx
+index f0ae71f..6027dd8 100644
+--- a/src/admin/pages/LegalPages.jsx
++++ b/src/admin/pages/LegalPages.jsx
+@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
+ import { adminGetSetting, adminSetSetting } from '../../lib/adminApi.js';
+ import { LEGAL_PAGES, CONTACT_FIELDS, GRIEVANCE_FIELDS, legalKey, defaultLegalPage, normalizeLegalPage, validateLegalPage, hasLegalContent } from '../../lib/legalPages.js';
+ import { LegalUpdated } from '../../components/LegalPageContent.jsx';
++import { brandingFromSetting } from '../../lib/settings.js';
+ 
+ export default function LegalPagesAdmin() {
+   const { pageId } = useParams();
+@@ -23,7 +24,7 @@ function LegalPagesEditor({ pageId }) {
+     Promise.all([adminGetSetting('contact'), adminGetSetting('branding'), ...LEGAL_PAGES.map(p => adminGetSetting(legalKey(p.id)))])
+       .then(([contact, branding, ...values]) => {
+         if (!live) return;
+-        const next = Object.fromEntries(LEGAL_PAGES.map((p, i) => [p.id, values[i] == null ? defaultLegalPage(p.id, contact || {}, branding?.siteName) : normalizeLegalPage(p.id, values[i])]));
++        const next = Object.fromEntries(LEGAL_PAGES.map((p, i) => [p.id, values[i] == null ? defaultLegalPage(p.id, contact || {}, brandingFromSetting(branding).siteName) : normalizeLegalPage(p.id, values[i])]));
+         setRecords(next); setForm(spec ? next[spec.id] : null);
+         setMissing(LEGAL_PAGES.filter((p,i) => values[i] == null).map(p => p.id));
+       }).catch(e => { if(live) { setErr(e.message || String(e)); setLoadFailed(true); } })
+diff --git a/src/admin/pages/ProductForm.jsx b/src/admin/pages/ProductForm.jsx
+index 34b2a79..413d92e 100644
+--- a/src/admin/pages/ProductForm.jsx
++++ b/src/admin/pages/ProductForm.jsx
+@@ -178,7 +178,7 @@ export default function ProductForm() {
+       <div className="adm__head">
+         <div>
+           <h1>{isEdit ? 'Edit product' : 'Add product'}</h1>
+-          <p>{isEdit ? values.name : 'Create a new Sora Life product'}</p>
++          <p>{isEdit ? values.name : 'Create a new Sora Lifestyle product'}</p>
+         </div>
+         <Link to="/admin/products" className="btn btn-outline btn-sm">← Back to products</Link>
+       </div>
+diff --git a/src/admin/pages/Promotions.jsx b/src/admin/pages/Promotions.jsx
+index 5a9e199..0c488f0 100644
+--- a/src/admin/pages/Promotions.jsx
++++ b/src/admin/pages/Promotions.jsx
+@@ -221,7 +221,7 @@ export default function Promotions() {
+ 
+           <div className="adm-grid2">
+             <div className="field"><label className="label">CTA button text (optional)</label>
+-              <input className="input" value={form.cta_text} onChange={(e) => set('cta_text', e.target.value)} placeholder="Explore SORA LIFE" maxLength={60} /></div>
++              <input className="input" value={form.cta_text} onChange={(e) => set('cta_text', e.target.value)} placeholder="Explore SORA LIFESTYLE" maxLength={60} /></div>
+             <div className="field"><label className="label">CTA link (internal path or https URL)</label>
+               <input className="input" value={form.cta_url} onChange={(e) => set('cta_url', e.target.value)} placeholder="/shop" maxLength={500} /></div>
+           </div>
+diff --git a/src/admin/pages/StoreCatalogue.jsx b/src/admin/pages/StoreCatalogue.jsx
+index 812a62c..2dfc4a6 100644
+--- a/src/admin/pages/StoreCatalogue.jsx
++++ b/src/admin/pages/StoreCatalogue.jsx
+@@ -94,7 +94,7 @@ function ClaimList({ warnings }) {
+ }
+ function ClaimNotice({ warnings }) {
+   if (!warnings?.length) return null;
+-  return <div className="adm-banner sc-info sc-claims" role="status"><strong>Saved — check this copy before customers read it.</strong> SORA LIFE cannot back these claims without proof (a certificate, a courier promise, clinical evidence). This is a warning, not a block: edit the copy if it overstates.<ClaimList warnings={warnings} /></div>;
++  return <div className="adm-banner sc-info sc-claims" role="status"><strong>Saved — check this copy before customers read it.</strong> SORA LIFESTYLE cannot back these claims without proof (a certificate, a courier promise, clinical evidence). This is a warning, not a block: edit the copy if it overstates.<ClaimList warnings={warnings} /></div>;
+ }
+ 
+ function CategoryEditor({ store, categories, initial, onSaved, onCancel }) {
+diff --git a/src/components/FashionEntryLink.jsx b/src/components/FashionEntryLink.jsx
+index 459e66b..12d549f 100644
+--- a/src/components/FashionEntryLink.jsx
++++ b/src/components/FashionEntryLink.jsx
+@@ -27,7 +27,7 @@ export function FashionChooser({ onClose }) {
+       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+       <div className="fashion-choice__inner">
+         <button type="button" className="fashion-choice__close" aria-label="Close fashion selection" onClick={onClose} autoFocus><Icon name="x" size={22} /></button>
+-        <p className="fashion-choice__eyebrow">SORA LIFE / The fashion edit</p>
++        <p className="fashion-choice__eyebrow">SORA LIFESTYLE / The fashion edit</p>
+         <h2 id={titleId}>Find your kind of style.</h2>
+         <p className="fashion-choice__intro">Three worlds. A style for every you.</p>
+         <div className="fashion-choice__grid">
+diff --git a/src/components/Footer.jsx b/src/components/Footer.jsx
+index c5f9c8c..8f3942e 100644
+--- a/src/components/Footer.jsx
++++ b/src/components/Footer.jsx
+@@ -24,7 +24,7 @@ import { useConsumerCare } from '../lib/consumerCare.js';
+ export default function Footer() {
+   const info = useConsumerCare();
+   const socials = socialLinks(info);
+-  const name = branding?.siteName || 'SORA LIFE';
++  const name = branding?.siteName || 'SORA LIFESTYLE';
+ 
+   return (
+     <footer className="ftr">
+diff --git a/src/components/Header.jsx b/src/components/Header.jsx
+index 3e96ad8..6971879 100644
+--- a/src/components/Header.jsx
++++ b/src/components/Header.jsx
+@@ -295,7 +295,7 @@ export default function Header() {
+                 way for the pages a first-time buyer checks before trusting a
+                 store. */}
+             <div className="drawer__sec">Company</div>
+-            <Link to="/about" className="drawer__minor">About {branding?.siteName || 'SORA LIFE'}</Link>
++            <Link to="/about" className="drawer__minor">About {branding?.siteName || 'SORA LIFESTYLE'}</Link>
+             <Link to="/contact" className="drawer__minor">Contact &amp; help</Link>
+           </nav>
+           <div className="drawer__foot">
+diff --git a/src/components/HomeLeaderboard.jsx b/src/components/HomeLeaderboard.jsx
+index fbadd75..908417f 100644
+--- a/src/components/HomeLeaderboard.jsx
++++ b/src/components/HomeLeaderboard.jsx
+@@ -27,7 +27,7 @@ export default function HomeLeaderboard({ rows: preloaded = null }) {
+     <section className="v2-sec hm-section hm-leaderboard sl-dark" data-home-section="leaderboard" aria-labelledby="hm-leaderboard-h">
+       <div className="v2-wrap">
+         <div className="hm-leaderboard__head">
+-          <p className="v2-eyebrow">SORA LIFE Creator Program</p>
++          <p className="v2-eyebrow">SORA LIFESTYLE Creator Program</p>
+           <h2 className="v2-h2" id="hm-leaderboard-h">Creator leaderboard</h2>
+           <p className="hm-leaderboard__copy">
+             The top {Math.min(rows.length, 100)} creators, ranked by confirmed sales through their own links.
+diff --git a/src/components/HomeMarketplace.jsx b/src/components/HomeMarketplace.jsx
+index db199ad..8d59774 100644
+--- a/src/components/HomeMarketplace.jsx
++++ b/src/components/HomeMarketplace.jsx
+@@ -110,7 +110,7 @@ export function MomTrustSpotlight({ category, products }) {
+           <div className="hm-mom__body">
+             <p className="v2-eyebrow">Brand spotlight</p>
+             <h2>Mom Trust</h2>
+-            <p>Explore the Mom Trust products currently available through the SORA LIFE catalogue.</p>
++            <p>Explore the Mom Trust products currently available through the SORA LIFESTYLE catalogue.</p>
+             <div className="hm-mom__products">
+               {[lead, ...more].slice(0, 3).map((product) => (
+                 <Link key={product.id} to={`/product/${product.slug}`}>{product.name}<Icon name="chevronRight" size={13} /></Link>
+@@ -160,7 +160,7 @@ export function CreatorCommunity() {
+         <div className="hm-creator">
+           <div className="hm-creator__mark" aria-hidden="true"><Icon name="users" size={42} stroke={1.25} /></div>
+           <div className="hm-creator__copy">
+-            <p className="v2-eyebrow">SORA LIFE Creator Program</p>
++            <p className="v2-eyebrow">SORA LIFESTYLE Creator Program</p>
+             <h2>Share what you genuinely discover.</h2>
+             <p>Use your customer account to explore the Creator Program, its attribution model and your application status.</p>
+           </div>
+@@ -182,7 +182,7 @@ export function WhySoraLife() {
+   return (
+     <section className="v2-sec hm-section hm-section--trust" data-home-section="why-sora-life">
+       <div className="v2-wrap">
+-        <SectionHeading eyebrow="Built for confident browsing" title="Why shop SORA LIFE" />
++        <SectionHeading eyebrow="Built for confident browsing" title="Why shop SORA LIFESTYLE" />
+         <div className="hm-trust">
+           {TRUST_ITEMS.map((item, index) => (
+             <Link key={item.title} to={item.to} className="hm-trust__item">
+diff --git a/src/components/HomeStorefront.jsx b/src/components/HomeStorefront.jsx
+index bc30414..88d14b9 100644
+--- a/src/components/HomeStorefront.jsx
++++ b/src/components/HomeStorefront.jsx
+@@ -136,7 +136,7 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
+   };
+   const onClickCapture = (e) => { if (swipe.current.moved) { e.preventDefault(); e.stopPropagation(); swipe.current.moved = false; } };
+   return (
+-    <section className="hx hx-hero" aria-roledescription="carousel" aria-label="SORA LIFE"
++    <section className="hx hx-hero" aria-roledescription="carousel" aria-label="SORA LIFESTYLE"
+       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
+       <div className="hx-hero__viewport" onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerCancel={() => { swipe.current = { x: null, y: null, moved: false }; }} onClickCapture={onClickCapture}>
+         <div className="hx-hero__track" style={{ transform: `translateX(-${index * 100}%)` }}>
+@@ -204,7 +204,7 @@ export function HomeTrustStrip() {
+   // Fewer than four: the row keeps its columns even (only then is the count set).
+   const count = items.length === TRUST.length ? {} : { 'data-count': items.length, style: { '--hx-trust-n': items.length } };
+   return (
+-    <section className="hx hx-trust" aria-label="Shopping with SORA LIFE">
++    <section className="hx hx-trust" aria-label="Shopping with SORA LIFESTYLE">
+       <ul className="hx-wrap hx-trust__list" {...count}>
+         {items.map((t) => {
+           const lines = filledLines(t.title);
+diff --git a/src/components/ProductImage.jsx b/src/components/ProductImage.jsx
+index 1cfddc9..427b47f 100644
+--- a/src/components/ProductImage.jsx
++++ b/src/components/ProductImage.jsx
+@@ -111,7 +111,7 @@ export default function ProductImage({
+       <div className={wrapClass}>
+         <div className="v2-pimg__fallback">
+           <div>
+-            <b>Sora Life</b>
++            <b>Sora Lifestyle</b>
+             {cat?.name && <span>{cat.name}</span>}
+           </div>
+         </div>
+@@ -126,7 +126,7 @@ export default function ProductImage({
+     <div className={wrapClass} style={{ background: `linear-gradient(150deg, ${t.tint}, #fff)` }}>
+       <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: t.b, textAlign: 'center', padding: 16 }}>
+         <div>
+-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, letterSpacing: 1 }}>SORA LIFE</div>
++          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, letterSpacing: 1 }}>SORA LIFESTYLE</div>
+           <div style={{ fontSize: 10, letterSpacing: 2, marginTop: 4, textTransform: 'uppercase' }}>{cat?.name}</div>
+         </div>
+       </div>
+diff --git a/src/components/category/CategorySpotlight.jsx b/src/components/category/CategorySpotlight.jsx
+index 26e8b2b..7137701 100644
+--- a/src/components/category/CategorySpotlight.jsx
++++ b/src/components/category/CategorySpotlight.jsx
+@@ -256,7 +256,7 @@ export default function CategorySpotlight({ category, products, configOverride =
+           <CategoryHeading className="cspot__category-name">{category.name}</CategoryHeading>
+           <span className="cspot__category-label">The edit</span>
+         </div>}
+-        <p className="cspot__eyebrow"><span>SORA LIFE</span><span>{category.name} / The edit</span></p>
++        <p className="cspot__eyebrow"><span>SORA LIFESTYLE</span><span>{category.name} / The edit</span></p>
+ 
+         {/* One live region for the whole stage: assistive tech hears the
+             product change once, not three times as the seats reshuffle. */}
+diff --git a/src/components/creator/CreatorCampaignsPage.jsx b/src/components/creator/CreatorCampaignsPage.jsx
+index 53917b2..53d166a 100644
+--- a/src/components/creator/CreatorCampaignsPage.jsx
++++ b/src/components/creator/CreatorCampaignsPage.jsx
+@@ -76,7 +76,7 @@ export default function CreatorCampaignsPage({ creator, campaigns = [], links =
+       <header className="cc-head">
+         <div>
+           <h1 className="crp__h1 serif">My campaigns</h1>
+-          <p className="crp__lede">Seasonal pushes SORA LIFE builds for creators — a launch, a festive edit, a category focus. Your programme manager sets them up.</p>
++          <p className="crp__lede">Seasonal pushes SORA LIFESTYLE builds for creators — a launch, a festive edit, a category focus. Your programme manager sets them up.</p>
+         </div>
+         {rows.length > 0 && <span className="ca-period"><Icon name="sparkle" size={15} /> {live} active of {rows.length}</span>}
+       </header>
+@@ -87,7 +87,7 @@ export default function CreatorCampaignsPage({ creator, campaigns = [], links =
+           <span className="cc-empty__ic" aria-hidden="true"><Icon name="sparkle" size={24} /></span>
+           <p className="cp-eyebrow">Campaign status</p>
+           <h2 className="serif">No campaigns running yet</h2>
+-          <p className="cc-empty__body">Campaigns are seasonal pushes SORA LIFE builds for creators — a launch, a festive edit, a category focus. Your programme manager sets them up; you don’t create them yourself.</p>
++          <p className="cc-empty__body">Campaigns are seasonal pushes SORA LIFESTYLE builds for creators — a launch, a festive edit, a category focus. Your programme manager sets them up; you don’t create them yourself.</p>
+           <ul className="cc-empty__points">
+             <li><Icon name="externalLink" size={15} /><span>A campaign link of your own, tracked separately from your default link</span></li>
+             <li><Icon name="award" size={15} /><span>Its own commission rate when the campaign carries one</span></li>
+diff --git a/src/components/creator/CreatorDashboard.jsx b/src/components/creator/CreatorDashboard.jsx
+index 3d3bcaf..260e304 100644
+--- a/src/components/creator/CreatorDashboard.jsx
++++ b/src/components/creator/CreatorDashboard.jsx
+@@ -34,12 +34,12 @@ export function Greeting({ creator, hour = new Date().getHours() }) {
+ 
+ export function QuotePanel() {
+   return (
+-    <figure className="cd-quote" role="img" aria-label="Small creators make a big difference. — SORA LIFE">
++    <figure className="cd-quote" role="img" aria-label="Small creators make a big difference. — SORA LIFESTYLE">
+       <blockquote className="cd-quote__q serif">
+         <span className="cd-quote__mark" aria-hidden="true">“</span>
+         Small creators <br />make a big difference.”
+       </blockquote>
+-      <figcaption className="cd-quote__by">— SORA LIFE</figcaption>
++      <figcaption className="cd-quote__by">— SORA LIFESTYLE</figcaption>
+     </figure>
+   );
+ }
+diff --git a/src/components/creator/CreatorEarningsPage.jsx b/src/components/creator/CreatorEarningsPage.jsx
+index 6a43035..1d8dc58 100644
+--- a/src/components/creator/CreatorEarningsPage.jsx
++++ b/src/components/creator/CreatorEarningsPage.jsx
+@@ -133,7 +133,7 @@ export function TermsPanel({ terms, standing }) {
+       <header className="cd-panel__head">
+         <div>
+           <h2 className="cd-panel__h serif" id="ce-terms-h">Your terms</h2>
+-          <p className="cd-panel__sub">Set by SORA LIFE and your tier.</p>
++          <p className="cd-panel__sub">Set by SORA LIFESTYLE and your tier.</p>
+         </div>
+         {standing?.rank && <Link to="/creator/tier" className="cd-panel__link">{standing.rank} · L{standing.level} <Icon name="arrowRight" size={13} /></Link>}
+       </header>
+diff --git a/src/components/creator/CreatorHowItWorks.jsx b/src/components/creator/CreatorHowItWorks.jsx
+index 2b93dd3..9fe55a3 100644
+--- a/src/components/creator/CreatorHowItWorks.jsx
++++ b/src/components/creator/CreatorHowItWorks.jsx
+@@ -128,7 +128,7 @@ export default function CreatorHowItWorks({ creator, earnings, standing = null }
+         <Icon name="circleAlert" size={15} />
+         <span>
+           Commission is earned on eligible sale value, not on shipping or fees. Self-referred orders don’t
+-          qualify. Payouts are made manually by our team — SORA LIFE never moves money automatically.
++          qualify. Payouts are made manually by our team — SORA LIFESTYLE never moves money automatically.
+         </span>
+       </p>
+     </section>
+diff --git a/src/components/creator/CreatorLinksPage.jsx b/src/components/creator/CreatorLinksPage.jsx
+index ae50307..3829a50 100644
+--- a/src/components/creator/CreatorLinksPage.jsx
++++ b/src/components/creator/CreatorLinksPage.jsx
+@@ -59,7 +59,7 @@ export function LinkCard({ title, destination, status, statusText, code, created
+       <code className="cl-card__url">{url}</code>
+       <div className="cl-card__actions">
+         <CopyButton value={url} className="cp-btn is-primary" label="Copy link" />
+-        <ShareButton url={url} title="Shop SORA LIFE" />
++        <ShareButton url={url} title="Shop SORA LIFESTYLE" />
+       </div>
+     </article>
+   );
+@@ -97,7 +97,7 @@ export default function CreatorLinksPage({ creator, links = [], campaigns = [],
+             <span className="cl-empty__ic" aria-hidden="true"><Icon name="externalLink" size={22} /></span>
+             <div>
+               <h3 className="serif">No campaign links yet</h3>
+-              <p>Campaign links are created alongside a campaign by your SORA LIFE programme manager. You don’t need one to start — your default link above is always ready and always attributes.</p>
++              <p>Campaign links are created alongside a campaign by your SORA LIFESTYLE programme manager. You don’t need one to start — your default link above is always ready and always attributes.</p>
+               <Link to="/creator/campaigns" className="cp-btn">See campaigns <Icon name="arrowRight" size={14} /></Link>
+             </div>
+           </div>
+diff --git a/src/components/creator/CreatorPayouts.jsx b/src/components/creator/CreatorPayouts.jsx
+index 5ddf4e7..ad1f89c 100644
+--- a/src/components/creator/CreatorPayouts.jsx
++++ b/src/components/creator/CreatorPayouts.jsx
+@@ -50,7 +50,7 @@ export default function CreatorPayouts({ creator, earnings, kyc, payouts, withdr
+     <>
+       <h1 className="serif crp__h1">Payouts</h1>
+       <p className="crp__lede">
+-        Verify your details once, then request a payout during the monthly window. SORA LIFE
++        Verify your details once, then request a payout during the monthly window. SORA LIFESTYLE
+         reviews and pays every request manually — money is never released automatically.
+       </p>
+ 
+@@ -96,7 +96,7 @@ function KycSection({ kyc, status, onSubmitKyc, onUploadKycDocument, onChanged }
+       )}
+       {status === 'verified' && (
+         <p className="crp__kyc-msg is-ok">
+-          <Icon name="checkCircle" size={14} /> Verified by SORA LIFE. You’re all set to request payouts.
++          <Icon name="checkCircle" size={14} /> Verified by SORA LIFESTYLE. You’re all set to request payouts.
+         </p>
+       )}
+       {status === 'rejected' && (
+@@ -296,7 +296,7 @@ function KycForm({ kyc, onSubmitKyc, onDone, onCancel }) {
+   return (
+     <form className="crp__form" onSubmit={submit} autoComplete="off">
+       <p className="crp__form-note">
+-        <Icon name="lock" size={13} /> These details are encrypted and masked. Even SORA LIFE staff
++        <Icon name="lock" size={13} /> These details are encrypted and masked. Even SORA LIFESTYLE staff
+         only ever see a masked version (e.g. <code>ABCDE****F</code>).
+       </p>
+ 
+@@ -394,13 +394,13 @@ function PayoutSection({ earnings, payouts, kycVerified, withdrawalsOpen = false
+     banner = (
+       <Banner tone="warn" icon="lock"
+         title="Withdrawals open later"
+-        body="Your commission keeps accruing. Payout requests open once SORA LIFE’s tax registration is complete — you’ll see the request button here the day they do." />
++        body="Your commission keeps accruing. Payout requests open once SORA LIFESTYLE’s tax registration is complete — you’ll see the request button here the day they do." />
+     );
+   } else if (!kycVerified) {
+     banner = (
+       <Banner tone="warn" icon="shield"
+         title="Verify your details to withdraw"
+-        body="Complete verification above. Payouts open once SORA LIFE has verified your KYC." />
++        body="Complete verification above. Payouts open once SORA LIFESTYLE has verified your KYC." />
+     );
+   } else if (activeReq) {
+     banner = (
+diff --git a/src/components/creator/CreatorProfilePage.jsx b/src/components/creator/CreatorProfilePage.jsx
+index 0dc26b4..1ba9f1b 100644
+--- a/src/components/creator/CreatorProfilePage.jsx
++++ b/src/components/creator/CreatorProfilePage.jsx
+@@ -90,7 +90,7 @@ export default function CreatorProfilePage({
+ 
+       <div className="cp-sec">
+         <h2 className="cp-sec__h serif">Programme terms</h2>
+-        <p className="cp-sec__sub">Set by SORA LIFE — not editable here.</p>
++        <p className="cp-sec__sub">Set by SORA LIFESTYLE — not editable here.</p>
+       </div>
+ 
+       <div className="cp-terms">
+@@ -118,7 +118,7 @@ export default function CreatorProfilePage({
+           <div>
+             <span className="cp-term__label">Creator since</span>
+             <div className="cp-term__fig serif">{fmtDate(since)}</div>
+-            <p className="cp-term__line">{since ? `You’ve been part of SORA LIFE since ${fmtDate(since)}.` : 'Your join date will appear once your account is activated.'}</p>
++            <p className="cp-term__line">{since ? `You’ve been part of SORA LIFESTYLE since ${fmtDate(since)}.` : 'Your join date will appear once your account is activated.'}</p>
+           </div>
+         </article>
+       </div>
+@@ -165,7 +165,7 @@ export default function CreatorProfilePage({
+         <span className="cp-help__ic" aria-hidden="true"><Icon name="chat" size={26} /></span>
+         <div className="cp-help__txt">
+           <strong>Need help?</strong>
+-          <span>Your commission rate and status are managed by SORA LIFE. Contact your programme manager if something here looks wrong.</span>
++          <span>Your commission rate and status are managed by SORA LIFESTYLE. Contact your programme manager if something here looks wrong.</span>
+         </div>
+         <Link to="/contact" className="cp-btn is-ghost"><Icon name="mail" size={16} /> Contact support</Link>
+       </footer>
+diff --git a/src/components/creator/CreatorTier.jsx b/src/components/creator/CreatorTier.jsx
+index 2a3f7b4..989d5e9 100644
+--- a/src/components/creator/CreatorTier.jsx
++++ b/src/components/creator/CreatorTier.jsx
+@@ -33,7 +33,7 @@ export function WithdrawalsNotice({ open, compact = false }) {
+       <div>
+         <strong>Withdrawals aren’t open yet.</strong>{' '}
+         Your commission is accruing and stays yours — every confirmed sale is recorded against your account.
+-        Payout requests open once SORA LIFE’s tax registration is complete; we’ll tell you here the day they do.
++        Payout requests open once SORA LIFESTYLE’s tax registration is complete; we’ll tell you here the day they do.
+       </div>
+     </div>
+   );
+diff --git a/src/components/creator/CreatorTierPage.jsx b/src/components/creator/CreatorTierPage.jsx
+index 01f1a73..bbf0d43 100644
+--- a/src/components/creator/CreatorTierPage.jsx
++++ b/src/components/creator/CreatorTierPage.jsx
+@@ -35,7 +35,7 @@ export function WithdrawalsBar({ open, initiallyDismissed = false }) {
+   return (
+     <div className="ct-bar" role="status" data-withdrawals="closed">
+       <span className="ct-bar__ic" aria-hidden="true"><Icon name="lock" size={15} /></span>
+-      <p><strong>Withdrawals aren’t open yet.</strong> Your commission is accruing and stays yours; payout requests open once SORA LIFE’s tax registration is complete.</p>
++      <p><strong>Withdrawals aren’t open yet.</strong> Your commission is accruing and stays yours; payout requests open once SORA LIFESTYLE’s tax registration is complete.</p>
+       <button type="button" className="ct-bar__x" onClick={dismiss} aria-label="Dismiss for this session"><Icon name="x" size={16} /></button>
+     </div>
+   );
+diff --git a/src/components/pdp/ProductTrustList.jsx b/src/components/pdp/ProductTrustList.jsx
+index 8ceb53c..83bb04c 100644
+--- a/src/components/pdp/ProductTrustList.jsx
++++ b/src/components/pdp/ProductTrustList.jsx
+@@ -9,7 +9,7 @@ import { TRUST_ITEMS } from '../../data/pdpContent.js';
+ export default function ProductTrustList() {
+   return (
+     <section className="pdp-sec pdp-trust" aria-labelledby="pdp-trust-h">
+-      <h2 id="pdp-trust-h" className="pdp-sec__title serif">Shopping with SORA LIFE</h2>
++      <h2 id="pdp-trust-h" className="pdp-sec__title serif">Shopping with SORA LIFESTYLE</h2>
+       <ul className="pdp-trust__list">
+         {TRUST_ITEMS.map(([icon, title, desc]) => (
+           <li key={title} className="pdp-trust__item">
+diff --git a/src/fashion/FashionJewellery.jsx b/src/fashion/FashionJewellery.jsx
+index 3fd7648..360f2fd 100644
+--- a/src/fashion/FashionJewellery.jsx
++++ b/src/fashion/FashionJewellery.jsx
+@@ -90,7 +90,7 @@ export default function FashionJewellery({ content = JEWELLERY }) {
+       </div>
+     </section>}
+ 
+-    {!s.trust.hidden && <nav className="jw-trust" aria-label="Shopping with SORA LIFE">
++    {!s.trust.hidden && <nav className="jw-trust" aria-label="Shopping with SORA LIFESTYLE">
+       <ul className="jw-wrap">{s.trust.items.filter(visible).map((t) => <li key={t.title}><Link to={t.link}>
+         <Icon name={t.icon} size={22} />
+         <span className="jw-trust__full"><strong>{t.title}</strong><small>{t.note}</small></span>
+diff --git a/src/lib/adminAuth.jsx b/src/lib/adminAuth.jsx
+index 722a4c5..becae39 100644
+--- a/src/lib/adminAuth.jsx
++++ b/src/lib/adminAuth.jsx
+@@ -115,7 +115,7 @@ export function AdminAuthProvider({ children }) {
+         error: new Error(
+           state === ADMIN_ERROR
+             ? "We could not verify your admin access just now. Please check your connection and try again."
+-            : "This account is not authorized as a SORA LIFE admin."
++            : "This account is not authorized as a SORA LIFESTYLE admin."
+         ),
+       };
+     }
+diff --git a/src/lib/creatorActivity.js b/src/lib/creatorActivity.js
+index f8a7349..2c80411 100644
+--- a/src/lib/creatorActivity.js
++++ b/src/lib/creatorActivity.js
+@@ -33,7 +33,7 @@ const PAYOUT_COPY = {
+ };
+ const KYC_COPY = {
+   pending: ['Verification submitted', 'Our team is checking your details'],
+-  verified: ['Verified by SORA LIFE', 'Payout details approved'],
++  verified: ['Verified by SORA LIFESTYLE', 'Payout details approved'],
+   rejected: ['Verification needs attention', 'See Payouts for the reason'],
+   needs_update: ['Verification needs an update', 'See Payouts for what to change'],
+ };
+@@ -67,7 +67,7 @@ export function buildActivity({ creator, clicks = [], payouts = [], rewards = nu
+     items.push({ id: 'active', icon: 'user', tone: 'ok', title: 'Account activated', body: 'Your creator account is now active', at: creator.joined_at });
+   }
+   if (creator?.created_at || creator?.joined_at) {
+-    items.push({ id: 'welcome', icon: 'star', tone: 'brand', title: 'Welcome to SORA LIFE', body: 'Start sharing and earn', at: creator.created_at || creator.joined_at });
++    items.push({ id: 'welcome', icon: 'star', tone: 'brand', title: 'Welcome to SORA LIFESTYLE', body: 'Start sharing and earn', at: creator.created_at || creator.joined_at });
+   }
+   return items
+     .filter((i) => Number.isFinite(new Date(i.at).getTime()))
+diff --git a/src/lib/legalPages.js b/src/lib/legalPages.js
+index e71f618..7e97e64 100644
+--- a/src/lib/legalPages.js
++++ b/src/lib/legalPages.js
+@@ -33,12 +33,16 @@ export function normalizeLegalPage(id, raw = {}) {
+   }
+   return page;
+ }
+-export function defaultLegalPage(id, legacy = {}, name = 'SORA LIFE') {
++// The built-in text says "SORA LIFE"; the site's name goes in its place. Only the
++// whole name is matched: "SORA LIFE" is also the start of "SORA LIFESTYLE", so a
++// plain replace would turn that into "SORA LIFESTYLESTYLE".
++const BUILT_IN_NAME = /\bSORA LIFE\b/g;
++export function defaultLegalPage(id, legacy = {}, name = 'SORA LIFESTYLE') {
+   const page = structuredClone(LEGAL_DEFAULTS[id]);
+   if (!page) return null;
+   if (page.body) {
+-    page.body = page.body.replaceAll('SORA LIFE', name);
+-    page.intro = page.intro.replaceAll('SORA LIFE', name);
++    page.body = page.body.replace(BUILT_IN_NAME, () => name);
++    page.intro = page.intro.replace(BUILT_IN_NAME, () => name);
+     if (legacy.policies?.[id]?.trim()) page.body += '\n\n# Full policy\n\n' + legacy.policies[id];
+     const info = sanitizeCompany(legacy);
+     page.body += '\n\n# Questions about this?\n\n' + (info.email || info.phone || info.address
+diff --git a/src/lib/settings.js b/src/lib/settings.js
+index 956eb2a..adb6b83 100644
+--- a/src/lib/settings.js
++++ b/src/lib/settings.js
+@@ -7,7 +7,7 @@
+ 
+ export let branding = {
+   logoUrl: '/assets/sora-life-logo.png',
+-  siteName: 'SORA LIFE',
++  siteName: 'SORA LIFESTYLE',
+   tagline: 'HEALTH & WELLNESS',
+   primaryColor: '#1E3A2F',
+   accentColor: '#E8B04B',
+@@ -69,7 +69,41 @@ export function applyStorefrontTheme(v) {
+   return true;
+ }
+ 
+-export function applyBranding(v) { if (v && typeof v === 'object') branding = { ...branding, ...v }; }
++/**
++ * The storefront's view of the stored `branding` record. Admin → Branding (and
++ * the 0001 seed) store it with snake_case keys — site_name, logo_url,
++ * favicon_url — while everything here reads siteName, logoUrl, faviconUrl;
++ * merging the record as it was stored set keys nothing read, so the name, logo
++ * and favicon saved in the admin never reached the site. Either spelling is
++ * accepted. A blank field keeps the built-in value, and an image address must
++ * be a site path or https. The colours are not taken from it: the storefront
++ * theme (Admin → Appearance) owns them.
++ */
++export function brandingFromSetting(v) {
++  if (!v || typeof v !== 'object') return {};
++  const pick = (...keys) => keys.map((k) => (typeof v[k] === 'string' ? v[k].trim() : '')).find(Boolean);
++  const imageUrl = (s) => (s && /^(\/(?!\/)|https:\/\/)/.test(s) ? s : undefined);
++  const out = {
++    siteName: pick('site_name', 'siteName'),
++    tagline: pick('tagline'),
++    logoUrl: imageUrl(pick('logo_url', 'logoUrl')),
++    faviconUrl: imageUrl(pick('favicon_url', 'faviconUrl')),
++  };
++  return Object.fromEntries(Object.entries(out).filter(([, value]) => value !== undefined));
++}
++export function applyBranding(v) { if (v && typeof v === 'object') branding = { ...branding, ...brandingFromSetting(v) }; }
++
++/**
++ * The tab title with the site name in front: whatever stands before the first
++ * " — " is replaced, so applying it again, or after the name has changed, never
++ * stacks names ("SORA LIFE" is the start of "SORA LIFESTYLE", so replacing a
++ * leading "SORA LIFE" would have).
++ */
++export function titleWithSiteName(title, siteName) {
++  const rest = String(title || '');
++  const cut = rest.indexOf(' — ');
++  return `${siteName}${cut >= 0 ? rest.slice(cut) : ''}`;
++}
+ export function applyAnnouncement(v) { if (v && typeof v === 'object') announcement = { ...announcement, ...v }; }
+ const homepageListeners = new Set();
+ export const getHomepageSnapshot = () => homepage;
+diff --git a/src/lib/spotlightImport.js b/src/lib/spotlightImport.js
+index c8b4c2b..108cdc0 100644
+--- a/src/lib/spotlightImport.js
++++ b/src/lib/spotlightImport.js
+@@ -260,7 +260,7 @@ export function buildSummaryText(plan, { uploadedUrls = new Map() } = {}) {
+     else rows.forEach((r) => lines.push(`  ${render(r)}`));
+     lines.push('');
+   };
+-  lines.push('SORA LIFE — spotlight packshot import');
++  lines.push('SORA LIFESTYLE — spotlight packshot import');
+   lines.push(new Date().toISOString());
+   lines.push('');
+   section('UPLOADED', group(IMPORT_STATUS.UPLOADED), (r) => `${r.slug}  ${uploadedUrls.get(r.slug) || ''}`.trim());
+diff --git a/src/pages/About.jsx b/src/pages/About.jsx
+index 5e7be2b..8c5bac7 100644
+--- a/src/pages/About.jsx
++++ b/src/pages/About.jsx
+@@ -33,7 +33,7 @@ const CAPABILITIES = [
+   {
+     icon: 'lock',
+     title: 'Secure checkout',
+-    body: 'Every price and order total is recalculated on our server before payment, and card payments are processed by Razorpay — Sora Life never sees or stores your card details.',
++    body: 'Every price and order total is recalculated on our server before payment, and card payments are processed by Razorpay — Sora Lifestyle never sees or stores your card details.',
+   },
+   {
+     icon: 'package',
+@@ -43,7 +43,7 @@ const CAPABILITIES = [
+ ];
+ 
+ export default function About() {
+-  const name = branding?.siteName || 'SORA LIFE';
++  const name = branding?.siteName || 'SORA LIFESTYLE';
+ 
+   return (
+     <div className="info">
+diff --git a/src/pages/Account.jsx b/src/pages/Account.jsx
+index b8a216d..76a2146 100644
+--- a/src/pages/Account.jsx
++++ b/src/pages/Account.jsx
+@@ -80,7 +80,7 @@ export default function Account() {
+       <div className="pagehead"><div className="container">
+         <nav className="crumbs"><Link to="/">Home</Link><Icon name="chevronRight" size={14} /><span>Account</span></nav>
+         <h1 className="serif">Hi, {firstName} 👋</h1>
+-        <p className="muted">Welcome back to your Sora Life account.</p>
++        <p className="muted">Welcome back to your Sora Lifestyle account.</p>
+       </div></div>
+ 
+       <div className="container section-sm" style={{ paddingTop: 'var(--sp-8)' }}>
+@@ -155,7 +155,7 @@ function SetNewPasswordView() {
+     <div className="auth">
+       <div className="auth__art">
+         <div className="auth__art-in">
+-          <span className="eyebrow" style={{ color: 'var(--honey-300)' }}>Sora Life members</span>
++          <span className="eyebrow" style={{ color: 'var(--honey-300)' }}>Sora Lifestyle members</span>
+           <h2 className="serif" style={{ color: '#FBF8F1', fontSize: 'var(--text-3xl)', margin: '12px 0' }}>Choose a new password.</h2>
+           <p style={{ color: 'rgba(251,248,241,0.82)' }}>Pick something you don’t use anywhere else. You’ll stay signed in on this device.</p>
+         </div>
+@@ -292,7 +292,7 @@ function AuthView() {
+     <div className="auth">
+       <div className="auth__art">
+         <div className="auth__art-in">
+-          <span className="eyebrow" style={{ color: 'var(--honey-300)' }}>Sora Life members</span>
++          <span className="eyebrow" style={{ color: 'var(--honey-300)' }}>Sora Lifestyle members</span>
+           <h2 className="serif" style={{ color: '#FBF8F1', fontSize: 'var(--text-3xl)', margin: '12px 0' }}>Your rituals, remembered.</h2>
+           {/* Every line here is a feature that exists. "Members-only drops" and
+               "early access to new launches" were neither built nor planned, and
+diff --git a/src/pages/AdminLogin.jsx b/src/pages/AdminLogin.jsx
+index 02f59fa..171b3a4 100644
+--- a/src/pages/AdminLogin.jsx
++++ b/src/pages/AdminLogin.jsx
+@@ -58,7 +58,7 @@ export default function AdminLogin() {
+           boxShadow: "0 20px 60px rgba(0,0,0,0.08)",
+         }}
+       >
+-        <h1 style={{ margin: 0, marginBottom: 8 }}>SORA LIFE Admin</h1>
++        <h1 style={{ margin: 0, marginBottom: 8 }}>SORA LIFESTYLE Admin</h1>
+ 
+         <p style={{ marginTop: 0, marginBottom: 24, color: "#666" }}>
+           Authorized access only.
+diff --git a/src/pages/Checkout.jsx b/src/pages/Checkout.jsx
+index deab1ee..7464171 100644
+--- a/src/pages/Checkout.jsx
++++ b/src/pages/Checkout.jsx
+@@ -396,7 +396,7 @@ export default function Checkout() {
+         order_id: created.razorpayOrderId,
+         amount: created.amountPaise,  // server-computed, in paise
+         currency: created.currency,
+-        name: 'Sora Life',
++        name: 'Sora Lifestyle',
+         description: `Order ${created.orderNumber}`,
+         theme: { color: '#1E3A2F' },
+         // The window closes before this order's hold on its stock and coupon
+@@ -608,7 +608,7 @@ export default function Checkout() {
+           {step === 2 && (
+             <section className="cform">
+               <h2 className="serif">Payment</h2>
+-              <p className="muted"><Icon name="lock" size={14} /> Payments are processed securely by Razorpay. Sora Life never sees or stores your card details.</p>
++              <p className="muted"><Icon name="lock" size={14} /> Payments are processed securely by Razorpay. Sora Lifestyle never sees or stores your card details.</p>
+               <div className="optlist">
+                 {[
+                   ['online', 'Pay online', 'UPI, cards, net banking & wallets', 'card'],
+diff --git a/src/pages/CreatorPortal.jsx b/src/pages/CreatorPortal.jsx
+index e9b7bfd..eb8c5b9 100644
+--- a/src/pages/CreatorPortal.jsx
++++ b/src/pages/CreatorPortal.jsx
+@@ -195,7 +195,7 @@ export default function CreatorPortal({ initial = null }) {
+     return (
+       <Shell>
+         <h1 className="serif crp__empty-h">Creator sign in</h1>
+-        <p className="muted">Sign in with the email address your SORA LIFE creator account was set up with.</p>
++        <p className="muted">Sign in with the email address your SORA LIFESTYLE creator account was set up with.</p>
+         <Link to="/account" className="btn" style={{ marginTop: 'var(--sp-5)' }}>Go to sign in</Link>
+       </Shell>
+     );
+@@ -206,7 +206,7 @@ export default function CreatorPortal({ initial = null }) {
+       <Shell>
+         <h1 className="serif crp__empty-h">Not a creator account</h1>
+         <p className="muted">
+-          This account isn’t part of the SORA LIFE Creator Program. If you’ve just been onboarded,
++          This account isn’t part of the SORA LIFESTYLE Creator Program. If you’ve just been onboarded,
+           make sure you’re signed in with the email address you gave us.
+         </p>
+         <Link to="/account" className="btn" style={{ marginTop: 'var(--sp-5)' }}>Back to my account</Link>
+@@ -226,9 +226,9 @@ export default function CreatorPortal({ initial = null }) {
+   return (
+     <div className="crp crp--studio" data-rank={rank}>
+       <aside className="cs-side">
+-        <Link to="/" className="cs-brand" aria-label="SORA LIFE home">
++        <Link to="/" className="cs-brand" aria-label="SORA LIFESTYLE home">
+           <span className="cs-brand__mark"><SparrowMark size={34} light /></span>
+-          <span className="cs-brand__txt"><strong>SORA LIFE</strong><em>Creator Program</em></span>
++          <span className="cs-brand__txt"><strong>SORA LIFESTYLE</strong><em>Creator Program</em></span>
+         </Link>
+         <nav ref={navRef} className="cs-nav" aria-label="Creator portal">
+           {NAV.map((n) => (
+@@ -240,7 +240,7 @@ export default function CreatorPortal({ initial = null }) {
+           ))}
+         </nav>
+         <div className="cs-side__foot">
+-          <p className="cs-side__eyebrow">SORA LIFE</p>
++          <p className="cs-side__eyebrow">SORA LIFESTYLE</p>
+           <p className="cs-side__tag serif">Wellness <br />for a Brighter <br />Tomorrow</p>
+           <Link to="/creator/tier" className="cs-side__chip"><Icon name="sparkle" size={15} /><span>You’re creating <br />real impact</span><Icon name="chevronRight" size={15} /></Link>
+         </div>
+diff --git a/src/pages/Home.jsx b/src/pages/Home.jsx
+index 3b658bc..81a34b4 100644
+--- a/src/pages/Home.jsx
++++ b/src/pages/Home.jsx
+@@ -113,7 +113,7 @@ export default function Home() {
+             <div className="v2-sechead">
+               <div>
+                 <p className="v2-eyebrow">Fresh on the shelf</p>
+-                <h2 className="v2-h2">This week at Sora Life</h2>
++                <h2 className="v2-h2">This week at Sora Lifestyle</h2>
+               </div>
+             </div>
+             <div className="v2-rail">
+diff --git a/src/pages/Invoice.jsx b/src/pages/Invoice.jsx
+index 761e922..afc4a01 100644
+--- a/src/pages/Invoice.jsx
++++ b/src/pages/Invoice.jsx
+@@ -130,7 +130,7 @@ export default function Invoice() {
+       <article className="container inv">
+         <header className="inv__head">
+           <div className="inv__brand">
+-            <img src="/assets/sora-life-logo.png" alt="SORA LIFE — Health and Wellness" className="inv__logo" width="1153" height="380" />
++            <img src="/assets/sora-life-logo.png" alt="SORA LIFESTYLE — Health and Wellness" className="inv__logo" width="1153" height="380" />
+             <p className="inv__brand-sub">Health &amp; Wellness</p>
+           </div>
+           <div className="inv__ident">
+@@ -272,7 +272,7 @@ export default function Invoice() {
+         </section>
+ 
+         <footer className="inv__foot">
+-          <p>Thank you for choosing SORA LIFE.</p>
++          <p>Thank you for choosing SORA LIFESTYLE.</p>
+           <p className="muted">
+             This is a computer-generated invoice for order {order.order_number}
+             {order.invoice_number ? ` (${order.invoice_number})` : ''}.
+diff --git a/src/pages/Legal.jsx b/src/pages/Legal.jsx
+index 84813a2..4e74be8 100644
+--- a/src/pages/Legal.jsx
++++ b/src/pages/Legal.jsx
+@@ -19,12 +19,12 @@ function documents(name) {
+   return {
+     shipping: {
+   title: 'Shipping Policy',
+-  blurb: 'How SORA LIFE dispatches and delivers eligible orders across India.',
++  blurb: `How ${name} dispatches and delivers eligible orders across India.`,
+   methods: SHIPPING_METHODS,
+   facts: [
+     {
+       heading: 'Shipping coverage',
+-      body: 'SORA LIFE ships eligible orders across India, subject to product availability, courier serviceability and applicable delivery restrictions.',
++      body: `${name} ships eligible orders across India, subject to product availability, courier serviceability and applicable delivery restrictions.`,
+     },
+     {
+       heading: 'Dispatch time',
+@@ -57,7 +57,7 @@ function documents(name) {
+ }
+ 
+ export default function Legal({ doc }) {
+-  const name = branding?.siteName || 'SORA LIFE';
++  const name = branding?.siteName || 'SORA LIFESTYLE';
+   const info = companyInfo();
+   const spec = documents(name)[doc];
+   if (!spec) return null;
+diff --git a/src/pages/Passport.jsx b/src/pages/Passport.jsx
+index f3f68fb..96d0158 100644
+--- a/src/pages/Passport.jsx
++++ b/src/pages/Passport.jsx
+@@ -104,11 +104,11 @@ export default function Passport() {
+     if (authLoading) {
+       return (
+         <div className="psp">
+-          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} member={{ name: 'SORA LIFE', tier: 'Loading…', tierIcon: 'checkCircle' }} />
++          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} member={{ name: 'SORA LIFESTYLE', tier: 'Loading…', tierIcon: 'checkCircle' }} />
+           {sidebarOpen && <div className="psp__side-scrim open" onClick={() => setSidebarOpen(false)} />}
+           <div className="psp__topbar">
+             <button className="iconbtn" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
+-            <strong>SORA LIFE</strong>
++            <strong>SORA LIFESTYLE</strong>
+           </div>
+           <main className="psp__main"><div className="psp__inner"><p className="muted">Loading…</p></div></main>
+         </div>
+@@ -125,7 +125,7 @@ export default function Passport() {
+           {sidebarOpen && <div className="psp__side-scrim open" onClick={() => setSidebarOpen(false)} />}
+           <div className="psp__topbar">
+             <button className="iconbtn" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
+-            <strong>SORA LIFE</strong>
++            <strong>SORA LIFESTYLE</strong>
+           </div>
+           <main className="psp__main">
+             <div className="psp__inner" style={{ maxWidth: 480 }}>
+@@ -157,7 +157,7 @@ export default function Passport() {
+         {sidebarOpen && <div className="psp__side-scrim open" onClick={() => setSidebarOpen(false)} />}
+         <div className="psp__topbar">
+           <button className="iconbtn" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
+-          <strong>SORA LIFE</strong>
++          <strong>SORA LIFESTYLE</strong>
+         </div>
+         <LookupGate
+           passportId={passportId}
+@@ -181,7 +181,7 @@ export default function Passport() {
+ 
+       <div className="psp__topbar">
+         <button className="iconbtn" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
+-        <strong>SORA LIFE</strong>
++        <strong>SORA LIFESTYLE</strong>
+       </div>
+ 
+       <main className="psp__main">
+@@ -195,7 +195,7 @@ export default function Passport() {
+             <span className="psp__head-rule" aria-hidden="true" />
+ 
+             {/* Official SORA LIFE brand lockup (real asset), foil-lit. */}
+-            <div className="psp__brandlock" role="img" aria-label="SORA LIFE — Health and Wellness">
++            <div className="psp__brandlock" role="img" aria-label="SORA LIFESTYLE — Health and Wellness">
+               <img src="/assets/sora-life-logo.png" alt="" />
+             </div>
+ 
+@@ -305,7 +305,7 @@ function Sidebar({ open, onClose, member }) {
+   return (
+     <aside className={`psp__side ${open ? 'open' : ''}`} aria-label="Primary">
+       <div className="psp__side-brand">
+-        <img className="psp__side-logo" src="/assets/sora-life-logo.png" alt="SORA LIFE — Health and Wellness" />
++        <img className="psp__side-logo" src="/assets/sora-life-logo.png" alt="SORA LIFESTYLE — Health and Wellness" />
+       </div>
+ 
+       <div className="psp__profile">
+diff --git a/src/pages/Shop.jsx b/src/pages/Shop.jsx
+index a5d62a8..401d819 100644
+--- a/src/pages/Shop.jsx
++++ b/src/pages/Shop.jsx
+@@ -75,7 +75,7 @@ export default function Shop() {
+           </nav>
+           <h1 className="v2-shop__title">All products</h1>
+           <p className="v2-shop__lede">
+-            Browse wellness, nutrition, hair, skin, beauty and everyday-care products available through Sora Life.
++            Browse wellness, nutrition, hair, skin, beauty and everyday-care products available through Sora Lifestyle.
+           </p>
+         </div>
+ 
+diff --git a/src/pages/account/CreatorOnboarding.jsx b/src/pages/account/CreatorOnboarding.jsx
+index 3bee40a..58eb54f 100644
+--- a/src/pages/account/CreatorOnboarding.jsx
++++ b/src/pages/account/CreatorOnboarding.jsx
+@@ -111,7 +111,7 @@ export default function CreatorOnboarding() {
+     return (
+       <div className="crob">
+         <div className="acct__panelhead">
+-          <h2>{s === 'active' ? 'Turn your SORA LIFE recommendations into rewards.' : 'SORA LIFE Creator'}</h2>
++          <h2>{s === 'active' ? 'Turn your SORA LIFESTYLE recommendations into rewards.' : 'SORA LIFESTYLE Creator'}</h2>
+           <p className="muted">
+             {s === 'active'
+               ? 'Your creator account is active. Share your link and track the orders you help generate.'
+@@ -134,7 +134,7 @@ export default function CreatorOnboarding() {
+             <Icon name="circleAlert" size={20} />
+             <div>
+               <strong>Your creator account is {s}</strong>
+-              <p>Please contact your SORA LIFE programme manager for details.</p>
++              <p>Please contact your SORA LIFESTYLE programme manager for details.</p>
+             </div>
+           </div>
+         )}
+@@ -144,7 +144,7 @@ export default function CreatorOnboarding() {
+             <div className="crob__status is-active">
+               <Icon name="checkCircle" size={20} />
+               <div>
+-                <strong>You’re an active SORA LIFE creator</strong>
++                <strong>You’re an active SORA LIFESTYLE creator</strong>
+                 <p>Share your link below, or open your full dashboard for campaigns and tracking links.</p>
+               </div>
+             </div>
+@@ -154,7 +154,7 @@ export default function CreatorOnboarding() {
+               <code className="crob__link">{defaultLink}</code>
+               <div className="crob__linkactions">
+                 <CopyButton value={defaultLink} className="btn btn-sm" label="Copy link" />
+-                <ShareButton url={defaultLink} title={`Shop SORA LIFE with ${creator.display_name}`} />
++                <ShareButton url={defaultLink} title={`Shop SORA LIFESTYLE with ${creator.display_name}`} />
+               </div>
+             </div>
+ 
+@@ -191,7 +191,7 @@ export default function CreatorOnboarding() {
+             <Link to="/creator/earnings">Earnings</Link> and <Link to="/creator/payouts">Payouts</Link>.
+           </span>
+         </div>
+-        <p className="crob__note">Your commission rate and status are managed by SORA LIFE.</p>
++        <p className="crob__note">Your commission rate and status are managed by SORA LIFESTYLE.</p>
+       </div>
+     );
+   }
+@@ -200,12 +200,12 @@ export default function CreatorOnboarding() {
+   return (
+     <div className="crob">
+       <div className="acct__panelhead">
+-        <h2>Become a SORA LIFE Creator</h2>
++        <h2>Become a SORA LIFESTYLE Creator</h2>
+         <p className="muted">Turn your audience into rewards. Share products you love with your own tracking link.</p>
+       </div>
+ 
+       <ul className="crob__perks">
+-        <li><Icon name="tag" size={16} /> Your own SORA LIFE creator code &amp; link</li>
++        <li><Icon name="tag" size={16} /> Your own SORA LIFESTYLE creator code &amp; link</li>
+         <li><Icon name="sparkle" size={16} /> Campaigns tailored to how you promote</li>
+         <li><Icon name="shield" size={16} /> Keep your existing account — nothing changes for your orders</li>
+       </ul>
+@@ -256,8 +256,8 @@ export default function CreatorOnboarding() {
+           <input type="checkbox" checked={form.agreed} onChange={(e) => set('agreed', e.target.checked)} />
+           <span>
+             {hasTerms
+-              ? `I have read and agree to the SORA LIFE creator terms (version ${terms.version}), and understand my account remains a normal customer account.`
+-              : 'I agree to the SORA LIFE creator terms and understand my account remains a normal customer account.'}
++              ? `I have read and agree to the SORA LIFESTYLE creator terms (version ${terms.version}), and understand my account remains a normal customer account.`
++              : 'I agree to the SORA LIFESTYLE creator terms and understand my account remains a normal customer account.'}
+           </span>
+         </label>
+ 
+diff --git a/src/styles/fashion-departments.css b/src/styles/fashion-departments.css
+index 3bc64b6..baf7a7f 100644
+--- a/src/styles/fashion-departments.css
++++ b/src/styles/fashion-departments.css
+@@ -309,7 +309,8 @@
+   .sw-header__menu { display: grid; flex-shrink: 0; width: 30px; }
+   .sw-header .fs-logo { gap: 4px; }
+   .sw-header .fs-logo > svg { display: none; }
+-  .sw-header .fs-logo__txt strong { font-size: 21px; letter-spacing: .02em; }
++  /* Scales with the screen below ~380px so the site name clears the icons. */
++  .sw-header .fs-logo__txt strong { font-size: clamp(13px, calc((100vw - 206px) / 8.3), 21px); letter-spacing: .02em; }
+   .sw-header .fs-logo__txt em { font-size: 6.5px; letter-spacing: .09em; }
+   .sw-header__nav { display: none; }
+   .sw-header__actions { margin-left: auto; gap: 0; }
+@@ -496,7 +497,8 @@
+   .wm-header__nav { display: none; }
+   .wm-header .fs-logo { justify-self: start; gap: 6px; }
+   .wm-header .fs-logo > svg { display: none; }
+-  .wm-header .fs-logo__txt strong { font-size: 21px; letter-spacing: .06em; }
++  /* Scales with the screen below ~390px so the site name clears the icons. */
++  .wm-header .fs-logo__txt strong { font-size: clamp(12px, calc((100vw - 216px) / 8.3), 21px); letter-spacing: .02em; }
+   .wm-header .fs-logo__txt em { font-size: 6.5px; letter-spacing: .14em; }
+   .wm-header__actions { gap: 0; }
+   .wm-header__actions a { width: 34px; }
+@@ -691,7 +693,8 @@
+   .jw-header__nav { display: none; }
+   .jw-header .fs-logo { justify-self: start; gap: 6px; }
+   .jw-header .fs-logo > svg { display: none; }
+-  .jw-header .fs-logo__txt strong { font-size: 20px; letter-spacing: .06em; }
++  /* Scales with the screen below ~380px so the site name clears the icons. */
++  .jw-header .fs-logo__txt strong { font-size: clamp(12px, calc((100vw - 216px) / 8.3), 20px); letter-spacing: .02em; }
+   .jw-header .fs-logo__txt em { font-size: 6.5px; letter-spacing: .14em; }
+   .jw-header__actions { gap: 0; }
+   .jw-header__actions a { width: 34px; }
+diff --git a/src/styles/fashion.css b/src/styles/fashion.css
+index e56442b..bd64636 100644
+--- a/src/styles/fashion.css
++++ b/src/styles/fashion.css
+@@ -319,7 +319,10 @@
+   .fs-main { padding: 0 10px 40px; }
+   .fs-hdr__row { padding: 8px 10px 3px; gap: 7px; }
+   .fs-logo { gap: 6px; }
+-  .fs-logo__txt strong { font-size: 20px; }
++  /* The site name has to fit between the menu and the icons: the sparrow steps aside, as in the
++     department headers, and below ~360px the name scales with the screen (full size from 360 up). */
++  .fs-logo > svg { display: none; }
++  .fs-logo__txt strong { font-size: clamp(14px, calc((100vw - 184px) / 8.8), 20px); letter-spacing: .06em; }
+   .fs-logo__txt em { margin-top: 3px; font-size: 7.5px; letter-spacing: .26em; }
+   .fs-hdr__acts { gap: 0; }
+   .fs-hdr__act { padding: 6px; }
+diff --git a/src/styles/passport.css b/src/styles/passport.css
+index b29de34..3c2c13e 100644
+--- a/src/styles/passport.css
++++ b/src/styles/passport.css
+@@ -919,9 +919,10 @@
+   text-align: center; color: var(--honey-300); padding: 0 14px; font-weight: 700;
+ }
+ .psp__hero-verify::before {
+-  content: "SORA LIFE";
++  content: "SORA LIFESTYLE";
+   position: absolute; top: 15px; left: 0; right: 0;
+-  font-size: 6px; letter-spacing: 0.18em; text-align: center;
++  /* 0.08em, not 0.18em: the longer name still sits inside the seal's curve. */
++  font-size: 6px; letter-spacing: 0.08em; text-align: center;
+   color: var(--honey-300); font-weight: 700;
+ }
+ .psp__hero-verify svg { margin-top: 2px; }
+@@ -1043,7 +1044,7 @@
+   .psp__summary { grid-template-columns: 1fr; }
+   .psp__fields { grid-template-columns: 1fr; gap: var(--sp-4); }
+   .psp__hero-verify { width: 66px; height: 66px; right: 14px; bottom: 14px; }
+-  .psp__hero-verify::before { top: 10px; font-size: 5px; }
++  .psp__hero-verify::before { top: 10px; font-size: 4.6px; }
+   .psp__hero-verify::after { bottom: 10px; font-size: 4.6px; }
+   .psp__tabs { gap: var(--sp-4); }
+   .psp__head-right { flex-wrap: wrap; gap: var(--sp-3); }

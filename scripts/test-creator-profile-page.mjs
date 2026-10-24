@@ -87,7 +87,7 @@ await test('window, join date, email and code come from the creator record', () 
   assert.match(html, /<div class="cp-term__fig serif">30 days<\/div>/);
   assert.match(text(html), /attributed to you for 30 days after someone clicks your link/);
   assert.match(html, /<div class="cp-term__fig serif">12 Sept 2026<\/div>/, 'joined_at is the join date');
-  assert.match(text(html), /part of SORA LIFE since 12 Sept 2026/);
+  assert.match(text(html), /part of SORA LIFESTYLE since 12 Sept 2026/);
   assert.match(html, /<p class="cp-id__email">vikas@example\.com<\/p>/);
   assert.match(html, /<code class="cp-id__code">VIKAS<\/code>/);
   assert.match(html, /data-copy="VIKAS"/, 'the copy button copies the code as stored');
@@ -150,8 +150,8 @@ console.log('\n— Nothing to edit, terms only when published —');
 await test('the page is read-only and says who sets the terms', () => {
   const html = render({ creator: vikas, standing: rise });
   assert.doesNotMatch(html, /<input|<textarea|<select/);
-  assert.match(text(html), /Set by SORA LIFE — not editable here\./);
-  assert.match(text(html), /Need help\? Your commission rate and status are managed by SORA LIFE\./);
+  assert.match(text(html), /Set by SORA LIFESTYLE — not editable here\./);
+  assert.match(text(html), /Need help\? Your commission rate and status are managed by SORA LIFESTYLE\./);
   assert.match(html, /<a href="\/contact" class="cp-btn is-ghost">/);
   assert.doesNotMatch(source, /Math\.random|mockData|sampleData/);
 });

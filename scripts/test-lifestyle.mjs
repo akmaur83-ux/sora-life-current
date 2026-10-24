@@ -25,7 +25,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule, buildLifestyleApp, loadLifestyleData, INITIAL, HOME_CATEGORIES, HOME_PRODUCTS, FASHION_CATEGORIES, FASHION_PRODUCTS } from './lifestyle-ssr.mjs';
 import { REPO, atCommit } from './baseline-export.mjs';
-import { CART_CHANGE_EDITS, ORDER_HOLDS_FILES, ORDER_CONFIRMATION_FILES, ADMIN_SAVES_FILES, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES, HOMELIVING_CART_FILES, sansCartChanges, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, HOME_STOREFRONT_FILES, JEWELLERY_FILES, CATALOGUE_DECLARATION_MIGRATION, PRODUCT_INFORMATION_FILES, PRODUCT_INFORMATION_EDITS, retiredControl, storefrontContentChange, STOREFRONT_CONTENT_MIGRATION } from './storefront-settings-pin.mjs';
+import { SITE_NAME_EDITS, CART_CHANGE_EDITS, ORDER_HOLDS_FILES, ORDER_CONFIRMATION_FILES, ADMIN_SAVES_FILES, DEPLOY_CONFIG_FILES, FASHION_DEPARTMENT_FILES, HOMELIVING_CART_FILES, sansCartChanges, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, HOME_STOREFRONT_FILES, JEWELLERY_FILES, CATALOGUE_DECLARATION_MIGRATION, PRODUCT_INFORMATION_FILES, PRODUCT_INFORMATION_EDITS, retiredControl, storefrontContentChange, STOREFRONT_CONTENT_MIGRATION } from './storefront-settings-pin.mjs';
 
 // The tree as it stood before this work: the homepage store doorway release.
 const BASELINE_SHA = '9ca51d5';
@@ -314,7 +314,12 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page and 
   // FashionLayout now also consumes the approved admin storefront setting;
   // test-storefront-customization.mjs pins that wiring and its defaults.
   for (const rel of ['src/components/Header.jsx', 'src/grocery/GroceryLayout.jsx']) {
-    const diff = execFileSync('git', ['diff', BASELINE_SHA, '--', rel], { cwd: REPO, encoding: 'utf8' }).split('\n').filter((l) => /^[-+]/.test(l) && !/^(\+\+\+|---)/.test(l));
+    const lines = execFileSync('git', ['diff', BASELINE_SHA, '--', rel], { cwd: REPO, encoding: 'utf8' }).split('\n').filter((l) => /^[-+]/.test(l) && !/^(\+\+\+|---)/.test(l));
+    // The site name (test-site-name.mjs) rewrote the drawer's About line: a removed line and the same line with
+    // the new name added are that change's, not this one's.
+    const renamed = (l) => `+${l.slice(1).replace(/SORA LIFE(?!STYLE)/g, 'SORA LIFESTYLE')}`;
+    const own = new Set(lines.filter((l) => l[0] === '-' && renamed(l) !== `+${l.slice(1)}` && lines.includes(renamed(l))).flatMap((l) => [l, renamed(l)]));
+    const diff = lines.filter((l) => !own.has(l));
     assert.ok(diff.length >= 2 && diff.length <= 4, `${rel}: one bar link and one drawer link (${diff.length} lines)`);
     for (const l of diff) { assert.match(l, /^\+/, `${rel}: additions only — ${l}`); assert.match(l, /\/lifestyle"/, `${rel}: about /lifestyle — ${l}`); }
   }
@@ -342,7 +347,11 @@ await test('App.jsx mounts /lifestyle as a sibling shell with an index page and 
   // .vercelignore is deploy configuration (f927077), not storefront code.
   // An approved cart change may edit a shared cart file only because the byte checks below undo it (sansCartChanges).
   // The Home & Living cart's own new files (test-homeliving-cart.mjs).
-  const bad = [...changed].filter((f) => !allowed.test(f) && !CATALOGUE_DECLARATION_MIGRATION.test(f) && !STOREFRONT_CONTENT_MIGRATION.test(f) && !PRODUCT_INFORMATION_FILES.test(f) && !PRODUCT_INFORMATION_EDITS.test(f) && !retiredControl(f) && !storefrontContentChange(f) && !catalogueAdmin.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !ORDER_HOLDS_FILES.test(f) && !ORDER_CONFIRMATION_FILES.test(f) && !ADMIN_SAVES_FILES.test(f) && !HOMELIVING_CART_FILES.test(f) && !SCROLL_MANAGER_FILES.test(f) && !SCROLL_MANAGER_EDITS.test(f) && !FASHION_PDP_THUMBS_EDITS.test(f) && !FASHION_RATING_ROW_EDITS.test(f) && !HOME_STOREFRONT_FILES.test(f) && !JEWELLERY_FILES.test(f));
+  const unaccounted = [...changed].filter((f) => !allowed.test(f) && !CATALOGUE_DECLARATION_MIGRATION.test(f) && !STOREFRONT_CONTENT_MIGRATION.test(f) && !PRODUCT_INFORMATION_FILES.test(f) && !PRODUCT_INFORMATION_EDITS.test(f) && !retiredControl(f) && !storefrontContentChange(f) && !catalogueAdmin.test(f) && !FASHION_DEPARTMENT_FILES.test(f) && !DEPLOY_CONFIG_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !ORDER_HOLDS_FILES.test(f) && !ORDER_CONFIRMATION_FILES.test(f) && !ADMIN_SAVES_FILES.test(f) && !HOMELIVING_CART_FILES.test(f) && !SCROLL_MANAGER_FILES.test(f) && !SCROLL_MANAGER_EDITS.test(f) && !FASHION_PDP_THUMBS_EDITS.test(f) && !FASHION_RATING_ROW_EDITS.test(f) && !HOME_STOREFRONT_FILES.test(f) && !JEWELLERY_FILES.test(f));
+  // The site name (test-site-name.mjs) changed the text of shared files: each is let through only because,
+  // with that change's recorded undo applied, it is the baseline byte for byte.
+  for (const rel of unaccounted.filter((f) => SITE_NAME_EDITS.test(f))) assert.equal(sansStorefrontChanges(rel, read(rel)).replace(/\r\n/g, '\n'), atCommit(BASELINE_SHA, rel).replace(/\r\n/g, '\n'), `${rel}: only the site name changed`);
+  const bad = unaccounted.filter((f) => !SITE_NAME_EDITS.test(f));
   assert.deepEqual(bad, [], `unexpected files changed: ${bad.join(', ')}`);
   // Scroll on navigation (test-scroll-on-navigate.mjs) replaced the wellness shell's own reset with one manager mounted in
   // main.jsx; its new files are its own, and these two are byte-identical to the baseline once its recorded undo is applied.

@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, buildGroceryApp, loadModule, loadGroceryData, CATEGORIES, PRODUCTS } from './grocery-ssr.mjs';
-import { CART_CHANGE_EDITS, ORDER_HOLDS_FILES, ORDER_CONFIRMATION_FILES, ADMIN_SAVES_FILES, FASHION_DEPARTMENT_FILES, sansHomeLivingCart, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, HOME_STOREFRONT_FILES, JEWELLERY_FILES, CATALOGUE_DECLARATION_MIGRATION, PRODUCT_INFORMATION_FILES, PRODUCT_INFORMATION_EDITS, retiredControl, storefrontContentChange, STOREFRONT_CONTENT_MIGRATION } from './storefront-settings-pin.mjs';
+import { SITE_NAME_EDITS, CART_CHANGE_EDITS, ORDER_HOLDS_FILES, ORDER_CONFIRMATION_FILES, ADMIN_SAVES_FILES, FASHION_DEPARTMENT_FILES, sansHomeLivingCart, sansStorefrontChanges, SCROLL_MANAGER_EDITS, SCROLL_MANAGER_FILES, FASHION_PDP_THUMBS_EDITS, FASHION_RATING_ROW_EDITS, HOME_STOREFRONT_FILES, JEWELLERY_FILES, CATALOGUE_DECLARATION_MIGRATION, PRODUCT_INFORMATION_FILES, PRODUCT_INFORMATION_EDITS, retiredControl, storefrontContentChange, STOREFRONT_CONTENT_MIGRATION } from './storefront-settings-pin.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // The tip before the grocery store existed (the Phase 2 bundle commit). Pinned,
@@ -506,7 +506,11 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
   const untouchable = /^(src\/fashion\/(?!FashionLayout\.jsx$|FashionHome\.jsx$)|src\/pages\/(?!Home\.jsx$|Legal\.jsx$|Checkout\.jsx$)|src\/components\/(?!Header\.jsx$|FashionBanner\.jsx$|Hero\.jsx$|pdp\/ProductDeliveryInfo\.jsx$)|src\/lib\/(cartLine\.js|cartQuote\.js|payments\.js|coupon[A-Za-z]*\.js|customerAuth\.jsx|adminAuth\.jsx|wishlist[A-Za-z]*\.js)$|api\/(?!_lib\/pricing\.js$|_lib\/couponQuote\.js$))/;
   // The fashion departments added two pages and the doorway chooser (test-fashion-departments.mjs owns them).
   // An approved cart change may touch a payment file only because the plumbing test byte-checks it through the undo.
-  const bad = [...changed].filter((f) => untouchable.test(f) && !PRODUCT_INFORMATION_FILES.test(f) && !PRODUCT_INFORMATION_EDITS.test(f) && !retiredControl(f) && !storefrontContentChange(f) && !FASHION_DEPARTMENT_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !ORDER_HOLDS_FILES.test(f) && !ORDER_CONFIRMATION_FILES.test(f) && !ADMIN_SAVES_FILES.test(f) && !SCROLL_MANAGER_FILES.test(f) && !SCROLL_MANAGER_EDITS.test(f) && !FASHION_PDP_THUMBS_EDITS.test(f) && !FASHION_RATING_ROW_EDITS.test(f) && !HOME_STOREFRONT_FILES.test(f) && !JEWELLERY_FILES.test(f));
+  const unaccounted = [...changed].filter((f) => untouchable.test(f) && !PRODUCT_INFORMATION_FILES.test(f) && !PRODUCT_INFORMATION_EDITS.test(f) && !retiredControl(f) && !storefrontContentChange(f) && !FASHION_DEPARTMENT_FILES.test(f) && !CART_CHANGE_EDITS.test(f) && !ORDER_HOLDS_FILES.test(f) && !ORDER_CONFIRMATION_FILES.test(f) && !ADMIN_SAVES_FILES.test(f) && !SCROLL_MANAGER_FILES.test(f) && !SCROLL_MANAGER_EDITS.test(f) && !FASHION_PDP_THUMBS_EDITS.test(f) && !FASHION_RATING_ROW_EDITS.test(f) && !HOME_STOREFRONT_FILES.test(f) && !JEWELLERY_FILES.test(f));
+  // The site name (test-site-name.mjs) changed the text of shared files: each is let through only because,
+  // with that change's recorded undo applied, it is the baseline byte for byte.
+  for (const rel of unaccounted.filter((f) => SITE_NAME_EDITS.test(f))) assert.equal(sansStorefrontChanges(rel, read(rel)).replace(/\r\n/g, '\n'), atBaseline(rel), `${rel}: only the site name changed`);
+  const bad = unaccounted.filter((f) => !SITE_NAME_EDITS.test(f));
   assert.deepEqual(bad, [], `untouchable files changed: ${bad.join(', ')}`);
   // Scroll on navigation (test-scroll-on-navigate.mjs) replaced the wellness shell's own reset with one manager mounted in
   // main.jsx; its new files are its own, and these two are byte-identical to the baseline once its recorded undo is applied.
@@ -518,8 +522,9 @@ await test('nothing under the wellness storefront, /fashion, checkout, pricing, 
   // under src/pages and the whole of api/ is untouched — but for the storefront publish endpoint, a new file
   // (test-storefront-publish.mjs owns it), and the order holds: verify.js and webhook.js, byte-checked above
   // through their recorded undo, the new orderHolds.js (test-order-holds.mjs owns it), and the new
-  // cash-collected admin route (test-order-confirmation.mjs owns it).
-  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', 'api', ':(exclude)api/_lib/pricing.js', ':(exclude)api/_lib/couponQuote.js', ':(exclude)api/_lib/supabaseAdmin.js', ':(exclude)api/razorpay/create-order.js', ':(exclude)api/admin/publish-storefront.js', ':(exclude)api/razorpay/verify.js', ':(exclude)api/razorpay/webhook.js', ':(exclude)api/_lib/orderHolds.js', ':(exclude)api/admin/mark-cod-collected.js', 'src/pages', ':(exclude)src/pages/Home.jsx', ':(exclude)src/pages/Legal.jsx', ':(exclude)src/pages/Checkout.jsx', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
+  // cash-collected admin route (test-order-confirmation.mjs owns it). The site name's files, byte-checked above
+  // through its recorded undo, are left out too.
+  assert.equal(execFileSync('git', ['diff', '--stat', BASELINE_SHA, '--', ...[...changed].filter((f) => SITE_NAME_EDITS.test(f)).map((f) => `:(exclude)${f}`), 'api',':(exclude)api/_lib/pricing.js', ':(exclude)api/_lib/couponQuote.js', ':(exclude)api/_lib/supabaseAdmin.js', ':(exclude)api/razorpay/create-order.js', ':(exclude)api/admin/publish-storefront.js', ':(exclude)api/razorpay/verify.js', ':(exclude)api/razorpay/webhook.js', ':(exclude)api/_lib/orderHolds.js', ':(exclude)api/admin/mark-cod-collected.js', 'src/pages', ':(exclude)src/pages/Home.jsx', ':(exclude)src/pages/Legal.jsx', ':(exclude)src/pages/Checkout.jsx', 'src/components/CategorySpotlight.jsx', 'src/components/ProductCard.jsx'], { cwd: REPO, encoding: 'utf8' }).trim(), '');
 });
 
 await test('no migration beyond 0034, no dependency change since the baseline', () => {

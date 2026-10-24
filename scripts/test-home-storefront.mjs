@@ -25,7 +25,7 @@ import { StaticRouter } from 'react-router-dom/server.mjs';
 import { ROOT, read, has, h, loadModule, loadSource } from './grocery-ssr.mjs';
 import sharp from 'sharp';
 import { atCommit } from './baseline-export.mjs';
-import { sansDeadHomepageCode } from './storefront-settings-pin.mjs';
+import { sansDeadHomepageCode, sansSiteName } from './storefront-settings-pin.mjs';
 
 // The tree before this work: the homepage banner and the fashion category strip.
 const BASELINE_SHA = '2d22a4e';
@@ -322,7 +322,7 @@ await test('the phone, as in the mockup: ONE compact hero block (copy in the lef
 
 // ---- the page ----------------------------------------------------------------
 await test('Home.jsx: the five sections lead the page in the mockup\'s order, then the offers; the old hero and category strip are gone from it; from LifestyleBanner down it is exactly as it was but for the jewellery banner, directly under it', () => {
-  const home = read('src/pages/Home.jsx');
+  const home = sansSiteName('src/pages/Home.jsx', read('src/pages/Home.jsx')); // the site name's heading undone (test-site-name.mjs)
   const order = [...home.matchAll(/<(HomeHero|HomeTrustStrip|HomeTiles|ExploreStores|FestivePromo|HomeOffers|LifestyleBanner|JewelleryBanner)\b/g)].map((m) => m[1]);
   assert.deepEqual(order, ['HomeHero', 'HomeTrustStrip', 'HomeTiles', 'ExploreStores', 'FestivePromo', 'HomeOffers', 'LifestyleBanner', 'JewelleryBanner']);
   assert.doesNotMatch(home, /import Hero from|import HomeCategoryStrip from|<Hero \/>|<HomeCategoryStrip/);

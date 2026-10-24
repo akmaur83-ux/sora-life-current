@@ -278,7 +278,7 @@ await test('shell: forest sidebar with the hummingbird, icon+label nav with a So
   const html = render('dashboard', reference);
   assert.match(html, /<div class="crp crp--studio" data-rank="rise"><aside class="cs-side">/);
   assert.match(html, /class="cs-brand__mark"><svg width="34" height="25.5" viewBox="0 0 44 32"/, 'the mark');
-  assert.match(html, /<strong>SORA LIFE<\/strong><em>Creator Program<\/em>/);
+  assert.match(html, /<strong>SORA LIFESTYLE<\/strong><em>Creator Program<\/em>/);
   assert.equal((html.match(/class="cs-nav__item/g) || []).length, 9);
   assert.match(html, /class="cs-nav__item is-on" aria-current="page"[^>]*><svg[^>]*>[\s\S]*?<span>Dashboard<\/span>/);
   assert.match(html, /<span>Payouts<\/span><em class="cs-nav__soon">Soon<\/em>/);
@@ -294,7 +294,7 @@ await test('greeting and quote: Fraunces name, time-of-day greeting, the quote p
   const html = render('dashboard', reference);
   assert.match(html, /<p class="cd-hello__hi">Good morning,<\/p><h1 class="cd-hello__name serif">Vikas Shamra <span class="cd-hello__spark"/);
   assert.match(text(html), /Create\. Inspire\. Earn\. Build a Healthier India\./);
-  assert.match(html, /<figure class="cd-quote" role="img" aria-label="Small creators make a big difference\. — SORA LIFE">/);
+  assert.match(html, /<figure class="cd-quote" role="img" aria-label="Small creators make a big difference\. — SORA LIFESTYLE">/);
   assert.match(html, /class="cd-mantra__words"><span>Create<\/span><span>Inspire<\/span><span>Earn<\/span>/);
   assert.match(render('dashboard', empty), /<p class="cd-hello__hi">Good afternoon,<\/p>/);
 });
@@ -347,7 +347,7 @@ await test('recent activity comes from what happened; tier progress reads ₹0 o
   const html = render('dashboard', reference);
   assert.match(html, /<strong>New link clicks<\/strong><span>4 clicks on your links in the last day<\/span><\/div><time class="cd-feed__when" [dD]ate[tT]ime="[^"]+">2 hours ago<\/time>/);
   assert.match(text(html), /Account activated Your creator account is now active 1 day ago/);
-  assert.match(text(html), /Welcome to SORA LIFE Start sharing and earn 1 day ago/);
+  assert.match(text(html), /Welcome to SORA LIFESTYLE Start sharing and earn 1 day ago/);
   assert.match(html, /<section class="cd-panel cd-tier" aria-labelledby="cd-tier-h" data-rank="rise">/);
   assert.match(html, /class="cd-medal" data-rank="rise"/);
   assert.match(html, /<h3 class="cd-tier__rank serif">Rise — Level 1<\/h3><p class="cd-tier__rate">Commission Rate 10%<\/p>/);
@@ -358,7 +358,7 @@ await test('recent activity comes from what happened; tier progress reads ₹0 o
   assert.match(html, /class="cd-promo__btn" aria-label="Explore campaigns" href="\/creator\/campaigns"><span class="cd-promo__btn-txt">Explore Campaigns<\/span>/);
   const zero = render('dashboard', empty);
   assert.doesNotMatch(zero, /New link clicks/, 'no click row without clicks');
-  assert.match(text(zero), /Account activated[\s\S]*Welcome to SORA LIFE/, "the account's own dates still make a feed");
+  assert.match(text(zero), /Account activated[\s\S]*Welcome to SORA LIFESTYLE/, "the account's own dates still make a feed");
   assert.match(text(zero), /Campaign figures appear here once activity is recorded/);
   const nobody = render('dashboard', { ...empty, creator: { ...empty.creator, status: 'pending', joined_at: null, created_at: null } });
   assert.match(nobody, /<p class="cd-feed__empty">/);

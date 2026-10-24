@@ -77,6 +77,13 @@ export const ORDER_CONFIRMATION_FILES = /^(api\/admin\/mark-cod-collected\.js|sc
  */
 export const ADMIN_SAVES_FILES = /^(scripts\/test-admin-saves\.mjs|scripts\/pins\/admin-saves\.patch|supabase\/migrations\/(0040_order_admin_events\.sql|rollback\/0040_order_admin_events_down\.sql))$/;
 
+/**
+ * The site name, SORA LIFE -> SORA LIFESTYLE (test-site-name.mjs owns it): the shared files whose text it
+ * changed, undone by sansCartChanges through scripts/pins/site-name.patch. A suite may let one of these through
+ * its changed-file list only by comparing it with the baseline through that undo.
+ */
+export const SITE_NAME_EDITS = /^(api\/razorpay\/verify\.js|index\.html|src\/App\.jsx|src\/admin\/components\/BulkPackshotImport\.jsx|src\/admin\/pages\/Appearance\.jsx|src\/admin\/pages\/Branding\.jsx|src\/admin\/pages\/CreatorDetail\.jsx|src\/admin\/pages\/CreatorTiers\.jsx|src\/admin\/pages\/Dashboard\.jsx|src\/admin\/pages\/LegalPages\.jsx|src\/admin\/pages\/ProductForm\.jsx|src\/admin\/pages\/Promotions\.jsx|src\/admin\/pages\/StoreCatalogue\.jsx|src\/components\/FashionEntryLink\.jsx|src\/components\/Footer\.jsx|src\/components\/Header\.jsx|src\/components\/HomeLeaderboard\.jsx|src\/components\/HomeMarketplace\.jsx|src\/components\/HomeStorefront\.jsx|src\/components\/ProductImage\.jsx|src\/components\/category\/CategorySpotlight\.jsx|src\/components\/creator\/CreatorCampaignsPage\.jsx|src\/components\/creator\/CreatorDashboard\.jsx|src\/components\/creator\/CreatorEarningsPage\.jsx|src\/components\/creator\/CreatorHowItWorks\.jsx|src\/components\/creator\/CreatorLinksPage\.jsx|src\/components\/creator\/CreatorPayouts\.jsx|src\/components\/creator\/CreatorProfilePage\.jsx|src\/components\/creator\/CreatorTier\.jsx|src\/components\/creator\/CreatorTierPage\.jsx|src\/components\/pdp\/ProductTrustList\.jsx|src\/fashion\/FashionJewellery\.jsx|src\/lib\/adminAuth\.jsx|src\/lib\/creatorActivity\.js|src\/lib\/legalPages\.js|src\/lib\/settings\.js|src\/lib\/spotlightImport\.js|src\/pages\/About\.jsx|src\/pages\/Account\.jsx|src\/pages\/AdminLogin\.jsx|src\/pages\/Checkout\.jsx|src\/pages\/CreatorPortal\.jsx|src\/pages\/Home\.jsx|src\/pages\/Invoice\.jsx|src\/pages\/Legal\.jsx|src\/pages\/Passport\.jsx|src\/pages\/Shop\.jsx|src\/pages\/account\/CreatorOnboarding\.jsx|src\/styles\/fashion-departments\.css|src\/styles\/fashion\.css|src\/styles\/passport\.css)$/;
+
 /** The files the Home & Living cart added: its cart line module, and the suite and undo patch that pin it. */
 export const HOMELIVING_CART_FILES = /^(src\/lib\/homelivingCartLine\.js|scripts\/test-homeliving-cart\.mjs|scripts\/pins\/homeliving-cart\.patch)$/;
 
@@ -527,6 +534,16 @@ const UNDO_ADMIN_FAILED_LOADS = undoFromPatch('admin-failed-loads.patch');
 // refused rather than overwriting another (adminApi.js and the three pages). Undone here, newest first.
 const UNDO_ADMIN_REORDER_CATEGORIES = undoFromPatch('admin-reorder-categories.patch');
 
+// The site name (SORA LIFE -> SORA LIFESTYLE): the name in the code's own text, Admin → Branding reaching the
+// storefront (settings.js, App.jsx, the Branding and Legal pages screens) and the passport seal's label. Undone
+// here, newest first.
+const UNDO_SITE_NAME = undoFromPatch('site-name.patch');
+/** The site name's edits undone on their own — for a suite with its own chain of older undos: apply this first. */
+export function sansSiteName(rel, text) {
+  const undo = UNDO_SITE_NAME[rel];
+  return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
+}
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -593,7 +610,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_ADMIN_REORDER_CATEGORIES, UNDO_ADMIN_FAILED_LOADS, UNDO_ADMIN_SAVES, UNDO_ORDER_CONFIRMATION, UNDO_ORDER_HOLDS, UNDO_CHECKOUT_REPLAY, UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_SITE_NAME, UNDO_ADMIN_REORDER_CATEGORIES, UNDO_ADMIN_FAILED_LOADS, UNDO_ADMIN_SAVES, UNDO_ORDER_CONFIRMATION, UNDO_ORDER_HOLDS, UNDO_CHECKOUT_REPLAY, UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
@@ -623,11 +640,11 @@ export function sansOrderNumber(rel, text) {
 }
 
 /**
- * The checkout-replay, order-holds, order-confirmation and admin-saves changes undone on their own, newest
- * first — for that same suite, whose pin predates them too: undo these first, then sansOrderNumber.
+ * The checkout-replay, order-holds, order-confirmation, admin-saves and site-name changes undone on their own,
+ * newest first — for that same suite, whose pin predates them too: undo these first, then sansOrderNumber.
  */
 export function sansCheckoutReplay(rel, text) {
-  const undos = [UNDO_ADMIN_SAVES[rel], UNDO_ORDER_CONFIRMATION[rel], UNDO_ORDER_HOLDS[rel], UNDO_CHECKOUT_REPLAY[rel]].filter(Boolean);
+  const undos = [UNDO_SITE_NAME[rel], UNDO_ADMIN_SAVES[rel], UNDO_ORDER_CONFIRMATION[rel], UNDO_ORDER_HOLDS[rel], UNDO_CHECKOUT_REPLAY[rel]].filter(Boolean);
   return undos.length ? undos.reduce((t, undo) => undo(t, rel), text.replace(/\r\n/g, '\n')) : text;
 }
 
