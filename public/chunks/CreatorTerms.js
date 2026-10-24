@@ -10,6 +10,9 @@ function CreatorTerms() {
   const [loadedVersion, setLoadedVersion] = reactExports.useState(1);
   const [bumpVersion, setBumpVersion] = reactExports.useState(false);
   const [loading, setLoading] = reactExports.useState(true);
+  // Set when the saved terms could not be read. The form then stays hidden:
+  // saving it would publish an empty document as version 1 over the live one.
+  const [loadErr, setLoadErr] = reactExports.useState('');
   const [saving, setSaving] = reactExports.useState(false);
   const [msg, setMsg] = reactExports.useState('');
   const [err, setErr] = reactExports.useState('');
@@ -21,10 +24,11 @@ function CreatorTerms() {
         ...v
       });
       setLoadedVersion(Number(v.version) || 1);
-    }).catch(e => setErr(e.message || String(e))).finally(() => setLoading(false));
+    }).catch(e => setLoadErr(e.message || String(e))).finally(() => setLoading(false));
   }, []);
   async function save(e) {
     e.preventDefault();
+    if (loadErr) return;
     setSaving(true);
     setErr('');
     setMsg('');
@@ -67,10 +71,14 @@ function CreatorTerms() {
     }), msg && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm-banner ok",
       children: msg
-    }), !published && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    }), loadErr && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "adm-banner err",
+      role: "alert",
+      children: ["The saved creator terms could not be loaded (", loadErr, "). They can't be edited until they load, so an empty document can't be published over the live terms. Reload the page to try again."]
+    }), !loadErr && !published && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm-banner",
       children: "No terms published yet. While this is empty, creators see no terms section and the signup checkbox is not shown."
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+    }), !loadErr && /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
       onSubmit: save,
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "surface",

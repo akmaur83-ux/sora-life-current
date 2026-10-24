@@ -2,40 +2,55 @@ import { r as reactExports, j as jsxRuntimeExports, b as Link, i as adminListPro
 
 function Dashboard() {
   const [loading, setLoading] = reactExports.useState(true);
-  const [products, setProducts] = reactExports.useState([]);
-  const [categories, setCategories] = reactExports.useState([]);
+  // null = not known. A failed read is not an empty catalogue, so it must
+  // never look like one: the import offer below needs a list that loaded.
+  const [products, setProducts] = reactExports.useState(null);
+  const [categories, setCategories] = reactExports.useState(null);
+  const [loadErr, setLoadErr] = reactExports.useState('');
   const [importing, setImporting] = reactExports.useState(false);
-  const [importMsg, setImportMsg] = reactExports.useState('');
+  const [importMsg, setImportMsg] = reactExports.useState(null); // { ok, text }
   const [progress, setProgress] = reactExports.useState(null);
   async function load() {
     setLoading(true);
-    const [p, c] = await Promise.all([adminListProducts().catch(() => []), adminListCategories().catch(() => [])]);
-    setProducts(p);
-    setCategories(c);
+    const [p, c] = await Promise.allSettled([adminListProducts(), adminListCategories()]);
+    setProducts(p.status === 'fulfilled' ? p.value : null);
+    setCategories(c.status === 'fulfilled' ? c.value : null);
+    setLoadErr([p, c].filter(r => r.status === 'rejected').map(r => r.reason?.message || String(r.reason)).join(' · '));
     setLoading(false);
   }
   reactExports.useEffect(() => {
     load();
   }, []);
   async function runImport() {
+    if (!window.confirm('Import the 149 bundled Biosash products into the live catalogue?\n\n' + 'They are added as active products with no prices set; price them on the Pricing page. ' + 'Default categories are added where missing. Nothing already in the catalogue is changed.')) return;
     setImporting(true);
-    setImportMsg('');
+    setImportMsg(null);
     try {
       await adminSeedDefaultCategories();
-      const n = await adminImportBiosashCatalog((done, total) => setProgress({
+      const {
+        added,
+        total
+      } = await adminImportBiosashCatalog((done, total) => setProgress({
         done,
         total
       }));
-      setImportMsg(`Imported/updated ${n} real Biosash products, seeded default categories.`);
+      setImportMsg({
+        ok: true,
+        text: `Added ${added} of the ${total} bundled Biosash products` + (added < total ? `; the other ${total - added} were already in the catalogue and were left as they are` : '') + '. Default categories seeded where missing.'
+      });
       await load();
     } catch (e) {
-      setImportMsg('Import failed: ' + (e.message || String(e)));
+      setImportMsg({
+        ok: false,
+        text: 'Import failed: ' + (e.message || String(e))
+      });
     } finally {
       setImporting(false);
       setProgress(null);
     }
   }
-  const active = products.filter(p => p.isActive).length;
+  const active = products ? products.filter(p => p.isActive).length : 0;
+  const count = (list, n) => loading || !list ? '—' : n;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm__head",
@@ -46,7 +61,14 @@ function Dashboard() {
           children: "Overview of your Sora Life storefront data."
         })]
       })
-    }), !loading && products.length === 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    }), loadErr && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "adm-banner err",
+      role: "alert",
+      children: ["The catalogue could not be loaded (", loadErr, "). Figures shown as \u2014 are unknown until it loads. Reload the page to try again."]
+    }), importMsg && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: `adm-banner ${importMsg.ok ? 'ok' : 'err'}`,
+      children: importMsg.text
+    }), !loading && products && products.length === 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "adm-banner info",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
         children: "The live product catalog is empty."
@@ -60,32 +82,27 @@ function Dashboard() {
           disabled: importing,
           children: importing ? progress ? `Importing… ${progress.done}/${progress.total}` : 'Importing…' : 'Import 149 Biosash products'
         })
-      }), importMsg && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        style: {
-          marginTop: 10
-        },
-        children: importMsg
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "adm__stats",
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "adm__stat",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-          children: loading ? '—' : products.length
+          children: count(products, products?.length)
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           children: "Products"
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "adm__stat",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-          children: loading ? '—' : active
+          children: count(products, active)
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           children: "Active products"
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "adm__stat",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-          children: loading ? '—' : categories.length
+          children: count(categories, categories?.length)
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           children: "Categories"
         })]

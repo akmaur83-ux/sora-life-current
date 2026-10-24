@@ -10,6 +10,9 @@ function Branding() {
     favicon_url: ''
   });
   const [loading, setLoading] = reactExports.useState(true);
+  // Set when the saved branding could not be read. The form then stays hidden:
+  // its defaults are not the live branding, and saving them would replace it.
+  const [loadErr, setLoadErr] = reactExports.useState('');
   const [saving, setSaving] = reactExports.useState(false);
   const [uploading, setUploading] = reactExports.useState('');
   const [msg, setMsg] = reactExports.useState('');
@@ -20,7 +23,7 @@ function Branding() {
         ...f,
         ...v
       }));
-    }).catch(e => setErr(e.message || String(e))).finally(() => setLoading(false));
+    }).catch(e => setLoadErr(e.message || String(e))).finally(() => setLoading(false));
   }, []);
   const set = (k, v) => setForm(f => ({
     ...f,
@@ -39,6 +42,7 @@ function Branding() {
   }
   async function save(e) {
     e.preventDefault();
+    if (loadErr) return;
     setSaving(true);
     setErr('');
     setMsg('');
@@ -71,7 +75,11 @@ function Branding() {
     }), msg && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm-banner ok",
       children: msg
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+    }), loadErr && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "adm-banner err",
+      role: "alert",
+      children: ["The saved branding could not be loaded (", loadErr, "). It can't be edited until it loads, so the default logo, name and colors can't be saved over the live ones. Reload the page to try again."]
+    }), !loadErr && /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
       onSubmit: save,
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "surface",

@@ -21,6 +21,9 @@ function Settings() {
     policies: {}
   });
   const [loading, setLoading] = reactExports.useState(true);
+  // Set when the saved details could not be read. The form then stays hidden:
+  // its blanks are not the live details, and saving them would replace those.
+  const [loadErr, setLoadErr] = reactExports.useState('');
   const [saving, setSaving] = reactExports.useState(false);
   const [msg, setMsg] = reactExports.useState('');
   const [err, setErr] = reactExports.useState('');
@@ -35,10 +38,11 @@ function Settings() {
         social: v.social || {},
         policies: v.policies || {}
       }));
-    }).catch(e => setErr(e.message || String(e))).finally(() => setLoading(false));
+    }).catch(e => setLoadErr(e.message || String(e))).finally(() => setLoading(false));
   }, []);
   async function save(e) {
     e.preventDefault();
+    if (loadErr) return;
     setSaving(true);
     setErr('');
     setMsg('');
@@ -150,7 +154,11 @@ function Settings() {
     }), msg && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm-banner ok",
       children: msg
-    }), !loading && /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+    }), loadErr && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "adm-banner err",
+      role: "alert",
+      children: ["The saved business information could not be loaded (", loadErr, "). It can't be edited until it loads, so blank fields can't be saved over the live details. Reload the page to try again."]
+    }), !loading && !loadErr && /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
       onSubmit: save,
       className: "surface",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
