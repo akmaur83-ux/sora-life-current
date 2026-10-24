@@ -42492,10 +42492,14 @@ async function adminSetTheme(theme) {
 // ADMIN: products
 // ---------------------------------------------------------------
 async function adminListProducts() {
+  // id breaks ties, so products sharing a position always list in the same
+  // order and Move up/down acts on the neighbour the screen shows.
   const {
     data,
     error
   } = await supabase.from('products').select('*').order('sort_order', {
+    ascending: true
+  }).order('id', {
     ascending: true
   });
   if (error) throw error;
@@ -42634,15 +42638,52 @@ async function adminDeleteProduct(dbId) {
   } = await supabase.from('products').delete().eq('id', dbId);
   if (error) throw error;
 }
-async function adminReorderProducts(dbIdsInOrder) {
-  await Promise.all(dbIdsInOrder.map((dbId, i) =>
+
+/**
+ * Save a new product order. `productsInOrder` is the whole list as it should
+ * now stand, each product carrying the sortOrder it was loaded with. A
+ * product's position is its index, and only products whose stored position
+ * differs are written, so moving one past its neighbour writes those two
+ * rather than every product. (A list whose stored positions tie — every
+ * product the editor used to save was given 0 — is numbered once, by the
+ * first move.)
+ *
+ * Every write is checked: one that errors, or matches no row (the product was
+ * deleted, or the session no longer has admin rights), makes this throw,
+ * so a failed move is never shown as saved. Returns the number written.
+ */
+async function adminReorderProducts(productsInOrder) {
   // updated_at moves here too. A write that does not stamp it is a write
   // the staleness check cannot see, which would let a form saved after a
   // reorder silently win.
-  supabase.from('products').update({
-    sort_order: i,
-    updated_at: new Date().toISOString()
-  }).eq('id', dbId)));
+  const now = new Date().toISOString();
+  return writePositions$1(productsInOrder.map((p, i) => ({
+    id: p.dbId,
+    from: p.sortOrder,
+    to: i
+  })), 'product', m => supabase.from('products').update({
+    sort_order: m.to,
+    updated_at: now
+  }).eq('id', m.id).select('id'));
+}
+
+/** Write each changed position; throw, after all have been tried, if any did not save. */
+async function writePositions$1(positions, what, write) {
+  const moves = positions.filter(m => Number(m.from) !== m.to);
+  const results = await Promise.allSettled(moves.map(async m => {
+    const {
+      data,
+      error
+    } = await write(m);
+    if (error) throw error;
+    if (!data || !data.length) throw new Error(`the ${what} was not found, or this session can no longer edit it`);
+  }));
+  const failed = results.filter(r => r.status === 'rejected');
+  if (failed.length) {
+    const reason = failed[0].reason?.message || String(failed[0].reason);
+    throw new Error(`The new order was not saved: ${failed.length} of ${moves.length} ${what} position${moves.length === 1 ? '' : 's'} could not be written (${reason}).`);
+  }
+  return moves.length;
 }
 function slugify(s) {
   return String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -42864,9 +42905,22 @@ async function adminListCategories() {
   if (error) throw error;
   return data || [];
 }
-async function adminUpsertCategory(category) {
+
+/**
+ * Save a category from the admin form.
+ *
+ * One that exists (it has an id) is updated by that id, and its slug is left
+ * as it is: products name their category by slug and the category page's
+ * address is built from it, so a changed slug would leave both pointing at
+ * nothing. (Saving by slug, as this used to, turned a slug edit into a second
+ * category beside the first.)
+ *
+ * A new one is inserted, and refused when its slug — typed, or made from the
+ * name — is already taken. (An upsert on slug overwrote that category instead,
+ * blanking its tagline and image.)
+ */
+async function adminSaveCategory(category) {
   const row = {
-    slug: category.slug || slugify(category.name),
     name: category.name,
     tagline: category.tagline || '',
     blurb: category.blurb || '',
@@ -42875,12 +42929,29 @@ async function adminUpsertCategory(category) {
     sort_order: Number(category.sort_order) || 0,
     is_active: category.is_active !== false
   };
+  if (category.id) {
+    const {
+      data,
+      error
+    } = await supabase.from('categories').update({
+      ...row,
+      updated_at: new Date().toISOString()
+    }).eq('id', category.id).select();
+    if (error) throw error;
+    if (!data || !data.length) throw new Error('This category was not saved: it no longer exists, or this session can no longer edit it. Reload the page.');
+    return data[0];
+  }
+  const slug = category.slug || slugify(category.name);
   const {
     data,
     error
-  } = await supabase.from('categories').upsert(row, {
-    onConflict: 'slug'
+  } = await supabase.from('categories').insert({
+    ...row,
+    slug
   }).select().single();
+  if (error?.code === '23505') {
+    throw new Error(`A category with the slug "${slug}" already exists. Edit that category instead, or give this one a different slug.`);
+  }
   if (error) throw error;
   return data;
 }
@@ -43792,10 +43863,21 @@ async function adminDeletePromotion(id) {
     throw error;
   }
 }
-async function adminReorderPromotions(idsInOrder) {
-  await Promise.all(idsInOrder.map((id, i) => supabase.from('promotions').update({
-    sort_order: i
-  }).eq('id', id)));
+
+/**
+ * Save a new promotion order: `promotionsInOrder` is the list as it should now
+ * stand, as loaded (with sort_order). As adminReorderProducts: only changed
+ * positions are written, and a write that fails or matches nothing throws.
+ * (The promotions trigger stamps updated_at.)
+ */
+async function adminReorderPromotions(promotionsInOrder) {
+  return writePositions$1(promotionsInOrder.map((p, i) => ({
+    id: p.id,
+    from: p.sort_order,
+    to: i
+  })), 'promotion', m => supabase.from('promotions').update({
+    sort_order: m.to
+  }).eq('id', m.id).select('id'));
 }
 const PROMO_IMAGE_MAX_BYTES = 6 * 1024 * 1024; // 6MB — posters should be light
 
@@ -71250,5 +71332,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { adminUpdateProduct as $, adminMarkCodCollected as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, groupRewardsByLevel as a$, adminCreateProduct as a0, adminUpdateProductPrice as a1, adminListVariants as a2, adminCreateVariant as a3, adminUpdateVariant as a4, adminSetVariantActive as a5, adminDeleteVariant as a6, adminGetProgramSettings as a7, CREATOR_STATUSES as a8, money2 as a9, adminGetConversionItems as aA, adminGetConversionAudit as aB, adminRefundConversion as aC, adminListKyc as aD, KYC_STATUSES as aE, KYC_SIGNED_URL_SECONDS as aF, adminSetKycStatus as aG, KYC_DOCUMENT_KINDS as aH, kycDocumentState as aI, adminKycDocumentUrl as aJ, adminListKycAudit as aK, getPayoutConfig as aL, adminListPayouts as aM, PAYOUT_STATUSES as aN, adminSetWithdrawalsOpen as aO, adminGetPayoutLedger as aP, adminGetPayoutAudit as aQ, adminGetKycForCreator as aR, adminReviewPayout as aS, adminMarkPayoutPaid as aT, normalizeLadder as aU, DEFAULT_BEYOND_STEP as aV, adminGetTierLadder as aW, validateLadder as aX, ladderErrorMessage as aY, rupees as aZ, adminListLevelRewards as a_, adminListCreators as aa, adminCreatorStandings as ab, adminSetProgramSettings as ac, adminCreateCreator as ad, adminSetCreatorStatus as ae, normalizeContentPatch as af, contentScore as ag, adminGetCreator as ah, adminListCodeAliases as ai, adminListCampaigns as aj, adminListLinks as ak, adminListAudit as al, adminListAttributionEvents as am, adminUpdateCampaign as an, adminCreateCampaign as ao, CAMPAIGN_STATUSES as ap, buildTrackingUrl as aq, normalizeDestination as ar, DESTINATION_TYPES as as, CopyButton as at, adminChangeCreatorCode as au, adminUpdateCreator as av, adminCreateLink as aw, adminSetLinkStatus as ax, adminListConversions as ay, CONVERSION_STATUSES as az, Link as b, HOMELIVING_SECTIONS as b$, REWARD_OPTION_SLOTS as b0, validateRewardOption as b1, REWARD_TYPES as b2, REWARD_TYPE_LABEL as b3, adminListRewardClaims as b4, CLAIM_STATUSES as b5, CLAIM_STATUS_LABEL as b6, DEFAULT_LADDER as b7, adminSetTierLadder as b8, rewardOptionErrorMessage as b9, CouponTicket as bA, HOMEPAGE_VISUAL_FIELDS as bB, safeVisualUrl as bC, MAX_CONCERN_PRODUCTS as bD, searchCatalogueForPicker as bE, productGallery as bF, MAX_DISCOVERY_CARDS as bG, makeDiscoveryId as bH, sanitizeHomepageVisuals as bI, normalizeDiscovery as bJ, products as bK, discoveryPayload as bL, mergeHomepageVisuals as bM, announceHomepageSaved as bN, POSITION_LABELS as bO, HERO_SECTION as bP, TRUST_SECTION as bQ, TILES_SECTION as bR, STORES_SECTION as bS, FESTIVE_SECTION as bT, LIFESTYLE_SECTION as bU, JEWELLERY_BANNER_SECTION as bV, STORE_CAROUSEL_SECTION as bW, DELIVERY_STRIP as bX, BENEFITS_STRIP as bY, DEPARTMENT_SECTIONS as bZ, JEWELLERY_SECTIONS as b_, adminUpsertLevelReward as ba, adminDeleteLevelReward as bb, adminSetRewardClaimStatus as bc, adminGetTheme as bd, sanitizeTheme$1 as be, TOKENS as bf, PRESET_LIST as bg, GROUPS as bh, DEFAULT_THEME as bi, OVERLAY_SCALES as bj, TYPE_SCALES as bk, HEX_RE as bl, adminSetTheme as bm, overlayRgba as bn, adminUpsertCategory as bo, adminDeleteCategory as bp, normalizePromo as bq, PromoPoster as br, PromoOfferCard as bs, adminListPromotions as bt, adminUpsertPromotion as bu, adminDeletePromotion as bv, adminSetPromotionActive as bw, adminReorderPromotions as bx, uploadPromoImage as by, supabase as bz, LegalUpdated as c, GROCERY_SECTIONS as c0, STOREFRONT_CONTENT_STORES as c1, STOREFRONT_LABELS as c2, normalizeFashionStorefront as c3, normalizeLifestyleStorefront as c4, sectionSpec as c5, sectionContent as c6, validateStorefrontContent as c7, useSearchParams as c8, buildTree as c9, validatePlacement as ca, uploadImage as cb, isSpotlightEligible as cc, categoryBySlug as cd, sanitizeCategoryConfig as ce, safeColor as cf, safeGradient as cg, makeSpotlightId as ch, validateImageUpload as ci, normalizeCategoryExperience as cj, categoryExperiencePayload as ck, categoryIsReadyButOff as cl, categoryToneTheme as cm, MIN_INTERVAL_MS as cn, MAX_INTERVAL_MS as co, DEFAULT_ITEM_SCALE as cp, MIN_ITEM_SCALE as cq, MAX_ITEM_SCALE as cr, ITEM_OFFSET_LIMIT as cs, CategorySpotlight as ct, SOCIAL_NETWORKS as cu, POLICY_KEYS as cv, validateCompanyForSave as cw, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminSeedDefaultCategories as m, normalizeLegalPage as n, adminImportBiosashCatalog as o, money as p, adminSetProductActive as q, reactExports as r, adminDeleteProduct as s, adminReorderProducts as t, useParams as u, validateLegalPage as v, categories as w, adminListOrders as x, fulfillmentStatusLabel as y, adminListOrderEvents as z };
+export { adminUpdateProduct as $, adminMarkCodCollected as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, groupRewardsByLevel as a$, adminCreateProduct as a0, adminUpdateProductPrice as a1, adminListVariants as a2, adminCreateVariant as a3, adminUpdateVariant as a4, adminSetVariantActive as a5, adminDeleteVariant as a6, adminGetProgramSettings as a7, CREATOR_STATUSES as a8, money2 as a9, adminGetConversionItems as aA, adminGetConversionAudit as aB, adminRefundConversion as aC, adminListKyc as aD, KYC_STATUSES as aE, KYC_SIGNED_URL_SECONDS as aF, adminSetKycStatus as aG, KYC_DOCUMENT_KINDS as aH, kycDocumentState as aI, adminKycDocumentUrl as aJ, adminListKycAudit as aK, getPayoutConfig as aL, adminListPayouts as aM, PAYOUT_STATUSES as aN, adminSetWithdrawalsOpen as aO, adminGetPayoutLedger as aP, adminGetPayoutAudit as aQ, adminGetKycForCreator as aR, adminReviewPayout as aS, adminMarkPayoutPaid as aT, normalizeLadder as aU, DEFAULT_BEYOND_STEP as aV, adminGetTierLadder as aW, validateLadder as aX, ladderErrorMessage as aY, rupees as aZ, adminListLevelRewards as a_, adminListCreators as aa, adminCreatorStandings as ab, adminSetProgramSettings as ac, adminCreateCreator as ad, adminSetCreatorStatus as ae, normalizeContentPatch as af, contentScore as ag, adminGetCreator as ah, adminListCodeAliases as ai, adminListCampaigns as aj, adminListLinks as ak, adminListAudit as al, adminListAttributionEvents as am, adminUpdateCampaign as an, adminCreateCampaign as ao, CAMPAIGN_STATUSES as ap, buildTrackingUrl as aq, normalizeDestination as ar, DESTINATION_TYPES as as, CopyButton as at, adminChangeCreatorCode as au, adminUpdateCreator as av, adminCreateLink as aw, adminSetLinkStatus as ax, adminListConversions as ay, CONVERSION_STATUSES as az, Link as b, HOMELIVING_SECTIONS as b$, REWARD_OPTION_SLOTS as b0, validateRewardOption as b1, REWARD_TYPES as b2, REWARD_TYPE_LABEL as b3, adminListRewardClaims as b4, CLAIM_STATUSES as b5, CLAIM_STATUS_LABEL as b6, DEFAULT_LADDER as b7, adminSetTierLadder as b8, rewardOptionErrorMessage as b9, CouponTicket as bA, HOMEPAGE_VISUAL_FIELDS as bB, safeVisualUrl as bC, MAX_CONCERN_PRODUCTS as bD, searchCatalogueForPicker as bE, productGallery as bF, MAX_DISCOVERY_CARDS as bG, makeDiscoveryId as bH, sanitizeHomepageVisuals as bI, normalizeDiscovery as bJ, products as bK, discoveryPayload as bL, mergeHomepageVisuals as bM, announceHomepageSaved as bN, POSITION_LABELS as bO, HERO_SECTION as bP, TRUST_SECTION as bQ, TILES_SECTION as bR, STORES_SECTION as bS, FESTIVE_SECTION as bT, LIFESTYLE_SECTION as bU, JEWELLERY_BANNER_SECTION as bV, STORE_CAROUSEL_SECTION as bW, DELIVERY_STRIP as bX, BENEFITS_STRIP as bY, DEPARTMENT_SECTIONS as bZ, JEWELLERY_SECTIONS as b_, adminUpsertLevelReward as ba, adminDeleteLevelReward as bb, adminSetRewardClaimStatus as bc, adminGetTheme as bd, sanitizeTheme$1 as be, TOKENS as bf, PRESET_LIST as bg, GROUPS as bh, DEFAULT_THEME as bi, OVERLAY_SCALES as bj, TYPE_SCALES as bk, HEX_RE as bl, adminSetTheme as bm, overlayRgba as bn, adminSaveCategory as bo, adminDeleteCategory as bp, normalizePromo as bq, PromoPoster as br, PromoOfferCard as bs, adminListPromotions as bt, adminUpsertPromotion as bu, adminDeletePromotion as bv, adminSetPromotionActive as bw, adminReorderPromotions as bx, uploadPromoImage as by, supabase as bz, LegalUpdated as c, GROCERY_SECTIONS as c0, STOREFRONT_CONTENT_STORES as c1, STOREFRONT_LABELS as c2, normalizeFashionStorefront as c3, normalizeLifestyleStorefront as c4, sectionSpec as c5, sectionContent as c6, validateStorefrontContent as c7, useSearchParams as c8, buildTree as c9, validatePlacement as ca, uploadImage as cb, isSpotlightEligible as cc, categoryBySlug as cd, sanitizeCategoryConfig as ce, safeColor as cf, safeGradient as cg, makeSpotlightId as ch, validateImageUpload as ci, normalizeCategoryExperience as cj, categoryExperiencePayload as ck, categoryIsReadyButOff as cl, categoryToneTheme as cm, MIN_INTERVAL_MS as cn, MAX_INTERVAL_MS as co, DEFAULT_ITEM_SCALE as cp, MIN_ITEM_SCALE as cq, MAX_ITEM_SCALE as cr, ITEM_OFFSET_LIMIT as cs, CategorySpotlight as ct, SOCIAL_NETWORKS as cu, POLICY_KEYS as cv, validateCompanyForSave as cw, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminSeedDefaultCategories as m, normalizeLegalPage as n, adminImportBiosashCatalog as o, money as p, adminSetProductActive as q, reactExports as r, adminDeleteProduct as s, adminReorderProducts as t, useParams as u, validateLegalPage as v, categories as w, adminListOrders as x, fulfillmentStatusLabel as y, adminListOrderEvents as z };
 //# sourceMappingURL=bundle.js.map

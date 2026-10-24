@@ -1,4 +1,4 @@
-import { r as reactExports, j as jsxRuntimeExports, k as adminListCategories, m as adminSeedDefaultCategories, bo as adminUpsertCategory, bp as adminDeleteCategory } from '../bundle.js';
+import { r as reactExports, j as jsxRuntimeExports, k as adminListCategories, m as adminSeedDefaultCategories, bo as adminSaveCategory, bp as adminDeleteCategory } from '../bundle.js';
 
 const TONES = ['forest', 'lime', 'amber', 'clay', 'moss', 'plum', 'rose', 'honey', 'teal', 'sky'];
 const empty = {
@@ -51,7 +51,7 @@ function Categories() {
     setSaving(true);
     setErr('');
     try {
-      await adminUpsertCategory(form);
+      await adminSaveCategory(form);
       setEditing(null);
       await load();
     } catch (ex) {
@@ -125,7 +125,7 @@ function Categories() {
               name: e.target.value
             }))
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        }), editing === 'new' ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "field",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
             className: "label",
@@ -138,6 +138,20 @@ function Categories() {
               slug: e.target.value
             })),
             placeholder: "auto from name"
+          })]
+        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "field",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+            className: "label",
+            children: "Slug"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+            className: "input",
+            value: form.slug,
+            readOnly: true,
+            "aria-readonly": "true"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hint",
+            children: "Fixed once the category exists: its products and its page address use it."
           })]
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {

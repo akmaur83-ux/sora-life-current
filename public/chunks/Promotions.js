@@ -37,6 +37,7 @@ function Promotions() {
   const [form, setForm] = reactExports.useState(EMPTY);
   const [saving, setSaving] = reactExports.useState(false);
   const [uploading, setUploading] = reactExports.useState(false);
+  const [reordering, setReordering] = reactExports.useState(false);
   const [err, setErr] = reactExports.useState('');
   const [notMigrated, setNotMigrated] = reactExports.useState(false);
   async function load() {
@@ -134,17 +135,34 @@ function Promotions() {
     }
   }
   async function move(row, dir) {
+    if (reordering) return;
     const idx = list.findIndex(x => x.id === row.id);
     const j = idx + dir;
     if (j < 0 || j >= list.length) return;
     const next = [...list];
     [next[idx], next[j]] = [next[j], next[idx]];
     setList(next);
+    setReordering(true);
+    setErr('');
     try {
-      await adminReorderPromotions(next.map(x => x.id));
+      await adminReorderPromotions(next);
+      // Stored positions now match the list; an editor opened next starts from them.
+      setList(next.map((x, i) => ({
+        ...x,
+        sort_order: i
+      })));
     } catch (ex) {
-      setErr(ex.message || String(ex));
+      // Show the order as it is stored, not the one that failed to save.
+      const msg = ex.message || String(ex);
+      try {
+        setList(await adminListPromotions());
+        setErr(`${msg} The list has been reloaded to show the saved order.`);
+      } catch {
+        setList(list);
+        setErr(`${msg} The list could not be reloaded either: reload the page before moving anything else.`);
+      }
     }
+    setReordering(false);
   }
 
   // One handler for both artwork fields; `field` names the column it fills.
@@ -558,11 +576,13 @@ function Promotions() {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
             className: "btn btn-sm btn-light",
             onClick: () => move(p, -1),
+            disabled: reordering,
             "aria-label": "Move up",
             children: "\u2191"
           }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
             className: "btn btn-sm btn-light",
             onClick: () => move(p, 1),
+            disabled: reordering,
             "aria-label": "Move down",
             children: "\u2193"
           }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {

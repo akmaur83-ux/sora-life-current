@@ -5,6 +5,7 @@ function Products() {
   const [loading, setLoading] = reactExports.useState(true);
   const [q, setQ] = reactExports.useState('');
   const [busyId, setBusyId] = reactExports.useState(null);
+  const [reordering, setReordering] = reactExports.useState(false);
   const [err, setErr] = reactExports.useState('');
   async function load() {
     setLoading(true);
@@ -48,17 +49,34 @@ function Products() {
     setBusyId(null);
   }
   async function move(p, dir) {
+    if (reordering) return;
     const idx = products.findIndex(x => x.dbId === p.dbId);
     const swapIdx = idx + dir;
     if (swapIdx < 0 || swapIdx >= products.length) return;
     const next = [...products];
     [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
     setProducts(next);
+    setReordering(true);
+    setErr('');
     try {
-      await adminReorderProducts(next.map(x => x.dbId));
+      await adminReorderProducts(next);
+      // Stored positions now match the list, so the next move writes only its pair.
+      setProducts(next.map((x, i) => ({
+        ...x,
+        sortOrder: i
+      })));
     } catch (e) {
-      setErr(e.message || String(e));
+      // Show the order as it is stored, not the one that failed to save.
+      const msg = e.message || String(e);
+      try {
+        setProducts(await adminListProducts());
+        setErr(`${msg} The list has been reloaded to show the saved order.`);
+      } catch {
+        setProducts(products);
+        setErr(`${msg} The list could not be reloaded either: reload the page before moving anything else.`);
+      }
     }
+    setReordering(false);
   }
   const catName = slug => categories.find(c => c.slug === slug)?.name || slug;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -194,11 +212,13 @@ function Products() {
                 children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
                   className: "btn btn-sm btn-light",
                   onClick: () => move(p, -1),
+                  disabled: reordering,
                   title: "Move up",
                   children: "\u2191"
                 }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
                   className: "btn btn-sm btn-light",
                   onClick: () => move(p, 1),
+                  disabled: reordering,
                   title: "Move down",
                   children: "\u2193"
                 }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
