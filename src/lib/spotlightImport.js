@@ -260,7 +260,7 @@ export function buildSummaryText(plan, { uploadedUrls = new Map() } = {}) {
     else rows.forEach((r) => lines.push(`  ${render(r)}`));
     lines.push('');
   };
-  lines.push('SORA LIFE — spotlight packshot import');
+  lines.push('SORA LIFESTYLE — spotlight packshot import');
   lines.push(new Date().toISOString());
   lines.push('');
   section('UPLOADED', group(IMPORT_STATUS.UPLOADED), (r) => `${r.slug}  ${uploadedUrls.get(r.slug) || ''}`.trim());

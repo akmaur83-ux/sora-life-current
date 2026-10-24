@@ -133,7 +133,7 @@ export function TermsPanel({ terms, standing }) {
       <header className="cd-panel__head">
         <div>
           <h2 className="cd-panel__h serif" id="ce-terms-h">Your terms</h2>
-          <p className="cd-panel__sub">Set by SORA LIFE and your tier.</p>
+          <p className="cd-panel__sub">Set by SORA LIFESTYLE and your tier.</p>
         </div>
         {standing?.rank && <Link to="/creator/tier" className="cd-panel__link">{standing.rank} · L{standing.level} <Icon name="arrowRight" size={13} /></Link>}
       </header>

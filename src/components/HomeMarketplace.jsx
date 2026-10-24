@@ -110,7 +110,7 @@ export function MomTrustSpotlight({ category, products }) {
           <div className="hm-mom__body">
             <p className="v2-eyebrow">Brand spotlight</p>
             <h2>Mom Trust</h2>
-            <p>Explore the Mom Trust products currently available through the SORA LIFE catalogue.</p>
+            <p>Explore the Mom Trust products currently available through the SORA LIFESTYLE catalogue.</p>
             <div className="hm-mom__products">
               {[lead, ...more].slice(0, 3).map((product) => (
                 <Link key={product.id} to={`/product/${product.slug}`}>{product.name}<Icon name="chevronRight" size={13} /></Link>
@@ -160,7 +160,7 @@ export function CreatorCommunity() {
         <div className="hm-creator">
           <div className="hm-creator__mark" aria-hidden="true"><Icon name="users" size={42} stroke={1.25} /></div>
           <div className="hm-creator__copy">
-            <p className="v2-eyebrow">SORA LIFE Creator Program</p>
+            <p className="v2-eyebrow">SORA LIFESTYLE Creator Program</p>
             <h2>Share what you genuinely discover.</h2>
             <p>Use your customer account to explore the Creator Program, its attribution model and your application status.</p>
           </div>
@@ -182,7 +182,7 @@ export function WhySoraLife() {
   return (
     <section className="v2-sec hm-section hm-section--trust" data-home-section="why-sora-life">
       <div className="v2-wrap">
-        <SectionHeading eyebrow="Built for confident browsing" title="Why shop SORA LIFE" />
+        <SectionHeading eyebrow="Built for confident browsing" title="Why shop SORA LIFESTYLE" />
         <div className="hm-trust">
           {TRUST_ITEMS.map((item, index) => (
             <Link key={item.title} to={item.to} className="hm-trust__item">

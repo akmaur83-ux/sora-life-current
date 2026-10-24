@@ -130,7 +130,7 @@ export default function Invoice() {
       <article className="container inv">
         <header className="inv__head">
           <div className="inv__brand">
-            <img src="/assets/sora-life-logo.png" alt="SORA LIFE — Health and Wellness" className="inv__logo" width="1153" height="380" />
+            <img src="/assets/sora-life-logo.png" alt="SORA LIFESTYLE — Health and Wellness" className="inv__logo" width="1153" height="380" />
             <p className="inv__brand-sub">Health &amp; Wellness</p>
           </div>
           <div className="inv__ident">
@@ -272,7 +272,7 @@ export default function Invoice() {
         </section>
 
         <footer className="inv__foot">
-          <p>Thank you for choosing SORA LIFE.</p>
+          <p>Thank you for choosing SORA LIFESTYLE.</p>
           <p className="muted">
             This is a computer-generated invoice for order {order.order_number}
             {order.invoice_number ? ` (${order.invoice_number})` : ''}.

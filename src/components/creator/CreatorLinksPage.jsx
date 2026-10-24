@@ -59,7 +59,7 @@ export function LinkCard({ title, destination, status, statusText, code, created
       <code className="cl-card__url">{url}</code>
       <div className="cl-card__actions">
         <CopyButton value={url} className="cp-btn is-primary" label="Copy link" />
-        <ShareButton url={url} title="Shop SORA LIFE" />
+        <ShareButton url={url} title="Shop SORA LIFESTYLE" />
       </div>
     </article>
   );
@@ -97,7 +97,7 @@ export default function CreatorLinksPage({ creator, links = [], campaigns = [], 
             <span className="cl-empty__ic" aria-hidden="true"><Icon name="externalLink" size={22} /></span>
             <div>
               <h3 className="serif">No campaign links yet</h3>
-              <p>Campaign links are created alongside a campaign by your SORA LIFE programme manager. You don’t need one to start — your default link above is always ready and always attributes.</p>
+              <p>Campaign links are created alongside a campaign by your SORA LIFESTYLE programme manager. You don’t need one to start — your default link above is always ready and always attributes.</p>
               <Link to="/creator/campaigns" className="cp-btn">See campaigns <Icon name="arrowRight" size={14} /></Link>
             </div>
           </div>

@@ -58,7 +58,7 @@ export default function AdminLogin() {
           boxShadow: "0 20px 60px rgba(0,0,0,0.08)",
         }}
       >
-        <h1 style={{ margin: 0, marginBottom: 8 }}>SORA LIFE Admin</h1>
+        <h1 style={{ margin: 0, marginBottom: 8 }}>SORA LIFESTYLE Admin</h1>
 
         <p style={{ marginTop: 0, marginBottom: 24, color: "#666" }}>
           Authorized access only.

@@ -34,12 +34,12 @@ export function Greeting({ creator, hour = new Date().getHours() }) {
 
 export function QuotePanel() {
   return (
-    <figure className="cd-quote" role="img" aria-label="Small creators make a big difference. — SORA LIFE">
+    <figure className="cd-quote" role="img" aria-label="Small creators make a big difference. — SORA LIFESTYLE">
       <blockquote className="cd-quote__q serif">
         <span className="cd-quote__mark" aria-hidden="true">“</span>
         Small creators <br />make a big difference.”
       </blockquote>
-      <figcaption className="cd-quote__by">— SORA LIFE</figcaption>
+      <figcaption className="cd-quote__by">— SORA LIFESTYLE</figcaption>
     </figure>
   );
 }

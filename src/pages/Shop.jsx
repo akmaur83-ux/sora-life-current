@@ -75,7 +75,7 @@ export default function Shop() {
           </nav>
           <h1 className="v2-shop__title">All products</h1>
           <p className="v2-shop__lede">
-            Browse wellness, nutrition, hair, skin, beauty and everyday-care products available through Sora Life.
+            Browse wellness, nutrition, hair, skin, beauty and everyday-care products available through Sora Lifestyle.
           </p>
         </div>
 

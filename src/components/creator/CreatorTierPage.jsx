@@ -35,7 +35,7 @@ export function WithdrawalsBar({ open, initiallyDismissed = false }) {
   return (
     <div className="ct-bar" role="status" data-withdrawals="closed">
       <span className="ct-bar__ic" aria-hidden="true"><Icon name="lock" size={15} /></span>
-      <p><strong>Withdrawals aren’t open yet.</strong> Your commission is accruing and stays yours; payout requests open once SORA LIFE’s tax registration is complete.</p>
+      <p><strong>Withdrawals aren’t open yet.</strong> Your commission is accruing and stays yours; payout requests open once SORA LIFESTYLE’s tax registration is complete.</p>
       <button type="button" className="ct-bar__x" onClick={dismiss} aria-label="Dismiss for this session"><Icon name="x" size={16} /></button>
     </div>
   );

@@ -309,7 +309,8 @@
   .sw-header__menu { display: grid; flex-shrink: 0; width: 30px; }
   .sw-header .fs-logo { gap: 4px; }
   .sw-header .fs-logo > svg { display: none; }
-  .sw-header .fs-logo__txt strong { font-size: 21px; letter-spacing: .02em; }
+  /* Scales with the screen below ~380px so the site name clears the icons. */
+  .sw-header .fs-logo__txt strong { font-size: clamp(13px, calc((100vw - 206px) / 8.3), 21px); letter-spacing: .02em; }
   .sw-header .fs-logo__txt em { font-size: 6.5px; letter-spacing: .09em; }
   .sw-header__nav { display: none; }
   .sw-header__actions { margin-left: auto; gap: 0; }
@@ -496,7 +497,8 @@
   .wm-header__nav { display: none; }
   .wm-header .fs-logo { justify-self: start; gap: 6px; }
   .wm-header .fs-logo > svg { display: none; }
-  .wm-header .fs-logo__txt strong { font-size: 21px; letter-spacing: .06em; }
+  /* Scales with the screen below ~390px so the site name clears the icons. */
+  .wm-header .fs-logo__txt strong { font-size: clamp(12px, calc((100vw - 216px) / 8.3), 21px); letter-spacing: .02em; }
   .wm-header .fs-logo__txt em { font-size: 6.5px; letter-spacing: .14em; }
   .wm-header__actions { gap: 0; }
   .wm-header__actions a { width: 34px; }
@@ -691,7 +693,8 @@
   .jw-header__nav { display: none; }
   .jw-header .fs-logo { justify-self: start; gap: 6px; }
   .jw-header .fs-logo > svg { display: none; }
-  .jw-header .fs-logo__txt strong { font-size: 20px; letter-spacing: .06em; }
+  /* Scales with the screen below ~380px so the site name clears the icons. */
+  .jw-header .fs-logo__txt strong { font-size: clamp(12px, calc((100vw - 216px) / 8.3), 20px); letter-spacing: .02em; }
   .jw-header .fs-logo__txt em { font-size: 6.5px; letter-spacing: .14em; }
   .jw-header__actions { gap: 0; }
   .jw-header__actions a { width: 34px; }

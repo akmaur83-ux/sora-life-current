@@ -136,7 +136,7 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
   };
   const onClickCapture = (e) => { if (swipe.current.moved) { e.preventDefault(); e.stopPropagation(); swipe.current.moved = false; } };
   return (
-    <section className="hx hx-hero" aria-roledescription="carousel" aria-label="SORA LIFE"
+    <section className="hx hx-hero" aria-roledescription="carousel" aria-label="SORA LIFESTYLE"
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
       <div className="hx-hero__viewport" onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerCancel={() => { swipe.current = { x: null, y: null, moved: false }; }} onClickCapture={onClickCapture}>
         <div className="hx-hero__track" style={{ transform: `translateX(-${index * 100}%)` }}>
@@ -204,7 +204,7 @@ export function HomeTrustStrip() {
   // Fewer than four: the row keeps its columns even (only then is the count set).
   const count = items.length === TRUST.length ? {} : { 'data-count': items.length, style: { '--hx-trust-n': items.length } };
   return (
-    <section className="hx hx-trust" aria-label="Shopping with SORA LIFE">
+    <section className="hx hx-trust" aria-label="Shopping with SORA LIFESTYLE">
       <ul className="hx-wrap hx-trust__list" {...count}>
         {items.map((t) => {
           const lines = filledLines(t.title);

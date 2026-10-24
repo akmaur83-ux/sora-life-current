@@ -113,7 +113,7 @@ export default function Home() {
             <div className="v2-sechead">
               <div>
                 <p className="v2-eyebrow">Fresh on the shelf</p>
-                <h2 className="v2-h2">This week at Sora Life</h2>
+                <h2 className="v2-h2">This week at Sora Lifestyle</h2>
               </div>
             </div>
             <div className="v2-rail">

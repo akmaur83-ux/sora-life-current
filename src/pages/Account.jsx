@@ -80,7 +80,7 @@ export default function Account() {
       <div className="pagehead"><div className="container">
         <nav className="crumbs"><Link to="/">Home</Link><Icon name="chevronRight" size={14} /><span>Account</span></nav>
         <h1 className="serif">Hi, {firstName} 👋</h1>
-        <p className="muted">Welcome back to your Sora Life account.</p>
+        <p className="muted">Welcome back to your Sora Lifestyle account.</p>
       </div></div>
 
       <div className="container section-sm" style={{ paddingTop: 'var(--sp-8)' }}>
@@ -155,7 +155,7 @@ function SetNewPasswordView() {
     <div className="auth">
       <div className="auth__art">
         <div className="auth__art-in">
-          <span className="eyebrow" style={{ color: 'var(--honey-300)' }}>Sora Life members</span>
+          <span className="eyebrow" style={{ color: 'var(--honey-300)' }}>Sora Lifestyle members</span>
           <h2 className="serif" style={{ color: '#FBF8F1', fontSize: 'var(--text-3xl)', margin: '12px 0' }}>Choose a new password.</h2>
           <p style={{ color: 'rgba(251,248,241,0.82)' }}>Pick something you don’t use anywhere else. You’ll stay signed in on this device.</p>
         </div>
@@ -292,7 +292,7 @@ function AuthView() {
     <div className="auth">
       <div className="auth__art">
         <div className="auth__art-in">
-          <span className="eyebrow" style={{ color: 'var(--honey-300)' }}>Sora Life members</span>
+          <span className="eyebrow" style={{ color: 'var(--honey-300)' }}>Sora Lifestyle members</span>
           <h2 className="serif" style={{ color: '#FBF8F1', fontSize: 'var(--text-3xl)', margin: '12px 0' }}>Your rituals, remembered.</h2>
           {/* Every line here is a feature that exists. "Members-only drops" and
               "early access to new launches" were neither built nor planned, and

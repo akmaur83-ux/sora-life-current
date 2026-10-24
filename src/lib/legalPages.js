@@ -33,12 +33,16 @@ export function normalizeLegalPage(id, raw = {}) {
   }
   return page;
 }
-export function defaultLegalPage(id, legacy = {}, name = 'SORA LIFE') {
+// The built-in text says "SORA LIFE"; the site's name goes in its place. Only the
+// whole name is matched: "SORA LIFE" is also the start of "SORA LIFESTYLE", so a
+// plain replace would turn that into "SORA LIFESTYLESTYLE".
+const BUILT_IN_NAME = /\bSORA LIFE\b/g;
+export function defaultLegalPage(id, legacy = {}, name = 'SORA LIFESTYLE') {
   const page = structuredClone(LEGAL_DEFAULTS[id]);
   if (!page) return null;
   if (page.body) {
-    page.body = page.body.replaceAll('SORA LIFE', name);
-    page.intro = page.intro.replaceAll('SORA LIFE', name);
+    page.body = page.body.replace(BUILT_IN_NAME, () => name);
+    page.intro = page.intro.replace(BUILT_IN_NAME, () => name);
     if (legacy.policies?.[id]?.trim()) page.body += '\n\n# Full policy\n\n' + legacy.policies[id];
     const info = sanitizeCompany(legacy);
     page.body += '\n\n# Questions about this?\n\n' + (info.email || info.phone || info.address

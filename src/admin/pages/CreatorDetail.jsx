@@ -318,7 +318,7 @@ export default function CreatorDetail() {
                   <input className="input" value={linkForm.destination_path} disabled={linkForm.destination_type === 'homepage'}
                     placeholder="/product/biosash-sea-buckthorn-juice"
                     onChange={(e) => setLinkForm((f) => ({ ...f, destination_path: e.target.value }))} />
-                  <p className="hint">Internal SORA LIFE paths only — external URLs are rejected.</p></div>
+                  <p className="hint">Internal SORA LIFESTYLE paths only — external URLs are rejected.</p></div>
               </div>
 
               <div className="field">

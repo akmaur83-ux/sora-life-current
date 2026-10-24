@@ -295,7 +295,7 @@ export default function Header() {
                 way for the pages a first-time buyer checks before trusting a
                 store. */}
             <div className="drawer__sec">Company</div>
-            <Link to="/about" className="drawer__minor">About {branding?.siteName || 'SORA LIFE'}</Link>
+            <Link to="/about" className="drawer__minor">About {branding?.siteName || 'SORA LIFESTYLE'}</Link>
             <Link to="/contact" className="drawer__minor">Contact &amp; help</Link>
           </nav>
           <div className="drawer__foot">

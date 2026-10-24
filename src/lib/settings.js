@@ -7,7 +7,7 @@
 
 export let branding = {
   logoUrl: '/assets/sora-life-logo.png',
-  siteName: 'SORA LIFE',
+  siteName: 'SORA LIFESTYLE',
   tagline: 'HEALTH & WELLNESS',
   primaryColor: '#1E3A2F',
   accentColor: '#E8B04B',
@@ -69,7 +69,41 @@ export function applyStorefrontTheme(v) {
   return true;
 }
 
-export function applyBranding(v) { if (v && typeof v === 'object') branding = { ...branding, ...v }; }
+/**
+ * The storefront's view of the stored `branding` record. Admin → Branding (and
+ * the 0001 seed) store it with snake_case keys — site_name, logo_url,
+ * favicon_url — while everything here reads siteName, logoUrl, faviconUrl;
+ * merging the record as it was stored set keys nothing read, so the name, logo
+ * and favicon saved in the admin never reached the site. Either spelling is
+ * accepted. A blank field keeps the built-in value, and an image address must
+ * be a site path or https. The colours are not taken from it: the storefront
+ * theme (Admin → Appearance) owns them.
+ */
+export function brandingFromSetting(v) {
+  if (!v || typeof v !== 'object') return {};
+  const pick = (...keys) => keys.map((k) => (typeof v[k] === 'string' ? v[k].trim() : '')).find(Boolean);
+  const imageUrl = (s) => (s && /^(\/(?!\/)|https:\/\/)/.test(s) ? s : undefined);
+  const out = {
+    siteName: pick('site_name', 'siteName'),
+    tagline: pick('tagline'),
+    logoUrl: imageUrl(pick('logo_url', 'logoUrl')),
+    faviconUrl: imageUrl(pick('favicon_url', 'faviconUrl')),
+  };
+  return Object.fromEntries(Object.entries(out).filter(([, value]) => value !== undefined));
+}
+export function applyBranding(v) { if (v && typeof v === 'object') branding = { ...branding, ...brandingFromSetting(v) }; }
+
+/**
+ * The tab title with the site name in front: whatever stands before the first
+ * " — " is replaced, so applying it again, or after the name has changed, never
+ * stacks names ("SORA LIFE" is the start of "SORA LIFESTYLE", so replacing a
+ * leading "SORA LIFE" would have).
+ */
+export function titleWithSiteName(title, siteName) {
+  const rest = String(title || '');
+  const cut = rest.indexOf(' — ');
+  return `${siteName}${cut >= 0 ? rest.slice(cut) : ''}`;
+}
 export function applyAnnouncement(v) { if (v && typeof v === 'object') announcement = { ...announcement, ...v }; }
 const homepageListeners = new Set();
 export const getHomepageSnapshot = () => homepage;

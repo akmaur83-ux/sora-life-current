@@ -33,7 +33,7 @@ const CAPABILITIES = [
   {
     icon: 'lock',
     title: 'Secure checkout',
-    body: 'Every price and order total is recalculated on our server before payment, and card payments are processed by Razorpay — Sora Life never sees or stores your card details.',
+    body: 'Every price and order total is recalculated on our server before payment, and card payments are processed by Razorpay — Sora Lifestyle never sees or stores your card details.',
   },
   {
     icon: 'package',
@@ -43,7 +43,7 @@ const CAPABILITIES = [
 ];
 
 export default function About() {
-  const name = branding?.siteName || 'SORA LIFE';
+  const name = branding?.siteName || 'SORA LIFESTYLE';
 
   return (
     <div className="info">

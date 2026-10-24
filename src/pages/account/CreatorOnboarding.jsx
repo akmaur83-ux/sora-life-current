@@ -111,7 +111,7 @@ export default function CreatorOnboarding() {
     return (
       <div className="crob">
         <div className="acct__panelhead">
-          <h2>{s === 'active' ? 'Turn your SORA LIFE recommendations into rewards.' : 'SORA LIFE Creator'}</h2>
+          <h2>{s === 'active' ? 'Turn your SORA LIFESTYLE recommendations into rewards.' : 'SORA LIFESTYLE Creator'}</h2>
           <p className="muted">
             {s === 'active'
               ? 'Your creator account is active. Share your link and track the orders you help generate.'
@@ -134,7 +134,7 @@ export default function CreatorOnboarding() {
             <Icon name="circleAlert" size={20} />
             <div>
               <strong>Your creator account is {s}</strong>
-              <p>Please contact your SORA LIFE programme manager for details.</p>
+              <p>Please contact your SORA LIFESTYLE programme manager for details.</p>
             </div>
           </div>
         )}
@@ -144,7 +144,7 @@ export default function CreatorOnboarding() {
             <div className="crob__status is-active">
               <Icon name="checkCircle" size={20} />
               <div>
-                <strong>You’re an active SORA LIFE creator</strong>
+                <strong>You’re an active SORA LIFESTYLE creator</strong>
                 <p>Share your link below, or open your full dashboard for campaigns and tracking links.</p>
               </div>
             </div>
@@ -154,7 +154,7 @@ export default function CreatorOnboarding() {
               <code className="crob__link">{defaultLink}</code>
               <div className="crob__linkactions">
                 <CopyButton value={defaultLink} className="btn btn-sm" label="Copy link" />
-                <ShareButton url={defaultLink} title={`Shop SORA LIFE with ${creator.display_name}`} />
+                <ShareButton url={defaultLink} title={`Shop SORA LIFESTYLE with ${creator.display_name}`} />
               </div>
             </div>
 
@@ -191,7 +191,7 @@ export default function CreatorOnboarding() {
             <Link to="/creator/earnings">Earnings</Link> and <Link to="/creator/payouts">Payouts</Link>.
           </span>
         </div>
-        <p className="crob__note">Your commission rate and status are managed by SORA LIFE.</p>
+        <p className="crob__note">Your commission rate and status are managed by SORA LIFESTYLE.</p>
       </div>
     );
   }
@@ -200,12 +200,12 @@ export default function CreatorOnboarding() {
   return (
     <div className="crob">
       <div className="acct__panelhead">
-        <h2>Become a SORA LIFE Creator</h2>
+        <h2>Become a SORA LIFESTYLE Creator</h2>
         <p className="muted">Turn your audience into rewards. Share products you love with your own tracking link.</p>
       </div>
 
       <ul className="crob__perks">
-        <li><Icon name="tag" size={16} /> Your own SORA LIFE creator code &amp; link</li>
+        <li><Icon name="tag" size={16} /> Your own SORA LIFESTYLE creator code &amp; link</li>
         <li><Icon name="sparkle" size={16} /> Campaigns tailored to how you promote</li>
         <li><Icon name="shield" size={16} /> Keep your existing account — nothing changes for your orders</li>
       </ul>
@@ -256,8 +256,8 @@ export default function CreatorOnboarding() {
           <input type="checkbox" checked={form.agreed} onChange={(e) => set('agreed', e.target.checked)} />
           <span>
             {hasTerms
-              ? `I have read and agree to the SORA LIFE creator terms (version ${terms.version}), and understand my account remains a normal customer account.`
-              : 'I agree to the SORA LIFE creator terms and understand my account remains a normal customer account.'}
+              ? `I have read and agree to the SORA LIFESTYLE creator terms (version ${terms.version}), and understand my account remains a normal customer account.`
+              : 'I agree to the SORA LIFESTYLE creator terms and understand my account remains a normal customer account.'}
           </span>
         </label>
 

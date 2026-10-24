@@ -195,7 +195,7 @@ export default function CreatorPortal({ initial = null }) {
     return (
       <Shell>
         <h1 className="serif crp__empty-h">Creator sign in</h1>
-        <p className="muted">Sign in with the email address your SORA LIFE creator account was set up with.</p>
+        <p className="muted">Sign in with the email address your SORA LIFESTYLE creator account was set up with.</p>
         <Link to="/account" className="btn" style={{ marginTop: 'var(--sp-5)' }}>Go to sign in</Link>
       </Shell>
     );
@@ -206,7 +206,7 @@ export default function CreatorPortal({ initial = null }) {
       <Shell>
         <h1 className="serif crp__empty-h">Not a creator account</h1>
         <p className="muted">
-          This account isn’t part of the SORA LIFE Creator Program. If you’ve just been onboarded,
+          This account isn’t part of the SORA LIFESTYLE Creator Program. If you’ve just been onboarded,
           make sure you’re signed in with the email address you gave us.
         </p>
         <Link to="/account" className="btn" style={{ marginTop: 'var(--sp-5)' }}>Back to my account</Link>
@@ -226,9 +226,9 @@ export default function CreatorPortal({ initial = null }) {
   return (
     <div className="crp crp--studio" data-rank={rank}>
       <aside className="cs-side">
-        <Link to="/" className="cs-brand" aria-label="SORA LIFE home">
+        <Link to="/" className="cs-brand" aria-label="SORA LIFESTYLE home">
           <span className="cs-brand__mark"><SparrowMark size={34} light /></span>
-          <span className="cs-brand__txt"><strong>SORA LIFE</strong><em>Creator Program</em></span>
+          <span className="cs-brand__txt"><strong>SORA LIFESTYLE</strong><em>Creator Program</em></span>
         </Link>
         <nav ref={navRef} className="cs-nav" aria-label="Creator portal">
           {NAV.map((n) => (
@@ -240,7 +240,7 @@ export default function CreatorPortal({ initial = null }) {
           ))}
         </nav>
         <div className="cs-side__foot">
-          <p className="cs-side__eyebrow">SORA LIFE</p>
+          <p className="cs-side__eyebrow">SORA LIFESTYLE</p>
           <p className="cs-side__tag serif">Wellness <br />for a Brighter <br />Tomorrow</p>
           <Link to="/creator/tier" className="cs-side__chip"><Icon name="sparkle" size={15} /><span>You’re creating <br />real impact</span><Icon name="chevronRight" size={15} /></Link>
         </div>

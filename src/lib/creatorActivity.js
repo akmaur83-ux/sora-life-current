@@ -33,7 +33,7 @@ const PAYOUT_COPY = {
 };
 const KYC_COPY = {
   pending: ['Verification submitted', 'Our team is checking your details'],
-  verified: ['Verified by SORA LIFE', 'Payout details approved'],
+  verified: ['Verified by SORA LIFESTYLE', 'Payout details approved'],
   rejected: ['Verification needs attention', 'See Payouts for the reason'],
   needs_update: ['Verification needs an update', 'See Payouts for what to change'],
 };
@@ -67,7 +67,7 @@ export function buildActivity({ creator, clicks = [], payouts = [], rewards = nu
     items.push({ id: 'active', icon: 'user', tone: 'ok', title: 'Account activated', body: 'Your creator account is now active', at: creator.joined_at });
   }
   if (creator?.created_at || creator?.joined_at) {
-    items.push({ id: 'welcome', icon: 'star', tone: 'brand', title: 'Welcome to SORA LIFE', body: 'Start sharing and earn', at: creator.created_at || creator.joined_at });
+    items.push({ id: 'welcome', icon: 'star', tone: 'brand', title: 'Welcome to SORA LIFESTYLE', body: 'Start sharing and earn', at: creator.created_at || creator.joined_at });
   }
   return items
     .filter((i) => Number.isFinite(new Date(i.at).getTime()))

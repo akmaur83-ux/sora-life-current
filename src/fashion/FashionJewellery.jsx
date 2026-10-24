@@ -90,7 +90,7 @@ export default function FashionJewellery({ content = JEWELLERY }) {
       </div>
     </section>}
 
-    {!s.trust.hidden && <nav className="jw-trust" aria-label="Shopping with SORA LIFE">
+    {!s.trust.hidden && <nav className="jw-trust" aria-label="Shopping with SORA LIFESTYLE">
       <ul className="jw-wrap">{s.trust.items.filter(visible).map((t) => <li key={t.title}><Link to={t.link}>
         <Icon name={t.icon} size={22} />
         <span className="jw-trust__full"><strong>{t.title}</strong><small>{t.note}</small></span>

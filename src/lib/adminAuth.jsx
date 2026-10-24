@@ -115,7 +115,7 @@ export function AdminAuthProvider({ children }) {
         error: new Error(
           state === ADMIN_ERROR
             ? "We could not verify your admin access just now. Please check your connection and try again."
-            : "This account is not authorized as a SORA LIFE admin."
+            : "This account is not authorized as a SORA LIFESTYLE admin."
         ),
       };
     }

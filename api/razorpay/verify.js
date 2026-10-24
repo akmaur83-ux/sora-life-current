@@ -100,7 +100,7 @@ export default async function handler(req, res) {
         payment_status: 'failed',
         failure_reason: 'signature_verification_failed',
       }, sb, { unlessPaid: true }).catch(() => {});
-      return fail(res, 400, 'We could not verify this payment. You have not been charged by Sora Life.');
+      return fail(res, 400, 'We could not verify this payment. You have not been charged by Sora Lifestyle.');
     }
 
     // The signature is genuine. Now ask Razorpay what actually happened to
@@ -120,7 +120,7 @@ export default async function handler(req, res) {
     // cheaper) payment could settle this one.
     if (payment?.order_id && payment.order_id !== orderId) {
       console.error('[verify] payment/order mismatch for order', order.order_number);
-      return fail(res, 400, 'We could not verify this payment. You have not been charged by Sora Life.');
+      return fail(res, 400, 'We could not verify this payment. You have not been charged by Sora Lifestyle.');
     }
     const paidPaise = Number(payment?.amount);
     if (Number.isFinite(paidPaise) && Number(order.amount_paise) !== paidPaise) {
@@ -130,7 +130,7 @@ export default async function handler(req, res) {
         payment_status: 'failed',
         failure_reason: 'amount_mismatch',
       }, sb, { unlessPaid: true }).catch(() => {});
-      return fail(res, 400, 'We could not verify this payment. You have not been charged by Sora Life.');
+      return fail(res, 400, 'We could not verify this payment. You have not been charged by Sora Lifestyle.');
     }
 
     if (!isCapturedPayment(payment)) {
@@ -144,7 +144,7 @@ export default async function handler(req, res) {
         // A genuine failure lets go of the order's stock and coupon use at
         // once (0039). A retry that then succeeds takes them again on payment.
         await releaseOrderHolds(order.id, sb);
-        return fail(res, 400, "Payment wasn't completed. You have not been charged by Sora Life.");
+        return fail(res, 400, "Payment wasn't completed. You have not been charged by Sora Lifestyle.");
       }
       // `authorized` / `created` / `pending`: the funds are held but not
       // taken. Not an error and not a payment — the webhook finishes this.

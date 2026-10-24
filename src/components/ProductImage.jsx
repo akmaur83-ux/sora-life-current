@@ -111,7 +111,7 @@ export default function ProductImage({
       <div className={wrapClass}>
         <div className="v2-pimg__fallback">
           <div>
-            <b>Sora Life</b>
+            <b>Sora Lifestyle</b>
             {cat?.name && <span>{cat.name}</span>}
           </div>
         </div>
@@ -126,7 +126,7 @@ export default function ProductImage({
     <div className={wrapClass} style={{ background: `linear-gradient(150deg, ${t.tint}, #fff)` }}>
       <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: t.b, textAlign: 'center', padding: 16 }}>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, letterSpacing: 1 }}>SORA LIFE</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, letterSpacing: 1 }}>SORA LIFESTYLE</div>
           <div style={{ fontSize: 10, letterSpacing: 2, marginTop: 4, textTransform: 'uppercase' }}>{cat?.name}</div>
         </div>
       </div>

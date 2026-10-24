@@ -33,7 +33,7 @@ export function WithdrawalsNotice({ open, compact = false }) {
       <div>
         <strong>Withdrawals aren’t open yet.</strong>{' '}
         Your commission is accruing and stays yours — every confirmed sale is recorded against your account.
-        Payout requests open once SORA LIFE’s tax registration is complete; we’ll tell you here the day they do.
+        Payout requests open once SORA LIFESTYLE’s tax registration is complete; we’ll tell you here the day they do.
       </div>
     </div>
   );

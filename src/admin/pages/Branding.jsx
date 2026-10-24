@@ -33,7 +33,7 @@ export default function Branding() {
     setSaving(true); setErr(''); setMsg('');
     try {
       await adminSetSetting('branding', form);
-      setMsg('Saved. Reload the storefront to see logo/color changes (they apply at page load).');
+      setMsg('Saved. Reload the storefront to see the change (it applies at page load).');
     } catch (ex) { setErr(ex.message || String(ex)); }
     setSaving(false);
   }
@@ -42,13 +42,13 @@ export default function Branding() {
 
   return (
     <div className="adm-form">
-      <div className="adm__head"><div><h1>Branding</h1><p>Logo, site name, tagline, favicon and brand colors.</p></div></div>
+      <div className="adm__head"><div><h1>Branding</h1><p>Logo, site name, tagline and favicon.</p></div></div>
       {err && <div className="adm-banner err">{err}</div>}
       {msg && <div className="adm-banner ok">{msg}</div>}
       {loadErr && (
         <div className="adm-banner err" role="alert">
           The saved branding could not be loaded ({loadErr}). It can't be edited until it loads, so the
-          default logo, name and colors can't be saved over the live ones. Reload the page to try again.
+          default logo and name can't be saved over the live ones. Reload the page to try again.
         </div>
       )}
 
@@ -77,22 +77,7 @@ export default function Branding() {
 
         <div className="surface">
           <h2>Brand colors</h2>
-          <div className="adm-grid2">
-            <div className="field">
-              <label className="label">Primary color</label>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input type="color" value={form.primary_color} onChange={(e) => set('primary_color', e.target.value)} style={{ width: 44, height: 40, border: 'none', background: 'none' }} />
-                <input className="input" value={form.primary_color} onChange={(e) => set('primary_color', e.target.value)} />
-              </div>
-            </div>
-            <div className="field">
-              <label className="label">Accent color</label>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input type="color" value={form.accent_color} onChange={(e) => set('accent_color', e.target.value)} style={{ width: 44, height: 40, border: 'none', background: 'none' }} />
-                <input className="input" value={form.accent_color} onChange={(e) => set('accent_color', e.target.value)} />
-              </div>
-            </div>
-          </div>
+          <p className="muted">Set in Appearance (Primary brand color and Accent): the storefront takes its colors from there, not from this page.</p>
         </div>
 
         <div className="surface">

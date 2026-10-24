@@ -34,7 +34,7 @@ import HomeLivingProductPage from './homeliving/HomeLivingProductPage.jsx';
 import LifestyleLayout from './lifestyle/LifestyleLayout.jsx';
 import LifestyleHome from './lifestyle/LifestyleHome.jsx';
 import { useAdminAuth } from './lib/adminAuth.jsx';
-import { branding } from './lib/settings.js';
+import { branding, titleWithSiteName } from './lib/settings.js';
 import { DEFERRED_ROUTES, loadDeferredStyles } from './lib/deferredStyles.js';
 
 
@@ -124,15 +124,20 @@ function useBrandingEffects() {
     document.documentElement.style.setProperty('--color-primary', branding.primaryColor);
     document.documentElement.style.setProperty('--color-primary-hover', branding.primaryColor);
     document.documentElement.style.setProperty('--color-accent', branding.accentColor);
-    if (branding.faviconUrl) {
+  }, []);
+  // The saved name and favicon arrive with the settings, after the first
+  // render, so these follow them rather than running once at start-up.
+  const { faviconUrl, siteName } = branding;
+  useEffect(() => {
+    if (faviconUrl) {
       let link = document.querySelector('link[rel="icon"]');
       if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
-      link.href = branding.faviconUrl;
+      link.href = faviconUrl;
     }
-    if (branding.siteName) {
-      document.title = document.title.replace(/^Sora Life|^SORA LIFE/, branding.siteName);
-    }
-  }, []);
+  }, [faviconUrl]);
+  useEffect(() => {
+    if (siteName) document.title = titleWithSiteName(document.title, siteName);
+  }, [siteName]);
 }
 
 export default function App() {

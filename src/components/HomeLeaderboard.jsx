@@ -27,7 +27,7 @@ export default function HomeLeaderboard({ rows: preloaded = null }) {
     <section className="v2-sec hm-section hm-leaderboard sl-dark" data-home-section="leaderboard" aria-labelledby="hm-leaderboard-h">
       <div className="v2-wrap">
         <div className="hm-leaderboard__head">
-          <p className="v2-eyebrow">SORA LIFE Creator Program</p>
+          <p className="v2-eyebrow">SORA LIFESTYLE Creator Program</p>
           <h2 className="v2-h2" id="hm-leaderboard-h">Creator leaderboard</h2>
           <p className="hm-leaderboard__copy">
             The top {Math.min(rows.length, 100)} creators, ranked by confirmed sales through their own links.

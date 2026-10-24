@@ -221,7 +221,7 @@ export default function Promotions() {
 
           <div className="adm-grid2">
             <div className="field"><label className="label">CTA button text (optional)</label>
-              <input className="input" value={form.cta_text} onChange={(e) => set('cta_text', e.target.value)} placeholder="Explore SORA LIFE" maxLength={60} /></div>
+              <input className="input" value={form.cta_text} onChange={(e) => set('cta_text', e.target.value)} placeholder="Explore SORA LIFESTYLE" maxLength={60} /></div>
             <div className="field"><label className="label">CTA link (internal path or https URL)</label>
               <input className="input" value={form.cta_url} onChange={(e) => set('cta_url', e.target.value)} placeholder="/shop" maxLength={500} /></div>
           </div>

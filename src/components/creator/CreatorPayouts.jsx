@@ -50,7 +50,7 @@ export default function CreatorPayouts({ creator, earnings, kyc, payouts, withdr
     <>
       <h1 className="serif crp__h1">Payouts</h1>
       <p className="crp__lede">
-        Verify your details once, then request a payout during the monthly window. SORA LIFE
+        Verify your details once, then request a payout during the monthly window. SORA LIFESTYLE
         reviews and pays every request manually — money is never released automatically.
       </p>
 
@@ -96,7 +96,7 @@ function KycSection({ kyc, status, onSubmitKyc, onUploadKycDocument, onChanged }
       )}
       {status === 'verified' && (
         <p className="crp__kyc-msg is-ok">
-          <Icon name="checkCircle" size={14} /> Verified by SORA LIFE. You’re all set to request payouts.
+          <Icon name="checkCircle" size={14} /> Verified by SORA LIFESTYLE. You’re all set to request payouts.
         </p>
       )}
       {status === 'rejected' && (
@@ -296,7 +296,7 @@ function KycForm({ kyc, onSubmitKyc, onDone, onCancel }) {
   return (
     <form className="crp__form" onSubmit={submit} autoComplete="off">
       <p className="crp__form-note">
-        <Icon name="lock" size={13} /> These details are encrypted and masked. Even SORA LIFE staff
+        <Icon name="lock" size={13} /> These details are encrypted and masked. Even SORA LIFESTYLE staff
         only ever see a masked version (e.g. <code>ABCDE****F</code>).
       </p>
 
@@ -394,13 +394,13 @@ function PayoutSection({ earnings, payouts, kycVerified, withdrawalsOpen = false
     banner = (
       <Banner tone="warn" icon="lock"
         title="Withdrawals open later"
-        body="Your commission keeps accruing. Payout requests open once SORA LIFE’s tax registration is complete — you’ll see the request button here the day they do." />
+        body="Your commission keeps accruing. Payout requests open once SORA LIFESTYLE’s tax registration is complete — you’ll see the request button here the day they do." />
     );
   } else if (!kycVerified) {
     banner = (
       <Banner tone="warn" icon="shield"
         title="Verify your details to withdraw"
-        body="Complete verification above. Payouts open once SORA LIFE has verified your KYC." />
+        body="Complete verification above. Payouts open once SORA LIFESTYLE has verified your KYC." />
     );
   } else if (activeReq) {
     banner = (

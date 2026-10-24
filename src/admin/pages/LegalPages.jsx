@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { adminGetSetting, adminSetSetting } from '../../lib/adminApi.js';
 import { LEGAL_PAGES, CONTACT_FIELDS, GRIEVANCE_FIELDS, legalKey, defaultLegalPage, normalizeLegalPage, validateLegalPage, hasLegalContent } from '../../lib/legalPages.js';
 import { LegalUpdated } from '../../components/LegalPageContent.jsx';
+import { brandingFromSetting } from '../../lib/settings.js';
 
 export default function LegalPagesAdmin() {
   const { pageId } = useParams();
@@ -23,7 +24,7 @@ function LegalPagesEditor({ pageId }) {
     Promise.all([adminGetSetting('contact'), adminGetSetting('branding'), ...LEGAL_PAGES.map(p => adminGetSetting(legalKey(p.id)))])
       .then(([contact, branding, ...values]) => {
         if (!live) return;
-        const next = Object.fromEntries(LEGAL_PAGES.map((p, i) => [p.id, values[i] == null ? defaultLegalPage(p.id, contact || {}, branding?.siteName) : normalizeLegalPage(p.id, values[i])]));
+        const next = Object.fromEntries(LEGAL_PAGES.map((p, i) => [p.id, values[i] == null ? defaultLegalPage(p.id, contact || {}, brandingFromSetting(branding).siteName) : normalizeLegalPage(p.id, values[i])]));
         setRecords(next); setForm(spec ? next[spec.id] : null);
         setMissing(LEGAL_PAGES.filter((p,i) => values[i] == null).map(p => p.id));
       }).catch(e => { if(live) { setErr(e.message || String(e)); setLoadFailed(true); } })

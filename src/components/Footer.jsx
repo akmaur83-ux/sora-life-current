@@ -24,7 +24,7 @@ import { useConsumerCare } from '../lib/consumerCare.js';
 export default function Footer() {
   const info = useConsumerCare();
   const socials = socialLinks(info);
-  const name = branding?.siteName || 'SORA LIFE';
+  const name = branding?.siteName || 'SORA LIFESTYLE';
 
   return (
     <footer className="ftr">

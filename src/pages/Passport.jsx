@@ -104,11 +104,11 @@ export default function Passport() {
     if (authLoading) {
       return (
         <div className="psp">
-          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} member={{ name: 'SORA LIFE', tier: 'Loading…', tierIcon: 'checkCircle' }} />
+          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} member={{ name: 'SORA LIFESTYLE', tier: 'Loading…', tierIcon: 'checkCircle' }} />
           {sidebarOpen && <div className="psp__side-scrim open" onClick={() => setSidebarOpen(false)} />}
           <div className="psp__topbar">
             <button className="iconbtn" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
-            <strong>SORA LIFE</strong>
+            <strong>SORA LIFESTYLE</strong>
           </div>
           <main className="psp__main"><div className="psp__inner"><p className="muted">Loading…</p></div></main>
         </div>
@@ -125,7 +125,7 @@ export default function Passport() {
           {sidebarOpen && <div className="psp__side-scrim open" onClick={() => setSidebarOpen(false)} />}
           <div className="psp__topbar">
             <button className="iconbtn" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
-            <strong>SORA LIFE</strong>
+            <strong>SORA LIFESTYLE</strong>
           </div>
           <main className="psp__main">
             <div className="psp__inner" style={{ maxWidth: 480 }}>
@@ -157,7 +157,7 @@ export default function Passport() {
         {sidebarOpen && <div className="psp__side-scrim open" onClick={() => setSidebarOpen(false)} />}
         <div className="psp__topbar">
           <button className="iconbtn" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
-          <strong>SORA LIFE</strong>
+          <strong>SORA LIFESTYLE</strong>
         </div>
         <LookupGate
           passportId={passportId}
@@ -181,7 +181,7 @@ export default function Passport() {
 
       <div className="psp__topbar">
         <button className="iconbtn" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
-        <strong>SORA LIFE</strong>
+        <strong>SORA LIFESTYLE</strong>
       </div>
 
       <main className="psp__main">
@@ -195,7 +195,7 @@ export default function Passport() {
             <span className="psp__head-rule" aria-hidden="true" />
 
             {/* Official SORA LIFE brand lockup (real asset), foil-lit. */}
-            <div className="psp__brandlock" role="img" aria-label="SORA LIFE — Health and Wellness">
+            <div className="psp__brandlock" role="img" aria-label="SORA LIFESTYLE — Health and Wellness">
               <img src="/assets/sora-life-logo.png" alt="" />
             </div>
 
@@ -305,7 +305,7 @@ function Sidebar({ open, onClose, member }) {
   return (
     <aside className={`psp__side ${open ? 'open' : ''}`} aria-label="Primary">
       <div className="psp__side-brand">
-        <img className="psp__side-logo" src="/assets/sora-life-logo.png" alt="SORA LIFE — Health and Wellness" />
+        <img className="psp__side-logo" src="/assets/sora-life-logo.png" alt="SORA LIFESTYLE — Health and Wellness" />
       </div>
 
       <div className="psp__profile">

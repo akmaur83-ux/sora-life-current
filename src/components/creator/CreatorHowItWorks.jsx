@@ -128,7 +128,7 @@ export default function CreatorHowItWorks({ creator, earnings, standing = null }
         <Icon name="circleAlert" size={15} />
         <span>
           Commission is earned on eligible sale value, not on shipping or fees. Self-referred orders don’t
-          qualify. Payouts are made manually by our team — SORA LIFE never moves money automatically.
+          qualify. Payouts are made manually by our team — SORA LIFESTYLE never moves money automatically.
         </span>
       </p>
     </section>

@@ -919,9 +919,10 @@
   text-align: center; color: var(--honey-300); padding: 0 14px; font-weight: 700;
 }
 .psp__hero-verify::before {
-  content: "SORA LIFE";
+  content: "SORA LIFESTYLE";
   position: absolute; top: 15px; left: 0; right: 0;
-  font-size: 6px; letter-spacing: 0.18em; text-align: center;
+  /* 0.08em, not 0.18em: the longer name still sits inside the seal's curve. */
+  font-size: 6px; letter-spacing: 0.08em; text-align: center;
   color: var(--honey-300); font-weight: 700;
 }
 .psp__hero-verify svg { margin-top: 2px; }
@@ -1043,7 +1044,7 @@
   .psp__summary { grid-template-columns: 1fr; }
   .psp__fields { grid-template-columns: 1fr; gap: var(--sp-4); }
   .psp__hero-verify { width: 66px; height: 66px; right: 14px; bottom: 14px; }
-  .psp__hero-verify::before { top: 10px; font-size: 5px; }
+  .psp__hero-verify::before { top: 10px; font-size: 4.6px; }
   .psp__hero-verify::after { bottom: 10px; font-size: 4.6px; }
   .psp__tabs { gap: var(--sp-4); }
   .psp__head-right { flex-wrap: wrap; gap: var(--sp-3); }

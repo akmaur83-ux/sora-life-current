@@ -189,7 +189,7 @@ export default function BulkPackshotImport({ onImported }) {
       <h2 className="adm-cx__h2">Bulk import spotlight packshots</h2>
       <p className="hint">
         Select a folder of packshots named after their product — <code>aloe-vera-protein-shampoo.png</code>.
-        Each file is uploaded to SORA LIFE’s own media storage and assigned as that product’s
+        Each file is uploaded to SORA LIFESTYLE’s own media storage and assigned as that product’s
         spotlight image. Files are matched on the exact product slug; nothing is guessed.
       </p>
       <p className="hint">

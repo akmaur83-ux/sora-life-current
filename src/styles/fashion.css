@@ -319,7 +319,10 @@
   .fs-main { padding: 0 10px 40px; }
   .fs-hdr__row { padding: 8px 10px 3px; gap: 7px; }
   .fs-logo { gap: 6px; }
-  .fs-logo__txt strong { font-size: 20px; }
+  /* The site name has to fit between the menu and the icons: the sparrow steps aside, as in the
+     department headers, and below ~360px the name scales with the screen (full size from 360 up). */
+  .fs-logo > svg { display: none; }
+  .fs-logo__txt strong { font-size: clamp(14px, calc((100vw - 184px) / 8.8), 20px); letter-spacing: .06em; }
   .fs-logo__txt em { margin-top: 3px; font-size: 7.5px; letter-spacing: .26em; }
   .fs-hdr__acts { gap: 0; }
   .fs-hdr__act { padding: 6px; }

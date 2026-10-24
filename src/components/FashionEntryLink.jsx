@@ -27,7 +27,7 @@ export function FashionChooser({ onClose }) {
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="fashion-choice__inner">
         <button type="button" className="fashion-choice__close" aria-label="Close fashion selection" onClick={onClose} autoFocus><Icon name="x" size={22} /></button>
-        <p className="fashion-choice__eyebrow">SORA LIFE / The fashion edit</p>
+        <p className="fashion-choice__eyebrow">SORA LIFESTYLE / The fashion edit</p>
         <h2 id={titleId}>Find your kind of style.</h2>
         <p className="fashion-choice__intro">Three worlds. A style for every you.</p>
         <div className="fashion-choice__grid">

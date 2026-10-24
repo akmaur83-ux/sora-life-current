@@ -90,7 +90,7 @@ export default function CreatorProfilePage({
 
       <div className="cp-sec">
         <h2 className="cp-sec__h serif">Programme terms</h2>
-        <p className="cp-sec__sub">Set by SORA LIFE — not editable here.</p>
+        <p className="cp-sec__sub">Set by SORA LIFESTYLE — not editable here.</p>
       </div>
 
       <div className="cp-terms">
@@ -118,7 +118,7 @@ export default function CreatorProfilePage({
           <div>
             <span className="cp-term__label">Creator since</span>
             <div className="cp-term__fig serif">{fmtDate(since)}</div>
-            <p className="cp-term__line">{since ? `You’ve been part of SORA LIFE since ${fmtDate(since)}.` : 'Your join date will appear once your account is activated.'}</p>
+            <p className="cp-term__line">{since ? `You’ve been part of SORA LIFESTYLE since ${fmtDate(since)}.` : 'Your join date will appear once your account is activated.'}</p>
           </div>
         </article>
       </div>
@@ -165,7 +165,7 @@ export default function CreatorProfilePage({
         <span className="cp-help__ic" aria-hidden="true"><Icon name="chat" size={26} /></span>
         <div className="cp-help__txt">
           <strong>Need help?</strong>
-          <span>Your commission rate and status are managed by SORA LIFE. Contact your programme manager if something here looks wrong.</span>
+          <span>Your commission rate and status are managed by SORA LIFESTYLE. Contact your programme manager if something here looks wrong.</span>
         </div>
         <Link to="/contact" className="cp-btn is-ghost"><Icon name="mail" size={16} /> Contact support</Link>
       </footer>

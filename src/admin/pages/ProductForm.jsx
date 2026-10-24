@@ -178,7 +178,7 @@ export default function ProductForm() {
       <div className="adm__head">
         <div>
           <h1>{isEdit ? 'Edit product' : 'Add product'}</h1>
-          <p>{isEdit ? values.name : 'Create a new Sora Life product'}</p>
+          <p>{isEdit ? values.name : 'Create a new Sora Lifestyle product'}</p>
         </div>
         <Link to="/admin/products" className="btn btn-outline btn-sm">← Back to products</Link>
       </div>

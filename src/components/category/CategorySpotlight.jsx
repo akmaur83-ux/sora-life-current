@@ -256,7 +256,7 @@ export default function CategorySpotlight({ category, products, configOverride =
           <CategoryHeading className="cspot__category-name">{category.name}</CategoryHeading>
           <span className="cspot__category-label">The edit</span>
         </div>}
-        <p className="cspot__eyebrow"><span>SORA LIFE</span><span>{category.name} / The edit</span></p>
+        <p className="cspot__eyebrow"><span>SORA LIFESTYLE</span><span>{category.name} / The edit</span></p>
 
         {/* One live region for the whole stage: assistive tech hears the
             product change once, not three times as the seats reshuffle. */}

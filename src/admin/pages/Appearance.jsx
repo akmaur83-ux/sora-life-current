@@ -182,7 +182,7 @@ function StorefrontPreview({ theme }) {
         <span className="ap-pv__annbar-acc">✦</span> FREE STANDARD SHIPPING
       </div>
       <div className="ap-pv__hdr">
-        <strong>SORA LIFE</strong>
+        <strong>SORA LIFESTYLE</strong>
         <nav>Wellness · Skin · Hair</nav>
         <span className="ap-pv__hdr-ic">♡ ⌕ ⛬</span>
       </div>
@@ -212,7 +212,7 @@ function StorefrontPreview({ theme }) {
         </div>
       </div>
       <div className="ap-pv__footer">
-        <span>© SORA LIFE</span> <span className="ap-pv__footer-acc">Wellness · Support</span>
+        <span>© SORA LIFESTYLE</span> <span className="ap-pv__footer-acc">Wellness · Support</span>
       </div>
     </div>
   );

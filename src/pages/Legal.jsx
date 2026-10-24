@@ -19,12 +19,12 @@ function documents(name) {
   return {
     shipping: {
   title: 'Shipping Policy',
-  blurb: 'How SORA LIFE dispatches and delivers eligible orders across India.',
+  blurb: `How ${name} dispatches and delivers eligible orders across India.`,
   methods: SHIPPING_METHODS,
   facts: [
     {
       heading: 'Shipping coverage',
-      body: 'SORA LIFE ships eligible orders across India, subject to product availability, courier serviceability and applicable delivery restrictions.',
+      body: `${name} ships eligible orders across India, subject to product availability, courier serviceability and applicable delivery restrictions.`,
     },
     {
       heading: 'Dispatch time',
@@ -57,7 +57,7 @@ function documents(name) {
 }
 
 export default function Legal({ doc }) {
-  const name = branding?.siteName || 'SORA LIFE';
+  const name = branding?.siteName || 'SORA LIFESTYLE';
   const info = companyInfo();
   const spec = documents(name)[doc];
   if (!spec) return null;

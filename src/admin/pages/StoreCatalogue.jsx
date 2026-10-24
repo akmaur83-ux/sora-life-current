@@ -94,7 +94,7 @@ function ClaimList({ warnings }) {
 }
 function ClaimNotice({ warnings }) {
   if (!warnings?.length) return null;
-  return <div className="adm-banner sc-info sc-claims" role="status"><strong>Saved — check this copy before customers read it.</strong> SORA LIFE cannot back these claims without proof (a certificate, a courier promise, clinical evidence). This is a warning, not a block: edit the copy if it overstates.<ClaimList warnings={warnings} /></div>;
+  return <div className="adm-banner sc-info sc-claims" role="status"><strong>Saved — check this copy before customers read it.</strong> SORA LIFESTYLE cannot back these claims without proof (a certificate, a courier promise, clinical evidence). This is a warning, not a block: edit the copy if it overstates.<ClaimList warnings={warnings} /></div>;
 }
 
 function CategoryEditor({ store, categories, initial, onSaved, onCancel }) {

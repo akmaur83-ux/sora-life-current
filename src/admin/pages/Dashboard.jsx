@@ -52,7 +52,7 @@ export default function Dashboard() {
       <div className="adm__head">
         <div>
           <h1>Dashboard</h1>
-          <p>Overview of your Sora Life storefront data.</p>
+          <p>Overview of your Sora Lifestyle storefront data.</p>
         </div>
       </div>
 

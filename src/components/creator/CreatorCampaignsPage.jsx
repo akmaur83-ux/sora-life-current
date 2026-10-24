@@ -76,7 +76,7 @@ export default function CreatorCampaignsPage({ creator, campaigns = [], links = 
       <header className="cc-head">
         <div>
           <h1 className="crp__h1 serif">My campaigns</h1>
-          <p className="crp__lede">Seasonal pushes SORA LIFE builds for creators — a launch, a festive edit, a category focus. Your programme manager sets them up.</p>
+          <p className="crp__lede">Seasonal pushes SORA LIFESTYLE builds for creators — a launch, a festive edit, a category focus. Your programme manager sets them up.</p>
         </div>
         {rows.length > 0 && <span className="ca-period"><Icon name="sparkle" size={15} /> {live} active of {rows.length}</span>}
       </header>
@@ -87,7 +87,7 @@ export default function CreatorCampaignsPage({ creator, campaigns = [], links = 
           <span className="cc-empty__ic" aria-hidden="true"><Icon name="sparkle" size={24} /></span>
           <p className="cp-eyebrow">Campaign status</p>
           <h2 className="serif">No campaigns running yet</h2>
-          <p className="cc-empty__body">Campaigns are seasonal pushes SORA LIFE builds for creators — a launch, a festive edit, a category focus. Your programme manager sets them up; you don’t create them yourself.</p>
+          <p className="cc-empty__body">Campaigns are seasonal pushes SORA LIFESTYLE builds for creators — a launch, a festive edit, a category focus. Your programme manager sets them up; you don’t create them yourself.</p>
           <ul className="cc-empty__points">
             <li><Icon name="externalLink" size={15} /><span>A campaign link of your own, tracked separately from your default link</span></li>
             <li><Icon name="award" size={15} /><span>Its own commission rate when the campaign carries one</span></li>

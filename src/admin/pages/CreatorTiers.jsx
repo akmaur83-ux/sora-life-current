@@ -251,7 +251,7 @@ function RewardSlot({ level, slot, row, onError, onFlash, onSaved }) {
       </div>
       <div className="field">
         <label className="label">Label</label>
-        <input className="input" value={form.label} maxLength={120} onChange={(e) => set('label', e.target.value)} placeholder="e.g. SORA LIFE gift box" />
+        <input className="input" value={form.label} maxLength={120} onChange={(e) => set('label', e.target.value)} placeholder="e.g. SORA LIFESTYLE gift box" />
       </div>
       <div className="adm-grid2">
         <div className="field">

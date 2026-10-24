@@ -396,7 +396,7 @@ export default function Checkout() {
         order_id: created.razorpayOrderId,
         amount: created.amountPaise,  // server-computed, in paise
         currency: created.currency,
-        name: 'Sora Life',
+        name: 'Sora Lifestyle',
         description: `Order ${created.orderNumber}`,
         theme: { color: '#1E3A2F' },
         // The window closes before this order's hold on its stock and coupon
@@ -608,7 +608,7 @@ export default function Checkout() {
           {step === 2 && (
             <section className="cform">
               <h2 className="serif">Payment</h2>
-              <p className="muted"><Icon name="lock" size={14} /> Payments are processed securely by Razorpay. Sora Life never sees or stores your card details.</p>
+              <p className="muted"><Icon name="lock" size={14} /> Payments are processed securely by Razorpay. Sora Lifestyle never sees or stores your card details.</p>
               <div className="optlist">
                 {[
                   ['online', 'Pay online', 'UPI, cards, net banking & wallets', 'card'],
