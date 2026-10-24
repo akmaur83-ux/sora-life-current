@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { adminListCategories, adminUpsertCategory, adminDeleteCategory, adminSeedDefaultCategories } from '../../lib/adminApi.js';
+import { adminListCategories, adminSaveCategory, adminDeleteCategory, adminSeedDefaultCategories } from '../../lib/adminApi.js';
 
 const TONES = ['forest', 'lime', 'amber', 'clay', 'moss', 'plum', 'rose', 'honey', 'teal', 'sky'];
 const empty = { slug: '', name: '', tagline: '', blurb: '', tone: 'forest', image_url: '', is_active: true, sort_order: 0 };
@@ -31,7 +31,7 @@ export default function Categories() {
     e.preventDefault();
     setSaving(true);
     setErr('');
-    try { await adminUpsertCategory(form); setEditing(null); await load(); } catch (ex) { setErr(ex.message || String(ex)); }
+    try { await adminSaveCategory(form); setEditing(null); await load(); } catch (ex) { setErr(ex.message || String(ex)); }
     setSaving(false);
   }
 
@@ -60,7 +60,10 @@ export default function Categories() {
           <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: 14 }}>{editing === 'new' ? 'New category' : `Edit "${editing.name}"`}</h2>
           <div className="adm-grid2">
             <div className="field"><label className="label">Name</label><input className="input" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
-            <div className="field"><label className="label">Slug</label><input className="input" value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} placeholder="auto from name" /></div>
+            {editing === 'new'
+              ? <div className="field"><label className="label">Slug</label><input className="input" value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} placeholder="auto from name" /></div>
+              : <div className="field"><label className="label">Slug</label><input className="input" value={form.slug} readOnly aria-readonly="true" />
+                <p className="hint">Fixed once the category exists: its products and its page address use it.</p></div>}
           </div>
           <div className="field"><label className="label">Tagline</label><input className="input" value={form.tagline} onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))} /></div>
           <div className="field"><label className="label">Description / blurb</label><textarea className="textarea" value={form.blurb} onChange={(e) => setForm((f) => ({ ...f, blurb: e.target.value }))} /></div>

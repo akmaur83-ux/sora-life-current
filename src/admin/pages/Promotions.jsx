@@ -43,6 +43,7 @@ export default function Promotions() {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [reordering, setReordering] = useState(false);
   const [err, setErr] = useState('');
   const [notMigrated, setNotMigrated] = useState(false);
 
@@ -120,13 +121,25 @@ export default function Promotions() {
   }
 
   async function move(row, dir) {
+    if (reordering) return;
     const idx = list.findIndex((x) => x.id === row.id);
     const j = idx + dir;
     if (j < 0 || j >= list.length) return;
     const next = [...list];
     [next[idx], next[j]] = [next[j], next[idx]];
     setList(next);
-    try { await adminReorderPromotions(next.map((x) => x.id)); } catch (ex) { setErr(ex.message || String(ex)); }
+    setReordering(true); setErr('');
+    try {
+      await adminReorderPromotions(next);
+      // Stored positions now match the list; an editor opened next starts from them.
+      setList(next.map((x, i) => ({ ...x, sort_order: i })));
+    } catch (ex) {
+      // Show the order as it is stored, not the one that failed to save.
+      const msg = ex.message || String(ex);
+      try { setList(await adminListPromotions()); setErr(`${msg} The list has been reloaded to show the saved order.`); }
+      catch { setList(list); setErr(`${msg} The list could not be reloaded either: reload the page before moving anything else.`); }
+    }
+    setReordering(false);
   }
 
   // One handler for both artwork fields; `field` names the column it fills.
@@ -299,8 +312,8 @@ export default function Promotions() {
               </div>
             </div>
             <div className="adm-actions">
-              <button className="btn btn-sm btn-light" onClick={() => move(p, -1)} aria-label="Move up">↑</button>
-              <button className="btn btn-sm btn-light" onClick={() => move(p, 1)} aria-label="Move down">↓</button>
+              <button className="btn btn-sm btn-light" onClick={() => move(p, -1)} disabled={reordering} aria-label="Move up">↑</button>
+              <button className="btn btn-sm btn-light" onClick={() => move(p, 1)} disabled={reordering} aria-label="Move down">↓</button>
               <button className="btn btn-sm btn-light" onClick={() => toggleActive(p)}>{p.is_active ? 'Disable' : 'Enable'}</button>
               <button className="btn btn-sm btn-light" onClick={() => startEdit(p)}>Edit</button>
               <button className="btn btn-sm btn-ghost" style={{ color: 'var(--color-sale)' }} onClick={() => remove(p)}>Delete</button>

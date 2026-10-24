@@ -9,6 +9,7 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const [busyId, setBusyId] = useState(null);
+  const [reordering, setReordering] = useState(false);
   const [err, setErr] = useState('');
 
   async function load() {
@@ -44,13 +45,25 @@ export default function Products() {
   }
 
   async function move(p, dir) {
+    if (reordering) return;
     const idx = products.findIndex((x) => x.dbId === p.dbId);
     const swapIdx = idx + dir;
     if (swapIdx < 0 || swapIdx >= products.length) return;
     const next = [...products];
     [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
     setProducts(next);
-    try { await adminReorderProducts(next.map((x) => x.dbId)); } catch (e) { setErr(e.message || String(e)); }
+    setReordering(true); setErr('');
+    try {
+      await adminReorderProducts(next);
+      // Stored positions now match the list, so the next move writes only its pair.
+      setProducts(next.map((x, i) => ({ ...x, sortOrder: i })));
+    } catch (e) {
+      // Show the order as it is stored, not the one that failed to save.
+      const msg = e.message || String(e);
+      try { setProducts(await adminListProducts()); setErr(`${msg} The list has been reloaded to show the saved order.`); }
+      catch { setProducts(products); setErr(`${msg} The list could not be reloaded either: reload the page before moving anything else.`); }
+    }
+    setReordering(false);
   }
 
   const catName = (slug) => staticCategories.find((c) => c.slug === slug)?.name || slug;
@@ -114,8 +127,8 @@ export default function Products() {
                   </td>
                   <td>
                     <div className="adm-actions">
-                      <button className="btn btn-sm btn-light" onClick={() => move(p, -1)} title="Move up">↑</button>
-                      <button className="btn btn-sm btn-light" onClick={() => move(p, 1)} title="Move down">↓</button>
+                      <button className="btn btn-sm btn-light" onClick={() => move(p, -1)} disabled={reordering} title="Move up">↑</button>
+                      <button className="btn btn-sm btn-light" onClick={() => move(p, 1)} disabled={reordering} title="Move down">↓</button>
                       <Link className="btn btn-sm btn-light" to={`/admin/products/${p.dbId}/edit`}>Edit</Link>
                       <button className="btn btn-sm btn-ghost" style={{ color: 'var(--color-sale)' }} onClick={() => remove(p)} disabled={busyId === p.dbId}>Delete</button>
                     </div>

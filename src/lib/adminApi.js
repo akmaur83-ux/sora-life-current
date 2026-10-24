@@ -238,7 +238,9 @@ export async function adminSetTheme(theme) {
 // ADMIN: products
 // ---------------------------------------------------------------
 export async function adminListProducts() {
-  const { data, error } = await supabase.from('products').select('*').order('sort_order', { ascending: true });
+  // id breaks ties, so products sharing a position always list in the same
+  // order and Move up/down acts on the neighbour the screen shows.
+  const { data, error } = await supabase.from('products').select('*').order('sort_order', { ascending: true }).order('id', { ascending: true });
   if (error) throw error;
   return (data || []).map(dbRowToProduct);
 }
@@ -353,13 +355,42 @@ export async function adminDeleteProduct(dbId) {
   if (error) throw error;
 }
 
-export async function adminReorderProducts(dbIdsInOrder) {
-  await Promise.all(dbIdsInOrder.map((dbId, i) =>
-    // updated_at moves here too. A write that does not stamp it is a write
-    // the staleness check cannot see, which would let a form saved after a
-    // reorder silently win.
-    supabase.from('products').update({ sort_order: i, updated_at: new Date().toISOString() }).eq('id', dbId)
-  ));
+/**
+ * Save a new product order. `productsInOrder` is the whole list as it should
+ * now stand, each product carrying the sortOrder it was loaded with. A
+ * product's position is its index, and only products whose stored position
+ * differs are written, so moving one past its neighbour writes those two
+ * rather than every product. (A list whose stored positions tie — every
+ * product the editor used to save was given 0 — is numbered once, by the
+ * first move.)
+ *
+ * Every write is checked: one that errors, or matches no row (the product was
+ * deleted, or the session no longer has admin rights), makes this throw,
+ * so a failed move is never shown as saved. Returns the number written.
+ */
+export async function adminReorderProducts(productsInOrder) {
+  // updated_at moves here too. A write that does not stamp it is a write
+  // the staleness check cannot see, which would let a form saved after a
+  // reorder silently win.
+  const now = new Date().toISOString();
+  return writePositions(productsInOrder.map((p, i) => ({ id: p.dbId, from: p.sortOrder, to: i })), 'product',
+    (m) => supabase.from('products').update({ sort_order: m.to, updated_at: now }).eq('id', m.id).select('id'));
+}
+
+/** Write each changed position; throw, after all have been tried, if any did not save. */
+async function writePositions(positions, what, write) {
+  const moves = positions.filter((m) => Number(m.from) !== m.to);
+  const results = await Promise.allSettled(moves.map(async (m) => {
+    const { data, error } = await write(m);
+    if (error) throw error;
+    if (!data || !data.length) throw new Error(`the ${what} was not found, or this session can no longer edit it`);
+  }));
+  const failed = results.filter((r) => r.status === 'rejected');
+  if (failed.length) {
+    const reason = failed[0].reason?.message || String(failed[0].reason);
+    throw new Error(`The new order was not saved: ${failed.length} of ${moves.length} ${what} position${moves.length === 1 ? '' : 's'} could not be written (${reason}).`);
+  }
+  return moves.length;
 }
 
 function slugify(s) {
@@ -556,9 +587,21 @@ export async function adminListCategories() {
   return data || [];
 }
 
-export async function adminUpsertCategory(category) {
+/**
+ * Save a category from the admin form.
+ *
+ * One that exists (it has an id) is updated by that id, and its slug is left
+ * as it is: products name their category by slug and the category page's
+ * address is built from it, so a changed slug would leave both pointing at
+ * nothing. (Saving by slug, as this used to, turned a slug edit into a second
+ * category beside the first.)
+ *
+ * A new one is inserted, and refused when its slug — typed, or made from the
+ * name — is already taken. (An upsert on slug overwrote that category instead,
+ * blanking its tagline and image.)
+ */
+export async function adminSaveCategory(category) {
   const row = {
-    slug: category.slug || slugify(category.name),
     name: category.name,
     tagline: category.tagline || '',
     blurb: category.blurb || '',
@@ -567,7 +610,18 @@ export async function adminUpsertCategory(category) {
     sort_order: Number(category.sort_order) || 0,
     is_active: category.is_active !== false,
   };
-  const { data, error } = await supabase.from('categories').upsert(row, { onConflict: 'slug' }).select().single();
+  if (category.id) {
+    const { data, error } = await supabase.from('categories')
+      .update({ ...row, updated_at: new Date().toISOString() }).eq('id', category.id).select();
+    if (error) throw error;
+    if (!data || !data.length) throw new Error('This category was not saved: it no longer exists, or this session can no longer edit it. Reload the page.');
+    return data[0];
+  }
+  const slug = category.slug || slugify(category.name);
+  const { data, error } = await supabase.from('categories').insert({ ...row, slug }).select().single();
+  if (error?.code === '23505') {
+    throw new Error(`A category with the slug "${slug}" already exists. Edit that category instead, or give this one a different slug.`);
+  }
   if (error) throw error;
   return data;
 }
@@ -1288,10 +1342,15 @@ export async function adminDeletePromotion(id) {
   }
 }
 
-export async function adminReorderPromotions(idsInOrder) {
-  await Promise.all(idsInOrder.map((id, i) =>
-    supabase.from('promotions').update({ sort_order: i }).eq('id', id)
-  ));
+/**
+ * Save a new promotion order: `promotionsInOrder` is the list as it should now
+ * stand, as loaded (with sort_order). As adminReorderProducts: only changed
+ * positions are written, and a write that fails or matches nothing throws.
+ * (The promotions trigger stamps updated_at.)
+ */
+export async function adminReorderPromotions(promotionsInOrder) {
+  return writePositions(promotionsInOrder.map((p, i) => ({ id: p.id, from: p.sort_order, to: i })), 'promotion',
+    (m) => supabase.from('promotions').update({ sort_order: m.to }).eq('id', m.id).select('id'));
 }
 
 const PROMO_IMAGE_MAX_BYTES = 6 * 1024 * 1024; // 6MB — posters should be light
