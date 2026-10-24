@@ -52,7 +52,7 @@ function world(seed = {}) {
     const json = (b, status = 200) => new Response(JSON.stringify(b), { status, headers: { 'Content-Type': 'application/json' } });
     if (url.pathname === '/auth/v1/user') {
       const m = /^Bearer user-(\w+)$/.exec(init.headers?.Authorization || '');
-      return m ? json({ id: `user-${m[1]}` }) : json({}, 401);
+      if (m) return json({ id: `user-${m[1]}` }); // a signed-in shopper; any other token goes to the double
     }
     if (rel === 'orders' && (init.method || 'GET') === 'GET' && url.searchParams.get('user_id')) {
       const uid = url.searchParams.get('user_id').replace('eq.', '');
@@ -86,7 +86,7 @@ await test('A1 an admin marks a COD order collected: paid, invoiced and dated in
   assert.match(o.invoice_number, /^SL\/\d{4}\//, 'an invoice number is issued');
   assert.ok(o.invoiced_at && o.paid_at, 'dated');
   assert.equal(o.payment_method, 'cod', 'still cash on delivery');
-  assert.deepEqual(res.body.order, { id: o.id, order_number: 'SORA-COD1', status: 'paid', payment_status: 'paid', paid_at: o.paid_at, invoice_number: o.invoice_number, invoiced_at: o.invoiced_at });
+  assert.deepEqual(res.body.order, { id: o.id, order_number: 'SORA-COD1', status: 'paid', payment_status: 'paid', paid_at: o.paid_at, invoice_number: o.invoice_number, invoiced_at: o.invoiced_at, collected_by: 'owner@soralife.test' });
   assert.deepEqual(w.conversionStatuses, [{ p_order_id: 'ord_cod', p_status: 'eligible', p_reason: 'cod_collected' }]);
 });
 
@@ -139,6 +139,28 @@ await test('A5 once collected, a signed-in COD buyer is no longer a first-time c
   const second = await place('key-confirm-a5-bbbb');
   assert.equal(second.statusCode, 409, 'the collected order counts as a paid one');
   assert.equal(second.body.reason, 'first_order_only');
+});
+
+await test('A7 it records WHICH admin pressed it — their user id and email, once, with the order', async () => {
+  const w = world({ orders: [codOrder()] });
+  const res = await collect('SORA-COD1');
+  assert.equal(res.body.order.collected_by, 'owner@soralife.test');
+  assert.deepEqual(w.orderEvents, [{ order_id: 'ord_cod', action: 'cod_collected', admin_user_id: 'admin-user-1', admin_email: 'owner@soralife.test' }]);
+  await collect('SORA-COD1');
+  assert.equal(w.orderEvents.length, 1, 'a second click records nothing');
+  const refused = world({ orders: [codOrder({ fulfillment_status: 'cancelled' })] });
+  await collect('SORA-COD1');
+  assert.equal(refused.orderEvents.length, 0, 'a refused order records nothing');
+});
+
+await test('A8 before migration 0040 is run, the button still marks the order paid (without the record)', async () => {
+  const w = world({ orders: [codOrder()], noAuditRpc: true });
+  const res = await collect('SORA-COD1');
+  assert.equal(res.statusCode, 200);
+  assert.equal(w.orders[0].payment_status, 'paid');
+  assert.match(w.orders[0].invoice_number, /^SL\//);
+  assert.equal(w.orderEvents.length, 0);
+  assert.equal(res.body.order.collected_by, null);
 });
 
 console.log('\n— A paid order is never handed back as payable —');
@@ -210,7 +232,8 @@ await test('A6 the Orders page offers "Mark cash collected" only on an unpaid, u
   const api = code('src/lib/adminApi.js');
   assert.match(api, /fetchImpl\('\/api\/admin\/mark-cod-collected', \{\n\s+method: 'POST',\n\s+headers: \{ 'Content-Type': 'application\/json', Authorization: `Bearer \$\{token\}` \},\n\s+body: JSON\.stringify\(\{ orderNumber \}\),/);
   const route = code('api/admin/mark-cod-collected.js');
-  assert.match(route, /if \(!\(await callerIsAdmin\(authorization, cfg\)\)\) return fail\(res, 403/, 'the admin check comes before any service-role read');
+  assert.match(route, /const admin = await callerIdentity\(authorization, cfg\);\n\s+if \(!admin \|\| !\(await callerIsAdmin\(authorization, cfg\)\)\) return fail\(res, 403/, 'who it is and that they are an admin, before any service-role read');
+  assert.match(route, /let paid = await markCodCollected\(order\.id, admin, generateInvoiceNumber\(\), cfg\);/, 'paid and recorded in one call');
   assert.ok(route.indexOf('callerIsAdmin(authorization') < route.indexOf('findOrderByNumber(orderNumber'), 'checked before the order is even read');
   assert.match(route, /\}, cfg, \{ unlessPaid: true \}\);/, 'one conditional write');
 });

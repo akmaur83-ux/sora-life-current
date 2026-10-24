@@ -17,15 +17,20 @@
 //     number and date issued in that same write — invoicePatchForPaidTransition,
 //     exactly as the online payment paths do — so a double click cannot issue
 //     two numbers, and a second click simply reports it already paid;
-//   * its creator conversion qualifies, as an online payment's does.
+//   * its creator conversion qualifies, as an online payment's does;
+//   * WHO pressed it is recorded — the admin's user id and email, in
+//     order_admin_events — in the same transaction that marks it paid
+//     (migration 0040's mark_cod_collected), so the order cannot become paid
+//     here without that record. Before 0040 is applied it falls back to the
+//     unrecorded write, so the button keeps working.
 // Stock and the coupon use were already taken when the order was placed (0039).
 //
 // The service-role key is used only after the admin check, and only for that
 // one guarded write; nothing about it reaches the browser.
 // ============================================================
-import { getSupabaseConfig, findOrderByNumber, updateOrderById, setConversionStatus } from '../_lib/supabaseAdmin.js';
+import { getSupabaseConfig, findOrderByNumber, updateOrderById, setConversionStatus, markCodCollected } from '../_lib/supabaseAdmin.js';
 import { normalizeOrderNumber } from '../_lib/orderLookup.js';
-import { invoicePatchForPaidTransition } from '../_lib/pricing.js';
+import { invoicePatchForPaidTransition, generateInvoiceNumber } from '../_lib/pricing.js';
 import { enforceRateLimit } from '../_lib/rateLimit.js';
 
 function fail(res, status, error) { return res.status(status).json({ ok: false, error }); }
@@ -40,7 +45,20 @@ function view(order) {
     paid_at: order.paid_at ?? null,
     invoice_number: order.invoice_number ?? null,
     invoiced_at: order.invoiced_at ?? null,
+    collected_by: order.collected_by ?? null,
   };
+}
+
+/** Who holds this access token: the user Supabase Auth reports for it, or null. */
+async function callerIdentity(authorization, cfg) {
+  const apikey = cfg.anonKey || cfg.serviceKey;
+  const r = await fetch(`${cfg.url}/auth/v1/user`, {
+    headers: { apikey, Authorization: authorization },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!r.ok) return null;
+  const user = await r.json().catch(() => null);
+  return user && typeof user.id === 'string' ? { id: user.id, email: typeof user.email === 'string' ? user.email : null } : null;
 }
 
 /** Is the bearer of this access token an admin? The database answers, as them. */
@@ -73,7 +91,10 @@ export default async function handler(req, res) {
   if (!orderNumber || orderNumber.length > 60) return fail(res, 400, 'Missing order number.');
 
   try {
-    if (!(await callerIsAdmin(authorization, cfg))) return fail(res, 403, 'Admin sign-in required.');
+    // Who is asking, then whether they are an admin — both answered by
+    // Supabase for this token, before any order is read.
+    const admin = await callerIdentity(authorization, cfg);
+    if (!admin || !(await callerIsAdmin(authorization, cfg))) return fail(res, 403, 'Admin sign-in required.');
 
     const order = await findOrderByNumber(orderNumber, cfg);
     if (!order) return fail(res, 404, 'That order was not found.');
@@ -81,12 +102,17 @@ export default async function handler(req, res) {
     if (order.payment_status === 'paid') return res.status(200).json({ ok: true, alreadyPaid: true, order: view(order) });
     if (order.fulfillment_status === 'cancelled') return fail(res, 409, 'This order is cancelled. Un-cancel it first if the cash really was collected.');
 
-    const paid = await updateOrderById(order.id, {
-      status: 'paid',
-      payment_status: 'paid',
-      paid_at: new Date().toISOString(),
-      ...invoicePatchForPaidTransition(order),
-    }, cfg, { unlessPaid: true });
+    // Paid, invoiced and recorded against this admin in one transaction. The
+    // invoice number is used only if the order has none yet.
+    let paid = await markCodCollected(order.id, admin, generateInvoiceNumber(), cfg);
+    if (paid?.skipped) {
+      paid = await updateOrderById(order.id, {
+        status: 'paid',
+        payment_status: 'paid',
+        paid_at: new Date().toISOString(),
+        ...invoicePatchForPaidTransition(order),
+      }, cfg, { unlessPaid: true });
+    }
 
     // Another click (or another admin) recorded it first: report that order as it now stands.
     if (!paid) {

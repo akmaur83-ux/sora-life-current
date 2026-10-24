@@ -52,6 +52,9 @@ export function makeWorld(seed = {}) {
     holds: [],
     // Every set_conversion_status call, in order (creator commission qualifying).
     conversionStatuses: [],
+    // order_admin_events rows (0040); noAuditRpc = 0040 not applied.
+    orderEvents: [],
+    noAuditRpc: Boolean(seed.noAuditRpc),
     // true = migration 0039 not applied: its functions answer PGRST202.
     noHolds: Boolean(seed.noHolds),
     payments: seed.payments ? structuredClone(seed.payments) : {},
@@ -102,7 +105,12 @@ export function makeWorld(seed = {}) {
     }
 
     // ---- Supabase ----
-    if (url.pathname === '/auth/v1/user') return json(401, {});
+    // An "admin-…" token belongs to the store's admin; any other is not a user.
+    if (url.pathname === '/auth/v1/user') {
+      return /^Bearer admin-/.test(String(init.headers?.Authorization || ''))
+        ? json(200, { id: 'admin-user-1', email: 'owner@soralife.test' })
+        : json(401, {});
+    }
 
     const rel = url.pathname.replace('/rest/v1/', '');
 
@@ -112,6 +120,19 @@ export function makeWorld(seed = {}) {
     // is_sora_admin() decides from the CALLER's token (auth.uid()); here a
     // token starting "admin-" belongs to an admin and any other does not.
     if (rel === 'rpc/is_sora_admin') return json(200, /^Bearer admin-/.test(String(init.headers?.Authorization || '')));
+
+    // Migration 0040's mark_cod_collected: paid, invoiced and recorded in one step, or
+    // null when the guard matches nothing. `noAuditRpc` = 0040 not applied (PGRST202).
+    if (rel === 'rpc/mark_cod_collected') {
+      if (world.noAuditRpc) return json(404, { code: 'PGRST202', message: 'Could not find the function public.mark_cod_collected' });
+      const o = world.orders.find((x) => x.id === body.p_order_id);
+      if (!o || o.payment_method !== 'cod' || o.payment_status === 'paid' || o.fulfillment_status === 'cancelled') return json(200, null);
+      const now = new Date().toISOString();
+      Object.assign(o, { status: 'paid', payment_status: 'paid', paid_at: now, invoice_number: o.invoice_number ?? body.p_invoice_number, invoiced_at: o.invoiced_at ?? now, updated_at: now });
+      const email = String(body.p_admin_email ?? '').trim() || null;
+      world.orderEvents.push({ order_id: o.id, action: 'cod_collected', admin_user_id: body.p_admin_user_id, admin_email: email });
+      return json(200, { id: o.id, order_number: o.order_number, status: o.status, payment_status: o.payment_status, paid_at: o.paid_at, invoice_number: o.invoice_number, invoiced_at: o.invoiced_at, collected_by: email });
+    }
 
     // ---- Migration 0039: order holds. Each mirrors its SQL function. ----
     if (/^rpc\/(reserve|settle|release)_order_holds$/.test(rel)) {

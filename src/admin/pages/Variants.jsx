@@ -47,6 +47,10 @@ export default function Variants() {
   const [msg, setMsg] = useState('');
   const [editingId, setEditingId] = useState(null); // null = none, 'new' = add form
   const [form, setForm] = useState(blank);
+  // The updated_at of the pack size being edited, as it was opened. The save
+  // is refused if the row has moved since — an order taking stock moves it —
+  // so a form opened before a sale cannot write the old stock back.
+  const [editingVersion, setEditingVersion] = useState(null);
 
   useEffect(() => {
     adminListProducts()
@@ -94,6 +98,7 @@ export default function Variants() {
   function startEdit(v) {
     setForm(toForm(v));
     setEditingId(v.id);
+    setEditingVersion(v.updated_at || null);
   }
 
   function flash(text) {
@@ -108,11 +113,17 @@ export default function Variants() {
     setErr('');
     try {
       if (editingId === 'new') await adminCreateVariant(productId, form);
-      else await adminUpdateVariant(editingId, productId, form);
+      else await adminUpdateVariant(editingId, productId, form, editingVersion);
       setEditingId(null);
       await reload();
       flash('Saved.');
     } catch (e2) {
+      // Refused because the pack size moved (an order, or another tab). The
+      // form still holds the old values — stock included — so it is closed
+      // rather than left one click from saving them again; the list reloads
+      // with the current figures to reopen and reapply the change against.
+      // (The message is set after the reload, which clears the banner.)
+      if (e2.isStaleWrite) { setEditingId(null); await reload(); }
       setErr(e2.message || String(e2));
     } finally {
       setBusy(false);

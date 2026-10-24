@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { adminListProducts, adminUpdateProduct } from '../../lib/adminApi.js';
+import { adminListProducts, adminUpdateProductPrice } from '../../lib/adminApi.js';
 import { money } from '../../lib/format.js';
 
 const TIERS = [10, 15, 18, 20];
@@ -22,15 +22,18 @@ export default function Pricing() {
     const v = editFor(p);
     setSavingId(p.dbId);
     try {
-      await adminUpdateProduct(p.dbId, {
-        name: p.name, slug: p.slug, description: p.description, category: p.category, image: p.image, gallery: p.gallery,
-        originalPrice: Number(v.originalPrice) || 0, discountPercent: Number(v.discountPercent) || 0,
-        form: p.form, stock: p.stock, permalink: p.permalink,
-        isNew: p.isNew, isBestseller: p.isBestseller, isFeatured: p.isFeatured, rating: p.rating, reviewCount: p.reviewCount, isActive: p.isActive,
-      });
-      setProducts((list) => list.map((x) => x.dbId === p.dbId ? { ...x, originalPrice: Number(v.originalPrice) || 0, discountPercent: Number(v.discountPercent) || 0 } : x));
+      // The price columns only, refused if the product moved since this page
+      // loaded it. Saving the whole row from that load used to write back its
+      // stale name, description, image, stock flag and active state.
+      const saved = await adminUpdateProductPrice(p.dbId, { originalPrice: v.originalPrice, discountPercent: v.discountPercent }, p.updatedAt);
+      setProducts((list) => list.map((x) => (x.dbId === p.dbId ? saved : x)));
       setEdits((e) => { const n = { ...e }; delete n[p.dbId]; return n; });
-    } catch (ex) { setErr(ex.message || String(ex)); }
+    } catch (ex) {
+      setErr(ex.message || String(ex));
+      // Changed elsewhere: reload the list so the next Save is checked
+      // against the current version. Unsaved price edits are kept.
+      if (ex.isStaleWrite) { try { setProducts(await adminListProducts()); } catch { /* the message already says to reload */ } }
+    }
     setSavingId(null);
   }
 

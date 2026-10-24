@@ -1,6 +1,6 @@
 import { useEffect, useState, Fragment } from 'react';
 import { Link } from 'react-router-dom';
-import { adminListOrders, adminUpdateOrderFulfillment, adminMarkCodCollected } from '../../lib/adminApi.js';
+import { adminListOrders, adminUpdateOrderFulfillment, adminMarkCodCollected, adminListOrderEvents } from '../../lib/adminApi.js';
 import { money } from '../../lib/format.js';
 import { FULFILLMENT_STATUSES, fulfillmentStatusLabel, validateFulfillmentInput } from '../../lib/orderFulfillment.js';
 
@@ -85,6 +85,22 @@ export default function Orders() {
   const [err, setErr] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  // Recorded admin actions per order (0040) — who collected a COD order's
+  // cash — loaded when its details open.
+  const [events, setEvents] = useState({});
+
+  async function loadEvents(orderId) {
+    try {
+      const list = await adminListOrderEvents(orderId);
+      setEvents((current) => ({ ...current, [orderId]: list }));
+    } catch { /* the details still show without the record */ }
+  }
+
+  function toggleDetails(order) {
+    const opening = expandedId !== order.id;
+    setExpandedId(opening ? order.id : null);
+    if (opening) loadEvents(order.id);
+  }
 
   useEffect(() => {
     adminListOrders()
@@ -112,6 +128,8 @@ export default function Orders() {
 
   function updateOrder(patch) {
     setOrders((current) => current.map((order) => (order.id === patch.id ? { ...order, ...patch } : order)));
+    // Cash just recorded as collected: show who, from the record itself.
+    if (patch.payment_status === 'paid') loadEvents(patch.id);
   }
 
   return (
@@ -178,7 +196,7 @@ export default function Orders() {
                         </span>
                       </td>
                       <td>
-                        <button className="btn btn-sm btn-light" onClick={() => setExpandedId(open ? null : o.id)}>
+                        <button className="btn btn-sm btn-light" onClick={() => toggleDetails(o)}>
                           {open ? 'Hide' : 'View details'}
                         </button>
                       </td>
@@ -245,6 +263,9 @@ export default function Orders() {
                                   <div><dt>Gateway order</dt><dd className="adm-mono">{o.razorpay_order_id}</dd></div>
                                 )}
                                 {o.failure_reason && <div><dt>Failure</dt><dd>{o.failure_reason}</dd></div>}
+                                {(events[o.id] || []).filter((e) => e.action === 'cod_collected').map((e) => (
+                                  <div key={e.created_at}><dt>Cash collected by</dt><dd>{e.admin_email || 'an admin (no email on record)'} · {dt(e.created_at)}</dd></div>
+                                ))}
                               </dl>
                               <CashCollected order={o} onUpdated={updateOrder} />
                               <Link to={`/invoice/${o.order_number}`} className="btn btn-sm" style={{ marginTop: 10 }}>

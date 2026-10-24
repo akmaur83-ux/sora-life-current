@@ -630,6 +630,31 @@ export async function releaseOrderHolds(orderId, cfg) {
 }
 
 /**
+ * Mark a cash-on-delivery order's cash collected AND record which admin did
+ * it, in one transaction (migration 0040's mark_cod_collected). Returns the
+ * order's new payment fields with `collected_by`; null when the guard matched
+ * nothing (not COD, already paid, or cancelled); or { skipped: true } before
+ * 0040 is applied, when the caller falls back to the unrecorded write.
+ */
+export async function markCodCollected(orderId, admin, invoiceNumber, cfg) {
+  try {
+    const out = await callRpc('mark_cod_collected', {
+      p_order_id: orderId,
+      p_admin_user_id: admin.id,
+      p_admin_email: admin.email || null,
+      p_invoice_number: invoiceNumber,
+    }, cfg);
+    return rpcObject(out, 'mark_cod_collected');
+  } catch (err) {
+    if (isMissingFunction(err)) {
+      console.warn('[orders] mark_cod_collected not present — run migration 0040. Recording the cash without the admin.');
+      return { skipped: true };
+    }
+    throw err;
+  }
+}
+
+/**
  * Remove an order row that was never placed: written a moment ago, then
  * refused its holds (the reservation writes nothing on a refusal). Guarded to
  * an unpaid row, so it can never touch an order that has taken money.
