@@ -57,7 +57,7 @@ export const FASHION_DEPARTMENT_EDITS = /^(src\/App\.jsx|src\/fashion\/(FashionH
  * by sansCartChanges. A suite may allow one in its changed-file list only where
  * it also byte-checks that file through sansStorefrontChanges.
  */
-export const CART_CHANGE_EDITS = /^(src\/lib\/(store\.jsx|payments\.js|couponApi\.js|homelivingPdp\.js)|api\/_lib\/(pricing|supabaseAdmin|couponQuote)\.js|api\/razorpay\/(create-order|verify|webhook)\.js|src\/admin\/pages\/(Orders|Pricing|Variants)\.jsx|src\/homeliving\/HomeLivingProduct(Card|Page)\.jsx|src\/data\/homelivingHomepage\.js|src\/components\/CartCoupons\.jsx|src\/pages\/Checkout\.jsx)$/;
+export const CART_CHANGE_EDITS = /^(src\/lib\/(store\.jsx|payments\.js|couponApi\.js|homelivingPdp\.js)|api\/_lib\/(pricing|supabaseAdmin|couponQuote)\.js|api\/razorpay\/(create-order|verify|webhook)\.js|src\/admin\/pages\/(Orders|Pricing|Variants|Settings|Branding|CreatorTerms)\.jsx|src\/homeliving\/HomeLivingProduct(Card|Page)\.jsx|src\/data\/homelivingHomepage\.js|src\/components\/CartCoupons\.jsx|src\/pages\/Checkout\.jsx)$/;
 
 /**
  * Order holds (money-path fix 6+3; test-order-holds.mjs owns them): what an order holds and for how
@@ -517,6 +517,11 @@ const UNDO_ORDER_CONFIRMATION = undoFromPatch('order-confirmation.patch');
 // (0040) shown on the Orders page. Undone here, newest first.
 const UNDO_ADMIN_SAVES = undoFromPatch('admin-saves.patch');
 
+// Admin failed loads (stage-two fixes 5, 6): Settings, Branding and Creator terms offering no form to save
+// after a failed read; the Dashboard offering the Biosash import only on a list that loaded empty, asking
+// first, with the import insert-only (adminApi.js). Undone here, newest first.
+const UNDO_ADMIN_FAILED_LOADS = undoFromPatch('admin-failed-loads.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -583,7 +588,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_ADMIN_SAVES, UNDO_ORDER_CONFIRMATION, UNDO_ORDER_HOLDS, UNDO_CHECKOUT_REPLAY, UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_ADMIN_FAILED_LOADS, UNDO_ADMIN_SAVES, UNDO_ORDER_CONFIRMATION, UNDO_ORDER_HOLDS, UNDO_CHECKOUT_REPLAY, UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart

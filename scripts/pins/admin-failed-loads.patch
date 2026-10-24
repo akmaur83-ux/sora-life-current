@@ -1,0 +1,325 @@
+diff --git a/src/admin/pages/Branding.jsx b/src/admin/pages/Branding.jsx
+index ba55260..5d1397b 100644
+--- a/src/admin/pages/Branding.jsx
++++ b/src/admin/pages/Branding.jsx
+@@ -4,13 +4,16 @@ import { adminGetSetting, adminSetSetting, uploadImage } from '../../lib/adminAp
+ export default function Branding() {
+   const [form, setForm] = useState({ logo_url: '', site_name: '', tagline: '', primary_color: '#1E3A2F', accent_color: '#E8B04B', favicon_url: '' });
+   const [loading, setLoading] = useState(true);
++  // Set when the saved branding could not be read. The form then stays hidden:
++  // its defaults are not the live branding, and saving them would replace it.
++  const [loadErr, setLoadErr] = useState('');
+   const [saving, setSaving] = useState(false);
+   const [uploading, setUploading] = useState('');
+   const [msg, setMsg] = useState('');
+   const [err, setErr] = useState('');
+ 
+   useEffect(() => {
+-    adminGetSetting('branding').then((v) => { if (v) setForm((f) => ({ ...f, ...v })); }).catch((e) => setErr(e.message || String(e))).finally(() => setLoading(false));
++    adminGetSetting('branding').then((v) => { if (v) setForm((f) => ({ ...f, ...v })); }).catch((e) => setLoadErr(e.message || String(e))).finally(() => setLoading(false));
+   }, []);
+ 
+   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+@@ -26,6 +29,7 @@ export default function Branding() {
+ 
+   async function save(e) {
+     e.preventDefault();
++    if (loadErr) return;
+     setSaving(true); setErr(''); setMsg('');
+     try {
+       await adminSetSetting('branding', form);
+@@ -41,8 +45,14 @@ export default function Branding() {
+       <div className="adm__head"><div><h1>Branding</h1><p>Logo, site name, tagline, favicon and brand colors.</p></div></div>
+       {err && <div className="adm-banner err">{err}</div>}
+       {msg && <div className="adm-banner ok">{msg}</div>}
++      {loadErr && (
++        <div className="adm-banner err" role="alert">
++          The saved branding could not be loaded ({loadErr}). It can't be edited until it loads, so the
++          default logo, name and colors can't be saved over the live ones. Reload the page to try again.
++        </div>
++      )}
+ 
+-      <form onSubmit={save}>
++      {!loadErr && <form onSubmit={save}>
+         <div className="surface">
+           <h2>Logo</h2>
+           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+@@ -94,7 +104,7 @@ export default function Branding() {
+         </div>
+ 
+         <button className="btn" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save branding'}</button>
+-      </form>
++      </form>}
+     </div>
+   );
+ }
+diff --git a/src/admin/pages/CreatorTerms.jsx b/src/admin/pages/CreatorTerms.jsx
+index a88e99d..d142ed9 100644
+--- a/src/admin/pages/CreatorTerms.jsx
++++ b/src/admin/pages/CreatorTerms.jsx
+@@ -23,6 +23,9 @@ export default function CreatorTerms() {
+   const [loadedVersion, setLoadedVersion] = useState(1);
+   const [bumpVersion, setBumpVersion] = useState(false);
+   const [loading, setLoading] = useState(true);
++  // Set when the saved terms could not be read. The form then stays hidden:
++  // saving it would publish an empty document as version 1 over the live one.
++  const [loadErr, setLoadErr] = useState('');
+   const [saving, setSaving] = useState(false);
+   const [msg, setMsg] = useState('');
+   const [err, setErr] = useState('');
+@@ -34,12 +37,13 @@ export default function CreatorTerms() {
+         setForm({ ...EMPTY, ...v });
+         setLoadedVersion(Number(v.version) || 1);
+       })
+-      .catch((e) => setErr(e.message || String(e)))
++      .catch((e) => setLoadErr(e.message || String(e)))
+       .finally(() => setLoading(false));
+   }, []);
+ 
+   async function save(e) {
+     e.preventDefault();
++    if (loadErr) return;
+     setSaving(true); setErr(''); setMsg('');
+     try {
+       const version = bumpVersion ? loadedVersion + 1 : loadedVersion;
+@@ -74,14 +78,20 @@ export default function CreatorTerms() {
+ 
+       {err && <div className="adm-banner err">{err}</div>}
+       {msg && <div className="adm-banner ok">{msg}</div>}
+-      {!published && (
++      {loadErr && (
++        <div className="adm-banner err" role="alert">
++          The saved creator terms could not be loaded ({loadErr}). They can't be edited until they load,
++          so an empty document can't be published over the live terms. Reload the page to try again.
++        </div>
++      )}
++      {!loadErr && !published && (
+         <div className="adm-banner">
+           No terms published yet. While this is empty, creators see no terms section and the
+           signup checkbox is not shown.
+         </div>
+       )}
+ 
+-      <form onSubmit={save}>
++      {!loadErr && <form onSubmit={save}>
+         <div className="surface">
+           <h2>Terms &amp; conditions</h2>
+           <div className="field">
+@@ -128,7 +138,7 @@ export default function CreatorTerms() {
+             {saving ? 'Saving…' : 'Save terms'}
+           </button>
+         </div>
+-      </form>
++      </form>}
+     </div>
+   );
+ }
+diff --git a/src/admin/pages/Dashboard.jsx b/src/admin/pages/Dashboard.jsx
+index 5dfb35e..cf1d602 100644
+--- a/src/admin/pages/Dashboard.jsx
++++ b/src/admin/pages/Dashboard.jsx
+@@ -4,40 +4,48 @@ import { adminListProducts, adminListCategories, adminImportBiosashCatalog, admi
+ 
+ export default function Dashboard() {
+   const [loading, setLoading] = useState(true);
+-  const [products, setProducts] = useState([]);
+-  const [categories, setCategories] = useState([]);
++  // null = not known. A failed read is not an empty catalogue, so it must
++  // never look like one: the import offer below needs a list that loaded.
++  const [products, setProducts] = useState(null);
++  const [categories, setCategories] = useState(null);
++  const [loadErr, setLoadErr] = useState('');
+   const [importing, setImporting] = useState(false);
+-  const [importMsg, setImportMsg] = useState('');
++  const [importMsg, setImportMsg] = useState(null); // { ok, text }
+   const [progress, setProgress] = useState(null);
+ 
+   async function load() {
+     setLoading(true);
+-    const [p, c] = await Promise.all([
+-      adminListProducts().catch(() => []),
+-      adminListCategories().catch(() => []),
+-    ]);
+-    setProducts(p); setCategories(c);
++    const [p, c] = await Promise.allSettled([adminListProducts(), adminListCategories()]);
++    setProducts(p.status === 'fulfilled' ? p.value : null);
++    setCategories(c.status === 'fulfilled' ? c.value : null);
++    setLoadErr([p, c].filter((r) => r.status === 'rejected').map((r) => r.reason?.message || String(r.reason)).join(' · '));
+     setLoading(false);
+   }
+   useEffect(() => { load(); }, []);
+ 
+   async function runImport() {
++    if (!window.confirm('Import the 149 bundled Biosash products into the live catalogue?\n\n'
++      + 'They are added as active products with no prices set; price them on the Pricing page. '
++      + 'Default categories are added where missing. Nothing already in the catalogue is changed.')) return;
+     setImporting(true);
+-    setImportMsg('');
++    setImportMsg(null);
+     try {
+       await adminSeedDefaultCategories();
+-      const n = await adminImportBiosashCatalog((done, total) => setProgress({ done, total }));
+-      setImportMsg(`Imported/updated ${n} real Biosash products, seeded default categories.`);
++      const { added, total } = await adminImportBiosashCatalog((done, total) => setProgress({ done, total }));
++      setImportMsg({ ok: true, text: `Added ${added} of the ${total} bundled Biosash products`
++        + (added < total ? `; the other ${total - added} were already in the catalogue and were left as they are` : '')
++        + '. Default categories seeded where missing.' });
+       await load();
+     } catch (e) {
+-      setImportMsg('Import failed: ' + (e.message || String(e)));
++      setImportMsg({ ok: false, text: 'Import failed: ' + (e.message || String(e)) });
+     } finally {
+       setImporting(false);
+       setProgress(null);
+     }
+   }
+ 
+-  const active = products.filter((p) => p.isActive).length;
++  const active = products ? products.filter((p) => p.isActive).length : 0;
++  const count = (list, n) => (loading || !list ? '—' : n);
+ 
+   return (
+     <div>
+@@ -48,7 +56,14 @@ export default function Dashboard() {
+         </div>
+       </div>
+ 
+-      {!loading && products.length === 0 && (
++      {loadErr && (
++        <div className="adm-banner err" role="alert">
++          The catalogue could not be loaded ({loadErr}). Figures shown as — are unknown until it loads. Reload the page to try again.
++        </div>
++      )}
++      {importMsg && <div className={`adm-banner ${importMsg.ok ? 'ok' : 'err'}`}>{importMsg.text}</div>}
++
++      {!loading && products && products.length === 0 && (
+         <div className="adm-banner info">
+           <strong>The live product catalog is empty.</strong> The storefront is currently showing the built-in
+           149-product Biosash catalog as a fallback. Click below to import it into Supabase — after that, this
+@@ -58,14 +73,13 @@ export default function Dashboard() {
+               {importing ? (progress ? `Importing… ${progress.done}/${progress.total}` : 'Importing…') : 'Import 149 Biosash products'}
+             </button>
+           </div>
+-          {importMsg && <p style={{ marginTop: 10 }}>{importMsg}</p>}
+         </div>
+       )}
+ 
+       <div className="adm__stats">
+-        <div className="adm__stat"><strong>{loading ? '—' : products.length}</strong><span>Products</span></div>
+-        <div className="adm__stat"><strong>{loading ? '—' : active}</strong><span>Active products</span></div>
+-        <div className="adm__stat"><strong>{loading ? '—' : categories.length}</strong><span>Categories</span></div>
++        <div className="adm__stat"><strong>{count(products, products?.length)}</strong><span>Products</span></div>
++        <div className="adm__stat"><strong>{count(products, active)}</strong><span>Active products</span></div>
++        <div className="adm__stat"><strong>{count(categories, categories?.length)}</strong><span>Categories</span></div>
+       </div>
+ 
+       <div className="surface pad-lg">
+diff --git a/src/admin/pages/Settings.jsx b/src/admin/pages/Settings.jsx
+index c3a7800..37f4b18 100644
+--- a/src/admin/pages/Settings.jsx
++++ b/src/admin/pages/Settings.jsx
+@@ -17,6 +17,9 @@ export default function Settings() {
+     legalName: '', phone: '', email: '', address: '', hours: '', social: {}, policies: {},
+   });
+   const [loading, setLoading] = useState(true);
++  // Set when the saved details could not be read. The form then stays hidden:
++  // its blanks are not the live details, and saving them would replace those.
++  const [loadErr, setLoadErr] = useState('');
+   const [saving, setSaving] = useState(false);
+   const [msg, setMsg] = useState('');
+   const [err, setErr] = useState('');
+@@ -28,11 +31,12 @@ export default function Settings() {
+   useEffect(() => {
+     adminGetSetting('contact').then((v) => {
+       if (v) setContact((current) => ({ ...current, ...v, social: v.social || {}, policies: v.policies || {} }));
+-    }).catch((e) => setErr(e.message || String(e))).finally(() => setLoading(false));
++    }).catch((e) => setLoadErr(e.message || String(e))).finally(() => setLoading(false));
+   }, []);
+ 
+   async function save(e) {
+     e.preventDefault();
++    if (loadErr) return;
+     setSaving(true); setErr(''); setMsg('');
+     try {
+       const clean = validateCompanyForSave(contact);
+@@ -78,8 +82,14 @@ export default function Settings() {
+ 
+       {err && <div className="adm-banner err">{err}</div>}
+       {msg && <div className="adm-banner ok">{msg}</div>}
++      {loadErr && (
++        <div className="adm-banner err" role="alert">
++          The saved business information could not be loaded ({loadErr}). It can't be edited until it loads,
++          so blank fields can't be saved over the live details. Reload the page to try again.
++        </div>
++      )}
+ 
+-      {!loading && (
++      {!loading && !loadErr && (
+         <form onSubmit={save} className="surface">
+           <h2>Business &amp; support information</h2>
+           <p className="muted" style={{ marginBottom: 20 }}>Only completed, valid fields appear publicly. Leave unknown details blank.</p>
+diff --git a/src/lib/adminApi.js b/src/lib/adminApi.js
+index 5e50532..29b37f0 100644
+--- a/src/lib/adminApi.js
++++ b/src/lib/adminApi.js
+@@ -367,14 +367,18 @@ function slugify(s) {
+ }
+ 
+ /**
+- * One-time (idempotent) import of the 149 real Biosash products from the
+- * bundled biosash.js into Supabase. Runs as the logged-in admin, so it is
+- * subject to the same RLS as any other admin write. Upserts on biosash_id,
+- * so it's safe to run more than once.
++ * One-time import of the 149 real Biosash products from the bundled
++ * biosash.js into Supabase. Runs as the logged-in admin, so it is subject to
++ * the same RLS as any other admin write.
++ *
++ * It only ADDS products. A row whose biosash_id is already in the table is
++ * skipped outright (ON CONFLICT DO NOTHING), so running it again, or on a
++ * catalogue that is not empty, changes no live product: not its name, slug,
++ * category, image, stock flag or form, which it used to overwrite from the
++ * bundle's old snapshot. Returns { added, total }.
+  *
+  * `is_active` and `description` are deliberately NOT in the payload — see the
+- * comment on the row below. Every other column here is still authoritative
+- * and will overwrite what the row holds.
++ * comment on the row below.
+  */
+ export async function adminImportBiosashCatalog(onProgress) {
+   const rows = BIOSASH_PRODUCTS.map((p) => {
+@@ -411,9 +415,9 @@ export async function adminImportBiosashCatalog(onProgress) {
+     //                     has already populated, so that copy does not come
+     //                     back on its own.
+     //
+-    // For an EXISTING row — which is all 148 of them — omitting a key leaves
+-    // the column exactly as it is, so this button can no longer undo any of
+-    // those decisions.
++    // An EXISTING row — which is all 148 of them — is now skipped outright,
++    // so this button can no longer undo any of those decisions, nor rewrite
++    // the columns it does send.
+     //
+     // For a genuinely new product the columns fall back to their defaults,
+     // and that is worth being clear about rather than glossing: is_active is
+@@ -453,14 +457,20 @@ export async function adminImportBiosashCatalog(onProgress) {
+ 
+   const chunkSize = 25;
+   let done = 0;
++  let added = 0;
+   for (let i = 0; i < rows.length; i += chunkSize) {
+     const chunk = rows.slice(i, i + chunkSize);
+-    const { error } = await supabase.from('products').upsert(chunk, { onConflict: 'biosash_id' });
++    // ignoreDuplicates: a product already in the table is left exactly as it
++    // is, and only the rows actually inserted come back.
++    const { data, error } = await supabase.from('products')
++      .upsert(chunk, { onConflict: 'biosash_id', ignoreDuplicates: true })
++      .select('biosash_id');
+     if (error) throw error;
++    added += (data || []).length;
+     done += chunk.length;
+     if (onProgress) onProgress(done, rows.length);
+   }
+-  return rows.length;
++  return { added, total: rows.length };
+ }
+ 
+ // ---------------------------------------------------------------
