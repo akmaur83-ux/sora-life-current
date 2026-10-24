@@ -367,14 +367,18 @@ function slugify(s) {
 }
 
 /**
- * One-time (idempotent) import of the 149 real Biosash products from the
- * bundled biosash.js into Supabase. Runs as the logged-in admin, so it is
- * subject to the same RLS as any other admin write. Upserts on biosash_id,
- * so it's safe to run more than once.
+ * One-time import of the 149 real Biosash products from the bundled
+ * biosash.js into Supabase. Runs as the logged-in admin, so it is subject to
+ * the same RLS as any other admin write.
+ *
+ * It only ADDS products. A row whose biosash_id is already in the table is
+ * skipped outright (ON CONFLICT DO NOTHING), so running it again, or on a
+ * catalogue that is not empty, changes no live product: not its name, slug,
+ * category, image, stock flag or form, which it used to overwrite from the
+ * bundle's old snapshot. Returns { added, total }.
  *
  * `is_active` and `description` are deliberately NOT in the payload — see the
- * comment on the row below. Every other column here is still authoritative
- * and will overwrite what the row holds.
+ * comment on the row below.
  */
 export async function adminImportBiosashCatalog(onProgress) {
   const rows = BIOSASH_PRODUCTS.map((p) => {
@@ -411,9 +415,9 @@ export async function adminImportBiosashCatalog(onProgress) {
     //                     has already populated, so that copy does not come
     //                     back on its own.
     //
-    // For an EXISTING row — which is all 148 of them — omitting a key leaves
-    // the column exactly as it is, so this button can no longer undo any of
-    // those decisions.
+    // An EXISTING row — which is all 148 of them — is now skipped outright,
+    // so this button can no longer undo any of those decisions, nor rewrite
+    // the columns it does send.
     //
     // For a genuinely new product the columns fall back to their defaults,
     // and that is worth being clear about rather than glossing: is_active is
@@ -453,14 +457,20 @@ export async function adminImportBiosashCatalog(onProgress) {
 
   const chunkSize = 25;
   let done = 0;
+  let added = 0;
   for (let i = 0; i < rows.length; i += chunkSize) {
     const chunk = rows.slice(i, i + chunkSize);
-    const { error } = await supabase.from('products').upsert(chunk, { onConflict: 'biosash_id' });
+    // ignoreDuplicates: a product already in the table is left exactly as it
+    // is, and only the rows actually inserted come back.
+    const { data, error } = await supabase.from('products')
+      .upsert(chunk, { onConflict: 'biosash_id', ignoreDuplicates: true })
+      .select('biosash_id');
     if (error) throw error;
+    added += (data || []).length;
     done += chunk.length;
     if (onProgress) onProgress(done, rows.length);
   }
-  return rows.length;
+  return { added, total: rows.length };
 }
 
 // ---------------------------------------------------------------

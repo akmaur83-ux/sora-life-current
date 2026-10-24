@@ -23,6 +23,9 @@ export default function CreatorTerms() {
   const [loadedVersion, setLoadedVersion] = useState(1);
   const [bumpVersion, setBumpVersion] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Set when the saved terms could not be read. The form then stays hidden:
+  // saving it would publish an empty document as version 1 over the live one.
+  const [loadErr, setLoadErr] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -34,12 +37,13 @@ export default function CreatorTerms() {
         setForm({ ...EMPTY, ...v });
         setLoadedVersion(Number(v.version) || 1);
       })
-      .catch((e) => setErr(e.message || String(e)))
+      .catch((e) => setLoadErr(e.message || String(e)))
       .finally(() => setLoading(false));
   }, []);
 
   async function save(e) {
     e.preventDefault();
+    if (loadErr) return;
     setSaving(true); setErr(''); setMsg('');
     try {
       const version = bumpVersion ? loadedVersion + 1 : loadedVersion;
@@ -74,14 +78,20 @@ export default function CreatorTerms() {
 
       {err && <div className="adm-banner err">{err}</div>}
       {msg && <div className="adm-banner ok">{msg}</div>}
-      {!published && (
+      {loadErr && (
+        <div className="adm-banner err" role="alert">
+          The saved creator terms could not be loaded ({loadErr}). They can't be edited until they load,
+          so an empty document can't be published over the live terms. Reload the page to try again.
+        </div>
+      )}
+      {!loadErr && !published && (
         <div className="adm-banner">
           No terms published yet. While this is empty, creators see no terms section and the
           signup checkbox is not shown.
         </div>
       )}
 
-      <form onSubmit={save}>
+      {!loadErr && <form onSubmit={save}>
         <div className="surface">
           <h2>Terms &amp; conditions</h2>
           <div className="field">
@@ -128,7 +138,7 @@ export default function CreatorTerms() {
             {saving ? 'Saving…' : 'Save terms'}
           </button>
         </div>
-      </form>
+      </form>}
     </div>
   );
 }

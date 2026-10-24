@@ -17,6 +17,9 @@ export default function Settings() {
     legalName: '', phone: '', email: '', address: '', hours: '', social: {}, policies: {},
   });
   const [loading, setLoading] = useState(true);
+  // Set when the saved details could not be read. The form then stays hidden:
+  // its blanks are not the live details, and saving them would replace those.
+  const [loadErr, setLoadErr] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -28,11 +31,12 @@ export default function Settings() {
   useEffect(() => {
     adminGetSetting('contact').then((v) => {
       if (v) setContact((current) => ({ ...current, ...v, social: v.social || {}, policies: v.policies || {} }));
-    }).catch((e) => setErr(e.message || String(e))).finally(() => setLoading(false));
+    }).catch((e) => setLoadErr(e.message || String(e))).finally(() => setLoading(false));
   }, []);
 
   async function save(e) {
     e.preventDefault();
+    if (loadErr) return;
     setSaving(true); setErr(''); setMsg('');
     try {
       const clean = validateCompanyForSave(contact);
@@ -78,8 +82,14 @@ export default function Settings() {
 
       {err && <div className="adm-banner err">{err}</div>}
       {msg && <div className="adm-banner ok">{msg}</div>}
+      {loadErr && (
+        <div className="adm-banner err" role="alert">
+          The saved business information could not be loaded ({loadErr}). It can't be edited until it loads,
+          so blank fields can't be saved over the live details. Reload the page to try again.
+        </div>
+      )}
 
-      {!loading && (
+      {!loading && !loadErr && (
         <form onSubmit={save} className="surface">
           <h2>Business &amp; support information</h2>
           <p className="muted" style={{ marginBottom: 20 }}>Only completed, valid fields appear publicly. Leave unknown details blank.</p>

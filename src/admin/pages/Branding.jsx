@@ -4,13 +4,16 @@ import { adminGetSetting, adminSetSetting, uploadImage } from '../../lib/adminAp
 export default function Branding() {
   const [form, setForm] = useState({ logo_url: '', site_name: '', tagline: '', primary_color: '#1E3A2F', accent_color: '#E8B04B', favicon_url: '' });
   const [loading, setLoading] = useState(true);
+  // Set when the saved branding could not be read. The form then stays hidden:
+  // its defaults are not the live branding, and saving them would replace it.
+  const [loadErr, setLoadErr] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState('');
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    adminGetSetting('branding').then((v) => { if (v) setForm((f) => ({ ...f, ...v })); }).catch((e) => setErr(e.message || String(e))).finally(() => setLoading(false));
+    adminGetSetting('branding').then((v) => { if (v) setForm((f) => ({ ...f, ...v })); }).catch((e) => setLoadErr(e.message || String(e))).finally(() => setLoading(false));
   }, []);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -26,6 +29,7 @@ export default function Branding() {
 
   async function save(e) {
     e.preventDefault();
+    if (loadErr) return;
     setSaving(true); setErr(''); setMsg('');
     try {
       await adminSetSetting('branding', form);
@@ -41,8 +45,14 @@ export default function Branding() {
       <div className="adm__head"><div><h1>Branding</h1><p>Logo, site name, tagline, favicon and brand colors.</p></div></div>
       {err && <div className="adm-banner err">{err}</div>}
       {msg && <div className="adm-banner ok">{msg}</div>}
+      {loadErr && (
+        <div className="adm-banner err" role="alert">
+          The saved branding could not be loaded ({loadErr}). It can't be edited until it loads, so the
+          default logo, name and colors can't be saved over the live ones. Reload the page to try again.
+        </div>
+      )}
 
-      <form onSubmit={save}>
+      {!loadErr && <form onSubmit={save}>
         <div className="surface">
           <h2>Logo</h2>
           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
@@ -94,7 +104,7 @@ export default function Branding() {
         </div>
 
         <button className="btn" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save branding'}</button>
-      </form>
+      </form>}
     </div>
   );
 }
