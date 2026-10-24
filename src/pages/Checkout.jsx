@@ -217,6 +217,11 @@ export default function Checkout() {
   // which becomes 0 right after CLEAR_CART fires below and would make
   // the confirmation screen show "Total paid ₹0".
   const [orderTotal, setOrderTotal] = useState(null);
+  // An online order whose payment Razorpay accepted but our server could not
+  // yet confirm (still authorised, or the confirmation call failed). The order
+  // exists and the payment is moving; the webhook settles it. The customer is
+  // told exactly that — never "not placed", which invited a second payment.
+  const [confirming, setConfirming] = useState(false);
   // The authoritative itemised breakdown returned by create-order. Until the
   // order is priced server-side the summary falls back to a local estimate;
   // tax and fees are never guessed in the browser.
@@ -240,7 +245,6 @@ export default function Checkout() {
   // larger baskets and quoted a cheaper total than the server actually charged.
   const deliveryFee = DELIVERY.find((d) => d.id === delivery)?.price || 0;
   const shipBase = deliveryFee;
-  const total = Math.max(0, subtotal + shipBase);
 
   // Live server pricing for the chosen delivery method, including the coupon
   // carried over from the cart. Changing the selection re-quotes, so the
@@ -248,22 +252,41 @@ export default function Checkout() {
   // for create-order to correct it.
   const quote = useCartQuote(cartDetailed, couponCode, delivery);
 
+  // The figure on the Pay button is the figure that will be charged: the
+  // order's own breakdown once create-order has priced it, the live quote's
+  // before that, and no figure at all until the server has answered. It used
+  // to show the local estimate, which knows nothing of coupons or tax — "Pay
+  // ₹1,000" over a ₹900 charge.
+  const charged = serverBreakdown?.grandTotal
+    ?? (quote.breakdown && !quote.stale ? quote.breakdown.grandTotal : null);
+
   if (placed) {
     return (
       <div className="v2-checkout-root v2-checkout-confirm-root">
       <div className="v2-wrap section">
         <div className={`confirm confirm__enter ${celebrate ? 'confirm--celebrate' : ''}`}>
           <OrderCelebration />
-          <span className="eyebrow confirm__reveal" style={{ '--d': '400ms' }}>Order confirmed</span>
-          <h1 className="serif confirm__reveal" style={{ '--d': '480ms' }}>Thank you — your ritual is on its way.</h1>
-          <p className="muted confirm__reveal" style={{ '--d': '550ms' }}>A confirmation has been sent to your email. Order <strong>#{orderNo}</strong>.</p>
+          <span className="eyebrow confirm__reveal" style={{ '--d': '400ms' }}>{confirming ? 'Payment received' : 'Order confirmed'}</span>
+          <h1 className="serif confirm__reveal" style={{ '--d': '480ms' }}>
+            {confirming ? 'Thank you — we are confirming your payment.' : 'Thank you — your ritual is on its way.'}
+          </h1>
+          {/* No email is sent from this site, so nothing here says one was.
+              The order number is what the customer needs to follow it. */}
+          <p className="muted confirm__reveal" style={{ '--d': '550ms' }}>
+            {confirming
+              ? <>Razorpay has your payment and we are confirming it with your bank. This usually takes a few minutes and happens on its own — please do not pay again. Your order number is <strong>#{orderNo}</strong>.</>
+              : <>Your order number is <strong>#{orderNo}</strong>. Keep it to track your order.</>}
+          </p>
           <div className="confirm__card confirm__reveal" style={{ '--d': '620ms' }}>
             <div className="confirm__row"><span>Estimated delivery</span><strong>{DELIVERY.find((d) => d.id === delivery)?.eta}</strong></div>
-            <div className="confirm__row"><span>Total paid</span><strong>{money(orderTotal)}</strong></div>
-            <div className="confirm__row"><span>Payment</span><strong>{pay === 'cod' ? 'Cash on delivery' : pay.toUpperCase()}</strong></div>
+            <div className="confirm__row"><span>{pay === 'cod' ? 'To pay on delivery' : confirming ? 'Amount' : 'Total paid'}</span><strong>{money(orderTotal)}</strong></div>
+            <div className="confirm__row"><span>Payment</span><strong>{pay === 'cod' ? 'Cash on delivery' : confirming ? 'Being confirmed' : 'Paid online'}</strong></div>
           </div>
           <div className="confirm__actions">
-            <Link to="/account/orders" className="btn confirm__reveal confirm__reveal--btn" style={{ '--d': '700ms' }}>Track my order</Link>
+            {/* The Purchase Passport works for every buyer: a signed-in
+                customer sees their own order, a guest confirms the email
+                they ordered with. /account/orders was a dead end for guests. */}
+            <Link to={`/passport/${orderNo}`} className="btn confirm__reveal confirm__reveal--btn" style={{ '--d': '700ms' }}>Track my order</Link>
             <Link to="/shop" className="btn btn-outline confirm__reveal confirm__reveal--btn" style={{ '--d': '780ms' }}>Continue shopping</Link>
           </div>
         </div>
@@ -291,10 +314,13 @@ export default function Checkout() {
   // Reached ONLY after the server has confirmed the order is genuinely
   // paid (or is a recorded COD order). This is the single place the cart is
   // cleared and the confirmation/celebration is shown.
-  const completeOrder = (orderNumber, amount) => {
+  // `confirming`: Razorpay accepted the payment but the server has not yet
+  // confirmed it; the order stands and the webhook finishes it.
+  const completeOrder = (orderNumber, amount, { confirming: stillConfirming = false } = {}) => {
     inFlight.current = false;
     setOrderNo(orderNumber);
     setOrderTotal(amount);
+    setConfirming(stillConfirming);
     dispatch({ type: 'CLEAR_CART' });
     setPlaced(true);
     window.scrollTo(0, 0);
@@ -353,7 +379,9 @@ export default function Checkout() {
 
       if (created.breakdown) setServerBreakdown(created.breakdown);
 
-      if (created.paymentMethod === 'cod') {
+      // Already paid — a retry after the money moved, or a second tab. It is
+      // done: show it, never a second payment window.
+      if (created.alreadyPaid || created.paymentMethod === 'cod') {
         completeOrder(created.orderNumber, created.amount);
         return;
       }
@@ -380,28 +408,37 @@ export default function Checkout() {
           email: form.email,
           contact: form.phone,
         },
-        // Razorpay says the payment succeeded — but only our server decides.
+        // Razorpay calls this only for a payment it accepted: from here the
+        // order exists and its money is moving. Only our server says it is
+        // PAID; until it does, the customer is told it is being confirmed.
         handler: async (response) => {
           try {
             const result = await verifyPayment(response);
             if (result?.verified) {
               completeOrder(result.orderNumber, result.amount);
             } else if (result?.pending) {
-              // Razorpay has the money authorised but not yet captured. This
-              // is not a failure — telling the customer their order was not
-              // placed here would invite a second payment for the same cart.
-              inFlight.current = false; setProcessing(false);
-              setPayNotice(
-                result.error
-                || 'Your payment is still being confirmed. We will update your order shortly — please do not pay again.'
-              );
+              // Authorised, not yet captured. Not a failure: the order is
+              // placed and the webhook settles it. It used to sit under a
+              // "Payment cancelled" heading, inviting a second payment.
+              completeOrder(result.orderNumber || created.orderNumber, created.amount, { confirming: true });
             } else {
               inFlight.current = false; setProcessing(false);
               setPayError('We could not verify this payment. Your order has not been placed.');
             }
           } catch (err) {
-            inFlight.current = false; setProcessing(false);
-            setPayError(err.message || 'We could not confirm your payment. Please contact support before paying again.');
+            // A 4xx (but a rate limit) is the server's examined refusal — a
+            // signature, order or amount that does not match, or a payment
+            // the bank declined: nothing was placed, and it says so.
+            if (err.status >= 400 && err.status < 500 && err.status !== 429) {
+              inFlight.current = false; setProcessing(false);
+              setPayError(err.message || 'We could not verify this payment. Your order has not been placed.');
+              return;
+            }
+            // Anything else — the server or its lookup of the payment did not
+            // answer — leaves an accepted payment unconfirmed, not failed. It
+            // used to say "your order has not been placed" over money already
+            // taken, and Try again reopened Razorpay for it.
+            completeOrder(created.orderNumber, created.amount, { confirming: true });
           }
         },
         modal: {
@@ -610,8 +647,8 @@ export default function Checkout() {
                   {processing
                     ? <><span className="spinner" /> Processing…</>
                     : pay === 'cod'
-                      ? <><Icon name="lock" size={17} /> Place order · {money(total)}</>
-                      : <><Icon name="lock" size={17} /> Pay {money(total)}</>}
+                      ? <><Icon name="lock" size={17} /> Place order{charged != null && ` · ${money(charged)}`}</>
+                      : <><Icon name="lock" size={17} /> Pay{charged != null && ` ${money(charged)}`}</>}
                 </button>
               </div>
             </section>

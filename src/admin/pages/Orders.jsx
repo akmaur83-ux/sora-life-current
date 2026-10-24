@@ -1,6 +1,6 @@
 import { useEffect, useState, Fragment } from 'react';
 import { Link } from 'react-router-dom';
-import { adminListOrders, adminUpdateOrderFulfillment } from '../../lib/adminApi.js';
+import { adminListOrders, adminUpdateOrderFulfillment, adminMarkCodCollected } from '../../lib/adminApi.js';
 import { money } from '../../lib/format.js';
 import { FULFILLMENT_STATUSES, fulfillmentStatusLabel, validateFulfillmentInput } from '../../lib/orderFulfillment.js';
 
@@ -246,6 +246,7 @@ export default function Orders() {
                                 )}
                                 {o.failure_reason && <div><dt>Failure</dt><dd>{o.failure_reason}</dd></div>}
                               </dl>
+                              <CashCollected order={o} onUpdated={updateOrder} />
                               <Link to={`/invoice/${o.order_number}`} className="btn btn-sm" style={{ marginTop: 10 }}>
                                 Open invoice
                               </Link>
@@ -366,6 +367,39 @@ export default function Orders() {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+// A cash-on-delivery order is unpaid until the cash is collected. This records
+// that moment: the order becomes paid and gets its invoice number (the server
+// route checks the admin and writes once, so a second click changes nothing).
+// Shown only for an unpaid COD order that is not cancelled.
+function CashCollected({ order, onUpdated }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  if (order.payment_method !== 'cod' || order.payment_status === 'paid' || order.fulfillment_status === 'cancelled') return null;
+
+  async function record() {
+    if (busy) return;
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(`Record that the cash for order ${order.order_number} has been collected? It will be marked paid and issued its invoice number.`)) return;
+    setBusy(true); setError('');
+    try {
+      onUpdated(await adminMarkCodCollected(order.order_number));
+    } catch (err) {
+      setError(err?.message || 'The payment could not be recorded.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <button type="button" className="btn btn-sm btn-light" disabled={busy} onClick={record}>
+        {busy ? 'Recording…' : 'Mark cash collected'}
+      </button>
+      {error && <p className="error-text" role="alert">{error}</p>}
     </div>
   );
 }

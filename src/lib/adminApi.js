@@ -454,6 +454,31 @@ export async function adminUpdateOrderFulfillment(orderId, input, actions = {}) 
   return data;
 }
 
+/**
+ * Record that a cash-on-delivery order's cash has been collected: it becomes
+ * paid and is issued its invoice number. Goes through the admin-checked
+ * /api/admin/mark-cod-collected route with the admin's own session; no secret
+ * is held here. Resolves with the order's new payment fields.
+ */
+export async function adminMarkCodCollected(orderNumber, { fetchImpl = globalThis.fetch } = {}) {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  if (!token) throw new Error('Your admin session has ended. Sign in again, then try.');
+  let response;
+  try {
+    response = await fetchImpl('/api/admin/mark-cod-collected', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ orderNumber }),
+    });
+  } catch {
+    throw new Error('Could not reach the server. Nothing was recorded; try again.');
+  }
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.ok) throw new Error(body.error || `Recording the payment failed (HTTP ${response.status}).`);
+  return body.order;
+}
+
 // ---------------------------------------------------------------
 // ADMIN: categories
 // ---------------------------------------------------------------

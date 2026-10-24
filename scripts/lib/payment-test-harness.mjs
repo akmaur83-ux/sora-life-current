@@ -50,6 +50,8 @@ export function makeWorld(seed = {}) {
     catalogueVariants: seed.catalogueVariants ? structuredClone(seed.catalogueVariants) : [],
     catalogueProducts: seed.catalogueProducts ? structuredClone(seed.catalogueProducts) : [],
     holds: [],
+    // Every set_conversion_status call, in order (creator commission qualifying).
+    conversionStatuses: [],
     // true = migration 0039 not applied: its functions answer PGRST202.
     noHolds: Boolean(seed.noHolds),
     payments: seed.payments ? structuredClone(seed.payments) : {},
@@ -105,7 +107,11 @@ export function makeWorld(seed = {}) {
     const rel = url.pathname.replace('/rest/v1/', '');
 
     if (rel === 'rpc/rate_limit_check') return json(200, { allowed: true, count: 1, limit: 99, reset: 0 });
-    if (rel === 'rpc/record_conversion' || rel === 'rpc/set_conversion_status') return json(200, { ok: true });
+    if (rel === 'rpc/set_conversion_status') { world.conversionStatuses.push(body); return json(200, { ok: true }); }
+    if (rel === 'rpc/record_conversion') return json(200, { ok: true });
+    // is_sora_admin() decides from the CALLER's token (auth.uid()); here a
+    // token starting "admin-" belongs to an admin and any other does not.
+    if (rel === 'rpc/is_sora_admin') return json(200, /^Bearer admin-/.test(String(init.headers?.Authorization || '')));
 
     // ---- Migration 0039: order holds. Each mirrors its SQL function. ----
     if (/^rpc\/(reserve|settle|release)_order_holds$/.test(rel)) {

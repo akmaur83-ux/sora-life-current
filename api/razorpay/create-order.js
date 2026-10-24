@@ -340,6 +340,19 @@ function replayPayload(order, rz) {
 
 async function returnExistingOrder(existing, idempotencyKey, sb, rz, res, body) {
   if (!replayMatches(existing, body)) return refuseChangedReplay(res);
+  // Already paid (a retry after the money moved but before the browser heard
+  // so, or a second tab): say so, and hand back nothing payable. Replaying the
+  // gateway order reopened Razorpay for an order that had been paid.
+  if (existing.payment_status === 'paid') {
+    return res.status(200).json({
+      alreadyPaid: true,
+      paymentMethod: existing.payment_method === 'cod' ? 'cod' : 'razorpay',
+      orderNumber: existing.order_number,
+      amount: Number(existing.amount_paise) / 100,
+      breakdown: existing.billing ?? null,
+      duplicate: true,
+    });
+  }
   let ready = existing;
   // An unpaid order must hold what it needs before it is handed back: its
   // first attempt may have ended before the reservation answered. Asking
