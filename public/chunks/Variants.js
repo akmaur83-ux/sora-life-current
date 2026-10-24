@@ -1,4 +1,4 @@
-import { r as reactExports, i as adminListProducts, j as jsxRuntimeExports, p as money, a0 as adminListVariants, a1 as adminCreateVariant, a2 as adminUpdateVariant, a3 as adminSetVariantActive, a4 as adminDeleteVariant } from '../bundle.js';
+import { r as reactExports, i as adminListProducts, j as jsxRuntimeExports, p as money, a2 as adminListVariants, a3 as adminCreateVariant, a4 as adminUpdateVariant, a5 as adminSetVariantActive, a6 as adminDeleteVariant } from '../bundle.js';
 
 const UNITS = ['ml', 'g', 'kg', 'l', 'capsules', 'tablets', 'sachets', 'pcs'];
 const blank = {
@@ -39,6 +39,10 @@ function Variants() {
   const [msg, setMsg] = reactExports.useState('');
   const [editingId, setEditingId] = reactExports.useState(null); // null = none, 'new' = add form
   const [form, setForm] = reactExports.useState(blank);
+  // The updated_at of the pack size being edited, as it was opened. The save
+  // is refused if the row has moved since — an order taking stock moves it —
+  // so a form opened before a sale cannot write the old stock back.
+  const [editingVersion, setEditingVersion] = reactExports.useState(null);
   reactExports.useEffect(() => {
     adminListProducts().then(list => {
       const withDbId = list.filter(p => p.dbId != null);
@@ -83,6 +87,7 @@ function Variants() {
   function startEdit(v) {
     setForm(toForm(v));
     setEditingId(v.id);
+    setEditingVersion(v.updated_at || null);
   }
   function flash(text) {
     setMsg(text);
@@ -94,11 +99,20 @@ function Variants() {
     setBusy(true);
     setErr('');
     try {
-      if (editingId === 'new') await adminCreateVariant(productId, form);else await adminUpdateVariant(editingId, productId, form);
+      if (editingId === 'new') await adminCreateVariant(productId, form);else await adminUpdateVariant(editingId, productId, form, editingVersion);
       setEditingId(null);
       await reload();
       flash('Saved.');
     } catch (e2) {
+      // Refused because the pack size moved (an order, or another tab). The
+      // form still holds the old values — stock included — so it is closed
+      // rather than left one click from saving them again; the list reloads
+      // with the current figures to reopen and reapply the change against.
+      // (The message is set after the reload, which clears the banner.)
+      if (e2.isStaleWrite) {
+        setEditingId(null);
+        await reload();
+      }
       setErr(e2.message || String(e2));
     } finally {
       setBusy(false);

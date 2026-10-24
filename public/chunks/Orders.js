@@ -1,4 +1,4 @@
-import { r as reactExports, x as adminListOrders, j as jsxRuntimeExports, p as money, y as fulfillmentStatusLabel, b as Link, F as FULFILLMENT_STATUSES, z as adminMarkCodCollected, A as validateFulfillmentInput, B as adminUpdateOrderFulfillment } from '../bundle.js';
+import { r as reactExports, x as adminListOrders, j as jsxRuntimeExports, p as money, y as fulfillmentStatusLabel, b as Link, F as FULFILLMENT_STATUSES, z as adminListOrderEvents, A as adminMarkCodCollected, B as validateFulfillmentInput, D as adminUpdateOrderFulfillment } from '../bundle.js';
 
 const STATUS_BADGE = {
   paid: 'badge-best',
@@ -69,6 +69,23 @@ function Orders() {
   const [err, setErr] = reactExports.useState('');
   const [expandedId, setExpandedId] = reactExports.useState(null);
   const [copiedId, setCopiedId] = reactExports.useState(null);
+  // Recorded admin actions per order (0040) — who collected a COD order's
+  // cash — loaded when its details open.
+  const [events, setEvents] = reactExports.useState({});
+  async function loadEvents(orderId) {
+    try {
+      const list = await adminListOrderEvents(orderId);
+      setEvents(current => ({
+        ...current,
+        [orderId]: list
+      }));
+    } catch {/* the details still show without the record */}
+  }
+  function toggleDetails(order) {
+    const opening = expandedId !== order.id;
+    setExpandedId(opening ? order.id : null);
+    if (opening) loadEvents(order.id);
+  }
   reactExports.useEffect(() => {
     adminListOrders().then(setOrders).catch(e => setErr(e.message || String(e))).finally(() => setLoading(false));
   }, []);
@@ -96,6 +113,8 @@ function Orders() {
       ...order,
       ...patch
     } : order));
+    // Cash just recorded as collected: show who, from the record itself.
+    if (patch.payment_status === 'paid') loadEvents(patch.id);
   }
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -201,7 +220,7 @@ function Orders() {
                 }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
                   children: /*#__PURE__*/jsxRuntimeExports.jsx("button", {
                     className: "btn btn-sm btn-light",
-                    onClick: () => setExpandedId(open ? null : o.id),
+                    onClick: () => toggleDetails(o),
                     children: open ? 'Hide' : 'View details'
                   })
                 })]
@@ -334,7 +353,13 @@ function Orders() {
                           }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
                             children: o.failure_reason
                           })]
-                        })]
+                        }), (events[o.id] || []).filter(e => e.action === 'cod_collected').map(e => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+                          children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+                            children: "Cash collected by"
+                          }), /*#__PURE__*/jsxRuntimeExports.jsxs("dd", {
+                            children: [e.admin_email || 'an admin (no email on record)', " \xB7 ", dt(e.created_at)]
+                          })]
+                        }, e.created_at))]
                       }), /*#__PURE__*/jsxRuntimeExports.jsx(CashCollected, {
                         order: o,
                         onUpdated: updateOrder
