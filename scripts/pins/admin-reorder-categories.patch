@@ -1,0 +1,261 @@
+diff --git a/src/admin/pages/Categories.jsx b/src/admin/pages/Categories.jsx
+index 476b2d6..253f62e 100644
+--- a/src/admin/pages/Categories.jsx
++++ b/src/admin/pages/Categories.jsx
+@@ -1,5 +1,5 @@
+ import { useEffect, useState } from 'react';
+-import { adminListCategories, adminUpsertCategory, adminDeleteCategory, adminSeedDefaultCategories } from '../../lib/adminApi.js';
++import { adminListCategories, adminSaveCategory, adminDeleteCategory, adminSeedDefaultCategories } from '../../lib/adminApi.js';
+ 
+ const TONES = ['forest', 'lime', 'amber', 'clay', 'moss', 'plum', 'rose', 'honey', 'teal', 'sky'];
+ const empty = { slug: '', name: '', tagline: '', blurb: '', tone: 'forest', image_url: '', is_active: true, sort_order: 0 };
+@@ -31,7 +31,7 @@ export default function Categories() {
+     e.preventDefault();
+     setSaving(true);
+     setErr('');
+-    try { await adminUpsertCategory(form); setEditing(null); await load(); } catch (ex) { setErr(ex.message || String(ex)); }
++    try { await adminSaveCategory(form); setEditing(null); await load(); } catch (ex) { setErr(ex.message || String(ex)); }
+     setSaving(false);
+   }
+ 
+@@ -60,7 +60,10 @@ export default function Categories() {
+           <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: 14 }}>{editing === 'new' ? 'New category' : `Edit "${editing.name}"`}</h2>
+           <div className="adm-grid2">
+             <div className="field"><label className="label">Name</label><input className="input" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
+-            <div className="field"><label className="label">Slug</label><input className="input" value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} placeholder="auto from name" /></div>
++            {editing === 'new'
++              ? <div className="field"><label className="label">Slug</label><input className="input" value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} placeholder="auto from name" /></div>
++              : <div className="field"><label className="label">Slug</label><input className="input" value={form.slug} readOnly aria-readonly="true" />
++                <p className="hint">Fixed once the category exists: its products and its page address use it.</p></div>}
+           </div>
+           <div className="field"><label className="label">Tagline</label><input className="input" value={form.tagline} onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))} /></div>
+           <div className="field"><label className="label">Description / blurb</label><textarea className="textarea" value={form.blurb} onChange={(e) => setForm((f) => ({ ...f, blurb: e.target.value }))} /></div>
+diff --git a/src/admin/pages/Products.jsx b/src/admin/pages/Products.jsx
+index 2b14395..ceec030 100644
+--- a/src/admin/pages/Products.jsx
++++ b/src/admin/pages/Products.jsx
+@@ -9,6 +9,7 @@ export default function Products() {
+   const [loading, setLoading] = useState(true);
+   const [q, setQ] = useState('');
+   const [busyId, setBusyId] = useState(null);
++  const [reordering, setReordering] = useState(false);
+   const [err, setErr] = useState('');
+ 
+   async function load() {
+@@ -44,13 +45,25 @@ export default function Products() {
+   }
+ 
+   async function move(p, dir) {
++    if (reordering) return;
+     const idx = products.findIndex((x) => x.dbId === p.dbId);
+     const swapIdx = idx + dir;
+     if (swapIdx < 0 || swapIdx >= products.length) return;
+     const next = [...products];
+     [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+     setProducts(next);
+-    try { await adminReorderProducts(next.map((x) => x.dbId)); } catch (e) { setErr(e.message || String(e)); }
++    setReordering(true); setErr('');
++    try {
++      await adminReorderProducts(next);
++      // Stored positions now match the list, so the next move writes only its pair.
++      setProducts(next.map((x, i) => ({ ...x, sortOrder: i })));
++    } catch (e) {
++      // Show the order as it is stored, not the one that failed to save.
++      const msg = e.message || String(e);
++      try { setProducts(await adminListProducts()); setErr(`${msg} The list has been reloaded to show the saved order.`); }
++      catch { setProducts(products); setErr(`${msg} The list could not be reloaded either: reload the page before moving anything else.`); }
++    }
++    setReordering(false);
+   }
+ 
+   const catName = (slug) => staticCategories.find((c) => c.slug === slug)?.name || slug;
+@@ -114,8 +127,8 @@ export default function Products() {
+                   </td>
+                   <td>
+                     <div className="adm-actions">
+-                      <button className="btn btn-sm btn-light" onClick={() => move(p, -1)} title="Move up">↑</button>
+-                      <button className="btn btn-sm btn-light" onClick={() => move(p, 1)} title="Move down">↓</button>
++                      <button className="btn btn-sm btn-light" onClick={() => move(p, -1)} disabled={reordering} title="Move up">↑</button>
++                      <button className="btn btn-sm btn-light" onClick={() => move(p, 1)} disabled={reordering} title="Move down">↓</button>
+                       <Link className="btn btn-sm btn-light" to={`/admin/products/${p.dbId}/edit`}>Edit</Link>
+                       <button className="btn btn-sm btn-ghost" style={{ color: 'var(--color-sale)' }} onClick={() => remove(p)} disabled={busyId === p.dbId}>Delete</button>
+                     </div>
+diff --git a/src/admin/pages/Promotions.jsx b/src/admin/pages/Promotions.jsx
+index 77a228e..5a9e199 100644
+--- a/src/admin/pages/Promotions.jsx
++++ b/src/admin/pages/Promotions.jsx
+@@ -43,6 +43,7 @@ export default function Promotions() {
+   const [form, setForm] = useState(EMPTY);
+   const [saving, setSaving] = useState(false);
+   const [uploading, setUploading] = useState(false);
++  const [reordering, setReordering] = useState(false);
+   const [err, setErr] = useState('');
+   const [notMigrated, setNotMigrated] = useState(false);
+ 
+@@ -120,13 +121,25 @@ export default function Promotions() {
+   }
+ 
+   async function move(row, dir) {
++    if (reordering) return;
+     const idx = list.findIndex((x) => x.id === row.id);
+     const j = idx + dir;
+     if (j < 0 || j >= list.length) return;
+     const next = [...list];
+     [next[idx], next[j]] = [next[j], next[idx]];
+     setList(next);
+-    try { await adminReorderPromotions(next.map((x) => x.id)); } catch (ex) { setErr(ex.message || String(ex)); }
++    setReordering(true); setErr('');
++    try {
++      await adminReorderPromotions(next);
++      // Stored positions now match the list; an editor opened next starts from them.
++      setList(next.map((x, i) => ({ ...x, sort_order: i })));
++    } catch (ex) {
++      // Show the order as it is stored, not the one that failed to save.
++      const msg = ex.message || String(ex);
++      try { setList(await adminListPromotions()); setErr(`${msg} The list has been reloaded to show the saved order.`); }
++      catch { setList(list); setErr(`${msg} The list could not be reloaded either: reload the page before moving anything else.`); }
++    }
++    setReordering(false);
+   }
+ 
+   // One handler for both artwork fields; `field` names the column it fills.
+@@ -299,8 +312,8 @@ export default function Promotions() {
+               </div>
+             </div>
+             <div className="adm-actions">
+-              <button className="btn btn-sm btn-light" onClick={() => move(p, -1)} aria-label="Move up">↑</button>
+-              <button className="btn btn-sm btn-light" onClick={() => move(p, 1)} aria-label="Move down">↓</button>
++              <button className="btn btn-sm btn-light" onClick={() => move(p, -1)} disabled={reordering} aria-label="Move up">↑</button>
++              <button className="btn btn-sm btn-light" onClick={() => move(p, 1)} disabled={reordering} aria-label="Move down">↓</button>
+               <button className="btn btn-sm btn-light" onClick={() => toggleActive(p)}>{p.is_active ? 'Disable' : 'Enable'}</button>
+               <button className="btn btn-sm btn-light" onClick={() => startEdit(p)}>Edit</button>
+               <button className="btn btn-sm btn-ghost" style={{ color: 'var(--color-sale)' }} onClick={() => remove(p)}>Delete</button>
+diff --git a/src/lib/adminApi.js b/src/lib/adminApi.js
+index 29b37f0..de36341 100644
+--- a/src/lib/adminApi.js
++++ b/src/lib/adminApi.js
+@@ -238,7 +238,9 @@ export async function adminSetTheme(theme) {
+ // ADMIN: products
+ // ---------------------------------------------------------------
+ export async function adminListProducts() {
+-  const { data, error } = await supabase.from('products').select('*').order('sort_order', { ascending: true });
++  // id breaks ties, so products sharing a position always list in the same
++  // order and Move up/down acts on the neighbour the screen shows.
++  const { data, error } = await supabase.from('products').select('*').order('sort_order', { ascending: true }).order('id', { ascending: true });
+   if (error) throw error;
+   return (data || []).map(dbRowToProduct);
+ }
+@@ -353,13 +355,42 @@ export async function adminDeleteProduct(dbId) {
+   if (error) throw error;
+ }
+ 
+-export async function adminReorderProducts(dbIdsInOrder) {
+-  await Promise.all(dbIdsInOrder.map((dbId, i) =>
+-    // updated_at moves here too. A write that does not stamp it is a write
+-    // the staleness check cannot see, which would let a form saved after a
+-    // reorder silently win.
+-    supabase.from('products').update({ sort_order: i, updated_at: new Date().toISOString() }).eq('id', dbId)
+-  ));
++/**
++ * Save a new product order. `productsInOrder` is the whole list as it should
++ * now stand, each product carrying the sortOrder it was loaded with. A
++ * product's position is its index, and only products whose stored position
++ * differs are written, so moving one past its neighbour writes those two
++ * rather than every product. (A list whose stored positions tie — every
++ * product the editor used to save was given 0 — is numbered once, by the
++ * first move.)
++ *
++ * Every write is checked: one that errors, or matches no row (the product was
++ * deleted, or the session no longer has admin rights), makes this throw,
++ * so a failed move is never shown as saved. Returns the number written.
++ */
++export async function adminReorderProducts(productsInOrder) {
++  // updated_at moves here too. A write that does not stamp it is a write
++  // the staleness check cannot see, which would let a form saved after a
++  // reorder silently win.
++  const now = new Date().toISOString();
++  return writePositions(productsInOrder.map((p, i) => ({ id: p.dbId, from: p.sortOrder, to: i })), 'product',
++    (m) => supabase.from('products').update({ sort_order: m.to, updated_at: now }).eq('id', m.id).select('id'));
++}
++
++/** Write each changed position; throw, after all have been tried, if any did not save. */
++async function writePositions(positions, what, write) {
++  const moves = positions.filter((m) => Number(m.from) !== m.to);
++  const results = await Promise.allSettled(moves.map(async (m) => {
++    const { data, error } = await write(m);
++    if (error) throw error;
++    if (!data || !data.length) throw new Error(`the ${what} was not found, or this session can no longer edit it`);
++  }));
++  const failed = results.filter((r) => r.status === 'rejected');
++  if (failed.length) {
++    const reason = failed[0].reason?.message || String(failed[0].reason);
++    throw new Error(`The new order was not saved: ${failed.length} of ${moves.length} ${what} position${moves.length === 1 ? '' : 's'} could not be written (${reason}).`);
++  }
++  return moves.length;
+ }
+ 
+ function slugify(s) {
+@@ -556,9 +587,21 @@ export async function adminListCategories() {
+   return data || [];
+ }
+ 
+-export async function adminUpsertCategory(category) {
++/**
++ * Save a category from the admin form.
++ *
++ * One that exists (it has an id) is updated by that id, and its slug is left
++ * as it is: products name their category by slug and the category page's
++ * address is built from it, so a changed slug would leave both pointing at
++ * nothing. (Saving by slug, as this used to, turned a slug edit into a second
++ * category beside the first.)
++ *
++ * A new one is inserted, and refused when its slug — typed, or made from the
++ * name — is already taken. (An upsert on slug overwrote that category instead,
++ * blanking its tagline and image.)
++ */
++export async function adminSaveCategory(category) {
+   const row = {
+-    slug: category.slug || slugify(category.name),
+     name: category.name,
+     tagline: category.tagline || '',
+     blurb: category.blurb || '',
+@@ -567,7 +610,18 @@ export async function adminUpsertCategory(category) {
+     sort_order: Number(category.sort_order) || 0,
+     is_active: category.is_active !== false,
+   };
+-  const { data, error } = await supabase.from('categories').upsert(row, { onConflict: 'slug' }).select().single();
++  if (category.id) {
++    const { data, error } = await supabase.from('categories')
++      .update({ ...row, updated_at: new Date().toISOString() }).eq('id', category.id).select();
++    if (error) throw error;
++    if (!data || !data.length) throw new Error('This category was not saved: it no longer exists, or this session can no longer edit it. Reload the page.');
++    return data[0];
++  }
++  const slug = category.slug || slugify(category.name);
++  const { data, error } = await supabase.from('categories').insert({ ...row, slug }).select().single();
++  if (error?.code === '23505') {
++    throw new Error(`A category with the slug "${slug}" already exists. Edit that category instead, or give this one a different slug.`);
++  }
+   if (error) throw error;
+   return data;
+ }
+@@ -1288,10 +1342,15 @@ export async function adminDeletePromotion(id) {
+   }
+ }
+ 
+-export async function adminReorderPromotions(idsInOrder) {
+-  await Promise.all(idsInOrder.map((id, i) =>
+-    supabase.from('promotions').update({ sort_order: i }).eq('id', id)
+-  ));
++/**
++ * Save a new promotion order: `promotionsInOrder` is the list as it should now
++ * stand, as loaded (with sort_order). As adminReorderProducts: only changed
++ * positions are written, and a write that fails or matches nothing throws.
++ * (The promotions trigger stamps updated_at.)
++ */
++export async function adminReorderPromotions(promotionsInOrder) {
++  return writePositions(promotionsInOrder.map((p, i) => ({ id: p.id, from: p.sort_order, to: i })), 'promotion',
++    (m) => supabase.from('promotions').update({ sort_order: m.to }).eq('id', m.id).select('id'));
+ }
+ 
+ const PROMO_IMAGE_MAX_BYTES = 6 * 1024 * 1024; // 6MB — posters should be light
