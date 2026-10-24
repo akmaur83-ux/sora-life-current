@@ -57,7 +57,7 @@ export const FASHION_DEPARTMENT_EDITS = /^(src\/App\.jsx|src\/fashion\/(FashionH
  * by sansCartChanges. A suite may allow one in its changed-file list only where
  * it also byte-checks that file through sansStorefrontChanges.
  */
-export const CART_CHANGE_EDITS = /^(src\/lib\/(store\.jsx|payments\.js|couponApi\.js|homelivingPdp\.js)|api\/_lib\/(pricing|supabaseAdmin|couponQuote)\.js|api\/razorpay\/(create-order|verify|webhook)\.js|src\/admin\/pages\/Orders\.jsx|src\/homeliving\/HomeLivingProduct(Card|Page)\.jsx|src\/data\/homelivingHomepage\.js|src\/components\/CartCoupons\.jsx|src\/pages\/Checkout\.jsx)$/;
+export const CART_CHANGE_EDITS = /^(src\/lib\/(store\.jsx|payments\.js|couponApi\.js|homelivingPdp\.js)|api\/_lib\/(pricing|supabaseAdmin|couponQuote)\.js|api\/razorpay\/(create-order|verify|webhook)\.js|src\/admin\/pages\/(Orders|Pricing|Variants)\.jsx|src\/homeliving\/HomeLivingProduct(Card|Page)\.jsx|src\/data\/homelivingHomepage\.js|src\/components\/CartCoupons\.jsx|src\/pages\/Checkout\.jsx)$/;
 
 /**
  * Order holds (money-path fix 6+3; test-order-holds.mjs owns them): what an order holds and for how
@@ -70,6 +70,12 @@ export const ORDER_HOLDS_FILES = /^(api\/_lib\/orderHolds\.js|scripts\/test-orde
  * that records a COD order's cash as collected, the suite and the recorded patch.
  */
 export const ORDER_CONFIRMATION_FILES = /^(api\/admin\/mark-cod-collected\.js|scripts\/test-order-confirmation\.mjs|scripts\/pins\/order-confirmation\.patch)$/;
+
+/**
+ * Admin saves (stage-two audit fixes 7, 1, 2; test-admin-saves.mjs owns them): the suite, the recorded
+ * patch, and migration 0040 (who did what to an order) with its rollback.
+ */
+export const ADMIN_SAVES_FILES = /^(scripts\/test-admin-saves\.mjs|scripts\/pins\/admin-saves\.patch|supabase\/migrations\/(0040_order_admin_events\.sql|rollback\/0040_order_admin_events_down\.sql))$/;
 
 /** The files the Home & Living cart added: its cart line module, and the suite and undo patch that pin it. */
 export const HOMELIVING_CART_FILES = /^(src\/lib\/homelivingCartLine\.js|scripts\/test-homeliving-cart\.mjs|scripts\/pins\/homeliving-cart\.patch)$/;
@@ -506,6 +512,11 @@ const UNDO_ORDER_HOLDS = undoFromPatch('order-holds.patch');
 // shows the server's amount and tells the truth after payment. Undone here, newest first.
 const UNDO_ORDER_CONFIRMATION = undoFromPatch('order-confirmation.patch');
 
+// Admin saves (stage-two fixes 7, 1, 2): a wellness pack-size save refused when the row moved, product
+// saves leaving sort_order alone, Pricing writing only the price; and who pressed "Mark cash collected"
+// (0040) shown on the Orders page. Undone here, newest first.
+const UNDO_ADMIN_SAVES = undoFromPatch('admin-saves.patch');
+
 // The homepage banner restyled to the women's page (full-bleed, square-edged) with the fashion
 // category strip beneath it, both in FashionBanner.jsx (test-store-doorway.mjs owns them); the
 // store carousel in the same file is unchanged. Undone here, newest first.
@@ -572,7 +583,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_ORDER_CONFIRMATION, UNDO_ORDER_HOLDS, UNDO_CHECKOUT_REPLAY, UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_ADMIN_SAVES, UNDO_ORDER_CONFIRMATION, UNDO_ORDER_HOLDS, UNDO_CHECKOUT_REPLAY, UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
@@ -602,11 +613,11 @@ export function sansOrderNumber(rel, text) {
 }
 
 /**
- * The checkout-replay, order-holds and order-confirmation changes undone on their own, newest first — for
- * that same suite, whose pin predates them too: undo these first, then sansOrderNumber.
+ * The checkout-replay, order-holds, order-confirmation and admin-saves changes undone on their own, newest
+ * first — for that same suite, whose pin predates them too: undo these first, then sansOrderNumber.
  */
 export function sansCheckoutReplay(rel, text) {
-  const undos = [UNDO_ORDER_CONFIRMATION[rel], UNDO_ORDER_HOLDS[rel], UNDO_CHECKOUT_REPLAY[rel]].filter(Boolean);
+  const undos = [UNDO_ADMIN_SAVES[rel], UNDO_ORDER_CONFIRMATION[rel], UNDO_ORDER_HOLDS[rel], UNDO_CHECKOUT_REPLAY[rel]].filter(Boolean);
   return undos.length ? undos.reduce((t, undo) => undo(t, rel), text.replace(/\r\n/g, '\n')) : text;
 }
 

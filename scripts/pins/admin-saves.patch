@@ -1,0 +1,380 @@
+diff --git a/api/_lib/supabaseAdmin.js b/api/_lib/supabaseAdmin.js
+index 23a1ab5..b60a5df 100644
+--- a/api/_lib/supabaseAdmin.js
++++ b/api/_lib/supabaseAdmin.js
+@@ -629,6 +629,31 @@ export async function releaseOrderHolds(orderId, cfg) {
+   }
+ }
+ 
++/**
++ * Mark a cash-on-delivery order's cash collected AND record which admin did
++ * it, in one transaction (migration 0040's mark_cod_collected). Returns the
++ * order's new payment fields with `collected_by`; null when the guard matched
++ * nothing (not COD, already paid, or cancelled); or { skipped: true } before
++ * 0040 is applied, when the caller falls back to the unrecorded write.
++ */
++export async function markCodCollected(orderId, admin, invoiceNumber, cfg) {
++  try {
++    const out = await callRpc('mark_cod_collected', {
++      p_order_id: orderId,
++      p_admin_user_id: admin.id,
++      p_admin_email: admin.email || null,
++      p_invoice_number: invoiceNumber,
++    }, cfg);
++    return rpcObject(out, 'mark_cod_collected');
++  } catch (err) {
++    if (isMissingFunction(err)) {
++      console.warn('[orders] mark_cod_collected not present — run migration 0040. Recording the cash without the admin.');
++      return { skipped: true };
++    }
++    throw err;
++  }
++}
++
+ /**
+  * Remove an order row that was never placed: written a moment ago, then
+  * refused its holds (the reservation writes nothing on a refusal). Guarded to
+diff --git a/src/admin/pages/Orders.jsx b/src/admin/pages/Orders.jsx
+index 31546a4..ff821c0 100644
+--- a/src/admin/pages/Orders.jsx
++++ b/src/admin/pages/Orders.jsx
+@@ -1,6 +1,6 @@
+ import { useEffect, useState, Fragment } from 'react';
+ import { Link } from 'react-router-dom';
+-import { adminListOrders, adminUpdateOrderFulfillment, adminMarkCodCollected } from '../../lib/adminApi.js';
++import { adminListOrders, adminUpdateOrderFulfillment, adminMarkCodCollected, adminListOrderEvents } from '../../lib/adminApi.js';
+ import { money } from '../../lib/format.js';
+ import { FULFILLMENT_STATUSES, fulfillmentStatusLabel, validateFulfillmentInput } from '../../lib/orderFulfillment.js';
+ 
+@@ -85,6 +85,22 @@ export default function Orders() {
+   const [err, setErr] = useState('');
+   const [expandedId, setExpandedId] = useState(null);
+   const [copiedId, setCopiedId] = useState(null);
++  // Recorded admin actions per order (0040) — who collected a COD order's
++  // cash — loaded when its details open.
++  const [events, setEvents] = useState({});
++
++  async function loadEvents(orderId) {
++    try {
++      const list = await adminListOrderEvents(orderId);
++      setEvents((current) => ({ ...current, [orderId]: list }));
++    } catch { /* the details still show without the record */ }
++  }
++
++  function toggleDetails(order) {
++    const opening = expandedId !== order.id;
++    setExpandedId(opening ? order.id : null);
++    if (opening) loadEvents(order.id);
++  }
+ 
+   useEffect(() => {
+     adminListOrders()
+@@ -112,6 +128,8 @@ export default function Orders() {
+ 
+   function updateOrder(patch) {
+     setOrders((current) => current.map((order) => (order.id === patch.id ? { ...order, ...patch } : order)));
++    // Cash just recorded as collected: show who, from the record itself.
++    if (patch.payment_status === 'paid') loadEvents(patch.id);
+   }
+ 
+   return (
+@@ -178,7 +196,7 @@ export default function Orders() {
+                         </span>
+                       </td>
+                       <td>
+-                        <button className="btn btn-sm btn-light" onClick={() => setExpandedId(open ? null : o.id)}>
++                        <button className="btn btn-sm btn-light" onClick={() => toggleDetails(o)}>
+                           {open ? 'Hide' : 'View details'}
+                         </button>
+                       </td>
+@@ -245,6 +263,9 @@ export default function Orders() {
+                                   <div><dt>Gateway order</dt><dd className="adm-mono">{o.razorpay_order_id}</dd></div>
+                                 )}
+                                 {o.failure_reason && <div><dt>Failure</dt><dd>{o.failure_reason}</dd></div>}
++                                {(events[o.id] || []).filter((e) => e.action === 'cod_collected').map((e) => (
++                                  <div key={e.created_at}><dt>Cash collected by</dt><dd>{e.admin_email || 'an admin (no email on record)'} · {dt(e.created_at)}</dd></div>
++                                ))}
+                               </dl>
+                               <CashCollected order={o} onUpdated={updateOrder} />
+                               <Link to={`/invoice/${o.order_number}`} className="btn btn-sm" style={{ marginTop: 10 }}>
+diff --git a/src/admin/pages/Pricing.jsx b/src/admin/pages/Pricing.jsx
+index 77e41db..6b20e53 100644
+--- a/src/admin/pages/Pricing.jsx
++++ b/src/admin/pages/Pricing.jsx
+@@ -1,5 +1,5 @@
+ import { useEffect, useState } from 'react';
+-import { adminListProducts, adminUpdateProduct } from '../../lib/adminApi.js';
++import { adminListProducts, adminUpdateProductPrice } from '../../lib/adminApi.js';
+ import { money } from '../../lib/format.js';
+ 
+ const TIERS = [10, 15, 18, 20];
+@@ -22,15 +22,18 @@ export default function Pricing() {
+     const v = editFor(p);
+     setSavingId(p.dbId);
+     try {
+-      await adminUpdateProduct(p.dbId, {
+-        name: p.name, slug: p.slug, description: p.description, category: p.category, image: p.image, gallery: p.gallery,
+-        originalPrice: Number(v.originalPrice) || 0, discountPercent: Number(v.discountPercent) || 0,
+-        form: p.form, stock: p.stock, permalink: p.permalink,
+-        isNew: p.isNew, isBestseller: p.isBestseller, isFeatured: p.isFeatured, rating: p.rating, reviewCount: p.reviewCount, isActive: p.isActive,
+-      });
+-      setProducts((list) => list.map((x) => x.dbId === p.dbId ? { ...x, originalPrice: Number(v.originalPrice) || 0, discountPercent: Number(v.discountPercent) || 0 } : x));
++      // The price columns only, refused if the product moved since this page
++      // loaded it. Saving the whole row from that load used to write back its
++      // stale name, description, image, stock flag and active state.
++      const saved = await adminUpdateProductPrice(p.dbId, { originalPrice: v.originalPrice, discountPercent: v.discountPercent }, p.updatedAt);
++      setProducts((list) => list.map((x) => (x.dbId === p.dbId ? saved : x)));
+       setEdits((e) => { const n = { ...e }; delete n[p.dbId]; return n; });
+-    } catch (ex) { setErr(ex.message || String(ex)); }
++    } catch (ex) {
++      setErr(ex.message || String(ex));
++      // Changed elsewhere: reload the list so the next Save is checked
++      // against the current version. Unsaved price edits are kept.
++      if (ex.isStaleWrite) { try { setProducts(await adminListProducts()); } catch { /* the message already says to reload */ } }
++    }
+     setSavingId(null);
+   }
+ 
+diff --git a/src/admin/pages/Variants.jsx b/src/admin/pages/Variants.jsx
+index b7c1a2d..5b097b0 100644
+--- a/src/admin/pages/Variants.jsx
++++ b/src/admin/pages/Variants.jsx
+@@ -47,6 +47,10 @@ export default function Variants() {
+   const [msg, setMsg] = useState('');
+   const [editingId, setEditingId] = useState(null); // null = none, 'new' = add form
+   const [form, setForm] = useState(blank);
++  // The updated_at of the pack size being edited, as it was opened. The save
++  // is refused if the row has moved since — an order taking stock moves it —
++  // so a form opened before a sale cannot write the old stock back.
++  const [editingVersion, setEditingVersion] = useState(null);
+ 
+   useEffect(() => {
+     adminListProducts()
+@@ -94,6 +98,7 @@ export default function Variants() {
+   function startEdit(v) {
+     setForm(toForm(v));
+     setEditingId(v.id);
++    setEditingVersion(v.updated_at || null);
+   }
+ 
+   function flash(text) {
+@@ -108,11 +113,17 @@ export default function Variants() {
+     setErr('');
+     try {
+       if (editingId === 'new') await adminCreateVariant(productId, form);
+-      else await adminUpdateVariant(editingId, productId, form);
++      else await adminUpdateVariant(editingId, productId, form, editingVersion);
+       setEditingId(null);
+       await reload();
+       flash('Saved.');
+     } catch (e2) {
++      // Refused because the pack size moved (an order, or another tab). The
++      // form still holds the old values — stock included — so it is closed
++      // rather than left one click from saving them again; the list reloads
++      // with the current figures to reopen and reapply the change against.
++      // (The message is set after the reload, which clears the banner.)
++      if (e2.isStaleWrite) { setEditingId(null); await reload(); }
+       setErr(e2.message || String(e2));
+     } finally {
+       setBusy(false);
+diff --git a/src/lib/adminApi.js b/src/lib/adminApi.js
+index 92559e2..5e50532 100644
+--- a/src/lib/adminApi.js
++++ b/src/lib/adminApi.js
+@@ -80,6 +80,15 @@ export function dbRowToProduct(row) {
+   };
+ }
+ 
++/** The three price columns, the sale price derived as the storefront derives it. */
++function priceColumns(originalPrice, discountPercent) {
++  return {
++    original_price: originalPrice,
++    discount_percent: discountPercent,
++    sale_price: originalPrice > 0 ? Math.round(originalPrice * (1 - discountPercent / 100)) : 0,
++  };
++}
++
+ function productToDbRow(p) {
+   const discountPercent = Number(p.discountPercent) || 0;
+   const originalPrice = Number(p.originalPrice) || 0;
+@@ -88,9 +97,7 @@ function productToDbRow(p) {
+     slug: p.slug,
+     category: p.category,
+     image_url: p.image || null,
+-    original_price: originalPrice,
+-    discount_percent: discountPercent,
+-    sale_price: originalPrice > 0 ? Math.round(originalPrice * (1 - discountPercent / 100)) : 0,
++    ...priceColumns(originalPrice, discountPercent),
+     is_active: p.isActive !== false,
+     form: p.form || null,
+     stock: stockToDbBoolean(p.inStock !== undefined ? p.inStock : p.stock),
+@@ -100,10 +107,17 @@ function productToDbRow(p) {
+     is_featured: !!p.isFeatured,
+     rating: Number(p.rating) || 0,
+     review_count: Number(p.reviewCount) || 0,
+-    sort_order: Number(p.sortOrder) || 0,
+   };
+   if (p.biosashId) row.biosash_id = p.biosashId;
+ 
++  // sort_order is ABSENT-OR-PRESENT, like description below. It used to read
++  // `Number(p.sortOrder) || 0`, and neither the product editor nor the Pricing
++  // screen carries a sortOrder — so every save from either wrote 0, and the
++  // product dropped out of its merchandised place in the shop. Only the
++  // Products list's Move up/down sets the order now; a caller that carries the
++  // key (the content importer passes the whole product) writes it unchanged.
++  if (p.sortOrder !== undefined && p.sortOrder !== null) row.sort_order = Number(p.sortOrder) || 0;
++
+   // description and gallery_urls are ABSENT-OR-PRESENT, never defaulted.
+   //
+   // They used to read `p.description || ''` and `p.gallery || []`. Because
+@@ -274,33 +288,59 @@ export async function adminUpdateProduct(dbId, product, expectedUpdatedAt = null
+   const row = productToDbRow(product);
+   row.updated_at = new Date().toISOString();
+ 
+-  let q = supabase.from('products').update(row).eq('id', dbId);
+-  if (expectedUpdatedAt) q = q.eq('updated_at', expectedUpdatedAt);
++  if (expectedUpdatedAt) return dbRowToProduct(await updateUnlessMoved('products', dbId, row, expectedUpdatedAt, { what: 'product' }));
+ 
+-  // `.select()` without `.single()`: zero rows is the expected outcome of a
+-  // lost race, and `.single()` would surface that as a generic PGRST116 error
+-  // indistinguishable from a genuine failure.
+-  const { data, error } = await q.select();
++  const { data, error } = await supabase.from('products').update(row).eq('id', dbId).select();
+   if (error) throw error;
++  if (!data || data.length === 0) throw new Error('Product update affected no rows.');
++  return dbRowToProduct(data[0]);
++}
+ 
+-  if (!data || data.length === 0) {
+-    if (expectedUpdatedAt) {
+-      // Tell the two cases apart: a row that still exists but moved on is a
+-      // conflict, a row that is gone is a deletion.
+-      const { data: current } = await supabase
+-        .from('products').select('id').eq('id', dbId).maybeSingle();
+-      if (current) {
+-        throw new StaleWriteError(
+-          'This product was modified elsewhere after you opened it. '
+-          + 'Reload the page to see the current values, then reapply your changes.',
+-        );
+-      }
+-      throw new StaleWriteError('This product no longer exists. It may have been deleted while you were editing.');
+-    }
+-    throw new Error('Product update affected no rows.');
+-  }
++/**
++ * Change ONLY a product's price — MRP, discount and the sale price derived
++ * from them — refusing the write if the product moved since it was read.
++ *
++ * The Pricing screen used to save through adminUpdateProduct with the whole
++ * row it loaded when the page opened, and no updated_at. A price change
++ * therefore wrote back that stale name, description, image, gallery, stock
++ * flag and active state: a product delisted in another tab came back on sale
++ * the moment its price was saved here. This writes the three price columns
++ * and nothing else.
++ */
++export async function adminUpdateProductPrice(dbId, { originalPrice, discountPercent }, expectedUpdatedAt) {
++  if (!expectedUpdatedAt) throw new StaleWriteError('Reload the page before saving: it did not record which version of this product it showed.');
++  const original = Number(originalPrice) || 0;
++  // The editor refuses a zero price for the same reason: it renders "Price
++  // coming soon" and checkout refuses the line, so the product cannot sell.
++  if (!(original > 0)) throw new Error('Enter an original price of at least ₹1 — a product with no price cannot be purchased.');
++  const row = { ...priceColumns(original, Number(discountPercent) || 0), updated_at: new Date().toISOString() };
++  return dbRowToProduct(await updateUnlessMoved('products', dbId, row, expectedUpdatedAt, { what: 'product' }));
++}
+ 
+-  return dbRowToProduct(data[0]);
++/**
++ * Apply `row` to one row only if it still carries the updated_at the editor
++ * loaded. That precondition is an equality filter on the UPDATE, so a row
++ * that moved since matches nothing — and nothing applied is the signal to
++ * refuse rather than clobber.
++ *
++ * `.select()` without `.single()`: zero rows is the expected outcome of a lost
++ * race, and `.single()` would surface it as a generic PGRST116 error
++ * indistinguishable from a genuine failure. The follow-up read tells the two
++ * refusals apart: a row that still exists moved on, a row that is gone was
++ * deleted.
++ */
++async function updateUnlessMoved(table, id, row, expectedUpdatedAt, { what, movedHint = '' }) {
++  const { data, error } = await supabase.from(table).update(row).eq('id', id).eq('updated_at', expectedUpdatedAt).select();
++  if (error) throw error;
++  if (data && data.length) return data[0];
++  const { data: current } = await supabase.from(table).select('id').eq('id', id).maybeSingle();
++  if (current) {
++    throw new StaleWriteError(
++      `This ${what} was modified elsewhere after you opened it.${movedHint ? ` ${movedHint}` : ''} `
++      + 'Reload the page to see the current values, then reapply your changes.',
++    );
++  }
++  throw new StaleWriteError(`This ${what} no longer exists. It may have been deleted while you were editing.`);
+ }
+ 
+ export async function adminSetProductActive(dbId, isActive) {
+@@ -479,6 +519,24 @@ export async function adminMarkCodCollected(orderNumber, { fetchImpl = globalThi
+   return body.order;
+ }
+ 
++/**
++ * The admin actions recorded against one order (migration 0040), oldest first
++ * — today, who marked a COD order's cash collected. Admin-read only (RLS).
++ * [] before 0040 is applied, so the Orders page simply shows nothing extra.
++ */
++export async function adminListOrderEvents(orderId) {
++  const { data, error } = await supabase
++    .from('order_admin_events')
++    .select('action, admin_email, created_at')
++    .eq('order_id', orderId)
++    .order('created_at', { ascending: true });
++  if (error) {
++    if (['42P01', 'PGRST205', 'PGRST106'].includes(error.code)) return [];
++    throw error;
++  }
++  return data || [];
++}
++
+ // ---------------------------------------------------------------
+ // ADMIN: categories
+ // ---------------------------------------------------------------
+@@ -675,22 +733,32 @@ export async function adminCreateVariant(productId, v) {
+   return data;
+ }
+ 
+-export async function adminUpdateVariant(id, productId, v) {
+-  const { data, error } = await supabase
+-    .from('product_variants')
+-    .update(variantRow(v, productId))
+-    .eq('id', id)
+-    .select()
+-    .single();
+-  if (error) throw error;
+-  return data;
++/**
++ * Save a pack size, refusing the write if the row moved since the editor
++ * opened it.
++ *
++ * Its stock is a real count: since 0039 every paid order and every COD order
++ * takes units from it. The form carries the stock it loaded, so saving a form
++ * opened before an order — even only to fix the price — wrote that old count
++ * back and put the sold unit on sale again. Orders move updated_at, so the
++ * precondition below refuses exactly that save.
++ */
++export async function adminUpdateVariant(id, productId, v, expectedUpdatedAt) {
++  if (!expectedUpdatedAt) throw new StaleWriteError('Reload this pack size before saving: the editor did not record which version it opened.');
++  const row = { ...variantRow(v, productId), updated_at: new Date().toISOString() };
++  return updateUnlessMoved('product_variants', id, row, expectedUpdatedAt, {
++    what: 'pack size',
++    movedHint: 'An order may have taken stock from it, or another tab saved it.',
++  });
+ }
+ 
+ /** Activate / deactivate without losing the row or its price history. */
+ export async function adminSetVariantActive(id, isActive) {
++  // updated_at moves with every write, so an editor still holding the
++  // previous version is refused rather than saving over this change.
+   const { error } = await supabase
+     .from('product_variants')
+-    .update({ is_active: isActive })
++    .update({ is_active: isActive, updated_at: new Date().toISOString() })
+     .eq('id', id);
+   if (error) throw error;
+ }
