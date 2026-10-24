@@ -42727,6 +42727,40 @@ async function adminUpdateOrderFulfillment(orderId, input, actions = {}) {
   return data;
 }
 
+/**
+ * Record that a cash-on-delivery order's cash has been collected: it becomes
+ * paid and is issued its invoice number. Goes through the admin-checked
+ * /api/admin/mark-cod-collected route with the admin's own session; no secret
+ * is held here. Resolves with the order's new payment fields.
+ */
+async function adminMarkCodCollected(orderNumber, {
+  fetchImpl = globalThis.fetch
+} = {}) {
+  const {
+    data
+  } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  if (!token) throw new Error('Your admin session has ended. Sign in again, then try.');
+  let response;
+  try {
+    response = await fetchImpl('/api/admin/mark-cod-collected', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        orderNumber
+      })
+    });
+  } catch {
+    throw new Error('Could not reach the server. Nothing was recorded; try again.');
+  }
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.ok) throw new Error(body.error || `Recording the payment failed (HTTP ${response.status}).`);
+  return body.order;
+}
+
 // ---------------------------------------------------------------
 // ADMIN: categories
 // ---------------------------------------------------------------
@@ -49431,6 +49465,11 @@ function Checkout() {
   // which becomes 0 right after CLEAR_CART fires below and would make
   // the confirmation screen show "Total paid ₹0".
   const [orderTotal, setOrderTotal] = reactExports.useState(null);
+  // An online order whose payment Razorpay accepted but our server could not
+  // yet confirm (still authorised, or the confirmation call failed). The order
+  // exists and the payment is moving; the webhook settles it. The customer is
+  // told exactly that — never "not placed", which invited a second payment.
+  const [confirming, setConfirming] = reactExports.useState(false);
   // The authoritative itemised breakdown returned by create-order. Until the
   // order is priced server-side the summary falls back to a local estimate;
   // tax and fees are never guessed in the browser.
@@ -49456,13 +49495,19 @@ function Checkout() {
   // larger baskets and quoted a cheaper total than the server actually charged.
   const deliveryFee = DELIVERY.find(d => d.id === delivery)?.price || 0;
   const shipBase = deliveryFee;
-  const total = Math.max(0, subtotal + shipBase);
 
   // Live server pricing for the chosen delivery method, including the coupon
   // carried over from the cart. Changing the selection re-quotes, so the
   // summary always reflects the option actually selected rather than waiting
   // for create-order to correct it.
   const quote = useCartQuote(cartDetailed, couponCode, delivery);
+
+  // The figure on the Pay button is the figure that will be charged: the
+  // order's own breakdown once create-order has priced it, the live quote's
+  // before that, and no figure at all until the server has answered. It used
+  // to show the local estimate, which knows nothing of coupons or tax — "Pay
+  // ₹1,000" over a ₹900 charge.
+  const charged = serverBreakdown?.grandTotal ?? (quote.breakdown && !quote.stale ? quote.breakdown.grandTotal : null);
   if (placed) {
     return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "v2-checkout-root v2-checkout-confirm-root",
@@ -49475,21 +49520,27 @@ function Checkout() {
             style: {
               '--d': '400ms'
             },
-            children: "Order confirmed"
+            children: confirming ? 'Payment received' : 'Order confirmed'
           }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
             className: "serif confirm__reveal",
             style: {
               '--d': '480ms'
             },
-            children: "Thank you \u2014 your ritual is on its way."
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            children: confirming ? 'Thank you — we are confirming your payment.' : 'Thank you — your ritual is on its way.'
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
             className: "muted confirm__reveal",
             style: {
               '--d': '550ms'
             },
-            children: ["A confirmation has been sent to your email. Order ", /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
-              children: ["#", orderNo]
-            }), "."]
+            children: confirming ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+              children: ["Razorpay has your payment and we are confirming it with your bank. This usually takes a few minutes and happens on its own \u2014 please do not pay again. Your order number is ", /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+                children: ["#", orderNo]
+              }), "."]
+            }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+              children: ["Your order number is ", /*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
+                children: ["#", orderNo]
+              }), ". Keep it to track your order."]
+            })
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
             className: "confirm__card confirm__reveal",
             style: {
@@ -49505,7 +49556,7 @@ function Checkout() {
             }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
               className: "confirm__row",
               children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                children: "Total paid"
+                children: pay === 'cod' ? 'To pay on delivery' : confirming ? 'Amount' : 'Total paid'
               }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
                 children: money(orderTotal)
               })]
@@ -49514,13 +49565,13 @@ function Checkout() {
               children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
                 children: "Payment"
               }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-                children: pay === 'cod' ? 'Cash on delivery' : pay.toUpperCase()
+                children: pay === 'cod' ? 'Cash on delivery' : confirming ? 'Being confirmed' : 'Paid online'
               })]
             })]
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
             className: "confirm__actions",
             children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-              to: "/account/orders",
+              to: `/passport/${orderNo}`,
               className: "btn confirm__reveal confirm__reveal--btn",
               style: {
                 '--d': '700ms'
@@ -49569,10 +49620,15 @@ function Checkout() {
   // Reached ONLY after the server has confirmed the order is genuinely
   // paid (or is a recorded COD order). This is the single place the cart is
   // cleared and the confirmation/celebration is shown.
-  const completeOrder = (orderNumber, amount) => {
+  // `confirming`: Razorpay accepted the payment but the server has not yet
+  // confirmed it; the order stands and the webhook finishes it.
+  const completeOrder = (orderNumber, amount, {
+    confirming: stillConfirming = false
+  } = {}) => {
     inFlight.current = false;
     setOrderNo(orderNumber);
     setOrderTotal(amount);
+    setConfirming(stillConfirming);
     dispatch({
       type: 'CLEAR_CART'
     });
@@ -49629,7 +49685,10 @@ function Checkout() {
         } : null
       });
       if (created.breakdown) setServerBreakdown(created.breakdown);
-      if (created.paymentMethod === 'cod') {
+
+      // Already paid — a retry after the money moved, or a second tab. It is
+      // done: show it, never a second payment window.
+      if (created.alreadyPaid || created.paymentMethod === 'cod') {
         completeOrder(created.orderNumber, created.amount);
         return;
       }
@@ -49660,28 +49719,43 @@ function Checkout() {
           email: form.email,
           contact: form.phone
         },
-        // Razorpay says the payment succeeded — but only our server decides.
+        // Razorpay calls this only for a payment it accepted: from here the
+        // order exists and its money is moving. Only our server says it is
+        // PAID; until it does, the customer is told it is being confirmed.
         handler: async response => {
           try {
             const result = await verifyPayment(response);
             if (result?.verified) {
               completeOrder(result.orderNumber, result.amount);
             } else if (result?.pending) {
-              // Razorpay has the money authorised but not yet captured. This
-              // is not a failure — telling the customer their order was not
-              // placed here would invite a second payment for the same cart.
-              inFlight.current = false;
-              setProcessing(false);
-              setPayNotice(result.error || 'Your payment is still being confirmed. We will update your order shortly — please do not pay again.');
+              // Authorised, not yet captured. Not a failure: the order is
+              // placed and the webhook settles it. It used to sit under a
+              // "Payment cancelled" heading, inviting a second payment.
+              completeOrder(result.orderNumber || created.orderNumber, created.amount, {
+                confirming: true
+              });
             } else {
               inFlight.current = false;
               setProcessing(false);
               setPayError('We could not verify this payment. Your order has not been placed.');
             }
           } catch (err) {
-            inFlight.current = false;
-            setProcessing(false);
-            setPayError(err.message || 'We could not confirm your payment. Please contact support before paying again.');
+            // A 4xx (but a rate limit) is the server's examined refusal — a
+            // signature, order or amount that does not match, or a payment
+            // the bank declined: nothing was placed, and it says so.
+            if (err.status >= 400 && err.status < 500 && err.status !== 429) {
+              inFlight.current = false;
+              setProcessing(false);
+              setPayError(err.message || 'We could not verify this payment. Your order has not been placed.');
+              return;
+            }
+            // Anything else — the server or its lookup of the payment did not
+            // answer — leaves an accepted payment unconfirmed, not failed. It
+            // used to say "your order has not been placed" over money already
+            // taken, and Try again reopened Razorpay for it.
+            completeOrder(created.orderNumber, created.amount, {
+              confirming: true
+            });
           }
         },
         modal: {
@@ -50179,12 +50253,12 @@ function Checkout() {
                 children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
                   name: "lock",
                   size: 17
-                }), " Place order \xB7 ", money(total)]
+                }), " Place order", charged != null && ` · ${money(charged)}`]
               }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
                 children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
                   name: "lock",
                   size: 17
-                }), " Pay ", money(total)]
+                }), " Pay", charged != null && ` ${money(charged)}`]
               })
             })]
           })]
@@ -71069,5 +71143,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { adminListVariants as $, adminUpdateOrderFulfillment as A, adminListProductMedia as B, CONTACT_FIELDS as C, adminCommitStagedProductMedia as D, validateMediaFile as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, mediaFailureMessage as H, adminReorderProductMedia as I, adminSetPrimaryMedia as J, adminEnsurePrimaryMedia as K, LEGAL_PAGES as L, adminUpdateProductMedia as M, NavLink as N, Outlet as O, adminReplaceProductMedia as P, adminDeleteProductMedia as Q, adminDiscoverMedia as R, adminImportMedia as S, validateContent as T, CONTENT_FIELDS as U, fieldPopulated as V, CONTENT_LABELS as W, useNavigate as X, useLocation as Y, adminUpdateProduct as Z, adminCreateProduct as _, adminGetSetting as a, REWARD_TYPES as a$, adminCreateVariant as a0, adminUpdateVariant as a1, adminSetVariantActive as a2, adminDeleteVariant as a3, adminGetProgramSettings as a4, CREATOR_STATUSES as a5, money2 as a6, adminListCreators as a7, adminCreatorStandings as a8, adminSetProgramSettings as a9, adminListKyc as aA, KYC_STATUSES as aB, KYC_SIGNED_URL_SECONDS as aC, adminSetKycStatus as aD, KYC_DOCUMENT_KINDS as aE, kycDocumentState as aF, adminKycDocumentUrl as aG, adminListKycAudit as aH, getPayoutConfig as aI, adminListPayouts as aJ, PAYOUT_STATUSES as aK, adminSetWithdrawalsOpen as aL, adminGetPayoutLedger as aM, adminGetPayoutAudit as aN, adminGetKycForCreator as aO, adminReviewPayout as aP, adminMarkPayoutPaid as aQ, normalizeLadder as aR, DEFAULT_BEYOND_STEP as aS, adminGetTierLadder as aT, validateLadder as aU, ladderErrorMessage as aV, rupees as aW, adminListLevelRewards as aX, groupRewardsByLevel as aY, REWARD_OPTION_SLOTS as aZ, validateRewardOption as a_, adminCreateCreator as aa, adminSetCreatorStatus as ab, normalizeContentPatch as ac, contentScore as ad, adminGetCreator as ae, adminListCodeAliases as af, adminListCampaigns as ag, adminListLinks as ah, adminListAudit as ai, adminListAttributionEvents as aj, adminUpdateCampaign as ak, adminCreateCampaign as al, CAMPAIGN_STATUSES as am, buildTrackingUrl as an, normalizeDestination as ao, DESTINATION_TYPES as ap, CopyButton as aq, adminChangeCreatorCode as ar, adminUpdateCreator as as, adminCreateLink as at, adminSetLinkStatus as au, adminListConversions as av, CONVERSION_STATUSES as aw, adminGetConversionItems as ax, adminGetConversionAudit as ay, adminRefundConversion as az, Link as b, STOREFRONT_LABELS as b$, REWARD_TYPE_LABEL as b0, adminListRewardClaims as b1, CLAIM_STATUSES as b2, CLAIM_STATUS_LABEL as b3, DEFAULT_LADDER as b4, adminSetTierLadder as b5, rewardOptionErrorMessage as b6, adminUpsertLevelReward as b7, adminDeleteLevelReward as b8, adminSetRewardClaimStatus as b9, MAX_CONCERN_PRODUCTS as bA, searchCatalogueForPicker as bB, productGallery as bC, MAX_DISCOVERY_CARDS as bD, makeDiscoveryId as bE, sanitizeHomepageVisuals as bF, normalizeDiscovery as bG, products as bH, discoveryPayload as bI, mergeHomepageVisuals as bJ, announceHomepageSaved as bK, POSITION_LABELS as bL, HERO_SECTION as bM, TRUST_SECTION as bN, TILES_SECTION as bO, STORES_SECTION as bP, FESTIVE_SECTION as bQ, LIFESTYLE_SECTION as bR, JEWELLERY_BANNER_SECTION as bS, STORE_CAROUSEL_SECTION as bT, DELIVERY_STRIP as bU, BENEFITS_STRIP as bV, DEPARTMENT_SECTIONS as bW, JEWELLERY_SECTIONS as bX, HOMELIVING_SECTIONS as bY, GROCERY_SECTIONS as bZ, STOREFRONT_CONTENT_STORES as b_, adminGetTheme as ba, sanitizeTheme$1 as bb, TOKENS as bc, PRESET_LIST as bd, GROUPS as be, DEFAULT_THEME as bf, OVERLAY_SCALES as bg, TYPE_SCALES as bh, HEX_RE as bi, adminSetTheme as bj, overlayRgba as bk, adminUpsertCategory as bl, adminDeleteCategory as bm, normalizePromo as bn, PromoPoster as bo, PromoOfferCard as bp, adminListPromotions as bq, adminUpsertPromotion as br, adminDeletePromotion as bs, adminSetPromotionActive as bt, adminReorderPromotions as bu, uploadPromoImage as bv, supabase as bw, CouponTicket as bx, HOMEPAGE_VISUAL_FIELDS as by, safeVisualUrl as bz, LegalUpdated as c, normalizeFashionStorefront as c0, normalizeLifestyleStorefront as c1, sectionSpec as c2, sectionContent as c3, validateStorefrontContent as c4, useSearchParams as c5, buildTree as c6, validatePlacement as c7, uploadImage as c8, isSpotlightEligible as c9, categoryBySlug as ca, sanitizeCategoryConfig as cb, safeColor as cc, safeGradient as cd, makeSpotlightId as ce, validateImageUpload as cf, normalizeCategoryExperience as cg, categoryExperiencePayload as ch, categoryIsReadyButOff as ci, categoryToneTheme as cj, MIN_INTERVAL_MS as ck, MAX_INTERVAL_MS as cl, DEFAULT_ITEM_SCALE as cm, MIN_ITEM_SCALE as cn, MAX_ITEM_SCALE as co, ITEM_OFFSET_LIMIT as cp, CategorySpotlight as cq, SOCIAL_NETWORKS as cr, POLICY_KEYS as cs, validateCompanyForSave as ct, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminSeedDefaultCategories as m, normalizeLegalPage as n, adminImportBiosashCatalog as o, money as p, adminSetProductActive as q, reactExports as r, adminDeleteProduct as s, adminReorderProducts as t, useParams as u, validateLegalPage as v, categories as w, adminListOrders as x, fulfillmentStatusLabel as y, validateFulfillmentInput as z };
+export { adminCreateProduct as $, validateFulfillmentInput as A, adminUpdateOrderFulfillment as B, CONTACT_FIELDS as C, adminListProductMedia as D, adminCommitStagedProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, validateMediaFile as H, mediaFailureMessage as I, adminReorderProductMedia as J, adminSetPrimaryMedia as K, LEGAL_PAGES as L, adminEnsurePrimaryMedia as M, NavLink as N, Outlet as O, adminUpdateProductMedia as P, adminReplaceProductMedia as Q, adminDeleteProductMedia as R, adminDiscoverMedia as S, adminImportMedia as T, validateContent as U, CONTENT_FIELDS as V, fieldPopulated as W, CONTENT_LABELS as X, useNavigate as Y, useLocation as Z, adminUpdateProduct as _, adminGetSetting as a, validateRewardOption as a$, adminListVariants as a0, adminCreateVariant as a1, adminUpdateVariant as a2, adminSetVariantActive as a3, adminDeleteVariant as a4, adminGetProgramSettings as a5, CREATOR_STATUSES as a6, money2 as a7, adminListCreators as a8, adminCreatorStandings as a9, adminRefundConversion as aA, adminListKyc as aB, KYC_STATUSES as aC, KYC_SIGNED_URL_SECONDS as aD, adminSetKycStatus as aE, KYC_DOCUMENT_KINDS as aF, kycDocumentState as aG, adminKycDocumentUrl as aH, adminListKycAudit as aI, getPayoutConfig as aJ, adminListPayouts as aK, PAYOUT_STATUSES as aL, adminSetWithdrawalsOpen as aM, adminGetPayoutLedger as aN, adminGetPayoutAudit as aO, adminGetKycForCreator as aP, adminReviewPayout as aQ, adminMarkPayoutPaid as aR, normalizeLadder as aS, DEFAULT_BEYOND_STEP as aT, adminGetTierLadder as aU, validateLadder as aV, ladderErrorMessage as aW, rupees as aX, adminListLevelRewards as aY, groupRewardsByLevel as aZ, REWARD_OPTION_SLOTS as a_, adminSetProgramSettings as aa, adminCreateCreator as ab, adminSetCreatorStatus as ac, normalizeContentPatch as ad, contentScore as ae, adminGetCreator as af, adminListCodeAliases as ag, adminListCampaigns as ah, adminListLinks as ai, adminListAudit as aj, adminListAttributionEvents as ak, adminUpdateCampaign as al, adminCreateCampaign as am, CAMPAIGN_STATUSES as an, buildTrackingUrl as ao, normalizeDestination as ap, DESTINATION_TYPES as aq, CopyButton as ar, adminChangeCreatorCode as as, adminUpdateCreator as at, adminCreateLink as au, adminSetLinkStatus as av, adminListConversions as aw, CONVERSION_STATUSES as ax, adminGetConversionItems as ay, adminGetConversionAudit as az, Link as b, STOREFRONT_CONTENT_STORES as b$, REWARD_TYPES as b0, REWARD_TYPE_LABEL as b1, adminListRewardClaims as b2, CLAIM_STATUSES as b3, CLAIM_STATUS_LABEL as b4, DEFAULT_LADDER as b5, adminSetTierLadder as b6, rewardOptionErrorMessage as b7, adminUpsertLevelReward as b8, adminDeleteLevelReward as b9, safeVisualUrl as bA, MAX_CONCERN_PRODUCTS as bB, searchCatalogueForPicker as bC, productGallery as bD, MAX_DISCOVERY_CARDS as bE, makeDiscoveryId as bF, sanitizeHomepageVisuals as bG, normalizeDiscovery as bH, products as bI, discoveryPayload as bJ, mergeHomepageVisuals as bK, announceHomepageSaved as bL, POSITION_LABELS as bM, HERO_SECTION as bN, TRUST_SECTION as bO, TILES_SECTION as bP, STORES_SECTION as bQ, FESTIVE_SECTION as bR, LIFESTYLE_SECTION as bS, JEWELLERY_BANNER_SECTION as bT, STORE_CAROUSEL_SECTION as bU, DELIVERY_STRIP as bV, BENEFITS_STRIP as bW, DEPARTMENT_SECTIONS as bX, JEWELLERY_SECTIONS as bY, HOMELIVING_SECTIONS as bZ, GROCERY_SECTIONS as b_, adminSetRewardClaimStatus as ba, adminGetTheme as bb, sanitizeTheme$1 as bc, TOKENS as bd, PRESET_LIST as be, GROUPS as bf, DEFAULT_THEME as bg, OVERLAY_SCALES as bh, TYPE_SCALES as bi, HEX_RE as bj, adminSetTheme as bk, overlayRgba as bl, adminUpsertCategory as bm, adminDeleteCategory as bn, normalizePromo as bo, PromoPoster as bp, PromoOfferCard as bq, adminListPromotions as br, adminUpsertPromotion as bs, adminDeletePromotion as bt, adminSetPromotionActive as bu, adminReorderPromotions as bv, uploadPromoImage as bw, supabase as bx, CouponTicket as by, HOMEPAGE_VISUAL_FIELDS as bz, LegalUpdated as c, STOREFRONT_LABELS as c0, normalizeFashionStorefront as c1, normalizeLifestyleStorefront as c2, sectionSpec as c3, sectionContent as c4, validateStorefrontContent as c5, useSearchParams as c6, buildTree as c7, validatePlacement as c8, uploadImage as c9, isSpotlightEligible as ca, categoryBySlug as cb, sanitizeCategoryConfig as cc, safeColor as cd, safeGradient as ce, makeSpotlightId as cf, validateImageUpload as cg, normalizeCategoryExperience as ch, categoryExperiencePayload as ci, categoryIsReadyButOff as cj, categoryToneTheme as ck, MIN_INTERVAL_MS as cl, MAX_INTERVAL_MS as cm, DEFAULT_ITEM_SCALE as cn, MIN_ITEM_SCALE as co, MAX_ITEM_SCALE as cp, ITEM_OFFSET_LIMIT as cq, CategorySpotlight as cr, SOCIAL_NETWORKS as cs, POLICY_KEYS as ct, validateCompanyForSave as cu, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminSeedDefaultCategories as m, normalizeLegalPage as n, adminImportBiosashCatalog as o, money as p, adminSetProductActive as q, reactExports as r, adminDeleteProduct as s, adminReorderProducts as t, useParams as u, validateLegalPage as v, categories as w, adminListOrders as x, fulfillmentStatusLabel as y, adminMarkCodCollected as z };
 //# sourceMappingURL=bundle.js.map

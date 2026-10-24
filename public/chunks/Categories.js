@@ -1,4 +1,4 @@
-import { r as reactExports, j as jsxRuntimeExports, k as adminListCategories, m as adminSeedDefaultCategories, bl as adminUpsertCategory, bm as adminDeleteCategory } from '../bundle.js';
+import { r as reactExports, j as jsxRuntimeExports, k as adminListCategories, m as adminSeedDefaultCategories, bm as adminUpsertCategory, bn as adminDeleteCategory } from '../bundle.js';
 
 const TONES = ['forest', 'lime', 'amber', 'clay', 'moss', 'plum', 'rose', 'honey', 'teal', 'sky'];
 const empty = {
