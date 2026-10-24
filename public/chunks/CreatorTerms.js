@@ -1,4 +1,4 @@
-import { r as reactExports, a as adminGetSetting, j as jsxRuntimeExports, e as adminSetSetting } from '../bundle.js';
+import { r as reactExports, a as adminGetSetting, j as jsxRuntimeExports, f as adminSetSetting } from '../bundle.js';
 
 const EMPTY = {
   body: '',

@@ -1,4 +1,4 @@
-import { cc as isSpotlightEligible, cd as categoryBySlug, ce as sanitizeCategoryConfig, cf as safeColor, cg as safeGradient, ch as makeSpotlightId, ci as validateImageUpload, r as reactExports, j as jsxRuntimeExports, bK as products, a as adminGetSetting, cj as normalizeCategoryExperience, ck as categoryExperiencePayload, e as adminSetSetting, w as categories, cl as categoryIsReadyButOff, cm as categoryToneTheme, cn as MIN_INTERVAL_MS, co as MAX_INTERVAL_MS, cp as DEFAULT_ITEM_SCALE, cq as MIN_ITEM_SCALE, cr as MAX_ITEM_SCALE, cs as ITEM_OFFSET_LIMIT, ct as CategorySpotlight } from '../bundle.js';
+import { cd as isSpotlightEligible, ce as categoryBySlug, cf as sanitizeCategoryConfig, cg as safeColor, ch as safeGradient, ci as makeSpotlightId, cj as validateImageUpload, r as reactExports, j as jsxRuntimeExports, bL as products, a as adminGetSetting, ck as normalizeCategoryExperience, cl as categoryExperiencePayload, f as adminSetSetting, x as categories, cm as categoryIsReadyButOff, cn as categoryToneTheme, co as MIN_INTERVAL_MS, cp as MAX_INTERVAL_MS, cq as DEFAULT_ITEM_SCALE, cr as MIN_ITEM_SCALE, cs as MAX_ITEM_SCALE, ct as ITEM_OFFSET_LIMIT, cu as CategorySpotlight } from '../bundle.js';
 import { u as uploadHomepageImage } from './homepageImageUpload.js';
 
 // ============================================================
@@ -304,7 +304,7 @@ function buildSummaryText(plan, {
     if (!rows.length) lines.push('  —');else rows.forEach(r => lines.push(`  ${render(r)}`));
     lines.push('');
   };
-  lines.push('SORA LIFE — spotlight packshot import');
+  lines.push('SORA LIFESTYLE — spotlight packshot import');
   lines.push(new Date().toISOString());
   lines.push('');
   section('UPLOADED', group(IMPORT_STATUS.UPLOADED), r => `${r.slug}  ${uploadedUrls.get(r.slug) || ''}`.trim());
@@ -914,7 +914,7 @@ function BulkPackshotImport({
       className: "hint",
       children: ["Select a folder of packshots named after their product \u2014 ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
         children: "aloe-vera-protein-shampoo.png"
-      }), ". Each file is uploaded to SORA LIFE\u2019s own media storage and assigned as that product\u2019s spotlight image. Files are matched on the exact product slug; nothing is guessed."]
+      }), ". Each file is uploaded to SORA LIFESTYLE\u2019s own media storage and assigned as that product\u2019s spotlight image. Files are matched on the exact product slug; nothing is guessed."]
     }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
       className: "hint",
       children: "Importing never publishes anything. A category you have not switched on stays off, and one that was already on stays on \u2014 you decide when each goes live."

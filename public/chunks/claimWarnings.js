@@ -1,4 +1,4 @@
-import { c9 as buildTree, bC as safeVisualUrl, ca as validatePlacement, bz as supabase, cb as uploadImage } from '../bundle.js';
+import { ca as buildTree, bD as safeVisualUrl, cb as validatePlacement, bA as supabase, cc as uploadImage } from '../bundle.js';
 
 // ============================================================
 // Catalogue images: every upload becomes a WebP under 150 KB, in the browser,

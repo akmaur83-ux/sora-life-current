@@ -1,4 +1,4 @@
-import { r as reactExports, a as adminGetSetting, j as jsxRuntimeExports, cb as uploadImage, e as adminSetSetting } from '../bundle.js';
+import { r as reactExports, a as adminGetSetting, j as jsxRuntimeExports, cc as uploadImage, f as adminSetSetting } from '../bundle.js';
 
 function Branding() {
   const [form, setForm] = reactExports.useState({
@@ -48,7 +48,7 @@ function Branding() {
     setMsg('');
     try {
       await adminSetSetting('branding', form);
-      setMsg('Saved. Reload the storefront to see logo/color changes (they apply at page load).');
+      setMsg('Saved. Reload the storefront to see the change (it applies at page load).');
     } catch (ex) {
       setErr(ex.message || String(ex));
     }
@@ -66,7 +66,7 @@ function Branding() {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
           children: "Branding"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: "Logo, site name, tagline, favicon and brand colors."
+          children: "Logo, site name, tagline and favicon."
         })]
       })
     }), err && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -78,7 +78,7 @@ function Branding() {
     }), loadErr && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "adm-banner err",
       role: "alert",
-      children: ["The saved branding could not be loaded (", loadErr, "). It can't be edited until it loads, so the default logo, name and colors can't be saved over the live ones. Reload the page to try again."]
+      children: ["The saved branding could not be loaded (", loadErr, "). It can't be edited until it loads, so the default logo and name can't be saved over the live ones. Reload the page to try again."]
     }), !loadErr && /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
       onSubmit: save,
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -160,63 +160,9 @@ function Branding() {
         className: "surface",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           children: "Brand colors"
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "adm-grid2",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            className: "field",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-              className: "label",
-              children: "Primary color"
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-              style: {
-                display: 'flex',
-                gap: 8,
-                alignItems: 'center'
-              },
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-                type: "color",
-                value: form.primary_color,
-                onChange: e => set('primary_color', e.target.value),
-                style: {
-                  width: 44,
-                  height: 40,
-                  border: 'none',
-                  background: 'none'
-                }
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-                className: "input",
-                value: form.primary_color,
-                onChange: e => set('primary_color', e.target.value)
-              })]
-            })]
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            className: "field",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
-              className: "label",
-              children: "Accent color"
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-              style: {
-                display: 'flex',
-                gap: 8,
-                alignItems: 'center'
-              },
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
-                type: "color",
-                value: form.accent_color,
-                onChange: e => set('accent_color', e.target.value),
-                style: {
-                  width: 44,
-                  height: 40,
-                  border: 'none',
-                  background: 'none'
-                }
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-                className: "input",
-                value: form.accent_color,
-                onChange: e => set('accent_color', e.target.value)
-              })]
-            })]
-          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "muted",
+          children: "Set in Appearance (Primary brand color and Accent): the storefront takes its colors from there, not from this page."
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "surface",

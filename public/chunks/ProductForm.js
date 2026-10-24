@@ -1,4 +1,4 @@
-import { r as reactExports, E as adminListProductMedia, H as adminCommitStagedProductMedia, I as validateMediaFile, J as mediaFailureMessage, j as jsxRuntimeExports, K as adminReorderProductMedia, M as adminSetPrimaryMedia, P as adminEnsurePrimaryMedia, Q as adminUpdateProductMedia, R as adminReplaceProductMedia, S as adminDeleteProductMedia, T as adminDiscoverMedia, U as adminImportMedia, V as validateContent, W as CONTENT_FIELDS, X as fieldPopulated, Y as CONTENT_LABELS, u as useParams, Z as useNavigate, _ as useLocation, i as adminListProducts, b as Link, w as categories, p as money, $ as adminUpdateProduct, a0 as adminCreateProduct } from '../bundle.js';
+import { r as reactExports, H as adminListProductMedia, I as adminCommitStagedProductMedia, J as validateMediaFile, K as mediaFailureMessage, j as jsxRuntimeExports, M as adminReorderProductMedia, P as adminSetPrimaryMedia, Q as adminEnsurePrimaryMedia, R as adminUpdateProductMedia, S as adminReplaceProductMedia, T as adminDeleteProductMedia, U as adminDiscoverMedia, V as adminImportMedia, W as validateContent, X as CONTENT_FIELDS, Y as fieldPopulated, Z as CONTENT_LABELS, u as useParams, _ as useNavigate, $ as useLocation, k as adminListProducts, c as Link, x as categories, q as money, a0 as adminUpdateProduct, a1 as adminCreateProduct } from '../bundle.js';
 
 let tmpSeq = 0;
 const tmpId = () => `tmp_${Date.now()}_${tmpSeq++}`;
@@ -1267,7 +1267,7 @@ function ProductForm() {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
           children: isEdit ? 'Edit product' : 'Add product'
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: isEdit ? values.name : 'Create a new Sora Life product'
+          children: isEdit ? values.name : 'Create a new Sora Lifestyle product'
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
         to: "/admin/products",

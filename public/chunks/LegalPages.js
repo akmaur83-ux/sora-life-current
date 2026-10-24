@@ -1,4 +1,4 @@
-import { u as useParams, j as jsxRuntimeExports, L as LEGAL_PAGES, r as reactExports, a as adminGetSetting, l as legalKey, d as defaultLegalPage, n as normalizeLegalPage, b as Link, h as hasLegalContent, c as LegalUpdated, C as CONTACT_FIELDS, G as GRIEVANCE_FIELDS, v as validateLegalPage, e as adminSetSetting } from '../bundle.js';
+import { u as useParams, j as jsxRuntimeExports, L as LEGAL_PAGES, r as reactExports, a as adminGetSetting, l as legalKey, d as defaultLegalPage, b as brandingFromSetting, n as normalizeLegalPage, c as Link, h as hasLegalContent, e as LegalUpdated, C as CONTACT_FIELDS, G as GRIEVANCE_FIELDS, v as validateLegalPage, f as adminSetSetting } from '../bundle.js';
 
 function LegalPagesAdmin() {
   const {
@@ -24,7 +24,7 @@ function LegalPagesEditor({
     let live = true;
     Promise.all([adminGetSetting('contact'), adminGetSetting('branding'), ...LEGAL_PAGES.map(p => adminGetSetting(legalKey(p.id)))]).then(([contact, branding, ...values]) => {
       if (!live) return;
-      const next = Object.fromEntries(LEGAL_PAGES.map((p, i) => [p.id, values[i] == null ? defaultLegalPage(p.id, contact || {}, branding?.siteName) : normalizeLegalPage(p.id, values[i])]));
+      const next = Object.fromEntries(LEGAL_PAGES.map((p, i) => [p.id, values[i] == null ? defaultLegalPage(p.id, contact || {}, brandingFromSetting(branding).siteName) : normalizeLegalPage(p.id, values[i])]));
       setRecords(next);
       setForm(spec ? next[spec.id] : null);
       setMissing(LEGAL_PAGES.filter((p, i) => values[i] == null).map(p => p.id));

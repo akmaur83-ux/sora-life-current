@@ -1,4 +1,4 @@
-import { W as CONTENT_FIELDS, af as normalizeContentPatch, Y as CONTENT_LABELS, r as reactExports, i as adminListProducts, ag as contentScore, j as jsxRuntimeExports, b as Link, $ as adminUpdateProduct } from '../bundle.js';
+import { X as CONTENT_FIELDS, ag as normalizeContentPatch, Z as CONTENT_LABELS, r as reactExports, k as adminListProducts, ah as contentScore, j as jsxRuntimeExports, c as Link, a0 as adminUpdateProduct } from '../bundle.js';
 
 // ============================================================
 // SORA LIFE — product content CSV round-trip

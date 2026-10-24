@@ -1,4 +1,4 @@
-import { r as reactExports, j as jsxRuntimeExports, b as Link, i as adminListProducts, k as adminListCategories, m as adminSeedDefaultCategories, o as adminImportBiosashCatalog } from '../bundle.js';
+import { r as reactExports, j as jsxRuntimeExports, c as Link, k as adminListProducts, m as adminListCategories, o as adminSeedDefaultCategories, p as adminImportBiosashCatalog } from '../bundle.js';
 
 function Dashboard() {
   const [loading, setLoading] = reactExports.useState(true);
@@ -58,7 +58,7 @@ function Dashboard() {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
           children: "Dashboard"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: "Overview of your Sora Life storefront data."
+          children: "Overview of your Sora Lifestyle storefront data."
         })]
       })
     }), loadErr && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {

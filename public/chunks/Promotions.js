@@ -1,4 +1,4 @@
-import { r as reactExports, bq as normalizePromo, j as jsxRuntimeExports, br as PromoPoster, bs as PromoOfferCard, bt as adminListPromotions, bu as adminUpsertPromotion, bv as adminDeletePromotion, bw as adminSetPromotionActive, bx as adminReorderPromotions, by as uploadPromoImage } from '../bundle.js';
+import { r as reactExports, br as normalizePromo, j as jsxRuntimeExports, bs as PromoPoster, bt as PromoOfferCard, bu as adminListPromotions, bv as adminUpsertPromotion, bw as adminDeletePromotion, bx as adminSetPromotionActive, by as adminReorderPromotions, bz as uploadPromoImage } from '../bundle.js';
 
 const THEME_OPTIONS = [['forest', 'Forest'], ['cream', 'Warm Cream'], ['orange', 'Orange Accent'], ['dark', 'Dark Luxe'], ['minimal', 'Minimal']];
 const PLACEMENT_OPTIONS = [['home', 'Homepage'], ['pdp', 'Product page'], ['cart', 'Cart']];
@@ -348,7 +348,7 @@ function Promotions() {
             className: "input",
             value: form.cta_text,
             onChange: e => set('cta_text', e.target.value),
-            placeholder: "Explore SORA LIFE",
+            placeholder: "Explore SORA LIFESTYLE",
             maxLength: 60
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {

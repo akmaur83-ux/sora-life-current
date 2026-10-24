@@ -4296,7 +4296,7 @@ function applyTheme(theme, root) {
 
 let branding = {
   logoUrl: '/assets/sora-life-logo.png',
-  siteName: 'SORA LIFE',
+  siteName: 'SORA LIFESTYLE',
   tagline: 'HEALTH & WELLNESS',
   primaryColor: '#1E3A2F',
   accentColor: '#E8B04B',
@@ -4353,11 +4353,46 @@ function applyStorefrontTheme(v) {
   applyTheme(theme);
   return true;
 }
+
+/**
+ * The storefront's view of the stored `branding` record. Admin → Branding (and
+ * the 0001 seed) store it with snake_case keys — site_name, logo_url,
+ * favicon_url — while everything here reads siteName, logoUrl, faviconUrl;
+ * merging the record as it was stored set keys nothing read, so the name, logo
+ * and favicon saved in the admin never reached the site. Either spelling is
+ * accepted. A blank field keeps the built-in value, and an image address must
+ * be a site path or https. The colours are not taken from it: the storefront
+ * theme (Admin → Appearance) owns them.
+ */
+function brandingFromSetting(v) {
+  if (!v || typeof v !== 'object') return {};
+  const pick = (...keys) => keys.map(k => typeof v[k] === 'string' ? v[k].trim() : '').find(Boolean);
+  const imageUrl = s => s && /^(\/(?!\/)|https:\/\/)/.test(s) ? s : undefined;
+  const out = {
+    siteName: pick('site_name', 'siteName'),
+    tagline: pick('tagline'),
+    logoUrl: imageUrl(pick('logo_url', 'logoUrl')),
+    faviconUrl: imageUrl(pick('favicon_url', 'faviconUrl'))
+  };
+  return Object.fromEntries(Object.entries(out).filter(([, value]) => value !== undefined));
+}
 function applyBranding(v) {
   if (v && typeof v === 'object') branding = {
     ...branding,
-    ...v
+    ...brandingFromSetting(v)
   };
+}
+
+/**
+ * The tab title with the site name in front: whatever stands before the first
+ * " — " is replaced, so applying it again, or after the name has changed, never
+ * stacks names ("SORA LIFE" is the start of "SORA LIFESTYLE", so replacing a
+ * leading "SORA LIFE" would have).
+ */
+function titleWithSiteName(title, siteName) {
+  const rest = String(title || '');
+  const cut = rest.indexOf(' — ');
+  return `${siteName}${cut >= 0 ? rest.slice(cut) : ''}`;
 }
 function applyAnnouncement(v) {
   if (v && typeof v === 'object') announcement = {
@@ -4985,7 +5020,7 @@ function ProductImage({
         className: "v2-pimg__fallback",
         children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
-            children: "Sora Life"
+            children: "Sora Lifestyle"
           }), cat?.name && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
             children: cat.name
           })]
@@ -5020,7 +5055,7 @@ function ProductImage({
             fontSize: 14,
             letterSpacing: 1
           },
-          children: "SORA LIFE"
+          children: "SORA LIFESTYLE"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
           style: {
             fontSize: 10,
@@ -34064,7 +34099,7 @@ function Header() {
           }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
             to: "/about",
             className: "drawer__minor",
-            children: ["About ", branding?.siteName || 'SORA LIFE']
+            children: ["About ", branding?.siteName || 'SORA LIFESTYLE']
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/contact",
             className: "drawer__minor",
@@ -34452,12 +34487,16 @@ function normalizeLegalPage(id, raw = {}) {
   }
   return page;
 }
-function defaultLegalPage(id, legacy = {}, name = 'SORA LIFE') {
+// The built-in text says "SORA LIFE"; the site's name goes in its place. Only the
+// whole name is matched: "SORA LIFE" is also the start of "SORA LIFESTYLE", so a
+// plain replace would turn that into "SORA LIFESTYLESTYLE".
+const BUILT_IN_NAME = /\bSORA LIFE\b/g;
+function defaultLegalPage(id, legacy = {}, name = 'SORA LIFESTYLE') {
   const page = structuredClone(LEGAL_DEFAULTS[id]);
   if (!page) return null;
   if (page.body) {
-    page.body = page.body.replaceAll('SORA LIFE', name);
-    page.intro = page.intro.replaceAll('SORA LIFE', name);
+    page.body = page.body.replace(BUILT_IN_NAME, () => name);
+    page.intro = page.intro.replace(BUILT_IN_NAME, () => name);
     if (legacy.policies?.[id]?.trim()) page.body += '\n\n# Full policy\n\n' + legacy.policies[id];
     const info = sanitizeCompany(legacy);
     page.body += '\n\n# Questions about this?\n\n' + (info.email || info.phone || info.address ? "See the Contact & help page for the store's published contact channels and support hours, when available." : 'Visit Contact & help for available support and order-tracking options.');
@@ -34565,7 +34604,7 @@ function useConsumerCare() {
 function Footer() {
   const info = useConsumerCare();
   const socials = socialLinks(info);
-  const name = branding?.siteName || 'SORA LIFE';
+  const name = branding?.siteName || 'SORA LIFESTYLE';
   return /*#__PURE__*/jsxRuntimeExports.jsx("footer", {
     className: "ftr",
     children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -35433,7 +35472,7 @@ function FashionChooser({
         })
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "fashion-choice__eyebrow",
-        children: "SORA LIFE / The fashion edit"
+        children: "SORA LIFESTYLE / The fashion edit"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
         id: titleId,
         children: "Find your kind of style."
@@ -35845,7 +35884,7 @@ function HomeHero({
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
     className: "hx hx-hero",
     "aria-roledescription": "carousel",
-    "aria-label": "SORA LIFE",
+    "aria-label": "SORA LIFESTYLE",
     onMouseEnter: () => setPaused(true),
     onMouseLeave: () => setPaused(false),
     onFocus: () => setPaused(true),
@@ -36009,7 +36048,7 @@ function HomeTrustStrip() {
   };
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
     className: "hx hx-trust",
-    "aria-label": "Shopping with SORA LIFE",
+    "aria-label": "Shopping with SORA LIFESTYLE",
     children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
       className: "hx-wrap hx-trust__list",
       ...count,
@@ -39269,7 +39308,7 @@ function HomeLeaderboard({
         className: "hm-leaderboard__head",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "v2-eyebrow",
-          children: "SORA LIFE Creator Program"
+          children: "SORA LIFESTYLE Creator Program"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           className: "v2-h2",
           id: "hm-leaderboard-h",
@@ -40343,7 +40382,7 @@ function MomTrustSpotlight({
           }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
             children: "Mom Trust"
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            children: "Explore the Mom Trust products currently available through the SORA LIFE catalogue."
+            children: "Explore the Mom Trust products currently available through the SORA LIFESTYLE catalogue."
           }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
             className: "hm-mom__products",
             children: [lead, ...more].slice(0, 3).map(product => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
@@ -40432,7 +40471,7 @@ function CreatorCommunity() {
           className: "hm-creator__copy",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
             className: "v2-eyebrow",
-            children: "SORA LIFE Creator Program"
+            children: "SORA LIFESTYLE Creator Program"
           }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
             children: "Share what you genuinely discover."
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -40479,7 +40518,7 @@ function WhySoraLife() {
       className: "v2-wrap",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHeading, {
         eyebrow: "Built for confident browsing",
-        title: "Why shop SORA LIFE"
+        title: "Why shop SORA LIFESTYLE"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "hm-trust",
         children: TRUST_ITEMS$1.map((item, index) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
@@ -43984,7 +44023,7 @@ function Home() {
               children: "Fresh on the shelf"
             }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
               className: "v2-h2",
-              children: "This week at Sora Life"
+              children: "This week at Sora Lifestyle"
             })]
           })
         }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -44608,7 +44647,7 @@ function Shop() {
           children: "All products"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "v2-shop__lede",
-          children: "Browse wellness, nutrition, hair, skin, beauty and everyday-care products available through Sora Life."
+          children: "Browse wellness, nutrition, hair, skin, beauty and everyday-care products available through Sora Lifestyle."
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductBrowser, {
         baseProducts: products
@@ -44925,7 +44964,7 @@ function CategorySpotlight({
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
         className: "cspot__eyebrow",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          children: "SORA LIFE"
+          children: "SORA LIFESTYLE"
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
           children: [category.name, " / The edit"]
         })]
@@ -46325,7 +46364,7 @@ function ProductTrustList() {
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
       id: "pdp-trust-h",
       className: "pdp-sec__title serif",
-      children: "Shopping with SORA LIFE"
+      children: "Shopping with SORA LIFESTYLE"
     }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
       className: "pdp-trust__list",
       children: TRUST_ITEMS.map(([icon, title, desc]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
@@ -49892,7 +49931,7 @@ function Checkout() {
         amount: created.amountPaise,
         // server-computed, in paise
         currency: created.currency,
-        name: 'Sora Life',
+        name: 'Sora Lifestyle',
         description: `Order ${created.orderNumber}`,
         theme: {
           color: '#1E3A2F'
@@ -50366,7 +50405,7 @@ function Checkout() {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
               name: "lock",
               size: 14
-            }), " Payments are processed securely by Razorpay. Sora Life never sees or stores your card details."]
+            }), " Payments are processed securely by Razorpay. Sora Lifestyle never sees or stores your card details."]
           }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
             className: "optlist",
             children: [['online', 'Pay online', 'UPI, cards, net banking & wallets', 'card'], ['cod', 'Cash on delivery', 'Pay when it arrives', 'truck']].map(([id, label, note, icon]) => /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
@@ -50814,7 +50853,7 @@ function CreatorOnboarding() {
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "acct__panelhead",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-          children: s === 'active' ? 'Turn your SORA LIFE recommendations into rewards.' : 'SORA LIFE Creator'
+          children: s === 'active' ? 'Turn your SORA LIFESTYLE recommendations into rewards.' : 'SORA LIFESTYLE Creator'
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "muted",
           children: s === 'active' ? 'Your creator account is active. Share your link and track the orders you help generate.' : 'Your creator account status and quick links.'
@@ -50840,7 +50879,7 @@ function CreatorOnboarding() {
           children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
             children: ["Your creator account is ", s]
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            children: "Please contact your SORA LIFE programme manager for details."
+            children: "Please contact your SORA LIFESTYLE programme manager for details."
           })]
         })]
       }), s === 'active' && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
@@ -50851,7 +50890,7 @@ function CreatorOnboarding() {
             size: 20
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-              children: "You\u2019re an active SORA LIFE creator"
+              children: "You\u2019re an active SORA LIFESTYLE creator"
             }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
               children: "Share your link below, or open your full dashboard for campaigns and tracking links."
             })]
@@ -50872,7 +50911,7 @@ function CreatorOnboarding() {
               label: "Copy link"
             }), /*#__PURE__*/jsxRuntimeExports.jsx(ShareButton$1, {
               url: defaultLink,
-              title: `Shop SORA LIFE with ${creator.display_name}`
+              title: `Shop SORA LIFESTYLE with ${creator.display_name}`
             })]
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
@@ -50959,7 +50998,7 @@ function CreatorOnboarding() {
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "crob__note",
-        children: "Your commission rate and status are managed by SORA LIFE."
+        children: "Your commission rate and status are managed by SORA LIFESTYLE."
       })]
     });
   }
@@ -50970,7 +51009,7 @@ function CreatorOnboarding() {
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "acct__panelhead",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        children: "Become a SORA LIFE Creator"
+        children: "Become a SORA LIFESTYLE Creator"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "muted",
         children: "Turn your audience into rewards. Share products you love with your own tracking link."
@@ -50981,7 +51020,7 @@ function CreatorOnboarding() {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "tag",
           size: 16
-        }), " Your own SORA LIFE creator code & link"]
+        }), " Your own SORA LIFESTYLE creator code & link"]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "sparkle",
@@ -51080,7 +51119,7 @@ function CreatorOnboarding() {
           checked: form.agreed,
           onChange: e => set('agreed', e.target.checked)
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          children: hasTerms ? `I have read and agree to the SORA LIFE creator terms (version ${terms.version}), and understand my account remains a normal customer account.` : 'I agree to the SORA LIFE creator terms and understand my account remains a normal customer account.'
+          children: hasTerms ? `I have read and agree to the SORA LIFESTYLE creator terms (version ${terms.version}), and understand my account remains a normal customer account.` : 'I agree to the SORA LIFESTYLE creator terms and understand my account remains a normal customer account.'
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "crob__note",
@@ -51324,7 +51363,7 @@ function Account() {
           children: ["Hi, ", firstName, " \uD83D\uDC4B"]
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "muted",
-          children: "Welcome back to your Sora Life account."
+          children: "Welcome back to your Sora Lifestyle account."
         })]
       })
     }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -51425,7 +51464,7 @@ function SetNewPasswordView() {
           style: {
             color: 'var(--honey-300)'
           },
-          children: "Sora Life members"
+          children: "Sora Lifestyle members"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           className: "serif",
           style: {
@@ -51692,7 +51731,7 @@ function AuthView() {
           style: {
             color: 'var(--honey-300)'
           },
-          children: "Sora Life members"
+          children: "Sora Lifestyle members"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           className: "serif",
           style: {
@@ -52780,14 +52819,14 @@ const CAPABILITIES = [{
 }, {
   icon: 'lock',
   title: 'Secure checkout',
-  body: 'Every price and order total is recalculated on our server before payment, and card payments are processed by Razorpay — Sora Life never sees or stores your card details.'
+  body: 'Every price and order total is recalculated on our server before payment, and card payments are processed by Razorpay — Sora Lifestyle never sees or stores your card details.'
 }, {
   icon: 'package',
   title: 'Orders you can follow',
   body: 'Once you have placed an order, its verified status — and tracking, when the seller adds it — is available in your account.'
 }];
 function About() {
-  const name = branding?.siteName || 'SORA LIFE';
+  const name = branding?.siteName || 'SORA LIFESTYLE';
   return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
     className: "info",
     children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -53341,11 +53380,11 @@ function documents(name) {
   return {
     shipping: {
       title: 'Shipping Policy',
-      blurb: 'How SORA LIFE dispatches and delivers eligible orders across India.',
+      blurb: `How ${name} dispatches and delivers eligible orders across India.`,
       methods: SHIPPING_METHODS,
       facts: [{
         heading: 'Shipping coverage',
-        body: 'SORA LIFE ships eligible orders across India, subject to product availability, courier serviceability and applicable delivery restrictions.'
+        body: `${name} ships eligible orders across India, subject to product availability, courier serviceability and applicable delivery restrictions.`
       }, {
         heading: 'Dispatch time',
         body: 'Orders are ordinarily dispatched within 2–3 business days after successful order confirmation. Dispatch may take longer during public holidays, unusually high order volumes or circumstances outside our reasonable control.'
@@ -53375,9 +53414,9 @@ function documents(name) {
 function Legal({
   doc
 }) {
-  branding?.siteName || 'SORA LIFE';
+  const name = branding?.siteName || 'SORA LIFESTYLE';
   const info = companyInfo();
-  const spec = documents()[doc];
+  const spec = documents(name)[doc];
   if (!spec) return null;
   const ownerText = policyParagraphs(info, spec.ownerLabel);
   const canContact = hasContactChannel(info);
@@ -53923,7 +53962,7 @@ function Passport() {
           open: sidebarOpen,
           onClose: () => setSidebarOpen(false),
           member: {
-            name: 'SORA LIFE',
+            name: 'SORA LIFESTYLE',
             tier: 'Loading…',
             tierIcon: 'checkCircle'
           }
@@ -53940,7 +53979,7 @@ function Passport() {
               name: "menu"
             })
           }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-            children: "SORA LIFE"
+            children: "SORA LIFESTYLE"
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
           className: "psp__main",
@@ -53982,7 +54021,7 @@ function Passport() {
               name: "menu"
             })
           }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-            children: "SORA LIFE"
+            children: "SORA LIFESTYLE"
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
           className: "psp__main",
@@ -54077,7 +54116,7 @@ function Passport() {
             name: "menu"
           })
         }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-          children: "SORA LIFE"
+          children: "SORA LIFESTYLE"
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx(LookupGate, {
         passportId: passportId,
@@ -54112,7 +54151,7 @@ function Passport() {
           name: "menu"
         })
       }), /*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-        children: "SORA LIFE"
+        children: "SORA LIFESTYLE"
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
       className: "psp__main",
@@ -54134,7 +54173,7 @@ function Passport() {
           }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
             className: "psp__brandlock",
             role: "img",
-            "aria-label": "SORA LIFE \u2014 Health and Wellness",
+            "aria-label": "SORA LIFESTYLE \u2014 Health and Wellness",
             children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
               src: "/assets/sora-life-logo.png",
               alt: ""
@@ -54336,7 +54375,7 @@ function Sidebar({
       children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
         className: "psp__side-logo",
         src: "/assets/sora-life-logo.png",
-        alt: "SORA LIFE \u2014 Health and Wellness"
+        alt: "SORA LIFESTYLE \u2014 Health and Wellness"
       })
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "psp__profile",
@@ -54823,7 +54862,7 @@ function Invoice() {
           className: "inv__brand",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
             src: "/assets/sora-life-logo.png",
-            alt: "SORA LIFE \u2014 Health and Wellness",
+            alt: "SORA LIFESTYLE \u2014 Health and Wellness",
             className: "inv__logo",
             width: "1153",
             height: "380"
@@ -55069,7 +55108,7 @@ function Invoice() {
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("footer", {
         className: "inv__foot",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: "Thank you for choosing SORA LIFE."
+          children: "Thank you for choosing SORA LIFESTYLE."
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
           className: "muted",
           children: ["This is a computer-generated invoice for order ", order.order_number, order.invoice_number ? ` (${order.invoice_number})` : '', "."]
@@ -55576,7 +55615,7 @@ const PAYOUT_COPY = {
 };
 const KYC_COPY = {
   pending: ['Verification submitted', 'Our team is checking your details'],
-  verified: ['Verified by SORA LIFE', 'Payout details approved'],
+  verified: ['Verified by SORA LIFESTYLE', 'Payout details approved'],
   rejected: ['Verification needs attention', 'See Payouts for the reason'],
   needs_update: ['Verification needs an update', 'See Payouts for what to change']
 };
@@ -55659,7 +55698,7 @@ function buildActivity({
       id: 'welcome',
       icon: 'star',
       tone: 'brand',
-      title: 'Welcome to SORA LIFE',
+      title: 'Welcome to SORA LIFESTYLE',
       body: 'Start sharing and earn',
       at: creator.created_at || creator.joined_at
     });
@@ -55705,7 +55744,7 @@ function QuotePanel() {
   return /*#__PURE__*/jsxRuntimeExports.jsxs("figure", {
     className: "cd-quote",
     role: "img",
-    "aria-label": "Small creators make a big difference. \u2014 SORA LIFE",
+    "aria-label": "Small creators make a big difference. \u2014 SORA LIFESTYLE",
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("blockquote", {
       className: "cd-quote__q serif",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -55715,7 +55754,7 @@ function QuotePanel() {
       }), "Small creators ", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "make a big difference.\u201D"]
     }), /*#__PURE__*/jsxRuntimeExports.jsx("figcaption", {
       className: "cd-quote__by",
-      children: "\u2014 SORA LIFE"
+      children: "\u2014 SORA LIFESTYLE"
     })]
   });
 }
@@ -56661,7 +56700,7 @@ function WithdrawalsNotice({
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
         children: "Withdrawals aren\u2019t open yet."
-      }), ' ', "Your commission is accruing and stays yours \u2014 every confirmed sale is recorded against your account. Payout requests open once SORA LIFE\u2019s tax registration is complete; we\u2019ll tell you here the day they do."]
+      }), ' ', "Your commission is accruing and stays yours \u2014 every confirmed sale is recorded against your account. Payout requests open once SORA LIFESTYLE\u2019s tax registration is complete; we\u2019ll tell you here the day they do."]
     })]
   });
 }
@@ -56863,7 +56902,7 @@ function WithdrawalsBar({
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
         children: "Withdrawals aren\u2019t open yet."
-      }), " Your commission is accruing and stays yours; payout requests open once SORA LIFE\u2019s tax registration is complete."]
+      }), " Your commission is accruing and stays yours; payout requests open once SORA LIFESTYLE\u2019s tax registration is complete."]
     }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
       type: "button",
       className: "ct-bar__x",
@@ -57714,7 +57753,7 @@ function TermsPanel({
           children: "Your terms"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "cd-panel__sub",
-          children: "Set by SORA LIFE and your tier."
+          children: "Set by SORA LIFESTYLE and your tier."
         })]
       }), standing?.rank && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: "/creator/tier",
@@ -58155,7 +58194,7 @@ function LinkCard({
         label: "Copy link"
       }), /*#__PURE__*/jsxRuntimeExports.jsx(ShareButton, {
         url: url,
-        title: "Shop SORA LIFE"
+        title: "Shop SORA LIFESTYLE"
       })]
     })]
   });
@@ -58225,7 +58264,7 @@ function CreatorLinksPage({
             className: "serif",
             children: "No campaign links yet"
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            children: "Campaign links are created alongside a campaign by your SORA LIFE programme manager. You don\u2019t need one to start \u2014 your default link above is always ready and always attributes."
+            children: "Campaign links are created alongside a campaign by your SORA LIFESTYLE programme manager. You don\u2019t need one to start \u2014 your default link above is always ready and always attributes."
           }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
             to: "/creator/campaigns",
             className: "cp-btn",
@@ -58436,7 +58475,7 @@ function CreatorCampaignsPage({
           children: "My campaigns"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "crp__lede",
-          children: "Seasonal pushes SORA LIFE builds for creators \u2014 a launch, a festive edit, a category focus. Your programme manager sets them up."
+          children: "Seasonal pushes SORA LIFESTYLE builds for creators \u2014 a launch, a festive edit, a category focus. Your programme manager sets them up."
         })]
       }), rows.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
         className: "ca-period",
@@ -58466,7 +58505,7 @@ function CreatorCampaignsPage({
         children: "No campaigns running yet"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "cc-empty__body",
-        children: "Campaigns are seasonal pushes SORA LIFE builds for creators \u2014 a launch, a festive edit, a category focus. Your programme manager sets them up; you don\u2019t create them yourself."
+        children: "Campaigns are seasonal pushes SORA LIFESTYLE builds for creators \u2014 a launch, a festive edit, a category focus. Your programme manager sets them up; you don\u2019t create them yourself."
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
         className: "cc-empty__points",
         children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
@@ -58612,7 +58651,7 @@ function CreatorHowItWorks({
         name: "circleAlert",
         size: 15
       }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        children: "Commission is earned on eligible sale value, not on shipping or fees. Self-referred orders don\u2019t qualify. Payouts are made manually by our team \u2014 SORA LIFE never moves money automatically."
+        children: "Commission is earned on eligible sale value, not on shipping or fees. Self-referred orders don\u2019t qualify. Payouts are made manually by our team \u2014 SORA LIFESTYLE never moves money automatically."
       })]
     })]
   });
@@ -58677,7 +58716,7 @@ function CreatorPayouts({
       children: "Payouts"
     }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
       className: "crp__lede",
-      children: "Verify your details once, then request a payout during the monthly window. SORA LIFE reviews and pays every request manually \u2014 money is never released automatically."
+      children: "Verify your details once, then request a payout during the monthly window. SORA LIFESTYLE reviews and pays every request manually \u2014 money is never released automatically."
     }), /*#__PURE__*/jsxRuntimeExports.jsx(WithdrawalsNotice, {
       open: withdrawalsOpen
     }), /*#__PURE__*/jsxRuntimeExports.jsx(KycSection, {
@@ -58739,7 +58778,7 @@ function KycSection({
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
         name: "checkCircle",
         size: 14
-      }), " Verified by SORA LIFE. You\u2019re all set to request payouts."]
+      }), " Verified by SORA LIFESTYLE. You\u2019re all set to request payouts."]
     }), status === 'rejected' && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
       className: "crp__kyc-msg is-bad",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -59022,7 +59061,7 @@ function KycForm({
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
         name: "lock",
         size: 13
-      }), " These details are encrypted and masked. Even SORA LIFE staff only ever see a masked version (e.g. ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
+      }), " These details are encrypted and masked. Even SORA LIFESTYLE staff only ever see a masked version (e.g. ", /*#__PURE__*/jsxRuntimeExports.jsx("code", {
         children: "ABCDE****F"
       }), ")."]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
@@ -59206,14 +59245,14 @@ function PayoutSection({
       tone: "warn",
       icon: "lock",
       title: "Withdrawals open later",
-      body: "Your commission keeps accruing. Payout requests open once SORA LIFE\u2019s tax registration is complete \u2014 you\u2019ll see the request button here the day they do."
+      body: "Your commission keeps accruing. Payout requests open once SORA LIFESTYLE\u2019s tax registration is complete \u2014 you\u2019ll see the request button here the day they do."
     });
   } else if (!kycVerified) {
     banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
       tone: "warn",
       icon: "shield",
       title: "Verify your details to withdraw",
-      body: "Complete verification above. Payouts open once SORA LIFE has verified your KYC."
+      body: "Complete verification above. Payouts open once SORA LIFESTYLE has verified your KYC."
     });
   } else if (activeReq) {
     banner = /*#__PURE__*/jsxRuntimeExports.jsx(Banner, {
@@ -59612,7 +59651,7 @@ function CreatorProfilePage({
         children: "Programme terms"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "cp-sec__sub",
-        children: "Set by SORA LIFE \u2014 not editable here."
+        children: "Set by SORA LIFESTYLE \u2014 not editable here."
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "cp-terms",
@@ -59679,7 +59718,7 @@ function CreatorProfilePage({
             children: fmtDate(since)
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
             className: "cp-term__line",
-            children: since ? `You’ve been part of SORA LIFE since ${fmtDate(since)}.` : 'Your join date will appear once your account is activated.'
+            children: since ? `You’ve been part of SORA LIFESTYLE since ${fmtDate(since)}.` : 'Your join date will appear once your account is activated.'
           })]
         })]
       })]
@@ -59782,7 +59821,7 @@ function CreatorProfilePage({
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
           children: "Need help?"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          children: "Your commission rate and status are managed by SORA LIFE. Contact your programme manager if something here looks wrong."
+          children: "Your commission rate and status are managed by SORA LIFESTYLE. Contact your programme manager if something here looks wrong."
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: "/contact",
@@ -61247,7 +61286,7 @@ function CreatorPortal({
         children: "Creator sign in"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "muted",
-        children: "Sign in with the email address your SORA LIFE creator account was set up with."
+        children: "Sign in with the email address your SORA LIFESTYLE creator account was set up with."
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
         to: "/account",
         className: "btn",
@@ -61265,7 +61304,7 @@ function CreatorPortal({
         children: "Not a creator account"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "muted",
-        children: "This account isn\u2019t part of the SORA LIFE Creator Program. If you\u2019ve just been onboarded, make sure you\u2019re signed in with the email address you gave us."
+        children: "This account isn\u2019t part of the SORA LIFESTYLE Creator Program. If you\u2019ve just been onboarded, make sure you\u2019re signed in with the email address you gave us."
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
         to: "/account",
         className: "btn",
@@ -61298,7 +61337,7 @@ function CreatorPortal({
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: "/",
         className: "cs-brand",
-        "aria-label": "SORA LIFE home",
+        "aria-label": "SORA LIFESTYLE home",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "cs-brand__mark",
           children: /*#__PURE__*/jsxRuntimeExports.jsx(SparrowMark, {
@@ -61308,7 +61347,7 @@ function CreatorPortal({
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
           className: "cs-brand__txt",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-            children: "SORA LIFE"
+            children: "SORA LIFESTYLE"
           }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
             children: "Creator Program"
           })]
@@ -61335,7 +61374,7 @@ function CreatorPortal({
         className: "cs-side__foot",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "cs-side__eyebrow",
-          children: "SORA LIFE"
+          children: "SORA LIFESTYLE"
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
           className: "cs-side__tag serif",
           children: ["Wellness ", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "for a Brighter ", /*#__PURE__*/jsxRuntimeExports.jsx("br", {}), "Tomorrow"]
@@ -61754,7 +61793,7 @@ function AdminAuthProvider({
       // authorized when the check simply could not run sends them looking for
       // the wrong problem.
       return {
-        error: new Error(state === ADMIN_ERROR ? "We could not verify your admin access just now. Please check your connection and try again." : "This account is not authorized as a SORA LIFE admin.")
+        error: new Error(state === ADMIN_ERROR ? "We could not verify your admin access just now. Please check your connection and try again." : "This account is not authorized as a SORA LIFESTYLE admin.")
       };
     }
     return {
@@ -61847,7 +61886,7 @@ function AdminLogin() {
           margin: 0,
           marginBottom: 8
         },
-        children: "SORA LIFE Admin"
+        children: "SORA LIFESTYLE Admin"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         style: {
           marginTop: 0,
@@ -65045,7 +65084,7 @@ function FashionJewellery({
       })]
     }), !s.trust.hidden && /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
       className: "jw-trust",
-      "aria-label": "Shopping with SORA LIFE",
+      "aria-label": "Shopping with SORA LIFESTYLE",
       children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
         className: "jw-wrap",
         children: s.trust.items.filter(visible$2).map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
@@ -70539,19 +70578,27 @@ function useBrandingEffects() {
     document.documentElement.style.setProperty('--color-primary', branding.primaryColor);
     document.documentElement.style.setProperty('--color-primary-hover', branding.primaryColor);
     document.documentElement.style.setProperty('--color-accent', branding.accentColor);
-    if (branding.faviconUrl) {
+  }, []);
+  // The saved name and favicon arrive with the settings, after the first
+  // render, so these follow them rather than running once at start-up.
+  const {
+    faviconUrl,
+    siteName
+  } = branding;
+  reactExports.useEffect(() => {
+    if (faviconUrl) {
       let link = document.querySelector('link[rel="icon"]');
       if (!link) {
         link = document.createElement('link');
         link.rel = 'icon';
         document.head.appendChild(link);
       }
-      link.href = branding.faviconUrl;
+      link.href = faviconUrl;
     }
-    if (branding.siteName) {
-      document.title = document.title.replace(/^Sora Life|^SORA LIFE/, branding.siteName);
-    }
-  }, []);
+  }, [faviconUrl]);
+  reactExports.useEffect(() => {
+    if (siteName) document.title = titleWithSiteName(document.title, siteName);
+  }, [siteName]);
 }
 function App() {
   useBrandingEffects();
@@ -71332,5 +71379,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { adminUpdateProduct as $, adminMarkCodCollected as A, validateFulfillmentInput as B, CONTACT_FIELDS as C, adminUpdateOrderFulfillment as D, adminListProductMedia as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminCommitStagedProductMedia as H, validateMediaFile as I, mediaFailureMessage as J, adminReorderProductMedia as K, LEGAL_PAGES as L, adminSetPrimaryMedia as M, NavLink as N, Outlet as O, adminEnsurePrimaryMedia as P, adminUpdateProductMedia as Q, adminReplaceProductMedia as R, adminDeleteProductMedia as S, adminDiscoverMedia as T, adminImportMedia as U, validateContent as V, CONTENT_FIELDS as W, fieldPopulated as X, CONTENT_LABELS as Y, useNavigate as Z, useLocation as _, adminGetSetting as a, groupRewardsByLevel as a$, adminCreateProduct as a0, adminUpdateProductPrice as a1, adminListVariants as a2, adminCreateVariant as a3, adminUpdateVariant as a4, adminSetVariantActive as a5, adminDeleteVariant as a6, adminGetProgramSettings as a7, CREATOR_STATUSES as a8, money2 as a9, adminGetConversionItems as aA, adminGetConversionAudit as aB, adminRefundConversion as aC, adminListKyc as aD, KYC_STATUSES as aE, KYC_SIGNED_URL_SECONDS as aF, adminSetKycStatus as aG, KYC_DOCUMENT_KINDS as aH, kycDocumentState as aI, adminKycDocumentUrl as aJ, adminListKycAudit as aK, getPayoutConfig as aL, adminListPayouts as aM, PAYOUT_STATUSES as aN, adminSetWithdrawalsOpen as aO, adminGetPayoutLedger as aP, adminGetPayoutAudit as aQ, adminGetKycForCreator as aR, adminReviewPayout as aS, adminMarkPayoutPaid as aT, normalizeLadder as aU, DEFAULT_BEYOND_STEP as aV, adminGetTierLadder as aW, validateLadder as aX, ladderErrorMessage as aY, rupees as aZ, adminListLevelRewards as a_, adminListCreators as aa, adminCreatorStandings as ab, adminSetProgramSettings as ac, adminCreateCreator as ad, adminSetCreatorStatus as ae, normalizeContentPatch as af, contentScore as ag, adminGetCreator as ah, adminListCodeAliases as ai, adminListCampaigns as aj, adminListLinks as ak, adminListAudit as al, adminListAttributionEvents as am, adminUpdateCampaign as an, adminCreateCampaign as ao, CAMPAIGN_STATUSES as ap, buildTrackingUrl as aq, normalizeDestination as ar, DESTINATION_TYPES as as, CopyButton as at, adminChangeCreatorCode as au, adminUpdateCreator as av, adminCreateLink as aw, adminSetLinkStatus as ax, adminListConversions as ay, CONVERSION_STATUSES as az, Link as b, HOMELIVING_SECTIONS as b$, REWARD_OPTION_SLOTS as b0, validateRewardOption as b1, REWARD_TYPES as b2, REWARD_TYPE_LABEL as b3, adminListRewardClaims as b4, CLAIM_STATUSES as b5, CLAIM_STATUS_LABEL as b6, DEFAULT_LADDER as b7, adminSetTierLadder as b8, rewardOptionErrorMessage as b9, CouponTicket as bA, HOMEPAGE_VISUAL_FIELDS as bB, safeVisualUrl as bC, MAX_CONCERN_PRODUCTS as bD, searchCatalogueForPicker as bE, productGallery as bF, MAX_DISCOVERY_CARDS as bG, makeDiscoveryId as bH, sanitizeHomepageVisuals as bI, normalizeDiscovery as bJ, products as bK, discoveryPayload as bL, mergeHomepageVisuals as bM, announceHomepageSaved as bN, POSITION_LABELS as bO, HERO_SECTION as bP, TRUST_SECTION as bQ, TILES_SECTION as bR, STORES_SECTION as bS, FESTIVE_SECTION as bT, LIFESTYLE_SECTION as bU, JEWELLERY_BANNER_SECTION as bV, STORE_CAROUSEL_SECTION as bW, DELIVERY_STRIP as bX, BENEFITS_STRIP as bY, DEPARTMENT_SECTIONS as bZ, JEWELLERY_SECTIONS as b_, adminUpsertLevelReward as ba, adminDeleteLevelReward as bb, adminSetRewardClaimStatus as bc, adminGetTheme as bd, sanitizeTheme$1 as be, TOKENS as bf, PRESET_LIST as bg, GROUPS as bh, DEFAULT_THEME as bi, OVERLAY_SCALES as bj, TYPE_SCALES as bk, HEX_RE as bl, adminSetTheme as bm, overlayRgba as bn, adminSaveCategory as bo, adminDeleteCategory as bp, normalizePromo as bq, PromoPoster as br, PromoOfferCard as bs, adminListPromotions as bt, adminUpsertPromotion as bu, adminDeletePromotion as bv, adminSetPromotionActive as bw, adminReorderPromotions as bx, uploadPromoImage as by, supabase as bz, LegalUpdated as c, GROCERY_SECTIONS as c0, STOREFRONT_CONTENT_STORES as c1, STOREFRONT_LABELS as c2, normalizeFashionStorefront as c3, normalizeLifestyleStorefront as c4, sectionSpec as c5, sectionContent as c6, validateStorefrontContent as c7, useSearchParams as c8, buildTree as c9, validatePlacement as ca, uploadImage as cb, isSpotlightEligible as cc, categoryBySlug as cd, sanitizeCategoryConfig as ce, safeColor as cf, safeGradient as cg, makeSpotlightId as ch, validateImageUpload as ci, normalizeCategoryExperience as cj, categoryExperiencePayload as ck, categoryIsReadyButOff as cl, categoryToneTheme as cm, MIN_INTERVAL_MS as cn, MAX_INTERVAL_MS as co, DEFAULT_ITEM_SCALE as cp, MIN_ITEM_SCALE as cq, MAX_ITEM_SCALE as cr, ITEM_OFFSET_LIMIT as cs, CategorySpotlight as ct, SOCIAL_NETWORKS as cu, POLICY_KEYS as cv, validateCompanyForSave as cw, defaultLegalPage as d, adminSetSetting as e, useAdminAuth as f, branding as g, hasLegalContent as h, adminListProducts as i, jsxRuntimeExports as j, adminListCategories as k, legalKey as l, adminSeedDefaultCategories as m, normalizeLegalPage as n, adminImportBiosashCatalog as o, money as p, adminSetProductActive as q, reactExports as r, adminDeleteProduct as s, adminReorderProducts as t, useParams as u, validateLegalPage as v, categories as w, adminListOrders as x, fulfillmentStatusLabel as y, adminListOrderEvents as z };
+export { useLocation as $, adminListOrderEvents as A, adminMarkCodCollected as B, CONTACT_FIELDS as C, validateFulfillmentInput as D, adminUpdateOrderFulfillment as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminListProductMedia as H, adminCommitStagedProductMedia as I, validateMediaFile as J, mediaFailureMessage as K, LEGAL_PAGES as L, adminReorderProductMedia as M, NavLink as N, Outlet as O, adminSetPrimaryMedia as P, adminEnsurePrimaryMedia as Q, adminUpdateProductMedia as R, adminReplaceProductMedia as S, adminDeleteProductMedia as T, adminDiscoverMedia as U, adminImportMedia as V, validateContent as W, CONTENT_FIELDS as X, fieldPopulated as Y, CONTENT_LABELS as Z, useNavigate as _, adminGetSetting as a, adminListLevelRewards as a$, adminUpdateProduct as a0, adminCreateProduct as a1, adminUpdateProductPrice as a2, adminListVariants as a3, adminCreateVariant as a4, adminUpdateVariant as a5, adminSetVariantActive as a6, adminDeleteVariant as a7, adminGetProgramSettings as a8, CREATOR_STATUSES as a9, CONVERSION_STATUSES as aA, adminGetConversionItems as aB, adminGetConversionAudit as aC, adminRefundConversion as aD, adminListKyc as aE, KYC_STATUSES as aF, KYC_SIGNED_URL_SECONDS as aG, adminSetKycStatus as aH, KYC_DOCUMENT_KINDS as aI, kycDocumentState as aJ, adminKycDocumentUrl as aK, adminListKycAudit as aL, getPayoutConfig as aM, adminListPayouts as aN, PAYOUT_STATUSES as aO, adminSetWithdrawalsOpen as aP, adminGetPayoutLedger as aQ, adminGetPayoutAudit as aR, adminGetKycForCreator as aS, adminReviewPayout as aT, adminMarkPayoutPaid as aU, normalizeLadder as aV, DEFAULT_BEYOND_STEP as aW, adminGetTierLadder as aX, validateLadder as aY, ladderErrorMessage as aZ, rupees as a_, money2 as aa, adminListCreators as ab, adminCreatorStandings as ac, adminSetProgramSettings as ad, adminCreateCreator as ae, adminSetCreatorStatus as af, normalizeContentPatch as ag, contentScore as ah, adminGetCreator as ai, adminListCodeAliases as aj, adminListCampaigns as ak, adminListLinks as al, adminListAudit as am, adminListAttributionEvents as an, adminUpdateCampaign as ao, adminCreateCampaign as ap, CAMPAIGN_STATUSES as aq, buildTrackingUrl as ar, normalizeDestination as as, DESTINATION_TYPES as at, CopyButton as au, adminChangeCreatorCode as av, adminUpdateCreator as aw, adminCreateLink as ax, adminSetLinkStatus as ay, adminListConversions as az, brandingFromSetting as b, JEWELLERY_SECTIONS as b$, groupRewardsByLevel as b0, REWARD_OPTION_SLOTS as b1, validateRewardOption as b2, REWARD_TYPES as b3, REWARD_TYPE_LABEL as b4, adminListRewardClaims as b5, CLAIM_STATUSES as b6, CLAIM_STATUS_LABEL as b7, DEFAULT_LADDER as b8, adminSetTierLadder as b9, supabase as bA, CouponTicket as bB, HOMEPAGE_VISUAL_FIELDS as bC, safeVisualUrl as bD, MAX_CONCERN_PRODUCTS as bE, searchCatalogueForPicker as bF, productGallery as bG, MAX_DISCOVERY_CARDS as bH, makeDiscoveryId as bI, sanitizeHomepageVisuals as bJ, normalizeDiscovery as bK, products as bL, discoveryPayload as bM, mergeHomepageVisuals as bN, announceHomepageSaved as bO, POSITION_LABELS as bP, HERO_SECTION as bQ, TRUST_SECTION as bR, TILES_SECTION as bS, STORES_SECTION as bT, FESTIVE_SECTION as bU, LIFESTYLE_SECTION as bV, JEWELLERY_BANNER_SECTION as bW, STORE_CAROUSEL_SECTION as bX, DELIVERY_STRIP as bY, BENEFITS_STRIP as bZ, DEPARTMENT_SECTIONS as b_, rewardOptionErrorMessage as ba, adminUpsertLevelReward as bb, adminDeleteLevelReward as bc, adminSetRewardClaimStatus as bd, adminGetTheme as be, sanitizeTheme$1 as bf, TOKENS as bg, PRESET_LIST as bh, GROUPS as bi, DEFAULT_THEME as bj, OVERLAY_SCALES as bk, TYPE_SCALES as bl, HEX_RE as bm, adminSetTheme as bn, overlayRgba as bo, adminSaveCategory as bp, adminDeleteCategory as bq, normalizePromo as br, PromoPoster as bs, PromoOfferCard as bt, adminListPromotions as bu, adminUpsertPromotion as bv, adminDeletePromotion as bw, adminSetPromotionActive as bx, adminReorderPromotions as by, uploadPromoImage as bz, Link as c, HOMELIVING_SECTIONS as c0, GROCERY_SECTIONS as c1, STOREFRONT_CONTENT_STORES as c2, STOREFRONT_LABELS as c3, normalizeFashionStorefront as c4, normalizeLifestyleStorefront as c5, sectionSpec as c6, sectionContent as c7, validateStorefrontContent as c8, useSearchParams as c9, buildTree as ca, validatePlacement as cb, uploadImage as cc, isSpotlightEligible as cd, categoryBySlug as ce, sanitizeCategoryConfig as cf, safeColor as cg, safeGradient as ch, makeSpotlightId as ci, validateImageUpload as cj, normalizeCategoryExperience as ck, categoryExperiencePayload as cl, categoryIsReadyButOff as cm, categoryToneTheme as cn, MIN_INTERVAL_MS as co, MAX_INTERVAL_MS as cp, DEFAULT_ITEM_SCALE as cq, MIN_ITEM_SCALE as cr, MAX_ITEM_SCALE as cs, ITEM_OFFSET_LIMIT as ct, CategorySpotlight as cu, SOCIAL_NETWORKS as cv, POLICY_KEYS as cw, validateCompanyForSave as cx, defaultLegalPage as d, LegalUpdated as e, adminSetSetting as f, useAdminAuth as g, hasLegalContent as h, branding as i, jsxRuntimeExports as j, adminListProducts as k, legalKey as l, adminListCategories as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminImportBiosashCatalog as p, money as q, reactExports as r, adminSetProductActive as s, adminDeleteProduct as t, useParams as u, validateLegalPage as v, adminReorderProducts as w, categories as x, adminListOrders as y, fulfillmentStatusLabel as z };
 //# sourceMappingURL=bundle.js.map

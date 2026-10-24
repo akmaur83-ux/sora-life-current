@@ -1,4 +1,4 @@
-import { r as reactExports, j as jsxRuntimeExports, aU as normalizeLadder, aV as DEFAULT_BEYOND_STEP, aW as adminGetTierLadder, aX as validateLadder, aY as ladderErrorMessage, aZ as rupees, a_ as adminListLevelRewards, a$ as groupRewardsByLevel, b0 as REWARD_OPTION_SLOTS, b1 as validateRewardOption, b2 as REWARD_TYPES, b3 as REWARD_TYPE_LABEL, b4 as adminListRewardClaims, b5 as CLAIM_STATUSES, b6 as CLAIM_STATUS_LABEL, b7 as DEFAULT_LADDER, b8 as adminSetTierLadder, b9 as rewardOptionErrorMessage, ba as adminUpsertLevelReward, bb as adminDeleteLevelReward, bc as adminSetRewardClaimStatus } from '../bundle.js';
+import { r as reactExports, j as jsxRuntimeExports, aV as normalizeLadder, aW as DEFAULT_BEYOND_STEP, aX as adminGetTierLadder, aY as validateLadder, aZ as ladderErrorMessage, a_ as rupees, a$ as adminListLevelRewards, b0 as groupRewardsByLevel, b1 as REWARD_OPTION_SLOTS, b2 as validateRewardOption, b3 as REWARD_TYPES, b4 as REWARD_TYPE_LABEL, b5 as adminListRewardClaims, b6 as CLAIM_STATUSES, b7 as CLAIM_STATUS_LABEL, b8 as DEFAULT_LADDER, b9 as adminSetTierLadder, ba as rewardOptionErrorMessage, bb as adminUpsertLevelReward, bc as adminDeleteLevelReward, bd as adminSetRewardClaimStatus } from '../bundle.js';
 
 const fmtDateTime = iso => iso ? new Date(iso).toLocaleString('en-IN') : '—';
 const CLAIM_BADGE = {
@@ -489,7 +489,7 @@ function RewardSlot({
         value: form.label,
         maxLength: 120,
         onChange: e => set('label', e.target.value),
-        placeholder: "e.g. SORA LIFE gift box"
+        placeholder: "e.g. SORA LIFESTYLE gift box"
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "adm-grid2",

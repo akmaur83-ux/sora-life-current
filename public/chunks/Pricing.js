@@ -1,4 +1,4 @@
-import { r as reactExports, i as adminListProducts, j as jsxRuntimeExports, p as money, a1 as adminUpdateProductPrice } from '../bundle.js';
+import { r as reactExports, k as adminListProducts, j as jsxRuntimeExports, q as money, a2 as adminUpdateProductPrice } from '../bundle.js';
 
 const TIERS = [10, 15, 18, 20];
 function Pricing() {

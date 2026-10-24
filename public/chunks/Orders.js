@@ -1,4 +1,4 @@
-import { r as reactExports, x as adminListOrders, j as jsxRuntimeExports, p as money, y as fulfillmentStatusLabel, b as Link, F as FULFILLMENT_STATUSES, z as adminListOrderEvents, A as adminMarkCodCollected, B as validateFulfillmentInput, D as adminUpdateOrderFulfillment } from '../bundle.js';
+import { r as reactExports, y as adminListOrders, j as jsxRuntimeExports, q as money, z as fulfillmentStatusLabel, c as Link, F as FULFILLMENT_STATUSES, A as adminListOrderEvents, B as adminMarkCodCollected, D as validateFulfillmentInput, E as adminUpdateOrderFulfillment } from '../bundle.js';
 
 const STATUS_BADGE = {
   paid: 'badge-best',

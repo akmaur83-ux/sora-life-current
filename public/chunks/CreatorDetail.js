@@ -1,4 +1,4 @@
-import { u as useParams, r as reactExports, ah as adminGetCreator, ai as adminListCodeAliases, aj as adminListCampaigns, ak as adminListLinks, al as adminListAudit, am as adminListAttributionEvents, j as jsxRuntimeExports, b as Link, a8 as CREATOR_STATUSES, an as adminUpdateCampaign, ao as adminCreateCampaign, ap as CAMPAIGN_STATUSES, aq as buildTrackingUrl, ar as normalizeDestination, as as DESTINATION_TYPES, at as CopyButton, ae as adminSetCreatorStatus, au as adminChangeCreatorCode, av as adminUpdateCreator, aw as adminCreateLink, ax as adminSetLinkStatus } from '../bundle.js';
+import { u as useParams, r as reactExports, ai as adminGetCreator, aj as adminListCodeAliases, ak as adminListCampaigns, al as adminListLinks, am as adminListAudit, an as adminListAttributionEvents, j as jsxRuntimeExports, c as Link, a9 as CREATOR_STATUSES, ao as adminUpdateCampaign, ap as adminCreateCampaign, aq as CAMPAIGN_STATUSES, ar as buildTrackingUrl, as as normalizeDestination, at as DESTINATION_TYPES, au as CopyButton, af as adminSetCreatorStatus, av as adminChangeCreatorCode, aw as adminUpdateCreator, ax as adminCreateLink, ay as adminSetLinkStatus } from '../bundle.js';
 
 const fmtDate = iso => iso ? new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
@@ -746,7 +746,7 @@ function CreatorDetail() {
                 }))
               }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
                 className: "hint",
-                children: "Internal SORA LIFE paths only \u2014 external URLs are rejected."
+                children: "Internal SORA LIFESTYLE paths only \u2014 external URLs are rejected."
               })]
             })]
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {

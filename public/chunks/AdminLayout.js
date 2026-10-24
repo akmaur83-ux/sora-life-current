@@ -1,4 +1,4 @@
-import { f as useAdminAuth, j as jsxRuntimeExports, g as branding, N as NavLink, O as Outlet } from '../bundle.js';
+import { g as useAdminAuth, j as jsxRuntimeExports, i as branding, N as NavLink, O as Outlet } from '../bundle.js';
 
 const NAV = [{
   to: '/admin',

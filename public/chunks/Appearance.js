@@ -1,4 +1,4 @@
-import { r as reactExports, bd as adminGetTheme, be as sanitizeTheme, bf as TOKENS, bg as PRESET_LIST, j as jsxRuntimeExports, bh as GROUPS, bi as DEFAULT_THEME, bj as OVERLAY_SCALES, bk as TYPE_SCALES, bl as HEX_RE, bm as adminSetTheme, bn as overlayRgba } from '../bundle.js';
+import { r as reactExports, be as adminGetTheme, bf as sanitizeTheme, bg as TOKENS, bh as PRESET_LIST, j as jsxRuntimeExports, bi as GROUPS, bj as DEFAULT_THEME, bk as OVERLAY_SCALES, bl as TYPE_SCALES, bm as HEX_RE, bn as adminSetTheme, bo as overlayRgba } from '../bundle.js';
 
 const upperHex = v => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toUpperCase() : v;
 const isValid = (tok, v) => tok.type === 'overlay' ? OVERLAY_SCALES.includes(v) : tok.type === 'scale' ? TYPE_SCALES.includes(v) : HEX_RE.test(v || '');
@@ -307,7 +307,7 @@ function StorefrontPreview({
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "ap-pv__hdr",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-        children: "SORA LIFE"
+        children: "SORA LIFESTYLE"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
         children: "Wellness \xB7 Skin \xB7 Hair"
       }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -367,7 +367,7 @@ function StorefrontPreview({
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "ap-pv__footer",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        children: "\xA9 SORA LIFE"
+        children: "\xA9 SORA LIFESTYLE"
       }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "ap-pv__footer-acc",
         children: "Wellness \xB7 Support"
