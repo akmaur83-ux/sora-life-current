@@ -1,4 +1,4 @@
-import { bA as supabase, j as jsxRuntimeExports, bP as POSITION_LABELS, r as reactExports, bD as safeVisualUrl, bQ as HERO_SECTION, bR as TRUST_SECTION, bS as TILES_SECTION, bT as STORES_SECTION, bU as FESTIVE_SECTION, bV as LIFESTYLE_SECTION, bW as JEWELLERY_BANNER_SECTION, bX as STORE_CAROUSEL_SECTION, bY as DELIVERY_STRIP, bZ as BENEFITS_STRIP, b_ as DEPARTMENT_SECTIONS, b$ as JEWELLERY_SECTIONS, c0 as HOMELIVING_SECTIONS, c1 as GROCERY_SECTIONS, c2 as STOREFRONT_CONTENT_STORES, c as Link, c3 as STOREFRONT_LABELS, c4 as normalizeFashionStorefront, c5 as normalizeLifestyleStorefront, c6 as sectionSpec, c7 as sectionContent, c8 as validateStorefrontContent } from '../bundle.js';
+import { bA as supabase, j as jsxRuntimeExports, bP as POSITION_LABELS, r as reactExports, bD as safeVisualUrl, bQ as HERO_SECTION, bR as TRUST_SECTION, bS as TILES_SECTION, bT as STORES_SECTION, bU as FESTIVE_SECTION, bV as NEW_ARRIVALS_SECTION, bW as LIFESTYLE_SECTION, bX as JEWELLERY_BANNER_SECTION, bY as STORE_CAROUSEL_SECTION, bZ as DELIVERY_STRIP, b_ as BENEFITS_STRIP, b$ as DEPARTMENT_SECTIONS, c0 as JEWELLERY_SECTIONS, c1 as HOMELIVING_SECTIONS, c2 as GROCERY_SECTIONS, c3 as STOREFRONT_CONTENT_STORES, c as Link, c4 as STOREFRONT_LABELS, c5 as normalizeFashionStorefront, c6 as normalizeLifestyleStorefront, c7 as sectionSpec, c8 as sectionContent, c9 as validateStorefrontContent } from '../bundle.js';
 import { c as claimWarnings, C as CLAIM_KINDS, u as uploadStorefrontImage } from './claimWarnings.js';
 
 // ============================================================
@@ -569,6 +569,9 @@ const SECTION_PAGES = Object.freeze({
     }, {
       path: 'promo',
       defaults: FESTIVE_SECTION
+    }, {
+      path: 'newArrivals',
+      defaults: NEW_ARRIVALS_SECTION
     }, {
       path: 'lifestyleBanner',
       defaults: LIFESTYLE_SECTION

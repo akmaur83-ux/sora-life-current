@@ -3213,6 +3213,12 @@ const WELLNESS = {
     alt: text$1(180, 'Photograph description'),
     position: position()
   }, 'Festive promo'),
+  newArrivals: group({
+    hidden: hidden(),
+    title: text$1(60, 'Heading'),
+    more: text$1(30, 'View-all label'),
+    link: link('View-all link (empty: the store of the newest arrival)')
+  }, 'New arrivals (the products flagged new; hidden while none are)'),
   lifestyleBanner: banner('Lifestyle banner', {
     position: position()
   }),
@@ -30762,7 +30768,7 @@ const supabase = createClient(supabaseUrl , supabasePublishableKey );
 const MAX_DEPTH = 3;
 /** The store column value every fashion row carries (catalogue_* since 0034). */
 const FASHION_STORE = 'fashion';
-const num$d = v => {
+const num$e = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -30779,7 +30785,7 @@ function buildTree(rows) {
     slug: str$6(r.slug),
     tagline: str$6(r.tagline),
     image_url: r.image_url || null,
-    sort_order: num$d(r.sort_order),
+    sort_order: num$e(r.sort_order),
     is_active: r.is_active !== false
   }));
   const byId = new Map(list.map(n => [n.id, n]));
@@ -30917,14 +30923,14 @@ function productView(product, variants = null) {
     colour: str$6(v.colour),
     colour_hex: v.colour_hex || null,
     sku: v.sku || null,
-    stock: Math.max(0, num$d(v.stock)),
-    price_override: v.price_override == null ? null : num$d(v.price_override),
-    sort_order: num$d(v.sort_order)
+    stock: Math.max(0, num$e(v.stock)),
+    price_override: v.price_override == null ? null : num$e(v.price_override),
+    sort_order: num$e(v.sort_order)
   })).sort((a, b) => a.sort_order - b.sort_order);
-  const mrp = num$d(product?.mrp);
-  const sale = product?.sale_price == null ? null : num$d(product.sale_price);
+  const mrp = num$e(product?.mrp);
+  const sale = product?.sale_price == null ? null : num$e(product.sale_price);
   const price = sale != null && sale < mrp ? sale : mrp;
-  const discountPct = product?.discount_percent != null ? num$d(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
+  const discountPct = product?.discount_percent != null ? num$e(product.discount_percent) : mrp > 0 && sale != null && sale < mrp ? Math.round((mrp - sale) / mrp * 100) : 0;
   const swatches = [];
   for (const v of vs) {
     let s = swatches.find(x => x.colour === v.colour);
@@ -30954,11 +30960,11 @@ function productView(product, variants = null) {
     price,
     discountPct,
     hasDiscount: discountPct > 0,
-    rating: Math.max(0, Math.min(5, num$d(product?.rating))),
-    reviewCount: Math.max(0, num$d(product?.review_count)),
+    rating: Math.max(0, Math.min(5, num$e(product?.rating))),
+    reviewCount: Math.max(0, num$e(product?.review_count)),
     isNew: product?.is_new === true,
     isBestseller: product?.is_bestseller === true,
-    sortOrder: num$d(product?.sort_order),
+    sortOrder: num$e(product?.sort_order),
     variants: vs,
     swatches,
     sizes,
@@ -31045,8 +31051,8 @@ const list$1 = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean
 const uniq$1 = arr => [...new Set(arr)];
 function readFashionUrlState(searchParams) {
   const p = searchParams instanceof URLSearchParams ? searchParams : new URLSearchParams(searchParams || '');
-  const discount = num$d(p.get('discount'));
-  const rating = num$d(p.get('rating'));
+  const discount = num$e(p.get('discount'));
+  const rating = num$e(p.get('rating'));
   return {
     q: str$6(p.get('q')),
     sort: SORT_IDS$2.has(p.get('sort')) ? p.get('sort') : 'featured',
@@ -31080,10 +31086,10 @@ function updateFashionUrlState(searchParams, patch) {
   if (has('colours')) setList('colour', patch.colours);
   if (has('brands')) setList('brand', patch.brands);
   if (has('discount')) {
-    if (DISCOUNT_STEPS$1.includes(num$d(patch.discount))) p.set('discount', String(num$d(patch.discount)));else p.delete('discount');
+    if (DISCOUNT_STEPS$1.includes(num$e(patch.discount))) p.set('discount', String(num$e(patch.discount)));else p.delete('discount');
   }
   if (has('rating')) {
-    if (RATING_STEPS$1.includes(num$d(patch.rating))) p.set('rating', String(num$d(patch.rating)));else p.delete('rating');
+    if (RATING_STEPS$1.includes(num$e(patch.rating))) p.set('rating', String(num$e(patch.rating)));else p.delete('rating');
   }
   if (has('view')) {
     if (patch.view === 'list') p.set('view', 'list');else p.delete('view');
@@ -31331,7 +31337,7 @@ const fashionRowFor = id => catalogueRowFor(FASHION_CATALOGUE, id);
 function ensureFashionProducts(ids) {
   return ensureCatalogueRows(FASHION_CATALOGUE, ids, getFashionProductsByIds, entryOf);
 }
-const num$c = v => {
+const num$d = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -31380,13 +31386,13 @@ function hydrateFashionCartLine(line, entry, {
   } = entry;
   const v = variants.find(x => String(x.id) === String(line.variantId)) || null;
   const variantMissing = !v || v.is_active === false;
-  const mrp = num$c(row.mrp);
-  const sale = row.sale_price == null ? null : num$c(row.sale_price);
+  const mrp = num$d(row.mrp);
+  const sale = row.sale_price == null ? null : num$d(row.sale_price);
   const base = sale != null && sale > 0 && sale < mrp ? sale : mrp;
-  const override = v && v.price_override != null ? num$c(v.price_override) : null;
+  const override = v && v.price_override != null ? num$d(v.price_override) : null;
   const unitPrice = variantMissing ? null : override != null && override > 0 ? override : base;
   const unitMrp = unitPrice == null ? null : Math.max(mrp, unitPrice);
-  const stock = v ? Math.max(0, Math.floor(num$c(v.stock))) : null;
+  const stock = v ? Math.max(0, Math.floor(num$d(v.stock))) : null;
   const label = v ? [v.size, v.colour].filter(Boolean).join(' · ') : line.variant ?? null;
   let unavailableReason = null;
   if (variantMissing) unavailableReason = label ? `“${label}” is no longer available.` : 'The size and colour you chose are no longer available.';else if (row.is_active === false) unavailableReason = 'This item is no longer available.';else if (stock === 0) unavailableReason = 'This size and colour is out of stock.';else if (stock != null && line.qty > stock) unavailableReason = stock === 1 ? 'Only 1 left — please reduce the quantity.' : `Only ${stock} left — please reduce the quantity.`;else if (!(unitPrice > 0)) unavailableReason = 'This item is not available to buy right now.';
@@ -31547,23 +31553,23 @@ const categoryHref$2 = c => `/grocery/category/${c.slug}`;
 // ---- Row shapes ----------------------------------------------------------------
 const CATEGORY_COLUMNS$1 = 'id, store, parent_id, name, slug, tagline, image_url, sort_order, is_active';
 const PRODUCT_COLUMNS$1 = 'id, store, name, slug, brand, description, category_id, mrp, sale_price, discount_percent, images, sku, hsn_code, gst_rate, net_content, stock, rating, review_count, is_active, is_new, is_bestseller, sort_order, is_demo';
-const num$b = v => {
+const num$c = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
 
 /** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
 const priceOf$1 = row => {
-  const mrp = num$b(row?.mrp);
-  const sale = row?.sale_price == null ? null : num$b(row.sale_price);
+  const mrp = num$c(row?.mrp);
+  const sale = row?.sale_price == null ? null : num$c(row.sale_price);
   return sale != null && sale > 0 && sale < mrp ? sale : mrp;
 };
 
 /** A product row for the homepage and the cart: the row as stored, plus `price`. */
 const groceryProductView = row => row ? {
   ...row,
-  mrp: num$b(row.mrp),
-  sale_price: row.sale_price == null ? null : num$b(row.sale_price),
+  mrp: num$c(row.mrp),
+  sale_price: row.sale_price == null ? null : num$c(row.sale_price),
   price: priceOf$1(row),
   images: Array.isArray(row.images) ? row.images.filter(Boolean) : []
 } : null;
@@ -31683,7 +31689,7 @@ const groceryProductFor = id => catalogueRowFor(GROCERY_CATALOGUE, id);
 function ensureGroceryProducts(ids) {
   return ensureCatalogueRows(GROCERY_CATALOGUE, ids, getGroceryProductsByIds, groceryProductView);
 }
-const num$a = v => {
+const num$b = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -31720,8 +31726,8 @@ function hydrateGroceryCartLine(line, product) {
       purchasable: false
     };
   }
-  const unitPrice = num$a(product.price) > 0 ? num$a(product.price) : null;
-  const unitMrp = unitPrice == null ? null : Math.max(num$a(product.mrp), unitPrice);
+  const unitPrice = num$b(product.price) > 0 ? num$b(product.price) : null;
+  const unitMrp = unitPrice == null ? null : Math.max(num$b(product.mrp), unitPrice);
   const image = Array.isArray(product.images) && product.images[0] ? product.images[0] : null;
   let unavailableReason = null;
   if (product.is_active === false) unavailableReason = 'This item is no longer available.';else if (unitPrice == null) unavailableReason = 'This item is not available to buy right now.';else unavailableReason = GROCERY_CHECKOUT_NOTE;
@@ -31933,7 +31939,7 @@ const MEDIA_COLUMNS = 'id, public_url, alt_text, sort_order, is_primary';
  * plus detail shots, in order) embedded.
  */
 const PRODUCT_SELECT = `${PRODUCT_COLUMNS}, variants:catalogue_variants (${VARIANT_COLUMNS}), media:catalogue_product_media (${MEDIA_COLUMNS})`;
-const num$9 = v => {
+const num$a = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -31941,8 +31947,8 @@ const str$5 = v => String(v ?? '').trim();
 
 /** The figure a card shows: sale_price when set and below mrp, else mrp. Same rule as fashion.js → productView. */
 const priceOf = row => {
-  const mrp = num$9(row?.mrp);
-  const sale = row?.sale_price == null ? null : num$9(row.sale_price);
+  const mrp = num$a(row?.mrp);
+  const sale = row?.sale_price == null ? null : num$a(row.sale_price);
   return sale != null && sale > 0 && sale < mrp ? sale : mrp;
 };
 
@@ -31953,7 +31959,7 @@ const priceOf = row => {
  * name as alt, so a gallery always has what the card shows.
  */
 const galleryOf = row => {
-  const media = (Array.isArray(row?.media) ? row.media : []).filter(m => m && str$5(m.public_url)).sort((a, b) => (b.is_primary === true) - (a.is_primary === true) || num$9(a.sort_order) - num$9(b.sort_order) || str$5(a.id).localeCompare(str$5(b.id))).map((m, i) => ({
+  const media = (Array.isArray(row?.media) ? row.media : []).filter(m => m && str$5(m.public_url)).sort((a, b) => (b.is_primary === true) - (a.is_primary === true) || num$a(a.sort_order) - num$a(b.sort_order) || str$5(a.id).localeCompare(str$5(b.id))).map((m, i) => ({
     url: str$5(m.public_url),
     alt: str$5(m.alt_text) || (i === 0 ? str$5(row.name) : `${str$5(row.name)} — view ${i + 1}`),
     primary: m.is_primary === true
@@ -31982,9 +31988,9 @@ const homelivingProductView = row => {
     colour: str$5(v.colour),
     colour_hex: v.colour_hex || null,
     sku: v.sku || null,
-    stock: Math.max(0, num$9(v.stock)),
-    price_override: v.price_override == null ? null : num$9(v.price_override),
-    sort_order: num$9(v.sort_order)
+    stock: Math.max(0, num$a(v.stock)),
+    price_override: v.price_override == null ? null : num$a(v.price_override),
+    sort_order: num$a(v.sort_order)
   })).sort((a, b) => a.sort_order - b.sort_order);
   const swatches = [];
   for (const v of variants) if (v.colour && !swatches.some(s => s.colour === v.colour)) swatches.push({
@@ -31993,15 +31999,15 @@ const homelivingProductView = row => {
   });
   return {
     ...row,
-    mrp: num$9(row.mrp),
-    sale_price: row.sale_price == null ? null : num$9(row.sale_price),
+    mrp: num$a(row.mrp),
+    sale_price: row.sale_price == null ? null : num$a(row.sale_price),
     price: priceOf(row),
-    discount_percent: row.discount_percent != null ? num$9(row.discount_percent) : 0,
-    rating: Math.max(0, Math.min(5, num$9(row.rating))),
-    review_count: Math.max(0, num$9(row.review_count)),
+    discount_percent: row.discount_percent != null ? num$a(row.discount_percent) : 0,
+    rating: Math.max(0, Math.min(5, num$a(row.rating))),
+    review_count: Math.max(0, num$a(row.review_count)),
     images: Array.isArray(row.images) ? row.images.filter(Boolean) : [],
     gallery: galleryOf(row),
-    stock: Math.max(0, num$9(row.stock)),
+    stock: Math.max(0, num$a(row.stock)),
     variants,
     sizes: [...new Set(variants.map(v => v.size).filter(Boolean))],
     swatches
@@ -32130,7 +32136,7 @@ const homelivingEntryFor = id => catalogueRowFor(HOMELIVING_CATALOGUE, id);
 function ensureHomeLivingProducts(ids) {
   return ensureCatalogueRows(HOMELIVING_CATALOGUE, ids, getHomeLivingProductsByIds, homelivingProductView);
 }
-const num$8 = v => {
+const num$9 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -32177,10 +32183,10 @@ function hydrateHomeLivingCartLine(line, view, {
   const v = line.variantId ? variants.find(x => String(x.id) === String(line.variantId)) || null : null;
   const variantMissing = Boolean(line.variantId) && !v;
   const label = v ? [v.size, v.colour].filter(Boolean).join(' · ') || null : line.variant ?? null;
-  const override = v && v.price_override != null ? num$8(v.price_override) : null;
-  const unitPrice = variantMissing ? null : override != null && override > 0 ? override : num$8(view.price) > 0 ? num$8(view.price) : null;
-  const unitMrp = unitPrice == null ? null : Math.max(num$8(view.mrp), unitPrice);
-  const stock = hasVariants ? v ? Math.max(0, Math.floor(num$8(v.stock))) : null : Math.max(0, Math.floor(num$8(view.stock)));
+  const override = v && v.price_override != null ? num$9(v.price_override) : null;
+  const unitPrice = variantMissing ? null : override != null && override > 0 ? override : num$9(view.price) > 0 ? num$9(view.price) : null;
+  const unitMrp = unitPrice == null ? null : Math.max(num$9(view.mrp), unitPrice);
+  const stock = hasVariants ? v ? Math.max(0, Math.floor(num$9(v.stock))) : null : Math.max(0, Math.floor(num$9(view.stock)));
   let unavailableReason = null;
   if (view.is_active === false) unavailableReason = 'This item is no longer available.';else if (variantMissing) unavailableReason = hasVariants && label ? `“${label}” is no longer available.` : 'This item is no longer sold in that option.';else if (hasVariants && !v) unavailableReason = 'Please choose a size for this item.';else if (stock === 0) unavailableReason = hasVariants ? 'This option is out of stock.' : 'This item is out of stock.';else if (stock != null && line.qty > stock) unavailableReason = stock === 1 ? 'Only 1 left — please reduce the quantity.' : `Only ${stock} left — please reduce the quantity.`;else if (!(unitPrice > 0)) unavailableReason = 'This item is not available to buy right now.';
   const image = Array.isArray(view.images) && view.images[0] ? view.images[0] : null;
@@ -37506,7 +37512,7 @@ const DEFAULT_LADDER = Object.freeze([{
   rate: 25
 }]);
 const DEFAULT_BEYOND_STEP = 25000;
-const num$7 = v => {
+const num$8 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
@@ -37518,8 +37524,8 @@ function normalizeLadder(rows) {
   return rows.map((r, i) => ({
     level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
     rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
-    threshold: num$7(r?.threshold),
-    rate: num$7(r?.rate)
+    threshold: num$8(r?.threshold),
+    rate: num$8(r?.rate)
   })).sort((a, b) => a.level - b.level);
 }
 
@@ -39691,7 +39697,7 @@ function DoorwayCarousel({
 }
 
 /** The strip's reduced-motion check, read when a tick fires rather than when it is scheduled. */
-function useReducedMotion$1() {
+function useReducedMotion$2() {
   const reduced = reactExports.useRef(false);
   reactExports.useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
@@ -39722,7 +39728,7 @@ function FashionCategoryStrip({
   const [paused, setPaused] = reactExports.useState(false);
   const [per, setPer] = reactExports.useState(1);
   const track = reactExports.useRef(null);
-  const reduced = useReducedMotion$1();
+  const reduced = useReducedMotion$2();
   const swipe = reactExports.useRef({
     x: null,
     y: null,
@@ -39956,6 +39962,338 @@ function StoreCarousel() {
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCarousel, {
         stores: cards
+      })]
+    })
+  });
+}
+
+// ============================================================
+// New arrivals for the wellness homepage: the products flagged new
+// (is_new), newest first, from the stores a customer can buy from —
+// wellness, fashion and Home & Living; grocery cannot be bought, so it
+// is not read. Never padded: with nothing flagged there is no section.
+//
+// Two small reads of flagged rows only:
+//   products            the wellness rows' ids and dates. What a wellness
+//                       card shows — its name, picture and price — comes
+//                       from the catalogue the site already loaded, so it
+//                       matches every other card, and only once that is
+//                       the real catalogue (never the bundled stand-in).
+//   catalogue_products  the fashion and Home & Living rows with their first
+//                       picture (images[0]: the 0034 trigger keeps the
+//                       primary shot first) and prices.
+// A product that cannot be bought (no payable price) is left out.
+// ============================================================
+const NEW_ARRIVALS_LIMIT = 12;
+const HREF = {
+  wellness: slug => `/product/${slug}`,
+  fashion: slug => `/fashion/p/${slug}`,
+  homeliving: slug => `/homeliving/p/${slug}`
+};
+
+/** Where "View All" goes when its link is left empty: the listing of the newest arrival's store. */
+const STORE_LISTING = Object.freeze({
+  wellness: '/shop?sort=new',
+  fashion: '/fashion',
+  homeliving: '/homeliving'
+});
+const num$7 = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const time = v => {
+  const t = Date.parse(v || '');
+  return Number.isFinite(t) ? t : 0;
+};
+
+/** A fashion or Home & Living card's figure: the sale price when set and below the MRP, else the MRP (as fashion.js and homelivingHomepage.js). */
+const cataloguePrice = row => {
+  const mrp = num$7(row?.mrp);
+  const sale = row?.sale_price == null ? null : num$7(row.sale_price);
+  return sale != null && sale > 0 && sale < mrp ? sale : mrp;
+};
+
+/** The flagged rows, newest first; a read that fails counts as none. */
+async function fetchNewArrivalRows(client = supabase, limit = NEW_ARRIVALS_LIMIT) {
+  const [wellness, catalogue] = await Promise.all([client.from('products').select('id, biosash_id, created_at').eq('is_active', true).eq('is_new', true).order('created_at', {
+    ascending: false
+  }).limit(limit), client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, created_at').eq('is_active', true).eq('is_new', true).in('store', ['fashion', 'homeliving']).order('created_at', {
+    ascending: false
+  }).limit(limit)]);
+  return {
+    wellness: !wellness.error && Array.isArray(wellness.data) ? wellness.data : [],
+    catalogue: !catalogue.error && Array.isArray(catalogue.data) ? catalogue.data : []
+  };
+}
+
+/**
+ * The cards, newest first across the stores: { key, store, name, href, image, price }.
+ * `byId` is the loaded wellness catalogue by id; `realCatalogue` says it is the one read from
+ * the database. Wellness rows wait for it; a product without a payable price is left out.
+ */
+function selectNewArrivals({
+  wellness = [],
+  catalogue = []
+} = {}, {
+  byId = {},
+  realCatalogue = false,
+  limit = NEW_ARRIVALS_LIMIT
+} = {}) {
+  const items = [];
+  if (realCatalogue) {
+    for (const row of wellness) {
+      const p = byId[row.biosash_id || row.id];
+      if (!p || !p.slug || !isPurchasable(p)) continue;
+      items.push({
+        key: `wellness-${p.id}`,
+        store: 'wellness',
+        name: p.name,
+        href: HREF.wellness(p.slug),
+        image: p.image || null,
+        price: p.price,
+        at: time(row.created_at)
+      });
+    }
+  }
+  for (const row of catalogue) {
+    if (row.store !== 'fashion' && row.store !== 'homeliving' || !row.slug) continue;
+    const price = cataloguePrice(row);
+    if (!(price > 0)) continue;
+    const image = Array.isArray(row.images) ? row.images.find(Boolean) || null : null;
+    items.push({
+      key: `${row.store}-${row.id}`,
+      store: row.store,
+      name: String(row.name || '').trim(),
+      href: HREF[row.store](row.slug),
+      image,
+      price,
+      at: time(row.created_at)
+    });
+  }
+  return items.sort((a, b) => b.at - a.at || a.key.localeCompare(b.key)).slice(0, limit).map(({
+    at,
+    ...card
+  }) => card);
+}
+
+/** The section's cards: null until the reads answer, then the list (empty when nothing is flagged). */
+function useNewArrivals() {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchNewArrivalRows().then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows({
+        wellness: [],
+        catalogue: []
+      });
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const real = catalogSource === 'supabase';
+  return reactExports.useMemo(() => rows ? selectNewArrivals(rows, {
+    byId: productById,
+    realCatalogue: real
+  }) : null, [rows, real, productById]);
+}
+
+const NEW_ARRIVALS_AUTOPLAY_MS = 4500; // the fashion strip's pace
+
+/** The section's built-in content; an empty link is the newest arrival's store (viewAllLink). */
+const NEW_ARRIVALS_SECTION = Object.freeze({
+  hidden: false,
+  title: 'New Arrivals',
+  more: 'View All',
+  link: ''
+});
+
+/** Where "View All" goes: the link set in Storefronts, else the listing of the store the newest card comes from. */
+const viewAllLink = (link, items) => link || STORE_LISTING[items[0]?.store] || STORE_LISTING.wellness;
+
+/** The reduced-motion check, read when a tick fires rather than when it is scheduled. */
+function useReducedMotion$1() {
+  const reduced = reactExports.useRef(false);
+  reactExports.useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => {
+      reduced.current = mq.matches;
+    };
+    sync();
+    mq.addEventListener?.('change', sync);
+    return () => mq.removeEventListener?.('change', sync);
+  }, []);
+  return reduced;
+}
+function NewArrivals({
+  items: given,
+  autoplayMs = NEW_ARRIVALS_AUTOPLAY_MS
+}) {
+  const section = useStorefrontSection('wellness', 'newArrivals', NEW_ARRIVALS_SECTION);
+  const loaded = useNewArrivals();
+  const items = (given ?? loaded) || [];
+  const [index, setIndex] = reactExports.useState(0);
+  const [paused, setPaused] = reactExports.useState(false);
+  const [per, setPer] = reactExports.useState(1);
+  const track = reactExports.useRef(null);
+  const reduced = useReducedMotion$1();
+  const swipe = reactExports.useRef({
+    x: null,
+    y: null,
+    moved: false
+  });
+  const n = section.hidden ? 0 : items.length;
+  reactExports.useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const measure = () => {
+      if (track.current) setPer(Math.max(1, parseInt(window.getComputedStyle(track.current).getPropertyValue('--per'), 10) || 1));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [n]);
+  const last = Math.max(0, n - per);
+  reactExports.useEffect(() => {
+    if (index > last) setIndex(last);
+  }, [index, last]);
+  reactExports.useEffect(() => {
+    if (last < 1 || paused) return undefined;
+    const t = setInterval(() => {
+      if (!reduced.current) setIndex(i => i >= last ? 0 : i + 1);
+    }, autoplayMs);
+    return () => clearInterval(t);
+  }, [last, paused, autoplayMs, reduced]);
+  if (n === 0) return null;
+  const step = d => setIndex(i => Math.min(last, Math.max(0, i + d)));
+  const onPointerDown = e => {
+    swipe.current = {
+      x: e.clientX,
+      y: e.clientY,
+      moved: false
+    };
+  };
+  const onPointerUp = e => {
+    const s = swipe.current;
+    if (s.x == null) return;
+    const dx = e.clientX - s.x,
+      dy = e.clientY - s.y;
+    swipe.current = {
+      x: null,
+      y: null,
+      moved: Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy)
+    };
+    if (swipe.current.moved) step(dx < 0 ? 1 : -1);
+  };
+  const onClickCapture = e => {
+    if (swipe.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      swipe.current.moved = false;
+    }
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-new",
+    "aria-labelledby": "hx-new-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      onMouseEnter: () => setPaused(true),
+      onMouseLeave: () => setPaused(false),
+      onFocus: () => setPaused(true),
+      onBlur: () => setPaused(false),
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-stores__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "hx-stores__h",
+          id: "hx-new-h",
+          children: section.title
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hx-new__tools",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: viewAllLink(section.link, items),
+            className: "hx-more",
+            "aria-label": section.more === NEW_ARRIVALS_SECTION.more ? 'View all new arrivals' : undefined,
+            children: [section.more, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 15
+            })]
+          }), last > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: "hx-new__arrows",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+              type: "button",
+              "aria-label": "Previous products",
+              disabled: index === 0,
+              onClick: () => step(-1),
+              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "chevronLeft",
+                size: 18
+              })
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+              type: "button",
+              "aria-label": "Next products",
+              disabled: index >= last,
+              onClick: () => step(1),
+              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "chevronRight",
+                size: 18
+              })
+            })]
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hx-new__viewport",
+        "aria-roledescription": "carousel",
+        "aria-label": "New arrivals",
+        onPointerDown: onPointerDown,
+        onPointerUp: onPointerUp,
+        onPointerCancel: () => {
+          swipe.current = {
+            x: null,
+            y: null,
+            moved: false
+          };
+        },
+        onClickCapture: onClickCapture,
+        onScroll: e => {
+          if (e.currentTarget.scrollLeft) e.currentTarget.scrollLeft = 0;
+        },
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "hx-new__track",
+          ref: track,
+          style: {
+            '--i': index
+          },
+          children: items.map((p, i) => {
+            const inView = i >= index && i < index + per;
+            return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+              className: "hx-new__item",
+              "aria-hidden": !inView,
+              children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+                to: p.href,
+                className: "hx-new__card",
+                tabIndex: inView ? undefined : -1,
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  className: `hx-new__art${p.store === 'wellness' ? ' hx-new__art--whole' : ''}`,
+                  children: p.image && /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+                    src: p.image,
+                    alt: "",
+                    width: 600,
+                    height: 600,
+                    className: "hx-new__image"
+                  })
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  className: "hx-new__name",
+                  children: p.name
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  className: "hx-new__price",
+                  children: money(p.price)
+                })]
+              })
+            }, p.key);
+          })
+        })
       })]
     })
   });
@@ -43990,7 +44328,7 @@ function Home() {
     className: "v2-home",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeHero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
       eyebrow: "Across the catalogue",
       title: "Start here",
@@ -71379,5 +71717,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { useLocation as $, adminListOrderEvents as A, adminMarkCodCollected as B, CONTACT_FIELDS as C, validateFulfillmentInput as D, adminUpdateOrderFulfillment as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminListProductMedia as H, adminCommitStagedProductMedia as I, validateMediaFile as J, mediaFailureMessage as K, LEGAL_PAGES as L, adminReorderProductMedia as M, NavLink as N, Outlet as O, adminSetPrimaryMedia as P, adminEnsurePrimaryMedia as Q, adminUpdateProductMedia as R, adminReplaceProductMedia as S, adminDeleteProductMedia as T, adminDiscoverMedia as U, adminImportMedia as V, validateContent as W, CONTENT_FIELDS as X, fieldPopulated as Y, CONTENT_LABELS as Z, useNavigate as _, adminGetSetting as a, adminListLevelRewards as a$, adminUpdateProduct as a0, adminCreateProduct as a1, adminUpdateProductPrice as a2, adminListVariants as a3, adminCreateVariant as a4, adminUpdateVariant as a5, adminSetVariantActive as a6, adminDeleteVariant as a7, adminGetProgramSettings as a8, CREATOR_STATUSES as a9, CONVERSION_STATUSES as aA, adminGetConversionItems as aB, adminGetConversionAudit as aC, adminRefundConversion as aD, adminListKyc as aE, KYC_STATUSES as aF, KYC_SIGNED_URL_SECONDS as aG, adminSetKycStatus as aH, KYC_DOCUMENT_KINDS as aI, kycDocumentState as aJ, adminKycDocumentUrl as aK, adminListKycAudit as aL, getPayoutConfig as aM, adminListPayouts as aN, PAYOUT_STATUSES as aO, adminSetWithdrawalsOpen as aP, adminGetPayoutLedger as aQ, adminGetPayoutAudit as aR, adminGetKycForCreator as aS, adminReviewPayout as aT, adminMarkPayoutPaid as aU, normalizeLadder as aV, DEFAULT_BEYOND_STEP as aW, adminGetTierLadder as aX, validateLadder as aY, ladderErrorMessage as aZ, rupees as a_, money2 as aa, adminListCreators as ab, adminCreatorStandings as ac, adminSetProgramSettings as ad, adminCreateCreator as ae, adminSetCreatorStatus as af, normalizeContentPatch as ag, contentScore as ah, adminGetCreator as ai, adminListCodeAliases as aj, adminListCampaigns as ak, adminListLinks as al, adminListAudit as am, adminListAttributionEvents as an, adminUpdateCampaign as ao, adminCreateCampaign as ap, CAMPAIGN_STATUSES as aq, buildTrackingUrl as ar, normalizeDestination as as, DESTINATION_TYPES as at, CopyButton as au, adminChangeCreatorCode as av, adminUpdateCreator as aw, adminCreateLink as ax, adminSetLinkStatus as ay, adminListConversions as az, brandingFromSetting as b, JEWELLERY_SECTIONS as b$, groupRewardsByLevel as b0, REWARD_OPTION_SLOTS as b1, validateRewardOption as b2, REWARD_TYPES as b3, REWARD_TYPE_LABEL as b4, adminListRewardClaims as b5, CLAIM_STATUSES as b6, CLAIM_STATUS_LABEL as b7, DEFAULT_LADDER as b8, adminSetTierLadder as b9, supabase as bA, CouponTicket as bB, HOMEPAGE_VISUAL_FIELDS as bC, safeVisualUrl as bD, MAX_CONCERN_PRODUCTS as bE, searchCatalogueForPicker as bF, productGallery as bG, MAX_DISCOVERY_CARDS as bH, makeDiscoveryId as bI, sanitizeHomepageVisuals as bJ, normalizeDiscovery as bK, products as bL, discoveryPayload as bM, mergeHomepageVisuals as bN, announceHomepageSaved as bO, POSITION_LABELS as bP, HERO_SECTION as bQ, TRUST_SECTION as bR, TILES_SECTION as bS, STORES_SECTION as bT, FESTIVE_SECTION as bU, LIFESTYLE_SECTION as bV, JEWELLERY_BANNER_SECTION as bW, STORE_CAROUSEL_SECTION as bX, DELIVERY_STRIP as bY, BENEFITS_STRIP as bZ, DEPARTMENT_SECTIONS as b_, rewardOptionErrorMessage as ba, adminUpsertLevelReward as bb, adminDeleteLevelReward as bc, adminSetRewardClaimStatus as bd, adminGetTheme as be, sanitizeTheme$1 as bf, TOKENS as bg, PRESET_LIST as bh, GROUPS as bi, DEFAULT_THEME as bj, OVERLAY_SCALES as bk, TYPE_SCALES as bl, HEX_RE as bm, adminSetTheme as bn, overlayRgba as bo, adminSaveCategory as bp, adminDeleteCategory as bq, normalizePromo as br, PromoPoster as bs, PromoOfferCard as bt, adminListPromotions as bu, adminUpsertPromotion as bv, adminDeletePromotion as bw, adminSetPromotionActive as bx, adminReorderPromotions as by, uploadPromoImage as bz, Link as c, HOMELIVING_SECTIONS as c0, GROCERY_SECTIONS as c1, STOREFRONT_CONTENT_STORES as c2, STOREFRONT_LABELS as c3, normalizeFashionStorefront as c4, normalizeLifestyleStorefront as c5, sectionSpec as c6, sectionContent as c7, validateStorefrontContent as c8, useSearchParams as c9, buildTree as ca, validatePlacement as cb, uploadImage as cc, isSpotlightEligible as cd, categoryBySlug as ce, sanitizeCategoryConfig as cf, safeColor as cg, safeGradient as ch, makeSpotlightId as ci, validateImageUpload as cj, normalizeCategoryExperience as ck, categoryExperiencePayload as cl, categoryIsReadyButOff as cm, categoryToneTheme as cn, MIN_INTERVAL_MS as co, MAX_INTERVAL_MS as cp, DEFAULT_ITEM_SCALE as cq, MIN_ITEM_SCALE as cr, MAX_ITEM_SCALE as cs, ITEM_OFFSET_LIMIT as ct, CategorySpotlight as cu, SOCIAL_NETWORKS as cv, POLICY_KEYS as cw, validateCompanyForSave as cx, defaultLegalPage as d, LegalUpdated as e, adminSetSetting as f, useAdminAuth as g, hasLegalContent as h, branding as i, jsxRuntimeExports as j, adminListProducts as k, legalKey as l, adminListCategories as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminImportBiosashCatalog as p, money as q, reactExports as r, adminSetProductActive as s, adminDeleteProduct as t, useParams as u, validateLegalPage as v, adminReorderProducts as w, categories as x, adminListOrders as y, fulfillmentStatusLabel as z };
+export { useLocation as $, adminListOrderEvents as A, adminMarkCodCollected as B, CONTACT_FIELDS as C, validateFulfillmentInput as D, adminUpdateOrderFulfillment as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminListProductMedia as H, adminCommitStagedProductMedia as I, validateMediaFile as J, mediaFailureMessage as K, LEGAL_PAGES as L, adminReorderProductMedia as M, NavLink as N, Outlet as O, adminSetPrimaryMedia as P, adminEnsurePrimaryMedia as Q, adminUpdateProductMedia as R, adminReplaceProductMedia as S, adminDeleteProductMedia as T, adminDiscoverMedia as U, adminImportMedia as V, validateContent as W, CONTENT_FIELDS as X, fieldPopulated as Y, CONTENT_LABELS as Z, useNavigate as _, adminGetSetting as a, adminListLevelRewards as a$, adminUpdateProduct as a0, adminCreateProduct as a1, adminUpdateProductPrice as a2, adminListVariants as a3, adminCreateVariant as a4, adminUpdateVariant as a5, adminSetVariantActive as a6, adminDeleteVariant as a7, adminGetProgramSettings as a8, CREATOR_STATUSES as a9, CONVERSION_STATUSES as aA, adminGetConversionItems as aB, adminGetConversionAudit as aC, adminRefundConversion as aD, adminListKyc as aE, KYC_STATUSES as aF, KYC_SIGNED_URL_SECONDS as aG, adminSetKycStatus as aH, KYC_DOCUMENT_KINDS as aI, kycDocumentState as aJ, adminKycDocumentUrl as aK, adminListKycAudit as aL, getPayoutConfig as aM, adminListPayouts as aN, PAYOUT_STATUSES as aO, adminSetWithdrawalsOpen as aP, adminGetPayoutLedger as aQ, adminGetPayoutAudit as aR, adminGetKycForCreator as aS, adminReviewPayout as aT, adminMarkPayoutPaid as aU, normalizeLadder as aV, DEFAULT_BEYOND_STEP as aW, adminGetTierLadder as aX, validateLadder as aY, ladderErrorMessage as aZ, rupees as a_, money2 as aa, adminListCreators as ab, adminCreatorStandings as ac, adminSetProgramSettings as ad, adminCreateCreator as ae, adminSetCreatorStatus as af, normalizeContentPatch as ag, contentScore as ah, adminGetCreator as ai, adminListCodeAliases as aj, adminListCampaigns as ak, adminListLinks as al, adminListAudit as am, adminListAttributionEvents as an, adminUpdateCampaign as ao, adminCreateCampaign as ap, CAMPAIGN_STATUSES as aq, buildTrackingUrl as ar, normalizeDestination as as, DESTINATION_TYPES as at, CopyButton as au, adminChangeCreatorCode as av, adminUpdateCreator as aw, adminCreateLink as ax, adminSetLinkStatus as ay, adminListConversions as az, brandingFromSetting as b, DEPARTMENT_SECTIONS as b$, groupRewardsByLevel as b0, REWARD_OPTION_SLOTS as b1, validateRewardOption as b2, REWARD_TYPES as b3, REWARD_TYPE_LABEL as b4, adminListRewardClaims as b5, CLAIM_STATUSES as b6, CLAIM_STATUS_LABEL as b7, DEFAULT_LADDER as b8, adminSetTierLadder as b9, supabase as bA, CouponTicket as bB, HOMEPAGE_VISUAL_FIELDS as bC, safeVisualUrl as bD, MAX_CONCERN_PRODUCTS as bE, searchCatalogueForPicker as bF, productGallery as bG, MAX_DISCOVERY_CARDS as bH, makeDiscoveryId as bI, sanitizeHomepageVisuals as bJ, normalizeDiscovery as bK, products as bL, discoveryPayload as bM, mergeHomepageVisuals as bN, announceHomepageSaved as bO, POSITION_LABELS as bP, HERO_SECTION as bQ, TRUST_SECTION as bR, TILES_SECTION as bS, STORES_SECTION as bT, FESTIVE_SECTION as bU, NEW_ARRIVALS_SECTION as bV, LIFESTYLE_SECTION as bW, JEWELLERY_BANNER_SECTION as bX, STORE_CAROUSEL_SECTION as bY, DELIVERY_STRIP as bZ, BENEFITS_STRIP as b_, rewardOptionErrorMessage as ba, adminUpsertLevelReward as bb, adminDeleteLevelReward as bc, adminSetRewardClaimStatus as bd, adminGetTheme as be, sanitizeTheme$1 as bf, TOKENS as bg, PRESET_LIST as bh, GROUPS as bi, DEFAULT_THEME as bj, OVERLAY_SCALES as bk, TYPE_SCALES as bl, HEX_RE as bm, adminSetTheme as bn, overlayRgba as bo, adminSaveCategory as bp, adminDeleteCategory as bq, normalizePromo as br, PromoPoster as bs, PromoOfferCard as bt, adminListPromotions as bu, adminUpsertPromotion as bv, adminDeletePromotion as bw, adminSetPromotionActive as bx, adminReorderPromotions as by, uploadPromoImage as bz, Link as c, JEWELLERY_SECTIONS as c0, HOMELIVING_SECTIONS as c1, GROCERY_SECTIONS as c2, STOREFRONT_CONTENT_STORES as c3, STOREFRONT_LABELS as c4, normalizeFashionStorefront as c5, normalizeLifestyleStorefront as c6, sectionSpec as c7, sectionContent as c8, validateStorefrontContent as c9, useSearchParams as ca, buildTree as cb, validatePlacement as cc, uploadImage as cd, isSpotlightEligible as ce, categoryBySlug as cf, sanitizeCategoryConfig as cg, safeColor as ch, safeGradient as ci, makeSpotlightId as cj, validateImageUpload as ck, normalizeCategoryExperience as cl, categoryExperiencePayload as cm, categoryIsReadyButOff as cn, categoryToneTheme as co, MIN_INTERVAL_MS as cp, MAX_INTERVAL_MS as cq, DEFAULT_ITEM_SCALE as cr, MIN_ITEM_SCALE as cs, MAX_ITEM_SCALE as ct, ITEM_OFFSET_LIMIT as cu, CategorySpotlight as cv, SOCIAL_NETWORKS as cw, POLICY_KEYS as cx, validateCompanyForSave as cy, defaultLegalPage as d, LegalUpdated as e, adminSetSetting as f, useAdminAuth as g, hasLegalContent as h, branding as i, jsxRuntimeExports as j, adminListProducts as k, legalKey as l, adminListCategories as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminImportBiosashCatalog as p, money as q, reactExports as r, adminSetProductActive as s, adminDeleteProduct as t, useParams as u, validateLegalPage as v, adminReorderProducts as w, categories as x, adminListOrders as y, fulfillmentStatusLabel as z };
 //# sourceMappingURL=bundle.js.map
