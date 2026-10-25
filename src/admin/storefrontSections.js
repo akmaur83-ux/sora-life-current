@@ -1,5 +1,6 @@
 import { HERO_SECTION, TRUST_SECTION, TILES_SECTION, STORES_SECTION, FESTIVE_SECTION, JEWELLERY_BANNER_SECTION } from '../components/HomeStorefront.jsx';
 import { LIFESTYLE_SECTION, STORE_CAROUSEL_SECTION } from '../components/FashionBanner.jsx';
+import { NEW_ARRIVALS_SECTION } from '../components/NewArrivals.jsx';
 import { DELIVERY_STRIP } from '../fashion/FashionLayout.jsx';
 import { BENEFITS_STRIP } from '../fashion/FashionHome.jsx';
 import { DEPARTMENT_SECTIONS } from '../fashion/departmentContent.js';
@@ -25,6 +26,7 @@ export const SECTION_PAGES = Object.freeze({
       { path: 'tiles', defaults: TILES_SECTION },
       { path: 'stores', defaults: STORES_SECTION },
       { path: 'promo', defaults: FESTIVE_SECTION },
+      { path: 'newArrivals', defaults: NEW_ARRIVALS_SECTION },
       { path: 'lifestyleBanner', defaults: LIFESTYLE_SECTION },
       { path: 'jewelleryBanner', defaults: JEWELLERY_BANNER_SECTION },
       { path: 'storeCarousel', defaults: STORE_CAROUSEL_SECTION },

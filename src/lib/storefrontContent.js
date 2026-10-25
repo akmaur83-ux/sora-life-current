@@ -108,6 +108,10 @@ const WELLNESS = {
     hidden: hidden(), title: text(60, 'Headline'), text: text(160, 'Subline'), cta: text(40, 'Button label'), link: link('Opens'),
     picture: pic(), alt: text(180, 'Photograph description'), position: position(),
   }, 'Festive promo'),
+  newArrivals: group({
+    hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
+    link: link('View-all link (empty: the store of the newest arrival)'),
+  }, 'New arrivals (the products flagged new; hidden while none are)'),
   lifestyleBanner: banner('Lifestyle banner', { position: position() }),
   jewelleryBanner: banner('Jewellery banner', { position: position() }),
   storeCarousel: group({

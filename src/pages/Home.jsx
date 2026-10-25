@@ -6,6 +6,7 @@ import Newsletter from '../components/Newsletter.jsx';
 import HomeOffers from '../components/promo/HomeOffers.jsx';
 import HomeLeaderboard from '../components/HomeLeaderboard.jsx';
 import { LifestyleBanner, StoreCarousel } from '../components/FashionBanner.jsx';
+import { NewArrivals } from '../components/NewArrivals.jsx';
 import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
@@ -62,6 +63,11 @@ export default function Home() {
       {/* 5 · CAMPAIGN / PROMOTION — existing promotions runtime, untouched.
              Renders nothing when no active promotion targets `home`. */}
       <HomeOffers appearance={visuals.offers} />
+
+      {/* The products flagged new, newest first, across wellness, fashion and Home & Living:
+          a sliding row between the promo and the Lifestyle banner. Renders nothing when
+          nothing is flagged, or when it is hidden in Storefronts → Wellness. */}
+      <NewArrivals />
 
       {/* The doorway to the lifestyle store — one banner, no data dependency. */}
       <LifestyleBanner />
