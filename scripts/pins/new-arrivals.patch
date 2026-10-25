@@ -1,0 +1,113 @@
+diff --git a/src/admin/storefrontSections.js b/src/admin/storefrontSections.js
+index 17c13d0..e479983 100644
+--- a/src/admin/storefrontSections.js
++++ b/src/admin/storefrontSections.js
+@@ -1,5 +1,6 @@
+ import { HERO_SECTION, TRUST_SECTION, TILES_SECTION, STORES_SECTION, FESTIVE_SECTION, JEWELLERY_BANNER_SECTION } from '../components/HomeStorefront.jsx';
+ import { LIFESTYLE_SECTION, STORE_CAROUSEL_SECTION } from '../components/FashionBanner.jsx';
++import { NEW_ARRIVALS_SECTION } from '../components/NewArrivals.jsx';
+ import { DELIVERY_STRIP } from '../fashion/FashionLayout.jsx';
+ import { BENEFITS_STRIP } from '../fashion/FashionHome.jsx';
+ import { DEPARTMENT_SECTIONS } from '../fashion/departmentContent.js';
+@@ -25,6 +26,7 @@ export const SECTION_PAGES = Object.freeze({
+       { path: 'tiles', defaults: TILES_SECTION },
+       { path: 'stores', defaults: STORES_SECTION },
+       { path: 'promo', defaults: FESTIVE_SECTION },
++      { path: 'newArrivals', defaults: NEW_ARRIVALS_SECTION },
+       { path: 'lifestyleBanner', defaults: LIFESTYLE_SECTION },
+       { path: 'jewelleryBanner', defaults: JEWELLERY_BANNER_SECTION },
+       { path: 'storeCarousel', defaults: STORE_CAROUSEL_SECTION },
+diff --git a/src/lib/storefrontContent.js b/src/lib/storefrontContent.js
+index a39e900..ed310f9 100644
+--- a/src/lib/storefrontContent.js
++++ b/src/lib/storefrontContent.js
+@@ -108,6 +108,10 @@ const WELLNESS = {
+     hidden: hidden(), title: text(60, 'Headline'), text: text(160, 'Subline'), cta: text(40, 'Button label'), link: link('Opens'),
+     picture: pic(), alt: text(180, 'Photograph description'), position: position(),
+   }, 'Festive promo'),
++  newArrivals: group({
++    hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
++    link: link('View-all link (empty: the store of the newest arrival)'),
++  }, 'New arrivals (the products flagged new; hidden while none are)'),
+   lifestyleBanner: banner('Lifestyle banner', { position: position() }),
+   jewelleryBanner: banner('Jewellery banner', { position: position() }),
+   storeCarousel: group({
+diff --git a/src/pages/Home.jsx b/src/pages/Home.jsx
+index 81a34b4..3d88206 100644
+--- a/src/pages/Home.jsx
++++ b/src/pages/Home.jsx
+@@ -6,6 +6,7 @@ import Newsletter from '../components/Newsletter.jsx';
+ import HomeOffers from '../components/promo/HomeOffers.jsx';
+ import HomeLeaderboard from '../components/HomeLeaderboard.jsx';
+ import { LifestyleBanner, StoreCarousel } from '../components/FashionBanner.jsx';
++import { NewArrivals } from '../components/NewArrivals.jsx';
+ import {
+   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
+   CuratedCollections, CreatorCommunity, WhySoraLife,
+@@ -63,6 +64,11 @@ export default function Home() {
+              Renders nothing when no active promotion targets `home`. */}
+       <HomeOffers appearance={visuals.offers} />
+ 
++      {/* The products flagged new, newest first, across wellness, fashion and Home & Living:
++          a sliding row between the promo and the Lifestyle banner. Renders nothing when
++          nothing is flagged, or when it is hidden in Storefronts → Wellness. */}
++      <NewArrivals />
++
+       {/* The doorway to the lifestyle store — one banner, no data dependency. */}
+       <LifestyleBanner />
+ 
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index ad3fbff..3bc4917 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -357,4 +357,49 @@
+ @media (prefers-reduced-motion: reduce) {
+   .hx-hero__track, .hx-tile__image, .hx-store__image, .hx-btn svg, .hx-tile__go, .hx-jewel__image, .hx-jewel__cta svg { transition: none; }
+   .hx .hx-btn:hover svg, .hx-tile:hover .hx-tile__go, .hx-tile:hover .hx-tile__image, .hx-store:hover .hx-store__image, .hx-jewel__link:hover .hx-jewel__image, .hx-jewel__link:hover .hx-jewel__cta svg { transform: none; }
++}
++
++/* ---- New Arrivals (NewArrivals.jsx) ----------------------------------------------------
++   The products flagged new, mid-page: the "Explore the stores" heading (.hx-stores__head,
++   .hx-stores__h, .hx-more) with arrows beside "View All", then the fashion category strip's
++   track — whole cards on transform only, --per cards in view. Square edges throughout. A
++   wellness packshot sits whole in its frame (as on the wellness cards); a fashion or Home &
++   Living photograph fills it (as on theirs). */
++/* The section above (the festive promo) brings its own space below it; this adds a little. */
++.hx-new { padding-block: 12px 48px; }
++.hx-new__tools { display: flex; align-items: center; gap: 14px; }
++.hx-new__arrows { display: flex; gap: 8px; }
++.hx-new__arrows button { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--hx-ink); border-radius: 0; background: transparent; color: var(--hx-ink); cursor: pointer; transition: background-color .2s ease, color .2s ease; }
++.hx-new__arrows button:disabled { opacity: .3; cursor: default; }
++/* clip, not hidden: a clipped box is not a scroll container, so focusing a card that is still sliding in
++   cannot scroll it and leave the row out of step with its arrows (hidden stays for older browsers). */
++.hx-new__viewport { overflow: hidden; overflow: clip; touch-action: pan-y; }
++.hx-new__track { --per: 5; --gap: 20px; display: flex; gap: var(--gap); margin: 0; padding: 0; list-style: none; transform: translateX(calc(var(--i, 0) * -1 * ((100% - (var(--per) - 1) * var(--gap)) / var(--per) + var(--gap)))); transition: transform .5s ease; }
++.hx-new__item { flex: 0 0 calc((100% - (var(--per) - 1) * var(--gap)) / var(--per)); min-width: 0; }
++.hx-new__card { display: grid; gap: 6px; }
++.hx-new__art { display: block; aspect-ratio: 1; margin-bottom: 6px; overflow: hidden; background: var(--hx-soft); }
++.hx-new__image { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
++.hx-new__art--whole { background: #fff; }
++.hx-new__art--whole .hx-new__image { object-fit: contain; padding: 8%; }
++.hx-new__name { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font: 500 14px/1.35 var(--slv2-sans); color: var(--hx-ink); }
++.hx-new__price { font: 600 15px/1.3 var(--slv2-sans); color: var(--hx-ink); }
++@media (hover: hover) and (pointer: fine) {
++  .hx-new__arrows button:hover:not(:disabled) { background: var(--hx-ink); color: #fff; }
++  .hx-new__card:hover .hx-new__image { transform: scale(1.04); }
++}
++@media (max-width: 1023px) {
++  .hx-new__track { --per: 3; --gap: 16px; }
++}
++@media (max-width: 700px) {
++  .hx-new { padding-block: 14px 28px; }
++  .hx-new__tools { gap: 10px; }
++  .hx-new__arrows { gap: 6px; }
++  .hx-new__arrows button { width: 34px; height: 34px; }
++  .hx-new__track { --per: 2; --gap: 12px; }
++  .hx-new__name { font-size: 13px; }
++  .hx-new__price { font-size: 14px; }
++}
++@media (prefers-reduced-motion: reduce) {
++  .hx-new__track, .hx-new__image, .hx-new__arrows button { transition: none; }
++  .hx-new__card:hover .hx-new__image { transform: none; }
+ }
+\ No newline at end of file

@@ -48,6 +48,7 @@ const Icon = loadModule('src/components/Icon.jsx').default;
 const DeferredImage = loadModule('src/components/DeferredImage.jsx').default;
 const FashionEntryLink = loadModule('src/components/FashionEntryLink.jsx', { Link, useLocation, Icon }).default;
 const wellness = loadModule('src/components/HomeStorefront.jsx', { Link, Icon, DeferredImage, FashionEntryLink });
+const arrivals = loadModule('src/components/NewArrivals.jsx', { Link, Icon, DeferredImage });
 const doorway = loadModule('src/components/FashionBanner.jsx', { Link, Icon, DeferredImage, FashionEntryLink });
 const homeliving = loadHomeLivingData();
 const grocery = loadGroceryData();
@@ -58,6 +59,7 @@ const SECTIONS = [
   ['wellness', 'tiles', wellness.TILES_SECTION],
   ['wellness', 'stores', wellness.STORES_SECTION],
   ['wellness', 'promo', wellness.FESTIVE_SECTION],
+  ['wellness', 'newArrivals', arrivals.NEW_ARRIVALS_SECTION],
   ['wellness', 'lifestyleBanner', doorway.LIFESTYLE_SECTION],
   ['wellness', 'jewelleryBanner', wellness.JEWELLERY_BANNER_SECTION],
   ['wellness', 'storeCarousel', doorway.STORE_CAROUSEL_SECTION],
@@ -84,9 +86,9 @@ console.log('\n— Each section and its built-in content —');
 
 await test('every editable section the schema defines has its built-in content, and the admin lists every one of them', () => {
   assert.deepEqual(SECTIONS.map(([s, p]) => `${s}:${p}`).sort(), schemaSections());
-  assert.equal(SECTIONS.length, 48, 'forty-eight sections across eight pages');
+  assert.equal(SECTIONS.length, 49, 'forty-nine sections across eight pages');
   const registry = read('src/admin/storefrontSections.js');
-  for (const name of ['HERO_SECTION', 'TRUST_SECTION', 'TILES_SECTION', 'STORES_SECTION', 'FESTIVE_SECTION','LIFESTYLE_SECTION', 'JEWELLERY_BANNER_SECTION', 'STORE_CAROUSEL_SECTION', 'DELIVERY_STRIP', 'BENEFITS_STRIP', 'JEWELLERY_SECTIONS', 'HOMELIVING_SECTIONS', 'GROCERY_SECTIONS']) assert.match(registry, new RegExp(`\\b${name}\\b`), name);
+  for (const name of ['HERO_SECTION', 'TRUST_SECTION', 'TILES_SECTION', 'STORES_SECTION', 'FESTIVE_SECTION', 'NEW_ARRIVALS_SECTION', 'LIFESTYLE_SECTION', 'JEWELLERY_BANNER_SECTION', 'STORE_CAROUSEL_SECTION', 'DELIVERY_STRIP', 'BENEFITS_STRIP', 'JEWELLERY_SECTIONS', 'HOMELIVING_SECTIONS', 'GROCERY_SECTIONS']) assert.match(registry, new RegExp(`\\b${name}\\b`), name);
   for (const page of ['women', 'men', 'sarees']) assert.match(registry, new RegExp(`each\\('${page}\\.', DEPARTMENT_SECTIONS\\.${page}\\)`), page);
   assert.match(registry, /each\('jewellery\.', JEWELLERY_SECTIONS\)/);
   assert.match(registry, /each\('', HOMELIVING_SECTIONS\)/); assert.match(registry, /each\('', GROCERY_SECTIONS\)/);

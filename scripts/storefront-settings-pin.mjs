@@ -84,6 +84,9 @@ export const ADMIN_SAVES_FILES = /^(scripts\/test-admin-saves\.mjs|scripts\/pins
  */
 export const SITE_NAME_EDITS = /^(api\/razorpay\/verify\.js|index\.html|src\/App\.jsx|src\/admin\/components\/BulkPackshotImport\.jsx|src\/admin\/pages\/Appearance\.jsx|src\/admin\/pages\/Branding\.jsx|src\/admin\/pages\/CreatorDetail\.jsx|src\/admin\/pages\/CreatorTiers\.jsx|src\/admin\/pages\/Dashboard\.jsx|src\/admin\/pages\/LegalPages\.jsx|src\/admin\/pages\/ProductForm\.jsx|src\/admin\/pages\/Promotions\.jsx|src\/admin\/pages\/StoreCatalogue\.jsx|src\/components\/FashionEntryLink\.jsx|src\/components\/Footer\.jsx|src\/components\/Header\.jsx|src\/components\/HomeLeaderboard\.jsx|src\/components\/HomeMarketplace\.jsx|src\/components\/HomeStorefront\.jsx|src\/components\/ProductImage\.jsx|src\/components\/category\/CategorySpotlight\.jsx|src\/components\/creator\/CreatorCampaignsPage\.jsx|src\/components\/creator\/CreatorDashboard\.jsx|src\/components\/creator\/CreatorEarningsPage\.jsx|src\/components\/creator\/CreatorHowItWorks\.jsx|src\/components\/creator\/CreatorLinksPage\.jsx|src\/components\/creator\/CreatorPayouts\.jsx|src\/components\/creator\/CreatorProfilePage\.jsx|src\/components\/creator\/CreatorTier\.jsx|src\/components\/creator\/CreatorTierPage\.jsx|src\/components\/pdp\/ProductTrustList\.jsx|src\/fashion\/FashionJewellery\.jsx|src\/lib\/adminAuth\.jsx|src\/lib\/creatorActivity\.js|src\/lib\/legalPages\.js|src\/lib\/settings\.js|src\/lib\/spotlightImport\.js|src\/pages\/About\.jsx|src\/pages\/Account\.jsx|src\/pages\/AdminLogin\.jsx|src\/pages\/Checkout\.jsx|src\/pages\/CreatorPortal\.jsx|src\/pages\/Home\.jsx|src\/pages\/Invoice\.jsx|src\/pages\/Legal\.jsx|src\/pages\/Passport\.jsx|src\/pages\/Shop\.jsx|src\/pages\/account\/CreatorOnboarding\.jsx|src\/styles\/fashion-departments\.css|src\/styles\/fashion\.css|src\/styles\/passport\.css)$/;
 
+/** New Arrivals on the wellness homepage (test-new-arrivals.mjs owns it): its section, its data module, the suite and the recorded patch. */
+export const NEW_ARRIVALS_FILES = /^(src\/components\/NewArrivals\.jsx|src\/lib\/newArrivals\.js|scripts\/test-new-arrivals\.mjs|scripts\/pins\/new-arrivals\.patch)$/;
+
 /** The files the Home & Living cart added: its cart line module, and the suite and undo patch that pin it. */
 export const HOMELIVING_CART_FILES = /^(src\/lib\/homelivingCartLine\.js|scripts\/test-homeliving-cart\.mjs|scripts\/pins\/homeliving-cart\.patch)$/;
 
@@ -539,6 +542,10 @@ const UNDO_ADMIN_REORDER_CATEGORIES = undoFromPatch('admin-reorder-categories.pa
 // here, newest first.
 const UNDO_SITE_NAME = undoFromPatch('site-name.patch');
 /** The site name's edits undone on their own — for a suite with its own chain of older undos: apply this first. */
+// New Arrivals (test-new-arrivals.mjs): its mount in Home.jsx, its block in v2-home.css, its section in the
+// wellness schema and in the admin's section registry. Undone here, newest first.
+const UNDO_NEW_ARRIVALS = undoFromPatch('new-arrivals.patch');
+
 export function sansSiteName(rel, text) {
   const undo = UNDO_SITE_NAME[rel];
   return undo ? undo(text.replace(/\r\n/g, '\n'), rel) : text;
@@ -610,7 +617,7 @@ const UNDO_GROCERY_LABEL = {
   ].join('\n')),
 };
 
-const CART_CHANGES = [UNDO_SITE_NAME, UNDO_ADMIN_REORDER_CATEGORIES, UNDO_ADMIN_FAILED_LOADS, UNDO_ADMIN_SAVES, UNDO_ORDER_CONFIRMATION, UNDO_ORDER_HOLDS, UNDO_CHECKOUT_REPLAY, UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
+const CART_CHANGES = [UNDO_NEW_ARRIVALS, UNDO_SITE_NAME, UNDO_ADMIN_REORDER_CATEGORIES, UNDO_ADMIN_FAILED_LOADS, UNDO_ADMIN_SAVES, UNDO_ORDER_CONFIRMATION, UNDO_ORDER_HOLDS, UNDO_CHECKOUT_REPLAY, UNDO_MEN_SHOP_TILES, UNDO_WELLNESS_SECTIONS, UNDO_STOREFRONT_SECTIONS, UNDO_RETIRED_HERO_POINTERS, UNDO_DEAD_HOMEPAGE_CODE, UNDO_STOREFRONT_CONTENT, UNDO_RETIRED_CONTROLS, UNDO_PRODUCT_INFORMATION, UNDO_FASHION_RATING_ROW, UNDO_FASHION_STRIP_SAREE, UNDO_DRAWER_SHADOW, UNDO_ORDER_NUMBER, UNDO_JEWELLERY, UNDO_HOME_STOREFRONT, UNDO_BANNER_STRIP, UNDO_WOMEN_PAGE, UNDO_FASHION_PDP_THUMBS, UNDO_PDP_THUMBS, UNDO_SCROLL_MANAGER, UNDO_PDP_ZOOM, UNDO_DELIVERY_COPY, UNDO_COUPON_OFFERS, UNDO_HOMELIVING_CART, UNDO_GROCERY_LABEL];
 
 /**
  * The Home & Living cart undone on its own — for a suite that owns an OLDER cart
