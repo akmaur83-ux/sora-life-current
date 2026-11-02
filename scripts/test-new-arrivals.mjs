@@ -275,13 +275,19 @@ await test('S1 Storefronts → Wellness edits it: hide, heading, "View All" labe
   const spec = content.sectionSpec('wellness', 'newArrivals');
   assert.ok(spec, 'the section is in the wellness schema');
   assert.deepEqual(Object.keys(spec.fields), ['hidden', 'title', 'more', 'link']);
-  assert.deepEqual(Object.keys(content.STOREFRONT_SCHEMAS.wellness.fields).slice(4, 7), ['promo', 'newArrivals', 'lifestyleBanner'], 'after the festive promo, as on the page');
+  // As on the page: after the festive promo and before the Lifestyle banner. The two category
+  // rails added on 2026-11-02 (Luxury Beds, Bedsheets) sit between it and the banner, so what is
+  // pinned here is the order, not that the banner is its immediate neighbour.
+  const wellnessKeys = Object.keys(content.STOREFRONT_SCHEMAS.wellness.fields);
+  assert.deepEqual(wellnessKeys.slice(4, 6), ['promo', 'newArrivals'], 'after the festive promo, as on the page');
+  assert.ok(wellnessKeys.indexOf('lifestyleBanner') > wellnessKeys.indexOf('newArrivals'), 'before the Lifestyle banner, as on the page');
   const defaults = { hidden: false, title: 'New Arrivals', more: 'View All', link: '' };
   assert.deepEqual(content.readSection(spec, { title: 'Just In', link: '' }, defaults), { hidden: false, title: 'Just In', more: 'View All', link: '' });
   assert.deepEqual(content.readSection(spec, { hidden: true }, defaults).hidden, true);
   assert.deepEqual(content.validateStorefrontContent('wellness', { newArrivals: { title: 'Just In', more: 'All of it', link: '/homeliving' } }).errors, {});
   const admin = read('src/admin/storefrontSections.js');
-  assert.match(admin, /\{ path: 'promo', defaults: FESTIVE_SECTION \},\n\s*\{ path: 'newArrivals', defaults: NEW_ARRIVALS_SECTION \},\n\s*\{ path: 'lifestyleBanner'/);
+  assert.match(admin, /\{ path: 'promo', defaults: FESTIVE_SECTION \},\n\s*\{ path: 'newArrivals', defaults: NEW_ARRIVALS_SECTION \},/);
+  assert.ok(admin.indexOf("path: 'lifestyleBanner'") > admin.indexOf("path: 'newArrivals'"), 'listed before the Lifestyle banner, as on the page');
   assert.equal(read('supabase/migrations/0037_storefront_content.sql').includes('newArrivals'), false, 'the 0037 records hold it as they are');
 });
 

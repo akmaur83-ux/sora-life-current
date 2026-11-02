@@ -7,6 +7,7 @@ import HomeOffers from '../components/promo/HomeOffers.jsx';
 import HomeLeaderboard from '../components/HomeLeaderboard.jsx';
 import { LifestyleBanner, StoreCarousel } from '../components/FashionBanner.jsx';
 import { NewArrivals } from '../components/NewArrivals.jsx';
+import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
 import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
@@ -68,6 +69,13 @@ export default function Home() {
           a sliding row between the promo and the Lifestyle banner. Renders nothing when
           nothing is flagged, or when it is hidden in Storefronts → Wellness. */}
       <NewArrivals />
+
+      {/* Home & Living's two bedroom categories, each a sliding row of its live
+          products in the catalogue's own order (HomeCategoryRails.jsx). Beds
+          first, bedsheets directly under them. Either renders nothing when its
+          category is empty, or when it is hidden in Storefronts → Wellness. */}
+      <LuxuryBeds />
+      <Bedsheets />
 
       {/* The doorway to the lifestyle store — one banner, no data dependency. */}
       <LifestyleBanner />
