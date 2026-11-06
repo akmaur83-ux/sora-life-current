@@ -1,4 +1,4 @@
-# SORA LIFE — https://www.soralife.shop
+# SORA LIFE — https://www.soralifestyle.in
 User-agent: *
 Allow: /
 
