@@ -76,6 +76,12 @@ export default function Home() {
           Storefronts → Wellness. */}
       <BiosashRange />
 
+      {/* Home & Living's Bedsheets, a sliding row of its live products in the
+          catalogue's own order (HomeCategoryRails.jsx), directly under the
+          Biosash range (owner, 2026-11-07). Renders nothing when the category is
+          empty, or when it is hidden in Storefronts → Wellness. */}
+      <Bedsheets />
+
       {/* The doorway to the lifestyle store — one banner, no data dependency. */}
       <LifestyleBanner />
 
@@ -149,13 +155,11 @@ export default function Home() {
 
       <WhySoraLife />
 
-      {/* Home & Living's two bedroom categories, each a sliding row of its live
-          products in the catalogue's own order (HomeCategoryRails.jsx). Beds
-          first, bedsheets directly under them, near the foot of the page.
-          Either renders nothing when its category is empty, or when it is
-          hidden in Storefronts → Wellness. */}
+      {/* Home & Living's Luxury Beds, a sliding row of its live products in the
+          catalogue's own order (HomeCategoryRails.jsx), near the foot of the page.
+          Renders nothing when the category is empty, or when it is hidden in
+          Storefronts → Wellness. */}
       <LuxuryBeds />
-      <Bedsheets />
 
       {/* 11 · Newsletter + Footer + tab bar are existing components, unchanged
              in Phase 1 */}

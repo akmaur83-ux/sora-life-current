@@ -289,14 +289,16 @@ await test('C10 cards outside the window are untabbable and hidden from assistiv
 
 console.log('\n— Where they live —');
 
-await test('P1 Home.jsx mounts beds and then bedsheets near the foot of the page (owner, 2026-11-07): after "Why Sora Life", just above the newsletter', () => {
+await test('P1 Home.jsx (owner, 2026-11-07): bedsheets directly under the Biosash range; beds near the foot, after "Why Sora Life", just above the newsletter', () => {
   const home = read('src/pages/Home.jsx');
   assert.match(home, /import \{ LuxuryBeds, Bedsheets \} from '\.\.\/components\/HomeCategoryRails\.jsx';/);
   const at = (s) => home.indexOf(s);
-  assert.ok(at('<LuxuryBeds />') > 0 && at('<Bedsheets />') > at('<LuxuryBeds />'), 'beds first, bedsheets under them');
-  assert.ok(at('<WhySoraLife />') < at('<LuxuryBeds />'), 'below "Why Sora Life"');
-  assert.ok(at('<Bedsheets />') < at('<Newsletter />'), 'above the newsletter');
-  assert.equal(home.split('<LuxuryBeds />').length - 1, 1, 'mounted once');
+  const between = home.slice(at('<BiosashRange />') + '<BiosashRange />'.length, at('<Bedsheets />'));
+  assert.ok(at('<BiosashRange />') > 0 && at('<Bedsheets />') > at('<BiosashRange />') && !/<[A-Z]/.test(between), 'bedsheets the very next section after Biosash');
+  assert.ok(at('<Bedsheets />') < at('<LifestyleBanner />'), 'above the Lifestyle banner');
+  assert.ok(at('<WhySoraLife />') < at('<LuxuryBeds />'), 'beds below "Why Sora Life"');
+  assert.ok(at('<LuxuryBeds />') < at('<Newsletter />'), 'beds above the newsletter');
+  for (const c of ['<LuxuryBeds />', '<Bedsheets />']) assert.equal(home.split(c).length - 1, 1, `${c} mounted once`);
 });
 
 await test('P2 both sections are in Storefronts → Wellness, with the schema their fields need', () => {
@@ -385,15 +387,15 @@ await test('S5 Home.jsx: the Biosash range sits where the beds were — straight
   const home = read('src/pages/Home.jsx');
   assert.match(home, /import \{ BiosashRange \} from '\.\.\/components\/BiosashRange\.jsx';/);
   const at = (s) => home.indexOf(s);
-  assert.ok(at('<NewArrivals />') < at('<BiosashRange />') && at('<BiosashRange />') < at('<LifestyleBanner />'));
+  assert.ok(at('<NewArrivals />') < at('<BiosashRange />') && at('<BiosashRange />') < at('<Bedsheets />') && at('<Bedsheets />') < at('<LifestyleBanner />'));
   assert.equal(home.split('<BiosashRange />').length - 1, 1);
 });
 
-await test('S6 Storefronts → Wellness lists it after New Arrivals, the beds and bedsheets last, as on the page; the schema has its fields', () => {
+await test('S6 Storefronts → Wellness lists it after New Arrivals with bedsheets under it, the beds last, as on the page; the schema has its fields', () => {
   const pages = read('src/admin/storefrontSections.js');
   const order = [...pages.matchAll(/\{ path: '([A-Za-z]+)', defaults: [A-Z_]+ \}/g)].map((m) => m[1]);
-  const wellness = order.slice(0, order.indexOf('bedsheets') + 1);
-  assert.deepEqual(wellness.slice(wellness.indexOf('newArrivals')), ['newArrivals', 'biosash', 'lifestyleBanner', 'jewelleryBanner', 'storeCarousel', 'luxuryBeds', 'bedsheets']);
+  const wellness = order.slice(0, order.indexOf('luxuryBeds') + 1);
+  assert.deepEqual(wellness.slice(wellness.indexOf('newArrivals')), ['newArrivals', 'biosash', 'bedsheets', 'lifestyleBanner', 'jewelleryBanner', 'storeCarousel', 'luxuryBeds']);
   const schema = read('src/lib/storefrontContent.js');
   const block = schema.slice(schema.indexOf('biosash: group('), schema.indexOf('biosash: group(') + 260);
   for (const field of ['hidden:', 'title:', 'more:', 'link:']) assert.ok(block.includes(field), `biosash has ${field}`);

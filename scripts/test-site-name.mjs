@@ -39,7 +39,7 @@ await test('B1 the built-in name is SORA LIFESTYLE; the built-in logo is the lea
   const s = await fresh();
   assert.equal(s.branding.siteName, 'SORA LIFESTYLE');
   // The owner replaced the sparrow with three new marks on 2026-11-07 (assets/README.md).
-  assert.equal(s.branding.logoUrl, '/assets/sora-lifestyle-header.webp');
+  assert.equal(s.branding.logoUrl, '/assets/sora-lifestyle-bird-header.webp');
   assert.equal(s.branding.tagline, 'HEALTH & WELLNESS');
 });
 
@@ -63,7 +63,7 @@ await test('B4 a blank field keeps the built-in value, an image address must be 
   s.applyBranding({ site_name: '  ', tagline: '', logo_url: 'javascript:alert(1)', favicon_url: '//evil.example/x.png', primary_color: '#FF0000', accent_color: '#00FF00' });
   assert.deepEqual(
     [s.branding.siteName, s.branding.tagline, s.branding.logoUrl, s.branding.faviconUrl, s.branding.primaryColor, s.branding.accentColor],
-    ['SORA LIFESTYLE', 'HEALTH & WELLNESS', '/assets/sora-lifestyle-header.webp', null, '#1E3A2F', '#E8B04B'],
+    ['SORA LIFESTYLE', 'HEALTH & WELLNESS', '/assets/sora-lifestyle-bird-header.webp', null, '#1E3A2F', '#E8B04B'],
   );
 });
 
@@ -170,7 +170,7 @@ await test('N4 on a phone the fashion headers fit the longer name between the me
 
 await test('N3 the renamed site keeps its marks where the owner put them (2026-11-07), and the "Health & Wellness" tagline as it was', () => {
   for (const file of ['src/pages/Invoice.jsx', 'src/pages/Passport.jsx']) assert.match(read(file), /\/assets\/sora-lifestyle-invoice\.webp/, file);
-  assert.match(read('src/lib/settings.js'), /\/assets\/sora-lifestyle-header\.webp/);
+  assert.match(read('src/lib/settings.js'), /\/assets\/sora-lifestyle-bird-header\.webp/, "the header: the bird lockup (owner, 2026-11-07)");
   assert.match(read('src/pages/Invoice.jsx'), /<p className="inv__brand-sub">Health &amp; Wellness<\/p>/);
   assert.match(read('src/pages/Invoice.jsx'), /alt="SORA LIFESTYLE — Health and Wellness"/);
 });

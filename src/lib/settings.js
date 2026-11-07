@@ -6,7 +6,7 @@
 // ============================================================
 
 export let branding = {
-  logoUrl: '/assets/sora-lifestyle-header.webp',
+  logoUrl: '/assets/sora-lifestyle-bird-header.webp',
   siteName: 'SORA LIFESTYLE',
   tagline: 'HEALTH & WELLNESS',
   primaryColor: '#1E3A2F',

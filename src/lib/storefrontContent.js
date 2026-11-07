@@ -116,6 +116,11 @@ const WELLNESS = {
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
     link: link('View-all link (empty: the shop)'),
   }, 'The Biosash range (Biosash products in stock; hidden while there are none)'),
+  // Directly under the Biosash range since 2026-11-07.
+  bedsheets: group({
+    hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
+    link: link('View-all link (empty: the Bedsheets listing)'),
+  }, 'Bedsheets (Home & Living › Bedsheets; hidden while it is empty)'),
   lifestyleBanner: banner('Lifestyle banner', { position: position() }),
   jewelleryBanner: banner('Jewellery banner', { position: position() }),
   storeCarousel: group({
@@ -131,10 +136,6 @@ const WELLNESS = {
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
     link: link('View-all link (empty: the Beds listing)'),
   }, 'Luxury beds (Home & Living › Beds; hidden while it is empty)'),
-  bedsheets: group({
-    hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
-    link: link('View-all link (empty: the Bedsheets listing)'),
-  }, 'Bedsheets (Home & Living › Bedsheets; hidden while it is empty)'),
 };
 
 const FASHION_STRIPS = group({

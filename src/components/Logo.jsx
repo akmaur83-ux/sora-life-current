@@ -33,9 +33,8 @@ export function SparrowMark({ size = 26, light = false, foil = false }) {
   );
 }
 
-/** The built-in header marks (assets/README.md). */
-export const HEADER_MARK = '/assets/sora-lifestyle-header.webp';
-export const HEADER_MARK_STACKED = '/assets/sora-lifestyle-header-stacked.webp';
+/** The built-in header mark (assets/README.md): the bird lockup, owner's artwork of 2026-11-07. */
+export const HEADER_MARK = '/assets/sora-lifestyle-bird-header.webp';
 
 export default function Logo({ compact = false, light = false, tagline = true }) {
   const [imgOk, setImgOk] = useState(true);
@@ -44,26 +43,19 @@ export default function Logo({ compact = false, light = false, tagline = true })
 
   // Use the official raster logo in the header (non-light contexts).
   if (!light && imgOk && branding.logoUrl) {
-    // The built-in mark comes in two shapes. From 1100px the header also carries
-    // the store links, and the bar never grows past ~1190px, so the centre column
-    // has room for ~80px of logo: there it is the stacked mark (leaves above the
-    // wordmark, 244x162). Narrower, the links are gone and the wide horizontal
-    // lockup reads larger. A logo uploaded in Admin → Branding is used as given.
-    const builtIn = branding.logoUrl === HEADER_MARK;
+    // One mark at every width: the bird lockup (owner, 2026-11-07), ~3.2:1. Its
+    // height per breakpoint is the stylesheet's (v2-header.css, layout.css). A logo
+    // uploaded in Admin → Branding is used as given.
     return (
       <Link to="/" className={`logo logo--img ${compact ? 'logo--compact' : ''}`} aria-label={`${branding.siteName} — ${branding.tagline}`}>
-        {/* Intrinsic sizes of the official artwork — let the browser reserve
-            the right box before it decodes, so the header never shifts.
-            Both are WebP with transparency at 3x their slot: the horizontal
-            lockup 661x138 (~34 KB), the stacked mark 244x162 (~18 KB). Keep
-            them lean: an upload through Admin → Branding once put a 1.6 MB
-            1536x1024 PNG here, on every page. */}
-        <picture>
-          {builtIn && <source media="(min-width: 1100px)" srcSet={HEADER_MARK_STACKED} width="244" height="162" />}
-          <img src={branding.logoUrl} alt={`${branding.siteName} — ${branding.tagline}`} className={`logo__img${builtIn ? ' logo__img--duo' : ''}`}
-            width="661" height="138" decoding="async" fetchpriority="high"
-            onError={() => setImgOk(false)} />
-        </picture>
+        {/* Intrinsic size of the official artwork, so the browser reserves the
+            box before it decodes and the header never shifts. WebP with
+            transparency at ~3x its slot: 494x156, ~25 KB. Keep it lean: an
+            upload through Admin → Branding once put a 1.6 MB 1536x1024 PNG
+            here, on every page. */}
+        <img src={branding.logoUrl} alt={`${branding.siteName} — ${branding.tagline}`} className="logo__img"
+          width="494" height="156" decoding="async" fetchpriority="high"
+          onError={() => setImgOk(false)} />
       </Link>
     );
   }

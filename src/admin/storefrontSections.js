@@ -30,11 +30,11 @@ export const SECTION_PAGES = Object.freeze({
       { path: 'promo', defaults: FESTIVE_SECTION },
       { path: 'newArrivals', defaults: NEW_ARRIVALS_SECTION },
       { path: 'biosash', defaults: BIOSASH_SECTION },
+      { path: 'bedsheets', defaults: BEDSHEETS_SECTION },
       { path: 'lifestyleBanner', defaults: LIFESTYLE_SECTION },
       { path: 'jewelleryBanner', defaults: JEWELLERY_BANNER_SECTION },
       { path: 'storeCarousel', defaults: STORE_CAROUSEL_SECTION },
       { path: 'luxuryBeds', defaults: LUXURY_BEDS_SECTION },
-      { path: 'bedsheets', defaults: BEDSHEETS_SECTION },
     ] },
   ],
   fashion: [
