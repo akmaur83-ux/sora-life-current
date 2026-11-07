@@ -162,7 +162,7 @@
    stacked mark, 54px tall in the 74px bar — about the old logo's footprint. */
 @media (min-width: 768px) { .v2-hdr__brand .logo__img { max-width: 200px; } }
 @media (min-width: 1024px) { .v2-hdr__brand .logo__img { max-width: 240px; } }
-@media (min-width: 1100px) { .v2-hdr__brand .logo__img--duo { height: 54px; } }
+@media (min-width: 1100px) { .v2-hdr__brand .logo__img.logo__img--duo { height: 54px; } }
 .logo--img picture { display: contents; }
 .ftr__logo { display: inline-block; }
 .ftr__logo img { display: block; width: 168px; height: auto; }

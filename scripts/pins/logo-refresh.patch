@@ -135,7 +135,7 @@ index 96d0158..b1d9b5e 100644
  
        <div className="psp__profile">
 diff --git a/src/styles/layout.css b/src/styles/layout.css
-index b794d74..ca40e20 100644
+index b794d74..17aa593 100644
 --- a/src/styles/layout.css
 +++ b/src/styles/layout.css
 @@ -155,6 +155,17 @@
@@ -149,7 +149,7 @@ index b794d74..ca40e20 100644
 +   stacked mark, 54px tall in the 74px bar — about the old logo's footprint. */
 +@media (min-width: 768px) { .v2-hdr__brand .logo__img { max-width: 200px; } }
 +@media (min-width: 1024px) { .v2-hdr__brand .logo__img { max-width: 240px; } }
-+@media (min-width: 1100px) { .v2-hdr__brand .logo__img--duo { height: 54px; } }
++@media (min-width: 1100px) { .v2-hdr__brand .logo__img.logo__img--duo { height: 54px; } }
 +.logo--img picture { display: contents; }
 +.ftr__logo { display: inline-block; }
 +.ftr__logo img { display: block; width: 168px; height: auto; }
