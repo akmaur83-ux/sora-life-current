@@ -44,12 +44,13 @@ export default function Logo({ compact = false, light = false, tagline = true })
       <Link to="/" className={`logo logo--img ${compact ? 'logo--compact' : ''}`} aria-label={`${branding.siteName} — ${branding.tagline}`}>
         {/* Intrinsic size of the official artwork — lets the browser reserve
             the right box before it decodes, so the header never shifts.
-            The asset is 420x138. The mark never renders taller than 46px, so
-            420 wide still covers a 3x device pixel ratio; it previously
-            shipped at 1153x378 / 167 KB, which was ~155 KB of header art no
-            screen could resolve, downloaded on every page. */}
+            The asset is the horizontal lockup (two leaves, then the SORA
+            LIFESTYLE wordmark), 661x138 WebP, ~34 KB with transparency. The
+            mark never renders taller than 46px, so 138 tall covers a 3x
+            device pixel ratio. Keep it lean: an upload through Admin →
+            Branding once put a 1.6 MB 1536x1024 PNG here, on every page. */}
         <img src={branding.logoUrl} alt={`${branding.siteName} — ${branding.tagline}`} className="logo__img"
-          width="420" height="138" decoding="async" fetchpriority="high"
+          width="661" height="138" decoding="async" fetchpriority="high"
           onError={() => setImgOk(false)} />
       </Link>
     );

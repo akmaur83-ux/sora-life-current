@@ -754,7 +754,7 @@
   max-width: 860px;
 }
 .inv__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-6); flex-wrap: wrap; padding-bottom: var(--sp-6); border-bottom: 1px solid var(--line-soft); }
-.inv__logo { height: 46px; width: auto; display: block; }
+.inv__logo { height: 72px; width: auto; display: block; }
 .inv__brand-sub { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--color-text-muted); margin-top: 6px; }
 .inv__ident { text-align: right; }
 .inv__title { font-size: var(--text-2xl); margin-bottom: 8px; }

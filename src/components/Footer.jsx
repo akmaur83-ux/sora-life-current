@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
-import Logo from './Logo.jsx';
 import { categories } from '../data/categories.js';
 import { branding } from '../lib/settings.js';
 import { hasContactChannel, socialLinks, telHref } from '../lib/company.js';
@@ -31,7 +30,10 @@ export default function Footer() {
       <div className="container">
         <div className="ftr__top">
           <div className="ftr__brand">
-            <Logo light />
+            {/* The sea-buckthorn mark, stacked, its lettering in cream for the dark footer. */}
+            <Link to="/" className="ftr__logo" aria-label={`${branding.siteName} home`}>
+              <img src="/assets/sora-lifestyle-footer.webp" alt="" width="540" height="424" loading="lazy" decoding="async" />
+            </Link>
             <p>A marketplace for wellness, personal care and everyday essentials.</p>
             {hasContactChannel(info) && (
               <section className="ftr__care" id="consumer-care" aria-labelledby="ftr-care-h">

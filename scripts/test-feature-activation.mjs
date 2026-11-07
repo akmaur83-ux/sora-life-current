@@ -389,7 +389,7 @@ await test('remaining footer links all point at real in-app routes', () => {
   const targets = [...code(footer).matchAll(/to=[`"]([^`"{]+)[`"]/g)].map((m) => m[1]);
   const known = [
     '/shop', '/account', '/account/orders', '/wishlist', '/account/creator',
-    '/about', '/contact', '/privacy', '/terms', '/shipping', '/returns', '/admin/login',
+    '/', '/about', '/contact', '/grievance', '/privacy', '/terms', '/shipping', '/returns', '/admin/login',
   ];
   for (const t of targets) {
     const ok = known.includes(t) || t.startsWith('/category/');

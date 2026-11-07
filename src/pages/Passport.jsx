@@ -196,7 +196,7 @@ export default function Passport() {
 
             {/* Official SORA LIFE brand lockup (real asset), foil-lit. */}
             <div className="psp__brandlock" role="img" aria-label="SORA LIFESTYLE — Health and Wellness">
-              <img src="/assets/sora-life-logo.png" alt="" />
+              <img src="/assets/sora-lifestyle-invoice.webp" alt="" />
             </div>
 
             <div className="psp__head-right">
@@ -305,7 +305,7 @@ function Sidebar({ open, onClose, member }) {
   return (
     <aside className={`psp__side ${open ? 'open' : ''}`} aria-label="Primary">
       <div className="psp__side-brand">
-        <img className="psp__side-logo" src="/assets/sora-life-logo.png" alt="SORA LIFESTYLE — Health and Wellness" />
+        <img className="psp__side-logo" src="/assets/sora-lifestyle-invoice.webp" alt="SORA LIFESTYLE — Health and Wellness" />
       </div>
 
       <div className="psp__profile">

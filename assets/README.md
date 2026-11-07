@@ -1,18 +1,17 @@
-# Sora Life brand assets
+# SORA LIFESTYLE brand assets
 
-## Official header logo
+Three marks, each with a job. All are transparent; none sits on a white box.
 
-Save the uploaded logo file here, named exactly:
+| File | Mark | Where | Notes |
+|---|---|---|---|
+| `sora-lifestyle-header.webp` | Two leaves + wordmark, horizontal | Header, every store | 661x138, ~34 KB. The built-in default for `branding.logoUrl` (`src/lib/settings.js`); an upload in Admin → Branding overrides it. Keep any replacement horizontal and small — the slot is 46px tall on desktop and 132px wide on a phone. |
+| `sora-lifestyle-footer.webp` | Sea-buckthorn branch, stacked, cream lettering | Footer (`src/components/Footer.jsx`) | For the dark footer only — the lettering is cream. |
+| `sora-lifestyle-invoice.webp` | Himalayan sun and mountains, stacked | Invoice and Purchase Passport | Dark lettering, for light paper. 4x its on-page size so it prints crisp. |
+| `favicon-32.png`, `favicon-192.png` | The two leaves on a cream tile | Browser tab (`index.html`) | The tile keeps the dark-green leaf visible on dark tab strips. |
+| `apple-touch-icon.png` | Same, opaque | iOS home screen | iOS fills transparency with black, so this one is opaque. |
 
-    assets/sora-life-logo.png
+`sora-life-logo.png` is the previous sparrow mark, kept so old links to it still resolve.
 
-- The header (`src/components/Logo.jsx`) loads it from `/assets/sora-life-logo.png`.
-- Until the file exists, the header falls back to the built-in SVG sparrow wordmark.
-- **Use a transparent-background PNG** (or SVG). The uploaded artwork sits on a
-  solid black background; on the light ivory navbar a transparent export looks
-  correct, whereas the black-background version would render as a dark box.
-- Any width works — it is sized by CSS to 48px tall on desktop / 34px on mobile
-  (aspect ratio preserved, so the navbar height does not change).
-
-To use a different filename or an SVG, update `LOGO_SRC` at the top of
-`src/components/Logo.jsx`.
+Files under `/assets/` are cached by browsers for 7 days (`vercel.json`). To change a
+mark, add it under a **new filename** and point the code at it; overwriting a file in
+place leaves returning visitors on the old one for up to a week.

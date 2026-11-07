@@ -130,7 +130,7 @@ export default function Invoice() {
       <article className="container inv">
         <header className="inv__head">
           <div className="inv__brand">
-            <img src="/assets/sora-life-logo.png" alt="SORA LIFESTYLE — Health and Wellness" className="inv__logo" width="1153" height="380" />
+            <img src="/assets/sora-lifestyle-invoice.webp" alt="SORA LIFESTYLE — Health and Wellness" className="inv__logo" width="464" height="288" />
             <p className="inv__brand-sub">Health &amp; Wellness</p>
           </div>
           <div className="inv__ident">
