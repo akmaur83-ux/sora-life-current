@@ -845,6 +845,26 @@ h3 { font-size: var(--text-xl); }
 /* ---------- Footer ---------- */
 .ftr { background: var(--st-footer-bg, var(--forest-800)); color: var(--st-footer-text, rgba(251,248,241,0.72)); margin-top: var(--sp-8); }
 .ftr__top { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: var(--sp-10); padding-block: var(--sp-16) var(--sp-12); }
+/* The header mark is the bird lockup (494x156, ~3.2:1; Logo.jsx). Up to 1099px the store
+   links are hidden and it takes the bar's own heights (46px from 1024 is ~146px wide);
+   phones keep their 132px cap. From 1100px the links share the bar, which stops at 1240px,
+   and the links' column outgrows its share, pressing on the mark: 18px of padding keeps
+   it clear, 38px tall up to 1279px, 40px from 1280px. From 1400px the bar opens to 1320px
+   and the mark is back to 46px with room either side. (Selectors one step more specific
+   than v2-header.css's, which loads after this file.) */
+@media (min-width: 768px) { .v2-hdr__brand .logo__img { max-width: 200px; } }
+@media (min-width: 1024px) { .v2-hdr__brand .logo__img { max-width: 240px; } }
+@media (min-width: 1100px) {
+  .v2-hdr__bar .v2-hdr__brand { padding-inline: 18px; }
+  .v2-hdr__brand .logo--img .logo__img { height: 38px; }
+}
+@media (min-width: 1280px) { .v2-hdr__brand .logo--img .logo__img { height: 40px; } }
+@media (min-width: 1400px) {
+  .v2-hdr .v2-hdr__bar { max-width: 1320px; }
+  .v2-hdr__brand .logo--img .logo__img { height: 46px; }
+}
+.ftr__logo { display: inline-block; }
+.ftr__logo img { display: block; width: 168px; height: auto; }
 .ftr__brand p { margin: var(--sp-4) 0; max-width: 34ch; font-size: var(--text-sm); line-height: 1.7; }
 .ftr__social { display: flex; gap: 6px; }
 .ftr__social .iconbtn { color: var(--forest-50); background: rgba(251,248,241,0.08); }
@@ -1675,7 +1695,7 @@ h3 { font-size: var(--text-xl); }
   max-width: 860px;
 }
 .inv__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-6); flex-wrap: wrap; padding-bottom: var(--sp-6); border-bottom: 1px solid var(--line-soft); }
-.inv__logo { height: 46px; width: auto; display: block; }
+.inv__logo { height: 72px; width: auto; display: block; }
 .inv__brand-sub { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--color-text-muted); margin-top: 6px; }
 .inv__ident { text-align: right; }
 .inv__title { font-size: var(--text-2xl); margin-bottom: 8px; }
