@@ -155,10 +155,15 @@
 /* ---------- Footer ---------- */
 .ftr { background: var(--st-footer-bg, var(--forest-800)); color: var(--st-footer-text, rgba(251,248,241,0.72)); margin-top: var(--sp-8); }
 .ftr__top { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: var(--sp-10); padding-block: var(--sp-16) var(--sp-12); }
-/* The header mark is a horizontal lockup (661x138): at 46px tall it is ~220px wide,
-   past the 175px cap that suited the old 3:1 mark. Phones keep their 132px cap. */
+/* Below 1100px the header mark is the horizontal lockup (661x138): at 46px tall it is
+   ~220px wide, past the 175px cap that suited the old 3:1 mark, and the store links are
+   hidden there, so it has the room. Phones keep their 132px cap.
+   From 1100px the links are shown and the centre column holds ~80px (Logo.jsx): the
+   stacked mark, 54px tall in the 74px bar — about the old logo's footprint. */
 @media (min-width: 768px) { .v2-hdr__brand .logo__img { max-width: 200px; } }
 @media (min-width: 1024px) { .v2-hdr__brand .logo__img { max-width: 240px; } }
+@media (min-width: 1100px) { .v2-hdr__brand .logo__img--duo { height: 54px; } }
+.logo--img picture { display: contents; }
 .ftr__logo { display: inline-block; }
 .ftr__logo img { display: block; width: 168px; height: auto; }
 .ftr__brand p { margin: var(--sp-4) 0; max-width: 34ch; font-size: var(--text-sm); line-height: 1.7; }

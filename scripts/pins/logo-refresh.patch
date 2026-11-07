@@ -37,28 +37,55 @@ index 8f3942e..c1fcb5d 100644
              {hasContactChannel(info) && (
                <section className="ftr__care" id="consumer-care" aria-labelledby="ftr-care-h">
 diff --git a/src/components/Logo.jsx b/src/components/Logo.jsx
-index d712beb..2f3e3fe 100644
+index d712beb..82a584c 100644
 --- a/src/components/Logo.jsx
 +++ b/src/components/Logo.jsx
-@@ -44,12 +44,13 @@ export default function Logo({ compact = false, light = false, tagline = true })
+@@ -33,6 +33,10 @@ export function SparrowMark({ size = 26, light = false, foil = false }) {
+   );
+ }
+ 
++/** The built-in header marks (assets/README.md). */
++export const HEADER_MARK = '/assets/sora-lifestyle-header.webp';
++export const HEADER_MARK_STACKED = '/assets/sora-lifestyle-header-stacked.webp';
++
+ export default function Logo({ compact = false, light = false, tagline = true }) {
+   const [imgOk, setImgOk] = useState(true);
+   const fg = light ? '#FBF8F1' : 'var(--forest-700)';
+@@ -40,17 +44,26 @@ export default function Logo({ compact = false, light = false, tagline = true })
+ 
+   // Use the official raster logo in the header (non-light contexts).
+   if (!light && imgOk && branding.logoUrl) {
++    // The built-in mark comes in two shapes. From 1100px the header also carries
++    // the store links, and the bar never grows past ~1190px, so the centre column
++    // has room for ~80px of logo: there it is the stacked mark (leaves above the
++    // wordmark, 244x162). Narrower, the links are gone and the wide horizontal
++    // lockup reads larger. A logo uploaded in Admin → Branding is used as given.
++    const builtIn = branding.logoUrl === HEADER_MARK;
+     return (
        <Link to="/" className={`logo logo--img ${compact ? 'logo--compact' : ''}`} aria-label={`${branding.siteName} — ${branding.tagline}`}>
-         {/* Intrinsic size of the official artwork — lets the browser reserve
+-        {/* Intrinsic size of the official artwork — lets the browser reserve
++        {/* Intrinsic sizes of the official artwork — let the browser reserve
              the right box before it decodes, so the header never shifts.
 -            The asset is 420x138. The mark never renders taller than 46px, so
 -            420 wide still covers a 3x device pixel ratio; it previously
 -            shipped at 1153x378 / 167 KB, which was ~155 KB of header art no
 -            screen could resolve, downloaded on every page. */}
-+            The asset is the horizontal lockup (two leaves, then the SORA
-+            LIFESTYLE wordmark), 661x138 WebP, ~34 KB with transparency. The
-+            mark never renders taller than 46px, so 138 tall covers a 3x
-+            device pixel ratio. Keep it lean: an upload through Admin →
-+            Branding once put a 1.6 MB 1536x1024 PNG here, on every page. */}
-         <img src={branding.logoUrl} alt={`${branding.siteName} — ${branding.tagline}`} className="logo__img"
+-        <img src={branding.logoUrl} alt={`${branding.siteName} — ${branding.tagline}`} className="logo__img"
 -          width="420" height="138" decoding="async" fetchpriority="high"
-+          width="661" height="138" decoding="async" fetchpriority="high"
-           onError={() => setImgOk(false)} />
+-          onError={() => setImgOk(false)} />
++            Both are WebP with transparency at 3x their slot: the horizontal
++            lockup 661x138 (~34 KB), the stacked mark 244x162 (~18 KB). Keep
++            them lean: an upload through Admin → Branding once put a 1.6 MB
++            1536x1024 PNG here, on every page. */}
++        <picture>
++          {builtIn && <source media="(min-width: 1100px)" srcSet={HEADER_MARK_STACKED} width="244" height="162" />}
++          <img src={branding.logoUrl} alt={`${branding.siteName} — ${branding.tagline}`} className={`logo__img${builtIn ? ' logo__img--duo' : ''}`}
++            width="661" height="138" decoding="async" fetchpriority="high"
++            onError={() => setImgOk(false)} />
++        </picture>
        </Link>
      );
+   }
 diff --git a/src/lib/settings.js b/src/lib/settings.js
 index adb6b83..cf1ffd5 100644
 --- a/src/lib/settings.js
@@ -108,17 +135,22 @@ index 96d0158..b1d9b5e 100644
  
        <div className="psp__profile">
 diff --git a/src/styles/layout.css b/src/styles/layout.css
-index b794d74..a34a19d 100644
+index b794d74..ca40e20 100644
 --- a/src/styles/layout.css
 +++ b/src/styles/layout.css
-@@ -155,6 +155,12 @@
+@@ -155,6 +155,17 @@
  /* ---------- Footer ---------- */
  .ftr { background: var(--st-footer-bg, var(--forest-800)); color: var(--st-footer-text, rgba(251,248,241,0.72)); margin-top: var(--sp-8); }
  .ftr__top { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: var(--sp-10); padding-block: var(--sp-16) var(--sp-12); }
-+/* The header mark is a horizontal lockup (661x138): at 46px tall it is ~220px wide,
-+   past the 175px cap that suited the old 3:1 mark. Phones keep their 132px cap. */
++/* Below 1100px the header mark is the horizontal lockup (661x138): at 46px tall it is
++   ~220px wide, past the 175px cap that suited the old 3:1 mark, and the store links are
++   hidden there, so it has the room. Phones keep their 132px cap.
++   From 1100px the links are shown and the centre column holds ~80px (Logo.jsx): the
++   stacked mark, 54px tall in the 74px bar — about the old logo's footprint. */
 +@media (min-width: 768px) { .v2-hdr__brand .logo__img { max-width: 200px; } }
 +@media (min-width: 1024px) { .v2-hdr__brand .logo__img { max-width: 240px; } }
++@media (min-width: 1100px) { .v2-hdr__brand .logo__img--duo { height: 54px; } }
++.logo--img picture { display: contents; }
 +.ftr__logo { display: inline-block; }
 +.ftr__logo img { display: block; width: 168px; height: auto; }
  .ftr__brand p { margin: var(--sp-4) 0; max-width: 34ch; font-size: var(--text-sm); line-height: 1.7; }

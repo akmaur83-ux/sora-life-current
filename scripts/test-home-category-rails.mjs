@@ -244,12 +244,15 @@ await test('C7 arrows step one card and stop at the ends', async () => {
 });
 
 await test('C8 it advances on its own, pauses on hover and on focus, and never moves under prefers-reduced-motion', async () => {
+  // Waits are generous and polled: the full suite runs eight files at once, and a 70ms
+  // window was too tight under that load (it advanced, but after the check).
   const live = await openRail({ items: FIVE, autoplayMs: 25 });
-  await live.tick(70);
+  for (let waited = 0; live.index() === 0 && waited < 2000; waited += 50) await live.tick(50);
   assert.ok(live.index() > 0, 'it advanced');
   live.wrap().props.onMouseEnter(); await live.handle.settle();
+  await live.tick(60);                       // any tick already in flight lands first
   const held = live.index();
-  await live.tick(70);
+  await live.tick(200);
   assert.equal(live.index(), held, 'hover holds it');
   live.wrap().props.onMouseLeave(); await live.handle.settle();
   const still = await openRail({ items: FIVE, autoplayMs: 25, reduced: true });
