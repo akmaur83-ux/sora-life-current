@@ -331,7 +331,10 @@ await test('Home.jsx: the five sections lead the page in the mockup\'s order, th
   const mount = '      <LifestyleBanner />\n\n      {/* The doorway to the jewellery page, directly under the fashion category strip. */}\n      <JewelleryBanner />\n';
   assert.equal(home.split(mount).length - 1, 1, 'the jewellery banner is mounted once, directly after LifestyleBanner');
   const tail = (s) => s.slice(s.indexOf('      <LifestyleBanner />'));
-  assert.equal(tail(home).replace(mount, '      <LifestyleBanner />\n'), tail(atCommit(BASELINE_SHA, 'src/pages/Home.jsx')), 'otherwise, from LifestyleBanner down, byte-identical');
+  // The owner moved the two bedroom rails to the foot of the page on 2026-11-07, above the
+  // newsletter (test-home-category-rails.mjs owns them); that block is all that may differ.
+  const bedroom = /      \{\/\* Home & Living's two bedroom categories[\s\S]*?<Bedsheets \/>\n\n/;
+  assert.equal(tail(home).replace(mount, '      <LifestyleBanner />\n').replace(bedroom, ''), tail(atCommit(BASELINE_SHA, 'src/pages/Home.jsx')), 'otherwise, from LifestyleBanner down, byte-identical');
 });
 
 await test('the jewellery banner: one link to /fashion/jewellery — "SORA LIFE Jewellery" / "Jewellery that tells your story" / "Rings, necklaces, earrings and bracelets, made to be worn every day." / "Explore Jewellery" — over the owner\'s photograph, the 4:5 portrait on a phone; square-edged, near-black on the ivory', () => {

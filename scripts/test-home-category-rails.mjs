@@ -25,6 +25,8 @@
 //   node scripts/test-home-category-rails.mjs
 // ============================================================
 import assert from 'node:assert/strict';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
 import { ROOT, read, has, loadModule, mount, h, findAll, hooks } from './catalogue-admin-harness.mjs';
 
 let passed = 0, failed = 0;
@@ -287,13 +289,14 @@ await test('C10 cards outside the window are untabbable and hidden from assistiv
 
 console.log('\n— Where they live —');
 
-await test('P1 Home.jsx mounts beds and then bedsheets, under the offers and above the Lifestyle banner', () => {
+await test('P1 Home.jsx mounts beds and then bedsheets near the foot of the page (owner, 2026-11-07): after "Why Sora Life", just above the newsletter', () => {
   const home = read('src/pages/Home.jsx');
   assert.match(home, /import \{ LuxuryBeds, Bedsheets \} from '\.\.\/components\/HomeCategoryRails\.jsx';/);
   const at = (s) => home.indexOf(s);
   assert.ok(at('<LuxuryBeds />') > 0 && at('<Bedsheets />') > at('<LuxuryBeds />'), 'beds first, bedsheets under them');
-  assert.ok(at('<HomeOffers') < at('<LuxuryBeds />'), 'under the offers');
-  assert.ok(at('<Bedsheets />') < at('<LifestyleBanner />'), 'above the Lifestyle banner');
+  assert.ok(at('<WhySoraLife />') < at('<LuxuryBeds />'), 'below "Why Sora Life"');
+  assert.ok(at('<Bedsheets />') < at('<Newsletter />'), 'above the newsletter');
+  assert.equal(home.split('<LuxuryBeds />').length - 1, 1, 'mounted once');
 });
 
 await test('P2 both sections are in Storefronts → Wellness, with the schema their fields need', () => {
@@ -310,6 +313,90 @@ await test('P2 both sections are in Storefronts → Wellness, with the schema th
 await test('P3 New Arrivals is left exactly as it was: this feature does not edit it', () => {
   const arrivals = read('src/components/NewArrivals.jsx');
   assert.ok(!/HomeCategoryRails|LuxuryBeds|Bedsheets|homeCategoryRail/.test(arrivals), 'NewArrivals.jsx is untouched by this feature');
+});
+
+console.log('\n— The Biosash range (owner, 2026-11-07: in the place the beds held) —');
+
+const { selectBiosashRange, BIOSASH_SECTION, BIOSASH_RANGE_LIMIT } = await import(`${pathToFileURL(resolve(ROOT, 'src/lib/biosashRange.js')).href}`);
+const wp = (id, name, extra = {}) => ({ id, slug: `p-${id}`, name, brand: 'Biosash', stock: 10, priceVerified: true, price: 300 + id, image: `/img/${id}.png`, ...extra });
+
+await test('S1 Biosash products only — by brand, or by a biosash.com source page — in stock, priced, in the catalogue\'s order; drawn whole on white', () => {
+  const cards = selectBiosashRange([
+    wp(1, 'Sea Buckthorn Juice'),
+    wp(2, 'Hair Mask', { brand: 'Mom Trust' }),
+    wp(3, 'Seabuck Capsules', { brand: '', permalink: 'https://www.biosash.com/product/caps' }),
+    wp(4, 'Out of stock', { stock: 0 }),
+    wp(5, 'Unpriced', { priceVerified: false }),
+    wp(6, 'No page', { slug: '' }),
+    wp(7, 'Lower-case brand', { brand: 'biosash' }),
+  ]);
+  assert.deepEqual(cards.map((c) => [c.name, c.href, c.price, c.whole]), [
+    ['Sea Buckthorn Juice', '/product/p-1', 301, true],
+    ['Seabuck Capsules', '/product/p-3', 303, true],
+    ['Lower-case brand', '/product/p-7', 307, true],
+  ]);
+});
+
+await test('S2 twelve at most; nothing in, nothing out', () => {
+  assert.equal(BIOSASH_RANGE_LIMIT, 12);
+  assert.equal(selectBiosashRange(Array.from({ length: 30 }, (_, i) => wp(i + 1, `P${i}`))).length, 12);
+  for (const list of [[], null, undefined]) assert.deepEqual(selectBiosashRange(list), []);
+});
+
+/** BiosashRange over given cards, the real SlidingRail under it. */
+async function openBiosash({ items, content = null } = {}) {
+  const asked = [];
+  const rails = loadModule('src/components/HomeCategoryRails.jsx', {
+    Link: LINK, Icon: ({ name }) => h('i', { 'data-icon': name }), DeferredImage: (p) => h('img', p),
+    useStorefrontSection: () => ({}), useCategoryRail: () => null, categoryListing: () => '/',
+    money: (n) => `₹${n}`,
+    window: { matchMedia: () => ({ matches: true, addEventListener() {}, removeEventListener() {} }), getComputedStyle: () => ({ getPropertyValue: () => '2' }), addEventListener() {}, removeEventListener() {} },
+    useRef: (init) => hooks.useRef(init === null ? { stand_in: 'track' } : init),
+  });
+  const mod = loadModule('src/components/BiosashRange.jsx', {
+    SlidingRail: rails.SlidingRail, BIOSASH_SECTION, selectBiosashRange, products: [],
+    useStorefrontSection: (store, path, defaults) => { asked.push([store, path]); return { ...defaults, ...(content || {}) }; },
+  });
+  const handle = await mount(h(mod.BiosashRange, { items, autoplayMs: 100000 }));
+  return { handle, asked };
+}
+const BIO = [1, 2, 3, 4].map((i) => ({ key: `wellness-${i}`, name: `Biosash ${i}`, href: `/product/p-${i}`, price: 100 * i, image: `/img/${i}.png`, whole: true }));
+
+await test('S3 it reads its own Storefronts section; hidden, or nothing to show, and there is no section', async () => {
+  const { asked } = await openBiosash({ items: BIO });
+  assert.deepEqual([...new Set(asked.map((a) => a.join('/')))], ['wellness/biosash']);
+  assert.equal((await openBiosash({ items: [] })).handle.tree, null);
+  assert.equal((await openBiosash({ items: BIO, content: { hidden: true } })).handle.tree, null);
+});
+
+await test('S4 the New Arrivals row: its classes, the heading "The Biosash Range", View All to the shop (a set link wins), packshots drawn whole', async () => {
+  const { handle } = await openBiosash({ items: BIO });
+  assert.equal(handle.tree.props.className, 'hx hx-new');
+  const heading = findAll(handle.tree, (n) => n.type === 'h2')[0];
+  assert.deepEqual([heading.props.id, heading.props.children], ['hx-biosash-h', 'The Biosash Range']);
+  assert.equal(findAll(handle.tree, (n) => n.props?.className === 'hx-more')[0].props.href, '/shop');
+  assert.equal(findAll(handle.tree, (n) => n.props?.className === 'hx-new__art hx-new__art--whole').length, 4);
+  assert.equal(findAll(handle.tree, (n) => n.props?.className === 'hx-new__card')[0].props.href, '/product/p-1');
+  const set = await openBiosash({ items: BIO, content: { link: '/category/wellness' } });
+  assert.equal(findAll(set.handle.tree, (n) => n.props?.className === 'hx-more')[0].props.href, '/category/wellness');
+});
+
+await test('S5 Home.jsx: the Biosash range sits where the beds were — straight after New Arrivals, above the Lifestyle banner, once', () => {
+  const home = read('src/pages/Home.jsx');
+  assert.match(home, /import \{ BiosashRange \} from '\.\.\/components\/BiosashRange\.jsx';/);
+  const at = (s) => home.indexOf(s);
+  assert.ok(at('<NewArrivals />') < at('<BiosashRange />') && at('<BiosashRange />') < at('<LifestyleBanner />'));
+  assert.equal(home.split('<BiosashRange />').length - 1, 1);
+});
+
+await test('S6 Storefronts → Wellness lists it after New Arrivals, the beds and bedsheets last, as on the page; the schema has its fields', () => {
+  const pages = read('src/admin/storefrontSections.js');
+  const order = [...pages.matchAll(/\{ path: '([A-Za-z]+)', defaults: [A-Z_]+ \}/g)].map((m) => m[1]);
+  const wellness = order.slice(0, order.indexOf('bedsheets') + 1);
+  assert.deepEqual(wellness.slice(wellness.indexOf('newArrivals')), ['newArrivals', 'biosash', 'lifestyleBanner', 'jewelleryBanner', 'storeCarousel', 'luxuryBeds', 'bedsheets']);
+  const schema = read('src/lib/storefrontContent.js');
+  const block = schema.slice(schema.indexOf('biosash: group('), schema.indexOf('biosash: group(') + 260);
+  for (const field of ['hidden:', 'title:', 'more:', 'link:']) assert.ok(block.includes(field), `biosash has ${field}`);
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

@@ -8,6 +8,7 @@ import HomeLeaderboard from '../components/HomeLeaderboard.jsx';
 import { LifestyleBanner, StoreCarousel } from '../components/FashionBanner.jsx';
 import { NewArrivals } from '../components/NewArrivals.jsx';
 import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
+import { BiosashRange } from '../components/BiosashRange.jsx';
 import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
@@ -70,12 +71,10 @@ export default function Home() {
           nothing is flagged, or when it is hidden in Storefronts → Wellness. */}
       <NewArrivals />
 
-      {/* Home & Living's two bedroom categories, each a sliding row of its live
-          products in the catalogue's own order (HomeCategoryRails.jsx). Beds
-          first, bedsheets directly under them. Either renders nothing when its
-          category is empty, or when it is hidden in Storefronts → Wellness. */}
-      <LuxuryBeds />
-      <Bedsheets />
+      {/* Biosash's own products, a sliding row like the one above (BiosashRange.jsx).
+          Renders nothing when there are none in stock, or when it is hidden in
+          Storefronts → Wellness. */}
+      <BiosashRange />
 
       {/* The doorway to the lifestyle store — one banner, no data dependency. */}
       <LifestyleBanner />
@@ -149,6 +148,14 @@ export default function Home() {
       <CreatorCommunity />
 
       <WhySoraLife />
+
+      {/* Home & Living's two bedroom categories, each a sliding row of its live
+          products in the catalogue's own order (HomeCategoryRails.jsx). Beds
+          first, bedsheets directly under them, near the foot of the page.
+          Either renders nothing when its category is empty, or when it is
+          hidden in Storefronts → Wellness. */}
+      <LuxuryBeds />
+      <Bedsheets />
 
       {/* 11 · Newsletter + Footer + tab bar are existing components, unchanged
              in Phase 1 */}

@@ -63,6 +63,19 @@ export function CategoryRail({ id, store, slug, sectionKey, defaults, label, ite
   const section = useStorefrontSection('wellness', sectionKey, defaults);
   const loaded = useCategoryRail(store, slug);
   const items = (given ?? loaded) || [];
+  return (
+    <SlidingRail id={id} label={label} section={section} defaults={defaults}
+      link={railLink(section.link, store, slug)} items={items} autoplayMs={autoplayMs} />
+  );
+}
+
+/**
+ * The sliding row itself, for any list of cards { key, name, href, price, image, whole? }:
+ * the category rails above and the Biosash range (BiosashRange.jsx) share it. A `whole`
+ * card is a packshot — drawn whole on white, as New Arrivals draws wellness products —
+ * rather than a photograph cropped to the square.
+ */
+export function SlidingRail({ id, label, section, defaults, link, items = [], autoplayMs = CATEGORY_RAIL_AUTOPLAY_MS }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [per, setPer] = useState(1);
@@ -104,7 +117,7 @@ export function CategoryRail({ id, store, slug, sectionKey, defaults, label, ite
         <div className="hx-stores__head">
           <h2 className="hx-stores__h" id={headingId}>{section.title}</h2>
           <div className="hx-new__tools">
-            <Link to={railLink(section.link, store, slug)} className="hx-more" aria-label={section.more === defaults.more ? `View all ${label.toLowerCase()}` : undefined}>{section.more} <Icon name="arrowRight" size={15} /></Link>
+            <Link to={link} className="hx-more" aria-label={section.more === defaults.more ? `View all ${label.toLowerCase()}` : undefined}>{section.more} <Icon name="arrowRight" size={15} /></Link>
             {last > 0 && (
               <div className="hx-new__arrows">
                 <button type="button" aria-label={`Previous ${label.toLowerCase()}`} disabled={index === 0} onClick={() => step(-1)}><Icon name="chevronLeft" size={18} /></button>
@@ -122,7 +135,7 @@ export function CategoryRail({ id, store, slug, sectionKey, defaults, label, ite
               return (
                 <li key={p.key} className="hx-new__item" aria-hidden={!inView}>
                   <Link to={p.href} className="hx-new__card" tabIndex={inView ? undefined : -1}>
-                    <span className="hx-new__art">
+                    <span className={`hx-new__art${p.whole ? ' hx-new__art--whole' : ''}`}>
                       {p.image && <DeferredImage src={p.image} alt="" width={600} height={600} className="hx-new__image" />}
                     </span>
                     <span className="hx-new__name">{p.name}</span>

@@ -112,14 +112,10 @@ const WELLNESS = {
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
     link: link('View-all link (empty: the store of the newest arrival)'),
   }, 'New arrivals (the products flagged new; hidden while none are)'),
-  luxuryBeds: group({
+  biosash: group({
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
-    link: link('View-all link (empty: the Beds listing)'),
-  }, 'Luxury beds (Home & Living › Beds; hidden while it is empty)'),
-  bedsheets: group({
-    hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
-    link: link('View-all link (empty: the Bedsheets listing)'),
-  }, 'Bedsheets (Home & Living › Bedsheets; hidden while it is empty)'),
+    link: link('View-all link (empty: the shop)'),
+  }, 'The Biosash range (Biosash products in stock; hidden while there are none)'),
   lifestyleBanner: banner('Lifestyle banner', { position: position() }),
   jewelleryBanner: banner('Jewellery banner', { position: position() }),
   storeCarousel: group({
@@ -130,6 +126,15 @@ const WELLNESS = {
       details: lines(3, 40, 'Three short features'),
     }, 'Store cards', 'Card'),
   }, 'Store carousel'),
+  // Near the foot of the page since 2026-11-07, just above the newsletter.
+  luxuryBeds: group({
+    hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
+    link: link('View-all link (empty: the Beds listing)'),
+  }, 'Luxury beds (Home & Living › Beds; hidden while it is empty)'),
+  bedsheets: group({
+    hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
+    link: link('View-all link (empty: the Bedsheets listing)'),
+  }, 'Bedsheets (Home & Living › Bedsheets; hidden while it is empty)'),
 };
 
 const FASHION_STRIPS = group({
