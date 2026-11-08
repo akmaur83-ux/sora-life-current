@@ -3225,6 +3225,12 @@ const WELLNESS = {
     more: text$1(30, 'View-all label'),
     link: link('View-all link (empty: the shop)')
   }, 'The Biosash range (Biosash products in stock; hidden while there are none)'),
+  // The Diwali gift shop on the wellness homepage (2026-11-09).
+  giftShop: group({
+    hidden: hidden(),
+    eyebrow: text$1(40, 'Eyebrow'),
+    title: text$1(60, 'Heading')
+  }, 'Gift shop (gift-ready categories)'),
   // The offer countdown in every product page's buy box (2026-11-08); gone once it ends.
   offerCountdown: group({
     hidden: hidden(),
@@ -42991,6 +42997,124 @@ function OfferBanner({
   });
 }
 
+const GIFT_SECTION = Object.freeze({
+  hidden: false,
+  eyebrow: 'Festive gifting',
+  title: 'The Diwali gift shop'
+});
+const GIFT_TILES = Object.freeze([{
+  store: 'fashion',
+  slug: 'shawl-gift-sets',
+  label: 'Shawl gift boxes',
+  href: '/fashion/c/shawl-gift-sets'
+}, {
+  store: 'fashion',
+  slug: 'leather-gift-sets',
+  label: 'Leather gift sets',
+  href: '/fashion/c/leather-gift-sets'
+}, {
+  store: 'fashion',
+  slug: 'womens-shawls',
+  label: 'For her: shawls',
+  href: '/fashion/c/womens-shawls'
+}, {
+  store: 'fashion',
+  slug: 'mens-wallets',
+  label: 'For him: wallets',
+  href: '/fashion/c/mens-wallets'
+}, {
+  store: 'fashion',
+  slug: 'handbags',
+  label: 'Handbags',
+  href: '/fashion/c/handbags'
+}, {
+  store: 'homeliving',
+  slug: 'bedsheets',
+  label: 'Bedsheets for the home',
+  href: '/homeliving/category/bedsheets'
+}]);
+const thumb$1 = src => src ? String(src).replace(/([?&])width=\d+/, '$1width=600') : null;
+
+/** { slug: picture } for the tiles' categories: the first live product's first picture. */
+async function fetchGiftPictures(client = supabase) {
+  if (!client) return {};
+  const slugs = GIFT_TILES.map(t => t.slug);
+  const {
+    data: cats,
+    error
+  } = await client.from('catalogue_categories').select('id, slug, store').in('slug', slugs).eq('is_active', true);
+  if (error || !Array.isArray(cats) || !cats.length) return {};
+  const ids = cats.map(c => c.id);
+  const {
+    data: rows
+  } = await client.from('catalogue_products').select('category_id, images, sort_order').in('category_id', ids).eq('is_active', true).order('sort_order', {
+    ascending: true
+  }).limit(300);
+  const out = {};
+  for (const c of cats) {
+    const first = (rows || []).find(r => r.category_id === c.id && Array.isArray(r.images) && r.images[0]);
+    if (first && GIFT_TILES.some(t => t.slug === c.slug && t.store === c.store)) out[c.slug] = thumb$1(first.images[0]);
+  }
+  return out;
+}
+function GiftShop() {
+  const s = useStorefrontSection('wellness', 'giftShop', GIFT_SECTION);
+  const [pics, setPics] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchGiftPictures().then(p => {
+      if (live) setPics(p);
+    }, () => {
+      if (live) setPics({});
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const tiles = pics ? GIFT_TILES.filter(t => pics[t.slug]) : [];
+  if (s.hidden || tiles.length < 3) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-gifts",
+    "aria-labelledby": "hx-gifts-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-gifts__eyebrow",
+        children: s.eyebrow
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "hx-gifts__h",
+        id: "hx-gifts-h",
+        children: s.title
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hx-gifts__grid",
+        children: tiles.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: t.href,
+            className: "hx-gifts__tile",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "hx-gifts__img",
+              children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                src: pics[t.slug],
+                alt: "",
+                width: "600",
+                height: "600",
+                loading: "lazy",
+                decoding: "async"
+              })
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "hx-gifts__label",
+              children: [t.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 15
+              })]
+            })]
+          })
+        }, t.slug))
+      })]
+    })
+  });
+}
+
 function PriceTag({
   product,
   showOff = true,
@@ -46901,7 +47025,7 @@ function Home() {
     className: "v2-home",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeHero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
       wrap: "hx-wrap"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(GiftShop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
     }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
@@ -56379,6 +56503,52 @@ function EmptyPanel({
   });
 }
 
+const ORIGIN = 'https://www.soralifestyle.in';
+
+/** The message text; pure, so a test can call it. */
+function wishlistText(items, heading = 'My SORA LIFESTYLE wishlist') {
+  const lines = (items || []).slice(0, 20).map((p, i) => `${i + 1}. ${p.name}${p.price > 0 ? ` — ${money(p.price)}` : ''}\n${ORIGIN}${p.href}`);
+  return `${heading}:\n\n${lines.join('\n\n')}`;
+}
+function ShareList({
+  items,
+  heading
+}) {
+  const [note, setNote] = reactExports.useState('');
+  if (!items || items.length === 0) return null;
+  const text = wishlistText(items, heading);
+  const share = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: heading || 'My wishlist',
+          text
+        });
+        return;
+      }
+    } catch {
+      return;
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    setNote('Opening WhatsApp…');
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+    className: "hx-share",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      type: "button",
+      className: "hx-share__btn",
+      onClick: share,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "chat",
+        size: 16
+      }), " Share my wishlist"]
+    }), note && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      role: "status",
+      children: note
+    })]
+  });
+}
+
 function Wishlist() {
   const {
     wishlist,
@@ -56482,17 +56652,24 @@ function Wishlist() {
           })]
         })]
       })
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "container section-sm",
       style: {
         paddingTop: 'var(--sp-8)'
       },
-      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ShareList, {
+        items: items.map(p => ({
+          name: p.name,
+          price: p.price,
+          href: `/product/${p.slug}`
+        })),
+        heading: "My wishlist on SORA LIFESTYLE"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "pgrid",
         children: items.map(p => /*#__PURE__*/jsxRuntimeExports.jsx(ProductCard, {
           product: p
         }, p.id))
-      })
+      })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductRail, {
       eyebrow: "More to love",
       title: "You might also like",
@@ -65822,28 +65999,46 @@ function RecentSearches({
   terms,
   hrefFor,
   onPick,
-  onClear
+  onClear,
+  popular = []
 }) {
-  if (!terms || terms.length === 0) return null;
+  const hasTerms = terms && terms.length > 0;
+  if (!hasTerms && popular.length === 0) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "hx-suggest hx-suggest--recent",
     id: id,
-    "aria-label": "Recent searches",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "hx-suggest__head",
-      children: ["Recent searches ", /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-        type: "button",
+    "aria-label": hasTerms ? 'Recent searches' : 'Popular categories',
+    children: [hasTerms && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "hx-suggest__head",
+        children: ["Recent searches ", /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          onMouseDown: e => e.preventDefault(),
+          onClick: onClear,
+          children: "Clear"
+        })]
+      }), terms.map(t => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: hrefFor(t),
+        className: "hx-suggest__recent",
         onMouseDown: e => e.preventDefault(),
-        onClick: onClear,
-        children: "Clear"
+        onClick: onPick,
+        children: t
+      }, t))]
+    }), popular.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-suggest__head",
+        children: "Popular categories"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hx-suggest__chips",
+        children: popular.slice(0, 8).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: c.href,
+          className: "hx-suggest__chip",
+          onMouseDown: e => e.preventDefault(),
+          onClick: onPick,
+          children: c.name
+        }, c.href))
       })]
-    }), terms.map(t => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-      to: hrefFor(t),
-      className: "hx-suggest__recent",
-      onMouseDown: e => e.preventDefault(),
-      onClick: onPick,
-      children: t
-    }, t))]
+    })]
   });
 }
 function SearchSuggest({
@@ -66351,9 +66546,13 @@ function FashionHeader({
       }), open && !term && /*#__PURE__*/jsxRuntimeExports.jsx(RecentSearches, {
         id: "fs-recent",
         terms: recent,
+        popular: (tree.roots || []).map(c => ({
+          name: c.name,
+          href: `/fashion/c/${c.slug}`
+        })),
         hrefFor: t => `/fashion/search?q=${encodeURIComponent(t)}`,
         onPick: e => {
-          setQ(e.currentTarget.textContent);
+          if (e.currentTarget.classList.contains('hx-suggest__recent')) setQ(e.currentTarget.textContent);
           setOpen(false);
         },
         onClear: () => {
@@ -69188,48 +69387,43 @@ function FashionJewellery({
   });
 }
 
-const ORIGIN = 'https://www.soralifestyle.in';
-
-/** The message text; pure, so a test can call it. */
-function wishlistText(items, heading = 'My SORA LIFESTYLE wishlist') {
-  const lines = (items || []).slice(0, 20).map((p, i) => `${i + 1}. ${p.name}${p.price > 0 ? ` — ${money(p.price)}` : ''}\n${ORIGIN}${p.href}`);
-  return `${heading}:\n\n${lines.join('\n\n')}`;
-}
-function ShareList({
-  items,
-  heading
-}) {
-  const [note, setNote] = reactExports.useState('');
-  if (!items || items.length === 0) return null;
-  const text = wishlistText(items, heading);
-  const share = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: heading || 'My wishlist',
-          text
-        });
-        return;
-      }
-    } catch {
-      return;
-    }
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
-    setNote('Opening WhatsApp…');
+const PAGE = 24;
+function useShowMore(total, resetKey) {
+  const [shown, setShown] = reactExports.useState(PAGE);
+  reactExports.useEffect(() => {
+    setShown(PAGE);
+  }, [resetKey]);
+  return {
+    shown: Math.min(shown, total),
+    more: () => setShown(n => n + PAGE),
+    left: Math.max(0, total - shown)
   };
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-    className: "hx-share",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+}
+function LoadMore({
+  shown,
+  total,
+  onMore,
+  cls = ''
+}) {
+  if (total <= shown) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `hx-more-wrap ${cls}`.trim(),
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "hx-more-wrap__n",
+      children: ["Showing ", shown, " of ", total]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hx-more-wrap__bar",
+      "aria-hidden": "true",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+        style: {
+          width: `${Math.round(shown / total * 100)}%`
+        }
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
       type: "button",
-      className: "hx-share__btn",
-      onClick: share,
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "chat",
-        size: 16
-      }), " Share my wishlist"]
-    }), note && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      role: "status",
-      children: note
+      className: "hx-more-wrap__btn",
+      onClick: onMore,
+      children: ["Show ", Math.min(PAGE, total - shown), " more"]
     })]
   });
 }
@@ -69430,6 +69624,7 @@ function Listing$1({
   } = useFashionCatalogue();
   const [params, setParams] = useSearchParams();
   const state = reactExports.useMemo(() => readFashionUrlState(params), [params]);
+  const paging = useShowMore(Number.MAX_SAFE_INTEGER, `${params.toString()}|${title}`);
   const [panel, setPanel] = reactExports.useState(false);
   reactExports.useEffect(() => {
     if (!panel) return undefined;
@@ -69545,13 +69740,19 @@ function Listing$1({
             onClick: clear,
             children: "Clear filters"
           })]
-        }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-          className: `fs-grid${state.view === 'list' ? ' fs-grid--list' : ''}`,
-          children: results.map((v, i) => /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductCard, {
-            view: v,
-            layout: state.view,
-            mediaLoading: i < 2 ? 'eager' : 'lazy'
-          }, v.id))
+        }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: `fs-grid${state.view === 'list' ? ' fs-grid--list' : ''}`,
+            children: results.slice(0, paging.shown).map((v, i) => /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductCard, {
+              view: v,
+              layout: state.view,
+              mediaLoading: i < 2 ? 'eager' : 'lazy'
+            }, v.id))
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(LoadMore, {
+            shown: Math.min(paging.shown, results.length),
+            total: results.length,
+            onMore: paging.more
+          })]
         })
       })]
     })]
@@ -70682,6 +70883,7 @@ function Listing({
   } = useHomeLivingCatalogue();
   const [params, setParams] = useSearchParams();
   const state = reactExports.useMemo(() => readListingState(params), [params]);
+  const paging = useShowMore(Number.MAX_SAFE_INTEGER, `${params.toString()}|${title}`);
   const [panel, setPanel] = reactExports.useState(false);
   reactExports.useEffect(() => {
     if (!panel) return undefined;
@@ -70799,13 +71001,19 @@ function Listing({
             onClick: clear,
             children: "Clear filters"
           })]
-        }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-          className: `hl-grid${state.view === 'list' ? ' hl-grid--list' : ''}`,
-          children: results.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingProductCard, {
-            product: p,
-            layout: state.view,
-            mediaLoading: i < 2 ? 'eager' : 'lazy'
-          }, p.id))
+        }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: `hl-grid${state.view === 'list' ? ' hl-grid--list' : ''}`,
+            children: results.slice(0, paging.shown).map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingProductCard, {
+              product: p,
+              layout: state.view,
+              mediaLoading: i < 2 ? 'eager' : 'lazy'
+            }, p.id))
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(LoadMore, {
+            shown: Math.min(paging.shown, results.length),
+            total: results.length,
+            onMore: paging.more
+          })]
         })
       })]
     })]
@@ -72455,6 +72663,17 @@ function Gallery({
       behavior: reduced ? 'auto' : 'smooth'
     });
   };
+  // ← → move between pictures on a computer (not while typing, nor with the full-screen viewer open).
+  reactExports.useEffect(() => {
+    if (images.length < 2 || zoom != null || typeof window === 'undefined' || typeof window.addEventListener !== 'function') return undefined;
+    const onKey = e => {
+      const t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (e.key === 'ArrowRight') show(Math.min(images.length - 1, active + 1));else if (e.key === 'ArrowLeft') show(Math.max(0, active - 1));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
   // A swipe on a phone moves the counter too (the thumbnails set it on a click).
   const onSwipe = e => {
     const el = e.currentTarget;
@@ -73765,9 +73984,13 @@ function SearchBar() {
     }), open && !term && /*#__PURE__*/jsxRuntimeExports.jsx(RecentSearches, {
       id: "hl-recent",
       terms: recent,
+      popular: (categories || []).filter(c => !c.parent_id).map(c => ({
+        name: c.name,
+        href: `/homeliving/category/${c.slug}`
+      })),
       hrefFor: t => `/homeliving/search?q=${encodeURIComponent(t)}`,
       onPick: e => {
-        setQ(e.currentTarget.textContent);
+        if (e.currentTarget.classList.contains('hx-suggest__recent')) setQ(e.currentTarget.textContent);
         setOpen(false);
       },
       onClear: () => {
