@@ -49,10 +49,12 @@ export function Gallery({ view }) {
     const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     el.scrollTo({ left: slide.offsetLeft - el.firstElementChild.offsetLeft, behavior: reduced ? 'auto' : 'smooth' });
   };
+  // A swipe on a phone moves the counter too (the thumbnails set it on a click).
+  const onSwipe = (e) => { const el = e.currentTarget; const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth)); if (i !== active && i >= 0 && i < images.length) setActive(i); };
   if (images.length === 0) return <div className="fs-pdp__media fs-pdp__media--none" aria-hidden="true"><b>{view.name.slice(0, 1)}</b></div>;
   return (
     <div className="fs-gallery">
-      <div className="fs-gallery__track" role="group" aria-label={`${view.name} images`} ref={track}>
+      <div className="fs-gallery__track" role="group" aria-label={`${view.name} images`} ref={track} onScroll={onSwipe}>
         {images.map((src, i) => (
           <figure key={src + i} className={`fs-gallery__slide${i === active ? ' is-on' : ''}`} id={`fs-slide-${i}`} onClick={() => setZoom(i)}>
             <img src={src} alt={i === 0 ? view.name : `${view.name} — view ${i + 1}`} width="900" height="900" decoding="async" loading={i === 0 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} />
@@ -68,6 +70,7 @@ export function Gallery({ view }) {
           ))}
         </div>
       )}
+      {images.length > 1 && <span className="fs-gallery__count" aria-hidden="true">{active + 1} / {images.length}</span>}
       {zoom != null && <GalleryZoom images={images.map((url, i) => ({ url, alt: i === 0 ? view.name : `${view.name} — view ${i + 1}` }))} start={zoom} name={view.name} onClose={() => setZoom(null)} />}
     </div>
   );
@@ -121,7 +124,8 @@ export default function FashionProductPage() {
     title: priceTitle(`${view.name}${view.brand ? ` by ${view.brand}` : ''}`, view.price),
     description: view.description || `${view.name} from ${view.brand || 'SORA Lifestyle'}. Free delivery in 6–7 business days, cash on delivery available.`,
     image: view.image, path: `/fashion/p/${view.slug}`,
-    product: { name: view.name, description: view.description, images: view.images, brand: view.brand, sku: facts?.sku, price: view.price, inStock: liveStock },
+    product: { name: view.name, description: view.description, images: view.images, brand: view.brand, sku: facts?.sku, price: view.price, inStock: liveStock,
+      crumbs: [...breadcrumbFor(tree, view.category_id ? tree.byId.get(view.category_id) : null), { name: view.name }] },
   } : {}, [view?.price, liveStock, facts?.sku]);
 
   if (!view) {

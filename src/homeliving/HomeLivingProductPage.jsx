@@ -570,7 +570,8 @@ export default function HomeLivingProductPage() {
     title: priceTitle(view.name, view.price),
     description: view.description || `${view.name}${view.brand ? ` by ${view.brand}` : ''}. Free delivery in 6–7 business days, cash on delivery available.`,
     image: view.images?.[0], path: `/homeliving/p/${view.slug}`,
-    product: { name: view.name, description: view.description, images: view.images, brand: view.brand, sku: view.sku, price: view.price, inStock: liveStock },
+    product: { name: view.name, description: view.description, images: view.images, brand: view.brand, sku: view.sku, price: view.price, inStock: liveStock,
+      crumbs: [{ name: 'Home & Living', href: '/homeliving' }, ...(categories.find((c) => String(c.id) === String(view.category_id)) ? [{ name: categories.find((c) => String(c.id) === String(view.category_id)).name, href: `/homeliving/category/${categories.find((c) => String(c.id) === String(view.category_id)).slug}` }] : []), { name: view.name }] },
   } : {}, [view?.price, liveStock]);
 
   if (!view) {

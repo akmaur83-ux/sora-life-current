@@ -82,6 +82,13 @@ export function usePageMeta({ title, description, image, path, product } = {}, d
     document.head.querySelectorAll('script[type="application/ld+json"]:not([data-site])').forEach((el) => el.remove());   // the share card's copy (api/share.js)
     let ld = null;
     const data = product ? productLd({ ...product, url: path || window.location.pathname }) : null;
+    const crumbs = Array.isArray(product?.crumbs) ? product.crumbs.filter((c) => c && c.name) : [];
+    if (crumbs.length > 1) {
+      const bc = document.createElement('script');
+      bc.type = 'application/ld+json'; bc.dataset.pm = 'crumbs';
+      bc.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.name, ...(c.href ? { item: absolute(c.href) } : {}) })) });
+      document.head.appendChild(bc);
+    }
     if (data) {
       ld = document.createElement('script');
       ld.type = 'application/ld+json'; ld.dataset.pm = 'product';

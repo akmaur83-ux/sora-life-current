@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '../Icon.jsx';
 import { deliveryEstimate, deliveryOptions } from '../../data/pdpContent.js';
 import { money } from '../../lib/format.js';
@@ -19,6 +19,7 @@ import { money } from '../../lib/format.js';
 // is free because Standard is free. api/_lib/pricing.js decides what is charged.
 // ============================================================
 const PIN = /^[1-9][0-9]{5}$/;
+const PIN_KEY = 'sora.pincode.v1';
 
 export default function ProductDeliveryInfo() {
   const est = deliveryEstimate();
@@ -26,16 +27,21 @@ export default function ProductDeliveryInfo() {
   const [pin, setPin] = useState('');
   const [checked, setChecked] = useState(null);
 
+  // The last pincode checked is remembered in this browser (2026-11-09), so every
+  // product page shows the answer for it without typing it again.
+  const answer = (code) => ({ ok: true, message: `Delivering to ${code}. ${options[0].eta} on Standard delivery.` });
+  useEffect(() => {
+    try { const saved = window.localStorage.getItem(PIN_KEY); if (saved && PIN.test(saved)) { setPin(saved); setChecked(answer(saved)); } } catch { /* storage off */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const check = (e) => {
     e.preventDefault();
     if (!PIN.test(pin)) {
       setChecked({ ok: false, message: 'Enter a valid 6-digit pincode.' });
       return;
     }
-    setChecked({
-      ok: true,
-      message: `Delivering to ${pin}. ${options[0].eta} on Standard delivery.`,
-    });
+    try { window.localStorage.setItem(PIN_KEY, pin); } catch { /* storage off */ }
+    setChecked(answer(pin));
   };
 
   return (

@@ -12,6 +12,7 @@ import { BiosashRange } from '../components/BiosashRange.jsx';
 import { WeaversVillaRange, WeaversVillaShowcase } from '../components/WeaversVilla.jsx';
 import { LeatherFactoryRange, LeatherFactoryShowcase } from '../components/LeatherFactory.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+import OfferBanner from '../components/OfferBanner.jsx';
 import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
@@ -61,6 +62,8 @@ export default function Home() {
              and the circle row replaced the category strip. */}
       <HomeHero />
       <HomeTrustStrip />
+      {/* The running offer with a live countdown (OfferBanner.jsx); nothing once it ends. */}
+      <OfferBanner wrap="hx-wrap" />
       <HomeTiles />
       <ExploreStores />
       <FestivePromo />

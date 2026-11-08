@@ -557,3 +557,7 @@
 .fs-sizeguide__table tr.is-sold th, .fs-sizeguide__table tr.is-sold td { background: #FFF4E5; }
 .fs-sizeguide__how { margin: 14px 0 8px; padding-left: 18px; font-size: 13px; line-height: 1.5; }
 .fs-sizeguide__note { margin: 0; font-size: 12px; color: #565959; }
+/* The picture counter (2026-11-09). */
+.fs-gallery { position: relative; }
+@media (min-width: 768px) { .fs-pdp--mk .fs-gallery { position: sticky; } }
+.fs-gallery__count { position: absolute; top: 10px; left: 10px; z-index: 2; padding: 3px 9px; background: rgba(15, 17, 17, .72); color: #fff; font: 600 12px/1.4 Arial, sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; }

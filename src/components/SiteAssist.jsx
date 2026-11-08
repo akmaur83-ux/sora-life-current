@@ -92,6 +92,19 @@ export default function SiteAssist() {
     return () => { window.removeEventListener('scroll', onScroll); root.classList.remove('pdp-bar-on'); document.querySelectorAll('.hl.pdp-bar-on').forEach((el) => el.classList.remove('pdp-bar-on')); };
   }, [pathname]);
 
+  // "Skip to main content": the first thing a keyboard reaches on every page (shown only when focused).
+  useEffect(() => {
+    if (document.querySelector('.hx-skip')) return;
+    const a = document.createElement('a');
+    a.className = 'hx-skip'; a.href = '#main'; a.textContent = 'Skip to main content';
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const m = document.querySelector('main') || document.querySelector('.hl, .fs, #root > *');
+      if (m) { if (!m.hasAttribute('tabindex')) m.setAttribute('tabindex', '-1'); m.focus(); }
+    });
+    document.body.prepend(a);
+  }, []);
+
   // "/" focuses the store's search box, as on most large shops (not while typing in a field).
   useEffect(() => {
     const onKey = (e) => {

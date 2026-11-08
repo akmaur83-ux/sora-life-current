@@ -8,6 +8,7 @@ import { CategoryChips } from './FashionLayout.jsx';
 import FashionProductCard from './FashionProductCard.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import BudgetChips from '../components/BudgetChips.jsx';
+import OfferBanner from '../components/OfferBanner.jsx';
 import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
 import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
 import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
@@ -151,6 +152,7 @@ export default function FashionHome() {
     <div className="fs-home">
       <Hero config={config.hero} />
       <CategoryChips />
+      <OfferBanner wrap="fs-sec" />
       {/* This visitor's recently viewed fashion products (2+; this browser only). */}
       <RecentlyViewedHome prefix="fs-" />
       <BudgetChips base="/fashion/search" wrap="fs-sec" />
