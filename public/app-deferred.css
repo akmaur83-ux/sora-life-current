@@ -8596,6 +8596,9 @@
 .hl .hl-about__h { font-family: inherit; }
 .hl-about ul { list-style: disc; }
 .hl-about li::marker { color: var(--az-ink-2); }
+@media (min-width: 1400px) { .hl-wrap.hl-pdp { max-width: 1520px; } }
+.hl-gallery__count { display: none; }
+.hl-gallery__heart { border: 1px solid #E3E6E6; box-shadow: none; }
 
 /* ═══ src/styles/lifestyle.css ═══ */
 /* ============================================================================
