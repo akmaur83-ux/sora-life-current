@@ -6702,6 +6702,9 @@
 .fs-pdp .fs-btn--add { background: #1E5A35; border-color: #1E5A35; color: #fff; min-height: 52px; }
 .fs-pdp .fs-btn--buy { background: #DCEFD0; border-color: #C3E0B2; color: #13261C; min-height: 52px; }
 
+/* The marketplace face on the product page (owner, 2026-11-08): Arial, Amazon Ember's fallback. */
+.fs-pdp, .fs-pdp .serif, .fs-pdp button { font-family: "Amazon Ember", Arial, "Helvetica Neue", Helvetica, sans-serif; }
+
 /* ═══ src/styles/fashion-departments.css ═══ */
 /* Men's streetwear and women's heritage edits. Scoped to the two new routes;
    product/variant behaviour and all other storefronts retain their own styles. */
@@ -8599,6 +8602,9 @@
 @media (min-width: 1400px) { .hl-wrap.hl-pdp { max-width: 1520px; } }
 .hl-gallery__count { display: none; }
 .hl-gallery__heart { border: 1px solid #E3E6E6; box-shadow: none; }
+
+/* The marketplace face on the product page (owner, 2026-11-08): Arial, Amazon Ember's fallback. */
+.hl-pdp, .hl .hl-pdp__h.serif, .hl-pdp .hl-sec__h, .hl-pdp button, .hl-pdp .hl-love__h { font-family: "Amazon Ember", Arial, "Helvetica Neue", Helvetica, sans-serif; }
 
 /* ═══ src/styles/lifestyle.css ═══ */
 /* ============================================================================
