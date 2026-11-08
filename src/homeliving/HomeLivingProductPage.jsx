@@ -11,6 +11,7 @@ import { Breadcrumb } from './HomeLivingCategory.jsx';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
 import ProductInformation from '../components/ProductInformation.jsx';
 import { fetchEligibleCoupons } from '../lib/couponApi.js';
+import { PdpCompare, PdpService } from '../components/pdp/PdpOwnerKit.jsx';
 
 // ============================================================
 // /homeliving/p/<slug> — the product page.
@@ -600,7 +601,7 @@ export default function HomeLivingProductPage() {
             const rows = [
               ['Brand', view.brand], ['Size', view.net_content], ['Material', view.material],
               ['Colour', view.swatches.length ? view.swatches.map((x) => x.colour).join(', ') : null],
-              ['Category', node ? node.name : null], ['Care', view.care], ['Country of origin', view.country_of_origin === 'IN' ? 'India' : view.country_of_origin],
+              ['Category', node ? node.name : null], ['Available sizes', view.sizes.length > 1 ? view.sizes.join(', ') : null], ['SKU', view.sku], ['Care', view.care], ['Country of origin', view.country_of_origin === 'IN' ? 'India' : view.country_of_origin],
               ['Delivery', `Standard, ${HOMELIVING_DELIVERY_WINDOW}, free`], ['Returns', 'Within 7 days of delivery'],
             ].filter((r) => r[1] != null && String(r[1]).trim());
             return (
@@ -639,6 +640,13 @@ export default function HomeLivingProductPage() {
       </div>
 
       <InfoTabs view={view} node={node} categories={categories} st={st} bullets={[]} />
+
+      {/* Marketplace detail under the fold (owner, 2026-11-08): compare, then service. */}
+      <PdpCompare items={[view, ...related.slice(0, 3)].map((p, i) => ({
+        key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null,
+        price: p.price, mrp: p.mrp > p.price ? p.mrp : 0, pct: p.mrp > p.price ? (p.discount_percent || 0) : 0, size: p.net_content || null, brand: p.brand || null, current: i === 0,
+      }))} />
+      <PdpService />
 
       {related.length > 0 && (
         <section className="hl-sec" aria-labelledby="hl-related-h">

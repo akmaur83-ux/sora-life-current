@@ -27,7 +27,7 @@ import PdpStorySlot from '../components/pdp/PdpStorySlot.jsx';
 import ProductClaims from '../components/pdp/ProductClaims.jsx';
 import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
-import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
+import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
 import { specificationsFor } from '../data/pdpContent.js';
 import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
 import { promotionsSource } from '../lib/promotions.js';
@@ -352,6 +352,8 @@ useEffect(() => {
             ['Brand', product.brand],
             ['Net quantity', netContent],
             ['Category', cat?.name],
+            ['Available sizes', pricedVariants.length > 1 ? pricedVariants.map((v) => v.label).join(', ') : null],
+            ['Price per unit', perUnitPrice(variant?.price ?? product.price, netContent)],
             ...specificationsFor(product).rows.filter((r) => !/^pack size$/i.test(r.key)).slice(0, 5).map((r) => [r.key, r.value]),
             ['Delivery', 'Standard, free on every order'],
             ['Returns', 'Within 7 days of delivery'],
@@ -397,6 +399,15 @@ useEffect(() => {
           </dl>
         </aside>
       </section>
+
+      {/* Marketplace detail under the fold (owner, 2026-11-08): compare, then service. */}
+      <div className="v2-wrap pdpk-more">
+        <PdpCompare items={[product, ...related.slice(0, 3)].map((p, i) => ({
+          key: p.id, href: `/product/${p.slug}`, name: p.name, image: p.image || null,
+          price: p.price, mrp: p.mrp, pct: p.discountPct || 0, size: p.netContent || p.form || null, brand: p.brand || null, current: i === 0,
+        }))} />
+        <PdpService />
+      </div>
 
       {/* Richer scroll: benefits → ingredients → usage → product information → trust */}
       <div className="v2-wrap pdp-flow">

@@ -1,4 +1,6 @@
+import { Link } from 'react-router-dom';
 import Icon from '../Icon.jsx';
+import { useConsumerCare } from '../../lib/consumerCare.js';
 import { money } from '../../lib/format.js';
 
 // ============================================================
@@ -118,6 +120,70 @@ export function PdpAbout({ bullets }) {
     <section className="pdpk-about" aria-labelledby="pdpk-about-h">
       <h2 className="pdpk-h" id="pdpk-about-h">About this item</h2>
       <ul>{bullets.map((b) => <li key={b}>{b}</li>)}</ul>
+    </section>
+  );
+}
+
+/**
+ * "Compare with similar items": this product and up to three others from the same
+ * shelf, each row the catalogue's own figure. items: { key, href, name, image, price,
+ * mrp, pct, size, brand, current? }.
+ */
+export function PdpCompare({ items }) {
+  const list = (items || []).filter(Boolean).slice(0, 4);
+  if (list.length < 2) return null;
+  const rows = [
+    ['Price', (p) => <b className="pdpk-cmp__price">{money(p.price)}</b>],
+    ['M.R.P.', (p) => (p.mrp > p.price ? <s>{money(p.mrp)}</s> : '—')],
+    ['Discount', (p) => (p.pct > 0 ? <span className="pdpk-cmp__off">-{p.pct}%</span> : '—')],
+    ['Size', (p) => p.size || '—'],
+    ['Brand', (p) => p.brand || '—'],
+    ['Delivery', () => 'Free, standard'],
+  ];
+  return (
+    <section className="pdpk-cmp" aria-labelledby="pdpk-cmp-h">
+      <h2 className="pdpk-h pdpk-h--lg" id="pdpk-cmp-h">Compare with similar items</h2>
+      <div className="pdpk-cmp__scroll">
+        <table>
+          <thead>
+            <tr><td />{list.map((p) => (
+              <th key={p.key} scope="col" className={p.current ? 'is-current' : undefined}>
+                {p.current ? <span className="pdpk-cmp__item">{p.image && <img src={p.image} alt="" width="120" height="120" loading="lazy" />}<span>{p.name}</span><em>This item</em></span>
+                  : <Link to={p.href} className="pdpk-cmp__item">{p.image && <img src={p.image} alt="" width="120" height="120" loading="lazy" />}<span>{p.name}</span></Link>}
+              </th>
+            ))}</tr>
+          </thead>
+          <tbody>{rows.map(([label, cell]) => (
+            <tr key={label}><th scope="row">{label}</th>{list.map((p) => <td key={p.key} className={p.current ? 'is-current' : undefined}>{cell(p)}</td>)}</tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+/** Payment, shipping & returns, and who sells it — store-wide facts and the published consumer care. */
+export function PdpService() {
+  const care = useConsumerCare();
+  return (
+    <section className="pdpk-svc" aria-label="Payment, delivery and seller">
+      <div>
+        <h2 className="pdpk-h"><Icon name="card" size={18} /> Payment options</h2>
+        <ul><li>UPI, credit and debit cards, net banking</li><li>Cash on Delivery</li><li>Payments processed securely by Razorpay</li></ul>
+      </div>
+      <div>
+        <h2 className="pdpk-h"><Icon name="truck" size={18} /> Shipping &amp; returns</h2>
+        <ul><li>Free Standard Delivery on every order, 6-7 days</li><li>Returns within 7 days of delivery</li><li><Link to="/shipping">Shipping policy</Link> · <Link to="/returns">Returns policy</Link></li></ul>
+      </div>
+      <div>
+        <h2 className="pdpk-h"><Icon name="shield" size={18} /> Sold &amp; supported by</h2>
+        <ul>
+          <li><b>{care.legalName || 'SORA LIFESTYLE'}</b></li>
+          {care.address && <li>{care.address}</li>}
+          {care.phone && <li><a href={`tel:${String(care.phone).replace(/[^0-9+]/g, '')}`}>{care.phone}</a>{care.hours ? ` · ${care.hours}` : ''}</li>}
+          {care.email && <li><a href={`mailto:${care.email}`}>{care.email}</a></li>}
+        </ul>
+      </div>
     </section>
   );
 }
