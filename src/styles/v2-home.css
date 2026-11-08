@@ -414,3 +414,33 @@
 @media (max-width: 700px) {
   .hx-hero__slide--homeliving::before { background: linear-gradient(90deg, rgba(28, 16, 6, .5) 0, rgba(28, 16, 6, .28) 48%, rgba(28, 16, 6, 0) 75%); }
 }
+/* Weavers Villa (partner, 2026-11-08): the shawl row's cards cropped toward the top,
+   then a dark poster band over a row of their films. Sharp corners, as the site. */
+.hx-wv-range .hx-new__image { object-position: 50% 22%; }
+.hx-wv { --wv-bg: #1E1611; --wv-ink: #F6EFE4; --wv-gold: #D9B26A; background: var(--wv-bg); color: var(--wv-ink); padding-block: 44px 48px; margin-block: 8px; }
+.hx-wv__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.hx-wv__copy { max-width: 640px; }
+.hx-wv__eyebrow { margin: 0 0 10px; font: 600 11px/1.6 var(--slv2-sans); letter-spacing: .18em; text-transform: uppercase; color: var(--wv-gold); }
+.hx-wv__h { margin: 0; font-family: var(--slv2-disp); font-size: clamp(32px, 3.6vw, 50px); font-weight: 500; line-height: 1.05; letter-spacing: -.01em; color: var(--wv-ink); }
+.hx-wv__text { margin: 12px 0 0; font: 400 15px/1.55 var(--slv2-sans); color: rgba(246, 239, 228, .78); }
+.hx-wv__cta { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 13px 22px; border: 1px solid var(--wv-gold); background: var(--wv-gold); color: #1E1611; font: 600 14px/1 var(--slv2-sans); text-decoration: none; transition: background .2s ease, color .2s ease; }
+.hx-wv__cta:hover { background: transparent; color: var(--wv-gold); }
+.hx-wv__films { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 4 * 12px) / 5); gap: 12px; margin: 0; padding: 0 0 6px; list-style: none; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: thin; scrollbar-color: rgba(217, 178, 106, .5) transparent; }
+.hx-wv__film { scroll-snap-align: start; min-width: 0; }
+.hx-wv__tile { display: block; color: inherit; text-decoration: none; }
+.hx-wv__media { position: relative; display: block; aspect-ratio: 3 / 4; overflow: hidden; background: #2A211A; }
+.hx-wv__video { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .6s ease; }
+.hx-wv__tile:hover .hx-wv__video { transform: scale(1.03); }
+.hx-wv__label { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 10px 2px 0; font: 600 14px/1.3 var(--slv2-sans); color: var(--wv-ink); }
+.hx-wv__tile:hover .hx-wv__label { color: var(--wv-gold); }
+.hx-wv__cta:focus-visible, .hx-wv__tile:focus-visible { outline: 2px solid var(--wv-gold); outline-offset: 3px; }
+@media (max-width: 1024px) { .hx-wv__films { grid-auto-columns: calc((100% - 2 * 12px) / 3.3); } }
+@media (max-width: 700px) {
+  .hx-wv { padding-block: 30px 34px; }
+  .hx-wv__head { flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
+  .hx-wv__text { font-size: 14px; }
+  .hx-wv__cta { padding: 11px 18px; font-size: 13px; }
+  .hx-wv__films { grid-auto-columns: 44%; gap: 10px; }
+  .hx-wv__label { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) { .hx-wv__video, .hx-wv__cta { transition: none; } .hx-wv__tile:hover .hx-wv__video { transform: none; } }

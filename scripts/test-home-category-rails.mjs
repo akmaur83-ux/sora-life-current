@@ -289,12 +289,12 @@ await test('C10 cards outside the window are untabbable and hidden from assistiv
 
 console.log('\n— Where they live —');
 
-await test('P1 Home.jsx (owner, 2026-11-07): bedsheets directly under the Biosash range; beds near the foot, after "Why Sora Life", just above the newsletter', () => {
+await test('P1 Home.jsx (owner, 2026-11-07; Weavers Villa between them since 2026-11-08): bedsheets under the Biosash range and the Weavers Villa sections; beds near the foot, after "Why Sora Life", just above the newsletter', () => {
   const home = read('src/pages/Home.jsx');
   assert.match(home, /import \{ LuxuryBeds, Bedsheets \} from '\.\.\/components\/HomeCategoryRails\.jsx';/);
   const at = (s) => home.indexOf(s);
   const between = home.slice(at('<BiosashRange />') + '<BiosashRange />'.length, at('<Bedsheets />'));
-  assert.ok(at('<BiosashRange />') > 0 && at('<Bedsheets />') > at('<BiosashRange />') && !/<[A-Z]/.test(between), 'bedsheets the very next section after Biosash');
+  assert.ok(at('<BiosashRange />') > 0 && at('<Bedsheets />') > at('<BiosashRange />') && between.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').match(/<[A-Z]\w*/g)?.join(',') === '<WeaversVillaRange,<WeaversVillaShowcase', 'only the Weavers Villa sections between Biosash and bedsheets');
   assert.ok(at('<Bedsheets />') < at('<LifestyleBanner />'), 'above the Lifestyle banner');
   assert.ok(at('<WhySoraLife />') < at('<LuxuryBeds />'), 'beds below "Why Sora Life"');
   assert.ok(at('<LuxuryBeds />') < at('<Newsletter />'), 'beds above the newsletter');

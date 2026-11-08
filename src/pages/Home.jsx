@@ -9,6 +9,7 @@ import { LifestyleBanner, StoreCarousel } from '../components/FashionBanner.jsx'
 import { NewArrivals } from '../components/NewArrivals.jsx';
 import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
 import { BiosashRange } from '../components/BiosashRange.jsx';
+import { WeaversVillaRange, WeaversVillaShowcase } from '../components/WeaversVilla.jsx';
 import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
@@ -75,6 +76,12 @@ export default function Home() {
           Renders nothing when there are none in stock, or when it is hidden in
           Storefronts → Wellness. */}
       <BiosashRange />
+
+      {/* Weavers Villa (partner, 2026-11-08): their shawls in the same sliding row,
+          then a poster band with their short films (WeaversVilla.jsx). Each renders
+          nothing when hidden in Storefronts → Wellness, the range also when empty. */}
+      <WeaversVillaRange />
+      <WeaversVillaShowcase />
 
       {/* Home & Living's Bedsheets, a sliding row of its live products in the
           catalogue's own order (HomeCategoryRails.jsx), directly under the

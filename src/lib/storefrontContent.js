@@ -116,7 +116,16 @@ const WELLNESS = {
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
     link: link('View-all link (empty: the shop)'),
   }, 'The Biosash range (Biosash products in stock; hidden while there are none)'),
-  // Directly under the Biosash range since 2026-11-07.
+  // Weavers Villa (partner, 2026-11-08), straight under the Biosash range.
+  weaversVilla: group({
+    hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
+    link: link('View-all link (empty: Shawls & Stoles)'),
+  }, 'Weavers Villa shawls (their products in Fashion; hidden while there are none)'),
+  weaversShowcase: group({
+    hidden: hidden(), eyebrow: text(60, 'Eyebrow'), title: text(60, 'Headline'), text: text(200, 'Subline'),
+    cta: text(40, 'Button label'), link: link('Button link (empty: Shawls & Stoles)'),
+  }, 'Weavers Villa poster with their films'),
+  // Under the Biosash range (and Weavers Villa since 2026-11-08) since 2026-11-07.
   bedsheets: group({
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
     link: link('View-all link (empty: the Bedsheets listing)'),
