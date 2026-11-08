@@ -10,6 +10,7 @@ import { searchProducts } from '../data/products.js';
 import { money } from '../lib/format.js';
 import { branding } from '../lib/settings.js';
 import { lockScroll, unlockScroll } from '../lib/scrollLock.js';
+import { useOtherStoreMatches } from '../lib/crossStoreSearch.js';
 
 // The desktop nav used to paint the built-in category set and then visibly
 // swap it for the Supabase set once hydration landed a few hundred ms later —
@@ -110,6 +111,20 @@ export default function Header() {
   }, []);
 
   const results = q.trim() ? searchProducts(q).slice(0, 6) : [];
+  // Fashion and Home & Living matches too (crossStoreSearch.js), read once the search is opened.
+  const others = (useOtherStoreMatches(q.trim(), focused || mobileSearch) || []).slice(0, 4);
+  const OtherMatches = ({ onPick, cls }) => (others.length ? (
+    <div className={`hx-xsg ${cls || ''}`}>
+      <p className="hx-xsg__h">In Fashion &amp; Home &amp; Living</p>
+      {others.map((p) => (
+        <Link key={p.key} to={p.href} className="hx-xsg__item" onClick={onPick}>
+          <span className="hx-xsg__img">{p.image && <img src={p.image} alt="" width="40" height="40" decoding="async" />}</span>
+          <span className="hx-xsg__name">{p.name}<em>{p.storeLabel}</em></span>
+          <b>{money(p.price)}</b>
+        </Link>
+      ))}
+    </div>
+  ) : null);
   const submit = (e) => { e.preventDefault(); if (q.trim()) { navigate(`/shop?q=${encodeURIComponent(q.trim())}`); setFocused(false); setMobileSearch(false); } };
 
   return (
@@ -149,7 +164,8 @@ export default function Header() {
                       <span className="v2-hdr__suggest-name">{p.name}</span>
                       <span className="v2-hdr__suggest-price">{money(p.price)}</span>
                     </Link>
-                  )) : <p className="v2-hdr__suggest-empty">No matches for “{q}”.</p>}
+                  )) : (others.length ? null : <p className="v2-hdr__suggest-empty">No matches for “{q}”.</p>)}
+                  <OtherMatches onPick={() => setFocused(false)} />
                 </div>
               )}
             </div>
@@ -250,7 +266,10 @@ export default function Header() {
                     </Link>
                   ))}
                   <button className="btn btn-ghost btn-block" onClick={submit}>See all results for “{q}”</button>
+                  <OtherMatches onPick={() => setMobileSearch(false)} cls="hx-xsg--sheet" />
                 </div>
+              ) : others.length ? (
+                <div className="search-results"><OtherMatches onPick={() => setMobileSearch(false)} cls="hx-xsg--sheet" /></div>
               ) : (
                 <p className="muted" style={{ padding: '18px 4px' }}>No matches for “{q}”. Try “juice”, “soap” or “hair”.</p>
               )

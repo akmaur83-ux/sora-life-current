@@ -1,0 +1,110 @@
+diff --git a/src/components/Header.jsx b/src/components/Header.jsx
+index 6971879..a5224c7 100644
+--- a/src/components/Header.jsx
++++ b/src/components/Header.jsx
+@@ -10,6 +10,7 @@ import { searchProducts } from '../data/products.js';
+ import { money } from '../lib/format.js';
+ import { branding } from '../lib/settings.js';
+ import { lockScroll, unlockScroll } from '../lib/scrollLock.js';
++import { useOtherStoreMatches } from '../lib/crossStoreSearch.js';
+ 
+ // The desktop nav used to paint the built-in category set and then visibly
+ // swap it for the Supabase set once hydration landed a few hundred ms later —
+@@ -110,6 +111,20 @@ export default function Header() {
+   }, []);
+ 
+   const results = q.trim() ? searchProducts(q).slice(0, 6) : [];
++  // Fashion and Home & Living matches too (crossStoreSearch.js), read once the search is opened.
++  const others = (useOtherStoreMatches(q.trim(), focused || mobileSearch) || []).slice(0, 4);
++  const OtherMatches = ({ onPick, cls }) => (others.length ? (
++    <div className={`hx-xsg ${cls || ''}`}>
++      <p className="hx-xsg__h">In Fashion &amp; Home &amp; Living</p>
++      {others.map((p) => (
++        <Link key={p.key} to={p.href} className="hx-xsg__item" onClick={onPick}>
++          <span className="hx-xsg__img">{p.image && <img src={p.image} alt="" width="40" height="40" decoding="async" />}</span>
++          <span className="hx-xsg__name">{p.name}<em>{p.storeLabel}</em></span>
++          <b>{money(p.price)}</b>
++        </Link>
++      ))}
++    </div>
++  ) : null);
+   const submit = (e) => { e.preventDefault(); if (q.trim()) { navigate(`/shop?q=${encodeURIComponent(q.trim())}`); setFocused(false); setMobileSearch(false); } };
+ 
+   return (
+@@ -149,7 +164,8 @@ export default function Header() {
+                       <span className="v2-hdr__suggest-name">{p.name}</span>
+                       <span className="v2-hdr__suggest-price">{money(p.price)}</span>
+                     </Link>
+-                  )) : <p className="v2-hdr__suggest-empty">No matches for “{q}”.</p>}
++                  )) : (others.length ? null : <p className="v2-hdr__suggest-empty">No matches for “{q}”.</p>)}
++                  <OtherMatches onPick={() => setFocused(false)} />
+                 </div>
+               )}
+             </div>
+@@ -250,7 +266,10 @@ export default function Header() {
+                     </Link>
+                   ))}
+                   <button className="btn btn-ghost btn-block" onClick={submit}>See all results for “{q}”</button>
++                  <OtherMatches onPick={() => setMobileSearch(false)} cls="hx-xsg--sheet" />
+                 </div>
++              ) : others.length ? (
++                <div className="search-results"><OtherMatches onPick={() => setMobileSearch(false)} cls="hx-xsg--sheet" /></div>
+               ) : (
+                 <p className="muted" style={{ padding: '18px 4px' }}>No matches for “{q}”. Try “juice”, “soap” or “hair”.</p>
+               )
+diff --git a/src/pages/Shop.jsx b/src/pages/Shop.jsx
+index 401d819..005e742 100644
+--- a/src/pages/Shop.jsx
++++ b/src/pages/Shop.jsx
+@@ -4,6 +4,7 @@ import ProductBrowser from '../components/ProductBrowser.jsx';
+ import Icon from '../components/Icon.jsx';
+ import { products } from '../data/products.js';
+ import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
++import OtherStoreResults from '../components/OtherStoreResults.jsx';
+ import {
+   normalizeDiscovery, findCollectionCard, findConcernCard,
+   collectionProducts, concernCardProducts, selectCategoryCards, selectConcernCards,
+@@ -80,6 +81,8 @@ export default function Shop() {
+         </div>
+ 
+         <ProductBrowser baseProducts={products} />
++        {/* A search also lists what Fashion and Home & Living have for it (OtherStoreResults.jsx). */}
++        {params.get('q') && <OtherStoreResults query={params.get('q')} />}
+       </div>
+     );
+   }
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index 0c9dbed..83362e7 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -476,4 +476,27 @@
+ .hx-suggest__price { font-size: 14px; font-weight: 700; white-space: nowrap; }
+ .hx-suggest__all { display: block; padding: 10px 12px; font-size: 14px; font-weight: 700; color: #007185; text-decoration: none; }
+ .hx-suggest__all:hover { text-decoration: underline; color: #C7511F; }
+-.hx-suggest__none { margin: 0; padding: 12px; font-size: 14px; color: #565959; }
+\ No newline at end of file
++.hx-suggest__none { margin: 0; padding: 12px; font-size: 14px; color: #565959; }
++/* One search across the stores (2026-11-08): the header's second group and the /shop?q= section. */
++.hx-xsg { border-top: 1px solid #E7E7E7; padding: 6px 0 2px; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; }
++.hx-xsg__h { margin: 4px 12px 4px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #565959; }
++.hx-xsg__item { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 12px; color: #0F1111; text-decoration: none; font-size: 13px; }
++.hx-xsg__item:hover { background: #F3F6F6; }
++.hx-xsg__img { width: 40px; height: 40px; display: block; background: #fff; }
++.hx-xsg__img img { width: 100%; height: 100%; object-fit: contain; display: block; }
++.hx-xsg__name { min-width: 0; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
++.hx-xsg__name em { display: block; font-style: normal; font-size: 11px; color: #007185; }
++.hx-xsg--sheet { margin-top: 10px; }
++.hx-xs { margin-top: 36px; margin-bottom: 40px; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; }
++.hx-xs__h { margin: 0 0 16px; padding-top: 22px; border-top: 1px solid #E7E7E7; font-size: 22px; font-weight: 700; color: #0F1111; }
++.hx-xs__h span { display: block; margin-top: 4px; font-size: 14px; font-weight: 400; color: #565959; }
++.hx-xs__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
++.hx-xs__card { display: grid; gap: 4px; color: #0F1111; text-decoration: none; }
++.hx-xs__img { display: block; aspect-ratio: 1; background: #F7F7F7; }
++.hx-xs__img img { width: 100%; height: 100%; object-fit: contain; display: block; }
++.hx-xs__store { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #007185; }
++.hx-xs__name { font-size: 14px; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
++.hx-xs__card:hover .hx-xs__name { color: #C7511F; text-decoration: underline; }
++.hx-xs__price { display: flex; align-items: baseline; gap: 6px; font-size: 16px; }
++.hx-xs__price s { font-size: 12px; color: #565959; }
++@media (max-width: 599px) { .hx-xs__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .hx-xs__h { font-size: 19px; } }
+\ No newline at end of file

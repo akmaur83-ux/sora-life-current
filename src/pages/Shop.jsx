@@ -4,6 +4,7 @@ import ProductBrowser from '../components/ProductBrowser.jsx';
 import Icon from '../components/Icon.jsx';
 import { products } from '../data/products.js';
 import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+import OtherStoreResults from '../components/OtherStoreResults.jsx';
 import {
   normalizeDiscovery, findCollectionCard, findConcernCard,
   collectionProducts, concernCardProducts, selectCategoryCards, selectConcernCards,
@@ -80,6 +81,8 @@ export default function Shop() {
         </div>
 
         <ProductBrowser baseProducts={products} />
+        {/* A search also lists what Fashion and Home & Living have for it (OtherStoreResults.jsx). */}
+        {params.get('q') && <OtherStoreResults query={params.get('q')} />}
       </div>
     );
   }

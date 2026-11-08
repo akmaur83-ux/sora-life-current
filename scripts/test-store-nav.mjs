@@ -52,6 +52,7 @@ function renderHeader(source) {
     useStore: () => ({ cartCount: 2, wishCount: 1 }),
     categories: CATS, hasConfiguredCategoryCopy: () => true, isCategoriesHydrated: () => true,
     searchProducts: () => [], money: (n) => `₹${n}`, branding: { siteName: 'SORA LIFE' }, lockScroll: () => {}, unlockScroll: () => {},
+    useOtherStoreMatches: () => null,
   });
   return renderToStaticMarkup(h(StaticRouter, { location: '/' }, h(mod.default)));
 }

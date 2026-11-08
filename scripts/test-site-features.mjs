@@ -33,6 +33,17 @@ test('search: every word in name, brand or category, any order and case; plural 
   assert.deepEqual(sm.searchItems(items, 'k'), [], 'one letter is not a search');
   assert.deepEqual(sm.searchItems(items, 'silk'), []);
 });
+const xs = loadModule('src/lib/crossStoreSearch.js', { useEffect: () => {}, useState: (v) => [v, () => {}], supabase: null, searchItems: sm.searchItems, cataloguePrice: (r) => (r.sale_price > 0 && r.sale_price < r.mrp ? r.sale_price : r.mrp) });
+test('one search across stores: fashion and Home & Living rows link to their own pages; unpriced or unslugged rows are left out', () => {
+  const rows = xs.toSearchRows([
+    { id: 'a', store: 'fashion', slug: 'red-shawl', name: 'Red Shawl', brand: 'Weavers Villa', mrp: 999, sale_price: 699, images: ['https://x/y.jpg?v=1&width=2000'], category_id: 'c1' },
+    { id: 'b', store: 'homeliving', slug: 'king-sheet', name: 'King Sheet', brand: '', mrp: 1299, sale_price: null, images: [], category_id: 'c2' },
+    { id: 'c', store: 'fashion', slug: '', name: 'No slug', mrp: 100 }, { id: 'd', store: 'homeliving', slug: 'free', name: 'Free', mrp: 0 },
+  ], new Map([['c1', "Women's Shawls"]]));
+  assert.deepEqual(rows.map((r) => [r.href, r.price, r.storeLabel]), [['/fashion/p/red-shawl', 699, 'Fashion'], ['/homeliving/p/king-sheet', 1299, 'Home & Living']]);
+  assert.equal(rows[0].image, 'https://x/y.jpg?v=1&width=500');
+  assert.deepEqual(sm.searchItems(rows, 'shawls').map((r) => r.name), ['Red Shawl'], 'the category counts');
+});
 const eng = loadModule('src/lib/productEngage.js', { supabase: null });
 test('stock alerts group by product and choice, most wanted first; admin links per store', () => {
   const g = eng.groupAlerts([{ id: 1, product_key: 'fashion:a', product_name: 'A', choice: '' }, { id: 2, product_key: 'fashion:b', product_name: 'B', choice: 'M' }, { id: 3, product_key: 'fashion:b', product_name: 'B', choice: 'M' }]);
