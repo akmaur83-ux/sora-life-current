@@ -390,6 +390,7 @@ await test('remaining footer links all point at real in-app routes', () => {
   const known = [
     '/shop', '/account', '/account/orders', '/wishlist', '/account/creator',
     '/', '/about', '/contact', '/grievance', '/privacy', '/terms', '/shipping', '/returns', '/admin/login',
+    '/passport',   // order tracking (App.jsx: /passport/:passportId?), in the footer since 2026-11-09
   ];
   for (const t of targets) {
     const ok = known.includes(t) || t.startsWith('/category/');

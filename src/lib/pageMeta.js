@@ -79,7 +79,7 @@ export function usePageMeta({ title, description, image, path, product } = {}, d
     let canon = document.head.querySelector('link[rel="canonical"]');
     if (!canon) { canon = document.createElement('link'); canon.rel = 'canonical'; canon.dataset.pm = '1'; document.head.appendChild(canon); }
     canon.href = url;
-    document.head.querySelectorAll('script[type="application/ld+json"]').forEach((el) => el.remove());   // the share card's copy (api/share.js)
+    document.head.querySelectorAll('script[type="application/ld+json"]:not([data-site])').forEach((el) => el.remove());   // the share card's copy (api/share.js)
     let ld = null;
     const data = product ? productLd({ ...product, url: path || window.location.pathname }) : null;
     if (data) {
@@ -93,8 +93,28 @@ export function usePageMeta({ title, description, image, path, product } = {}, d
       document.title = siteHomeTitle();
       metaEl('name', 'description').setAttribute('content', base.description);
       if (ld) ld.remove();
-      document.head.querySelectorAll('link[rel="canonical"], script[type="application/ld+json"]').forEach((el) => el.remove());   // the page's own, or the share card's
+      document.head.querySelectorAll('link[rel="canonical"], script[type="application/ld+json"]:not([data-site])').forEach((el) => el.remove());   // the page's own, or the share card's
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, description, image, path, ...deps]);
+}
+
+/** The site's own data for search engines: the business, and its search (Google's sitelinks search box). Pure. */
+export function siteLd(phone) {
+  return [
+    { '@context': 'https://schema.org', '@type': 'Organization', name: SITE, url: ORIGIN, logo: `${ORIGIN}/assets/favicon-192.png`,
+      ...(phone ? { contactPoint: { '@type': 'ContactPoint', telephone: phone, contactType: 'customer service', areaServed: 'IN', availableLanguage: ['en', 'hi'] } } : {}) },
+    { '@context': 'https://schema.org', '@type': 'WebSite', name: SITE, url: ORIGIN,
+      potentialAction: { '@type': 'SearchAction', target: { '@type': 'EntryPoint', urlTemplate: `${ORIGIN}/shop?q={search_term_string}` }, 'query-input': 'required name=search_term_string' } },
+  ];
+}
+
+/** Puts siteLd in the head once (kept across pages). */
+export function useSiteLd(phone) {
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    let el = document.head.querySelector('script[data-site]');
+    if (!el) { el = document.createElement('script'); el.type = 'application/ld+json'; el.dataset.site = '1'; document.head.appendChild(el); }
+    el.textContent = JSON.stringify(siteLd(phone));
+  }, [phone]);
 }

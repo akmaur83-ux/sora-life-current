@@ -73,6 +73,7 @@ export default function Footer() {
             <h4>Account</h4>
             <Link to="/account">My account</Link>
             <Link to="/account/orders">Orders</Link>
+            <Link to="/passport">Track your order</Link>
             <Link to="/wishlist">Wishlist</Link>
           </div>
 

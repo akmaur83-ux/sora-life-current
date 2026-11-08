@@ -1,0 +1,171 @@
+diff --git a/src/components/Footer.jsx b/src/components/Footer.jsx
+index c1fcb5d..3cbe448 100644
+--- a/src/components/Footer.jsx
++++ b/src/components/Footer.jsx
+@@ -73,6 +73,7 @@ export default function Footer() {
+             <h4>Account</h4>
+             <Link to="/account">My account</Link>
+             <Link to="/account/orders">Orders</Link>
++            <Link to="/passport">Track your order</Link>
+             <Link to="/wishlist">Wishlist</Link>
+           </div>
+ 
+diff --git a/src/fashion/FashionHome.jsx b/src/fashion/FashionHome.jsx
+index a214c7c..84dc097 100644
+--- a/src/fashion/FashionHome.jsx
++++ b/src/fashion/FashionHome.jsx
+@@ -7,6 +7,7 @@ import { useFashionCatalogue } from './FashionCatalogue.jsx';
+ import { CategoryChips } from './FashionLayout.jsx';
+ import FashionProductCard from './FashionProductCard.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
++import BudgetChips from '../components/BudgetChips.jsx';
+ import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
+ import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+ import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
+@@ -152,6 +153,7 @@ export default function FashionHome() {
+       <CategoryChips />
+       {/* This visitor's recently viewed fashion products (2+; this browser only). */}
+       <RecentlyViewedHome prefix="fs-" />
++      <BudgetChips base="/fashion/search" wrap="fs-sec" />
+       <CategoryTiles tree={tree} />
+       <Benefits />
+       <ShopByCategory tree={tree} copy={config.sections} />
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 534983f..4e5a7db 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -18,6 +18,7 @@ import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullet
+ import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
++import SizeGuide from './SizeGuide.jsx';
+ import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
+ 
+ // ============================================================
+@@ -187,6 +188,7 @@ export default function FashionProductPage() {
+           <PdpAssurances />
+ 
+           <VariantPicker view={view} size={st.size} colour={st.colour} onChange={setSel} />
++          <SizeGuide sizes={view.sizes} department={node && tree.ancestors(node.id).some((a) => /^men/i.test(a.slug)) ? 'men' : 'women'} />
+ 
+           <PdpFactTable rows={factRows} />
+           <PdpAbout bullets={bullets} />
+diff --git a/src/homeliving/HomeLivingHome.jsx b/src/homeliving/HomeLivingHome.jsx
+index b45a70e..91bed7e 100644
+--- a/src/homeliving/HomeLivingHome.jsx
++++ b/src/homeliving/HomeLivingHome.jsx
+@@ -6,6 +6,7 @@ import { useStorefrontSection, positionAttr } from '../lib/storefrontSections.js
+ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
+ import { BottomNav, DeliveryRow, SearchBar } from './HomeLivingLayout.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
++import BudgetChips from '../components/BudgetChips.jsx';
+ 
+ // ============================================================
+ // /homeliving — the hero (to the top of the page, the shell's header floats
+@@ -225,6 +226,7 @@ export default function HomeLivingHome() {
+       <CategoryCircles categories={categories} />
+       <FeaturedRow products={products} status={status} />
+       <RecentlyViewedHome prefix="hl-" />
++      <BudgetChips base="/homeliving/search" wrap="hl-wrap" />
+       <PromoStrip />
+     </div>
+   );
+diff --git a/src/homeliving/HomeLivingSearch.jsx b/src/homeliving/HomeLivingSearch.jsx
+index b1c5510..2a3c0b1 100644
+--- a/src/homeliving/HomeLivingSearch.jsx
++++ b/src/homeliving/HomeLivingSearch.jsx
+@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
+ import { useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
+ import { searchItems } from '../lib/searchMatch.js';
+ import { homelivingSearchRows } from './HomeLivingLayout.jsx';
+-import { Breadcrumb } from './HomeLivingCategory.jsx';
++import { Breadcrumb, Listing } from './HomeLivingCategory.jsx';
+ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
+ 
+ // ============================================================
+@@ -17,6 +17,10 @@ export default function HomeLivingSearch() {
+   const { status, products, categories } = useHomeLivingCatalogue();
+   const results = useMemo(() => (q.length >= 2 ? searchItems(homelivingSearchRows(products, categories), q).map((r) => r.product) : []), [q, products, categories]);
+   const title = q ? `Results for “${q}”` : 'Search Home & Living';
++  // No words, a filter (?price= from "Shop by budget"): the whole range, with the listing's filters and sort.
++  if (!q && params.get('price')) {
++    return <Listing title="All Home & Living" trail={[{ name: 'Home & Living', href: '/homeliving' }, { name: 'All products' }]} emptyCopy="Nothing in this price range yet." />;
++  }
+   return (
+     <div className="hl-wrap hl-listing">
+       <Breadcrumb trail={[{ name: 'Home & Living', href: '/homeliving' }, { name: 'Search' }]} />
+diff --git a/src/styles/fashion.css b/src/styles/fashion.css
+index 5880c87..1ebcb75 100644
+--- a/src/styles/fashion.css
++++ b/src/styles/fashion.css
+@@ -528,3 +528,32 @@
+ /* Search suggestions sit under the box; a product picture opens full screen on a tap (2026-11-08). */
+ .fs-search { position: relative; }
+ .fs-gallery__slide { cursor: zoom-in; }
++/* Desktop: the buy bar at the foot once the buy box has scrolled away (2026-11-09; SiteAssist sets html.pdp-bar-on). */
++@media (min-width: 900px) {
++  html.pdp-bar-on .fs-pdp__bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 10px max(24px, calc((100vw - 1480px) / 2)); background: #fff; border-top: 1px solid #D5D9D9; box-shadow: 0 -6px 18px -12px rgba(15, 17, 17, .3); animation: fs-bar-in .2s ease-out; }
++  html.pdp-bar-on .fs-pdp__bar-price { margin-right: auto; display: flex; align-items: baseline; gap: 10px; }
++  html.pdp-bar-on .fs-pdp__bar-price b { font-size: 22px; font-weight: 400; color: #0F1111; }
++  html.pdp-bar-on .fs-pdp__bar-price em { font-style: normal; font-size: 13px; color: #565959; }
++  html.pdp-bar-on .fs-pdp__bar .fs-btn { min-height: 42px; padding: 0 26px; font-size: 14px; }
++  html.pdp-bar-on .fs-pdp { padding-bottom: 72px; }
++}
++@keyframes fs-bar-in { from { transform: translateY(100%); } to { transform: none; } }
++@media (prefers-reduced-motion: reduce) { html.pdp-bar-on .fs-pdp__bar { animation: none; } }
++/* Size guide (2026-11-09). */
++.fs-sizeguide__open { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 12px; padding: 0; border: 0; background: none; font: 400 13px Arial, sans-serif; color: #007185; cursor: pointer; }
++.fs-sizeguide__open:hover { color: #C7511F; text-decoration: underline; }
++.fs-sizeguide { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(15, 17, 17, .55); }
++.fs-sizeguide__box { width: min(560px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; padding: 18px 20px 20px; background: #fff; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0F1111; }
++.fs-sizeguide__top { display: flex; justify-content: space-between; align-items: center; }
++.fs-sizeguide__top h2 { margin: 0; font-size: 20px; font-weight: 700; }
++.fs-sizeguide__x { width: 36px; height: 36px; border: 0; background: none; cursor: pointer; color: #0F1111; }
++.fs-sizeguide__tabs { display: flex; gap: 0; margin: 12px 0; border-bottom: 1px solid #D5D9D9; }
++.fs-sizeguide__tabs button { padding: 8px 16px; border: 0; border-bottom: 2px solid transparent; background: none; font: 600 14px Arial, sans-serif; color: #565959; cursor: pointer; }
++.fs-sizeguide__tabs button.is-on { color: #0F1111; border-bottom-color: #C2500A; }
++.fs-sizeguide__table { width: 100%; border-collapse: collapse; font-size: 14px; }
++.fs-sizeguide__table caption { caption-side: top; text-align: left; padding-bottom: 6px; font-size: 12px; color: #565959; }
++.fs-sizeguide__table th, .fs-sizeguide__table td { padding: 8px 10px; border-bottom: 1px solid #E7E7E7; text-align: left; }
++.fs-sizeguide__table thead th { background: #F7F7F7; font-weight: 700; }
++.fs-sizeguide__table tr.is-sold th, .fs-sizeguide__table tr.is-sold td { background: #FFF4E5; }
++.fs-sizeguide__how { margin: 14px 0 8px; padding-left: 18px; font-size: 13px; line-height: 1.5; }
++.fs-sizeguide__note { margin: 0; font-size: 12px; color: #565959; }
+diff --git a/src/styles/homeliving.css b/src/styles/homeliving.css
+index 7e2372b..837d905 100644
+--- a/src/styles/homeliving.css
++++ b/src/styles/homeliving.css
+@@ -1057,3 +1057,11 @@
+ .hl .hl-card__heart { cursor: pointer; }
+ .hl .hl-card__heart.is-on, .hl .hl-gallery__heart.is-on { color: #C0392B; }
+ .hl .hl-card__heart:focus-visible, .hl .hl-gallery__heart:focus-visible { outline: 2px solid #007185; outline-offset: 2px; }
++/* Desktop: the buy bar at the foot once the buy box has scrolled away (2026-11-09). */
++@media (min-width: 900px) {
++  .hl.pdp-bar-on .hl-pdp__bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 10px max(24px, calc((100vw - 1480px) / 2)); background: #fff; border-top: 1px solid #D5D9D9; box-shadow: 0 -6px 18px -12px rgba(15, 17, 17, .3); }
++  .hl.pdp-bar-on .hl-pdp__bar-price { margin-right: auto; display: flex; align-items: baseline; gap: 10px; font-size: 13px; }
++  .hl.pdp-bar-on .hl-pdp__bar-price b { font-size: 22px; font-weight: 400; color: #0F1111; }
++  .hl.pdp-bar-on .hl-pdp__bar .hl-btn { min-height: 42px; padding: 0 26px; font-size: 14px; }
++  .hl.pdp-bar-on .hl-pdp { padding-bottom: 72px; }
++}
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index c1fbb77..6b51aaf 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -508,4 +508,14 @@
+ .hx-suggest__recent:hover { background: #F3F6F6; }
+ .hx-share { margin: 0 0 14px; display: flex; align-items: center; gap: 10px; font: 400 13px Arial, sans-serif; color: #565959; }
+ .hx-share__btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: 1px solid #1DA851; background: #fff; color: #11823B; font: 600 13px Arial, sans-serif; cursor: pointer; }
+-.hx-share__btn:hover { background: #F0FAF3; }
+\ No newline at end of file
++.hx-share__btn:hover { background: #F0FAF3; }
++/* Shop by budget on the Fashion and Home & Living homes (2026-11-09). */
++.hx-budget { margin: 8px 0 20px; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; }
++.hx-budget__h { margin: 0 0 12px; font-size: 20px; font-weight: 700; color: #0F1111; }
++.hx-budget__row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
++.hx-budget__chip { display: grid; place-items: center; gap: 2px; padding: 16px 8px; border: 1px solid #D5D9D9; background: linear-gradient(180deg, #FFF8EF, #fff); color: #0F1111; text-decoration: none; transition: border-color .15s ease, transform .15s ease; }
++.hx-budget__chip span { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #565959; }
++.hx-budget__chip b { font-size: 22px; font-weight: 700; color: #C2500A; }
++.hx-budget__chip:hover { border-color: #C2500A; transform: translateY(-2px); }
++@media (max-width: 599px) { .hx-budget__row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .hx-budget__chip b { font-size: 19px; } }
++@media (prefers-reduced-motion: reduce) { .hx-budget__chip { transition: none; } .hx-budget__chip:hover { transform: none; } }
+\ No newline at end of file

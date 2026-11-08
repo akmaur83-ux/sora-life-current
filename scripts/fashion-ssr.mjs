@@ -119,7 +119,7 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
   const picker = loadModule('src/fashion/FashionVariantPicker.jsx', { Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, selectionState: pdpRules.selectionState });
   const card = loadModule('src/fashion/FashionProductCard.jsx', { Link, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, swatchOverflow: rules.swatchOverflow, quickAddPlan: pdpRules.quickAddPlan, useFashionWishlist: wishMod.useFashionWishlist, useStore, VariantSheet: picker.VariantSheet });
   const layout = loadModule('src/fashion/FashionLayout.jsx', { Link, Outlet, useLocation, useNavigate, Icon, SparrowMark, Footer, Toasts, useStore, branding, useFashionWishlist: wishMod.useFashionWishlist, FashionCatalogueProvider: catalogue.FashionCatalogueProvider, useFashionCatalogue: catalogue.useFashionCatalogue, categoryHref: rules.categoryHref, resolveCategory: rules.resolveCategory, ...homepageDeps });
-  const home = loadModule('src/fashion/FashionHome.jsx', { RecentlyViewedHome: () => null, Link, Icon, useCustomerAuth, categoryHref: rules.categoryHref, sortViews: rules.sortViews, topBrands: rules.topBrands, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default, HERO_IMAGE: art.HERO_IMAGE, circleArt: art.circleArt, cardArt: art.cardArt, ...homepageDeps });
+  const home = loadModule('src/fashion/FashionHome.jsx', { RecentlyViewedHome: () => null,  BudgetChips: () => null, Link, Icon, useCustomerAuth, categoryHref: rules.categoryHref, sortViews: rules.sortViews, topBrands: rules.topBrands, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default, HERO_IMAGE: art.HERO_IMAGE, circleArt: art.circleArt, cardArt: art.cardArt, ...homepageDeps });
   // The department pages arrived with /fashion/men and /fashion/women. A baseline tree from
   // before them has neither file, so it renders without the two routes instead of crashing.
   const department = has('src/fashion/FashionDepartment.jsx')
@@ -136,7 +136,7 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
     // The marketplace kit (PdpOwnerKit.jsx) and the extra facts read, stubbed: they need the network or storage.
     PdpPrice: () => null, PdpSaving: () => null, PdpAssurances: () => null, PdpFactTable: () => null, PdpAbout: () => null,
     aboutBullets: () => [], PdpCompare: () => null, PdpService: () => null, PdpBrandRail: () => null, PdpRecent: () => null,
-    PdpShare: () => null, PdpReviews: () => null, useRecentlyViewed: () => [], useHoverZoom: () => {}, PdpDeliveryDate: () => null, ProductDeliveryInfo: () => null, usePageMeta: () => {}, priceTitle: (n) => n, GalleryZoom: () => null,
+    PdpShare: () => null, PdpReviews: () => null, useRecentlyViewed: () => [], useHoverZoom: () => {}, PdpDeliveryDate: () => null, ProductDeliveryInfo: () => null, SizeGuide: () => null, usePageMeta: () => {}, priceTitle: (n) => n, GalleryZoom: () => null,
     useFashionDetails: () => null, countryName: (c) => c });
   const App = ({ path, initial = INITIAL }) => h(StaticRouter, { location: path },
     h(Routes, null,

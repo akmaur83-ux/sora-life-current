@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import { useConsumerCare } from '../lib/consumerCare.js';
-import { siteHomeTitle, holdTitle } from '../lib/pageMeta.js';
+import { siteHomeTitle, holdTitle, useSiteLd } from '../lib/pageMeta.js';
 
 // ============================================================
 // Two small helpers on every storefront page (owner, 2026-11-08: more features),
@@ -61,6 +61,7 @@ export default function SiteAssist() {
   const [up, setUp] = useState(false);
   const [offset, setOffset] = useState(0);
   const hidden = HIDDEN.test(pathname);
+  useSiteLd(care?.phone || '');   // the business and its search, for search engines (pageMeta.js)
 
   useEffect(() => {
     if (hidden) return undefined;
@@ -72,6 +73,24 @@ export default function SiteAssist() {
     window.addEventListener('resize', measure);
     return () => { timers.forEach(clearTimeout); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', measure); };
   }, [pathname, hidden]);
+
+  // Desktop: once the buy box has scrolled away on a Fashion or Home & Living product
+  // page, the page's own buy bar (the phone one) shows at the foot (CSS: html.pdp-bar-on).
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!PRODUCT.test(pathname)) { root.classList.remove('pdp-bar-on'); document.querySelectorAll('.hl.pdp-bar-on').forEach((el) => el.classList.remove('pdp-bar-on')); return undefined; }
+    const onScroll = () => {
+      const box = document.querySelector('.fs-buybox, .hl-buybox');
+      const on = !!box && box.getBoundingClientRect().bottom < 0;
+      if (on !== root.classList.contains('pdp-bar-on')) {
+        root.classList.toggle('pdp-bar-on', on);
+        document.querySelectorAll('.hl').forEach((el) => el.classList.toggle('pdp-bar-on', on));   // its sheet is namespaced under .hl
+        [60, 320].forEach((ms) => setTimeout(() => setOffset(footOffset()), ms));   // after the bar's slide-in
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); root.classList.remove('pdp-bar-on'); document.querySelectorAll('.hl.pdp-bar-on').forEach((el) => el.classList.remove('pdp-bar-on')); };
+  }, [pathname]);
 
   // "/" focuses the store's search box, as on most large shops (not while typing in a field).
   useEffect(() => {

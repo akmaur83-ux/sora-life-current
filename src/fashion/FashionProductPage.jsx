@@ -18,6 +18,7 @@ import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullet
 import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+import SizeGuide from './SizeGuide.jsx';
 import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
 
 // ============================================================
@@ -187,6 +188,7 @@ export default function FashionProductPage() {
           <PdpAssurances />
 
           <VariantPicker view={view} size={st.size} colour={st.colour} onChange={setSel} />
+          <SizeGuide sizes={view.sizes} department={node && tree.ancestors(node.id).some((a) => /^men/i.test(a.slug)) ? 'men' : 'women'} />
 
           <PdpFactTable rows={factRows} />
           <PdpAbout bullets={bullets} />

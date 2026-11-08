@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
 import { searchItems } from '../lib/searchMatch.js';
 import { homelivingSearchRows } from './HomeLivingLayout.jsx';
-import { Breadcrumb } from './HomeLivingCategory.jsx';
+import { Breadcrumb, Listing } from './HomeLivingCategory.jsx';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
 
 // ============================================================
@@ -17,6 +17,10 @@ export default function HomeLivingSearch() {
   const { status, products, categories } = useHomeLivingCatalogue();
   const results = useMemo(() => (q.length >= 2 ? searchItems(homelivingSearchRows(products, categories), q).map((r) => r.product) : []), [q, products, categories]);
   const title = q ? `Results for “${q}”` : 'Search Home & Living';
+  // No words, a filter (?price= from "Shop by budget"): the whole range, with the listing's filters and sort.
+  if (!q && params.get('price')) {
+    return <Listing title="All Home & Living" trail={[{ name: 'Home & Living', href: '/homeliving' }, { name: 'All products' }]} emptyCopy="Nothing in this price range yet." />;
+  }
   return (
     <div className="hl-wrap hl-listing">
       <Breadcrumb trail={[{ name: 'Home & Living', href: '/homeliving' }, { name: 'Search' }]} />

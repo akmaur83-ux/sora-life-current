@@ -69,6 +69,19 @@ const sl = loadModule('src/components/ShareList.jsx', { useState: (v) => [v, () 
 test('share a wishlist: numbered names, prices and full links', () => {
   assert.equal(sl.wishlistText([{ name: 'A', price: 10, href: '/fashion/p/a' }], 'List'), 'List:\n\n1. A — ₹10\nhttps://www.soralifestyle.in/fashion/p/a');
 });
+const sg = loadModule('src/fashion/SizeGuide.jsx', { useEffect: () => {}, useRef: () => ({}), useState: (v) => [v, () => {}], Icon: () => null });
+test('size guide: only for letter sizes; the chart covers every row it lists', () => {
+  assert.equal(sg.hasLetterSizes(['S', 'M', 'L']), true);
+  assert.equal(sg.hasLetterSizes(['Free Size']), false);
+  assert.equal(sg.hasLetterSizes(['UK 8', 'UK 9']), false);
+  for (const k of ['women', 'men']) for (const r of sg.SIZE_CHART[k].rows) assert.equal(r.length, sg.SIZE_CHART[k].head.length);
+});
+test('site data for search engines: the business with its phone, and the site search', () => {
+  const [org, site] = pm.siteLd('+91 78890 96228');
+  assert.equal(org['@type'], 'Organization'); assert.equal(org.contactPoint.telephone, '+91 78890 96228');
+  assert.equal(site.potentialAction.target.urlTemplate, 'https://www.soralifestyle.in/shop?q={search_term_string}');
+  assert.ok(!('contactPoint' in pm.siteLd('')[0]));
+});
 const eng = loadModule('src/lib/productEngage.js', { supabase: null });
 test('stock alerts group by product and choice, most wanted first; admin links per store', () => {
   const g = eng.groupAlerts([{ id: 1, product_key: 'fashion:a', product_name: 'A', choice: '' }, { id: 2, product_key: 'fashion:b', product_name: 'B', choice: 'M' }, { id: 3, product_key: 'fashion:b', product_name: 'B', choice: 'M' }]);
