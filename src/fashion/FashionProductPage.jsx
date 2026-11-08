@@ -17,6 +17,8 @@ import { GalleryZoom } from '../homeliving/HomeLivingProductPage.jsx';
 import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
 import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
 
 // ============================================================
 // /fashion/p/<slug> — the product page.
@@ -113,6 +115,13 @@ export default function FashionProductPage() {
   const facts = useFashionDetails(view?.id);
   const recent = useRecentlyViewed(view ? { key: `fs-${view.id}`, href: `/fashion/p/${view.slug}`, name: view.name, image: view.image, price: view.price } : null);
   useHoverZoom('.fs-pdp .fs-gallery__slide', view?.id);
+  const liveStock = !!view?.variants?.some((v) => v.stock > 0);
+  usePageMeta(view ? {
+    title: priceTitle(`${view.name}${view.brand ? ` by ${view.brand}` : ''}`, view.price),
+    description: view.description || `${view.name} from ${view.brand || 'SORA Lifestyle'}. Free delivery in 6–7 business days, cash on delivery available.`,
+    image: view.image, path: `/fashion/p/${view.slug}`,
+    product: { name: view.name, description: view.description, images: view.images, brand: view.brand, sku: facts?.sku, price: view.price, inStock: liveStock },
+  } : {}, [view?.price, liveStock, facts?.sku]);
 
   if (!view) {
     return (
@@ -215,6 +224,7 @@ export default function FashionProductPage() {
             <div><dt>Returns</dt><dd>Within 7 days of delivery</dd></div>
           </dl>
           <DeliveryBlock />
+          <ProductDeliveryInfo />
         </aside>
       </div>
 

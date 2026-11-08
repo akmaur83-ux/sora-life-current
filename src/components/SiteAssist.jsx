@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import { useConsumerCare } from '../lib/consumerCare.js';
+import { siteHomeTitle, holdTitle } from '../lib/pageMeta.js';
 
 // ============================================================
 // Two small helpers on every storefront page (owner, 2026-11-08: more features),
@@ -18,6 +19,7 @@ import { useConsumerCare } from '../lib/consumerCare.js';
 // ============================================================
 const HIDDEN = /^\/(admin|checkout|cart|creator|invoice|passport|login|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout)(\/|$)/;
 const PRODUCT = /^\/(product|fashion\/p|homeliving\/p|grocery\/p)\/[^/]+/;
+const LISTING = /^\/(shop|category\/[^/]+|fashion\/(c\/[^/]+|search|wishlist|men|women|jewellery)|homeliving\/(category\/[^/]+|search|wishlist))\/?$/;
 
 /** wa.me digits for an Indian number as published ("+91 78890 96228" → 917889096228). */
 export function waNumber(phone) {
@@ -70,6 +72,38 @@ export default function SiteAssist() {
     window.addEventListener('resize', measure);
     return () => { timers.forEach(clearTimeout); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', measure); };
   }, [pathname, hidden]);
+
+  // "/" focuses the store's search box, as on most large shops (not while typing in a field).
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const box = document.querySelector('.fs-search input, .hl-search input, .v2-hdr__searchbox input');
+      if (box && box.offsetParent !== null) { e.preventDefault(); box.focus(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Listing and search pages are named after their heading (product pages name
+  // themselves: pageMeta.js). Read once the page has rendered.
+  useEffect(() => {
+    const siteTitle = siteHomeTitle();
+    if (!LISTING.test(pathname)) {
+      if (!PRODUCT.test(pathname)) document.title = siteTitle;   // the home pages and the rest: the site's own title
+      return undefined;
+    }
+    // The heading can change as the catalogue arrives ("Loading…" → the category), so it is read again.
+    let release = () => {};
+    let last = '';
+    const read = () => {
+      const h = (document.querySelector('main h1, .fs-listing h1, .hl-listing h1, h1')?.textContent || '').replace(/\s+/g, ' ').trim();
+      if (h && h !== last) { last = h; release(); release = holdTitle(`${h} | SORA LIFESTYLE`); }
+    };
+    const timers = [400, 1200, 2500, 5000].map((ms) => setTimeout(read, ms));
+    return () => { timers.forEach(clearTimeout); release(); };
+  }, [pathname]);
 
   if (hidden) return null;
   // The product's name is read from the page's heading at the moment of the tap (it renders after this).

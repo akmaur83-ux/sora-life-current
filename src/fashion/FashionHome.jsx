@@ -6,6 +6,7 @@ import { categoryHref, sortViews, topBrands } from '../lib/fashion.js';
 import { useFashionCatalogue } from './FashionCatalogue.jsx';
 import { CategoryChips } from './FashionLayout.jsx';
 import FashionProductCard from './FashionProductCard.jsx';
+import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
 import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
 import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
@@ -149,6 +150,8 @@ export default function FashionHome() {
     <div className="fs-home">
       <Hero config={config.hero} />
       <CategoryChips />
+      {/* This visitor's recently viewed fashion products (2+; this browser only). */}
+      <RecentlyViewedHome prefix="fs-" />
       <CategoryTiles tree={tree} />
       <Benefits />
       <ShopByCategory tree={tree} copy={config.sections} />

@@ -11,6 +11,32 @@ export const SUGGEST_MAX = 6;
 /** A partner CDN picture asked for at thumbnail size (Shopify resizes on `width`). */
 const thumb = (src) => String(src).replace(/([?&])width=\d+/, '$1width=120');
 
+// ---- Recent searches (this browser only, per store) -----------------------------------
+const RECENT_MAX = 6;
+const recentKey = (store) => `sora.search.recent.${store}`;
+export function readRecentSearches(store) {
+  try { const v = JSON.parse(window.localStorage.getItem(recentKey(store)) || '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string').slice(0, RECENT_MAX) : []; } catch { return []; }
+}
+export function rememberSearch(store, term) {
+  const t = String(term || '').trim().slice(0, 60);
+  if (t.length < 2) return;
+  try { const cur = readRecentSearches(store).filter((x) => x.toLowerCase() !== t.toLowerCase()); window.localStorage.setItem(recentKey(store), JSON.stringify([t, ...cur].slice(0, RECENT_MAX))); } catch { /* storage off */ }
+}
+export function clearRecentSearches(store) { try { window.localStorage.removeItem(recentKey(store)); } catch { /* storage off */ } }
+
+/** With nothing typed yet: the last searches, each a link to its results, and Clear. */
+export function RecentSearches({ id, terms, hrefFor, onPick, onClear }) {
+  if (!terms || terms.length === 0) return null;
+  return (
+    <div className="hx-suggest hx-suggest--recent" id={id} aria-label="Recent searches">
+      <p className="hx-suggest__head">Recent searches <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={onClear}>Clear</button></p>
+      {terms.map((t) => (
+        <Link key={t} to={hrefFor(t)} className="hx-suggest__recent" onMouseDown={(e) => e.preventDefault()} onClick={onPick}>{t}</Link>
+      ))}
+    </div>
+  );
+}
+
 export default function SearchSuggest({ id, items, query, active = -1, allHref, onPick }) {
   if (!items) return null;
   const shown = items.slice(0, SUGGEST_MAX);

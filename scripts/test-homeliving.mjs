@@ -155,11 +155,11 @@ await test('the delivery badge reads "Standard Delivery · 6-7 days"; the search
   assert.match(layout, /categories\.map\(\(c\) => <li key=\{c\.id\}><Link to=\{categoryHref\(c\)\}/, 'the drawer lists the live categories');
 });
 
-await test('bottom nav matches grocery: Home / Categories / Offers / Orders / Account — only Home is a link; the rest are inert', () => {
+await test('bottom nav: Home / Categories / Wishlist / Orders / Account — every tab a link since 2026-11-08 (Offers had no page)', () => {
   const nav = home.slice(home.indexOf('<nav class="hl-nav"'), home.indexOf('</nav>', home.indexOf('<nav class="hl-nav"')) + 6);
-  assert.deepEqual([...nav.matchAll(/<span>([^<]+)<\/span>/g)].map((m) => m[1]), ['Home', 'Categories', 'Offers', 'Orders', 'Account']);
-  assert.match(nav, /<a class="hl-nav__item is-on" aria-current="page" href="\/homeliving">/);
-  assert.equal((nav.match(/<a /g) || []).length, 1); assert.equal((nav.match(/aria-disabled="true"/g) || []).length, 4);
+  assert.deepEqual([...nav.matchAll(/<span>([^<]+)<\/span>/g)].map((m) => m[1]), ['Home', 'Categories', 'Wishlist', 'Orders', 'Account']);
+  assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]), ['/homeliving', '/homeliving#hl-cats-h', '/homeliving/wishlist', '/account/orders', '/account']);
+  assert.equal((nav.match(/aria-disabled="true"/g) || []).length, 0);
 });
 
 await test('section order: hero → nav strip → delivery row + search bar → trust band → category circles → featured row → promo', () => {

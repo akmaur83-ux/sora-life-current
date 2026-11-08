@@ -5,6 +5,7 @@ import { FEATURED, HOMELIVING_SECTIONS, categoryHref, useHomeLivingCatalogue } f
 import { useStorefrontSection, positionAttr } from '../lib/storefrontSections.js';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
 import { BottomNav, DeliveryRow, SearchBar } from './HomeLivingLayout.jsx';
+import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 
 // ============================================================
 // /homeliving — the hero (to the top of the page, the shell's header floats
@@ -223,6 +224,7 @@ export default function HomeLivingHome() {
       <TrustStrip />
       <CategoryCircles categories={categories} />
       <FeaturedRow products={products} status={status} />
+      <RecentlyViewedHome prefix="hl-" />
       <PromoStrip />
     </div>
   );

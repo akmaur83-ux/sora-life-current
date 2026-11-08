@@ -1,0 +1,173 @@
+diff --git a/src/homeliving/HomeLivingHome.jsx b/src/homeliving/HomeLivingHome.jsx
+index 17abb70..b45a70e 100644
+--- a/src/homeliving/HomeLivingHome.jsx
++++ b/src/homeliving/HomeLivingHome.jsx
+@@ -5,6 +5,7 @@ import { FEATURED, HOMELIVING_SECTIONS, categoryHref, useHomeLivingCatalogue } f
+ import { useStorefrontSection, positionAttr } from '../lib/storefrontSections.js';
+ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
+ import { BottomNav, DeliveryRow, SearchBar } from './HomeLivingLayout.jsx';
++import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+ 
+ // ============================================================
+ // /homeliving — the hero (to the top of the page, the shell's header floats
+@@ -223,6 +224,7 @@ export default function HomeLivingHome() {
+       <TrustStrip />
+       <CategoryCircles categories={categories} />
+       <FeaturedRow products={products} status={status} />
++      <RecentlyViewedHome prefix="hl-" />
+       <PromoStrip />
+     </div>
+   );
+diff --git a/src/homeliving/HomeLivingLayout.jsx b/src/homeliving/HomeLivingLayout.jsx
+index baf808c..f22fc0e 100644
+--- a/src/homeliving/HomeLivingLayout.jsx
++++ b/src/homeliving/HomeLivingLayout.jsx
+@@ -6,7 +6,7 @@ import Toasts from '../components/Toasts.jsx';
+ import { useStore } from '../lib/store.jsx';
+ import { branding } from '../lib/settings.js';
+ import { HOMELIVING_DELIVERY_WINDOW, HOMELIVING_TAGLINE, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
+-import SearchSuggest, { SUGGEST_MAX, suggestKeys } from '../components/SearchSuggest.jsx';
++import SearchSuggest, { SUGGEST_MAX, suggestKeys, RecentSearches, readRecentSearches, rememberSearch, clearRecentSearches } from '../components/SearchSuggest.jsx';
+ import { searchItems } from '../lib/searchMatch.js';
+ import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+ 
+@@ -44,12 +44,15 @@ const HOME_PATH = /^\/homeliving\/?$/;
+ export const SOLID_AFTER_PX = 8;
+ 
+ /** Home is the only live tab; the rest render, do nothing, and never 404. */
++// Every tab goes somewhere since 2026-11-08 (Categories, Offers and Orders were inert):
++// Categories to the category circles on the store's homepage, Wishlist (in place of
++// Offers, which had no page) to this browser's list, Orders and Account to the account.
+ export const BOTTOM_NAV = [
+   { id: 'home', label: 'Home', icon: 'home', href: '/homeliving' },
+-  { id: 'categories', label: 'Categories', icon: 'grid' },
+-  { id: 'offers', label: 'Offers', icon: 'tag' },
+-  { id: 'orders', label: 'Orders', icon: 'package' },
+-  { id: 'account', label: 'Account', icon: 'user' },
++  { id: 'categories', label: 'Categories', icon: 'grid', href: '/homeliving#hl-cats-h' },
++  { id: 'wishlist', label: 'Wishlist', icon: 'heart', href: '/homeliving/wishlist' },
++  { id: 'orders', label: 'Orders', icon: 'package', href: '/account/orders' },
++  { id: 'account', label: 'Account', icon: 'user', href: '/account' },
+ ];
+ 
+ function HomeLivingLogo() {
+@@ -117,7 +120,8 @@ export function SearchBar() {
+   const term = q.trim();
+   const found = open && term.length >= 2 ? searchItems(homelivingSearchRows(products, categories), term) : null;
+   const all = `/homeliving/search?q=${encodeURIComponent(term)}`;
+-  const pick = () => { setOpen(false); setActive(-1); };
++  const [recent, setRecent] = useState([]);
++  const pick = () => { setOpen(false); setActive(-1); if (term.length >= 2) rememberSearch('homeliving', term); };
+   const keys = (e) => {
+     if (e.key === 'Enter' && active < 0) { e.preventDefault(); pick(); navigate(term ? all : '/homeliving/search'); return; }
+     suggestKeys(e, { count: Math.min(SUGGEST_MAX, found?.length || 0), active, setActive, open, setOpen, go: (i) => { pick(); navigate(found[i].href); } });
+@@ -126,9 +130,10 @@ export function SearchBar() {
+     <div className="hl-search" role="search" aria-label="Search Home & Living">
+       <Icon name="search" size={22} />
+       <input type="search" placeholder={SEARCH_PLACEHOLDER} aria-label="Search Home & Living" value={q}
+-        onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={keys}
++        onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} onFocus={() => { setOpen(true); setRecent(readRecentSearches('homeliving')); }} onBlur={() => setOpen(false)} onKeyDown={keys}
+         enterKeyHint="search" aria-expanded={found ? true : undefined} aria-controls={found ? 'hl-suggest' : undefined} />
+       {found && <SearchSuggest id="hl-suggest" items={found} query={term} active={active} allHref={all} onPick={pick} />}
++      {open && !term && <RecentSearches id="hl-recent" terms={recent} hrefFor={(t) => `/homeliving/search?q=${encodeURIComponent(t)}`} onPick={(e) => { setQ(e.currentTarget.textContent); setOpen(false); }} onClear={() => { clearRecentSearches('homeliving'); setRecent([]); }} />}
+     </div>
+   );
+ }
+@@ -179,10 +184,12 @@ function WishLink() {
+ }
+ 
+ export function BottomNav() {
++  const { pathname, hash } = useLocation();
++  const here = (item) => (item.id === 'home' ? pathname.replace(/\/$/, '') === '/homeliving' && hash !== '#hl-cats-h' : item.id === 'categories' ? hash === '#hl-cats-h' : pathname.startsWith(item.href));
+   return (
+     <nav className="hl-nav" aria-label="Home & Living">
+       {BOTTOM_NAV.map((item) => (item.href
+-        ? <Link key={item.id} to={item.href} className="hl-nav__item is-on" aria-current="page"><Icon name={item.icon} size={24} /><span>{item.label}</span></Link>
++        ? <Link key={item.id} to={item.href} className={`hl-nav__item${here(item) ? ' is-on' : ''}`} aria-current={here(item) ? 'page' : undefined}><Icon name={item.icon} size={24} /><span>{item.label}</span></Link>
+         : <span key={item.id} className="hl-nav__item" aria-disabled="true"><Icon name={item.icon} size={24} /><span>{item.label}</span></span>))}
+     </nav>
+   );
+diff --git a/src/homeliving/HomeLivingProductPage.jsx b/src/homeliving/HomeLivingProductPage.jsx
+index 7c0cb83..119ada7 100644
+--- a/src/homeliving/HomeLivingProductPage.jsx
++++ b/src/homeliving/HomeLivingProductPage.jsx
+@@ -14,6 +14,7 @@ import { fetchEligibleCoupons } from '../lib/couponApi.js';
+ import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+ import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
++import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
+ import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+ 
+ // ============================================================
+@@ -564,6 +565,13 @@ export default function HomeLivingProductPage() {
+   const [qty, setQty] = useState(1);
+   const recent = useRecentlyViewed(view ? { key: `hl-${view.id}`, href: `/homeliving/p/${view.slug}`, name: view.name, image: (view.gallery && view.gallery[0]?.url) || view.images?.[0] || null, price: view.price } : null);
+   useHoverZoom('.hl-pdp .hl-gallery__slide', view?.id);
++  const liveStock = !!view && (view.variants?.length ? view.variants.some((v) => v.stock > 0) : view.stock > 0);
++  usePageMeta(view ? {
++    title: priceTitle(view.name, view.price),
++    description: view.description || `${view.name}${view.brand ? ` by ${view.brand}` : ''}. Free delivery in 6–7 business days, cash on delivery available.`,
++    image: view.images?.[0], path: `/homeliving/p/${view.slug}`,
++    product: { name: view.name, description: view.description, images: view.images, brand: view.brand, sku: view.sku, price: view.price, inStock: liveStock },
++  } : {}, [view?.price, liveStock]);
+ 
+   if (!view) {
+     return (
+diff --git a/src/pages/Product.jsx b/src/pages/Product.jsx
+index 0ecac98..2758aed 100644
+--- a/src/pages/Product.jsx
++++ b/src/pages/Product.jsx
+@@ -15,6 +15,7 @@ import ProductRatingTeaser from '../components/pdp/ProductRatingTeaser.jsx';
+ import ProductOfferTeaser from '../components/pdp/ProductOfferTeaser.jsx';
+ import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
++import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
+ import ProductBenefits from '../components/pdp/ProductBenefits.jsx';
+ import ProductIngredients from '../components/pdp/ProductIngredients.jsx';
+ import ProductHowToUse from '../components/pdp/ProductHowToUse.jsx';
+@@ -108,6 +109,12 @@ useEffect(() => {
+   // Recently viewed and hover zoom (owner, 2026-11-08). Before any early return: hooks.
+   const recent = useRecentlyViewed(product ? { key: `w-${product.id}`, href: `/product/${product.slug}`, name: product.name, image: product.image || null, price: product.price } : null);
+   useHoverZoom('.v2-pdp-root .pdp__main', product?.id);
++  usePageMeta(product ? {
++    title: priceTitle(product.name, product.price),
++    description: product.description || `${product.name}${product.brand ? ` by ${product.brand}` : ''}. Free delivery in 6–7 business days, cash on delivery available.`,
++    image: product.image, path: `/product/${product.slug}`,
++    product: { name: product.name, description: product.description, image: product.image, brand: product.brand, price: product.price, inStock: Number(product.stock) > 0 },
++  } : {}, [product?.price, product?.stock]);
+   const [catalogTimedOut, setCatalogTimedOut] = useState(false);
+   useEffect(() => {
+     if (isCatalogHydrated()) return;
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index 83362e7..c1fbb77 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -499,4 +499,13 @@
+ .hx-xs__card:hover .hx-xs__name { color: #C7511F; text-decoration: underline; }
+ .hx-xs__price { display: flex; align-items: baseline; gap: 6px; font-size: 16px; }
+ .hx-xs__price s { font-size: 12px; color: #565959; }
+-@media (max-width: 599px) { .hx-xs__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .hx-xs__h { font-size: 19px; } }
+\ No newline at end of file
++@media (max-width: 599px) { .hx-xs__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .hx-xs__h { font-size: 19px; } }
++/* More features (2026-11-08): recent searches, ask on WhatsApp, share a wishlist. */
++.hx-suggest__head { display: flex; justify-content: space-between; align-items: center; margin: 0; padding: 10px 12px 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #565959; }
++.hx-suggest__head button { border: 0; background: none; padding: 0; font: 400 12px Arial, sans-serif; letter-spacing: 0; text-transform: none; color: #007185; cursor: pointer; }
++.hx-suggest__recent { display: block; padding: 8px 12px; font-size: 14px; color: #0F1111; text-decoration: none; }
++.hx-suggest__recent::before { content: "↺"; margin-right: 10px; color: #8A8F8F; }
++.hx-suggest__recent:hover { background: #F3F6F6; }
++.hx-share { margin: 0 0 14px; display: flex; align-items: center; gap: 10px; font: 400 13px Arial, sans-serif; color: #565959; }
++.hx-share__btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: 1px solid #1DA851; background: #fff; color: #11823B; font: 600 13px Arial, sans-serif; cursor: pointer; }
++.hx-share__btn:hover { background: #F0FAF3; }
+\ No newline at end of file
+diff --git a/src/styles/v2-pdp.css b/src/styles/v2-pdp.css
+index 4e8d7c3..cc11ee6 100644
+--- a/src/styles/v2-pdp.css
++++ b/src/styles/v2-pdp.css
+@@ -1523,3 +1523,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ .pdpk-offer svg { flex: none; margin-top: 2px; color: #C2500A; }
+ .pdpk-offer__code { margin: 0 2px; padding: 1px 6px; border: 1px dashed #C2500A; background: #fff; color: #C2500A; font: 700 12px/1.4 Arial, sans-serif; letter-spacing: .04em; cursor: pointer; }
+ .pdpk-offer em { display: block; font-style: normal; color: #B12704; }
++.pdpk-ask { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font: 400 13px/1.4 Arial, sans-serif; color: #0F1111; text-decoration: none; }
++.pdpk-ask svg { color: #1DA851; flex: none; }
++.pdpk-ask b { color: #007185; font-weight: 400; }
++.pdpk-ask:hover b { color: #C7511F; text-decoration: underline; }

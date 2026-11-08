@@ -6,7 +6,7 @@ import Toasts from '../components/Toasts.jsx';
 import { useStore } from '../lib/store.jsx';
 import { branding } from '../lib/settings.js';
 import { HOMELIVING_DELIVERY_WINDOW, HOMELIVING_TAGLINE, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
-import SearchSuggest, { SUGGEST_MAX, suggestKeys } from '../components/SearchSuggest.jsx';
+import SearchSuggest, { SUGGEST_MAX, suggestKeys, RecentSearches, readRecentSearches, rememberSearch, clearRecentSearches } from '../components/SearchSuggest.jsx';
 import { searchItems } from '../lib/searchMatch.js';
 import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
 
@@ -44,12 +44,15 @@ const HOME_PATH = /^\/homeliving\/?$/;
 export const SOLID_AFTER_PX = 8;
 
 /** Home is the only live tab; the rest render, do nothing, and never 404. */
+// Every tab goes somewhere since 2026-11-08 (Categories, Offers and Orders were inert):
+// Categories to the category circles on the store's homepage, Wishlist (in place of
+// Offers, which had no page) to this browser's list, Orders and Account to the account.
 export const BOTTOM_NAV = [
   { id: 'home', label: 'Home', icon: 'home', href: '/homeliving' },
-  { id: 'categories', label: 'Categories', icon: 'grid' },
-  { id: 'offers', label: 'Offers', icon: 'tag' },
-  { id: 'orders', label: 'Orders', icon: 'package' },
-  { id: 'account', label: 'Account', icon: 'user' },
+  { id: 'categories', label: 'Categories', icon: 'grid', href: '/homeliving#hl-cats-h' },
+  { id: 'wishlist', label: 'Wishlist', icon: 'heart', href: '/homeliving/wishlist' },
+  { id: 'orders', label: 'Orders', icon: 'package', href: '/account/orders' },
+  { id: 'account', label: 'Account', icon: 'user', href: '/account' },
 ];
 
 function HomeLivingLogo() {
@@ -117,7 +120,8 @@ export function SearchBar() {
   const term = q.trim();
   const found = open && term.length >= 2 ? searchItems(homelivingSearchRows(products, categories), term) : null;
   const all = `/homeliving/search?q=${encodeURIComponent(term)}`;
-  const pick = () => { setOpen(false); setActive(-1); };
+  const [recent, setRecent] = useState([]);
+  const pick = () => { setOpen(false); setActive(-1); if (term.length >= 2) rememberSearch('homeliving', term); };
   const keys = (e) => {
     if (e.key === 'Enter' && active < 0) { e.preventDefault(); pick(); navigate(term ? all : '/homeliving/search'); return; }
     suggestKeys(e, { count: Math.min(SUGGEST_MAX, found?.length || 0), active, setActive, open, setOpen, go: (i) => { pick(); navigate(found[i].href); } });
@@ -126,9 +130,10 @@ export function SearchBar() {
     <div className="hl-search" role="search" aria-label="Search Home & Living">
       <Icon name="search" size={22} />
       <input type="search" placeholder={SEARCH_PLACEHOLDER} aria-label="Search Home & Living" value={q}
-        onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={keys}
+        onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} onFocus={() => { setOpen(true); setRecent(readRecentSearches('homeliving')); }} onBlur={() => setOpen(false)} onKeyDown={keys}
         enterKeyHint="search" aria-expanded={found ? true : undefined} aria-controls={found ? 'hl-suggest' : undefined} />
       {found && <SearchSuggest id="hl-suggest" items={found} query={term} active={active} allHref={all} onPick={pick} />}
+      {open && !term && <RecentSearches id="hl-recent" terms={recent} hrefFor={(t) => `/homeliving/search?q=${encodeURIComponent(t)}`} onPick={(e) => { setQ(e.currentTarget.textContent); setOpen(false); }} onClear={() => { clearRecentSearches('homeliving'); setRecent([]); }} />}
     </div>
   );
 }
@@ -179,10 +184,12 @@ function WishLink() {
 }
 
 export function BottomNav() {
+  const { pathname, hash } = useLocation();
+  const here = (item) => (item.id === 'home' ? pathname.replace(/\/$/, '') === '/homeliving' && hash !== '#hl-cats-h' : item.id === 'categories' ? hash === '#hl-cats-h' : pathname.startsWith(item.href));
   return (
     <nav className="hl-nav" aria-label="Home & Living">
       {BOTTOM_NAV.map((item) => (item.href
-        ? <Link key={item.id} to={item.href} className="hl-nav__item is-on" aria-current="page"><Icon name={item.icon} size={24} /><span>{item.label}</span></Link>
+        ? <Link key={item.id} to={item.href} className={`hl-nav__item${here(item) ? ' is-on' : ''}`} aria-current={here(item) ? 'page' : undefined}><Icon name={item.icon} size={24} /><span>{item.label}</span></Link>
         : <span key={item.id} className="hl-nav__item" aria-disabled="true"><Icon name={item.icon} size={24} /><span>{item.label}</span></span>))}
     </nav>
   );

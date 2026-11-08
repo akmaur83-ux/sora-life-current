@@ -12,10 +12,11 @@ import { readRecentlyViewed, clearRecentlyViewed } from './pdp/PdpOwnerKit.jsx';
 // ============================================================
 export const RECENT_SECTION = Object.freeze({ hidden: false, title: 'Continue where you left off', more: '', link: '' });
 
-export default function RecentlyViewedHome() {
+/** `prefix` keeps one store's products ('fs-' Fashion, 'hl-' Home & Living); none keeps all. */
+export default function RecentlyViewedHome({ prefix = '' } = {}) {
   const section = useStorefrontSection('wellness', 'recentlyViewed', RECENT_SECTION);
   const [items, setItems] = useState([]);
-  useEffect(() => { setItems(readRecentlyViewed().filter((r) => r && r.href && r.name && r.price > 0)); }, []);
+  useEffect(() => { setItems(readRecentlyViewed().filter((r) => r && r.href && r.name && r.price > 0 && String(r.key || '').startsWith(prefix))); }, [prefix]);
   if (section.hidden || items.length < 2) return null;
   return (
     <div className="hx-recent">

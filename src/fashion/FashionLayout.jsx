@@ -11,7 +11,7 @@ import { FashionCatalogueProvider, useFashionCatalogue } from './FashionCatalogu
 import { categoryHref, resolveCategory } from '../lib/fashion.js';
 import { normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
 import { useStorefrontSection } from '../lib/storefrontSections.js';
-import SearchSuggest, { SUGGEST_MAX, suggestKeys } from '../components/SearchSuggest.jsx';
+import SearchSuggest, { SUGGEST_MAX, suggestKeys, RecentSearches, readRecentSearches, rememberSearch, clearRecentSearches } from '../components/SearchSuggest.jsx';
 import { searchItems } from '../lib/searchMatch.js';
 
 // ============================================================
@@ -48,6 +48,7 @@ export function FashionHeader({ onMenu }) {
     e.preventDefault();
     const term = q.trim();
     setOpen(false);
+    rememberSearch('fashion', term);
     navigate(term ? `/fashion/search?q=${encodeURIComponent(term)}` : '/fashion/search');
   };
   // Live suggestions under the box (SearchSuggest.jsx, searchMatch.js), from the catalogue already loaded.
@@ -58,7 +59,8 @@ export function FashionHeader({ onMenu }) {
   const found = open && term.length >= 2
     ? searchItems(views, term, (v) => [v.name, v.brand, tree.byId.get(v.category_id)?.name]).map((v) => ({ key: v.id, href: `/fashion/p/${v.slug}`, name: v.name, brand: v.brand, image: v.image, price: v.price }))
     : null;
-  const pick = () => { setOpen(false); setActive(-1); };
+  const [recent, setRecent] = useState([]);
+  const pick = () => { setOpen(false); setActive(-1); if (term.length >= 2) rememberSearch('fashion', term); };
   const keys = (e) => suggestKeys(e, { count: Math.min(SUGGEST_MAX, found?.length || 0), active, setActive, open, setOpen, go: (i) => { pick(); navigate(found[i].href); } });
   // The women's page: the same links over its photograph, and no delivery strip.
   if (/^\/fashion\/women\/?$/.test(location.pathname)) return (
@@ -129,9 +131,10 @@ export function FashionHeader({ onMenu }) {
       <form className="fs-search" role="search" onSubmit={submit}>
         <Icon name="search" size={20} />
         <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} placeholder={config.header.searchPlaceholder || SEARCH_PLACEHOLDER} aria-label="Search fashion"
-          onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={keys} aria-expanded={found ? true : undefined} aria-controls={found ? 'fs-suggest' : undefined} />
+          onFocus={() => { setOpen(true); setRecent(readRecentSearches('fashion')); }} onBlur={() => setOpen(false)} onKeyDown={keys} aria-expanded={found ? true : undefined} aria-controls={found ? 'fs-suggest' : undefined} />
         <button type="submit" className="fs-search__go" aria-label="Search"><Icon name="search" size={22} /></button>
         {found && <SearchSuggest id="fs-suggest" items={found} query={term} active={active} allHref={`/fashion/search?q=${encodeURIComponent(term)}`} onPick={pick} />}
+        {open && !term && <RecentSearches id="fs-recent" terms={recent} hrefFor={(t) => `/fashion/search?q=${encodeURIComponent(t)}`} onPick={(e) => { setQ(e.currentTarget.textContent); setOpen(false); }} onClear={() => { clearRecentSearches('fashion'); setRecent([]); }} />}
       </form>
       {!strip.hidden && <div className="fs-strip" aria-label="Delivery">
         <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> {strip.location}</span>

@@ -119,7 +119,7 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
   const picker = loadModule('src/fashion/FashionVariantPicker.jsx', { Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, selectionState: pdpRules.selectionState });
   const card = loadModule('src/fashion/FashionProductCard.jsx', { Link, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, swatchOverflow: rules.swatchOverflow, quickAddPlan: pdpRules.quickAddPlan, useFashionWishlist: wishMod.useFashionWishlist, useStore, VariantSheet: picker.VariantSheet });
   const layout = loadModule('src/fashion/FashionLayout.jsx', { Link, Outlet, useLocation, useNavigate, Icon, SparrowMark, Footer, Toasts, useStore, branding, useFashionWishlist: wishMod.useFashionWishlist, FashionCatalogueProvider: catalogue.FashionCatalogueProvider, useFashionCatalogue: catalogue.useFashionCatalogue, categoryHref: rules.categoryHref, resolveCategory: rules.resolveCategory, ...homepageDeps });
-  const home = loadModule('src/fashion/FashionHome.jsx', { Link, Icon, useCustomerAuth, categoryHref: rules.categoryHref, sortViews: rules.sortViews, topBrands: rules.topBrands, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default, HERO_IMAGE: art.HERO_IMAGE, circleArt: art.circleArt, cardArt: art.cardArt, ...homepageDeps });
+  const home = loadModule('src/fashion/FashionHome.jsx', { RecentlyViewedHome: () => null, Link, Icon, useCustomerAuth, categoryHref: rules.categoryHref, sortViews: rules.sortViews, topBrands: rules.topBrands, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default, HERO_IMAGE: art.HERO_IMAGE, circleArt: art.circleArt, cardArt: art.cardArt, ...homepageDeps });
   // The department pages arrived with /fashion/men and /fashion/women. A baseline tree from
   // before them has neither file, so it renders without the two routes instead of crashing.
   const department = has('src/fashion/FashionDepartment.jsx')
@@ -129,14 +129,14 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
   const jewellery = department && has('src/fashion/FashionJewellery.jsx')
     ? loadModule('src/fashion/FashionJewellery.jsx', { Link, Icon, categoryHref: rules.categoryHref, useFashionCatalogue: catalogue.useFashionCatalogue, FashionProductCard: card.default, departmentCatalogue: department.departmentCatalogue, ...loadModule('src/fashion/jewelleryContent.js') })
     : null;
-  const listing = loadModule('src/fashion/FashionListing.jsx', { Link, useParams, useSearchParams, Icon, ...rules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default });
+  const listing = loadModule('src/fashion/FashionListing.jsx', { ShareList: () => null, Link, useParams, useSearchParams, Icon, ...rules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, FashionProductCard: card.default });
   // Product information reads after mount (an effect), so a server render has none: the same null as the real one here.
   const ProductInformation = () => null;
   const pdp = loadModule('src/fashion/FashionProductPage.jsx', { Link, useNavigate, useParams, useSearchParams, Icon, money: (n) => `₹${Number(n).toLocaleString('en-IN')}`, useStore, ...pdpContent, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, useFashionWishlist: wishMod.useFashionWishlist, useFashionCatalogue: catalogue.useFashionCatalogue, CategoryChips: layout.CategoryChips, Breadcrumb: listing.Breadcrumb, FashionProductCard: card.default, Stars: card.Stars, VariantPicker: picker.VariantPicker, ProductInformation,
     // The marketplace kit (PdpOwnerKit.jsx) and the extra facts read, stubbed: they need the network or storage.
     PdpPrice: () => null, PdpSaving: () => null, PdpAssurances: () => null, PdpFactTable: () => null, PdpAbout: () => null,
     aboutBullets: () => [], PdpCompare: () => null, PdpService: () => null, PdpBrandRail: () => null, PdpRecent: () => null,
-    PdpShare: () => null, PdpReviews: () => null, useRecentlyViewed: () => [], useHoverZoom: () => {}, PdpDeliveryDate: () => null,
+    PdpShare: () => null, PdpReviews: () => null, useRecentlyViewed: () => [], useHoverZoom: () => {}, PdpDeliveryDate: () => null, ProductDeliveryInfo: () => null, usePageMeta: () => {}, priceTitle: (n) => n, GalleryZoom: () => null,
     useFashionDetails: () => null, countryName: (c) => c });
   const App = ({ path, initial = INITIAL }) => h(StaticRouter, { location: path },
     h(Routes, null,

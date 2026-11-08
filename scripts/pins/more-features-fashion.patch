@@ -1,0 +1,126 @@
+diff --git a/src/fashion/FashionHome.jsx b/src/fashion/FashionHome.jsx
+index fe18692..a214c7c 100644
+--- a/src/fashion/FashionHome.jsx
++++ b/src/fashion/FashionHome.jsx
+@@ -6,6 +6,7 @@ import { categoryHref, sortViews, topBrands } from '../lib/fashion.js';
+ import { useFashionCatalogue } from './FashionCatalogue.jsx';
+ import { CategoryChips } from './FashionLayout.jsx';
+ import FashionProductCard from './FashionProductCard.jsx';
++import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+ import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
+ import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+ import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
+@@ -149,6 +150,8 @@ export default function FashionHome() {
+     <div className="fs-home">
+       <Hero config={config.hero} />
+       <CategoryChips />
++      {/* This visitor's recently viewed fashion products (2+; this browser only). */}
++      <RecentlyViewedHome prefix="fs-" />
+       <CategoryTiles tree={tree} />
+       <Benefits />
+       <ShopByCategory tree={tree} copy={config.sections} />
+diff --git a/src/fashion/FashionLayout.jsx b/src/fashion/FashionLayout.jsx
+index ad4bab1..b3cfdde 100644
+--- a/src/fashion/FashionLayout.jsx
++++ b/src/fashion/FashionLayout.jsx
+@@ -11,7 +11,7 @@ import { FashionCatalogueProvider, useFashionCatalogue } from './FashionCatalogu
+ import { categoryHref, resolveCategory } from '../lib/fashion.js';
+ import { normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
+ import { useStorefrontSection } from '../lib/storefrontSections.js';
+-import SearchSuggest, { SUGGEST_MAX, suggestKeys } from '../components/SearchSuggest.jsx';
++import SearchSuggest, { SUGGEST_MAX, suggestKeys, RecentSearches, readRecentSearches, rememberSearch, clearRecentSearches } from '../components/SearchSuggest.jsx';
+ import { searchItems } from '../lib/searchMatch.js';
+ 
+ // ============================================================
+@@ -48,6 +48,7 @@ export function FashionHeader({ onMenu }) {
+     e.preventDefault();
+     const term = q.trim();
+     setOpen(false);
++    rememberSearch('fashion', term);
+     navigate(term ? `/fashion/search?q=${encodeURIComponent(term)}` : '/fashion/search');
+   };
+   // Live suggestions under the box (SearchSuggest.jsx, searchMatch.js), from the catalogue already loaded.
+@@ -58,7 +59,8 @@ export function FashionHeader({ onMenu }) {
+   const found = open && term.length >= 2
+     ? searchItems(views, term, (v) => [v.name, v.brand, tree.byId.get(v.category_id)?.name]).map((v) => ({ key: v.id, href: `/fashion/p/${v.slug}`, name: v.name, brand: v.brand, image: v.image, price: v.price }))
+     : null;
+-  const pick = () => { setOpen(false); setActive(-1); };
++  const [recent, setRecent] = useState([]);
++  const pick = () => { setOpen(false); setActive(-1); if (term.length >= 2) rememberSearch('fashion', term); };
+   const keys = (e) => suggestKeys(e, { count: Math.min(SUGGEST_MAX, found?.length || 0), active, setActive, open, setOpen, go: (i) => { pick(); navigate(found[i].href); } });
+   // The women's page: the same links over its photograph, and no delivery strip.
+   if (/^\/fashion\/women\/?$/.test(location.pathname)) return (
+@@ -129,9 +131,10 @@ export function FashionHeader({ onMenu }) {
+       <form className="fs-search" role="search" onSubmit={submit}>
+         <Icon name="search" size={20} />
+         <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} placeholder={config.header.searchPlaceholder || SEARCH_PLACEHOLDER} aria-label="Search fashion"
+-          onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={keys} aria-expanded={found ? true : undefined} aria-controls={found ? 'fs-suggest' : undefined} />
++          onFocus={() => { setOpen(true); setRecent(readRecentSearches('fashion')); }} onBlur={() => setOpen(false)} onKeyDown={keys} aria-expanded={found ? true : undefined} aria-controls={found ? 'fs-suggest' : undefined} />
+         <button type="submit" className="fs-search__go" aria-label="Search"><Icon name="search" size={22} /></button>
+         {found && <SearchSuggest id="fs-suggest" items={found} query={term} active={active} allHref={`/fashion/search?q=${encodeURIComponent(term)}`} onPick={pick} />}
++        {open && !term && <RecentSearches id="fs-recent" terms={recent} hrefFor={(t) => `/fashion/search?q=${encodeURIComponent(t)}`} onPick={(e) => { setQ(e.currentTarget.textContent); setOpen(false); }} onClear={() => { clearRecentSearches('fashion'); setRecent([]); }} />}
+       </form>
+       {!strip.hidden && <div className="fs-strip" aria-label="Delivery">
+         <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> {strip.location}</span>
+diff --git a/src/fashion/FashionListing.jsx b/src/fashion/FashionListing.jsx
+index 3cb7ce2..5556af3 100644
+--- a/src/fashion/FashionListing.jsx
++++ b/src/fashion/FashionListing.jsx
+@@ -10,6 +10,7 @@ import { useFashionWishlist } from '../lib/fashionWishlist.js';
+ import { useFashionCatalogue } from './FashionCatalogue.jsx';
+ import { CategoryChips } from './FashionLayout.jsx';
+ import FashionProductCard from './FashionProductCard.jsx';
++import ShareList from '../components/ShareList.jsx';
+ 
+ // ============================================================
+ // The listing — /fashion/c/<slug> at any level, /fashion/search and
+@@ -205,11 +206,14 @@ export function FashionSearch() {
+ export function FashionWishlistPage() {
+   const wish = useFashionWishlist();
+   const set = new Set(wish.ids);
++  const { views } = useFashionCatalogue();
++  const saved = views.filter((v) => set.has(v.id)).map((v) => ({ name: v.name, price: v.price, href: `/fashion/p/${v.slug}` }));
+   return (
+     <Listing
+       title="Your fashion wishlist"
+       trail={[{ name: 'Fashion', href: '/fashion' }, { name: 'Wishlist' }]}
+       only={(v) => set.has(v.id)}
++      intro={saved.length ? <ShareList items={saved} heading="My Fashion wishlist on SORA LIFESTYLE" /> : null}
+       emptyCopy="Nothing saved yet — tap the heart on any style to keep it here."
+     />
+   );
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index dc860f4..534983f 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -17,6 +17,8 @@ import { GalleryZoom } from '../homeliving/HomeLivingProductPage.jsx';
+ import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+ import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
++import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
++import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
+ 
+ // ============================================================
+ // /fashion/p/<slug> — the product page.
+@@ -113,6 +115,13 @@ export default function FashionProductPage() {
+   const facts = useFashionDetails(view?.id);
+   const recent = useRecentlyViewed(view ? { key: `fs-${view.id}`, href: `/fashion/p/${view.slug}`, name: view.name, image: view.image, price: view.price } : null);
+   useHoverZoom('.fs-pdp .fs-gallery__slide', view?.id);
++  const liveStock = !!view?.variants?.some((v) => v.stock > 0);
++  usePageMeta(view ? {
++    title: priceTitle(`${view.name}${view.brand ? ` by ${view.brand}` : ''}`, view.price),
++    description: view.description || `${view.name} from ${view.brand || 'SORA Lifestyle'}. Free delivery in 6–7 business days, cash on delivery available.`,
++    image: view.image, path: `/fashion/p/${view.slug}`,
++    product: { name: view.name, description: view.description, images: view.images, brand: view.brand, sku: facts?.sku, price: view.price, inStock: liveStock },
++  } : {}, [view?.price, liveStock, facts?.sku]);
+ 
+   if (!view) {
+     return (
+@@ -215,6 +224,7 @@ export default function FashionProductPage() {
+             <div><dt>Returns</dt><dd>Within 7 days of delivery</dd></div>
+           </dl>
+           <DeliveryBlock />
++          <ProductDeliveryInfo />
+         </aside>
+       </div>
+ 

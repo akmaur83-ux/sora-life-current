@@ -15,6 +15,7 @@ import ProductRatingTeaser from '../components/pdp/ProductRatingTeaser.jsx';
 import ProductOfferTeaser from '../components/pdp/ProductOfferTeaser.jsx';
 import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
 import ProductBenefits from '../components/pdp/ProductBenefits.jsx';
 import ProductIngredients from '../components/pdp/ProductIngredients.jsx';
 import ProductHowToUse from '../components/pdp/ProductHowToUse.jsx';
@@ -108,6 +109,12 @@ useEffect(() => {
   // Recently viewed and hover zoom (owner, 2026-11-08). Before any early return: hooks.
   const recent = useRecentlyViewed(product ? { key: `w-${product.id}`, href: `/product/${product.slug}`, name: product.name, image: product.image || null, price: product.price } : null);
   useHoverZoom('.v2-pdp-root .pdp__main', product?.id);
+  usePageMeta(product ? {
+    title: priceTitle(product.name, product.price),
+    description: product.description || `${product.name}${product.brand ? ` by ${product.brand}` : ''}. Free delivery in 6–7 business days, cash on delivery available.`,
+    image: product.image, path: `/product/${product.slug}`,
+    product: { name: product.name, description: product.description, image: product.image, brand: product.brand, price: product.price, inStock: Number(product.stock) > 0 },
+  } : {}, [product?.price, product?.stock]);
   const [catalogTimedOut, setCatalogTimedOut] = useState(false);
   useEffect(() => {
     if (isCatalogHydrated()) return;

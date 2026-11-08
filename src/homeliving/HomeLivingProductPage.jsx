@@ -14,6 +14,7 @@ import { fetchEligibleCoupons } from '../lib/couponApi.js';
 import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
 import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
 import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
 
 // ============================================================
@@ -564,6 +565,13 @@ export default function HomeLivingProductPage() {
   const [qty, setQty] = useState(1);
   const recent = useRecentlyViewed(view ? { key: `hl-${view.id}`, href: `/homeliving/p/${view.slug}`, name: view.name, image: (view.gallery && view.gallery[0]?.url) || view.images?.[0] || null, price: view.price } : null);
   useHoverZoom('.hl-pdp .hl-gallery__slide', view?.id);
+  const liveStock = !!view && (view.variants?.length ? view.variants.some((v) => v.stock > 0) : view.stock > 0);
+  usePageMeta(view ? {
+    title: priceTitle(view.name, view.price),
+    description: view.description || `${view.name}${view.brand ? ` by ${view.brand}` : ''}. Free delivery in 6–7 business days, cash on delivery available.`,
+    image: view.images?.[0], path: `/homeliving/p/${view.slug}`,
+    product: { name: view.name, description: view.description, images: view.images, brand: view.brand, sku: view.sku, price: view.price, inStock: liveStock },
+  } : {}, [view?.price, liveStock]);
 
   if (!view) {
     return (

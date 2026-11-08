@@ -2,6 +2,9 @@
   "framework": null,
   "buildCommand": "npm run build && node build/publish-content.mjs",
   "outputDirectory": ".",
+  "functions": {
+    "api/share.js": { "includeFiles": "index.html" }
+  },
   "redirects": [
     {
       "source": "/(.*)",
@@ -41,6 +44,18 @@
     {
       "source": "/sitemap.xml",
       "destination": "/api/sitemap"
+    },
+    {
+      "source": "/product/:slug",
+      "destination": "/api/share?kind=product&slug=:slug"
+    },
+    {
+      "source": "/fashion/p/:slug",
+      "destination": "/api/share?kind=fashion&slug=:slug"
+    },
+    {
+      "source": "/homeliving/p/:slug",
+      "destination": "/api/share?kind=homeliving&slug=:slug"
     },
     {
       "source": "/((?!api/).*)",

@@ -54,6 +54,21 @@ test('offer countdown: the admin\'s end time is India time; the time left reads 
   assert.equal(oc.timeLeft(0), '');
   assert.equal(oc.timeLeft(-5), '');
 });
+const pm = loadModule('src/lib/pageMeta.js', { useEffect: () => {}, branding: { siteName: 'SORA LIFESTYLE' }, titleWithSiteName: (t) => t });
+test('product data for search engines: INR price, stock, brand, absolute pictures; nothing without a price', () => {
+  const ld = pm.productLd({ name: 'Red Shawl', images: ['/img/a.webp', 'https://x/b.jpg'], brand: 'Weavers Villa', price: 1199, inStock: false, url: '/fashion/p/red-shawl' });
+  assert.equal(ld['@type'], 'Product'); assert.equal(ld.offers.price, '1199.00'); assert.equal(ld.offers.priceCurrency, 'INR');
+  assert.equal(ld.offers.availability, 'https://schema.org/OutOfStock');
+  assert.deepEqual(ld.image, ['https://www.soralifestyle.in/img/a.webp', 'https://x/b.jpg']);
+  assert.equal(ld.offers.url, 'https://www.soralifestyle.in/fashion/p/red-shawl');
+  assert.equal(pm.productLd({ name: 'X', price: 0 }), null);
+  assert.ok(!('aggregateRating' in ld), 'no rating is invented');
+  assert.equal(pm.priceTitle('Red Shawl', 1199), 'Red Shawl — ₹1,199');
+});
+const sl = loadModule('src/components/ShareList.jsx', { useState: (v) => [v, () => {}], Icon: () => null, money: (n) => `₹${n}` });
+test('share a wishlist: numbered names, prices and full links', () => {
+  assert.equal(sl.wishlistText([{ name: 'A', price: 10, href: '/fashion/p/a' }], 'List'), 'List:\n\n1. A — ₹10\nhttps://www.soralifestyle.in/fashion/p/a');
+});
 const eng = loadModule('src/lib/productEngage.js', { supabase: null });
 test('stock alerts group by product and choice, most wanted first; admin links per store', () => {
   const g = eng.groupAlerts([{ id: 1, product_key: 'fashion:a', product_name: 'A', choice: '' }, { id: 2, product_key: 'fashion:b', product_name: 'B', choice: 'M' }, { id: 3, product_key: 'fashion:b', product_name: 'B', choice: 'M' }]);

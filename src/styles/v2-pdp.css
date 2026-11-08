@@ -1523,3 +1523,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-offer svg { flex: none; margin-top: 2px; color: #C2500A; }
 .pdpk-offer__code { margin: 0 2px; padding: 1px 6px; border: 1px dashed #C2500A; background: #fff; color: #C2500A; font: 700 12px/1.4 Arial, sans-serif; letter-spacing: .04em; cursor: pointer; }
 .pdpk-offer em { display: block; font-style: normal; color: #B12704; }
+.pdpk-ask { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font: 400 13px/1.4 Arial, sans-serif; color: #0F1111; text-decoration: none; }
+.pdpk-ask svg { color: #1DA851; flex: none; }
+.pdpk-ask b { color: #007185; font-weight: 400; }
+.pdpk-ask:hover b { color: #C7511F; text-decoration: underline; }

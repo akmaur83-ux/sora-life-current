@@ -10,6 +10,7 @@ import { useFashionWishlist } from '../lib/fashionWishlist.js';
 import { useFashionCatalogue } from './FashionCatalogue.jsx';
 import { CategoryChips } from './FashionLayout.jsx';
 import FashionProductCard from './FashionProductCard.jsx';
+import ShareList from '../components/ShareList.jsx';
 
 // ============================================================
 // The listing — /fashion/c/<slug> at any level, /fashion/search and
@@ -205,11 +206,14 @@ export function FashionSearch() {
 export function FashionWishlistPage() {
   const wish = useFashionWishlist();
   const set = new Set(wish.ids);
+  const { views } = useFashionCatalogue();
+  const saved = views.filter((v) => set.has(v.id)).map((v) => ({ name: v.name, price: v.price, href: `/fashion/p/${v.slug}` }));
   return (
     <Listing
       title="Your fashion wishlist"
       trail={[{ name: 'Fashion', href: '/fashion' }, { name: 'Wishlist' }]}
       only={(v) => set.has(v.id)}
+      intro={saved.length ? <ShareList items={saved} heading="My Fashion wishlist on SORA LIFESTYLE" /> : null}
       emptyCopy="Nothing saved yet — tap the heart on any style to keep it here."
     />
   );

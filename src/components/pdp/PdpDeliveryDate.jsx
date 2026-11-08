@@ -4,6 +4,21 @@ import { deliveryWindow } from '../../lib/deliveryEstimate.js';
 import { PdpNotifyMe } from './PdpEngage.jsx';
 import { useStorefrontSection } from '../../lib/storefrontSections.js';
 import { OFFER_COUNTDOWN, parseIndiaTime, timeLeft } from '../../lib/offerCountdown.js';
+import { useConsumerCare } from '../../lib/consumerCare.js';
+import { waLink } from '../SiteAssist.jsx';
+
+/** "Questions? Ask us on WhatsApp" with this product named (SiteAssist.waLink); nothing without a number. */
+function AskWhatsApp({ productName }) {
+  const care = useConsumerCare();
+  const [href, setHref] = useState('');
+  useEffect(() => { setHref(waLink(care?.phone, window.location.pathname, productName, window.location.href.split('#')[0])); }, [care?.phone, productName]);
+  if (!href) return null;
+  return (
+    <a className="pdpk-ask" href={href} target="_blank" rel="noopener noreferrer">
+      <Icon name="chat" size={16} /> Questions about this product? <b>Ask us on WhatsApp</b>
+    </a>
+  );
+}
 
 /** The admin's offer line with the time left (offerCountdown.js); nothing once it ends. */
 function OfferCountdown() {
@@ -32,7 +47,7 @@ export default function PdpDeliveryDate({ className = '', out = false, productKe
   useEffect(() => { setWin(deliveryWindow(new Date())); }, []);
   // "Free Size · As shown" says nothing to a customer: only a real size or colour is named.
   const named = String(choice || '').split('·').map((x) => x.trim()).filter((x) => x && !/^(free size|one size|as shown)$/i.test(x)).join(' · ');
-  if (out) return <PdpNotifyMe productKey={productKey} productName={productName} choice={named} />;
+  if (out) return <><PdpNotifyMe productKey={productKey} productName={productName} choice={named} /><AskWhatsApp productName={productName} /></>;
   if (!win) return null;
   return (
     <>
@@ -41,6 +56,7 @@ export default function PdpDeliveryDate({ className = '', out = false, productKe
       <Icon name="truck" size={16} />
       <span>FREE delivery <b>{win.label}</b><em>Estimated delivery date</em></span>
     </p>
+    <AskWhatsApp productName={productName} />
     </>
   );
 }
