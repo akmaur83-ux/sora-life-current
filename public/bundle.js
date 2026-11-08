@@ -3240,6 +3240,21 @@ const WELLNESS = {
     cta: text$1(40, 'Button label'),
     link: link('Button link (empty: Shawls & Stoles)')
   }, 'Weavers Villa poster with their films'),
+  // Leather Factory (partner, 2026-11-08), under Weavers Villa.
+  leatherFactory: group({
+    hidden: hidden(),
+    title: text$1(60, 'Heading'),
+    more: text$1(30, 'View-all label'),
+    link: link('View-all link (empty: Leather Goods)')
+  }, 'Leather Factory pieces (their products in Fashion; hidden while there are none)'),
+  leatherShowcase: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: text$1(60, 'Headline'),
+    text: text$1(200, 'Subline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link (empty: Leather Goods)')
+  }, 'Leather Factory poster with category tiles'),
   // Under the Biosash range (and Weavers Villa since 2026-11-08) since 2026-11-07.
   bedsheets: group({
     hidden: hidden(),
@@ -41178,6 +41193,160 @@ function WeaversVillaShowcase({
   });
 }
 
+// ============================================================
+// Leather Factory on the wellness homepage (partner, 2026-11-08): their wallets,
+// handbags, belts and bags now live in Fashion › Leather Goods. Two pieces, as for
+// Weavers Villa:
+//
+//   * the range — a sliding row of their pieces, sub-categories taking turns
+//     (the same rule as Weavers Villa: selectWeaversRange);
+//   * the showcase — a poster band of category tiles, each a packshot served from
+//     this site (/img/partners/leather-factory) opening that sub-category.
+//
+// Their own short films carry wholesale prices and "DM to order" lettering, so
+// they are not shown on SORA.
+// ============================================================
+const LF_BRAND = 'Leather Factory';
+const LF_LISTING = '/fashion/c/leather-goods';
+const LF_SECTION = Object.freeze({
+  hidden: false,
+  title: 'Leather Goods by Leather Factory',
+  more: 'View All',
+  link: ''
+});
+const LF_SHOWCASE = Object.freeze({
+  hidden: false,
+  eyebrow: 'New on SORA Lifestyle',
+  title: 'Leather Factory',
+  text: 'Wallets, handbags, belts, card holders and travel bags from a leather goods maker in New Delhi.',
+  cta: 'Shop leather goods',
+  link: LF_LISTING
+});
+const LF_TILES = Object.freeze([['handbags', 'Handbags'], ['mens-wallets', "Men's Wallets"], ['belts', 'Belts'], ['sling-bags', 'Sling Bags'], ['laptop-travel-bags', 'Laptop Bags'], ['clutches', 'Clutches'], ['card-holders', 'Card Holders'], ['passport-holders', 'Passport Holders'], ['pouches', 'Pouches']].map(([slug, label]) => Object.freeze({
+  id: slug,
+  label,
+  href: `/fashion/c/${slug}`,
+  image: `/img/partners/leather-factory/${slug}.webp`
+})));
+
+/** The range's rows: active fashion rows of the brand; a failed read counts as none. */
+async function fetchLeatherRows(client = supabase, limit = 72) {
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', LF_BRAND).eq('is_active', true).order('sort_order', {
+    ascending: true
+  }).limit(limit);
+  if (error || !Array.isArray(data)) return [];
+  return data;
+}
+
+/** The range's cards (packshots, drawn whole): null until the read answers. */
+function useLeatherRange(limit = 12) {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchLeatherRows(supabase).then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return reactExports.useMemo(() => rows ? selectWeaversRange(rows, limit).map(c => ({
+    ...c,
+    whole: true
+  })) : null, [rows, limit]);
+}
+
+/** `items` is for a test; the page passes nothing and the live catalogue is read. */
+function LeatherFactoryRange({
+  items: given,
+  autoplayMs
+} = {}) {
+  const section = useStorefrontSection('wellness', 'leatherFactory', LF_SECTION);
+  const loaded = useLeatherRange();
+  const items = (given ?? loaded) || [];
+  return /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
+    id: "leather",
+    label: "Leather Factory pieces",
+    section: section,
+    defaults: LF_SECTION,
+    link: section.link || LF_LISTING,
+    items: items,
+    ...(autoplayMs ? {
+      autoplayMs
+    } : {})
+  });
+}
+function LeatherFactoryShowcase({
+  tiles = LF_TILES
+} = {}) {
+  const s = useStorefrontSection('wellness', 'leatherShowcase', LF_SHOWCASE);
+  if (s.hidden || !tiles.length) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-wv hx-lf",
+    "aria-labelledby": "hx-lf-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-wv__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hx-wv__copy",
+          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-wv__eyebrow",
+            children: s.eyebrow
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "hx-wv__h",
+            id: "hx-lf-h",
+            children: s.title
+          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-wv__text",
+            children: s.text
+          })]
+        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: s.link || LF_LISTING,
+          className: "hx-wv__cta",
+          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hx-wv__films hx-lf__tiles",
+        "aria-label": "Leather Factory categories",
+        children: tiles.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          className: "hx-wv__film",
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: t.href,
+            className: "hx-wv__tile",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "hx-wv__media hx-lf__media",
+              children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                className: "hx-lf__img",
+                src: t.image,
+                alt: "",
+                width: 720,
+                height: 720,
+                loading: "lazy",
+                decoding: "async"
+              })
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "hx-wv__label",
+              children: [t.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 14
+              })]
+            })]
+          })
+        }, t.id))
+      })]
+    })
+  });
+}
+
 function PriceTag({
   product,
   showOff = true,
@@ -45088,7 +45257,7 @@ function Home() {
     className: "v2-home",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeHero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
       eyebrow: "Across the catalogue",
       title: "Start here",
