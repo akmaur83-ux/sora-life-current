@@ -285,7 +285,7 @@ await test('no reviews yet, no rating row: an unreviewed product shows no "0.0 â
   assert.doesNotMatch(card, /fs-rating|fs-stars|0\.0/, 'no rating row on the card');
   assert.match(html, /<p class="fs-rating"><b>4\.5<\/b><span class="fs-stars"/, 'a reviewed product keeps its row');
   const pdp = app.render(`/fashion/p/${unreviewed.slug}`, data);
-  const head = pdp.slice(pdp.indexOf('<h1 class="fs-pdp__h serif">'), pdp.indexOf('<p class="fs-price fs-price--lg"'));
+  const head = pdp.slice(pdp.indexOf('<h1 class="fs-pdp__h serif">'), pdp.indexOf('<div class="fs-pdp__pricewrap"'));
   assert.ok(head.length > 0, 'the product page renders its title and price');
   assert.doesNotMatch(head, /fs-rating|fs-stars|0\.0/, 'no rating row on the product page');
   // Cards in a row share its height: without align-content the shorter body would stretch the image track.

@@ -300,7 +300,10 @@ await test(`the eight fashion pages render byte-identically from the working tre
   // The fashion departments point the Men and Women tiles at their pages (test-fashion-departments.mjs).
   const normalise = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(sansStripCopy(sansDepartmentTiles(html)).replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, OLD_BACK))[1].replace(SHIP_LIST, 'SHIP')]));
   const heroes = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(html)[0]]));
-  assert.deepEqual(normalise(now), normalise(then), 'identical markup for every page, the campaign hero aside');
+  // The product page took the marketplace layout (owner, 2026-11-08; test-fashion-cart.mjs pins it), so
+  // its markup is compared no longer; every listing and home page still is.
+  const sansPdp = (o) => Object.fromEntries(Object.entries(o).filter(([p]) => !p.startsWith('/fashion/p/')));
+  assert.deepEqual(sansPdp(normalise(now)), sansPdp(normalise(then)), 'identical markup for every page, the campaign hero aside');
   assert.deepEqual(heroes(now), heroes(then), 'the campaign hero block itself is byte-identical — only its position changed');
   assert.match(a['/fashion/p/meadow-linen-shirt-sage?size=M&colour=Sage'], /fs-pick__note is-out/, 'the per-combination stock state survives');
   // And the FASHION source that renders those pages is untouched: only the data layer moved.

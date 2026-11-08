@@ -1,0 +1,190 @@
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 6b34d06..8b76947 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -13,6 +13,8 @@ import { Breadcrumb } from './FashionListing.jsx';
+ import FashionProductCard, { Stars } from './FashionProductCard.jsx';
+ import { VariantPicker } from './FashionVariantPicker.jsx';
+ import ProductInformation from '../components/ProductInformation.jsx';
++import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
++import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
+ 
+ // ============================================================
+ // /fashion/p/<slug> — the product page.
+@@ -80,6 +82,22 @@ function DeliveryBlock() {
+   );
+ }
+ 
++/**
++ * One-size pieces (shawls, stoles, caps) open ready to buy, as a marketplace page does: the only
++ * size, and the first colour in stock (or the only one). A garment with several sizes waits for
++ * the customer to choose both; whatever the URL names always wins.
++ */
++export function defaultSelection(view, sel) {
++  if (view.sizes.length !== 1) return sel;
++  const size = sel.size ?? view.sizes[0];
++  let colour = sel.colour;
++  if (!colour) {
++    const live = view.swatches.find((sw) => view.variants.some((v) => v.size === size && v.colour === sw.colour && v.stock > 0));
++    colour = live ? live.colour : (view.swatches.length === 1 ? view.swatches[0].colour : null);
++  }
++  return { size, colour };
++}
++
+ export default function FashionProductPage() {
+   const { slug } = useParams();
+   const { status, tree, views, bySlug } = useFashionCatalogue();
+@@ -88,6 +106,9 @@ export default function FashionProductPage() {
+   const [params, setParams] = useSearchParams();
+   const wish = useFashionWishlist();
+   const view = bySlug.get(String(slug || ''));
++  const facts = useFashionDetails(view?.id);
++  const recent = useRecentlyViewed(view ? { key: `fs-${view.id}`, href: `/fashion/p/${view.slug}`, name: view.name, image: view.image, price: view.price } : null);
++  useHoverZoom('.fs-pdp .fs-gallery__slide', view?.id);
+ 
+   if (!view) {
+     return (
+@@ -103,74 +124,112 @@ export default function FashionProductPage() {
+ 
+   const node = view.category_id ? tree.byId.get(view.category_id) : null;
+   const trail = [...breadcrumbFor(tree, node), { name: view.name }];
+-  const sel = readSelection(params, view);
++  const sel = defaultSelection(view, readSelection(params, view));
+   const st = selectionState(view, sel);
+   const setSel = (next) => setParams(writeSelection(params, next), { replace: true });
+   const wished = wish.has(view.id);
+-  const related = relatedFor(view, views, 4);
++  const related = relatedFor(view, views, 8);
++  const priced = { ...view, price: st.price };
++  const bullets = aboutBullets(view.description);
++  const anyLive = view.variants.some((v) => v.stock > 0);
++  const stockText = st.status === 'in' ? 'In stock' : st.status === 'low' ? st.stockNote : st.status === 'choose' ? (anyLive ? 'In stock' : 'Out of stock') : st.stockNote;
++  const stockClass = st.status === 'choose' ? (anyLive ? 'in' : 'out') : st.status;
++  const factRows = [
++    ['Brand', view.brand],
++    ['Material', facts?.material],
++    ['Colour', st.colour || (view.swatches.length ? view.swatches.map((x) => x.colour).join(', ') : null)],
++    ['Size', st.size || (view.sizes.length ? view.sizes.join(', ') : null)],
++    ['Net quantity', facts?.net_content],
++    ['Product type', facts?.generic_name],
++    ['Category', node ? tree.ancestors(node.id).map((a) => a.name).join(' › ') : null],
++    ['Care', facts?.care],
++    ['SKU', st.variant?.sku || facts?.sku],
++    ['Country of origin', facts?.country_of_origin ? countryName(facts.country_of_origin) : null],
++    ['Delivery', 'Standard, 6–7 business days, free'],
++    ['Returns', 'Within 7 days of delivery'],
++  ];
+ 
+   const add = () => addFashionToCart(view, st.variant);
+   const buyNow = () => { if (addFashionToCart(view, st.variant)) navigate('/checkout'); };
+   const addLabel = st.canAdd ? 'Add to cart' : st.status === 'out' ? 'Out of stock' : st.status === 'missing' ? 'Not available' : st.missing;
+ 
+   return (
+-    <div className="fs-pdp" data-product={view.slug}>
++    <div className="fs-pdp fs-pdp--mk" data-product={view.slug}>
+       <CategoryChips />
+       <Breadcrumb trail={trail} />
+       <div className="fs-pdp__grid">
+         <Gallery view={view} />
+         <div className="fs-pdp__body">
+-          {view.brand && <p className="fs-pdp__brand">{view.brand}</p>}
++          {view.brand && <p className="fs-pdp__brand">Brand: <Link to={`/fashion/search?q=${encodeURIComponent(view.brand)}`}>{view.brand}</Link></p>}
+           <h1 className="fs-pdp__h serif">{view.name}</h1>
+           {/* No reviews yet: no rating row, rather than "0.0 ☆☆☆☆☆ (0 reviews)" (as on the card). */}
+           {view.reviewCount > 0 && <p className="fs-rating"><b>{view.rating.toFixed(1)}</b><Stars value={view.rating} size={15} /><span className="fs-rating__count">({view.reviewCount.toLocaleString('en-IN')} {view.reviewCount === 1 ? 'review' : 'reviews'})</span></p>}
++          {facts?.net_content && <p className="fs-pdp__net">{facts.net_content}</p>}
+ 
+-          <p className="fs-price fs-price--lg" data-price={st.price}>
+-            <strong><span className="fs-price__cur">₹</span>{money(st.price).replace(/^₹\s?/, '')}</strong>
+-            {view.hasDiscount && <><span className="fs-price__mrp">M.R.P: <s>{money(view.mrp)}</s></span><span className="fs-badge">{view.discountPct}% OFF</span></>}
+-          </p>
+-          <p className="fs-pdp__tax">Inclusive of all taxes</p>
++          <div className="fs-pdp__pricewrap" data-price={st.price}>
++            <PdpPrice product={priced} />
++            <p className="fs-pdp__tax">Inclusive of all taxes</p>
++            <PdpSaving product={priced} />
++          </div>
++          <PdpAssurances />
+ 
+           <VariantPicker view={view} size={st.size} colour={st.colour} onChange={setSel} />
+ 
++          <PdpFactTable rows={factRows} />
++          <PdpAbout bullets={bullets} />
++          {view.description && bullets.length < 2 && (
++            <section className="fs-pdp__section" aria-labelledby="fs-desc-h">
++              <h2 className="fs-pdp__h2" id="fs-desc-h">About this item</h2>
++              <p className="fs-pdp__desc">{view.description}</p>
++            </section>
++          )}
++          <ProductInformation store="fashion" productId={view.id} variant={st.variant} prefix="fs" />
++        </div>
++
++        <aside className="fs-buybox" aria-label="Buy">
++          <p className="fs-buybox__price"><span className="fs-price__cur">₹</span>{money(st.price).replace(/^₹\s?/, '')}</p>
++          <p className="fs-buybox__deliv"><b>FREE</b> Standard Delivery: 6–7 business days</p>
++          <p className="fs-buybox__note">Free on every order · Cash on Delivery available</p>
++          <p className={`fs-buybox__stock is-${stockClass}`}>{stockText}</p>
++          {st.label && <p className="fs-buybox__sel">{st.label}</p>}
+           <div className="fs-pdp__actions">
+             <button type="button" className="fs-btn fs-btn--add" disabled={!st.canAdd} onClick={add} data-can-add={st.canAdd ? 'yes' : 'no'}>
+               <Icon name="bag" size={18} /> {addLabel}
+             </button>
+             <button type="button" className="fs-btn fs-btn--buy" disabled={!st.canAdd} onClick={buyNow}>Buy now</button>
+             <button type="button" className={`fs-heart fs-heart--inline${wished ? ' is-on' : ''}`} aria-pressed={wished} aria-label={wished ? 'Remove from wishlist' : 'Save to wishlist'} onClick={() => wish.toggle(view.id)}>
+-              <Icon name="heart" size={20} fill={wished ? 'currentColor' : 'none'} />
++              <Icon name="heart" size={20} fill={wished ? 'currentColor' : 'none'} /> <span>{wished ? 'Saved to wishlist' : 'Add to wishlist'}</span>
+             </button>
+           </div>
+-
++          <p className="fs-buybox__secure"><Icon name="lock" size={14} /> Secure transaction</p>
++          <PdpShare name={view.name} />
++          <dl className="fs-buybox__facts">
++            {view.brand && <div><dt>Brand</dt><dd>{view.brand}</dd></div>}
++            <div><dt>Delivery</dt><dd>Standard, free</dd></div>
++            <div><dt>Payment</dt><dd>Secure transaction · COD</dd></div>
++            <div><dt>Returns</dt><dd>Within 7 days of delivery</dd></div>
++          </dl>
+           <DeliveryBlock />
++        </aside>
++      </div>
+ 
+-          {view.description && (
+-            <section className="fs-pdp__section" aria-labelledby="fs-desc-h">
+-              <h2 className="fs-pdp__h2" id="fs-desc-h">About this style</h2>
+-              <p className="fs-pdp__desc">{view.description}</p>
+-            </section>
+-          )}
+-          {(view.brand || node) && (
+-            <section className="fs-pdp__section" aria-labelledby="fs-details-h">
+-              <h2 className="fs-pdp__h2" id="fs-details-h">Details</h2>
+-              <dl className="fs-pdp__details">
+-                {view.brand && <div><dt>Brand</dt><dd>{view.brand}</dd></div>}
+-                {node && <div><dt>Category</dt><dd>{tree.ancestors(node.id).map((a) => a.name).join(' › ')}</dd></div>}
+-                {view.sizes.length > 0 && <div><dt>Sizes</dt><dd>{view.sizes.join(', ')}</dd></div>}
+-                {view.swatches.length > 0 && <div><dt>Colours</dt><dd>{view.swatches.map((s) => s.colour).join(', ')}</dd></div>}
+-              </dl>
+-            </section>
+-          )}
+-          <ProductInformation store="fashion" productId={view.id} variant={st.variant} prefix="fs" />
+-        </div>
++      <div className="fs-pdp__more">
++        <PdpCompare items={[view, ...related.slice(0, 3)].map((p, i) => ({
++          key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price,
++          mrp: p.hasDiscount ? p.mrp : 0, pct: p.discountPct, size: p.sizes.join(', '), brand: p.brand, current: i === 0,
++        }))} />
++        <PdpService />
++        <PdpReviews productKey={`fashion:${view.id}`} productName={view.name} />
++        <PdpRecent items={recent} />
++        <PdpBrandRail brand={view.brand} items={views.filter((p) => p.id !== view.id && p.brand && p.brand === view.brand && !related.slice(0, 4).some((r) => r.id === p.id)).slice(0, 12)
++          .map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price }))} />
+       </div>
+ 
+       {related.length > 0 && (
+         <section className="fs-sec" aria-labelledby="fs-related-h">
+           <header className="fs-sec__head"><h2 className="fs-sec__h serif" id="fs-related-h">You may also like</h2></header>
+           <div className="fs-grid fs-grid--related">
+-            {related.map((v) => <FashionProductCard key={v.id} view={v} />)}
++            {related.slice(0, 4).map((v) => <FashionProductCard key={v.id} view={v} />)}
+           </div>
+         </section>
+       )}

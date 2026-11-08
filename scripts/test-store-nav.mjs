@@ -126,7 +126,8 @@ await test('the eight fashion pages equal the baseline render once the stores bl
     // (test-fashion-cart.mjs pins what it says now), so it is normalised out here.
     const SHIP_LIST = /<ul class="fs-pdp__ship">[\s\S]*?<\/ul>/;
     const sans = (html) => html.replace(HERO_BLOCK, '').replace(SHIP_LIST, 'SHIP');
-    assert.equal(sans(stripped), sans(then[p]), `${p}: otherwise byte-identical`);
+    // The product page took the marketplace layout (owner, 2026-11-08; pinned by test-fashion-cart.mjs).
+    if (!p.startsWith('/fashion/p/')) assert.equal(sans(stripped), sans(then[p]), `${p}: otherwise byte-identical`);
   }
   const layout = read('src/fashion/FashionLayout.jsx');
   assert.match(layout, /<Link to="\/grocery" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Grocery store<\/Link>\n\s+<Link to="\/homeliving" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Home &amp; Living store<\/Link>\n\s+<Link to="\/lifestyle" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronRight" size=\{16\} \/> Lifestyle store<\/Link>\n\s+<Link to="\/" className="fs-drawer__back" onClick=\{onClose\}><Icon name="chevronLeft" size=\{16\} \/> Back to the wellness store<\/Link>/, 'the drawer lists the other stores beside the way back');

@@ -290,10 +290,12 @@ await test('gallery, brand, name, rating, price row, both selectors, delivery ru
   assert.ok(!app.error, app.error?.message);
   const html = app.render(SLUG);
   assert.match(html, /class="fs-gallery"[\s\S]*?<figure class="fs-gallery__slide is-on"[\s\S]*?<img src="\/img\/demo-mens-shirt\.webp" alt="Meadow Linen Shirt — Sage"[^>]*fetchpriority="high"/);
-  assert.match(html, /<p class="fs-pdp__brand">Aurelia Wear<\/p>/);
+  // The marketplace layout (owner, 2026-11-08): "Brand: <link>", the kit's price block, a buy box.
+  assert.match(html, /<p class="fs-pdp__brand">Brand: <a href="\/fashion\/search\?q=Aurelia%20Wear">Aurelia Wear<\/a><\/p>/);
   assert.match(html, /<h1 class="fs-pdp__h serif">Meadow Linen Shirt — Sage<\/h1>/);
   assert.match(html, /<p class="fs-rating"><b>4\.4<\/b>[\s\S]*?\(812 reviews\)/);
-  assert.match(html, /<p class="fs-price fs-price--lg" data-price="1099"><strong><span class="fs-price__cur">₹<\/span>1,099<\/strong><span class="fs-price__mrp">M\.R\.P: <s>₹1,999<\/s><\/span><span class="fs-badge">45% OFF<\/span><\/p>/);
+  assert.match(html, /<div class="fs-pdp__pricewrap" data-price="1099">/);
+  assert.match(html, /<aside class="fs-buybox" aria-label="Buy"><p class="fs-buybox__price"><span class="fs-price__cur">₹<\/span>1,099<\/p>/);
   assert.match(html, /<legend>Colour<\/legend>/); assert.match(html, /<legend>Size<\/legend>/);
   assert.deepEqual([...html.matchAll(/class="fs-pick__swatch[^"]*" style="--sw:([^"]+)"/g)].map((m) => m[1]), ['#8A9A6B', '#2F3A56', '#EDE6D6', '#B4552E', '#1B1B1B'], 'swatches use colour_hex');
   assert.deepEqual([...html.matchAll(/class="fs-pick__size[^"]*"[^>]*>([^<]+)</g)].map((m) => m[1]), ['S', 'M', 'L', 'XL'], 'every size is listed');
@@ -301,14 +303,14 @@ await test('gallery, brand, name, rating, price row, both selectors, delivery ru
   // real src/data/pdpContent.js now rather than a copy of it in the harness.
   assert.match(html, /Delivery[\s\S]*?Standard<em>6–7 business days<\/em><\/span><b>Free<\/b>/, 'the real shipping rule');
   assert.doesNotMatch(html, /Express|Scheduled/, 'no withdrawn method is offered on the PDP');
-  assert.match(html, /About this style[\s\S]*?A breathable linen-blend shirt/);
-  assert.match(html, /<dt>Category<\/dt><dd>Clothing › Men › Shirts<\/dd>/);
+  assert.match(html, /About this item[\s\S]*?A breathable linen-blend shirt/);
+  assert.match(html, /<dt>Brand<\/dt><dd>Aurelia Wear<\/dd>/, 'the buy box facts');
   const related = html.slice(html.indexOf('You may also like'));
   const cards = [...related.matchAll(/data-product="([^"]+)"/g)].map((m) => m[1]);
   assert.ok(cards.length >= 1 && cards.length <= 4 && !cards.includes('meadow-linen-shirt-sage'), 'related styles, never itself');
   assert.match(html, /<div class="fs-pdp__bar" role="region" aria-label="Buy">/);
   const noDesc = app.render(SLUG, { categories: CATEGORIES, products: PRODUCTS.map((p) => ({ ...p, description: '' })) });
-  assert.doesNotMatch(noDesc, /About this style/, 'an empty section hides');
+  assert.doesNotMatch(noDesc, /About this item/, 'an empty section hides');
 });
 
 await test('gallery thumbnails are buttons that change the slide and nothing else: the track scrolls sideways (smoothly; at once under reduced motion), the window, URL and history never move', async () => {
