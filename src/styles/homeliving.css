@@ -921,3 +921,5 @@
 .hl-gallery__count { display: none; }
 .hl-gallery__heart { border: 1px solid #E3E6E6; box-shadow: none; }
 
+/* The marketplace face on the product page (owner, 2026-11-08): Arial, Amazon Ember's fallback. */
+.hl-pdp, .hl .hl-pdp__h.serif, .hl-pdp .hl-sec__h, .hl-pdp button, .hl-pdp .hl-love__h { font-family: "Amazon Ember", Arial, "Helvetica Neue", Helvetica, sans-serif; }

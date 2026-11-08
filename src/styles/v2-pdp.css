@@ -1372,3 +1372,6 @@ body:has(.v2-pdp-root .buybar) .page-main {
   .v2-pdp-root > .v2-wrap, .v2-pdp-root .pdp.v2-wrap { max-width:1520px; }
 }
 
+/* The owner's call (2026-11-08): the marketplace's face. Amazon Ember is Amazon's own and
+   not licensed to us, so the stack is the one it falls back to — Arial, then Helvetica. */
+.v2-pdp-root, .v2-pdp-root .pdp__title, .v2-pdp-root .pdp-sec__title, .v2-pdp-root .v2-price, .v2-pdp-root button, .v2-pdp-root input { font-family:"Amazon Ember", Arial, "Helvetica Neue", Helvetica, sans-serif; }

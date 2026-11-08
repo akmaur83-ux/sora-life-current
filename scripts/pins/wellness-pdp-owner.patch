@@ -1,8 +1,8 @@
 diff --git a/src/styles/v2-pdp.css b/src/styles/v2-pdp.css
-index a5a71e9..0d29815 100644
+index a5a71e9..a1c5bb9 100644
 --- a/src/styles/v2-pdp.css
 +++ b/src/styles/v2-pdp.css
-@@ -1150,3 +1150,225 @@ body:has(.v2-pdp-root .buybar) .page-main {
+@@ -1150,3 +1150,228 @@ body:has(.v2-pdp-root .buybar) .page-main {
    .v2-pdp-root .variantlist { grid-template-columns: repeat(3, minmax(0, 1fr)); }
    .v2-pdp-root .pdp-specs__row { grid-template-columns: minmax(140px, 26%) minmax(0, 1fr); }
  }
@@ -228,3 +228,6 @@ index a5a71e9..0d29815 100644
 +  .v2-pdp-root > .v2-wrap, .v2-pdp-root .pdp.v2-wrap { max-width:1520px; }
 +}
 +
++/* The owner's call (2026-11-08): the marketplace's face. Amazon Ember is Amazon's own and
++   not licensed to us, so the stack is the one it falls back to — Arial, then Helvetica. */
++.v2-pdp-root, .v2-pdp-root .pdp__title, .v2-pdp-root .pdp-sec__title, .v2-pdp-root .v2-price, .v2-pdp-root button, .v2-pdp-root input { font-family:"Amazon Ember", Arial, "Helvetica Neue", Helvetica, sans-serif; }

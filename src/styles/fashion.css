@@ -418,3 +418,5 @@
 .fs-pdp .fs-btn--add { background: #1E5A35; border-color: #1E5A35; color: #fff; min-height: 52px; }
 .fs-pdp .fs-btn--buy { background: #DCEFD0; border-color: #C3E0B2; color: #13261C; min-height: 52px; }
 
+/* The marketplace face on the product page (owner, 2026-11-08): Arial, Amazon Ember's fallback. */
+.fs-pdp, .fs-pdp .serif, .fs-pdp button { font-family: "Amazon Ember", Arial, "Helvetica Neue", Helvetica, sans-serif; }
