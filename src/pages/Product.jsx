@@ -346,6 +346,13 @@ useEffect(() => {
             </div>
           )}
 
+        </div>
+
+        {/* The buy box (owner's reference, 2026-11-08): price, stock, quantity, Add to
+            cart and Buy now, delivery, and the facts every order shares. A third column
+            on a desktop; under the details on a tablet and a phone. */}
+        <aside className="pdp__buybox" aria-label="Buy">
+          <div className="pdp__bbprice"><PriceTag product={product} showOff={false} variant={variant} v2 /></div>
           <div className="pdp__stock">
             {out ? <span className="v2-badge v2-badge--out">Out of stock</span>
               : lowStock ? <span className="v2-badge"><Icon name="clock" size={13} /> Only {product.stock} left</span>
@@ -367,7 +374,13 @@ useEffect(() => {
           <button className="v2-btn v2-btn--ghost v2-btn--block pdp__buynow" disabled={blocked} onClick={buyNow}>Buy it now</button>
 
           <ProductDeliveryInfo product={product} />
-        </div>
+          <dl className="pdp__bbfacts">
+            {product.brand && <div><dt>Brand</dt><dd>{product.brand}</dd></div>}
+            <div><dt>Delivery</dt><dd>Standard, free</dd></div>
+            <div><dt>Payment</dt><dd>Secure transaction · COD</dd></div>
+            <div><dt>Returns</dt><dd>Within 7 days of delivery</dd></div>
+          </dl>
+        </aside>
       </section>
 
       {/* Richer scroll: benefits → ingredients → usage → product information → trust */}
