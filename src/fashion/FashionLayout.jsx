@@ -134,7 +134,7 @@ export function FashionHeader({ onMenu }) {
           onFocus={() => { setOpen(true); setRecent(readRecentSearches('fashion')); }} onBlur={() => setOpen(false)} onKeyDown={keys} aria-expanded={found ? true : undefined} aria-controls={found ? 'fs-suggest' : undefined} />
         <button type="submit" className="fs-search__go" aria-label="Search"><Icon name="search" size={22} /></button>
         {found && <SearchSuggest id="fs-suggest" items={found} query={term} active={active} allHref={`/fashion/search?q=${encodeURIComponent(term)}`} onPick={pick} />}
-        {open && !term && <RecentSearches id="fs-recent" terms={recent} hrefFor={(t) => `/fashion/search?q=${encodeURIComponent(t)}`} onPick={(e) => { setQ(e.currentTarget.textContent); setOpen(false); }} onClear={() => { clearRecentSearches('fashion'); setRecent([]); }} />}
+        {open && !term && <RecentSearches id="fs-recent" terms={recent} popular={(tree.roots || []).map((c) => ({ name: c.name, href: `/fashion/c/${c.slug}` }))} hrefFor={(t) => `/fashion/search?q=${encodeURIComponent(t)}`} onPick={(e) => { if (e.currentTarget.classList.contains('hx-suggest__recent')) setQ(e.currentTarget.textContent); setOpen(false); }} onClear={() => { clearRecentSearches('fashion'); setRecent([]); }} />}
       </form>
       {!strip.hidden && <div className="fs-strip" aria-label="Delivery">
         <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> {strip.location}</span>

@@ -13,6 +13,7 @@ import { WeaversVillaRange, WeaversVillaShowcase } from '../components/WeaversVi
 import { LeatherFactoryRange, LeatherFactoryShowcase } from '../components/LeatherFactory.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
+import GiftShop from '../components/GiftShop.jsx';
 import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
@@ -64,6 +65,8 @@ export default function Home() {
       <HomeTrustStrip />
       {/* The running offer with a live countdown (OfferBanner.jsx); nothing once it ends. */}
       <OfferBanner wrap="hx-wrap" />
+      {/* Gift-ready categories across Fashion and Home & Living (GiftShop.jsx). */}
+      <GiftShop />
       <HomeTiles />
       <ExploreStores />
       <FestivePromo />

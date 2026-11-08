@@ -133,7 +133,7 @@ export function SearchBar() {
         onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} onFocus={() => { setOpen(true); setRecent(readRecentSearches('homeliving')); }} onBlur={() => setOpen(false)} onKeyDown={keys}
         enterKeyHint="search" aria-expanded={found ? true : undefined} aria-controls={found ? 'hl-suggest' : undefined} />
       {found && <SearchSuggest id="hl-suggest" items={found} query={term} active={active} allHref={all} onPick={pick} />}
-      {open && !term && <RecentSearches id="hl-recent" terms={recent} hrefFor={(t) => `/homeliving/search?q=${encodeURIComponent(t)}`} onPick={(e) => { setQ(e.currentTarget.textContent); setOpen(false); }} onClear={() => { clearRecentSearches('homeliving'); setRecent([]); }} />}
+      {open && !term && <RecentSearches id="hl-recent" terms={recent} popular={(categories || []).filter((c) => !c.parent_id).map((c) => ({ name: c.name, href: `/homeliving/category/${c.slug}` }))} hrefFor={(t) => `/homeliving/search?q=${encodeURIComponent(t)}`} onPick={(e) => { if (e.currentTarget.classList.contains('hx-suggest__recent')) setQ(e.currentTarget.textContent); setOpen(false); }} onClear={() => { clearRecentSearches('homeliving'); setRecent([]); }} />}
     </div>
   );
 }

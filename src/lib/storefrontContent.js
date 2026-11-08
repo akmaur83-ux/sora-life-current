@@ -116,6 +116,8 @@ const WELLNESS = {
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
     link: link('View-all link (empty: the shop)'),
   }, 'The Biosash range (Biosash products in stock; hidden while there are none)'),
+  // The Diwali gift shop on the wellness homepage (2026-11-09).
+  giftShop: group({ hidden: hidden(), eyebrow: text(40, 'Eyebrow'), title: text(60, 'Heading') }, 'Gift shop (gift-ready categories)'),
   // The offer countdown in every product page's buy box (2026-11-08); gone once it ends.
   offerCountdown: group({
     hidden: hidden(), title: text(60, 'Offer line'), code: text(30, 'Coupon code shown'),

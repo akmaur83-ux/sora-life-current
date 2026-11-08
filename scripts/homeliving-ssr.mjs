@@ -118,7 +118,7 @@ export async function buildHomeLivingApp({ cartCount = 0, initial = INITIAL, onA
   // The homepage mounts the shell's nav strip, delivery row and search bar under its hero.
   const home = loadModule('src/homeliving/HomeLivingHome.jsx', { OfferBanner: () => null, RecentlyViewedHome: () => null, BudgetChips: () => null, Link, Icon, ...data, HomeLivingProductCard: card.default, BottomNav: layout.BottomNav, DeliveryRow: layout.DeliveryRow, SearchBar: layout.SearchBar });
   const rules = has('src/lib/homelivingListing.js') ? loadModule('src/lib/homelivingListing.js', {}) : {};
-  const category = has('src/homeliving/HomeLivingCategory.jsx') ? loadModule('src/homeliving/HomeLivingCategory.jsx', { Link, useParams, useSearchParams, Icon, useHomeLivingCatalogue: data.useHomeLivingCatalogue, ...rules, HomeLivingProductCard: card.default }) : null;
+  const category = has('src/homeliving/HomeLivingCategory.jsx') ? loadModule('src/homeliving/HomeLivingCategory.jsx', { useShowMore: () => ({ shown: Infinity, more: () => {} }), LoadMore: () => null,  Link, useParams, useSearchParams, Icon, useHomeLivingCatalogue: data.useHomeLivingCatalogue, ...rules, HomeLivingProductCard: card.default }) : null;
   const pdpRules = has('src/lib/homelivingPdp.js') ? loadModule('src/lib/homelivingPdp.js', {}) : {};
   // Product information reads after mount (an effect), so a server render has none: the same null as the real one here.
   const ProductInformation = () => null;

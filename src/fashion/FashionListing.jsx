@@ -11,6 +11,7 @@ import { useFashionCatalogue } from './FashionCatalogue.jsx';
 import { CategoryChips } from './FashionLayout.jsx';
 import FashionProductCard from './FashionProductCard.jsx';
 import ShareList from '../components/ShareList.jsx';
+import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
 
 // ============================================================
 // The listing — /fashion/c/<slug> at any level, /fashion/search and
@@ -102,6 +103,7 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
   const { status, tree, views } = useFashionCatalogue();
   const [params, setParams] = useSearchParams();
   const state = useMemo(() => readFashionUrlState(params), [params]);
+  const paging = useShowMore(Number.MAX_SAFE_INTEGER, `${params.toString()}|${title}`);
   const [panel, setPanel] = useState(false);
   useEffect(() => { if (!panel) return undefined; const onKey = (e) => { if (e.key === 'Escape') setPanel(false); }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }, [panel]);
 
@@ -145,9 +147,12 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
               {count > 0 && <button type="button" className="fs-btn" onClick={clear}>Clear filters</button>}
             </div>
           ) : (
+            <>
             <div className={`fs-grid${state.view === 'list' ? ' fs-grid--list' : ''}`}>
-              {results.map((v, i) => <FashionProductCard key={v.id} view={v} layout={state.view} mediaLoading={i < 2 ? 'eager' : 'lazy'} />)}
+              {results.slice(0, paging.shown).map((v, i) => <FashionProductCard key={v.id} view={v} layout={state.view} mediaLoading={i < 2 ? 'eager' : 'lazy'} />)}
             </div>
+            <LoadMore shown={Math.min(paging.shown, results.length)} total={results.length} onMore={paging.more} />
+            </>
           )}
         </div>
       </div>

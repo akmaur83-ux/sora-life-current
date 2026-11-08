@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { money } from '../lib/format.js';
@@ -49,6 +49,18 @@ export function Gallery({ view }) {
     const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     el.scrollTo({ left: slide.offsetLeft - el.firstElementChild.offsetLeft, behavior: reduced ? 'auto' : 'smooth' });
   };
+  // ← → move between pictures on a computer (not while typing, nor with the full-screen viewer open).
+  useEffect(() => {
+    if (images.length < 2 || zoom != null || typeof window === 'undefined' || typeof window.addEventListener !== 'function') return undefined;
+    const onKey = (e) => {
+      const t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (e.key === 'ArrowRight') show(Math.min(images.length - 1, active + 1));
+      else if (e.key === 'ArrowLeft') show(Math.max(0, active - 1));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
   // A swipe on a phone moves the counter too (the thumbnails set it on a click).
   const onSwipe = (e) => { const el = e.currentTarget; const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth)); if (i !== active && i >= 0 && i < images.length) setActive(i); };
   if (images.length === 0) return <div className="fs-pdp__media fs-pdp__media--none" aria-hidden="true"><b>{view.name.slice(0, 1)}</b></div>;

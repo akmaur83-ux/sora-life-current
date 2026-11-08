@@ -8,6 +8,7 @@ import {
   resolveCategory, categoryChildren, categoryScope, breadcrumbFor, categoryHref,
 } from '../lib/homelivingListing.js';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
+import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
 
 // ============================================================
 // /homeliving/category/<slug> — the category listing. Every filter, the
@@ -99,6 +100,7 @@ export function Listing({ title, trail, scope = null, intro = null, emptyCopy })
   const { status, products } = useHomeLivingCatalogue();
   const [params, setParams] = useSearchParams();
   const state = useMemo(() => readListingState(params), [params]);
+  const paging = useShowMore(Number.MAX_SAFE_INTEGER, `${params.toString()}|${title}`);
   const [panel, setPanel] = useState(false);
   useEffect(() => { if (!panel) return undefined; const onKey = (e) => { if (e.key === 'Escape') setPanel(false); }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }, [panel]);
 
@@ -143,9 +145,12 @@ export function Listing({ title, trail, scope = null, intro = null, emptyCopy })
               {count > 0 && <button type="button" className="hl-btn" onClick={clear}>Clear filters</button>}
             </div>
           ) : (
+            <>
             <div className={`hl-grid${state.view === 'list' ? ' hl-grid--list' : ''}`}>
-              {results.map((p, i) => <HomeLivingProductCard key={p.id} product={p} layout={state.view} mediaLoading={i < 2 ? 'eager' : 'lazy'} />)}
+              {results.slice(0, paging.shown).map((p, i) => <HomeLivingProductCard key={p.id} product={p} layout={state.view} mediaLoading={i < 2 ? 'eager' : 'lazy'} />)}
             </div>
+            <LoadMore shown={Math.min(paging.shown, results.length)} total={results.length} onMore={paging.more} />
+            </>
           )}
         </div>
       </div>

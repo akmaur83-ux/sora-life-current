@@ -25,14 +25,24 @@ export function rememberSearch(store, term) {
 export function clearRecentSearches(store) { try { window.localStorage.removeItem(recentKey(store)); } catch { /* storage off */ } }
 
 /** With nothing typed yet: the last searches, each a link to its results, and Clear. */
-export function RecentSearches({ id, terms, hrefFor, onPick, onClear }) {
-  if (!terms || terms.length === 0) return null;
+export function RecentSearches({ id, terms, hrefFor, onPick, onClear, popular = [] }) {
+  const hasTerms = terms && terms.length > 0;
+  if (!hasTerms && popular.length === 0) return null;
   return (
-    <div className="hx-suggest hx-suggest--recent" id={id} aria-label="Recent searches">
-      <p className="hx-suggest__head">Recent searches <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={onClear}>Clear</button></p>
-      {terms.map((t) => (
-        <Link key={t} to={hrefFor(t)} className="hx-suggest__recent" onMouseDown={(e) => e.preventDefault()} onClick={onPick}>{t}</Link>
-      ))}
+    <div className="hx-suggest hx-suggest--recent" id={id} aria-label={hasTerms ? 'Recent searches' : 'Popular categories'}>
+      {hasTerms && <>
+        <p className="hx-suggest__head">Recent searches <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={onClear}>Clear</button></p>
+        {terms.map((t) => (
+          <Link key={t} to={hrefFor(t)} className="hx-suggest__recent" onMouseDown={(e) => e.preventDefault()} onClick={onPick}>{t}</Link>
+        ))}
+      </>}
+      {/* Nothing typed and nothing searched yet: the store's categories, one tap away (2026-11-09). */}
+      {popular.length > 0 && <>
+        <p className="hx-suggest__head">Popular categories</p>
+        <div className="hx-suggest__chips">
+          {popular.slice(0, 8).map((c) => <Link key={c.href} to={c.href} className="hx-suggest__chip" onMouseDown={(e) => e.preventDefault()} onClick={onPick}>{c.name}</Link>)}
+        </div>
+      </>}
     </div>
   );
 }
