@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../Icon.jsx';
 import { useConsumerCare } from '../../lib/consumerCare.js';
@@ -242,4 +243,88 @@ export function PdpBundle({ items, canAddAll = false, onAddAll = null }) {
       </div>
     </section>
   );
+}
+
+// ---- Recently viewed (per viewer, this browser only) --------------------------------
+const RECENT_KEY = 'sl-recent-v1';
+const RECENT_MAX = 12;
+const readRecent = () => { try { const v = JSON.parse(window.localStorage.getItem(RECENT_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+
+/**
+ * Remembers this product and returns the others viewed before it, newest first.
+ * item: { key, href, name, image, price } — what a card needs, nothing personal.
+ */
+export function useRecentlyViewed(item) {
+  const [list, setList] = useState([]);
+  const key = item?.key;
+  useEffect(() => {
+    if (!key || typeof window === 'undefined') return;
+    const before = readRecent().filter((r) => r && r.key && r.key !== key);
+    setList(before.slice(0, RECENT_MAX));
+    try { window.localStorage.setItem(RECENT_KEY, JSON.stringify([item, ...before].slice(0, RECENT_MAX))); } catch { /* storage off: nothing remembered */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return list;
+}
+
+export function PdpRecent({ items }) {
+  const list = (items || []).slice(0, 8);
+  if (list.length < 1) return null;
+  return (
+    <section className="pdpk-rail" aria-labelledby="pdpk-recent-h">
+      <h2 className="pdpk-h pdpk-h--lg" id="pdpk-recent-h">Your recently viewed items</h2>
+      <ul className="pdpk-rail__row">
+        {list.map((p) => (
+          <li key={p.key}>
+            <Link to={p.href} className="pdpk-rail__card">
+              <span className="pdpk-rail__img">{p.image && <img src={p.image} alt="" width="180" height="180" loading="lazy" />}</span>
+              <span className="pdpk-rail__name">{p.name}</span>
+              {p.price > 0 && <span className="pdpk-rail__price"><b>{money(p.price)}</b></span>}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// ---- Share: WhatsApp, the system sheet, or copy the link ----------------------------
+export function PdpShare({ name }) {
+  const [copied, setCopied] = useState(false);
+  const url = typeof window !== 'undefined' ? window.location.href.split('#')[0] : '';
+  const text = `${name} on SORA LIFESTYLE`;
+  const copy = async () => {
+    try {
+      if (navigator.share) { await navigator.share({ title: name, text, url }); return; }
+      await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1800);
+    } catch { /* dismissed */ }
+  };
+  return (
+    <div className="pdpk-share">
+      <span>Share:</span>
+      <a href={`https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+      <button type="button" onClick={copy}>{copied ? 'Link copied' : 'Copy link'}</button>
+    </div>
+  );
+}
+
+// ---- Hover zoom on a desktop: the picture under the pointer at 2x ------------------
+/** Zooms any <img> inside elements matching `selector` while a fine pointer hovers it. */
+export function useHoverZoom(selector, dep) {
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia?.('(hover: hover) and (pointer: fine)').matches) return undefined;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return undefined;
+    const move = (e) => {
+      const host = e.target.closest?.(selector); if (!host) return;
+      const img = host.querySelector('img'); if (!img) return;
+      const r = img.getBoundingClientRect();
+      img.style.transformOrigin = `${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`;
+      img.style.transform = 'scale(2)';
+    };
+    const out = (e) => { const host = e.target.closest?.(selector); const img = host?.querySelector('img'); if (img) img.style.transform = ''; };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseout', out);
+    return () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseout', out); };
+  }, [selector, dep]);
 }

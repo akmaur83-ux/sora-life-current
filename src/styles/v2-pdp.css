@@ -1414,7 +1414,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
 
 /* More from the brand, frequently bought together, product information (owner, 2026-11-08). */
 .pdpk-rail, .pdpk-fbt, .hl-info { margin-top: 28px; padding-top: 18px; border-top: 1px solid #E7E7E7; }
-.pdpk-rail__row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(160px, 1fr); gap: 16px; margin: 0; padding: 0 0 6px; list-style: none; overflow-x: auto; }
+.pdpk-rail__row { display: grid; grid-auto-flow: column; grid-auto-columns: 170px; justify-content: start; gap: 16px; margin: 0; padding: 0 0 6px; list-style: none; overflow-x: auto; }
 .pdpk-rail__card, .pdpk-fbt__item { display: grid; gap: 5px; color: #0F1111; text-decoration: none; }
 .pdpk-rail__img { display: block; aspect-ratio: 1; background: #F7F8F8; overflow: hidden; }
 .pdpk-rail__img img { width: 100%; height: 100%; object-fit: contain; }
@@ -1431,3 +1431,12 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-fbt__item { width: 160px; }
 .pdpk-fbt__buy p { margin: 0 0 10px; font-size: 16px; color: #0F1111; }
 .pdpk-fbt__btn { min-height: 38px; padding: 0 18px; border: 1px solid #1E5A35; background: #1E5A35; color: #fff; font: inherit; font-size: 14px; cursor: pointer; }
+
+/* Share, quantity, hover zoom (owner, 2026-11-08). */
+.pdpk-share { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12.5px; color: #565959; }
+.pdpk-share a, .pdpk-share button { padding: 0; border: 0; background: none; font: inherit; color: #007185; cursor: pointer; text-decoration: none; }
+.pdpk-share a:hover, .pdpk-share button:hover { text-decoration: underline; }
+.hl-qty { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 13px; color: #0F1111; }
+.hl-qty select { height: 32px; padding: 0 8px; border: 1px solid #D5D9D9; background: #F0F2F2; font: inherit; }
+.pdp__main img, .hl-gallery__slide img { transition: transform .12s ease-out; }
+.pdp__main, .hl-gallery__slide { overflow: hidden; }

@@ -11,7 +11,8 @@ import { Breadcrumb } from './HomeLivingCategory.jsx';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
 import ProductInformation from '../components/ProductInformation.jsx';
 import { fetchEligibleCoupons } from '../lib/couponApi.js';
-import { PdpCompare, PdpService, PdpBrandRail, PdpBundle } from '../components/pdp/PdpOwnerKit.jsx';
+import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpShare, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
 
 // ============================================================
 // /homeliving/p/<slug> — the product page.
@@ -538,6 +539,9 @@ export default function HomeLivingProductPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const view = useMemo(() => products.find((p) => p.slug === String(slug || '')) || null, [products, slug]);
+  const [qty, setQty] = useState(1);
+  const recent = useRecentlyViewed(view ? { key: `hl-${view.id}`, href: `/homeliving/p/${view.slug}`, name: view.name, image: (view.gallery && view.gallery[0]?.url) || view.images?.[0] || null, price: view.price } : null);
+  useHoverZoom('.hl-pdp .hl-gallery__slide', view?.id);
 
   if (!view) {
     return (
@@ -565,8 +569,8 @@ export default function HomeLivingProductPage() {
   const lede = sentences[0] && sentences[0].length <= 140 ? sentences[0] : null;
   const bullets = sentences.slice(0, 6).filter((x) => x.length <= 220);
   // st.variant is the chosen size × colour (null for a product without variants).
-  const add = () => addHomeLivingToCart(view, st.variant, 1);
-  const buy = () => { if (addHomeLivingToCart(view, st.variant, 1) !== false) navigate('/checkout'); };
+  const add = () => addHomeLivingToCart(view, st.variant, qty);
+  const buy = () => { if (addHomeLivingToCart(view, st.variant, qty) !== false) navigate('/checkout'); };
 
   const stockLine = (
     <p className="hl-pdp__tax"><span className={`hl-pdp__stock is-${st.shape === 'none' ? st.status : st.status === 'choose' ? 'in' : st.status}`}><Icon name="checkCircle" size={18} /> {st.shape === 'none' ? (st.stockNote || 'In stock') : (st.stockNote || (st.sizes.some((x) => x.available) ? 'In stock' : 'Out of stock'))}</span><span aria-hidden="true">|</span> Inclusive of all taxes</p>
@@ -634,12 +638,19 @@ export default function HomeLivingProductPage() {
           <p className="hl-buybox__price"><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</p>
           <DeliveryBlock />
           {stockLine}
+          <label className="hl-qty">Quantity:{' '}
+            <select value={qty} onChange={(e) => setQty(Number(e.target.value) || 1)} disabled={!st.canAdd}>
+              {Array.from({ length: Math.max(1, Math.min(10, st.stock || 10)) }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
           {/* The action row: Add to cart in the first cell, Buy now beside it. */}
           <div className="hl-pdp__actions" data-slot="add-to-cart" data-can-add={st.canAdd ? 'yes' : 'no'}>
             <AddToCartButton st={st} onAdd={add} />
             <BuyNowButton st={st} onBuy={buy} />
           </div>
           <p className="pdp__bbsecure"><Icon name="lock" size={14} /> Secure transaction</p>
+          <PdpShare name={view.name} />
+          <ProductDeliveryInfo />
           <dl className="hl-buybox__facts">
             {view.brand && <div><dt>Brand</dt><dd>{view.brand}</dd></div>}
             <div><dt>Delivery</dt><dd>Standard, free</dd></div>
@@ -660,6 +671,7 @@ export default function HomeLivingProductPage() {
       <PdpBundle items={bundle.map((p, i) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null, price: i === 0 ? st.price : p.price }))}
         canAddAll={bundleAddable} onAddAll={() => bundle.forEach((p, i) => addHomeLivingToCart(p, i === 0 ? st.variant : null, 1))} />
       <PdpService />
+      <PdpRecent items={recent} />
       <PdpBrandRail brand={view.brand} items={products.filter((p) => p.id !== view.id && p.brand && p.brand === view.brand && !related.slice(0, 4).some((r) => r.id === p.id))
         .slice(0, 8).map((p) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null, price: p.price, mrp: p.mrp, pct: p.mrp > p.price ? (p.discount_percent || 0) : 0 }))} />
 

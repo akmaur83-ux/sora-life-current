@@ -27,7 +27,7 @@ import PdpStorySlot from '../components/pdp/PdpStorySlot.jsx';
 import ProductClaims from '../components/pdp/ProductClaims.jsx';
 import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
-import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, PdpBrandRail, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
+import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, useRecentlyViewed, useHoverZoom, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
 import { specificationsFor } from '../data/pdpContent.js';
 import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
 import { promotionsSource } from '../lib/promotions.js';
@@ -104,6 +104,9 @@ useEffect(() => {
   // Show a loading state until the catalogue is hydrated; a safety timeout (a
   // little beyond main.jsx's 4s fetch window) makes sure a failed/slow load can
   // never hang a genuinely-missing slug forever — it falls through to NotFound.
+  // Recently viewed and hover zoom (owner, 2026-11-08). Before any early return: hooks.
+  const recent = useRecentlyViewed(product ? { key: `w-${product.id}`, href: `/product/${product.slug}`, name: product.name, image: product.image || null, price: product.price } : null);
+  useHoverZoom('.v2-pdp-root .pdp__main', product?.id);
   const [catalogTimedOut, setCatalogTimedOut] = useState(false);
   useEffect(() => {
     if (isCatalogHydrated()) return;
@@ -391,6 +394,7 @@ useEffect(() => {
             <Icon name="heart" size={16} fill={wished ? 'currentColor' : 'none'} /> {wished ? 'Saved to Wish List' : 'Add to Wish List'}
           </button>
           <p className="pdp__bbsecure"><Icon name="lock" size={14} /> Secure transaction</p>
+          <PdpShare name={product.name} />
           <dl className="pdp__bbfacts">
             {product.brand && <div><dt>Brand</dt><dd>{product.brand}</dd></div>}
             <div><dt>Delivery</dt><dd>Standard, free</dd></div>
@@ -407,6 +411,7 @@ useEffect(() => {
           price: p.price, mrp: p.mrp, pct: p.discountPct || 0, size: p.netContent || p.form || null, brand: p.brand || null, current: i === 0,
         }))} />
         <PdpService />
+        <PdpRecent items={recent} />
         <PdpBrandRail brand={product.brand} items={catalogue
           .filter((p) => p.id !== product.id && p.brand && p.brand === product.brand && p.slug && p.price > 0)
           .slice(0, 8).map((p) => ({ key: p.id, href: `/product/${p.slug}`, name: p.name, image: p.image || null, price: p.price, mrp: p.mrp, pct: p.discountPct || 0 }))} />
