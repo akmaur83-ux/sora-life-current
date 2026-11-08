@@ -1,8 +1,8 @@
 diff --git a/src/styles/v2-pdp.css b/src/styles/v2-pdp.css
-index a5a71e9..971fe0d 100644
+index a5a71e9..1ea57f6 100644
 --- a/src/styles/v2-pdp.css
 +++ b/src/styles/v2-pdp.css
-@@ -1150,3 +1150,105 @@ body:has(.v2-pdp-root .buybar) .page-main {
+@@ -1150,3 +1150,109 @@ body:has(.v2-pdp-root .buybar) .page-main {
    .v2-pdp-root .variantlist { grid-template-columns: repeat(3, minmax(0, 1fr)); }
    .v2-pdp-root .pdp-specs__row { grid-template-columns: minmax(140px, 26%) minmax(0, 1fr); }
  }
@@ -97,6 +97,10 @@ index a5a71e9..971fe0d 100644
 +  .v2-pdp-root .pdp-coupons__head { padding:9px 12px; font-size:14px; }
 +  .v2-pdp-root .pdp-coupon__title { font-size:14px; }
 +  .v2-pdp-root .pdp-coupon__desc { font-size:12px; }
++  .v2-pdp-root .pdp-coupons__list { padding:8px 10px 10px; gap:8px; }
++  .v2-pdp-root .pdp-coupon__body { padding:8px 12px; }
++  .v2-pdp-root .pdp-coupon__stub { padding:8px 10px; }
++  .v2-pdp-root .pdp-coupon__desc { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 +  .pdpk-feats { margin:10px 0; }
 +  .pdpk-feats li { gap:4px; font-size:10.5px; padding:1px 2px; }
 +  .pdpk-feats span { width:30px; height:30px; }
