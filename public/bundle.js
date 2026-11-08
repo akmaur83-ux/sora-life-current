@@ -42471,7 +42471,7 @@ function PdpBundle({
 
 // ---- Recently viewed (per viewer, this browser only) --------------------------------
 const RECENT_KEY = 'sl-recent-v1';
-const RECENT_MAX = 12;
+const RECENT_MAX$1 = 12;
 const readRecent = () => {
   try {
     const v = JSON.parse(window.localStorage.getItem(RECENT_KEY) || '[]');
@@ -42498,9 +42498,9 @@ function useRecentlyViewed(item) {
   reactExports.useEffect(() => {
     if (!key || typeof window === 'undefined') return;
     const before = readRecent().filter(r => r && r.key && r.key !== key);
-    setList(before.slice(0, RECENT_MAX));
+    setList(before.slice(0, RECENT_MAX$1));
     try {
-      window.localStorage.setItem(RECENT_KEY, JSON.stringify([item, ...before].slice(0, RECENT_MAX)));
+      window.localStorage.setItem(RECENT_KEY, JSON.stringify([item, ...before].slice(0, RECENT_MAX$1)));
     } catch {/* storage off: nothing remembered */}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
@@ -42852,12 +42852,16 @@ const RECENT_SECTION = Object.freeze({
   more: '',
   link: ''
 });
-function RecentlyViewedHome() {
+
+/** `prefix` keeps one store's products ('fs-' Fashion, 'hl-' Home & Living); none keeps all. */
+function RecentlyViewedHome({
+  prefix = ''
+} = {}) {
   const section = useStorefrontSection('wellness', 'recentlyViewed', RECENT_SECTION);
   const [items, setItems] = reactExports.useState([]);
   reactExports.useEffect(() => {
-    setItems(readRecentlyViewed().filter(r => r && r.href && r.name && r.price > 0));
-  }, []);
+    setItems(readRecentlyViewed().filter(r => r && r.href && r.name && r.price > 0 && String(r.key || '').startsWith(prefix)));
+  }, [prefix]);
   if (section.hidden || items.length < 2) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "hx-recent",
@@ -49107,6 +49111,333 @@ function timeLeft(ms) {
   return `${Math.max(1, mm)}m`;
 }
 
+// ============================================================
+// Page titles, descriptions and product data for search engines (owner,
+// 2026-11-08: more features). Every page used to carry the same title and
+// description. A page calls usePageMeta with what it shows; leaving the page puts
+// the site's own back. On a product page the Product data (name, picture, brand,
+// price in INR, in stock or not) goes in as JSON-LD, which is what Google reads for
+// price and availability in results. Nothing here invents a rating or a review.
+// ============================================================
+const SITE = 'SORA LIFESTYLE';
+const ORIGIN$1 = 'https://www.soralifestyle.in';
+const INDEX_TITLE = 'Sora Lifestyle — Modern Wellness, Beauty & Everyday Care'; // index.html's
+/** The site's own title, with the admin's site name (as App.jsx sets it on start). */
+const siteHomeTitle = () => branding?.siteName ? titleWithSiteName(INDEX_TITLE, branding.siteName) : INDEX_TITLE;
+const INDEX_DESCRIPTION = 'Sora Lifestyle — premium health, wellness, beauty and personal-care essentials for modern living.';
+let base = null;
+const metaEl = (attr, key) => {
+  let el = document.head.querySelector(`meta[${attr}="${key}"]`);
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute(attr, key);
+    el.dataset.pm = '1';
+    document.head.appendChild(el);
+  }
+  return el;
+};
+const absolute = u => !u ? '' : /^https?:\/\//.test(u) ? u : `${ORIGIN$1}${u.startsWith('/') ? '' : '/'}${u}`;
+/**
+ * Keep the page's title while it is open: the site name arriving after start-up
+ * (App.jsx) rewrites document.title, which would otherwise undo a page's own.
+ * Returns the function that stops holding it.
+ */
+function holdTitle(full) {
+  if (typeof document === 'undefined' || typeof MutationObserver !== 'function') return () => {};
+  document.title = full;
+  const el = document.querySelector('title');
+  if (!el) return () => {};
+  const mo = new MutationObserver(() => {
+    if (document.title !== full) document.title = full;
+  });
+  mo.observe(el, {
+    childList: true,
+    characterData: true,
+    subtree: true
+  });
+  return () => mo.disconnect();
+}
+
+/** 'Name — ₹1,199': a page title that names the price. */
+const priceTitle = (name, price) => `${name} — ₹${Math.round(Number(price) || 0).toLocaleString('en-IN')}`;
+const clip = (s, n = 155) => {
+  const t = String(s || '').replace(/\s+/g, ' ').trim();
+  return t.length > n ? `${t.slice(0, n - 1).replace(/\s+\S*$/, '')}…` : t;
+};
+
+/** The JSON-LD Product for a page; pure, so a test can call it. */
+function productLd({
+  name,
+  description,
+  image,
+  images,
+  brand,
+  sku,
+  price,
+  mrp,
+  inStock,
+  url
+}) {
+  const pics = (images && images.length ? images : [image]).filter(Boolean).slice(0, 6).map(absolute);
+  if (!name || !(price > 0)) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name,
+    ...(pics.length ? {
+      image: pics
+    } : {}),
+    ...(description ? {
+      description: clip(description, 500)
+    } : {}),
+    ...(brand ? {
+      brand: {
+        '@type': 'Brand',
+        name: brand
+      }
+    } : {}),
+    ...(sku ? {
+      sku
+    } : {}),
+    offers: {
+      '@type': 'Offer',
+      url: absolute(url),
+      priceCurrency: 'INR',
+      price: Number(price).toFixed(2),
+      availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+      seller: {
+        '@type': 'Organization',
+        name: SITE
+      }
+    }
+  };
+}
+
+/** Title (without the site name), description, picture, canonical path and, on a product page, its data. */
+function usePageMeta({
+  title,
+  description,
+  image,
+  path,
+  product
+} = {}, deps = []) {
+  reactExports.useEffect(() => {
+    if (typeof document === 'undefined' || !title) return undefined;
+    if (!base) base = {
+      description: INDEX_DESCRIPTION
+    };
+    const full = `${title} | ${SITE}`;
+    const desc = clip(description || base.description);
+    const url = absolute(path || window.location.pathname);
+    const release = holdTitle(full);
+    metaEl('name', 'description').setAttribute('content', desc);
+    metaEl('property', 'og:title').setAttribute('content', full);
+    metaEl('property', 'og:description').setAttribute('content', desc);
+    metaEl('property', 'og:url').setAttribute('content', url);
+    metaEl('property', 'og:type').setAttribute('content', product ? 'product' : 'website');
+    if (image) metaEl('property', 'og:image').setAttribute('content', absolute(image));
+    let canon = document.head.querySelector('link[rel="canonical"]');
+    if (!canon) {
+      canon = document.createElement('link');
+      canon.rel = 'canonical';
+      canon.dataset.pm = '1';
+      document.head.appendChild(canon);
+    }
+    canon.href = url;
+    document.head.querySelectorAll('script[type="application/ld+json"]').forEach(el => el.remove()); // the share card's copy (api/share.js)
+    let ld = null;
+    const data = product ? productLd({
+      ...product,
+      url: path || window.location.pathname
+    }) : null;
+    if (data) {
+      ld = document.createElement('script');
+      ld.type = 'application/ld+json';
+      ld.dataset.pm = 'product';
+      ld.textContent = JSON.stringify(data);
+      document.head.appendChild(ld);
+    }
+    return () => {
+      release();
+      document.title = siteHomeTitle();
+      metaEl('name', 'description').setAttribute('content', base.description);
+      if (ld) ld.remove();
+      document.head.querySelectorAll('link[rel="canonical"], script[type="application/ld+json"]').forEach(el => el.remove()); // the page's own, or the share card's
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description, image, path, ...deps]);
+}
+
+const HIDDEN = /^\/(admin|checkout|cart|creator|invoice|passport|login|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout)(\/|$)/;
+const PRODUCT = /^\/(product|fashion\/p|homeliving\/p|grocery\/p)\/[^/]+/;
+const LISTING = /^\/(shop|category\/[^/]+|fashion\/(c\/[^/]+|search|wishlist|men|women|jewellery)|homeliving\/(category\/[^/]+|search|wishlist))\/?$/;
+
+/** wa.me digits for an Indian number as published ("+91 78890 96228" → 917889096228). */
+function waNumber(phone) {
+  const d = String(phone || '').replace(/\D/g, '');
+  if (d.length === 10) return `91${d}`;
+  if (d.length === 11 && d.startsWith('0')) return `91${d.slice(1)}`;
+  return d.length >= 11 && d.length <= 13 ? d : '';
+}
+function waLink(phone, pathname, title, href) {
+  const n = waNumber(phone);
+  if (!n) return '';
+  const product = PRODUCT.test(pathname || '');
+  const name = String(title || '').split(/\s[|–—-]\s/)[0].trim();
+  const text = product && name ? `Hi SORA Lifestyle, I have a question about ${name}: ${href}` : 'Hi SORA Lifestyle, I need some help.';
+  return `https://wa.me/${n}?text=${encodeURIComponent(text)}`;
+}
+
+/** The height of whatever is fixed to the foot of the screen, so the buttons clear it. */
+function footOffset() {
+  if (typeof document === 'undefined') return 0;
+  let h = 0;
+  const vh = window.innerHeight;
+  for (const el of document.querySelectorAll('body *')) {
+    if (el.closest('.hx-sa')) continue;
+    const s = getComputedStyle(el);
+    if (s.position !== 'fixed' || s.display === 'none' || s.visibility === 'hidden') continue;
+    const r = el.getBoundingClientRect();
+    if (r.height > 0 && r.height < vh * 0.4 && r.width > window.innerWidth * 0.5 && Math.abs(r.bottom - vh) < 4) h = Math.max(h, r.height);
+  }
+  return Math.round(h);
+}
+function SiteAssist() {
+  const {
+    pathname
+  } = useLocation();
+  const care = useConsumerCare();
+  const [up, setUp] = reactExports.useState(false);
+  const [offset, setOffset] = reactExports.useState(0);
+  const hidden = HIDDEN.test(pathname);
+  reactExports.useEffect(() => {
+    if (hidden) return undefined;
+    const onScroll = () => setUp(window.scrollY > window.innerHeight * 2);
+    const measure = () => setOffset(footOffset());
+    onScroll();
+    const timers = [100, 600, 1500].map(ms => setTimeout(measure, ms));
+    window.addEventListener('scroll', onScroll, {
+      passive: true
+    });
+    window.addEventListener('resize', measure);
+    return () => {
+      timers.forEach(clearTimeout);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', measure);
+    };
+  }, [pathname, hidden]);
+
+  // "/" focuses the store's search box, as on most large shops (not while typing in a field).
+  reactExports.useEffect(() => {
+    const onKey = e => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const box = document.querySelector('.fs-search input, .hl-search input, .v2-hdr__searchbox input');
+      if (box && box.offsetParent !== null) {
+        e.preventDefault();
+        box.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Listing and search pages are named after their heading (product pages name
+  // themselves: pageMeta.js). Read once the page has rendered.
+  reactExports.useEffect(() => {
+    const siteTitle = siteHomeTitle();
+    if (!LISTING.test(pathname)) {
+      if (!PRODUCT.test(pathname)) document.title = siteTitle; // the home pages and the rest: the site's own title
+      return undefined;
+    }
+    // The heading can change as the catalogue arrives ("Loading…" → the category), so it is read again.
+    let release = () => {};
+    let last = '';
+    const read = () => {
+      const h = (document.querySelector('main h1, .fs-listing h1, .hl-listing h1, h1')?.textContent || '').replace(/\s+/g, ' ').trim();
+      if (h && h !== last) {
+        last = h;
+        release();
+        release = holdTitle(`${h} | SORA LIFESTYLE`);
+      }
+    };
+    const timers = [400, 1200, 2500, 5000].map(ms => setTimeout(read, ms));
+    return () => {
+      timers.forEach(clearTimeout);
+      release();
+    };
+  }, [pathname]);
+  if (hidden) return null;
+  // The product's name is read from the page's heading at the moment of the tap (it renders after this).
+  const build = () => waLink(care?.phone, pathname, document.querySelector('main h1, h1')?.textContent || '', window.location.href.split('#')[0]);
+  const wa = waLink(care?.phone, '/', '', '');
+  const top = () => {
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({
+      top: 0,
+      behavior: still ? 'auto' : 'smooth'
+    });
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hx-sa",
+    style: {
+      '--sa-foot': `${offset}px`
+    },
+    children: [up && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: "hx-sa__btn hx-sa__top",
+      onClick: top,
+      "aria-label": "Back to top",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "chevronUp",
+        size: 20
+      })
+    }), wa && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+      className: "hx-sa__btn hx-sa__wa",
+      href: wa,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      "aria-label": "Chat with us on WhatsApp",
+      onClick: e => {
+        e.currentTarget.href = build();
+      },
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "chat",
+        size: 22
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "hx-sa__wa-label",
+        children: "Chat with us"
+      })]
+    })]
+  });
+}
+
+function AskWhatsApp({
+  productName
+}) {
+  const care = useConsumerCare();
+  const [href, setHref] = reactExports.useState('');
+  reactExports.useEffect(() => {
+    setHref(waLink(care?.phone, window.location.pathname, productName, window.location.href.split('#')[0]));
+  }, [care?.phone, productName]);
+  if (!href) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+    className: "pdpk-ask",
+    href: href,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+      name: "chat",
+      size: 16
+    }), " Questions about this product? ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+      children: "Ask us on WhatsApp"
+    })]
+  });
+}
+
+/** The admin's offer line with the time left (offerCountdown.js); nothing once it ends. */
 function OfferCountdown() {
   const o = useStorefrontSection('wellness', 'offerCountdown', OFFER_COUNTDOWN);
   const [now, setNow] = reactExports.useState(null);
@@ -49165,10 +49496,14 @@ function PdpDeliveryDate({
   }, []);
   // "Free Size · As shown" says nothing to a customer: only a real size or colour is named.
   const named = String(choice || '').split('·').map(x => x.trim()).filter(x => x && !/^(free size|one size|as shown)$/i.test(x)).join(' · ');
-  if (out) return /*#__PURE__*/jsxRuntimeExports.jsx(PdpNotifyMe, {
-    productKey: productKey,
-    productName: productName,
-    choice: named
+  if (out) return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(PdpNotifyMe, {
+      productKey: productKey,
+      productName: productName,
+      choice: named
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(AskWhatsApp, {
+      productName: productName
+    })]
   });
   if (!win) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
@@ -49184,6 +49519,8 @@ function PdpDeliveryDate({
           children: "Estimated delivery date"
         })]
       })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(AskWhatsApp, {
+      productName: productName
     })]
   });
 }
@@ -50146,6 +50483,20 @@ function Product() {
     price: product.price
   } : null);
   useHoverZoom('.v2-pdp-root .pdp__main', product?.id);
+  usePageMeta(product ? {
+    title: priceTitle(product.name, product.price),
+    description: product.description || `${product.name}${product.brand ? ` by ${product.brand}` : ''}. Free delivery in 6–7 business days, cash on delivery available.`,
+    image: product.image,
+    path: `/product/${product.slug}`,
+    product: {
+      name: product.name,
+      description: product.description,
+      image: product.image,
+      brand: product.brand,
+      price: product.price,
+      inStock: Number(product.stock) > 0
+    }
+  } : {}, [product?.price, product?.stock]);
   const [catalogTimedOut, setCatalogTimedOut] = reactExports.useState(false);
   reactExports.useEffect(() => {
     if (isCatalogHydrated()) return;
@@ -65240,6 +65591,62 @@ function useFashionCatalogue() {
 const SUGGEST_MAX = 6;
 /** A partner CDN picture asked for at thumbnail size (Shopify resizes on `width`). */
 const thumb = src => String(src).replace(/([?&])width=\d+/, '$1width=120');
+
+// ---- Recent searches (this browser only, per store) -----------------------------------
+const RECENT_MAX = 6;
+const recentKey = store => `sora.search.recent.${store}`;
+function readRecentSearches(store) {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(recentKey(store)) || '[]');
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(0, RECENT_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+function rememberSearch(store, term) {
+  const t = String(term || '').trim().slice(0, 60);
+  if (t.length < 2) return;
+  try {
+    const cur = readRecentSearches(store).filter(x => x.toLowerCase() !== t.toLowerCase());
+    window.localStorage.setItem(recentKey(store), JSON.stringify([t, ...cur].slice(0, RECENT_MAX)));
+  } catch {/* storage off */}
+}
+function clearRecentSearches(store) {
+  try {
+    window.localStorage.removeItem(recentKey(store));
+  } catch {/* storage off */}
+}
+
+/** With nothing typed yet: the last searches, each a link to its results, and Clear. */
+function RecentSearches({
+  id,
+  terms,
+  hrefFor,
+  onPick,
+  onClear
+}) {
+  if (!terms || terms.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hx-suggest hx-suggest--recent",
+    id: id,
+    "aria-label": "Recent searches",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "hx-suggest__head",
+      children: ["Recent searches ", /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        onMouseDown: e => e.preventDefault(),
+        onClick: onClear,
+        children: "Clear"
+      })]
+    }), terms.map(t => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+      to: hrefFor(t),
+      className: "hx-suggest__recent",
+      onMouseDown: e => e.preventDefault(),
+      onClick: onPick,
+      children: t
+    }, t))]
+  });
+}
 function SearchSuggest({
   id,
   items,
@@ -65365,6 +65772,7 @@ function FashionHeader({
     e.preventDefault();
     const term = q.trim();
     setOpen(false);
+    rememberSearch('fashion', term);
     navigate(term ? `/fashion/search?q=${encodeURIComponent(term)}` : '/fashion/search');
   };
   // Live suggestions under the box (SearchSuggest.jsx, searchMatch.js), from the catalogue already loaded.
@@ -65383,9 +65791,11 @@ function FashionHeader({
     image: v.image,
     price: v.price
   })) : null;
+  const [recent, setRecent] = reactExports.useState([]);
   const pick = () => {
     setOpen(false);
     setActive(-1);
+    if (term.length >= 2) rememberSearch('fashion', term);
   };
   const keys = e => suggestKeys(e, {
     count: Math.min(SUGGEST_MAX, found?.length || 0),
@@ -65716,7 +66126,10 @@ function FashionHeader({
         },
         placeholder: config.header.searchPlaceholder || SEARCH_PLACEHOLDER$2,
         "aria-label": "Search fashion",
-        onFocus: () => setOpen(true),
+        onFocus: () => {
+          setOpen(true);
+          setRecent(readRecentSearches('fashion'));
+        },
         onBlur: () => setOpen(false),
         onKeyDown: keys,
         "aria-expanded": found ? true : undefined,
@@ -65736,6 +66149,18 @@ function FashionHeader({
         active: active,
         allHref: `/fashion/search?q=${encodeURIComponent(term)}`,
         onPick: pick
+      }), open && !term && /*#__PURE__*/jsxRuntimeExports.jsx(RecentSearches, {
+        id: "fs-recent",
+        terms: recent,
+        hrefFor: t => `/fashion/search?q=${encodeURIComponent(t)}`,
+        onPick: e => {
+          setQ(e.currentTarget.textContent);
+          setOpen(false);
+        },
+        onClear: () => {
+          clearRecentSearches('fashion');
+          setRecent([]);
+        }
       })]
     }), !strip.hidden && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-strip",
@@ -66618,7 +67043,9 @@ function FashionHome() {
     className: "fs-home",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(Hero, {
       config: config.hero
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {
+      prefix: "fs-"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
       tree: tree
     }), /*#__PURE__*/jsxRuntimeExports.jsx(Benefits, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {
       tree: tree,
@@ -68511,6 +68938,52 @@ function FashionJewellery({
   });
 }
 
+const ORIGIN = 'https://www.soralifestyle.in';
+
+/** The message text; pure, so a test can call it. */
+function wishlistText(items, heading = 'My SORA LIFESTYLE wishlist') {
+  const lines = (items || []).slice(0, 20).map((p, i) => `${i + 1}. ${p.name}${p.price > 0 ? ` — ${money(p.price)}` : ''}\n${ORIGIN}${p.href}`);
+  return `${heading}:\n\n${lines.join('\n\n')}`;
+}
+function ShareList({
+  items,
+  heading
+}) {
+  const [note, setNote] = reactExports.useState('');
+  if (!items || items.length === 0) return null;
+  const text = wishlistText(items, heading);
+  const share = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: heading || 'My wishlist',
+          text
+        });
+        return;
+      }
+    } catch {
+      return;
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    setNote('Opening WhatsApp…');
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+    className: "hx-share",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      type: "button",
+      className: "hx-share__btn",
+      onClick: share,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "chat",
+        size: 16
+      }), " Share my wishlist"]
+    }), note && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      role: "status",
+      children: note
+    })]
+  });
+}
+
 function Breadcrumb$1({
   trail
 }) {
@@ -68906,6 +69379,14 @@ function FashionSearch() {
 function FashionWishlistPage() {
   const wish = useFashionWishlist();
   const set = new Set(wish.ids);
+  const {
+    views
+  } = useFashionCatalogue();
+  const saved = views.filter(v => set.has(v.id)).map(v => ({
+    name: v.name,
+    price: v.price,
+    href: `/fashion/p/${v.slug}`
+  }));
   return /*#__PURE__*/jsxRuntimeExports.jsx(Listing$1, {
     title: "Your fashion wishlist",
     trail: [{
@@ -68915,6 +69396,10 @@ function FashionWishlistPage() {
       name: 'Wishlist'
     }],
     only: v => set.has(v.id),
+    intro: saved.length ? /*#__PURE__*/jsxRuntimeExports.jsx(ShareList, {
+      items: saved,
+      heading: "My Fashion wishlist on SORA LIFESTYLE"
+    }) : null,
     emptyCopy: "Nothing saved yet \u2014 tap the heart on any style to keep it here."
   });
 }
@@ -71161,6 +71646,22 @@ function HomeLivingProductPage() {
     price: view.price
   } : null);
   useHoverZoom('.hl-pdp .hl-gallery__slide', view?.id);
+  const liveStock = !!view && (view.variants?.length ? view.variants.some(v => v.stock > 0) : view.stock > 0);
+  usePageMeta(view ? {
+    title: priceTitle(view.name, view.price),
+    description: view.description || `${view.name}${view.brand ? ` by ${view.brand}` : ''}. Free delivery in 6–7 business days, cash on delivery available.`,
+    image: view.images?.[0],
+    path: `/homeliving/p/${view.slug}`,
+    product: {
+      name: view.name,
+      description: view.description,
+      images: view.images,
+      brand: view.brand,
+      sku: view.sku,
+      price: view.price,
+      inStock: liveStock
+    }
+  } : {}, [view?.price, liveStock]);
   if (!view) {
     return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hl-wrap hl-listing",
@@ -71701,6 +72202,22 @@ function FashionProductPage() {
     price: view.price
   } : null);
   useHoverZoom('.fs-pdp .fs-gallery__slide', view?.id);
+  const liveStock = !!view?.variants?.some(v => v.stock > 0);
+  usePageMeta(view ? {
+    title: priceTitle(`${view.name}${view.brand ? ` by ${view.brand}` : ''}`, view.price),
+    description: view.description || `${view.name} from ${view.brand || 'SORA Lifestyle'}. Free delivery in 6–7 business days, cash on delivery available.`,
+    image: view.image,
+    path: `/fashion/p/${view.slug}`,
+    product: {
+      name: view.name,
+      description: view.description,
+      images: view.images,
+      brand: view.brand,
+      sku: facts?.sku,
+      price: view.price,
+      inStock: liveStock
+    }
+  } : {}, [view?.price, liveStock, facts?.sku]);
   if (!view) {
     return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-listing",
@@ -71907,7 +72424,7 @@ function FashionProductPage() {
               children: "Within 7 days of delivery"
             })]
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryBlock, {})]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryBlock, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ProductDeliveryInfo, {})]
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-pdp__more",
@@ -72649,6 +73166,9 @@ const HOME_PATH = /^\/homeliving\/?$/;
 const SOLID_AFTER_PX = 8;
 
 /** Home is the only live tab; the rest render, do nothing, and never 404. */
+// Every tab goes somewhere since 2026-11-08 (Categories, Offers and Orders were inert):
+// Categories to the category circles on the store's homepage, Wishlist (in place of
+// Offers, which had no page) to this browser's list, Orders and Account to the account.
 const BOTTOM_NAV$1 = [{
   id: 'home',
   label: 'Home',
@@ -72657,19 +73177,23 @@ const BOTTOM_NAV$1 = [{
 }, {
   id: 'categories',
   label: 'Categories',
-  icon: 'grid'
+  icon: 'grid',
+  href: '/homeliving#hl-cats-h'
 }, {
-  id: 'offers',
-  label: 'Offers',
-  icon: 'tag'
+  id: 'wishlist',
+  label: 'Wishlist',
+  icon: 'heart',
+  href: '/homeliving/wishlist'
 }, {
   id: 'orders',
   label: 'Orders',
-  icon: 'package'
+  icon: 'package',
+  href: '/account/orders'
 }, {
   id: 'account',
   label: 'Account',
-  icon: 'user'
+  icon: 'user',
+  href: '/account'
 }];
 function HomeLivingLogo() {
   return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
@@ -72775,9 +73299,11 @@ function SearchBar() {
   const term = q.trim();
   const found = open && term.length >= 2 ? searchItems(homelivingSearchRows(products, categories), term) : null;
   const all = `/homeliving/search?q=${encodeURIComponent(term)}`;
+  const [recent, setRecent] = reactExports.useState([]);
   const pick = () => {
     setOpen(false);
     setActive(-1);
+    if (term.length >= 2) rememberSearch('homeliving', term);
   };
   const keys = e => {
     if (e.key === 'Enter' && active < 0) {
@@ -72815,7 +73341,10 @@ function SearchBar() {
         setOpen(true);
         setActive(-1);
       },
-      onFocus: () => setOpen(true),
+      onFocus: () => {
+        setOpen(true);
+        setRecent(readRecentSearches('homeliving'));
+      },
       onBlur: () => setOpen(false),
       onKeyDown: keys,
       enterKeyHint: "search",
@@ -72828,6 +73357,18 @@ function SearchBar() {
       active: active,
       allHref: all,
       onPick: pick
+    }), open && !term && /*#__PURE__*/jsxRuntimeExports.jsx(RecentSearches, {
+      id: "hl-recent",
+      terms: recent,
+      hrefFor: t => `/homeliving/search?q=${encodeURIComponent(t)}`,
+      onPick: e => {
+        setQ(e.currentTarget.textContent);
+        setOpen(false);
+      },
+      onClear: () => {
+        clearRecentSearches('homeliving');
+        setRecent([]);
+      }
     })]
   });
 }
@@ -72938,13 +73479,18 @@ function WishLink() {
   });
 }
 function BottomNav$1() {
+  const {
+    pathname,
+    hash
+  } = useLocation();
+  const here = item => item.id === 'home' ? pathname.replace(/\/$/, '') === '/homeliving' && hash !== '#hl-cats-h' : item.id === 'categories' ? hash === '#hl-cats-h' : pathname.startsWith(item.href);
   return /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
     className: "hl-nav",
     "aria-label": "Home & Living",
     children: BOTTOM_NAV$1.map(item => item.href ? /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
       to: item.href,
-      className: "hl-nav__item is-on",
-      "aria-current": "page",
+      className: `hl-nav__item${here(item) ? ' is-on' : ''}`,
+      "aria-current": here(item) ? 'page' : undefined,
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
         name: item.icon,
         size: 24
@@ -73499,6 +74045,8 @@ function HomeLivingHome() {
     }), /*#__PURE__*/jsxRuntimeExports.jsx(FeaturedRow, {
       products: products,
       status: status
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {
+      prefix: "hl-"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(PromoStrip$1, {})]
   });
 }
@@ -73593,12 +74141,21 @@ function HomeLivingWishlist() {
         className: "hl-btn",
         children: "Browse Home & Living"
       })]
-    }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "hl-grid",
-      children: saved.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingProductCard, {
-        product: p,
-        mediaLoading: i < 2 ? 'eager' : 'lazy'
-      }, p.id))
+    }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ShareList, {
+        items: saved.map(p => ({
+          name: p.name,
+          price: p.price,
+          href: `/homeliving/p/${p.slug}`
+        })),
+        heading: "My Home & Living wishlist on SORA LIFESTYLE"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hl-grid",
+        children: saved.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingProductCard, {
+          product: p,
+          mediaLoading: i < 2 ? 'eager' : 'lazy'
+        }, p.id))
+      })]
     })]
   });
 }
@@ -75456,108 +76013,6 @@ function ScrollManager() {
     writePositions(window.sessionStorage, st.positions);
   }, [location, action]);
   return null;
-}
-
-const HIDDEN = /^\/(admin|checkout|cart|creator|invoice|passport|login|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout)(\/|$)/;
-const PRODUCT = /^\/(product|fashion\/p|homeliving\/p|grocery\/p)\/[^/]+/;
-
-/** wa.me digits for an Indian number as published ("+91 78890 96228" → 917889096228). */
-function waNumber(phone) {
-  const d = String(phone || '').replace(/\D/g, '');
-  if (d.length === 10) return `91${d}`;
-  if (d.length === 11 && d.startsWith('0')) return `91${d.slice(1)}`;
-  return d.length >= 11 && d.length <= 13 ? d : '';
-}
-function waLink(phone, pathname, title, href) {
-  const n = waNumber(phone);
-  if (!n) return '';
-  const product = PRODUCT.test(pathname || '');
-  const name = String(title || '').split(/\s[|–—-]\s/)[0].trim();
-  const text = product && name ? `Hi SORA Lifestyle, I have a question about ${name}: ${href}` : 'Hi SORA Lifestyle, I need some help.';
-  return `https://wa.me/${n}?text=${encodeURIComponent(text)}`;
-}
-
-/** The height of whatever is fixed to the foot of the screen, so the buttons clear it. */
-function footOffset() {
-  if (typeof document === 'undefined') return 0;
-  let h = 0;
-  const vh = window.innerHeight;
-  for (const el of document.querySelectorAll('body *')) {
-    if (el.closest('.hx-sa')) continue;
-    const s = getComputedStyle(el);
-    if (s.position !== 'fixed' || s.display === 'none' || s.visibility === 'hidden') continue;
-    const r = el.getBoundingClientRect();
-    if (r.height > 0 && r.height < vh * 0.4 && r.width > window.innerWidth * 0.5 && Math.abs(r.bottom - vh) < 4) h = Math.max(h, r.height);
-  }
-  return Math.round(h);
-}
-function SiteAssist() {
-  const {
-    pathname
-  } = useLocation();
-  const care = useConsumerCare();
-  const [up, setUp] = reactExports.useState(false);
-  const [offset, setOffset] = reactExports.useState(0);
-  const hidden = HIDDEN.test(pathname);
-  reactExports.useEffect(() => {
-    if (hidden) return undefined;
-    const onScroll = () => setUp(window.scrollY > window.innerHeight * 2);
-    const measure = () => setOffset(footOffset());
-    onScroll();
-    const timers = [100, 600, 1500].map(ms => setTimeout(measure, ms));
-    window.addEventListener('scroll', onScroll, {
-      passive: true
-    });
-    window.addEventListener('resize', measure);
-    return () => {
-      timers.forEach(clearTimeout);
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', measure);
-    };
-  }, [pathname, hidden]);
-  if (hidden) return null;
-  // The product's name is read from the page's heading at the moment of the tap (it renders after this).
-  const build = () => waLink(care?.phone, pathname, document.querySelector('main h1, h1')?.textContent || '', window.location.href.split('#')[0]);
-  const wa = waLink(care?.phone, '/', '', '');
-  const top = () => {
-    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    window.scrollTo({
-      top: 0,
-      behavior: still ? 'auto' : 'smooth'
-    });
-  };
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "hx-sa",
-    style: {
-      '--sa-foot': `${offset}px`
-    },
-    children: [up && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-      type: "button",
-      className: "hx-sa__btn hx-sa__top",
-      onClick: top,
-      "aria-label": "Back to top",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "chevronUp",
-        size: 20
-      })
-    }), wa && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
-      className: "hx-sa__btn hx-sa__wa",
-      href: wa,
-      target: "_blank",
-      rel: "noopener noreferrer",
-      "aria-label": "Chat with us on WhatsApp",
-      onClick: e => {
-        e.currentTarget.href = build();
-      },
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "chat",
-        size: 22
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "hx-sa__wa-label",
-        children: "Chat with us"
-      })]
-    })]
-  });
 }
 
 scheduleDeferredStyles();

@@ -3849,6 +3849,15 @@ h3 { font-size: var(--text-xl); }
 .hx-xs__price { display: flex; align-items: baseline; gap: 6px; font-size: 16px; }
 .hx-xs__price s { font-size: 12px; color: #565959; }
 @media (max-width: 599px) { .hx-xs__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .hx-xs__h { font-size: 19px; } }
+/* More features (2026-11-08): recent searches, ask on WhatsApp, share a wishlist. */
+.hx-suggest__head { display: flex; justify-content: space-between; align-items: center; margin: 0; padding: 10px 12px 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #565959; }
+.hx-suggest__head button { border: 0; background: none; padding: 0; font: 400 12px Arial, sans-serif; letter-spacing: 0; text-transform: none; color: #007185; cursor: pointer; }
+.hx-suggest__recent { display: block; padding: 8px 12px; font-size: 14px; color: #0F1111; text-decoration: none; }
+.hx-suggest__recent::before { content: "↺"; margin-right: 10px; color: #8A8F8F; }
+.hx-suggest__recent:hover { background: #F3F6F6; }
+.hx-share { margin: 0 0 14px; display: flex; align-items: center; gap: 10px; font: 400 13px Arial, sans-serif; color: #565959; }
+.hx-share__btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: 1px solid #1DA851; background: #fff; color: #11823B; font: 600 13px Arial, sans-serif; cursor: pointer; }
+.hx-share__btn:hover { background: #F0FAF3; }
 
 /* ═══ src/styles/v2-shop.css ═══ */
 /* ============================================================================
@@ -5674,6 +5683,10 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-offer svg { flex: none; margin-top: 2px; color: #C2500A; }
 .pdpk-offer__code { margin: 0 2px; padding: 1px 6px; border: 1px dashed #C2500A; background: #fff; color: #C2500A; font: 700 12px/1.4 Arial, sans-serif; letter-spacing: .04em; cursor: pointer; }
 .pdpk-offer em { display: block; font-style: normal; color: #B12704; }
+.pdpk-ask { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font: 400 13px/1.4 Arial, sans-serif; color: #0F1111; text-decoration: none; }
+.pdpk-ask svg { color: #1DA851; flex: none; }
+.pdpk-ask b { color: #007185; font-weight: 400; }
+.pdpk-ask:hover b { color: #C7511F; text-decoration: underline; }
 
 /* ═══ src/styles/v2-cart-checkout.css ═══ */
 /* ============================================================================
