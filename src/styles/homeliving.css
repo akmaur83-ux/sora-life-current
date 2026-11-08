@@ -1039,3 +1039,14 @@
 @media (max-width: 767px) { .hl .pdpk-rev { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
 
 .hl .pdpk-rev__cta h3 { font-family: inherit; letter-spacing: 0; }
+/* Phone (owner, 2026-11-08): the buy box straight after the price and the choice, not under every detail. */
+@media (max-width: 767px) {
+  .hl .hl-pdp__grid { row-gap: 0; }
+  .hl .hl-pdp__grid > :first-child { margin-bottom: 12px; }
+  .hl .hl-pdp__body { display: contents; }
+  .hl .hl-pdp__body > * { order: 3; }
+  .hl .hl-pdp__body > :is(.hl-pdp__brand, .hl-pdp__h, .hl-pdp__lede, .hl-pdp__rating, .hl-pdp__size, .hl-pdp__pricecard, .hl-pick) { order: 1; }
+  .hl .hl-buybox { order: 2; margin-bottom: 14px; }
+}
+/* Sharp corners across the store (owner, 2026-11-08). */
+.hl, .hl *, .hl *::before, .hl *::after { border-radius: 0 !important; }

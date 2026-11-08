@@ -238,6 +238,7 @@ export default function FashionProductPage() {
       <div className="fs-pdp__bar" role="region" aria-label="Buy">
         <span className="fs-pdp__bar-price"><b><span className="fs-price__cur">₹</span>{money(st.price).replace(/^₹\s?/, '')}</b>{st.label && <em>{st.label}</em>}</span>
         <button type="button" className="fs-btn fs-btn--add" disabled={!st.canAdd} onClick={add}><Icon name="bag" size={18} /> {st.canAdd ? 'Add to cart' : st.missing || addLabel}</button>
+        <button type="button" className="fs-btn fs-btn--buy" disabled={!st.canAdd} onClick={buyNow}>Buy now</button>
       </div>
     </div>
   );

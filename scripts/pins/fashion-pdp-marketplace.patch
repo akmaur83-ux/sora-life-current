@@ -1,5 +1,5 @@
 diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
-index 6b34d06..8b76947 100644
+index 6b34d06..6c44e64 100644
 --- a/src/fashion/FashionProductPage.jsx
 +++ b/src/fashion/FashionProductPage.jsx
 @@ -13,6 +13,8 @@ import { Breadcrumb } from './FashionListing.jsx';
@@ -188,3 +188,11 @@ index 6b34d06..8b76947 100644
            </div>
          </section>
        )}
+@@ -179,6 +238,7 @@ export default function FashionProductPage() {
+       <div className="fs-pdp__bar" role="region" aria-label="Buy">
+         <span className="fs-pdp__bar-price"><b><span className="fs-price__cur">₹</span>{money(st.price).replace(/^₹\s?/, '')}</b>{st.label && <em>{st.label}</em>}</span>
+         <button type="button" className="fs-btn fs-btn--add" disabled={!st.canAdd} onClick={add}><Icon name="bag" size={18} /> {st.canAdd ? 'Add to cart' : st.missing || addLabel}</button>
++        <button type="button" className="fs-btn fs-btn--buy" disabled={!st.canAdd} onClick={buyNow}>Buy now</button>
+       </div>
+     </div>
+   );

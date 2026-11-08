@@ -506,4 +506,22 @@
 }
 
 .fs-pdp--mk .pdpk-price__off { color: #CC0C39; font-weight: 300; }
-.fs-pdp--mk .fs-pdp__info h2, .fs-pdp--mk .pdpk-h { font-family: inherit; }
+.fs-pdp--mk .fs-pdp__info h2, .fs-pdp--mk .pdpk-h { font-family: inherit; }/* Phone (owner, 2026-11-08): the buy box straight after the price and the colour and size, not
+   under every detail — the details column opens into the grid so the box can sit between. */
+@media (max-width: 767px) {
+  .fs-pdp--mk .fs-pdp__grid { gap: 0; }
+  .fs-pdp--mk .fs-gallery { margin-bottom: 14px; }
+  .fs-pdp--mk .fs-pdp__body { display: contents; }
+  .fs-pdp--mk .fs-pdp__body > * { order: 3; }
+  .fs-pdp--mk .fs-pdp__body > :is(.fs-pdp__brand, .fs-pdp__h, .fs-rating, .fs-pdp__net, .fs-pdp__pricewrap, .fs-pick) { order: 1; }
+  .fs-pdp--mk .fs-buybox { order: 2; margin-bottom: 14px; }
+  .fs-pdp--mk .fs-buybox .fs-pdp__delivery, .fs-pdp--mk .fs-buybox__facts { display: none; }
+}
+.fs-pdp__bar .fs-btn--buy { min-height: 46px; padding: 0 16px; background: #C2500A; border-color: #C2500A; color: #fff; }
+.fs-pdp__bar .fs-btn--buy:disabled { background: #F0F2F2; border-color: #D5D9D9; color: #8A8F8F; }
+@media (max-width: 767px) {
+  .fs-pdp__bar { grid-template-columns: minmax(0, 1fr) auto auto !important; gap: 8px !important; }
+  .fs-pdp__bar .fs-btn--add { padding: 0 12px; }
+}
+/* Sharp corners across the fashion store (owner, 2026-11-08): cards, chips, badges, buttons, panels. */
+.fs, .fs *, .fs *::before, .fs *::after { border-radius: 0 !important; }

@@ -532,6 +532,15 @@ export function BuyNowButton({ st, onBuy, className = '' }) {
   );
 }
 
+/** The only size, and the first colour that can be bought in it; anything the URL names wins. */
+export function oneSizeDefault(view, sel) {
+  if (!view || !Array.isArray(view.sizes) || view.sizes.length !== 1) return sel;
+  const size = sel.size ?? view.sizes[0];
+  if (sel.colour || !(view.swatches || []).length) return { ...sel, size };
+  const live = view.swatches.find((sw) => selectionState(view, { size, colour: sw.colour }).canAdd);
+  return { size, colour: live ? live.colour : null };
+}
+
 export default function HomeLivingProductPage() {
   const { slug } = useParams();
   const { status, categories, products } = useHomeLivingCatalogue();
@@ -557,7 +566,8 @@ export default function HomeLivingProductPage() {
 
   const node = view.category_id != null ? categories.find((c) => String(c.id) === String(view.category_id)) || null : null;
   const trail = [...breadcrumbFor(categories, node), { name: view.name }];
-  const sel = readSelection(params, view);
+  // One-size pieces open ready to buy (owner, 2026-11-08): the only size and the first colour in stock.
+  const sel = oneSizeDefault(view, readSelection(params, view));
   const st = selectionState(view, sel);
   const setSel = (next) => setParams(writeSelection(params, next), { replace: true });
   const related = relatedFor(view, products, 4);
