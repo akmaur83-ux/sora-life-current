@@ -26,6 +26,7 @@ const rupees = (n) => `₹${Math.round(Number(n) || 0).toLocaleString('en-IN')}`
 let shell = null;
 function readShell() {
   if (shell) return shell;
+  // Bundled with the function when the platform traces it; otherwise read from the site itself below.
   try { shell = readFileSync(new URL('../index.html', import.meta.url), 'utf8'); } catch { shell = null; }
   return shell;
 }

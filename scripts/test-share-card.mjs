@@ -22,11 +22,10 @@ test('a wellness product reads its own columns; a missing row or a free product 
   assert.equal(withProductHead(html, shareFacts('fashion', null, 'x')), html);
   assert.equal(withProductHead(html, { name: 'Free', price: 0 }), html);
 });
-test('vercel.json sends the three product paths here before the app, and ships index.html with the function', () => {
+test('vercel.json sends the three product paths here before the app', () => {
   const v = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
   const i = (s) => v.rewrites.findIndex((r) => r.source === s);
   for (const s of ['/product/:slug', '/fashion/p/:slug', '/homeliving/p/:slug']) assert.ok(i(s) >= 0 && i(s) < i('/((?!api/).*)'), s);
-  assert.equal(v.functions['api/share.js'].includeFiles, 'index.html');
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

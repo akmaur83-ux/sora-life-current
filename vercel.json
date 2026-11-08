@@ -2,9 +2,6 @@
   "framework": null,
   "buildCommand": "npm run build && node build/publish-content.mjs",
   "outputDirectory": ".",
-  "functions": {
-    "api/share.js": { "includeFiles": "index.html" }
-  },
   "redirects": [
     {
       "source": "/(.*)",
