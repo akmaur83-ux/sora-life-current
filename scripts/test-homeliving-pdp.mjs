@@ -153,7 +153,7 @@ await test('/homeliving/p/sage-fitted-sheet: breadcrumb back through the categor
   assert.doesNotMatch(html, /href="#hl-slide-/, 'no fragment links: a thumbnail can never jump the page or add history');
   assert.match(html, /<p class="hl-pdp__brand">Meadow Weave<\/p><h1 class="hl-pdp__h serif">Sage Fitted Sheet<\/h1><p class="hl-pdp__lede">Sage Fitted Sheet\.<\/p><p class="hl-pdp__rating">[\s\S]*?<\/p><p class="hl-pdp__size">Fitted sheet<\/p>/, 'the rating row only because this product has reviews');
   // The owner's layout (2026-11-08): the price in a card with what it saves, the tax line beside the stock.
-  assert.match(html, /<div class="hl-pdp__pricecard"><p class="hl-price hl-price--lg" data-price="999"><strong><span class="hl-price__cur">₹<\/span>999<\/strong><span class="hl-price__mrp">M\.R\.P: <s>₹1,299<\/s><\/span><span class="hl-badge">23% OFF<\/span><\/p><p class="hl-pdp__save">Save ₹300 on this item<\/p><\/div>/);
+  assert.match(html, /<div class="hl-pdp__pricecard"><p class="hl-price hl-price--lg" data-price="999"><strong><span class="hl-price__cur">₹<\/span>999<\/strong><span class="hl-price__mrp">M\.R\.P: <s>₹1,299<\/s><\/span><span class="hl-badge">23%<span class="hl-badge__off"> OFF<\/span><\/span><\/p><p class="hl-pdp__save">Save ₹300 on this item<\/p><\/div>/);
   assert.match(html, /<\/span> Inclusive of all taxes<\/p>/);
   assert.match(html, /<legend>Colour<\/legend>/); assert.match(html, /<legend>Size<\/legend>/);
   assert.deepEqual([...html.matchAll(/class="hl-pick__swatch[^"]*" style="--sw:([^"]+)"/g)].map((m) => m[1]), ['#8A9A6B', '#EDE6D6']);

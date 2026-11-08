@@ -557,6 +557,14 @@ export default function HomeLivingProductPage() {
   const add = () => addHomeLivingToCart(view, st.variant, 1);
   const buy = () => { if (addHomeLivingToCart(view, st.variant, 1) !== false) navigate('/checkout'); };
 
+  const stockLine = (
+    <p className="hl-pdp__tax"><span className={`hl-pdp__stock is-${st.shape === 'none' ? st.status : st.status === 'choose' ? 'in' : st.status}`}><Icon name="checkCircle" size={18} /> {st.shape === 'none' ? (st.stockNote || 'In stock') : (st.stockNote || (st.sizes.some((x) => x.available) ? 'In stock' : 'Out of stock'))}</span><span aria-hidden="true">|</span> Inclusive of all taxes</p>
+  );
+
+  // The owner's second reference (2026-11-08, a marketplace product page): three
+  // columns on a desktop — the pictures, the details, and a buy box — in a quiet
+  // sans at reading size, colour carrying meaning (red the discount, teal the links,
+  // green the stock). On a phone the same blocks stack in that order.
   return (
     <div className="hl-wrap hl-pdp" data-product={view.slug}>
       <AssuranceStrip />
@@ -575,29 +583,45 @@ export default function HomeLivingProductPage() {
           <div className="hl-pdp__pricecard">
             <p className="hl-price hl-price--lg" data-price={st.price}>
               <strong><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</strong>
-              {st.hasDiscount && <><span className="hl-price__mrp">M.R.P: <s>{money(st.mrp)}</s></span><span className="hl-badge">{st.discountPct}% OFF</span></>}
+              {st.hasDiscount && <><span className="hl-price__mrp">M.R.P: <s>{money(st.mrp)}</s></span><span className="hl-badge">{st.discountPct}%<span className="hl-badge__off"> OFF</span></span></>}
             </p>
             {st.hasDiscount && <p className="hl-pdp__save">Save {money(st.saving)} on this item</p>}
           </div>
 
           <OfferStrip view={view} />
           <Assurances />
-          <DeliveryBlock />
-          <p className="hl-pdp__tax"><span className={`hl-pdp__stock is-${st.shape === 'none' ? st.status : st.status === 'choose' ? 'in' : st.status}`}><Icon name="checkCircle" size={18} /> {st.shape === 'none' ? (st.stockNote || 'In stock') : (st.stockNote || (st.sizes.some((x) => x.available) ? 'In stock' : 'Out of stock'))}</span><span aria-hidden="true">|</span> Inclusive of all taxes</p>
 
           {st.shape === 'none'
             ? null
             : <VariantPicker view={view} st={st} onChange={setSel} />}
 
+          {bullets.length > 1 && (
+            <section className="hl-about" aria-labelledby="hl-about-h">
+              <h2 className="hl-about__h" id="hl-about-h">About this item</h2>
+              <ul>{bullets.map((b) => <li key={b}>{b}</li>)}</ul>
+            </section>
+          )}
+        </div>
+
+        <aside className="hl-buybox" aria-label="Buy">
+          <p className="hl-buybox__price"><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</p>
+          <DeliveryBlock />
+          {stockLine}
           {/* The action row: Add to cart in the first cell, Buy now beside it. */}
           <div className="hl-pdp__actions" data-slot="add-to-cart" data-can-add={st.canAdd ? 'yes' : 'no'}>
             <AddToCartButton st={st} onAdd={add} />
             <BuyNowButton st={st} onBuy={buy} />
           </div>
-
-          <InfoTabs view={view} node={node} categories={categories} st={st} bullets={bullets} />
-        </div>
+          <dl className="hl-buybox__facts">
+            {view.brand && <div><dt>Brand</dt><dd>{view.brand}</dd></div>}
+            <div><dt>Delivery</dt><dd>Standard, free</dd></div>
+            <div><dt>Payment</dt><dd>Secure transaction · COD</dd></div>
+            <div><dt>Returns</dt><dd>Within 7 days of delivery</dd></div>
+          </dl>
+        </aside>
       </div>
+
+      <InfoTabs view={view} node={node} categories={categories} st={st} bullets={[]} />
 
       {related.length > 0 && (
         <section className="hl-sec" aria-labelledby="hl-related-h">
