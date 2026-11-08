@@ -8413,6 +8413,49 @@
   .hl-pdp__delivery-h { font-size: 16px; }
 }
 
+/* Phone: denser, so more of the page fits on one screen (owner, 2026-11-08). */
+@media (max-width: 599px) {
+  .hl-assure { padding: 7px var(--hl-gutter, 16px); font-size: 11px; gap: 14px; }
+  .hl-crumb { font-size: 11.5px; }
+  .hl-gallery.has-thumbs { grid-template-columns: 48px minmax(0, 1fr); gap: 6px; }
+  .hl-gallery__thumb { width: 48px; height: 48px; }
+  .hl-gallery.has-thumbs .hl-gallery__thumbs { gap: 6px; }
+  .hl-gallery__heart { width: 34px; height: 34px; }
+  .hl-gallery__count { padding: 3px 8px; font-size: 11.5px; }
+  .hl-pdp__grid { gap: 12px; margin-top: 10px; }
+  .hl-pdp__brand { margin-bottom: 3px; font-size: 10.5px; }
+  .hl .hl-pdp__h.serif { font-size: 21px; line-height: 1.2; margin-bottom: 4px; }
+  .hl-pdp__lede { margin-bottom: 4px; font-size: 13px; }
+  .hl-pdp__size { margin-bottom: 6px; font-size: 12px; }
+  .hl-pdp__pricecard { min-height: 0; margin: 4px 0 8px; padding: 10px 12px; background-size: 110px auto; }
+  .hl-pdp__pricecard .hl-price--lg strong { font-size: 25px; }
+  .hl-pdp__pricecard .hl-price__mrp { font-size: 13px; }
+  .hl-pdp__pricecard .hl-badge { min-height: 22px; padding: 0 8px; font-size: 12px; }
+  .hl-pdp__save { margin-top: 4px; font-size: 13.5px; }
+  .hl-pdp__pricecard .hl-price--lg, .hl-pdp__save { max-width: calc(100% - 70px); }
+  .hl-offer { margin-bottom: 10px; padding: 8px 10px; }
+  .hl-offer__t b { font-size: 13.5px; }
+  .hl-offer__code { padding: 4px 8px; font-size: 12px; }
+  .hl-feats { margin: 0 0 10px; }
+  .hl-feats li { gap: 4px; font-size: 10.5px; padding: 1px 2px; }
+  .hl-feats span { width: 30px; height: 30px; }
+  .hl-feats svg { width: 16px; height: 16px; }
+  .hl-pdp__delivery { gap: 10px; margin-bottom: 8px; padding: 9px 12px; }
+  .hl-pdp__delivery-icon svg { width: 22px; height: 22px; }
+  .hl-pdp__delivery-h { font-size: 14px; }
+  .hl-pdp__delivery .hl-pdp__ship { font-size: 12px; }
+  .hl-pdp__tax { margin-bottom: 10px; font-size: 12.5px; }
+  .hl-pick__group legend { font-size: 14px; }
+  .hl-pick__swatch span { width: 48px; height: 34px; }
+  .hl-pick__size { min-height: 46px; font-size: 13px; }
+  .hl-add, .hl-buy { min-height: 44px; font-size: 14px; }
+  .hl-tabs { margin-top: 16px; }
+  .hl-tabs__bar button { padding: 10px 10px 8px; font-size: 13.5px; }
+  .hl-love { padding: 12px; }
+  .hl-love__h { font-size: 15.5px; }
+  .hl-love li { font-size: 13px; }
+}
+
 /* ═══ src/styles/lifestyle.css ═══ */
 /* ============================================================================
    SORA LIFE — the lifestyle storefront (/lifestyle). Namespaced .ls-*, deferred bundle.
