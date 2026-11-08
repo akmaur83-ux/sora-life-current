@@ -777,3 +777,17 @@
   .hl-love li { font-size: 13px; }
 }
 
+/* Phone, the owner's reference to the letter (2026-11-08): on a product page the
+   picture comes first — the shell's delivery row, search bar and bottom tabs step
+   aside (the header stays), the buy bar sits on the bottom edge, and the trail is
+   one line. Other Home & Living pages keep the full shell. */
+.hl-pdp__pricecard::before { content: 'Home Comfort Collection'; position: absolute; right: 16px; top: 14px; max-width: 120px; font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-style: italic; font-size: 16px; line-height: 1.15; text-align: right; color: #2F5A3A; pointer-events: none; }
+@media (max-width: 767px) {
+  .hl:has(.hl-pdp) .hl-tools--bar, .hl:has(.hl-pdp) .hl-nav { display: none; }
+  .hl:has(.hl-pdp) .hl-pdp__bar { bottom: 0; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .hl-pdp .hl-crumb { margin: 8px 0 0; }
+  .hl-pdp .hl-crumb ol { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+  .hl-pdp .hl-crumb li:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .hl-pdp__pricecard::before { display: none; }
+}
+
