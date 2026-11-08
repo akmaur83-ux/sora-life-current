@@ -189,7 +189,7 @@ export default function FashionProductPage() {
 
         <aside className="fs-buybox" aria-label="Buy">
           <p className="fs-buybox__price"><span className="fs-price__cur">₹</span>{money(st.price).replace(/^₹\s?/, '')}</p>
-          <PdpDeliveryDate />
+          <PdpDeliveryDate out={st.status === 'out' || !anyLive} productKey={`fashion:${view.id}`} productName={view.name} choice={st.status === 'out' ? (st.label || '') : ''} />
           <p className="fs-buybox__deliv"><b>FREE</b> Standard Delivery: 6–7 business days</p>
           <p className="fs-buybox__note">Free on every order · Cash on Delivery available</p>
           <p className={`fs-buybox__stock is-${stockClass}`}>{stockText}</p>

@@ -370,7 +370,7 @@ useEffect(() => {
             on a desktop; under the details on a tablet and a phone. */}
         <aside className="pdp__buybox" aria-label="Buy">
           <div className="pdp__bbprice"><PdpPrice product={{ ...product, discountPct: 0 }} variant={variant ? { ...variant, discountPct: 0 } : null} /></div>
-          {!out && <PdpDeliveryDate />}
+          <PdpDeliveryDate out={out} productKey={`wellness:${product.id}`} productName={product.name} choice={variant?.label || variant?.name || ''} />
           <div className="pdp__stock">
             {out ? <span className="v2-badge v2-badge--out">Out of stock</span>
               : lowStock ? <span className="v2-badge"><Icon name="clock" size={13} /> Only {product.stock} left</span>

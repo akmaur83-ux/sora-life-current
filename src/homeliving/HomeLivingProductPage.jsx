@@ -647,7 +647,7 @@ export default function HomeLivingProductPage() {
 
         <aside className="hl-buybox" aria-label="Buy">
           <p className="hl-buybox__price"><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</p>
-          <PdpDeliveryDate />
+          <PdpDeliveryDate out={st.status === 'out' || (st.status === 'choose' && !st.sizes?.some((x) => x.available))} productKey={`homeliving:${view.id}`} productName={view.name} choice={st.status === 'out' ? (st.label || '') : ''} />
           <DeliveryBlock />
           {stockLine}
           <label className="hl-qty">Quantity:{' '}

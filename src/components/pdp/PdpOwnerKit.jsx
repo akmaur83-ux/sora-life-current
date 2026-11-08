@@ -5,6 +5,7 @@ import { useConsumerCare } from '../../lib/consumerCare.js';
 import { useCustomerAuth } from '../../lib/customerAuth.jsx';
 import { fetchApprovedReviews, reviewSummary, submitReview } from '../../lib/productReviews.js';
 import { money } from '../../lib/format.js';
+import { PdpQuestions } from './PdpEngage.jsx';
 
 // ============================================================
 // The owner's product-page pieces (2026-11-08), shared by the wellness PDP:
@@ -365,6 +366,7 @@ export function PdpReviews({ productKey, productName }) {
     if (res.ok) { setOpen(false); setForm({ rating: 0, title: '', body: '', authorName: '' }); }
   };
   return (
+    <>
     <section className="pdpk-rev" aria-labelledby="pdpk-rev-h" id="reviews">
       <div className="pdpk-rev__side">
         <h2 className="pdpk-h pdpk-h--lg" id="pdpk-rev-h">Customer reviews</h2>
@@ -414,5 +416,8 @@ export function PdpReviews({ productKey, productName }) {
         ))}
       </div>
     </section>
+    {/* Questions & answers follow the reviews on every product page (PdpEngage.jsx). */}
+    <PdpQuestions productKey={productKey} productName={productName} />
+    </>
   );
 }

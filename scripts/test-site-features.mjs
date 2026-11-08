@@ -25,5 +25,20 @@ test('WhatsApp: Indian numbers as published, nothing when unset; a product page 
   assert.match(p, /^https:\/\/wa\.me\/917889096228\?text=Hi SORA Lifestyle, I have a question about Kalamkari Shawl: https:\/\/www\.soralifestyle\.in\/fashion\/p\/a-shawl$/);
   assert.match(decodeURIComponent(sa.waLink('7889096228', '/shop', 'Shop', 'u')), /I need some help\.$/);
 });
+const eng = loadModule('src/lib/productEngage.js', { supabase: null });
+test('stock alerts group by product and choice, most wanted first; admin links per store', () => {
+  const g = eng.groupAlerts([{ id: 1, product_key: 'fashion:a', product_name: 'A', choice: '' }, { id: 2, product_key: 'fashion:b', product_name: 'B', choice: 'M' }, { id: 3, product_key: 'fashion:b', product_name: 'B', choice: 'M' }]);
+  assert.deepEqual(g.map((x) => [x.product_name, x.rows.length]), [['B', 2], ['A', 1]]);
+  assert.equal(eng.productHref('fashion:x1'), '/admin/store-catalogue/fashion/x1');
+  assert.equal(eng.productHref('wellness:7'), '/admin/products/7/edit');
+});
+await (async () => {
+  const bad = await eng.requestStockAlert({ key: 'fashion:a', name: 'A', email: 'nope' }, {});
+  test('a bad email never reaches the database; a short question neither', () => {
+    assert.equal(bad.ok, false);
+  });
+  const q = await eng.submitQuestion({ key: 'fashion:a', question: 'short', authorName: 'A' }, {});
+  test('question under 10 characters is refused', () => assert.equal(q.ok, false));
+})();
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
