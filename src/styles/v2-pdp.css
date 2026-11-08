@@ -1150,3 +1150,65 @@ body:has(.v2-pdp-root .buybar) .page-main {
   .v2-pdp-root .variantlist { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .v2-pdp-root .pdp-specs__row { grid-template-columns: minmax(140px, 26%) minmax(0, 1fr); }
 }
+
+/* ============================================================================
+   THE OWNER'S PRODUCT PAGE (2026-11-08) — the Home & Living PDP's look on the
+   wellness PDP: white page, sharp corners, a thumbnail rail beside the image on
+   every width, the name with its middle words in orange, the price in a green
+   card with "Save ₹… on this item", five store-wide assurances (PdpOwnerKit.jsx),
+   a white delivery card, Add to cart + Buy now in green. Data unchanged.
+   ========================================================================== */
+.v2-pdp-root { --pk-ink:#13261C; --pk-green:#1E5A35; --pk-green-bg:#F2F7EF; --pk-green-line:#D3E3CB; --pk-hl:#C2500A; --pk-red:#C62828; --pdp-ground:#F6F7F5 !important; --pdp-arc:0%; background:#fff; }
+.v2-pdp-root, .v2-pdp-root *, .v2-pdp-root *::before, .v2-pdp-root *::after { border-radius:0 !important; }
+.v2-pdp-root .sl-bg { display:none; }
+.v2-pdp-root .pdp-strip { padding:0; }
+.pdpk-strip { display:flex; flex-wrap:wrap; justify-content:center; gap:6px 26px; margin:0; padding:10px 0; list-style:none; border-bottom:1px solid var(--pk-green-line); background:var(--pk-green-bg); box-shadow:0 0 0 100vmax var(--pk-green-bg); clip-path:inset(0 -100vmax); font-size:13px; font-weight:600; color:var(--pk-ink); }
+.pdpk-strip li { display:inline-flex; align-items:center; gap:7px; }
+.pdpk-strip svg { color:var(--pk-green); }
+
+.v2-pdp-root .pdp__main { background:var(--pdp-ground); }
+.v2-pdp-root .pdp__thumb { border:1.5px solid #E4E8E1; background:#fff; }
+.v2-pdp-root .pdp__thumb.active { border-color:var(--pk-green); box-shadow:inset 0 0 0 1px var(--pk-green); }
+.v2-pdp-root .pdp__galbtn { background:#fff; color:var(--pk-ink); box-shadow:0 2px 10px rgba(0,0,0,.12); }
+.v2-pdp-root .pdp__dot { width:8px; height:8px; background:#D5D9D2; }
+.v2-pdp-root .pdp__dot.active { width:8px; background:var(--pk-green); }
+
+.v2-pdp-root .pdp__brand { color:var(--pk-green); letter-spacing:.16em; }
+.v2-pdp-root .pdp__brand::after { content:''; width:44px; height:1px; margin-left:8px; background:currentColor; }
+.v2-pdp-root .pdp__title { max-width:none; font-family:var(--slv2-disp, 'Playfair Display', Georgia, serif); font-weight:600; letter-spacing:-.01em; color:var(--pk-ink); }
+.v2-pdp-root .pdp__hl { color:var(--pk-hl); }
+
+.v2-pdp-root .pdp__price { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-top:12px; padding:16px 18px; background:var(--pk-green-bg); border:1px solid var(--pk-green-line); }
+.v2-pdp-root .pdp__price .v2-price { flex-wrap:wrap; align-items:center; gap:8px 14px; }
+.v2-pdp-root .pdp__price .v2-price__now { font-size:36px; line-height:1; color:var(--pk-ink); }
+.v2-pdp-root .pdp__price .v2-price__mrp { font-size:16px; color:#7A847E; }
+.v2-pdp-root .pdp__price .v2-price__off { padding:4px 12px; background:var(--pk-red); color:#fff; font-size:14px; font-weight:700; text-transform:uppercase; }
+.pdpk-save { flex-basis:100%; order:2; margin:0; font-size:16px; font-weight:700; color:#1F7A3A; }
+.v2-pdp-root .pdp__price .pdp__tax { order:3; flex-basis:100%; font-size:12.5px; color:#4A5650; }
+
+.pdpk-feats { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); margin:14px 0; padding:0; list-style:none; }
+.pdpk-feats li { display:grid; justify-items:center; gap:6px; padding:4px 6px; font-size:13px; line-height:1.25; text-align:center; color:var(--pk-ink); }
+.pdpk-feats li + li { border-left:1px solid #E4E8E1; }
+.pdpk-feats span { width:40px; height:40px; display:grid; place-items:center; background:var(--pk-green-bg); color:var(--pk-green); }
+
+.v2-pdp-root .variantchip { background:#fff; border:1.5px solid #D5DAD2; }
+.v2-pdp-root .variantchip.active { border-color:var(--pk-green); background:var(--pk-green-bg); }
+.v2-pdp-root .pdp__addbtn, .v2-pdp-root .buybar__add { background:var(--pk-green); border-color:var(--pk-green); color:#fff; }
+.v2-pdp-root .pdp__buynow, .v2-pdp-root .buybar__buy { background:#DCEFD0; border-color:#C3E0B2; color:var(--pk-ink); }
+
+@media (max-width:900px) {
+  .v2-pdp-root .pdp__gallery:not(.pdp__gallery--single) { display:grid; grid-template-columns:62px minmax(0, 1fr); gap:8px; margin-inline:0; }
+  .v2-pdp-root .pdp__gallery:not(.pdp__gallery--single) .pdp__main { grid-column:2; grid-row:1; }
+  .v2-pdp-root .pdp__gallery:not(.pdp__gallery--single) .pdp__dots { display:none; }
+  /* The rail is as tall as the image (height 0, min-height 100%) and scrolls past it. */
+  .v2-pdp-root .pdp__gallery:not(.pdp__gallery--single) .pdp__thumbs { grid-column:1; grid-row:1; flex-direction:column; height:0; min-height:100%; padding:0; overflow-y:auto; overflow-x:hidden; }
+  .v2-pdp-root .pdp__thumb { flex:0 0 62px; width:62px; }
+}
+@media (max-width:767px) {
+  .pdpk-strip { flex-wrap:nowrap; justify-content:flex-start; overflow-x:auto; gap:18px; font-size:12px; scrollbar-width:none; }
+  .pdpk-strip li { flex:0 0 auto; }
+  .v2-pdp-root .pdp__price .v2-price__now { font-size:30px; }
+  .pdpk-save { font-size:15px; }
+  .pdpk-feats li { font-size:11.5px; padding:2px 3px; }
+  .pdpk-feats span { width:34px; height:34px; }
+}

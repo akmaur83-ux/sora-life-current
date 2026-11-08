@@ -27,6 +27,7 @@ import PdpStorySlot from '../components/pdp/PdpStorySlot.jsx';
 import ProductClaims from '../components/pdp/ProductClaims.jsx';
 import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
+import { PdpAssuranceStrip, PdpAssurances, PdpSaving, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
 import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
 import { promotionsSource } from '../lib/promotions.js';
 
@@ -143,6 +144,7 @@ useEffect(() => {
   // outranks it.
   const netContent = variant?.label || product.netContent || product.form || null;
 
+  const [head, hl, tail] = titleParts(product.name);
   const fbt = [product, ...related.slice(0, 2)];
   const fbtTotal = fbt.reduce((s, p) => s + p.price, 0);
 
@@ -220,6 +222,8 @@ useEffect(() => {
 
   return (
     <div className="v2-pdp-root" style={tone ? { '--pdp-ground': tone.tint } : undefined}>
+      {/* The owner's product page (2026-11-08): the assurance strip over it. */}
+      <div className="v2-wrap pdp-strip"><PdpAssuranceStrip /></div>
       <div className="v2-wrap pdp-top">
         <nav className="v2-crumbs" aria-label="Breadcrumb">
           <Link to="/">Home</Link><Icon name="chevronRight" size={14} />
@@ -269,7 +273,7 @@ useEffect(() => {
           )}
 
           <h1 className="pdp__title">
-            {product.name}
+            {head}{hl && <> <span className="pdp__hl">{hl}</span></>}{tail && <> {tail}</>}
             {netContent && <span className="pdp__net"> ({netContent})</span>}
           </h1>
 
@@ -280,6 +284,7 @@ useEffect(() => {
               the row just has to stay a row. */}
           <div className="pdp__price">
             <PriceTag product={product} size="lg" variant={variant} v2 />
+            <PdpSaving product={product} variant={variant} />
             <span className="pdp__tax">Incl. of all taxes</span>
           </div>
 
@@ -293,6 +298,8 @@ useEffect(() => {
             product={product}
             variantId={variant?.price != null ? (variant.id ?? null) : null}
           />
+
+          <PdpAssurances />
 
           <ProductClaims product={product} />
 
