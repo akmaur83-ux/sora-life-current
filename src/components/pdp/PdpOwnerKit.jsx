@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../Icon.jsx';
 import { useConsumerCare } from '../../lib/consumerCare.js';
+import { useCustomerAuth } from '../../lib/customerAuth.jsx';
+import { fetchApprovedReviews, reviewSummary, submitReview } from '../../lib/productReviews.js';
 import { money } from '../../lib/format.js';
 
 // ============================================================
@@ -327,4 +329,87 @@ export function useHoverZoom(selector, dep) {
     document.addEventListener('mouseout', out);
     return () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseout', out); };
   }, [selector, dep]);
+}
+
+// ---- Customer reviews (0041): approved reviews, their summary, and a form ----------
+function StarRow({ value, size = 16 }) {
+  return (
+    <span className="pdpk-stars" aria-hidden="true">
+      {[1, 2, 3, 4, 5].map((i) => <Icon key={i} name="star" size={size} className={value >= i - 0.25 ? 'is-on' : undefined} />)}
+    </span>
+  );
+}
+
+export function PdpReviews({ productKey, productName }) {
+  const { user } = useCustomerAuth();
+  const [reviews, setReviews] = useState(null);
+  const [form, setForm] = useState({ rating: 0, title: '', body: '', authorName: '' });
+  const [open, setOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [note, setNote] = useState(null);
+  useEffect(() => {
+    let live = true;
+    setReviews(null);
+    fetchApprovedReviews(productKey).then((r) => { if (live) setReviews(r); });
+    return () => { live = false; };
+  }, [productKey]);
+  const sum = reviewSummary(reviews || []);
+  const send = async (e) => {
+    e.preventDefault();
+    setSending(true);
+    const res = await submitReview({ key: productKey, ...form });
+    setSending(false); setNote(res);
+    if (res.ok) { setOpen(false); setForm({ rating: 0, title: '', body: '', authorName: '' }); }
+  };
+  return (
+    <section className="pdpk-rev" aria-labelledby="pdpk-rev-h" id="reviews">
+      <div className="pdpk-rev__side">
+        <h2 className="pdpk-h pdpk-h--lg" id="pdpk-rev-h">Customer reviews</h2>
+        {sum.count > 0 ? (
+          <>
+            <p className="pdpk-rev__avg"><StarRow value={sum.average} size={18} /> <b>{sum.average.toFixed(1)} out of 5</b></p>
+            <p className="pdpk-rev__n">{sum.count.toLocaleString('en-IN')} {sum.count === 1 ? 'rating' : 'ratings'}</p>
+            <ul className="pdpk-rev__bars">
+              {sum.bars.map((b) => (
+                <li key={b.stars}><span>{b.stars} star</span><span className="pdpk-rev__bar"><i style={{ width: `${b.pct}%` }} /></span><span>{b.pct}%</span></li>
+              ))}
+            </ul>
+          </>
+        ) : <p className="pdpk-rev__n">{reviews === null ? 'Loading reviews…' : 'No reviews yet. Be the first to share your thoughts.'}</p>}
+        <div className="pdpk-rev__cta">
+          <h3>Review this product</h3>
+          <p>Share your thoughts with other customers</p>
+          {user
+            ? <button type="button" className="pdpk-rev__btn" onClick={() => { setOpen((o) => !o); setNote(null); }} aria-expanded={open}>Write a product review</button>
+            : <a className="pdpk-rev__btn" href="/account">Sign in to write a review</a>}
+          {note && <p className={`pdpk-rev__note ${note.ok ? 'is-ok' : 'is-bad'}`} role="status">{note.message}</p>}
+        </div>
+      </div>
+      <div className="pdpk-rev__main">
+        {open && user && (
+          <form className="pdpk-rev__form" onSubmit={send} aria-label={`Review ${productName}`}>
+            <fieldset><legend>Overall rating</legend>
+              <div className="pdpk-rev__pick">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button key={n} type="button" aria-label={`${n} star${n > 1 ? 's' : ''}`} aria-pressed={form.rating === n} className={form.rating >= n ? 'is-on' : undefined} onClick={() => setForm({ ...form, rating: n })}><Icon name="star" size={26} /></button>
+                ))}
+              </div>
+            </fieldset>
+            <label>Your name (shown with the review)<input value={form.authorName} maxLength={60} onChange={(e) => setForm({ ...form, authorName: e.target.value })} required /></label>
+            <label>Title (optional)<input value={form.title} maxLength={120} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
+            <label>Your review<textarea rows={5} value={form.body} maxLength={2000} onChange={(e) => setForm({ ...form, body: e.target.value })} required /></label>
+            <button type="submit" className="pdpk-rev__submit" disabled={sending}>{sending ? 'Sending…' : 'Submit review'}</button>
+          </form>
+        )}
+        {(reviews || []).slice(0, 20).map((r) => (
+          <article key={r.id} className="pdpk-rev__item">
+            <p className="pdpk-rev__who"><span className="pdpk-rev__avatar" aria-hidden="true">{String(r.author_name || '?').slice(0, 1).toUpperCase()}</span>{r.author_name}</p>
+            <p className="pdpk-rev__head"><StarRow value={r.rating} size={15} /> {r.title && <b>{r.title}</b>}</p>
+            <p className="pdpk-rev__date">Reviewed on {new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            <p className="pdpk-rev__body">{r.body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }

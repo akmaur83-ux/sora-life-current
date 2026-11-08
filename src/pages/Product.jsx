@@ -27,7 +27,7 @@ import PdpStorySlot from '../components/pdp/PdpStorySlot.jsx';
 import ProductClaims from '../components/pdp/ProductClaims.jsx';
 import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
-import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, useRecentlyViewed, useHoverZoom, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
+import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
 import { specificationsFor } from '../data/pdpContent.js';
 import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
 import { promotionsSource } from '../lib/promotions.js';
@@ -487,6 +487,7 @@ useEffect(() => {
       )}
 
       {/* Ratings & reviews — lightweight Part 1 teaser; Part 3 fills this in */}
+      <div className="v2-wrap pdpk-more"><PdpReviews productKey={`wellness:${product.id}`} productName={product.name} /></div>
       <ProductReviewsTeaser product={product} />
 
       {/* Related */}

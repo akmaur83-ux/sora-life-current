@@ -1,0 +1,32 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 5626204..36e89f9 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -75,6 +75,7 @@ const Categories = lazy(() => import('./admin/pages/Categories.jsx'));
+ const Promotions = lazy(() => import('./admin/pages/Promotions.jsx'));
+ const Coupons = lazy(() => import('./admin/pages/Coupons.jsx'));
+ const HomepageSettings = lazy(() => import('./admin/pages/Homepage.jsx'));
++const AdminReviews = lazy(() => import('./admin/pages/Reviews.jsx'));
+ const Storefronts = lazy(() => import('./admin/pages/Storefronts.jsx'));
+ const StoreCatalogue = lazy(() => import('./admin/pages/StoreCatalogue.jsx'));
+ const CategoryExperience = lazy(() => import('./admin/pages/CategoryExperience.jsx'));
+@@ -184,6 +185,7 @@ export default function App() {
+         <Route path="promotions" element={<Promotions />} />
+         <Route path="coupons" element={<Coupons />} />
+         <Route path="homepage" element={<HomepageSettings />} />
++        <Route path="reviews" element={<AdminReviews />} />
+         <Route path="storefronts" element={<Storefronts />} />
+         <Route path="store-catalogue/:store/:productId?" element={<StoreCatalogue />} />
+         <Route path="category-experience" element={<CategoryExperience />} />
+diff --git a/src/admin/AdminLayout.jsx b/src/admin/AdminLayout.jsx
+index 310465d..06c69fa 100644
+--- a/src/admin/AdminLayout.jsx
++++ b/src/admin/AdminLayout.jsx
+@@ -19,6 +19,7 @@ const NAV = [
+   { to: '/admin/promotions', label: 'Promotions' },
+   { to: '/admin/coupons', label: 'Coupons' },
+   { to: '/admin/homepage', label: 'Homepage' },
++  { to: '/admin/reviews', label: 'Reviews' },
+   { to: '/admin/storefronts', label: 'Storefronts' },
+   { to: '/admin/store-catalogue/fashion', label: 'Fashion Products' },
+   { to: '/admin/store-catalogue/homeliving', label: 'Home & Living Products' },
