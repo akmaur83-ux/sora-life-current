@@ -9,3 +9,5 @@ Disallow: /checkout
 Disallow: /account
 Disallow: /invoice/
 Disallow: /passport/
+
+Sitemap: https://www.soralifestyle.in/sitemap.xml
