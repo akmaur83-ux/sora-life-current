@@ -33655,6 +33655,241 @@ function unlockScroll() {
   document.body.style.paddingRight = previousPaddingRight;
 }
 
+// ============================================================
+// Store search (owner, 2026-11-08: more features). One rule for the live
+// suggestions under the Fashion and Home & Living search boxes and for the Home &
+// Living results page: every word typed must appear in the product's name, brand
+// or category (any order, any case; "bedsheet" also finds "bedsheets"). A name
+// that starts with the query ranks first, then a name starting with its first word,
+// then other name matches, then the rest, each
+// in the catalogue's own order.
+// ============================================================
+const normalise = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const stem = w => w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w;
+function searchItems(items, query, fields = x => [x.name, x.brand, x.category]) {
+  const q = normalise(query);
+  if (q.length < 2) return [];
+  const words = q.split(' ').map(stem).filter(Boolean);
+  const scored = [];
+  (Array.isArray(items) ? items : []).forEach((item, i) => {
+    const [name = '', ...rest] = fields(item).map(normalise);
+    const hay = `${name} ${rest.join(' ')}`;
+    if (!words.every(w => hay.includes(w))) return;
+    const inName = words.every(w => name.includes(w));
+    const rank = name.startsWith(q) ? 0 : inName && name.startsWith(words[0]) ? 1 : inName ? 2 : 3;
+    scored.push({
+      item,
+      rank,
+      i
+    });
+  });
+  return scored.sort((a, b) => a.rank - b.rank || a.i - b.i).map(s => s.item);
+}
+
+// ============================================================
+// New arrivals for the wellness homepage: the products flagged new
+// (is_new), newest first, from the stores a customer can buy from —
+// wellness, fashion and Home & Living; grocery cannot be bought, so it
+// is not read. Never padded: with nothing flagged there is no section.
+//
+// Two small reads of flagged rows only:
+//   products            the wellness rows' ids and dates. What a wellness
+//                       card shows — its name, picture and price — comes
+//                       from the catalogue the site already loaded, so it
+//                       matches every other card, and only once that is
+//                       the real catalogue (never the bundled stand-in).
+//   catalogue_products  the fashion and Home & Living rows with their first
+//                       picture (images[0]: the 0034 trigger keeps the
+//                       primary shot first) and prices.
+// A product that cannot be bought (no payable price) is left out.
+// ============================================================
+const NEW_ARRIVALS_LIMIT = 12;
+const HREF$1 = {
+  wellness: slug => `/product/${slug}`,
+  fashion: slug => `/fashion/p/${slug}`,
+  homeliving: slug => `/homeliving/p/${slug}`
+};
+
+/** Where "View All" goes when its link is left empty: the listing of the newest arrival's store. */
+const STORE_LISTING = Object.freeze({
+  wellness: '/shop?sort=new',
+  fashion: '/fashion',
+  homeliving: '/homeliving'
+});
+const num$9 = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const time$1 = v => {
+  const t = Date.parse(v || '');
+  return Number.isFinite(t) ? t : 0;
+};
+
+/** A fashion or Home & Living card's figure: the sale price when set and below the MRP, else the MRP (as fashion.js and homelivingHomepage.js). */
+const cataloguePrice = row => {
+  const mrp = num$9(row?.mrp);
+  const sale = row?.sale_price == null ? null : num$9(row.sale_price);
+  return sale != null && sale > 0 && sale < mrp ? sale : mrp;
+};
+
+/** The flagged rows, newest first; a read that fails counts as none. */
+async function fetchNewArrivalRows(client = supabase, limit = NEW_ARRIVALS_LIMIT) {
+  const [wellness, catalogue] = await Promise.all([client.from('products').select('id, biosash_id, created_at').eq('is_active', true).eq('is_new', true).order('created_at', {
+    ascending: false
+  }).limit(limit), client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, created_at').eq('is_active', true).eq('is_new', true).in('store', ['fashion', 'homeliving']).order('created_at', {
+    ascending: false
+  }).limit(limit)]);
+  return {
+    wellness: !wellness.error && Array.isArray(wellness.data) ? wellness.data : [],
+    catalogue: !catalogue.error && Array.isArray(catalogue.data) ? catalogue.data : []
+  };
+}
+
+/**
+ * The cards, newest first across the stores: { key, store, name, href, image, price }.
+ * `byId` is the loaded wellness catalogue by id; `realCatalogue` says it is the one read from
+ * the database. Wellness rows wait for it; a product without a payable price is left out.
+ */
+function selectNewArrivals({
+  wellness = [],
+  catalogue = []
+} = {}, {
+  byId = {},
+  realCatalogue = false,
+  limit = NEW_ARRIVALS_LIMIT
+} = {}) {
+  const items = [];
+  if (realCatalogue) {
+    for (const row of wellness) {
+      const p = byId[row.biosash_id || row.id];
+      if (!p || !p.slug || !isPurchasable(p)) continue;
+      items.push({
+        key: `wellness-${p.id}`,
+        store: 'wellness',
+        name: p.name,
+        href: HREF$1.wellness(p.slug),
+        image: p.image || null,
+        price: p.price,
+        at: time$1(row.created_at)
+      });
+    }
+  }
+  for (const row of catalogue) {
+    if (row.store !== 'fashion' && row.store !== 'homeliving' || !row.slug) continue;
+    const price = cataloguePrice(row);
+    if (!(price > 0)) continue;
+    const image = Array.isArray(row.images) ? row.images.find(Boolean) || null : null;
+    items.push({
+      key: `${row.store}-${row.id}`,
+      store: row.store,
+      name: String(row.name || '').trim(),
+      href: HREF$1[row.store](row.slug),
+      image,
+      price,
+      at: time$1(row.created_at)
+    });
+  }
+  return items.sort((a, b) => b.at - a.at || a.key.localeCompare(b.key)).slice(0, limit).map(({
+    at,
+    ...card
+  }) => card);
+}
+
+/** The section's cards: null until the reads answer, then the list (empty when nothing is flagged). */
+function useNewArrivals() {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchNewArrivalRows().then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows({
+        wellness: [],
+        catalogue: []
+      });
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const real = catalogSource === 'supabase';
+  return reactExports.useMemo(() => rows ? selectNewArrivals(rows, {
+    byId: productById,
+    realCatalogue: real
+  }) : null, [rows, real, productById]);
+}
+
+// ============================================================
+// One search across the stores (owner, 2026-11-08: more features). The wellness
+// search box and /shop?q= already search the wellness catalogue; this adds the
+// Fashion and Home & Living products that match the same words (searchMatch.js),
+// so "shawl" or "bedsheet" typed on the main site finds them.
+//
+// One small read of their active rows (name, brand, category, picture, price),
+// made the first time someone searches and shared for the visit. A failed read is
+// no extra results, never an error.
+// ============================================================
+const STORE_LABEL = {
+  fashion: 'Fashion',
+  homeliving: 'Home & Living'
+};
+let rowsPromise = null;
+function loadRows(client = supabase) {
+  if (!rowsPromise) {
+    rowsPromise = Promise.all([client.from('catalogue_products').select('id, store, name, slug, brand, images, mrp, sale_price, category_id').in('store', ['fashion', 'homeliving']).eq('is_active', true).order('sort_order', {
+      ascending: true
+    }).limit(2000), client.from('catalogue_categories').select('id, name').in('store', ['fashion', 'homeliving'])]).then(([p, c]) => {
+      if (p.error || !Array.isArray(p.data)) {
+        rowsPromise = null;
+        return [];
+      }
+      const cat = new Map((c.data || []).map(x => [String(x.id), x.name]));
+      return toSearchRows(p.data, cat);
+    }, () => {
+      rowsPromise = null;
+      return [];
+    });
+  }
+  return rowsPromise;
+}
+
+/** Catalogue rows as search rows: what a suggestion or a result card shows. */
+function toSearchRows(rows, categoryNames = new Map()) {
+  return (rows || []).filter(r => r && r.slug && STORE_LABEL[r.store]).map(r => {
+    const price = cataloguePrice(r);
+    const image = Array.isArray(r.images) ? r.images.find(Boolean) : null;
+    return {
+      key: `${r.store}-${r.id}`,
+      store: r.store,
+      storeLabel: STORE_LABEL[r.store],
+      href: r.store === 'fashion' ? `/fashion/p/${r.slug}` : `/homeliving/p/${r.slug}`,
+      name: r.name,
+      brand: r.brand,
+      category: categoryNames.get(String(r.category_id)) || '',
+      image: image ? String(image).replace(/([?&])width=\d+/, '$1width=500') : null,
+      price,
+      mrp: Number(r.mrp) || 0
+    };
+  }).filter(r => r.price > 0);
+}
+
+/** The Fashion and Home & Living matches for `query`: null until loaded (only once `enabled`). */
+function useOtherStoreMatches(query, enabled = true) {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    if (!enabled || rows) return undefined;
+    let live = true;
+    loadRows().then(r => {
+      if (live) setRows(r);
+    });
+    return () => {
+      live = false;
+    };
+  }, [enabled, rows]);
+  if (!rows) return null;
+  return searchItems(rows, query);
+}
+
 const NAV_PLACEHOLDER_COUNT = 5;
 
 // Mirrors the catalogue settle rule in src/pages/Product.jsx: show the real
@@ -33766,6 +34001,39 @@ function Header() {
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
   const results = q.trim() ? searchProducts(q).slice(0, 6) : [];
+  // Fashion and Home & Living matches too (crossStoreSearch.js), read once the search is opened.
+  const others = (useOtherStoreMatches(q.trim(), focused || mobileSearch) || []).slice(0, 4);
+  const OtherMatches = ({
+    onPick,
+    cls
+  }) => others.length ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `hx-xsg ${cls || ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "hx-xsg__h",
+      children: "In Fashion & Home & Living"
+    }), others.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: p.href,
+      className: "hx-xsg__item",
+      onClick: onPick,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "hx-xsg__img",
+        children: p.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: p.image,
+          alt: "",
+          width: "40",
+          height: "40",
+          decoding: "async"
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hx-xsg__name",
+        children: [p.name, /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: p.storeLabel
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+        children: money(p.price)
+      })]
+    }, p.key))]
+  }) : null;
   const submit = e => {
     e.preventDefault();
     if (q.trim()) {
@@ -33818,9 +34086,9 @@ function Header() {
                   stroke: 1.6
                 })
               })]
-            }), focused && q.trim() && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            }), focused && q.trim() && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
               className: "v2-hdr__suggest",
-              children: results.length ? results.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+              children: [results.length ? results.map(p => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
                 to: `/product/${p.slug}`,
                 className: "v2-hdr__suggest-item",
                 onClick: () => setFocused(false),
@@ -33839,10 +34107,12 @@ function Header() {
                   className: "v2-hdr__suggest-price",
                   children: money(p.price)
                 })]
-              }, p.id)) : /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+              }, p.id)) : others.length ? null : /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
                 className: "v2-hdr__suggest-empty",
                 children: ["No matches for \u201C", q, "\u201D."]
-              })
+              }), /*#__PURE__*/jsxRuntimeExports.jsx(OtherMatches, {
+                onPick: () => setFocused(false)
+              })]
             })]
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
@@ -34043,7 +34313,16 @@ function Header() {
             className: "btn btn-ghost btn-block",
             onClick: submit,
             children: ["See all results for \u201C", q, "\u201D"]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(OtherMatches, {
+            onPick: () => setMobileSearch(false),
+            cls: "hx-xsg--sheet"
           })]
+        }) : others.length ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+          className: "search-results",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(OtherMatches, {
+            onPick: () => setMobileSearch(false),
+            cls: "hx-xsg--sheet"
+          })
         }) : /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
           className: "muted",
           style: {
@@ -37583,7 +37862,7 @@ const DEFAULT_LADDER = Object.freeze([{
   rate: 25
 }]);
 const DEFAULT_BEYOND_STEP = 25000;
-const num$9 = v => {
+const num$8 = v => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
@@ -37595,8 +37874,8 @@ function normalizeLadder(rows) {
   return rows.map((r, i) => ({
     level: Number.isInteger(Number(r?.level)) ? Number(r.level) : i + 1,
     rank: String(r?.rank ?? r?.rank_name ?? '').trim(),
-    threshold: num$9(r?.threshold),
-    rate: num$9(r?.rate)
+    threshold: num$8(r?.threshold),
+    rate: num$8(r?.rate)
   })).sort((a, b) => a.level - b.level);
 }
 
@@ -40036,139 +40315,6 @@ function StoreCarousel() {
       })]
     })
   });
-}
-
-// ============================================================
-// New arrivals for the wellness homepage: the products flagged new
-// (is_new), newest first, from the stores a customer can buy from —
-// wellness, fashion and Home & Living; grocery cannot be bought, so it
-// is not read. Never padded: with nothing flagged there is no section.
-//
-// Two small reads of flagged rows only:
-//   products            the wellness rows' ids and dates. What a wellness
-//                       card shows — its name, picture and price — comes
-//                       from the catalogue the site already loaded, so it
-//                       matches every other card, and only once that is
-//                       the real catalogue (never the bundled stand-in).
-//   catalogue_products  the fashion and Home & Living rows with their first
-//                       picture (images[0]: the 0034 trigger keeps the
-//                       primary shot first) and prices.
-// A product that cannot be bought (no payable price) is left out.
-// ============================================================
-const NEW_ARRIVALS_LIMIT = 12;
-const HREF$1 = {
-  wellness: slug => `/product/${slug}`,
-  fashion: slug => `/fashion/p/${slug}`,
-  homeliving: slug => `/homeliving/p/${slug}`
-};
-
-/** Where "View All" goes when its link is left empty: the listing of the newest arrival's store. */
-const STORE_LISTING = Object.freeze({
-  wellness: '/shop?sort=new',
-  fashion: '/fashion',
-  homeliving: '/homeliving'
-});
-const num$8 = v => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
-const time$1 = v => {
-  const t = Date.parse(v || '');
-  return Number.isFinite(t) ? t : 0;
-};
-
-/** A fashion or Home & Living card's figure: the sale price when set and below the MRP, else the MRP (as fashion.js and homelivingHomepage.js). */
-const cataloguePrice = row => {
-  const mrp = num$8(row?.mrp);
-  const sale = row?.sale_price == null ? null : num$8(row.sale_price);
-  return sale != null && sale > 0 && sale < mrp ? sale : mrp;
-};
-
-/** The flagged rows, newest first; a read that fails counts as none. */
-async function fetchNewArrivalRows(client = supabase, limit = NEW_ARRIVALS_LIMIT) {
-  const [wellness, catalogue] = await Promise.all([client.from('products').select('id, biosash_id, created_at').eq('is_active', true).eq('is_new', true).order('created_at', {
-    ascending: false
-  }).limit(limit), client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, created_at').eq('is_active', true).eq('is_new', true).in('store', ['fashion', 'homeliving']).order('created_at', {
-    ascending: false
-  }).limit(limit)]);
-  return {
-    wellness: !wellness.error && Array.isArray(wellness.data) ? wellness.data : [],
-    catalogue: !catalogue.error && Array.isArray(catalogue.data) ? catalogue.data : []
-  };
-}
-
-/**
- * The cards, newest first across the stores: { key, store, name, href, image, price }.
- * `byId` is the loaded wellness catalogue by id; `realCatalogue` says it is the one read from
- * the database. Wellness rows wait for it; a product without a payable price is left out.
- */
-function selectNewArrivals({
-  wellness = [],
-  catalogue = []
-} = {}, {
-  byId = {},
-  realCatalogue = false,
-  limit = NEW_ARRIVALS_LIMIT
-} = {}) {
-  const items = [];
-  if (realCatalogue) {
-    for (const row of wellness) {
-      const p = byId[row.biosash_id || row.id];
-      if (!p || !p.slug || !isPurchasable(p)) continue;
-      items.push({
-        key: `wellness-${p.id}`,
-        store: 'wellness',
-        name: p.name,
-        href: HREF$1.wellness(p.slug),
-        image: p.image || null,
-        price: p.price,
-        at: time$1(row.created_at)
-      });
-    }
-  }
-  for (const row of catalogue) {
-    if (row.store !== 'fashion' && row.store !== 'homeliving' || !row.slug) continue;
-    const price = cataloguePrice(row);
-    if (!(price > 0)) continue;
-    const image = Array.isArray(row.images) ? row.images.find(Boolean) || null : null;
-    items.push({
-      key: `${row.store}-${row.id}`,
-      store: row.store,
-      name: String(row.name || '').trim(),
-      href: HREF$1[row.store](row.slug),
-      image,
-      price,
-      at: time$1(row.created_at)
-    });
-  }
-  return items.sort((a, b) => b.at - a.at || a.key.localeCompare(b.key)).slice(0, limit).map(({
-    at,
-    ...card
-  }) => card);
-}
-
-/** The section's cards: null until the reads answer, then the list (empty when nothing is flagged). */
-function useNewArrivals() {
-  const [rows, setRows] = reactExports.useState(null);
-  reactExports.useEffect(() => {
-    let live = true;
-    fetchNewArrivalRows().then(r => {
-      if (live) setRows(r);
-    }, () => {
-      if (live) setRows({
-        wellness: [],
-        catalogue: []
-      });
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-  const real = catalogSource === 'supabase';
-  return reactExports.useMemo(() => rows ? selectNewArrivals(rows, {
-    byId: productById,
-    realCatalogue: real
-  }) : null, [rows, real, productById]);
 }
 
 const NEW_ARRIVALS_AUTOPLAY_MS = 4500; // the fashion strip's pace
@@ -47245,6 +47391,59 @@ function ProductBrowser({
   });
 }
 
+function OtherStoreResults({
+  query,
+  limit = 24
+}) {
+  const q = String(query || '').trim();
+  const found = useOtherStoreMatches(q, q.length >= 2);
+  if (!found || found.length === 0) return null;
+  const stores = [...new Set(found.map(f => f.storeLabel))].join(' and ');
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "v2-wrap hx-xs",
+    "aria-labelledby": "hx-xs-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+      className: "hx-xs__h",
+      id: "hx-xs-h",
+      children: ["Also in ", stores, " ", /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [found.length, " ", found.length === 1 ? 'product' : 'products', " for \u201C", q, "\u201D"]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "hx-xs__grid",
+      children: found.slice(0, limit).map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: p.href,
+          className: "hx-xs__card",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hx-xs__img",
+            children: p.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+              src: p.image,
+              alt: "",
+              width: "300",
+              height: "300",
+              loading: "lazy",
+              decoding: "async"
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hx-xs__store",
+            children: p.storeLabel
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hx-xs__name",
+            children: p.name
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "hx-xs__price",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: money(p.price)
+            }), p.mrp > p.price && /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+              children: money(p.mrp)
+            })]
+          })]
+        })
+      }, p.key))
+    })]
+  });
+}
+
 function Shop() {
   const [params] = useSearchParams();
   // Read through the settings store so an admin's saved cards are picked up on
@@ -47307,6 +47506,8 @@ function Shop() {
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductBrowser, {
         baseProducts: products
+      }), params.get('q') && /*#__PURE__*/jsxRuntimeExports.jsx(OtherStoreResults, {
+        query: params.get('q')
       })]
     });
   }
@@ -65030,37 +65231,6 @@ function suggestKeys(e, {
     e.preventDefault();
     go(active);
   }
-}
-
-// ============================================================
-// Store search (owner, 2026-11-08: more features). One rule for the live
-// suggestions under the Fashion and Home & Living search boxes and for the Home &
-// Living results page: every word typed must appear in the product's name, brand
-// or category (any order, any case; "bedsheet" also finds "bedsheets"). A name
-// that starts with the query ranks first, then a name starting with its first word,
-// then other name matches, then the rest, each
-// in the catalogue's own order.
-// ============================================================
-const normalise = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
-const stem = w => w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w;
-function searchItems(items, query, fields = x => [x.name, x.brand, x.category]) {
-  const q = normalise(query);
-  if (q.length < 2) return [];
-  const words = q.split(' ').map(stem).filter(Boolean);
-  const scored = [];
-  (Array.isArray(items) ? items : []).forEach((item, i) => {
-    const [name = '', ...rest] = fields(item).map(normalise);
-    const hay = `${name} ${rest.join(' ')}`;
-    if (!words.every(w => hay.includes(w))) return;
-    const inName = words.every(w => name.includes(w));
-    const rank = name.startsWith(q) ? 0 : inName && name.startsWith(words[0]) ? 1 : inName ? 2 : 3;
-    scored.push({
-      item,
-      rank,
-      i
-    });
-  });
-  return scored.sort((a, b) => a.rank - b.rank || a.i - b.i).map(s => s.item);
 }
 
 const SEARCH_PLACEHOLDER$2 = 'Search for fashion, lifestyle and more…';
