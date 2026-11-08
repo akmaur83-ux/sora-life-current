@@ -12,7 +12,7 @@
         }
       ],
       "destination": "https://www.soralifestyle.in/$1",
-      "permanent": true
+      "statusCode": 301
     },
     {
       "source": "/((?!api/|google3d2830967d3bf270\\.html).*)",
@@ -23,7 +23,7 @@
         }
       ],
       "destination": "https://www.soralifestyle.in/$1",
-      "permanent": true
+      "statusCode": 301
     },
     {
       "source": "/((?!api/|google3d2830967d3bf270\\.html).*)",
@@ -34,7 +34,7 @@
         }
       ],
       "destination": "https://www.soralifestyle.in/$1",
-      "permanent": true
+      "statusCode": 301
     }
   ],
   "rewrites": [
