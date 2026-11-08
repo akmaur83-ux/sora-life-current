@@ -35042,6 +35042,9 @@ function Footer() {
             to: "/account/orders",
             children: "Orders"
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/passport",
+            children: "Track your order"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/wishlist",
             children: "Wishlist"
           })]
@@ -49245,7 +49248,7 @@ function usePageMeta({
       document.head.appendChild(canon);
     }
     canon.href = url;
-    document.head.querySelectorAll('script[type="application/ld+json"]').forEach(el => el.remove()); // the share card's copy (api/share.js)
+    document.head.querySelectorAll('script[type="application/ld+json"]:not([data-site])').forEach(el => el.remove()); // the share card's copy (api/share.js)
     let ld = null;
     const data = product ? productLd({
       ...product,
@@ -49263,10 +49266,58 @@ function usePageMeta({
       document.title = siteHomeTitle();
       metaEl('name', 'description').setAttribute('content', base.description);
       if (ld) ld.remove();
-      document.head.querySelectorAll('link[rel="canonical"], script[type="application/ld+json"]').forEach(el => el.remove()); // the page's own, or the share card's
+      document.head.querySelectorAll('link[rel="canonical"], script[type="application/ld+json"]:not([data-site])').forEach(el => el.remove()); // the page's own, or the share card's
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, description, image, path, ...deps]);
+}
+
+/** The site's own data for search engines: the business, and its search (Google's sitelinks search box). Pure. */
+function siteLd(phone) {
+  return [{
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: SITE,
+    url: ORIGIN$1,
+    logo: `${ORIGIN$1}/assets/favicon-192.png`,
+    ...(phone ? {
+      contactPoint: {
+        '@type': 'ContactPoint',
+        telephone: phone,
+        contactType: 'customer service',
+        areaServed: 'IN',
+        availableLanguage: ['en', 'hi']
+      }
+    } : {})
+  }, {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE,
+    url: ORIGIN$1,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${ORIGIN$1}/shop?q={search_term_string}`
+      },
+      'query-input': 'required name=search_term_string'
+    }
+  }];
+}
+
+/** Puts siteLd in the head once (kept across pages). */
+function useSiteLd(phone) {
+  reactExports.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    let el = document.head.querySelector('script[data-site]');
+    if (!el) {
+      el = document.createElement('script');
+      el.type = 'application/ld+json';
+      el.dataset.site = '1';
+      document.head.appendChild(el);
+    }
+    el.textContent = JSON.stringify(siteLd(phone));
+  }, [phone]);
 }
 
 const HIDDEN = /^\/(admin|checkout|cart|creator|invoice|passport|login|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout)(\/|$)/;
@@ -49311,6 +49362,8 @@ function SiteAssist() {
   const [up, setUp] = reactExports.useState(false);
   const [offset, setOffset] = reactExports.useState(0);
   const hidden = HIDDEN.test(pathname);
+  useSiteLd(care?.phone || ''); // the business and its search, for search engines (pageMeta.js)
+
   reactExports.useEffect(() => {
     if (hidden) return undefined;
     const onScroll = () => setUp(window.scrollY > window.innerHeight * 2);
@@ -49327,6 +49380,34 @@ function SiteAssist() {
       window.removeEventListener('resize', measure);
     };
   }, [pathname, hidden]);
+
+  // Desktop: once the buy box has scrolled away on a Fashion or Home & Living product
+  // page, the page's own buy bar (the phone one) shows at the foot (CSS: html.pdp-bar-on).
+  reactExports.useEffect(() => {
+    const root = document.documentElement;
+    if (!PRODUCT.test(pathname)) {
+      root.classList.remove('pdp-bar-on');
+      document.querySelectorAll('.hl.pdp-bar-on').forEach(el => el.classList.remove('pdp-bar-on'));
+      return undefined;
+    }
+    const onScroll = () => {
+      const box = document.querySelector('.fs-buybox, .hl-buybox');
+      const on = !!box && box.getBoundingClientRect().bottom < 0;
+      if (on !== root.classList.contains('pdp-bar-on')) {
+        root.classList.toggle('pdp-bar-on', on);
+        document.querySelectorAll('.hl').forEach(el => el.classList.toggle('pdp-bar-on', on)); // its sheet is namespaced under .hl
+        [60, 320].forEach(ms => setTimeout(() => setOffset(footOffset()), ms)); // after the bar's slide-in
+      }
+    };
+    window.addEventListener('scroll', onScroll, {
+      passive: true
+    });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      root.classList.remove('pdp-bar-on');
+      document.querySelectorAll('.hl.pdp-bar-on').forEach(el => el.classList.remove('pdp-bar-on'));
+    };
+  }, [pathname]);
 
   // "/" focuses the store's search box, as on most large shops (not while typing in a field).
   reactExports.useEffect(() => {
@@ -66747,6 +66828,52 @@ function FashionProductCard({
   });
 }
 
+const BUDGETS = Object.freeze([{
+  id: 'under-500',
+  top: 'Under',
+  amount: '₹499'
+}, {
+  id: '500-999',
+  top: 'Under',
+  amount: '₹999'
+}, {
+  id: '1000-1999',
+  top: 'Under',
+  amount: '₹1,999'
+}, {
+  id: '2000-plus',
+  top: 'Premium',
+  amount: '₹2,000+'
+}]);
+function BudgetChips({
+  base,
+  title = 'Shop by budget',
+  wrap = ''
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `hx-budget${wrap ? ` ${wrap}` : ''}`,
+    "aria-labelledby": `hx-budget-${base.replace(/\W+/g, '')}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      className: "hx-budget__h",
+      id: `hx-budget-${base.replace(/\W+/g, '')}`,
+      children: title
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "hx-budget__row",
+      children: BUDGETS.map(b => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: `${base}?price=${b.id}`,
+          className: "hx-budget__chip",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: b.top
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+            children: b.amount
+          })]
+        })
+      }, b.id))
+    })]
+  });
+}
+
 // ============================================================
 // Fashion homepage art — the supplied photography, keyed by category slug.
 //
@@ -67045,6 +67172,9 @@ function FashionHome() {
       config: config.hero
     }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {
       prefix: "fs-"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(BudgetChips, {
+      base: "/fashion/search",
+      wrap: "fs-sec"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
       tree: tree
     }), /*#__PURE__*/jsxRuntimeExports.jsx(Benefits, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {
@@ -72044,6 +72174,135 @@ function useFashionDetails(id) {
 }
 const countryName = c => String(c || '').trim().toUpperCase() === 'IN' ? 'India' : String(c || '').trim();
 
+const LETTER_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+const hasLetterSizes = (sizes = []) => sizes.some(s => LETTER_SIZES.includes(String(s).trim().toUpperCase()));
+const SIZE_CHART = Object.freeze({
+  women: {
+    head: ['Size', 'Bust', 'Waist', 'Hip'],
+    rows: [['XS', '30–32', '24–26', '33–35'], ['S', '32–34', '26–28', '35–37'], ['M', '34–36', '28–30', '37–39'], ['L', '36–38', '30–32', '39–41'], ['XL', '38–40', '32–34', '41–43'], ['XXL', '40–42', '34–36', '43–45']]
+  },
+  men: {
+    head: ['Size', 'Chest', 'Waist', 'Shoulder'],
+    rows: [['S', '36–38', '28–30', '17'], ['M', '38–40', '30–32', '17.5'], ['L', '40–42', '32–34', '18'], ['XL', '42–44', '34–36', '18.5'], ['XXL', '44–46', '36–38', '19']]
+  }
+});
+function SizeGuide({
+  sizes,
+  department = 'women'
+}) {
+  const [open, setOpen] = reactExports.useState(false);
+  const [tab, setTab] = reactExports.useState(department === 'men' ? 'men' : 'women');
+  const closer = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    if (!open) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closer.current?.focus();
+    const onKey = e => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+  if (!hasLetterSizes(sizes)) return null;
+  const chart = SIZE_CHART[tab];
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      type: "button",
+      className: "fs-sizeguide__open",
+      onClick: () => setOpen(true),
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "sliders",
+        size: 15
+      }), " Size guide"]
+    }), open && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "fs-sizeguide",
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": "fs-sizeguide-h",
+      onMouseDown: e => {
+        if (e.target === e.currentTarget) setOpen(false);
+      },
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "fs-sizeguide__box",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "fs-sizeguide__top",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            id: "fs-sizeguide-h",
+            children: "Size guide"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            ref: closer,
+            className: "fs-sizeguide__x",
+            onClick: () => setOpen(false),
+            "aria-label": "Close size guide",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "x",
+              size: 20
+            })
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+          className: "fs-sizeguide__tabs",
+          role: "tablist",
+          children: [['women', 'Women'], ['men', 'Men']].map(([id, label]) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            role: "tab",
+            "aria-selected": tab === id,
+            className: tab === id ? 'is-on' : '',
+            onClick: () => setTab(id),
+            children: label
+          }, id))
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+          className: "fs-sizeguide__table",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("caption", {
+            children: "Body measurements in inches"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsx("tr", {
+              children: chart.head.map(h => /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+                scope: "col",
+                children: h
+              }, h))
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+            children: chart.rows.map(r => /*#__PURE__*/jsxRuntimeExports.jsx("tr", {
+              className: sizes.map(s => String(s).toUpperCase()).includes(r[0]) ? 'is-sold' : '',
+              children: r.map((c, i) => i === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+                scope: "row",
+                children: c
+              }, i) : /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                children: c
+              }, i))
+            }, r[0]))
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
+          className: "fs-sizeguide__how",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: "Chest / bust:"
+            }), " around the fullest part, tape level under the arms."]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: "Waist:"
+            }), " around the natural waistline, where you usually wear a belt."]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: "Hip:"
+            }), " around the fullest part of the hips."]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: "Between two sizes? Choose the larger for a relaxed fit."
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fs-sizeguide__note",
+          children: "A general guide. Where a product lists its own measurements in its details, follow those. Highlighted rows are the sizes this product comes in."
+        })]
+      })
+    })]
+  });
+}
+
 function Gallery({
   view
 }) {
@@ -72308,6 +72567,9 @@ function FashionProductPage() {
           size: st.size,
           colour: st.colour,
           onChange: setSel
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(SizeGuide, {
+          sizes: view.sizes,
+          department: node && tree.ancestors(node.id).some(a => /^men/i.test(a.slug)) ? 'men' : 'women'
         }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpFactTable, {
           rows: factRows
         }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpAbout, {
@@ -74047,6 +74309,9 @@ function HomeLivingHome() {
       status: status
     }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {
       prefix: "hl-"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(BudgetChips, {
+      base: "/homeliving/search",
+      wrap: "hl-wrap"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(PromoStrip$1, {})]
   });
 }
@@ -74061,6 +74326,19 @@ function HomeLivingSearch() {
   } = useHomeLivingCatalogue();
   const results = reactExports.useMemo(() => q.length >= 2 ? searchItems(homelivingSearchRows(products, categories), q).map(r => r.product) : [], [q, products, categories]);
   const title = q ? `Results for “${q}”` : 'Search Home & Living';
+  // No words, a filter (?price= from "Shop by budget"): the whole range, with the listing's filters and sort.
+  if (!q && params.get('price')) {
+    return /*#__PURE__*/jsxRuntimeExports.jsx(Listing, {
+      title: "All Home & Living",
+      trail: [{
+        name: 'Home & Living',
+        href: '/homeliving'
+      }, {
+        name: 'All products'
+      }],
+      emptyCopy: "Nothing in this price range yet."
+    });
+  }
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "hl-wrap hl-listing",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
