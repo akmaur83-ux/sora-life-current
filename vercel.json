@@ -13,6 +13,28 @@
       ],
       "destination": "https://www.soralifestyle.in/$1",
       "permanent": true
+    },
+    {
+      "source": "/((?!api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.soralife.shop"
+        }
+      ],
+      "destination": "https://www.soralifestyle.in/$1",
+      "permanent": true
+    },
+    {
+      "source": "/((?!api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "soralife.shop"
+        }
+      ],
+      "destination": "https://www.soralifestyle.in/$1",
+      "permanent": true
     }
   ],
   "rewrites": [
