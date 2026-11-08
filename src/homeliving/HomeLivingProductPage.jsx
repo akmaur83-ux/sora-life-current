@@ -11,7 +11,7 @@ import { Breadcrumb } from './HomeLivingCategory.jsx';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
 import ProductInformation from '../components/ProductInformation.jsx';
 import { fetchEligibleCoupons } from '../lib/couponApi.js';
-import { PdpCompare, PdpService } from '../components/pdp/PdpOwnerKit.jsx';
+import { PdpCompare, PdpService, PdpBrandRail, PdpBundle } from '../components/pdp/PdpOwnerKit.jsx';
 
 // ============================================================
 // /homeliving/p/<slug> — the product page.
@@ -449,7 +449,7 @@ const faqs = () => [
 ];
 
 function InfoTabs({ view, node, categories, st, bullets }) {
-  const tabs = [['about', 'About this Product'], ['specs', 'Specifications'], ...(view.review_count > 0 ? [['reviews', `Reviews (${view.review_count.toLocaleString('en-IN')})`]] : []), ['faqs', 'FAQs']];
+  const tabs = [['about', 'About this Product'], ...(view.review_count > 0 ? [['reviews', `Reviews (${view.review_count.toLocaleString('en-IN')})`]] : []), ['faqs', 'FAQs']];
   const [tab, setTab] = useState('about');
   return (
     <section className="hl-tabs" aria-label="Product information">
@@ -468,7 +468,23 @@ function InfoTabs({ view, node, categories, st, bullets }) {
         )}
         {view.description && (bullets.length < 2 || sentencesOf(view.description).length > bullets.length) && <p className="hl-pdp__desc">{view.description}</p>}
       </div>
-      <div className="hl-tabs__panel" role="tabpanel" id="hl-panel-specs" aria-labelledby="hl-tab-specs" hidden={tab !== 'specs'}>
+      {view.review_count > 0 && (
+        <div className="hl-tabs__panel" role="tabpanel" id="hl-panel-reviews" aria-labelledby="hl-tab-reviews" hidden={tab !== 'reviews'}>
+          <p className="hl-pdp__desc">Rated {view.rating.toFixed(1)} out of 5 from {view.review_count.toLocaleString('en-IN')} reviews.</p>
+        </div>
+      )}
+      <div className="hl-tabs__panel" role="tabpanel" id="hl-panel-faqs" aria-labelledby="hl-tab-faqs" hidden={tab !== 'faqs'}>
+        <dl className="hl-faq">{faqs().map(([q, a]) => <div key={q}><dt>{q}</dt><dd>{a}</dd></div>)}</dl>
+      </div>
+    </section>
+  );
+}
+
+/** The product's information, open (owner, 2026-11-08): the details and the listing's declarations. */
+function ProductInfoSection({ view, node, categories, st }) {
+  return (
+    <section className="hl-info" aria-labelledby="hl-info-h">
+      <h2 className="pdpk-h pdpk-h--lg" id="hl-info-h">Product information</h2>
         <dl className="hl-pdp__details">
           {view.brand && <div><dt>Brand</dt><dd>{view.brand}</dd></div>}
           {node && <div><dt>Category</dt><dd>{breadcrumbFor(categories, node).slice(1).map((c) => c.name).join(' › ')}</dd></div>}
@@ -479,15 +495,6 @@ function InfoTabs({ view, node, categories, st, bullets }) {
         </dl>
         {/* Net quantity is the Size row above. */}
         <ProductInformation store="homeliving" productId={view.id} variant={st.variant} prefix="hl" netQuantity={false} />
-      </div>
-      {view.review_count > 0 && (
-        <div className="hl-tabs__panel" role="tabpanel" id="hl-panel-reviews" aria-labelledby="hl-tab-reviews" hidden={tab !== 'reviews'}>
-          <p className="hl-pdp__desc">Rated {view.rating.toFixed(1)} out of 5 from {view.review_count.toLocaleString('en-IN')} reviews.</p>
-        </div>
-      )}
-      <div className="hl-tabs__panel" role="tabpanel" id="hl-panel-faqs" aria-labelledby="hl-tab-faqs" hidden={tab !== 'faqs'}>
-        <dl className="hl-faq">{faqs().map(([q, a]) => <div key={q}><dt>{q}</dt><dd>{a}</dd></div>)}</dl>
-      </div>
     </section>
   );
 }
@@ -551,6 +558,9 @@ export default function HomeLivingProductPage() {
   const setSel = (next) => setParams(writeSelection(params, next), { replace: true });
   const related = relatedFor(view, products, 4);
   const [head, hl, tail] = titleParts(view.name);
+  // Frequently bought together: this item and two from the same shelf; "Add all" only when each can go in as it is.
+  const bundle = [view, ...related.filter((p) => !(p.variants && p.variants.length)).slice(0, 2)];
+  const bundleAddable = st.canAdd && bundle.slice(1).every((p) => p.stock > 0 && !(p.variants && p.variants.length));
   const sentences = sentencesOf(view.description);
   const lede = sentences[0] && sentences[0].length <= 140 ? sentences[0] : null;
   const bullets = sentences.slice(0, 6).filter((x) => x.length <= 220);
@@ -646,7 +656,12 @@ export default function HomeLivingProductPage() {
         key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null,
         price: p.price, mrp: p.mrp > p.price ? p.mrp : 0, pct: p.mrp > p.price ? (p.discount_percent || 0) : 0, size: p.net_content || null, brand: p.brand || null, current: i === 0,
       }))} />
+      <ProductInfoSection view={view} node={node} categories={categories} st={st} />
+      <PdpBundle items={bundle.map((p, i) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null, price: i === 0 ? st.price : p.price }))}
+        canAddAll={bundleAddable} onAddAll={() => bundle.forEach((p, i) => addHomeLivingToCart(p, i === 0 ? st.variant : null, 1))} />
       <PdpService />
+      <PdpBrandRail brand={view.brand} items={products.filter((p) => p.id !== view.id && p.brand && p.brand === view.brand && !related.slice(0, 4).some((r) => r.id === p.id))
+        .slice(0, 8).map((p) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null, price: p.price, mrp: p.mrp, pct: p.mrp > p.price ? (p.discount_percent || 0) : 0 }))} />
 
       {related.length > 0 && (
         <section className="hl-sec" aria-labelledby="hl-related-h">

@@ -6,7 +6,7 @@ import ProductGallery from '../components/ProductGallery.jsx';
 import PriceTag from '../components/PriceTag.jsx';
 import NotFound from './NotFound.jsx';
 import { useStore } from '../lib/store.jsx';
-import { productBySlug, isCatalogHydrated, productRouteState, getRelated, isPurchasable, UNAVAILABLE_LABEL } from '../data/products.js';
+import { products as catalogue, productBySlug, isCatalogHydrated, productRouteState, getRelated, isPurchasable, UNAVAILABLE_LABEL } from '../data/products.js';
 import { categoryBySlug, tones } from '../data/categories.js';
 import { canonicalProductSlug } from '../data/legacyProductSlugs.js';
 import { money } from '../lib/format.js';
@@ -27,7 +27,7 @@ import PdpStorySlot from '../components/pdp/PdpStorySlot.jsx';
 import ProductClaims from '../components/pdp/ProductClaims.jsx';
 import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
-import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
+import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, PdpBrandRail, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
 import { specificationsFor } from '../data/pdpContent.js';
 import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
 import { promotionsSource } from '../lib/promotions.js';
@@ -407,6 +407,9 @@ useEffect(() => {
           price: p.price, mrp: p.mrp, pct: p.discountPct || 0, size: p.netContent || p.form || null, brand: p.brand || null, current: i === 0,
         }))} />
         <PdpService />
+        <PdpBrandRail brand={product.brand} items={catalogue
+          .filter((p) => p.id !== product.id && p.brand && p.brand === product.brand && p.slug && p.price > 0)
+          .slice(0, 8).map((p) => ({ key: p.id, href: `/product/${p.slug}`, name: p.name, image: p.image || null, price: p.price, mrp: p.mrp, pct: p.discountPct || 0 }))} />
       </div>
 
       {/* Richer scroll: benefits → ingredients → usage → product information → trust */}

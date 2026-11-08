@@ -187,3 +187,59 @@ export function PdpService() {
     </section>
   );
 }
+
+/** "More from <brand>": a row of cards. items: { key, href, name, image, price, mrp, pct }. */
+export function PdpBrandRail({ brand, items }) {
+  const list = (items || []).filter(Boolean).slice(0, 8);
+  if (!brand || list.length < 2) return null;
+  return (
+    <section className="pdpk-rail" aria-labelledby="pdpk-rail-h">
+      <h2 className="pdpk-h pdpk-h--lg" id="pdpk-rail-h">More from {brand}</h2>
+      <ul className="pdpk-rail__row">
+        {list.map((p) => (
+          <li key={p.key}>
+            <Link to={p.href} className="pdpk-rail__card">
+              <span className="pdpk-rail__img">{p.image && <img src={p.image} alt="" width="180" height="180" loading="lazy" />}</span>
+              <span className="pdpk-rail__name">{p.name}</span>
+              <span className="pdpk-rail__price">{p.pct > 0 && <i>-{p.pct}%</i>}<b>{money(p.price)}</b></span>
+              {p.mrp > p.price && <span className="pdpk-rail__mrp">M.R.P.: <s>{money(p.mrp)}</s></span>}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * "Frequently bought together": this item and up to two more, their total, and one
+ * button that adds them all (only offered when every one can be added as it is).
+ */
+export function PdpBundle({ items, canAddAll = false, onAddAll = null }) {
+  const list = (items || []).filter(Boolean).slice(0, 3);
+  if (list.length < 2) return null;
+  const total = list.reduce((t, p) => t + (Number(p.price) || 0), 0);
+  return (
+    <section className="pdpk-fbt" aria-labelledby="pdpk-fbt-h">
+      <h2 className="pdpk-h pdpk-h--lg" id="pdpk-fbt-h">Frequently bought together</h2>
+      <div className="pdpk-fbt__body">
+        <ul className="pdpk-fbt__items">
+          {list.map((p, i) => (
+            <li key={p.key}>
+              {i > 0 && <span className="pdpk-fbt__plus" aria-hidden="true">+</span>}
+              <Link to={p.href} className="pdpk-fbt__item">
+                <span className="pdpk-rail__img">{p.image && <img src={p.image} alt="" width="140" height="140" loading="lazy" />}</span>
+                <span className="pdpk-rail__name">{i === 0 ? <b>This item: </b> : null}{p.name}</span>
+                <span className="pdpk-rail__price"><b>{money(p.price)}</b></span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="pdpk-fbt__buy">
+          <p>Total price: <b>{money(total)}</b></p>
+          {canAddAll && onAddAll && <button type="button" className="pdpk-fbt__btn" onClick={onAddAll}>Add all {list.length} to cart</button>}
+        </div>
+      </div>
+    </section>
+  );
+}

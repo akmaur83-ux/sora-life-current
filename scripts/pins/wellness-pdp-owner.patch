@@ -1,8 +1,8 @@
 diff --git a/src/styles/v2-pdp.css b/src/styles/v2-pdp.css
-index a5a71e9..b7d15b7 100644
+index a5a71e9..1a6d71a 100644
 --- a/src/styles/v2-pdp.css
 +++ b/src/styles/v2-pdp.css
-@@ -1150,3 +1150,264 @@ body:has(.v2-pdp-root .buybar) .page-main {
+@@ -1150,3 +1150,284 @@ body:has(.v2-pdp-root .buybar) .page-main {
    .v2-pdp-root .variantlist { grid-template-columns: repeat(3, minmax(0, 1fr)); }
    .v2-pdp-root .pdp-specs__row { grid-template-columns: minmax(140px, 26%) minmax(0, 1fr); }
  }
@@ -267,3 +267,23 @@ index a5a71e9..b7d15b7 100644
 +.pdpk-svc ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 13.5px; line-height: 1.45; color: #0F1111; }
 +.pdpk-svc a { color: #007185; }
 +@media (max-width: 767px) { .pdpk-svc { grid-template-columns: minmax(0, 1fr); } .pdpk-cmp table { font-size: 13px; } }
++
++/* More from the brand, frequently bought together, product information (owner, 2026-11-08). */
++.pdpk-rail, .pdpk-fbt, .hl-info { margin-top: 28px; padding-top: 18px; border-top: 1px solid #E7E7E7; }
++.pdpk-rail__row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(160px, 1fr); gap: 16px; margin: 0; padding: 0 0 6px; list-style: none; overflow-x: auto; }
++.pdpk-rail__card, .pdpk-fbt__item { display: grid; gap: 5px; color: #0F1111; text-decoration: none; }
++.pdpk-rail__img { display: block; aspect-ratio: 1; background: #F7F8F8; overflow: hidden; }
++.pdpk-rail__img img { width: 100%; height: 100%; object-fit: contain; }
++.pdpk-rail__name { font-size: 13.5px; line-height: 1.35; color: #007185; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
++.pdpk-rail__price { display: flex; gap: 6px; align-items: baseline; font-size: 16px; }
++.pdpk-rail__price i { font-style: normal; color: #CC0C39; font-size: 14px; }
++.pdpk-rail__price b { font-weight: 500; }
++.pdpk-rail__mrp { font-size: 12px; color: #565959; }
++.pdpk-fbt__body { display: flex; flex-wrap: wrap; align-items: center; gap: 20px 32px; }
++.pdpk-fbt__items { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; margin: 0; padding: 0; list-style: none; }
++.pdpk-fbt__items li { display: flex; align-items: center; gap: 10px; width: 190px; }
++.pdpk-fbt__items li:not(:first-child) { width: 216px; }
++.pdpk-fbt__plus { font-size: 24px; color: #565959; }
++.pdpk-fbt__item { width: 160px; }
++.pdpk-fbt__buy p { margin: 0 0 10px; font-size: 16px; color: #0F1111; }
++.pdpk-fbt__btn { min-height: 38px; padding: 0 18px; border: 1px solid #1E5A35; background: #1E5A35; color: #fff; font: inherit; font-size: 14px; cursor: pointer; }
