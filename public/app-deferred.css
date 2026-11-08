@@ -6704,6 +6704,18 @@
 
 /* The marketplace face on the product page (owner, 2026-11-08): Arial, Amazon Ember's fallback. */
 .fs-pdp, .fs-pdp .serif, .fs-pdp button { font-family: "Amazon Ember", Arial, "Helvetica Neue", Helvetica, sans-serif; }
+/* Product pictures shown whole (owner, 2026-11-08): a long thumbnail row no longer widens the gallery
+   past its column (it scrolls instead), and each picture is fitted inside a 4:5 frame on white rather
+   than cropped to a square, so a portrait photograph is never cut or blown up. */
+.fs-gallery { grid-template-columns: minmax(0, 1fr); }
+.fs-gallery__track, .fs-gallery__thumbs { min-width: 0; }
+.fs-gallery__slide { aspect-ratio: 4 / 5; background: #fff; }
+.fs-gallery__slide img { object-fit: contain; }
+.fs-gallery__thumbs { overflow-x: auto; scrollbar-width: thin; padding-bottom: 4px; }
+.fs-gallery__thumb { flex: none; background: #fff; }
+.fs-gallery__thumb img { object-fit: contain; }
+.fs-card__media { aspect-ratio: 4 / 5; }
+.fs-card__img img { object-position: 50% 20%; }
 
 /* ═══ src/styles/fashion-departments.css ═══ */
 /* Men's streetwear and women's heritage edits. Scoped to the two new routes;
