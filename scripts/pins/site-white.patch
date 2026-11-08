@@ -1,5 +1,5 @@
 diff --git a/src/styles/v2-foundation.css b/src/styles/v2-foundation.css
-index a64ca1a..ab001d4 100644
+index a64ca1a..5ac8285 100644
 --- a/src/styles/v2-foundation.css
 +++ b/src/styles/v2-foundation.css
 @@ -31,9 +31,13 @@
@@ -28,6 +28,15 @@ index a64ca1a..ab001d4 100644
  
    /* ---- GEOMETRY — sharp editorial. Three values, no exceptions. ----
       r-ui   every structural surface and control
+@@ -259,3 +263,8 @@
+ @media (prefers-reduced-motion: reduce) {
+   .v2-data-settle > span { animation:none; }
+ }
++
++/* White page, no decoration behind it (owner, 2026-11-08): the coloured washes and
++   leaves that StorefrontBackground draws behind the shop and other pages are off. */
++.sl-bg-host > .sl-bg, .sl-bg { display:none; }
++
 diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
 index 7b8fb01..4d6e1bd 100644
 --- a/src/styles/v2-home.css

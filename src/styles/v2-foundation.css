@@ -263,3 +263,8 @@
 @media (prefers-reduced-motion: reduce) {
   .v2-data-settle > span { animation:none; }
 }
+
+/* White page, no decoration behind it (owner, 2026-11-08): the coloured washes and
+   leaves that StorefrontBackground draws behind the shop and other pages are off. */
+.sl-bg-host > .sl-bg, .sl-bg { display:none; }
+
