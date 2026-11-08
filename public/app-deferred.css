@@ -8379,6 +8379,40 @@
   .hl-buy--bar svg { display: none; }
 }
 
+/* Closer to the owner's reference (2026-11-08, second pass): a bold name, a sans
+   delivery heading, a one-line offer, coloured assurance icons and a quiet mountain
+   scene on the price card. */
+.hl .hl-pdp__h.serif { font-weight: 700; color: #173823; letter-spacing: -.01em; }
+.hl-pdp__lede { color: #3E4A43; }
+.hl-pdp__pricecard { position: relative; overflow: hidden; min-height: 96px; background-color: #F3F8F0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 90'%3E%3Cpath d='M0 90 L52 34 L78 58 L112 14 L150 60 L172 42 L220 90Z' fill='%23CFE3C6'/%3E%3Cpath d='M112 14 L122 27 L114 25 L106 31Z' fill='%23fff'/%3E%3Cpath d='M0 90 L38 62 L70 80 L104 52 L140 78 L176 58 L220 90Z' fill='%23A9CC9C'/%3E%3Cg fill='%233E7A4A'%3E%3Cpath d='M150 90 l7-26 7 26z'/%3E%3Cpath d='M164 90 l6-20 6 20z'/%3E%3Cpath d='M178 90 l8-30 8 30z'/%3E%3Cpath d='M194 90 l6-22 6 22z'/%3E%3Cpath d='M206 90 l7-27 7 27z'/%3E%3C/g%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right bottom; background-size: 200px auto; }
+.hl-pdp__pricecard .hl-price--lg, .hl-pdp__save { position: relative; max-width: calc(100% - 120px); }
+.hl-offer { grid-template-columns: auto minmax(0, 1fr) auto auto; padding: 11px 14px; background: #FFF4F1; border-color: #F4CFC5; }
+.hl-offer__t b { font-size: 15.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hl-offer__t em { display: none; }
+.hl-offer__code { padding: 7px 12px; border: 1.5px dashed #1E5A35; font-size: 14px; }
+.hl-feats { margin: 4px 0 14px; }
+.hl-feats li:nth-child(1) span { background: #E7F1FB; color: #2C6AB0; }
+.hl-feats li:nth-child(2) span { background: #F0E9FB; color: #7446C2; }
+.hl-feats li:nth-child(3) span { background: #FDEDE3; color: #D25E17; }
+.hl-feats li:nth-child(4) span { background: #E8F4E4; color: #3B8A3A; }
+.hl-feats li:nth-child(5) span { background: #FBE7EE; color: #C2366B; }
+.hl-feats span { width: 44px; height: 44px; }
+.hl-pdp__delivery { background: #FBFCFA; border-color: #DCE3D8; }
+.hl-pdp__delivery-icon { color: #2F7A3D; }
+.hl-pdp__delivery-h { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 17px; font-weight: 800; color: #4A2A7A; }
+.hl-pdp__delivery .hl-pdp__ship { font-size: 14px; color: #2F3A33; }
+.hl-love { background-image: radial-gradient(circle at 0 100%, #E3F0DC 0 46px, transparent 47px); }
+@media (max-width: 767px) {
+  .hl-pdp__h { font-size: 28px; }
+  .hl-pdp__pricecard { background-size: 150px auto; }
+  .hl-pdp__pricecard .hl-price--lg, .hl-pdp__save { max-width: calc(100% - 90px); }
+  .hl-offer { gap: 10px; padding: 10px 12px; }
+  .hl-offer__t b { font-size: 14.5px; }
+  .hl-offer__code { padding: 6px 9px; font-size: 13px; }
+  .hl-feats span { width: 40px; height: 40px; }
+  .hl-pdp__delivery-h { font-size: 16px; }
+}
+
 /* ═══ src/styles/lifestyle.css ═══ */
 /* ============================================================================
    SORA LIFE — the lifestyle storefront (/lifestyle). Namespaced .ls-*, deferred bundle.
