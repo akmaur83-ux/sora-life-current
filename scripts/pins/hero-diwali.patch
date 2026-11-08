@@ -1,0 +1,21 @@
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index 3bc4917..7b8fb01 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -402,4 +402,15 @@
+ @media (prefers-reduced-motion: reduce) {
+   .hx-new__track, .hx-new__image, .hx-new__arrows button { transition: none; }
+   .hx-new__card:hover .hx-new__image { transform: none; }
++}
++/* Hero slide 2, Home & Living for Diwali (owner, 2026-11-08): a full-bleed room photograph, not a
++   packshot on white — so it covers the slide edge to edge (no white fade, no multiply), and the copy
++   sits on a light warm shade, cream on the photograph. */
++.hx-hero__slide--homeliving .hx-hero__image { left: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 62%; mix-blend-mode: normal; -webkit-mask-image: none; mask-image: none; }
++.hx-hero__slide--homeliving::before { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, rgba(28, 16, 6, .5) 0, rgba(28, 16, 6, .32) 40%, rgba(28, 16, 6, 0) 64%); pointer-events: none; }
++.hx-hero__slide--homeliving .hx-hero__copy { z-index: 2; }
++.hx .hx-hero__slide--homeliving .hx-eyebrow, .hx-hero__slide--homeliving .hx-hero__title { color: #FFF8EE; text-shadow: 0 1px 14px rgba(0, 0, 0, .35); }
++.hx-hero__slide--homeliving .hx-hero__title .hx-hl { color: #FFC680; }
++@media (max-width: 700px) {
++  .hx-hero__slide--homeliving::before { background: linear-gradient(90deg, rgba(28, 16, 6, .5) 0, rgba(28, 16, 6, .28) 48%, rgba(28, 16, 6, 0) 75%); }
+ }
+\ No newline at end of file

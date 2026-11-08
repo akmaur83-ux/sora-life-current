@@ -477,12 +477,14 @@ const bar = (html) => strip(html.match(/<div class="hl-pdp__bar"[\s\S]*?<\/div>/
 await test('PDP: Add to cart sits in the reserved slot and in the phone bar, disabled until the choice is complete and in stock', () => {
   const r = (q) => app.render(`/homeliving/p/${q}`);
   const btn = (disabled, label, cls = '') => `<button type="button" class="hl-btn hl-add${cls}"${disabled ? ' disabled=""' : ''}> ${label}</button>`;
-  assert.equal(actions(r('sage-fitted-sheet')), `<div class="hl-pdp__actions" data-slot="add-to-cart" data-can-add="no">${btn(true, 'Add to cart')}<button type="button" class="hl-card__heart hl-heart--inline" aria-label="Save Sage Fitted Sheet to wishlist" aria-disabled="true"></button></div>`);
+  // Buy now (owner, 2026-11-08) sits beside it: the same add, then checkout.
+  const buy = (disabled, cls = '') => `<button type="button" class="hl-btn hl-buy${cls}"${disabled ? ' disabled=""' : ''}> Buy Now</button>`;
+  assert.equal(actions(r('sage-fitted-sheet')), `<div class="hl-pdp__actions" data-slot="add-to-cart" data-can-add="no">${btn(true, 'Add to cart')}${buy(true)}</div>`);
   assert.match(actions(r('sage-fitted-sheet?size=Single&colour=Sage')), new RegExp(`data-can-add="yes">${btn(false, 'Add to cart')}`));
   assert.match(actions(r('sage-fitted-sheet?size=King&colour=Sage')), new RegExp(`data-can-add="no">${btn(true, 'Out of stock')}`));
   assert.match(actions(r('linen-curtain-pair')), new RegExp(`data-can-add="no">${btn(true, 'Out of stock')}`));
   assert.match(actions(r('bath-towel-set-pack-of-2')), new RegExp(`data-can-add="yes">${btn(false, 'Add to cart')}`));
-  assert.equal(bar(r('sage-fitted-sheet?size=Single&colour=Sage')), `<div class="hl-pdp__bar" role="region" aria-label="Buy" data-slot="add-to-cart"><span class="hl-pdp__bar-price"><b><span class="hl-price__cur">₹</span>999</b><em>Single · Sage</em><span class="hl-pick__note is-in">In stock</span></span>${btn(false, 'Add to cart', ' hl-add--bar')}</div>`);
+  assert.equal(bar(r('sage-fitted-sheet?size=Single&colour=Sage')), `<div class="hl-pdp__bar" role="region" aria-label="Buy" data-slot="add-to-cart"><span class="hl-pdp__bar-price"><b><span class="hl-price__cur">₹</span>999</b><s>₹1,299</s><i>23% OFF</i><em>Single · Sage</em><span class="hl-pick__note is-in">In stock</span></span>${btn(false, 'Add to cart', ' hl-add--bar')}${buy(false, ' hl-buy--bar')}</div>`);
   assert.match(bar(r('waffle-bath-towel?size=Sheet')), new RegExp(btn(true, 'Out of stock', ' hl-add--bar')));
 });
 
@@ -499,7 +501,7 @@ const rules = loadModule('src/lib/homelivingPdp.js', {});
 const listing = has('src/lib/homelivingListing.js') ? loadModule('src/lib/homelivingListing.js', {}) : {};
 const pageWith = (slug, query, recorded) => loadModule('src/homeliving/HomeLivingProductPage.jsx', {
   Link: (p) => React.createElement('a', p), Icon: () => null, money: (n) => `₹${n}`, Breadcrumb: () => null, HomeLivingProductCard: () => null, ProductInformation: () => null,
-  useParams: () => ({ slug }), useSearchParams: () => [new URLSearchParams(query), () => {}], useMemo: (f) => f(),
+  useParams: () => ({ slug }), useSearchParams: () => [new URLSearchParams(query), () => {}], useMemo: (f) => f(), useNavigate: () => () => {}, fetchEligibleCoupons: async () => ({ applicable: [], unlockable: [] }),
   useHomeLivingCatalogue: () => ({ status: 'ready', categories: PDP.categories, products: VIEWS }),
   HOMELIVING_DELIVERY_WINDOW: '6-7 days', breadcrumbFor: listing.breadcrumbFor || (() => []), ...rules,
   useStore: () => ({ addHomeLivingToCart: (...args) => { recorded.push(args); return true; } }),

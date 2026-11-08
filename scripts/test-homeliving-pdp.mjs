@@ -151,16 +151,18 @@ await test('/homeliving/p/sage-fitted-sheet: breadcrumb back through the categor
   assert.equal((html.match(/class="hl-gallery__thumb( is-on)?"/g) || []).length, 3, 'a thumbnail per image');
   assert.match(html, /<button type="button" role="tab" aria-selected="true" aria-controls="hl-slide-0" aria-label="Show image 1 of 3" class="hl-gallery__thumb is-on">/, 'a thumbnail is a button with a name — not a #hl-slide link');
   assert.doesNotMatch(html, /href="#hl-slide-/, 'no fragment links: a thumbnail can never jump the page or add history');
-  assert.match(html, /<p class="hl-pdp__brand">Meadow Weave<\/p><h1 class="hl-pdp__h serif">Sage Fitted Sheet<\/h1><p class="hl-pdp__size">Fitted sheet<\/p>/);
-  assert.match(html, /<p class="hl-price hl-price--lg" data-price="999"><strong><span class="hl-price__cur">₹<\/span>999<\/strong><span class="hl-price__mrp">M\.R\.P: <s>₹1,299<\/s><\/span><span class="hl-badge">23% OFF<\/span><\/p><p class="hl-pdp__tax">Inclusive of all taxes<\/p>/);
+  assert.match(html, /<p class="hl-pdp__brand">Meadow Weave<\/p><h1 class="hl-pdp__h serif">Sage Fitted Sheet<\/h1><p class="hl-pdp__lede">Sage Fitted Sheet\.<\/p><p class="hl-pdp__rating">[\s\S]*?<\/p><p class="hl-pdp__size">Fitted sheet<\/p>/, 'the rating row only because this product has reviews');
+  // The owner's layout (2026-11-08): the price in a card with what it saves, the tax line beside the stock.
+  assert.match(html, /<div class="hl-pdp__pricecard"><p class="hl-price hl-price--lg" data-price="999"><strong><span class="hl-price__cur">₹<\/span>999<\/strong><span class="hl-price__mrp">M\.R\.P: <s>₹1,299<\/s><\/span><span class="hl-badge">23% OFF<\/span><\/p><p class="hl-pdp__save">Save ₹300 on this item<\/p><\/div>/);
+  assert.match(html, /<\/span> Inclusive of all taxes<\/p>/);
   assert.match(html, /<legend>Colour<\/legend>/); assert.match(html, /<legend>Size<\/legend>/);
   assert.deepEqual([...html.matchAll(/class="hl-pick__swatch[^"]*" style="--sw:([^"]+)"/g)].map((m) => m[1]), ['#8A9A6B', '#EDE6D6']);
-  assert.deepEqual([...html.matchAll(/class="hl-pick__size[^"]*"[^>]*>([^<]+)</g)].map((m) => m[1]), ['Single', 'King']);
+  assert.deepEqual([...html.matchAll(/class="hl-pick__size[^"]*"[^>]*><span>([^<]+)</g)].map((m) => m[1]), ['Single', 'King']);
   assert.match(html, /<p class="hl-pick__note is-choose" role="status">Choose a size and colour<\/p>/);
-  assert.match(html, /<h2 class="hl-pdp__h2" id="hl-deliv-h">[\s\S]*?Delivery<\/h2><p class="hl-pdp__ship"><span>Standard delivery<em>6-7 days<\/em><\/span><b>Free<\/b><\/p><p class="hl-pdp__fine">Select Standard delivery at checkout\.<\/p>/);
+  assert.match(html, /<h2 class="hl-pdp__delivery-h" id="hl-deliv-h">Standard Delivery: 6-7 days<\/h2><p class="hl-pdp__ship">Free on every order · Cash on Delivery available<\/p>/);
   // Standard is the only method since Express and Scheduled were withdrawn (2fa4ed2): no "other options".
   assert.doesNotMatch(html, /[Oo]ther delivery options/);
-  assert.match(html, /About this product<\/h2><p class="hl-pdp__desc">Sage Fitted Sheet\.<\/p>/);
+  assert.match(html, /About this Product<\/button>[\s\S]*?<div class="hl-tabs__panel" role="tabpanel" id="hl-panel-about" aria-labelledby="hl-tab-about"><p class="hl-pdp__desc">Sage Fitted Sheet\.<\/p><\/div>/);
   assert.match(html, /<dt>Category<\/dt><dd>Bedsheets › Fitted Sheets<\/dd>/); assert.match(html, /<dt>Sizes<\/dt><dd>Single, King<\/dd>/); assert.match(html, /<dt>Colours<\/dt><dd>Sage, Ivory<\/dd>/); assert.match(html, /<dt>SKU<\/dt><dd>SL-HL-FIT-SAGE<\/dd>/);
   const related = html.slice(html.indexOf('You may also like'));
   const cards = [...related.matchAll(/data-product="([^"]+)"/g)].map((m) => m[1]);
@@ -174,7 +176,7 @@ await test('the URL drives the selection: ?size=King&colour=Sage marks Sage stru
   assert.match(out, /<button type="button" class="hl-pick__size is-on is-out" aria-pressed="true" aria-label="King — out of stock"/, 'the chosen size stays chosen (so it can be un-chosen) but is marked out for Sage');
   assert.match(out, /<p class="hl-pick__note is-out" role="status">Out of stock in this size and colour<\/p>/);
   // The Home & Living cart (test-homeliving-cart.mjs) put the note under the price and Add to cart beside it.
-  assert.match(out, /<div class="hl-pdp__bar" role="region" aria-label="Buy" data-slot="add-to-cart"><span class="hl-pdp__bar-price"><b><span class="hl-price__cur">₹<\/span>999<\/b><em>King · Sage<\/em><span class="hl-pick__note is-out">Out of stock in this size and colour<\/span><\/span><button type="button" class="hl-btn hl-add hl-add--bar" disabled=""><svg[\s\S]*?<\/svg> Out of stock<\/button><\/div>/);
+  assert.match(out, /<div class="hl-pdp__bar" role="region" aria-label="Buy" data-slot="add-to-cart"><span class="hl-pdp__bar-price"><b><span class="hl-price__cur">₹<\/span>999<\/b><s>₹1,299<\/s><i>23% OFF<\/i><em>King · Sage<\/em><span class="hl-pick__note is-out">Out of stock in this size and colour<\/span><\/span><button type="button" class="hl-btn hl-add hl-add--bar" disabled=""><svg[\s\S]*?<\/svg> Out of stock<\/button><button type="button" class="hl-btn hl-buy hl-buy--bar" disabled=""><svg[\s\S]*?<\/svg> Buy Now<\/button><\/div>/);
   const low = render('/homeliving/p/sage-fitted-sheet?size=Single&colour=Ivory');
   assert.match(low, /<p class="hl-pick__note is-low" role="status">Only 2 left<\/p>/);
   assert.match(low, /data-can-add="yes"/);
@@ -190,21 +192,21 @@ await test('size-only and no-variant products: sizes alone with the out one stru
   assert.match(towel, /<p class="hl-price hl-price--lg" data-price="349"><strong><span class="hl-price__cur">₹<\/span>349<\/strong><\/p>/, 'no MRP against an override');
   const bed = render('/homeliving/p/botanical-bedsheet-set-king');
   assert.doesNotMatch(bed, /hl-pick__group/, 'no picker');
-  assert.match(bed, /<p class="hl-pick__note hl-pick__note--solo is-in" role="status">In stock<\/p>/);
+  assert.match(bed, /<span class="hl-pdp__stock is-in"><svg[\s\S]*?<\/svg> In stock<\/span>/);
   assert.equal((bed.match(/class="hl-gallery__thumb( is-on)?"/g) || []).length, 0, 'one image, no thumbnails');
   assert.equal((bed.match(/<figure class="hl-gallery__slide/g) || []).length, 1);
   assert.match(bed, /data-price="1499"[\s\S]*?21% OFF/);
   const curtain = render('/homeliving/p/linen-curtain-pair');
-  assert.match(curtain, /<p class="hl-pick__note hl-pick__note--solo is-out" role="status">Out of stock<\/p>/); assert.match(curtain, /data-can-add="no"/);
+  assert.match(curtain, /<span class="hl-pdp__stock is-out"><svg[\s\S]*?<\/svg> Out of stock<\/span>/); assert.match(curtain, /data-can-add="no"/);
 });
 
-await test('Add to cart fills the reserved slot: the first cell of the action row and the phone bar (data-slot="add-to-cart"); the wishlist keeps the second cell', () => {
+await test('Add to cart fills the reserved slot: the first cell of the action row and the phone bar (data-slot="add-to-cart"); Buy now the second (the wishlist moved onto the image), 2026-11-08', () => {
   // The slot this suite reserved is filled by the Home & Living cart (test-homeliving-cart.mjs pins the behaviour).
   const html = render('/homeliving/p/sage-fitted-sheet');
-  assert.match(html, /<div class="hl-pdp__actions" data-slot="add-to-cart" data-can-add="no"><button type="button" class="hl-btn hl-add" disabled=""><svg[\s\S]*?<\/svg> Add to cart<\/button><button type="button" class="hl-card__heart hl-heart--inline" aria-label="Save Sage Fitted Sheet to wishlist" aria-disabled="true">/);
+  assert.match(html, /<div class="hl-pdp__actions" data-slot="add-to-cart" data-can-add="no"><button type="button" class="hl-btn hl-add" disabled=""><svg[\s\S]*?<\/svg> Add to cart<\/button><button type="button" class="hl-btn hl-buy" disabled=""><svg[\s\S]*?<\/svg> Buy Now<\/button><\/div>/);
+  assert.match(html, /<button type="button" class="hl-gallery__heart" aria-label="Save Sage Fitted Sheet to wishlist" aria-disabled="true">/);
   assert.equal((html.match(/data-slot="add-to-cart"/g) || []).length, 2, 'the action row and the phone bar');
-  assert.match(read('src/styles/homeliving.css'), /\.hl-pdp__actions \{ display: grid; grid-template-columns: minmax\(0, 1\.4fr\) 48px;/, 'the first cell is kept for it');
-  assert.match(read('src/styles/homeliving.css'), /\.hl-heart--inline \{[^}]*grid-column: 2;/);
+  assert.match(read('src/styles/homeliving.css'), /\.hl-pdp__actions \{ grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\); gap: 12px; \}/, 'two equal cells');
 });
 
 await test('unknown slug: a not-found state inside the shell, never a crash; loading says loading', async () => {
@@ -239,7 +241,7 @@ await test('text rule and copy: every gallery image has alt text, every thumbnai
   for (const m of html.matchAll(/<figure class="hl-gallery__slide[^>]*><button [^>]*><img [^>]*>/g)) assert.match(m[0], / alt="[^"]+"/);
   for (const m of html.matchAll(/class="hl-gallery__thumb[^>]*><img [^>]*>/g)) assert.match(m[0], / alt=""/);
   const t = text(html);
-  for (const s of ['Sage Fitted Sheet', '₹ 999', 'M.R.P: ₹1,299', '23% OFF', 'Fitted sheet', 'Standard delivery 6-7 days Free', 'Inclusive of all taxes']) assert.ok(t.includes(s), s);
+  for (const s of ['Sage Fitted Sheet', '₹ 999', 'M.R.P: ₹1,299', '23% OFF', 'Fitted sheet', 'Standard Delivery: 6-7 days', 'Free on every order', 'Inclusive of all taxes']) assert.ok(t.includes(s), s);
   for (const rel of NEW_FILES) for (const re of SPEED_CLAIMS) assert.ok(!re.test(read(rel)), `${rel} matches ${re}`);
   for (const re of SPEED_CLAIMS) assert.ok(!re.test(t), `rendered page matches ${re}`);
   const src = stripComments(read('src/homeliving/HomeLivingProductPage.jsx'));
@@ -257,7 +259,7 @@ await test('a thumbnail shows its image and nothing else moves: the track scroll
   let reduce = false;
   const windowScrolls = [], trackScrolls = [];
   const win = { matchMedia: () => ({ matches: reduce }), scrollTo: (...a) => windowScrolls.push(a), scrollBy: (...a) => windowScrolls.push(a) };
-  const { Gallery } = loadSource(read('src/homeliving/HomeLivingProductPage.jsx'), { ...hooks, window: win });
+  const { Gallery } = loadSource(read('src/homeliving/HomeLivingProductPage.jsx'), { ...hooks, window: win, Icon: () => null });
   const handle = await mount(h(Gallery, { view: by('sage-fitted-sheet') }));
   await handle.settle();
   const node = findAll(handle.tree, (n) => n.props?.className === 'hl-gallery__track')[0];

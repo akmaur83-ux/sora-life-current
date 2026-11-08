@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { money } from '../lib/format.js';
 import { useStore } from '../lib/store.jsx';
@@ -10,6 +10,7 @@ import { readSelection, writeSelection, selectionState, relatedFor } from '../li
 import { Breadcrumb } from './HomeLivingCategory.jsx';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
 import ProductInformation from '../components/ProductInformation.jsx';
+import { fetchEligibleCoupons } from '../lib/couponApi.js';
 
 // ============================================================
 // /homeliving/p/<slug> — the product page.
@@ -233,7 +234,7 @@ export function GalleryZoom({ images, start = 0, name, onClose }) {
   );
 }
 
-export function Gallery({ view }) {
+export function Gallery({ view, badge = null }) {
   const images = view.gallery && view.gallery.length ? view.gallery : [];
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(null);   // the image open full screen
@@ -252,6 +253,13 @@ export function Gallery({ view }) {
     el.scrollTo({ left: slide.offsetLeft - el.firstElementChild.offsetLeft, behavior: behavior || (reduced ? 'auto' : 'smooth') });
     return slide;
   };
+  // A swipe on the track moves the counter and the dots with it.
+  const onScroll = (e) => {
+    const el = e.currentTarget;
+    if (!el.clientWidth) return;
+    const i = Math.floor(el.scrollLeft / el.clientWidth + 0.5);
+    if (i !== active && i >= 0 && i < images.length) setActive(i);
+  };
   // Back from full screen: the gallery shows the image it closed on, and that image has focus.
   const closeZoom = (i) => {
     setZoom(null);
@@ -259,17 +267,7 @@ export function Gallery({ view }) {
   };
   if (images.length === 0) return <div className="hl-pdp__media hl-pdp__media--none" aria-hidden="true"><b>{view.name.slice(0, 1)}</b></div>;
   return (
-    <div className="hl-gallery">
-      <div className="hl-gallery__track" role="group" aria-label={`${view.name} images`} ref={track}>
-        {images.map((img, i) => (
-          <figure key={img.url + i} className={`hl-gallery__slide${i === active ? ' is-on' : ''}`} id={`hl-slide-${i}`}>
-            <button type="button" className="hl-gallery__zoom" aria-label={`View image ${i + 1} of ${images.length} full screen`} onClick={() => setZoom(i)}>
-              <img src={img.url} alt={img.alt} width="900" height="900" decoding="async" loading={i === 0 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} />
-            </button>
-          </figure>
-        ))}
-      </div>
-      {zoom != null && <GalleryZoom images={images} start={zoom} name={view.name} onClose={closeZoom} />}
+    <div className={`hl-gallery${images.length > 1 ? ' has-thumbs' : ''}`}>
       {images.length > 1 && (
         <div className="hl-gallery__thumbs" role="tablist" aria-label="Choose image">
           {images.map((img, i) => (
@@ -279,6 +277,26 @@ export function Gallery({ view }) {
           ))}
         </div>
       )}
+      <div className="hl-gallery__main">
+        <div className="hl-gallery__track" role="group" aria-label={`${view.name} images`} ref={track} onScroll={onScroll}>
+          {images.map((img, i) => (
+            <figure key={img.url + i} className={`hl-gallery__slide${i === active ? ' is-on' : ''}`} id={`hl-slide-${i}`}>
+              <button type="button" className="hl-gallery__zoom" aria-label={`View image ${i + 1} of ${images.length} full screen`} onClick={() => setZoom(i)}>
+                <img src={img.url} alt={img.alt} width="900" height="900" decoding="async" loading={i === 0 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} />
+              </button>
+            </figure>
+          ))}
+        </div>
+        {badge && <span className="hl-gallery__badge"><Icon name="award" size={15} /> {badge}</span>}
+        <button type="button" className="hl-gallery__heart" aria-label={`Save ${view.name} to wishlist`} aria-disabled="true"><Icon name="heart" size={20} /></button>
+        {images.length > 1 && <span className="hl-gallery__count" aria-hidden="true">{active + 1} / {images.length}</span>}
+      </div>
+      {images.length > 1 && (
+        <div className="hl-gallery__dots" aria-hidden="true">
+          {images.map((img, i) => <span key={img.url + i} className={i === active ? 'is-on' : undefined} />)}
+        </div>
+      )}
+      {zoom != null && <GalleryZoom images={images} start={zoom} name={view.name} onClose={closeZoom} />}
     </div>
   );
 }
@@ -288,6 +306,13 @@ export function Gallery({ view }) {
  * unavailable one is disabled or struck, not hidden — and the stock note
  * answers for the pair. A size-only product shows sizes alone.
  */
+/** The price a size button shows: the chosen colour's figure, else the lowest across colours. */
+export function sizePrice(view, size, colour = null) {
+  const rows = (view.variants || []).filter((v) => v.size === size && (!colour || v.colour === colour));
+  const prices = rows.map((v) => (v.price_override != null ? v.price_override : view.price)).filter((n) => n > 0);
+  return prices.length ? Math.min(...prices) : view.price;
+}
+
 export function VariantPicker({ view, st, onChange }) {
   return (
     <div className="hl-pick">
@@ -304,7 +329,7 @@ export function VariantPicker({ view, st, onChange }) {
                 aria-label={`${c.colour}${c.available ? '' : ' — not available for this size'}`}
                 title={c.colour}
                 onClick={() => onChange({ size: st.size, colour: c.colour === st.colour ? null : c.colour })}
-              ><span /></button>
+              ><span /><em>{c.colour}</em></button>
             ))}
           </div>
         </fieldset>
@@ -320,7 +345,7 @@ export function VariantPicker({ view, st, onChange }) {
               disabled={!s.available && s.size !== st.size}
               aria-label={`${s.size}${s.available ? '' : ' — out of stock'}`}
               onClick={() => onChange({ size: s.size === st.size ? null : s.size, colour: st.colour })}
-            >{s.size}</button>
+            ><span>{s.size}</span><small>{money(sizePrice(view, s.size, st.colour))}</small></button>
           ))}
         </div>
       </fieldset>
@@ -332,10 +357,145 @@ export function VariantPicker({ view, st, onChange }) {
 function DeliveryBlock() {
   return (
     <section className="hl-pdp__delivery" aria-labelledby="hl-deliv-h">
-      <h2 className="hl-pdp__h2" id="hl-deliv-h"><Icon name="truck" size={18} /> Delivery</h2>
-      <p className="hl-pdp__ship"><span>Standard delivery<em>{HOMELIVING_DELIVERY_WINDOW}</em></span><b>Free</b></p>
-      <p className="hl-pdp__fine">Select Standard delivery at checkout.</p>
+      <span className="hl-pdp__delivery-icon" aria-hidden="true"><Icon name="truck" size={26} /></span>
+      <div>
+        <h2 className="hl-pdp__delivery-h" id="hl-deliv-h">Standard Delivery: {HOMELIVING_DELIVERY_WINDOW}</h2>
+        <p className="hl-pdp__ship">Free on every order · Cash on Delivery available</p>
+      </div>
     </section>
+  );
+}
+
+// Store-wide facts, each true of every order (the trust strip, shipping and returns pages).
+const ASSURANCES = [
+  { icon: 'truck', label: ['Free', 'Delivery'] },
+  { icon: 'card', label: ['Cash on', 'Delivery'] },
+  { icon: 'return', label: ['7-Day', 'Returns'] },
+  { icon: 'lock', label: ['Secure', 'Payments'] },
+  { icon: 'shield', label: ['Genuine', 'Products'] },
+];
+const STRIP = [
+  { icon: 'leaf', label: 'Premium Home Decor' },
+  { icon: 'shield', label: 'Trusted Quality' },
+  { icon: 'truck', label: 'Free Delivery' },
+  { icon: 'return', label: 'Easy Returns' },
+];
+
+export function AssuranceStrip() {
+  return (
+    <ul className="hl-assure" aria-label="Why shop with us">
+      {STRIP.map((a) => <li key={a.label}><Icon name={a.icon} size={16} /> {a.label}</li>)}
+    </ul>
+  );
+}
+
+function Assurances() {
+  return (
+    <ul className="hl-feats">
+      {ASSURANCES.map((a) => <li key={a.icon}><span aria-hidden="true"><Icon name={a.icon} size={20} /></span>{a.label[0]}<br />{a.label[1]}</li>)}
+    </ul>
+  );
+}
+
+/** The name with its middle words picked out ("Parquet Wood <Anti-Skid> Doormat"); short names stay whole. */
+export function titleParts(name) {
+  const [main, ...rest] = String(name || '').split(' — ');
+  const w = main.split(' ').filter(Boolean);
+  const tail = rest.length ? ` — ${rest.join(' — ')}` : '';
+  if (w.length < 4) return [main + tail, '', ''];
+  return [w.slice(0, 2).join(' '), w.slice(2, -1).join(' '), w[w.length - 1] + tail];
+}
+
+/** The description as sentences: the first is the subtitle, up to five are the "why" list. */
+export function sentencesOf(text) {
+  return String(text || '').replace(/\s+/g, ' ').split(/(?<=[.!?])\s+(?=[A-Z0-9])/).map((x) => x.trim()).filter((x) => x.length > 2);
+}
+
+/** The best live offer on this product, from the server (no rupee figure: what it saves depends on the basket). */
+function useOffer(view, variantId) {
+  const [offer, setOffer] = useState(null);
+  useEffect(() => {
+    if (!view?.id) return undefined;
+    const ctl = new AbortController();
+    fetchEligibleCoupons({ items: [{ id: view.id, qty: 1, variantId, catalogue: 'homeliving' }], signal: ctl.signal })
+      .then(({ applicable, unlockable }) => { if (!ctl.signal.aborted) setOffer([...applicable, ...unlockable][0] || null); })
+      .catch(() => { if (!ctl.signal.aborted) setOffer(null); });
+    return () => ctl.abort();
+  }, [view?.id, variantId]);
+  return offer;
+}
+
+function OfferStrip({ view }) {
+  const offer = useOffer(view, null);
+  const { couponCode, dispatch, toast } = useStore();
+  if (!offer) return null;
+  const applied = couponCode === offer.code;
+  const apply = () => { dispatch({ type: 'APPLY_COUPON', code: offer.code }); toast(`${offer.code} will be applied in your cart`, { kind: 'cart' }); };
+  return (
+    <button type="button" className={`hl-offer${applied ? ' is-applied' : ''}`} onClick={applied ? undefined : apply} aria-label={applied ? `${offer.code} applied` : `Apply code ${offer.code}: ${offer.title}`}>
+      <Icon name="gift" size={20} />
+      <span className="hl-offer__t"><b>{offer.title}</b>{offer.description ? <em>{offer.description}</em> : null}</span>
+      <span className="hl-offer__code">{applied ? 'Applied' : <>Use code <b>{offer.code}</b></>}</span>
+      <Icon name="chevronRight" size={18} />
+    </button>
+  );
+}
+
+const faqs = () => [
+  ['When will my order arrive?', `Standard delivery takes ${HOMELIVING_DELIVERY_WINDOW}, and it is free on every order.`],
+  ['Can I pay on delivery?', 'Yes. Cash on Delivery is available at checkout, as are cards, UPI and net banking.'],
+  ['What if I want to return it?', 'Returns are accepted within 7 days of delivery. See the returns page for the details.'],
+];
+
+function InfoTabs({ view, node, categories, st, bullets }) {
+  const tabs = [['about', 'About this Product'], ['specs', 'Specifications'], ...(view.review_count > 0 ? [['reviews', `Reviews (${view.review_count.toLocaleString('en-IN')})`]] : []), ['faqs', 'FAQs']];
+  const [tab, setTab] = useState('about');
+  return (
+    <section className="hl-tabs" aria-label="Product information">
+      <div className="hl-tabs__bar" role="tablist">
+        {tabs.map(([id, label]) => (
+          <button key={id} type="button" role="tab" id={`hl-tab-${id}`} aria-selected={tab === id} aria-controls={`hl-panel-${id}`} className={tab === id ? 'is-on' : undefined} onClick={() => setTab(id)}>{label}</button>
+        ))}
+      </div>
+      {/* Every panel is in the page (search engines, find-in-page); only the chosen one shows. */}
+      <div className="hl-tabs__panel" role="tabpanel" id="hl-panel-about" aria-labelledby="hl-tab-about" hidden={tab !== 'about'}>
+        {bullets.length > 1 && (
+          <div className="hl-love">
+            <h2 className="hl-love__h"><Icon name="heart" size={20} /> Why You’ll Love It</h2>
+            <ul>{bullets.map((b) => <li key={b}><Icon name="check" size={16} /> {b}</li>)}</ul>
+          </div>
+        )}
+        {view.description && (bullets.length < 2 || sentencesOf(view.description).length > bullets.length) && <p className="hl-pdp__desc">{view.description}</p>}
+      </div>
+      <div className="hl-tabs__panel" role="tabpanel" id="hl-panel-specs" aria-labelledby="hl-tab-specs" hidden={tab !== 'specs'}>
+        <dl className="hl-pdp__details">
+          {view.brand && <div><dt>Brand</dt><dd>{view.brand}</dd></div>}
+          {node && <div><dt>Category</dt><dd>{breadcrumbFor(categories, node).slice(1).map((c) => c.name).join(' › ')}</dd></div>}
+          {view.net_content && <div><dt>Size</dt><dd>{view.net_content}</dd></div>}
+          {view.sizes.length > 0 && <div><dt>Sizes</dt><dd>{view.sizes.join(', ')}</dd></div>}
+          {view.swatches.length > 0 && <div><dt>Colours</dt><dd>{view.swatches.map((s) => s.colour).join(', ')}</dd></div>}
+          {view.sku && <div><dt>SKU</dt><dd>{view.sku}</dd></div>}
+        </dl>
+        {/* Net quantity is the Size row above. */}
+        <ProductInformation store="homeliving" productId={view.id} variant={st.variant} prefix="hl" netQuantity={false} />
+      </div>
+      {view.review_count > 0 && (
+        <div className="hl-tabs__panel" role="tabpanel" id="hl-panel-reviews" aria-labelledby="hl-tab-reviews" hidden={tab !== 'reviews'}>
+          <p className="hl-pdp__desc">Rated {view.rating.toFixed(1)} out of 5 from {view.review_count.toLocaleString('en-IN')} reviews.</p>
+        </div>
+      )}
+      <div className="hl-tabs__panel" role="tabpanel" id="hl-panel-faqs" aria-labelledby="hl-tab-faqs" hidden={tab !== 'faqs'}>
+        <dl className="hl-faq">{faqs().map(([q, a]) => <div key={q}><dt>{q}</dt><dd>{a}</dd></div>)}</dl>
+      </div>
+    </section>
+  );
+}
+
+function Stars({ rating }) {
+  return (
+    <span className="hl-stars" aria-hidden="true">
+      {[1, 2, 3, 4, 5].map((i) => <Icon key={i} name="star" size={18} className={rating >= i - 0.25 ? 'is-on' : rating >= i - 0.75 ? 'is-half' : undefined} />)}
+    </span>
   );
 }
 
@@ -355,10 +515,19 @@ export function AddToCartButton({ st, onAdd, className = '' }) {
   );
 }
 
+export function BuyNowButton({ st, onBuy, className = '' }) {
+  return (
+    <button type="button" className={`hl-btn hl-buy${className ? ` ${className}` : ''}`} disabled={!st.canAdd} onClick={st.canAdd ? onBuy : undefined}>
+      <Icon name="sparkle" size={18} /> Buy Now
+    </button>
+  );
+}
+
 export default function HomeLivingProductPage() {
   const { slug } = useParams();
   const { status, categories, products } = useHomeLivingCatalogue();
   const { addHomeLivingToCart } = useStore();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const view = useMemo(() => products.find((p) => p.slug === String(slug || '')) || null, [products, slug]);
 
@@ -380,56 +549,53 @@ export default function HomeLivingProductPage() {
   const st = selectionState(view, sel);
   const setSel = (next) => setParams(writeSelection(params, next), { replace: true });
   const related = relatedFor(view, products, 4);
+  const [head, hl, tail] = titleParts(view.name);
+  const sentences = sentencesOf(view.description);
+  const lede = sentences[0] && sentences[0].length <= 140 ? sentences[0] : null;
+  const bullets = sentences.slice(0, 5).filter((x) => x.length <= 160);
   // st.variant is the chosen size × colour (null for a product without variants).
   const add = () => addHomeLivingToCart(view, st.variant, 1);
+  const buy = () => { if (addHomeLivingToCart(view, st.variant, 1) !== false) navigate('/checkout'); };
 
   return (
     <div className="hl-wrap hl-pdp" data-product={view.slug}>
+      <AssuranceStrip />
       <Breadcrumb trail={trail} />
       <div className="hl-pdp__grid">
-        <Gallery view={view} />
+        <Gallery view={view} badge={view.is_bestseller ? 'Bestseller' : null} />
         <div className="hl-pdp__body">
           {view.brand && <p className="hl-pdp__brand">{view.brand}</p>}
-          <h1 className="hl-pdp__h serif">{view.name}</h1>
+          <h1 className="hl-pdp__h serif">{head}{hl && <> <span className="hl-pdp__hl">{hl}</span></>}{tail && <> {tail}</>}</h1>
+          {lede && <p className="hl-pdp__lede">{lede}</p>}
+          {view.review_count > 0 && view.rating > 0 && (
+            <p className="hl-pdp__rating"><Stars rating={view.rating} /><b>{view.rating.toFixed(1)}</b> <span>({view.review_count.toLocaleString('en-IN')} Reviews)</span></p>
+          )}
           {view.net_content && <p className="hl-pdp__size">{view.net_content}</p>}
 
-          <p className="hl-price hl-price--lg" data-price={st.price}>
-            <strong><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</strong>
-            {st.hasDiscount && <><span className="hl-price__mrp">M.R.P: <s>{money(st.mrp)}</s></span><span className="hl-badge">{st.discountPct}% OFF</span></>}
-          </p>
-          <p className="hl-pdp__tax">Inclusive of all taxes</p>
-
-          {st.shape === 'none'
-            ? <p className={`hl-pick__note hl-pick__note--solo is-${st.status}`} role="status">{st.stockNote || 'In stock'}</p>
-            : <VariantPicker view={view} st={st} onChange={setSel} />}
-
-          {/* The action row: Add to cart in the first cell, the wishlist beside it. */}
-          <div className="hl-pdp__actions" data-slot="add-to-cart" data-can-add={st.canAdd ? 'yes' : 'no'}>
-            <AddToCartButton st={st} onAdd={add} />
-            <button type="button" className="hl-card__heart hl-heart--inline" aria-label={`Save ${view.name} to wishlist`} aria-disabled="true"><Icon name="heart" size={20} /></button>
+          <div className="hl-pdp__pricecard">
+            <p className="hl-price hl-price--lg" data-price={st.price}>
+              <strong><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</strong>
+              {st.hasDiscount && <><span className="hl-price__mrp">M.R.P: <s>{money(st.mrp)}</s></span><span className="hl-badge">{st.discountPct}% OFF</span></>}
+            </p>
+            {st.hasDiscount && <p className="hl-pdp__save">Save {money(st.saving)} on this item</p>}
           </div>
 
+          <OfferStrip view={view} />
+          <Assurances />
           <DeliveryBlock />
+          <p className="hl-pdp__tax"><span className={`hl-pdp__stock is-${st.shape === 'none' ? st.status : st.status === 'choose' ? 'in' : st.status}`}><Icon name="checkCircle" size={18} /> {st.shape === 'none' ? (st.stockNote || 'In stock') : (st.stockNote || (st.sizes.some((x) => x.available) ? 'In stock' : 'Out of stock'))}</span><span aria-hidden="true">|</span> Inclusive of all taxes</p>
 
-          {view.description && (
-            <section className="hl-pdp__section" aria-labelledby="hl-desc-h">
-              <h2 className="hl-pdp__h2" id="hl-desc-h">About this product</h2>
-              <p className="hl-pdp__desc">{view.description}</p>
-            </section>
-          )}
-          <section className="hl-pdp__section" aria-labelledby="hl-details-h">
-            <h2 className="hl-pdp__h2" id="hl-details-h">Details</h2>
-            <dl className="hl-pdp__details">
-              {view.brand && <div><dt>Brand</dt><dd>{view.brand}</dd></div>}
-              {node && <div><dt>Category</dt><dd>{breadcrumbFor(categories, node).slice(1).map((c) => c.name).join(' › ')}</dd></div>}
-              {view.net_content && <div><dt>Size</dt><dd>{view.net_content}</dd></div>}
-              {view.sizes.length > 0 && <div><dt>Sizes</dt><dd>{view.sizes.join(', ')}</dd></div>}
-              {view.swatches.length > 0 && <div><dt>Colours</dt><dd>{view.swatches.map((s) => s.colour).join(', ')}</dd></div>}
-              {view.sku && <div><dt>SKU</dt><dd>{view.sku}</dd></div>}
-            </dl>
-          </section>
-          {/* Net quantity is the Size row above. */}
-          <ProductInformation store="homeliving" productId={view.id} variant={st.variant} prefix="hl" netQuantity={false} />
+          {st.shape === 'none'
+            ? null
+            : <VariantPicker view={view} st={st} onChange={setSel} />}
+
+          {/* The action row: Add to cart in the first cell, Buy now beside it. */}
+          <div className="hl-pdp__actions" data-slot="add-to-cart" data-can-add={st.canAdd ? 'yes' : 'no'}>
+            <AddToCartButton st={st} onAdd={add} />
+            <BuyNowButton st={st} onBuy={buy} />
+          </div>
+
+          <InfoTabs view={view} node={node} categories={categories} st={st} bullets={bullets} />
         </div>
       </div>
 
@@ -444,8 +610,9 @@ export default function HomeLivingProductPage() {
 
       {/* Phone: the price, the choice and its stock in reach, with Add to cart beside them. */}
       <div className="hl-pdp__bar" role="region" aria-label="Buy" data-slot="add-to-cart">
-        <span className="hl-pdp__bar-price"><b><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</b>{st.label && <em>{st.label}</em>}<span className={`hl-pick__note is-${st.status}`}>{st.stockNote || st.missing || 'In stock'}</span></span>
+        <span className="hl-pdp__bar-price"><b><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</b>{st.hasDiscount && <><s>{money(st.mrp)}</s><i>{st.discountPct}% OFF</i></>}{st.label && <em>{st.label}</em>}<span className={`hl-pick__note is-${st.status}`}>{st.stockNote || st.missing || 'In stock'}</span></span>
         <AddToCartButton st={st} onAdd={add} className="hl-add--bar" />
+        <BuyNowButton st={st} onBuy={buy} className="hl-buy--bar" />
       </div>
     </div>
   );

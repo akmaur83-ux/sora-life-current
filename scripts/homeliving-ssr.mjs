@@ -110,7 +110,9 @@ export async function buildHomeLivingApp({ cartCount = 0, initial = INITIAL, onA
   const useStore = () => ({ cartCount, addHomeLivingToCart: (view, variant = null, qty = 1) => { added.push({ id: view.id, variantId: variant?.id ?? null, qty }); if (onAdd) onAdd(view, variant, qty); return true; } });
   const branding = { siteName: 'SORA LIFE', tagline: 'HEALTH & WELLNESS' };
   const money = (n) => `₹${Number(n).toLocaleString('en-IN')}`;
-  const { useParams, useSearchParams } = ReactRouter;
+  const { useParams, useSearchParams, useNavigate } = ReactRouter;
+  // The PDP's live offer is fetched in an effect, which a static render never runs.
+  const fetchEligibleCoupons = async () => ({ applicable: [], unlockable: [] });
   const card = loadModule('src/homeliving/HomeLivingProductCard.jsx', { Link, Icon, money, useStore });
   const layout = loadModule('src/homeliving/HomeLivingLayout.jsx', { Link, Outlet, useLocation, Icon, Footer, Toasts, useStore, branding, ...data });
   // The homepage mounts the shell's nav strip, delivery row and search bar under its hero.
@@ -120,7 +122,7 @@ export async function buildHomeLivingApp({ cartCount = 0, initial = INITIAL, onA
   const pdpRules = has('src/lib/homelivingPdp.js') ? loadModule('src/lib/homelivingPdp.js', {}) : {};
   // Product information reads after mount (an effect), so a server render has none: the same null as the real one here.
   const ProductInformation = () => null;
-  const pdp = has('src/homeliving/HomeLivingProductPage.jsx') ? loadModule('src/homeliving/HomeLivingProductPage.jsx', { Link, useParams, useSearchParams, Icon, money, useStore, HOMELIVING_DELIVERY_WINDOW: data.HOMELIVING_DELIVERY_WINDOW, useHomeLivingCatalogue: data.useHomeLivingCatalogue, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, Breadcrumb: category?.Breadcrumb, HomeLivingProductCard: card.default, ProductInformation }) : null;
+  const pdp = has('src/homeliving/HomeLivingProductPage.jsx') ? loadModule('src/homeliving/HomeLivingProductPage.jsx', { Link, useParams, useSearchParams, useNavigate, fetchEligibleCoupons, Icon, money, useStore, HOMELIVING_DELIVERY_WINDOW: data.HOMELIVING_DELIVERY_WINDOW, useHomeLivingCatalogue: data.useHomeLivingCatalogue, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, Breadcrumb: category?.Breadcrumb, HomeLivingProductCard: card.default, ProductInformation }) : null;
   const App = ({ path }) => h(StaticRouter, { location: path },
     h(Routes, null,
       h(Route, { path: '/homeliving', element: h(layout.default) },
