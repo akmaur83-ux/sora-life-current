@@ -6298,7 +6298,7 @@
 .fs-main { display: block; max-width: 1280px; margin: 0 auto; padding: 0 16px 48px; }
 .fs-home { background:
   radial-gradient(circle at 92% 18%, rgba(202, 167, 83, .09), transparent 25rem),
-  linear-gradient(180deg, var(--slv2-ivory), #FCFAF5 64%, var(--slv2-ivory)); }
+  linear-gradient(180deg, var(--slv2-ivory), #FFFFFF 64%, var(--slv2-ivory)); }
 .fs-home > .fs-hero { margin-top: 18px; }
 .fs-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--slv2-f700); background: var(--slv2-f700); color: var(--slv2-ivory); font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
 
@@ -7463,7 +7463,7 @@
    button, gold for the hero and promo calls to action. Only transform and
    opacity ever animate. Nothing here matches outside .gs.
    ========================================================================= */
-.gs { --gs-hdr: #F7F3EA; --gs-r: 14px; --gs-r-sm: 10px; --gs-line: var(--slv2-stone); --gs-nav-h: 64px;
+.gs { --gs-hdr: #FFFFFF; --gs-r: 14px; --gs-r-sm: 10px; --gs-line: var(--slv2-stone); --gs-nav-h: 64px;
   --gs-shadow: 0 1px 2px rgba(22, 33, 27, .04), 0 10px 26px -18px rgba(22, 33, 27, .22);
   min-height: 100vh; background: var(--slv2-ivory); color: var(--slv2-ink-2); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
 .gs .serif { font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-weight: 400; letter-spacing: -.008em; color: var(--slv2-ink); }
@@ -7674,7 +7674,7 @@
    to edge; everything else sits in a 1280px wrap. Only transform and
    opacity ever animate. Nothing here matches outside .hl.
    ========================================================================= */
-.hl { --hl-hdr: #F7F3EA; --hl-r: 14px; --hl-r-sm: 10px; --hl-line: var(--slv2-stone); --hl-nav-h: 64px; --hl-hdr-h: 68px;
+.hl { --hl-hdr: #FFFFFF; --hl-r: 14px; --hl-r-sm: 10px; --hl-line: var(--slv2-stone); --hl-nav-h: 64px; --hl-hdr-h: 68px;
   --hl-shadow: 0 1px 2px rgba(22, 33, 27, .04), 0 10px 26px -18px rgba(22, 33, 27, .22);
   min-height: 100vh; background: var(--slv2-ivory); color: var(--slv2-ink-2); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; overflow-x: clip; }
 .hl .serif { font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-weight: 400; letter-spacing: -.008em; color: var(--slv2-ink); }
@@ -7683,7 +7683,7 @@
 .hl-main { display: block; padding: 0 0 48px; }
 .hl-home { background:
   radial-gradient(circle at 8% 34%, rgba(202, 167, 83, .08), transparent 24rem),
-  linear-gradient(180deg, var(--slv2-ivory) 0%, #FCFAF5 58%, var(--slv2-ivory) 100%); }
+  linear-gradient(180deg, var(--slv2-ivory) 0%, #FFFFFF 58%, var(--slv2-ivory) 100%); }
 .hl-wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
 .hl-eyebrow { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--slv2-gold-ink); }
 .hl-cta { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 24px; border-radius: 999px; background: var(--slv2-gold); color: var(--slv2-f900); font-size: 16px; font-weight: 700; text-decoration: none; transition: transform .16s ease; }
@@ -8379,7 +8379,7 @@
    left and the rows become grids. Only transform and opacity ever animate.
    Nothing here matches outside .ls.
    ========================================================================= */
-.ls { --ls-hdr: #F7F3EA; --ls-r: 16px; --ls-r-sm: 10px; --ls-line: var(--slv2-stone); --ls-nav-h: 64px; --ls-cream: #f6efe3;
+.ls { --ls-hdr: #FFFFFF; --ls-r: 16px; --ls-r-sm: 10px; --ls-line: var(--slv2-stone); --ls-nav-h: 64px; --ls-cream: #F5F6F4;
   --ls-shadow: 0 1px 2px rgba(22, 33, 27, .04), 0 10px 26px -18px rgba(22, 33, 27, .22);
   min-height: 100vh; background: var(--slv2-ivory); color: var(--slv2-ink-2); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; overflow-x: clip; }
 .ls .serif { font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-weight: 400; letter-spacing: -.008em; color: var(--slv2-ink); }
