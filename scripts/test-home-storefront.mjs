@@ -61,6 +61,7 @@ const JEWELLERY_PHOTOS = { 'img/home-jewellery-wide.webp': [1891, 831], 'img/hom
 const IMAGES = {
   'img/home-hero-1.webp': [1536, 864], 'img/home-hero-1-800.webp': [800, 450],
   'img/home-hero-2.webp': [1600, 900], 'img/home-hero-2-800.webp': [800, 450],
+  'img/home-hero-diwali.webp': [1280, 720], 'img/home-hero-diwali-800.webp': [800, 450],
   'img/home-fashion-portrait-orange.webp': [800, 1067], 'img/home-tile-nutrition.webp': [900, 563], 'img/home-tile-living.webp': [900, 563],
   'img/home-promo-festive.webp': [1600, 533], 'img/home-promo-festive-800.webp': [800, 267],
   'img/home-cat-wellness.webp': [480, 480], 'img/home-cat-personal-care.webp': [480, 480], 'img/home-cat-fashion.webp': [480, 480],
@@ -87,16 +88,15 @@ const render = (C, props = {}) => (C ? renderToStaticMarkup(h(StaticRouter, { lo
 const hero = render(mod.HomeHero), trust = render(mod.HomeTrustStrip), tiles = render(mod.HomeTiles), stores = render(mod.ExploreStores), promo = render(mod.FestivePromo);
 const all = hero + trust + tiles + stores + promo;
 
-await test('the hero: two slides of the product lineup; the first is the page\'s only h1 — "Everything for everyday wellbeing." with "Shop now" to /shop, over the wide lineup (the juices, Berry Veda and its box) — the second "The Biosash range" with no button (no brand page exists); the first photograph loads at once, the second waits', () => {
+await test('the hero: two slides of the product lineup; the first is the page\'s only h1 — "Everything for everyday wellbeing." with "Shop now" to /shop, over the wide lineup (the juices, Berry Veda and its box) — the second (owner, 2026-11-08) Home & Living: "Dress your home for Diwali." with "Shop bedsheets" to the bedsheets listing; the first photograph loads at once, the second waits', () => {
   const slides = [...hero.matchAll(/<div class="hx-hero__slide hx-hero__slide--([a-z]+)" aria-hidden="(true|false)" aria-roledescription="slide" aria-label="(\d) of 2">([\s\S]*?)<\/div><\/div>(?=<div class="hx-hero__slide|<\/div><\/div><div class="hx-hero__dots")/g)];
-  assert.deepEqual(slides.map((m) => [m[1], m[2], m[3]]), [['everyday', 'false', '1'], ['biosash', 'true', '2']]);
+  assert.deepEqual(slides.map((m) => [m[1], m[2], m[3]]), [['everyday', 'false', '1'], ['homeliving', 'true', '2']]);
   const [one, two] = slides.map((m) => m[4]);
   assert.ok(one.includes('<p class="hx-eyebrow"><span>Wellness · Fashion · Home</span><span><span class="hx-eyebrow__dot" aria-hidden="true"> · </span>Personal care · More</span></p><h1 class="hx-hero__title"><span>Everything for</span> <span class="hx-hl">everyday wellbeing.</span></h1><a class="hx-btn" href="/shop">Shop now <svg'), 'slide 1, in order');
-  assert.ok(two.endsWith('<p class="hx-eyebrow"><span>In the catalogue</span></p><h2 class="hx-hero__title"><span>The Biosash</span> <span class="hx-hl">range</span></h2>'), 'slide 2: a heading, nothing after it');
-  assert.doesNotMatch(two, /<a /, 'and no button');
+  assert.ok(two.includes('<p class="hx-eyebrow"><span>Home &amp; Living</span></p><h2 class="hx-hero__title"><span>Dress your home</span> <span class="hx-hl">for Diwali.</span></h2><a class="hx-btn" tabindex="-1" href="/homeliving/category/bedsheets">Shop bedsheets <svg'), 'slide 2, in order, its button out of the tab order while hidden');
   assert.equal((hero.match(/<h1/g) || []).length, 1, 'one h1');
   assert.match(one, /<picture><source media="\(max-width: 700px\)" srcSet="\/img\/home-hero-2-800\.webp"\/><img alt="Biosash sea buckthorn juices, Berry Veda[^"]+" width="1600" height="900" class="hx-hero__image" src="\/img\/home-hero-2\.webp" loading="eager" decoding="async" fetchPriority="high"\/><\/picture>/, 'slide 1 is the wide lineup, the page\'s largest paint: eager, high priority');
-  assert.match(two, /<picture><source media="\(max-width: 700px\)"\/><img alt="Biosash and Mom’s Trust products[^"]+" width="1536" height="864" class="hx-hero__image" loading="lazy" decoding="async"\/><\/picture>/, 'slide 2 the other lineup, waiting until it is near');
+  assert.match(two, /<picture><source media="\(max-width: 700px\)"\/><img alt="A bed in printed bedsheets[^"]+" width="1280" height="720" class="hx-hero__image" loading="lazy" decoding="async"\/><\/picture>/, 'slide 2 the Diwali bedroom, waiting until it is near');
   assert.match(hero, /<div class="hx-hero__track" style="transform:translateX\(-0%\)">/, 'the track moves on transform');
   assert.match(hero, /<div class="hx-hero__dots" role="group" aria-label="Choose a slide"><button type="button" aria-label="Show slide 1 of 2" aria-pressed="true" class="hx-hero__dot is-on"><\/button><button type="button" aria-label="Show slide 2 of 2" aria-pressed="false" class="hx-hero__dot"><\/button><\/div>/);
 });

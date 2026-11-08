@@ -45,13 +45,13 @@ export const HERO_SLIDES = [
     alt: 'Biosash sea buckthorn juices, Berry Veda and Mom’s Trust care products with berries and marigolds',
   },
   {
-    key: 'biosash',
-    eyebrow: ['In the catalogue'],
-    title: ['The Biosash', 'range'],
-    // No brand page or brand filter exists yet, so this slide has no button.
-    cta: null,
-    image: '/img/home-hero-1.webp', phone: '/img/home-hero-1-800.webp', width: 1536, height: 864,
-    alt: 'Biosash and Mom’s Trust products on a stone slab with sea buckthorn berries and oranges',
+    // Home & Living for the festive season (owner, 2026-11-08): the Biosash lineup slide gave way.
+    key: 'homeliving',
+    eyebrow: ['Home & Living'],
+    title: ['Dress your home', 'for Diwali.'],
+    cta: { label: 'Shop bedsheets', to: '/homeliving/category/bedsheets' },
+    image: '/img/home-hero-diwali.webp', phone: '/img/home-hero-diwali-800.webp', width: 1280, height: 720,
+    alt: 'A bed in printed bedsheets with folded sheets and printed doormats, lit by diyas, a lantern and marigold garlands',
   },
 ];
 
