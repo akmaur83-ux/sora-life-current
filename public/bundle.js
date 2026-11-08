@@ -3225,6 +3225,13 @@ const WELLNESS = {
     more: text$1(30, 'View-all label'),
     link: link('View-all link (empty: the shop)')
   }, 'The Biosash range (Biosash products in stock; hidden while there are none)'),
+  // The offer countdown in every product page's buy box (2026-11-08); gone once it ends.
+  offerCountdown: group({
+    hidden: hidden(),
+    title: text$1(60, 'Offer line'),
+    code: text$1(30, 'Coupon code shown'),
+    endsAt: text$1(16, 'Ends (YYYY-MM-DD HH:MM, India time)')
+  }, 'Offer countdown on product pages'),
   // The visitor's own recently viewed products (this browser only), after the offers (2026-11-08).
   recentlyViewed: group({
     hidden: hidden(),
@@ -31313,18 +31320,18 @@ async function getFashionProductsByIds(ids) {
 const rows = new Map(); // `${store}:${id}` → entry (whatever the store module keeps)
 const known = new Set(); // keys a fetch has answered for, present or not
 const inflight = new Map(); // store → the fetch in progress
-const listeners$4 = new Set();
+const listeners$5 = new Set();
 let cacheVersion = 0; // not `version`: the test loader puts React in scope, which has one
 
 const cacheKey = (store, id) => `${store}:${String(id)}`;
 const getCatalogueCartVersion = () => cacheVersion;
 const subscribeCatalogueCart = fn => {
-  listeners$4.add(fn);
-  return () => listeners$4.delete(fn);
+  listeners$5.add(fn);
+  return () => listeners$5.delete(fn);
 };
 const bumpCatalogueCart = () => {
   cacheVersion += 1;
-  for (const l of listeners$4) l();
+  for (const l of listeners$5) l();
 };
 
 /** A fetch has answered for this store + id — present or gone. */
@@ -31678,10 +31685,10 @@ const EMPTY$3 = Object.freeze({
 });
 let snapshot$2 = EMPTY$3;
 let loading$2 = null;
-const listeners$3 = new Set();
+const listeners$4 = new Set();
 const publish$2 = next => {
   snapshot$2 = next;
-  for (const l of listeners$3) l();
+  for (const l of listeners$4) l();
 };
 const shape$3 = (categories, products) => ({
   categories: (Array.isArray(categories) ? categories : []).filter(c => c && c.is_active !== false),
@@ -31704,9 +31711,9 @@ function loadGroceryCatalogue() {
   return loading$2;
 }
 const subscribe$2 = fn => {
-  listeners$3.add(fn);
+  listeners$4.add(fn);
   if (snapshot$2.status === 'loading') loadGroceryCatalogue();
-  return () => listeners$3.delete(fn);
+  return () => listeners$4.delete(fn);
 };
 const getSnapshot$2 = () => snapshot$2;
 
@@ -32123,10 +32130,10 @@ const EMPTY$2 = Object.freeze({
 });
 let snapshot$1 = EMPTY$2;
 let loading$1 = null;
-const listeners$2 = new Set();
+const listeners$3 = new Set();
 const publish$1 = next => {
   snapshot$1 = next;
-  for (const l of listeners$2) l();
+  for (const l of listeners$3) l();
 };
 const shape$2 = (categories, products) => ({
   categories: (Array.isArray(categories) ? categories : []).filter(c => c && c.is_active !== false),
@@ -32149,9 +32156,9 @@ function loadHomeLivingCatalogue() {
   return loading$1;
 }
 const subscribe$1 = fn => {
-  listeners$2.add(fn);
+  listeners$3.add(fn);
   if (snapshot$1.status === 'loading') loadHomeLivingCatalogue();
-  return () => listeners$2.delete(fn);
+  return () => listeners$3.delete(fn);
 };
 const getSnapshot$1 = () => snapshot$1;
 
@@ -49066,6 +49073,85 @@ function deliveryWindow(now = new Date(), min = DELIVERY_MIN_DAYS, max = DELIVER
   };
 }
 
+// ============================================================
+// The offer countdown in the buy box (owner, 2026-11-08: more features). What it
+// says, the code and when it ends are the admin's (Storefronts → Wellness → Offer
+// countdown); it shows only while that time is ahead and disappears by itself
+// when it passes. The coupon itself, and whether it applies, stay the cart's
+// business: this line never prices anything.
+// ============================================================
+const OFFER_COUNTDOWN = Object.freeze({
+  hidden: false,
+  title: 'Diwali offer: 20% off with code',
+  code: 'DIWALI20',
+  endsAt: '2026-11-15 23:59'
+});
+
+/** 'YYYY-MM-DD HH:MM' in India time → ms since epoch; NaN when unreadable. */
+function parseIndiaTime(text) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/.exec(String(text || '').trim());
+  if (!m) return NaN;
+  const [, y, mo, d, h = '23', mi = '59'] = m;
+  return Date.UTC(+y, +mo - 1, +d, +h, +mi) - 5.5 * 3600 * 1000;
+}
+
+/** '6d 18h 20m' / '4h 05m' / '12m' for the time left; '' when none. */
+function timeLeft(ms) {
+  if (!(ms > 0)) return '';
+  const m = Math.floor(ms / 60000),
+    d = Math.floor(m / 1440),
+    h = Math.floor(m % 1440 / 60),
+    mm = m % 60;
+  if (d > 0) return `${d}d ${h}h ${mm}m`;
+  if (h > 0) return `${h}h ${String(mm).padStart(2, '0')}m`;
+  return `${Math.max(1, mm)}m`;
+}
+
+function OfferCountdown() {
+  const o = useStorefrontSection('wellness', 'offerCountdown', OFFER_COUNTDOWN);
+  const [now, setNow] = reactExports.useState(null);
+  const [copied, setCopied] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  const end = parseIndiaTime(o.endsAt);
+  const left = now == null ? '' : timeLeft(end - now);
+  if (o.hidden || !left) return null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(o.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {/* clipboard off */}
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+    className: "pdpk-offer",
+    role: "note",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+      name: "tag",
+      size: 16
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+      children: [o.title, " ", o.code && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "pdpk-offer__code",
+        onClick: copy,
+        "aria-label": `Copy code ${o.code}`,
+        children: copied ? 'Copied' : o.code
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("em", {
+        children: ["Ends in ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          children: left
+        })]
+      })]
+    })]
+  });
+}
+
+// The buy box's delivery line (deliveryEstimate.js has the rule): the estimated
+// arrival dates while the item can be bought; "Notify me when it is back" while it
+// is out of stock (PdpEngage.jsx). Rendered after mount, so a server render or a
+// page left open past midnight never shows a stale date.
 function PdpDeliveryDate({
   className = '',
   out = false,
@@ -49085,16 +49171,18 @@ function PdpDeliveryDate({
     choice: named
   });
   if (!win) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-    className: `pdpk-eta ${className}`.trim(),
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-      name: "truck",
-      size: 16
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-      children: ["FREE delivery ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
-        children: win.label
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-        children: "Estimated delivery date"
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(OfferCountdown, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: `pdpk-eta ${className}`.trim(),
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "truck",
+        size: 16
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: ["FREE delivery ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          children: win.label
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: "Estimated delivery date"
+        })]
       })]
     })]
   });
@@ -65031,46 +65119,46 @@ function AdminLogin() {
 // the fashion header count, the hearts and /fashion/wishlist.
 // ============================================================
 const FASHION_WISH_KEY = 'sora.fashion.wish.v1';
-let ids = null;
-const listeners$1 = new Set();
-function read() {
-  if (ids) return ids;
+let ids$1 = null;
+const listeners$2 = new Set();
+function read$1() {
+  if (ids$1) return ids$1;
   try {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(FASHION_WISH_KEY) : null;
     const parsed = raw ? JSON.parse(raw) : [];
-    ids = Array.isArray(parsed) ? [...new Set(parsed.map(String))] : [];
+    ids$1 = Array.isArray(parsed) ? [...new Set(parsed.map(String))] : [];
   } catch {
-    ids = [];
+    ids$1 = [];
   }
-  return ids;
+  return ids$1;
 }
-function write(next) {
-  ids = [...new Set(next.map(String))];
+function write$1(next) {
+  ids$1 = [...new Set(next.map(String))];
   try {
-    if (typeof localStorage !== 'undefined') localStorage.setItem(FASHION_WISH_KEY, JSON.stringify(ids));
+    if (typeof localStorage !== 'undefined') localStorage.setItem(FASHION_WISH_KEY, JSON.stringify(ids$1));
   } catch {/* private mode */}
-  for (const l of listeners$1) l();
+  for (const l of listeners$2) l();
 }
 const fashionWishlist = {
-  get: read,
-  has: id => read().includes(String(id)),
+  get: read$1,
+  has: id => read$1().includes(String(id)),
   toggle: id => {
     const key = String(id);
-    const cur = read();
-    write(cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key]);
+    const cur = read$1();
+    write$1(cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key]);
     return !cur.includes(key);
   },
-  remove: id => write(read().filter(x => x !== String(id))),
-  clear: () => write([]),
+  remove: id => write$1(read$1().filter(x => x !== String(id))),
+  clear: () => write$1([]),
   subscribe: fn => {
-    listeners$1.add(fn);
-    return () => listeners$1.delete(fn);
+    listeners$2.add(fn);
+    return () => listeners$2.delete(fn);
   }
 };
 function useFashionWishlist() {
   // The server snapshot is the same cache: without localStorage it is empty,
   // and a harness that seeds it renders what it seeded.
-  const list = reactExports.useSyncExternalStore(fashionWishlist.subscribe, read, read);
+  const list = reactExports.useSyncExternalStore(fashionWishlist.subscribe, read$1, read$1);
   return {
     ids: list,
     count: list.length,
@@ -69522,6 +69610,61 @@ function relatedFor(view, products, limit = 4) {
   return [...same, ...brand, ...rest].slice(0, limit);
 }
 
+// ============================================================
+// Home & Living wishlist — this browser's saved Home & Living products (owner,
+// 2026-11-08: the hearts were inert). The same shape as the fashion list
+// (fashionWishlist.js): localStorage, product ids only, read by the header
+// count, the hearts on cards and the gallery, and /homeliving/wishlist.
+// ============================================================
+const HOMELIVING_WISH_KEY = 'sora.homeliving.wish.v1';
+let ids = null;
+const listeners$1 = new Set();
+function read() {
+  if (ids) return ids;
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(HOMELIVING_WISH_KEY) : null;
+    const parsed = raw ? JSON.parse(raw) : [];
+    ids = Array.isArray(parsed) ? [...new Set(parsed.map(String))] : [];
+  } catch {
+    ids = [];
+  }
+  return ids;
+}
+function write(next) {
+  ids = [...new Set(next.map(String))];
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(HOMELIVING_WISH_KEY, JSON.stringify(ids));
+  } catch {/* private mode */}
+  for (const l of listeners$1) l();
+}
+const homelivingWishlist = {
+  get: read,
+  has: id => read().includes(String(id)),
+  toggle: id => {
+    const key = String(id);
+    const cur = read();
+    write(cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key]);
+    return !cur.includes(key);
+  },
+  remove: id => write(read().filter(x => x !== String(id))),
+  clear: () => write([]),
+  subscribe: fn => {
+    listeners$1.add(fn);
+    return () => listeners$1.delete(fn);
+  }
+};
+function useHomeLivingWishlist() {
+  // The server snapshot is the same cache: without localStorage it is empty,
+  // and a harness that seeds it renders what it seeded.
+  const list = reactExports.useSyncExternalStore(homelivingWishlist.subscribe, read, read);
+  return {
+    ids: list,
+    count: list.length,
+    has: id => list.includes(String(id)),
+    toggle: homelivingWishlist.toggle
+  };
+}
+
 const productHref$1 = product => `/homeliving/p/${product.slug}`;
 function HomeLivingProductCard({
   product,
@@ -69535,6 +69678,8 @@ function HomeLivingProductCard({
   const href = productHref$1(product);
   const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
   const inStock = Number(product.stock) > 0;
+  const wish = useHomeLivingWishlist();
+  const saved = wish.has(product.id);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
     className: `hl-card${layout === 'list' ? ' hl-card--list' : ''}`,
     "data-product": product.slug,
@@ -69558,12 +69703,14 @@ function HomeLivingProductCard({
         })
       }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
         type: "button",
-        className: "hl-card__heart",
-        "aria-label": `Save ${product.name} to wishlist`,
-        "aria-disabled": "true",
+        className: `hl-card__heart${saved ? ' is-on' : ''}`,
+        "aria-label": saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`,
+        "aria-pressed": saved,
+        onClick: () => wish.toggle(product.id),
         children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "heart",
-          size: 16
+          size: 16,
+          fill: saved ? 'currentColor' : 'none'
         })
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -69982,6 +70129,34 @@ function HomeLivingCategory() {
     emptyCopy: `No products in ${node.name} yet — they appear here as they go live.`
   });
 }
+
+function GalleryHeart({
+  id,
+  name
+}) {
+  const wish = useHomeLivingWishlist();
+  const saved = wish.has(id);
+  return /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+    type: "button",
+    className: `hl-gallery__heart${saved ? ' is-on' : ''}`,
+    "aria-label": saved ? `Remove ${name} from wishlist` : `Save ${name} to wishlist`,
+    "aria-pressed": saved,
+    onClick: () => wish.toggle(id),
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+      name: "heart",
+      size: 20,
+      fill: saved ? 'currentColor' : 'none'
+    })
+  });
+}
+
+// ---- Full screen --------------------------------------------------------------------
+// A tap on a gallery image opens it full screen at that image. Two fingers pinch to
+// zoom (up to ZOOM_MAX) and one finger drags a zoomed image about; a swipe left or
+// right moves between images; a tap, a swipe down or Escape closes it, and focus
+// returns to the image that opened it. With a mouse a click zooms in at the point and
+// out again, the wheel zooms, a drag pans, ← → move and × or Escape closes. Pointer
+// events only; the page under it does not scroll. Only transform and opacity animate.
 
 const ZOOM_MAX = 4;
 const TAP_SLOP = 10; // px a press may wander and still be a tap
@@ -70479,15 +70654,9 @@ function Gallery$1({
           name: "award",
           size: 15
         }), " ", badge]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-        type: "button",
-        className: "hl-gallery__heart",
-        "aria-label": `Save ${view.name} to wishlist`,
-        "aria-disabled": "true",
-        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "heart",
-          size: 20
-        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(GalleryHeart, {
+        id: view.id,
+        name: view.name
       }), images.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
         className: "hl-gallery__count",
         "aria-hidden": "true",
@@ -72727,16 +72896,7 @@ function HomeLivingHeader({
               size: 15
             })]
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-          type: "button",
-          className: "hl-hdr__act",
-          "aria-label": "Wishlist",
-          "aria-disabled": "true",
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "heart",
-            size: 24
-          })
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(WishLink, {}), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
           to: "/cart",
           className: "hl-hdr__act",
           "aria-label": `Cart${cartCount ? `, ${cartCount} items` : ''}`,
@@ -72757,6 +72917,23 @@ function HomeLivingHeader({
     children: [bar, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hl-tools hl-tools--bar",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeliveryRow, {}), /*#__PURE__*/jsxRuntimeExports.jsx(SearchBar, {})]
+    })]
+  });
+}
+
+/** The header heart: this browser's Home & Living wishlist, with its count. */
+function WishLink() {
+  const wish = useHomeLivingWishlist();
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+    to: "/homeliving/wishlist",
+    className: "hl-hdr__act",
+    "aria-label": `Wishlist${wish.count ? `, ${wish.count} items` : ''}`,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+      name: "heart",
+      size: 24
+    }), wish.count > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "hl-hdr__count",
+      children: wish.count
     })]
   });
 }
@@ -73374,6 +73551,52 @@ function HomeLivingSearch() {
       children: results.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingProductCard, {
         product: p,
         layout: "grid",
+        mediaLoading: i < 2 ? 'eager' : 'lazy'
+      }, p.id))
+    })]
+  });
+}
+
+function HomeLivingWishlist() {
+  const wish = useHomeLivingWishlist();
+  const {
+    status,
+    products
+  } = useHomeLivingCatalogue();
+  const byId = new Map(products.map(p => [String(p.id), p]));
+  const saved = [...wish.ids].reverse().map(id => byId.get(String(id))).filter(Boolean);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hl-wrap hl-listing",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
+      trail: [{
+        name: 'Home & Living',
+        href: '/homeliving'
+      }, {
+        name: 'Wishlist'
+      }]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-listing__bar",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "hl-listing__h serif",
+        children: "Your wishlist"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hl-listing__count",
+        role: "status",
+        children: status === 'loading' ? 'Loading…' : `${saved.length} ${saved.length === 1 ? 'product' : 'products'}`
+      })]
+    }), saved.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-empty hl-empty--listing",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        children: status === 'loading' ? 'Loading your wishlist…' : 'Nothing saved yet. Tap the heart on any product to keep it here.'
+      }), status !== 'loading' && /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: "/homeliving",
+        className: "hl-btn",
+        children: "Browse Home & Living"
+      })]
+    }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hl-grid",
+      children: saved.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingProductCard, {
+        product: p,
         mediaLoading: i < 2 ? 'eager' : 'lazy'
       }, p.id))
     })]
@@ -74768,6 +74991,9 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "search",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingSearch, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "wishlist",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingWishlist, {})
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
         path: "/lifestyle",

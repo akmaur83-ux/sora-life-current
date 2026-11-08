@@ -8843,6 +8843,10 @@
 /* The search bar works (2026-11-08): its suggestions hang under it. */
 .hl .hl-search { position: relative; }
 .hl .hl-search input { cursor: text; }
+/* The hearts save to the Home & Living wishlist (2026-11-08; they were inert). */
+.hl .hl-card__heart { cursor: pointer; }
+.hl .hl-card__heart.is-on, .hl .hl-gallery__heart.is-on { color: #C0392B; }
+.hl .hl-card__heart:focus-visible, .hl .hl-gallery__heart:focus-visible { outline: 2px solid #007185; outline-offset: 2px; }
 
 /* ═══ src/styles/lifestyle.css ═══ */
 /* ============================================================================
