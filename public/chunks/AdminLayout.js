@@ -50,6 +50,9 @@ const NAV = [{
   to: '/admin/homepage',
   label: 'Homepage'
 }, {
+  to: '/admin/reviews',
+  label: 'Reviews'
+}, {
   to: '/admin/storefronts',
   label: 'Storefronts'
 }, {

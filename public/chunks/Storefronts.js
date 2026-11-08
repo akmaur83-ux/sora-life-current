@@ -1,4 +1,4 @@
-import { bA as supabase, j as jsxRuntimeExports, bP as POSITION_LABELS, r as reactExports, bD as safeVisualUrl, bQ as HERO_SECTION, bR as TRUST_SECTION, bS as TILES_SECTION, bT as STORES_SECTION, bU as FESTIVE_SECTION, bV as NEW_ARRIVALS_SECTION, bW as LIFESTYLE_SECTION, bX as JEWELLERY_BANNER_SECTION, bY as STORE_CAROUSEL_SECTION, bZ as DELIVERY_STRIP, b_ as BENEFITS_STRIP, b$ as DEPARTMENT_SECTIONS, c0 as JEWELLERY_SECTIONS, c1 as HOMELIVING_SECTIONS, c2 as GROCERY_SECTIONS, c3 as STOREFRONT_CONTENT_STORES, c as Link, c4 as STOREFRONT_LABELS, c5 as normalizeFashionStorefront, c6 as normalizeLifestyleStorefront, c7 as sectionSpec, c8 as sectionContent, c9 as validateStorefrontContent } from '../bundle.js';
+import { bA as supabase, j as jsxRuntimeExports, bR as POSITION_LABELS, r as reactExports, bD as safeVisualUrl, bS as HERO_SECTION, bT as TRUST_SECTION, bU as TILES_SECTION, bV as STORES_SECTION, bW as FESTIVE_SECTION, bX as NEW_ARRIVALS_SECTION, bY as BIOSASH_SECTION, bZ as BEDSHEETS_SECTION, b_ as LIFESTYLE_SECTION, b$ as JEWELLERY_BANNER_SECTION, c0 as STORE_CAROUSEL_SECTION, c1 as LUXURY_BEDS_SECTION, c2 as DELIVERY_STRIP, c3 as BENEFITS_STRIP, c4 as DEPARTMENT_SECTIONS, c5 as JEWELLERY_SECTIONS, c6 as HOMELIVING_SECTIONS, c7 as GROCERY_SECTIONS, c8 as STOREFRONT_CONTENT_STORES, c as Link, c9 as STOREFRONT_LABELS, ca as normalizeFashionStorefront, cb as normalizeLifestyleStorefront, cc as sectionSpec, cd as sectionContent, ce as validateStorefrontContent } from '../bundle.js';
 import { c as claimWarnings, C as CLAIM_KINDS, u as uploadStorefrontImage } from './claimWarnings.js';
 
 // ============================================================
@@ -573,6 +573,12 @@ const SECTION_PAGES = Object.freeze({
       path: 'newArrivals',
       defaults: NEW_ARRIVALS_SECTION
     }, {
+      path: 'biosash',
+      defaults: BIOSASH_SECTION
+    }, {
+      path: 'bedsheets',
+      defaults: BEDSHEETS_SECTION
+    }, {
       path: 'lifestyleBanner',
       defaults: LIFESTYLE_SECTION
     }, {
@@ -581,6 +587,9 @@ const SECTION_PAGES = Object.freeze({
     }, {
       path: 'storeCarousel',
       defaults: STORE_CAROUSEL_SECTION
+    }, {
+      path: 'luxuryBeds',
+      defaults: LUXURY_BEDS_SECTION
     }]
   }],
   fashion: [{
