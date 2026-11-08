@@ -1323,3 +1323,52 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .v2-pdp-root .buybar__buy { background:#C2500A; border-color:#C2500A; color:#fff; }
 .v2-pdp-root .buybar__buy:disabled { background:#F0F2F2; border-color:#D5D9D9; color:#8A8F8F; }
 
+/* Third pass (owner, 2026-11-08): calmer, closer to the marketplace reference. */
+.pdpk-pricebox { flex-basis:100%; }
+.pdpk-price { display:flex; align-items:flex-start; gap:10px; margin:0; line-height:1; }
+.pdpk-price__off { font-size:26px; font-weight:300; color:var(--az-red); }
+.pdpk-price__now { font-size:28px; font-weight:400; color:var(--az-ink); }
+.pdpk-price__now sup { font-size:13px; top:auto; vertical-align:13px; margin-right:1px; }
+.pdpk-price__mrp { margin:6px 0 0; font-size:12.5px; color:var(--az-ink-2); }
+.pdpk-price__tbd { font-size:18px; color:var(--az-ink-2); }
+.v2-pdp-root .pdp__price { display:block; }
+.v2-pdp-root .pdp__price .pdpk-save { margin-top:8px; font-size:13px; }
+.v2-pdp-root .pdp__price .pdp__tax { display:block; margin-top:4px; font-size:13px; }
+.v2-pdp-root .pdp__bbprice .pdpk-price__mrp { display:none; }
+.v2-pdp-root .pdp__bbprice .pdpk-price__now { font-size:28px; }
+
+@media (min-width:1200px) {
+  .v2-pdp-root .pdp.v2-wrap { grid-template-columns:minmax(0, 1.4fr) minmax(0, 1fr) 270px; column-gap:32px; }
+}
+.v2-pdp-root .pdp__zoom-label { display:none; }
+.v2-pdp-root .pdp__galbtn { width:40px; height:40px; border:1px solid #E3E6E6; box-shadow:none; background:rgba(255,255,255,.95); }
+.v2-pdp-root .pdp__thumb { border:1px solid #D5D9D9; }
+.v2-pdp-root .pdp__thumb.active { border-color:var(--az-teal); box-shadow:0 0 0 2px rgba(0,113,133,.25); }
+.v2-pdp-root .pdp__main { border:0; }
+
+.v2-pdp-root .pdp-coupons { border:0; border-top:1px solid #E7E7E7; margin-top:12px; padding-top:4px; }
+.v2-pdp-root .pdp-coupons__head { padding:10px 0; border:0; background:none; font-size:16px; font-weight:700; color:var(--az-ink); }
+.v2-pdp-root .pdp-coupons__count { display:none; }
+.v2-pdp-root .pdp-coupons__list { padding:0 0 12px; }
+.v2-pdp-root .pdp-coupon { box-shadow:0 0 14px rgba(0,0,0,.05); }
+.v2-pdp-root .pdp-coupon__apply { padding:5px 12px; border:1px solid #8D9096; background:#fff; color:var(--az-ink); text-decoration:none; }
+.v2-pdp-root .pdp-offers { background:#fff; border:0; border-top:1px solid #E7E7E7; }
+.v2-pdp-root .pdp-claims { margin:10px 0; }
+
+.v2-pdp-root .pdp__buybox { padding:16px 18px; border:1px solid #D5D9D9; }
+.v2-pdp-root .pdp__buybox .pdp__buy .qty { height:36px; border:1px solid #D5D9D9; background:#F0F2F2; }
+.v2-pdp-root .pdp__buybox .pdp__buy .qty button { width:34px; height:34px; }
+.v2-pdp-root .pdp__buybox .pdp__buy .qty span { min-width:28px; text-align:center; font-size:13px; }
+.v2-pdp-root .pdp__buybox .pdp__addbtn, .v2-pdp-root .pdp__buybox .pdp__buynow { min-height:38px; }
+.v2-pdp-root .pdp__buybox .pdp__addbtn svg { display:none; }
+.v2-pdp-root .pdp__buybox .pdp-deliver { margin-top:14px; padding-top:12px; border-top:1px solid #E7E7E7; }
+.v2-pdp-root .pdp__buybox input { height:34px; font-size:13px; }
+.v2-pdp-root .pdp__buybox button.v2-btn--ghost:not(.pdp__buynow) { min-height:34px; }
+@media (max-width:599px) {
+  .pdpk-price__off { font-size:22px; }
+  .pdpk-price__now { font-size:24px; }
+}
+@media (min-width:1400px) {
+  .v2-pdp-root > .v2-wrap, .v2-pdp-root .pdp.v2-wrap { max-width:1520px; }
+}
+

@@ -32,7 +32,8 @@ import { useStore } from '../../lib/store.jsx';
 export default function PdpCouponSlot({ product, variantId = null }) {
   const { couponCode, dispatch, toast } = useStore();
   const [offers, setOffers] = useState([]);
-  const [open, setOpen] = useState(false);
+  // Open by default (owner, 2026-11-08): offers are shown, as on a marketplace page.
+  const [open, setOpen] = useState(true);
 
   const productId = product?.id ?? null;
 

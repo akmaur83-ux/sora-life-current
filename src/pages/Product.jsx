@@ -27,7 +27,7 @@ import PdpStorySlot from '../components/pdp/PdpStorySlot.jsx';
 import ProductClaims from '../components/pdp/ProductClaims.jsx';
 import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
-import { PdpAssuranceStrip, PdpAssurances, PdpSaving, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
+import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
 import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
 import { promotionsSource } from '../lib/promotions.js';
 
@@ -283,7 +283,7 @@ useEffect(() => {
               saving, and the tax note. PriceTag already emits them as a row;
               the row just has to stay a row. */}
           <div className="pdp__price">
-            <PriceTag product={product} size="lg" variant={variant} v2 />
+            <PdpPrice product={product} variant={variant} />
             <PdpSaving product={product} variant={variant} />
             <span className="pdp__tax">Incl. of all taxes</span>
           </div>
@@ -352,7 +352,7 @@ useEffect(() => {
             cart and Buy now, delivery, and the facts every order shares. A third column
             on a desktop; under the details on a tablet and a phone. */}
         <aside className="pdp__buybox" aria-label="Buy">
-          <div className="pdp__bbprice"><PriceTag product={product} showOff={false} variant={variant} v2 /></div>
+          <div className="pdp__bbprice"><PdpPrice product={{ ...product, discountPct: 0 }} variant={variant ? { ...variant, discountPct: 0 } : null} /></div>
           <div className="pdp__stock">
             {out ? <span className="v2-badge v2-badge--out">Out of stock</span>
               : lowStock ? <span className="v2-badge"><Icon name="clock" size={13} /> Only {product.stock} left</span>

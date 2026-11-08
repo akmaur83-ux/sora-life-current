@@ -65,3 +65,30 @@ export function titleParts(name) {
   if (w.length < 4) return [main + tail, '', ''];
   return [w.slice(0, 1).join(' '), w.slice(1, -1).join(' '), w[w.length - 1] + tail];
 }
+
+/** The chosen pack's (or product's) price, M.R.P. and discount, for the price block. */
+export function priceParts(product, variant = null) {
+  const price = Number(variant?.price ?? product?.price) || 0;
+  const mrp = Number(variant?.mrp ?? product?.mrp) || 0;
+  const pct = variant
+    ? (variant.discountPct ?? (mrp > price && mrp > 0 ? Math.round(((mrp - price) / mrp) * 100) : 0))
+    : (product?.discountPct || 0);
+  return { price, mrp: mrp > price ? mrp : 0, pct };
+}
+
+const digits = (n, currency) => money(n, currency).replace(/^[^0-9]+/, '');
+
+/** "-18% ₹656" with a small raised ₹, M.R.P. under it — the marketplace price block. */
+export function PdpPrice({ product, variant = null }) {
+  if (product?.priceVerified === false) return <p className="pdpk-price"><span className="pdpk-price__tbd">Price coming soon</span></p>;
+  const { price, mrp, pct } = priceParts(product, variant);
+  return (
+    <div className="pdpk-pricebox">
+      <p className="pdpk-price">
+        {pct > 0 && <span className="pdpk-price__off">-{pct}%</span>}
+        <span className="pdpk-price__now"><sup>₹</sup>{digits(price, product.currency)}</span>
+      </p>
+      {mrp > 0 && <p className="pdpk-price__mrp">M.R.P.: <s>{money(mrp, product.currency)}</s></p>}
+    </div>
+  );
+}
