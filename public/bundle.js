@@ -41469,6 +41469,393 @@ async function setReviewStatus(id, status, client = supabase) {
   if (error) throw error;
 }
 
+// ============================================================
+// Product questions and stock alerts (migration 0042; owner, 2026-11-08: more
+// features). Same key as reviews: '<store>:<id>'.
+//
+//   questions   a signed-in customer asks; an admin answers and publishes; the
+//               product page shows published ones (never who asked, beyond the
+//               name they chose).
+//   alerts      "Notify me when it is back" on an out-of-stock product: an email
+//               and the size/colour wanted, readable only by an admin.
+// ============================================================
+const QUESTION_COLUMNS = 'id, product_key, question, author_name, answer, status, created_at, answered_at';
+const EMAIL = /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i;
+async function fetchPublishedQuestions(key, client = supabase) {
+  if (!client || !key) return [];
+  const {
+    data,
+    error
+  } = await client.from('product_questions').select(QUESTION_COLUMNS).eq('product_key', key).eq('status', 'published').order('answered_at', {
+    ascending: false
+  }).limit(50);
+  return error || !Array.isArray(data) ? [] : data;
+}
+async function submitQuestion({
+  key,
+  question,
+  authorName
+}, client = supabase) {
+  const q = String(question || '').trim();
+  const name = String(authorName || '').trim();
+  if (q.length < 10) return {
+    ok: false,
+    message: 'Write at least 10 characters.'
+  };
+  if (q.length > 500) return {
+    ok: false,
+    message: 'Keep the question under 500 characters.'
+  };
+  if (!name || name.length > 60) return {
+    ok: false,
+    message: 'Add the name to show with your question.'
+  };
+  const {
+    error
+  } = await client.from('product_questions').insert({
+    product_key: key,
+    question: q,
+    author_name: name
+  });
+  return error ? {
+    ok: false,
+    message: 'Your question could not be sent. Please try again.'
+  } : {
+    ok: true,
+    message: 'Thank you. We will answer it here, usually within a day.'
+  };
+}
+async function requestStockAlert({
+  key,
+  name,
+  choice,
+  email
+}, client = supabase) {
+  const e = String(email || '').trim();
+  if (!EMAIL.test(e) || e.length > 254) return {
+    ok: false,
+    message: 'Enter a valid email address.'
+  };
+  const {
+    error
+  } = await client.from('stock_alerts').insert({
+    product_key: key,
+    product_name: String(name || '').slice(0, 200) || 'Product',
+    choice: String(choice || '').slice(0, 80),
+    email: e
+  });
+  if (!error) return {
+    ok: true,
+    message: 'Done. We will email you when it is back in stock.'
+  };
+  if (error.code === '23505') return {
+    ok: true,
+    message: 'You are already on the list for this one.'
+  };
+  return {
+    ok: false,
+    message: 'That did not go through. Please try again.'
+  };
+}
+
+// ---- admin ----
+async function fetchQuestionsForAdmin(status = 'pending', client = supabase) {
+  const {
+    data,
+    error
+  } = await client.from('product_questions').select(QUESTION_COLUMNS).eq('status', status).order('created_at', {
+    ascending: false
+  }).limit(300);
+  if (error) throw error;
+  return data || [];
+}
+async function answerQuestion(id, answer, client = supabase) {
+  const a = String(answer || '').trim();
+  if (!a) throw new Error('Write an answer first.');
+  const {
+    error
+  } = await client.from('product_questions').update({
+    answer: a,
+    status: 'published',
+    answered_at: new Date().toISOString()
+  }).eq('id', id);
+  if (error) throw error;
+}
+async function rejectQuestion(id, client = supabase) {
+  const {
+    error
+  } = await client.from('product_questions').update({
+    status: 'rejected'
+  }).eq('id', id);
+  if (error) throw error;
+}
+async function fetchStockAlerts(open = true, client = supabase) {
+  let q = client.from('stock_alerts').select('id, product_key, product_name, choice, email, created_at, notified_at').order('created_at', {
+    ascending: false
+  }).limit(500);
+  q = open ? q.is('notified_at', null) : q.not('notified_at', 'is', null);
+  const {
+    data,
+    error
+  } = await q;
+  if (error) throw error;
+  return data || [];
+}
+async function markAlertsNotified(ids, client = supabase) {
+  const {
+    error
+  } = await client.from('stock_alerts').update({
+    notified_at: new Date().toISOString()
+  }).in('id', ids);
+  if (error) throw error;
+}
+
+/** Open alerts grouped by product and choice, most wanted first. */
+function groupAlerts(rows = []) {
+  const m = new Map();
+  for (const r of rows) {
+    const k = `${r.product_key}|${r.choice}`;
+    if (!m.has(k)) m.set(k, {
+      key: k,
+      product_key: r.product_key,
+      product_name: r.product_name,
+      choice: r.choice,
+      rows: []
+    });
+    m.get(k).rows.push(r);
+  }
+  return [...m.values()].sort((a, b) => b.rows.length - a.rows.length);
+}
+
+/** Where a product_key's page lives, for the admin's links. */
+function productHref$3(key) {
+  const [store, id] = String(key || '').split(':');
+  if (store === 'wellness') return `/admin/products/${id}/edit`;
+  if (store === 'fashion' || store === 'homeliving') return `/admin/store-catalogue/${store}/${id}`;
+  return '';
+}
+
+function PdpQuestions({
+  productKey,
+  productName
+}) {
+  const {
+    user
+  } = useCustomerAuth();
+  const [rows, setRows] = reactExports.useState(null);
+  const [open, setOpen] = reactExports.useState(false);
+  const [form, setForm] = reactExports.useState({
+    question: '',
+    authorName: ''
+  });
+  const [sending, setSending] = reactExports.useState(false);
+  const [note, setNote] = reactExports.useState(null);
+  const [filter, setFilter] = reactExports.useState('');
+  reactExports.useEffect(() => {
+    let live = true;
+    setRows(null);
+    fetchPublishedQuestions(productKey).then(r => {
+      if (live) setRows(r);
+    });
+    return () => {
+      live = false;
+    };
+  }, [productKey]);
+  const send = async e => {
+    e.preventDefault();
+    setSending(true);
+    const res = await submitQuestion({
+      key: productKey,
+      ...form
+    });
+    setSending(false);
+    setNote(res);
+    if (res.ok) {
+      setOpen(false);
+      setForm({
+        question: '',
+        authorName: ''
+      });
+    }
+  };
+  const f = filter.trim().toLowerCase();
+  const shown = (rows || []).filter(q => !f || `${q.question} ${q.answer}`.toLowerCase().includes(f));
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "pdpk-qa",
+    "aria-labelledby": "pdpk-qa-h",
+    id: "questions",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      className: "pdpk-h pdpk-h--lg",
+      id: "pdpk-qa-h",
+      children: "Customer questions & answers"
+    }), (rows || []).length > 3 && /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+      className: "pdpk-qa__search",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "search",
+        size: 16
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+        type: "search",
+        placeholder: "Search the answers",
+        value: filter,
+        onChange: e => setFilter(e.target.value),
+        "aria-label": "Search questions and answers"
+      })]
+    }), rows === null ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "pdpk-qa__empty",
+      children: "Loading questions\u2026"
+    }) : rows.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "pdpk-qa__empty",
+      children: "No questions yet. Ask the first one and we will answer it here."
+    }) : /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+      className: "pdpk-qa__list",
+      children: [shown.slice(0, 10).map(q => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "pdpk-qa__item",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("dt", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Question:"
+          }), " ", q.question]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("dd", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Answer:"
+          }), " ", q.answer, /*#__PURE__*/jsxRuntimeExports.jsxs("em", {
+            children: ["SORA Lifestyle \xB7 ", new Date(q.answered_at || q.created_at).toLocaleDateString('en-IN', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric'
+            }), " \xB7 asked by ", q.author_name]
+          })]
+        })]
+      }, q.id)), shown.length === 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "pdpk-qa__empty",
+        children: ["No answer matches \u201C", filter, "\u201D."]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "pdpk-qa__ask",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        children: "Don\u2019t see your answer?"
+      }), user ? /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "pdpk-rev__btn",
+        onClick: () => {
+          setOpen(o => !o);
+          setNote(null);
+        },
+        "aria-expanded": open,
+        children: "Ask a question"
+      }) : /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+        className: "pdpk-rev__btn",
+        href: "/account",
+        children: "Sign in to ask a question"
+      }), note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: `pdpk-rev__note ${note.ok ? 'is-ok' : 'is-bad'}`,
+        role: "status",
+        children: note.message
+      })]
+    }), open && user && /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+      className: "pdpk-rev__form pdpk-qa__form",
+      onSubmit: send,
+      "aria-label": `Ask about ${productName}`,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        children: ["Your question", /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
+          rows: 3,
+          value: form.question,
+          maxLength: 500,
+          onChange: e => setForm({
+            ...form,
+            question: e.target.value
+          }),
+          required: true
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        children: ["Your name (shown with the question)", /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          value: form.authorName,
+          maxLength: 60,
+          onChange: e => setForm({
+            ...form,
+            authorName: e.target.value
+          }),
+          required: true
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "submit",
+        className: "pdpk-rev__submit",
+        disabled: sending,
+        children: sending ? 'Sending…' : 'Submit question'
+      })]
+    })]
+  });
+}
+function PdpNotifyMe({
+  productKey,
+  productName,
+  choice = ''
+}) {
+  const {
+    user
+  } = useCustomerAuth();
+  const [email, setEmail] = reactExports.useState('');
+  const [sending, setSending] = reactExports.useState(false);
+  const [note, setNote] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    if (user?.email) setEmail(e => e || user.email);
+  }, [user?.email]);
+  reactExports.useEffect(() => {
+    setNote(null);
+  }, [productKey, choice]);
+  const send = async e => {
+    e.preventDefault();
+    setSending(true);
+    setNote(await requestStockAlert({
+      key: productKey,
+      name: productName,
+      choice,
+      email
+    }));
+    setSending(false);
+  };
+  if (!productKey) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+    className: "pdpk-notify",
+    onSubmit: send,
+    "aria-label": "Notify me when back in stock",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "pdpk-notify__h",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "bell",
+        size: 16
+      }), " Out of stock", choice ? ` in ${choice}` : '']
+    }), note?.ok ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "pdpk-notify__ok",
+      role: "status",
+      children: note.message
+    }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "pdpk-notify__t",
+        children: "Leave your email and we will tell you when it is back."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "pdpk-notify__row",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          type: "email",
+          required: true,
+          value: email,
+          onChange: e => setEmail(e.target.value),
+          placeholder: "you@example.com",
+          "aria-label": "Email address",
+          autoComplete: "email"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "submit",
+          disabled: sending,
+          children: sending ? '…' : 'Notify me'
+        })]
+      }), note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "pdpk-notify__bad",
+        role: "status",
+        children: note.message
+      })]
+    })]
+  });
+}
+
 const STRIP$1 = [{
   icon: 'leaf',
   label: 'Premium Wellness'
@@ -42139,164 +42526,169 @@ function PdpReviews({
       });
     }
   };
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: "pdpk-rev",
-    "aria-labelledby": "pdpk-rev-h",
-    id: "reviews",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "pdpk-rev__side",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        className: "pdpk-h pdpk-h--lg",
-        id: "pdpk-rev-h",
-        children: "Customer reviews"
-      }), sum.count > 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-          className: "pdpk-rev__avg",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx(StarRow, {
-            value: sum.average,
-            size: 18
-          }), " ", /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
-            children: [sum.average.toFixed(1), " out of 5"]
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-          className: "pdpk-rev__n",
-          children: [sum.count.toLocaleString('en-IN'), " ", sum.count === 1 ? 'rating' : 'ratings']
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-          className: "pdpk-rev__bars",
-          children: sum.bars.map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              children: [b.stars, " star"]
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              className: "pdpk-rev__bar",
-              children: /*#__PURE__*/jsxRuntimeExports.jsx("i", {
-                style: {
-                  width: `${b.pct}%`
-                }
-              })
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              children: [b.pct, "%"]
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "pdpk-rev",
+      "aria-labelledby": "pdpk-rev-h",
+      id: "reviews",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "pdpk-rev__side",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "pdpk-h pdpk-h--lg",
+          id: "pdpk-rev-h",
+          children: "Customer reviews"
+        }), sum.count > 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            className: "pdpk-rev__avg",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(StarRow, {
+              value: sum.average,
+              size: 18
+            }), " ", /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+              children: [sum.average.toFixed(1), " out of 5"]
             })]
-          }, b.stars))
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            className: "pdpk-rev__n",
+            children: [sum.count.toLocaleString('en-IN'), " ", sum.count === 1 ? 'rating' : 'ratings']
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+            className: "pdpk-rev__bars",
+            children: sum.bars.map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                children: [b.stars, " star"]
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "pdpk-rev__bar",
+                children: /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+                  style: {
+                    width: `${b.pct}%`
+                  }
+                })
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                children: [b.pct, "%"]
+              })]
+            }, b.stars))
+          })]
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "pdpk-rev__n",
+          children: reviews === null ? 'Loading reviews…' : 'No reviews yet. Be the first to share your thoughts.'
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "pdpk-rev__cta",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+            children: "Review this product"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            children: "Share your thoughts with other customers"
+          }), user ? /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: "pdpk-rev__btn",
+            onClick: () => {
+              setOpen(o => !o);
+              setNote(null);
+            },
+            "aria-expanded": open,
+            children: "Write a product review"
+          }) : /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+            className: "pdpk-rev__btn",
+            href: "/account",
+            children: "Sign in to write a review"
+          }), note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: `pdpk-rev__note ${note.ok ? 'is-ok' : 'is-bad'}`,
+            role: "status",
+            children: note.message
+          })]
         })]
-      }) : /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "pdpk-rev__n",
-        children: reviews === null ? 'Loading reviews…' : 'No reviews yet. Be the first to share your thoughts.'
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "pdpk-rev__cta",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-          children: "Review this product"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: "Share your thoughts with other customers"
-        }), user ? /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-          type: "button",
-          className: "pdpk-rev__btn",
-          onClick: () => {
-            setOpen(o => !o);
-            setNote(null);
-          },
-          "aria-expanded": open,
-          children: "Write a product review"
-        }) : /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-          className: "pdpk-rev__btn",
-          href: "/account",
-          children: "Sign in to write a review"
-        }), note && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: `pdpk-rev__note ${note.ok ? 'is-ok' : 'is-bad'}`,
-          role: "status",
-          children: note.message
-        })]
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "pdpk-rev__main",
-      children: [open && user && /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
-        className: "pdpk-rev__form",
-        onSubmit: send,
-        "aria-label": `Review ${productName}`,
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
-            children: "Overall rating"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-            className: "pdpk-rev__pick",
-            children: [1, 2, 3, 4, 5].map(n => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-              type: "button",
-              "aria-label": `${n} star${n > 1 ? 's' : ''}`,
-              "aria-pressed": form.rating === n,
-              className: form.rating >= n ? 'is-on' : undefined,
-              onClick: () => setForm({
+        className: "pdpk-rev__main",
+        children: [open && user && /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+          className: "pdpk-rev__form",
+          onSubmit: send,
+          "aria-label": `Review ${productName}`,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("fieldset", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("legend", {
+              children: "Overall rating"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+              className: "pdpk-rev__pick",
+              children: [1, 2, 3, 4, 5].map(n => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+                type: "button",
+                "aria-label": `${n} star${n > 1 ? 's' : ''}`,
+                "aria-pressed": form.rating === n,
+                className: form.rating >= n ? 'is-on' : undefined,
+                onClick: () => setForm({
+                  ...form,
+                  rating: n
+                }),
+                children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                  name: "star",
+                  size: 26
+                })
+              }, n))
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+            children: ["Your name (shown with the review)", /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+              value: form.authorName,
+              maxLength: 60,
+              onChange: e => setForm({
                 ...form,
-                rating: n
+                authorName: e.target.value
               }),
-              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                name: "star",
-                size: 26
+              required: true
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+            children: ["Title (optional)", /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+              value: form.title,
+              maxLength: 120,
+              onChange: e => setForm({
+                ...form,
+                title: e.target.value
               })
-            }, n))
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+            children: ["Your review", /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
+              rows: 5,
+              value: form.body,
+              maxLength: 2000,
+              onChange: e => setForm({
+                ...form,
+                body: e.target.value
+              }),
+              required: true
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "submit",
+            className: "pdpk-rev__submit",
+            disabled: sending,
+            children: sending ? 'Sending…' : 'Submit review'
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-          children: ["Your name (shown with the review)", /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-            value: form.authorName,
-            maxLength: 60,
-            onChange: e => setForm({
-              ...form,
-              authorName: e.target.value
-            }),
-            required: true
+        }), (reviews || []).slice(0, 20).map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
+          className: "pdpk-rev__item",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            className: "pdpk-rev__who",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "pdpk-rev__avatar",
+              "aria-hidden": "true",
+              children: String(r.author_name || '?').slice(0, 1).toUpperCase()
+            }), r.author_name]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            className: "pdpk-rev__head",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(StarRow, {
+              value: r.rating,
+              size: 15
+            }), " ", r.title && /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: r.title
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            className: "pdpk-rev__date",
+            children: ["Reviewed on ", new Date(r.created_at).toLocaleDateString('en-IN', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "pdpk-rev__body",
+            children: r.body
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-          children: ["Title (optional)", /*#__PURE__*/jsxRuntimeExports.jsx("input", {
-            value: form.title,
-            maxLength: 120,
-            onChange: e => setForm({
-              ...form,
-              title: e.target.value
-            })
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
-          children: ["Your review", /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
-            rows: 5,
-            value: form.body,
-            maxLength: 2000,
-            onChange: e => setForm({
-              ...form,
-              body: e.target.value
-            }),
-            required: true
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-          type: "submit",
-          className: "pdpk-rev__submit",
-          disabled: sending,
-          children: sending ? 'Sending…' : 'Submit review'
-        })]
-      }), (reviews || []).slice(0, 20).map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("article", {
-        className: "pdpk-rev__item",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-          className: "pdpk-rev__who",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            className: "pdpk-rev__avatar",
-            "aria-hidden": "true",
-            children: String(r.author_name || '?').slice(0, 1).toUpperCase()
-          }), r.author_name]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-          className: "pdpk-rev__head",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx(StarRow, {
-            value: r.rating,
-            size: 15
-          }), " ", r.title && /*#__PURE__*/jsxRuntimeExports.jsx("b", {
-            children: r.title
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-          className: "pdpk-rev__date",
-          children: ["Reviewed on ", new Date(r.created_at).toLocaleDateString('en-IN', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "pdpk-rev__body",
-          children: r.body
-        })]
-      }, r.id))]
+        }, r.id))]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpQuestions, {
+      productKey: productKey,
+      productName: productName
     })]
   });
 }
@@ -48474,12 +48866,23 @@ function deliveryWindow(now = new Date(), min = DELIVERY_MIN_DAYS, max = DELIVER
 }
 
 function PdpDeliveryDate({
-  className = ''
+  className = '',
+  out = false,
+  productKey = '',
+  productName = '',
+  choice = ''
 }) {
   const [win, setWin] = reactExports.useState(null);
   reactExports.useEffect(() => {
     setWin(deliveryWindow(new Date()));
   }, []);
+  // "Free Size · As shown" says nothing to a customer: only a real size or colour is named.
+  const named = String(choice || '').split('·').map(x => x.trim()).filter(x => x && !/^(free size|one size|as shown)$/i.test(x)).join(' · ');
+  if (out) return /*#__PURE__*/jsxRuntimeExports.jsx(PdpNotifyMe, {
+    productKey: productKey,
+    productName: productName,
+    choice: named
+  });
   if (!win) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
     className: `pdpk-eta ${className}`.trim(),
@@ -49767,7 +50170,12 @@ function Product() {
               discountPct: 0
             } : null
           })
-        }), !out && /*#__PURE__*/jsxRuntimeExports.jsx(PdpDeliveryDate, {}), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpDeliveryDate, {
+          out: out,
+          productKey: `wellness:${product.id}`,
+          productName: product.name,
+          choice: variant?.label || variant?.name || ''
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
           className: "pdp__stock",
           children: out ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
             className: "v2-badge v2-badge--out",
@@ -68649,7 +69057,12 @@ function FashionProductPage() {
             className: "fs-price__cur",
             children: "\u20B9"
           }), money(st.price).replace(/^₹\s?/, '')]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpDeliveryDate, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpDeliveryDate, {
+          out: st.status === 'out' || !anyLive,
+          productKey: `fashion:${view.id}`,
+          productName: view.name,
+          choice: st.status === 'out' ? st.label || '' : ''
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
           className: "fs-buybox__deliv",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
             children: "FREE"
@@ -72330,7 +72743,12 @@ function HomeLivingProductPage() {
             className: "hl-price__cur",
             children: "\u20B9"
           }), priceDigits(st.price)]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpDeliveryDate, {}), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryBlock, {}), stockLine, /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpDeliveryDate, {
+          out: st.status === 'out' || st.status === 'choose' && !st.sizes?.some(x => x.available),
+          productKey: `homeliving:${view.id}`,
+          productName: view.name,
+          choice: st.status === 'out' ? st.label || '' : ''
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryBlock, {}), stockLine, /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
           className: "hl-qty",
           children: ["Quantity:", ' ', /*#__PURE__*/jsxRuntimeExports.jsx("select", {
             value: qty,
@@ -74592,5 +75010,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { useLocation as $, adminListOrderEvents as A, adminMarkCodCollected as B, CONTACT_FIELDS as C, validateFulfillmentInput as D, adminUpdateOrderFulfillment as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminListProductMedia as H, adminCommitStagedProductMedia as I, validateMediaFile as J, mediaFailureMessage as K, LEGAL_PAGES as L, adminReorderProductMedia as M, NavLink as N, Outlet as O, adminSetPrimaryMedia as P, adminEnsurePrimaryMedia as Q, adminUpdateProductMedia as R, adminReplaceProductMedia as S, adminDeleteProductMedia as T, adminDiscoverMedia as U, adminImportMedia as V, validateContent as W, CONTENT_FIELDS as X, fieldPopulated as Y, CONTENT_LABELS as Z, useNavigate as _, adminGetSetting as a, adminListLevelRewards as a$, adminUpdateProduct as a0, adminCreateProduct as a1, adminUpdateProductPrice as a2, adminListVariants as a3, adminCreateVariant as a4, adminUpdateVariant as a5, adminSetVariantActive as a6, adminDeleteVariant as a7, adminGetProgramSettings as a8, CREATOR_STATUSES as a9, CONVERSION_STATUSES as aA, adminGetConversionItems as aB, adminGetConversionAudit as aC, adminRefundConversion as aD, adminListKyc as aE, KYC_STATUSES as aF, KYC_SIGNED_URL_SECONDS as aG, adminSetKycStatus as aH, KYC_DOCUMENT_KINDS as aI, kycDocumentState as aJ, adminKycDocumentUrl as aK, adminListKycAudit as aL, getPayoutConfig as aM, adminListPayouts as aN, PAYOUT_STATUSES as aO, adminSetWithdrawalsOpen as aP, adminGetPayoutLedger as aQ, adminGetPayoutAudit as aR, adminGetKycForCreator as aS, adminReviewPayout as aT, adminMarkPayoutPaid as aU, normalizeLadder as aV, DEFAULT_BEYOND_STEP as aW, adminGetTierLadder as aX, validateLadder as aY, ladderErrorMessage as aZ, rupees as a_, money2 as aa, adminListCreators as ab, adminCreatorStandings as ac, adminSetProgramSettings as ad, adminCreateCreator as ae, adminSetCreatorStatus as af, normalizeContentPatch as ag, contentScore as ah, adminGetCreator as ai, adminListCodeAliases as aj, adminListCampaigns as ak, adminListLinks as al, adminListAudit as am, adminListAttributionEvents as an, adminUpdateCampaign as ao, adminCreateCampaign as ap, CAMPAIGN_STATUSES as aq, buildTrackingUrl as ar, normalizeDestination as as, DESTINATION_TYPES as at, CopyButton as au, adminChangeCreatorCode as av, adminUpdateCreator as aw, adminCreateLink as ax, adminSetLinkStatus as ay, adminListConversions as az, brandingFromSetting as b, JEWELLERY_BANNER_SECTION as b$, groupRewardsByLevel as b0, REWARD_OPTION_SLOTS as b1, validateRewardOption as b2, REWARD_TYPES as b3, REWARD_TYPE_LABEL as b4, adminListRewardClaims as b5, CLAIM_STATUSES as b6, CLAIM_STATUS_LABEL as b7, DEFAULT_LADDER as b8, adminSetTierLadder as b9, supabase as bA, CouponTicket as bB, HOMEPAGE_VISUAL_FIELDS as bC, safeVisualUrl as bD, MAX_CONCERN_PRODUCTS as bE, searchCatalogueForPicker as bF, productGallery as bG, MAX_DISCOVERY_CARDS as bH, makeDiscoveryId as bI, sanitizeHomepageVisuals as bJ, normalizeDiscovery as bK, products as bL, discoveryPayload as bM, mergeHomepageVisuals as bN, announceHomepageSaved as bO, fetchReviewsForAdmin as bP, setReviewStatus as bQ, POSITION_LABELS as bR, HERO_SECTION as bS, TRUST_SECTION as bT, TILES_SECTION as bU, STORES_SECTION as bV, FESTIVE_SECTION as bW, NEW_ARRIVALS_SECTION as bX, BIOSASH_SECTION as bY, BEDSHEETS_SECTION as bZ, LIFESTYLE_SECTION as b_, rewardOptionErrorMessage as ba, adminUpsertLevelReward as bb, adminDeleteLevelReward as bc, adminSetRewardClaimStatus as bd, adminGetTheme as be, sanitizeTheme$1 as bf, TOKENS as bg, PRESET_LIST as bh, GROUPS as bi, DEFAULT_THEME as bj, OVERLAY_SCALES as bk, TYPE_SCALES as bl, HEX_RE as bm, adminSetTheme as bn, overlayRgba as bo, adminSaveCategory as bp, adminDeleteCategory as bq, normalizePromo as br, PromoPoster as bs, PromoOfferCard as bt, adminListPromotions as bu, adminUpsertPromotion as bv, adminDeletePromotion as bw, adminSetPromotionActive as bx, adminReorderPromotions as by, uploadPromoImage as bz, Link as c, STORE_CAROUSEL_SECTION as c0, LUXURY_BEDS_SECTION as c1, DELIVERY_STRIP as c2, BENEFITS_STRIP as c3, DEPARTMENT_SECTIONS as c4, JEWELLERY_SECTIONS as c5, HOMELIVING_SECTIONS as c6, GROCERY_SECTIONS as c7, STOREFRONT_CONTENT_STORES as c8, STOREFRONT_LABELS as c9, CategorySpotlight as cA, SOCIAL_NETWORKS as cB, POLICY_KEYS as cC, validateCompanyForSave as cD, normalizeFashionStorefront as ca, normalizeLifestyleStorefront as cb, sectionSpec as cc, sectionContent as cd, validateStorefrontContent as ce, useSearchParams as cf, buildTree as cg, validatePlacement as ch, uploadImage as ci, isSpotlightEligible as cj, categoryBySlug as ck, sanitizeCategoryConfig as cl, safeColor as cm, safeGradient as cn, makeSpotlightId as co, validateImageUpload as cp, normalizeCategoryExperience as cq, categoryExperiencePayload as cr, categoryIsReadyButOff as cs, categoryToneTheme as ct, MIN_INTERVAL_MS as cu, MAX_INTERVAL_MS as cv, DEFAULT_ITEM_SCALE as cw, MIN_ITEM_SCALE as cx, MAX_ITEM_SCALE as cy, ITEM_OFFSET_LIMIT as cz, defaultLegalPage as d, LegalUpdated as e, adminSetSetting as f, useAdminAuth as g, hasLegalContent as h, branding as i, jsxRuntimeExports as j, adminListProducts as k, legalKey as l, adminListCategories as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminImportBiosashCatalog as p, money as q, reactExports as r, adminSetProductActive as s, adminDeleteProduct as t, useParams as u, validateLegalPage as v, adminReorderProducts as w, categories as x, adminListOrders as y, fulfillmentStatusLabel as z };
+export { useLocation as $, adminListOrderEvents as A, adminMarkCodCollected as B, CONTACT_FIELDS as C, validateFulfillmentInput as D, adminUpdateOrderFulfillment as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminListProductMedia as H, adminCommitStagedProductMedia as I, validateMediaFile as J, mediaFailureMessage as K, LEGAL_PAGES as L, adminReorderProductMedia as M, NavLink as N, Outlet as O, adminSetPrimaryMedia as P, adminEnsurePrimaryMedia as Q, adminUpdateProductMedia as R, adminReplaceProductMedia as S, adminDeleteProductMedia as T, adminDiscoverMedia as U, adminImportMedia as V, validateContent as W, CONTENT_FIELDS as X, fieldPopulated as Y, CONTENT_LABELS as Z, useNavigate as _, adminGetSetting as a, adminListLevelRewards as a$, adminUpdateProduct as a0, adminCreateProduct as a1, adminUpdateProductPrice as a2, adminListVariants as a3, adminCreateVariant as a4, adminUpdateVariant as a5, adminSetVariantActive as a6, adminDeleteVariant as a7, adminGetProgramSettings as a8, CREATOR_STATUSES as a9, CONVERSION_STATUSES as aA, adminGetConversionItems as aB, adminGetConversionAudit as aC, adminRefundConversion as aD, adminListKyc as aE, KYC_STATUSES as aF, KYC_SIGNED_URL_SECONDS as aG, adminSetKycStatus as aH, KYC_DOCUMENT_KINDS as aI, kycDocumentState as aJ, adminKycDocumentUrl as aK, adminListKycAudit as aL, getPayoutConfig as aM, adminListPayouts as aN, PAYOUT_STATUSES as aO, adminSetWithdrawalsOpen as aP, adminGetPayoutLedger as aQ, adminGetPayoutAudit as aR, adminGetKycForCreator as aS, adminReviewPayout as aT, adminMarkPayoutPaid as aU, normalizeLadder as aV, DEFAULT_BEYOND_STEP as aW, adminGetTierLadder as aX, validateLadder as aY, ladderErrorMessage as aZ, rupees as a_, money2 as aa, adminListCreators as ab, adminCreatorStandings as ac, adminSetProgramSettings as ad, adminCreateCreator as ae, adminSetCreatorStatus as af, normalizeContentPatch as ag, contentScore as ah, adminGetCreator as ai, adminListCodeAliases as aj, adminListCampaigns as ak, adminListLinks as al, adminListAudit as am, adminListAttributionEvents as an, adminUpdateCampaign as ao, adminCreateCampaign as ap, CAMPAIGN_STATUSES as aq, buildTrackingUrl as ar, normalizeDestination as as, DESTINATION_TYPES as at, CopyButton as au, adminChangeCreatorCode as av, adminUpdateCreator as aw, adminCreateLink as ax, adminSetLinkStatus as ay, adminListConversions as az, brandingFromSetting as b, TILES_SECTION as b$, groupRewardsByLevel as b0, REWARD_OPTION_SLOTS as b1, validateRewardOption as b2, REWARD_TYPES as b3, REWARD_TYPE_LABEL as b4, adminListRewardClaims as b5, CLAIM_STATUSES as b6, CLAIM_STATUS_LABEL as b7, DEFAULT_LADDER as b8, adminSetTierLadder as b9, supabase as bA, CouponTicket as bB, HOMEPAGE_VISUAL_FIELDS as bC, safeVisualUrl as bD, MAX_CONCERN_PRODUCTS as bE, searchCatalogueForPicker as bF, productGallery as bG, MAX_DISCOVERY_CARDS as bH, makeDiscoveryId as bI, sanitizeHomepageVisuals as bJ, normalizeDiscovery as bK, products as bL, discoveryPayload as bM, mergeHomepageVisuals as bN, announceHomepageSaved as bO, fetchReviewsForAdmin as bP, fetchQuestionsForAdmin as bQ, productHref$3 as bR, fetchStockAlerts as bS, groupAlerts as bT, setReviewStatus as bU, answerQuestion as bV, rejectQuestion as bW, markAlertsNotified as bX, POSITION_LABELS as bY, HERO_SECTION as bZ, TRUST_SECTION as b_, rewardOptionErrorMessage as ba, adminUpsertLevelReward as bb, adminDeleteLevelReward as bc, adminSetRewardClaimStatus as bd, adminGetTheme as be, sanitizeTheme$1 as bf, TOKENS as bg, PRESET_LIST as bh, GROUPS as bi, DEFAULT_THEME as bj, OVERLAY_SCALES as bk, TYPE_SCALES as bl, HEX_RE as bm, adminSetTheme as bn, overlayRgba as bo, adminSaveCategory as bp, adminDeleteCategory as bq, normalizePromo as br, PromoPoster as bs, PromoOfferCard as bt, adminListPromotions as bu, adminUpsertPromotion as bv, adminDeletePromotion as bw, adminSetPromotionActive as bx, adminReorderPromotions as by, uploadPromoImage as bz, Link as c, STORES_SECTION as c0, FESTIVE_SECTION as c1, NEW_ARRIVALS_SECTION as c2, BIOSASH_SECTION as c3, BEDSHEETS_SECTION as c4, LIFESTYLE_SECTION as c5, JEWELLERY_BANNER_SECTION as c6, STORE_CAROUSEL_SECTION as c7, LUXURY_BEDS_SECTION as c8, DELIVERY_STRIP as c9, categoryToneTheme as cA, MIN_INTERVAL_MS as cB, MAX_INTERVAL_MS as cC, DEFAULT_ITEM_SCALE as cD, MIN_ITEM_SCALE as cE, MAX_ITEM_SCALE as cF, ITEM_OFFSET_LIMIT as cG, CategorySpotlight as cH, SOCIAL_NETWORKS as cI, POLICY_KEYS as cJ, validateCompanyForSave as cK, BENEFITS_STRIP as ca, DEPARTMENT_SECTIONS as cb, JEWELLERY_SECTIONS as cc, HOMELIVING_SECTIONS as cd, GROCERY_SECTIONS as ce, STOREFRONT_CONTENT_STORES as cf, STOREFRONT_LABELS as cg, normalizeFashionStorefront as ch, normalizeLifestyleStorefront as ci, sectionSpec as cj, sectionContent as ck, validateStorefrontContent as cl, useSearchParams as cm, buildTree as cn, validatePlacement as co, uploadImage as cp, isSpotlightEligible as cq, categoryBySlug as cr, sanitizeCategoryConfig as cs, safeColor as ct, safeGradient as cu, makeSpotlightId as cv, validateImageUpload as cw, normalizeCategoryExperience as cx, categoryExperiencePayload as cy, categoryIsReadyButOff as cz, defaultLegalPage as d, LegalUpdated as e, adminSetSetting as f, useAdminAuth as g, hasLegalContent as h, branding as i, jsxRuntimeExports as j, adminListProducts as k, legalKey as l, adminListCategories as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminImportBiosashCatalog as p, money as q, reactExports as r, adminSetProductActive as s, adminDeleteProduct as t, useParams as u, validateLegalPage as v, adminReorderProducts as w, categories as x, adminListOrders as y, fulfillmentStatusLabel as z };
 //# sourceMappingURL=bundle.js.map

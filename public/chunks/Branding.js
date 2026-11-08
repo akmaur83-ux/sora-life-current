@@ -1,4 +1,4 @@
-import { r as reactExports, a as adminGetSetting, j as jsxRuntimeExports, ci as uploadImage, f as adminSetSetting } from '../bundle.js';
+import { r as reactExports, a as adminGetSetting, j as jsxRuntimeExports, cp as uploadImage, f as adminSetSetting } from '../bundle.js';
 
 function Branding() {
   const [form, setForm] = reactExports.useState({
