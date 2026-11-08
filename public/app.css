@@ -5572,6 +5572,15 @@ body:has(.v2-pdp-root .buybar) .page-main {
 @media (max-width: 767px) { .pdpk-rev { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
 
 .pdpk-rev__cta h3 { font-family: inherit; letter-spacing: 0; }
+/* Phone (owner, 2026-11-08): the buy box straight after the price, not under every detail. */
+@media (max-width: 767px) {
+  .v2-pdp-root .pdp { row-gap: 0; }
+  .v2-pdp-root .pdp > :first-child { margin-bottom: 12px; }
+  .v2-pdp-root .pdp__info { display: contents; }
+  .v2-pdp-root .pdp__info > * { order: 3; }
+  .v2-pdp-root .pdp__info > :is(.pdp__brand, .pdp__title, .pdp__price) { order: 1; }
+  .v2-pdp-root .pdp__buybox { order: 2; margin: 4px 0 14px; }
+}
 
 /* ═══ src/styles/v2-cart-checkout.css ═══ */
 /* ============================================================================

@@ -68516,6 +68516,12 @@ function FashionProductPage() {
           name: "bag",
           size: 18
         }), " ", st.canAdd ? 'Add to cart' : st.missing || addLabel]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "fs-btn fs-btn--buy",
+        disabled: !st.canAdd,
+        onClick: buyNow,
+        children: "Buy now"
       })]
     })]
   });
@@ -71817,6 +71823,24 @@ function BuyNowButton({
     }), " Buy Now"]
   });
 }
+
+/** The only size, and the first colour that can be bought in it; anything the URL names wins. */
+function oneSizeDefault(view, sel) {
+  if (!view || !Array.isArray(view.sizes) || view.sizes.length !== 1) return sel;
+  const size = sel.size ?? view.sizes[0];
+  if (sel.colour || !(view.swatches || []).length) return {
+    ...sel,
+    size
+  };
+  const live = view.swatches.find(sw => selectionState(view, {
+    size,
+    colour: sw.colour
+  }).canAdd);
+  return {
+    size,
+    colour: live ? live.colour : null
+  };
+}
 function HomeLivingProductPage() {
   const {
     slug
@@ -71867,7 +71891,8 @@ function HomeLivingProductPage() {
   const trail = [...breadcrumbFor(categories, node), {
     name: view.name
   }];
-  const sel = readSelection(params, view);
+  // One-size pieces open ready to buy (owner, 2026-11-08): the only size and the first colour in stock.
+  const sel = oneSizeDefault(view, readSelection(params, view));
   const st = selectionState(view, sel);
   const setSel = next => setParams(writeSelection(params, next), {
     replace: true
