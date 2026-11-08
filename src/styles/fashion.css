@@ -405,3 +405,16 @@
   .fs *, .fs *::before, .fs *::after { transition: none !important; }
   .fs-hero__cta:hover, .fs-catcard:hover, .fs-brandcard:hover, .fs-heart:hover, .fs-quick:hover, .fs-pick__swatch:hover, .fs-card:hover .fs-card__img img { transform: none; }
 }
+
+/* The owner's product page (2026-11-08), as on Home & Living and wellness: sharp
+   corners, the price in a green card, the discount in red, green Add to cart and a
+   light-green Buy now. */
+.fs-pdp, .fs-pdp *, .fs-pdp *::before, .fs-pdp *::after { border-radius: 0 !important; }
+.fs-pdp__brand { color: #1E5A35; letter-spacing: .16em; }
+.fs-pdp__h { color: #13261C; }
+.fs-pdp .fs-price--lg { margin-top: 10px; padding: 16px 18px; background: #F2F7EF; border: 1px solid #D3E3CB; align-items: center; gap: 10px 14px; }
+.fs-pdp .fs-price--lg strong { font-size: 36px; color: #13261C; }
+.fs-pdp .fs-price--lg .fs-badge { background: #C62828; color: #fff; }
+.fs-pdp .fs-btn--add { background: #1E5A35; border-color: #1E5A35; color: #fff; min-height: 52px; }
+.fs-pdp .fs-btn--buy { background: #DCEFD0; border-color: #C3E0B2; color: #13261C; min-height: 52px; }
+
