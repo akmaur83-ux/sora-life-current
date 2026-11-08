@@ -14,7 +14,7 @@
 .fs-main { display: block; max-width: 1280px; margin: 0 auto; padding: 0 16px 48px; }
 .fs-home { background:
   radial-gradient(circle at 92% 18%, rgba(202, 167, 83, .09), transparent 25rem),
-  linear-gradient(180deg, var(--slv2-ivory), #FCFAF5 64%, var(--slv2-ivory)); }
+  linear-gradient(180deg, var(--slv2-ivory), #FFFFFF 64%, var(--slv2-ivory)); }
 .fs-home > .fs-hero { margin-top: 18px; }
 .fs-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--slv2-f700); background: var(--slv2-f700); color: var(--slv2-ivory); font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
 

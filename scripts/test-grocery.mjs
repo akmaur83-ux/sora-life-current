@@ -146,7 +146,7 @@ await test('header: cream shell, hamburger, centred SORA LIFE wordmark in the se
   const empty = app.render('/grocery');
   assert.ok(empty.includes('gs-hdr__count'), 'count shown at 3');
   const css = read('src/styles/grocery.css');
-  assert.match(css, /\.gs \{[^}]*--gs-hdr: #F7F3EA/); assert.match(css, /\.gs-hdr \{[^}]*background: var\(--gs-hdr\)/);
+  assert.match(css, /\.gs \{[^}]*--gs-hdr: #FFFFFF/, "white since 2026-11-08 (owner)"); assert.match(css, /\.gs-hdr \{[^}]*background: var\(--gs-hdr\)/);
   assert.match(css, /\.gs-hdr__row \{[^}]*grid-template-columns: 1fr auto 1fr/, 'the wordmark is centred between equal columns');
   assert.match(css, /\.gs \.serif \{[^}]*font-family: var\(--font-display, 'Playfair Display'/);
 });

@@ -141,7 +141,7 @@ await test('header: the shell (cream everywhere but the homepage, where it float
   assert.match(home, /<button type="button" class="hl-hdr__act" aria-label="Wishlist" aria-disabled="true">/);
   assert.match(home, /<a class="hl-hdr__act" aria-label="Cart, 3 items" href="\/cart">[\s\S]*?<span class="hl-hdr__count">3<\/span><\/a>/);
   const css = read('src/styles/homeliving.css');
-  assert.match(css, /\.hl \{[^}]*--hl-hdr: #F7F3EA/); assert.match(css, /\.hl-hdr \{[^}]*background: var\(--hl-hdr\)/);
+  assert.match(css, /\.hl \{[^}]*--hl-hdr: #FFFFFF/, "white since 2026-11-08 (owner)"); assert.match(css, /\.hl-hdr \{[^}]*background: var\(--hl-hdr\)/);
   assert.match(css, /\.hl-hdr__row \{[^}]*grid-template-columns: 1fr auto 1fr/, 'the wordmark is centred');
 });
 

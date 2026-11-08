@@ -163,7 +163,7 @@
    (the Fashion tile). The bright orange never carries white text. The page is a very slight
    warm white (#FDFBF8), not flat pure white; the deep orange on it is 4.57:1.
    ============================================================ */
-.hx { --hx-orange: #F47B20; --hx-orange-deep: #C2500A; --hx-ink: #1D1D1B; --hx-muted: #5C5853; --hx-soft: #F5F4F2; --hx-line: #ECE8E2; --hx-page: #FDFBF8; background: var(--hx-page); color: var(--hx-ink); }
+.hx { --hx-orange: #F47B20; --hx-orange-deep: #C2500A; --hx-ink: #1D1D1B; --hx-muted: #5C5853; --hx-soft: #F5F4F2; --hx-line: #E8EBE6; --hx-page: #FFFFFF; background: var(--hx-page); color: var(--hx-ink); }
 .hx *, .hx *::before, .hx *::after { box-sizing: border-box; }
 .hx a { color: inherit; text-decoration: none; }
 .hx-wrap { width: 100%; max-width: 1240px; margin-inline: auto; padding-inline: 28px; }

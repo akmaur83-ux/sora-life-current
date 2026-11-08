@@ -257,7 +257,7 @@ await test('scoped: every selector in the new rules starts with .hx (no element,
 await test('contrast (WCAG 2.x), from the stylesheet itself: white on the deep-orange buttons ≥ 4.5:1, the deep-orange headline line and View All on the page tint ≥ 4.5:1, near-black on the bright-orange Fashion panel ≥ 4.5:1; the bright orange never carries white text', () => {
   const token = (name) => { const m = hx.match(new RegExp(`${name}:\\s*(#[0-9A-Fa-f]{6})`)); assert.ok(m, name); return m[1]; };
   const orange = token('--hx-orange'), deep = token('--hx-orange-deep'), ink = token('--hx-ink'), page = token('--hx-page');
-  assert.equal(page.toUpperCase(), '#FDFBF8', 'the page is a very slight warm white, not flat pure white');
+  assert.equal(page.toUpperCase(), '#FFFFFF', 'the page is white (owner, 2026-11-08: the cream is gone)');
   assert.equal(decl('.hx', 'background'), 'var(--hx-page)'); assert.match(decl('.hx-hero__slide', 'background'), /var\(--hx-page\)/);
   assert.equal(decl('.hx-hero__image', 'mix-blend-mode'), 'multiply', 'the lineups\' white takes the tint: no white block');
   assert.equal(decl('.hx .hx-btn', 'background'), 'var(--hx-orange-deep)'); assert.equal(decl('.hx .hx-btn', 'color'), '#fff');

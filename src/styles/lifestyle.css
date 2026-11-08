@@ -9,7 +9,7 @@
    left and the rows become grids. Only transform and opacity ever animate.
    Nothing here matches outside .ls.
    ========================================================================= */
-.ls { --ls-hdr: #F7F3EA; --ls-r: 16px; --ls-r-sm: 10px; --ls-line: var(--slv2-stone); --ls-nav-h: 64px; --ls-cream: #f6efe3;
+.ls { --ls-hdr: #FFFFFF; --ls-r: 16px; --ls-r-sm: 10px; --ls-line: var(--slv2-stone); --ls-nav-h: 64px; --ls-cream: #F5F6F4;
   --ls-shadow: 0 1px 2px rgba(22, 33, 27, .04), 0 10px 26px -18px rgba(22, 33, 27, .22);
   min-height: 100vh; background: var(--slv2-ivory); color: var(--slv2-ink-2); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; overflow-x: clip; }
 .ls .serif { font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-weight: 400; letter-spacing: -.008em; color: var(--slv2-ink); }

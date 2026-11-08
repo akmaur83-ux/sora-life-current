@@ -31,9 +31,13 @@
   --slv2-gold:#C79A45; --slv2-gold-2:#E4C482; --slv2-gold-ink:#866419;
   --slv2-gold-100:#F4E9D2; --slv2-gold-50:#FBF5E8;
 
-  /* ---- warm neutrals ---- */
-  --slv2-ivory:#FBF8F1; --slv2-cream:#F4EEE1; --slv2-sand:#EFE7D8; --slv2-paper:#FFFDF8;
-  --slv2-stone:#E7DCC7; --slv2-stone-2:#D9CBB0;
+  /* ---- neutrals: white, the owner's call (2026-11-08) — the cream page is gone.
+     ivory/paper are the page and the cards; cream/sand the quiet fills (image
+     wells, inputs); stone the borders. Cool, faintly green greys, never beige.
+     The legacy --ivory/--cream/--sand (tokens.css) follow, so --color-bg is white too. ---- */
+  --slv2-ivory:#FFFFFF; --slv2-cream:#F5F6F4; --slv2-sand:#EEF0EC; --slv2-paper:#FFFFFF;
+  --slv2-stone:#E1E5DE; --slv2-stone-2:#CDD3CA;
+  --ivory:#FFFFFF; --cream:#F5F6F4; --sand:#EEF0EC;
 
   /* ---- ink ---- */
   --slv2-ink:#16211B; --slv2-ink-2:#3B4A41; --slv2-ink-3:#5F6D64; --slv2-ink-4:#8A958C;
@@ -48,7 +52,7 @@
   --slv2-alert:#9A3F33;
 
   /* ---- structure ---- */
-  --slv2-line:#E5DCCB; --slv2-line-2:#F0E9DB; --slv2-star:#D9A441;
+  --slv2-line:#E4E8E1; --slv2-line-2:#EEF1EC; --slv2-star:#D9A441;
 
   /* ---- GEOMETRY — sharp editorial. Three values, no exceptions. ----
      r-ui   every structural surface and control
