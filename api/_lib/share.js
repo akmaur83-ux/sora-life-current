@@ -1,6 +1,7 @@
 // ============================================================
-// GET /product/:slug, /fashion/p/:slug, /homeliving/p/:slug (rewritten here by
-// vercel.json; owner, 2026-11-08: more features)
+// GET /product/:slug, /fashion/p/:slug, /homeliving/p/:slug (rewritten by vercel.json
+// to /api/sitemap?kind=…, which hands them here: the plan allows twelve functions;
+// owner, 2026-11-08: more features)
 //
 // A product link pasted into WhatsApp, Instagram or Facebook shows a card built
 // from the page's <head>, read by a bot that does not run JavaScript, so every
@@ -27,7 +28,7 @@ let shell = null;
 function readShell() {
   if (shell) return shell;
   // Bundled with the function when the platform traces it; otherwise read from the site itself below.
-  try { shell = readFileSync(new URL('../index.html', import.meta.url), 'utf8'); } catch { shell = null; }
+  try { shell = readFileSync(new URL('../../index.html', import.meta.url), 'utf8'); } catch { shell = null; }
   return shell;
 }
 
@@ -88,7 +89,7 @@ export function withProductHead(html, f) {
     .replace('</head>', `    ${head}\n  </head>`);
 }
 
-export default async function handler(req, res) {
+export async function shareHandler(req, res) {
   const kind = String(req.query?.kind || '');
   const slug = String(req.query?.slug || '');
   let html = readShell();

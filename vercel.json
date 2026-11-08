@@ -44,15 +44,15 @@
     },
     {
       "source": "/product/:slug",
-      "destination": "/api/share?kind=product&slug=:slug"
+      "destination": "/api/sitemap?kind=product&slug=:slug"
     },
     {
       "source": "/fashion/p/:slug",
-      "destination": "/api/share?kind=fashion&slug=:slug"
+      "destination": "/api/sitemap?kind=fashion&slug=:slug"
     },
     {
       "source": "/homeliving/p/:slug",
-      "destination": "/api/share?kind=homeliving&slug=:slug"
+      "destination": "/api/sitemap?kind=homeliving&slug=:slug"
     },
     {
       "source": "/((?!api/).*)",

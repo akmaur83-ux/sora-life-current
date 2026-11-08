@@ -2,7 +2,7 @@
 //   node scripts/test-share-card.mjs
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { shareFacts, withProductHead } from '../api/share.js';
+import { shareFacts, withProductHead } from '../api/_lib/share.js';
 let passed = 0, failed = 0;
 const test = (n, fn) => { try { fn(); console.log(`  PASS  ${n}`); passed++; } catch (e) { console.log(`  FAIL  ${n}\n        ${e.message}`); failed++; } };
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');

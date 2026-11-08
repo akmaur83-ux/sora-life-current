@@ -12,6 +12,8 @@
 // still yields the public pages, never an error page. Cached at the edge
 // for an hour.
 // ============================================================
+import { shareHandler } from './_lib/share.js';
+
 const ORIGIN = 'https://www.soralifestyle.in';
 
 export const STATIC_PATHS = [
@@ -64,6 +66,8 @@ export function buildSitemap({ wellness = [], catalogue = [] } = {}) {
 }
 
 export default async function handler(req, res) {
+  // A product page with its share card (api/_lib/share.js): the same function, as the plan allows twelve.
+  if (req.query?.kind) return shareHandler(req, res);
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     return res.status(405).end();
