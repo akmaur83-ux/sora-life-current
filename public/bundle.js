@@ -42896,6 +42896,101 @@ function RecentlyViewedHome({
   });
 }
 
+// ============================================================
+// The offer countdown in the buy box (owner, 2026-11-08: more features). What it
+// says, the code and when it ends are the admin's (Storefronts → Wellness → Offer
+// countdown); it shows only while that time is ahead and disappears by itself
+// when it passes. The coupon itself, and whether it applies, stay the cart's
+// business: this line never prices anything.
+// ============================================================
+const OFFER_COUNTDOWN = Object.freeze({
+  hidden: false,
+  title: 'Diwali offer: 20% off with code',
+  code: 'DIWALI20',
+  endsAt: '2026-11-15 23:59'
+});
+
+/** 'YYYY-MM-DD HH:MM' in India time → ms since epoch; NaN when unreadable. */
+function parseIndiaTime(text) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/.exec(String(text || '').trim());
+  if (!m) return NaN;
+  const [, y, mo, d, h = '23', mi = '59'] = m;
+  return Date.UTC(+y, +mo - 1, +d, +h, +mi) - 5.5 * 3600 * 1000;
+}
+
+/** '6d 18h 20m' / '4h 05m' / '12m' for the time left; '' when none. */
+function timeLeft(ms) {
+  if (!(ms > 0)) return '';
+  const m = Math.floor(ms / 60000),
+    d = Math.floor(m / 1440),
+    h = Math.floor(m % 1440 / 60),
+    mm = m % 60;
+  if (d > 0) return `${d}d ${h}h ${mm}m`;
+  if (h > 0) return `${h}h ${String(mm).padStart(2, '0')}m`;
+  return `${Math.max(1, mm)}m`;
+}
+
+const pad = n => String(n).padStart(2, '0');
+function clockParts(ms) {
+  if (!(ms > 0)) return null;
+  const s = Math.floor(ms / 1000);
+  return {
+    d: Math.floor(s / 86400),
+    h: Math.floor(s % 86400 / 3600),
+    m: Math.floor(s % 3600 / 60),
+    s: s % 60
+  };
+}
+function OfferBanner({
+  wrap = ''
+}) {
+  const o = useStorefrontSection('wellness', 'offerCountdown', OFFER_COUNTDOWN);
+  const [now, setNow] = reactExports.useState(null);
+  const [copied, setCopied] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const left = now == null ? null : clockParts(parseIndiaTime(o.endsAt) - now);
+  if (o.hidden || !left) return null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(o.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {/* clipboard off */}
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `hx-offer${wrap ? ` ${wrap}` : ''}`,
+    "aria-label": "Current offer",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "hx-offer__t",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "gift",
+        size: 18
+      }), " ", o.title, o.code && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hx-offer__code",
+        onClick: copy,
+        "aria-label": `Copy code ${o.code}`,
+        children: copied ? 'Copied ✓' : o.code
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "hx-offer__clock",
+      "aria-label": `Ends in ${left.d} days ${left.h} hours ${left.m} minutes`,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "Ends in"
+      }), [['d', left.d], ['h', left.h], ['m', left.m], ['s', left.s]].map(([k, v]) => /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+        "aria-hidden": "true",
+        children: [k === 'd' ? v : pad(v), /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          children: k
+        })]
+      }, k))]
+    })]
+  });
+}
+
 function PriceTag({
   product,
   showOff = true,
@@ -46804,7 +46899,9 @@ function Home() {
   const story = homepage?.story;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "v2-home",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeHero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeHero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
+      wrap: "hx-wrap"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
     }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
@@ -48960,11 +49057,29 @@ function ProductOfferTeaser({
 }
 
 const PIN = /^[1-9][0-9]{5}$/;
+const PIN_KEY = 'sora.pincode.v1';
 function ProductDeliveryInfo() {
   const est = deliveryEstimate();
   const options = deliveryOptions();
   const [pin, setPin] = reactExports.useState('');
   const [checked, setChecked] = reactExports.useState(null);
+
+  // The last pincode checked is remembered in this browser (2026-11-09), so every
+  // product page shows the answer for it without typing it again.
+  const answer = code => ({
+    ok: true,
+    message: `Delivering to ${code}. ${options[0].eta} on Standard delivery.`
+  });
+  reactExports.useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(PIN_KEY);
+      if (saved && PIN.test(saved)) {
+        setPin(saved);
+        setChecked(answer(saved));
+      }
+    } catch {/* storage off */}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const check = e => {
     e.preventDefault();
     if (!PIN.test(pin)) {
@@ -48974,10 +49089,10 @@ function ProductDeliveryInfo() {
       });
       return;
     }
-    setChecked({
-      ok: true,
-      message: `Delivering to ${pin}. ${options[0].eta} on Standard delivery.`
-    });
+    try {
+      window.localStorage.setItem(PIN_KEY, pin);
+    } catch {/* storage off */}
+    setChecked(answer(pin));
   };
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "pdp-deliver",
@@ -49078,40 +49193,6 @@ function deliveryWindow(now = new Date(), min = DELIVERY_MIN_DAYS, max = DELIVER
     to,
     label: `${fmt(from)} – ${fmt(to)}`
   };
-}
-
-// ============================================================
-// The offer countdown in the buy box (owner, 2026-11-08: more features). What it
-// says, the code and when it ends are the admin's (Storefronts → Wellness → Offer
-// countdown); it shows only while that time is ahead and disappears by itself
-// when it passes. The coupon itself, and whether it applies, stay the cart's
-// business: this line never prices anything.
-// ============================================================
-const OFFER_COUNTDOWN = Object.freeze({
-  hidden: false,
-  title: 'Diwali offer: 20% off with code',
-  code: 'DIWALI20',
-  endsAt: '2026-11-15 23:59'
-});
-
-/** 'YYYY-MM-DD HH:MM' in India time → ms since epoch; NaN when unreadable. */
-function parseIndiaTime(text) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/.exec(String(text || '').trim());
-  if (!m) return NaN;
-  const [, y, mo, d, h = '23', mi = '59'] = m;
-  return Date.UTC(+y, +mo - 1, +d, +h, +mi) - 5.5 * 3600 * 1000;
-}
-
-/** '6d 18h 20m' / '4h 05m' / '12m' for the time left; '' when none. */
-function timeLeft(ms) {
-  if (!(ms > 0)) return '';
-  const m = Math.floor(ms / 60000),
-    d = Math.floor(m / 1440),
-    h = Math.floor(m % 1440 / 60),
-    mm = m % 60;
-  if (d > 0) return `${d}d ${h}h ${mm}m`;
-  if (h > 0) return `${h}h ${String(mm).padStart(2, '0')}m`;
-  return `${Math.max(1, mm)}m`;
 }
 
 // ============================================================
@@ -49254,6 +49335,25 @@ function usePageMeta({
       ...product,
       url: path || window.location.pathname
     }) : null;
+    const crumbs = Array.isArray(product?.crumbs) ? product.crumbs.filter(c => c && c.name) : [];
+    if (crumbs.length > 1) {
+      const bc = document.createElement('script');
+      bc.type = 'application/ld+json';
+      bc.dataset.pm = 'crumbs';
+      bc.textContent = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: crumbs.map((c, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: c.name,
+          ...(c.href ? {
+            item: absolute(c.href)
+          } : {})
+        }))
+      });
+      document.head.appendChild(bc);
+    }
     if (data) {
       ld = document.createElement('script');
       ld.type = 'application/ld+json';
@@ -49408,6 +49508,24 @@ function SiteAssist() {
       document.querySelectorAll('.hl.pdp-bar-on').forEach(el => el.classList.remove('pdp-bar-on'));
     };
   }, [pathname]);
+
+  // "Skip to main content": the first thing a keyboard reaches on every page (shown only when focused).
+  reactExports.useEffect(() => {
+    if (document.querySelector('.hx-skip')) return;
+    const a = document.createElement('a');
+    a.className = 'hx-skip';
+    a.href = '#main';
+    a.textContent = 'Skip to main content';
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const m = document.querySelector('main') || document.querySelector('.hl, .fs, #root > *');
+      if (m) {
+        if (!m.hasAttribute('tabindex')) m.setAttribute('tabindex', '-1');
+        m.focus();
+      }
+    });
+    document.body.prepend(a);
+  }, []);
 
   // "/" focuses the store's search box, as on most large shops (not while typing in a field).
   reactExports.useEffect(() => {
@@ -67170,7 +67288,9 @@ function FashionHome() {
     className: "fs-home",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(Hero, {
       config: config.hero
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
+      wrap: "fs-sec"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {
       prefix: "fs-"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(BudgetChips, {
       base: "/fashion/search",
@@ -71789,7 +71909,16 @@ function HomeLivingProductPage() {
       brand: view.brand,
       sku: view.sku,
       price: view.price,
-      inStock: liveStock
+      inStock: liveStock,
+      crumbs: [{
+        name: 'Home & Living',
+        href: '/homeliving'
+      }, ...(categories.find(c => String(c.id) === String(view.category_id)) ? [{
+        name: categories.find(c => String(c.id) === String(view.category_id)).name,
+        href: `/homeliving/category/${categories.find(c => String(c.id) === String(view.category_id)).slug}`
+      }] : []), {
+        name: view.name
+      }]
     }
   } : {}, [view?.price, liveStock]);
   if (!view) {
@@ -72326,6 +72455,12 @@ function Gallery({
       behavior: reduced ? 'auto' : 'smooth'
     });
   };
+  // A swipe on a phone moves the counter too (the thumbnails set it on a click).
+  const onSwipe = e => {
+    const el = e.currentTarget;
+    const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+    if (i !== active && i >= 0 && i < images.length) setActive(i);
+  };
   if (images.length === 0) return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
     className: "fs-pdp__media fs-pdp__media--none",
     "aria-hidden": "true",
@@ -72340,6 +72475,7 @@ function Gallery({
       role: "group",
       "aria-label": `${view.name} images`,
       ref: track,
+      onScroll: onSwipe,
       children: images.map((src, i) => /*#__PURE__*/jsxRuntimeExports.jsx("figure", {
         className: `fs-gallery__slide${i === active ? ' is-on' : ''}`,
         id: `fs-slide-${i}`,
@@ -72375,6 +72511,10 @@ function Gallery({
           decoding: "async"
         })
       }, src + i))
+    }), images.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+      className: "fs-gallery__count",
+      "aria-hidden": "true",
+      children: [active + 1, " / ", images.length]
     }), zoom != null && /*#__PURE__*/jsxRuntimeExports.jsx(GalleryZoom, {
       images: images.map((url, i) => ({
         url,
@@ -72474,7 +72614,10 @@ function FashionProductPage() {
       brand: view.brand,
       sku: facts?.sku,
       price: view.price,
-      inStock: liveStock
+      inStock: liveStock,
+      crumbs: [...breadcrumbFor$1(tree, view.category_id ? tree.byId.get(view.category_id) : null), {
+        name: view.name
+      }]
     }
   } : {}, [view?.price, liveStock, facts?.sku]);
   if (!view) {
@@ -74302,7 +74445,9 @@ function HomeLivingHome() {
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(HeroCarousel$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BottomNav$1, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hl-tools",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeliveryRow, {}), /*#__PURE__*/jsxRuntimeExports.jsx(SearchBar, {})]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryCircles, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
+      wrap: "hl-wrap"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryCircles, {
       categories: categories
     }), /*#__PURE__*/jsxRuntimeExports.jsx(FeaturedRow, {
       products: products,
