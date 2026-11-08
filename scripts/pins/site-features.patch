@@ -1,0 +1,60 @@
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 6c44e64..a1d99ef 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -15,6 +15,7 @@ import { VariantPicker } from './FashionVariantPicker.jsx';
+ import ProductInformation from '../components/ProductInformation.jsx';
+ import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+ import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
++import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ 
+ // ============================================================
+ // /fashion/p/<slug> — the product page.
+@@ -188,6 +189,7 @@ export default function FashionProductPage() {
+ 
+         <aside className="fs-buybox" aria-label="Buy">
+           <p className="fs-buybox__price"><span className="fs-price__cur">₹</span>{money(st.price).replace(/^₹\s?/, '')}</p>
++          <PdpDeliveryDate />
+           <p className="fs-buybox__deliv"><b>FREE</b> Standard Delivery: 6–7 business days</p>
+           <p className="fs-buybox__note">Free on every order · Cash on Delivery available</p>
+           <p className={`fs-buybox__stock is-${stockClass}`}>{stockText}</p>
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index 25e7e82..33931cc 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -449,4 +449,19 @@
+ .hx-lf__media { background: #fff; aspect-ratio: 1; }
+ .hx-lf__img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 6%; transition: transform .5s ease; }
+ .hx-wv__tile:hover .hx-lf__img { transform: scale(1.04); }
+-@media (prefers-reduced-motion: reduce) { .hx-lf__img { transition: none; } .hx-wv__tile:hover .hx-lf__img { transform: none; } }
+\ No newline at end of file
++@media (prefers-reduced-motion: reduce) { .hx-lf__img { transition: none; } .hx-wv__tile:hover .hx-lf__img { transform: none; } }
++/* Site helpers (2026-11-08): chat on WhatsApp and back to top, clear of any fixed foot bar. */
++.hx-sa { position: fixed; right: 16px; bottom: calc(16px + var(--sa-foot, 0px) + env(safe-area-inset-bottom, 0px)); z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: none; }
++.hx-sa__btn { pointer-events: auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; min-width: 48px; padding: 0 14px; border: 0; color: #fff; font: 600 14px/1 Arial, "Helvetica Neue", Helvetica, sans-serif; text-decoration: none; cursor: pointer; box-shadow: 0 6px 18px rgba(15, 17, 17, .22); transition: transform .2s ease, box-shadow .2s ease; }
++.hx-sa__btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15, 17, 17, .28); }
++.hx-sa__btn:focus-visible { outline: 2px solid #0F1111; outline-offset: 3px; }
++.hx-sa__wa { background: #1DA851; }
++.hx-sa__top { width: 44px; min-width: 44px; height: 44px; padding: 0; background: #fff; color: #0F1111; border: 1px solid #D5D9D9; }
++@media (max-width: 767px) { .hx-sa { right: 12px; bottom: calc(12px + var(--sa-foot, 0px) + env(safe-area-inset-bottom, 0px)); } .hx-sa__wa { width: 48px; padding: 0; } .hx-sa__wa-label { display: none; } }
++@media (prefers-reduced-motion: reduce) { .hx-sa__btn { transition: none; } .hx-sa__btn:hover { transform: none; } }
++@media print { .hx-sa { display: none; } }
++/* Continue where you left off: no view-all link, a quiet "Clear history". */
++.hx-recent .hx-more { display: none; }
++.hx-recent__foot { display: flex; justify-content: flex-end; margin-top: -18px; margin-bottom: 8px; }
++.hx-recent__clear { border: 0; background: none; padding: 4px 0; font: 400 13px/1.4 Arial, sans-serif; color: #007185; cursor: pointer; }
++.hx-recent__clear:hover { text-decoration: underline; color: #C7511F; }
+\ No newline at end of file
+diff --git a/src/styles/v2-pdp.css b/src/styles/v2-pdp.css
+index ca424c5..b91e472 100644
+--- a/src/styles/v2-pdp.css
++++ b/src/styles/v2-pdp.css
+@@ -1486,3 +1486,8 @@ body:has(.v2-pdp-root .buybar) .page-main {
+   .v2-pdp-root .pdp__info > :is(.pdp__brand, .pdp__title, .pdp__price) { order: 1; }
+   .v2-pdp-root .pdp__buybox { order: 2; margin: 4px 0 14px; }
+ }
++/* Estimated delivery dates in every buy box (2026-11-08). */
++.pdpk-eta { display: flex; align-items: flex-start; gap: 8px; margin: 6px 0 10px; font: 400 14px/1.4 Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0F1111; }
++.pdpk-eta svg { flex: none; margin-top: 2px; color: #007185; }
++.pdpk-eta b { font-weight: 700; }
++.pdpk-eta em { display: block; font-style: normal; font-size: 12px; color: #565959; }

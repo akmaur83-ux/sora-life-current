@@ -15,6 +15,7 @@ import { VariantPicker } from './FashionVariantPicker.jsx';
 import ProductInformation from '../components/ProductInformation.jsx';
 import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
 import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
+import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 
 // ============================================================
 // /fashion/p/<slug> — the product page.
@@ -188,6 +189,7 @@ export default function FashionProductPage() {
 
         <aside className="fs-buybox" aria-label="Buy">
           <p className="fs-buybox__price"><span className="fs-price__cur">₹</span>{money(st.price).replace(/^₹\s?/, '')}</p>
+          <PdpDeliveryDate />
           <p className="fs-buybox__deliv"><b>FREE</b> Standard Delivery: 6–7 business days</p>
           <p className="fs-buybox__note">Free on every order · Cash on Delivery available</p>
           <p className={`fs-buybox__stock is-${stockClass}`}>{stockText}</p>

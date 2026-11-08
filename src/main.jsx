@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import ScrollManager from './components/ScrollManager.jsx';
+import SiteAssist from './components/SiteAssist.jsx';
 import { StoreProvider } from './lib/store.jsx';
 import { AdminAuthProvider } from './lib/adminAuth.jsx';
 import { CustomerAuthProvider } from './lib/customerAuth.jsx';
@@ -118,6 +119,8 @@ function Root() {
             </AdminAuthProvider>
           </StoreProvider>
         </CustomerAuthProvider>
+        {/* Chat on WhatsApp and back to top on every storefront page (SiteAssist.jsx). */}
+        <SiteAssist />
       </BrowserRouter>
       {previewing && <div role="status" style={{ position: 'fixed', left: 12, bottom: 12, zIndex: 9999, padding: '8px 14px', borderRadius: 999, background: '#1D1D1B', color: '#fff', font: '600 13px/1.2 Inter, system-ui, sans-serif', boxShadow: '0 4px 14px rgb(0 0 0 / 20%)' }}>Draft preview — not live</div>}
     </BootstrapReadyContext.Provider>

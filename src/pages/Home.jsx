@@ -11,6 +11,7 @@ import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
 import { BiosashRange } from '../components/BiosashRange.jsx';
 import { WeaversVillaRange, WeaversVillaShowcase } from '../components/WeaversVilla.jsx';
 import { LeatherFactoryRange, LeatherFactoryShowcase } from '../components/LeatherFactory.jsx';
+import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
@@ -67,6 +68,10 @@ export default function Home() {
       {/* 5 · CAMPAIGN / PROMOTION — existing promotions runtime, untouched.
              Renders nothing when no active promotion targets `home`. */}
       <HomeOffers appearance={visuals.offers} />
+
+      {/* This visitor's recently viewed products, any store, this browser only
+          (RecentlyViewedHome.jsx). Renders nothing below two, or when hidden. */}
+      <RecentlyViewedHome />
 
       {/* The products flagged new, newest first, across wellness, fashion and Home & Living:
           a sliding row between the promo and the Lifestyle banner. Renders nothing when

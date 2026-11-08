@@ -251,6 +251,9 @@ export function PdpBundle({ items, canAddAll = false, onAddAll = null }) {
 const RECENT_KEY = 'sl-recent-v1';
 const RECENT_MAX = 12;
 const readRecent = () => { try { const v = JSON.parse(window.localStorage.getItem(RECENT_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+/** The list as kept (homepage "Continue where you left off"); [] when storage is off. */
+export const readRecentlyViewed = () => (typeof window === 'undefined' ? [] : readRecent());
+export const clearRecentlyViewed = () => { try { window.localStorage.removeItem(RECENT_KEY); } catch { /* storage off */ } };
 
 /**
  * Remembers this product and returns the others viewed before it, newest first.

@@ -13,6 +13,7 @@ import ProductInformation from '../components/ProductInformation.jsx';
 import { fetchEligibleCoupons } from '../lib/couponApi.js';
 import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
 import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 
 // ============================================================
 // /homeliving/p/<slug> — the product page.
@@ -646,6 +647,7 @@ export default function HomeLivingProductPage() {
 
         <aside className="hl-buybox" aria-label="Buy">
           <p className="hl-buybox__price"><span className="hl-price__cur">₹</span>{priceDigits(st.price)}</p>
+          <PdpDeliveryDate />
           <DeliveryBlock />
           {stockLine}
           <label className="hl-qty">Quantity:{' '}

@@ -389,7 +389,7 @@ await test('one ScrollManager, inside <BrowserRouter> (every storefront and the 
   assert.doesNotMatch(layout, /ScrollToTop|scrollTo\(/, 'the wellness shell no longer resets on its own (it fired on back/forward and ignored #hash)');
   assert.doesNotMatch(read('src/fashion/FashionDepartment.jsx'), /window\.scrollTo/, 'nor do the fashion departments');
   const windowScrolls = files.filter((f) => /\bwindow\.scrollTo\(/.test(read(f)));
-  assert.deepEqual(windowScrolls.sort(), ['src/components/ScrollManager.jsx', 'src/pages/Checkout.jsx'], 'nothing else moves the window on a route change (Checkout scrolls up once an order is placed, on the same page)');
+  assert.deepEqual(windowScrolls.sort(), ['src/components/ScrollManager.jsx', 'src/components/SiteAssist.jsx', 'src/pages/Checkout.jsx'], 'nothing else moves the window on a route change (Checkout scrolls up once an order is placed, on the same page; SiteAssist only when Back to top is pressed)');
   const app = read('src/App.jsx');
   assert.match(app, /path="\/admin"/, 'the admin is a route of the same App');
 });
