@@ -6716,6 +6716,81 @@
 .fs-gallery__thumb img { object-fit: contain; }
 .fs-card__media { aspect-ratio: 4 / 5; }
 .fs-card__img img { object-position: 50% 20%; }
+/* Listing cards on a phone (owner, 2026-11-08): two even columns, every picture the same 4:5 frame,
+   compact badge, heart and add button, and a two-line name, so no card spills into the next. */
+.fs-card { min-width: 0; }
+.fs-card__media { overflow: hidden; }
+.fs-card__img { position: absolute; inset: 0; }
+@media (max-width: 599px) {
+  .fs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .fs-card .fs-badge { left: 8px; top: 8px; min-height: 24px; padding: 0 8px; font-size: 11px; }
+  .fs-card .fs-heart { right: 8px; top: 8px; width: 32px; height: 32px; }
+  .fs-card .fs-quick { right: 8px; bottom: 8px; width: 36px; height: 36px; }
+  .fs-card__body { gap: 4px; padding: 8px 10px 10px; }
+  .fs-card .fs-price { gap: 2px 6px; }
+  .fs-card .fs-price strong { font-size: 18px; }
+  .fs-card .fs-price__mrp { font-size: 11px; }
+  .fs-card__name { font-size: 13px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}
+/* The fashion product page in the marketplace layout of the other stores (owner, 2026-11-08):
+   pictures | details | a buy box, then compare, service, reviews, recently viewed and the brand's row. */
+.fs-main:has(.fs-pdp--mk) { max-width: 1520px; }
+.fs-pdp--mk { --mk-ink: #0F1111; --mk-ink-2: #565959; --mk-teal: #007185; --mk-line: #D5D9D9; color: var(--mk-ink); }
+.fs-pdp--mk .fs-pdp__grid { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) 270px; gap: 28px; }
+.fs-pdp--mk .fs-gallery { top: 120px; }
+.fs-pdp--mk .fs-pdp__brand { margin: 0 0 4px; font-size: 14px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--mk-ink-2); }
+.fs-pdp--mk .fs-pdp__brand a { color: var(--mk-teal); text-decoration: none; }
+.fs-pdp--mk .fs-pdp__brand a:hover { text-decoration: underline; }
+.fs-pdp--mk .fs-pdp__h { margin: 0 0 6px; font-size: 24px; font-weight: 400; line-height: 1.3; letter-spacing: 0; color: var(--mk-ink); }
+.fs-pdp__net { margin: 0 0 8px; font-size: 14px; color: var(--mk-ink-2); }
+.fs-pdp__pricewrap { margin: 10px 0 12px; padding: 12px 0; border-top: 1px solid #E7E7E7; border-bottom: 1px solid #E7E7E7; }
+.fs-pdp--mk .fs-pdp__tax { margin: 2px 0 0; font-size: 13px; color: var(--mk-ink-2); }
+.fs-pdp--mk .pdpk-feats { margin: 0 0 14px; }
+.fs-pdp--mk .fs-pdp__body .pdpk-facts, .fs-pdp--mk .fs-pdp__body .pdpk-about { margin-top: 16px; padding-top: 14px; border-top: 1px solid #E7E7E7; }
+.fs-buybox { position: sticky; top: 120px; padding: 18px; border: 1px solid var(--mk-line); background: #fff; font-size: 14px; }
+.fs-buybox p { margin: 0; }
+.fs-buybox__price { margin-bottom: 8px !important; font-size: 28px; line-height: 1; color: var(--mk-ink); }
+.fs-buybox__price .fs-price__cur { font-size: .5em; vertical-align: .9em; }
+.fs-buybox__deliv { color: var(--mk-ink); }
+.fs-buybox__note { margin: 2px 0 10px !important; font-size: 13px; color: var(--mk-ink-2); }
+.fs-buybox__stock { margin-bottom: 4px !important; font-size: 18px; font-weight: 500; color: #007600; }
+.fs-buybox__stock.is-out, .fs-buybox__stock.is-missing { color: #B12704; }
+.fs-buybox__stock.is-low { color: #C45500; }
+.fs-buybox__sel { font-size: 13px; color: var(--mk-ink-2); }
+.fs-pdp--mk .fs-buybox .fs-pdp__actions { grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 12px 0 10px; }
+.fs-pdp--mk .fs-buybox .fs-btn--add, .fs-pdp--mk .fs-buybox .fs-btn--buy { grid-column: auto; grid-row: auto; min-height: 40px; font-size: 14px; font-weight: 500; }
+.fs-pdp--mk .fs-buybox .fs-btn--add svg { display: none; }
+.fs-pdp--mk .fs-buybox .fs-btn--buy { background: #C2500A; border-color: #C2500A; color: #fff; }
+.fs-pdp--mk .fs-btn--add:disabled, .fs-pdp--mk .fs-btn--buy:disabled { background: #F0F2F2; border-color: #D5D9D9; color: #8A8F8F; }
+.fs-pdp--mk .fs-buybox .fs-heart--inline { grid-column: auto; grid-row: auto; display: flex; gap: 6px; width: 100%; height: 36px; font-size: 13px; color: var(--mk-ink); background: #fff; border: 1px solid var(--mk-line); }
+.fs-pdp--mk .fs-buybox .fs-heart--inline.is-on { color: #C0392B; }
+.fs-buybox__secure { display: flex; align-items: center; gap: 6px; margin-bottom: 8px !important; font-size: 13px; color: var(--mk-teal); }
+.fs-buybox__facts { display: grid; gap: 6px; margin: 12px 0 0; padding-top: 12px; border-top: 1px solid #E7E7E7; font-size: 12.5px; }
+.fs-buybox__facts div { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 8px; }
+.fs-buybox__facts dt { color: var(--mk-ink-2); }
+.fs-buybox__facts dd { margin: 0; color: var(--mk-teal); }
+.fs-pdp--mk .fs-buybox .fs-pdp__delivery { margin-top: 14px; padding-top: 12px; border: 0; border-top: 1px solid #E7E7E7; background: none; box-shadow: none; }
+.fs-pdp--mk .fs-buybox .fs-pdp__h2 { font-size: 14px; font-weight: 700; font-family: inherit; }
+.fs-pdp__more { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 28px; }
+.fs-pdp__more > * { min-width: 0; }
+.fs-pdp--mk .fs-sec__h { font-family: inherit; font-size: 20px; font-weight: 700; }
+@media (max-width: 1199px) {
+  .fs-pdp--mk .fs-pdp__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .fs-buybox { grid-column: 2; position: static; }
+}
+@media (max-width: 767px) {
+  .fs-pdp--mk .fs-pdp__grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .fs-buybox { grid-column: auto; padding: 12px 0 0; border: 0; border-top: 1px solid #E7E7E7; }
+  .fs-buybox__price { display: none; }
+  .fs-pdp--mk .fs-pdp__h { font-size: 18px; line-height: 1.35; }
+  .fs-pdp--mk .fs-buybox .fs-pdp__actions { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .fs-pdp--mk .fs-buybox .fs-heart--inline { grid-column: 1 / -1; }
+  .fs-pdp--mk .fs-buybox .fs-btn--add, .fs-pdp--mk .fs-buybox .fs-btn--buy { min-height: 44px; }
+  .fs-pdp--mk .fs-gallery__slide { aspect-ratio: 1 / 1; }
+}
+
+.fs-pdp--mk .pdpk-price__off { color: #CC0C39; font-weight: 300; }
+.fs-pdp--mk .fs-pdp__info h2, .fs-pdp--mk .pdpk-h { font-family: inherit; }
 
 /* ═══ src/styles/fashion-departments.css ═══ */
 /* Men's streetwear and women's heritage edits. Scoped to the two new routes;

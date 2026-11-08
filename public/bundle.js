@@ -67894,7 +67894,7 @@ const grams = v => `${Number(v).toLocaleString('en-IN', {
 })} g`;
 
 /** "IN" → "India". A code the browser cannot name is shown as the code; anything else, not at all. */
-function countryName(code) {
+function countryName$1(code) {
   const c = text(code).toUpperCase();
   if (!/^[A-Z]{2}$/.test(c)) return '';
   try {
@@ -67931,7 +67931,7 @@ function stoneText(s) {
 function partyText(p) {
   if (!p || !text(p.name)) return '';
   const country = text(p.country).toUpperCase();
-  return [text(p.name), text(p.address), country && country !== 'IN' ? countryName(country) : ''].filter(Boolean).join(', ');
+  return [text(p.name), text(p.address), country && country !== 'IN' ? countryName$1(country) : ''].filter(Boolean).join(', ');
 }
 
 /**
@@ -67988,7 +67988,7 @@ function declarationRows(decl, {
   };
   add('generic_name', 'Generic name', text(decl.generic_name));
   if (netQuantity) add('net_content', 'Net quantity', text(decl.net_content));
-  add('country_of_origin', 'Country of origin', countryName(decl.country_of_origin));
+  add('country_of_origin', 'Country of origin', countryName$1(decl.country_of_origin));
   add('material', 'Material', text(decl.material));
   add('fit', 'Fit', text(decl.fit));
   add('care', 'Care', text(decl.care));
@@ -68062,6 +68062,39 @@ function ProductInformation({
     })]
   });
 }
+
+// ============================================================
+// The fashion product page's extra facts (owner, 2026-11-08: "the same detailed
+// page as the other stores"): material, care, net quantity, SKU, generic name and
+// country of origin — catalogue columns the store's listing read does not carry.
+// One small read for the open product; a failed read is no facts, never an error.
+// ============================================================
+const DETAIL_COLUMNS = 'id, material, care, net_content, sku, generic_name, country_of_origin';
+async function fetchFashionDetails(client, id) {
+  if (!client || !id) return null;
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select(DETAIL_COLUMNS).eq('id', id).maybeSingle();
+  return error ? null : data || null;
+}
+
+/** null until the read answers (or when it fails), then the row. */
+function useFashionDetails(id) {
+  const [row, setRow] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    setRow(null);
+    fetchFashionDetails(supabase, id).then(r => {
+      if (live) setRow(r);
+    }, () => {});
+    return () => {
+      live = false;
+    };
+  }, [id]);
+  return row;
+}
+const countryName = c => String(c || '').trim().toUpperCase() === 'IN' ? 'India' : String(c || '').trim();
 
 function Gallery$1({
   view
@@ -68166,6 +68199,25 @@ function DeliveryBlock$1() {
     })]
   });
 }
+
+/**
+ * One-size pieces (shawls, stoles, caps) open ready to buy, as a marketplace page does: the only
+ * size, and the first colour in stock (or the only one). A garment with several sizes waits for
+ * the customer to choose both; whatever the URL names always wins.
+ */
+function defaultSelection(view, sel) {
+  if (view.sizes.length !== 1) return sel;
+  const size = sel.size ?? view.sizes[0];
+  let colour = sel.colour;
+  if (!colour) {
+    const live = view.swatches.find(sw => view.variants.some(v => v.size === size && v.colour === sw.colour && v.stock > 0));
+    colour = live ? live.colour : view.swatches.length === 1 ? view.swatches[0].colour : null;
+  }
+  return {
+    size,
+    colour
+  };
+}
 function FashionProductPage() {
   const {
     slug
@@ -68183,6 +68235,15 @@ function FashionProductPage() {
   const [params, setParams] = useSearchParams();
   const wish = useFashionWishlist();
   const view = bySlug.get(String(slug || ''));
+  const facts = useFashionDetails(view?.id);
+  const recent = useRecentlyViewed(view ? {
+    key: `fs-${view.id}`,
+    href: `/fashion/p/${view.slug}`,
+    name: view.name,
+    image: view.image,
+    price: view.price
+  } : null);
+  useHoverZoom('.fs-pdp .fs-gallery__slide', view?.id);
   if (!view) {
     return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-listing",
@@ -68202,20 +68263,29 @@ function FashionProductPage() {
   const trail = [...breadcrumbFor$1(tree, node), {
     name: view.name
   }];
-  const sel = readSelection$1(params, view);
+  const sel = defaultSelection(view, readSelection$1(params, view));
   const st = selectionState$1(view, sel);
   const setSel = next => setParams(writeSelection$1(params, next), {
     replace: true
   });
   const wished = wish.has(view.id);
-  const related = relatedFor$1(view, views, 4);
+  const related = relatedFor$1(view, views, 8);
+  const priced = {
+    ...view,
+    price: st.price
+  };
+  const bullets = aboutBullets(view.description);
+  const anyLive = view.variants.some(v => v.stock > 0);
+  const stockText = st.status === 'in' ? 'In stock' : st.status === 'low' ? st.stockNote : st.status === 'choose' ? anyLive ? 'In stock' : 'Out of stock' : st.stockNote;
+  const stockClass = st.status === 'choose' ? anyLive ? 'in' : 'out' : st.status;
+  const factRows = [['Brand', view.brand], ['Material', facts?.material], ['Colour', st.colour || (view.swatches.length ? view.swatches.map(x => x.colour).join(', ') : null)], ['Size', st.size || (view.sizes.length ? view.sizes.join(', ') : null)], ['Net quantity', facts?.net_content], ['Product type', facts?.generic_name], ['Category', node ? tree.ancestors(node.id).map(a => a.name).join(' › ') : null], ['Care', facts?.care], ['SKU', st.variant?.sku || facts?.sku], ['Country of origin', facts?.country_of_origin ? countryName(facts.country_of_origin) : null], ['Delivery', 'Standard, 6–7 business days, free'], ['Returns', 'Within 7 days of delivery']];
   const add = () => addFashionToCart(view, st.variant);
   const buyNow = () => {
     if (addFashionToCart(view, st.variant)) navigate('/checkout');
   };
   const addLabel = st.canAdd ? 'Add to cart' : st.status === 'out' ? 'Out of stock' : st.status === 'missing' ? 'Not available' : st.missing;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "fs-pdp",
+    className: "fs-pdp fs-pdp--mk",
     "data-product": view.slug,
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb$1, {
       trail: trail
@@ -68225,9 +68295,12 @@ function FashionProductPage() {
         view: view
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "fs-pdp__body",
-        children: [view.brand && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        children: [view.brand && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
           className: "fs-pdp__brand",
-          children: view.brand
+          children: ["Brand: ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: `/fashion/search?q=${encodeURIComponent(view.brand)}`,
+            children: view.brand
+          })]
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
           className: "fs-pdp__h serif",
           children: view.name
@@ -68242,33 +68315,69 @@ function FashionProductPage() {
             className: "fs-rating__count",
             children: ["(", view.reviewCount.toLocaleString('en-IN'), " ", view.reviewCount === 1 ? 'review' : 'reviews', ")"]
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-          className: "fs-price fs-price--lg",
+        }), facts?.net_content && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fs-pdp__net",
+          children: facts.net_content
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "fs-pdp__pricewrap",
           "data-price": st.price,
-          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("strong", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              className: "fs-price__cur",
-              children: "\u20B9"
-            }), money(st.price).replace(/^₹\s?/, '')]
-          }), view.hasDiscount && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              className: "fs-price__mrp",
-              children: ["M.R.P: ", /*#__PURE__*/jsxRuntimeExports.jsx("s", {
-                children: money(view.mrp)
-              })]
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              className: "fs-badge",
-              children: [view.discountPct, "% OFF"]
-            })]
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(PdpPrice, {
+            product: priced
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "fs-pdp__tax",
+            children: "Inclusive of all taxes"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpSaving, {
+            product: priced
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "fs-pdp__tax",
-          children: "Inclusive of all taxes"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(VariantPicker$1, {
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpAssurances, {}), /*#__PURE__*/jsxRuntimeExports.jsx(VariantPicker$1, {
           view: view,
           size: st.size,
           colour: st.colour,
           onChange: setSel
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpFactTable, {
+          rows: factRows
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpAbout, {
+          bullets: bullets
+        }), view.description && bullets.length < 2 && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+          className: "fs-pdp__section",
+          "aria-labelledby": "fs-desc-h",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "fs-pdp__h2",
+            id: "fs-desc-h",
+            children: "About this item"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "fs-pdp__desc",
+            children: view.description
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductInformation, {
+          store: "fashion",
+          productId: view.id,
+          variant: st.variant,
+          prefix: "fs"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("aside", {
+        className: "fs-buybox",
+        "aria-label": "Buy",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "fs-buybox__price",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "fs-price__cur",
+            children: "\u20B9"
+          }), money(st.price).replace(/^₹\s?/, '')]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "fs-buybox__deliv",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+            children: "FREE"
+          }), " Standard Delivery: 6\u20137 business days"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fs-buybox__note",
+          children: "Free on every order \xB7 Cash on Delivery available"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: `fs-buybox__stock is-${stockClass}`,
+          children: stockText
+        }), st.label && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fs-buybox__sel",
+          children: st.label
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "fs-pdp__actions",
           children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
@@ -68287,70 +68396,86 @@ function FashionProductPage() {
             disabled: !st.canAdd,
             onClick: buyNow,
             children: "Buy now"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
             type: "button",
             className: `fs-heart fs-heart--inline${wished ? ' is-on' : ''}`,
             "aria-pressed": wished,
             "aria-label": wished ? 'Remove from wishlist' : 'Save to wishlist',
             onClick: () => wish.toggle(view.id),
-            children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
               name: "heart",
               size: 20,
               fill: wished ? 'currentColor' : 'none'
-            })
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryBlock$1, {}), view.description && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-          className: "fs-pdp__section",
-          "aria-labelledby": "fs-desc-h",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-            className: "fs-pdp__h2",
-            id: "fs-desc-h",
-            children: "About this style"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "fs-pdp__desc",
-            children: view.description
-          })]
-        }), (view.brand || node) && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-          className: "fs-pdp__section",
-          "aria-labelledby": "fs-details-h",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-            className: "fs-pdp__h2",
-            id: "fs-details-h",
-            children: "Details"
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
-            className: "fs-pdp__details",
-            children: [view.brand && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-                children: "Brand"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-                children: view.brand
-              })]
-            }), node && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-                children: "Category"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-                children: tree.ancestors(node.id).map(a => a.name).join(' › ')
-              })]
-            }), view.sizes.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-                children: "Sizes"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-                children: view.sizes.join(', ')
-              })]
-            }), view.swatches.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
-                children: "Colours"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
-                children: view.swatches.map(s => s.colour).join(', ')
-              })]
+            }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: wished ? 'Saved to wishlist' : 'Add to wishlist'
             })]
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductInformation, {
-          store: "fashion",
-          productId: view.id,
-          variant: st.variant,
-          prefix: "fs"
-        })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "fs-buybox__secure",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "lock",
+            size: 14
+          }), " Secure transaction"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpShare, {
+          name: view.name
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("dl", {
+          className: "fs-buybox__facts",
+          children: [view.brand && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+              children: "Brand"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+              children: view.brand
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+              children: "Delivery"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+              children: "Standard, free"
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+              children: "Payment"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+              children: "Secure transaction \xB7 COD"
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("dt", {
+              children: "Returns"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("dd", {
+              children: "Within 7 days of delivery"
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(DeliveryBlock$1, {})]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-pdp__more",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(PdpCompare, {
+        items: [view, ...related.slice(0, 3)].map((p, i) => ({
+          key: p.id,
+          href: `/fashion/p/${p.slug}`,
+          name: p.name,
+          image: p.image,
+          price: p.price,
+          mrp: p.hasDiscount ? p.mrp : 0,
+          pct: p.discountPct,
+          size: p.sizes.join(', '),
+          brand: p.brand,
+          current: i === 0
+        }))
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpService, {}), /*#__PURE__*/jsxRuntimeExports.jsx(PdpReviews, {
+        productKey: `fashion:${view.id}`,
+        productName: view.name
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpRecent, {
+        items: recent
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpBrandRail, {
+        brand: view.brand,
+        items: views.filter(p => p.id !== view.id && p.brand && p.brand === view.brand && !related.slice(0, 4).some(r => r.id === p.id)).slice(0, 12).map(p => ({
+          key: p.id,
+          href: `/fashion/p/${p.slug}`,
+          name: p.name,
+          image: p.image,
+          price: p.price
+        }))
       })]
     }), related.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
       className: "fs-sec",
@@ -68364,7 +68489,7 @@ function FashionProductPage() {
         })
       }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "fs-grid fs-grid--related",
-        children: related.map(v => /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductCard, {
+        children: related.slice(0, 4).map(v => /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductCard, {
           view: v
         }, v.id))
       })]
