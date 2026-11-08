@@ -1,8 +1,8 @@
 diff --git a/src/styles/v2-pdp.css b/src/styles/v2-pdp.css
-index a5a71e9..336dcaf 100644
+index a5a71e9..971fe0d 100644
 --- a/src/styles/v2-pdp.css
 +++ b/src/styles/v2-pdp.css
-@@ -1150,3 +1150,65 @@ body:has(.v2-pdp-root .buybar) .page-main {
+@@ -1150,3 +1150,105 @@ body:has(.v2-pdp-root .buybar) .page-main {
    .v2-pdp-root .variantlist { grid-template-columns: repeat(3, minmax(0, 1fr)); }
    .v2-pdp-root .pdp-specs__row { grid-template-columns: minmax(140px, 26%) minmax(0, 1fr); }
  }
@@ -68,3 +68,43 @@ index a5a71e9..336dcaf 100644
 +  .pdpk-feats li { font-size:11.5px; padding:2px 3px; }
 +  .pdpk-feats span { width:34px; height:34px; }
 +}
++
++/* Phone: denser, so more of the page fits on one screen (owner, 2026-11-08). */
++@media (max-width:599px) {
++  .v2-pdp-root .pdp-top { padding-top:6px; padding-bottom:6px; }
++  .v2-pdp-root .v2-crumbs { font-size:11.5px; }
++  .v2-pdp-root .pdp-back { min-height:32px; font-size:11px; }
++  .pdpk-strip { padding:7px 0; font-size:11px; gap:14px; }
++  .v2-pdp-root .pdp__gallery:not(.pdp__gallery--single) { grid-template-columns:48px minmax(0, 1fr); gap:6px; }
++  .v2-pdp-root .pdp__thumb { flex:0 0 48px; width:48px; }
++  .v2-pdp-root .pdp__gallery:not(.pdp__gallery--single) .pdp__thumbs { gap:6px; }
++  .v2-pdp-root .pdp__galbtn { width:34px; height:34px; min-width:34px; min-height:34px; }
++  .v2-pdp-root .pdp__galbtn svg { width:17px; height:17px; }
++  .v2-pdp-root .pdp__zoom-label { padding:5px 10px; font-size:12px; }
++  .v2-pdp-root .pdp__info { padding-top:12px; }
++  .v2-pdp-root .pdp__brand { margin-bottom:3px; font-size:10.5px; }
++  .v2-pdp-root .pdp__brand::after { width:28px; }
++  .v2-pdp-root .pdp__title { font-size:21px; line-height:1.2; }
++  .v2-pdp-root .pdp__net { font-size:12.5px; }
++  .v2-pdp-root .pdp__price { margin-top:8px; padding:10px 12px; gap:4px 10px; }
++  .v2-pdp-root .pdp__price .v2-price { gap:4px 10px; }
++  .v2-pdp-root .pdp__price .v2-price__now { font-size:25px; }
++  .v2-pdp-root .pdp__price .v2-price__mrp { font-size:13px; }
++  .v2-pdp-root .pdp__price .v2-price__off { padding:2px 8px; font-size:12px; }
++  .pdpk-save { font-size:13.5px; }
++  .v2-pdp-root .pdp__price .pdp__tax { font-size:11px; }
++  .v2-pdp-root .pdp-coupons { margin-top:10px; }
++  .v2-pdp-root .pdp-coupons__head { padding:9px 12px; font-size:14px; }
++  .v2-pdp-root .pdp-coupon__title { font-size:14px; }
++  .v2-pdp-root .pdp-coupon__desc { font-size:12px; }
++  .pdpk-feats { margin:10px 0; }
++  .pdpk-feats li { gap:4px; font-size:10.5px; padding:1px 2px; }
++  .pdpk-feats span { width:30px; height:30px; }
++  .pdpk-feats svg { width:16px; height:16px; }
++  .v2-pdp-root .pdp__addbtn, .v2-pdp-root .pdp__buynow { min-height:44px; font-size:14px; }
++  .v2-pdp-root .variantchip { padding:8px 10px; font-size:13px; }
++  .v2-pdp-root .pdp__block .label { font-size:11px; }
++  .v2-pdp-root .buybar { padding-top:8px; padding-bottom:calc(8px + env(safe-area-inset-bottom)); }
++  .v2-pdp-root .buybar__add, .v2-pdp-root .buybar__buy { min-height:42px; padding:0 14px; font-size:14px; }
++}
++
