@@ -105,7 +105,8 @@ await test('S1 the showcase: muted, inline, nothing loaded up front, hidden from
 await test('H1 Home.jsx: the range then the showcase, straight under the Biosash range, each once', () => {
   const home = read('src/pages/Home.jsx');
   const at = (s) => home.indexOf(s);
-  assert.ok(at('<BiosashRange />') > 0 && at('<BiosashRange />') < at('<WeaversVillaRange />') && at('<WeaversVillaRange />') < at('<WeaversVillaShowcase />') && at('<WeaversVillaShowcase />') < at('<Bedsheets />'));
+  assert.ok(at('<BiosashRange />') > 0 && at('<BiosashRange />') < at('<WeaversVillaRange />') && at('<WeaversVillaRange />') < at('<WeaversVillaShowcase />') && at('<WeaversVillaShowcase />') < at('<LeatherFactoryRange />') && at('<LeatherFactoryRange />') < at('<LeatherFactoryShowcase />') && at('<LeatherFactoryShowcase />') < at('<Bedsheets />'));
+  for (const f of ['handbags', 'mens-wallets', 'belts']) assert.ok(existsSync(resolve(ROOT, `img/partners/leather-factory/${f}.webp`)), `${f} tile picture`);
   for (const c of ['<WeaversVillaRange />', '<WeaversVillaShowcase />']) assert.equal(home.split(c).length - 1, 1);
 });
 

@@ -294,7 +294,7 @@ await test('P1 Home.jsx (owner, 2026-11-07; Weavers Villa between them since 202
   assert.match(home, /import \{ LuxuryBeds, Bedsheets \} from '\.\.\/components\/HomeCategoryRails\.jsx';/);
   const at = (s) => home.indexOf(s);
   const between = home.slice(at('<BiosashRange />') + '<BiosashRange />'.length, at('<Bedsheets />'));
-  assert.ok(at('<BiosashRange />') > 0 && at('<Bedsheets />') > at('<BiosashRange />') && between.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').match(/<[A-Z]\w*/g)?.join(',') === '<WeaversVillaRange,<WeaversVillaShowcase', 'only the Weavers Villa sections between Biosash and bedsheets');
+  assert.ok(at('<BiosashRange />') > 0 && at('<Bedsheets />') > at('<BiosashRange />') && between.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').match(/<[A-Z]\w*/g)?.join(',') === '<WeaversVillaRange,<WeaversVillaShowcase,<LeatherFactoryRange,<LeatherFactoryShowcase', 'only the partner sections between Biosash and bedsheets');
   assert.ok(at('<Bedsheets />') < at('<LifestyleBanner />'), 'above the Lifestyle banner');
   assert.ok(at('<WhySoraLife />') < at('<LuxuryBeds />'), 'beds below "Why Sora Life"');
   assert.ok(at('<LuxuryBeds />') < at('<Newsletter />'), 'beds above the newsletter');

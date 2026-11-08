@@ -125,6 +125,15 @@ const WELLNESS = {
     hidden: hidden(), eyebrow: text(60, 'Eyebrow'), title: text(60, 'Headline'), text: text(200, 'Subline'),
     cta: text(40, 'Button label'), link: link('Button link (empty: Shawls & Stoles)'),
   }, 'Weavers Villa poster with their films'),
+  // Leather Factory (partner, 2026-11-08), under Weavers Villa.
+  leatherFactory: group({
+    hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
+    link: link('View-all link (empty: Leather Goods)'),
+  }, 'Leather Factory pieces (their products in Fashion; hidden while there are none)'),
+  leatherShowcase: group({
+    hidden: hidden(), eyebrow: text(60, 'Eyebrow'), title: text(60, 'Headline'), text: text(200, 'Subline'),
+    cta: text(40, 'Button label'), link: link('Button link (empty: Leather Goods)'),
+  }, 'Leather Factory poster with category tiles'),
   // Under the Biosash range (and Weavers Villa since 2026-11-08) since 2026-11-07.
   bedsheets: group({
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),

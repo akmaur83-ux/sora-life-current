@@ -10,6 +10,7 @@ import { NewArrivals } from '../components/NewArrivals.jsx';
 import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
 import { BiosashRange } from '../components/BiosashRange.jsx';
 import { WeaversVillaRange, WeaversVillaShowcase } from '../components/WeaversVilla.jsx';
+import { LeatherFactoryRange, LeatherFactoryShowcase } from '../components/LeatherFactory.jsx';
 import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
@@ -82,6 +83,11 @@ export default function Home() {
           nothing when hidden in Storefronts → Wellness, the range also when empty. */}
       <WeaversVillaRange />
       <WeaversVillaShowcase />
+
+      {/* Leather Factory (partner, 2026-11-08): their pieces in the same row, then a
+          poster band of category tiles (LeatherFactory.jsx). */}
+      <LeatherFactoryRange />
+      <LeatherFactoryShowcase />
 
       {/* Home & Living's Bedsheets, a sliding row of its live products in the
           catalogue's own order (HomeCategoryRails.jsx), directly under the

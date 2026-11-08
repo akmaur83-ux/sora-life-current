@@ -444,3 +444,9 @@
   .hx-wv__label { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) { .hx-wv__video, .hx-wv__cta { transition: none; } .hx-wv__tile:hover .hx-wv__video { transform: none; } }
+/* Leather Factory (partner, 2026-11-08): the poster band in leather brown, packshot tiles on white. */
+.hx-lf { --wv-bg: #3B2416; --wv-ink: #FBF4EA; --wv-gold: #E2B983; }
+.hx-lf__media { background: #fff; aspect-ratio: 1; }
+.hx-lf__img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 6%; transition: transform .5s ease; }
+.hx-wv__tile:hover .hx-lf__img { transform: scale(1.04); }
+@media (prefers-reduced-motion: reduce) { .hx-lf__img { transition: none; } .hx-wv__tile:hover .hx-lf__img { transform: none; } }
