@@ -923,3 +923,16 @@
 
 /* The marketplace face on the product page (owner, 2026-11-08): Arial, Amazon Ember's fallback. */
 .hl-pdp, .hl .hl-pdp__h.serif, .hl-pdp .hl-sec__h, .hl-pdp button, .hl-pdp .hl-love__h { font-family: "Amazon Ember", Arial, "Helvetica Neue", Helvetica, sans-serif; }
+
+/* Marketplace detail blocks (owner, 2026-11-08). */
+.hl .pdpk-h, .hl .v2-pdp-root .pdpk-h { font-family: inherit; letter-spacing: 0; margin: 0 0 8px; font-size: 16px; font-weight: 700; color: #0F1111; }
+.hl .pdpk-facts { margin-top: 14px; padding-top: 12px; border-top: 1px solid #E7E7E7; }
+.hl .pdpk-facts table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.hl .pdpk-facts th { width: 38%; padding: 4px 12px 4px 0; text-align: left; vertical-align: top; font-weight: 700; color: #0F1111; }
+.hl .pdpk-facts td { padding: 4px 0; color: #0F1111; line-height: 1.4; }
+.hl .pdpk-about { margin-top: 14px; padding-top: 12px; border-top: 1px solid #E7E7E7; }
+.hl .pdpk-about ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; list-style: disc; }
+.hl .pdpk-about li { font-size: 14px; line-height: 1.45; color: #0F1111; }
+.hl .pdp__bbwish { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 34px; margin-top: 10px; border: 1px solid #D5D9D9; background: #fff; color: #0F1111; font: inherit; font-size: 13px; cursor: pointer; }
+.hl .pdp__bbwish.is-on { color: #C2500A; border-color: #C2500A; }
+.hl .pdp__bbsecure { display: flex; align-items: center; gap: 5px; margin: 10px 0 0; font-size: 12.5px; color: #007185; }

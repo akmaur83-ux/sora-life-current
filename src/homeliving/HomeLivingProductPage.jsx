@@ -552,7 +552,7 @@ export default function HomeLivingProductPage() {
   const [head, hl, tail] = titleParts(view.name);
   const sentences = sentencesOf(view.description);
   const lede = sentences[0] && sentences[0].length <= 140 ? sentences[0] : null;
-  const bullets = sentences.slice(0, 5).filter((x) => x.length <= 160);
+  const bullets = sentences.slice(0, 6).filter((x) => x.length <= 220);
   // st.variant is the chosen size × colour (null for a product without variants).
   const add = () => addHomeLivingToCart(view, st.variant, 1);
   const buy = () => { if (addHomeLivingToCart(view, st.variant, 1) !== false) navigate('/checkout'); };
@@ -595,6 +595,22 @@ export default function HomeLivingProductPage() {
             ? null
             : <VariantPicker view={view} st={st} onChange={setSel} />}
 
+          {/* Marketplace detail (owner, 2026-11-08): only what the catalogue carries. */}
+          {(() => {
+            const rows = [
+              ['Brand', view.brand], ['Size', view.net_content], ['Material', view.material],
+              ['Colour', view.swatches.length ? view.swatches.map((x) => x.colour).join(', ') : null],
+              ['Category', node ? node.name : null], ['Care', view.care], ['Country of origin', view.country_of_origin === 'IN' ? 'India' : view.country_of_origin],
+              ['Delivery', `Standard, ${HOMELIVING_DELIVERY_WINDOW}, free`], ['Returns', 'Within 7 days of delivery'],
+            ].filter((r) => r[1] != null && String(r[1]).trim());
+            return (
+              <section className="pdpk-facts" aria-label="Product details">
+                <h2 className="pdpk-h">Product details</h2>
+                <table><tbody>{rows.map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}</tbody></table>
+              </section>
+            );
+          })()}
+
           {bullets.length > 1 && (
             <section className="hl-about" aria-labelledby="hl-about-h">
               <h2 className="hl-about__h" id="hl-about-h">About this item</h2>
@@ -612,6 +628,7 @@ export default function HomeLivingProductPage() {
             <AddToCartButton st={st} onAdd={add} />
             <BuyNowButton st={st} onBuy={buy} />
           </div>
+          <p className="pdp__bbsecure"><Icon name="lock" size={14} /> Secure transaction</p>
           <dl className="hl-buybox__facts">
             {view.brand && <div><dt>Brand</dt><dd>{view.brand}</dd></div>}
             <div><dt>Delivery</dt><dd>Standard, free</dd></div>

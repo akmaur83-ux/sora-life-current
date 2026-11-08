@@ -1375,3 +1375,16 @@ body:has(.v2-pdp-root .buybar) .page-main {
 /* The owner's call (2026-11-08): the marketplace's face. Amazon Ember is Amazon's own and
    not licensed to us, so the stack is the one it falls back to — Arial, then Helvetica. */
 .v2-pdp-root, .v2-pdp-root .pdp__title, .v2-pdp-root .pdp-sec__title, .v2-pdp-root .v2-price, .v2-pdp-root button, .v2-pdp-root input { font-family:"Amazon Ember", Arial, "Helvetica Neue", Helvetica, sans-serif; }
+
+/* Marketplace detail blocks (owner, 2026-11-08). */
+.pdpk-h, .hl .pdpk-h, .v2-pdp-root .pdpk-h { font-family: inherit; letter-spacing: 0; margin: 0 0 8px; font-size: 16px; font-weight: 700; color: #0F1111; }
+.pdpk-facts { margin-top: 14px; padding-top: 12px; border-top: 1px solid #E7E7E7; }
+.pdpk-facts table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.pdpk-facts th { width: 38%; padding: 4px 12px 4px 0; text-align: left; vertical-align: top; font-weight: 700; color: #0F1111; }
+.pdpk-facts td { padding: 4px 0; color: #0F1111; line-height: 1.4; }
+.pdpk-about { margin-top: 14px; padding-top: 12px; border-top: 1px solid #E7E7E7; }
+.pdpk-about ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; list-style: disc; }
+.pdpk-about li { font-size: 14px; line-height: 1.45; color: #0F1111; }
+.pdp__bbwish { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 34px; margin-top: 10px; border: 1px solid #D5D9D9; background: #fff; color: #0F1111; font: inherit; font-size: 13px; cursor: pointer; }
+.pdp__bbwish.is-on { color: #C2500A; border-color: #C2500A; }
+.pdp__bbsecure { display: flex; align-items: center; gap: 5px; margin: 10px 0 0; font-size: 12.5px; color: #007185; }

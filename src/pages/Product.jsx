@@ -27,7 +27,8 @@ import PdpStorySlot from '../components/pdp/PdpStorySlot.jsx';
 import ProductClaims from '../components/pdp/ProductClaims.jsx';
 import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
-import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
+import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
+import { specificationsFor } from '../data/pdpContent.js';
 import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
 import { promotionsSource } from '../lib/promotions.js';
 
@@ -346,6 +347,16 @@ useEffect(() => {
             </div>
           )}
 
+          {/* Marketplace detail (owner, 2026-11-08): what the catalogue says, as a table and as bullets. */}
+          <PdpFactTable rows={[
+            ['Brand', product.brand],
+            ['Net quantity', netContent],
+            ['Category', cat?.name],
+            ...specificationsFor(product).rows.filter((r) => !/^pack size$/i.test(r.key)).slice(0, 5).map((r) => [r.key, r.value]),
+            ['Delivery', 'Standard, free on every order'],
+            ['Returns', 'Within 7 days of delivery'],
+          ]} />
+          <PdpAbout bullets={aboutBullets(product.description)} />
         </div>
 
         {/* The buy box (owner's reference, 2026-11-08): price, stock, quantity, Add to
@@ -374,6 +385,10 @@ useEffect(() => {
           <button className="v2-btn v2-btn--ghost v2-btn--block pdp__buynow" disabled={blocked} onClick={buyNow}>Buy it now</button>
 
           <ProductDeliveryInfo product={product} />
+          <button type="button" className={`pdp__bbwish${wished ? ' is-on' : ''}`} onClick={() => toggleWish(product)} aria-pressed={wished}>
+            <Icon name="heart" size={16} fill={wished ? 'currentColor' : 'none'} /> {wished ? 'Saved to Wish List' : 'Add to Wish List'}
+          </button>
+          <p className="pdp__bbsecure"><Icon name="lock" size={14} /> Secure transaction</p>
           <dl className="pdp__bbfacts">
             {product.brand && <div><dt>Brand</dt><dd>{product.brand}</dd></div>}
             <div><dt>Delivery</dt><dd>Standard, free</dd></div>

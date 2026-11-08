@@ -92,3 +92,32 @@ export function PdpPrice({ product, variant = null }) {
     </div>
   );
 }
+
+/** Description as sentences, for "About this item" (up to six, none longer than a line or two). */
+export function aboutBullets(text, limit = 6) {
+  return String(text || '').replace(/\s+/g, ' ')
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9])/).map((x) => x.trim())
+    .filter((x) => x.length > 12 && x.length <= 220).slice(0, limit);
+}
+
+/** The marketplace "key / value" table at the top of the details: only rows the catalogue carries. */
+export function PdpFactTable({ rows, title = 'Product details' }) {
+  const shown = (rows || []).filter((r) => r && r[1] != null && String(r[1]).trim());
+  if (!shown.length) return null;
+  return (
+    <section className="pdpk-facts" aria-label={title}>
+      <h2 className="pdpk-h">{title}</h2>
+      <table><tbody>{shown.map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}</tbody></table>
+    </section>
+  );
+}
+
+export function PdpAbout({ bullets }) {
+  if (!bullets || bullets.length < 2) return null;
+  return (
+    <section className="pdpk-about" aria-labelledby="pdpk-about-h">
+      <h2 className="pdpk-h" id="pdpk-about-h">About this item</h2>
+      <ul>{bullets.map((b) => <li key={b}>{b}</li>)}</ul>
+    </section>
+  );
+}
