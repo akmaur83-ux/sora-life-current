@@ -1,0 +1,65 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 36e89f9..e3563ca 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -31,6 +31,7 @@ import HomeLivingLayout from './homeliving/HomeLivingLayout.jsx';
+ import HomeLivingHome from './homeliving/HomeLivingHome.jsx';
+ import HomeLivingCategory from './homeliving/HomeLivingCategory.jsx';
+ import HomeLivingProductPage from './homeliving/HomeLivingProductPage.jsx';
++import HomeLivingSearch from './homeliving/HomeLivingSearch.jsx';
+ import LifestyleLayout from './lifestyle/LifestyleLayout.jsx';
+ import LifestyleHome from './lifestyle/LifestyleHome.jsx';
+ import { useAdminAuth } from './lib/adminAuth.jsx';
+@@ -226,6 +227,7 @@ export default function App() {
+         <Route index element={<HomeLivingHome />} />
+         <Route path="category/:slug" element={<HomeLivingCategory />} />
+         <Route path="p/:slug" element={<HomeLivingProductPage />} />
++        <Route path="search" element={<HomeLivingSearch />} />
+       </Route>
+ 
+       {/* The lifestyle storefront: the roof over the fashion and Home & Living
+diff --git a/src/fashion/FashionLayout.jsx b/src/fashion/FashionLayout.jsx
+index 86392bf..ad4bab1 100644
+--- a/src/fashion/FashionLayout.jsx
++++ b/src/fashion/FashionLayout.jsx
+@@ -11,6 +11,8 @@ import { FashionCatalogueProvider, useFashionCatalogue } from './FashionCatalogu
+ import { categoryHref, resolveCategory } from '../lib/fashion.js';
+ import { normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
+ import { useStorefrontSection } from '../lib/storefrontSections.js';
++import SearchSuggest, { SUGGEST_MAX, suggestKeys } from '../components/SearchSuggest.jsx';
++import { searchItems } from '../lib/searchMatch.js';
+ 
+ // ============================================================
+ // The fashion store shell — its own header (logo, search, account,
+@@ -45,8 +47,19 @@ export function FashionHeader({ onMenu }) {
+   const submit = (e) => {
+     e.preventDefault();
+     const term = q.trim();
++    setOpen(false);
+     navigate(term ? `/fashion/search?q=${encodeURIComponent(term)}` : '/fashion/search');
+   };
++  // Live suggestions under the box (SearchSuggest.jsx, searchMatch.js), from the catalogue already loaded.
++  const { views, tree } = useFashionCatalogue();
++  const [open, setOpen] = useState(false);
++  const [active, setActive] = useState(-1);
++  const term = q.trim();
++  const found = open && term.length >= 2
++    ? searchItems(views, term, (v) => [v.name, v.brand, tree.byId.get(v.category_id)?.name]).map((v) => ({ key: v.id, href: `/fashion/p/${v.slug}`, name: v.name, brand: v.brand, image: v.image, price: v.price }))
++    : null;
++  const pick = () => { setOpen(false); setActive(-1); };
++  const keys = (e) => suggestKeys(e, { count: Math.min(SUGGEST_MAX, found?.length || 0), active, setActive, open, setOpen, go: (i) => { pick(); navigate(found[i].href); } });
+   // The women's page: the same links over its photograph, and no delivery strip.
+   if (/^\/fashion\/women\/?$/.test(location.pathname)) return (
+     <header className="wm-header">
+@@ -115,8 +128,10 @@ export function FashionHeader({ onMenu }) {
+       </div>
+       <form className="fs-search" role="search" onSubmit={submit}>
+         <Icon name="search" size={20} />
+-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={config.header.searchPlaceholder || SEARCH_PLACEHOLDER} aria-label="Search fashion" />
++        <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} placeholder={config.header.searchPlaceholder || SEARCH_PLACEHOLDER} aria-label="Search fashion"
++          onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={keys} aria-expanded={found ? true : undefined} aria-controls={found ? 'fs-suggest' : undefined} />
+         <button type="submit" className="fs-search__go" aria-label="Search"><Icon name="search" size={22} /></button>
++        {found && <SearchSuggest id="fs-suggest" items={found} query={term} active={active} allHref={`/fashion/search?q=${encodeURIComponent(term)}`} onPick={pick} />}
+       </form>
+       {!strip.hidden && <div className="fs-strip" aria-label="Delivery">
+         <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> {strip.location}</span>

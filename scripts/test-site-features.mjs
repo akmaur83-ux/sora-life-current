@@ -25,6 +25,14 @@ test('WhatsApp: Indian numbers as published, nothing when unset; a product page 
   assert.match(p, /^https:\/\/wa\.me\/917889096228\?text=Hi SORA Lifestyle, I have a question about Kalamkari Shawl: https:\/\/www\.soralifestyle\.in\/fashion\/p\/a-shawl$/);
   assert.match(decodeURIComponent(sa.waLink('7889096228', '/shop', 'Shop', 'u')), /I need some help\.$/);
 });
+const sm = loadModule('src/lib/searchMatch.js', {});
+test('search: every word in name, brand or category, any order and case; plural finds singular; name-start first', () => {
+  const items = [{ name: 'Cotton Bedsheet King', brand: 'SORA', category: 'Bedsheets' }, { name: 'King Size Bedsheet Set', brand: 'X', category: 'Bedsheets' }, { name: 'Wool Shawl', brand: 'Weavers Villa', category: "Women's Shawls" }];
+  assert.deepEqual(sm.searchItems(items, 'king bedsheets').map((x) => x.name), ['King Size Bedsheet Set', 'Cotton Bedsheet King']);
+  assert.deepEqual(sm.searchItems(items, 'WEAVERS shawl').map((x) => x.name), ['Wool Shawl']);
+  assert.deepEqual(sm.searchItems(items, 'k'), [], 'one letter is not a search');
+  assert.deepEqual(sm.searchItems(items, 'silk'), []);
+});
 const eng = loadModule('src/lib/productEngage.js', { supabase: null });
 test('stock alerts group by product and choice, most wanted first; admin links per store', () => {
   const g = eng.groupAlerts([{ id: 1, product_key: 'fashion:a', product_name: 'A', choice: '' }, { id: 2, product_key: 'fashion:b', product_name: 'B', choice: 'M' }, { id: 3, product_key: 'fashion:b', product_name: 'B', choice: 'M' }]);

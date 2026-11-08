@@ -145,9 +145,9 @@ await test('header: the shell (cream everywhere but the homepage, where it float
   assert.match(css, /\.hl-hdr__row \{[^}]*grid-template-columns: 1fr auto 1fr/, 'the wordmark is centred');
 });
 
-await test('the delivery badge reads "Standard Delivery · 6-7 days"; the search bar is visual only; the drawer lists the six categories and the three other stores', () => {
+await test('the delivery badge reads "Standard Delivery · 6-7 days"; the search bar searches (2026-11-08; it was visual only); the drawer lists the six categories and the three other stores', () => {
   assert.match(home, /<span class="hl-deliver__badge">[\s\S]*?<\/svg> Standard Delivery · 6-7 days<\/span>/);
-  assert.match(home, /<input type="search" placeholder="Search bedsheets, curtains, cushions\.\.\." aria-label="Search Home &amp; Living \(coming soon\)" readonly=""\/>/);
+  assert.match(home, /<input type="search" placeholder="Search bedsheets, curtains, cushions\.\.\." aria-label="Search Home &amp; Living" enterKeyHint="search" value=""\/>/);
   assert.doesNotMatch(home, /<form/, 'nothing submits');
   const layout = read('src/homeliving/HomeLivingLayout.jsx');
   assert.match(layout, /<Link to="\/fashion" className="hl-drawer__back"[^>]*>[\s\S]*?Fashion store<\/Link>\n\s+<Link to="\/grocery" className="hl-drawer__back"[^>]*>[\s\S]*?Grocery store<\/Link>\n(\s+<Link to="\/lifestyle" className="hl-drawer__back"[^>]*>[\s\S]*?Lifestyle store<\/Link>\n)?\s+<Link to="\/" className="hl-drawer__back"[^>]*>[\s\S]*?Back to the wellness store<\/Link>/);

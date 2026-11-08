@@ -1050,3 +1050,6 @@
 }
 /* Sharp corners across the store (owner, 2026-11-08). */
 .hl, .hl *, .hl *::before, .hl *::after { border-radius: 0 !important; }
+/* The search bar works (2026-11-08): its suggestions hang under it. */
+.hl .hl-search { position: relative; }
+.hl .hl-search input { cursor: text; }

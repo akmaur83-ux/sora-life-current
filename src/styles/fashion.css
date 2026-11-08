@@ -525,3 +525,6 @@
 }
 /* Sharp corners across the fashion store (owner, 2026-11-08): cards, chips, badges, buttons, panels. */
 .fs, .fs *, .fs *::before, .fs *::after { border-radius: 0 !important; }
+/* Search suggestions sit under the box; a product picture opens full screen on a tap (2026-11-08). */
+.fs-search { position: relative; }
+.fs-gallery__slide { cursor: zoom-in; }

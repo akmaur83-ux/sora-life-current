@@ -114,7 +114,7 @@ export async function buildHomeLivingApp({ cartCount = 0, initial = INITIAL, onA
   // The PDP's live offer is fetched in an effect, which a static render never runs.
   const fetchEligibleCoupons = async () => ({ applicable: [], unlockable: [] });
   const card = loadModule('src/homeliving/HomeLivingProductCard.jsx', { Link, Icon, money, useStore });
-  const layout = loadModule('src/homeliving/HomeLivingLayout.jsx', { Link, Outlet, useLocation, Icon, Footer, Toasts, useStore, branding, ...data });
+  const layout = loadModule('src/homeliving/HomeLivingLayout.jsx', { Link, Outlet, useLocation, useNavigate: () => () => {}, Icon, Footer, Toasts, useStore, branding, ...data, SearchSuggest: () => null, SUGGEST_MAX: 6, suggestKeys: () => {}, searchItems: () => [] });
   // The homepage mounts the shell's nav strip, delivery row and search bar under its hero.
   const home = loadModule('src/homeliving/HomeLivingHome.jsx', { Link, Icon, ...data, HomeLivingProductCard: card.default, BottomNav: layout.BottomNav, DeliveryRow: layout.DeliveryRow, SearchBar: layout.SearchBar });
   const rules = has('src/lib/homelivingListing.js') ? loadModule('src/lib/homelivingListing.js', {}) : {};

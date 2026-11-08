@@ -1,0 +1,217 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 36e89f9..e3563ca 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -31,6 +31,7 @@ import HomeLivingLayout from './homeliving/HomeLivingLayout.jsx';
+ import HomeLivingHome from './homeliving/HomeLivingHome.jsx';
+ import HomeLivingCategory from './homeliving/HomeLivingCategory.jsx';
+ import HomeLivingProductPage from './homeliving/HomeLivingProductPage.jsx';
++import HomeLivingSearch from './homeliving/HomeLivingSearch.jsx';
+ import LifestyleLayout from './lifestyle/LifestyleLayout.jsx';
+ import LifestyleHome from './lifestyle/LifestyleHome.jsx';
+ import { useAdminAuth } from './lib/adminAuth.jsx';
+@@ -226,6 +227,7 @@ export default function App() {
+         <Route index element={<HomeLivingHome />} />
+         <Route path="category/:slug" element={<HomeLivingCategory />} />
+         <Route path="p/:slug" element={<HomeLivingProductPage />} />
++        <Route path="search" element={<HomeLivingSearch />} />
+       </Route>
+ 
+       {/* The lifestyle storefront: the roof over the fashion and Home & Living
+diff --git a/src/fashion/FashionLayout.jsx b/src/fashion/FashionLayout.jsx
+index 86392bf..ad4bab1 100644
+--- a/src/fashion/FashionLayout.jsx
++++ b/src/fashion/FashionLayout.jsx
+@@ -11,6 +11,8 @@ import { FashionCatalogueProvider, useFashionCatalogue } from './FashionCatalogu
+ import { categoryHref, resolveCategory } from '../lib/fashion.js';
+ import { normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
+ import { useStorefrontSection } from '../lib/storefrontSections.js';
++import SearchSuggest, { SUGGEST_MAX, suggestKeys } from '../components/SearchSuggest.jsx';
++import { searchItems } from '../lib/searchMatch.js';
+ 
+ // ============================================================
+ // The fashion store shell — its own header (logo, search, account,
+@@ -45,8 +47,19 @@ export function FashionHeader({ onMenu }) {
+   const submit = (e) => {
+     e.preventDefault();
+     const term = q.trim();
++    setOpen(false);
+     navigate(term ? `/fashion/search?q=${encodeURIComponent(term)}` : '/fashion/search');
+   };
++  // Live suggestions under the box (SearchSuggest.jsx, searchMatch.js), from the catalogue already loaded.
++  const { views, tree } = useFashionCatalogue();
++  const [open, setOpen] = useState(false);
++  const [active, setActive] = useState(-1);
++  const term = q.trim();
++  const found = open && term.length >= 2
++    ? searchItems(views, term, (v) => [v.name, v.brand, tree.byId.get(v.category_id)?.name]).map((v) => ({ key: v.id, href: `/fashion/p/${v.slug}`, name: v.name, brand: v.brand, image: v.image, price: v.price }))
++    : null;
++  const pick = () => { setOpen(false); setActive(-1); };
++  const keys = (e) => suggestKeys(e, { count: Math.min(SUGGEST_MAX, found?.length || 0), active, setActive, open, setOpen, go: (i) => { pick(); navigate(found[i].href); } });
+   // The women's page: the same links over its photograph, and no delivery strip.
+   if (/^\/fashion\/women\/?$/.test(location.pathname)) return (
+     <header className="wm-header">
+@@ -115,8 +128,10 @@ export function FashionHeader({ onMenu }) {
+       </div>
+       <form className="fs-search" role="search" onSubmit={submit}>
+         <Icon name="search" size={20} />
+-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={config.header.searchPlaceholder || SEARCH_PLACEHOLDER} aria-label="Search fashion" />
++        <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} placeholder={config.header.searchPlaceholder || SEARCH_PLACEHOLDER} aria-label="Search fashion"
++          onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={keys} aria-expanded={found ? true : undefined} aria-controls={found ? 'fs-suggest' : undefined} />
+         <button type="submit" className="fs-search__go" aria-label="Search"><Icon name="search" size={22} /></button>
++        {found && <SearchSuggest id="fs-suggest" items={found} query={term} active={active} allHref={`/fashion/search?q=${encodeURIComponent(term)}`} onPick={pick} />}
+       </form>
+       {!strip.hidden && <div className="fs-strip" aria-label="Delivery">
+         <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> {strip.location}</span>
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 106533b..dc860f4 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -13,6 +13,7 @@ import { Breadcrumb } from './FashionListing.jsx';
+ import FashionProductCard, { Stars } from './FashionProductCard.jsx';
+ import { VariantPicker } from './FashionVariantPicker.jsx';
+ import ProductInformation from '../components/ProductInformation.jsx';
++import { GalleryZoom } from '../homeliving/HomeLivingProductPage.jsx';
+ import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+ import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+@@ -31,6 +32,7 @@ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ export function Gallery({ view }) {
+   const images = view.images.length ? view.images : (view.image ? [view.image] : []);
+   const [active, setActive] = useState(0);
++  const [zoom, setZoom] = useState(null);   // the picture open full screen (Home & Living's viewer: pinch, swipe, Escape)
+   const track = useRef(null);
+   /**
+    * Show image i: the track scrolls sideways to it and nothing else moves — not the
+@@ -49,7 +51,7 @@ export function Gallery({ view }) {
+     <div className="fs-gallery">
+       <div className="fs-gallery__track" role="group" aria-label={`${view.name} images`} ref={track}>
+         {images.map((src, i) => (
+-          <figure key={src + i} className={`fs-gallery__slide${i === active ? ' is-on' : ''}`} id={`fs-slide-${i}`}>
++          <figure key={src + i} className={`fs-gallery__slide${i === active ? ' is-on' : ''}`} id={`fs-slide-${i}`} onClick={() => setZoom(i)}>
+             <img src={src} alt={i === 0 ? view.name : `${view.name} — view ${i + 1}`} width="900" height="900" decoding="async" loading={i === 0 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} />
+           </figure>
+         ))}
+@@ -63,6 +65,7 @@ export function Gallery({ view }) {
+           ))}
+         </div>
+       )}
++      {zoom != null && <GalleryZoom images={images.map((url, i) => ({ url, alt: i === 0 ? view.name : `${view.name} — view ${i + 1}` }))} start={zoom} name={view.name} onClose={() => setZoom(null)} />}
+     </div>
+   );
+ }
+diff --git a/src/homeliving/HomeLivingLayout.jsx b/src/homeliving/HomeLivingLayout.jsx
+index 85d05d6..f5fc51d 100644
+--- a/src/homeliving/HomeLivingLayout.jsx
++++ b/src/homeliving/HomeLivingLayout.jsx
+@@ -1,11 +1,13 @@
+ import { useEffect, useState } from 'react';
+-import { Link, Outlet, useLocation } from 'react-router-dom';
++import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import Footer from '../components/Footer.jsx';
+ import Toasts from '../components/Toasts.jsx';
+ import { useStore } from '../lib/store.jsx';
+ import { branding } from '../lib/settings.js';
+ import { HOMELIVING_DELIVERY_WINDOW, HOMELIVING_TAGLINE, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
++import SearchSuggest, { SUGGEST_MAX, suggestKeys } from '../components/SearchSuggest.jsx';
++import { searchItems } from '../lib/searchMatch.js';
+ 
+ // ============================================================
+ // The Home & Living store shell — its own header (menu, centred wordmark,
+@@ -94,12 +96,38 @@ export function DeliveryRow() {
+   );
+ }
+ 
+-/** Visual only for now: no search route exists in the Home & Living store yet. */
++/** Home & Living items as search rows: name, brand and category, with what a suggestion shows. */
++export function homelivingSearchRows(products, categories) {
++  const cat = new Map((categories || []).map((c) => [String(c.id), c.name]));
++  return (products || []).map((p) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, brand: p.brand, category: cat.get(String(p.category_id)) || '', image: p.images?.[0] || null, price: p.price, product: p }));
++}
++
++/**
++ * The store's search (2026-11-08; it was visual only): live suggestions as you type,
++ * Enter opens /homeliving/search?q=… (HomeLivingSearch.jsx).
++ */
+ export function SearchBar() {
++  const navigate = useNavigate();
++  const location = useLocation();
++  const { products, categories } = useHomeLivingCatalogue();
++  const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') || '');
++  const [open, setOpen] = useState(false);
++  const [active, setActive] = useState(-1);
++  const term = q.trim();
++  const found = open && term.length >= 2 ? searchItems(homelivingSearchRows(products, categories), term) : null;
++  const all = `/homeliving/search?q=${encodeURIComponent(term)}`;
++  const pick = () => { setOpen(false); setActive(-1); };
++  const keys = (e) => {
++    if (e.key === 'Enter' && active < 0) { e.preventDefault(); pick(); navigate(term ? all : '/homeliving/search'); return; }
++    suggestKeys(e, { count: Math.min(SUGGEST_MAX, found?.length || 0), active, setActive, open, setOpen, go: (i) => { pick(); navigate(found[i].href); } });
++  };
+   return (
+     <div className="hl-search" role="search" aria-label="Search Home & Living">
+       <Icon name="search" size={22} />
+-      <input type="search" placeholder={SEARCH_PLACEHOLDER} aria-label="Search Home & Living (coming soon)" readOnly />
++      <input type="search" placeholder={SEARCH_PLACEHOLDER} aria-label="Search Home & Living" value={q}
++        onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={keys}
++        enterKeyHint="search" aria-expanded={found ? true : undefined} aria-controls={found ? 'hl-suggest' : undefined} />
++      {found && <SearchSuggest id="hl-suggest" items={found} query={term} active={active} allHref={all} onPick={pick} />}
+     </div>
+   );
+ }
+diff --git a/src/styles/fashion.css b/src/styles/fashion.css
+index 2966a38..5880c87 100644
+--- a/src/styles/fashion.css
++++ b/src/styles/fashion.css
+@@ -525,3 +525,6 @@
+ }
+ /* Sharp corners across the fashion store (owner, 2026-11-08): cards, chips, badges, buttons, panels. */
+ .fs, .fs *, .fs *::before, .fs *::after { border-radius: 0 !important; }
++/* Search suggestions sit under the box; a product picture opens full screen on a tap (2026-11-08). */
++.fs-search { position: relative; }
++.fs-gallery__slide { cursor: zoom-in; }
+diff --git a/src/styles/homeliving.css b/src/styles/homeliving.css
+index 44a8bb7..064b449 100644
+--- a/src/styles/homeliving.css
++++ b/src/styles/homeliving.css
+@@ -1050,3 +1050,6 @@
+ }
+ /* Sharp corners across the store (owner, 2026-11-08). */
+ .hl, .hl *, .hl *::before, .hl *::after { border-radius: 0 !important; }
++/* The search bar works (2026-11-08): its suggestions hang under it. */
++.hl .hl-search { position: relative; }
++.hl .hl-search input { cursor: text; }
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index 33931cc..0c9dbed 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -451,7 +451,7 @@
+ .hx-wv__tile:hover .hx-lf__img { transform: scale(1.04); }
+ @media (prefers-reduced-motion: reduce) { .hx-lf__img { transition: none; } .hx-wv__tile:hover .hx-lf__img { transform: none; } }
+ /* Site helpers (2026-11-08): chat on WhatsApp and back to top, clear of any fixed foot bar. */
+-.hx-sa { position: fixed; right: 16px; bottom: calc(16px + var(--sa-foot, 0px) + env(safe-area-inset-bottom, 0px)); z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: none; }
++.hx-sa { position: fixed; right: 16px; bottom: calc(16px + var(--sa-foot, 0px) + env(safe-area-inset-bottom, 0px)); z-index: 55; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: none; }
+ .hx-sa__btn { pointer-events: auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; min-width: 48px; padding: 0 14px; border: 0; color: #fff; font: 600 14px/1 Arial, "Helvetica Neue", Helvetica, sans-serif; text-decoration: none; cursor: pointer; box-shadow: 0 6px 18px rgba(15, 17, 17, .22); transition: transform .2s ease, box-shadow .2s ease; }
+ .hx-sa__btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15, 17, 17, .28); }
+ .hx-sa__btn:focus-visible { outline: 2px solid #0F1111; outline-offset: 3px; }
+@@ -464,4 +464,16 @@
+ .hx-recent .hx-more { display: none; }
+ .hx-recent__foot { display: flex; justify-content: flex-end; margin-top: -18px; margin-bottom: 8px; }
+ .hx-recent__clear { border: 0; background: none; padding: 4px 0; font: 400 13px/1.4 Arial, sans-serif; color: #007185; cursor: pointer; }
+-.hx-recent__clear:hover { text-decoration: underline; color: #C7511F; }
+\ No newline at end of file
++.hx-recent__clear:hover { text-decoration: underline; color: #C7511F; }
++/* Live search suggestions under the Fashion and Home & Living search boxes (2026-11-08). */
++.hx-suggest { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 70; max-height: min(70vh, 520px); overflow-y: auto; background: #fff; border: 1px solid #D5D9D9; box-shadow: 0 10px 28px rgba(15, 17, 17, .16); font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; text-align: left; }
++.hx-suggest__item { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 12px; color: #0F1111; text-decoration: none; border-bottom: 1px solid #F0F2F2; }
++.hx-suggest__item:hover, .hx-suggest__item.is-on { background: #F3F6F6; }
++.hx-suggest__img { width: 44px; height: 44px; background: #fff; display: block; }
++.hx-suggest__img img { width: 100%; height: 100%; object-fit: contain; display: block; }
++.hx-suggest__name { min-width: 0; font-size: 14px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
++.hx-suggest__name em { display: block; font-style: normal; font-size: 12px; color: #565959; }
++.hx-suggest__price { font-size: 14px; font-weight: 700; white-space: nowrap; }
++.hx-suggest__all { display: block; padding: 10px 12px; font-size: 14px; font-weight: 700; color: #007185; text-decoration: none; }
++.hx-suggest__all:hover { text-decoration: underline; color: #C7511F; }
++.hx-suggest__none { margin: 0; padding: 12px; font-size: 14px; color: #565959; }
+\ No newline at end of file

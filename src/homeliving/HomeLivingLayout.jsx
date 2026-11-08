@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import Footer from '../components/Footer.jsx';
 import Toasts from '../components/Toasts.jsx';
 import { useStore } from '../lib/store.jsx';
 import { branding } from '../lib/settings.js';
 import { HOMELIVING_DELIVERY_WINDOW, HOMELIVING_TAGLINE, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
+import SearchSuggest, { SUGGEST_MAX, suggestKeys } from '../components/SearchSuggest.jsx';
+import { searchItems } from '../lib/searchMatch.js';
 
 // ============================================================
 // The Home & Living store shell — its own header (menu, centred wordmark,
@@ -94,12 +96,38 @@ export function DeliveryRow() {
   );
 }
 
-/** Visual only for now: no search route exists in the Home & Living store yet. */
+/** Home & Living items as search rows: name, brand and category, with what a suggestion shows. */
+export function homelivingSearchRows(products, categories) {
+  const cat = new Map((categories || []).map((c) => [String(c.id), c.name]));
+  return (products || []).map((p) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, brand: p.brand, category: cat.get(String(p.category_id)) || '', image: p.images?.[0] || null, price: p.price, product: p }));
+}
+
+/**
+ * The store's search (2026-11-08; it was visual only): live suggestions as you type,
+ * Enter opens /homeliving/search?q=… (HomeLivingSearch.jsx).
+ */
 export function SearchBar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { products, categories } = useHomeLivingCatalogue();
+  const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') || '');
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const term = q.trim();
+  const found = open && term.length >= 2 ? searchItems(homelivingSearchRows(products, categories), term) : null;
+  const all = `/homeliving/search?q=${encodeURIComponent(term)}`;
+  const pick = () => { setOpen(false); setActive(-1); };
+  const keys = (e) => {
+    if (e.key === 'Enter' && active < 0) { e.preventDefault(); pick(); navigate(term ? all : '/homeliving/search'); return; }
+    suggestKeys(e, { count: Math.min(SUGGEST_MAX, found?.length || 0), active, setActive, open, setOpen, go: (i) => { pick(); navigate(found[i].href); } });
+  };
   return (
     <div className="hl-search" role="search" aria-label="Search Home & Living">
       <Icon name="search" size={22} />
-      <input type="search" placeholder={SEARCH_PLACEHOLDER} aria-label="Search Home & Living (coming soon)" readOnly />
+      <input type="search" placeholder={SEARCH_PLACEHOLDER} aria-label="Search Home & Living" value={q}
+        onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={keys}
+        enterKeyHint="search" aria-expanded={found ? true : undefined} aria-controls={found ? 'hl-suggest' : undefined} />
+      {found && <SearchSuggest id="hl-suggest" items={found} query={term} active={active} allHref={all} onPick={pick} />}
     </div>
   );
 }

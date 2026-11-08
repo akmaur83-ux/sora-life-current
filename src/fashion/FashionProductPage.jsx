@@ -13,6 +13,7 @@ import { Breadcrumb } from './FashionListing.jsx';
 import FashionProductCard, { Stars } from './FashionProductCard.jsx';
 import { VariantPicker } from './FashionVariantPicker.jsx';
 import ProductInformation from '../components/ProductInformation.jsx';
+import { GalleryZoom } from '../homeliving/HomeLivingProductPage.jsx';
 import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
 import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
@@ -31,6 +32,7 @@ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 export function Gallery({ view }) {
   const images = view.images.length ? view.images : (view.image ? [view.image] : []);
   const [active, setActive] = useState(0);
+  const [zoom, setZoom] = useState(null);   // the picture open full screen (Home & Living's viewer: pinch, swipe, Escape)
   const track = useRef(null);
   /**
    * Show image i: the track scrolls sideways to it and nothing else moves — not the
@@ -49,7 +51,7 @@ export function Gallery({ view }) {
     <div className="fs-gallery">
       <div className="fs-gallery__track" role="group" aria-label={`${view.name} images`} ref={track}>
         {images.map((src, i) => (
-          <figure key={src + i} className={`fs-gallery__slide${i === active ? ' is-on' : ''}`} id={`fs-slide-${i}`}>
+          <figure key={src + i} className={`fs-gallery__slide${i === active ? ' is-on' : ''}`} id={`fs-slide-${i}`} onClick={() => setZoom(i)}>
             <img src={src} alt={i === 0 ? view.name : `${view.name} — view ${i + 1}`} width="900" height="900" decoding="async" loading={i === 0 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} />
           </figure>
         ))}
@@ -63,6 +65,7 @@ export function Gallery({ view }) {
           ))}
         </div>
       )}
+      {zoom != null && <GalleryZoom images={images.map((url, i) => ({ url, alt: i === 0 ? view.name : `${view.name} — view ${i + 1}` }))} start={zoom} name={view.name} onClose={() => setZoom(null)} />}
     </div>
   );
 }
