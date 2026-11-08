@@ -8,6 +8,7 @@ import { branding } from '../lib/settings.js';
 import { HOMELIVING_DELIVERY_WINDOW, HOMELIVING_TAGLINE, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
 import SearchSuggest, { SUGGEST_MAX, suggestKeys } from '../components/SearchSuggest.jsx';
 import { searchItems } from '../lib/searchMatch.js';
+import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
 
 // ============================================================
 // The Home & Living store shell — its own header (menu, centred wordmark,
@@ -155,7 +156,7 @@ export function HomeLivingHeader({ onMenu, over = false }) {
             <Link to="/grocery" className="hl-hdr__store">Grocery <Icon name="chevronRight" size={15} /></Link>
             <Link to="/lifestyle" className="hl-hdr__store">Lifestyle <Icon name="chevronRight" size={15} /></Link>
           </span>
-          <button type="button" className="hl-hdr__act" aria-label="Wishlist" aria-disabled="true"><Icon name="heart" size={24} /></button>
+          <WishLink />
           <Link to="/cart" className="hl-hdr__act" aria-label={`Cart${cartCount ? `, ${cartCount} items` : ''}`}>
             <Icon name="bag" size={24} />{cartCount > 0 && <span className="hl-hdr__count">{cartCount}</span>}
           </Link>
@@ -165,6 +166,16 @@ export function HomeLivingHeader({ onMenu, over = false }) {
   );
   if (over) return bar;
   return <div className="hl-top">{bar}<div className="hl-tools hl-tools--bar"><DeliveryRow /><SearchBar /></div></div>;
+}
+
+/** The header heart: this browser's Home & Living wishlist, with its count. */
+function WishLink() {
+  const wish = useHomeLivingWishlist();
+  return (
+    <Link to="/homeliving/wishlist" className="hl-hdr__act" aria-label={`Wishlist${wish.count ? `, ${wish.count} items` : ''}`}>
+      <Icon name="heart" size={24} />{wish.count > 0 && <span className="hl-hdr__count">{wish.count}</span>}
+    </Link>
+  );
 }
 
 export function BottomNav() {

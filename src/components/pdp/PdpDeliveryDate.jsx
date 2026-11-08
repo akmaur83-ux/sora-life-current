@@ -2,6 +2,26 @@ import { useEffect, useState } from 'react';
 import Icon from '../Icon.jsx';
 import { deliveryWindow } from '../../lib/deliveryEstimate.js';
 import { PdpNotifyMe } from './PdpEngage.jsx';
+import { useStorefrontSection } from '../../lib/storefrontSections.js';
+import { OFFER_COUNTDOWN, parseIndiaTime, timeLeft } from '../../lib/offerCountdown.js';
+
+/** The admin's offer line with the time left (offerCountdown.js); nothing once it ends. */
+function OfferCountdown() {
+  const o = useStorefrontSection('wellness', 'offerCountdown', OFFER_COUNTDOWN);
+  const [now, setNow] = useState(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => { setNow(Date.now()); const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []);
+  const end = parseIndiaTime(o.endsAt);
+  const left = now == null ? '' : timeLeft(end - now);
+  if (o.hidden || !left) return null;
+  const copy = async () => { try { await navigator.clipboard.writeText(o.code); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* clipboard off */ } };
+  return (
+    <p className="pdpk-offer" role="note">
+      <Icon name="tag" size={16} />
+      <span>{o.title} {o.code && <button type="button" className="pdpk-offer__code" onClick={copy} aria-label={`Copy code ${o.code}`}>{copied ? 'Copied' : o.code}</button>}<em>Ends in <b>{left}</b></em></span>
+    </p>
+  );
+}
 
 // The buy box's delivery line (deliveryEstimate.js has the rule): the estimated
 // arrival dates while the item can be bought; "Notify me when it is back" while it
@@ -15,9 +35,12 @@ export default function PdpDeliveryDate({ className = '', out = false, productKe
   if (out) return <PdpNotifyMe productKey={productKey} productName={productName} choice={named} />;
   if (!win) return null;
   return (
+    <>
+    <OfferCountdown />
     <p className={`pdpk-eta ${className}`.trim()}>
       <Icon name="truck" size={16} />
       <span>FREE delivery <b>{win.label}</b><em>Estimated delivery date</em></span>
     </p>
+    </>
   );
 }

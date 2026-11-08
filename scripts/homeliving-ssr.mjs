@@ -113,8 +113,8 @@ export async function buildHomeLivingApp({ cartCount = 0, initial = INITIAL, onA
   const { useParams, useSearchParams, useNavigate } = ReactRouter;
   // The PDP's live offer is fetched in an effect, which a static render never runs.
   const fetchEligibleCoupons = async () => ({ applicable: [], unlockable: [] });
-  const card = loadModule('src/homeliving/HomeLivingProductCard.jsx', { Link, Icon, money, useStore });
-  const layout = loadModule('src/homeliving/HomeLivingLayout.jsx', { Link, Outlet, useLocation, useNavigate: () => () => {}, Icon, Footer, Toasts, useStore, branding, ...data, SearchSuggest: () => null, SUGGEST_MAX: 6, suggestKeys: () => {}, searchItems: () => [] });
+  const card = loadModule('src/homeliving/HomeLivingProductCard.jsx', { Link, Icon, money, useStore, useHomeLivingWishlist: () => ({ ids: [], count: 0, has: () => false, toggle: () => {} }) });
+  const layout = loadModule('src/homeliving/HomeLivingLayout.jsx', { useHomeLivingWishlist: () => ({ ids: [], count: 0, has: () => false, toggle: () => {} }), Link, Outlet, useLocation, useNavigate: () => () => {}, Icon, Footer, Toasts, useStore, branding, ...data, SearchSuggest: () => null, SUGGEST_MAX: 6, suggestKeys: () => {}, searchItems: () => [] });
   // The homepage mounts the shell's nav strip, delivery row and search bar under its hero.
   const home = loadModule('src/homeliving/HomeLivingHome.jsx', { Link, Icon, ...data, HomeLivingProductCard: card.default, BottomNav: layout.BottomNav, DeliveryRow: layout.DeliveryRow, SearchBar: layout.SearchBar });
   const rules = has('src/lib/homelivingListing.js') ? loadModule('src/lib/homelivingListing.js', {}) : {};
@@ -122,7 +122,7 @@ export async function buildHomeLivingApp({ cartCount = 0, initial = INITIAL, onA
   const pdpRules = has('src/lib/homelivingPdp.js') ? loadModule('src/lib/homelivingPdp.js', {}) : {};
   // Product information reads after mount (an effect), so a server render has none: the same null as the real one here.
   const ProductInformation = () => null;
-  const pdp = has('src/homeliving/HomeLivingProductPage.jsx') ? loadModule('src/homeliving/HomeLivingProductPage.jsx', { Link, useParams, useSearchParams, useNavigate, fetchEligibleCoupons, PdpCompare: () => null, PdpService: () => null, PdpBrandRail: () => null, PdpBundle: () => null, PdpRecent: () => null, PdpReviews: () => null, PdpShare: () => null, PdpDeliveryDate: () => null, ProductDeliveryInfo: () => null, useRecentlyViewed: () => [], useHoverZoom: () => {}, Icon, money, useStore, HOMELIVING_DELIVERY_WINDOW: data.HOMELIVING_DELIVERY_WINDOW, useHomeLivingCatalogue: data.useHomeLivingCatalogue, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, Breadcrumb: category?.Breadcrumb, HomeLivingProductCard: card.default, ProductInformation }) : null;
+  const pdp = has('src/homeliving/HomeLivingProductPage.jsx') ? loadModule('src/homeliving/HomeLivingProductPage.jsx', { useHomeLivingWishlist: () => ({ ids: [], count: 0, has: () => false, toggle: () => {} }), Link, useParams, useSearchParams, useNavigate, fetchEligibleCoupons, PdpCompare: () => null, PdpService: () => null, PdpBrandRail: () => null, PdpBundle: () => null, PdpRecent: () => null, PdpReviews: () => null, PdpShare: () => null, PdpDeliveryDate: () => null, ProductDeliveryInfo: () => null, useRecentlyViewed: () => [], useHoverZoom: () => {}, Icon, money, useStore, HOMELIVING_DELIVERY_WINDOW: data.HOMELIVING_DELIVERY_WINDOW, useHomeLivingCatalogue: data.useHomeLivingCatalogue, breadcrumbFor: rules.breadcrumbFor, ...pdpRules, Breadcrumb: category?.Breadcrumb, HomeLivingProductCard: card.default, ProductInformation }) : null;
   const App = ({ path }) => h(StaticRouter, { location: path },
     h(Routes, null,
       h(Route, { path: '/homeliving', element: h(layout.default) },

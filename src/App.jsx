@@ -32,6 +32,7 @@ import HomeLivingHome from './homeliving/HomeLivingHome.jsx';
 import HomeLivingCategory from './homeliving/HomeLivingCategory.jsx';
 import HomeLivingProductPage from './homeliving/HomeLivingProductPage.jsx';
 import HomeLivingSearch from './homeliving/HomeLivingSearch.jsx';
+import HomeLivingWishlist from './homeliving/HomeLivingWishlist.jsx';
 import LifestyleLayout from './lifestyle/LifestyleLayout.jsx';
 import LifestyleHome from './lifestyle/LifestyleHome.jsx';
 import { useAdminAuth } from './lib/adminAuth.jsx';
@@ -228,6 +229,7 @@ export default function App() {
         <Route path="category/:slug" element={<HomeLivingCategory />} />
         <Route path="p/:slug" element={<HomeLivingProductPage />} />
         <Route path="search" element={<HomeLivingSearch />} />
+        <Route path="wishlist" element={<HomeLivingWishlist />} />
       </Route>
 
       {/* The lifestyle storefront: the roof over the fashion and Home & Living

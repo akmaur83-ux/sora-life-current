@@ -499,7 +499,7 @@ const walk = (el, hit, out = []) => {
 };
 const rules = loadModule('src/lib/homelivingPdp.js', {});
 const listing = has('src/lib/homelivingListing.js') ? loadModule('src/lib/homelivingListing.js', {}) : {};
-const pageWith = (slug, query, recorded) => loadModule('src/homeliving/HomeLivingProductPage.jsx', {
+const pageWith = (slug, query, recorded) => loadModule('src/homeliving/HomeLivingProductPage.jsx', { useHomeLivingWishlist: () => ({ ids: [], count: 0, has: () => false, toggle: () => {} }),
   Link: (p) => React.createElement('a', p), Icon: () => null, money: (n) => `₹${n}`, Breadcrumb: () => null, HomeLivingProductCard: () => null, ProductInformation: () => null,
   useParams: () => ({ slug }), useSearchParams: () => [new URLSearchParams(query), () => {}], useMemo: (f) => f(), useState: (v) => [typeof v === 'function' ? v() : v, () => {}], useNavigate: () => () => {}, PdpCompare: () => null, PdpService: () => null, PdpBrandRail: () => null, PdpBundle: () => null, PdpRecent: () => null, PdpReviews: () => null, PdpShare: () => null, PdpDeliveryDate: () => null, ProductDeliveryInfo: () => null, useRecentlyViewed: () => [], useHoverZoom: () => {}, fetchEligibleCoupons: async () => ({ applicable: [], unlockable: [] }),
   useHomeLivingCatalogue: () => ({ status: 'ready', categories: PDP.categories, products: VIEWS }),
@@ -528,7 +528,7 @@ await test('card: a product without options is added from the card (out of stock
   assert.match(strip(html), /<a class="hl-btn hl-add hl-card__add hl-card__add--choose" href="\/homeliving\/p\/sage-fitted-sheet">Choose options<\/a>/);
   assert.match(strip(html), /<button type="button" class="hl-btn hl-add hl-card__add"> Add to cart<\/button>/);
   const rec = [];
-  const card = loadModule('src/homeliving/HomeLivingProductCard.jsx', { Link: (p) => React.createElement('a', p), Icon: () => null, money: (n) => `₹${n}`, useStore: () => ({ addHomeLivingToCart: (...a) => { rec.push(a); return true; } }) });
+  const card = loadModule('src/homeliving/HomeLivingProductCard.jsx', { useHomeLivingWishlist: () => ({ ids: [], count: 0, has: () => false, toggle: () => {} }), Link: (p) => React.createElement('a', p), Icon: () => null, money: (n) => `₹${n}`, useStore: () => ({ addHomeLivingToCart: (...a) => { rec.push(a); return true; } }) });
   const set = view('bath-towel-set-pack-of-2');
   walk(card.default({ product: set }), (el) => el.type === 'button' && /hl-card__add/.test(el.props.className))[0].props.onClick();
   assert.deepEqual(rec.map(([p, v, q]) => [p.id, v, q]), [[set.id, null, 1]]);

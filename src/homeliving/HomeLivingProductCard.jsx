@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { money } from '../lib/format.js';
 import { useStore } from '../lib/store.jsx';
+import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
 
 // ============================================================
 // Home & Living product card — image, brand line, name, size, price, and
@@ -21,6 +22,8 @@ export default function HomeLivingProductCard({ product, layout = 'grid', mediaL
   const href = productHref(product);
   const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
   const inStock = Number(product.stock) > 0;
+  const wish = useHomeLivingWishlist();
+  const saved = wish.has(product.id);
   return (
     <article className={`hl-card${layout === 'list' ? ' hl-card--list' : ''}`} data-product={product.slug}>
       <div className="hl-card__media">
@@ -29,7 +32,7 @@ export default function HomeLivingProductCard({ product, layout = 'grid', mediaL
             ? <img src={image} alt="" loading={mediaLoading} decoding="async" width="400" height="400" />
             : <span className="hl-card__noimg" aria-hidden="true">{product.name.slice(0, 1)}</span>}
         </Link>
-        <button type="button" className="hl-card__heart" aria-label={`Save ${product.name} to wishlist`} aria-disabled="true"><Icon name="heart" size={16} /></button>
+        <button type="button" className={`hl-card__heart${saved ? ' is-on' : ''}`} aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`} aria-pressed={saved} onClick={() => wish.toggle(product.id)}><Icon name="heart" size={16} fill={saved ? 'currentColor' : 'none'} /></button>
       </div>
       <div className="hl-card__body">
         <p className="hl-card__brand">{product.brand}</p>

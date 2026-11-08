@@ -116,6 +116,11 @@ const WELLNESS = {
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
     link: link('View-all link (empty: the shop)'),
   }, 'The Biosash range (Biosash products in stock; hidden while there are none)'),
+  // The offer countdown in every product page's buy box (2026-11-08); gone once it ends.
+  offerCountdown: group({
+    hidden: hidden(), title: text(60, 'Offer line'), code: text(30, 'Coupon code shown'),
+    endsAt: text(16, 'Ends (YYYY-MM-DD HH:MM, India time)'),
+  }, 'Offer countdown on product pages'),
   // The visitor's own recently viewed products (this browser only), after the offers (2026-11-08).
   recentlyViewed: group({ hidden: hidden(), title: text(60, 'Heading') }, 'Continue where you left off (shown to a visitor with 2+ viewed products)'),
   // Weavers Villa (partner, 2026-11-08), straight under the Biosash range.

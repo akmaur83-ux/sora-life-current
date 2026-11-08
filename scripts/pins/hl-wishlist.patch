@@ -1,0 +1,152 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index e3563ca..4ceb0ac 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -32,6 +32,7 @@ import HomeLivingHome from './homeliving/HomeLivingHome.jsx';
+ import HomeLivingCategory from './homeliving/HomeLivingCategory.jsx';
+ import HomeLivingProductPage from './homeliving/HomeLivingProductPage.jsx';
+ import HomeLivingSearch from './homeliving/HomeLivingSearch.jsx';
++import HomeLivingWishlist from './homeliving/HomeLivingWishlist.jsx';
+ import LifestyleLayout from './lifestyle/LifestyleLayout.jsx';
+ import LifestyleHome from './lifestyle/LifestyleHome.jsx';
+ import { useAdminAuth } from './lib/adminAuth.jsx';
+@@ -228,6 +229,7 @@ export default function App() {
+         <Route path="category/:slug" element={<HomeLivingCategory />} />
+         <Route path="p/:slug" element={<HomeLivingProductPage />} />
+         <Route path="search" element={<HomeLivingSearch />} />
++        <Route path="wishlist" element={<HomeLivingWishlist />} />
+       </Route>
+ 
+       {/* The lifestyle storefront: the roof over the fashion and Home & Living
+diff --git a/src/homeliving/HomeLivingLayout.jsx b/src/homeliving/HomeLivingLayout.jsx
+index f5fc51d..baf808c 100644
+--- a/src/homeliving/HomeLivingLayout.jsx
++++ b/src/homeliving/HomeLivingLayout.jsx
+@@ -8,6 +8,7 @@ import { branding } from '../lib/settings.js';
+ import { HOMELIVING_DELIVERY_WINDOW, HOMELIVING_TAGLINE, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
+ import SearchSuggest, { SUGGEST_MAX, suggestKeys } from '../components/SearchSuggest.jsx';
+ import { searchItems } from '../lib/searchMatch.js';
++import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+ 
+ // ============================================================
+ // The Home & Living store shell — its own header (menu, centred wordmark,
+@@ -155,7 +156,7 @@ export function HomeLivingHeader({ onMenu, over = false }) {
+             <Link to="/grocery" className="hl-hdr__store">Grocery <Icon name="chevronRight" size={15} /></Link>
+             <Link to="/lifestyle" className="hl-hdr__store">Lifestyle <Icon name="chevronRight" size={15} /></Link>
+           </span>
+-          <button type="button" className="hl-hdr__act" aria-label="Wishlist" aria-disabled="true"><Icon name="heart" size={24} /></button>
++          <WishLink />
+           <Link to="/cart" className="hl-hdr__act" aria-label={`Cart${cartCount ? `, ${cartCount} items` : ''}`}>
+             <Icon name="bag" size={24} />{cartCount > 0 && <span className="hl-hdr__count">{cartCount}</span>}
+           </Link>
+@@ -167,6 +168,16 @@ export function HomeLivingHeader({ onMenu, over = false }) {
+   return <div className="hl-top">{bar}<div className="hl-tools hl-tools--bar"><DeliveryRow /><SearchBar /></div></div>;
+ }
+ 
++/** The header heart: this browser's Home & Living wishlist, with its count. */
++function WishLink() {
++  const wish = useHomeLivingWishlist();
++  return (
++    <Link to="/homeliving/wishlist" className="hl-hdr__act" aria-label={`Wishlist${wish.count ? `, ${wish.count} items` : ''}`}>
++      <Icon name="heart" size={24} />{wish.count > 0 && <span className="hl-hdr__count">{wish.count}</span>}
++    </Link>
++  );
++}
++
+ export function BottomNav() {
+   return (
+     <nav className="hl-nav" aria-label="Home & Living">
+diff --git a/src/homeliving/HomeLivingProductCard.jsx b/src/homeliving/HomeLivingProductCard.jsx
+index be58ac4..91ac708 100644
+--- a/src/homeliving/HomeLivingProductCard.jsx
++++ b/src/homeliving/HomeLivingProductCard.jsx
+@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import { money } from '../lib/format.js';
+ import { useStore } from '../lib/store.jsx';
++import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+ 
+ // ============================================================
+ // Home & Living product card — image, brand line, name, size, price, and
+@@ -21,6 +22,8 @@ export default function HomeLivingProductCard({ product, layout = 'grid', mediaL
+   const href = productHref(product);
+   const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+   const inStock = Number(product.stock) > 0;
++  const wish = useHomeLivingWishlist();
++  const saved = wish.has(product.id);
+   return (
+     <article className={`hl-card${layout === 'list' ? ' hl-card--list' : ''}`} data-product={product.slug}>
+       <div className="hl-card__media">
+@@ -29,7 +32,7 @@ export default function HomeLivingProductCard({ product, layout = 'grid', mediaL
+             ? <img src={image} alt="" loading={mediaLoading} decoding="async" width="400" height="400" />
+             : <span className="hl-card__noimg" aria-hidden="true">{product.name.slice(0, 1)}</span>}
+         </Link>
+-        <button type="button" className="hl-card__heart" aria-label={`Save ${product.name} to wishlist`} aria-disabled="true"><Icon name="heart" size={16} /></button>
++        <button type="button" className={`hl-card__heart${saved ? ' is-on' : ''}`} aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`} aria-pressed={saved} onClick={() => wish.toggle(product.id)}><Icon name="heart" size={16} fill={saved ? 'currentColor' : 'none'} /></button>
+       </div>
+       <div className="hl-card__body">
+         <p className="hl-card__brand">{product.brand}</p>
+diff --git a/src/homeliving/HomeLivingProductPage.jsx b/src/homeliving/HomeLivingProductPage.jsx
+index b3172bd..7c0cb83 100644
+--- a/src/homeliving/HomeLivingProductPage.jsx
++++ b/src/homeliving/HomeLivingProductPage.jsx
+@@ -14,6 +14,7 @@ import { fetchEligibleCoupons } from '../lib/couponApi.js';
+ import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+ import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
++import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+ 
+ // ============================================================
+ // /homeliving/p/<slug> — the product page.
+@@ -33,6 +34,17 @@ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ // goes into the homeliving cart namespace and the server prices it.
+ // ============================================================
+ 
++// ---- The heart on the picture: saves to this browser's Home & Living wishlist ----
++function GalleryHeart({ id, name }) {
++  const wish = useHomeLivingWishlist();
++  const saved = wish.has(id);
++  return (
++    <button type="button" className={`hl-gallery__heart${saved ? ' is-on' : ''}`} aria-label={saved ? `Remove ${name} from wishlist` : `Save ${name} to wishlist`} aria-pressed={saved} onClick={() => wish.toggle(id)}>
++      <Icon name="heart" size={20} fill={saved ? 'currentColor' : 'none'} />
++    </button>
++  );
++}
++
+ // ---- Full screen --------------------------------------------------------------------
+ // A tap on a gallery image opens it full screen at that image. Two fingers pinch to
+ // zoom (up to ZOOM_MAX) and one finger drags a zoomed image about; a swipe left or
+@@ -291,7 +303,7 @@ export function Gallery({ view, badge = null }) {
+           ))}
+         </div>
+         {badge && <span className="hl-gallery__badge"><Icon name="award" size={15} /> {badge}</span>}
+-        <button type="button" className="hl-gallery__heart" aria-label={`Save ${view.name} to wishlist`} aria-disabled="true"><Icon name="heart" size={20} /></button>
++        <GalleryHeart id={view.id} name={view.name} />
+         {images.length > 1 && <span className="hl-gallery__count" aria-hidden="true">{active + 1} / {images.length}</span>}
+       </div>
+       {images.length > 1 && (
+diff --git a/src/styles/homeliving.css b/src/styles/homeliving.css
+index 064b449..7e2372b 100644
+--- a/src/styles/homeliving.css
++++ b/src/styles/homeliving.css
+@@ -1053,3 +1053,7 @@
+ /* The search bar works (2026-11-08): its suggestions hang under it. */
+ .hl .hl-search { position: relative; }
+ .hl .hl-search input { cursor: text; }
++/* The hearts save to the Home & Living wishlist (2026-11-08; they were inert). */
++.hl .hl-card__heart { cursor: pointer; }
++.hl .hl-card__heart.is-on, .hl .hl-gallery__heart.is-on { color: #C0392B; }
++.hl .hl-card__heart:focus-visible, .hl .hl-gallery__heart:focus-visible { outline: 2px solid #007185; outline-offset: 2px; }
+diff --git a/src/styles/v2-pdp.css b/src/styles/v2-pdp.css
+index 3e4dde8..4e8d7c3 100644
+--- a/src/styles/v2-pdp.css
++++ b/src/styles/v2-pdp.css
+@@ -1518,3 +1518,8 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ .pdpk-notify__row button:disabled { opacity: .6; }
+ .pdpk-notify__ok { margin-top: 6px !important; font-size: 13px; color: #007600; }
+ .pdpk-notify__bad { margin-top: 6px !important; font-size: 13px; color: #B12704; }
++/* The offer countdown in the buy box (2026-11-08). */
++.pdpk-offer { display: flex; align-items: flex-start; gap: 8px; margin: 6px 0 8px; padding: 8px 10px; background: #FFF4E5; border-left: 3px solid #C2500A; font: 400 13px/1.45 Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0F1111; }
++.pdpk-offer svg { flex: none; margin-top: 2px; color: #C2500A; }
++.pdpk-offer__code { margin: 0 2px; padding: 1px 6px; border: 1px dashed #C2500A; background: #fff; color: #C2500A; font: 700 12px/1.4 Arial, sans-serif; letter-spacing: .04em; cursor: pointer; }
++.pdpk-offer em { display: block; font-style: normal; color: #B12704; }

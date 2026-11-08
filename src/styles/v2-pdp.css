@@ -1518,3 +1518,8 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-notify__row button:disabled { opacity: .6; }
 .pdpk-notify__ok { margin-top: 6px !important; font-size: 13px; color: #007600; }
 .pdpk-notify__bad { margin-top: 6px !important; font-size: 13px; color: #B12704; }
+/* The offer countdown in the buy box (2026-11-08). */
+.pdpk-offer { display: flex; align-items: flex-start; gap: 8px; margin: 6px 0 8px; padding: 8px 10px; background: #FFF4E5; border-left: 3px solid #C2500A; font: 400 13px/1.45 Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0F1111; }
+.pdpk-offer svg { flex: none; margin-top: 2px; color: #C2500A; }
+.pdpk-offer__code { margin: 0 2px; padding: 1px 6px; border: 1px dashed #C2500A; background: #fff; color: #C2500A; font: 700 12px/1.4 Arial, sans-serif; letter-spacing: .04em; cursor: pointer; }
+.pdpk-offer em { display: block; font-style: normal; color: #B12704; }

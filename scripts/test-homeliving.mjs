@@ -132,13 +132,14 @@ console.log('\n— The shell and the homepage, rendered through the real router 
 const app = await buildHomeLivingApp({ cartCount: 3 }).catch((e) => ({ error: e }));
 const home = app.error ? '' : app.render('/homeliving');
 
-await test('header: the shell (cream everywhere but the homepage, where it floats over the hero), hamburger, centred SORA LIFE wordmark with the tagline, the three other stores, inert wishlist, cart with the shared count', () => {
+await test('header: the shell (cream everywhere but the homepage, where it floats over the hero), hamburger, centred SORA LIFE wordmark with the tagline, the three other stores, the wishlist (it works since 2026-11-08), cart with the shared count', () => {
   assert.ok(!app.error, app.error?.message);
   assert.match(home, /^<div class="hl hl--over"><header class="hl-hdr hl-hdr--over"><div class="hl-hdr__row"><button type="button" class="hl-hdr__menu" aria-label="Open menu">/);
   assert.match(home, /<a class="hl-logo" aria-label="SORA LIFE Home &amp; Living home" href="\/homeliving"><strong class="serif">SORA LIFE<\/strong><em>Comfort for every home<\/em><\/a>/);
   assert.match(home, /<span class="hl-hdr__stores" role="navigation" aria-label="Other stores"><a class="hl-hdr__store" href="\/"><svg[\s\S]*?<\/svg> Wellness store<\/a><a class="hl-hdr__store" href="\/fashion">Fashion <svg[\s\S]*?<\/svg><\/a><a class="hl-hdr__store" href="\/grocery">Grocery <svg[\s\S]*?<\/svg><\/a><\/span>/);
   assert.doesNotMatch(home, /hl-hdr__store" href="\/homeliving"/, 'never links to itself');
-  assert.match(home, /<button type="button" class="hl-hdr__act" aria-label="Wishlist" aria-disabled="true">/);
+  // The wishlist works since 2026-11-08: the header heart opens /homeliving/wishlist.
+  assert.match(home, /<a class="hl-hdr__act" aria-label="Wishlist" href="\/homeliving\/wishlist">/);
   assert.match(home, /<a class="hl-hdr__act" aria-label="Cart, 3 items" href="\/cart">[\s\S]*?<span class="hl-hdr__count">3<\/span><\/a>/);
   const css = read('src/styles/homeliving.css');
   assert.match(css, /\.hl \{[^}]*--hl-hdr: #FFFFFF/, "white since 2026-11-08 (owner)"); assert.match(css, /\.hl-hdr \{[^}]*background: var\(--hl-hdr\)/);

@@ -204,7 +204,8 @@ await test('Add to cart fills the reserved slot: the first cell of the action ro
   // The slot this suite reserved is filled by the Home & Living cart (test-homeliving-cart.mjs pins the behaviour).
   const html = render('/homeliving/p/sage-fitted-sheet');
   assert.match(html, /<div class="hl-pdp__actions" data-slot="add-to-cart" data-can-add="no"><button type="button" class="hl-btn hl-add" disabled=""><svg[\s\S]*?<\/svg> Add to cart<\/button><button type="button" class="hl-btn hl-buy" disabled=""><svg[\s\S]*?<\/svg> Buy Now<\/button><\/div>/);
-  assert.match(html, /<button type="button" class="hl-gallery__heart" aria-label="Save Sage Fitted Sheet to wishlist" aria-disabled="true">/);
+  // The heart works since 2026-11-08 (the Home & Living wishlist): a real toggle, not inert.
+  assert.match(html, /<button type="button" class="hl-gallery__heart" aria-label="Save Sage Fitted Sheet to wishlist" aria-pressed="false">/);
   assert.equal((html.match(/data-slot="add-to-cart"/g) || []).length, 2, 'the action row and the phone bar');
   assert.match(read('src/styles/homeliving.css'), /\.hl-pdp__actions \{ grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\); gap: 12px; \}/, 'two equal cells');
 });
@@ -259,7 +260,7 @@ await test('a thumbnail shows its image and nothing else moves: the track scroll
   let reduce = false;
   const windowScrolls = [], trackScrolls = [];
   const win = { matchMedia: () => ({ matches: reduce }), scrollTo: (...a) => windowScrolls.push(a), scrollBy: (...a) => windowScrolls.push(a) };
-  const { Gallery } = loadSource(read('src/homeliving/HomeLivingProductPage.jsx'), { ...hooks, window: win, Icon: () => null });
+  const { Gallery } = loadSource(read('src/homeliving/HomeLivingProductPage.jsx'), { ...hooks, window: win, Icon: () => null, useHomeLivingWishlist: () => ({ ids: [], count: 0, has: () => false, toggle: () => {} }) });
   const handle = await mount(h(Gallery, { view: by('sage-fitted-sheet') }));
   await handle.settle();
   const node = findAll(handle.tree, (n) => n.props?.className === 'hl-gallery__track')[0];

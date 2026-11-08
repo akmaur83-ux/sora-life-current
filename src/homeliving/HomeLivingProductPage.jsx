@@ -14,6 +14,7 @@ import { fetchEligibleCoupons } from '../lib/couponApi.js';
 import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
 import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
 
 // ============================================================
 // /homeliving/p/<slug> — the product page.
@@ -32,6 +33,17 @@ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 // the choice is complete and in stock (selectionState → canAdd); the line
 // goes into the homeliving cart namespace and the server prices it.
 // ============================================================
+
+// ---- The heart on the picture: saves to this browser's Home & Living wishlist ----
+function GalleryHeart({ id, name }) {
+  const wish = useHomeLivingWishlist();
+  const saved = wish.has(id);
+  return (
+    <button type="button" className={`hl-gallery__heart${saved ? ' is-on' : ''}`} aria-label={saved ? `Remove ${name} from wishlist` : `Save ${name} to wishlist`} aria-pressed={saved} onClick={() => wish.toggle(id)}>
+      <Icon name="heart" size={20} fill={saved ? 'currentColor' : 'none'} />
+    </button>
+  );
+}
 
 // ---- Full screen --------------------------------------------------------------------
 // A tap on a gallery image opens it full screen at that image. Two fingers pinch to
@@ -291,7 +303,7 @@ export function Gallery({ view, badge = null }) {
           ))}
         </div>
         {badge && <span className="hl-gallery__badge"><Icon name="award" size={15} /> {badge}</span>}
-        <button type="button" className="hl-gallery__heart" aria-label={`Save ${view.name} to wishlist`} aria-disabled="true"><Icon name="heart" size={20} /></button>
+        <GalleryHeart id={view.id} name={view.name} />
         {images.length > 1 && <span className="hl-gallery__count" aria-hidden="true">{active + 1} / {images.length}</span>}
       </div>
       {images.length > 1 && (

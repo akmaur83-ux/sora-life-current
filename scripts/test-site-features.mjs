@@ -44,6 +44,16 @@ test('one search across stores: fashion and Home & Living rows link to their own
   assert.equal(rows[0].image, 'https://x/y.jpg?v=1&width=500');
   assert.deepEqual(sm.searchItems(rows, 'shawls').map((r) => r.name), ['Red Shawl'], 'the category counts');
 });
+const oc = loadModule('src/lib/offerCountdown.js', {});
+test('offer countdown: the admin\'s end time is India time; the time left reads d/h/m; gone at the end', () => {
+  const end = oc.parseIndiaTime('2026-11-15 23:59');
+  assert.equal(new Date(end).toISOString(), '2026-11-15T18:29:00.000Z');
+  assert.ok(Number.isNaN(oc.parseIndiaTime('15/11/2026')));
+  assert.equal(oc.timeLeft((6 * 1440 + 18 * 60 + 20) * 60000), '6d 18h 20m');
+  assert.equal(oc.timeLeft((4 * 60 + 5) * 60000), '4h 05m');
+  assert.equal(oc.timeLeft(0), '');
+  assert.equal(oc.timeLeft(-5), '');
+});
 const eng = loadModule('src/lib/productEngage.js', { supabase: null });
 test('stock alerts group by product and choice, most wanted first; admin links per store', () => {
   const g = eng.groupAlerts([{ id: 1, product_key: 'fashion:a', product_name: 'A', choice: '' }, { id: 2, product_key: 'fashion:b', product_name: 'B', choice: 'M' }, { id: 3, product_key: 'fashion:b', product_name: 'B', choice: 'M' }]);
