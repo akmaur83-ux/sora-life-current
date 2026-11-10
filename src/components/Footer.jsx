@@ -4,6 +4,7 @@ import { categories } from '../data/categories.js';
 import { branding } from '../lib/settings.js';
 import { hasContactChannel, socialLinks, telHref } from '../lib/company.js';
 import { useConsumerCare } from '../lib/consumerCare.js';
+import InstallApp from './InstallApp.jsx';
 
 // ============================================================
 // Footer.
@@ -75,6 +76,8 @@ export default function Footer() {
             <Link to="/account/orders">Orders</Link>
             <Link to="/passport">Track your order</Link>
             <Link to="/wishlist">Wishlist</Link>
+            {/* Shown only when the browser offers to install the site (InstallApp.jsx). */}
+            <InstallApp />
           </div>
 
           <div className="ftr__col">

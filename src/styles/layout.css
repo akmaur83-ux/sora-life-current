@@ -56,7 +56,7 @@
 .search-overlay { position: fixed; inset: 0; z-index: 120; background: rgba(20,38,28,0.4); backdrop-filter: blur(3px); animation: fade 0.2s var(--ease); display: flex; justify-content: center; align-items: flex-start; padding: 0 var(--sp-4); }
 .search-panel { width: 100%; max-width: 680px; margin-top: 8vh; background: var(--paper); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); padding: var(--sp-5); animation: modalin 0.3s var(--ease); }
 .search-panel__box { align-items: center; }
-.search-panel__box .input { padding-right: 46px; }
+.search-panel__box .input { padding-right: 88px; }   /* the close button and the voice button (2026-11-10) */
 .search-panel__box .iconbtn { position: absolute; right: 4px; }
 .search-results { margin-top: 14px; display: flex; flex-direction: column; gap: 2px; }
 .search-result { display: flex; align-items: center; gap: 14px; padding: 10px; border-radius: var(--r-md); transition: background var(--t) var(--ease); }

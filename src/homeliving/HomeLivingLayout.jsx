@@ -7,7 +7,8 @@ import { useStore } from '../lib/store.jsx';
 import { branding } from '../lib/settings.js';
 import { HOMELIVING_DELIVERY_WINDOW, HOMELIVING_TAGLINE, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
 import SearchSuggest, { SUGGEST_MAX, suggestKeys, RecentSearches, readRecentSearches, rememberSearch, clearRecentSearches } from '../components/SearchSuggest.jsx';
-import { searchItems } from '../lib/searchMatch.js';
+import { searchItems, didYouMean } from '../lib/searchMatch.js';
+import VoiceSearch from '../components/VoiceSearch.jsx';
 import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
 
 // ============================================================
@@ -118,10 +119,13 @@ export function SearchBar() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const term = q.trim();
-  const found = open && term.length >= 2 ? searchItems(homelivingSearchRows(products, categories), term) : null;
+  const rows = homelivingSearchRows(products, categories);
+  const found = open && term.length >= 2 ? searchItems(rows, term) : null;
+  const fix = found && found.length === 0 ? didYouMean(rows, term) : '';
   const all = `/homeliving/search?q=${encodeURIComponent(term)}`;
   const [recent, setRecent] = useState([]);
   const pick = () => { setOpen(false); setActive(-1); if (term.length >= 2) rememberSearch('homeliving', term); };
+  const spoken = (t) => { setQ(t); setOpen(false); rememberSearch('homeliving', t); navigate(`/homeliving/search?q=${encodeURIComponent(t)}`); };
   const keys = (e) => {
     if (e.key === 'Enter' && active < 0) { e.preventDefault(); pick(); navigate(term ? all : '/homeliving/search'); return; }
     suggestKeys(e, { count: Math.min(SUGGEST_MAX, found?.length || 0), active, setActive, open, setOpen, go: (i) => { pick(); navigate(found[i].href); } });
@@ -132,7 +136,8 @@ export function SearchBar() {
       <input type="search" placeholder={SEARCH_PLACEHOLDER} aria-label="Search Home & Living" value={q}
         onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} onFocus={() => { setOpen(true); setRecent(readRecentSearches('homeliving')); }} onBlur={() => setOpen(false)} onKeyDown={keys}
         enterKeyHint="search" aria-expanded={found ? true : undefined} aria-controls={found ? 'hl-suggest' : undefined} />
-      {found && <SearchSuggest id="hl-suggest" items={found} query={term} active={active} allHref={all} onPick={pick} />}
+      <VoiceSearch onResult={spoken} />
+      {found && <SearchSuggest id="hl-suggest" items={found} query={term} active={active} allHref={all} onPick={(e) => { if (e?.currentTarget?.closest?.('.hx-dym')) { setQ(fix); setOpen(false); setActive(-1); rememberSearch('homeliving', fix); } else pick(); }} fix={fix} fixHref={`/homeliving/search?q=${encodeURIComponent(fix)}`} />}
       {open && !term && <RecentSearches id="hl-recent" terms={recent} popular={(categories || []).filter((c) => !c.parent_id).map((c) => ({ name: c.name, href: `/homeliving/category/${c.slug}` }))} hrefFor={(t) => `/homeliving/search?q=${encodeURIComponent(t)}`} onPick={(e) => { if (e.currentTarget.classList.contains('hx-suggest__recent')) setQ(e.currentTarget.textContent); setOpen(false); }} onClear={() => { clearRecentSearches('homeliving'); setRecent([]); }} />}
     </div>
   );

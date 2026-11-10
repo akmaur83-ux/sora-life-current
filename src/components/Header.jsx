@@ -11,6 +11,7 @@ import { money } from '../lib/format.js';
 import { branding } from '../lib/settings.js';
 import { lockScroll, unlockScroll } from '../lib/scrollLock.js';
 import { useOtherStoreMatches } from '../lib/crossStoreSearch.js';
+import VoiceSearch from './VoiceSearch.jsx';
 
 // The desktop nav used to paint the built-in category set and then visibly
 // swap it for the Supabase set once hydration landed a few hundred ms later —
@@ -126,6 +127,7 @@ export default function Header() {
     </div>
   ) : null);
   const submit = (e) => { e.preventDefault(); if (q.trim()) { navigate(`/shop?q=${encodeURIComponent(q.trim())}`); setFocused(false); setMobileSearch(false); } };
+  const spoken = (t) => { setQ(t); navigate(`/shop?q=${encodeURIComponent(t)}`); setFocused(false); setMobileSearch(false); };   // VoiceSearch.jsx
 
   return (
     <>
@@ -154,6 +156,7 @@ export default function Header() {
                   onFocus={() => setFocused(true)}
                   aria-label="Search for products"
                 />
+                <VoiceSearch onResult={spoken} />
                 <button type="submit" aria-label="Search"><Icon name="arrowRight" size={16} stroke={1.6} /></button>
               </form>
               {focused && q.trim() && (
@@ -250,6 +253,7 @@ export default function Header() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
+              <VoiceSearch onResult={spoken} className="hx-voice--panel" />
               <button type="button" className="iconbtn" onClick={() => setMobileSearch(false)} aria-label="Close search"><Icon name="x" /></button>
             </form>
 

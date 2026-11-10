@@ -12,7 +12,8 @@ import { categoryHref, resolveCategory } from '../lib/fashion.js';
 import { normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
 import { useStorefrontSection } from '../lib/storefrontSections.js';
 import SearchSuggest, { SUGGEST_MAX, suggestKeys, RecentSearches, readRecentSearches, rememberSearch, clearRecentSearches } from '../components/SearchSuggest.jsx';
-import { searchItems } from '../lib/searchMatch.js';
+import VoiceSearch from '../components/VoiceSearch.jsx';
+import { searchItems, didYouMean } from '../lib/searchMatch.js';
 
 // ============================================================
 // The fashion store shell — its own header (logo, search, account,
@@ -59,8 +60,11 @@ export function FashionHeader({ onMenu }) {
   const found = open && term.length >= 2
     ? searchItems(views, term, (v) => [v.name, v.brand, tree.byId.get(v.category_id)?.name]).map((v) => ({ key: v.id, href: `/fashion/p/${v.slug}`, name: v.name, brand: v.brand, image: v.image, price: v.price }))
     : null;
+  const fashionFields = (v) => [v.name, v.brand, tree.byId.get(v.category_id)?.name];
+  const fix = found && found.length === 0 ? didYouMean(views, term, fashionFields) : '';
   const [recent, setRecent] = useState([]);
   const pick = () => { setOpen(false); setActive(-1); if (term.length >= 2) rememberSearch('fashion', term); };
+  const spoken = (t) => { setQ(t); setOpen(false); rememberSearch('fashion', t); navigate(`/fashion/search?q=${encodeURIComponent(t)}`); };
   const keys = (e) => suggestKeys(e, { count: Math.min(SUGGEST_MAX, found?.length || 0), active, setActive, open, setOpen, go: (i) => { pick(); navigate(found[i].href); } });
   // The women's page: the same links over its photograph, and no delivery strip.
   if (/^\/fashion\/women\/?$/.test(location.pathname)) return (
@@ -132,8 +136,9 @@ export function FashionHeader({ onMenu }) {
         <Icon name="search" size={20} />
         <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} placeholder={config.header.searchPlaceholder || SEARCH_PLACEHOLDER} aria-label="Search fashion"
           onFocus={() => { setOpen(true); setRecent(readRecentSearches('fashion')); }} onBlur={() => setOpen(false)} onKeyDown={keys} aria-expanded={found ? true : undefined} aria-controls={found ? 'fs-suggest' : undefined} />
+        <VoiceSearch onResult={spoken} />
         <button type="submit" className="fs-search__go" aria-label="Search"><Icon name="search" size={22} /></button>
-        {found && <SearchSuggest id="fs-suggest" items={found} query={term} active={active} allHref={`/fashion/search?q=${encodeURIComponent(term)}`} onPick={pick} />}
+        {found && <SearchSuggest id="fs-suggest" items={found} query={term} active={active} allHref={`/fashion/search?q=${encodeURIComponent(term)}`} onPick={(e) => { if (e?.currentTarget?.closest?.('.hx-dym')) { setQ(fix); setOpen(false); setActive(-1); rememberSearch('fashion', fix); } else pick(); }} fix={fix} fixHref={`/fashion/search?q=${encodeURIComponent(fix)}`} />}
         {open && !term && <RecentSearches id="fs-recent" terms={recent} popular={(tree.roots || []).map((c) => ({ name: c.name, href: `/fashion/c/${c.slug}` }))} hrefFor={(t) => `/fashion/search?q=${encodeURIComponent(t)}`} onPick={(e) => { if (e.currentTarget.classList.contains('hx-suggest__recent')) setQ(e.currentTarget.textContent); setOpen(false); }} onClear={() => { clearRecentSearches('fashion'); setRecent([]); }} />}
       </form>
       {!strip.hidden && <div className="fs-strip" aria-label="Delivery">

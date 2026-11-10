@@ -561,3 +561,10 @@
 .fs-gallery { position: relative; }
 @media (min-width: 768px) { .fs-pdp--mk .fs-gallery { position: sticky; } }
 .fs-gallery__count { position: absolute; top: 10px; left: 10px; z-index: 2; padding: 3px 9px; background: rgba(15, 17, 17, .72); color: #fff; font: 600 12px/1.4 Arial, sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; }
+/* Search by voice in the search bar (2026-11-10): the microphone sits inside the field, left of the search button. */
+.fs-search .hx-voice { position: absolute; right: 98px; top: 8px; }
+.fs-search input { padding-right: 48px; }
+@media (max-width: 599px) {
+  .fs-search .hx-voice { right: 68px; top: 6px; width: 34px; height: 34px; }
+  .fs-search input { padding-right: 40px; }
+}

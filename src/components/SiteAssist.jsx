@@ -61,6 +61,7 @@ export default function SiteAssist() {
   const [up, setUp] = useState(false);
   const [offset, setOffset] = useState(0);
   const hidden = HIDDEN.test(pathname);
+  const [net, setNet] = useState(null);   // null, 'off' or 'back'
   useSiteLd(care?.phone || '');   // the business and its search, for search engines (pageMeta.js)
 
   useEffect(() => {
@@ -91,6 +92,18 @@ export default function SiteAssist() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => { window.removeEventListener('scroll', onScroll); root.classList.remove('pdp-bar-on'); document.querySelectorAll('.hl.pdp-bar-on').forEach((el) => el.classList.remove('pdp-bar-on')); };
   }, [pathname]);
+
+  // Offline notice (2026-11-10): the connection dropping says so, on every page, the
+  // checkout included; coming back says so for a few seconds, then goes.
+  useEffect(() => {
+    let t = null;
+    const off = () => { clearTimeout(t); setNet('off'); };
+    const on = () => { clearTimeout(t); setNet((v) => (v === 'off' ? 'back' : v)); t = setTimeout(() => setNet(null), 3500); };
+    if (navigator.onLine === false) setNet('off');
+    window.addEventListener('offline', off);
+    window.addEventListener('online', on);
+    return () => { clearTimeout(t); window.removeEventListener('offline', off); window.removeEventListener('online', on); };
+  }, []);
 
   // "Skip to main content": the first thing a keyboard reaches on every page (shown only when focused).
   useEffect(() => {
@@ -137,7 +150,12 @@ export default function SiteAssist() {
     return () => { timers.forEach(clearTimeout); release(); };
   }, [pathname]);
 
-  if (hidden) return null;
+  const netNote = net && (
+    <p className={`hx-net${net === 'back' ? ' is-back' : ''}`} role="status" aria-live="polite">
+      {net === 'off' ? 'You’re offline. Check your connection; anything new loads once you’re back.' : 'Back online.'}
+    </p>
+  );
+  if (hidden) return netNote || null;
   // The product's name is read from the page's heading at the moment of the tap (it renders after this).
   const build = () => waLink(care?.phone, pathname, document.querySelector('main h1, h1')?.textContent || '', window.location.href.split('#')[0]);
   const wa = waLink(care?.phone, '/', '', '');
@@ -146,6 +164,7 @@ export default function SiteAssist() {
     window.scrollTo({ top: 0, behavior: still ? 'auto' : 'smooth' });
   };
   return (
+    <>{netNote}
     <div className="hx-sa" style={{ '--sa-foot': `${offset}px` }}>
       {up && (
         <button type="button" className="hx-sa__btn hx-sa__top" onClick={top} aria-label="Back to top">
@@ -158,5 +177,6 @@ export default function SiteAssist() {
         </a>
       )}
     </div>
+    </>
   );
 }

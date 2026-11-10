@@ -1065,3 +1065,11 @@
   .hl.pdp-bar-on .hl-pdp__bar .hl-btn { min-height: 42px; padding: 0 26px; font-size: 14px; }
   .hl.pdp-bar-on .hl-pdp { padding-bottom: 72px; }
 }
+/* Search by voice in the search bar (2026-11-10): the microphone inside the field, at its right. */
+.hl .hl-search .hx-voice { position: absolute; right: 25px; top: 9px; }
+.hl .hl-search input { padding-right: 52px; }
+@media (max-width: 599px) {
+  .hl .hl-search .hx-voice { right: 18px; top: 4px; }
+  .hl .hl-search input { padding-right: 46px; }
+  .hl-home .hl-search .hx-voice { right: 4px; top: 12px; width: 34px; height: 34px; }
+}

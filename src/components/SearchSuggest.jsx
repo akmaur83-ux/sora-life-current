@@ -47,13 +47,26 @@ export function RecentSearches({ id, terms, hrefFor, onPick, onClear, popular = 
   );
 }
 
-export default function SearchSuggest({ id, items, query, active = -1, allHref, onPick }) {
+/** "Did you mean …?" — a corrected search (searchMatch.js didYouMean) as a link to its results. */
+export function DidYouMean({ fix, href, onPick, className = '' }) {
+  if (!fix) return null;
+  return (
+    <p className={`hx-dym${className ? ` ${className}` : ''}`}>
+      Did you mean <Link to={href} onMouseDown={(e) => e.preventDefault()} onClick={onPick}>{fix}</Link>?
+    </p>
+  );
+}
+
+export default function SearchSuggest({ id, items, query, active = -1, allHref, onPick, fix = '', fixHref = '' }) {
   if (!items) return null;
   const shown = items.slice(0, SUGGEST_MAX);
   return (
     <div className="hx-suggest" id={id} role="listbox" aria-label="Search suggestions">
       {shown.length === 0 ? (
-        <p className="hx-suggest__none">No products match “{query}”.</p>
+        <>
+          <p className="hx-suggest__none">No products match “{query}”.</p>
+          <DidYouMean fix={fix} href={fixHref} onPick={onPick} className="hx-dym--suggest" />
+        </>
       ) : shown.map((p, i) => (
         <Link key={p.key} id={`${id}-${i}`} role="option" aria-selected={i === active} to={p.href} className={`hx-suggest__item${i === active ? ' is-on' : ''}`} onMouseDown={(e) => e.preventDefault()} onClick={onPick}>
           <span className="hx-suggest__img">{p.image && <img src={thumb(p.image)} alt="" width="44" height="44" decoding="async" />}</span>

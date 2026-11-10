@@ -72,6 +72,8 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
     switch (sort) {
       case 'price-asc': s.sort((a, b) => a.price - b.price); break;
       case 'price-desc': s.sort((a, b) => b.price - a.price); break;
+      // Biggest discount first (2026-11-10): the verified % off; equal ones keep the curated order.
+      case 'discount': s.sort((a, b) => (Number(b.discountPct) || 0) - (Number(a.discountPct) || 0) || Number(b.isFeatured) - Number(a.isFeatured)); break;
       case 'new': s.sort((a, b) => Number(b.isNew) - Number(a.isNew)); break;
       default: s.sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured));
     }

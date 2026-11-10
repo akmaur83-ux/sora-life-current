@@ -2,9 +2,18 @@ import { useSyncExternalStore } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ProductBrowser from '../components/ProductBrowser.jsx';
 import Icon from '../components/Icon.jsx';
-import { products } from '../data/products.js';
+import { products, searchProducts } from '../data/products.js';
 import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
 import OtherStoreResults from '../components/OtherStoreResults.jsx';
+import { DidYouMean } from '../components/SearchSuggest.jsx';
+import { didYouMean } from '../lib/searchMatch.js';
+
+/** A wellness search that finds nothing: the corrected spelling, when it finds products (searchMatch.js). */
+export function wellnessFix(q) {
+  const t = String(q || '').trim();
+  if (t.length < 3 || searchProducts(t).length) return '';
+  return didYouMean(products, t, (p) => [p.name, p.brand, ...(p.categories || [p.category])], (s) => searchProducts(s).length > 0);
+}
 import {
   normalizeDiscovery, findCollectionCard, findConcernCard,
   collectionProducts, concernCardProducts, selectCategoryCards, selectConcernCards,
@@ -80,6 +89,7 @@ export default function Shop() {
           </p>
         </div>
 
+        {params.get('q') && (() => { const fix = wellnessFix(params.get('q')); return fix ? <div className="v2-wrap"><DidYouMean fix={fix} href={`/shop?q=${encodeURIComponent(fix)}`} className="hx-dym--page" /></div> : null; })()}
         <ProductBrowser baseProducts={products} />
         {/* A search also lists what Fashion and Home & Living have for it (OtherStoreResults.jsx). */}
         {params.get('q') && <OtherStoreResults query={params.get('q')} />}

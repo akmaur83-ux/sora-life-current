@@ -2,6 +2,7 @@ export const SHOP_SORTS = [
   { id: 'recommended', label: 'Recommended' },
   { id: 'price-asc', label: 'Price: low to high' },
   { id: 'price-desc', label: 'Price: high to low' },
+  { id: 'discount', label: 'Biggest discount' },
   { id: 'new', label: 'Newest' },
 ];
 

@@ -174,7 +174,7 @@ console.log('\n— Consumer care —');
 const footerWith = (info) => {
   const Footer = loadForServer('src/components/Footer.jsx', {
     Link: ({ to, children, ...p }) => h('a', { ...p, href: to }, children), Icon: () => null, Logo: () => h('span', null, 'SORA LIFE'),
-    categories: [], branding: { siteName: 'SORA LIFE' }, useConsumerCare: () => info, hasContactChannel, socialLinks, telHref,
+    categories: [], branding: { siteName: 'SORA LIFE' }, useConsumerCare: () => info, InstallApp: () => null, hasContactChannel, socialLinks, telHref,
   }).default;
   return renderToStaticMarkup(h(Footer));
 };

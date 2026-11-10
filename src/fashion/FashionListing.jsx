@@ -11,6 +11,8 @@ import { useFashionCatalogue } from './FashionCatalogue.jsx';
 import { CategoryChips } from './FashionLayout.jsx';
 import FashionProductCard from './FashionProductCard.jsx';
 import ShareList from '../components/ShareList.jsx';
+import { DidYouMean } from '../components/SearchSuggest.jsx';
+import { didYouMean } from '../lib/searchMatch.js';
 import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
 
 // ============================================================
@@ -198,8 +200,16 @@ export default function FashionCategory() {
 export function FashionSearch() {
   const [params] = useSearchParams();
   const q = (params.get('q') || '').trim();
+  const { views, tree } = useFashionCatalogue();
+  // Nothing found: offer the corrected spelling, when it finds styles by the page's own rule (matchesFilters).
+  const fix = useMemo(() => {
+    if (q.length < 3 || !views.length) return '';
+    const hits = (s) => { const t = s.toLowerCase(); return views.some((v) => `${v.name} ${v.brand} ${v.description}`.toLowerCase().includes(t)); };
+    return didYouMean(views, q, (v) => [v.name, v.brand, tree.byId.get(v.category_id)?.name], hits);
+  }, [q, views, tree]);
   return (
     <Listing
+      intro={fix ? <DidYouMean fix={fix} href={`/fashion/search?q=${encodeURIComponent(fix)}`} className="hx-dym--page" /> : null}
       title={q ? `Results for “${q}”` : 'All fashion'}
       trail={[{ name: 'Fashion', href: '/fashion' }, { name: q ? 'Search' : 'All styles' }]}
       emptyCopy={q ? `Nothing found for “${q}”. Try another word, or browse a category.` : 'The fashion store is being stocked — styles appear here as they go live.'}
