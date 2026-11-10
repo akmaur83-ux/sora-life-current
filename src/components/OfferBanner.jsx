@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import { useStorefrontSection } from '../lib/storefrontSections.js';
 import { OFFER_COUNTDOWN, parseIndiaTime } from '../lib/offerCountdown.js';
+import { offerShareText } from './PromoCard.jsx';
 
 // ============================================================
 // The offer banner on the store homes (owner, 2026-11-09: more features): the same
@@ -18,6 +20,7 @@ export function clockParts(ms) {
 
 export default function OfferBanner({ wrap = '' }) {
   const o = useStorefrontSection('wellness', 'offerCountdown', OFFER_COUNTDOWN);
+  const { pathname } = useLocation();
   const [now, setNow] = useState(null);
   const [copied, setCopied] = useState(false);
   useEffect(() => { setNow(Date.now()); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
@@ -30,6 +33,14 @@ export default function OfferBanner({ wrap = '' }) {
       <p className="hx-offer__clock" aria-label={`Ends in ${left.d} days ${left.h} hours ${left.m} minutes`}>
         <span>Ends in</span>
         {[['d', left.d], ['h', left.h], ['m', left.m], ['s', left.s]].map(([k, v]) => <b key={k} aria-hidden="true">{k === 'd' ? v : pad(v)}<i>{k}</i></b>)}
+      </p>
+      {/* Spread the word (2026-11-10): the offer page, carrying the code (PromoCard.jsx promo links). */}
+      <p className="hx-offer__acts">
+        {pathname !== '/offers' && <Link to="/offers" className="hx-offer__go">Shop all offers <Icon name="arrowRight" size={14} /></Link>}
+        <a className="hx-offer__share" target="_blank" rel="noopener noreferrer"
+          href={`https://wa.me/?text=${encodeURIComponent(offerShareText(o, `https://www.soralifestyle.in/offers${o.code ? `?promo=${encodeURIComponent(o.code)}` : ''}`))}`}>
+          <Icon name="chat" size={14} /> Share on WhatsApp
+        </a>
       </p>
     </section>
   );

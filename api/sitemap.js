@@ -13,11 +13,12 @@
 // for an hour.
 // ============================================================
 import { shareHandler } from './_lib/share.js';
+import { feedHandler } from './_lib/feed.js';
 
 const ORIGIN = 'https://www.soralifestyle.in';
 
 export const STATIC_PATHS = [
-  '/', '/shop', '/fashion', '/homeliving', '/lifestyle', '/grocery',
+  '/', '/shop', '/offers', '/fashion', '/homeliving', '/lifestyle', '/grocery',
   '/about', '/contact', '/shipping', '/returns', '/privacy', '/terms',
   '/refund-policy', '/shipping-policy', '/grievance',
 ];
@@ -68,6 +69,8 @@ export function buildSitemap({ wellness = [], catalogue = [] } = {}) {
 export default async function handler(req, res) {
   // A product page with its share card (api/_lib/share.js): the same function, as the plan allows twelve.
   if (req.query?.kind) return shareHandler(req, res);
+  // The product feed for Google Shopping and Meta catalogues (api/_lib/feed.js), here for the same reason.
+  if (req.query?.feed === 'products') return feedHandler(req, res);
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     return res.status(405).end();

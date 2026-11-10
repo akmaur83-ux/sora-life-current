@@ -43,6 +43,10 @@
       "destination": "/api/sitemap"
     },
     {
+      "source": "/feed/products.xml",
+      "destination": "/api/sitemap?feed=products"
+    },
+    {
       "source": "/product/:slug",
       "destination": "/api/sitemap?kind=product&slug=:slug"
     },

@@ -65,6 +65,7 @@ export default function Footer() {
           <div className="ftr__col">
             <h4>Shop</h4>
             <Link to="/shop">All products</Link>
+            <Link to="/offers">Offers &amp; deals</Link>
             {categories.slice(0, 3).map((c) => (
               <Link key={c.slug} to={`/category/${c.slug}`}>{c.name}</Link>
             ))}

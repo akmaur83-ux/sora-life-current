@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import { useConsumerCare } from '../lib/consumerCare.js';
 import { siteHomeTitle, holdTitle, useSiteLd } from '../lib/pageMeta.js';
+import PromoCard from './PromoCard.jsx';
 
 // ============================================================
 // Two small helpers on every storefront page (owner, 2026-11-08: more features),
@@ -65,13 +66,13 @@ export default function SiteAssist() {
   useSiteLd(care?.phone || '');   // the business and its search, for search engines (pageMeta.js)
 
   useEffect(() => {
-    if (hidden) return undefined;
-    const onScroll = () => setUp(window.scrollY > window.innerHeight * 2);
     const measure = () => setOffset(footOffset());
-    onScroll();
-    const timers = [100, 600, 1500].map((ms) => setTimeout(measure, ms));
-    window.addEventListener('scroll', onScroll, { passive: true });
+    const timers = [100, 600, 1500].map((ms) => setTimeout(measure, ms));   // also where only the promo card shows (cart, checkout)
     window.addEventListener('resize', measure);
+    if (hidden) return () => { timers.forEach(clearTimeout); window.removeEventListener('resize', measure); };
+    const onScroll = () => setUp(window.scrollY > window.innerHeight * 2);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => { timers.forEach(clearTimeout); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', measure); };
   }, [pathname, hidden]);
 
@@ -155,7 +156,9 @@ export default function SiteAssist() {
       {net === 'off' ? 'You’re offline. Check your connection; anything new loads once you’re back.' : 'Back online.'}
     </p>
   );
-  if (hidden) return netNote || null;
+  // A promo link's code, or the welcome offer (PromoCard.jsx); cart and checkout keep the code in view.
+  const promo = <PromoCard foot={offset} />;
+  if (hidden) return <>{netNote}{promo}</>;
   // The product's name is read from the page's heading at the moment of the tap (it renders after this).
   const build = () => waLink(care?.phone, pathname, document.querySelector('main h1, h1')?.textContent || '', window.location.href.split('#')[0]);
   const wa = waLink(care?.phone, '/', '', '');
@@ -164,7 +167,7 @@ export default function SiteAssist() {
     window.scrollTo({ top: 0, behavior: still ? 'auto' : 'smooth' });
   };
   return (
-    <>{netNote}
+    <>{netNote}{promo}
     <div className="hx-sa" style={{ '--sa-foot': `${offset}px` }}>
       {up && (
         <button type="button" className="hx-sa__btn hx-sa__top" onClick={top} aria-label="Back to top">

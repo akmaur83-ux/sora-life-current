@@ -121,6 +121,8 @@ const WELLNESS = {
   // Top deals and the visitor's wishlist on the wellness homepage (2026-11-10).
   topDeals: group({ hidden: hidden(), title: text(60, 'Heading') }, 'Top deals (biggest discounts in stock)'),
   savedRail: group({ hidden: hidden(), title: text(60, 'Heading') }, 'From your wishlist (the visitor’s saved products)'),
+  // The welcome card for first-time visitors (2026-11-10): the offer above, once, twelve seconds in.
+  welcomeOffer: group({ hidden: hidden() }, 'Welcome offer card (first visit; shows the offer countdown’s offer and code)'),
   // The offer countdown in every product page's buy box (2026-11-08); gone once it ends.
   offerCountdown: group({
     hidden: hidden(), title: text(60, 'Offer line'), code: text(30, 'Coupon code shown'),

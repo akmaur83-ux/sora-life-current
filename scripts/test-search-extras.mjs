@@ -52,7 +52,7 @@ test('the site has an installable app manifest', () => {
 test('the offline notice is on every page', () => {
   const s = read('src/components/SiteAssist.jsx');
   assert.match(s, /addEventListener\('offline'/);
-  assert.match(s, /if \(hidden\) return netNote \|\| null;/);
+  assert.match(s, /if \(hidden\) return <>\{netNote\}\{promo\}<\/>;/);
 });
 
 if (failed) { console.log(`\n${failed} FAIL`); process.exit(1); }

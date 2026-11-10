@@ -9,6 +9,7 @@ import Cart from './pages/Cart.jsx';
 import Checkout from './pages/Checkout.jsx';
 import Account from './pages/Account.jsx';
 import Wishlist from './pages/Wishlist.jsx';
+import Offers from './pages/Offers.jsx';
 import About from './pages/About.jsx';
 import Contact from './pages/Contact.jsx';
 import Legal from './pages/Legal.jsx';
@@ -248,6 +249,7 @@ export default function App() {
         <Route path="/account" element={<Account />} />
         <Route path="/account/:tab" element={<Account />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/offers" element={<Offers />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/grievance" element={<EditableLegal doc="grievance" />} />
