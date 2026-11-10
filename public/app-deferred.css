@@ -8903,6 +8903,8 @@
   .hl .hl-search input { padding-right: 46px; }
   .hl-home .hl-search .hx-voice { right: 4px; top: 12px; width: 34px; height: 34px; }
 }
+/* "Similar, for less" (2026-11-10). */
+.hl .pdpk-rail__save { font-size: 13px; font-weight: 700; color: #067D62; }
 
 /* ═══ src/styles/lifestyle.css ═══ */
 /* ============================================================================

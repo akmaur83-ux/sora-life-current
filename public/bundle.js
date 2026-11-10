@@ -3231,6 +3231,15 @@ const WELLNESS = {
     eyebrow: text$1(40, 'Eyebrow'),
     title: text$1(60, 'Heading')
   }, 'Gift shop (gift-ready categories)'),
+  // Top deals and the visitor's wishlist on the wellness homepage (2026-11-10).
+  topDeals: group({
+    hidden: hidden(),
+    title: text$1(60, 'Heading')
+  }, 'Top deals (biggest discounts in stock)'),
+  savedRail: group({
+    hidden: hidden(),
+    title: text$1(60, 'Heading')
+  }, 'From your wishlist (the visitor’s saved products)'),
   // The offer countdown in every product page's buy box (2026-11-08); gone once it ends.
   offerCountdown: group({
     hidden: hidden(),
@@ -33003,7 +33012,7 @@ function shouldCelebrate(state, quote) {
 }
 
 const StoreCtx = /*#__PURE__*/reactExports.createContext(null);
-const KEY = 'sora.store.v1';
+const KEY$1 = 'sora.store.v1';
 
 // PERSISTED_KEYS, the ownership rules and every wishlist reducer case live
 // in wishlistState.js so they can be executed directly in tests.
@@ -33017,7 +33026,7 @@ const initial = {
 };
 function load() {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY$1);
     if (!raw) return initial;
     const saved = JSON.parse(raw);
     // Legacy migration: before cross-device sync this was a single
@@ -33211,7 +33220,7 @@ function StoreProvider({
   // must not reach localStorage — see the ownership note at the top.
   reactExports.useEffect(() => {
     try {
-      localStorage.setItem(KEY, JSON.stringify(pickPersisted(state)));
+      localStorage.setItem(KEY$1, JSON.stringify(pickPersisted(state)));
     } catch {}
   }, [state.cart, state.saved, state.couponCode, state.guestWish]);
   const toast = reactExports.useCallback((message, opts = {}) => {
@@ -42788,6 +42797,66 @@ function PdpRecent({
   });
 }
 
+// ---- Similar, for less (owner, 2026-11-10: more features) ---------------------------
+/**
+ * The same kind of product for less: other items in this product's category (`group`),
+ * in stock, priced below it but not below a third of it, closest price first. Pure.
+ * pool/current: { key, href, name, image, price, group, inStock }.
+ */
+function cheaperPicks(pool, current, max = 8) {
+  const price = Number(current?.price) || 0;
+  if (!(price > 0) || !current.group) return [];
+  return (Array.isArray(pool) ? pool : []).filter(p => p && p.key !== current.key && p.group === current.group && p.inStock !== false && p.price > 0 && p.price < price && p.price >= price / 3).sort((a, b) => b.price - a.price || String(a.name).localeCompare(String(b.name))).slice(0, max).map(p => ({
+    ...p,
+    save: Math.round(price - p.price)
+  }));
+}
+function PdpCheaper({
+  items,
+  current
+}) {
+  const list = cheaperPicks(items, current);
+  if (list.length < 2) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "pdpk-rail pdpk-rail--cheaper",
+    "aria-labelledby": "pdpk-cheaper-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      className: "pdpk-h pdpk-h--lg",
+      id: "pdpk-cheaper-h",
+      children: "Similar, for less"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "pdpk-rail__row",
+      children: list.map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: p.href,
+          className: "pdpk-rail__card",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "pdpk-rail__img",
+            children: p.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+              src: p.image,
+              alt: "",
+              width: "180",
+              height: "180",
+              loading: "lazy"
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "pdpk-rail__name",
+            children: p.name
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "pdpk-rail__price",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: money(p.price)
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "pdpk-rail__save",
+            children: [money(p.save), " less"]
+          })]
+        })
+      }, p.key))
+    })]
+  });
+}
+
 // ---- Share: WhatsApp, the system sheet, or copy the link ----------------------------
 function PdpShare({
   name
@@ -43341,6 +43410,145 @@ function GiftShop() {
             })]
           })
         }, t.slug))
+      })]
+    })
+  });
+}
+
+const TOP_DEALS_SECTION = Object.freeze({
+  hidden: false,
+  title: 'Top deals right now'
+});
+const SAVED_SECTION = Object.freeze({
+  hidden: false,
+  title: 'From your wishlist'
+});
+
+/** In-stock products with a real discount, biggest first. Pure. */
+function topDeals(list, max = 8) {
+  return (Array.isArray(list) ? list : []).filter(p => p && p.slug && p.price > 0 && Number(p.stock) > 0 && Number(p.discountPct) > 0 && p.mrp > p.price).sort((a, b) => b.discountPct - a.discountPct || b.mrp - b.price - (a.mrp - a.price)).slice(0, max);
+}
+function DealRow({
+  id,
+  title,
+  items,
+  more
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-deals",
+    "aria-labelledby": `hx-${id}-h`,
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-deals__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "hx-deals__h",
+          id: `hx-${id}-h`,
+          children: title
+        }), more && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: more.href,
+          className: "hx-more",
+          children: [more.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 15
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hx-deals__row",
+        children: items.map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: `/product/${p.slug}`,
+            className: "hx-deals__card",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "hx-deals__img",
+              children: [p.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                src: p.image,
+                alt: "",
+                width: "300",
+                height: "300",
+                loading: "lazy",
+                decoding: "async"
+              }), p.discountPct > 0 && p.mrp > p.price && /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+                className: "hx-deals__pct",
+                children: ["\u2212", Math.round(p.discountPct), "%"]
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "hx-deals__name",
+              children: p.name
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "hx-deals__price",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                children: money(p.price)
+              }), p.mrp > p.price && /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+                children: money(p.mrp)
+              })]
+            })]
+          })
+        }, p.id))
+      })]
+    })
+  });
+}
+function TopDeals() {
+  const s = useStorefrontSection('wellness', 'topDeals', TOP_DEALS_SECTION);
+  const items = topDeals(products);
+  if (s.hidden || items.length < 3) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx(DealRow, {
+    id: "deals",
+    title: s.title,
+    items: items,
+    more: {
+      href: '/shop?sort=discount',
+      label: 'See all deals'
+    }
+  });
+}
+function WishlistRail() {
+  const s = useStorefrontSection('wellness', 'savedRail', SAVED_SECTION);
+  const {
+    wishlist
+  } = useStore();
+  const items = (wishlist || []).map(id => productById[id]).filter(p => p && p.slug && p.price > 0).slice(0, 8);
+  if (s.hidden || items.length < 2) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx(DealRow, {
+    id: "saved",
+    title: s.title,
+    items: items,
+    more: {
+      href: '/wishlist',
+      label: 'Your wishlist'
+    }
+  });
+}
+
+/** phone={false}: desktop only, where the page has its own bag bar on a phone (the wellness home). */
+function BagReminder({
+  wrap = 'hx-wrap',
+  phone = true
+}) {
+  const {
+    cartCount
+  } = useStore();
+  if (!(cartCount > 0)) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: wrap,
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: `hx-bagnote${phone ? '' : ' hx-bagnote--desk'}`,
+      role: "status",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "bag",
+        size: 18
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: ["Your bag has ", /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+          children: [cartCount, " ", cartCount === 1 ? 'item' : 'items']
+        }), ", ready when you are."]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/cart",
+        className: "hx-bagnote__go",
+        children: ["View bag ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 15
+        })]
       })]
     })
   });
@@ -47254,11 +47462,13 @@ function Home() {
   const story = homepage?.story;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "v2-home",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeHero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeHero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BagReminder, {
+      phone: false
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
       wrap: "hx-wrap"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(GiftShop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(TopDeals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(GiftShop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WishlistRail, {}), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
       eyebrow: "Across the catalogue",
       title: "Start here",
@@ -51737,7 +51947,22 @@ function Product() {
           brand: p.brand || null,
           current: i === 0
         }))
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpService, {}), /*#__PURE__*/jsxRuntimeExports.jsx(PdpRecent, {
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpService, {}), /*#__PURE__*/jsxRuntimeExports.jsx(PdpCheaper, {
+        current: {
+          key: product.id,
+          price: product.price,
+          group: product.category
+        },
+        items: products.filter(p => p.slug).map(p => ({
+          key: p.id,
+          href: `/product/${p.slug}`,
+          name: p.name,
+          image: p.image || null,
+          price: p.price,
+          group: p.category,
+          inStock: Number(p.stock) > 0
+        }))
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpRecent, {
         items: recent
       }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpBrandRail, {
         brand: product.brand,
@@ -57021,6 +57246,109 @@ function ShareList({
   });
 }
 
+const KEY = 'sora.wish.prices.v1';
+const MAX = 400;
+const readAll = () => {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(KEY) || '{}');
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
+};
+
+/**
+ * Notes today's prices and returns the drops, biggest first. Pure but for `store`.
+ * items: [{ key, name, price, href, image }]; store: a { key: { p, at } } object it updates.
+ */
+function priceDrops(items, store, now = Date.now()) {
+  const drops = [];
+  for (const it of items || []) {
+    const price = Math.round(Number(it?.price) || 0);
+    if (!it?.key || !(price > 0)) continue;
+    const was = store[it.key];
+    if (!was || !(was.p > 0)) {
+      store[it.key] = {
+        p: price,
+        at: now
+      };
+      continue;
+    }
+    if (price < was.p) drops.push({
+      ...it,
+      price,
+      was: was.p,
+      since: was.at,
+      less: was.p - price
+    });
+  }
+  return drops.sort((a, b) => b.less - a.less);
+}
+const day = t => new Date(t).toLocaleDateString('en-IN', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'Asia/Kolkata'
+});
+function PriceDrops({
+  items,
+  className = ''
+}) {
+  const [drops, setDrops] = reactExports.useState([]);
+  const sig = (items || []).map(i => `${i.key}:${i.price}`).join('|');
+  reactExports.useEffect(() => {
+    if (typeof window === 'undefined' || !sig) {
+      setDrops([]);
+      return;
+    }
+    const store = readAll();
+    setDrops(priceDrops(items, store));
+    const keys = Object.keys(store);
+    if (keys.length > MAX) keys.sort((a, b) => store[a].at - store[b].at).slice(0, keys.length - MAX).forEach(k => delete store[k]);
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(store));
+    } catch {/* storage off */}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sig]);
+  if (!drops.length) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: `hx-drops${className ? ` ${className}` : ''}`,
+    "aria-labelledby": "hx-drops-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      className: "hx-drops__h",
+      id: "hx-drops-h",
+      children: drops.length === 1 ? 'A price dropped on your list' : `${drops.length} prices dropped on your list`
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "hx-drops__list",
+      children: drops.slice(0, 6).map(d => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: d.href,
+          className: "hx-drops__item",
+          children: [d.image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: d.image,
+            alt: "",
+            width: "48",
+            height: "48",
+            loading: "lazy"
+          }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hx-drops__ph",
+            "aria-hidden": "true"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hx-drops__name",
+            children: d.name
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "hx-drops__price",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: money(d.price)
+            }), " ", /*#__PURE__*/jsxRuntimeExports.jsxs("em", {
+              children: [money(d.less), " less than on ", day(d.since)]
+            })]
+          })]
+        })
+      }, d.key))
+    })]
+  });
+}
+
 function Wishlist() {
   const {
     wishlist,
@@ -57129,7 +57457,15 @@ function Wishlist() {
       style: {
         paddingTop: 'var(--sp-8)'
       },
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ShareList, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(PriceDrops, {
+        items: items.map(p => ({
+          key: `w-${p.id}`,
+          name: p.name,
+          price: p.price,
+          href: `/product/${p.slug}`,
+          image: p.image || null
+        }))
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(ShareList, {
         items: items.map(p => ({
           name: p.name,
           price: p.price,
@@ -67820,7 +68156,9 @@ function FashionHome() {
     className: "fs-home",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(Hero, {
       config: config.hero
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BagReminder, {
+      wrap: "fs-sec"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
       wrap: "fs-sec"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {
       prefix: "fs-"
@@ -70185,9 +70523,11 @@ function FashionWishlistPage() {
     views
   } = useFashionCatalogue();
   const saved = views.filter(v => set.has(v.id)).map(v => ({
+    key: `fs-${v.id}`,
     name: v.name,
     price: v.price,
-    href: `/fashion/p/${v.slug}`
+    href: `/fashion/p/${v.slug}`,
+    image: v.image
   }));
   return /*#__PURE__*/jsxRuntimeExports.jsx(Listing$1, {
     title: "Your fashion wishlist",
@@ -70198,9 +70538,13 @@ function FashionWishlistPage() {
       name: 'Wishlist'
     }],
     only: v => set.has(v.id),
-    intro: saved.length ? /*#__PURE__*/jsxRuntimeExports.jsx(ShareList, {
-      items: saved,
-      heading: "My Fashion wishlist on SORA LIFESTYLE"
+    intro: saved.length ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(PriceDrops, {
+        items: saved
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(ShareList, {
+        items: saved,
+        heading: "My Fashion wishlist on SORA LIFESTYLE"
+      })]
     }) : null,
     emptyCopy: "Nothing saved yet \u2014 tap the heart on any style to keep it here."
   });
@@ -72763,6 +73107,21 @@ function HomeLivingProductPage() {
     }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpService, {}), /*#__PURE__*/jsxRuntimeExports.jsx(PdpReviews, {
       productKey: `homeliving:${view.id}`,
       productName: view.name
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpCheaper, {
+      current: {
+        key: view.id,
+        price: view.price,
+        group: view.category_id
+      },
+      items: products.map(p => ({
+        key: p.id,
+        href: `/homeliving/p/${p.slug}`,
+        name: p.name,
+        image: p.gallery && p.gallery[0]?.url || p.images?.[0] || null,
+        price: p.price,
+        group: p.category_id,
+        inStock: p.stock > 0 || (p.variants || []).some(v => v.stock > 0)
+      }))
     }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpRecent, {
       items: recent
     }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpBrandRail, {
@@ -73419,6 +73778,21 @@ function FashionProductPage() {
       }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpService, {}), /*#__PURE__*/jsxRuntimeExports.jsx(PdpReviews, {
         productKey: `fashion:${view.id}`,
         productName: view.name
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpCheaper, {
+        current: {
+          key: view.id,
+          price: view.price,
+          group: view.category_id
+        },
+        items: views.map(p => ({
+          key: p.id,
+          href: `/fashion/p/${p.slug}`,
+          name: p.name,
+          image: p.image,
+          price: p.price,
+          group: p.category_id,
+          inStock: p.inStock
+        }))
       }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpRecent, {
         items: recent
       }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpBrandRail, {
@@ -75038,7 +75412,9 @@ function HomeLivingHome() {
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(HeroCarousel$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BottomNav$1, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hl-tools",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(DeliveryRow, {}), /*#__PURE__*/jsxRuntimeExports.jsx(SearchBar, {})]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(TrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BagReminder, {
+      wrap: "hl-wrap"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
       wrap: "hl-wrap"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryCircles, {
       categories: categories
@@ -75163,7 +75539,15 @@ function HomeLivingWishlist() {
         children: "Browse Home & Living"
       })]
     }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ShareList, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(PriceDrops, {
+        items: saved.map(p => ({
+          key: `hl-${p.id}`,
+          name: p.name,
+          price: p.price,
+          href: `/homeliving/p/${p.slug}`,
+          image: p.gallery && p.gallery[0]?.url || p.images?.[0] || null
+        }))
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(ShareList, {
         items: saved.map(p => ({
           name: p.name,
           price: p.price,
