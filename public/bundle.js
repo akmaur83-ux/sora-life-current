@@ -3240,6 +3240,10 @@ const WELLNESS = {
     hidden: hidden(),
     title: text$1(60, 'Heading')
   }, 'From your wishlist (the visitor’s saved products)'),
+  // The welcome card for first-time visitors (2026-11-10): the offer above, once, twelve seconds in.
+  welcomeOffer: group({
+    hidden: hidden()
+  }, 'Welcome offer card (first visit; shows the offer countdown’s offer and code)'),
   // The offer countdown in every product page's buy box (2026-11-08); gone once it ends.
   offerCountdown: group({
     hidden: hidden(),
@@ -35273,6 +35277,9 @@ function Footer() {
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/shop",
             children: "All products"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/offers",
+            children: "Offers & deals"
           }), categories.slice(0, 3).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: `/category/${c.slug}`,
             children: c.name
@@ -36349,7 +36356,7 @@ const TRUST = [{
   note: '9am–6pm IST',
   to: '/contact'
 }];
-const STORES$1 = [{
+const STORES$2 = [{
   key: 'wellness',
   name: 'Wellness',
   to: '/category/wellness',
@@ -36631,7 +36638,7 @@ const STORES_SECTION = Object.freeze({
   title: 'Explore the stores',
   more: 'View All',
   link: '/shop',
-  items: STORES$1.map(s => ({
+  items: STORES$2.map(s => ({
     ...s,
     hidden: false,
     link: s.to,
@@ -36784,7 +36791,7 @@ function ExploreStores({
     picture: tileArt(s.image)
   })) : section.hidden ? [] : section.items.filter(visible$4);
   if (!circles.length) return null;
-  const count = given || circles.length === STORES$1.length ? {} : {
+  const count = given || circles.length === STORES$2.length ? {} : {
     'data-count': circles.length,
     style: {
       '--hx-stores-n': circles.length
@@ -40032,7 +40039,7 @@ function stripTiles(categories = FASHION_CATEGORIES$1) {
   for (let i = 0; i < Math.max(women.length, men.length); i++) tiles.push(...[women[i], men[i]].filter(Boolean));
   return tiles;
 }
-const STORES = [{
+const STORES$1 = [{
   key: 'fashion',
   to: '/fashion',
   eyebrow: 'Discover your style',
@@ -40092,7 +40099,7 @@ const STORE_CAROUSEL_SECTION = Object.freeze({
   eyebrow: 'More to explore',
   title: 'Two Worlds. A Better You.',
   text: 'Fashion for your style. Living for your space. All at SORA LIFE.',
-  cards: STORES.map(s => ({
+  cards: STORES$1.map(s => ({
     ...s,
     hidden: false,
     title: [...s.heading],
@@ -40193,7 +40200,7 @@ function DoorwayCard({
  * would otherwise follow the card link.
  */
 function DoorwayCarousel({
-  stores = STORES,
+  stores = STORES$1,
   autoplayMs = AUTOPLAY_MS$3
 }) {
   const [index, setIndex] = reactExports.useState(0);
@@ -43236,6 +43243,160 @@ function timeLeft(ms) {
   return `${Math.max(1, mm)}m`;
 }
 
+const WELCOME_SECTION = Object.freeze({
+  hidden: false
+});
+const PROMO_KEY = 'sora.promo.v1';
+const WELCOME_KEY = 'sora.welcome.v1';
+const WELCOME_EVERY = 14 * 86400 * 1000;
+const WELCOME_AFTER_MS = 12000;
+const NEVER = /^\/(admin|creator|invoice|passport|login)(\/|$)/;
+const QUIET = /^\/(cart|checkout|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout)(\/|$)/;
+
+/** A code from a promo link, upper-cased, or '' when it is not one. */
+function promoCode(search) {
+  const raw = new URLSearchParams(search || '').get('promo');
+  const c = String(raw || '').trim().toUpperCase();
+  return /^[A-Z0-9][A-Z0-9_-]{2,23}$/.test(c) ? c : '';
+}
+
+/** The words a shared offer goes out with. */
+function offerShareText(offer, link) {
+  return offer && offer.code ? `${offer.title} ${offer.code} at SORA LIFESTYLE (wellness, fashion and home). Shop the offers: ${link}` : `Offers on wellness, fashion and home at SORA LIFESTYLE: ${link}`;
+}
+const store$1 = kind => {
+  try {
+    return kind === 'session' ? window.sessionStorage : window.localStorage;
+  } catch {
+    return null;
+  }
+};
+const readJson = (s, k) => {
+  try {
+    return JSON.parse(s?.getItem(k) || 'null');
+  } catch {
+    return null;
+  }
+};
+const writeJson = (s, k, v) => {
+  try {
+    s?.setItem(k, JSON.stringify(v));
+  } catch {/* storage off */}
+};
+function PromoCard$1({
+  foot = 0
+}) {
+  const {
+    pathname,
+    search
+  } = useLocation();
+  const offer = useStorefrontSection('wellness', 'offerCountdown', OFFER_COUNTDOWN);
+  const welcome = useStorefrontSection('wellness', 'welcomeOffer', WELCOME_SECTION);
+  const [promo, setPromo] = reactExports.useState(null); // { code, closed }
+  const [greet, setGreet] = reactExports.useState(false);
+  const [copied, setCopied] = reactExports.useState(false);
+  const offerLive = !offer.hidden && !!offer.code && parseIndiaTime(offer.endsAt) > Date.now();
+
+  // A promo link: remember its code for this visit.
+  reactExports.useEffect(() => {
+    const code = promoCode(search);
+    const ss = store$1('session');
+    if (code) {
+      const v = {
+        code,
+        closed: false
+      };
+      writeJson(ss, PROMO_KEY, v);
+      setPromo(v);
+      return;
+    }
+    setPromo(readJson(ss, PROMO_KEY));
+  }, [search]);
+
+  // The welcome card: first visit (or 14 days on), twelve seconds in, once.
+  reactExports.useEffect(() => {
+    if (welcome.hidden || !offerLive || NEVER.test(pathname) || QUIET.test(pathname)) return undefined;
+    const ls = store$1('local');
+    const seen = Number(readJson(ls, WELCOME_KEY)) || 0;
+    if (Date.now() - seen < WELCOME_EVERY) return undefined;
+    const t = setTimeout(() => {
+      writeJson(ls, WELCOME_KEY, Date.now());
+      setGreet(true);
+    }, WELCOME_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [welcome.hidden, offerLive, pathname]);
+  if (NEVER.test(pathname)) return null;
+  const showPromo = promo && promo.code && !promo.closed;
+  const showWelcome = !showPromo && greet && offerLive && !QUIET.test(pathname);
+  if (!showPromo && !showWelcome) return null;
+  const code = showPromo ? promo.code : offer.code;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {/* clipboard off */}
+  };
+  const close = () => {
+    if (showPromo) {
+      const v = {
+        ...promo,
+        closed: true
+      };
+      writeJson(store$1('session'), PROMO_KEY, v);
+      setPromo(v);
+    } else setGreet(false);
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("aside", {
+    className: "hx-pcard",
+    style: {
+      '--pcard-foot': `${foot}px`
+    },
+    "aria-label": showPromo ? 'Your promo code' : 'Current offer',
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "hx-pcard__ic",
+      "aria-hidden": "true",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "gift",
+        size: 20
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-pcard__body",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-pcard__t",
+        children: showPromo ? 'Your code is ready' : offer.title
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "hx-pcard__code",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          children: code
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          onClick: copy,
+          children: copied ? 'Copied ✓' : 'Copy'
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-pcard__s",
+        children: showPromo ? 'Enter it in the coupon box at checkout.' : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: ["Enter it at checkout. ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/offers",
+            onClick: close,
+            children: "See the offers"
+          })]
+        })
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: "hx-pcard__x",
+      onClick: close,
+      "aria-label": "Close",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "x",
+        size: 16
+      })
+    })]
+  });
+}
+
 const pad = n => String(n).padStart(2, '0');
 function clockParts(ms) {
   if (!(ms > 0)) return null;
@@ -43251,6 +43412,9 @@ function OfferBanner({
   wrap = ''
 }) {
   const o = useStorefrontSection('wellness', 'offerCountdown', OFFER_COUNTDOWN);
+  const {
+    pathname
+  } = useLocation();
   const [now, setNow] = reactExports.useState(null);
   const [copied, setCopied] = reactExports.useState(false);
   reactExports.useEffect(() => {
@@ -43293,6 +43457,25 @@ function OfferBanner({
           children: k
         })]
       }, k))]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "hx-offer__acts",
+      children: [pathname !== '/offers' && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/offers",
+        className: "hx-offer__go",
+        children: ["Shop all offers ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 14
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+        className: "hx-offer__share",
+        target: "_blank",
+        rel: "noopener noreferrer",
+        href: `https://wa.me/?text=${encodeURIComponent(offerShareText(o, `https://www.soralifestyle.in/offers${o.code ? `?promo=${encodeURIComponent(o.code)}` : ''}`))}`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chat",
+          size: 14
+        }), " Share on WhatsApp"]
+      })]
     })]
   });
 }
@@ -50240,15 +50423,18 @@ function SiteAssist() {
   useSiteLd(care?.phone || ''); // the business and its search, for search engines (pageMeta.js)
 
   reactExports.useEffect(() => {
-    if (hidden) return undefined;
-    const onScroll = () => setUp(window.scrollY > window.innerHeight * 2);
     const measure = () => setOffset(footOffset());
+    const timers = [100, 600, 1500].map(ms => setTimeout(measure, ms)); // also where only the promo card shows (cart, checkout)
+    window.addEventListener('resize', measure);
+    if (hidden) return () => {
+      timers.forEach(clearTimeout);
+      window.removeEventListener('resize', measure);
+    };
+    const onScroll = () => setUp(window.scrollY > window.innerHeight * 2);
     onScroll();
-    const timers = [100, 600, 1500].map(ms => setTimeout(measure, ms));
     window.addEventListener('scroll', onScroll, {
       passive: true
     });
-    window.addEventListener('resize', measure);
     return () => {
       timers.forEach(clearTimeout);
       window.removeEventListener('scroll', onScroll);
@@ -50372,7 +50558,13 @@ function SiteAssist() {
     "aria-live": "polite",
     children: net === 'off' ? 'You’re offline. Check your connection; anything new loads once you’re back.' : 'Back online.'
   });
-  if (hidden) return netNote || null;
+  // A promo link's code, or the welcome offer (PromoCard.jsx); cart and checkout keep the code in view.
+  const promo = /*#__PURE__*/jsxRuntimeExports.jsx(PromoCard$1, {
+    foot: offset
+  });
+  if (hidden) return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [netNote, promo]
+  });
   // The product's name is read from the page's heading at the moment of the tap (it renders after this).
   const build = () => waLink(care?.phone, pathname, document.querySelector('main h1, h1')?.textContent || '', window.location.href.split('#')[0]);
   const wa = waLink(care?.phone, '/', '', '');
@@ -50384,7 +50576,7 @@ function SiteAssist() {
     });
   };
   return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-    children: [netNote, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    children: [netNote, promo, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hx-sa",
       style: {
         '--sa-foot': `${offset}px`
@@ -57483,6 +57675,264 @@ function Wishlist() {
       title: "You might also like",
       products: getBestsellers(),
       link: "/shop"
+    })]
+  });
+}
+
+const PAGE = 24;
+function useShowMore(total, resetKey) {
+  const [shown, setShown] = reactExports.useState(PAGE);
+  reactExports.useEffect(() => {
+    setShown(PAGE);
+  }, [resetKey]);
+  return {
+    shown: Math.min(shown, total),
+    more: () => setShown(n => n + PAGE),
+    left: Math.max(0, total - shown)
+  };
+}
+function LoadMore({
+  shown,
+  total,
+  onMore,
+  cls = ''
+}) {
+  if (total <= shown) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: `hx-more-wrap ${cls}`.trim(),
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "hx-more-wrap__n",
+      children: ["Showing ", shown, " of ", total]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hx-more-wrap__bar",
+      "aria-hidden": "true",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+        style: {
+          width: `${Math.round(shown / total * 100)}%`
+        }
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      type: "button",
+      className: "hx-more-wrap__btn",
+      onClick: onMore,
+      children: ["Show ", Math.min(PAGE, total - shown), " more"]
+    })]
+  });
+}
+
+const STORES = [{
+  id: 'all',
+  label: 'All'
+}, {
+  id: 'wellness',
+  label: 'Wellness'
+}, {
+  id: 'fashion',
+  label: 'Fashion'
+}, {
+  id: 'homeliving',
+  label: 'Home & Living'
+}];
+
+/** A Fashion or Home & Living row as a deal, or null when it is not on a real discount or not in stock. Pure. */
+function catalogueDeal(r) {
+  if (!r || r.is_demo || !r.slug) return null;
+  const mrp = Number(r.mrp) || 0;
+  const sale = r.sale_price == null ? 0 : Number(r.sale_price) || 0;
+  if (!(sale > 0 && sale < mrp)) return null;
+  const vs = (Array.isArray(r.variants) ? r.variants : []).filter(v => v && v.is_active !== false);
+  const inStock = vs.length ? vs.some(v => Number(v.stock) > 0) : Number(r.stock) > 0;
+  const image = Array.isArray(r.images) ? r.images.find(Boolean) : null;
+  if (!inStock || !image) return null;
+  return {
+    key: `${r.store}-${r.id}`,
+    store: r.store,
+    name: r.name,
+    image,
+    price: sale,
+    mrp,
+    pct: Math.round((mrp - sale) / mrp * 100),
+    href: r.store === 'fashion' ? `/fashion/p/${r.slug}` : `/homeliving/p/${r.slug}`
+  };
+}
+const wellnessDeals = list => (Array.isArray(list) ? list : []).filter(p => p && p.slug && p.price > 0 && p.mrp > p.price && Number(p.stock) > 0).map(p => ({
+  key: `wellness-${p.id}`,
+  store: 'wellness',
+  name: p.name,
+  image: p.image || null,
+  price: p.price,
+  mrp: p.mrp,
+  pct: Math.round((p.mrp - p.price) / p.mrp * 100),
+  href: `/product/${p.slug}`
+}));
+const sortDeals = deals => [...deals].sort((a, b) => b.pct - a.pct || b.mrp - b.price - (a.mrp - a.price) || String(a.name).localeCompare(String(b.name)));
+async function fetchCatalogueDeals(client = supabase) {
+  if (!client) return [];
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, stock, is_demo, variants:catalogue_variants(stock, is_active)').eq('is_active', true).in('store', ['fashion', 'homeliving']).not('sale_price', 'is', null).limit(3000);
+  if (error || !Array.isArray(data)) return [];
+  return data.map(catalogueDeal).filter(Boolean);
+}
+function ShareOffer() {
+  const o = useStorefrontSection('wellness', 'offerCountdown', OFFER_COUNTDOWN);
+  const [copied, setCopied] = reactExports.useState(false);
+  const live = !o.hidden && parseIndiaTime(o.endsAt) > Date.now();
+  const link = `https://www.soralifestyle.in/offers${live && o.code ? `?promo=${encodeURIComponent(o.code)}` : ''}`;
+  const text = offerShareText(live ? o : null, link);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {/* clipboard off */}
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hx-offers__share",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      children: "Tell a friend:"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+      href: `https://wa.me/?text=${encodeURIComponent(text)}`,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      className: "hx-offers__btn hx-offers__btn--wa",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "chat",
+        size: 16
+      }), " WhatsApp"]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      type: "button",
+      className: "hx-offers__btn",
+      onClick: copy,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "copy",
+        size: 16
+      }), " ", copied ? 'Link copied ✓' : 'Copy link']
+    })]
+  });
+}
+function Offers() {
+  const [params, setParams] = useSearchParams();
+  const store = STORES.some(s => s.id === params.get('store')) ? params.get('store') : 'all';
+  const [cat, setCat] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let on = true;
+    fetchCatalogueDeals().then(d => {
+      if (on) setCat(d);
+    }, () => {
+      if (on) setCat([]);
+    });
+    return () => {
+      on = false;
+    };
+  }, []);
+  const all = reactExports.useMemo(() => sortDeals([...wellnessDeals(products), ...(cat || [])]), [cat]);
+  const shownDeals = store === 'all' ? all : all.filter(d => d.store === store);
+  const paging = useShowMore(shownDeals.length, store);
+  usePageMeta({
+    title: 'Offers & deals',
+    description: 'Every product on offer at SORA LIFESTYLE: wellness, fashion and home, biggest discounts first.',
+    path: '/offers'
+  });
+  const counts = Object.fromEntries(STORES.map(s => [s.id, s.id === 'all' ? all.length : all.filter(d => d.store === s.id).length]));
+  const pick = id => {
+    const next = new URLSearchParams(params);
+    if (id === 'all') next.delete('store');else next.set('store', id);
+    setParams(next, {
+      replace: true
+    });
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hx hx-offers",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/",
+          children: "Home"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Offers"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "hx-offers__h",
+        children: "Offers & deals"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-offers__lede",
+        children: "Everything on offer right now across wellness, fashion and home, biggest discount first."
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
+      wrap: "hx-wrap"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ShareOffer, {}), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hx-offers__tabs",
+        role: "tablist",
+        "aria-label": "Store",
+        children: STORES.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+          type: "button",
+          role: "tab",
+          "aria-selected": store === s.id,
+          className: `hx-offers__tab${store === s.id ? ' is-on' : ''}`,
+          onClick: () => pick(s.id),
+          children: [s.label, cat ? /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+            children: counts[s.id]
+          }) : null]
+        }, s.id))
+      }), cat === null && shownDeals.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-offers__empty",
+        role: "status",
+        children: "Loading the offers\u2026"
+      }) : shownDeals.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-offers__empty",
+        children: "Nothing on offer here right now. New deals appear the moment they go live."
+      }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "hx-offers__grid",
+          children: shownDeals.slice(0, paging.shown).map((d, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+              to: d.href,
+              className: "hx-deals__card",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                className: "hx-deals__img",
+                children: [d.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                  src: d.image,
+                  alt: "",
+                  width: "300",
+                  height: "300",
+                  loading: i < 8 ? 'eager' : 'lazy',
+                  decoding: "async"
+                }), /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+                  className: "hx-deals__pct",
+                  children: ["\u2212", d.pct, "%"]
+                })]
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-deals__name",
+                children: d.name
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                className: "hx-deals__price",
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                  children: money(d.price)
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+                  children: money(d.mrp)
+                })]
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                className: "hx-offers__save",
+                children: ["You save ", money(d.mrp - d.price)]
+              })]
+            })
+          }, d.key))
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(LoadMore, {
+          shown: paging.shown,
+          total: shownDeals.length,
+          onMore: paging.more
+        })]
+      })]
     })]
   });
 }
@@ -70058,47 +70508,6 @@ function FashionJewellery({
   });
 }
 
-const PAGE = 24;
-function useShowMore(total, resetKey) {
-  const [shown, setShown] = reactExports.useState(PAGE);
-  reactExports.useEffect(() => {
-    setShown(PAGE);
-  }, [resetKey]);
-  return {
-    shown: Math.min(shown, total),
-    more: () => setShown(n => n + PAGE),
-    left: Math.max(0, total - shown)
-  };
-}
-function LoadMore({
-  shown,
-  total,
-  onMore,
-  cls = ''
-}) {
-  if (total <= shown) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: `hx-more-wrap ${cls}`.trim(),
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "hx-more-wrap__n",
-      children: ["Showing ", shown, " of ", total]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "hx-more-wrap__bar",
-      "aria-hidden": "true",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx("i", {
-        style: {
-          width: `${Math.round(shown / total * 100)}%`
-        }
-      })
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-      type: "button",
-      className: "hx-more-wrap__btn",
-      onClick: onMore,
-      children: ["Show ", Math.min(PAGE, total - shown), " more"]
-    })]
-  });
-}
-
 function Breadcrumb$1({
   trail
 }) {
@@ -76993,6 +77402,9 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "/wishlist",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(Wishlist, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "/offers",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(Offers, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "/about",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(About, {})
