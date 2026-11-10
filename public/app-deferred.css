@@ -6845,6 +6845,13 @@
 .fs-gallery { position: relative; }
 @media (min-width: 768px) { .fs-pdp--mk .fs-gallery { position: sticky; } }
 .fs-gallery__count { position: absolute; top: 10px; left: 10px; z-index: 2; padding: 3px 9px; background: rgba(15, 17, 17, .72); color: #fff; font: 600 12px/1.4 Arial, sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; }
+/* Search by voice in the search bar (2026-11-10): the microphone sits inside the field, left of the search button. */
+.fs-search .hx-voice { position: absolute; right: 98px; top: 8px; }
+.fs-search input { padding-right: 48px; }
+@media (max-width: 599px) {
+  .fs-search .hx-voice { right: 68px; top: 6px; width: 34px; height: 34px; }
+  .fs-search input { padding-right: 40px; }
+}
 
 /* ═══ src/styles/fashion-departments.css ═══ */
 /* Men's streetwear and women's heritage edits. Scoped to the two new routes;
@@ -8887,6 +8894,14 @@
   .hl.pdp-bar-on .hl-pdp__bar-price b { font-size: 22px; font-weight: 400; color: #0F1111; }
   .hl.pdp-bar-on .hl-pdp__bar .hl-btn { min-height: 42px; padding: 0 26px; font-size: 14px; }
   .hl.pdp-bar-on .hl-pdp { padding-bottom: 72px; }
+}
+/* Search by voice in the search bar (2026-11-10): the microphone inside the field, at its right. */
+.hl .hl-search .hx-voice { position: absolute; right: 25px; top: 9px; }
+.hl .hl-search input { padding-right: 52px; }
+@media (max-width: 599px) {
+  .hl .hl-search .hx-voice { right: 18px; top: 4px; }
+  .hl .hl-search input { padding-right: 46px; }
+  .hl-home .hl-search .hx-voice { right: 4px; top: 12px; width: 34px; height: 34px; }
 }
 
 /* ═══ src/styles/lifestyle.css ═══ */

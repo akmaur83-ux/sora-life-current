@@ -31716,7 +31716,7 @@ function loadGroceryCatalogue() {
   });
   return loading$2;
 }
-const subscribe$2 = fn => {
+const subscribe$3 = fn => {
   listeners$4.add(fn);
   if (snapshot$2.status === 'loading') loadGroceryCatalogue();
   return () => listeners$4.delete(fn);
@@ -31725,7 +31725,7 @@ const getSnapshot$2 = () => snapshot$2;
 
 /** { status: 'loading' | 'ready' | 'error', error, categories, products } — categories and products carry the schema's field names. */
 function useGroceryCatalogue() {
-  return reactExports.useSyncExternalStore(subscribe$2, getSnapshot$2, getSnapshot$2);
+  return reactExports.useSyncExternalStore(subscribe$3, getSnapshot$2, getSnapshot$2);
 }
 
 // ============================================================
@@ -32161,7 +32161,7 @@ function loadHomeLivingCatalogue() {
   });
   return loading$1;
 }
-const subscribe$1 = fn => {
+const subscribe$2 = fn => {
   listeners$3.add(fn);
   if (snapshot$1.status === 'loading') loadHomeLivingCatalogue();
   return () => listeners$3.delete(fn);
@@ -32170,7 +32170,7 @@ const getSnapshot$1 = () => snapshot$1;
 
 /** { status: 'loading' | 'ready' | 'error', error, categories, products } — categories and products carry the schema's field names. */
 function useHomeLivingCatalogue() {
-  return reactExports.useSyncExternalStore(subscribe$1, getSnapshot$1, getSnapshot$1);
+  return reactExports.useSyncExternalStore(subscribe$2, getSnapshot$1, getSnapshot$1);
 }
 
 // ============================================================
@@ -33699,6 +33699,69 @@ function searchItems(items, query, fields = x => [x.name, x.brand, x.category]) 
   return scored.sort((a, b) => a.rank - b.rank || a.i - b.i).map(s => s.item);
 }
 
+// ---- "Did you mean…?" (owner, 2026-11-10: more features) ----------------------------
+// A search that finds nothing is checked word by word against the words the store's
+// own names, brands and categories use: a word one letter off (two for longer words)
+// is swapped for the closest store word ("kurtha" → "kurta", "bedshet" → "bedsheet").
+// The corrected search is offered only when it really finds products.
+function editDistance(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let before = null; // two rows back: swapped neighbours ("shwal" → "shawl") count as one slip
+  let prev = Array.from({
+    length: b.length + 1
+  }, (_, j) => j);
+  for (let i = 1; i <= a.length; i += 1) {
+    const cur = [i];
+    let low = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (before && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) cur[j] = Math.min(cur[j], before[j - 2] + 1);
+      if (cur[j] < low) low = cur[j];
+    }
+    if (low > max) return max + 1;
+    before = prev;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+/** The corrected search, or '' when the search already finds something or nothing close does. */
+function didYouMean(items, query, fields = x => [x.name, x.brand, x.category], finds = null) {
+  const q = normalise(query);
+  const rows = Array.isArray(items) ? items : [];
+  if (q.length < 3 || rows.length === 0) return '';
+  const found = s => finds ? finds(s) : searchItems(rows, s, fields).length > 0;
+  if (found(q)) return '';
+  const vocab = new Map();
+  rows.forEach(it => fields(it).forEach(f => normalise(f).split(' ').forEach(w => {
+    if (w.length >= 3 && !/^\d+$/.test(w)) vocab.set(w, (vocab.get(w) || 0) + 1);
+  })));
+  let changed = false;
+  const fixed = q.split(' ').filter(Boolean).map(w => {
+    if (w.length < 3 || /^\d+$/.test(w)) return w;
+    const sw = stem(w);
+    for (const v of vocab.keys()) if (v.includes(sw)) return w; // the word is fine; another one is not
+    const max = w.length <= 5 ? 1 : 2;
+    let best = '';
+    let bestD = max + 1;
+    let bestN = 0;
+    for (const [v, n] of vocab) {
+      const d = editDistance(w, v, max);
+      if (d <= max && (d < bestD || d === bestD && n > bestN)) {
+        best = v;
+        bestD = d;
+        bestN = n;
+      }
+    }
+    if (!best) return w;
+    changed = true;
+    return best;
+  });
+  if (!changed) return '';
+  const s = fixed.join(' ');
+  return found(s) ? s : '';
+}
+
 // ============================================================
 // New arrivals for the wellness homepage: the products flagged new
 // (is_new), newest first, from the stores a customer can buy from —
@@ -33903,6 +33966,95 @@ function useOtherStoreMatches(query, enabled = true) {
   return searchItems(rows, query);
 }
 
+function speechApi() {
+  if (typeof window === 'undefined') return null;
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+/** What was heard, as a search: trimmed, without the full stop speech adds. */
+const spokenQuery = t => String(t || '').replace(/[.?!।]+\s*$/, '').replace(/\s+/g, ' ').trim().slice(0, 80);
+const Mic = () => /*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+  width: "18",
+  height: "18",
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "1.8",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  "aria-hidden": "true",
+  children: [/*#__PURE__*/jsxRuntimeExports.jsx("rect", {
+    x: "9",
+    y: "3",
+    width: "6",
+    height: "11",
+    rx: "3"
+  }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+    d: "M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"
+  })]
+});
+function VoiceSearch({
+  onResult,
+  className = ''
+}) {
+  const [ok, setOk] = reactExports.useState(false);
+  const [on, setOn] = reactExports.useState(false);
+  const rec = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    setOk(!!speechApi());
+    return () => {
+      try {
+        rec.current?.abort();
+      } catch {/* already stopped */}
+    };
+  }, []);
+  if (!ok) return null;
+  const toggle = () => {
+    if (on) {
+      try {
+        rec.current?.stop();
+      } catch {/* already stopped */}
+      return;
+    }
+    const R = speechApi();
+    if (!R) return;
+    const r = new R();
+    r.lang = 'en-IN';
+    r.interimResults = false;
+    r.maxAlternatives = 1;
+    r.continuous = false;
+    r.onresult = e => {
+      const t = spokenQuery(e.results?.[0]?.[0]?.transcript);
+      if (t.length >= 2) onResult(t);
+    };
+    r.onend = () => setOn(false);
+    r.onerror = () => setOn(false);
+    rec.current = r;
+    try {
+      r.start();
+      setOn(true);
+    } catch {
+      setOn(false);
+    }
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "button",
+      className: `hx-voice${on ? ' is-on' : ''}${className ? ` ${className}` : ''}`,
+      onMouseDown: e => e.preventDefault(),
+      onClick: toggle,
+      "aria-label": on ? 'Stop listening' : 'Search by voice',
+      "aria-pressed": on,
+      title: "Search by voice",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(Mic, {})
+    }), on && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "hx-voice__tip",
+      role: "status",
+      children: "Listening\u2026 say what you\u2019re looking for"
+    })]
+  });
+}
+
 const NAV_PLACEHOLDER_COUNT = 5;
 
 // Mirrors the catalogue settle rule in src/pages/Product.jsx: show the real
@@ -34055,6 +34207,13 @@ function Header() {
       setMobileSearch(false);
     }
   };
+  const spoken = t => {
+    setQ(t);
+    navigate(`/shop?q=${encodeURIComponent(t)}`);
+    setFocused(false);
+    setMobileSearch(false);
+  }; // VoiceSearch.jsx
+
   return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(AnnouncementBar, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
       className: `v2-hdr ${scrolled ? 'is-scrolled' : ''}`,
@@ -34090,6 +34249,8 @@ function Header() {
                 onChange: e => setQ(e.target.value),
                 onFocus: () => setFocused(true),
                 "aria-label": "Search for products"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx(VoiceSearch, {
+                onResult: spoken
               }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
                 type: "submit",
                 "aria-label": "Search",
@@ -34291,6 +34452,9 @@ function Header() {
             "aria-label": "Search for products",
             value: q,
             onChange: e => setQ(e.target.value)
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(VoiceSearch, {
+            onResult: spoken,
+            className: "hx-voice--panel"
           }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
             type: "button",
             className: "iconbtn",
@@ -34957,6 +35121,73 @@ function useConsumerCare() {
   });
 }
 
+let deferred = null;
+const subs = new Set();
+const emit = () => subs.forEach(fn => fn());
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferred = e;
+    emit();
+  });
+  window.addEventListener('appinstalled', () => {
+    deferred = null;
+    emit();
+  });
+}
+const subscribe$1 = fn => {
+  subs.add(fn);
+  return () => subs.delete(fn);
+};
+const canInstall = () => !!deferred;
+const never = () => false;
+function useCanInstall() {
+  return reactExports.useSyncExternalStore(subscribe$1, canInstall, never);
+}
+function InstallApp({
+  className = ''
+}) {
+  const can = useCanInstall();
+  if (!can) return null;
+  const install = async () => {
+    const e = deferred;
+    if (!e) return;
+    try {
+      await e.prompt();
+      const r = await e.userChoice;
+      if (r?.outcome === 'accepted') {
+        deferred = null;
+        emit();
+      }
+    } catch {/* dismissed */}
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+    type: "button",
+    className: `hx-install${className ? ` ${className}` : ''}`,
+    onClick: install,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+      width: "16",
+      height: "16",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "1.8",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": "true",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("rect", {
+        x: "6",
+        y: "2.5",
+        width: "12",
+        height: "19",
+        rx: "2.5"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+        d: "M12 7v7m-3-3 3 3 3-3M10 18.5h4"
+      })]
+    }), "Install the SORA app"]
+  });
+}
+
 function Footer() {
   const info = useConsumerCare();
   const socials = socialLinks(info);
@@ -35053,7 +35284,7 @@ function Footer() {
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/wishlist",
             children: "Wishlist"
-          })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(InstallApp, {})]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "ftr__col",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
@@ -47160,6 +47391,9 @@ const SHOP_SORTS = [{
   id: 'price-desc',
   label: 'Price: high to low'
 }, {
+  id: 'discount',
+  label: 'Biggest discount'
+}, {
   id: 'new',
   label: 'Newest'
 }];
@@ -47316,6 +47550,10 @@ function ProductBrowser({
         break;
       case 'price-desc':
         s.sort((a, b) => b.price - a.price);
+        break;
+      // Biggest discount first (2026-11-10): the verified % off; equal ones keep the curated order.
+      case 'discount':
+        s.sort((a, b) => (Number(b.discountPct) || 0) - (Number(a.discountPct) || 0) || Number(b.isFeatured) - Number(a.isFeatured));
         break;
       case 'new':
         s.sort((a, b) => Number(b.isNew) - Number(a.isNew));
@@ -47679,6 +47917,198 @@ function OtherStoreResults({
   });
 }
 
+const SUGGEST_MAX = 6;
+/** A partner CDN picture asked for at thumbnail size (Shopify resizes on `width`). */
+const thumb = src => String(src).replace(/([?&])width=\d+/, '$1width=120');
+
+// ---- Recent searches (this browser only, per store) -----------------------------------
+const RECENT_MAX = 6;
+const recentKey = store => `sora.search.recent.${store}`;
+function readRecentSearches(store) {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(recentKey(store)) || '[]');
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(0, RECENT_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+function rememberSearch(store, term) {
+  const t = String(term || '').trim().slice(0, 60);
+  if (t.length < 2) return;
+  try {
+    const cur = readRecentSearches(store).filter(x => x.toLowerCase() !== t.toLowerCase());
+    window.localStorage.setItem(recentKey(store), JSON.stringify([t, ...cur].slice(0, RECENT_MAX)));
+  } catch {/* storage off */}
+}
+function clearRecentSearches(store) {
+  try {
+    window.localStorage.removeItem(recentKey(store));
+  } catch {/* storage off */}
+}
+
+/** With nothing typed yet: the last searches, each a link to its results, and Clear. */
+function RecentSearches({
+  id,
+  terms,
+  hrefFor,
+  onPick,
+  onClear,
+  popular = []
+}) {
+  const hasTerms = terms && terms.length > 0;
+  if (!hasTerms && popular.length === 0) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hx-suggest hx-suggest--recent",
+    id: id,
+    "aria-label": hasTerms ? 'Recent searches' : 'Popular categories',
+    children: [hasTerms && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "hx-suggest__head",
+        children: ["Recent searches ", /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          onMouseDown: e => e.preventDefault(),
+          onClick: onClear,
+          children: "Clear"
+        })]
+      }), terms.map(t => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+        to: hrefFor(t),
+        className: "hx-suggest__recent",
+        onMouseDown: e => e.preventDefault(),
+        onClick: onPick,
+        children: t
+      }, t))]
+    }), popular.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-suggest__head",
+        children: "Popular categories"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hx-suggest__chips",
+        children: popular.slice(0, 8).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: c.href,
+          className: "hx-suggest__chip",
+          onMouseDown: e => e.preventDefault(),
+          onClick: onPick,
+          children: c.name
+        }, c.href))
+      })]
+    })]
+  });
+}
+
+/** "Did you mean …?" — a corrected search (searchMatch.js didYouMean) as a link to its results. */
+function DidYouMean({
+  fix,
+  href,
+  onPick,
+  className = ''
+}) {
+  if (!fix) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+    className: `hx-dym${className ? ` ${className}` : ''}`,
+    children: ["Did you mean ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+      to: href,
+      onMouseDown: e => e.preventDefault(),
+      onClick: onPick,
+      children: fix
+    }), "?"]
+  });
+}
+function SearchSuggest({
+  id,
+  items,
+  query,
+  active = -1,
+  allHref,
+  onPick,
+  fix = '',
+  fixHref = ''
+}) {
+  if (!items) return null;
+  const shown = items.slice(0, SUGGEST_MAX);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "hx-suggest",
+    id: id,
+    role: "listbox",
+    "aria-label": "Search suggestions",
+    children: [shown.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "hx-suggest__none",
+        children: ["No products match \u201C", query, "\u201D."]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(DidYouMean, {
+        fix: fix,
+        href: fixHref,
+        onPick: onPick,
+        className: "hx-dym--suggest"
+      })]
+    }) : shown.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      id: `${id}-${i}`,
+      role: "option",
+      "aria-selected": i === active,
+      to: p.href,
+      className: `hx-suggest__item${i === active ? ' is-on' : ''}`,
+      onMouseDown: e => e.preventDefault(),
+      onClick: onPick,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "hx-suggest__img",
+        children: p.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: thumb(p.image),
+          alt: "",
+          width: "44",
+          height: "44",
+          decoding: "async"
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hx-suggest__name",
+        children: [p.name, p.brand && /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: p.brand
+        })]
+      }), p.price > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+        className: "hx-suggest__price",
+        children: money(p.price)
+      })]
+    }, p.key)), items.length > 0 && allHref && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: allHref,
+      className: "hx-suggest__all",
+      onMouseDown: e => e.preventDefault(),
+      onClick: onPick,
+      children: ["See all ", items.length, " ", items.length === 1 ? 'result' : 'results', " for \u201C", query, "\u201D"]
+    })]
+  });
+}
+
+/** Keyboard for a search box with suggestions: ↓ ↑ move, Enter opens the highlighted one, Escape closes. */
+function suggestKeys(e, {
+  count,
+  active,
+  setActive,
+  open,
+  setOpen,
+  go
+}) {
+  if (e.key === 'Escape') {
+    setOpen(false);
+    setActive(-1);
+    return;
+  }
+  if (!open || count === 0) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    setActive((active + 1) % count);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    setActive(active <= 0 ? count - 1 : active - 1);
+  } else if (e.key === 'Enter' && active >= 0) {
+    e.preventDefault();
+    go(active);
+  }
+}
+
+/** A wellness search that finds nothing: the corrected spelling, when it finds products (searchMatch.js). */
+function wellnessFix(q) {
+  const t = String(q || '').trim();
+  if (t.length < 3 || searchProducts(t).length) return '';
+  return didYouMean(products, t, p => [p.name, p.brand, ...(p.categories || [p.category])], s => searchProducts(s).length > 0);
+}
 function Shop() {
   const [params] = useSearchParams();
   // Read through the settings store so an admin's saved cards are picked up on
@@ -47739,7 +48169,17 @@ function Shop() {
           className: "v2-shop__lede",
           children: "Browse wellness, nutrition, hair, skin, beauty and everyday-care products available through Sora Lifestyle."
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductBrowser, {
+      }), params.get('q') && (() => {
+        const fix = wellnessFix(params.get('q'));
+        return fix ? /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+          className: "v2-wrap",
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(DidYouMean, {
+            fix: fix,
+            href: `/shop?q=${encodeURIComponent(fix)}`,
+            className: "hx-dym--page"
+          })
+        }) : null;
+      })(), /*#__PURE__*/jsxRuntimeExports.jsx(ProductBrowser, {
         baseProducts: products
       }), params.get('q') && /*#__PURE__*/jsxRuntimeExports.jsx(OtherStoreResults, {
         query: params.get('q')
@@ -49586,6 +50026,7 @@ function SiteAssist() {
   const [up, setUp] = reactExports.useState(false);
   const [offset, setOffset] = reactExports.useState(0);
   const hidden = HIDDEN.test(pathname);
+  const [net, setNet] = reactExports.useState(null); // null, 'off' or 'back'
   useSiteLd(care?.phone || ''); // the business and its search, for search engines (pageMeta.js)
 
   reactExports.useEffect(() => {
@@ -49632,6 +50073,29 @@ function SiteAssist() {
       document.querySelectorAll('.hl.pdp-bar-on').forEach(el => el.classList.remove('pdp-bar-on'));
     };
   }, [pathname]);
+
+  // Offline notice (2026-11-10): the connection dropping says so, on every page, the
+  // checkout included; coming back says so for a few seconds, then goes.
+  reactExports.useEffect(() => {
+    let t = null;
+    const off = () => {
+      clearTimeout(t);
+      setNet('off');
+    };
+    const on = () => {
+      clearTimeout(t);
+      setNet(v => v === 'off' ? 'back' : v);
+      t = setTimeout(() => setNet(null), 3500);
+    };
+    if (navigator.onLine === false) setNet('off');
+    window.addEventListener('offline', off);
+    window.addEventListener('online', on);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('offline', off);
+      window.removeEventListener('online', on);
+    };
+  }, []);
 
   // "Skip to main content": the first thing a keyboard reaches on every page (shown only when focused).
   reactExports.useEffect(() => {
@@ -49692,7 +50156,13 @@ function SiteAssist() {
       release();
     };
   }, [pathname]);
-  if (hidden) return null;
+  const netNote = net && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+    className: `hx-net${net === 'back' ? ' is-back' : ''}`,
+    role: "status",
+    "aria-live": "polite",
+    children: net === 'off' ? 'You’re offline. Check your connection; anything new loads once you’re back.' : 'Back online.'
+  });
+  if (hidden) return netNote || null;
   // The product's name is read from the page's heading at the moment of the tap (it renders after this).
   const build = () => waLink(care?.phone, pathname, document.querySelector('main h1, h1')?.textContent || '', window.location.href.split('#')[0]);
   const wa = waLink(care?.phone, '/', '', '');
@@ -49703,35 +50173,37 @@ function SiteAssist() {
       behavior: still ? 'auto' : 'smooth'
     });
   };
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "hx-sa",
-    style: {
-      '--sa-foot': `${offset}px`
-    },
-    children: [up && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-      type: "button",
-      className: "hx-sa__btn hx-sa__top",
-      onClick: top,
-      "aria-label": "Back to top",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "chevronUp",
-        size: 20
-      })
-    }), wa && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
-      className: "hx-sa__btn hx-sa__wa",
-      href: wa,
-      target: "_blank",
-      rel: "noopener noreferrer",
-      "aria-label": "Chat with us on WhatsApp",
-      onClick: e => {
-        e.currentTarget.href = build();
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [netNote, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-sa",
+      style: {
+        '--sa-foot': `${offset}px`
       },
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "chat",
-        size: 22
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "hx-sa__wa-label",
-        children: "Chat with us"
+      children: [up && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hx-sa__btn hx-sa__top",
+        onClick: top,
+        "aria-label": "Back to top",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronUp",
+          size: 20
+        })
+      }), wa && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+        className: "hx-sa__btn hx-sa__wa",
+        href: wa,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        "aria-label": "Chat with us on WhatsApp",
+        onClick: e => {
+          e.currentTarget.href = build();
+        },
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chat",
+          size: 22
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "hx-sa__wa-label",
+          children: "Chat with us"
+        })]
       })]
     })]
   });
@@ -65964,164 +66436,6 @@ function useFashionCatalogue() {
   return v;
 }
 
-const SUGGEST_MAX = 6;
-/** A partner CDN picture asked for at thumbnail size (Shopify resizes on `width`). */
-const thumb = src => String(src).replace(/([?&])width=\d+/, '$1width=120');
-
-// ---- Recent searches (this browser only, per store) -----------------------------------
-const RECENT_MAX = 6;
-const recentKey = store => `sora.search.recent.${store}`;
-function readRecentSearches(store) {
-  try {
-    const v = JSON.parse(window.localStorage.getItem(recentKey(store)) || '[]');
-    return Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(0, RECENT_MAX) : [];
-  } catch {
-    return [];
-  }
-}
-function rememberSearch(store, term) {
-  const t = String(term || '').trim().slice(0, 60);
-  if (t.length < 2) return;
-  try {
-    const cur = readRecentSearches(store).filter(x => x.toLowerCase() !== t.toLowerCase());
-    window.localStorage.setItem(recentKey(store), JSON.stringify([t, ...cur].slice(0, RECENT_MAX)));
-  } catch {/* storage off */}
-}
-function clearRecentSearches(store) {
-  try {
-    window.localStorage.removeItem(recentKey(store));
-  } catch {/* storage off */}
-}
-
-/** With nothing typed yet: the last searches, each a link to its results, and Clear. */
-function RecentSearches({
-  id,
-  terms,
-  hrefFor,
-  onPick,
-  onClear,
-  popular = []
-}) {
-  const hasTerms = terms && terms.length > 0;
-  if (!hasTerms && popular.length === 0) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "hx-suggest hx-suggest--recent",
-    id: id,
-    "aria-label": hasTerms ? 'Recent searches' : 'Popular categories',
-    children: [hasTerms && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-        className: "hx-suggest__head",
-        children: ["Recent searches ", /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-          type: "button",
-          onMouseDown: e => e.preventDefault(),
-          onClick: onClear,
-          children: "Clear"
-        })]
-      }), terms.map(t => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-        to: hrefFor(t),
-        className: "hx-suggest__recent",
-        onMouseDown: e => e.preventDefault(),
-        onClick: onPick,
-        children: t
-      }, t))]
-    }), popular.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "hx-suggest__head",
-        children: "Popular categories"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "hx-suggest__chips",
-        children: popular.slice(0, 8).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-          to: c.href,
-          className: "hx-suggest__chip",
-          onMouseDown: e => e.preventDefault(),
-          onClick: onPick,
-          children: c.name
-        }, c.href))
-      })]
-    })]
-  });
-}
-function SearchSuggest({
-  id,
-  items,
-  query,
-  active = -1,
-  allHref,
-  onPick
-}) {
-  if (!items) return null;
-  const shown = items.slice(0, SUGGEST_MAX);
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "hx-suggest",
-    id: id,
-    role: "listbox",
-    "aria-label": "Search suggestions",
-    children: [shown.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-      className: "hx-suggest__none",
-      children: ["No products match \u201C", query, "\u201D."]
-    }) : shown.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      id: `${id}-${i}`,
-      role: "option",
-      "aria-selected": i === active,
-      to: p.href,
-      className: `hx-suggest__item${i === active ? ' is-on' : ''}`,
-      onMouseDown: e => e.preventDefault(),
-      onClick: onPick,
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "hx-suggest__img",
-        children: p.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-          src: thumb(p.image),
-          alt: "",
-          width: "44",
-          height: "44",
-          decoding: "async"
-        })
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-        className: "hx-suggest__name",
-        children: [p.name, p.brand && /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-          children: p.brand
-        })]
-      }), p.price > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("b", {
-        className: "hx-suggest__price",
-        children: money(p.price)
-      })]
-    }, p.key)), items.length > 0 && allHref && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      to: allHref,
-      className: "hx-suggest__all",
-      onMouseDown: e => e.preventDefault(),
-      onClick: onPick,
-      children: ["See all ", items.length, " ", items.length === 1 ? 'result' : 'results', " for \u201C", query, "\u201D"]
-    })]
-  });
-}
-
-/** Keyboard for a search box with suggestions: ↓ ↑ move, Enter opens the highlighted one, Escape closes. */
-function suggestKeys(e, {
-  count,
-  active,
-  setActive,
-  open,
-  setOpen,
-  go
-}) {
-  if (e.key === 'Escape') {
-    setOpen(false);
-    setActive(-1);
-    return;
-  }
-  if (!open || count === 0) return;
-  if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    setActive((active + 1) % count);
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    setActive(active <= 0 ? count - 1 : active - 1);
-  } else if (e.key === 'Enter' && active >= 0) {
-    e.preventDefault();
-    go(active);
-  }
-}
-
 const SEARCH_PLACEHOLDER$2 = 'Search for fashion, lifestyle and more…';
 
 /** The delivery strip under the search bar — the admin's (Storefronts → Fashion → strips); this is its built-in content. */
@@ -66185,11 +66499,19 @@ function FashionHeader({
     image: v.image,
     price: v.price
   })) : null;
+  const fashionFields = v => [v.name, v.brand, tree.byId.get(v.category_id)?.name];
+  const fix = found && found.length === 0 ? didYouMean(views, term, fashionFields) : '';
   const [recent, setRecent] = reactExports.useState([]);
   const pick = () => {
     setOpen(false);
     setActive(-1);
     if (term.length >= 2) rememberSearch('fashion', term);
+  };
+  const spoken = t => {
+    setQ(t);
+    setOpen(false);
+    rememberSearch('fashion', t);
+    navigate(`/fashion/search?q=${encodeURIComponent(t)}`);
   };
   const keys = e => suggestKeys(e, {
     count: Math.min(SUGGEST_MAX, found?.length || 0),
@@ -66528,6 +66850,8 @@ function FashionHeader({
         onKeyDown: keys,
         "aria-expanded": found ? true : undefined,
         "aria-controls": found ? 'fs-suggest' : undefined
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(VoiceSearch, {
+        onResult: spoken
       }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
         type: "submit",
         className: "fs-search__go",
@@ -66542,7 +66866,16 @@ function FashionHeader({
         query: term,
         active: active,
         allHref: `/fashion/search?q=${encodeURIComponent(term)}`,
-        onPick: pick
+        onPick: e => {
+          if (e?.currentTarget?.closest?.('.hx-dym')) {
+            setQ(fix);
+            setOpen(false);
+            setActive(-1);
+            rememberSearch('fashion', fix);
+          } else pick();
+        },
+        fix: fix,
+        fixHref: `/fashion/search?q=${encodeURIComponent(fix)}`
       }), open && !term && /*#__PURE__*/jsxRuntimeExports.jsx(RecentSearches, {
         id: "fs-recent",
         terms: recent,
@@ -69814,7 +70147,25 @@ function FashionCategory() {
 function FashionSearch() {
   const [params] = useSearchParams();
   const q = (params.get('q') || '').trim();
+  const {
+    views,
+    tree
+  } = useFashionCatalogue();
+  // Nothing found: offer the corrected spelling, when it finds styles by the page's own rule (matchesFilters).
+  const fix = reactExports.useMemo(() => {
+    if (q.length < 3 || !views.length) return '';
+    const hits = s => {
+      const t = s.toLowerCase();
+      return views.some(v => `${v.name} ${v.brand} ${v.description}`.toLowerCase().includes(t));
+    };
+    return didYouMean(views, q, v => [v.name, v.brand, tree.byId.get(v.category_id)?.name], hits);
+  }, [q, views, tree]);
   return /*#__PURE__*/jsxRuntimeExports.jsx(Listing$1, {
+    intro: fix ? /*#__PURE__*/jsxRuntimeExports.jsx(DidYouMean, {
+      fix: fix,
+      href: `/fashion/search?q=${encodeURIComponent(fix)}`,
+      className: "hx-dym--page"
+    }) : null,
     title: q ? `Results for “${q}”` : 'All fashion',
     trail: [{
       name: 'Fashion',
@@ -73921,13 +74272,21 @@ function SearchBar() {
   const [open, setOpen] = reactExports.useState(false);
   const [active, setActive] = reactExports.useState(-1);
   const term = q.trim();
-  const found = open && term.length >= 2 ? searchItems(homelivingSearchRows(products, categories), term) : null;
+  const rows = homelivingSearchRows(products, categories);
+  const found = open && term.length >= 2 ? searchItems(rows, term) : null;
+  const fix = found && found.length === 0 ? didYouMean(rows, term) : '';
   const all = `/homeliving/search?q=${encodeURIComponent(term)}`;
   const [recent, setRecent] = reactExports.useState([]);
   const pick = () => {
     setOpen(false);
     setActive(-1);
     if (term.length >= 2) rememberSearch('homeliving', term);
+  };
+  const spoken = t => {
+    setQ(t);
+    setOpen(false);
+    rememberSearch('homeliving', t);
+    navigate(`/homeliving/search?q=${encodeURIComponent(t)}`);
   };
   const keys = e => {
     if (e.key === 'Enter' && active < 0) {
@@ -73974,13 +74333,24 @@ function SearchBar() {
       enterKeyHint: "search",
       "aria-expanded": found ? true : undefined,
       "aria-controls": found ? 'hl-suggest' : undefined
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(VoiceSearch, {
+      onResult: spoken
     }), found && /*#__PURE__*/jsxRuntimeExports.jsx(SearchSuggest, {
       id: "hl-suggest",
       items: found,
       query: term,
       active: active,
       allHref: all,
-      onPick: pick
+      onPick: e => {
+        if (e?.currentTarget?.closest?.('.hx-dym')) {
+          setQ(fix);
+          setOpen(false);
+          setActive(-1);
+          rememberSearch('homeliving', fix);
+        } else pick();
+      },
+      fix: fix,
+      fixHref: `/homeliving/search?q=${encodeURIComponent(fix)}`
     }), open && !term && /*#__PURE__*/jsxRuntimeExports.jsx(RecentSearches, {
       id: "hl-recent",
       terms: recent,
@@ -74692,7 +75062,9 @@ function HomeLivingSearch() {
     products,
     categories
   } = useHomeLivingCatalogue();
-  const results = reactExports.useMemo(() => q.length >= 2 ? searchItems(homelivingSearchRows(products, categories), q).map(r => r.product) : [], [q, products, categories]);
+  const rows = reactExports.useMemo(() => homelivingSearchRows(products, categories), [products, categories]);
+  const results = reactExports.useMemo(() => q.length >= 2 ? searchItems(rows, q).map(r => r.product) : [], [q, rows]);
+  const fix = reactExports.useMemo(() => q.length >= 2 && results.length === 0 ? didYouMean(rows, q) : '', [q, rows, results.length]);
   const title = q ? `Results for “${q}”` : 'Search Home & Living';
   // No words, a filter (?price= from "Shop by budget"): the whole range, with the listing's filters and sort.
   if (!q && params.get('price')) {
@@ -74735,6 +75107,9 @@ function HomeLivingSearch() {
       className: "hl-empty hl-empty--listing",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
         children: status === 'loading' ? 'Loading the catalogue…' : `Nothing in Home & Living matches “${q}”. Try a shorter word, or browse the store.`
+      }), status !== 'loading' && /*#__PURE__*/jsxRuntimeExports.jsx(DidYouMean, {
+        fix: fix,
+        href: `/homeliving/search?q=${encodeURIComponent(fix)}`
       }), status !== 'loading' && /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
         to: "/homeliving",
         className: "hl-btn",
