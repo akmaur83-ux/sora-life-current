@@ -8,6 +8,7 @@ import { BottomNav, DeliveryRow, SearchBar } from './HomeLivingLayout.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import BudgetChips from '../components/BudgetChips.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
+import { BagReminder } from '../components/HomeExtras.jsx';
 
 // ============================================================
 // /homeliving — the hero (to the top of the page, the shell's header floats
@@ -224,6 +225,7 @@ export default function HomeLivingHome() {
       <BottomNav />
       <div className="hl-tools"><DeliveryRow /><SearchBar /></div>
       <TrustStrip />
+      <BagReminder wrap="hl-wrap" />
       <OfferBanner wrap="hl-wrap" />
       <CategoryCircles categories={categories} />
       <FeaturedRow products={products} status={status} />

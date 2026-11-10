@@ -29,7 +29,7 @@ import PdpStorySlot from '../components/pdp/PdpStorySlot.jsx';
 import ProductClaims from '../components/pdp/ProductClaims.jsx';
 import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
-import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
+import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
 import { specificationsFor } from '../data/pdpContent.js';
 import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
 import { promotionsSource } from '../lib/promotions.js';
@@ -420,6 +420,8 @@ useEffect(() => {
           price: p.price, mrp: p.mrp, pct: p.discountPct || 0, size: p.netContent || p.form || null, brand: p.brand || null, current: i === 0,
         }))} />
         <PdpService />
+        <PdpCheaper current={{ key: product.id, price: product.price, group: product.category }}
+          items={catalogue.filter((p) => p.slug).map((p) => ({ key: p.id, href: `/product/${p.slug}`, name: p.name, image: p.image || null, price: p.price, group: p.category, inStock: Number(p.stock) > 0 }))} />
         <PdpRecent items={recent} />
         <PdpBrandRail brand={product.brand} items={catalogue
           .filter((p) => p.id !== product.id && p.brand && p.brand === product.brand && p.slug && p.price > 0)

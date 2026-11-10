@@ -1,0 +1,338 @@
+diff --git a/src/components/pdp/PdpOwnerKit.jsx b/src/components/pdp/PdpOwnerKit.jsx
+index c92f99a..238806b 100644
+--- a/src/components/pdp/PdpOwnerKit.jsx
++++ b/src/components/pdp/PdpOwnerKit.jsx
+@@ -294,6 +294,44 @@ export function PdpRecent({ items }) {
+   );
+ }
+ 
++// ---- Similar, for less (owner, 2026-11-10: more features) ---------------------------
++/**
++ * The same kind of product for less: other items in this product's category (`group`),
++ * in stock, priced below it but not below a third of it, closest price first. Pure.
++ * pool/current: { key, href, name, image, price, group, inStock }.
++ */
++export function cheaperPicks(pool, current, max = 8) {
++  const price = Number(current?.price) || 0;
++  if (!(price > 0) || !current.group) return [];
++  return (Array.isArray(pool) ? pool : [])
++    .filter((p) => p && p.key !== current.key && p.group === current.group && p.inStock !== false && p.price > 0 && p.price < price && p.price >= price / 3)
++    .sort((a, b) => b.price - a.price || String(a.name).localeCompare(String(b.name)))
++    .slice(0, max)
++    .map((p) => ({ ...p, save: Math.round(price - p.price) }));
++}
++
++export function PdpCheaper({ items, current }) {
++  const list = cheaperPicks(items, current);
++  if (list.length < 2) return null;
++  return (
++    <section className="pdpk-rail pdpk-rail--cheaper" aria-labelledby="pdpk-cheaper-h">
++      <h2 className="pdpk-h pdpk-h--lg" id="pdpk-cheaper-h">Similar, for less</h2>
++      <ul className="pdpk-rail__row">
++        {list.map((p) => (
++          <li key={p.key}>
++            <Link to={p.href} className="pdpk-rail__card">
++              <span className="pdpk-rail__img">{p.image && <img src={p.image} alt="" width="180" height="180" loading="lazy" />}</span>
++              <span className="pdpk-rail__name">{p.name}</span>
++              <span className="pdpk-rail__price"><b>{money(p.price)}</b></span>
++              <span className="pdpk-rail__save">{money(p.save)} less</span>
++            </Link>
++          </li>
++        ))}
++      </ul>
++    </section>
++  );
++}
++
+ // ---- Share: WhatsApp, the system sheet, or copy the link ----------------------------
+ export function PdpShare({ name }) {
+   const [copied, setCopied] = useState(false);
+diff --git a/src/fashion/FashionHome.jsx b/src/fashion/FashionHome.jsx
+index c4da065..abdc0d6 100644
+--- a/src/fashion/FashionHome.jsx
++++ b/src/fashion/FashionHome.jsx
+@@ -9,6 +9,7 @@ import FashionProductCard from './FashionProductCard.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+ import BudgetChips from '../components/BudgetChips.jsx';
+ import OfferBanner from '../components/OfferBanner.jsx';
++import { BagReminder } from '../components/HomeExtras.jsx';
+ import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
+ import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+ import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
+@@ -152,6 +153,7 @@ export default function FashionHome() {
+     <div className="fs-home">
+       <Hero config={config.hero} />
+       <CategoryChips />
++      <BagReminder wrap="fs-sec" />
+       <OfferBanner wrap="fs-sec" />
+       {/* This visitor's recently viewed fashion products (2+; this browser only). */}
+       <RecentlyViewedHome prefix="fs-" />
+diff --git a/src/fashion/FashionListing.jsx b/src/fashion/FashionListing.jsx
+index 5b23a9e..aa5e46b 100644
+--- a/src/fashion/FashionListing.jsx
++++ b/src/fashion/FashionListing.jsx
+@@ -11,6 +11,7 @@ import { useFashionCatalogue } from './FashionCatalogue.jsx';
+ import { CategoryChips } from './FashionLayout.jsx';
+ import FashionProductCard from './FashionProductCard.jsx';
+ import ShareList from '../components/ShareList.jsx';
++import PriceDrops from '../components/PriceDrops.jsx';
+ import { DidYouMean } from '../components/SearchSuggest.jsx';
+ import { didYouMean } from '../lib/searchMatch.js';
+ import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
+@@ -222,13 +223,13 @@ export function FashionWishlistPage() {
+   const wish = useFashionWishlist();
+   const set = new Set(wish.ids);
+   const { views } = useFashionCatalogue();
+-  const saved = views.filter((v) => set.has(v.id)).map((v) => ({ name: v.name, price: v.price, href: `/fashion/p/${v.slug}` }));
++  const saved = views.filter((v) => set.has(v.id)).map((v) => ({ key: `fs-${v.id}`, name: v.name, price: v.price, href: `/fashion/p/${v.slug}`, image: v.image }));
+   return (
+     <Listing
+       title="Your fashion wishlist"
+       trail={[{ name: 'Fashion', href: '/fashion' }, { name: 'Wishlist' }]}
+       only={(v) => set.has(v.id)}
+-      intro={saved.length ? <ShareList items={saved} heading="My Fashion wishlist on SORA LIFESTYLE" /> : null}
++      intro={saved.length ? <><PriceDrops items={saved} /><ShareList items={saved} heading="My Fashion wishlist on SORA LIFESTYLE" /></> : null}
+       emptyCopy="Nothing saved yet — tap the heart on any style to keep it here."
+     />
+   );
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 98dd0e4..cfecb85 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -14,7 +14,7 @@ import FashionProductCard, { Stars } from './FashionProductCard.jsx';
+ import { VariantPicker } from './FashionVariantPicker.jsx';
+ import ProductInformation from '../components/ProductInformation.jsx';
+ import { GalleryZoom } from '../homeliving/HomeLivingProductPage.jsx';
+-import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
++import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+ import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+@@ -253,6 +253,8 @@ export default function FashionProductPage() {
+         }))} />
+         <PdpService />
+         <PdpReviews productKey={`fashion:${view.id}`} productName={view.name} />
++        <PdpCheaper current={{ key: view.id, price: view.price, group: view.category_id }}
++          items={views.map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price, group: p.category_id, inStock: p.inStock }))} />
+         <PdpRecent items={recent} />
+         <PdpBrandRail brand={view.brand} items={views.filter((p) => p.id !== view.id && p.brand && p.brand === view.brand && !related.slice(0, 4).some((r) => r.id === p.id)).slice(0, 12)
+           .map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price }))} />
+diff --git a/src/homeliving/HomeLivingHome.jsx b/src/homeliving/HomeLivingHome.jsx
+index 01eca86..74c19ab 100644
+--- a/src/homeliving/HomeLivingHome.jsx
++++ b/src/homeliving/HomeLivingHome.jsx
+@@ -8,6 +8,7 @@ import { BottomNav, DeliveryRow, SearchBar } from './HomeLivingLayout.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+ import BudgetChips from '../components/BudgetChips.jsx';
+ import OfferBanner from '../components/OfferBanner.jsx';
++import { BagReminder } from '../components/HomeExtras.jsx';
+ 
+ // ============================================================
+ // /homeliving — the hero (to the top of the page, the shell's header floats
+@@ -224,6 +225,7 @@ export default function HomeLivingHome() {
+       <BottomNav />
+       <div className="hl-tools"><DeliveryRow /><SearchBar /></div>
+       <TrustStrip />
++      <BagReminder wrap="hl-wrap" />
+       <OfferBanner wrap="hl-wrap" />
+       <CategoryCircles categories={categories} />
+       <FeaturedRow products={products} status={status} />
+diff --git a/src/homeliving/HomeLivingProductPage.jsx b/src/homeliving/HomeLivingProductPage.jsx
+index f70de2a..4d82173 100644
+--- a/src/homeliving/HomeLivingProductPage.jsx
++++ b/src/homeliving/HomeLivingProductPage.jsx
+@@ -12,7 +12,7 @@ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
+ import ProductInformation from '../components/ProductInformation.jsx';
+ import { fetchEligibleCoupons } from '../lib/couponApi.js';
+ import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+-import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
++import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
+ import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+@@ -705,6 +705,8 @@ export default function HomeLivingProductPage() {
+         canAddAll={bundleAddable} onAddAll={() => bundle.forEach((p, i) => addHomeLivingToCart(p, i === 0 ? st.variant : null, 1))} />
+       <PdpService />
+       <PdpReviews productKey={`homeliving:${view.id}`} productName={view.name} />
++      <PdpCheaper current={{ key: view.id, price: view.price, group: view.category_id }}
++        items={products.map((p) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null, price: p.price, group: p.category_id, inStock: p.stock > 0 || (p.variants || []).some((v) => v.stock > 0) }))} />
+       <PdpRecent items={recent} />
+       <PdpBrandRail brand={view.brand} items={products.filter((p) => p.id !== view.id && p.brand && p.brand === view.brand && !related.slice(0, 4).some((r) => r.id === p.id))
+         .slice(0, 8).map((p) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null, price: p.price, mrp: p.mrp, pct: p.mrp > p.price ? (p.discount_percent || 0) : 0 }))} />
+diff --git a/src/homeliving/HomeLivingWishlist.jsx b/src/homeliving/HomeLivingWishlist.jsx
+index 7890a47..de66235 100644
+--- a/src/homeliving/HomeLivingWishlist.jsx
++++ b/src/homeliving/HomeLivingWishlist.jsx
+@@ -4,6 +4,7 @@ import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+ import { Breadcrumb } from './HomeLivingCategory.jsx';
+ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
+ import ShareList from '../components/ShareList.jsx';
++import PriceDrops from '../components/PriceDrops.jsx';
+ 
+ // /homeliving/wishlist (owner, 2026-11-08): the products saved with a heart in this
+ // browser, newest first; a saved product no longer in the catalogue is skipped.
+@@ -26,6 +27,7 @@ export default function HomeLivingWishlist() {
+         </div>
+       ) : (
+         <>
++        <PriceDrops items={saved.map((p) => ({ key: `hl-${p.id}`, name: p.name, price: p.price, href: `/homeliving/p/${p.slug}`, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null }))} />
+         <ShareList items={saved.map((p) => ({ name: p.name, price: p.price, href: `/homeliving/p/${p.slug}` }))} heading="My Home & Living wishlist on SORA LIFESTYLE" />
+         <div className="hl-grid">
+           {saved.map((p, i) => <HomeLivingProductCard key={p.id} product={p} mediaLoading={i < 2 ? 'eager' : 'lazy'} />)}
+diff --git a/src/lib/storefrontContent.js b/src/lib/storefrontContent.js
+index 7c66ed8..86118f1 100644
+--- a/src/lib/storefrontContent.js
++++ b/src/lib/storefrontContent.js
+@@ -118,6 +118,9 @@ const WELLNESS = {
+   }, 'The Biosash range (Biosash products in stock; hidden while there are none)'),
+   // The Diwali gift shop on the wellness homepage (2026-11-09).
+   giftShop: group({ hidden: hidden(), eyebrow: text(40, 'Eyebrow'), title: text(60, 'Heading') }, 'Gift shop (gift-ready categories)'),
++  // Top deals and the visitor's wishlist on the wellness homepage (2026-11-10).
++  topDeals: group({ hidden: hidden(), title: text(60, 'Heading') }, 'Top deals (biggest discounts in stock)'),
++  savedRail: group({ hidden: hidden(), title: text(60, 'Heading') }, 'From your wishlist (the visitor’s saved products)'),
+   // The offer countdown in every product page's buy box (2026-11-08); gone once it ends.
+   offerCountdown: group({
+     hidden: hidden(), title: text(60, 'Offer line'), code: text(30, 'Coupon code shown'),
+diff --git a/src/pages/Home.jsx b/src/pages/Home.jsx
+index 72e4687..2549928 100644
+--- a/src/pages/Home.jsx
++++ b/src/pages/Home.jsx
+@@ -14,6 +14,7 @@ import { LeatherFactoryRange, LeatherFactoryShowcase } from '../components/Leath
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+ import OfferBanner from '../components/OfferBanner.jsx';
+ import GiftShop from '../components/GiftShop.jsx';
++import { TopDeals, WishlistRail, BagReminder } from '../components/HomeExtras.jsx';
+ import {
+   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
+   CuratedCollections, CreatorCommunity, WhySoraLife,
+@@ -63,8 +64,12 @@ export default function Home() {
+              and the circle row replaced the category strip. */}
+       <HomeHero />
+       <HomeTrustStrip />
++      {/* Something already in the bag: how many, and the way to it (HomeExtras.jsx). */}
++      <BagReminder phone={false} />
+       {/* The running offer with a live countdown (OfferBanner.jsx); nothing once it ends. */}
+       <OfferBanner wrap="hx-wrap" />
++      {/* The biggest verified discounts in stock (HomeExtras.jsx). */}
++      <TopDeals />
+       {/* Gift-ready categories across Fashion and Home & Living (GiftShop.jsx). */}
+       <GiftShop />
+       <HomeTiles />
+@@ -78,6 +83,8 @@ export default function Home() {
+       {/* This visitor's recently viewed products, any store, this browser only
+           (RecentlyViewedHome.jsx). Renders nothing below two, or when hidden. */}
+       <RecentlyViewedHome />
++      {/* The visitor's saved products, two or more (HomeExtras.jsx). */}
++      <WishlistRail />
+ 
+       {/* The products flagged new, newest first, across wellness, fashion and Home & Living:
+           a sliding row between the promo and the Lifestyle banner. Renders nothing when
+diff --git a/src/pages/Product.jsx b/src/pages/Product.jsx
+index 2758aed..f099ced 100644
+--- a/src/pages/Product.jsx
++++ b/src/pages/Product.jsx
+@@ -29,7 +29,7 @@ import PdpStorySlot from '../components/pdp/PdpStorySlot.jsx';
+ import ProductClaims from '../components/pdp/ProductClaims.jsx';
+ import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
+ import PromoRail from '../components/promo/PromoRail.jsx';
+-import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
++import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
+ import { specificationsFor } from '../data/pdpContent.js';
+ import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
+ import { promotionsSource } from '../lib/promotions.js';
+@@ -420,6 +420,8 @@ useEffect(() => {
+           price: p.price, mrp: p.mrp, pct: p.discountPct || 0, size: p.netContent || p.form || null, brand: p.brand || null, current: i === 0,
+         }))} />
+         <PdpService />
++        <PdpCheaper current={{ key: product.id, price: product.price, group: product.category }}
++          items={catalogue.filter((p) => p.slug).map((p) => ({ key: p.id, href: `/product/${p.slug}`, name: p.name, image: p.image || null, price: p.price, group: p.category, inStock: Number(p.stock) > 0 }))} />
+         <PdpRecent items={recent} />
+         <PdpBrandRail brand={product.brand} items={catalogue
+           .filter((p) => p.id !== product.id && p.brand && p.brand === product.brand && p.slug && p.price > 0)
+diff --git a/src/pages/Wishlist.jsx b/src/pages/Wishlist.jsx
+index fc545f4..7f082ac 100644
+--- a/src/pages/Wishlist.jsx
++++ b/src/pages/Wishlist.jsx
+@@ -5,6 +5,7 @@ import ProductRail from '../components/ProductRail.jsx';
+ import { useStore } from '../lib/store.jsx';
+ import { productById, getBestsellers } from '../data/products.js';
+ import ShareList from '../components/ShareList.jsx';
++import PriceDrops from '../components/PriceDrops.jsx';
+ 
+ export default function Wishlist() {
+   const { wishlist, addToCart } = useStore();
+@@ -43,6 +44,8 @@ export default function Wishlist() {
+         </div>
+       </div></div>
+       <div className="container section-sm" style={{ paddingTop: 'var(--sp-8)' }}>
++        {/* Saved products now cheaper than when first seen here (PriceDrops.jsx). */}
++        <PriceDrops items={items.map((p) => ({ key: `w-${p.id}`, name: p.name, price: p.price, href: `/product/${p.slug}`, image: p.image || null }))} />
+         <ShareList items={items.map((p) => ({ name: p.name, price: p.price, href: `/product/${p.slug}` }))} heading="My wishlist on SORA LIFESTYLE" />
+         <div className="pgrid">{items.map((p) => <ProductCard key={p.id} product={p} />)}</div>
+       </div>
+diff --git a/src/styles/homeliving.css b/src/styles/homeliving.css
+index 7729369..1e2258c 100644
+--- a/src/styles/homeliving.css
++++ b/src/styles/homeliving.css
+@@ -1073,3 +1073,5 @@
+   .hl .hl-search input { padding-right: 46px; }
+   .hl-home .hl-search .hx-voice { right: 4px; top: 12px; width: 34px; height: 34px; }
+ }
++/* "Similar, for less" (2026-11-10). */
++.hl .pdpk-rail__save { font-size: 13px; font-weight: 700; color: #067D62; }
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index 90ca36f..3a588b0 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -571,4 +571,38 @@
+ .hx-net { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 1000; width: max-content; max-width: calc(100vw - 32px); margin: 0; padding: 10px 18px; background: #0F1111; color: #fff; font: 14px/1.35 Arial, "Helvetica Neue", Helvetica, sans-serif; text-align: center; box-shadow: 0 10px 26px rgba(15, 17, 17, .28); }
+ .hx-net.is-back { background: #1E3A2F; }
+ .hx-install { display: inline-flex; align-items: center; gap: 7px; width: fit-content; margin-top: 6px; padding: 8px 14px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
+-.hx-install:hover { background: rgba(255, 255, 255, .08); }
+\ No newline at end of file
++.hx-install:hover { background: rgba(255, 255, 255, .08); }
++/* Wishlist price drops, top deals, from your wishlist, the bag reminder (2026-11-10: more features). */
++.hx-drops { margin: 0 0 18px; padding: 14px 16px; border: 1px solid #F3C9A6; border-left: 4px solid #C2500A; background: #FFF8F2; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; }
++.hx-drops__h { margin: 0 0 10px; font-size: 16px; font-weight: 700; color: #0F1111; }
++.hx-drops__list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
++.hx-drops__item { display: grid; grid-template-columns: 48px minmax(0, 1fr); grid-template-areas: "img name" "img price"; column-gap: 12px; align-items: center; color: #0F1111; text-decoration: none; }
++.hx-drops__item img, .hx-drops__ph { grid-area: img; width: 48px; height: 48px; object-fit: contain; background: #fff; display: block; }
++.hx-drops__name { grid-area: name; font-size: 14px; color: #007185; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.hx-drops__item:hover .hx-drops__name { color: #C7511F; text-decoration: underline; }
++.hx-drops__price { grid-area: price; font-size: 14px; }
++.hx-drops__price b { font-size: 16px; }
++.hx-drops__price em { font-style: normal; color: #067D62; font-weight: 700; margin-left: 6px; }
++.hx-deals { padding: 28px 0 8px; }
++.hx-deals__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
++.hx-deals__h { margin: 0; font-family: var(--slv2-serif, Georgia, serif); font-size: clamp(22px, 2.6vw, 30px); font-weight: 500; color: #1D1D1B; }
++.hx-deals__row { display: grid; grid-auto-flow: column; grid-auto-columns: max(150px, calc((100% - 64px) / 5)); gap: 16px; margin: 0; padding: 0 0 8px; list-style: none; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: thin; }
++.hx-deals__row > li { scroll-snap-align: start; }
++.hx-deals__card { display: grid; gap: 6px; color: #1D1D1B; text-decoration: none; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; }
++.hx-deals__img { position: relative; display: block; aspect-ratio: 1; background: #F7F8F8; overflow: hidden; }
++.hx-deals__img img { width: 100%; height: 100%; object-fit: contain; display: block; transition: transform .3s ease; }
++.hx-deals__card:hover .hx-deals__img img { transform: scale(1.04); }
++.hx-deals__pct { position: absolute; left: 0; top: 10px; padding: 4px 8px; background: #CC0C39; color: #fff; font-size: 13px; font-weight: 700; }
++.hx-deals__name { font-size: 14px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
++.hx-deals__price { display: flex; align-items: baseline; gap: 8px; }
++.hx-deals__price b { font-size: 17px; font-weight: 700; }
++.hx-deals__price s { font-size: 13px; color: #565959; }
++.hx-bagnote { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; padding: 11px 14px; border: 1px solid #D5D9D9; background: #F7FAFA; color: #0F1111; font: 14.5px/1.35 Arial, "Helvetica Neue", Helvetica, sans-serif; }
++.hx-bagnote > svg { flex: none; color: #1E3A2F; }
++.hx-bagnote__go { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 7px 12px; background: #1E3A2F; color: #fff; font-weight: 700; text-decoration: none; }
++.hx-bagnote__go:hover { background: #142a21; }
++@media (max-width: 599px) {
++  .hx-deals__row { grid-auto-columns: 46%; gap: 12px; }
++  .hx-bagnote { font-size: 13.5px; }
++  .hx-bagnote--desk { display: none; }
++}
+\ No newline at end of file
+diff --git a/src/styles/v2-pdp.css b/src/styles/v2-pdp.css
+index cc11ee6..ca2b9be 100644
+--- a/src/styles/v2-pdp.css
++++ b/src/styles/v2-pdp.css
+@@ -1527,3 +1527,5 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ .pdpk-ask svg { color: #1DA851; flex: none; }
+ .pdpk-ask b { color: #007185; font-weight: 400; }
+ .pdpk-ask:hover b { color: #C7511F; text-decoration: underline; }
++/* "Similar, for less" (2026-11-10): how much less, under the price. */
++.pdpk-rail__save { font-size: 13px; font-weight: 700; color: #067D62; }

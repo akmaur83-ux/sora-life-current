@@ -14,6 +14,7 @@ import { LeatherFactoryRange, LeatherFactoryShowcase } from '../components/Leath
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import GiftShop from '../components/GiftShop.jsx';
+import { TopDeals, WishlistRail, BagReminder } from '../components/HomeExtras.jsx';
 import {
   MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
@@ -63,8 +64,12 @@ export default function Home() {
              and the circle row replaced the category strip. */}
       <HomeHero />
       <HomeTrustStrip />
+      {/* Something already in the bag: how many, and the way to it (HomeExtras.jsx). */}
+      <BagReminder phone={false} />
       {/* The running offer with a live countdown (OfferBanner.jsx); nothing once it ends. */}
       <OfferBanner wrap="hx-wrap" />
+      {/* The biggest verified discounts in stock (HomeExtras.jsx). */}
+      <TopDeals />
       {/* Gift-ready categories across Fashion and Home & Living (GiftShop.jsx). */}
       <GiftShop />
       <HomeTiles />
@@ -78,6 +83,8 @@ export default function Home() {
       {/* This visitor's recently viewed products, any store, this browser only
           (RecentlyViewedHome.jsx). Renders nothing below two, or when hidden. */}
       <RecentlyViewedHome />
+      {/* The visitor's saved products, two or more (HomeExtras.jsx). */}
+      <WishlistRail />
 
       {/* The products flagged new, newest first, across wellness, fashion and Home & Living:
           a sliding row between the promo and the Lifestyle banner. Renders nothing when

@@ -4,6 +4,7 @@ import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
 import { Breadcrumb } from './HomeLivingCategory.jsx';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
 import ShareList from '../components/ShareList.jsx';
+import PriceDrops from '../components/PriceDrops.jsx';
 
 // /homeliving/wishlist (owner, 2026-11-08): the products saved with a heart in this
 // browser, newest first; a saved product no longer in the catalogue is skipped.
@@ -26,6 +27,7 @@ export default function HomeLivingWishlist() {
         </div>
       ) : (
         <>
+        <PriceDrops items={saved.map((p) => ({ key: `hl-${p.id}`, name: p.name, price: p.price, href: `/homeliving/p/${p.slug}`, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null }))} />
         <ShareList items={saved.map((p) => ({ name: p.name, price: p.price, href: `/homeliving/p/${p.slug}` }))} heading="My Home & Living wishlist on SORA LIFESTYLE" />
         <div className="hl-grid">
           {saved.map((p, i) => <HomeLivingProductCard key={p.id} product={p} mediaLoading={i < 2 ? 'eager' : 'lazy'} />)}

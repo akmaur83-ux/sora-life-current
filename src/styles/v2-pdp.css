@@ -1527,3 +1527,5 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-ask svg { color: #1DA851; flex: none; }
 .pdpk-ask b { color: #007185; font-weight: 400; }
 .pdpk-ask:hover b { color: #C7511F; text-decoration: underline; }
+/* "Similar, for less" (2026-11-10): how much less, under the price. */
+.pdpk-rail__save { font-size: 13px; font-weight: 700; color: #067D62; }

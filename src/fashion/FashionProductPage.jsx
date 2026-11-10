@@ -14,7 +14,7 @@ import FashionProductCard, { Stars } from './FashionProductCard.jsx';
 import { VariantPicker } from './FashionVariantPicker.jsx';
 import ProductInformation from '../components/ProductInformation.jsx';
 import { GalleryZoom } from '../homeliving/HomeLivingProductPage.jsx';
-import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
 import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
@@ -253,6 +253,8 @@ export default function FashionProductPage() {
         }))} />
         <PdpService />
         <PdpReviews productKey={`fashion:${view.id}`} productName={view.name} />
+        <PdpCheaper current={{ key: view.id, price: view.price, group: view.category_id }}
+          items={views.map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price, group: p.category_id, inStock: p.inStock }))} />
         <PdpRecent items={recent} />
         <PdpBrandRail brand={view.brand} items={views.filter((p) => p.id !== view.id && p.brand && p.brand === view.brand && !related.slice(0, 4).some((r) => r.id === p.id)).slice(0, 12)
           .map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price }))} />

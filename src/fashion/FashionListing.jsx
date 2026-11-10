@@ -11,6 +11,7 @@ import { useFashionCatalogue } from './FashionCatalogue.jsx';
 import { CategoryChips } from './FashionLayout.jsx';
 import FashionProductCard from './FashionProductCard.jsx';
 import ShareList from '../components/ShareList.jsx';
+import PriceDrops from '../components/PriceDrops.jsx';
 import { DidYouMean } from '../components/SearchSuggest.jsx';
 import { didYouMean } from '../lib/searchMatch.js';
 import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
@@ -222,13 +223,13 @@ export function FashionWishlistPage() {
   const wish = useFashionWishlist();
   const set = new Set(wish.ids);
   const { views } = useFashionCatalogue();
-  const saved = views.filter((v) => set.has(v.id)).map((v) => ({ name: v.name, price: v.price, href: `/fashion/p/${v.slug}` }));
+  const saved = views.filter((v) => set.has(v.id)).map((v) => ({ key: `fs-${v.id}`, name: v.name, price: v.price, href: `/fashion/p/${v.slug}`, image: v.image }));
   return (
     <Listing
       title="Your fashion wishlist"
       trail={[{ name: 'Fashion', href: '/fashion' }, { name: 'Wishlist' }]}
       only={(v) => set.has(v.id)}
-      intro={saved.length ? <ShareList items={saved} heading="My Fashion wishlist on SORA LIFESTYLE" /> : null}
+      intro={saved.length ? <><PriceDrops items={saved} /><ShareList items={saved} heading="My Fashion wishlist on SORA LIFESTYLE" /></> : null}
       emptyCopy="Nothing saved yet — tap the heart on any style to keep it here."
     />
   );

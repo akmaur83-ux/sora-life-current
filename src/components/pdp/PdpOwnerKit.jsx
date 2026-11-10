@@ -294,6 +294,44 @@ export function PdpRecent({ items }) {
   );
 }
 
+// ---- Similar, for less (owner, 2026-11-10: more features) ---------------------------
+/**
+ * The same kind of product for less: other items in this product's category (`group`),
+ * in stock, priced below it but not below a third of it, closest price first. Pure.
+ * pool/current: { key, href, name, image, price, group, inStock }.
+ */
+export function cheaperPicks(pool, current, max = 8) {
+  const price = Number(current?.price) || 0;
+  if (!(price > 0) || !current.group) return [];
+  return (Array.isArray(pool) ? pool : [])
+    .filter((p) => p && p.key !== current.key && p.group === current.group && p.inStock !== false && p.price > 0 && p.price < price && p.price >= price / 3)
+    .sort((a, b) => b.price - a.price || String(a.name).localeCompare(String(b.name)))
+    .slice(0, max)
+    .map((p) => ({ ...p, save: Math.round(price - p.price) }));
+}
+
+export function PdpCheaper({ items, current }) {
+  const list = cheaperPicks(items, current);
+  if (list.length < 2) return null;
+  return (
+    <section className="pdpk-rail pdpk-rail--cheaper" aria-labelledby="pdpk-cheaper-h">
+      <h2 className="pdpk-h pdpk-h--lg" id="pdpk-cheaper-h">Similar, for less</h2>
+      <ul className="pdpk-rail__row">
+        {list.map((p) => (
+          <li key={p.key}>
+            <Link to={p.href} className="pdpk-rail__card">
+              <span className="pdpk-rail__img">{p.image && <img src={p.image} alt="" width="180" height="180" loading="lazy" />}</span>
+              <span className="pdpk-rail__name">{p.name}</span>
+              <span className="pdpk-rail__price"><b>{money(p.price)}</b></span>
+              <span className="pdpk-rail__save">{money(p.save)} less</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // ---- Share: WhatsApp, the system sheet, or copy the link ----------------------------
 export function PdpShare({ name }) {
   const [copied, setCopied] = useState(false);

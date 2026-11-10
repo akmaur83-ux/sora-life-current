@@ -5,6 +5,7 @@ import ProductRail from '../components/ProductRail.jsx';
 import { useStore } from '../lib/store.jsx';
 import { productById, getBestsellers } from '../data/products.js';
 import ShareList from '../components/ShareList.jsx';
+import PriceDrops from '../components/PriceDrops.jsx';
 
 export default function Wishlist() {
   const { wishlist, addToCart } = useStore();
@@ -43,6 +44,8 @@ export default function Wishlist() {
         </div>
       </div></div>
       <div className="container section-sm" style={{ paddingTop: 'var(--sp-8)' }}>
+        {/* Saved products now cheaper than when first seen here (PriceDrops.jsx). */}
+        <PriceDrops items={items.map((p) => ({ key: `w-${p.id}`, name: p.name, price: p.price, href: `/product/${p.slug}`, image: p.image || null }))} />
         <ShareList items={items.map((p) => ({ name: p.name, price: p.price, href: `/product/${p.slug}` }))} heading="My wishlist on SORA LIFESTYLE" />
         <div className="pgrid">{items.map((p) => <ProductCard key={p.id} product={p} />)}</div>
       </div>

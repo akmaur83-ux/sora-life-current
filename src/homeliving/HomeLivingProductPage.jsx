@@ -12,7 +12,7 @@ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
 import ProductInformation from '../components/ProductInformation.jsx';
 import { fetchEligibleCoupons } from '../lib/couponApi.js';
 import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
-import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
 import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
@@ -705,6 +705,8 @@ export default function HomeLivingProductPage() {
         canAddAll={bundleAddable} onAddAll={() => bundle.forEach((p, i) => addHomeLivingToCart(p, i === 0 ? st.variant : null, 1))} />
       <PdpService />
       <PdpReviews productKey={`homeliving:${view.id}`} productName={view.name} />
+      <PdpCheaper current={{ key: view.id, price: view.price, group: view.category_id }}
+        items={products.map((p) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null, price: p.price, group: p.category_id, inStock: p.stock > 0 || (p.variants || []).some((v) => v.stock > 0) }))} />
       <PdpRecent items={recent} />
       <PdpBrandRail brand={view.brand} items={products.filter((p) => p.id !== view.id && p.brand && p.brand === view.brand && !related.slice(0, 4).some((r) => r.id === p.id))
         .slice(0, 8).map((p) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null, price: p.price, mrp: p.mrp, pct: p.mrp > p.price ? (p.discount_percent || 0) : 0 }))} />
