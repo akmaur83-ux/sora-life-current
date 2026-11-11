@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadModule } from './catalogue-admin-harness.mjs';
-import { feedItems, buildFeed, wellnessPrices, cataloguePrices } from '../api/_lib/feed.js';
+import { feedItems, buildFeed, wellnessPrices, cataloguePrices, readRows } from '../api/_lib/feed.js';
 import { STATIC_PATHS } from '../api/sitemap.js';
 let failed = 0;
 const test = (name, fn) => { try { fn(); console.log(`  PASS  ${name}`); } catch (e) { console.log(`  FAIL  ${name}\n        ${e.message}`); failed++; } };
@@ -73,6 +73,16 @@ test('wired: the route, the footer link, the welcome card setting, the banner sh
   assert.match(read('src/lib/storefrontContent.js'), /welcomeOffer: group\(/);
   assert.match(read('src/components/OfferBanner.jsx'), /Share on WhatsApp/);
   assert.match(read('src/components/SiteAssist.jsx'), /<PromoCard foot=\{offset\} \/>/);
+});
+
+// Async tests run in order below.
+const pages = [];
+const fake = async (u) => { pages.push(u); const off = Number(new URL(u).searchParams.get('offset')); const n = off < 2000 ? 1000 : 37; return { ok: true, json: async () => Array.from({ length: n }, (_, i) => ({ i: off + i })) }; };
+const all = await readRows('https://x.supabase.co', 'k', 'catalogue_products', 'select=id', fake);
+test('feed: reads every row, a thousand at a time (the API caps one read at 1000)', () => {
+  assert.equal(all.length, 2037);
+  assert.equal(pages.length, 3);
+  assert.match(pages[2], /&limit=1000&offset=2000$/);
 });
 
 if (failed) { console.log(`\n${failed} FAIL`); process.exit(1); }

@@ -35,5 +35,23 @@ test('wired: posters lead the Fashion home and follow Atomy on the wellness home
   assert.match(read('src/lib/tajLeather.js'), /laptop\|bag/);
 });
 
+// The Fashion store passed a thousand-row read with this partner: it must read in pages.
+{
+  const api = loadModule('src/lib/fashionApi.js', { supabase: null, FASHION_STORE: 'fashion', fashionCategoryToRow: (x) => x, fashionProductToRow: (x) => x, fashionVariantToRow: (x) => x });
+  const ranges = [];
+  const chain = (from) => new Proxy({}, { get: (t, k) => (k === 'then' ? undefined : (...a) => {
+    if (k === 'range') { ranges.push(a); const n = a[0] < 2000 ? 1000 : 5; return Promise.resolve({ data: Array.from({ length: n }, (_, i) => ({ id: `p${a[0] + i}` })), error: null }); }
+    return chain(from);
+  }) });
+  const realSupabase = { from: () => chain() };
+  const api2 = loadModule('src/lib/fashionApi.js', { supabase: realSupabase, FASHION_STORE: 'fashion', fashionCategoryToRow: (x) => x, fashionProductToRow: (x) => x, fashionVariantToRow: (x) => x });
+  const rows = await api2.getFashionProducts();
+  test('the Fashion catalogue reads every active product, a thousand at a time', () => {
+    assert.equal(rows.length, 2005);
+    assert.deepEqual(ranges, [[0, 999], [1000, 1999], [2000, 2999]]);
+    assert.ok(api.FASHION_PAGE === 1000);
+  });
+}
+
 if (failed) { console.log(`\n${failed} FAIL`); process.exit(1); }
 console.log('\nall passed');

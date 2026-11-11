@@ -101,13 +101,20 @@ export function buildFeed(items) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">\n  <channel>\n    <title>${SITE}</title>\n    <link>${ORIGIN}</link>\n    <description>${SITE} products: wellness, fashion and home</description>\n${body}\n  </channel>\n</rss>\n`;
 }
 
-async function readRows(url, key, table, query) {
+/** Every matching row, a thousand at a time (the API's own cap per read). */
+export async function readRows(url, key, table, query, fetchImpl = fetch, page = 1000) {
+  const out = [];
   try {
-    const res = await fetch(`${url}/rest/v1/${table}?${query}`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(9000) });
-    if (!res.ok) return [];
-    const rows = await res.json();
-    return Array.isArray(rows) ? rows : [];
-  } catch { return []; }
+    for (let offset = 0; offset < 20000; offset += page) {
+      const res = await fetchImpl(`${url}/rest/v1/${table}?${query}&limit=${page}&offset=${offset}`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(9000) });
+      if (!res.ok) break;
+      const rows = await res.json();
+      if (!Array.isArray(rows)) break;
+      out.push(...rows);
+      if (rows.length < page) break;
+    }
+  } catch { /* what was read so far */ }
+  return out;
 }
 
 export async function feedHandler(req, res) {
@@ -117,8 +124,8 @@ export async function feedHandler(req, res) {
   let wellness = [], catalogue = [];
   if (url && key) {
     [wellness, catalogue] = await Promise.all([
-      readRows(url, key, 'products', 'select=id,name,slug,description,category,image_url,gallery_urls,original_price,discount_percent,sale_price,stock,brand&is_active=eq.true&order=sort_order.asc&limit=5000'),
-      readRows(url, key, 'catalogue_products', 'select=id,store,name,slug,brand,description,mrp,sale_price,images,stock,is_demo,variants:catalogue_variants(stock,is_active)&is_active=eq.true&store=in.(fashion,homeliving)&order=sort_order.asc&limit=5000'),
+      readRows(url, key, 'products', 'select=id,name,slug,description,category,image_url,gallery_urls,original_price,discount_percent,sale_price,stock,brand&is_active=eq.true&order=sort_order.asc,id.asc'),
+      readRows(url, key, 'catalogue_products', 'select=id,store,name,slug,brand,description,mrp,sale_price,images,stock,is_demo,variants:catalogue_variants(stock,is_active)&is_active=eq.true&store=in.(fashion,homeliving)&order=sort_order.asc,id.asc'),
     ]);
   }
   res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');

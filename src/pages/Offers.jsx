@@ -49,11 +49,18 @@ export const sortDeals = (deals) => [...deals].sort((a, b) => b.pct - a.pct || (
 
 async function fetchCatalogueDeals(client = supabase) {
   if (!client) return [];
-  const { data, error } = await client.from('catalogue_products')
-    .select('id, store, name, slug, mrp, sale_price, images, stock, is_demo, variants:catalogue_variants(stock, is_active)')
-    .eq('is_active', true).in('store', ['fashion', 'homeliving']).not('sale_price', 'is', null).limit(3000);
-  if (error || !Array.isArray(data)) return [];
-  return data.map(catalogueDeal).filter(Boolean);
+  // A thousand rows per read (the API's cap), until a page comes back short.
+  const rows = [];
+  for (let from = 0; from < 10000; from += 1000) {
+    const { data, error } = await client.from('catalogue_products')
+      .select('id, store, name, slug, mrp, sale_price, images, stock, is_demo, variants:catalogue_variants(stock, is_active)')
+      .eq('is_active', true).in('store', ['fashion', 'homeliving']).not('sale_price', 'is', null)
+      .order('id', { ascending: true }).range(from, from + 999);
+    if (error || !Array.isArray(data)) break;
+    rows.push(...data);
+    if (data.length < 1000) break;
+  }
+  return rows.map(catalogueDeal).filter(Boolean);
 }
 
 function ShareOffer() {

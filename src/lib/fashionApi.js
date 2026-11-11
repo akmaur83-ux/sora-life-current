@@ -36,16 +36,30 @@ export async function getFashionCategories() {
   return Array.isArray(data) ? data : [];
 }
 
-/** Every active product with its active variants, in one request. */
+/**
+ * Every active product with its active variants. The API answers at most a thousand
+ * rows per read, and the store now holds close to that (partners, 2026-11-11), so it
+ * reads a thousand at a time until a page comes back short.
+ */
+export const FASHION_PAGE = 1000;
 export async function getFashionProducts() {
-  const { data, error } = await supabase
-    .from(PRODUCT_TABLE)
-    .select(PRODUCT_SELECT)
-    .eq('store', FASHION_STORE)
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true });
-  if (error) throw error;
-  return Array.isArray(data) ? data : [];
+  const out = [];
+  const seen = new Set();
+  for (let from = 0; from < 50 * FASHION_PAGE; from += FASHION_PAGE) {
+    const { data, error } = await supabase
+      .from(PRODUCT_TABLE)
+      .select(PRODUCT_SELECT)
+      .eq('store', FASHION_STORE)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + FASHION_PAGE - 1);
+    if (error) throw error;
+    const rows = Array.isArray(data) ? data : [];
+    for (const r of rows) if (!seen.has(r.id)) { seen.add(r.id); out.push(r); }
+    if (rows.length < FASHION_PAGE) break;
+  }
+  return out;
 }
 
 /** The products (with active variants) behind a set of cart lines. */
