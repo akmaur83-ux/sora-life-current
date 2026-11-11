@@ -31327,16 +31327,33 @@ async function getFashionCategories() {
   return Array.isArray(data) ? data : [];
 }
 
-/** Every active product with its active variants, in one request. */
+/**
+ * Every active product with its active variants. The API answers at most a thousand
+ * rows per read, and the store now holds close to that (partners, 2026-11-11), so it
+ * reads a thousand at a time until a page comes back short.
+ */
+const FASHION_PAGE = 1000;
 async function getFashionProducts() {
-  const {
-    data,
-    error
-  } = await supabase.from(PRODUCT_TABLE).select(PRODUCT_SELECT$1).eq('store', FASHION_STORE).eq('is_active', true).order('sort_order', {
-    ascending: true
-  });
-  if (error) throw error;
-  return Array.isArray(data) ? data : [];
+  const out = [];
+  const seen = new Set();
+  for (let from = 0; from < 50 * FASHION_PAGE; from += FASHION_PAGE) {
+    const {
+      data,
+      error
+    } = await supabase.from(PRODUCT_TABLE).select(PRODUCT_SELECT$1).eq('store', FASHION_STORE).eq('is_active', true).order('sort_order', {
+      ascending: true
+    }).order('id', {
+      ascending: true
+    }).range(from, from + FASHION_PAGE - 1);
+    if (error) throw error;
+    const rows = Array.isArray(data) ? data : [];
+    for (const r of rows) if (!seen.has(r.id)) {
+      seen.add(r.id);
+      out.push(r);
+    }
+    if (rows.length < FASHION_PAGE) break;
+  }
+  return out;
 }
 
 /** The products (with active variants) behind a set of cart lines. */
@@ -58158,12 +58175,20 @@ const wellnessDeals = list => (Array.isArray(list) ? list : []).filter(p => p &&
 const sortDeals = deals => [...deals].sort((a, b) => b.pct - a.pct || b.mrp - b.price - (a.mrp - a.price) || String(a.name).localeCompare(String(b.name)));
 async function fetchCatalogueDeals(client = supabase) {
   if (!client) return [];
-  const {
-    data,
-    error
-  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, stock, is_demo, variants:catalogue_variants(stock, is_active)').eq('is_active', true).in('store', ['fashion', 'homeliving']).not('sale_price', 'is', null).limit(3000);
-  if (error || !Array.isArray(data)) return [];
-  return data.map(catalogueDeal).filter(Boolean);
+  // A thousand rows per read (the API's cap), until a page comes back short.
+  const rows = [];
+  for (let from = 0; from < 10000; from += 1000) {
+    const {
+      data,
+      error
+    } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, stock, is_demo, variants:catalogue_variants(stock, is_active)').eq('is_active', true).in('store', ['fashion', 'homeliving']).not('sale_price', 'is', null).order('id', {
+      ascending: true
+    }).range(from, from + 999);
+    if (error || !Array.isArray(data)) break;
+    rows.push(...data);
+    if (data.length < 1000) break;
+  }
+  return rows.map(catalogueDeal).filter(Boolean);
 }
 function ShareOffer() {
   const o = useStorefrontSection('wellness', 'offerCountdown', OFFER_COUNTDOWN);
