@@ -11,6 +11,7 @@ import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
 import { BiosashRange } from '../components/BiosashRange.jsx';
 import { WeaversVillaRange, WeaversVillaShowcase } from '../components/WeaversVilla.jsx';
 import { LeatherFactoryRange, LeatherFactoryShowcase } from '../components/LeatherFactory.jsx';
+import { AtomyRange, AtomyShowcase } from '../components/Atomy.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import GiftShop from '../components/GiftShop.jsx';
@@ -106,6 +107,11 @@ export default function Home() {
           poster band of category tiles (LeatherFactory.jsx). */}
       <LeatherFactoryRange />
       <LeatherFactoryShowcase />
+
+      {/* Atomy (partner, 2026-11-11): their range in the wellness store, then a poster
+          band of category tiles (Atomy.jsx). */}
+      <AtomyRange />
+      <AtomyShowcase />
 
       {/* Home & Living's Bedsheets, a sliding row of its live products in the
           catalogue's own order (HomeCategoryRails.jsx), directly under the
