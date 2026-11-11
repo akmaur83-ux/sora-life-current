@@ -4,8 +4,9 @@ import { selectWeaversRange } from './weaversVilla.js';
 
 // ============================================================
 // Taj Leather (partner, 2026-11-11: "tie-up"). Their genuine leather jackets and
-// coats live in Fashion › Leather Jackets (Men's, Women's, Coats; their laptop bags
-// in Leather Goods › Laptop & Travel Bags), at Taj Leather's own prices.
+// coats live in Fashion › Men (Leather Jackets, Leather Coats) and Fashion › Women
+// (the same two), their laptop bags in Leather Goods › Laptop & Travel Bags, at Taj
+// Leather's own prices.
 //
 //   * the range — a sliding row of their jackets and coats, sub-categories taking
 //     turns (the Weavers Villa rule: selectWeaversRange), cropped toward the top so
@@ -19,7 +20,8 @@ import { selectWeaversRange } from './weaversVilla.js';
 // Wellness (hide, wording, links). Nothing to show renders nothing.
 // ============================================================
 export const TAJ_BRAND = 'Taj Leather';
-export const TAJ_LISTING = '/fashion/c/leather-jackets';
+// Their range sits in Men's and Women's (2026-11-11: the departments show it), so "all of it" is the brand's search.
+export const TAJ_LISTING = '/fashion/search?q=taj%20leather';
 export const TAJ_RANGE_LIMIT = 12;
 
 export const TAJ_SECTION = Object.freeze({ hidden: false, title: 'Leather Jackets by Taj Leather', more: 'View All', link: '' });

@@ -108,8 +108,11 @@ function WomenDepartment({ sections: s, tree, category, categories, products, st
     const node = resolveCategory(tree, item.root);
     return node && !node.parent_id ? categoryHref(node) : listing;
   };
-  const fresh = products.filter((view) => view.isNew);
-  const pool = fresh.length ? sortViews(fresh, 'new') : products;
+  // New pieces lead; with fewer than a row of them, the rest of the range fills in
+  // (2026-11-11: one new Taj Leather jacket left the row at a single card).
+  const newOnes = products.filter((view) => view.isNew);
+  const fresh = newOnes.length >= 4 ? newOnes : [];
+  const pool = fresh.length ? sortViews(fresh, 'new') : [...sortViews(newOnes, 'new'), ...products.filter((view) => !view.isNew)];
   // Filters only for Women's own sub-categories that have something in the row.
   const shelves = (category ? tree.children(category.id) : []).filter((child) => child.is_active).map((child) => ({
     id: child.id, name: child.name,

@@ -14,7 +14,7 @@ test('posters: their two jacket posters, served from this site, each opening its
     for (const f of [p.wide, p.tall].filter(Boolean)) { assert.match(f, /^\/img\/partners\/taj-leather\/[a-z-]+\.webp$/); assert.ok(existsSync(new URL(`..${f}`, import.meta.url)), f); }
     assert.ok(p.alt.length > 10);
   }
-  assert.equal(lib.TAJ_LISTING, '/fashion/c/leather-jackets');
+  assert.equal(lib.TAJ_LISTING, '/fashion/search?q=taj%20leather');
 });
 test('the range reads only their in-stock fashion rows', async () => {
   const calls = [];

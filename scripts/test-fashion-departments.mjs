@@ -169,15 +169,20 @@ test('the saree page fills the width too: its hero takes its height from the wid
   }
 });
 
-test('the women page row: new arrivals when any are flagged, a filter per Women sub-category on the shelf', () => {
+test('the women page row: new arrivals when a row of them (4+) is flagged, else the new ones first and the range after; a filter per Women sub-category on the shelf', () => {
   const sub = (id, slug, name) => ({ id, parent_id: womenCategory.id, name, slug, tagline: '', image_url: null, sort_order: 1, is_active: true });
   const product = (n, category_id, isNew) => ({ ...womenProduct, id: `00000000-0000-4000-8000-00000000090${n}`, slug: `women-piece-${n}`, name: `Women piece ${n}`, category_id, is_new: isNew });
   const categories = [...INITIAL.categories, sub('w-dresses', 'dresses', 'Dresses'), sub('w-knit', 'knitwear', 'Knitwear')];
+  // Four flagged: "New in", only those (2026-11-11: fewer than a row left one lone card).
+  const full = app.render('/fashion/women', { categories, products: [product(1, 'w-dresses', true), product(2, 'w-knit', true), product(4, 'w-knit', true), product(5, 'w-dresses', true), product(3, 'w-knit', false)] });
+  assert.match(full, /<h2 id="wm-products-title">New in<\/h2>/);
+  assert.doesNotMatch(full, /data-product="women-piece-3"/); // not flagged new
+  // Two flagged: they lead, the rest of the range follows.
   const fresh = app.render('/fashion/women', { categories, products: [product(1, 'w-dresses', true), product(2, 'w-knit', true), product(3, 'w-knit', false)] });
-  assert.match(fresh, /<h2 id="wm-products-title">New in<\/h2>/);
+  assert.match(fresh, /<h2 id="wm-products-title">From the collection<\/h2>/);
   assert.match(fresh, /data-product="women-piece-1"/);
   assert.match(fresh, /data-product="women-piece-2"/);
-  assert.doesNotMatch(fresh, /data-product="women-piece-3"/); // not flagged new
+  assert.ok(fresh.indexOf('data-product="women-piece-3"') > fresh.indexOf('data-product="women-piece-2"'), 'the unflagged piece follows the new ones');
   assert.match(fresh, /role="group" aria-label="Show a category"><button type="button" aria-pressed="true">All<\/button><button type="button" aria-pressed="false">Dresses<\/button><button type="button" aria-pressed="false">Knitwear<\/button>/);
   assert.match(fresh, /<a class="wm-category" href="\/fashion\/c\/dresses">/);
   const none = app.render('/fashion/women', { categories, products: [product(3, 'w-knit', false)] });
