@@ -3080,7 +3080,7 @@ const lines = (length, max, label) => ({
   label
 });
 /** Two uploads, phone and desktop, set together. */
-const pic = (label = 'Photograph') => ({
+const pic$1 = (label = 'Photograph') => ({
   type: 'pic',
   label
 });
@@ -3118,7 +3118,7 @@ const banner = (label, extra = {}) => group({
   text: text$1(200, 'Subline'),
   cta: text$1(40, 'Button label'),
   link: link('Button link'),
-  picture: pic(),
+  picture: pic$1(),
   alt: text$1(180, 'Photograph description'),
   ...extra
 }, label);
@@ -3128,7 +3128,7 @@ const tile = (extra = {}) => ({
   title: text$1(40, 'Name'),
   ...extra,
   link: link('Opens'),
-  picture: pic(),
+  picture: pic$1(),
   alt: text$1(180, 'Photograph description')
 });
 /** A row of shopping facts (delivery, returns, support): words and where each goes. */
@@ -3209,7 +3209,7 @@ const WELLNESS = {
     text: text$1(160, 'Subline'),
     cta: text$1(40, 'Button label'),
     link: link('Opens'),
-    picture: pic(),
+    picture: pic$1(),
     alt: text$1(180, 'Photograph description'),
     position: position()
   }, 'Festive promo'),
@@ -3286,6 +3286,21 @@ const WELLNESS = {
     cta: text$1(40, 'Button label'),
     link: link('Button link (empty: Leather Goods)')
   }, 'Leather Factory poster with category tiles'),
+  // Atomy (partner, 2026-11-11), under Leather Factory.
+  atomy: group({
+    hidden: hidden(),
+    title: text$1(60, 'Heading'),
+    more: text$1(30, 'View-all label'),
+    link: link('View-all link (empty: all Atomy products)')
+  }, 'Atomy products (their range in the wellness store; hidden while there are none)'),
+  atomyShowcase: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: text$1(60, 'Headline'),
+    text: text$1(200, 'Subline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link (empty: all Atomy products)')
+  }, 'Atomy poster with category tiles'),
   // Under the Biosash range (and Weavers Villa since 2026-11-08) since 2026-11-07.
   bedsheets: group({
     hidden: hidden(),
@@ -3311,7 +3326,7 @@ const WELLNESS = {
       text: text$1(200, 'Subline'),
       cta: text$1(40, 'Button label'),
       link: link('Card link'),
-      picture: pic(),
+      picture: pic$1(),
       alt: text$1(180, 'Photograph description'),
       details: lines(3, 40, 'Three short features')
     }, 'Store cards', 'Card')
@@ -3351,7 +3366,7 @@ const WOMEN = group({
     intro: text$1(200, 'Subline'),
     cta: text$1(40, 'Button label'),
     link: link('Button link (empty: the Women listing)'),
-    picture: pic(),
+    picture: pic$1(),
     alt: text$1(180, 'Photograph description'),
     position: position()
   }, 'Hero'),
@@ -3400,7 +3415,7 @@ const MEN = group({
     cta: text$1(40, 'Button label'),
     link: link('Button link (empty: the Men listing)'),
     note: text$1(40, 'Edition note'),
-    picture: pic(),
+    picture: pic$1(),
     alt: text$1(180, 'Photograph description'),
     position: position()
   }, 'Hero'),
@@ -3453,7 +3468,7 @@ const SAREES = group({
     link: link('Button link (empty: the Women listing)'),
     position: position(),
     slides: list$2(2, {
-      picture: pic(),
+      picture: pic$1(),
       alt: text$1(180, 'Photograph description')
     }, 'Photographs (the arrows step between them)', 'Photograph')
   }, 'Hero'),
@@ -3489,7 +3504,7 @@ const SAREES = group({
     title: lines(2, 40, 'Headline'),
     cta: text$1(40, 'Button label'),
     link: link('Button link (empty: the Women listing)'),
-    picture: pic(),
+    picture: pic$1(),
     alt: text$1(180, 'Photograph description')
   }, 'Closing banner'),
   services: facts$1(4, 'Shopping information')
@@ -3502,7 +3517,7 @@ const JEWELLERY$1 = group({
     intro: text$1(200, 'Subline'),
     cta: text$1(40, 'Button label'),
     link: link('Button link (empty: the Jewellery listing)'),
-    picture: pic(),
+    picture: pic$1(),
     alt: text$1(180, 'Photograph description'),
     position: position()
   }, 'Hero'),
@@ -3535,7 +3550,7 @@ const JEWELLERY$1 = group({
       title: lines(3, 30, 'Headline'),
       cta: text$1(40, 'Button label'),
       link: link('Opens'),
-      picture: pic(),
+      picture: pic$1(),
       alt: text$1(180, 'Photograph description')
     }, 'Banners', 'Banner')
   }, 'Wedding and gifts banners'),
@@ -3546,14 +3561,14 @@ const JEWELLERY$1 = group({
     text: text$1(240, 'Text'),
     cta: text$1(40, 'Button label'),
     link: link('Button link'),
-    picture: pic(),
+    picture: pic$1(),
     alt: text$1(180, 'Photograph description')
   }, 'Story'),
   newsletter: group({
     hidden: hidden(),
     title: text$1(80, 'Heading'),
     text: text$1(200, 'Text'),
-    picture: pic(),
+    picture: pic$1(),
     alt: text$1(180, 'Photograph description')
   }, 'Newsletter')
 }, 'Jewellery page');
@@ -41762,6 +41777,198 @@ function LeatherFactoryShowcase({
 }
 
 // ============================================================
+// Atomy on the wellness homepage (partner, 2026-11-11: "tie-up"). Their India
+// catalogue (skin care, hair and body, oral care, supplements, HemoHIM, teas)
+// lives in the wellness store itself, brand "Atomy", in its own categories, at
+// Atomy's own retail price. Two pieces, as for Weavers Villa and Leather Factory:
+//
+//   * the range — a sliding row of their products in stock, bestsellers first,
+//     then the categories taking turns so it is not twelve creams in a row;
+//   * the showcase — a poster band of tiles, one per kind of product, each a
+//     packshot opening that part of the range (search by brand and category:
+//     /shop?q=atomy skin care).
+//
+// Both editable in Storefronts → Wellness (hide, wording, links); nothing to show
+// renders nothing.
+// ============================================================
+const ATOMY_LISTING = '/shop?q=atomy';
+const ATOMY_RANGE_LIMIT = 12;
+const ATOMY_SECTION = Object.freeze({
+  hidden: false,
+  title: 'Atomy: Korean beauty & wellness',
+  more: 'View All',
+  link: ''
+});
+const ATOMY_SHOWCASE = Object.freeze({
+  hidden: false,
+  eyebrow: 'New on SORA Lifestyle',
+  title: 'Atomy',
+  text: 'Skin care, hair and body care, oral care, supplements and teas from the South Korean brand, at Atomy’s own prices.',
+  cta: 'Shop all Atomy',
+  link: ATOMY_LISTING
+});
+const pic = (no, file = `${no}_00.jpg`) => `https://image.atomy.com/IN/goods/${no}/${file}?w=720&h=720`;
+const ATOMY_TILES = Object.freeze([{
+  id: 'skin',
+  label: 'Skin Care',
+  href: '/shop?q=atomy%20skin%20care',
+  image: pic('D00190')
+}, {
+  id: 'hemohim',
+  label: 'HemoHIM',
+  href: '/shop?q=hemohim',
+  image: pic('D00101')
+}, {
+  id: 'supplements',
+  label: 'Supplements',
+  href: '/shop?q=atomy%20supplements',
+  image: pic('D00111')
+}, {
+  id: 'hair',
+  label: 'Hair Care',
+  href: '/shop?q=atomy%20hair%20care',
+  image: pic('D00601')
+}, {
+  id: 'body',
+  label: 'Bath & Body',
+  href: '/shop?q=atomy%20bath%20body',
+  image: pic('D00645')
+}, {
+  id: 'oral',
+  label: 'Oral & Personal Care',
+  href: '/shop?q=atomy%20personal%20care',
+  image: pic('D00510')
+}, {
+  id: 'drinks',
+  label: 'Teas & Drinks',
+  href: '/shop?q=atomy%20juices%20drinks',
+  image: pic('D00975')
+}].map(t => Object.freeze(t)));
+const isAtomy = p => String(p?.brand || '').trim().toLowerCase() === 'atomy';
+/** A card-sized copy of their picture (their CDN resizes on w and h). */
+const atomyCard = src => src ? String(src).replace(/\?w=\d+&h=\d+$/, '?w=600&h=600') : null;
+
+/**
+ * The cards: { key, name, href, price, image, whole }. In stock, priced, with a picture;
+ * bestsellers first, then the categories take turns, each in the catalogue's order. Pure.
+ */
+function selectAtomyRange(list = [], limit = ATOMY_RANGE_LIMIT) {
+  const ok = (Array.isArray(list) ? list : []).filter(p => isAtomy(p) && p.slug && Number(p.stock) > 0 && Number(p.price) > 0 && p.image);
+  const card = p => ({
+    key: `wellness-${p.id}`,
+    name: String(p.name || '').trim(),
+    href: `/product/${p.slug}`,
+    price: Number(p.price),
+    image: atomyCard(p.image),
+    whole: true
+  });
+  const out = ok.filter(p => p.isBestseller).map(card);
+  const seen = new Set(out.map(c => c.key));
+  const lanes = new Map();
+  for (const p of ok) {
+    if (seen.has(`wellness-${p.id}`)) continue;
+    if (!lanes.has(p.category)) lanes.set(p.category, []);
+    lanes.get(p.category).push(p);
+  }
+  // The kinds people come for first; household odds and ends last.
+  const order = ['skin-care', 'supplements', 'hair-care', 'bath-body', 'juices-drinks', 'mens-care', 'wellness', 'personal-care'];
+  const rank = c => {
+    const i = order.indexOf(c);
+    return i < 0 ? order.length : i;
+  };
+  const qs = [...lanes.entries()].sort((a, b) => rank(a[0]) - rank(b[0])).map(([, q]) => q);
+  while (out.length < limit && qs.some(q => q.length)) {
+    for (const q of qs) if (q.length && out.length < limit) out.push(card(q.shift()));
+  }
+  return out.slice(0, limit);
+}
+
+/** `items` is for a test; the page passes nothing and the live catalogue is read. */
+function AtomyRange({
+  items: given,
+  autoplayMs
+} = {}) {
+  const section = useStorefrontSection('wellness', 'atomy', ATOMY_SECTION);
+  const items = given ?? selectAtomyRange(products);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
+    id: "atomy",
+    label: "Atomy products",
+    section: section,
+    defaults: ATOMY_SECTION,
+    link: section.link || ATOMY_LISTING,
+    items: items,
+    ...(autoplayMs ? {
+      autoplayMs
+    } : {})
+  });
+}
+function AtomyShowcase({
+  tiles = ATOMY_TILES
+} = {}) {
+  const s = useStorefrontSection('wellness', 'atomyShowcase', ATOMY_SHOWCASE);
+  if (s.hidden || !tiles.length) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-wv hx-lf hx-atomy",
+    "aria-labelledby": "hx-atomy-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-wv__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hx-wv__copy",
+          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-wv__eyebrow",
+            children: s.eyebrow
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "hx-wv__h",
+            id: "hx-atomy-h",
+            children: s.title
+          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-wv__text",
+            children: s.text
+          })]
+        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: s.link || ATOMY_LISTING,
+          className: "hx-wv__cta",
+          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hx-wv__films hx-lf__tiles",
+        "aria-label": "Atomy categories",
+        children: tiles.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          className: "hx-wv__film",
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: t.href,
+            className: "hx-wv__tile",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "hx-wv__media hx-lf__media",
+              children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                className: "hx-lf__img",
+                src: t.image,
+                alt: "",
+                width: 720,
+                height: 720,
+                loading: "lazy",
+                decoding: "async"
+              })
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "hx-wv__label",
+              children: [t.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 14
+              })]
+            })]
+          })
+        }, t.id))
+      })]
+    })
+  });
+}
+
+// ============================================================
 // Product reviews (migration 0041): customers write, an admin approves, the
 // product page shows the approved ones. Public reads never see user_id (it is
 // not granted); a customer may write one review per product, which starts
@@ -47651,7 +47858,7 @@ function Home() {
       wrap: "hx-wrap"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(TopDeals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(GiftShop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WishlistRail, {}), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WishlistRail, {}), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AtomyRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AtomyShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
       eyebrow: "Across the catalogue",
       title: "Start here",
