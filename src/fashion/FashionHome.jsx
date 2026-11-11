@@ -10,6 +10,7 @@ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import BudgetChips from '../components/BudgetChips.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import { BagReminder } from '../components/HomeExtras.jsx';
+import { TajLeatherPosters, TajLeatherRange } from '../components/TajLeather.jsx';
 import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
 import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
 import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
@@ -153,12 +154,15 @@ export default function FashionHome() {
     <div className="fs-home">
       <Hero config={config.hero} />
       <CategoryChips />
+      {/* Taj Leather (partner, 2026-11-11): their campaign posters right under the hero (TajLeather.jsx). */}
+      <TajLeatherPosters />
       <BagReminder wrap="fs-sec" />
       <OfferBanner wrap="fs-sec" />
       {/* This visitor's recently viewed fashion products (2+; this browser only). */}
       <RecentlyViewedHome prefix="fs-" />
       <BudgetChips base="/fashion/search" wrap="fs-sec" />
       <CategoryTiles tree={tree} />
+      <TajLeatherRange />
       <Benefits />
       <ShopByCategory tree={tree} copy={config.sections} />
       <TopBrands views={views} copy={config.sections} />

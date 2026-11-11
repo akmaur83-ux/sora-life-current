@@ -12,6 +12,7 @@ import { BiosashRange } from '../components/BiosashRange.jsx';
 import { WeaversVillaRange, WeaversVillaShowcase } from '../components/WeaversVilla.jsx';
 import { LeatherFactoryRange, LeatherFactoryShowcase } from '../components/LeatherFactory.jsx';
 import { AtomyRange, AtomyShowcase } from '../components/Atomy.jsx';
+import { TajLeatherRange, TajLeatherPosters } from '../components/TajLeather.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import GiftShop from '../components/GiftShop.jsx';
@@ -112,6 +113,11 @@ export default function Home() {
           band of category tiles (Atomy.jsx). */}
       <AtomyRange />
       <AtomyShowcase />
+
+      {/* Taj Leather (partner, 2026-11-11): their campaign posters, then their jackets
+          and coats in the same sliding row (TajLeather.jsx). */}
+      <TajLeatherPosters />
+      <TajLeatherRange />
 
       {/* Home & Living's Bedsheets, a sliding row of its live products in the
           catalogue's own order (HomeCategoryRails.jsx), directly under the

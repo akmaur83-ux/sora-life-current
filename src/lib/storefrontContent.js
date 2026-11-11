@@ -157,6 +157,15 @@ const WELLNESS = {
     hidden: hidden(), eyebrow: text(60, 'Eyebrow'), title: text(60, 'Headline'), text: text(200, 'Subline'),
     cta: text(40, 'Button label'), link: link('Button link (empty: all Atomy products)'),
   }, 'Atomy poster with category tiles'),
+  // Taj Leather (partner, 2026-11-11), under Atomy; the posters also lead the Fashion home.
+  tajPosters: group({
+    hidden: hidden(), eyebrow: text(60, 'Eyebrow'), title: text(60, 'Headline'), text: text(200, 'Subline'),
+    cta: text(40, 'Button label'), link: link('Button link (empty: Leather Jackets)'),
+  }, 'Taj Leather posters (their campaign posters; also on the Fashion home)'),
+  tajLeather: group({
+    hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
+    link: link('View-all link (empty: Leather Jackets)'),
+  }, 'Taj Leather jackets (their range in Fashion; also on the Fashion home)'),
   // Under the Biosash range (and Weavers Villa since 2026-11-08) since 2026-11-07.
   bedsheets: group({
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),

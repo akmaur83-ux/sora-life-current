@@ -642,3 +642,23 @@
   .hx-offers__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
   .hx-pcard { left: 10px; width: calc(100vw - 88px); padding: 12px 8px 12px 12px; gap: 10px; }
 }
+/* Taj Leather posters (2026-11-11): their campaign posters, each a link; two across on a wide screen. */
+.hx-taj { padding: 28px 0 8px; }
+.hx-taj__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 16px; }
+.hx-taj__eyebrow { margin: 0 0 6px; font: 700 12px/1.2 Arial, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #8A5A2B; }
+.hx-taj__h { margin: 0; font-family: var(--slv2-serif, Georgia, serif); font-size: clamp(26px, 3.2vw, 38px); font-weight: 500; color: #1D1D1B; }
+.hx-taj__text { margin: 6px 0 0; max-width: 560px; font: 15px/1.5 Arial, sans-serif; color: #565959; }
+.hx-taj__cta { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; background: #2A1F17; font: 700 14px Arial, sans-serif; text-decoration: none; }
+.hx.hx-taj .hx-taj__cta, .hx.hx-taj .hx-taj__cta:visited { color: #fff; }
+.hx-taj__cta:hover { background: #4A3627; }
+.hx-taj__posters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+.hx-taj__poster { display: block; overflow: hidden; background: #EDE6DD; }
+.hx-taj__poster img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; transition: transform .5s ease; }
+.hx-taj__poster:hover img { transform: scale(1.025); }
+.hx-taj__poster:focus-visible { outline: 3px solid #2A1F17; outline-offset: 3px; }
+@media (max-width: 599px) {
+  .hx-taj { padding-top: 20px; }
+  .hx-taj__posters { grid-template-columns: 1fr; gap: 12px; }
+  .hx-taj__poster img { aspect-ratio: auto; max-height: 520px; object-position: center top; }
+  .hx-taj__cta { width: 100%; justify-content: center; }
+}
