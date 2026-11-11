@@ -42002,8 +42002,9 @@ function AtomyShowcase({
 
 // ============================================================
 // Taj Leather (partner, 2026-11-11: "tie-up"). Their genuine leather jackets and
-// coats live in Fashion › Leather Jackets (Men's, Women's, Coats; their laptop bags
-// in Leather Goods › Laptop & Travel Bags), at Taj Leather's own prices.
+// coats live in Fashion › Men (Leather Jackets, Leather Coats) and Fashion › Women
+// (the same two), their laptop bags in Leather Goods › Laptop & Travel Bags, at Taj
+// Leather's own prices.
 //
 //   * the range — a sliding row of their jackets and coats, sub-categories taking
 //     turns (the Weavers Villa rule: selectWeaversRange), cropped toward the top so
@@ -42017,7 +42018,8 @@ function AtomyShowcase({
 // Wellness (hide, wording, links). Nothing to show renders nothing.
 // ============================================================
 const TAJ_BRAND = 'Taj Leather';
-const TAJ_LISTING = '/fashion/c/leather-jackets';
+// Their range sits in Men's and Women's (2026-11-11: the departments show it), so "all of it" is the brand's search.
+const TAJ_LISTING = '/fashion/search?q=taj%20leather';
 const TAJ_RANGE_LIMIT = 12;
 const TAJ_SECTION = Object.freeze({
   hidden: false,
@@ -69916,8 +69918,11 @@ function WomenDepartment({
     const node = resolveCategory$1(tree, item.root);
     return node && !node.parent_id ? categoryHref$3(node) : listing;
   };
-  const fresh = products.filter(view => view.isNew);
-  const pool = fresh.length ? sortViews(fresh, 'new') : products;
+  // New pieces lead; with fewer than a row of them, the rest of the range fills in
+  // (2026-11-11: one new Taj Leather jacket left the row at a single card).
+  const newOnes = products.filter(view => view.isNew);
+  const fresh = newOnes.length >= 4 ? newOnes : [];
+  const pool = fresh.length ? sortViews(fresh, 'new') : [...sortViews(newOnes, 'new'), ...products.filter(view => !view.isNew)];
   // Filters only for Women's own sub-categories that have something in the row.
   const shelves = (category ? tree.children(category.id) : []).filter(child => child.is_active).map(child => ({
     id: child.id,
