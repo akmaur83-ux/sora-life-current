@@ -41450,6 +41450,427 @@ function BiosashRange({
   });
 }
 
+const WEAVERS_RANGE_LIMIT = 12;
+
+/** The films, in the order they play along the row, each with where its tile opens. */
+Object.freeze([{
+  id: '0e053f13',
+  label: "Women's Shawls",
+  href: '/fashion/c/womens-shawls'
+}, {
+  id: '9530163f',
+  label: "Men's Shawls",
+  href: '/fashion/c/mens-shawls'
+}, {
+  id: '4f1440d9',
+  label: 'Dupattas & Phulkari',
+  href: '/fashion/c/dupattas-phulkari'
+}, {
+  id: '8a9a44c5',
+  label: 'Stoles',
+  href: '/fashion/c/stoles'
+}, {
+  id: '913fba8f',
+  label: 'Embroidered Shawls',
+  href: '/fashion/c/womens-shawls'
+}, {
+  id: 'c4953552',
+  label: 'Mufflers & Caps',
+  href: '/fashion/c/mufflers-caps'
+}, {
+  id: '1af80d20',
+  label: 'Table Covers',
+  href: '/homeliving/category/table-covers'
+}, {
+  id: '283b0a85',
+  label: 'Kullu Shawls',
+  href: '/fashion/c/womens-shawls'
+}, {
+  id: '6e5c05cd',
+  label: 'Statement Shawls',
+  href: '/fashion/c/womens-shawls'
+}, {
+  id: '8b4ab5ca',
+  label: 'Gift Box Sets',
+  href: '/fashion/c/shawl-gift-sets'
+}].map(f => Object.freeze({
+  ...f,
+  video: `/video/weavers-villa/${f.id}.mp4`,
+  poster: `/video/weavers-villa/${f.id}.webp`
+})));
+const str$4 = v => String(v ?? '').trim();
+
+/** A card-sized copy of a partner picture: their CDN resizes on `width`. */
+const cardImage = src => src ? String(src).replace(/([?&])width=\d+/, '$1width=700') : null;
+
+/**
+ * The cards: { key, name, href, price, image }. Sub-categories take turns, each
+ * keeping the catalogue's order; a row without a slug, a price or a picture is left out.
+ */
+function selectWeaversRange(rows = [], limit = WEAVERS_RANGE_LIMIT) {
+  const queues = new Map();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (row?.store !== 'fashion' || !str$4(row.slug)) continue;
+    const price = cataloguePrice(row);
+    const image = Array.isArray(row.images) ? row.images.find(Boolean) : null;
+    if (!(price > 0) || !image) continue;
+    const k = row.category_id ?? 'none';
+    if (!queues.has(k)) queues.set(k, []);
+    queues.get(k).push({
+      key: `fashion-${row.id}`,
+      name: str$4(row.name),
+      href: `/fashion/p/${row.slug}`,
+      price,
+      image: cardImage(image)
+    });
+  }
+  const lanes = [...queues.values()];
+  const out = [];
+  while (out.length < limit && lanes.some(q => q.length)) {
+    for (const q of lanes) if (q.length && out.length < limit) out.push(q.shift());
+  }
+  return out;
+}
+
+// ============================================================
+// Taj Leather (partner, 2026-11-11: "tie-up"). Their genuine leather jackets and
+// coats live in Fashion › Men (Leather Jackets, Leather Coats) and Fashion › Women
+// (the same two), their laptop bags in Leather Goods › Laptop & Travel Bags, at Taj
+// Leather's own prices.
+//
+//   * the range — a sliding row of their jackets and coats, sub-categories taking
+//     turns (the Weavers Villa rule: selectWeaversRange), cropped toward the top so
+//     the model's face stays in frame;
+//   * the posters — Taj Leather's own campaign posters ("The Leather Edit", the
+//     women's jacket), copies served from this site (/img/partners/taj-leather),
+//     each opening its listing. Their shoe and handbag posters are not used: those
+//     products are not on SORA.
+//
+// Shown on the wellness homepage and the Fashion home; editable in Storefronts →
+// Wellness (hide, wording, links). Nothing to show renders nothing.
+// ============================================================
+const TAJ_BRAND = 'Taj Leather';
+// Their range sits in Men's and Women's (2026-11-11: the departments show it), so "all of it" is the brand's search.
+const TAJ_LISTING = '/fashion/search?q=taj%20leather';
+const TAJ_RANGE_LIMIT = 12;
+const TAJ_SECTION = Object.freeze({
+  hidden: false,
+  title: 'Leather Jackets by Taj Leather',
+  more: 'View All',
+  link: ''
+});
+const TAJ_POSTERS_SECTION = Object.freeze({
+  hidden: false,
+  eyebrow: 'New on SORA Lifestyle',
+  title: 'Taj Leather',
+  text: 'Genuine leather jackets and coats for men and women, at Taj Leather’s own prices.',
+  cta: 'Shop leather jackets',
+  link: TAJ_LISTING
+});
+const P$1 = '/img/partners/taj-leather';
+const TAJ_POSTERS = Object.freeze([Object.freeze({
+  id: 'leather-edit',
+  href: '/fashion/c/mens-leather-jackets',
+  alt: 'The Leather Edit: men’s leather jackets by Taj Leather',
+  wide: `${P$1}/leather-edit-wide.webp`,
+  tall: `${P$1}/leather-edit-tall.webp`
+}), Object.freeze({
+  id: 'womens-jacket',
+  href: '/fashion/c/womens-leather-jackets',
+  alt: 'Premium leather jacket: women’s leather jackets by Taj Leather',
+  wide: `${P$1}/womens-jacket-wide.webp`,
+  tall: null
+})]);
+
+/** The range's rows: active fashion rows of the brand; a failed read counts as none. */
+async function fetchTajRows(client = supabase, limit = 72) {
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', TAJ_BRAND).eq('is_active', true).gt('stock', 0).order('sort_order', {
+    ascending: true
+  }).limit(limit);
+  if (error || !Array.isArray(data)) return [];
+  return data;
+}
+
+/** The range's cards: null until the read answers. */
+function useTajRange(limit = TAJ_RANGE_LIMIT) {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchTajRows(supabase).then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  // Jackets and coats only: their laptop bags stay in Leather Goods, out of this row.
+  return reactExports.useMemo(() => rows ? selectWeaversRange(rows.filter(r => !/laptop|bag\b/i.test(String(r.name || ''))), limit).map(c => ({
+    ...c,
+    image: c.image ? String(c.image).replace(/width=\d+/, 'width=700') : c.image
+  })) : null, [rows, limit]);
+}
+
+/** `items` is for a test; the page passes nothing and the live catalogue is read. */
+function TajLeatherRange({
+  items: given,
+  autoplayMs
+} = {}) {
+  const section = useStorefrontSection('wellness', 'tajLeather', TAJ_SECTION);
+  const loaded = useTajRange();
+  const items = (given ?? loaded) || [];
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx-wv-range",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
+      id: "taj",
+      label: "Taj Leather jackets",
+      section: section,
+      defaults: TAJ_SECTION,
+      link: section.link || TAJ_LISTING,
+      items: items,
+      ...(autoplayMs ? {
+        autoplayMs
+      } : {})
+    })
+  });
+}
+
+/** Their posters, side by side on a wide screen, one above the other on a phone (the tall cut where there is one). */
+function TajLeatherPosters({
+  posters = TAJ_POSTERS,
+  heading = true
+} = {}) {
+  const s = useStorefrontSection('wellness', 'tajPosters', TAJ_POSTERS_SECTION);
+  if (s.hidden || !posters.length) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-taj",
+    "aria-labelledby": heading ? 'hx-taj-h' : undefined,
+    "aria-label": heading ? undefined : 'Taj Leather',
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [heading && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-taj__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-taj__eyebrow",
+            children: s.eyebrow
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "hx-taj__h",
+            id: "hx-taj-h",
+            children: s.title
+          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-taj__text",
+            children: s.text
+          })]
+        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: s.link || TAJ_LISTING,
+          className: "hx-taj__cta",
+          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hx-taj__posters",
+        children: posters.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: p.href,
+            className: "hx-taj__poster",
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
+              children: [p.tall && /*#__PURE__*/jsxRuntimeExports.jsx("source", {
+                media: "(max-width: 599px)",
+                srcSet: p.tall,
+                width: "900",
+                height: "1350"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                src: p.wide,
+                alt: p.alt,
+                width: "1600",
+                height: "900",
+                loading: i === 0 ? 'eager' : 'lazy',
+                decoding: "async"
+              })]
+            })
+          })
+        }, p.id))
+      })]
+    })
+  });
+}
+
+// ============================================================
+// Ansari Fashion, Banaras (partner, 2026-11-13: "tie-up"). Their Banarasi suit sets
+// (mostly unstitched, three pieces) and sarees live in Fashion › Women (Suits &
+// Dress Materials, Sarees), so the Women page and the saree store show them too.
+// Prices are theirs; an M.R.P. more than 60% above the price is not shown.
+//
+//   * the posters — their three category photographs (copies served from this site,
+//     /img/partners/ansari-fashion), each with our own label, opening its listing.
+//     Their sale banners ("extra 10% on prepaid" and the like) are not used: those
+//     are their store's offers, not SORA's.
+//   * the range — a sliding row of their pieces, the two categories taking turns.
+//
+// On the wellness homepage and the Fashion home; editable in Storefronts → Wellness.
+// ============================================================
+const ANSARI_BRAND = 'Ansari Fashion';
+const ANSARI_LISTING = '/fashion/search?q=ansari%20fashion';
+const ANSARI_RANGE_LIMIT = 12;
+const ANSARI_SECTION = Object.freeze({
+  hidden: false,
+  title: 'Banarasi suits & sarees by Ansari Fashion',
+  more: 'View All',
+  link: ''
+});
+const ANSARI_POSTERS_SECTION = Object.freeze({
+  hidden: false,
+  eyebrow: 'New on SORA Lifestyle',
+  title: 'Ansari Fashion, Banaras',
+  text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees, at Ansari Fashion’s own prices.',
+  cta: 'Shop Ansari Fashion',
+  link: ANSARI_LISTING
+});
+const P = '/img/partners/ansari-fashion';
+const ANSARI_POSTERS = Object.freeze([Object.freeze({
+  id: 'suits',
+  label: 'Suits & Dress Materials',
+  href: '/fashion/c/suits-dress-materials',
+  image: `${P}/suit-sets.webp`,
+  alt: 'A woman in a cream Banarasi suit with a woven dupatta'
+}), Object.freeze({
+  id: 'banarasi',
+  label: 'Banarasi Silk Suits',
+  href: '/fashion/search?q=banarasi%20silk',
+  image: `${P}/banarasi-suits.webp`,
+  alt: 'A woman in a pink Banarasi silk suit with a zari dupatta'
+}), Object.freeze({
+  id: 'sarees',
+  label: 'Sarees',
+  href: '/fashion/c/sarees',
+  image: `${P}/sarees.webp`,
+  alt: 'A woman in a Banarasi silk saree'
+})]);
+
+/** The range's rows: active, in-stock fashion rows of the brand; a failed read counts as none. */
+async function fetchAnsariRows(client = supabase, limit = 72) {
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', ANSARI_BRAND).eq('is_active', true).gt('stock', 0).order('sort_order', {
+    ascending: true
+  }).limit(limit);
+  if (error || !Array.isArray(data)) return [];
+  return data;
+}
+
+/** A card-sized copy of their picture (their CDN resizes on w-…). */
+const ansariCard = src => src ? String(src).replace(/\bw-\d+\b/, 'w-700') : src;
+
+/** The range's cards: null until the read answers. */
+function useAnsariRange(limit = ANSARI_RANGE_LIMIT) {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchAnsariRows(supabase).then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return reactExports.useMemo(() => rows ? selectWeaversRange(rows, limit).map(c => ({
+    ...c,
+    image: ansariCard(c.image)
+  })) : null, [rows, limit]);
+}
+
+/** `items` is for a test; the page passes nothing and the live catalogue is read. */
+function AnsariRange({
+  items: given,
+  autoplayMs
+} = {}) {
+  const section = useStorefrontSection('wellness', 'ansari', ANSARI_SECTION);
+  const loaded = useAnsariRange();
+  const items = (given ?? loaded) || [];
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx-wv-range",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
+      id: "ansari",
+      label: "Ansari Fashion suits and sarees",
+      section: section,
+      defaults: ANSARI_SECTION,
+      link: section.link || ANSARI_LISTING,
+      items: items,
+      ...(autoplayMs ? {
+        autoplayMs
+      } : {})
+    })
+  });
+}
+function AnsariPosters({
+  posters = ANSARI_POSTERS
+} = {}) {
+  const s = useStorefrontSection('wellness', 'ansariPosters', ANSARI_POSTERS_SECTION);
+  if (s.hidden || !posters.length) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-ans",
+    "aria-labelledby": "hx-ans-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-taj__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-taj__eyebrow",
+            children: s.eyebrow
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "hx-taj__h",
+            id: "hx-ans-h",
+            children: s.title
+          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-taj__text",
+            children: s.text
+          })]
+        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: s.link || ANSARI_LISTING,
+          className: "hx-ans__cta",
+          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hx-ans__posters",
+        children: posters.map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: p.href,
+            className: "hx-ans__poster",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+              src: p.image,
+              alt: p.alt,
+              width: "900",
+              height: "1200",
+              loading: "lazy",
+              decoding: "async"
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "hx-ans__label",
+              children: [p.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 15
+              })]
+            })]
+          })
+        }, p.id))
+      })]
+    })
+  });
+}
+
 // ============================================================
 // A homepage group band (2026-11-13 redesign: "homepage cleanup"). The homepage is
 // four parts — Offers, Shop by store, Our brands, For you — and each opens with this
@@ -44339,7 +44760,7 @@ const NEUTRAL_THEME = {
   background: '#F1EDE4',
   gradient: 'linear-gradient(168deg, #F6F2EA 0%, #E9E3D7 100%)'
 };
-const str$4 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
+const str$3 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
 
 /**
  * A CSS colour we are willing to inline as a style value.
@@ -44349,7 +44770,7 @@ const str$4 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
  * quote or url() is refused rather than escaped.
  */
 function safeColor(value) {
-  const v = str$4(value, 40);
+  const v = str$3(value, 40);
   if (!v) return '';
   if (/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) return v;
   if (/^(?:rgb|hsl)a?\(\s*[\d.,%\s/deg]+\)$/i.test(v)) return v;
@@ -44364,7 +44785,7 @@ function safeColor(value) {
  * one. No url(), no var(), no expression, no nesting of other functions.
  */
 function safeGradient(value) {
-  const v = str$4(value, 240);
+  const v = str$3(value, 240);
   if (!v) return '';
   if (!/^(?:linear|radial|conic)-gradient\(/i.test(v)) return '';
   if (!v.endsWith(')')) return '';
@@ -44434,16 +44855,16 @@ function makeSpotlightId(productSlug, taken = []) {
  */
 function sanitizeSpotlightItem(raw, taken = []) {
   if (!raw || typeof raw !== 'object') return null;
-  const productSlug = str$4(raw.productSlug ?? raw.productId ?? raw.slug, 120);
+  const productSlug = str$3(raw.productSlug ?? raw.productId ?? raw.slug, 120);
   if (!productSlug) return null;
   return {
-    id: str$4(raw.id, 60) || makeSpotlightId(productSlug, taken),
+    id: str$3(raw.id, 60) || makeSpotlightId(productSlug, taken),
     productSlug,
     // Optional cutout/hero asset. Same URL policy the homepage visuals use.
     spotlightImage: safeVisualUrl(raw.spotlightImage) || '',
     // Owner-authored, and shown verbatim. Never generated from product data.
-    headline: str$4(raw.headline, 60),
-    subline: str$4(raw.subline, 90),
+    headline: str$3(raw.headline, 60),
+    subline: str$3(raw.subline, 90),
     background: safeColor(raw.background),
     gradient: safeGradient(raw.gradient),
     // Generated once by the Admin packshot preprocessor. It is deliberately
@@ -45627,9 +46048,9 @@ const CONTENT_LABELS = {
   how_to_use: 'How to use',
   specifications: 'Specifications'
 };
-const str$3 = v => (v === null || v === undefined ? '' : String(v)).trim();
+const str$2 = v => (v === null || v === undefined ? '' : String(v)).trim();
 const truthyStr = v => {
-  const s = str$3(v);
+  const s = str$2(v);
   return s.length ? s : null;
 };
 
@@ -45643,7 +46064,7 @@ function normalizeKeyClaims(value) {
   const list = Array.isArray(value) ? value
   // A tag input or a CSV cell may hand us a comma-separated string.
   : String(value).split(',');
-  const out = list.map(str$3).filter(Boolean);
+  const out = list.map(str$2).filter(Boolean);
   return arrayOrNull(out);
 }
 function normalizeBenefits(value) {
@@ -45653,7 +46074,7 @@ function normalizeBenefits(value) {
   for (const raw of value) {
     if (typeof raw === 'string') {
       // The legacy shape. Keep it readable rather than dropping the content.
-      const t = str$3(raw);
+      const t = str$2(raw);
       if (t) out.push({
         title: t,
         description: ''
@@ -45661,8 +46082,8 @@ function normalizeBenefits(value) {
       continue;
     }
     if (!raw || typeof raw !== 'object') continue;
-    const title = str$3(raw.title);
-    const description = str$3(raw.description);
+    const title = str$2(raw.title);
+    const description = str$2(raw.description);
     // A row with neither is not a benefit, it is an empty row the admin has
     // not filled in yet — dropped on save rather than stored.
     if (!title && !description) continue;
@@ -45679,7 +46100,7 @@ function normalizeIngredients(value) {
   const out = [];
   for (const raw of value) {
     if (typeof raw === 'string') {
-      const n = str$3(raw);
+      const n = str$2(raw);
       if (n) out.push({
         name: n,
         description: '',
@@ -45688,14 +46109,14 @@ function normalizeIngredients(value) {
       continue;
     }
     if (!raw || typeof raw !== 'object') continue;
-    const name = str$3(raw.name);
+    const name = str$2(raw.name);
     if (!name) continue; // an ingredient with no name is nothing
     out.push({
       name,
-      description: str$3(raw.description),
+      description: str$2(raw.description),
       // Only http(s). A relative or javascript: value must never reach an
       // <img src> on a live page.
-      image_url: /^https?:\/\//i.test(str$3(raw.image_url)) ? str$3(raw.image_url) : null
+      image_url: /^https?:\/\//i.test(str$2(raw.image_url)) ? str$2(raw.image_url) : null
     });
   }
   return out;
@@ -45705,7 +46126,7 @@ function normalizeHowToUse(value) {
   if (!Array.isArray(value)) return null;
   const out = [];
   for (const raw of value) {
-    const text = typeof raw === 'string' ? str$3(raw) : str$3(raw?.text);
+    const text = typeof raw === 'string' ? str$2(raw) : str$2(raw?.text);
     if (!text) continue;
     out.push({
       step: out.length + 1,
@@ -45717,7 +46138,7 @@ function normalizeHowToUse(value) {
 function normalizeSpecifications(value) {
   if (value === null || value === undefined) return null;
   // Accept both the stored object and the editor's row array.
-  const pairs = Array.isArray(value) ? value.map(r => [str$3(r?.key), str$3(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$3(k), str$3(v)]) : [];
+  const pairs = Array.isArray(value) ? value.map(r => [str$2(r?.key), str$2(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$2(k), str$2(v)]) : [];
   const out = {};
   for (const [k, v] of pairs) {
     if (!k || !v) continue; // a label with no value renders as "Shelf life:"
@@ -45783,7 +46204,7 @@ function validateContent(input) {
       errors.push('Benefits: each row needs a title and description.');
       break;
     }
-    if (!str$3(b.title) && !str$3(b.description)) {
+    if (!str$2(b.title) && !str$2(b.description)) {
       errors.push('Benefits: a row is completely empty.');
       break;
     }
@@ -45793,11 +46214,11 @@ function validateContent(input) {
       errors.push('Ingredients: each row needs a name.');
       break;
     }
-    if (!str$3(i.name)) {
+    if (!str$2(i.name)) {
       errors.push('Ingredients: a row has a description but no name.');
       break;
     }
-    const url = str$3(i.image_url);
+    const url = str$2(i.image_url);
     if (url && !/^https?:\/\//i.test(url)) {
       errors.push(`Ingredients: "${url.slice(0, 30)}" is not an http(s) image URL.`);
       break;
@@ -45808,7 +46229,7 @@ function validateContent(input) {
       errors.push('How to use: each step needs text.');
       break;
     }
-    if (!str$3(s.text)) {
+    if (!str$2(s.text)) {
       errors.push('How to use: a step has no text.');
       break;
     }
@@ -45848,7 +46269,7 @@ function contentScore(product) {
     missing: CONTENT_FIELDS.filter(f => !populated.includes(f)),
     count: populated.length,
     total: CONTENT_FIELDS.length,
-    hasDescription: !!str$3(product?.description)
+    hasDescription: !!str$2(product?.description)
   };
 }
 
@@ -47570,15 +47991,12 @@ function Home() {
       title: "Deals worth grabbing"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
       wrap: "hx-wrap"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(TopDeals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BrandCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AnsariPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
     }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeGroup, {
       eyebrow: "Shop by store",
       title: "Wellness, fashion and home"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByConcerns, {}), /*#__PURE__*/jsxRuntimeExports.jsx(GiftShop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeGroup, {
-      eyebrow: "Our brands",
-      title: "The makers behind SORA"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(BrandCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeGroup, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByConcerns, {}), /*#__PURE__*/jsxRuntimeExports.jsx(GiftShop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TopDeals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeGroup, {
       eyebrow: "For you",
       title: "Picked for you"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WishlistRail, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
@@ -53760,7 +54178,7 @@ async function requireUserId() {
 }
 
 // ---------- field whitelists (prevent id/user_id injection) ----------
-function str$2(v) {
+function str$1(v) {
   return v == null ? null : String(v);
 }
 
@@ -53782,7 +54200,7 @@ function pickAddressColumns(fields = {}) {
   };
   const row = {};
   for (const [key, col] of Object.entries(map)) {
-    if (fields[key] !== undefined) row[col] = str$2(fields[key]);
+    if (fields[key] !== undefined) row[col] = str$1(fields[key]);
   }
   return row;
 }
@@ -70050,427 +70468,6 @@ function BudgetChips({
         })
       }, b.id))
     })]
-  });
-}
-
-const WEAVERS_RANGE_LIMIT = 12;
-
-/** The films, in the order they play along the row, each with where its tile opens. */
-Object.freeze([{
-  id: '0e053f13',
-  label: "Women's Shawls",
-  href: '/fashion/c/womens-shawls'
-}, {
-  id: '9530163f',
-  label: "Men's Shawls",
-  href: '/fashion/c/mens-shawls'
-}, {
-  id: '4f1440d9',
-  label: 'Dupattas & Phulkari',
-  href: '/fashion/c/dupattas-phulkari'
-}, {
-  id: '8a9a44c5',
-  label: 'Stoles',
-  href: '/fashion/c/stoles'
-}, {
-  id: '913fba8f',
-  label: 'Embroidered Shawls',
-  href: '/fashion/c/womens-shawls'
-}, {
-  id: 'c4953552',
-  label: 'Mufflers & Caps',
-  href: '/fashion/c/mufflers-caps'
-}, {
-  id: '1af80d20',
-  label: 'Table Covers',
-  href: '/homeliving/category/table-covers'
-}, {
-  id: '283b0a85',
-  label: 'Kullu Shawls',
-  href: '/fashion/c/womens-shawls'
-}, {
-  id: '6e5c05cd',
-  label: 'Statement Shawls',
-  href: '/fashion/c/womens-shawls'
-}, {
-  id: '8b4ab5ca',
-  label: 'Gift Box Sets',
-  href: '/fashion/c/shawl-gift-sets'
-}].map(f => Object.freeze({
-  ...f,
-  video: `/video/weavers-villa/${f.id}.mp4`,
-  poster: `/video/weavers-villa/${f.id}.webp`
-})));
-const str$1 = v => String(v ?? '').trim();
-
-/** A card-sized copy of a partner picture: their CDN resizes on `width`. */
-const cardImage = src => src ? String(src).replace(/([?&])width=\d+/, '$1width=700') : null;
-
-/**
- * The cards: { key, name, href, price, image }. Sub-categories take turns, each
- * keeping the catalogue's order; a row without a slug, a price or a picture is left out.
- */
-function selectWeaversRange(rows = [], limit = WEAVERS_RANGE_LIMIT) {
-  const queues = new Map();
-  for (const row of Array.isArray(rows) ? rows : []) {
-    if (row?.store !== 'fashion' || !str$1(row.slug)) continue;
-    const price = cataloguePrice(row);
-    const image = Array.isArray(row.images) ? row.images.find(Boolean) : null;
-    if (!(price > 0) || !image) continue;
-    const k = row.category_id ?? 'none';
-    if (!queues.has(k)) queues.set(k, []);
-    queues.get(k).push({
-      key: `fashion-${row.id}`,
-      name: str$1(row.name),
-      href: `/fashion/p/${row.slug}`,
-      price,
-      image: cardImage(image)
-    });
-  }
-  const lanes = [...queues.values()];
-  const out = [];
-  while (out.length < limit && lanes.some(q => q.length)) {
-    for (const q of lanes) if (q.length && out.length < limit) out.push(q.shift());
-  }
-  return out;
-}
-
-// ============================================================
-// Taj Leather (partner, 2026-11-11: "tie-up"). Their genuine leather jackets and
-// coats live in Fashion › Men (Leather Jackets, Leather Coats) and Fashion › Women
-// (the same two), their laptop bags in Leather Goods › Laptop & Travel Bags, at Taj
-// Leather's own prices.
-//
-//   * the range — a sliding row of their jackets and coats, sub-categories taking
-//     turns (the Weavers Villa rule: selectWeaversRange), cropped toward the top so
-//     the model's face stays in frame;
-//   * the posters — Taj Leather's own campaign posters ("The Leather Edit", the
-//     women's jacket), copies served from this site (/img/partners/taj-leather),
-//     each opening its listing. Their shoe and handbag posters are not used: those
-//     products are not on SORA.
-//
-// Shown on the wellness homepage and the Fashion home; editable in Storefronts →
-// Wellness (hide, wording, links). Nothing to show renders nothing.
-// ============================================================
-const TAJ_BRAND = 'Taj Leather';
-// Their range sits in Men's and Women's (2026-11-11: the departments show it), so "all of it" is the brand's search.
-const TAJ_LISTING = '/fashion/search?q=taj%20leather';
-const TAJ_RANGE_LIMIT = 12;
-const TAJ_SECTION = Object.freeze({
-  hidden: false,
-  title: 'Leather Jackets by Taj Leather',
-  more: 'View All',
-  link: ''
-});
-const TAJ_POSTERS_SECTION = Object.freeze({
-  hidden: false,
-  eyebrow: 'New on SORA Lifestyle',
-  title: 'Taj Leather',
-  text: 'Genuine leather jackets and coats for men and women, at Taj Leather’s own prices.',
-  cta: 'Shop leather jackets',
-  link: TAJ_LISTING
-});
-const P$1 = '/img/partners/taj-leather';
-const TAJ_POSTERS = Object.freeze([Object.freeze({
-  id: 'leather-edit',
-  href: '/fashion/c/mens-leather-jackets',
-  alt: 'The Leather Edit: men’s leather jackets by Taj Leather',
-  wide: `${P$1}/leather-edit-wide.webp`,
-  tall: `${P$1}/leather-edit-tall.webp`
-}), Object.freeze({
-  id: 'womens-jacket',
-  href: '/fashion/c/womens-leather-jackets',
-  alt: 'Premium leather jacket: women’s leather jackets by Taj Leather',
-  wide: `${P$1}/womens-jacket-wide.webp`,
-  tall: null
-})]);
-
-/** The range's rows: active fashion rows of the brand; a failed read counts as none. */
-async function fetchTajRows(client = supabase, limit = 72) {
-  const {
-    data,
-    error
-  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', TAJ_BRAND).eq('is_active', true).gt('stock', 0).order('sort_order', {
-    ascending: true
-  }).limit(limit);
-  if (error || !Array.isArray(data)) return [];
-  return data;
-}
-
-/** The range's cards: null until the read answers. */
-function useTajRange(limit = TAJ_RANGE_LIMIT) {
-  const [rows, setRows] = reactExports.useState(null);
-  reactExports.useEffect(() => {
-    let live = true;
-    fetchTajRows(supabase).then(r => {
-      if (live) setRows(r);
-    }, () => {
-      if (live) setRows([]);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-  // Jackets and coats only: their laptop bags stay in Leather Goods, out of this row.
-  return reactExports.useMemo(() => rows ? selectWeaversRange(rows.filter(r => !/laptop|bag\b/i.test(String(r.name || ''))), limit).map(c => ({
-    ...c,
-    image: c.image ? String(c.image).replace(/width=\d+/, 'width=700') : c.image
-  })) : null, [rows, limit]);
-}
-
-/** `items` is for a test; the page passes nothing and the live catalogue is read. */
-function TajLeatherRange({
-  items: given,
-  autoplayMs
-} = {}) {
-  const section = useStorefrontSection('wellness', 'tajLeather', TAJ_SECTION);
-  const loaded = useTajRange();
-  const items = (given ?? loaded) || [];
-  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-    className: "hx-wv-range",
-    children: /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
-      id: "taj",
-      label: "Taj Leather jackets",
-      section: section,
-      defaults: TAJ_SECTION,
-      link: section.link || TAJ_LISTING,
-      items: items,
-      ...(autoplayMs ? {
-        autoplayMs
-      } : {})
-    })
-  });
-}
-
-/** Their posters, side by side on a wide screen, one above the other on a phone (the tall cut where there is one). */
-function TajLeatherPosters({
-  posters = TAJ_POSTERS,
-  heading = true
-} = {}) {
-  const s = useStorefrontSection('wellness', 'tajPosters', TAJ_POSTERS_SECTION);
-  if (s.hidden || !posters.length) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "hx hx-taj",
-    "aria-labelledby": heading ? 'hx-taj-h' : undefined,
-    "aria-label": heading ? undefined : 'Taj Leather',
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "hx-wrap",
-      children: [heading && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "hx-taj__head",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-taj__eyebrow",
-            children: s.eyebrow
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-            className: "hx-taj__h",
-            id: "hx-taj-h",
-            children: s.title
-          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-taj__text",
-            children: s.text
-          })]
-        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: s.link || TAJ_LISTING,
-          className: "hx-taj__cta",
-          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "arrowRight",
-            size: 16
-          })]
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-        className: "hx-taj__posters",
-        children: posters.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-            to: p.href,
-            className: "hx-taj__poster",
-            children: /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
-              children: [p.tall && /*#__PURE__*/jsxRuntimeExports.jsx("source", {
-                media: "(max-width: 599px)",
-                srcSet: p.tall,
-                width: "900",
-                height: "1350"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-                src: p.wide,
-                alt: p.alt,
-                width: "1600",
-                height: "900",
-                loading: i === 0 ? 'eager' : 'lazy',
-                decoding: "async"
-              })]
-            })
-          })
-        }, p.id))
-      })]
-    })
-  });
-}
-
-// ============================================================
-// Ansari Fashion, Banaras (partner, 2026-11-13: "tie-up"). Their Banarasi suit sets
-// (mostly unstitched, three pieces) and sarees live in Fashion › Women (Suits &
-// Dress Materials, Sarees), so the Women page and the saree store show them too.
-// Prices are theirs; an M.R.P. more than 60% above the price is not shown.
-//
-//   * the posters — their three category photographs (copies served from this site,
-//     /img/partners/ansari-fashion), each with our own label, opening its listing.
-//     Their sale banners ("extra 10% on prepaid" and the like) are not used: those
-//     are their store's offers, not SORA's.
-//   * the range — a sliding row of their pieces, the two categories taking turns.
-//
-// On the wellness homepage and the Fashion home; editable in Storefronts → Wellness.
-// ============================================================
-const ANSARI_BRAND = 'Ansari Fashion';
-const ANSARI_LISTING = '/fashion/search?q=ansari%20fashion';
-const ANSARI_RANGE_LIMIT = 12;
-const ANSARI_SECTION = Object.freeze({
-  hidden: false,
-  title: 'Banarasi suits & sarees by Ansari Fashion',
-  more: 'View All',
-  link: ''
-});
-const ANSARI_POSTERS_SECTION = Object.freeze({
-  hidden: false,
-  eyebrow: 'New on SORA Lifestyle',
-  title: 'Ansari Fashion, Banaras',
-  text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees, at Ansari Fashion’s own prices.',
-  cta: 'Shop Ansari Fashion',
-  link: ANSARI_LISTING
-});
-const P = '/img/partners/ansari-fashion';
-const ANSARI_POSTERS = Object.freeze([Object.freeze({
-  id: 'suits',
-  label: 'Suits & Dress Materials',
-  href: '/fashion/c/suits-dress-materials',
-  image: `${P}/suit-sets.webp`,
-  alt: 'A woman in a cream Banarasi suit with a woven dupatta'
-}), Object.freeze({
-  id: 'banarasi',
-  label: 'Banarasi Silk Suits',
-  href: '/fashion/search?q=banarasi%20silk',
-  image: `${P}/banarasi-suits.webp`,
-  alt: 'A woman in a pink Banarasi silk suit with a zari dupatta'
-}), Object.freeze({
-  id: 'sarees',
-  label: 'Sarees',
-  href: '/fashion/c/sarees',
-  image: `${P}/sarees.webp`,
-  alt: 'A woman in a Banarasi silk saree'
-})]);
-
-/** The range's rows: active, in-stock fashion rows of the brand; a failed read counts as none. */
-async function fetchAnsariRows(client = supabase, limit = 72) {
-  const {
-    data,
-    error
-  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', ANSARI_BRAND).eq('is_active', true).gt('stock', 0).order('sort_order', {
-    ascending: true
-  }).limit(limit);
-  if (error || !Array.isArray(data)) return [];
-  return data;
-}
-
-/** A card-sized copy of their picture (their CDN resizes on w-…). */
-const ansariCard = src => src ? String(src).replace(/\bw-\d+\b/, 'w-700') : src;
-
-/** The range's cards: null until the read answers. */
-function useAnsariRange(limit = ANSARI_RANGE_LIMIT) {
-  const [rows, setRows] = reactExports.useState(null);
-  reactExports.useEffect(() => {
-    let live = true;
-    fetchAnsariRows(supabase).then(r => {
-      if (live) setRows(r);
-    }, () => {
-      if (live) setRows([]);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-  return reactExports.useMemo(() => rows ? selectWeaversRange(rows, limit).map(c => ({
-    ...c,
-    image: ansariCard(c.image)
-  })) : null, [rows, limit]);
-}
-
-/** `items` is for a test; the page passes nothing and the live catalogue is read. */
-function AnsariRange({
-  items: given,
-  autoplayMs
-} = {}) {
-  const section = useStorefrontSection('wellness', 'ansari', ANSARI_SECTION);
-  const loaded = useAnsariRange();
-  const items = (given ?? loaded) || [];
-  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-    className: "hx-wv-range",
-    children: /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
-      id: "ansari",
-      label: "Ansari Fashion suits and sarees",
-      section: section,
-      defaults: ANSARI_SECTION,
-      link: section.link || ANSARI_LISTING,
-      items: items,
-      ...(autoplayMs ? {
-        autoplayMs
-      } : {})
-    })
-  });
-}
-function AnsariPosters({
-  posters = ANSARI_POSTERS
-} = {}) {
-  const s = useStorefrontSection('wellness', 'ansariPosters', ANSARI_POSTERS_SECTION);
-  if (s.hidden || !posters.length) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "hx hx-ans",
-    "aria-labelledby": "hx-ans-h",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "hx-wrap",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "hx-taj__head",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-taj__eyebrow",
-            children: s.eyebrow
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-            className: "hx-taj__h",
-            id: "hx-ans-h",
-            children: s.title
-          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-taj__text",
-            children: s.text
-          })]
-        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: s.link || ANSARI_LISTING,
-          className: "hx-ans__cta",
-          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "arrowRight",
-            size: 16
-          })]
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-        className: "hx-ans__posters",
-        children: posters.map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: p.href,
-            className: "hx-ans__poster",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
-              src: p.image,
-              alt: p.alt,
-              width: "900",
-              height: "1200",
-              loading: "lazy",
-              decoding: "async"
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              className: "hx-ans__label",
-              children: [p.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                name: "arrowRight",
-                size: 15
-              })]
-            })]
-          })
-        }, p.id))
-      })]
-    })
   });
 }
 
