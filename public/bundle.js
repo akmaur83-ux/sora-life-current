@@ -58487,7 +58487,8 @@ function Settings$1() {
         style: {
           margin: '20px 0'
         }
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/delete-account",
         className: "linkbtn linkbtn--danger",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "trash",
@@ -59386,6 +59387,13 @@ const HELP_TOPICS = Object.freeze([Object.freeze({
       label: 'My Orders'
     }
   }, {
+    q: 'How do I delete my account?',
+    a: 'Ask us on WhatsApp or by email from the number or address on your account; we confirm it is you and delete it within 30 days.',
+    link: {
+      to: '/delete-account',
+      label: 'Delete your account'
+    }
+  }, {
     q: 'How do I save products for later?',
     a: 'Tap the heart on any product. Your wishlist also tells you when a saved product’s price has dropped.',
     link: {
@@ -59534,6 +59542,131 @@ function Help() {
             to: "/contact",
             className: "hx-offers__btn",
             children: "Contact & help"
+          })]
+        })]
+      })]
+    })
+  });
+}
+
+const DELETE_TEXT = 'Hi SORA Lifestyle, please delete my SORA LIFESTYLE account and its personal data. My account email / phone: ';
+function deleteLinks(care) {
+  const n = waNumber(care?.phone);
+  const email = String(care?.email || '').trim();
+  return {
+    wa: n ? `https://wa.me/${n}?text=${encodeURIComponent(DELETE_TEXT)}` : '',
+    mail: email ? `mailto:${email}?subject=${encodeURIComponent('Delete my SORA LIFESTYLE account')}&body=${encodeURIComponent(DELETE_TEXT)}` : '',
+    email
+  };
+}
+function DeleteAccount() {
+  const care = useConsumerCare();
+  const {
+    wa,
+    mail,
+    email
+  } = deleteLinks(care);
+  usePageMeta({
+    title: 'Delete your account',
+    description: 'How to ask SORA LIFESTYLE to delete your account and personal data.',
+    path: '/delete-account'
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx hx-help",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/",
+          children: "Home"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Delete your account"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "hx-offers__h",
+        children: "Delete your SORA LIFESTYLE account"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-offers__lede",
+        children: "This applies to accounts made on www.soralifestyle.in and in the SORA LIFESTYLE app: they are the same account."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-help__topics",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+          className: "hx-help__topic",
+          "aria-labelledby": "hx-del-how",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            id: "hx-del-how",
+            children: "How to ask"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-del__p",
+            children: "Send us a request from the WhatsApp number or email address on your account, saying which email or phone number you signed up with. We confirm it is your account before deleting anything."
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: "hx-help__ask-go",
+            children: [wa && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+              href: wa,
+              target: "_blank",
+              rel: "noopener noreferrer",
+              className: "hx-offers__btn hx-offers__btn--wa",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "chat",
+                size: 16
+              }), " Request on WhatsApp"]
+            }), mail && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+              href: mail,
+              className: "hx-offers__btn",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "mail",
+                size: 16
+              }), " Request by email"]
+            })]
+          }), email && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            className: "hx-del__p hx-del__small",
+            children: ["Or write to ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: email
+            }), " with the subject \u201CDelete my SORA LIFESTYLE account\u201D."]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+          className: "hx-help__topic",
+          "aria-labelledby": "hx-del-what",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            id: "hx-del-what",
+            children: "What is deleted"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
+            className: "hx-del__list",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("li", {
+              children: "Your account and sign-in"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+              children: "Your name, phone number, email address and saved addresses"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+              children: "Your wishlist and saved preferences"
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+          className: "hx-help__topic",
+          "aria-labelledby": "hx-del-kept",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            id: "hx-del-kept",
+            children: "What is kept, and for how long"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            className: "hx-del__p",
+            children: ["Records of orders you placed (invoices, payment and delivery records) are kept only for as long as tax and accounting law requires, and are not used for anything else. Read more in our ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+              to: "/privacy",
+              children: "Privacy Policy"
+            }), "."]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+          className: "hx-help__topic",
+          "aria-labelledby": "hx-del-when",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            id: "hx-del-when",
+            children: "How long it takes"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-del__p",
+            children: "We act on a confirmed request within 30 days and tell you when it is done. An order still being delivered or returned is completed first."
           })]
         })]
       })]
@@ -79114,6 +79247,9 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "/help",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(Help, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "/delete-account",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(DeleteAccount, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "/about",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(About, {})
