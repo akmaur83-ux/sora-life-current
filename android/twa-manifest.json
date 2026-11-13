@@ -1,0 +1,76 @@
+{
+  "packageId": "in.soralifestyle.app",
+  "host": "www.soralifestyle.in",
+  "name": "SORA LIFESTYLE",
+  "launcherName": "SORA",
+  "display": "standalone",
+  "themeColor": "#1E3A2F",
+  "themeColorDark": "#000000",
+  "navigationColor": "#1E3A2F",
+  "navigationColorDark": "#1E3A2F",
+  "navigationDividerColor": "#1E3A2F",
+  "navigationDividerColorDark": "#1E3A2F",
+  "backgroundColor": "#1E3A2F",
+  "enableNotifications": false,
+  "startUrl": "/?source=android-app",
+  "iconUrl": "https://www.soralifestyle.in/assets/app-icon-512.png",
+  "maskableIconUrl": "https://www.soralifestyle.in/assets/app-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./sora-upload.jks",
+    "alias": "sora-upload"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Offers & deals",
+      "shortName": "Offers",
+      "url": "http://localhost:4173/offers?source=app-shortcut",
+      "chosenIconUrl": "https://www.soralifestyle.in/assets/shortcut-offers.png"
+    },
+    {
+      "name": "My orders",
+      "shortName": "Orders",
+      "url": "http://localhost:4173/account/orders?source=app-shortcut",
+      "chosenIconUrl": "https://www.soralifestyle.in/assets/shortcut-orders.png"
+    },
+    {
+      "name": "Saved items",
+      "shortName": "Saved",
+      "url": "http://localhost:4173/wishlist?source=app-shortcut",
+      "chosenIconUrl": "https://www.soralifestyle.in/assets/shortcut-saved.png"
+    },
+    {
+      "name": "Fashion",
+      "shortName": "Fashion",
+      "url": "http://localhost:4173/fashion?source=app-shortcut",
+      "chosenIconUrl": "https://www.soralifestyle.in/assets/shortcut-fashion.png"
+    }
+  ],
+  "generatorApp": "unknown",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "minSdkVersion": 24,
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": [
+    "navigate-existing",
+    "auto"
+  ],
+  "displayOverride": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "appVersion": "1.0.0"
+}

@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import ScrollManager from './components/ScrollManager.jsx';
 import SiteAssist from './components/SiteAssist.jsx';
+import AppShell from './components/AppShell.jsx';
 import { StoreProvider } from './lib/store.jsx';
 import { AdminAuthProvider } from './lib/adminAuth.jsx';
 import { CustomerAuthProvider } from './lib/customerAuth.jsx';
@@ -117,6 +118,8 @@ function Root() {
                 <App />
               </ErrorBoundary>
             </AdminAuthProvider>
+            {/* The installed app: offline worker, new-version notice, Back button, icon badge (AppShell.jsx). */}
+            <AppShell />
           </StoreProvider>
         </CustomerAuthProvider>
         {/* Chat on WhatsApp and back to top on every storefront page (SiteAssist.jsx). */}

@@ -14,6 +14,7 @@ import { money } from '../lib/format.js';
 import { fulfillmentStatusLabel, safeTrackingUrl } from '../lib/orderFulfillment.js';
 import { useConsumerCare } from '../lib/consumerCare.js';
 import { waNumber } from '../components/SiteAssist.jsx';
+import InstallApp from '../components/InstallApp.jsx';
 
 // Format an ISO timestamp the same way the rest of the app does (en-IN).
 function fmtOrderDate(iso) {
@@ -113,6 +114,8 @@ export default function Account() {
               </button>
             ))}
             <button className="acct__navitem acct__logout" onClick={() => signOut()}><Icon name="logout" size={19} /> Log out</button>
+            {/* The SORA app, where this browser can install it (InstallApp.jsx); nothing otherwise. */}
+            <InstallApp className="acct__navitem acct__app" label="Get the SORA app" />
           </aside>
 
           <div className="acct__panel">

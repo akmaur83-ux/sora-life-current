@@ -20,3 +20,4 @@ __pycache__
 *.local
 reports
 .creator-qa
+android

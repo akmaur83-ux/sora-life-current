@@ -1,23 +1,148 @@
 {
   "name": "SORA LIFESTYLE",
   "short_name": "SORA",
-  "description": "Wellness, beauty, fashion and home essentials from SORA LIFESTYLE.",
+  "description": "Shop wellness, beauty, fashion and home essentials from SORA LIFESTYLE: free standard delivery across India, offers, order tracking and products you've browsed even offline.",
   "id": "/",
-  "start_url": "/",
+  "start_url": "/?source=app",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#FFFFFF",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#1E3A2F",
   "theme_color": "#1E3A2F",
   "lang": "en-IN",
-  "categories": ["shopping", "lifestyle", "health"],
+  "dir": "ltr",
+  "categories": [
+    "shopping",
+    "lifestyle",
+    "health",
+    "beauty"
+  ],
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  },
   "icons": [
-    { "src": "/assets/favicon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/app-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/app-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Fashion", "url": "/fashion" },
-    { "name": "Home & Living", "url": "/homeliving" },
-    { "name": "My orders", "url": "/account/orders" }
+    {
+      "name": "Offers & deals",
+      "short_name": "Offers",
+      "url": "/offers?source=app-shortcut",
+      "icons": [
+        {
+          "src": "/assets/shortcut-offers.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "My orders",
+      "short_name": "Orders",
+      "url": "/account/orders?source=app-shortcut",
+      "icons": [
+        {
+          "src": "/assets/shortcut-orders.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Saved items",
+      "short_name": "Saved",
+      "url": "/wishlist?source=app-shortcut",
+      "icons": [
+        {
+          "src": "/assets/shortcut-saved.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Fashion",
+      "short_name": "Fashion",
+      "url": "/fashion?source=app-shortcut",
+      "icons": [
+        {
+          "src": "/assets/shortcut-fashion.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Home & Living",
+      "short_name": "Home",
+      "url": "/homeliving?source=app-shortcut",
+      "icons": [
+        {
+          "src": "/assets/shortcut-home.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/assets/app-shot-home.webp",
+      "sizes": "1080x1920",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "SORA LIFESTYLE home: wellness, fashion and home in one app"
+    },
+    {
+      "src": "/assets/app-shot-fashion.webp",
+      "sizes": "1080x1920",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Fashion: suits, sarees, shawls and leather"
+    },
+    {
+      "src": "/assets/app-shot-offers.webp",
+      "sizes": "1080x1920",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Offers & deals, biggest discounts first"
+    },
+    {
+      "src": "/assets/app-shot-wide.webp",
+      "sizes": "1280x800",
+      "type": "image/webp",
+      "form_factor": "wide",
+      "label": "SORA LIFESTYLE on a larger screen"
+    }
   ]
 }

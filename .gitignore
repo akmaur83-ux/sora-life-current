@@ -14,3 +14,13 @@ img/published/
 img/.published-tmp/
 .flake-reports
 .creator-qa
+
+# Android app (TWA) build output and signing — the key never goes in the repo
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.jks
+*.keystore
+*.aab
+*.apk

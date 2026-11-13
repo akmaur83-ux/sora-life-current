@@ -5,6 +5,7 @@ import { useConsumerCare } from '../lib/consumerCare.js';
 import { siteHomeTitle, holdTitle, useSiteLd } from '../lib/pageMeta.js';
 import PromoCard from './PromoCard.jsx';
 import { careOpen } from '../lib/careHours.js';
+import AppNudge from './AppNudge.jsx';
 
 // ============================================================
 // Two small helpers on every storefront page (owner, 2026-11-08: more features),
@@ -68,13 +69,17 @@ export default function SiteAssist() {
 
   useEffect(() => {
     const measure = () => setOffset(footOffset());
-    const timers = [100, 600, 1500].map((ms) => setTimeout(measure, ms));   // also where only the promo card shows (cart, checkout)
+    // Also later: a product page's buy bar appears once its catalogue has loaded (often after 1.5 s).
+    const timers = [100, 600, 1500, 3000, 5000].map((ms) => setTimeout(measure, ms));   // also where only the promo card shows (cart, checkout)
     window.addEventListener('resize', measure);
-    if (hidden) return () => { timers.forEach(clearTimeout); window.removeEventListener('resize', measure); };
+    let once = false;
+    const firstScroll = () => { if (!once) { once = true; measure(); } };
+    window.addEventListener('scroll', firstScroll, { passive: true });
+    if (hidden) return () => { timers.forEach(clearTimeout); window.removeEventListener('resize', measure); window.removeEventListener('scroll', firstScroll); };
     const onScroll = () => setUp(window.scrollY > window.innerHeight * 2);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => { timers.forEach(clearTimeout); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', measure); };
+    return () => { timers.forEach(clearTimeout); window.removeEventListener('scroll', onScroll); window.removeEventListener('scroll', firstScroll); window.removeEventListener('resize', measure); };
   }, [pathname, hidden]);
 
   // Desktop: once the buy box has scrolled away on a Fashion or Home & Living product
@@ -94,6 +99,9 @@ export default function SiteAssist() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => { window.removeEventListener('scroll', onScroll); root.classList.remove('pdp-bar-on'); document.querySelectorAll('.hl.pdp-bar-on').forEach((el) => el.classList.remove('pdp-bar-on')); };
   }, [pathname]);
+
+  // The installed app's Back button sits above the same foot bar (AppShell.jsx).
+  useEffect(() => { document.documentElement.style.setProperty('--app-foot', `${offset}px`); }, [offset]);
 
   // Offline notice (2026-11-10): the connection dropping says so, on every page, the
   // checkout included; coming back says so for a few seconds, then goes.
@@ -154,12 +162,15 @@ export default function SiteAssist() {
 
   const netNote = net && (
     <p className={`hx-net${net === 'back' ? ' is-back' : ''}`} role="status" aria-live="polite">
-      {net === 'off' ? 'You’re offline. Check your connection; anything new loads once you’re back.' : 'Back online.'}
+      {net === 'off'
+        ? (navigator.serviceWorker?.controller ? 'You’re offline. Pages and products you’ve already seen still open; anything new loads once you’re back.' : 'You’re offline. Check your connection; anything new loads once you’re back.')
+        : 'Back online.'}
     </p>
   );
   // A promo link's code, or the welcome offer (PromoCard.jsx); cart and checkout keep the code in view.
   const promo = <PromoCard foot={offset} />;
   if (hidden) return <>{netNote}{promo}</>;
+  const nudge = <AppNudge foot={offset} />;
   // The product's name is read from the page's heading at the moment of the tap (it renders after this).
   const build = () => waLink(care?.phone, pathname, document.querySelector('main h1, h1')?.textContent || '', window.location.href.split('#')[0]);
   const wa = waLink(care?.phone, '/', '', '');
@@ -171,7 +182,7 @@ export default function SiteAssist() {
     window.scrollTo({ top: 0, behavior: still ? 'auto' : 'smooth' });
   };
   return (
-    <>{netNote}{promo}
+    <>{netNote}{promo}{nudge}
     <div className="hx-sa" style={{ '--sa-foot': `${offset}px` }}>
       {up && (
         <button type="button" className="hx-sa__btn hx-sa__top" onClick={top} aria-label="Back to top">

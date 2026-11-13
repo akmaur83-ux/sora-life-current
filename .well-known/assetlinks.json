@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.soralifestyle.app",
+      "sha256_cert_fingerprints": [
+        "2E:A3:E3:23:54:86:4F:8A:3E:7B:D1:43:C6:5A:9C:49:41:73:5A:61:A2:CC:A8:A8:71:30:A4:31:8D:B9:67:BD"
+      ]
+    }
+  }
+]

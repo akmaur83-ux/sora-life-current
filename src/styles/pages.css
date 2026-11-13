@@ -964,3 +964,7 @@
   font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2;
   margin: 0 0 var(--sp-4); color: var(--slv2-ink);
 }
+
+/* The SORA app in the account menu (2026-11-13): shown only where this browser can install it. */
+.acct__navitem.acct__app { width: auto; margin-top: 0; padding: 12px 14px; border: 0; background: var(--forest-50); color: var(--forest-700); font: inherit; font-weight: 600; }
+.acct__navitem.acct__app:hover { background: var(--forest-100, var(--forest-50)); }
