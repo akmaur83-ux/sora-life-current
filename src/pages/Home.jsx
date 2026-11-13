@@ -13,6 +13,7 @@ import { WeaversVillaRange, WeaversVillaShowcase } from '../components/WeaversVi
 import { LeatherFactoryRange, LeatherFactoryShowcase } from '../components/LeatherFactory.jsx';
 import { AtomyRange, AtomyShowcase } from '../components/Atomy.jsx';
 import { TajLeatherRange, TajLeatherPosters } from '../components/TajLeather.jsx';
+import { AnsariRange, AnsariPosters } from '../components/AnsariFashion.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import GiftShop from '../components/GiftShop.jsx';
@@ -118,6 +119,11 @@ export default function Home() {
           and coats in the same sliding row (TajLeather.jsx). */}
       <TajLeatherPosters />
       <TajLeatherRange />
+
+      {/* Ansari Fashion (partner, 2026-11-13): three category posters, then their
+          Banarasi suits and sarees (AnsariFashion.jsx). */}
+      <AnsariPosters />
+      <AnsariRange />
 
       {/* Home & Living's Bedsheets, a sliding row of its live products in the
           catalogue's own order (HomeCategoryRails.jsx), directly under the

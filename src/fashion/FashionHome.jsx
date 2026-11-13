@@ -11,6 +11,7 @@ import BudgetChips from '../components/BudgetChips.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import { BagReminder } from '../components/HomeExtras.jsx';
 import { TajLeatherPosters, TajLeatherRange } from '../components/TajLeather.jsx';
+import { AnsariPosters, AnsariRange } from '../components/AnsariFashion.jsx';
 import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
 import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
 import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
@@ -156,6 +157,8 @@ export default function FashionHome() {
       <CategoryChips />
       {/* Taj Leather (partner, 2026-11-11): their campaign posters right under the hero (TajLeather.jsx). */}
       <TajLeatherPosters />
+      {/* Ansari Fashion (partner, 2026-11-13): their category posters (AnsariFashion.jsx). */}
+      <AnsariPosters />
       <BagReminder wrap="fs-sec" />
       <OfferBanner wrap="fs-sec" />
       {/* This visitor's recently viewed fashion products (2+; this browser only). */}
@@ -163,6 +166,7 @@ export default function FashionHome() {
       <BudgetChips base="/fashion/search" wrap="fs-sec" />
       <CategoryTiles tree={tree} />
       <TajLeatherRange />
+      <AnsariRange />
       <Benefits />
       <ShopByCategory tree={tree} copy={config.sections} />
       <TopBrands views={views} copy={config.sections} />
