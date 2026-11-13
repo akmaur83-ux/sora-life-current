@@ -1,5 +1,9 @@
 import { r as reactExports, j as jsxRuntimeExports, bP as fetchReviewsForAdmin, bQ as fetchQuestionsForAdmin, bR as productHref, bS as fetchStockAlerts, bT as groupAlerts, bU as setReviewStatus, bV as answerQuestion, bW as rejectQuestion, bX as markAlertsNotified } from '../bundle.js';
 
+function backInStockBody(g) {
+  const search = `https://www.soralifestyle.in/${g.product_key.startsWith('fashion:') ? 'fashion/search' : g.product_key.startsWith('homeliving:') ? 'homeliving/search' : 'shop'}?q=${encodeURIComponent(g.product_name)}`;
+  return `Hello,\n\nGood news: ${g.product_name}${g.choice ? ` (${g.choice})` : ''} is back in stock at SORA LIFESTYLE.\n\nShop it here: ${search}\n\nYou asked us to let you know when it returned.\n\nSORA LIFESTYLE`;
+}
 const SECTIONS = [['reviews', 'Reviews'], ['questions', 'Questions'], ['alerts', 'Stock alerts']];
 const card = {
   border: '1px solid #E4E8E1',
@@ -305,7 +309,7 @@ function AlertsPane() {
           },
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("a", {
             className: "btn btn-sm btn-ghost",
-            href: `mailto:?bcc=${encodeURIComponent(g.rows.map(r => r.email).join(','))}&subject=${encodeURIComponent(`${g.product_name} is back in stock`)}`,
+            href: `mailto:?bcc=${encodeURIComponent(g.rows.map(r => r.email).join(','))}&subject=${encodeURIComponent(`${g.product_name} is back in stock`)}&body=${encodeURIComponent(backInStockBody(g))}`,
             children: "Email them"
           }), tab === 'open' && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
             type: "button",
@@ -334,5 +338,5 @@ function Reviews() {
   });
 }
 
-export { Reviews as default };
+export { backInStockBody, Reviews as default };
 //# sourceMappingURL=Reviews.js.map

@@ -9850,6 +9850,106 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 .sora-brand--luxe .sora-brand__eyebrow { color: #D9B26A; }
 .sora-brand--luxe .sora-brand__count { color: #F7F1E4; }
 
+/* ===== Features 22–38 (2026-11-13) ===== */
+/* Mega menu under the store bar (MegaMenu.jsx). */
+.sora-storebar { position: relative; z-index: 70; }
+.sora-storebar__store.is-open { background: #fff; color: var(--sora-forest); }
+.sora-mega { position: absolute; left: 0; right: 0; top: 100%; background: #fff; border-top: 1px solid #E6DFCC; border-bottom: 1px solid var(--sora-line); box-shadow: 0 24px 40px -24px rgba(15, 17, 17, .35); }
+.sora-mega__in { max-width: 1480px; margin: 0 auto; padding: 22px max(16px, 4vw) 18px; display: grid; gap: 14px; }
+.sora-mega__tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px; }
+.sora-mega__tiles a { display: flex; flex-direction: column; gap: 6px; color: var(--sora-ink); text-decoration: none; }
+.sora-mega__tiles b { font-size: 13.5px; font-weight: 600; }
+.sora-mega__img { display: block; aspect-ratio: 1; overflow: hidden; background: #F3F1EA; }
+.sora-mega__img img { width: 100%; height: 100%; object-fit: cover; }
+.sora-mega__img.is-whole img { object-fit: contain; padding: 8px; box-sizing: border-box; background: #fff; }
+.sora-mega__cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 20px; }
+.sora-mega__head { display: flex; flex-direction: column; gap: 8px; color: var(--sora-ink); text-decoration: none; }
+.sora-mega__head .sora-mega__img { aspect-ratio: 10 / 7; }
+.sora-mega__head b { display: inline-flex; align-items: center; gap: 2px; font-size: 15px; }
+.sora-mega__col ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.sora-mega__col li a { color: #3E4A44; font-size: 13.5px; text-decoration: none; }
+.sora-mega a:hover b, .sora-mega__col li a:hover { color: var(--sora-honey); }
+.sora-mega__all { justify-self: end; display: inline-flex; align-items: center; gap: 4px; color: var(--sora-forest-2); font-weight: 700; text-decoration: none; }
+.sora-mega__wait { margin: 0; color: var(--sora-muted); }
+
+/* Compare (Compare.jsx). */
+.sora-cmpbtn { display: inline-flex; align-items: center; gap: 6px; height: 34px; margin-top: 10px; padding: 0 12px; border: 1px solid #D5D9D9; background: #fff; color: var(--sora-ink); font: 600 13.5px Arial, sans-serif; cursor: pointer; }
+.sora-cmpbtn.is-on { border-color: var(--sora-forest); color: var(--sora-forest); background: #EEF4F0; }
+.sora-cmptray { position: fixed; left: 50%; bottom: calc(14px + var(--app-foot, 0px) + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 58; display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #fff; border: 1px solid #D5D9D9; box-shadow: 0 16px 34px -14px rgba(15, 17, 17, .4); max-width: calc(100vw - 24px); }
+.sora-cmptray ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; }
+.sora-cmptray li { position: relative; width: 44px; height: 44px; border: 1px solid var(--sora-line); background: #fff; }
+.sora-cmptray li.is-empty { border-style: dashed; }
+.sora-cmptray li img { width: 100%; height: 100%; object-fit: contain; }
+.sora-cmptray li button { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; display: grid; place-items: center; padding: 0; border: 0; background: var(--sora-ink); color: #fff; cursor: pointer; }
+.sora-cmptray p { margin: 0; font-size: 13px; color: var(--sora-muted); white-space: nowrap; }
+.sora-cmptray__go { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; background: var(--sora-forest); color: #fff; font-weight: 700; font-size: 14px; text-decoration: none; white-space: nowrap; }
+.sora-cmptray__go.is-off { pointer-events: none; opacity: .45; }
+.sora-cmptray__clear { border: 0; background: none; color: var(--sora-muted); font-size: 13px; text-decoration: underline; cursor: pointer; }
+@media (max-width: 600px) { .sora-cmptray p, .sora-cmptray__clear { display: none; } }
+.sora-cmp { overflow-x: auto; margin: 16px 0 32px; }
+.sora-cmp table { border-collapse: collapse; min-width: 640px; width: 100%; background: #fff; }
+.sora-cmp th, .sora-cmp td { padding: 12px; border: 1px solid var(--sora-line); text-align: left; vertical-align: top; font-size: 14px; }
+.sora-cmp tbody th { width: 140px; background: #F7F8F8; font-weight: 700; }
+.sora-cmp__item { display: flex; flex-direction: column; gap: 8px; color: var(--sora-ink); text-decoration: none; font-weight: 600; }
+.sora-cmp__item img { width: 140px; height: 140px; object-fit: contain; background: #fff; }
+.sora-cmp__rm { margin-top: 8px; border: 0; background: none; color: var(--sora-muted); text-decoration: underline; cursor: pointer; padding: 0; font-size: 13px; }
+
+/* Price history (PriceHistory.jsx). */
+.sora-ph { margin: 22px 0; padding: 16px; border: 1px solid var(--sora-line); background: #fff; color: var(--sora-forest-2); max-width: 520px; }
+.sora-ph__facts { display: flex; gap: 18px; flex-wrap: wrap; margin: 8px 0 0; font-size: 13.5px; color: var(--sora-muted); }
+.sora-ph__facts b { color: var(--sora-ink); }
+.sora-ph__low { margin: 8px 0 0; font-size: 13.5px; font-weight: 700; color: #067D62; }
+
+/* Build your hamper (Hamper.jsx). */
+.sora-hamper { padding-bottom: 110px; }
+.sora-hamper__grid { margin-top: 16px; }
+.sora-hamper__card { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 0; border: 2px solid transparent; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.sora-hamper__card.is-on { border-color: var(--sora-forest); }
+.sora-hamper__card:disabled { opacity: .45; cursor: not-allowed; }
+.sora-hamper__card .hx-deals__img { position: relative; }
+.sora-hamper__tick { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; display: grid; place-items: center; background: #fff; border: 1px solid #D5D9D9; color: var(--sora-forest); }
+.sora-hamper__card.is-on .sora-hamper__tick { background: var(--sora-forest); color: #fff; border-color: var(--sora-forest); }
+.sora-hamper__bar { position: fixed; left: 0; right: 0; bottom: calc(var(--app-foot, 0px)); z-index: 57; background: #fff; border-top: 1px solid #D5D9D9; box-shadow: 0 -10px 24px -16px rgba(15, 17, 17, .35); }
+.sora-hamper__bar-in { max-width: 1480px; margin: 0 auto; padding: 10px max(16px, 4vw) calc(10px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 14px; }
+.sora-hamper__picked { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; }
+.sora-hamper__picked li { width: 40px; height: 40px; border: 1px solid var(--sora-line); background: #fff; }
+.sora-hamper__picked li.is-empty { border-style: dashed; }
+.sora-hamper__picked img { width: 100%; height: 100%; object-fit: contain; }
+.sora-hamper__bar p { margin: 0; flex: 1; font-size: 14px; }
+.sora-hamper__bar p span { display: block; font-size: 12.5px; color: var(--sora-muted); }
+.sora-hamper__go { height: 42px; padding: 0 18px; border: 0; background: var(--sora-forest); color: #fff; font: 700 14.5px Arial, sans-serif; cursor: pointer; white-space: nowrap; }
+.sora-hamper__go:disabled { opacity: .45; cursor: not-allowed; }
+@media (max-width: 600px) { .sora-hamper__picked { display: none; } }
+
+/* Shop by colour, styling tips, almost gone (ShopExtras.jsx). */
+.sora-colours__row { list-style: none; margin: 0; padding: 0 0 4px; display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; }
+.sora-colours__row::-webkit-scrollbar { display: none; }
+.sora-colours__sw { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 72px; color: var(--sora-ink); font-size: 13px; text-decoration: none; }
+.sora-colours__sw span { width: 52px; height: 52px; border-radius: 50%; border: 1px solid rgba(15, 17, 17, .15); box-shadow: inset 0 0 0 3px #fff; }
+.sora-colours__sw:hover span { outline: 2px solid var(--sora-forest); outline-offset: 2px; }
+.sora-tips { margin: 22px 0; padding: 16px 18px; background: var(--sora-cream); border: 1px solid #EDE6D3; max-width: 760px; }
+.sora-tips h2 { display: flex; align-items: center; gap: 6px; }
+.sora-tips ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14.5px; line-height: 1.5; }
+.sora-last { padding: 24px 0 8px; }
+.sora-last__row { list-style: none; margin: 0; padding: 0 0 8px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(160px, 190px); gap: 14px; overflow-x: auto; }
+.sora-last .hx-deals__img { position: relative; }
+.sora-last__left { position: absolute; left: 8px; bottom: 8px; padding: 3px 8px; background: #B12704; color: #fff; font-size: 12px; }
+
+/* Sticky category strip on phones (StickyCats.jsx). */
+.sora-stickycats { display: none; }
+@media (max-width: 899px) {
+  .sora-stickycats { display: block; position: sticky; top: var(--sora-hdr-h, 56px); z-index: 19; background: #fff; border-bottom: 1px solid var(--sora-line); }
+  .sora-stickycats ul { list-style: none; margin: 0; padding: 8px 12px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .sora-stickycats ul::-webkit-scrollbar { display: none; }
+  .sora-stickycats a { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border: 1px solid #D5D9D9; background: #fff; color: var(--sora-ink); font-size: 13px; white-space: nowrap; text-decoration: none; }
+  .sora-stickycats a.is-on { border-color: var(--sora-forest); background: var(--sora-forest); color: #fff; }
+}
+
+/* "Was this answer helpful?" (PdpEngage.jsx). */
+.pdpk-qa__helpful { display: flex; align-items: center; gap: 10px; margin: 6px 0 0; font-size: 12.5px; color: var(--sora-muted); }
+.pdpk-qa__helpful button { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px; border: 1px solid #D5D9D9; background: #fff; font: inherit; color: var(--sora-ink); cursor: pointer; }
+.pdpk-qa__helpful em { font-style: normal; }
+
 /* ═══ src/styles/storefront-sections.css ═══ */
 /* ============================================================
    Storefront sections an admin edits (Storefronts in the admin; storefrontContent.js).
