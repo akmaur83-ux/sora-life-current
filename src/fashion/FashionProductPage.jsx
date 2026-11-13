@@ -16,6 +16,9 @@ import ProductInformation from '../components/ProductInformation.jsx';
 import { GalleryZoom } from '../homeliving/HomeLivingProductPage.jsx';
 import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpLook, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
 import { lookPicks } from '../lib/completeLook.js';
+import { CompareButton } from '../components/Compare.jsx';
+import PriceHistory from '../components/PriceHistory.jsx';
+import { StylingTips } from '../components/ShopExtras.jsx';
 import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
@@ -236,6 +239,7 @@ export default function FashionProductPage() {
           </div>
           <p className="fs-buybox__secure"><Icon name="lock" size={14} /> Secure transaction</p>
           <PdpShare name={view.name} />
+          <CompareButton item={{ key: `fashion-${view.id}`, store: 'fashion', name: view.name, href: `/fashion/p/${view.slug}`, image: view.image, price: view.price, mrp: view.hasDiscount ? view.mrp : 0, brand: view.brand, category: node?.name || '', sizes: view.sizes.join(', '), colours: (view.swatches || []).map((s) => s.colour).filter((c) => c && c !== 'As shown').join(', ') }} />
           <dl className="fs-buybox__facts">
             {view.brand && <div><dt>Brand</dt><dd>{view.brand}</dd></div>}
             <div><dt>Delivery</dt><dd>Standard, free</dd></div>
@@ -252,8 +256,10 @@ export default function FashionProductPage() {
           key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price,
           mrp: p.hasDiscount ? p.mrp : 0, pct: p.discountPct, size: p.sizes.join(', '), brand: p.brand, current: i === 0,
         }))} />
+        <PriceHistory productId={view.id} />
         <PdpService />
         <PdpReviews productKey={`fashion:${view.id}`} productName={view.name} />
+        <StylingTips slug={node?.slug} />
         <PdpLook items={lookPicks(views.map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price, inStock: p.inStock, slug: p.category_id ? tree.byId.get(p.category_id)?.slug : '' })),
           { key: view.id, slug: node?.slug })} />
         <PdpCheaper current={{ key: view.id, price: view.price, group: view.category_id }}

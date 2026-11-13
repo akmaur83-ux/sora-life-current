@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import { useStore } from '../lib/store.jsx';
 import { isStandalone } from '../lib/appMode.js';
+import { CompareTray } from './Compare.jsx';
+import { logSearch } from '../lib/insights.js';
 
 // ============================================================
 // The SORA app's runtime (owner, 2026-11-13: the app, deep), mounted once beside
@@ -22,6 +24,7 @@ import { isStandalone } from '../lib/appMode.js';
 const QUIET = /^\/(cart|checkout|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout|admin|invoice)(\/|$)/;
 const HOMES = /^\/(fashion|homeliving|grocery|lifestyle)?\/?$/;
 const CHECK_EVERY_MS = 30 * 60 * 1000;
+const SEARCH_PAGES = [[/^\/shop\/?$/, 'wellness', 'main .v2-pc, main .pcard'], [/^\/fashion\/search\/?$/, 'fashion', 'main .fs-card'], [/^\/homeliving\/search\/?$/, 'homeliving', 'main .hl-card']];
 const REVEAL = '.sora-group, .sora-bc, .hx-wv-range, .hx-taj, .hx-ans, .hx-stores, .fs-sec, .hl .hl-sec, .sora-cats__store, .hx-wed__sec';
 
 /** The deployed app's fingerprint: the entry script's ETag (or Last-Modified); '' if unknown. */
@@ -44,7 +47,7 @@ export function registerServiceWorker(win = typeof window !== 'undefined' ? wind
 }
 
 export default function AppShell() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const { cartCount } = useStore();
   const [app, setApp] = useState(false);
@@ -107,8 +110,20 @@ export default function AppShell() {
   const showBack = app && !quiet && !HOMES.test(pathname);
   const back = () => { if (window.history.length > 1) navigate(-1); else navigate('/'); };
 
+  // The search log (2026-11-13, owner feature 36): what was searched in which store and how many
+  // results the page showed, read from the page itself once it has settled. Text only, nothing personal.
+  useEffect(() => {
+    const m = SEARCH_PAGES.find(([re]) => re.test(pathname));
+    if (!m) return undefined;
+    const q = new URLSearchParams(search).get('q');
+    if (!q) return undefined;
+    const t = setTimeout(() => { logSearch(m[1], q, document.querySelectorAll(m[2]).length); }, 3500);
+    return () => clearTimeout(t);
+  }, [pathname, search]);
+
   return (
     <>
+      <CompareTray />
       {showBack && (
         <button type="button" className="hx-appback" onClick={back} aria-label="Back">
           <Icon name="chevronLeft" size={20} /><span>Back</span>

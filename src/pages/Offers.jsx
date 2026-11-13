@@ -11,6 +11,7 @@ import { OFFER_COUNTDOWN, parseIndiaTime } from '../lib/offerCountdown.js';
 import { offerShareText } from '../components/PromoCard.jsx';
 import { usePageMeta } from '../lib/pageMeta.js';
 import SkeletonGrid from '../components/Skeleton.jsx';
+import { LastChance } from '../components/ShopExtras.jsx';
 
 // ============================================================
 // /offers — every product on a real discount, across the stores, biggest discount
@@ -153,6 +154,7 @@ export default function Offers() {
       <div className="hx-wrap">
         <ShareOffer />
         {store === 'all' && cat !== null && <TodayPick deals={all} />}
+        {store === 'all' && <LastChance wrap="" />}
         <div className="hx-offers__tabs" role="tablist" aria-label="Store">
           {STORES.map((s) => (
             <button key={s.id} type="button" role="tab" aria-selected={store === s.id} className={`hx-offers__tab${store === s.id ? ' is-on' : ''}`} onClick={() => pick(s.id)}>

@@ -20,6 +20,7 @@ const NAV = [
   { to: '/admin/coupons', label: 'Coupons' },
   { to: '/admin/homepage', label: 'Homepage' },
   { to: '/admin/reviews', label: 'Reviews' },
+  { to: '/admin/insights', label: 'Insights' },
   { to: '/admin/storefronts', label: 'Storefronts' },
   { to: '/admin/store-catalogue/fashion', label: 'Fashion Products' },
   { to: '/admin/store-catalogue/homeliving', label: 'Home & Living Products' },

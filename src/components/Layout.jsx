@@ -6,6 +6,8 @@ import Toasts from './Toasts.jsx';
 import StorefrontMotion from './StorefrontMotion.jsx';
 import StorefrontBackground from './StorefrontBackground.jsx';
 import { useBootstrapReady } from '../lib/bootstrapReady.js';
+import StickyCats from './StickyCats.jsx';
+import { categories } from '../data/categories.js';
 
 export default function Layout() {
   const { pathname } = useLocation();
@@ -21,6 +23,8 @@ export default function Layout() {
       <StorefrontMotion />
       <StorefrontBackground />
       <Header />
+      {/* The phone's sticky category strip (StickyCats.jsx, 2026-11-13). */}
+      <StickyCats store="wellness" items={categories.map((c) => ({ name: c.name, href: `/category/${c.slug}` }))} />
       <main
         key={pathname}
         className={`page-main${settling ? ' page-main--settling' : ''}`}

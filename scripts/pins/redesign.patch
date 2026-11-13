@@ -1,5 +1,5 @@
 diff --git a/api/sitemap.js b/api/sitemap.js
-index 6deb50d..523ae3c 100644
+index 6deb50d..9097437 100644
 --- a/api/sitemap.js
 +++ b/api/sitemap.js
 @@ -18,7 +18,7 @@ import { feedHandler } from './_lib/feed.js';
@@ -7,7 +7,7 @@ index 6deb50d..523ae3c 100644
  
  export const STATIC_PATHS = [
 -  '/', '/shop', '/offers', '/brands', '/help', '/delete-account', '/new', '/fashion/wedding', '/fashion', '/homeliving', '/lifestyle', '/grocery',
-+  '/', '/shop', '/offers', '/brands', '/brands/biosash', '/brands/atomy', '/brands/weavers-villa', '/brands/leather-factory', '/brands/taj-leather', '/brands/ansari-fashion', '/help', '/delete-account', '/new', '/categories', '/fashion/wedding', '/fashion', '/homeliving', '/lifestyle', '/grocery',
++  '/', '/shop', '/offers', '/brands', '/brands/biosash', '/brands/atomy', '/brands/weavers-villa', '/brands/leather-factory', '/brands/taj-leather', '/brands/ansari-fashion', '/help', '/delete-account', '/new', '/categories', '/hamper', '/fashion/wedding', '/fashion', '/homeliving', '/lifestyle', '/grocery',
    '/about', '/contact', '/shipping', '/returns', '/privacy', '/terms',
    '/refund-policy', '/shipping-policy', '/grievance',
  ];
@@ -25,19 +25,37 @@ index 8490cc6..5ad70ab 100644
    // It matches only those settings' attributes, so with nothing published it changes nothing.
    'src/styles/storefront-sections.css',
 diff --git a/src/App.jsx b/src/App.jsx
-index 065e3ec..b6d4b2d 100644
+index 065e3ec..27af67e 100644
 --- a/src/App.jsx
 +++ b/src/App.jsx
-@@ -15,6 +15,8 @@ import Help from './pages/Help.jsx';
+@@ -15,6 +15,10 @@ import Help from './pages/Help.jsx';
  import DeleteAccount from './pages/DeleteAccount.jsx';
  import NewArrivalsPage from './pages/NewArrivalsPage.jsx';
  import WeddingEdit from './fashion/WeddingEdit.jsx';
 +import AllCategories from './pages/AllCategories.jsx';
 +import BrandPage from './pages/BrandPage.jsx';
++import Hamper from './pages/Hamper.jsx';
++import ComparePage from './components/Compare.jsx';
  import About from './pages/About.jsx';
  import Contact from './pages/Contact.jsx';
  import Legal from './pages/Legal.jsx';
-@@ -257,9 +259,11 @@ export default function App() {
+@@ -84,6 +88,7 @@ const Promotions = lazy(() => import('./admin/pages/Promotions.jsx'));
+ const Coupons = lazy(() => import('./admin/pages/Coupons.jsx'));
+ const HomepageSettings = lazy(() => import('./admin/pages/Homepage.jsx'));
+ const AdminReviews = lazy(() => import('./admin/pages/Reviews.jsx'));
++const AdminInsights = lazy(() => import('./admin/pages/Insights.jsx'));
+ const Storefronts = lazy(() => import('./admin/pages/Storefronts.jsx'));
+ const StoreCatalogue = lazy(() => import('./admin/pages/StoreCatalogue.jsx'));
+ const CategoryExperience = lazy(() => import('./admin/pages/CategoryExperience.jsx'));
+@@ -194,6 +199,7 @@ export default function App() {
+         <Route path="coupons" element={<Coupons />} />
+         <Route path="homepage" element={<HomepageSettings />} />
+         <Route path="reviews" element={<AdminReviews />} />
++        <Route path="insights" element={<AdminInsights />} />
+         <Route path="storefronts" element={<Storefronts />} />
+         <Route path="store-catalogue/:store/:productId?" element={<StoreCatalogue />} />
+         <Route path="category-experience" element={<CategoryExperience />} />
+@@ -257,9 +263,13 @@ export default function App() {
          <Route path="/wishlist" element={<Wishlist />} />
          <Route path="/offers" element={<Offers />} />
          <Route path="/brands" element={<Brands />} />
@@ -46,22 +64,180 @@ index 065e3ec..b6d4b2d 100644
          <Route path="/delete-account" element={<DeleteAccount />} />
          <Route path="/new" element={<NewArrivalsPage />} />
 +        <Route path="/categories" element={<AllCategories />} />
++        <Route path="/hamper" element={<Hamper />} />
++        <Route path="/compare" element={<ComparePage />} />
          <Route path="/about" element={<About />} />
          <Route path="/contact" element={<Contact />} />
          <Route path="/grievance" element={<EditableLegal doc="grievance" />} />
+diff --git a/src/admin/AdminLayout.jsx b/src/admin/AdminLayout.jsx
+index 06c69fa..5ff0bcb 100644
+--- a/src/admin/AdminLayout.jsx
++++ b/src/admin/AdminLayout.jsx
+@@ -20,6 +20,7 @@ const NAV = [
+   { to: '/admin/coupons', label: 'Coupons' },
+   { to: '/admin/homepage', label: 'Homepage' },
+   { to: '/admin/reviews', label: 'Reviews' },
++  { to: '/admin/insights', label: 'Insights' },
+   { to: '/admin/storefronts', label: 'Storefronts' },
+   { to: '/admin/store-catalogue/fashion', label: 'Fashion Products' },
+   { to: '/admin/store-catalogue/homeliving', label: 'Home & Living Products' },
+diff --git a/src/admin/pages/Insights.jsx b/src/admin/pages/Insights.jsx
+new file mode 100644
+index 0000000..d5d572d
+--- /dev/null
++++ b/src/admin/pages/Insights.jsx
+@@ -0,0 +1,93 @@
++import { useEffect, useState } from 'react';
++import { supabase } from '../../lib/supabase.js';
++import { money } from '../../lib/format.js';
++
++// ============================================================
++// Admin → Insights (owner, 2026-11-13: feature 36, "kya bik raha hai"). Three lists:
++//   * Top searches — what shoppers typed, by store (search_log, 0043);
++//   * Searched, nothing found — demand the catalogue does not meet yet: stock it,
++//     or add the words to a product's name or description;
++//   * Best sellers — paid orders' lines, by units, in the period.
++// Read-only. The search log holds the text only — no shopper, no address.
++// ============================================================
++export const RANGES = [[7, 'Last 7 days'], [30, 'Last 30 days']];
++
++/** search_log rows → { top, zero }: each { q, store, n }, most searched first. Pure. */
++export function summariseSearches(rows) {
++  const top = new Map(); const zero = new Map();
++  for (const r of Array.isArray(rows) ? rows : []) {
++    const k = `${r.store}|${r.q}`;
++    const into = Number(r.results) > 0 ? top : zero;
++    into.set(k, { q: r.q, store: r.store, n: (into.get(k)?.n || 0) + 1 });
++  }
++  const sort = (m) => [...m.values()].sort((a, b) => b.n - a.n || a.q.localeCompare(b.q));
++  // A query that found results at least once is not "nothing found".
++  const found = new Set([...top.keys()]);
++  return { top: sort(top), zero: sort(zero).filter((z) => !found.has(`${z.store}|${z.q}`)) };
++}
++
++/** Paid orders → best sellers by units: { name, units, revenue }. Pure. */
++export function bestSellers(orders) {
++  const m = new Map();
++  for (const o of Array.isArray(orders) ? orders : []) {
++    if (o.payment_status !== 'paid') continue;
++    for (const l of Array.isArray(o.items) ? o.items : []) {
++      const name = String(l?.name || '').trim();
++      if (!name) continue;
++      const cur = m.get(name) || { name, units: 0, revenue: 0 };
++      cur.units += Number(l.qty) || 0;
++      cur.revenue += Number(l.line_total) || (Number(l.unit_price) || 0) * (Number(l.qty) || 0);
++      m.set(name, cur);
++    }
++  }
++  return [...m.values()].sort((a, b) => b.units - a.units || b.revenue - a.revenue);
++}
++
++const STORE = { wellness: 'Wellness', fashion: 'Fashion', homeliving: 'Home & Living', grocery: 'Grocery' };
++const box = { border: '1px solid #E4E8E1', background: '#fff', padding: 14 };
++
++function List({ title, hint, rows, render, empty }) {
++  return (
++    <section style={box}>
++      <h2 style={{ margin: '0 0 4px', fontSize: 16 }}>{title}</h2>
++      <p className="adm-hint" style={{ margin: '0 0 10px' }}>{hint}</p>
++      {rows === null ? <p>Loading…</p> : rows.length === 0 ? <p className="adm-hint">{empty}</p> : (
++        <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 6 }}>{rows.slice(0, 25).map(render)}</ol>
++      )}
++    </section>
++  );
++}
++
++export default function Insights() {
++  const [days, setDays] = useState(7);
++  const [searches, setSearches] = useState(null);
++  const [sellers, setSellers] = useState(null);
++  const [error, setError] = useState('');
++  useEffect(() => {
++    let live = true;
++    setSearches(null); setSellers(null); setError('');
++    const since = new Date(Date.now() - days * 86400e3).toISOString();
++    supabase.from('search_log').select('q, store, results').gte('created_at', since).order('created_at', { ascending: false }).limit(5000)
++      .then(({ data, error: e }) => { if (!live) return; if (e) { setError(e.message); setSearches({ top: [], zero: [] }); } else setSearches(summariseSearches(data)); });
++    supabase.from('orders').select('items, payment_status, created_at').eq('payment_status', 'paid').gte('created_at', since).limit(2000)
++      .then(({ data, error: e }) => { if (!live) return; if (e) { setError(e.message); setSellers([]); } else setSellers(bestSellers(data)); });
++    return () => { live = false; };
++  }, [days]);
++  return (
++    <div>
++      <div className="adm__head"><h1>Insights</h1></div>
++      <div className="adm-checkrow" role="tablist" style={{ gap: 8, margin: '12px 0' }}>
++        {RANGES.map(([d, label]) => <button key={d} type="button" role="tab" aria-selected={days === d} className={`btn btn-sm${days === d ? '' : ' btn-ghost'}`} onClick={() => setDays(d)}>{label}</button>)}
++      </div>
++      {error && <div className="adm-banner error">{error}</div>}
++      <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
++        <List title="Top searches" hint="What shoppers typed, and found something." rows={searches?.top ?? null} empty="No searches yet in this period."
++          render={(r) => <li key={`${r.store}|${r.q}`}><b>{r.q}</b> <span style={{ color: '#5F6D64' }}>· {STORE[r.store]} · {r.n}×</span></li>} />
++        <List title="Searched, nothing found" hint="Demand you are not meeting yet: stock it, or add these words to the right products." rows={searches?.zero ?? null} empty="Nothing went unfound in this period."
++          render={(r) => <li key={`${r.store}|${r.q}`}><b>{r.q}</b> <span style={{ color: '#5F6D64' }}>· {STORE[r.store]} · {r.n}×</span></li>} />
++        <List title="Best sellers" hint="Units sold in paid orders." rows={sellers} empty="No paid orders in this period."
++          render={(r) => <li key={r.name}><b>{r.name}</b> <span style={{ color: '#5F6D64' }}>· {r.units} sold · {money(r.revenue)}</span></li>} />
++      </div>
++    </div>
++  );
++}
+diff --git a/src/admin/pages/Reviews.jsx b/src/admin/pages/Reviews.jsx
+index 5833655..997d0ac 100644
+--- a/src/admin/pages/Reviews.jsx
++++ b/src/admin/pages/Reviews.jsx
+@@ -12,6 +12,12 @@ import {
+ //   Stock alerts   (0042) "Notify me" emails for out-of-stock products, grouped
+ //                  by product; mark a group notified once you have told them.
+ // ============================================================
++/** The back-in-stock email (2026-11-13, owner feature 38): ready to send from the admin's own mail. Pure. */
++export function backInStockBody(g) {
++  const search = `https://www.soralifestyle.in/${g.product_key.startsWith('fashion:') ? 'fashion/search' : g.product_key.startsWith('homeliving:') ? 'homeliving/search' : 'shop'}?q=${encodeURIComponent(g.product_name)}`;
++  return `Hello,\n\nGood news: ${g.product_name}${g.choice ? ` (${g.choice})` : ''} is back in stock at SORA LIFESTYLE.\n\nShop it here: ${search}\n\nYou asked us to let you know when it returned.\n\nSORA LIFESTYLE`;
++}
++
+ const SECTIONS = [['reviews', 'Reviews'], ['questions', 'Questions'], ['alerts', 'Stock alerts']];
+ const card = { border: '1px solid #E4E8E1', padding: 14, background: '#fff' };
+ const meta = { margin: 0, fontSize: 12, color: '#5F6D64' };
+@@ -118,7 +124,7 @@ function AlertsPane() {
+               <p style={meta}>{productHref(g.product_key) ? <a href={productHref(g.product_key)}>{g.product_key}</a> : g.product_key} · latest {new Date(g.rows[0].created_at).toLocaleString('en-IN')}</p>
+               <textarea readOnly rows={Math.min(4, g.rows.length)} value={g.rows.map((r) => r.email).join(', ')} onFocus={(e) => e.target.select()} aria-label="Emails" style={{ width: '100%', margin: '8px 0', padding: 8, font: '13px/1.4 monospace' }} />
+               <div style={{ display: 'flex', gap: 8 }}>
+-                <a className="btn btn-sm btn-ghost" href={`mailto:?bcc=${encodeURIComponent(g.rows.map((r) => r.email).join(','))}&subject=${encodeURIComponent(`${g.product_name} is back in stock`)}`}>Email them</a>
++                <a className="btn btn-sm btn-ghost" href={`mailto:?bcc=${encodeURIComponent(g.rows.map((r) => r.email).join(','))}&subject=${encodeURIComponent(`${g.product_name} is back in stock`)}&body=${encodeURIComponent(backInStockBody(g))}`}>Email them</a>
+                 {tab === 'open' && <button type="button" className="btn btn-sm" onClick={() => done(g)}>Mark notified</button>}
+               </div>
+             </article>
 diff --git a/src/components/AppShell.jsx b/src/components/AppShell.jsx
-index 6caec6a..9cdc5bc 100644
+index 6caec6a..c080a3b 100644
 --- a/src/components/AppShell.jsx
 +++ b/src/components/AppShell.jsx
-@@ -22,6 +22,7 @@ import { isStandalone } from '../lib/appMode.js';
+@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
+ import Icon from './Icon.jsx';
+ import { useStore } from '../lib/store.jsx';
+ import { isStandalone } from '../lib/appMode.js';
++import { CompareTray } from './Compare.jsx';
++import { logSearch } from '../lib/insights.js';
+ 
+ // ============================================================
+ // The SORA app's runtime (owner, 2026-11-13: the app, deep), mounted once beside
+@@ -22,6 +24,8 @@ import { isStandalone } from '../lib/appMode.js';
  const QUIET = /^\/(cart|checkout|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout|admin|invoice)(\/|$)/;
  const HOMES = /^\/(fashion|homeliving|grocery|lifestyle)?\/?$/;
  const CHECK_EVERY_MS = 30 * 60 * 1000;
++const SEARCH_PAGES = [[/^\/shop\/?$/, 'wellness', 'main .v2-pc, main .pcard'], [/^\/fashion\/search\/?$/, 'fashion', 'main .fs-card'], [/^\/homeliving\/search\/?$/, 'homeliving', 'main .hl-card']];
 +const REVEAL = '.sora-group, .sora-bc, .hx-wv-range, .hx-taj, .hx-ans, .hx-stores, .fs-sec, .hl .hl-sec, .sora-cats__store, .hx-wed__sec';
  
  /** The deployed app's fingerprint: the entry script's ETag (or Last-Modified); '' if unknown. */
  async function buildStamp() {
-@@ -82,6 +83,26 @@ export default function AppShell() {
+@@ -43,7 +47,7 @@ export function registerServiceWorker(win = typeof window !== 'undefined' ? wind
+ }
+ 
+ export default function AppShell() {
+-  const { pathname } = useLocation();
++  const { pathname, search } = useLocation();
+   const navigate = useNavigate();
+   const { cartCount } = useStore();
+   const [app, setApp] = useState(false);
+@@ -82,12 +86,44 @@ export default function AppShell() {
      } catch { /* not supported */ }
    }, [app, cartCount]);
  
@@ -88,6 +264,24 @@ index 6caec6a..9cdc5bc 100644
    const quiet = QUIET.test(pathname);
    const showBack = app && !quiet && !HOMES.test(pathname);
    const back = () => { if (window.history.length > 1) navigate(-1); else navigate('/'); };
+ 
++  // The search log (2026-11-13, owner feature 36): what was searched in which store and how many
++  // results the page showed, read from the page itself once it has settled. Text only, nothing personal.
++  useEffect(() => {
++    const m = SEARCH_PAGES.find(([re]) => re.test(pathname));
++    if (!m) return undefined;
++    const q = new URLSearchParams(search).get('q');
++    if (!q) return undefined;
++    const t = setTimeout(() => { logSearch(m[1], q, document.querySelectorAll(m[2]).length); }, 3500);
++    return () => clearTimeout(t);
++  }, [pathname, search]);
++
+   return (
+     <>
++      <CompareTray />
+       {showBack && (
+         <button type="button" className="hx-appback" onClick={back} aria-label="Back">
+           <Icon name="chevronLeft" size={20} /><span>Back</span>
 diff --git a/src/components/BrandCarousel.jsx b/src/components/BrandCarousel.jsx
 new file mode 100644
 index 0000000..831f26a
@@ -153,8 +347,100 @@ index 0000000..831f26a
 +    </section>
 +  );
 +}
+diff --git a/src/components/Compare.jsx b/src/components/Compare.jsx
+new file mode 100644
+index 0000000..462aeb4
+--- /dev/null
++++ b/src/components/Compare.jsx
+@@ -0,0 +1,86 @@
++import { Link, useLocation } from 'react-router-dom';
++import Icon from './Icon.jsx';
++import { money } from '../lib/format.js';
++import { compareApi, useCompareList, COMPARE_MAX } from '../lib/compareList.js';
++import { usePageMeta } from '../lib/pageMeta.js';
++
++// ============================================================
++// Compare (owner, 2026-11-13): the "Compare" button on product pages, the tray at
++// the foot of the screen while anything is picked, and the /compare page.
++// compareList.js keeps the list (this browser only).
++// ============================================================
++export function CompareButton({ item }) {
++  const list = useCompareList();
++  const on = list.some((x) => x.key === item?.key);
++  if (!item?.key) return null;
++  return (
++    <button type="button" className={`sora-cmpbtn${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => compareApi.toggle(item)}>
++      <Icon name={on ? 'check' : 'plus'} size={15} /> {on ? 'Added to compare' : 'Compare'}
++    </button>
++  );
++}
++
++const HIDE = /^\/(compare|cart|checkout|admin|invoice)(\/|$)/;
++
++export function CompareTray() {
++  const list = useCompareList();
++  const { pathname } = useLocation();
++  if (!list.length || HIDE.test(pathname)) return null;
++  return (
++    <aside className="sora-cmptray" aria-label="Compare">
++      <ul>
++        {list.map((p) => (
++          <li key={p.key}>
++            {p.image && <img src={p.image} alt="" width="44" height="44" />}
++            <button type="button" aria-label={`Remove ${p.name}`} onClick={() => compareApi.remove(p.key)}><Icon name="x" size={12} /></button>
++          </li>
++        ))}
++        {Array.from({ length: COMPARE_MAX - list.length }, (_, i) => <li key={`e${i}`} className="is-empty" aria-hidden="true" />)}
++      </ul>
++      <p>{list.length < 2 ? 'Add one more to compare' : `${list.length} picked`}</p>
++      <Link to="/compare" className={`sora-cmptray__go${list.length < 2 ? ' is-off' : ''}`} aria-disabled={list.length < 2}>Compare now</Link>
++      <button type="button" className="sora-cmptray__clear" onClick={compareApi.clear}>Clear</button>
++    </aside>
++  );
++}
++
++const ROWS = [
++  ['Price', (p) => <b>{money(p.price)}</b>],
++  ['M.R.P.', (p) => (p.mrp > p.price ? <s>{money(p.mrp)}</s> : '—')],
++  ['You save', (p) => (p.mrp > p.price ? `${money(p.mrp - p.price)} (${Math.round(((p.mrp - p.price) / p.mrp) * 100)}%)` : '—')],
++  ['Brand', (p) => p.brand || '—'],
++  ['Category', (p) => p.category || '—'],
++  ['Sizes', (p) => p.sizes || '—'],
++  ['Colours', (p) => p.colours || '—'],
++  ['Delivery', () => 'Free standard delivery'],
++];
++
++export default function ComparePage() {
++  const list = useCompareList();
++  usePageMeta({ title: 'Compare', description: 'Compare products side by side at SORA LIFESTYLE.', path: '/compare' });
++  return (
++    <div className="hx hx-help">
++      <div className="hx-wrap">
++        <nav className="hx-offers__crumbs" aria-label="Breadcrumb"><Link to="/">Home</Link> <Icon name="chevronRight" size={12} /> <span>Compare</span></nav>
++        <h1 className="hx-offers__h">Compare</h1>
++        {list.length < 2 ? (
++          <p className="hx-offers__empty">Pick two to four products with the “Compare” button on their pages, and they line up here.</p>
++        ) : (
++          <div className="sora-cmp">
++            <table>
++              <thead>
++                <tr><td />{list.map((p) => (
++                  <th key={p.key} scope="col">
++                    <Link to={p.href} className="sora-cmp__item">{p.image && <img src={p.image} alt="" width="160" height="160" />}<span>{p.name}</span></Link>
++                    <button type="button" className="sora-cmp__rm" onClick={() => compareApi.remove(p.key)}>Remove</button>
++                  </th>
++                ))}</tr>
++              </thead>
++              <tbody>{ROWS.map(([label, cell]) => <tr key={label}><th scope="row">{label}</th>{list.map((p) => <td key={p.key}>{cell(p)}</td>)}</tr>)}</tbody>
++            </table>
++          </div>
++        )}
++      </div>
++    </div>
++  );
++}
 diff --git a/src/components/Footer.jsx b/src/components/Footer.jsx
-index 187e38d..5a34bb1 100644
+index 187e38d..f7b82b9 100644
 --- a/src/components/Footer.jsx
 +++ b/src/components/Footer.jsx
 @@ -5,6 +5,7 @@ import { branding } from '../lib/settings.js';
@@ -165,15 +451,16 @@ index 187e38d..5a34bb1 100644
  
  // ============================================================
  // Footer.
-@@ -69,6 +70,7 @@ export default function Footer() {
+@@ -69,6 +70,8 @@ export default function Footer() {
              <Link to="/brands">Our brands</Link>
              <Link to="/new">New arrivals</Link>
              <Link to="/fashion/wedding">Wedding edit</Link>
 +            <Link to="/categories">All categories</Link>
++            <Link to="/hamper">Build a hamper</Link>
              {categories.slice(0, 3).map((c) => (
                <Link key={c.slug} to={`/category/${c.slug}`}>{c.name}</Link>
              ))}
-@@ -102,9 +104,30 @@ export default function Footer() {
+@@ -102,9 +105,30 @@ export default function Footer() {
            </div>
          </div>
  
@@ -250,6 +537,107 @@ index 886bfa5..61088ab 100644
        className={className} style={style} aria-hidden="true"
        dangerouslySetInnerHTML={{ __html: d }}
      />
+diff --git a/src/components/Layout.jsx b/src/components/Layout.jsx
+index bc25d5d..c7db7df 100644
+--- a/src/components/Layout.jsx
++++ b/src/components/Layout.jsx
+@@ -6,6 +6,8 @@ import Toasts from './Toasts.jsx';
+ import StorefrontMotion from './StorefrontMotion.jsx';
+ import StorefrontBackground from './StorefrontBackground.jsx';
+ import { useBootstrapReady } from '../lib/bootstrapReady.js';
++import StickyCats from './StickyCats.jsx';
++import { categories } from '../data/categories.js';
+ 
+ export default function Layout() {
+   const { pathname } = useLocation();
+@@ -21,6 +23,8 @@ export default function Layout() {
+       <StorefrontMotion />
+       <StorefrontBackground />
+       <Header />
++      {/* The phone's sticky category strip (StickyCats.jsx, 2026-11-13). */}
++      <StickyCats store="wellness" items={categories.map((c) => ({ name: c.name, href: `/category/${c.slug}` }))} />
+       <main
+         key={pathname}
+         className={`page-main${settling ? ' page-main--settling' : ''}`}
+diff --git a/src/components/MegaMenu.jsx b/src/components/MegaMenu.jsx
+new file mode 100644
+index 0000000..39ef76e
+--- /dev/null
++++ b/src/components/MegaMenu.jsx
+@@ -0,0 +1,73 @@
++import { useEffect, useState } from 'react';
++import { Link } from 'react-router-dom';
++import Icon from './Icon.jsx';
++import { supabase } from '../lib/supabase.js';
++import { categories as wellnessCategories } from '../data/categories.js';
++import { products as wellnessProducts } from '../data/products.js';
++import { fetchCategoryCovers } from '../lib/insights.js';
++import { flatTiles } from '../lib/allCategories.js';
++
++// ============================================================
++// The mega menu (owner, 2026-11-13: "store-wise mega menu with images"). On a
++// desktop, pointing at Wellness, Fashion or Home & Living in the store bar opens a
++// panel of that store's categories, each with a picture (the category's own, else
++// its first product's — catalogue_category_covers). Read once, on first open.
++// ============================================================
++let catalogueCache = null;
++async function loadCatalogueCategories() {
++  if (catalogueCache) return catalogueCache;
++  if (!supabase) return { rows: [], covers: {} };
++  const [{ data }, covers] = await Promise.all([
++    supabase.from('catalogue_categories').select('id, name, slug, parent_id, store, sort_order, image_url, is_demo').eq('is_active', true).in('store', ['fashion', 'homeliving']).order('sort_order', { ascending: true }),
++    fetchCategoryCovers(),
++  ]);
++  catalogueCache = { rows: (data || []).filter((r) => !r.is_demo), covers };
++  return catalogueCache;
++}
++
++/** Fashion: roots with their children; a root's picture is its own, else its first child's. Pure. */
++export function fashionMenu(rows, covers) {
++  const f = (rows || []).filter((r) => r.store === 'fashion');
++  const kids = (id) => f.filter((r) => r.parent_id === id);
++  const pic = (r) => r.image_url || covers[r.id] || null;
++  return f.filter((r) => !r.parent_id).map((r) => {
++    const children = kids(r.id).filter((c) => pic(c) || kids(c.id).length);
++    const image = pic(r) || children.map(pic).find(Boolean) || null;
++    return { id: r.id, name: r.name, href: `/fashion/c/${r.slug}`, image, children: children.slice(0, 7).map((c) => ({ id: c.id, name: c.name, href: `/fashion/c/${c.slug}` })) };
++  }).filter((g) => g.image || g.children.length);
++}
++
++export default function MegaMenu({ store, onClose }) {
++  const [data, setData] = useState(catalogueCache);
++  useEffect(() => { if (!data && store !== 'wellness') loadCatalogueCategories().then(setData, () => setData({ rows: [], covers: {} })); }, [store, data]);
++  let body = null;
++  if (store === 'wellness') {
++    const tiles = flatTiles(wellnessCategories, wellnessProducts, { catOf: (p) => p.category, imageOf: (p) => p.image, href: (c) => `/category/${c.slug}`, key: (c) => c.slug }).slice(0, 10);
++    body = <ul className="sora-mega__tiles">{tiles.map((t) => <li key={t.key}><Link to={t.href} onClick={onClose}><span className="sora-mega__img is-whole">{t.image && <img src={t.image} alt="" width="120" height="120" loading="lazy" />}</span><b>{t.name}</b></Link></li>)}</ul>;
++  } else if (!data) {
++    body = <p className="sora-mega__wait">Loading…</p>;
++  } else if (store === 'fashion') {
++    body = (
++      <div className="sora-mega__cols">
++        {fashionMenu(data.rows, data.covers).slice(0, 6).map((g) => (
++          <div key={g.id} className="sora-mega__col">
++            <Link to={g.href} className="sora-mega__head" onClick={onClose}><span className="sora-mega__img">{g.image && <img src={g.image} alt="" width="200" height="140" loading="lazy" />}</span><b>{g.name} <Icon name="chevronRight" size={13} /></b></Link>
++            <ul>{g.children.map((c) => <li key={c.id}><Link to={c.href} onClick={onClose}>{c.name}</Link></li>)}</ul>
++          </div>
++        ))}
++      </div>
++    );
++  } else {
++    const hl = (data.rows || []).filter((r) => r.store === 'homeliving');
++    body = <ul className="sora-mega__tiles">{hl.map((r) => <li key={r.id}><Link to={`/homeliving/category/${r.slug}`} onClick={onClose}><span className="sora-mega__img">{(r.image_url || data.covers[r.id]) && <img src={r.image_url || data.covers[r.id]} alt="" width="120" height="120" loading="lazy" />}</span><b>{r.name}</b></Link></li>)}</ul>;
++  }
++  const all = { wellness: ['/shop', 'Shop all wellness'], fashion: ['/fashion', 'Visit the Fashion store'], homeliving: ['/homeliving', 'Visit Home & Living'] }[store];
++  return (
++    <div className="sora-mega" role="region" aria-label={`${store} categories`}>
++      <div className="sora-mega__in">
++        {body}
++        {all && <Link to={all[0]} className="sora-mega__all" onClick={onClose}>{all[1]} <Icon name="arrowRight" size={14} /></Link>}
++      </div>
++    </div>
++  );
++}
 diff --git a/src/components/MobileTabBar.jsx b/src/components/MobileTabBar.jsx
 index 1b084b5..e55935d 100644
 --- a/src/components/MobileTabBar.jsx
@@ -285,6 +673,192 @@ index 1b084b5..e55935d 100644
          <span>Saved</span>
        </NavLink>
        <NavLink to="/cart" className={item}>
+diff --git a/src/components/PriceHistory.jsx b/src/components/PriceHistory.jsx
+new file mode 100644
+index 0000000..8187a8c
+--- /dev/null
++++ b/src/components/PriceHistory.jsx
+@@ -0,0 +1,36 @@
++import { useEffect, useState } from 'react';
++import { money } from '../lib/format.js';
++import { fetchPriceHistory, priceSummary } from '../lib/insights.js';
++
++// ============================================================
++// Price history on a product page (owner, 2026-11-13: "pehle aur ab price graph").
++// The product's own daily prices (recorded since 13 Nov 2026 whenever a price is
++// set or changed), the last 30 days as a small line. Shown only once there are
++// two days to compare; nothing is estimated or filled in.
++// ============================================================
++export function sparkPath(points, w = 260, h = 56, pad = 4) {
++  const prices = points.map((p) => p.price);
++  const lo = Math.min(...prices); const hi = Math.max(...prices);
++  const span = hi - lo || 1;
++  const step = points.length > 1 ? (w - pad * 2) / (points.length - 1) : 0;
++  return points.map((p, i) => `${i ? 'L' : 'M'}${(pad + i * step).toFixed(1)} ${(h - pad - ((p.price - lo) / span) * (h - pad * 2)).toFixed(1)}`).join(' ');
++}
++
++export default function PriceHistory({ productId }) {
++  const [hist, setHist] = useState(null);
++  useEffect(() => { let on = true; fetchPriceHistory(productId).then((h) => { if (on) setHist(h); }); return () => { on = false; }; }, [productId]);
++  const s = hist ? priceSummary(hist, 30) : null;
++  if (!s) return null;
++  return (
++    <section className="sora-ph" aria-labelledby="sora-ph-h">
++      <h2 className="pdpk-h" id="sora-ph-h">Price in the last 30 days</h2>
++      <svg viewBox="0 0 260 56" width="100%" height="56" role="img" aria-label={`From ${money(s.low)} to ${money(s.high)}; now ${money(s.now)}`}>
++        <path d={sparkPath(s.points)} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
++      </svg>
++      <p className="sora-ph__facts">
++        <span>Lowest <b>{money(s.low)}</b></span><span>Highest <b>{money(s.high)}</b></span><span>Now <b>{money(s.now)}</b></span>
++      </p>
++      {s.isLowest && <p className="sora-ph__low">Lowest price in the last 30 days</p>}
++    </section>
++  );
++}
+diff --git a/src/components/SearchSuggest.jsx b/src/components/SearchSuggest.jsx
+index 69e8002..1118c38 100644
+--- a/src/components/SearchSuggest.jsx
++++ b/src/components/SearchSuggest.jsx
+@@ -1,4 +1,5 @@
+ import { Link } from 'react-router-dom';
++import { usePopularSearches } from '../lib/insights.js';
+ import { money } from '../lib/format.js';
+ 
+ // ============================================================
+@@ -27,7 +28,9 @@ export function clearRecentSearches(store) { try { window.localStorage.removeIte
+ /** With nothing typed yet: the last searches, each a link to its results, and Clear. */
+ export function RecentSearches({ id, terms, hrefFor, onPick, onClear, popular = [] }) {
+   const hasTerms = terms && terms.length > 0;
+-  if (!hasTerms && popular.length === 0) return null;
++  // Trending searches (2026-11-13): what shoppers actually searched (3+ times in two weeks, with results).
++  const trending = usePopularSearches().filter((t) => !(terms || []).some((x) => x.toLowerCase() === t)).slice(0, 6);
++  if (!hasTerms && popular.length === 0 && trending.length === 0) return null;
+   return (
+     <div className="hx-suggest hx-suggest--recent" id={id} aria-label={hasTerms ? 'Recent searches' : 'Popular categories'}>
+       {hasTerms && <>
+@@ -36,6 +39,12 @@ export function RecentSearches({ id, terms, hrefFor, onPick, onClear, popular =
+           <Link key={t} to={hrefFor(t)} className="hx-suggest__recent" onMouseDown={(e) => e.preventDefault()} onClick={onPick}>{t}</Link>
+         ))}
+       </>}
++      {trending.length > 0 && <>
++        <p className="hx-suggest__head">Trending searches</p>
++        <div className="hx-suggest__chips">
++          {trending.map((t) => <Link key={t} to={hrefFor(t)} className="hx-suggest__chip" onMouseDown={(e) => e.preventDefault()} onClick={onPick}>{t}</Link>)}
++        </div>
++      </>}
+       {/* Nothing typed and nothing searched yet: the store's categories, one tap away (2026-11-09). */}
+       {popular.length > 0 && <>
+         <p className="hx-suggest__head">Popular categories</p>
+diff --git a/src/components/ShopExtras.jsx b/src/components/ShopExtras.jsx
+new file mode 100644
+index 0000000..4b1d03d
+--- /dev/null
++++ b/src/components/ShopExtras.jsx
+@@ -0,0 +1,104 @@
++import { useEffect, useState } from 'react';
++import { Link } from 'react-router-dom';
++import Icon from './Icon.jsx';
++import { money } from '../lib/format.js';
++import { supabase } from '../lib/supabase.js';
++import { cataloguePrice } from '../lib/newArrivals.js';
++
++// ============================================================
++// Shop extras (owner, 2026-11-13: features 28, 29, 30).
++//   ShopByColour — colour swatches on the Fashion home, each opening every style in
++//                  that colour (the listing's own colour filter, ?colour=).
++//   StylingTips  — "How to wear it" on a fashion product page, by its category.
++//   LastChance   — pieces with 1–3 left, from catalogue_last_chance (0044), which
++//                  leaves out brands whose stock figures are placeholders.
++// ============================================================
++export const COLOURS = Object.freeze([
++  ['Black', '#1B1B1B'], ['Brown', '#6B4226'], ['Beige', '#D8C3A5'], ['White', '#F7F5F0'], ['Red', '#B3261E'], ['Maroon', '#6D1A2A'],
++  ['Pink', '#E58FB0'], ['Green', '#2F6B3F'], ['Blue', '#2F5DA8'], ['Grey', '#8A8D91'], ['Mustard', '#D4A12A'], ['Peach', '#F2B79A'],
++]);
++
++export function ShopByColour() {
++  return (
++    <section className="fs-sec sora-colours" aria-labelledby="sora-colours-h">
++      <div className="fs-sec__head"><h2 className="fs-sec__h serif" id="sora-colours-h">Shop by colour</h2></div>
++      <ul className="sora-colours__row">
++        {COLOURS.map(([name, hex]) => (
++          <li key={name}>
++            <Link to={`/fashion/search?colour=${encodeURIComponent(name)}`} className="sora-colours__sw">
++              <span style={{ background: hex }} aria-hidden="true" />
++              {name}
++            </Link>
++          </li>
++        ))}
++      </ul>
++    </section>
++  );
++}
++
++export const STYLING_TIPS = Object.freeze([
++  [/suit|dress-material|salwar|kurta/, ['Pair with a contrasting dupatta, or let a woven one carry the colour.', 'Juttis or block heels keep it festive; kolhapuris keep it easy.', 'Jhumkas or chandbalis suit a Banarasi neckline; keep the rest light.']],
++  [/saree/, ['A plain blouse lets a woven saree speak; a brocade blouse lifts a plain one.', 'Pleat the pallu for a day function, leave it open in the evening.', 'A potli or a clutch in the border’s colour ties the look together.']],
++  [/leather-jacket|leather-coat/, ['Over a plain tee and dark jeans is the classic; add boots for winter.', 'Leave it open over a knit, or belt a coat for a sharper line.', 'Match the belt and shoes to the leather’s tone, brown with brown, black with black.']],
++  [/shawl|stole|dupatta|muffler/, ['Drape over one shoulder on a plain outfit to let the weave lead.', 'Wrap it twice for warmth on a cold evening.', 'A woven shawl turns a simple kurta into a function look.']],
++  [/handbag|clutch|sling|pouch|potli/, ['Pick a bag a shade apart from the outfit, not an exact match.', 'A clutch for the evening, a sling when you need your hands free.']],
++  [/wallet|belt|card-holder|passport/, ['Match the belt to your shoes.', 'Leather mellows and darkens with use: that’s the character, not wear.']],
++]);
++
++/** The tips for a category slug; [] when none fit. Pure. */
++export const stylingTips = (slug) => (STYLING_TIPS.find(([re]) => re.test(String(slug || ''))) || [null, []])[1];
++
++export function StylingTips({ slug }) {
++  const tips = stylingTips(slug);
++  if (!tips.length) return null;
++  return (
++    <section className="sora-tips" aria-labelledby="sora-tips-h">
++      <h2 className="pdpk-h" id="sora-tips-h"><Icon name="sparkle" size={17} /> How to wear it</h2>
++      <ul>{tips.map((t) => <li key={t}>{t}</li>)}</ul>
++    </section>
++  );
++}
++
++/** Rows → cards: in-stock, priced, pictured; fewest left first. Pure. */
++export function lastChanceCards(rows) {
++  return (Array.isArray(rows) ? rows : []).flatMap((r) => {
++    const p = r?.product; const image = Array.isArray(p?.images) ? p.images.find(Boolean) : null; const price = p ? cataloguePrice(p) : 0;
++    if (!p?.slug || !image || !(price > 0)) return [];
++    return [{ key: `${p.store}-${p.id}`, name: String(p.name || '').trim(), image, price, left: r.left_in_stock, href: p.store === 'fashion' ? `/fashion/p/${p.slug}` : `/homeliving/p/${p.slug}` }];
++  }).sort((a, b) => a.left - b.left || a.name.localeCompare(b.name));
++}
++
++export function LastChance({ wrap = 'hx-wrap', max = 10 }) {
++  const [cards, setCards] = useState([]);
++  useEffect(() => {
++    if (!supabase) return undefined;
++    let live = true;
++    (async () => {
++      const { data: left } = await supabase.from('catalogue_last_chance').select('product_id, left_in_stock').limit(40);
++      if (!Array.isArray(left) || !left.length) return;
++      const { data: rows } = await supabase.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images').in('id', left.map((r) => r.product_id));
++      const byId = new Map((rows || []).map((r) => [r.id, r]));
++      if (live) setCards(lastChanceCards(left.map((r) => ({ left_in_stock: r.left_in_stock, product: byId.get(r.product_id) }))).slice(0, max));
++    })().catch(() => {});
++    return () => { live = false; };
++  }, [max]);
++  if (cards.length < 3) return null;
++  return (
++    <section className="hx sora-last" aria-labelledby="sora-last-h">
++      <div className={wrap}>
++        <div className="hx-stores__head"><h2 className="hx-stores__h" id="sora-last-h">Almost gone</h2></div>
++        <ul className="sora-last__row">
++          {cards.map((c) => (
++            <li key={c.key}>
++              <Link to={c.href} className="hx-deals__card">
++                <span className="hx-deals__img"><img src={c.image} alt="" width="240" height="240" loading="lazy" decoding="async" /><b className="sora-last__left">Only {c.left} left</b></span>
++                <span className="hx-deals__name">{c.name}</span>
++                <span className="hx-deals__price"><b>{money(c.price)}</b></span>
++              </Link>
++            </li>
++          ))}
++        </ul>
++      </div>
++    </section>
++  );
++}
 diff --git a/src/components/Skeleton.jsx b/src/components/Skeleton.jsx
 new file mode 100644
 index 0000000..9652fa7
@@ -314,13 +888,53 @@ index 0000000..9652fa7
 +    </div>
 +  );
 +}
+diff --git a/src/components/StickyCats.jsx b/src/components/StickyCats.jsx
+new file mode 100644
+index 0000000..0bc4f3f
+--- /dev/null
++++ b/src/components/StickyCats.jsx
+@@ -0,0 +1,32 @@
++import { useEffect } from 'react';
++import { NavLink, useLocation } from 'react-router-dom';
++
++// ============================================================
++// The sticky category strip (owner, 2026-11-13: feature 27). On a phone, a slim
++// row of the store's categories that stays just under the header while scrolling a
++// store's home and its listings, one tap to any category. Hidden on larger screens
++// (the header's own menus are there). The header's height is measured, so the strip
++// always sits exactly under it.
++// ============================================================
++const SHOW = { wellness: /^\/($|shop\/?$|category\/)/, fashion: /^\/fashion\/?($|c\/|search)/ };
++
++export default function StickyCats({ store, items }) {
++  const { pathname } = useLocation();
++  useEffect(() => {
++    const hdr = document.querySelector(store === 'fashion' ? '.fs-hdr' : '.v2-hdr');
++    if (!hdr || typeof ResizeObserver === 'undefined') return undefined;
++    const set = () => document.documentElement.style.setProperty('--sora-hdr-h', `${Math.round(hdr.getBoundingClientRect().height)}px`);
++    set();
++    const ro = new ResizeObserver(set);
++    ro.observe(hdr);
++    return () => ro.disconnect();
++  }, [store]);
++  if (!SHOW[store]?.test(pathname) || !items || items.length < 2) return null;
++  return (
++    <nav className="sora-stickycats" aria-label="Categories">
++      <ul>
++        {items.map((c) => <li key={c.href}><NavLink to={c.href} className={({ isActive }) => (isActive ? 'is-on' : undefined)}>{c.name}</NavLink></li>)}
++      </ul>
++    </nav>
++  );
++}
 diff --git a/src/components/StoreBar.jsx b/src/components/StoreBar.jsx
 new file mode 100644
-index 0000000..12667e2
+index 0000000..95f97ed
 --- /dev/null
 +++ b/src/components/StoreBar.jsx
-@@ -0,0 +1,60 @@
+@@ -0,0 +1,79 @@
++import { useEffect, useRef, useState } from 'react';
 +import { Link, NavLink, useLocation } from 'react-router-dom';
++import MegaMenu from './MegaMenu.jsx';
 +import Icon from './Icon.jsx';
 +
 +// ============================================================
@@ -359,16 +973,32 @@ index 0000000..12667e2
 +  return '';
 +}
 +
++const MEGA = new Set(['wellness', 'fashion', 'homeliving']);
++
 +export default function StoreBar() {
 +  const { pathname } = useLocation();
++  const [open, setOpen] = useState('');
++  const timer = useRef(null);
++  useEffect(() => { setOpen(''); }, [pathname]);
++  useEffect(() => {
++    if (!open) return undefined;
++    const onKey = (e) => { if (e.key === 'Escape') setOpen(''); };
++    window.addEventListener('keydown', onKey);
++    return () => window.removeEventListener('keydown', onKey);
++  }, [open]);
 +  if (HIDDEN.test(pathname)) return null;
 +  const current = storeOf(pathname);
++  // The mega menu: desktop pointers only (a tap on a phone just opens the store).
++  const desktop = () => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 1024px) and (hover: hover)').matches;
++  const enter = (id) => { if (!MEGA.has(id) || !desktop()) return; clearTimeout(timer.current); timer.current = setTimeout(() => setOpen(id), 140); };
++  const leave = () => { clearTimeout(timer.current); timer.current = setTimeout(() => setOpen(''), 180); };
 +  return (
-+    <div className="sora-storebar">
++    <div className="sora-storebar" onMouseLeave={leave}>
 +      <div className="sora-storebar__in">
 +        <nav className="sora-storebar__stores" aria-label="SORA stores">
 +          {STORES.map((s) => (
-+            <Link key={s.id} to={s.to} className={`sora-storebar__store${current === s.id ? ' is-on' : ''}`} aria-current={current === s.id ? 'page' : undefined}>{s.label}</Link>
++            <Link key={s.id} to={s.to} className={`sora-storebar__store${current === s.id ? ' is-on' : ''}${open === s.id ? ' is-open' : ''}`} aria-current={current === s.id ? 'page' : undefined}
++              onMouseEnter={() => enter(s.id)} onFocus={() => enter(s.id)}>{s.label}</Link>
 +          ))}
 +        </nav>
 +        <nav className="sora-storebar__site" aria-label="Across the stores">
@@ -377,25 +1007,95 @@ index 0000000..12667e2
 +          ))}
 +        </nav>
 +      </div>
++      {open && <div onMouseEnter={() => clearTimeout(timer.current)}><MegaMenu store={open} onClose={() => setOpen('')} /></div>}
 +    </div>
 +  );
 +}
+diff --git a/src/components/pdp/PdpEngage.jsx b/src/components/pdp/PdpEngage.jsx
+index b24fcad..f25c549 100644
+--- a/src/components/pdp/PdpEngage.jsx
++++ b/src/components/pdp/PdpEngage.jsx
+@@ -1,13 +1,26 @@
+ import { useEffect, useState } from 'react';
+ import Icon from '../Icon.jsx';
+ import { useCustomerAuth } from '../../lib/customerAuth.jsx';
+-import { fetchPublishedQuestions, submitQuestion, requestStockAlert } from '../../lib/productEngage.js';
++import { fetchPublishedQuestions, submitQuestion, requestStockAlert, voteHelpful, votedQuestions } from '../../lib/productEngage.js';
+ 
+ // ============================================================
+ // Product questions and "Notify me" on every product page (productEngage.js has
+ // the rules; owner, 2026-11-08). PdpQuestions follows the reviews; PdpNotifyMe
+ // replaces the delivery estimate in the buy box while the item is out of stock.
+ // ============================================================
++/** "Was this answer helpful?" — one vote per browser; the count shows once anyone voted. */
++function Helpful({ id, count }) {
++  const [n, setN] = useState(Number(count) || 0);
++  const [done, setDone] = useState(() => votedQuestions().includes(id));
++  const vote = async () => { setDone(true); const r = await voteHelpful(id); if (Number.isFinite(r) && r !== null) setN(r); else setN((x) => x + 1); };
++  return (
++    <p className="pdpk-qa__helpful">
++      {done ? <span>Thanks for your feedback.</span> : <button type="button" onClick={vote}><Icon name="check" size={13} /> Helpful</button>}
++      {n > 0 && <em>{n} {n === 1 ? 'person' : 'people'} found this helpful</em>}
++    </p>
++  );
++}
++
+ export function PdpQuestions({ productKey, productName }) {
+   const { user } = useCustomerAuth();
+   const [rows, setRows] = useState(null);
+@@ -45,6 +58,7 @@ export function PdpQuestions({ productKey, productName }) {
+               <div key={q.id} className="pdpk-qa__item">
+                 <dt><span>Question:</span> {q.question}</dt>
+                 <dd><span>Answer:</span> {q.answer}<em>SORA Lifestyle · {new Date(q.answered_at || q.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · asked by {q.author_name}</em></dd>
++                <Helpful id={q.id} count={q.helpful} />
+               </div>
+             ))}
+             {shown.length === 0 && <p className="pdpk-qa__empty">No answer matches “{filter}”.</p>}
+diff --git a/src/fashion/FashionHome.jsx b/src/fashion/FashionHome.jsx
+index 7147fba..f13003d 100644
+--- a/src/fashion/FashionHome.jsx
++++ b/src/fashion/FashionHome.jsx
+@@ -9,6 +9,7 @@ import FashionProductCard from './FashionProductCard.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+ import BudgetChips from '../components/BudgetChips.jsx';
+ import { WeddingStrip } from './WeddingEdit.jsx';
++import { ShopByColour, LastChance } from '../components/ShopExtras.jsx';
+ import OfferBanner from '../components/OfferBanner.jsx';
+ import { BagReminder } from '../components/HomeExtras.jsx';
+ import { TajLeatherPosters, TajLeatherRange } from '../components/TajLeather.jsx';
+@@ -167,6 +168,9 @@ export default function FashionHome() {
+       <BudgetChips base="/fashion/search" wrap="fs-sec" />
+       {/* The Wedding & Festive edit (WeddingEdit.jsx, 2026-11-13). */}
+       <WeddingStrip />
++      {/* Colour swatches and the pieces almost gone (ShopExtras.jsx, 2026-11-13). */}
++      <ShopByColour />
++      <LastChance wrap="fs-sec" />
+       <CategoryTiles tree={tree} />
+       <TajLeatherRange />
+       <AnsariRange />
 diff --git a/src/fashion/FashionLayout.jsx b/src/fashion/FashionLayout.jsx
-index 4ed4fdb..ec3b46b 100644
+index 4ed4fdb..1beb378 100644
 --- a/src/fashion/FashionLayout.jsx
 +++ b/src/fashion/FashionLayout.jsx
-@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+@@ -3,6 +3,8 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
  import Icon from '../components/Icon.jsx';
  import { SparrowMark } from '../components/Logo.jsx';
  import Footer from '../components/Footer.jsx';
 +import MobileTabBar from '../components/MobileTabBar.jsx';
++import StickyCats from '../components/StickyCats.jsx';
  import Toasts from '../components/Toasts.jsx';
  import { useStore } from '../lib/store.jsx';
  import { branding, getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
-@@ -204,6 +205,11 @@ function Drawer({ open, onClose }) {
+@@ -204,6 +206,17 @@ function Drawer({ open, onClose }) {
    );
  }
  
++function FashionStickyCats() {
++  const { tree } = useFashionCatalogue();
++  const items = (tree?.roots || []).flatMap((r) => tree.children(r.id)).slice(0, 14).map((n) => ({ name: n.name, href: `/fashion/c/${n.slug}` }));
++  return <StickyCats store="fashion" items={items} />;
++}
++
 +function FashionTabBar() {
 +  const wish = useFashionWishlist();
 +  return <MobileTabBar store="fashion" savedCount={wish.count} />;
@@ -404,8 +1104,11 @@ index 4ed4fdb..ec3b46b 100644
  function Shell() {
    const [menu, setMenu] = useState(false);
    const { pathname } = useLocation();
-@@ -214,6 +220,8 @@ function Shell() {
+@@ -212,8 +225,11 @@ function Shell() {
+     <div className={`fs${/^\/fashion\/(men|women|women\/sarees)\/?$/.test(pathname) ? ' fs--department' : ''}${/^\/fashion\/women\/sarees\/?$/.test(pathname) ? ' fs--saree' : ''}${/^\/fashion\/women\/?$/.test(pathname) ? ' fs--women' : ''}${/^\/fashion\/jewellery\/?$/.test(pathname) ? ' fs--jewellery' : ''}`}>
+       <FashionHeader onMenu={() => setMenu(true)} />
        <Drawer open={menu} onClose={() => setMenu(false)} />
++      <FashionStickyCats />
        <main className="fs-main"><Outlet /></main>
        <Footer />
 +      {/* The phone's bottom bar, as in the wellness store (2026-11-13 redesign); not over a product page's buy bar. */}
@@ -414,18 +1117,19 @@ index 4ed4fdb..ec3b46b 100644
      </div>
    );
 diff --git a/src/fashion/FashionListing.jsx b/src/fashion/FashionListing.jsx
-index c061365..67d254f 100644
+index c061365..ff43bc1 100644
 --- a/src/fashion/FashionListing.jsx
 +++ b/src/fashion/FashionListing.jsx
-@@ -14,6 +14,7 @@ import ShareList from '../components/ShareList.jsx';
+@@ -14,6 +14,8 @@ import ShareList from '../components/ShareList.jsx';
  import PriceDrops from '../components/PriceDrops.jsx';
  import { DidYouMean } from '../components/SearchSuggest.jsx';
  import FindForMe from '../components/FindForMe.jsx';
 +import SkeletonGrid from '../components/Skeleton.jsx';
++import { WEAVERS_FILMS } from '../lib/weaversVilla.js';
  import { didYouMean } from '../lib/searchMatch.js';
  import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
  
-@@ -103,7 +104,7 @@ export function FilterPanel({ state, options, onPatch, onClear, onClose = null,
+@@ -103,7 +105,7 @@ export function FilterPanel({ state, options, onPatch, onClear, onClose = null,
    );
  }
  
@@ -434,7 +1138,7 @@ index c061365..67d254f 100644
    const { status, tree, views } = useFashionCatalogue();
    const [params, setParams] = useSearchParams();
    const state = useMemo(() => readFashionUrlState(params), [params]);
-@@ -123,9 +124,10 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
+@@ -123,9 +125,10 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
      <div className="fs-listing">
        <CategoryChips onFilters={() => setPanel((v) => !v)} filterCount={count} />
        <Breadcrumb trail={trail} />
@@ -446,7 +1150,7 @@ index c061365..67d254f 100644
          <p className="fs-listing__count" role="status">{status === 'loading' ? 'Loading…' : `${results.length} ${results.length === 1 ? 'product' : 'products'}`}</p>
          <div className="fs-listing__tools">
            <label className="fs-sort">
-@@ -146,8 +148,8 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
+@@ -146,8 +149,8 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
          <FilterPanel state={state} options={options} onPatch={patch} onClear={clear} onClose={() => setPanel(false)} />
          <div className="fs-listing__results">
            {results.length === 0 ? (
@@ -457,7 +1161,7 @@ index c061365..67d254f 100644
                {count > 0 && <button type="button" className="fs-btn" onClick={clear}>Clear filters</button>}
                {status !== 'loading' && count === 0 && emptyExtra}
              </div>
-@@ -168,7 +170,7 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
+@@ -168,7 +171,7 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
  // ---- /fashion/c/<slug> --------------------------------------------------------
  export default function FashionCategory() {
    const { slug } = useParams();
@@ -466,7 +1170,7 @@ index c061365..67d254f 100644
    const node = resolveCategory(tree, slug);
    if (!node) {
      return (
-@@ -188,11 +190,28 @@ export default function FashionCategory() {
+@@ -188,11 +191,32 @@ export default function FashionCategory() {
        {children.map((c) => <Link key={c.id} to={categoryHref(c)} className="fs-subcat">{c.name}</Link>)}
      </nav>
    ) : null;
@@ -475,9 +1179,13 @@ index c061365..67d254f 100644
 +  const inScope = views.filter((v) => v.category_id && scope.has(v.category_id));
 +  const bannerImage = node.image_url || inScope.find((v) => v.image)?.image || null;
 +  const parent = tree.ancestors(node.id).slice(-2, -1)[0];
++  // A category with its own film (Weavers Villa's, 2026-11-13: "product videos") plays it in the banner, muted.
++  const film = WEAVERS_FILMS.find((f) => f.href === `/fashion/c/${node.slug}`) || null;
++  const stillOnly = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 +  const banner = (
 +    <header className={`fs-catbanner${bannerImage ? '' : ' fs-catbanner--plain'}`}>
-+      {bannerImage && <img className="fs-catbanner__img" src={bannerImage} alt="" width="1200" height="500" decoding="async" />}
++      {film ? <video className="fs-catbanner__img" src={film.video} poster={film.poster} autoPlay={!stillOnly} muted loop playsInline preload="metadata" aria-hidden="true" />
++        : bannerImage && <img className="fs-catbanner__img" src={bannerImage} alt="" width="1200" height="500" decoding="async" />}
 +      <div className="fs-catbanner__copy">
 +        <p className="fs-catbanner__eyebrow">{parent ? parent.name : 'Fashion'}</p>
 +        <h1 className="fs-listing__h serif fs-catbanner__h">{node.name}</h1>
@@ -518,6 +1226,39 @@ index 0f64aac..0126a1d 100644
          {/* No reviews yet: no rating row at all, rather than "0.0 ☆☆☆☆☆ (0)". */}
          {view.reviewCount > 0 && (
            <p className="fs-rating">
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 0f6d424..2f8d724 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -16,6 +16,9 @@ import ProductInformation from '../components/ProductInformation.jsx';
+ import { GalleryZoom } from '../homeliving/HomeLivingProductPage.jsx';
+ import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpLook, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+ import { lookPicks } from '../lib/completeLook.js';
++import { CompareButton } from '../components/Compare.jsx';
++import PriceHistory from '../components/PriceHistory.jsx';
++import { StylingTips } from '../components/ShopExtras.jsx';
+ import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+@@ -236,6 +239,7 @@ export default function FashionProductPage() {
+           </div>
+           <p className="fs-buybox__secure"><Icon name="lock" size={14} /> Secure transaction</p>
+           <PdpShare name={view.name} />
++          <CompareButton item={{ key: `fashion-${view.id}`, store: 'fashion', name: view.name, href: `/fashion/p/${view.slug}`, image: view.image, price: view.price, mrp: view.hasDiscount ? view.mrp : 0, brand: view.brand, category: node?.name || '', sizes: view.sizes.join(', '), colours: (view.swatches || []).map((s) => s.colour).filter((c) => c && c !== 'As shown').join(', ') }} />
+           <dl className="fs-buybox__facts">
+             {view.brand && <div><dt>Brand</dt><dd>{view.brand}</dd></div>}
+             <div><dt>Delivery</dt><dd>Standard, free</dd></div>
+@@ -252,8 +256,10 @@ export default function FashionProductPage() {
+           key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price,
+           mrp: p.hasDiscount ? p.mrp : 0, pct: p.discountPct, size: p.sizes.join(', '), brand: p.brand, current: i === 0,
+         }))} />
++        <PriceHistory productId={view.id} />
+         <PdpService />
+         <PdpReviews productKey={`fashion:${view.id}`} productName={view.name} />
++        <StylingTips slug={node?.slug} />
+         <PdpLook items={lookPicks(views.map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price, inStock: p.inStock, slug: p.category_id ? tree.byId.get(p.category_id)?.slug : '' })),
+           { key: view.id, slug: node?.slug })} />
+         <PdpCheaper current={{ key: view.id, price: view.price, group: view.category_id }}
 diff --git a/src/fashion/WeddingEdit.jsx b/src/fashion/WeddingEdit.jsx
 index 5f7e925..f819e3e 100644
 --- a/src/fashion/WeddingEdit.jsx
@@ -610,6 +1351,35 @@ index 91ac708..2717fcd 100644
              : <span className="hl-card__noimg" aria-hidden="true">{product.name.slice(0, 1)}</span>}
          </Link>
          <button type="button" className={`hl-card__heart${saved ? ' is-on' : ''}`} aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`} aria-pressed={saved} onClick={() => wish.toggle(product.id)}><Icon name="heart" size={16} fill={saved ? 'currentColor' : 'none'} /></button>
+diff --git a/src/homeliving/HomeLivingProductPage.jsx b/src/homeliving/HomeLivingProductPage.jsx
+index 4d82173..a0d7ac1 100644
+--- a/src/homeliving/HomeLivingProductPage.jsx
++++ b/src/homeliving/HomeLivingProductPage.jsx
+@@ -13,6 +13,8 @@ import ProductInformation from '../components/ProductInformation.jsx';
+ import { fetchEligibleCoupons } from '../lib/couponApi.js';
+ import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+ import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
++import { CompareButton } from '../components/Compare.jsx';
++import PriceHistory from '../components/PriceHistory.jsx';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
+ import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+@@ -683,6 +685,7 @@ export default function HomeLivingProductPage() {
+           </div>
+           <p className="pdp__bbsecure"><Icon name="lock" size={14} /> Secure transaction</p>
+           <PdpShare name={view.name} />
++          <CompareButton item={{ key: `homeliving-${view.id}`, store: 'homeliving', name: view.name, href: `/homeliving/p/${view.slug}`, image: (view.gallery && view.gallery[0]?.url) || view.images?.[0] || null, price: st.price, mrp: view.mrp > st.price ? view.mrp : 0, brand: view.brand || '', category: node?.name || '', sizes: view.net_content || '' }} />
+           <ProductDeliveryInfo />
+           <dl className="hl-buybox__facts">
+             {view.brand && <div><dt>Brand</dt><dd>{view.brand}</dd></div>}
+@@ -703,6 +706,7 @@ export default function HomeLivingProductPage() {
+       <ProductInfoSection view={view} node={node} categories={categories} st={st} />
+       <PdpBundle items={bundle.map((p, i) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null, price: i === 0 ? st.price : p.price }))}
+         canAddAll={bundleAddable} onAddAll={() => bundle.forEach((p, i) => addHomeLivingToCart(p, i === 0 ? st.variant : null, 1))} />
++      <PriceHistory productId={view.id} />
+       <PdpService />
+       <PdpReviews productKey={`homeliving:${view.id}`} productName={view.name} />
+       <PdpCheaper current={{ key: view.id, price: view.price, group: view.category_id }}
 diff --git a/src/homeliving/HomeLivingSearch.jsx b/src/homeliving/HomeLivingSearch.jsx
 index 70dca68..e6592e9 100644
 --- a/src/homeliving/HomeLivingSearch.jsx
@@ -806,6 +1576,160 @@ index d1fe435..9f8c435 100644
      text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees from Banaras.' }),
  ]);
  
+diff --git a/src/lib/compareList.js b/src/lib/compareList.js
+new file mode 100644
+index 0000000..3b3ff4a
+--- /dev/null
++++ b/src/lib/compareList.js
+@@ -0,0 +1,42 @@
++import { useSyncExternalStore } from 'react';
++
++// ============================================================
++// The compare list (owner, 2026-11-13: "Compare drawer"). Up to four products from
++// one store, picked from their product pages, kept in this browser only. The tray
++// (CompareTray.jsx) shows them; /compare lays them side by side.
++// ============================================================
++export const COMPARE_KEY = 'sora.compare.v1';
++export const COMPARE_MAX = 4;
++const subs = new Set();
++let cache = null;
++
++const read = () => {
++  if (cache) return cache;
++  try { const v = JSON.parse(window.localStorage.getItem(COMPARE_KEY) || '[]'); cache = Array.isArray(v) ? v.slice(0, COMPARE_MAX) : []; } catch { cache = []; }
++  return cache;
++};
++const write = (list) => {
++  cache = list;
++  try { window.localStorage.setItem(COMPARE_KEY, JSON.stringify(list)); } catch { /* storage off */ }
++  subs.forEach((fn) => fn());
++};
++
++/** Add or remove; another store's product starts a fresh list; the oldest drops past four. Pure. */
++export function toggleCompare(list, item) {
++  const cur = Array.isArray(list) ? list : [];
++  if (!item?.key) return cur;
++  if (cur.some((x) => x.key === item.key)) return cur.filter((x) => x.key !== item.key);
++  const same = cur.filter((x) => x.store === item.store);
++  return [...same, item].slice(-COMPARE_MAX);
++}
++
++export const compareApi = {
++  toggle: (item) => write(toggleCompare(read(), item)),
++  remove: (key) => write(read().filter((x) => x.key !== key)),
++  clear: () => write([]),
++};
++
++const empty = [];
++export function useCompareList() {
++  return useSyncExternalStore((fn) => { subs.add(fn); return () => subs.delete(fn); }, () => (typeof window === 'undefined' ? empty : read()), () => empty);
++}
+diff --git a/src/lib/insights.js b/src/lib/insights.js
+new file mode 100644
+index 0000000..cf126a2
+--- /dev/null
++++ b/src/lib/insights.js
+@@ -0,0 +1,71 @@
++import { useEffect, useState } from 'react';
++import { supabase } from './supabase.js';
++
++// ============================================================
++// Shop insights on the client (owner, 2026-11-13: features 23, 26, 33, 36):
++// writes the search log, reads the public aggregates (0043_insights.sql).
++// Nothing personal is sent: the search text, the store and the result count.
++// ============================================================
++const logged = new Set();
++
++/** Search text worth logging: trimmed, collapsed, 1–80 characters. Pure. */
++export function cleanQuery(q) {
++  const s = String(q || '').replace(/\s+/g, ' ').trim().toLowerCase();
++  return s.length >= 1 && s.length <= 80 ? s : '';
++}
++
++/** One row per store + query per page load; a failure is silent. */
++export function logSearch(store, q, results, client = supabase) {
++  const text = cleanQuery(q);
++  if (!client || !text || !['wellness', 'fashion', 'homeliving', 'grocery'].includes(store)) return false;
++  const key = `${store}|${text}`;
++  if (logged.has(key)) return false;
++  logged.add(key);
++  client.from('search_log').insert({ q: text, store, results: Math.max(0, Math.min(99999, Math.round(Number(results) || 0))) }).then(() => {}, () => {});
++  return true;
++}
++
++let popularCache = null;
++/** Queries people searched at least 3 times in two weeks that found something; [] until known. */
++export function usePopularSearches() {
++  const [list, setList] = useState(popularCache || []);
++  useEffect(() => {
++    if (popularCache || !supabase) return undefined;
++    let live = true;
++    supabase.rpc('popular_searches', { days: 14, max_rows: 8 }).then(({ data }) => {
++      popularCache = Array.isArray(data) ? data.map((r) => r.q).filter(Boolean) : [];
++      if (live) setList(popularCache);
++    }, () => {});
++    return () => { live = false; };
++  }, []);
++  return list;
++}
++
++/** A product's daily prices, oldest first: [{ day, price, mrp }]. */
++export async function fetchPriceHistory(productId, client = supabase) {
++  if (!client || !productId) return [];
++  const { data, error } = await client.from('catalogue_price_history').select('recorded_on, price, mrp')
++    .eq('product_id', productId).order('recorded_on', { ascending: true }).limit(120);
++  if (error || !Array.isArray(data)) return [];
++  return data.map((r) => ({ day: r.recorded_on, price: Number(r.price), mrp: r.mrp == null ? null : Number(r.mrp) }));
++}
++
++/** The last `days` of a history, and its low, high and whether today is the lowest. Pure. */
++export function priceSummary(history, days = 30, today = new Date().toISOString().slice(0, 10)) {
++  const from = new Date(Date.parse(`${today}T00:00:00Z`) - days * 86400e3).toISOString().slice(0, 10);
++  const pts = (Array.isArray(history) ? history : []).filter((p) => p.day >= from && Number.isFinite(p.price));
++  if (pts.length < 2) return null;
++  const prices = pts.map((p) => p.price);
++  const low = Math.min(...prices); const high = Math.max(...prices); const now = prices[prices.length - 1];
++  return { points: pts, low, high, now, isLowest: now === low && high > low, days };
++}
++
++let coversCache = null;
++/** category id → first product picture (catalogue_category_covers); {} until read. */
++export async function fetchCategoryCovers(client = supabase) {
++  if (coversCache) return coversCache;
++  if (!client) return {};
++  const { data } = await client.from('catalogue_category_covers').select('category_id, image');
++  coversCache = Object.fromEntries((Array.isArray(data) ? data : []).map((r) => [r.category_id, r.image]));
++  return coversCache;
++}
+diff --git a/src/lib/productEngage.js b/src/lib/productEngage.js
+index 9520839..ed1ed9c 100644
+--- a/src/lib/productEngage.js
++++ b/src/lib/productEngage.js
+@@ -10,7 +10,7 @@ import { supabase } from './supabase.js';
+ //   alerts      "Notify me when it is back" on an out-of-stock product: an email
+ //               and the size/colour wanted, readable only by an admin.
+ // ============================================================
+-export const QUESTION_COLUMNS = 'id, product_key, question, author_name, answer, status, created_at, answered_at';
++export const QUESTION_COLUMNS = 'id, product_key, question, author_name, answer, status, created_at, answered_at, helpful';
+ const EMAIL = /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i;
+ 
+ export async function fetchPublishedQuestions(key, client = supabase) {
+@@ -87,3 +87,15 @@ export function productHref(key) {
+   if (store === 'fashion' || store === 'homeliving') return `/admin/store-catalogue/${store}/${id}`;
+   return '';
+ }
++
++// ---- "Was this answer helpful?" (2026-11-13, owner feature 37) --------------------------
++// One vote per question per browser (kept here); the count lives on the question (0043).
++const VOTED_KEY = 'sora.qa.helpful.v1';
++export const votedQuestions = () => { try { const v = JSON.parse(window.localStorage.getItem(VOTED_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
++export async function voteHelpful(id, client = supabase) {
++  const voted = votedQuestions();
++  if (!id || voted.includes(id)) return null;
++  try { window.localStorage.setItem(VOTED_KEY, JSON.stringify([...voted, id].slice(-200))); } catch { /* storage off */ }
++  const { data, error } = await client.rpc('vote_question_helpful', { qid: id });
++  return error ? null : Number(data);
++}
 diff --git a/src/main.jsx b/src/main.jsx
 index d2e0532..fc0dfef 100644
 --- a/src/main.jsx
@@ -827,6 +1751,37 @@ index d2e0532..fc0dfef 100644
              <AdminAuthProvider>
                <ErrorBoundary>
                  <App />
+diff --git a/src/pages/Account.jsx b/src/pages/Account.jsx
+index 60e9473..538e022 100644
+--- a/src/pages/Account.jsx
++++ b/src/pages/Account.jsx
+@@ -51,6 +51,16 @@ export function orderHelpLink(phone, orderNumber) {
+   return `https://wa.me/${n}?text=${encodeURIComponent(`Hi SORA Lifestyle, I need help with my order ${orderNumber}.`)}`;
+ }
+ 
++/**
++ * "Rate your purchase" (2026-11-13, owner feature 34): once an order is delivered, the
++ * reviews of its first product still on sale. '' otherwise. Pure.
++ */
++export function rateLink(order) {
++  if (!order || order.fulfillment_status !== 'delivered') return '';
++  const p = (Array.isArray(order.items) ? order.items : []).map(productForLine).find((x) => x && x.slug);
++  return p ? `/product/${p.slug}#reviews` : '';
++}
++
+ export function buyAgainLines(items) {
+   return (Array.isArray(items) ? items : [])
+     .map((l) => ({ product: productForLine(l), qty: Math.max(1, Math.min(10, Number(l?.qty) || 1)) }))
+@@ -495,6 +505,9 @@ function Orders() {
+                       </button>
+                     );
+                   })()}
++                  {rateLink(o) && (
++                    <Link to={rateLink(o)} className="btn btn-sm btn-light"><Icon name="star" size={15} /> Rate your purchase</Link>
++                  )}
+                   {trackingUrl && (
+                     <a href={trackingUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light">
+                       Track shipment <Icon name="externalLink" size={14} />
 diff --git a/src/pages/AllCategories.jsx b/src/pages/AllCategories.jsx
 new file mode 100644
 index 0000000..ae2cf6d
@@ -1023,6 +1978,92 @@ index 145fd86..852cf3e 100644
                    <span className={`hx-brands__img${b.imageFrom ? ' is-whole' : ''}`}>
                      {img && <img src={img} alt="" width="600" height="450" loading={i < 3 ? 'eager' : 'lazy'} decoding="async" />}
                    </span>
+diff --git a/src/pages/Hamper.jsx b/src/pages/Hamper.jsx
+new file mode 100644
+index 0000000..d48a712
+--- /dev/null
++++ b/src/pages/Hamper.jsx
+@@ -0,0 +1,80 @@
++import { useState } from 'react';
++import { Link, useNavigate } from 'react-router-dom';
++import Icon from '../components/Icon.jsx';
++import { money } from '../lib/format.js';
++import { useStore } from '../lib/store.jsx';
++import { products } from '../data/products.js';
++import { categories } from '../data/categories.js';
++import { usePageMeta } from '../lib/pageMeta.js';
++
++// ============================================================
++// Build your hamper (owner, 2026-11-13: "Apna Diwali hamper banao"). Pick three to
++// six wellness products, see the total, and put them all in the bag in one tap.
++// Each goes in at its own price, one of each; nothing is discounted or bundled
++// here — the bag and checkout price them as always.
++// ============================================================
++export const HAMPER_MIN = 3;
++export const HAMPER_MAX = 6;
++
++/** In-stock, priced wellness products with a picture. Pure. */
++export const hamperPool = (list) => (Array.isArray(list) ? list : []).filter((p) => p && p.slug && p.image && Number(p.stock) > 0 && Number(p.price) > 0);
++
++/** Pick or drop one; never past the maximum. Pure. */
++export function toggleHamper(picked, id) {
++  if (picked.includes(id)) return picked.filter((x) => x !== id);
++  return picked.length >= HAMPER_MAX ? picked : [...picked, id];
++}
++
++export const hamperTotal = (items) => items.reduce((n, p) => n + Number(p.price || 0), 0);
++
++export default function Hamper() {
++  const { addToCart } = useStore();
++  const navigate = useNavigate();
++  const pool = hamperPool(products);
++  const cats = categories.filter((c) => pool.some((p) => p.category === c.slug));
++  const [cat, setCat] = useState('');
++  const [picked, setPicked] = useState([]);
++  usePageMeta({ title: 'Build your hamper', description: 'Pick three to six wellness favourites and put them all in your bag in one tap.', path: '/hamper' });
++  const shown = cat ? pool.filter((p) => p.category === cat) : pool;
++  const chosen = picked.map((id) => pool.find((p) => p.id === id)).filter(Boolean);
++  const ready = chosen.length >= HAMPER_MIN;
++  const addAll = () => { chosen.forEach((p) => addToCart(p, 1)); navigate('/cart'); };
++  return (
++    <div className="hx sora-hamper">
++      <div className="hx-wrap">
++        <nav className="hx-offers__crumbs" aria-label="Breadcrumb"><Link to="/">Home</Link> <Icon name="chevronRight" size={12} /> <span>Build your hamper</span></nav>
++        <h1 className="hx-offers__h">Build your hamper</h1>
++        <p className="hx-offers__lede">Pick {HAMPER_MIN} to {HAMPER_MAX} wellness favourites for someone you love, then add them all to your bag in one tap.</p>
++        <div className="sora-brand__cats" role="group" aria-label="Category">
++          <button type="button" aria-pressed={!cat} className={`hx-offers__chip${!cat ? ' is-on' : ''}`} onClick={() => setCat('')}>All</button>
++          {cats.map((c) => <button key={c.slug} type="button" aria-pressed={cat === c.slug} className={`hx-offers__chip${cat === c.slug ? ' is-on' : ''}`} onClick={() => setCat(c.slug)}>{c.name}</button>)}
++        </div>
++        <ul className="hx-offers__grid sora-hamper__grid">
++          {shown.map((p) => {
++            const on = picked.includes(p.id);
++            const full = !on && picked.length >= HAMPER_MAX;
++            return (
++              <li key={p.id}>
++                <button type="button" className={`sora-hamper__card${on ? ' is-on' : ''}`} aria-pressed={on} disabled={full} onClick={() => setPicked((x) => toggleHamper(x, p.id))}>
++                  <span className="hx-deals__img sora-brand__whole"><img src={p.image} alt="" width="300" height="300" loading="lazy" decoding="async" /><i className="sora-hamper__tick" aria-hidden="true"><Icon name={on ? 'check' : 'plus'} size={16} /></i></span>
++                  <span className="hx-deals__name">{p.name}</span>
++                  <span className="hx-deals__price"><b>{money(p.price)}</b></span>
++                </button>
++              </li>
++            );
++          })}
++        </ul>
++      </div>
++      <div className="sora-hamper__bar" role="region" aria-label="Your hamper">
++        <div className="sora-hamper__bar-in">
++          <ul className="sora-hamper__picked">
++            {chosen.map((p) => <li key={p.id}><img src={p.image} alt={p.name} width="40" height="40" /></li>)}
++            {Array.from({ length: Math.max(0, HAMPER_MIN - chosen.length) }, (_, i) => <li key={`e${i}`} className="is-empty" aria-hidden="true" />)}
++          </ul>
++          <p><b>{chosen.length} of {HAMPER_MAX}</b> · {money(hamperTotal(chosen))}<span>{ready ? 'Ready to add' : `Pick ${HAMPER_MIN - chosen.length} more`}</span></p>
++          <button type="button" className="sora-hamper__go" disabled={!ready} onClick={addAll}>Add all to bag</button>
++        </div>
++      </div>
++    </div>
++  );
++}
 diff --git a/src/pages/Home.jsx b/src/pages/Home.jsx
 index a45c23b..d5e711e 100644
 --- a/src/pages/Home.jsx
@@ -1243,18 +2284,27 @@ index f4b85c9..d294d34 100644
              : (
                <>
 diff --git a/src/pages/Offers.jsx b/src/pages/Offers.jsx
-index 150372a..ab2587e 100644
+index 150372a..809a32c 100644
 --- a/src/pages/Offers.jsx
 +++ b/src/pages/Offers.jsx
-@@ -10,6 +10,7 @@ import { useStorefrontSection } from '../lib/storefrontSections.js';
+@@ -10,6 +10,8 @@ import { useStorefrontSection } from '../lib/storefrontSections.js';
  import { OFFER_COUNTDOWN, parseIndiaTime } from '../lib/offerCountdown.js';
  import { offerShareText } from '../components/PromoCard.jsx';
  import { usePageMeta } from '../lib/pageMeta.js';
 +import SkeletonGrid from '../components/Skeleton.jsx';
++import { LastChance } from '../components/ShopExtras.jsx';
  
  // ============================================================
  // /offers — every product on a real discount, across the stores, biggest discount
-@@ -165,7 +166,7 @@ export default function Offers() {
+@@ -152,6 +154,7 @@ export default function Offers() {
+       <div className="hx-wrap">
+         <ShareOffer />
+         {store === 'all' && cat !== null && <TodayPick deals={all} />}
++        {store === 'all' && <LastChance wrap="" />}
+         <div className="hx-offers__tabs" role="tablist" aria-label="Store">
+           {STORES.map((s) => (
+             <button key={s.id} type="button" role="tab" aria-selected={store === s.id} className={`hx-offers__tab${store === s.id ? ' is-on' : ''}`} onClick={() => pick(s.id)}>
+@@ -165,7 +168,7 @@ export default function Offers() {
            ))}
          </div>
          {cat === null && shownDeals.length === 0 ? (
@@ -1263,6 +2313,26 @@ index 150372a..ab2587e 100644
          ) : shownDeals.length === 0 ? (
            <p className="hx-offers__empty">Nothing on offer here right now. New deals appear the moment they go live.</p>
          ) : (
+diff --git a/src/pages/Product.jsx b/src/pages/Product.jsx
+index f099ced..92db63f 100644
+--- a/src/pages/Product.jsx
++++ b/src/pages/Product.jsx
+@@ -30,6 +30,7 @@ import ProductClaims from '../components/pdp/ProductClaims.jsx';
+ import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
+ import PromoRail from '../components/promo/PromoRail.jsx';
+ import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
++import { CompareButton } from '../components/Compare.jsx';
+ import { specificationsFor } from '../data/pdpContent.js';
+ import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
+ import { promotionsSource } from '../lib/promotions.js';
+@@ -404,6 +405,7 @@ useEffect(() => {
+           </button>
+           <p className="pdp__bbsecure"><Icon name="lock" size={14} /> Secure transaction</p>
+           <PdpShare name={product.name} />
++          <CompareButton item={{ key: `wellness-${product.id}`, store: 'wellness', name: product.name, href: `/product/${product.slug}`, image: product.image || null, price: product.price, mrp: product.mrp > product.price ? product.mrp : 0, brand: product.brand || '', category: product.category || '', sizes: product.netContent || product.form || '' }} />
+           <dl className="pdp__bbfacts">
+             {product.brand && <div><dt>Brand</dt><dd>{product.brand}</dd></div>}
+             <div><dt>Delivery</dt><dd>Standard, free</dd></div>
 diff --git a/src/styles/fashion.css b/src/styles/fashion.css
 index 2d83557..e710363 100644
 --- a/src/styles/fashion.css
@@ -1411,10 +2481,10 @@ index 78d25b9..0e83e9d 100644
 +@media (max-width: 767px) { .hl .hl-catbanner::after { background: linear-gradient(0deg, rgba(15, 25, 20, .88) 0%, rgba(15, 25, 20, .55) 55%, rgba(15, 25, 20, .25) 100%); } }
 diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
 new file mode 100644
-index 0000000..4e926a8
+index 0000000..ceb961b
 --- /dev/null
 +++ b/src/styles/sora-ds.css
-@@ -0,0 +1,191 @@
+@@ -0,0 +1,291 @@
 +/* ============================================================
 +   SORA design system (2026-11-13 redesign: one look across the stores).
 +   Loaded last of the storefront sheets, before the admin's per-section settings.
@@ -1606,6 +2676,106 @@ index 0000000..4e926a8
 +.sora-brand--luxe .sora-brand__story { color: #CFC6B4; }
 +.sora-brand--luxe .sora-brand__eyebrow { color: #D9B26A; }
 +.sora-brand--luxe .sora-brand__count { color: #F7F1E4; }
++
++/* ===== Features 22–38 (2026-11-13) ===== */
++/* Mega menu under the store bar (MegaMenu.jsx). */
++.sora-storebar { position: relative; z-index: 70; }
++.sora-storebar__store.is-open { background: #fff; color: var(--sora-forest); }
++.sora-mega { position: absolute; left: 0; right: 0; top: 100%; background: #fff; border-top: 1px solid #E6DFCC; border-bottom: 1px solid var(--sora-line); box-shadow: 0 24px 40px -24px rgba(15, 17, 17, .35); }
++.sora-mega__in { max-width: 1480px; margin: 0 auto; padding: 22px max(16px, 4vw) 18px; display: grid; gap: 14px; }
++.sora-mega__tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px; }
++.sora-mega__tiles a { display: flex; flex-direction: column; gap: 6px; color: var(--sora-ink); text-decoration: none; }
++.sora-mega__tiles b { font-size: 13.5px; font-weight: 600; }
++.sora-mega__img { display: block; aspect-ratio: 1; overflow: hidden; background: #F3F1EA; }
++.sora-mega__img img { width: 100%; height: 100%; object-fit: cover; }
++.sora-mega__img.is-whole img { object-fit: contain; padding: 8px; box-sizing: border-box; background: #fff; }
++.sora-mega__cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 20px; }
++.sora-mega__head { display: flex; flex-direction: column; gap: 8px; color: var(--sora-ink); text-decoration: none; }
++.sora-mega__head .sora-mega__img { aspect-ratio: 10 / 7; }
++.sora-mega__head b { display: inline-flex; align-items: center; gap: 2px; font-size: 15px; }
++.sora-mega__col ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
++.sora-mega__col li a { color: #3E4A44; font-size: 13.5px; text-decoration: none; }
++.sora-mega a:hover b, .sora-mega__col li a:hover { color: var(--sora-honey); }
++.sora-mega__all { justify-self: end; display: inline-flex; align-items: center; gap: 4px; color: var(--sora-forest-2); font-weight: 700; text-decoration: none; }
++.sora-mega__wait { margin: 0; color: var(--sora-muted); }
++
++/* Compare (Compare.jsx). */
++.sora-cmpbtn { display: inline-flex; align-items: center; gap: 6px; height: 34px; margin-top: 10px; padding: 0 12px; border: 1px solid #D5D9D9; background: #fff; color: var(--sora-ink); font: 600 13.5px Arial, sans-serif; cursor: pointer; }
++.sora-cmpbtn.is-on { border-color: var(--sora-forest); color: var(--sora-forest); background: #EEF4F0; }
++.sora-cmptray { position: fixed; left: 50%; bottom: calc(14px + var(--app-foot, 0px) + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 58; display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #fff; border: 1px solid #D5D9D9; box-shadow: 0 16px 34px -14px rgba(15, 17, 17, .4); max-width: calc(100vw - 24px); }
++.sora-cmptray ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; }
++.sora-cmptray li { position: relative; width: 44px; height: 44px; border: 1px solid var(--sora-line); background: #fff; }
++.sora-cmptray li.is-empty { border-style: dashed; }
++.sora-cmptray li img { width: 100%; height: 100%; object-fit: contain; }
++.sora-cmptray li button { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; display: grid; place-items: center; padding: 0; border: 0; background: var(--sora-ink); color: #fff; cursor: pointer; }
++.sora-cmptray p { margin: 0; font-size: 13px; color: var(--sora-muted); white-space: nowrap; }
++.sora-cmptray__go { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; background: var(--sora-forest); color: #fff; font-weight: 700; font-size: 14px; text-decoration: none; white-space: nowrap; }
++.sora-cmptray__go.is-off { pointer-events: none; opacity: .45; }
++.sora-cmptray__clear { border: 0; background: none; color: var(--sora-muted); font-size: 13px; text-decoration: underline; cursor: pointer; }
++@media (max-width: 600px) { .sora-cmptray p, .sora-cmptray__clear { display: none; } }
++.sora-cmp { overflow-x: auto; margin: 16px 0 32px; }
++.sora-cmp table { border-collapse: collapse; min-width: 640px; width: 100%; background: #fff; }
++.sora-cmp th, .sora-cmp td { padding: 12px; border: 1px solid var(--sora-line); text-align: left; vertical-align: top; font-size: 14px; }
++.sora-cmp tbody th { width: 140px; background: #F7F8F8; font-weight: 700; }
++.sora-cmp__item { display: flex; flex-direction: column; gap: 8px; color: var(--sora-ink); text-decoration: none; font-weight: 600; }
++.sora-cmp__item img { width: 140px; height: 140px; object-fit: contain; background: #fff; }
++.sora-cmp__rm { margin-top: 8px; border: 0; background: none; color: var(--sora-muted); text-decoration: underline; cursor: pointer; padding: 0; font-size: 13px; }
++
++/* Price history (PriceHistory.jsx). */
++.sora-ph { margin: 22px 0; padding: 16px; border: 1px solid var(--sora-line); background: #fff; color: var(--sora-forest-2); max-width: 520px; }
++.sora-ph__facts { display: flex; gap: 18px; flex-wrap: wrap; margin: 8px 0 0; font-size: 13.5px; color: var(--sora-muted); }
++.sora-ph__facts b { color: var(--sora-ink); }
++.sora-ph__low { margin: 8px 0 0; font-size: 13.5px; font-weight: 700; color: #067D62; }
++
++/* Build your hamper (Hamper.jsx). */
++.sora-hamper { padding-bottom: 110px; }
++.sora-hamper__grid { margin-top: 16px; }
++.sora-hamper__card { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 0; border: 2px solid transparent; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
++.sora-hamper__card.is-on { border-color: var(--sora-forest); }
++.sora-hamper__card:disabled { opacity: .45; cursor: not-allowed; }
++.sora-hamper__card .hx-deals__img { position: relative; }
++.sora-hamper__tick { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; display: grid; place-items: center; background: #fff; border: 1px solid #D5D9D9; color: var(--sora-forest); }
++.sora-hamper__card.is-on .sora-hamper__tick { background: var(--sora-forest); color: #fff; border-color: var(--sora-forest); }
++.sora-hamper__bar { position: fixed; left: 0; right: 0; bottom: calc(var(--app-foot, 0px)); z-index: 57; background: #fff; border-top: 1px solid #D5D9D9; box-shadow: 0 -10px 24px -16px rgba(15, 17, 17, .35); }
++.sora-hamper__bar-in { max-width: 1480px; margin: 0 auto; padding: 10px max(16px, 4vw) calc(10px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 14px; }
++.sora-hamper__picked { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; }
++.sora-hamper__picked li { width: 40px; height: 40px; border: 1px solid var(--sora-line); background: #fff; }
++.sora-hamper__picked li.is-empty { border-style: dashed; }
++.sora-hamper__picked img { width: 100%; height: 100%; object-fit: contain; }
++.sora-hamper__bar p { margin: 0; flex: 1; font-size: 14px; }
++.sora-hamper__bar p span { display: block; font-size: 12.5px; color: var(--sora-muted); }
++.sora-hamper__go { height: 42px; padding: 0 18px; border: 0; background: var(--sora-forest); color: #fff; font: 700 14.5px Arial, sans-serif; cursor: pointer; white-space: nowrap; }
++.sora-hamper__go:disabled { opacity: .45; cursor: not-allowed; }
++@media (max-width: 600px) { .sora-hamper__picked { display: none; } }
++
++/* Shop by colour, styling tips, almost gone (ShopExtras.jsx). */
++.sora-colours__row { list-style: none; margin: 0; padding: 0 0 4px; display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; }
++.sora-colours__row::-webkit-scrollbar { display: none; }
++.sora-colours__sw { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 72px; color: var(--sora-ink); font-size: 13px; text-decoration: none; }
++.sora-colours__sw span { width: 52px; height: 52px; border-radius: 50%; border: 1px solid rgba(15, 17, 17, .15); box-shadow: inset 0 0 0 3px #fff; }
++.sora-colours__sw:hover span { outline: 2px solid var(--sora-forest); outline-offset: 2px; }
++.sora-tips { margin: 22px 0; padding: 16px 18px; background: var(--sora-cream); border: 1px solid #EDE6D3; max-width: 760px; }
++.sora-tips h2 { display: flex; align-items: center; gap: 6px; }
++.sora-tips ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14.5px; line-height: 1.5; }
++.sora-last { padding: 24px 0 8px; }
++.sora-last__row { list-style: none; margin: 0; padding: 0 0 8px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(160px, 190px); gap: 14px; overflow-x: auto; }
++.sora-last .hx-deals__img { position: relative; }
++.sora-last__left { position: absolute; left: 8px; bottom: 8px; padding: 3px 8px; background: #B12704; color: #fff; font-size: 12px; }
++
++/* Sticky category strip on phones (StickyCats.jsx). */
++.sora-stickycats { display: none; }
++@media (max-width: 899px) {
++  .sora-stickycats { display: block; position: sticky; top: var(--sora-hdr-h, 56px); z-index: 19; background: #fff; border-bottom: 1px solid var(--sora-line); }
++  .sora-stickycats ul { list-style: none; margin: 0; padding: 8px 12px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
++  .sora-stickycats ul::-webkit-scrollbar { display: none; }
++  .sora-stickycats a { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border: 1px solid #D5D9D9; background: #fff; color: var(--sora-ink); font-size: 13px; white-space: nowrap; text-decoration: none; }
++  .sora-stickycats a.is-on { border-color: var(--sora-forest); background: var(--sora-forest); color: #fff; }
++}
++
++/* "Was this answer helpful?" (PdpEngage.jsx). */
++.pdpk-qa__helpful { display: flex; align-items: center; gap: 10px; margin: 6px 0 0; font-size: 12.5px; color: var(--sora-muted); }
++.pdpk-qa__helpful button { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px; border: 1px solid #D5D9D9; background: #fff; font: inherit; color: var(--sora-ink); cursor: pointer; }
++.pdpk-qa__helpful em { font-style: normal; }
 diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
 index 1fed525..5d0d184 100644
 --- a/src/styles/v2-home.css

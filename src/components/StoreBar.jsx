@@ -1,4 +1,6 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import MegaMenu from './MegaMenu.jsx';
 import Icon from './Icon.jsx';
 
 // ============================================================
@@ -37,16 +39,32 @@ export function storeOf(pathname) {
   return '';
 }
 
+const MEGA = new Set(['wellness', 'fashion', 'homeliving']);
+
 export default function StoreBar() {
   const { pathname } = useLocation();
+  const [open, setOpen] = useState('');
+  const timer = useRef(null);
+  useEffect(() => { setOpen(''); }, [pathname]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(''); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
   if (HIDDEN.test(pathname)) return null;
   const current = storeOf(pathname);
+  // The mega menu: desktop pointers only (a tap on a phone just opens the store).
+  const desktop = () => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 1024px) and (hover: hover)').matches;
+  const enter = (id) => { if (!MEGA.has(id) || !desktop()) return; clearTimeout(timer.current); timer.current = setTimeout(() => setOpen(id), 140); };
+  const leave = () => { clearTimeout(timer.current); timer.current = setTimeout(() => setOpen(''), 180); };
   return (
-    <div className="sora-storebar">
+    <div className="sora-storebar" onMouseLeave={leave}>
       <div className="sora-storebar__in">
         <nav className="sora-storebar__stores" aria-label="SORA stores">
           {STORES.map((s) => (
-            <Link key={s.id} to={s.to} className={`sora-storebar__store${current === s.id ? ' is-on' : ''}`} aria-current={current === s.id ? 'page' : undefined}>{s.label}</Link>
+            <Link key={s.id} to={s.to} className={`sora-storebar__store${current === s.id ? ' is-on' : ''}${open === s.id ? ' is-open' : ''}`} aria-current={current === s.id ? 'page' : undefined}
+              onMouseEnter={() => enter(s.id)} onFocus={() => enter(s.id)}>{s.label}</Link>
           ))}
         </nav>
         <nav className="sora-storebar__site" aria-label="Across the stores">
@@ -55,6 +73,7 @@ export default function StoreBar() {
           ))}
         </nav>
       </div>
+      {open && <div onMouseEnter={() => clearTimeout(timer.current)}><MegaMenu store={open} onClose={() => setOpen('')} /></div>}
     </div>
   );
 }

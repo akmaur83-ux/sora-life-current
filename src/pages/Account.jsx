@@ -51,6 +51,16 @@ export function orderHelpLink(phone, orderNumber) {
   return `https://wa.me/${n}?text=${encodeURIComponent(`Hi SORA Lifestyle, I need help with my order ${orderNumber}.`)}`;
 }
 
+/**
+ * "Rate your purchase" (2026-11-13, owner feature 34): once an order is delivered, the
+ * reviews of its first product still on sale. '' otherwise. Pure.
+ */
+export function rateLink(order) {
+  if (!order || order.fulfillment_status !== 'delivered') return '';
+  const p = (Array.isArray(order.items) ? order.items : []).map(productForLine).find((x) => x && x.slug);
+  return p ? `/product/${p.slug}#reviews` : '';
+}
+
 export function buyAgainLines(items) {
   return (Array.isArray(items) ? items : [])
     .map((l) => ({ product: productForLine(l), qty: Math.max(1, Math.min(10, Number(l?.qty) || 1)) }))
@@ -495,6 +505,9 @@ function Orders() {
                       </button>
                     );
                   })()}
+                  {rateLink(o) && (
+                    <Link to={rateLink(o)} className="btn btn-sm btn-light"><Icon name="star" size={15} /> Rate your purchase</Link>
+                  )}
                   {trackingUrl && (
                     <a href={trackingUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light">
                       Track shipment <Icon name="externalLink" size={14} />

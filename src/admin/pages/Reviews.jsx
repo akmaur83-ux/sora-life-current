@@ -12,6 +12,12 @@ import {
 //   Stock alerts   (0042) "Notify me" emails for out-of-stock products, grouped
 //                  by product; mark a group notified once you have told them.
 // ============================================================
+/** The back-in-stock email (2026-11-13, owner feature 38): ready to send from the admin's own mail. Pure. */
+export function backInStockBody(g) {
+  const search = `https://www.soralifestyle.in/${g.product_key.startsWith('fashion:') ? 'fashion/search' : g.product_key.startsWith('homeliving:') ? 'homeliving/search' : 'shop'}?q=${encodeURIComponent(g.product_name)}`;
+  return `Hello,\n\nGood news: ${g.product_name}${g.choice ? ` (${g.choice})` : ''} is back in stock at SORA LIFESTYLE.\n\nShop it here: ${search}\n\nYou asked us to let you know when it returned.\n\nSORA LIFESTYLE`;
+}
+
 const SECTIONS = [['reviews', 'Reviews'], ['questions', 'Questions'], ['alerts', 'Stock alerts']];
 const card = { border: '1px solid #E4E8E1', padding: 14, background: '#fff' };
 const meta = { margin: 0, fontSize: 12, color: '#5F6D64' };
@@ -118,7 +124,7 @@ function AlertsPane() {
               <p style={meta}>{productHref(g.product_key) ? <a href={productHref(g.product_key)}>{g.product_key}</a> : g.product_key} · latest {new Date(g.rows[0].created_at).toLocaleString('en-IN')}</p>
               <textarea readOnly rows={Math.min(4, g.rows.length)} value={g.rows.map((r) => r.email).join(', ')} onFocus={(e) => e.target.select()} aria-label="Emails" style={{ width: '100%', margin: '8px 0', padding: 8, font: '13px/1.4 monospace' }} />
               <div style={{ display: 'flex', gap: 8 }}>
-                <a className="btn btn-sm btn-ghost" href={`mailto:?bcc=${encodeURIComponent(g.rows.map((r) => r.email).join(','))}&subject=${encodeURIComponent(`${g.product_name} is back in stock`)}`}>Email them</a>
+                <a className="btn btn-sm btn-ghost" href={`mailto:?bcc=${encodeURIComponent(g.rows.map((r) => r.email).join(','))}&subject=${encodeURIComponent(`${g.product_name} is back in stock`)}&body=${encodeURIComponent(backInStockBody(g))}`}>Email them</a>
                 {tab === 'open' && <button type="button" className="btn btn-sm" onClick={() => done(g)}>Mark notified</button>}
               </div>
             </article>

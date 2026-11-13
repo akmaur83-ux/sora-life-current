@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { usePopularSearches } from '../lib/insights.js';
 import { money } from '../lib/format.js';
 
 // ============================================================
@@ -27,7 +28,9 @@ export function clearRecentSearches(store) { try { window.localStorage.removeIte
 /** With nothing typed yet: the last searches, each a link to its results, and Clear. */
 export function RecentSearches({ id, terms, hrefFor, onPick, onClear, popular = [] }) {
   const hasTerms = terms && terms.length > 0;
-  if (!hasTerms && popular.length === 0) return null;
+  // Trending searches (2026-11-13): what shoppers actually searched (3+ times in two weeks, with results).
+  const trending = usePopularSearches().filter((t) => !(terms || []).some((x) => x.toLowerCase() === t)).slice(0, 6);
+  if (!hasTerms && popular.length === 0 && trending.length === 0) return null;
   return (
     <div className="hx-suggest hx-suggest--recent" id={id} aria-label={hasTerms ? 'Recent searches' : 'Popular categories'}>
       {hasTerms && <>
@@ -35,6 +38,12 @@ export function RecentSearches({ id, terms, hrefFor, onPick, onClear, popular = 
         {terms.map((t) => (
           <Link key={t} to={hrefFor(t)} className="hx-suggest__recent" onMouseDown={(e) => e.preventDefault()} onClick={onPick}>{t}</Link>
         ))}
+      </>}
+      {trending.length > 0 && <>
+        <p className="hx-suggest__head">Trending searches</p>
+        <div className="hx-suggest__chips">
+          {trending.map((t) => <Link key={t} to={hrefFor(t)} className="hx-suggest__chip" onMouseDown={(e) => e.preventDefault()} onClick={onPick}>{t}</Link>)}
+        </div>
       </>}
       {/* Nothing typed and nothing searched yet: the store's categories, one tap away (2026-11-09). */}
       {popular.length > 0 && <>

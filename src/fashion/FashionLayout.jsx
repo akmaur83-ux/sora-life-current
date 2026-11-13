@@ -4,6 +4,7 @@ import Icon from '../components/Icon.jsx';
 import { SparrowMark } from '../components/Logo.jsx';
 import Footer from '../components/Footer.jsx';
 import MobileTabBar from '../components/MobileTabBar.jsx';
+import StickyCats from '../components/StickyCats.jsx';
 import Toasts from '../components/Toasts.jsx';
 import { useStore } from '../lib/store.jsx';
 import { branding, getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
@@ -205,6 +206,12 @@ function Drawer({ open, onClose }) {
   );
 }
 
+function FashionStickyCats() {
+  const { tree } = useFashionCatalogue();
+  const items = (tree?.roots || []).flatMap((r) => tree.children(r.id)).slice(0, 14).map((n) => ({ name: n.name, href: `/fashion/c/${n.slug}` }));
+  return <StickyCats store="fashion" items={items} />;
+}
+
 function FashionTabBar() {
   const wish = useFashionWishlist();
   return <MobileTabBar store="fashion" savedCount={wish.count} />;
@@ -218,6 +225,7 @@ function Shell() {
     <div className={`fs${/^\/fashion\/(men|women|women\/sarees)\/?$/.test(pathname) ? ' fs--department' : ''}${/^\/fashion\/women\/sarees\/?$/.test(pathname) ? ' fs--saree' : ''}${/^\/fashion\/women\/?$/.test(pathname) ? ' fs--women' : ''}${/^\/fashion\/jewellery\/?$/.test(pathname) ? ' fs--jewellery' : ''}`}>
       <FashionHeader onMenu={() => setMenu(true)} />
       <Drawer open={menu} onClose={() => setMenu(false)} />
+      <FashionStickyCats />
       <main className="fs-main"><Outlet /></main>
       <Footer />
       {/* The phone's bottom bar, as in the wellness store (2026-11-13 redesign); not over a product page's buy bar. */}

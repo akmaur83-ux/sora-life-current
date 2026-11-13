@@ -13,6 +13,8 @@ import ProductInformation from '../components/ProductInformation.jsx';
 import { fetchEligibleCoupons } from '../lib/couponApi.js';
 import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
 import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+import { CompareButton } from '../components/Compare.jsx';
+import PriceHistory from '../components/PriceHistory.jsx';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
 import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
@@ -683,6 +685,7 @@ export default function HomeLivingProductPage() {
           </div>
           <p className="pdp__bbsecure"><Icon name="lock" size={14} /> Secure transaction</p>
           <PdpShare name={view.name} />
+          <CompareButton item={{ key: `homeliving-${view.id}`, store: 'homeliving', name: view.name, href: `/homeliving/p/${view.slug}`, image: (view.gallery && view.gallery[0]?.url) || view.images?.[0] || null, price: st.price, mrp: view.mrp > st.price ? view.mrp : 0, brand: view.brand || '', category: node?.name || '', sizes: view.net_content || '' }} />
           <ProductDeliveryInfo />
           <dl className="hl-buybox__facts">
             {view.brand && <div><dt>Brand</dt><dd>{view.brand}</dd></div>}
@@ -703,6 +706,7 @@ export default function HomeLivingProductPage() {
       <ProductInfoSection view={view} node={node} categories={categories} st={st} />
       <PdpBundle items={bundle.map((p, i) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null, price: i === 0 ? st.price : p.price }))}
         canAddAll={bundleAddable} onAddAll={() => bundle.forEach((p, i) => addHomeLivingToCart(p, i === 0 ? st.variant : null, 1))} />
+      <PriceHistory productId={view.id} />
       <PdpService />
       <PdpReviews productKey={`homeliving:${view.id}`} productName={view.name} />
       <PdpCheaper current={{ key: view.id, price: view.price, group: view.category_id }}

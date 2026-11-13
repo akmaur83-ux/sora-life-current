@@ -18,7 +18,7 @@ import { feedHandler } from './_lib/feed.js';
 const ORIGIN = 'https://www.soralifestyle.in';
 
 export const STATIC_PATHS = [
-  '/', '/shop', '/offers', '/brands', '/brands/biosash', '/brands/atomy', '/brands/weavers-villa', '/brands/leather-factory', '/brands/taj-leather', '/brands/ansari-fashion', '/help', '/delete-account', '/new', '/categories', '/fashion/wedding', '/fashion', '/homeliving', '/lifestyle', '/grocery',
+  '/', '/shop', '/offers', '/brands', '/brands/biosash', '/brands/atomy', '/brands/weavers-villa', '/brands/leather-factory', '/brands/taj-leather', '/brands/ansari-fashion', '/help', '/delete-account', '/new', '/categories', '/hamper', '/fashion/wedding', '/fashion', '/homeliving', '/lifestyle', '/grocery',
   '/about', '/contact', '/shipping', '/returns', '/privacy', '/terms',
   '/refund-policy', '/shipping-policy', '/grievance',
 ];

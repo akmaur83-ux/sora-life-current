@@ -15,6 +15,7 @@ import PriceDrops from '../components/PriceDrops.jsx';
 import { DidYouMean } from '../components/SearchSuggest.jsx';
 import FindForMe from '../components/FindForMe.jsx';
 import SkeletonGrid from '../components/Skeleton.jsx';
+import { WEAVERS_FILMS } from '../lib/weaversVilla.js';
 import { didYouMean } from '../lib/searchMatch.js';
 import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
 
@@ -195,9 +196,13 @@ export default function FashionCategory() {
   const inScope = views.filter((v) => v.category_id && scope.has(v.category_id));
   const bannerImage = node.image_url || inScope.find((v) => v.image)?.image || null;
   const parent = tree.ancestors(node.id).slice(-2, -1)[0];
+  // A category with its own film (Weavers Villa's, 2026-11-13: "product videos") plays it in the banner, muted.
+  const film = WEAVERS_FILMS.find((f) => f.href === `/fashion/c/${node.slug}`) || null;
+  const stillOnly = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const banner = (
     <header className={`fs-catbanner${bannerImage ? '' : ' fs-catbanner--plain'}`}>
-      {bannerImage && <img className="fs-catbanner__img" src={bannerImage} alt="" width="1200" height="500" decoding="async" />}
+      {film ? <video className="fs-catbanner__img" src={film.video} poster={film.poster} autoPlay={!stillOnly} muted loop playsInline preload="metadata" aria-hidden="true" />
+        : bannerImage && <img className="fs-catbanner__img" src={bannerImage} alt="" width="1200" height="500" decoding="async" />}
       <div className="fs-catbanner__copy">
         <p className="fs-catbanner__eyebrow">{parent ? parent.name : 'Fashion'}</p>
         <h1 className="fs-listing__h serif fs-catbanner__h">{node.name}</h1>

@@ -10,7 +10,7 @@ import { supabase } from './supabase.js';
 //   alerts      "Notify me when it is back" on an out-of-stock product: an email
 //               and the size/colour wanted, readable only by an admin.
 // ============================================================
-export const QUESTION_COLUMNS = 'id, product_key, question, author_name, answer, status, created_at, answered_at';
+export const QUESTION_COLUMNS = 'id, product_key, question, author_name, answer, status, created_at, answered_at, helpful';
 const EMAIL = /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i;
 
 export async function fetchPublishedQuestions(key, client = supabase) {
@@ -86,4 +86,16 @@ export function productHref(key) {
   if (store === 'wellness') return `/admin/products/${id}/edit`;
   if (store === 'fashion' || store === 'homeliving') return `/admin/store-catalogue/${store}/${id}`;
   return '';
+}
+
+// ---- "Was this answer helpful?" (2026-11-13, owner feature 37) --------------------------
+// One vote per question per browser (kept here); the count lives on the question (0043).
+const VOTED_KEY = 'sora.qa.helpful.v1';
+export const votedQuestions = () => { try { const v = JSON.parse(window.localStorage.getItem(VOTED_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+export async function voteHelpful(id, client = supabase) {
+  const voted = votedQuestions();
+  if (!id || voted.includes(id)) return null;
+  try { window.localStorage.setItem(VOTED_KEY, JSON.stringify([...voted, id].slice(-200))); } catch { /* storage off */ }
+  const { data, error } = await client.rpc('vote_question_helpful', { qid: id });
+  return error ? null : Number(data);
 }

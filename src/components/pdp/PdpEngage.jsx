@@ -1,13 +1,26 @@
 import { useEffect, useState } from 'react';
 import Icon from '../Icon.jsx';
 import { useCustomerAuth } from '../../lib/customerAuth.jsx';
-import { fetchPublishedQuestions, submitQuestion, requestStockAlert } from '../../lib/productEngage.js';
+import { fetchPublishedQuestions, submitQuestion, requestStockAlert, voteHelpful, votedQuestions } from '../../lib/productEngage.js';
 
 // ============================================================
 // Product questions and "Notify me" on every product page (productEngage.js has
 // the rules; owner, 2026-11-08). PdpQuestions follows the reviews; PdpNotifyMe
 // replaces the delivery estimate in the buy box while the item is out of stock.
 // ============================================================
+/** "Was this answer helpful?" — one vote per browser; the count shows once anyone voted. */
+function Helpful({ id, count }) {
+  const [n, setN] = useState(Number(count) || 0);
+  const [done, setDone] = useState(() => votedQuestions().includes(id));
+  const vote = async () => { setDone(true); const r = await voteHelpful(id); if (Number.isFinite(r) && r !== null) setN(r); else setN((x) => x + 1); };
+  return (
+    <p className="pdpk-qa__helpful">
+      {done ? <span>Thanks for your feedback.</span> : <button type="button" onClick={vote}><Icon name="check" size={13} /> Helpful</button>}
+      {n > 0 && <em>{n} {n === 1 ? 'person' : 'people'} found this helpful</em>}
+    </p>
+  );
+}
+
 export function PdpQuestions({ productKey, productName }) {
   const { user } = useCustomerAuth();
   const [rows, setRows] = useState(null);
@@ -45,6 +58,7 @@ export function PdpQuestions({ productKey, productName }) {
               <div key={q.id} className="pdpk-qa__item">
                 <dt><span>Question:</span> {q.question}</dt>
                 <dd><span>Answer:</span> {q.answer}<em>SORA Lifestyle · {new Date(q.answered_at || q.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · asked by {q.author_name}</em></dd>
+                <Helpful id={q.id} count={q.helpful} />
               </div>
             ))}
             {shown.length === 0 && <p className="pdpk-qa__empty">No answer matches “{filter}”.</p>}

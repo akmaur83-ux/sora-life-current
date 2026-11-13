@@ -17,6 +17,8 @@ import NewArrivalsPage from './pages/NewArrivalsPage.jsx';
 import WeddingEdit from './fashion/WeddingEdit.jsx';
 import AllCategories from './pages/AllCategories.jsx';
 import BrandPage from './pages/BrandPage.jsx';
+import Hamper from './pages/Hamper.jsx';
+import ComparePage from './components/Compare.jsx';
 import About from './pages/About.jsx';
 import Contact from './pages/Contact.jsx';
 import Legal from './pages/Legal.jsx';
@@ -86,6 +88,7 @@ const Promotions = lazy(() => import('./admin/pages/Promotions.jsx'));
 const Coupons = lazy(() => import('./admin/pages/Coupons.jsx'));
 const HomepageSettings = lazy(() => import('./admin/pages/Homepage.jsx'));
 const AdminReviews = lazy(() => import('./admin/pages/Reviews.jsx'));
+const AdminInsights = lazy(() => import('./admin/pages/Insights.jsx'));
 const Storefronts = lazy(() => import('./admin/pages/Storefronts.jsx'));
 const StoreCatalogue = lazy(() => import('./admin/pages/StoreCatalogue.jsx'));
 const CategoryExperience = lazy(() => import('./admin/pages/CategoryExperience.jsx'));
@@ -196,6 +199,7 @@ export default function App() {
         <Route path="coupons" element={<Coupons />} />
         <Route path="homepage" element={<HomepageSettings />} />
         <Route path="reviews" element={<AdminReviews />} />
+        <Route path="insights" element={<AdminInsights />} />
         <Route path="storefronts" element={<Storefronts />} />
         <Route path="store-catalogue/:store/:productId?" element={<StoreCatalogue />} />
         <Route path="category-experience" element={<CategoryExperience />} />
@@ -264,6 +268,8 @@ export default function App() {
         <Route path="/delete-account" element={<DeleteAccount />} />
         <Route path="/new" element={<NewArrivalsPage />} />
         <Route path="/categories" element={<AllCategories />} />
+        <Route path="/hamper" element={<Hamper />} />
+        <Route path="/compare" element={<ComparePage />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/grievance" element={<EditableLegal doc="grievance" />} />

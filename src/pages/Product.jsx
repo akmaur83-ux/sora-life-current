@@ -30,6 +30,7 @@ import ProductClaims from '../components/pdp/ProductClaims.jsx';
 import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
 import PromoRail from '../components/promo/PromoRail.jsx';
 import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
+import { CompareButton } from '../components/Compare.jsx';
 import { specificationsFor } from '../data/pdpContent.js';
 import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
 import { promotionsSource } from '../lib/promotions.js';
@@ -404,6 +405,7 @@ useEffect(() => {
           </button>
           <p className="pdp__bbsecure"><Icon name="lock" size={14} /> Secure transaction</p>
           <PdpShare name={product.name} />
+          <CompareButton item={{ key: `wellness-${product.id}`, store: 'wellness', name: product.name, href: `/product/${product.slug}`, image: product.image || null, price: product.price, mrp: product.mrp > product.price ? product.mrp : 0, brand: product.brand || '', category: product.category || '', sizes: product.netContent || product.form || '' }} />
           <dl className="pdp__bbfacts">
             {product.brand && <div><dt>Brand</dt><dd>{product.brand}</dd></div>}
             <div><dt>Delivery</dt><dd>Standard, free</dd></div>
