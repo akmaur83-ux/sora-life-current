@@ -6852,6 +6852,13 @@
   .fs-search .hx-voice { right: 68px; top: 6px; width: 34px; height: 34px; }
   .fs-search input { padding-right: 40px; }
 }
+/* Find my size (2026-11-13): a measurement in, the chart's size out. */
+.fs-sizeguide__find { display: grid; gap: 6px; margin: 4px 0 14px; padding: 12px; background: #F7F8F8; border: 1px solid #E3E6E6; }
+.fs-sizeguide__find label { font-weight: 700; font-size: 14px; }
+.fs-sizeguide__find input { width: 120px; height: 38px; padding: 0 10px; border: 1px solid #888C8C; font-size: 16px; }
+.fs-sizeguide__find p { margin: 0; font-size: 14px; color: #565959; }
+.fs-sizeguide__find p b { color: #067D62; font-size: 16px; }
+.fs-sizeguide__table tr.is-pick th, .fs-sizeguide__table tr.is-pick td { background: #E6F4EA; font-weight: 700; }
 
 /* ═══ src/styles/fashion-departments.css ═══ */
 /* Men's streetwear and women's heritage edits. Scoped to the two new routes;

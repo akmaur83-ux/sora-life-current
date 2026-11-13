@@ -35342,6 +35342,9 @@ function Footer() {
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/offers",
             children: "Offers & deals"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/brands",
+            children: "Our brands"
           }), categories.slice(0, 3).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: `/category/${c.slug}`,
             children: c.name
@@ -41362,14 +41365,14 @@ const BIOSASH_SECTION = Object.freeze({
   more: 'View All',
   link: ''
 });
-const isBiosash = product => productBrandName(product).toLowerCase() === 'biosash';
+const isBiosash$1 = product => productBrandName(product).toLowerCase() === 'biosash';
 
 /** The cards: { key, name, href, price, image, whole }, the catalogue's order kept. Packshots, so drawn whole. */
 function selectBiosashRange(list = [], limit = BIOSASH_RANGE_LIMIT) {
   const items = [];
   for (const p of Array.isArray(list) ? list : []) {
     if (items.length >= limit) break;
-    if (!p?.slug || !(Number(p.stock) > 0) || !p.priceVerified || !(Number(p.price) > 0) || !isBiosash(p)) continue;
+    if (!p?.slug || !(Number(p.stock) > 0) || !p.priceVerified || !(Number(p.price) > 0) || !isBiosash$1(p)) continue;
     items.push({
       key: `wellness-${p.id}`,
       name: String(p.name || '').trim(),
@@ -43450,6 +43453,49 @@ function PdpCheaper({
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
             className: "pdpk-rail__save",
             children: [money(p.save), " less"]
+          })]
+        })
+      }, p.key))
+    })]
+  });
+}
+
+// ---- Complete the look (2026-11-13): pieces that go with this one (completeLook.js) ----
+function PdpLook({
+  items
+}) {
+  const list = Array.isArray(items) ? items : [];
+  if (list.length < 2) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "pdpk-rail pdpk-rail--look",
+    "aria-labelledby": "pdpk-look-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+      className: "pdpk-h pdpk-h--lg",
+      id: "pdpk-look-h",
+      children: "Complete the look"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "pdpk-rail__row",
+      children: list.map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: p.href,
+          className: "pdpk-rail__card",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "pdpk-rail__img",
+            children: p.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+              src: p.image,
+              alt: "",
+              width: "180",
+              height: "180",
+              loading: "lazy"
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "pdpk-rail__name",
+            children: p.name
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "pdpk-rail__price",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: money(p.price)
+            })
           })]
         })
       }, p.key))
@@ -51204,25 +51250,46 @@ function SiteAssist() {
   });
 }
 
+function bulkText(name, href) {
+  return `Hi SORA Lifestyle, I'd like to buy ${String(name || 'this product').trim()} in bulk (quantity: __). Could you share a bulk price and delivery time? ${href}`;
+}
 function AskWhatsApp({
   productName
 }) {
   const care = useConsumerCare();
   const [href, setHref] = reactExports.useState('');
+  const [bulk, setBulk] = reactExports.useState('');
   reactExports.useEffect(() => {
-    setHref(waLink(care?.phone, window.location.pathname, productName, window.location.href.split('#')[0]));
+    const page = window.location.href.split('#')[0];
+    setHref(waLink(care?.phone, window.location.pathname, productName, page));
+    // Bulk orders (2026-11-13: more features): weddings, gifting, shops — the same number, its own message.
+    const n = waNumber(care?.phone);
+    setBulk(n ? `https://wa.me/${n}?text=${encodeURIComponent(bulkText(productName, page))}` : '');
   }, [care?.phone, productName]);
   if (!href) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
-    className: "pdpk-ask",
-    href: href,
-    target: "_blank",
-    rel: "noopener noreferrer",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-      name: "chat",
-      size: 16
-    }), " Questions about this product? ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
-      children: "Ask us on WhatsApp"
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+      className: "pdpk-ask",
+      href: href,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "chat",
+        size: 16
+      }), " Questions about this product? ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+        children: "Ask us on WhatsApp"
+      })]
+    }), bulk && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+      className: "pdpk-ask pdpk-ask--bulk",
+      href: bulk,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "package",
+        size: 16
+      }), " Buying 5 or more for a wedding, gifting or your shop? ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+        children: "Ask for a bulk price"
+      })]
     })]
   });
 }
@@ -56575,6 +56642,20 @@ function productForLine(line) {
   const key = line?.biosash_id ?? line?.product_id;
   return key != null ? productById[key] : undefined;
 }
+
+/**
+ * "Buy it again" (2026-11-13: more features): the order's wellness lines that are
+ * still on sale and in stock, with the quantities bought. Fashion and Home & Living
+ * lines need a size or colour chosen again, so they open from their product page.
+ */
+function buyAgainLines(items) {
+  return (Array.isArray(items) ? items : []).map(l => ({
+    product: productForLine(l),
+    qty: Math.max(1, Math.min(10, Number(l?.qty) || 1))
+  })).filter(({
+    product
+  }) => product && Number(product.stock) > 0 && Number(product.price) > 0);
+}
 const NAV$1 = [{
   id: 'orders',
   label: 'My orders',
@@ -57231,6 +57312,10 @@ function AuthView() {
   });
 }
 function Orders$1() {
+  const {
+    addToCart
+  } = useStore();
+  const navigate = useNavigate();
   const [orders, setOrders] = reactExports.useState(null); // null = loading, [] = none
   const [error, setError] = reactExports.useState('');
   reactExports.useEffect(() => {
@@ -57357,7 +57442,29 @@ function Orders$1() {
                 to: `/passport/${o.order_number}`,
                 className: "btn btn-sm btn-light btn-goldhover",
                 children: "View Passport"
-              }), trackingUrl && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+              }), (() => {
+                const again = buyAgainLines(items);
+                if (!again.length) return null;
+                const buy = () => {
+                  let added = 0;
+                  again.forEach(({
+                    product,
+                    qty
+                  }) => {
+                    if (addToCart(product, qty) !== false) added += 1;
+                  });
+                  if (added) navigate('/cart');
+                };
+                return /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+                  type: "button",
+                  className: "btn btn-sm btn-primary",
+                  onClick: buy,
+                  children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                    name: "bag",
+                    size: 15
+                  }), " Buy it again", again.length < items.length ? ` (${again.length} of ${items.length})` : '']
+                });
+              })(), trackingUrl && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
                 href: trackingUrl,
                 target: "_blank",
                 rel: "noopener noreferrer",
@@ -58535,6 +58642,137 @@ function Offers() {
         })]
       })]
     })]
+  });
+}
+
+// ============================================================
+// Our Brands (2026-11-13: more features) — the partner brands sold on SORA
+// Lifestyle, one card each: who they are, what of theirs is here, where to shop it.
+// The links are the same listings the homepage sections open (the brand files'
+// *_LISTING constants; test-more-features-6 keeps them in step). Pictures are the
+// copies already served from this site, or the brand's own product shots.
+// Nothing here prices or ranks anything.
+// ============================================================
+const BRANDS = Object.freeze([Object.freeze({
+  id: 'biosash',
+  name: 'Biosash',
+  store: 'Wellness',
+  href: '/shop',
+  image: null,
+  imageFrom: 'biosash',
+  text: 'Ayurvedic and herbal care: oils, powders, juices and supplements for everyday wellness.'
+}), Object.freeze({
+  id: 'atomy',
+  name: 'Atomy',
+  store: 'Wellness',
+  href: '/shop?q=atomy',
+  image: 'https://image.atomy.com/IN/goods/D00190/D00190_00.jpg?w=720&h=720',
+  text: 'Korean skin care, HemoHIM, supplements, hair and personal care.'
+}), Object.freeze({
+  id: 'weavers-villa',
+  name: 'Weavers Villa',
+  store: 'Fashion · Home',
+  href: '/fashion/c/shawls-stoles',
+  image: '/video/weavers-villa/0e053f13.webp',
+  text: 'Handwoven shawls, stoles, dupattas and Kullu weaves, plus table covers for the home.'
+}), Object.freeze({
+  id: 'leather-factory',
+  name: 'Leather Factory',
+  store: 'Fashion',
+  href: '/fashion/c/leather-goods',
+  image: '/img/partners/leather-factory/handbags.webp',
+  text: 'Leather handbags, wallets, belts, sling bags and travel bags.'
+}), Object.freeze({
+  id: 'taj-leather',
+  name: 'Taj Leather',
+  store: 'Fashion',
+  href: '/fashion/search?q=taj%20leather',
+  image: 'https://cdn.shopify.com/s/files/1/0780/8437/4633/files/kbxt1xR35kfGamD.jpg?width=800',
+  text: 'Genuine leather jackets and coats for men and women.'
+}), Object.freeze({
+  id: 'ansari-fashion',
+  name: 'Ansari Fashion',
+  store: 'Fashion',
+  href: '/fashion/search?q=ansari%20fashion',
+  image: '/img/partners/ansari-fashion/suit-sets.webp',
+  text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees from Banaras.'
+})]);
+
+/** A brand's picture: its own, or for Biosash the first in-stock Biosash product shot. Pure. */
+function brandImage(brand, products = [], isBrand = () => false) {
+  if (!brand) return null;
+  if (brand.image) return brand.image;
+  const hit = (Array.isArray(products) ? products : []).find(p => p && p.image && Number(p.stock) > 0 && isBrand(p));
+  return hit ? hit.image : null;
+}
+
+const isBiosash = p => productBrandName(p).toLowerCase() === 'biosash';
+function Brands() {
+  usePageMeta({
+    title: 'Our brands',
+    description: 'The brands you can shop at SORA LIFESTYLE: Biosash, Atomy, Weavers Villa, Leather Factory, Taj Leather and Ansari Fashion.',
+    path: '/brands'
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx hx-brands",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/",
+          children: "Home"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Our brands"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "hx-offers__h",
+        children: "Our brands"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-offers__lede",
+        children: "The makers we partner with, across wellness, fashion and home. Each one sells here at its own prices."
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hx-brands__grid",
+        children: BRANDS.map((b, i) => {
+          const img = brandImage(b, products, isBiosash);
+          return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+              to: b.href,
+              className: "hx-brands__card",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: `hx-brands__img${b.imageFrom ? ' is-whole' : ''}`,
+                children: img && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                  src: img,
+                  alt: "",
+                  width: "600",
+                  height: "450",
+                  loading: i < 3 ? 'eager' : 'lazy',
+                  decoding: "async"
+                })
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                className: "hx-brands__body",
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("em", {
+                  children: b.store
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                  children: b.name
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  children: b.text
+                }), /*#__PURE__*/jsxRuntimeExports.jsxs("i", {
+                  children: ["Shop ", b.name, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                    name: "arrowRight",
+                    size: 14
+                  })]
+                })]
+              })]
+            })
+          }, b.id);
+        })
+      })]
+    })
   });
 }
 
@@ -74202,6 +74440,40 @@ function HomeLivingProductPage() {
 }
 
 // ============================================================
+// Complete the look (2026-11-13: more features) — on a Fashion product page, pieces
+// from the categories that go with this one: a suit set with dupattas, shawls and
+// clutches; a leather jacket with belts, wallets and mufflers. Matched on category
+// slugs, so a new sub-category joins by its name. Pure; nothing is priced here.
+// ============================================================
+const LOOK_RULES = Object.freeze([[/suit|kurta|salwar|dress-material|lehenga|saree|ethnic/, [/dupatta|phulkari/, /shawl|stole/, /clutch|potli/, /handbag|sling/]], [/leather-jacket|leather-coat|jacket|coat|blazer/, [/belt/, /wallet|card-holder/, /muffler|cap/, /sling|laptop|travel/]], [/shawl|stole|dupatta|muffler/, [/suit|dress-material|kurta/, /saree/, /leather-jacket|jacket|coat/]], [/handbag|clutch|sling|pouch|potli/, [/saree/, /suit|dress-material|kurta/, /shawl|stole/]], [/wallet|belt|card-holder|passport/, [/leather-jacket|jacket/, /belt|wallet/, /laptop|travel|sling/]], [/shirt|t-shirt|tee|jean|trouser|top|dress/, [/jacket|coat/, /belt|wallet/, /handbag|sling|clutch/]]]);
+
+/**
+ * pool items: { key, href, name, image, price, slug (category), inStock }.
+ * The categories that go with `slug` take turns, best-matched first; never this
+ * product's own category, never out of stock. [] when nothing matches. Pure.
+ */
+function lookPicks(pool, current, max = 8) {
+  const slug = String(current?.slug || '');
+  if (!slug) return [];
+  const rule = LOOK_RULES.find(([own]) => own.test(slug));
+  if (!rule) return [];
+  const ok = (Array.isArray(pool) ? pool : []).filter(p => p && p.key !== current.key && p.slug && p.slug !== slug && p.inStock !== false && Number(p.price) > 0 && p.image);
+  const lanes = rule[1].map(re => ok.filter(p => re.test(p.slug)));
+  const out = [];
+  const seen = new Set();
+  for (let i = 0; out.length < max && lanes.some(l => l.length > i); i += 1) {
+    for (const lane of lanes) {
+      const p = lane[i];
+      if (p && !seen.has(p.key) && out.length < max) {
+        seen.add(p.key);
+        out.push(p);
+      }
+    }
+  }
+  return out;
+}
+
+// ============================================================
 // The fashion product page's extra facts (owner, 2026-11-08: "the same detailed
 // page as the other stores"): material, care, net quantity, SKU, generic name and
 // country of origin — catalogue columns the store's listing read does not carry.
@@ -74246,12 +74518,34 @@ const SIZE_CHART = Object.freeze({
     rows: [['S', '36–38', '28–30', '17'], ['M', '38–40', '30–32', '17.5'], ['L', '40–42', '32–34', '18'], ['XL', '42–44', '34–36', '18.5'], ['XXL', '44–46', '36–38', '19']]
   }
 });
+
+/**
+ * Find my size (2026-11-13: more features): the chart's size for a chest or bust
+ * measurement in inches — the first row whose range reaches it; between two sizes
+ * the larger (the guide's own advice). '' outside the chart. Pure.
+ */
+function suggestSize(chart, inches) {
+  const n = Number(String(inches).replace(',', '.'));
+  if (!chart || !Number.isFinite(n) || n <= 0) return '';
+  const rows = chart.rows.map(r => {
+    const [lo, hi] = String(r[1]).split('–').map(Number);
+    return {
+      size: r[0],
+      lo,
+      hi: Number.isFinite(hi) ? hi : lo
+    };
+  });
+  if (n < rows[0].lo - 2 || n > rows[rows.length - 1].hi + 1) return '';
+  const hit = rows.find(r => n < r.hi);
+  return (hit || rows[rows.length - 1]).size;
+}
 function SizeGuide({
   sizes,
   department = 'women'
 }) {
   const [open, setOpen] = reactExports.useState(false);
   const [tab, setTab] = reactExports.useState(department === 'men' ? 'men' : 'women');
+  const [inches, setInches] = reactExports.useState('');
   const closer = reactExports.useRef(null);
   reactExports.useEffect(() => {
     if (!open) return undefined;
@@ -74269,6 +74563,9 @@ function SizeGuide({
   }, [open]);
   if (!hasLetterSizes(sizes)) return null;
   const chart = SIZE_CHART[tab];
+  const pick = suggestSize(chart, inches);
+  const sold = sizes.map(x => String(x).trim().toUpperCase());
+  const pickSold = pick && sold.includes(pick);
   return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
       type: "button",
@@ -74315,6 +74612,30 @@ function SizeGuide({
             onClick: () => setTab(id),
             children: label
           }, id))
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "fs-sizeguide__find",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+            htmlFor: "fs-sizeguide-in",
+            children: ["Find my size: your ", tab === 'men' ? 'chest' : 'bust', " in inches"]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+            id: "fs-sizeguide-in",
+            type: "number",
+            inputMode: "decimal",
+            min: "20",
+            max: "60",
+            step: "0.5",
+            placeholder: tab === 'men' ? 'e.g. 40' : 'e.g. 35',
+            value: inches,
+            onChange: e => setInches(e.target.value)
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            role: "status",
+            "aria-live": "polite",
+            children: !inches ? 'Measure as below, then type it in.' : !pick ? 'That is outside this chart. Ask us on WhatsApp and we’ll help.' : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+              children: ["Suggested size: ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                children: pick
+              }), pickSold ? '' : ' (not made in this product; try the next size or ask us)']
+            })
+          })]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
           className: "fs-sizeguide__table",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("caption", {
@@ -74328,7 +74649,7 @@ function SizeGuide({
             })
           }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
             children: chart.rows.map(r => /*#__PURE__*/jsxRuntimeExports.jsx("tr", {
-              className: sizes.map(s => String(s).toUpperCase()).includes(r[0]) ? 'is-sold' : '',
+              className: `${sold.includes(r[0]) ? 'is-sold' : ''}${r[0] === pick ? ' is-pick' : ''}`.trim(),
               children: r.map((c, i) => i === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("th", {
                 scope: "row",
                 children: c
@@ -74791,6 +75112,19 @@ function FashionProductPage() {
       }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpService, {}), /*#__PURE__*/jsxRuntimeExports.jsx(PdpReviews, {
         productKey: `fashion:${view.id}`,
         productName: view.name
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpLook, {
+        items: lookPicks(views.map(p => ({
+          key: p.id,
+          href: `/fashion/p/${p.slug}`,
+          name: p.name,
+          image: p.image,
+          price: p.price,
+          inStock: p.inStock,
+          slug: p.category_id ? tree.byId.get(p.category_id)?.slug : ''
+        })), {
+          key: view.id,
+          slug: node?.slug
+        })
       }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpCheaper, {
         current: {
           key: view.id,
@@ -78009,6 +78343,9 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "/offers",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(Offers, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "/brands",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(Brands, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "/about",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(About, {})
