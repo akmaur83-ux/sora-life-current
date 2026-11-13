@@ -76,6 +76,8 @@ const STOREFRONT = [
   // fashion store is on the critical path — its sheet is deferred below.
   'src/styles/fashion-banner.css',
   'src/styles/fashion-choice.css',
+  // The SORA design system (2026-11-13 redesign): headings, breadcrumbs, skeletons, the reveal.
+  'src/styles/sora-ds.css',
   // Last: what an admin sets on an editable section (text position, a photograph's colour).
   // It matches only those settings' attributes, so with nothing published it changes nothing.
   'src/styles/storefront-sections.css',

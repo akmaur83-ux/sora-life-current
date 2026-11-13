@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { SparrowMark } from '../components/Logo.jsx';
 import Footer from '../components/Footer.jsx';
+import MobileTabBar from '../components/MobileTabBar.jsx';
 import Toasts from '../components/Toasts.jsx';
 import { useStore } from '../lib/store.jsx';
 import { branding, getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
@@ -204,6 +205,11 @@ function Drawer({ open, onClose }) {
   );
 }
 
+function FashionTabBar() {
+  const wish = useFashionWishlist();
+  return <MobileTabBar store="fashion" savedCount={wish.count} />;
+}
+
 function Shell() {
   const [menu, setMenu] = useState(false);
   const { pathname } = useLocation();
@@ -214,6 +220,8 @@ function Shell() {
       <Drawer open={menu} onClose={() => setMenu(false)} />
       <main className="fs-main"><Outlet /></main>
       <Footer />
+      {/* The phone's bottom bar, as in the wellness store (2026-11-13 redesign); not over a product page's buy bar. */}
+      {!/^\/fashion\/p\//.test(pathname) && <FashionTabBar />}
       <Toasts />
     </div>
   );

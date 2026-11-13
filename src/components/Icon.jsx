@@ -63,13 +63,19 @@ const P = {
   drop: '<path d="M12 3.4S5.8 10 5.8 14a6.2 6.2 0 0 0 12.4 0c0-4-6.2-10.6-6.2-10.6Z"/>',
 };
 
-export default function Icon({ name, size = 22, stroke = 1.6, fill = 'none', className, style }) {
+// One icon set, one line weight (2026-11-13 redesign: "icons ka ek set"). Callers used
+// 1.5 to 2; every icon now draws at ICON_STROKE, so the site's icons read as one family.
+// `stroke` stays accepted so no caller breaks; it no longer changes the weight.
+export const ICON_STROKE = 1.7;
+
+// eslint-disable-next-line no-unused-vars
+export default function Icon({ name, size = 22, stroke = ICON_STROKE, fill = 'none', className, style }) {
   const d = P[name];
   if (!d) return null;
   return (
     <svg
       width={size} height={size} viewBox="0 0 24 24" fill={fill}
-      stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round"
+      stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round"
       className={className} style={style} aria-hidden="true"
       dangerouslySetInnerHTML={{ __html: d }}
     />

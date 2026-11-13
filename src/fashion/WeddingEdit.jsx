@@ -3,6 +3,7 @@ import Icon from '../components/Icon.jsx';
 import { money } from '../lib/format.js';
 import { useWeddingEdit } from '../lib/weddingEdit.js';
 import { usePageMeta } from '../lib/pageMeta.js';
+import SkeletonGrid from '../components/Skeleton.jsx';
 
 // /fashion/wedding — the Wedding & Festive edit (weddingEdit.js has what is shown and why).
 export default function WeddingEdit() {
@@ -22,7 +23,7 @@ export default function WeddingEdit() {
             </ul>
           )}
         </header>
-        {sections === null ? <p className="hx-offers__empty" role="status">Loading the edit…</p>
+        {sections === null ? <SkeletonGrid label="Loading the edit…" />
           : sections.length === 0 ? <p className="hx-offers__empty">The edit is being put together. <Link to="/fashion">Browse Fashion</Link></p>
             : sections.map((s) => (
               <section key={s.id} className="hx-wed__sec" id={`wed-${s.id}`} aria-labelledby={`wed-${s.id}-h`}>

@@ -47,6 +47,8 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
       <div className="fs-card__media">
         <Link to={href} className="fs-card__img" aria-label={view.name}>
           {view.image ? <img src={view.image} alt="" loading={mediaLoading} decoding="async" width="600" height="600" /> : <span className="fs-card__noimg" aria-hidden="true">{view.name.slice(0, 1)}</span>}
+          {/* The second picture, shown on hover with a mouse (2026-11-13 redesign: product cards). */}
+          {view.image && view.images?.[1] && view.images[1] !== view.image && <img className="fs-card__alt" src={view.images[1]} alt="" loading="lazy" decoding="async" width="600" height="600" />}
         </Link>
         {out ? <span className="fs-badge fs-badge--out">Sold out</span>
           : view.hasDiscount ? <span className="fs-badge">{view.discountPct}% OFF</span>
@@ -64,7 +66,7 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
           {view.hasDiscount && <span className="fs-price__mrp">M.R.P: <s>{rupee(view.mrp)}</s></span>}
         </p>
         <h3 className="fs-card__name"><Link to={href}>{view.name}</Link></h3>
-        {layout === 'list' && view.brand && <p className="fs-card__brand">{view.brand}</p>}
+        {view.brand && <p className={`fs-card__brand${layout === 'list' ? '' : ' fs-card__brand--grid'}`}>{view.brand}</p>}
         {/* No reviews yet: no rating row at all, rather than "0.0 ☆☆☆☆☆ (0)". */}
         {view.reviewCount > 0 && (
           <p className="fs-rating">

@@ -5,6 +5,7 @@ import { branding } from '../lib/settings.js';
 import { hasContactChannel, socialLinks, telHref } from '../lib/company.js';
 import { useConsumerCare } from '../lib/consumerCare.js';
 import InstallApp from './InstallApp.jsx';
+import { BRANDS } from '../lib/brands.js';
 
 // ============================================================
 // Footer.
@@ -69,6 +70,7 @@ export default function Footer() {
             <Link to="/brands">Our brands</Link>
             <Link to="/new">New arrivals</Link>
             <Link to="/fashion/wedding">Wedding edit</Link>
+            <Link to="/categories">All categories</Link>
             {categories.slice(0, 3).map((c) => (
               <Link key={c.slug} to={`/category/${c.slug}`}>{c.name}</Link>
             ))}
@@ -102,9 +104,30 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* 2026-11-13 redesign: the brands row, how to pay, and the app — one band above the trust line. */}
+        <div className="ftr__brands" aria-label="Our brands">
+          <h4>Our brands</h4>
+          <div className="ftr__brandlist">
+            {BRANDS.map((b) => <Link key={b.id} to={b.page}>{b.name}</Link>)}
+          </div>
+        </div>
+        <div className="ftr__pay">
+          <div>
+            <h4>Pay your way</h4>
+            <p className="ftr__paylist"><span>UPI</span><span>Credit &amp; debit cards</span><span>Net banking</span><span>Cash on Delivery</span></p>
+            <p className="ftr__paynote">Payments are processed securely at checkout; the options for your order are shown there.</p>
+          </div>
+          <div className="ftr__app">
+            <h4>The SORA app</h4>
+            <p>Install it from this site: one tap from your home screen, and what you’ve browsed opens offline.</p>
+            <InstallApp label="Get the SORA app" />
+          </div>
+        </div>
+
         <div className="ftr__trust">
           <span><Icon name="lock" size={17} /> Secure checkout</span>
           <span><Icon name="truck" size={17} /> Free standard shipping</span>
+          <span><Icon name="shield" size={17} /> Genuine products</span>
           <span><Icon name="package" size={17} /> Order tracking in your account</span>
         </div>
 

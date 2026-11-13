@@ -27,10 +27,11 @@ test('the tiles open the brand’s part of the wellness search', () => {
   assert.equal(ATOMY_LISTING, '/shop?q=atomy');
   for (const t of ATOMY_TILES) { assert.match(t.href, /^\/shop\?q=(atomy%20[a-z%20]+|hemohim)$/); assert.match(t.image, /^https:\/\/image\.atomy\.com\/IN\/goods\//); }
 });
-test('wired: under Leather Factory on the homepage, editable in Storefronts → Wellness', () => {
+test('wired: on the homepage through the brands row (2026-11-13 redesign), its own page, editable in Storefronts → Wellness', () => {
   const home = read('src/pages/Home.jsx');
-  assert.ok(home.indexOf('<AtomyRange />') > home.indexOf('<LeatherFactoryShowcase />'));
-  assert.match(home, /<AtomyShowcase \/>/);
+  assert.ok(!home.includes('<AtomyRange />') && home.split('<BrandCarousel />').length === 2);
+  assert.match(read('src/lib/brands.js'), /id: 'atomy', page: '\/brands\/atomy'/);
+  assert.match(read('src/components/Atomy.jsx'), /export function AtomyShowcase/, 'the sections stay, ready to be placed again');
   const c = read('src/lib/storefrontContent.js');
   assert.match(c, /atomy: group\(/); assert.match(c, /atomyShowcase: group\(/);
 });

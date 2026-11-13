@@ -26,12 +26,14 @@ test('the range reads only their in-stock fashion rows', async () => {
   await lib.fetchAnsariRows({ from: (t) => { calls.push(`from:${t}`); return q; } });
   for (const c of ['from:catalogue_products', 'eq:store:fashion', 'eq:brand:Ansari Fashion', 'eq:is_active:true', 'gt:stock:0']) assert.ok(calls.includes(c), c);
 });
-test('wired: after Taj Leather on both homes; editable in Storefronts → Wellness', () => {
+test('wired: after Taj Leather on the Fashion home; on the wellness homepage through the brands row (2026-11-13 redesign); editable', () => {
   const fs = read('src/fashion/FashionHome.jsx');
   assert.ok(fs.indexOf('<AnsariPosters />') > fs.indexOf('<TajLeatherPosters />'));
   assert.ok(fs.indexOf('<AnsariRange />') > fs.indexOf('<TajLeatherRange />'));
   const home = read('src/pages/Home.jsx');
-  assert.ok(home.indexOf('<AnsariPosters />') > home.indexOf('<TajLeatherRange />'));
+  // The redesign put the partners in one "Our brands" row, each card opening the brand's page.
+  assert.ok(!home.includes('<AnsariPosters />') && home.split('<BrandCarousel />').length === 2);
+  assert.match(read('src/lib/brands.js'), /id: 'ansari-fashion', luxe: true, page: '\/brands\/ansari-fashion'/);
   const c = read('src/lib/storefrontContent.js');
   assert.match(c, /ansariPosters: group\(/); assert.match(c, /ansari: group\(/);
 });

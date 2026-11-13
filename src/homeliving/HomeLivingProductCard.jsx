@@ -29,7 +29,7 @@ export default function HomeLivingProductCard({ product, layout = 'grid', mediaL
       <div className="hl-card__media">
         <Link to={href} className="hl-card__img" aria-label={product.name}>
           {image
-            ? <img src={image} alt="" loading={mediaLoading} decoding="async" width="400" height="400" />
+            ? <><img src={image} alt="" loading={mediaLoading} decoding="async" width="400" height="400" />{product.images?.[1] && product.images[1] !== image && <img className="hl-card__alt" src={product.images[1]} alt="" loading="lazy" decoding="async" width="400" height="400" />}</>
             : <span className="hl-card__noimg" aria-hidden="true">{product.name.slice(0, 1)}</span>}
         </Link>
         <button type="button" className={`hl-card__heart${saved ? ' is-on' : ''}`} aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`} aria-pressed={saved} onClick={() => wish.toggle(product.id)}><Icon name="heart" size={16} fill={saved ? 'currentColor' : 'none'} /></button>

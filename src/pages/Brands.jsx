@@ -39,7 +39,7 @@ export default function Brands() {
             const img = brandImage(b, products, isBiosash);
             return (
               <li key={b.id}>
-                <Link to={b.href} className="hx-brands__card">
+                <Link to={b.page} className="hx-brands__card">
                   <span className={`hx-brands__img${b.imageFrom ? ' is-whole' : ''}`}>
                     {img && <img src={img} alt="" width="600" height="450" loading={i < 3 ? 'eager' : 'lazy'} decoding="async" />}
                   </span>

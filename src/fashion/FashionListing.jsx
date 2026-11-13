@@ -14,6 +14,7 @@ import ShareList from '../components/ShareList.jsx';
 import PriceDrops from '../components/PriceDrops.jsx';
 import { DidYouMean } from '../components/SearchSuggest.jsx';
 import FindForMe from '../components/FindForMe.jsx';
+import SkeletonGrid from '../components/Skeleton.jsx';
 import { didYouMean } from '../lib/searchMatch.js';
 import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
 
@@ -103,7 +104,7 @@ export function FilterPanel({ state, options, onPatch, onClear, onClose = null, 
   );
 }
 
-export function Listing({ title, trail, scope = null, only = null, intro = null, emptyCopy, emptyExtra = null }) {
+export function Listing({ title, trail, scope = null, only = null, intro = null, emptyCopy, emptyExtra = null, banner = null }) {
   const { status, tree, views } = useFashionCatalogue();
   const [params, setParams] = useSearchParams();
   const state = useMemo(() => readFashionUrlState(params), [params]);
@@ -123,9 +124,10 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
     <div className="fs-listing">
       <CategoryChips onFilters={() => setPanel((v) => !v)} filterCount={count} />
       <Breadcrumb trail={trail} />
+      {banner}
       {intro}
       <div className="fs-listing__bar">
-        <h1 className="fs-listing__h serif">{title}</h1>
+        {banner ? null : <h1 className="fs-listing__h serif">{title}</h1>}
         <p className="fs-listing__count" role="status">{status === 'loading' ? 'Loading…' : `${results.length} ${results.length === 1 ? 'product' : 'products'}`}</p>
         <div className="fs-listing__tools">
           <label className="fs-sort">
@@ -146,8 +148,8 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
         <FilterPanel state={state} options={options} onPatch={patch} onClear={clear} onClose={() => setPanel(false)} />
         <div className="fs-listing__results">
           {results.length === 0 ? (
-            <div className="fs-empty">
-              <p>{status === 'loading' ? 'Loading the catalogue…' : count > 0 ? 'Nothing matches these filters.' : emptyCopy}</p>
+            status === 'loading' ? <SkeletonGrid count={8} label="Loading the catalogue…" /> : <div className="fs-empty">
+              <p>{count > 0 ? 'Nothing matches these filters.' : emptyCopy}</p>
               {count > 0 && <button type="button" className="fs-btn" onClick={clear}>Clear filters</button>}
               {status !== 'loading' && count === 0 && emptyExtra}
             </div>
@@ -168,7 +170,7 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
 // ---- /fashion/c/<slug> --------------------------------------------------------
 export default function FashionCategory() {
   const { slug } = useParams();
-  const { status, tree } = useFashionCatalogue();
+  const { status, tree, views } = useFashionCatalogue();
   const node = resolveCategory(tree, slug);
   if (!node) {
     return (
@@ -188,11 +190,28 @@ export default function FashionCategory() {
       {children.map((c) => <Link key={c.id} to={categoryHref(c)} className="fs-subcat">{c.name}</Link>)}
     </nav>
   ) : null;
+  // The category's banner (2026-11-13 redesign): its own picture, else its first product's.
+  const scope = categoryScope(tree, node);
+  const inScope = views.filter((v) => v.category_id && scope.has(v.category_id));
+  const bannerImage = node.image_url || inScope.find((v) => v.image)?.image || null;
+  const parent = tree.ancestors(node.id).slice(-2, -1)[0];
+  const banner = (
+    <header className={`fs-catbanner${bannerImage ? '' : ' fs-catbanner--plain'}`}>
+      {bannerImage && <img className="fs-catbanner__img" src={bannerImage} alt="" width="1200" height="500" decoding="async" />}
+      <div className="fs-catbanner__copy">
+        <p className="fs-catbanner__eyebrow">{parent ? parent.name : 'Fashion'}</p>
+        <h1 className="fs-listing__h serif fs-catbanner__h">{node.name}</h1>
+        {node.tagline ? <p className="fs-catbanner__tag">{node.tagline}</p> : null}
+        {inScope.length > 0 && <p className="fs-catbanner__count">{inScope.length} {inScope.length === 1 ? 'style' : 'styles'}</p>}
+      </div>
+    </header>
+  );
   return (
     <Listing
       title={node.name}
       trail={breadcrumbFor(tree, node)}
-      scope={categoryScope(tree, node)}
+      scope={scope}
+      banner={banner}
       intro={intro}
       emptyCopy={`No styles in ${node.name} yet — they appear here as they go live.`}
     />

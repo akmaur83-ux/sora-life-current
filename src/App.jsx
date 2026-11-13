@@ -15,6 +15,8 @@ import Help from './pages/Help.jsx';
 import DeleteAccount from './pages/DeleteAccount.jsx';
 import NewArrivalsPage from './pages/NewArrivalsPage.jsx';
 import WeddingEdit from './fashion/WeddingEdit.jsx';
+import AllCategories from './pages/AllCategories.jsx';
+import BrandPage from './pages/BrandPage.jsx';
 import About from './pages/About.jsx';
 import Contact from './pages/Contact.jsx';
 import Legal from './pages/Legal.jsx';
@@ -257,9 +259,11 @@ export default function App() {
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/offers" element={<Offers />} />
         <Route path="/brands" element={<Brands />} />
+        <Route path="/brands/:id" element={<BrandPage />} />
         <Route path="/help" element={<Help />} />
         <Route path="/delete-account" element={<DeleteAccount />} />
         <Route path="/new" element={<NewArrivalsPage />} />
+        <Route path="/categories" element={<AllCategories />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/grievance" element={<EditableLegal doc="grievance" />} />

@@ -102,12 +102,13 @@ await test('S1 the showcase: muted, inline, nothing loaded up front, hidden from
   void React;
 });
 
-await test('H1 Home.jsx: the range then the showcase, straight under the Biosash range, each once', () => {
+await test('H1 Home.jsx: since the 2026-11-13 redesign Weavers Villa and Leather Factory are in the "Our brands" row, each opening its page; the tile pictures are still served', () => {
   const home = read('src/pages/Home.jsx');
   const at = (s) => home.indexOf(s);
-  assert.ok(at('<BiosashRange />') > 0 && at('<BiosashRange />') < at('<WeaversVillaRange />') && at('<WeaversVillaRange />') < at('<WeaversVillaShowcase />') && at('<WeaversVillaShowcase />') < at('<LeatherFactoryRange />') && at('<LeatherFactoryRange />') < at('<LeatherFactoryShowcase />') && at('<LeatherFactoryShowcase />') < at('<Bedsheets />'));
+  assert.ok(at('<WeaversVillaRange />') === -1 && at('<LeatherFactoryRange />') === -1 && home.split('<BrandCarousel />').length === 2);
+  for (const id of ['weavers-villa', 'leather-factory']) assert.match(read('src/lib/brands.js'), new RegExp(`id: '${id}', page: '/brands/${id}'`));
   for (const f of ['handbags', 'mens-wallets', 'belts']) assert.ok(existsSync(resolve(ROOT, `img/partners/leather-factory/${f}.webp`)), `${f} tile picture`);
-  for (const c of ['<WeaversVillaRange />', '<WeaversVillaShowcase />']) assert.equal(home.split(c).length - 1, 1);
+  for (const c of ['WeaversVillaRange', 'WeaversVillaShowcase']) assert.match(read('src/components/WeaversVilla.jsx'), new RegExp(`export function ${c}`));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -5,6 +5,7 @@ import App from './App.jsx';
 import ScrollManager from './components/ScrollManager.jsx';
 import SiteAssist from './components/SiteAssist.jsx';
 import AppShell from './components/AppShell.jsx';
+import StoreBar from './components/StoreBar.jsx';
 import { StoreProvider } from './lib/store.jsx';
 import { AdminAuthProvider } from './lib/adminAuth.jsx';
 import { CustomerAuthProvider } from './lib/customerAuth.jsx';
@@ -113,6 +114,8 @@ function Root() {
         <ScrollManager />
         <CustomerAuthProvider>
           <StoreProvider>
+            {/* One bar across the top of every store (StoreBar.jsx, 2026-11-13 redesign). */}
+            <StoreBar />
             <AdminAuthProvider>
               <ErrorBoundary>
                 <App />

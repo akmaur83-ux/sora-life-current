@@ -24,12 +24,13 @@ test('the range reads only their in-stock fashion rows', async () => {
   const flat = calls.map((c) => c.join(':'));
   for (const c of ['from:catalogue_products', 'eq:store:fashion', 'eq:brand:Taj Leather', 'eq:is_active:true', 'gt:stock:0']) assert.ok(flat.includes(c), c);
 });
-test('wired: posters lead the Fashion home and follow Atomy on the wellness homepage; both editable', () => {
+test('wired: posters lead the Fashion home; on the wellness homepage through the brands row (2026-11-13 redesign); both editable', () => {
   const fs = read('src/fashion/FashionHome.jsx');
   assert.ok(fs.indexOf('<TajLeatherPosters />') > fs.indexOf('<CategoryChips />') && fs.indexOf('<TajLeatherPosters />') < fs.indexOf('<BagReminder'));
   assert.match(fs, /<TajLeatherRange \/>/);
   const home = read('src/pages/Home.jsx');
-  assert.ok(home.indexOf('<TajLeatherPosters />') > home.indexOf('<AtomyShowcase />'));
+  assert.ok(!home.includes('<TajLeatherPosters />') && home.split('<BrandCarousel />').length === 2);
+  assert.match(read('src/lib/brands.js'), /id: 'taj-leather', luxe: true, page: '\/brands\/taj-leather'/);
   const c = read('src/lib/storefrontContent.js');
   assert.match(c, /tajPosters: group\(/); assert.match(c, /tajLeather: group\(/);
   assert.match(read('src/lib/tajLeather.js'), /laptop\|bag/);

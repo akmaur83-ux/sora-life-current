@@ -1,0 +1,1144 @@
+diff --git a/api/sitemap.js b/api/sitemap.js
+index 6deb50d..523ae3c 100644
+--- a/api/sitemap.js
++++ b/api/sitemap.js
+@@ -18,7 +18,7 @@ import { feedHandler } from './_lib/feed.js';
+ const ORIGIN = 'https://www.soralifestyle.in';
+ 
+ export const STATIC_PATHS = [
+-  '/', '/shop', '/offers', '/brands', '/help', '/delete-account', '/new', '/fashion/wedding', '/fashion', '/homeliving', '/lifestyle', '/grocery',
++  '/', '/shop', '/offers', '/brands', '/brands/biosash', '/brands/atomy', '/brands/weavers-villa', '/brands/leather-factory', '/brands/taj-leather', '/brands/ansari-fashion', '/help', '/delete-account', '/new', '/categories', '/fashion/wedding', '/fashion', '/homeliving', '/lifestyle', '/grocery',
+   '/about', '/contact', '/shipping', '/returns', '/privacy', '/terms',
+   '/refund-policy', '/shipping-policy', '/grievance',
+ ];
+diff --git a/build/build-css.mjs b/build/build-css.mjs
+index 8490cc6..5ad70ab 100644
+--- a/build/build-css.mjs
++++ b/build/build-css.mjs
+@@ -76,6 +76,8 @@ const STOREFRONT = [
+   // fashion store is on the critical path — its sheet is deferred below.
+   'src/styles/fashion-banner.css',
+   'src/styles/fashion-choice.css',
++  // The SORA design system (2026-11-13 redesign): headings, breadcrumbs, skeletons, the reveal.
++  'src/styles/sora-ds.css',
+   // Last: what an admin sets on an editable section (text position, a photograph's colour).
+   // It matches only those settings' attributes, so with nothing published it changes nothing.
+   'src/styles/storefront-sections.css',
+diff --git a/src/App.jsx b/src/App.jsx
+index 065e3ec..b6d4b2d 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -15,6 +15,8 @@ import Help from './pages/Help.jsx';
+ import DeleteAccount from './pages/DeleteAccount.jsx';
+ import NewArrivalsPage from './pages/NewArrivalsPage.jsx';
+ import WeddingEdit from './fashion/WeddingEdit.jsx';
++import AllCategories from './pages/AllCategories.jsx';
++import BrandPage from './pages/BrandPage.jsx';
+ import About from './pages/About.jsx';
+ import Contact from './pages/Contact.jsx';
+ import Legal from './pages/Legal.jsx';
+@@ -257,9 +259,11 @@ export default function App() {
+         <Route path="/wishlist" element={<Wishlist />} />
+         <Route path="/offers" element={<Offers />} />
+         <Route path="/brands" element={<Brands />} />
++        <Route path="/brands/:id" element={<BrandPage />} />
+         <Route path="/help" element={<Help />} />
+         <Route path="/delete-account" element={<DeleteAccount />} />
+         <Route path="/new" element={<NewArrivalsPage />} />
++        <Route path="/categories" element={<AllCategories />} />
+         <Route path="/about" element={<About />} />
+         <Route path="/contact" element={<Contact />} />
+         <Route path="/grievance" element={<EditableLegal doc="grievance" />} />
+diff --git a/src/components/AppShell.jsx b/src/components/AppShell.jsx
+index 6caec6a..9cdc5bc 100644
+--- a/src/components/AppShell.jsx
++++ b/src/components/AppShell.jsx
+@@ -22,6 +22,7 @@ import { isStandalone } from '../lib/appMode.js';
+ const QUIET = /^\/(cart|checkout|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout|admin|invoice)(\/|$)/;
+ const HOMES = /^\/(fashion|homeliving|grocery|lifestyle)?\/?$/;
+ const CHECK_EVERY_MS = 30 * 60 * 1000;
++const REVEAL = '.sora-group, .sora-bc, .hx-wv-range, .hx-taj, .hx-ans, .hx-stores, .fs-sec, .hl .hl-sec, .sora-cats__store, .hx-wed__sec';
+ 
+ /** The deployed app's fingerprint: the entry script's ETag (or Last-Modified); '' if unknown. */
+ async function buildStamp() {
+@@ -82,6 +83,26 @@ export default function AppShell() {
+     } catch { /* not supported */ }
+   }, [app, cartCount]);
+ 
++  // The reveal (2026-11-13 redesign): sections below the fold rise in softly once as
++  // they scroll into view. Only what starts off-screen is ever hidden, so nothing
++  // visible blinks; never under prefers-reduced-motion (sora-ds.css, .sora-reveal).
++  useEffect(() => {
++    if (typeof window === 'undefined' || !window.IntersectionObserver) return undefined;
++    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
++    let io = null;
++    const t = setTimeout(() => {
++      io = new IntersectionObserver((entries) => {
++        for (const e of entries) if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
++      }, { rootMargin: '0px 0px -8% 0px' });
++      document.querySelectorAll(REVEAL).forEach((el) => {
++        if (el.classList.contains('sora-reveal') || el.getBoundingClientRect().top < window.innerHeight) return;
++        el.classList.add('sora-reveal');
++        io.observe(el);
++      });
++    }, 700);
++    return () => { clearTimeout(t); io?.disconnect(); document.querySelectorAll('.sora-reveal:not(.is-in)').forEach((el) => el.classList.remove('sora-reveal')); };
++  }, [pathname]);
++
+   const quiet = QUIET.test(pathname);
+   const showBack = app && !quiet && !HOMES.test(pathname);
+   const back = () => { if (window.history.length > 1) navigate(-1); else navigate('/'); };
+diff --git a/src/components/Footer.jsx b/src/components/Footer.jsx
+index 187e38d..5a34bb1 100644
+--- a/src/components/Footer.jsx
++++ b/src/components/Footer.jsx
+@@ -5,6 +5,7 @@ import { branding } from '../lib/settings.js';
+ import { hasContactChannel, socialLinks, telHref } from '../lib/company.js';
+ import { useConsumerCare } from '../lib/consumerCare.js';
+ import InstallApp from './InstallApp.jsx';
++import { BRANDS } from '../lib/brands.js';
+ 
+ // ============================================================
+ // Footer.
+@@ -69,6 +70,7 @@ export default function Footer() {
+             <Link to="/brands">Our brands</Link>
+             <Link to="/new">New arrivals</Link>
+             <Link to="/fashion/wedding">Wedding edit</Link>
++            <Link to="/categories">All categories</Link>
+             {categories.slice(0, 3).map((c) => (
+               <Link key={c.slug} to={`/category/${c.slug}`}>{c.name}</Link>
+             ))}
+@@ -102,9 +104,30 @@ export default function Footer() {
+           </div>
+         </div>
+ 
++        {/* 2026-11-13 redesign: the brands row, how to pay, and the app — one band above the trust line. */}
++        <div className="ftr__brands" aria-label="Our brands">
++          <h4>Our brands</h4>
++          <div className="ftr__brandlist">
++            {BRANDS.map((b) => <Link key={b.id} to={b.page}>{b.name}</Link>)}
++          </div>
++        </div>
++        <div className="ftr__pay">
++          <div>
++            <h4>Pay your way</h4>
++            <p className="ftr__paylist"><span>UPI</span><span>Credit &amp; debit cards</span><span>Net banking</span><span>Cash on Delivery</span></p>
++            <p className="ftr__paynote">Payments are processed securely at checkout; the options for your order are shown there.</p>
++          </div>
++          <div className="ftr__app">
++            <h4>The SORA app</h4>
++            <p>Install it from this site: one tap from your home screen, and what you’ve browsed opens offline.</p>
++            <InstallApp label="Get the SORA app" />
++          </div>
++        </div>
++
+         <div className="ftr__trust">
+           <span><Icon name="lock" size={17} /> Secure checkout</span>
+           <span><Icon name="truck" size={17} /> Free standard shipping</span>
++          <span><Icon name="shield" size={17} /> Genuine products</span>
+           <span><Icon name="package" size={17} /> Order tracking in your account</span>
+         </div>
+ 
+diff --git a/src/components/Icon.jsx b/src/components/Icon.jsx
+index 886bfa5..61088ab 100644
+--- a/src/components/Icon.jsx
++++ b/src/components/Icon.jsx
+@@ -63,13 +63,19 @@ const P = {
+   drop: '<path d="M12 3.4S5.8 10 5.8 14a6.2 6.2 0 0 0 12.4 0c0-4-6.2-10.6-6.2-10.6Z"/>',
+ };
+ 
+-export default function Icon({ name, size = 22, stroke = 1.6, fill = 'none', className, style }) {
++// One icon set, one line weight (2026-11-13 redesign: "icons ka ek set"). Callers used
++// 1.5 to 2; every icon now draws at ICON_STROKE, so the site's icons read as one family.
++// `stroke` stays accepted so no caller breaks; it no longer changes the weight.
++export const ICON_STROKE = 1.7;
++
++// eslint-disable-next-line no-unused-vars
++export default function Icon({ name, size = 22, stroke = ICON_STROKE, fill = 'none', className, style }) {
+   const d = P[name];
+   if (!d) return null;
+   return (
+     <svg
+       width={size} height={size} viewBox="0 0 24 24" fill={fill}
+-      stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round"
++      stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round"
+       className={className} style={style} aria-hidden="true"
+       dangerouslySetInnerHTML={{ __html: d }}
+     />
+diff --git a/src/components/MobileTabBar.jsx b/src/components/MobileTabBar.jsx
+index 1b084b5..e55935d 100644
+--- a/src/components/MobileTabBar.jsx
++++ b/src/components/MobileTabBar.jsx
+@@ -3,15 +3,24 @@ import Icon from './Icon.jsx';
+ import { useStore } from '../lib/store.jsx';
+ 
+ // Mobile-only bottom navigation — thumb-reachable core actions.
+-export default function MobileTabBar() {
++// 2026-11-13 redesign: the same bar in the Fashion store too (FashionLayout), its
++// Home, Saved and categories pointing at that store; Home & Living has its own (.hl-nav).
++const LINKS = {
++  wellness: { home: '/', shop: '/shop', shopLabel: 'Shop', saved: '/wishlist' },
++  fashion: { home: '/fashion', shop: '/categories?store=fashion', shopLabel: 'Categories', saved: '/fashion/wishlist' },
++};
++
++export default function MobileTabBar({ store = 'wellness', savedCount = null }) {
+   const { cartCount, wishCount } = useStore();
++  const L = LINKS[store] || LINKS.wellness;
++  const saved = savedCount ?? wishCount;
+   const item = ({ isActive }) => `tabbar__item ${isActive ? 'active' : ''}`;
+   return (
+-    <nav className="tabbar only-mobile" aria-label="Mobile navigation">
+-      <NavLink to="/" className={item} end><Icon name="home" size={22} /><span>Home</span></NavLink>
+-      <NavLink to="/shop" className={item}><Icon name="grid" size={22} /><span>Shop</span></NavLink>
+-      <NavLink to="/wishlist" className={item}>
+-        <span className="tabbar__ic"><Icon name="heart" size={22} />{wishCount > 0 && <i className="tabbar__dot" key={wishCount} />}</span>
++    <nav className={`tabbar only-mobile tabbar--${store}`} aria-label="Mobile navigation">
++      <NavLink to={L.home} className={item} end><Icon name="home" size={22} /><span>Home</span></NavLink>
++      <NavLink to={L.shop} className={item}><Icon name="grid" size={22} /><span>{L.shopLabel}</span></NavLink>
++      <NavLink to={L.saved} className={item}>
++        <span className="tabbar__ic"><Icon name="heart" size={22} />{saved > 0 && <i className="tabbar__dot" key={saved} />}</span>
+         <span>Saved</span>
+       </NavLink>
+       <NavLink to="/cart" className={item}>
+diff --git a/src/fashion/FashionLayout.jsx b/src/fashion/FashionLayout.jsx
+index 4ed4fdb..ec3b46b 100644
+--- a/src/fashion/FashionLayout.jsx
++++ b/src/fashion/FashionLayout.jsx
+@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import { SparrowMark } from '../components/Logo.jsx';
+ import Footer from '../components/Footer.jsx';
++import MobileTabBar from '../components/MobileTabBar.jsx';
+ import Toasts from '../components/Toasts.jsx';
+ import { useStore } from '../lib/store.jsx';
+ import { branding, getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+@@ -204,6 +205,11 @@ function Drawer({ open, onClose }) {
+   );
+ }
+ 
++function FashionTabBar() {
++  const wish = useFashionWishlist();
++  return <MobileTabBar store="fashion" savedCount={wish.count} />;
++}
++
+ function Shell() {
+   const [menu, setMenu] = useState(false);
+   const { pathname } = useLocation();
+@@ -214,6 +220,8 @@ function Shell() {
+       <Drawer open={menu} onClose={() => setMenu(false)} />
+       <main className="fs-main"><Outlet /></main>
+       <Footer />
++      {/* The phone's bottom bar, as in the wellness store (2026-11-13 redesign); not over a product page's buy bar. */}
++      {!/^\/fashion\/p\//.test(pathname) && <FashionTabBar />}
+       <Toasts />
+     </div>
+   );
+diff --git a/src/fashion/FashionListing.jsx b/src/fashion/FashionListing.jsx
+index c061365..67d254f 100644
+--- a/src/fashion/FashionListing.jsx
++++ b/src/fashion/FashionListing.jsx
+@@ -14,6 +14,7 @@ import ShareList from '../components/ShareList.jsx';
+ import PriceDrops from '../components/PriceDrops.jsx';
+ import { DidYouMean } from '../components/SearchSuggest.jsx';
+ import FindForMe from '../components/FindForMe.jsx';
++import SkeletonGrid from '../components/Skeleton.jsx';
+ import { didYouMean } from '../lib/searchMatch.js';
+ import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
+ 
+@@ -103,7 +104,7 @@ export function FilterPanel({ state, options, onPatch, onClear, onClose = null,
+   );
+ }
+ 
+-export function Listing({ title, trail, scope = null, only = null, intro = null, emptyCopy, emptyExtra = null }) {
++export function Listing({ title, trail, scope = null, only = null, intro = null, emptyCopy, emptyExtra = null, banner = null }) {
+   const { status, tree, views } = useFashionCatalogue();
+   const [params, setParams] = useSearchParams();
+   const state = useMemo(() => readFashionUrlState(params), [params]);
+@@ -123,9 +124,10 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
+     <div className="fs-listing">
+       <CategoryChips onFilters={() => setPanel((v) => !v)} filterCount={count} />
+       <Breadcrumb trail={trail} />
++      {banner}
+       {intro}
+       <div className="fs-listing__bar">
+-        <h1 className="fs-listing__h serif">{title}</h1>
++        {banner ? null : <h1 className="fs-listing__h serif">{title}</h1>}
+         <p className="fs-listing__count" role="status">{status === 'loading' ? 'Loading…' : `${results.length} ${results.length === 1 ? 'product' : 'products'}`}</p>
+         <div className="fs-listing__tools">
+           <label className="fs-sort">
+@@ -146,8 +148,8 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
+         <FilterPanel state={state} options={options} onPatch={patch} onClear={clear} onClose={() => setPanel(false)} />
+         <div className="fs-listing__results">
+           {results.length === 0 ? (
+-            <div className="fs-empty">
+-              <p>{status === 'loading' ? 'Loading the catalogue…' : count > 0 ? 'Nothing matches these filters.' : emptyCopy}</p>
++            status === 'loading' ? <SkeletonGrid count={8} label="Loading the catalogue…" /> : <div className="fs-empty">
++              <p>{count > 0 ? 'Nothing matches these filters.' : emptyCopy}</p>
+               {count > 0 && <button type="button" className="fs-btn" onClick={clear}>Clear filters</button>}
+               {status !== 'loading' && count === 0 && emptyExtra}
+             </div>
+@@ -168,7 +170,7 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
+ // ---- /fashion/c/<slug> --------------------------------------------------------
+ export default function FashionCategory() {
+   const { slug } = useParams();
+-  const { status, tree } = useFashionCatalogue();
++  const { status, tree, views } = useFashionCatalogue();
+   const node = resolveCategory(tree, slug);
+   if (!node) {
+     return (
+@@ -188,11 +190,28 @@ export default function FashionCategory() {
+       {children.map((c) => <Link key={c.id} to={categoryHref(c)} className="fs-subcat">{c.name}</Link>)}
+     </nav>
+   ) : null;
++  // The category's banner (2026-11-13 redesign): its own picture, else its first product's.
++  const scope = categoryScope(tree, node);
++  const inScope = views.filter((v) => v.category_id && scope.has(v.category_id));
++  const bannerImage = node.image_url || inScope.find((v) => v.image)?.image || null;
++  const parent = tree.ancestors(node.id).slice(-2, -1)[0];
++  const banner = (
++    <header className={`fs-catbanner${bannerImage ? '' : ' fs-catbanner--plain'}`}>
++      {bannerImage && <img className="fs-catbanner__img" src={bannerImage} alt="" width="1200" height="500" decoding="async" />}
++      <div className="fs-catbanner__copy">
++        <p className="fs-catbanner__eyebrow">{parent ? parent.name : 'Fashion'}</p>
++        <h1 className="fs-listing__h serif fs-catbanner__h">{node.name}</h1>
++        {node.tagline ? <p className="fs-catbanner__tag">{node.tagline}</p> : null}
++        {inScope.length > 0 && <p className="fs-catbanner__count">{inScope.length} {inScope.length === 1 ? 'style' : 'styles'}</p>}
++      </div>
++    </header>
++  );
+   return (
+     <Listing
+       title={node.name}
+       trail={breadcrumbFor(tree, node)}
+-      scope={categoryScope(tree, node)}
++      scope={scope}
++      banner={banner}
+       intro={intro}
+       emptyCopy={`No styles in ${node.name} yet — they appear here as they go live.`}
+     />
+diff --git a/src/fashion/FashionProductCard.jsx b/src/fashion/FashionProductCard.jsx
+index 0f64aac..0126a1d 100644
+--- a/src/fashion/FashionProductCard.jsx
++++ b/src/fashion/FashionProductCard.jsx
+@@ -47,6 +47,8 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
+       <div className="fs-card__media">
+         <Link to={href} className="fs-card__img" aria-label={view.name}>
+           {view.image ? <img src={view.image} alt="" loading={mediaLoading} decoding="async" width="600" height="600" /> : <span className="fs-card__noimg" aria-hidden="true">{view.name.slice(0, 1)}</span>}
++          {/* The second picture, shown on hover with a mouse (2026-11-13 redesign: product cards). */}
++          {view.image && view.images?.[1] && view.images[1] !== view.image && <img className="fs-card__alt" src={view.images[1]} alt="" loading="lazy" decoding="async" width="600" height="600" />}
+         </Link>
+         {out ? <span className="fs-badge fs-badge--out">Sold out</span>
+           : view.hasDiscount ? <span className="fs-badge">{view.discountPct}% OFF</span>
+@@ -64,7 +66,7 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
+           {view.hasDiscount && <span className="fs-price__mrp">M.R.P: <s>{rupee(view.mrp)}</s></span>}
+         </p>
+         <h3 className="fs-card__name"><Link to={href}>{view.name}</Link></h3>
+-        {layout === 'list' && view.brand && <p className="fs-card__brand">{view.brand}</p>}
++        {view.brand && <p className={`fs-card__brand${layout === 'list' ? '' : ' fs-card__brand--grid'}`}>{view.brand}</p>}
+         {/* No reviews yet: no rating row at all, rather than "0.0 ☆☆☆☆☆ (0)". */}
+         {view.reviewCount > 0 && (
+           <p className="fs-rating">
+diff --git a/src/fashion/WeddingEdit.jsx b/src/fashion/WeddingEdit.jsx
+index 5f7e925..f819e3e 100644
+--- a/src/fashion/WeddingEdit.jsx
++++ b/src/fashion/WeddingEdit.jsx
+@@ -3,6 +3,7 @@ import Icon from '../components/Icon.jsx';
+ import { money } from '../lib/format.js';
+ import { useWeddingEdit } from '../lib/weddingEdit.js';
+ import { usePageMeta } from '../lib/pageMeta.js';
++import SkeletonGrid from '../components/Skeleton.jsx';
+ 
+ // /fashion/wedding — the Wedding & Festive edit (weddingEdit.js has what is shown and why).
+ export default function WeddingEdit() {
+@@ -22,7 +23,7 @@ export default function WeddingEdit() {
+             </ul>
+           )}
+         </header>
+-        {sections === null ? <p className="hx-offers__empty" role="status">Loading the edit…</p>
++        {sections === null ? <SkeletonGrid label="Loading the edit…" />
+           : sections.length === 0 ? <p className="hx-offers__empty">The edit is being put together. <Link to="/fashion">Browse Fashion</Link></p>
+             : sections.map((s) => (
+               <section key={s.id} className="hx-wed__sec" id={`wed-${s.id}`} aria-labelledby={`wed-${s.id}-h`}>
+diff --git a/src/homeliving/HomeLivingCategory.jsx b/src/homeliving/HomeLivingCategory.jsx
+index 9b98976..fa6ab2d 100644
+--- a/src/homeliving/HomeLivingCategory.jsx
++++ b/src/homeliving/HomeLivingCategory.jsx
+@@ -96,7 +96,7 @@ export function FilterPanel({ state, options, onPatch, onClear, onClose = null,
+   );
+ }
+ 
+-export function Listing({ title, trail, scope = null, intro = null, emptyCopy }) {
++export function Listing({ title, trail, scope = null, intro = null, emptyCopy, banner = null }) {
+   const { status, products } = useHomeLivingCatalogue();
+   const [params, setParams] = useSearchParams();
+   const state = useMemo(() => readListingState(params), [params]);
+@@ -114,9 +114,10 @@ export function Listing({ title, trail, scope = null, intro = null, emptyCopy })
+   return (
+     <div className="hl-wrap hl-listing">
+       <Breadcrumb trail={trail} />
++      {banner}
+       {intro}
+       <div className="hl-listing__bar">
+-        <h1 className="hl-listing__h serif">{title}</h1>
++        {banner ? null : <h1 className="hl-listing__h serif">{title}</h1>}
+         <p className="hl-listing__count" role="status">{status === 'loading' ? 'Loading…' : `${results.length} ${results.length === 1 ? 'product' : 'products'}`}</p>
+         <div className="hl-listing__tools">
+           <button type="button" className="hl-filters__toggle" onClick={() => setPanel((v) => !v)} aria-expanded={panel} aria-controls="hl-filters" aria-label={count ? `Filters, ${count} active` : 'Filters'}>
+@@ -161,7 +162,7 @@ export function Listing({ title, trail, scope = null, intro = null, emptyCopy })
+ // ---- /homeliving/category/<slug> ------------------------------------------------
+ export default function HomeLivingCategory() {
+   const { slug } = useParams();
+-  const { status, categories } = useHomeLivingCatalogue();
++  const { status, categories, products } = useHomeLivingCatalogue();
+   const node = resolveCategory(categories, slug);
+   // Hooks before the early return: the scope memo runs on every render.
+   const scope = useMemo(() => categoryScope(categories, node), [categories, node]);
+@@ -182,8 +183,23 @@ export default function HomeLivingCategory() {
+       {children.map((c) => <Link key={c.id} to={categoryHref(c)} className="hl-subcat">{c.name}</Link>)}
+     </nav>
+   ) : null;
++  // The category's banner (2026-11-13 redesign): its own picture, else its first product's.
++  const inScope = products.filter((p) => p.category_id != null && scope.has(String(p.category_id)));
++  const bannerImage = node.image_url || inScope.find((p) => p.images?.[0])?.images[0] || null;
++  const banner = (
++    <header className={`hl-catbanner${bannerImage ? '' : ' hl-catbanner--plain'}`}>
++      {bannerImage && <img className="hl-catbanner__img" src={bannerImage} alt="" width="1200" height="500" decoding="async" />}
++      <div className="hl-catbanner__copy">
++        <p className="hl-catbanner__eyebrow">Home &amp; Living</p>
++        <h1 className="hl-listing__h serif hl-catbanner__h">{node.name}</h1>
++        {node.tagline ? <p className="hl-catbanner__tag">{node.tagline}</p> : null}
++        {inScope.length > 0 && <p className="hl-catbanner__count">{inScope.length} {inScope.length === 1 ? 'product' : 'products'}</p>}
++      </div>
++    </header>
++  );
+   return (
+     <Listing
++      banner={banner}
+       title={node.name}
+       trail={breadcrumbFor(categories, node)}
+       scope={scope}
+diff --git a/src/homeliving/HomeLivingProductCard.jsx b/src/homeliving/HomeLivingProductCard.jsx
+index 91ac708..2717fcd 100644
+--- a/src/homeliving/HomeLivingProductCard.jsx
++++ b/src/homeliving/HomeLivingProductCard.jsx
+@@ -29,7 +29,7 @@ export default function HomeLivingProductCard({ product, layout = 'grid', mediaL
+       <div className="hl-card__media">
+         <Link to={href} className="hl-card__img" aria-label={product.name}>
+           {image
+-            ? <img src={image} alt="" loading={mediaLoading} decoding="async" width="400" height="400" />
++            ? <><img src={image} alt="" loading={mediaLoading} decoding="async" width="400" height="400" />{product.images?.[1] && product.images[1] !== image && <img className="hl-card__alt" src={product.images[1]} alt="" loading="lazy" decoding="async" width="400" height="400" />}</>
+             : <span className="hl-card__noimg" aria-hidden="true">{product.name.slice(0, 1)}</span>}
+         </Link>
+         <button type="button" className={`hl-card__heart${saved ? ' is-on' : ''}`} aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`} aria-pressed={saved} onClick={() => wish.toggle(product.id)}><Icon name="heart" size={16} fill={saved ? 'currentColor' : 'none'} /></button>
+diff --git a/src/homeliving/HomeLivingSearch.jsx b/src/homeliving/HomeLivingSearch.jsx
+index 70dca68..e6592e9 100644
+--- a/src/homeliving/HomeLivingSearch.jsx
++++ b/src/homeliving/HomeLivingSearch.jsx
+@@ -4,6 +4,7 @@ import { useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
+ import { searchItems, didYouMean } from '../lib/searchMatch.js';
+ import { DidYouMean } from '../components/SearchSuggest.jsx';
+ import FindForMe from '../components/FindForMe.jsx';
++import SkeletonGrid from '../components/Skeleton.jsx';
+ import { homelivingSearchRows } from './HomeLivingLayout.jsx';
+ import { Breadcrumb, Listing } from './HomeLivingCategory.jsx';
+ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
+@@ -34,6 +35,8 @@ export default function HomeLivingSearch() {
+       </div>
+       {q.length < 2 ? (
+         <div className="hl-empty hl-empty--listing"><p>Type at least two letters in the search bar above, e.g. “bedsheet”, “cushion” or “table cover”.</p></div>
++      ) : results.length === 0 && status === 'loading' ? (
++        <SkeletonGrid count={8} label="Loading the catalogue…" />
+       ) : results.length === 0 ? (
+         <div className="hl-empty hl-empty--listing">
+           <p>{status === 'loading' ? 'Loading the catalogue…' : `Nothing in Home & Living matches “${q}”. Try a shorter word, or browse the store.`}</p>
+diff --git a/src/lib/brands.js b/src/lib/brands.js
+index d1fe435..9f8c435 100644
+--- a/src/lib/brands.js
++++ b/src/lib/brands.js
+@@ -7,17 +7,17 @@
+ // Nothing here prices or ranks anything.
+ // ============================================================
+ export const BRANDS = Object.freeze([
+-  Object.freeze({ id: 'biosash', name: 'Biosash', store: 'Wellness', href: '/shop', image: null, imageFrom: 'biosash',
++  Object.freeze({ id: 'biosash', page: '/brands/biosash', story: "Biosash makes Ayurvedic and herbal care built around Himalayan sea buckthorn: juices, oils, supplements, skin and hair care for everyday wellness. Their range is the heart of SORA's wellness store.", name: 'Biosash', store: 'Wellness', href: '/shop', image: null, imageFrom: 'biosash',
+     text: 'Ayurvedic and herbal care: oils, powders, juices and supplements for everyday wellness.' }),
+-  Object.freeze({ id: 'atomy', name: 'Atomy', store: 'Wellness', href: '/shop?q=atomy', image: 'https://image.atomy.com/IN/goods/D00190/D00190_00.jpg?w=720&h=720',
++  Object.freeze({ id: 'atomy', page: '/brands/atomy', story: "Atomy is a Korean brand known for its skin care, the HemoHIM wellness range, supplements and personal care. On SORA you'll find their range at Atomy's own prices.", name: 'Atomy', store: 'Wellness', href: '/shop?q=atomy', image: 'https://image.atomy.com/IN/goods/D00190/D00190_00.jpg?w=720&h=720',
+     text: 'Korean skin care, HemoHIM, supplements, hair and personal care.' }),
+-  Object.freeze({ id: 'weavers-villa', catalogueBrand: 'Weavers Villa', name: 'Weavers Villa', store: 'Fashion · Home', href: '/fashion/c/shawls-stoles', image: '/video/weavers-villa/0e053f13.webp',
++  Object.freeze({ id: 'weavers-villa', page: '/brands/weavers-villa', story: 'Weavers Villa brings handwoven shawls, stoles and dupattas, from Kullu weaves to embroidered and Phulkari pieces, plus gift boxes and table covers for the home.', catalogueBrand: 'Weavers Villa', name: 'Weavers Villa', store: 'Fashion · Home', href: '/fashion/c/shawls-stoles', image: '/video/weavers-villa/0e053f13.webp',
+     text: 'Handwoven shawls, stoles, dupattas and Kullu weaves, plus table covers for the home.' }),
+-  Object.freeze({ id: 'leather-factory', catalogueBrand: 'Leather Factory', name: 'Leather Factory', store: 'Fashion', href: '/fashion/c/leather-goods', image: '/img/partners/leather-factory/handbags.webp',
++  Object.freeze({ id: 'leather-factory', page: '/brands/leather-factory', story: 'Leather Factory makes everyday leather goods: handbags and clutches, wallets and card holders, belts, sling bags, pouches and travel bags.', catalogueBrand: 'Leather Factory', name: 'Leather Factory', store: 'Fashion', href: '/fashion/c/leather-goods', image: '/img/partners/leather-factory/handbags.webp',
+     text: 'Leather handbags, wallets, belts, sling bags and travel bags.' }),
+-  Object.freeze({ id: 'taj-leather', catalogueBrand: 'Taj Leather', name: 'Taj Leather', store: 'Fashion', href: '/fashion/search?q=taj%20leather', image: 'https://cdn.shopify.com/s/files/1/0780/8437/4633/files/kbxt1xR35kfGamD.jpg?width=800',
++  Object.freeze({ id: 'taj-leather', luxe: true, page: '/brands/taj-leather', story: "Taj Leather makes genuine leather jackets and coats for men and women, from classic bikers to long coats, sold here at Taj Leather's own prices.", catalogueBrand: 'Taj Leather', name: 'Taj Leather', store: 'Fashion', href: '/fashion/search?q=taj%20leather', image: 'https://cdn.shopify.com/s/files/1/0780/8437/4633/files/kbxt1xR35kfGamD.jpg?width=800',
+     text: 'Genuine leather jackets and coats for men and women.' }),
+-  Object.freeze({ id: 'ansari-fashion', catalogueBrand: 'Ansari Fashion', name: 'Ansari Fashion', store: 'Fashion', href: '/fashion/search?q=ansari%20fashion', image: '/img/partners/ansari-fashion/suit-sets.webp',
++  Object.freeze({ id: 'ansari-fashion', luxe: true, page: '/brands/ansari-fashion', story: "Ansari Fashion is from Banaras: Banarasi silk and cotton suit sets, Jamdani weaves and sarees, sold here at Ansari Fashion's own prices.", catalogueBrand: 'Ansari Fashion', name: 'Ansari Fashion', store: 'Fashion', href: '/fashion/search?q=ansari%20fashion', image: '/img/partners/ansari-fashion/suit-sets.webp',
+     text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees from Banaras.' }),
+ ]);
+ 
+diff --git a/src/main.jsx b/src/main.jsx
+index d2e0532..fc0dfef 100644
+--- a/src/main.jsx
++++ b/src/main.jsx
+@@ -5,6 +5,7 @@ import App from './App.jsx';
+ import ScrollManager from './components/ScrollManager.jsx';
+ import SiteAssist from './components/SiteAssist.jsx';
+ import AppShell from './components/AppShell.jsx';
++import StoreBar from './components/StoreBar.jsx';
+ import { StoreProvider } from './lib/store.jsx';
+ import { AdminAuthProvider } from './lib/adminAuth.jsx';
+ import { CustomerAuthProvider } from './lib/customerAuth.jsx';
+@@ -113,6 +114,8 @@ function Root() {
+         <ScrollManager />
+         <CustomerAuthProvider>
+           <StoreProvider>
++            {/* One bar across the top of every store (StoreBar.jsx, 2026-11-13 redesign). */}
++            <StoreBar />
+             <AdminAuthProvider>
+               <ErrorBoundary>
+                 <App />
+diff --git a/src/pages/Brands.jsx b/src/pages/Brands.jsx
+index 145fd86..852cf3e 100644
+--- a/src/pages/Brands.jsx
++++ b/src/pages/Brands.jsx
+@@ -39,7 +39,7 @@ export default function Brands() {
+             const img = brandImage(b, products, isBiosash);
+             return (
+               <li key={b.id}>
+-                <Link to={b.href} className="hx-brands__card">
++                <Link to={b.page} className="hx-brands__card">
+                   <span className={`hx-brands__img${b.imageFrom ? ' is-whole' : ''}`}>
+                     {img && <img src={img} alt="" width="600" height="450" loading={i < 3 ? 'eager' : 'lazy'} decoding="async" />}
+                   </span>
+diff --git a/src/pages/Home.jsx b/src/pages/Home.jsx
+index a45c23b..23f4515 100644
+--- a/src/pages/Home.jsx
++++ b/src/pages/Home.jsx
+@@ -5,21 +5,18 @@ import StoryBlock from '../components/StoryBlock.jsx';
+ import Newsletter from '../components/Newsletter.jsx';
+ import HomeOffers from '../components/promo/HomeOffers.jsx';
+ import HomeLeaderboard from '../components/HomeLeaderboard.jsx';
+-import { LifestyleBanner, StoreCarousel } from '../components/FashionBanner.jsx';
++import { LifestyleBanner } from '../components/FashionBanner.jsx';
++import BrandCarousel from '../components/BrandCarousel.jsx';
++import { BiosashRange } from '../components/BiosashRange.jsx';
++import HomeGroup from '../components/HomeGroup.jsx';
+ import { NewArrivals } from '../components/NewArrivals.jsx';
+ import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
+-import { BiosashRange } from '../components/BiosashRange.jsx';
+-import { WeaversVillaRange, WeaversVillaShowcase } from '../components/WeaversVilla.jsx';
+-import { LeatherFactoryRange, LeatherFactoryShowcase } from '../components/LeatherFactory.jsx';
+-import { AtomyRange, AtomyShowcase } from '../components/Atomy.jsx';
+-import { TajLeatherRange, TajLeatherPosters } from '../components/TajLeather.jsx';
+-import { AnsariRange, AnsariPosters } from '../components/AnsariFashion.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+ import OfferBanner from '../components/OfferBanner.jsx';
+ import GiftShop from '../components/GiftShop.jsx';
+ import { TopDeals, WishlistRail, BagReminder } from '../components/HomeExtras.jsx';
+ import {
+-  MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
++  MarketplaceProductRail, DiscoveryEdit, MomTrustSpotlight,
+   CuratedCollections, CreatorCommunity, WhySoraLife,
+ } from '../components/HomeMarketplace.jsx';
+ import { ShopByCategory, ShopByConcerns } from '../components/HomeDiscoveryRails.jsx';
+@@ -62,106 +59,60 @@ export default function Home() {
+     <div className="v2-home">
+       {/* 1–2 · announcement + header are mounted by Layout via Header */}
+ 
+-      {/* 3 · THE TOP OF THE PAGE — white with an orange accent (HomeStorefront.jsx).
++      {/* 2026-11-13 redesign ("homepage cleanup"): the page in four parts, each opened by
++          a HomeGroup band — Offers, Shop by store, Our brands, For you — then the
++          closing blocks. The ten partner sections that ran one after another are one
++          "Our brands" row now (BrandCarousel.jsx), each card opening the brand's page;
++          the store carousel that repeated "Explore the stores" and the wellness
++          brand row are gone. */}
++
++      {/* The top of the page — white with an orange accent (HomeStorefront.jsx).
+              The hero is static: the admin Hero Slides page no longer drives it,
+              and the circle row replaced the category strip. */}
+       <HomeHero />
+       <HomeTrustStrip />
+       {/* Something already in the bag: how many, and the way to it (HomeExtras.jsx). */}
+       <BagReminder phone={false} />
++      <HomeTiles />
++      {/* The round quick-nav row stays straight under the hero, above the offers (test-home-discovery D18). */}
++      <ExploreStores />
++
++      <HomeGroup eyebrow="Offers" title="Deals worth grabbing" />
+       {/* The running offer with a live countdown (OfferBanner.jsx); nothing once it ends. */}
+       <OfferBanner wrap="hx-wrap" />
+       {/* The biggest verified discounts in stock (HomeExtras.jsx). */}
+       <TopDeals />
+-      {/* Gift-ready categories across Fashion and Home & Living (GiftShop.jsx). */}
+-      <GiftShop />
+-      <HomeTiles />
+-      <ExploreStores />
+       <FestivePromo />
+-
+-      {/* 5 · CAMPAIGN / PROMOTION — existing promotions runtime, untouched.
+-             Renders nothing when no active promotion targets `home`. */}
++      {/* Existing promotions runtime: nothing when no active promotion targets `home`. */}
+       <HomeOffers appearance={visuals.offers} />
+ 
+-      {/* This visitor's recently viewed products, any store, this browser only
+-          (RecentlyViewedHome.jsx). Renders nothing below two, or when hidden. */}
+-      <RecentlyViewedHome />
+-      {/* The visitor's saved products, two or more (HomeExtras.jsx). */}
+-      <WishlistRail />
+-
+-      {/* The products flagged new, newest first, across wellness, fashion and Home & Living:
+-          a sliding row between the promo and the Lifestyle banner. Renders nothing when
+-          nothing is flagged, or when it is hidden in Storefronts → Wellness. */}
++      <HomeGroup eyebrow="Shop by store" title="Wellness, fashion and home" />
++      {/* The editorial category browse and the need-led one (HomeDiscoveryRails.jsx). */}
++      <ShopByCategory />
++      <ShopByConcerns />
++      {/* Gift-ready categories across Fashion and Home & Living (GiftShop.jsx). */}
++      <GiftShop />
++      {/* The products flagged new, across the stores (NewArrivals.jsx; View All opens /new). */}
+       <NewArrivals />
+-
+-      {/* Biosash's own products, a sliding row like the one above (BiosashRange.jsx).
+-          Renders nothing when there are none in stock, or when it is hidden in
+-          Storefronts → Wellness. */}
++      {/* Biosash's own range stays here, straight after New Arrivals (owner, 2026-11-07). */}
+       <BiosashRange />
+-
+-      {/* Weavers Villa (partner, 2026-11-08): their shawls in the same sliding row,
+-          then a poster band with their short films (WeaversVilla.jsx). Each renders
+-          nothing when hidden in Storefronts → Wellness, the range also when empty. */}
+-      <WeaversVillaRange />
+-      <WeaversVillaShowcase />
+-
+-      {/* Leather Factory (partner, 2026-11-08): their pieces in the same row, then a
+-          poster band of category tiles (LeatherFactory.jsx). */}
+-      <LeatherFactoryRange />
+-      <LeatherFactoryShowcase />
+-
+-      {/* Atomy (partner, 2026-11-11): their range in the wellness store, then a poster
+-          band of category tiles (Atomy.jsx). */}
+-      <AtomyRange />
+-      <AtomyShowcase />
+-
+-      {/* Taj Leather (partner, 2026-11-11): their campaign posters, then their jackets
+-          and coats in the same sliding row (TajLeather.jsx). */}
+-      <TajLeatherPosters />
+-      <TajLeatherRange />
+-
+-      {/* Ansari Fashion (partner, 2026-11-13): three category posters, then their
+-          Banarasi suits and sarees (AnsariFashion.jsx). */}
+-      <AnsariPosters />
+-      <AnsariRange />
+-
+-      {/* Home & Living's Bedsheets, a sliding row of its live products in the
+-          catalogue's own order (HomeCategoryRails.jsx), directly under the
+-          Biosash range (owner, 2026-11-07). Renders nothing when the category is
+-          empty, or when it is hidden in Storefronts → Wellness. */}
++      {/* Home & Living's Bedsheets, straight under the Biosash range (HomeCategoryRails.jsx). */}
+       <Bedsheets />
+-
+-      {/* The doorway to the lifestyle store — one banner, no data dependency. */}
+       <LifestyleBanner />
+ 
+       {/* The doorway to the jewellery page, directly under the fashion category strip. */}
+       <JewelleryBanner />
+ 
+-      {/* selectHomeMerchandising balances this across categories. It is NOT a
+-          popularity measure, and today it is not a curated one either: the live
+-          catalogue has no is_featured or is_bestseller rows, and every product
+-          carries a discount — so "trending", "featured" and "on offer" would
+-          all be claims the data cannot back. It is an entry point, so it says
+-          so. Flag real featured products and this can become a Featured rail. */}
+-      <MarketplaceProductRail id="trending" eyebrow="Across the catalogue" title="Start here" products={merchandise.trending} />
+-
+-      {/* Two deliberately different category experiences: the circular rail
+-          under the hero is quick navigation, and this is the editorial browse.
+-          They sit far apart so neither reads as a duplicate of the other. */}
+-      <ShopByCategory />
+-
+-      {/* Need-led discovery, paired with the section above: every concern is
+-          backed by real catalogue results (see homeDiscovery.js). */}
+-      <ShopByConcerns />
+-
+-      <FeaturedBrands brands={merchandise.brands} />
++      <HomeGroup eyebrow="Our brands" title="The makers behind SORA" />
++      <BrandCarousel />
+ 
++      <HomeGroup eyebrow="For you" title="Picked for you" />
++      {/* This visitor's recently viewed and saved products (this browser only). */}
++      <RecentlyViewedHome />
++      <WishlistRail />
++      {/* selectHomeMerchandising balances this across categories: an entry point, not a popularity claim. */}
++      <MarketplaceProductRail id="trending" eyebrow="Across the catalogue" title="Start here" products={merchandise.trending} />
+       <DiscoveryEdit products={merchandise.discover} link={merchandise.discoverLink} />
+-
+-      {/* The fashion and Home & Living store cards as one carousel, under
+-          their own heading, just above the popular rail. No data dependency. */}
+-      <StoreCarousel />
+-
+       <MarketplaceProductRail
+         id="popular"
+         eyebrow={merchandise.popularEyebrow}
+@@ -169,9 +120,7 @@ export default function Home() {
+         products={merchandise.popular}
+         link={merchandise.popularTitle === 'Bestsellers' ? '/shop?sort=bestselling' : '/shop'}
+       />
+-
+       <MomTrustSpotlight category={merchandise.momCategory} products={merchandise.momProducts} />
+-
+       <CuratedCollections collections={merchandise.collections} />
+ 
+       {/* 7 · THIS WEEK — editorial cards. Hidden entirely when unconfigured. */}
+@@ -204,10 +153,7 @@ export default function Home() {
+ 
+       <WhySoraLife />
+ 
+-      {/* Home & Living's Luxury Beds, a sliding row of its live products in the
+-          catalogue's own order (HomeCategoryRails.jsx), near the foot of the page.
+-          Renders nothing when the category is empty, or when it is hidden in
+-          Storefronts → Wellness. */}
++      {/* Home & Living's Luxury Beds near the foot of the page, after "Why Sora Life" (owner, 2026-11-07). */}
+       <LuxuryBeds />
+ 
+       {/* 11 · Newsletter + Footer + tab bar are existing components, unchanged
+diff --git a/src/pages/NewArrivalsPage.jsx b/src/pages/NewArrivalsPage.jsx
+index f4b85c9..d294d34 100644
+--- a/src/pages/NewArrivalsPage.jsx
++++ b/src/pages/NewArrivalsPage.jsx
+@@ -4,6 +4,7 @@ import { money } from '../lib/format.js';
+ import { useNewArrivals } from '../lib/newArrivals.js';
+ import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
+ import { usePageMeta } from '../lib/pageMeta.js';
++import SkeletonGrid from '../components/Skeleton.jsx';
+ 
+ // ============================================================
+ // /new — every product flagged new, across wellness, fashion and Home & Living,
+@@ -40,7 +41,7 @@ export default function NewArrivalsPage() {
+             </button>
+           ))}
+         </div>
+-        {all === null ? <p className="hx-offers__empty" role="status">Loading the new arrivals…</p>
++        {all === null ? <SkeletonGrid label="Loading the new arrivals…" />
+           : list.length === 0 ? <p className="hx-offers__empty">Nothing new here this week. New pieces appear the moment they go live.</p>
+             : (
+               <>
+diff --git a/src/pages/Offers.jsx b/src/pages/Offers.jsx
+index 150372a..ab2587e 100644
+--- a/src/pages/Offers.jsx
++++ b/src/pages/Offers.jsx
+@@ -10,6 +10,7 @@ import { useStorefrontSection } from '../lib/storefrontSections.js';
+ import { OFFER_COUNTDOWN, parseIndiaTime } from '../lib/offerCountdown.js';
+ import { offerShareText } from '../components/PromoCard.jsx';
+ import { usePageMeta } from '../lib/pageMeta.js';
++import SkeletonGrid from '../components/Skeleton.jsx';
+ 
+ // ============================================================
+ // /offers — every product on a real discount, across the stores, biggest discount
+@@ -165,7 +166,7 @@ export default function Offers() {
+           ))}
+         </div>
+         {cat === null && shownDeals.length === 0 ? (
+-          <p className="hx-offers__empty" role="status">Loading the offers…</p>
++          <SkeletonGrid label="Loading the offers…" />
+         ) : shownDeals.length === 0 ? (
+           <p className="hx-offers__empty">Nothing on offer here right now. New deals appear the moment they go live.</p>
+         ) : (
+diff --git a/src/styles/fashion.css b/src/styles/fashion.css
+index 2d83557..e710363 100644
+--- a/src/styles/fashion.css
++++ b/src/styles/fashion.css
+@@ -451,7 +451,7 @@
+ /* The fashion product page in the marketplace layout of the other stores (owner, 2026-11-08):
+    pictures | details | a buy box, then compare, service, reviews, recently viewed and the brand's row. */
+ .fs-main:has(.fs-pdp--mk) { max-width: 1520px; }
+-.fs-pdp--mk { --mk-ink: #0F1111; --mk-ink-2: #565959; --mk-teal: #007185; --mk-line: #D5D9D9; color: var(--mk-ink); }
++.fs-pdp--mk { --mk-ink: #0F1111; --mk-ink-2: #565959; --mk-teal: #2C5341; --mk-line: #D5D9D9; color: var(--mk-ink); }
+ .fs-pdp--mk .fs-pdp__grid { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) 270px; gap: 28px; }
+ .fs-pdp--mk .fs-gallery { top: 120px; }
+ .fs-pdp--mk .fs-pdp__brand { margin: 0 0 4px; font-size: 14px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--mk-ink-2); }
+@@ -540,8 +540,8 @@
+ @keyframes fs-bar-in { from { transform: translateY(100%); } to { transform: none; } }
+ @media (prefers-reduced-motion: reduce) { html.pdp-bar-on .fs-pdp__bar { animation: none; } }
+ /* Size guide (2026-11-09). */
+-.fs-sizeguide__open { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 12px; padding: 0; border: 0; background: none; font: 400 13px Arial, sans-serif; color: #007185; cursor: pointer; }
+-.fs-sizeguide__open:hover { color: #C7511F; text-decoration: underline; }
++.fs-sizeguide__open { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 12px; padding: 0; border: 0; background: none; font: 400 13px Arial, sans-serif; color: #2C5341; cursor: pointer; }
++.fs-sizeguide__open:hover { color: #8A5A12; text-decoration: underline; }
+ .fs-sizeguide { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(15, 17, 17, .55); }
+ .fs-sizeguide__box { width: min(560px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; padding: 18px 20px 20px; background: #fff; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0F1111; }
+ .fs-sizeguide__top { display: flex; justify-content: space-between; align-items: center; }
+@@ -575,3 +575,21 @@
+ .fs-sizeguide__find p { margin: 0; font-size: 14px; color: #565959; }
+ .fs-sizeguide__find p b { color: #067D62; font-size: 16px; }
+ .fs-sizeguide__table tr.is-pick th, .fs-sizeguide__table tr.is-pick td { background: #E6F4EA; font-weight: 700; }
++/* Product cards (2026-11-13 redesign): the second picture on hover, the brand line in the grid. */
++.fs-card__img { position: relative; }
++.fs-card__img .fs-card__alt { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; opacity: 0; transition: opacity .35s ease; }
++@media (hover: hover) and (pointer: fine) { .fs-card:hover .fs-card__img .fs-card__alt { opacity: 1; } }
++.fs-card__brand--grid { order: -1; margin: 0 0 2px; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--slv2-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
++@media (prefers-reduced-motion: reduce) { .fs-card__img .fs-card__alt { transition: none; } }
++/* Category banner (2026-11-13 redesign): the category's picture, its name and how many styles. */
++.fs-catbanner { position: relative; display: flex; align-items: flex-end; min-height: 220px; margin: 12px 0 14px; overflow: hidden; background: #1E3A2F; color: #fff; }
++.fs-catbanner__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 25%; }
++.fs-catbanner::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(15, 25, 20, .82) 0%, rgba(15, 25, 20, .45) 45%, rgba(15, 25, 20, 0) 75%); }
++.fs-catbanner__copy { position: relative; z-index: 1; padding: 26px 30px; max-width: 560px; }
++.fs-catbanner__eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #F6D79A; }
++.fs .fs-catbanner__h { margin: 0; color: #fff; font-size: clamp(28px, 3.6vw, 44px); line-height: 1.1; }
++.fs-catbanner__tag { margin: 8px 0 0; font-size: 15px; color: #EDE6D8; }
++.fs-catbanner__count { margin: 10px 0 0; font-size: 13.5px; font-weight: 700; color: #fff; }
++.fs-catbanner--plain { min-height: 150px; }
++@media (max-width: 767px) { .fs-catbanner { min-height: 170px; margin: 8px 0 10px; } .fs-catbanner__copy { padding: 18px; } }
++@media (max-width: 767px) { .fs-catbanner::after { background: linear-gradient(0deg, rgba(15, 25, 20, .88) 0%, rgba(15, 25, 20, .55) 55%, rgba(15, 25, 20, .25) 100%); } }
+diff --git a/src/styles/homeliving.css b/src/styles/homeliving.css
+index 78d25b9..0e83e9d 100644
+--- a/src/styles/homeliving.css
++++ b/src/styles/homeliving.css
+@@ -797,7 +797,7 @@
+    links and labels, green the stock; three columns on a desktop (pictures, details,
+    buy box). Everything below overrides the first pass above.
+    ============================================================ */
+-.hl-pdp { --az-ink: #0F1111; --az-ink-2: #565959; --az-teal: #007185; --az-red: #CC0C39; --az-green: #007600; --az-line: #D5D9D9; --az-soft: #F7F8F8; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--az-ink); font-size: 14px; }
++.hl-pdp { --az-ink: #0F1111; --az-ink-2: #565959; --az-teal: #2C5341; --az-red: #CC0C39; --az-green: #007600; --az-line: #D5D9D9; --az-soft: #F7F8F8; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--az-ink); font-size: 14px; }
+ .hl-pdp .hl-crumb ol { font-size: 12.5px; }
+ .hl-pdp .hl-crumb a { color: var(--az-ink-2); }
+ .hl-pdp__grid { grid-template-columns: minmax(0, 1fr); gap: 18px; margin-top: 14px; }
+@@ -935,7 +935,7 @@
+ .hl .pdpk-about li { font-size: 14px; line-height: 1.45; color: #0F1111; }
+ .hl .pdp__bbwish { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 34px; margin-top: 10px; border: 1px solid #D5D9D9; background: #fff; color: #0F1111; font: inherit; font-size: 13px; cursor: pointer; }
+ .hl .pdp__bbwish.is-on { color: #C2500A; border-color: #C2500A; }
+-.hl .pdp__bbsecure { display: flex; align-items: center; gap: 5px; margin: 10px 0 0; font-size: 12.5px; color: #007185; }
++.hl .pdp__bbsecure { display: flex; align-items: center; gap: 5px; margin: 10px 0 0; font-size: 12.5px; color: #2C5341; }
+ 
+ /* Compare with similar items, and the service cards (owner, 2026-11-08). */
+ .hl .pdpk-h--lg { font-size: 20px; }
+@@ -946,7 +946,7 @@
+ .hl .pdpk-cmp tbody th { width: 120px; font-weight: 700; }
+ .hl .pdpk-cmp thead th { width: 22%; font-weight: 400; }
+ .hl .pdpk-cmp .is-current { background: #F7FAFA; }
+-.hl .pdpk-cmp__item { display: grid; gap: 6px; color: #007185; text-decoration: none; font-size: 13.5px; line-height: 1.35; }
++.hl .pdpk-cmp__item { display: grid; gap: 6px; color: #2C5341; text-decoration: none; font-size: 13.5px; line-height: 1.35; }
+ .hl .pdpk-cmp__item img { width: 110px; height: 110px; object-fit: contain; background: #fff; }
+ .hl .pdpk-cmp__item em { font-style: normal; font-size: 12px; font-weight: 700; color: #565959; }
+ .hl .pdpk-cmp__price { font-size: 16px; font-weight: 500; }
+@@ -955,9 +955,9 @@
+ .hl .pdpk-svc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #E7E7E7; }
+ .hl .pdpk-svc > div { padding: 14px 16px; border: 1px solid #D5D9D9; background: #fff; }
+ .hl .pdpk-svc .pdpk-h { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+-.hl .pdpk-svc .pdpk-h svg { color: #007185; }
++.hl .pdpk-svc .pdpk-h svg { color: #2C5341; }
+ .hl .pdpk-svc ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 13.5px; line-height: 1.45; color: #0F1111; }
+-.hl .pdpk-svc a { color: #007185; }
++.hl .pdpk-svc a { color: #2C5341; }
+ @media (max-width: 767px) { .hl .pdpk-svc { grid-template-columns: minmax(0, 1fr); } .hl .pdpk-cmp table { font-size: 13px; } }
+ 
+ /* More from the brand, frequently bought together, product information (owner, 2026-11-08). */
+@@ -966,7 +966,7 @@
+ .hl .pdpk-rail__card, .hl .pdpk-fbt__item { display: grid; gap: 5px; color: #0F1111; text-decoration: none; }
+ .hl .pdpk-rail__img { display: block; aspect-ratio: 1; background: #F7F8F8; overflow: hidden; }
+ .hl .pdpk-rail__img img { width: 100%; height: 100%; object-fit: contain; }
+-.hl .pdpk-rail__name { font-size: 13.5px; line-height: 1.35; color: #007185; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
++.hl .pdpk-rail__name { font-size: 13.5px; line-height: 1.35; color: #2C5341; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+ .hl .pdpk-rail__price { display: flex; gap: 6px; align-items: baseline; font-size: 16px; }
+ .hl .pdpk-rail__price i { font-style: normal; color: #CC0C39; font-size: 14px; }
+ .hl .pdpk-rail__price b { font-weight: 500; }
+@@ -982,7 +982,7 @@
+ 
+ /* Share, quantity, hover zoom (owner, 2026-11-08). */
+ .hl .pdpk-share { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12.5px; color: #565959; }
+-.hl .pdpk-share a, .hl .pdpk-share button { padding: 0; border: 0; background: none; font: inherit; color: #007185; cursor: pointer; text-decoration: none; }
++.hl .pdpk-share a, .hl .pdpk-share button { padding: 0; border: 0; background: none; font: inherit; color: #2C5341; cursor: pointer; text-decoration: none; }
+ .hl .pdpk-share a:hover, .hl .pdpk-share button:hover { text-decoration: underline; }
+ .hl .pdpk-share .pdpk-share__hint { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 10px; border-left: 1px solid #D5D9D9; }
+ .hl .hl-qty { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 13px; color: #0F1111; }
+@@ -1010,7 +1010,7 @@
+ .hl .pdpk-stars .is-on { color: #DE7921; fill: currentColor; }
+ .hl .pdpk-rev__avg { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 17px; }
+ .hl .pdpk-rev__n { margin: 6px 0 12px; font-size: 14px; color: #565959; }
+-.hl .pdpk-rev__bars { display: grid; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; font-size: 14px; color: #007185; }
++.hl .pdpk-rev__bars { display: grid; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; font-size: 14px; color: #2C5341; }
+ .hl .pdpk-rev__bars li { display: grid; grid-template-columns: 52px minmax(0, 1fr) 40px; align-items: center; gap: 10px; }
+ .hl .pdpk-rev__bar { height: 20px; border: 1px solid #C7CCCC; background: #F0F2F2; }
+ .hl .pdpk-rev__bar i { display: block; height: 100%; background: #DE7921; }
+@@ -1057,7 +1057,7 @@
+ /* The hearts save to the Home & Living wishlist (2026-11-08; they were inert). */
+ .hl .hl-card__heart { cursor: pointer; }
+ .hl .hl-card__heart.is-on, .hl .hl-gallery__heart.is-on { color: #C0392B; }
+-.hl .hl-card__heart:focus-visible, .hl .hl-gallery__heart:focus-visible { outline: 2px solid #007185; outline-offset: 2px; }
++.hl .hl-card__heart:focus-visible, .hl .hl-gallery__heart:focus-visible { outline: 2px solid #2C5341; outline-offset: 2px; }
+ /* Desktop: the buy bar at the foot once the buy box has scrolled away (2026-11-09). */
+ @media (min-width: 900px) {
+   .hl.pdp-bar-on .hl-pdp__bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 10px max(24px, calc((100vw - 1480px) / 2)); background: #fff; border-top: 1px solid #D5D9D9; box-shadow: 0 -6px 18px -12px rgba(15, 17, 17, .3); }
+@@ -1076,3 +1076,20 @@
+ }
+ /* "Similar, for less" (2026-11-10). */
+ .hl .pdpk-rail__save { font-size: 13px; font-weight: 700; color: #067D62; }
++/* Category banner (2026-11-13 redesign). */
++.hl .hl-catbanner { position: relative; display: flex; align-items: flex-end; min-height: 220px; margin: 12px 0 14px; overflow: hidden; background: #1E3A2F; color: #fff; }
++.hl .hl-catbanner__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
++.hl .hl-catbanner::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(15, 25, 20, .82) 0%, rgba(15, 25, 20, .45) 45%, rgba(15, 25, 20, 0) 75%); }
++.hl .hl-catbanner__copy { position: relative; z-index: 1; padding: 26px 30px; max-width: 560px; }
++.hl .hl-catbanner__eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #F6D79A; }
++.hl .hl-catbanner__h { margin: 0; color: #fff; font-size: clamp(28px, 3.6vw, 44px); line-height: 1.1; }
++.hl .hl-catbanner__tag { margin: 8px 0 0; font-size: 15px; color: #EDE6D8; }
++.hl .hl-catbanner__count { margin: 10px 0 0; font-size: 13.5px; font-weight: 700; color: #fff; }
++.hl .hl-catbanner--plain { min-height: 150px; }
++@media (max-width: 767px) { .hl .hl-catbanner { min-height: 170px; margin: 8px 0 10px; } .hl .hl-catbanner__copy { padding: 18px; } }
++/* Product cards (2026-11-13 redesign): the second picture on hover. */
++.hl .hl-card__img { position: relative; }
++.hl .hl-card__img .hl-card__alt { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .35s ease; }
++@media (hover: hover) and (pointer: fine) { .hl .hl-card:hover .hl-card__img .hl-card__alt { opacity: 1; } }
++@media (prefers-reduced-motion: reduce) { .hl .hl-card__img .hl-card__alt { transition: none; } }
++@media (max-width: 767px) { .hl .hl-catbanner::after { background: linear-gradient(0deg, rgba(15, 25, 20, .88) 0%, rgba(15, 25, 20, .55) 55%, rgba(15, 25, 20, .25) 100%); } }
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index 1fed525..5d0d184 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -463,8 +463,8 @@
+ /* Continue where you left off: no view-all link, a quiet "Clear history". */
+ .hx-recent .hx-more { display: none; }
+ .hx-recent__foot { display: flex; justify-content: flex-end; margin-top: -18px; margin-bottom: 8px; }
+-.hx-recent__clear { border: 0; background: none; padding: 4px 0; font: 400 13px/1.4 Arial, sans-serif; color: #007185; cursor: pointer; }
+-.hx-recent__clear:hover { text-decoration: underline; color: #C7511F; }
++.hx-recent__clear { border: 0; background: none; padding: 4px 0; font: 400 13px/1.4 Arial, sans-serif; color: #2C5341; cursor: pointer; }
++.hx-recent__clear:hover { text-decoration: underline; color: #8A5A12; }
+ /* Live search suggestions under the Fashion and Home & Living search boxes (2026-11-08). */
+ .hx-suggest { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 70; max-height: min(70vh, 520px); overflow-y: auto; background: #fff; border: 1px solid #D5D9D9; box-shadow: 0 10px 28px rgba(15, 17, 17, .16); font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; text-align: left; }
+ .hx-suggest__item { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 12px; color: #0F1111; text-decoration: none; border-bottom: 1px solid #F0F2F2; }
+@@ -474,8 +474,8 @@
+ .hx-suggest__name { min-width: 0; font-size: 14px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+ .hx-suggest__name em { display: block; font-style: normal; font-size: 12px; color: #565959; }
+ .hx-suggest__price { font-size: 14px; font-weight: 700; white-space: nowrap; }
+-.hx-suggest__all { display: block; padding: 10px 12px; font-size: 14px; font-weight: 700; color: #007185; text-decoration: none; }
+-.hx-suggest__all:hover { text-decoration: underline; color: #C7511F; }
++.hx-suggest__all { display: block; padding: 10px 12px; font-size: 14px; font-weight: 700; color: #2C5341; text-decoration: none; }
++.hx-suggest__all:hover { text-decoration: underline; color: #8A5A12; }
+ .hx-suggest__none { margin: 0; padding: 12px; font-size: 14px; color: #565959; }
+ /* One search across the stores (2026-11-08): the header's second group and the /shop?q= section. */
+ .hx-xsg { border-top: 1px solid #E7E7E7; padding: 6px 0 2px; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; }
+@@ -485,7 +485,7 @@
+ .hx-xsg__img { width: 40px; height: 40px; display: block; background: #fff; }
+ .hx-xsg__img img { width: 100%; height: 100%; object-fit: contain; display: block; }
+ .hx-xsg__name { min-width: 0; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+-.hx-xsg__name em { display: block; font-style: normal; font-size: 11px; color: #007185; }
++.hx-xsg__name em { display: block; font-style: normal; font-size: 11px; color: #2C5341; }
+ .hx-xsg--sheet { margin-top: 10px; }
+ .hx-xs { margin-top: 36px; margin-bottom: 40px; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; }
+ .hx-xs__h { margin: 0 0 16px; padding-top: 22px; border-top: 1px solid #E7E7E7; font-size: 22px; font-weight: 700; color: #0F1111; }
+@@ -494,15 +494,15 @@
+ .hx-xs__card { display: grid; gap: 4px; color: #0F1111; text-decoration: none; }
+ .hx-xs__img { display: block; aspect-ratio: 1; background: #F7F7F7; }
+ .hx-xs__img img { width: 100%; height: 100%; object-fit: contain; display: block; }
+-.hx-xs__store { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #007185; }
++.hx-xs__store { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #2C5341; }
+ .hx-xs__name { font-size: 14px; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+-.hx-xs__card:hover .hx-xs__name { color: #C7511F; text-decoration: underline; }
++.hx-xs__card:hover .hx-xs__name { color: #8A5A12; text-decoration: underline; }
+ .hx-xs__price { display: flex; align-items: baseline; gap: 6px; font-size: 16px; }
+ .hx-xs__price s { font-size: 12px; color: #565959; }
+ @media (max-width: 599px) { .hx-xs__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .hx-xs__h { font-size: 19px; } }
+ /* More features (2026-11-08): recent searches, ask on WhatsApp, share a wishlist. */
+ .hx-suggest__head { display: flex; justify-content: space-between; align-items: center; margin: 0; padding: 10px 12px 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #565959; }
+-.hx-suggest__head button { border: 0; background: none; padding: 0; font: 400 12px Arial, sans-serif; letter-spacing: 0; text-transform: none; color: #007185; cursor: pointer; }
++.hx-suggest__head button { border: 0; background: none; padding: 0; font: 400 12px Arial, sans-serif; letter-spacing: 0; text-transform: none; color: #2C5341; cursor: pointer; }
+ .hx-suggest__recent { display: block; padding: 8px 12px; font-size: 14px; color: #0F1111; text-decoration: none; }
+ .hx-suggest__recent::before { content: "↺"; margin-right: 10px; color: #8A8F8F; }
+ .hx-suggest__recent:hover { background: #F3F6F6; }
+@@ -564,8 +564,8 @@
+ .hx-voice__tip { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); z-index: 90; max-width: calc(100vw - 32px); padding: 8px 14px; background: #0F1111; color: #fff; font: 13px/1.3 Arial, "Helvetica Neue", Helvetica, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 8px 20px rgba(15, 17, 17, .25); pointer-events: none; }
+ .hx-voice--panel { position: absolute; right: 46px; top: 50%; transform: translateY(-50%); }
+ .hx-dym { margin: 10px 0 0; font: 15px/1.4 Arial, "Helvetica Neue", Helvetica, sans-serif; color: #565959; }
+-.hx-dym a { color: #007185; font-weight: 700; font-style: italic; text-decoration: underline; text-underline-offset: 2px; }
+-.hx-dym a:hover { color: #C7511F; }
++.hx-dym a { color: #2C5341; font-weight: 700; font-style: italic; text-decoration: underline; text-underline-offset: 2px; }
++.hx-dym a:hover { color: #8A5A12; }
+ .hx-dym--suggest { margin: 0; padding: 0 12px 12px; }
+ .hx-dym--page { margin: 4px 0 14px; font-size: 16px; color: #0F1111; }
+ .hx-net { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 1000; width: max-content; max-width: calc(100vw - 32px); margin: 0; padding: 10px 18px; background: #0F1111; color: #fff; font: 14px/1.35 Arial, "Helvetica Neue", Helvetica, sans-serif; text-align: center; box-shadow: 0 10px 26px rgba(15, 17, 17, .28); }
+@@ -578,8 +578,8 @@
+ .hx-drops__list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+ .hx-drops__item { display: grid; grid-template-columns: 48px minmax(0, 1fr); grid-template-areas: "img name" "img price"; column-gap: 12px; align-items: center; color: #0F1111; text-decoration: none; }
+ .hx-drops__item img, .hx-drops__ph { grid-area: img; width: 48px; height: 48px; object-fit: contain; background: #fff; display: block; }
+-.hx-drops__name { grid-area: name; font-size: 14px; color: #007185; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+-.hx-drops__item:hover .hx-drops__name { color: #C7511F; text-decoration: underline; }
++.hx-drops__name { grid-area: name; font-size: 14px; color: #2C5341; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.hx-drops__item:hover .hx-drops__name { color: #8A5A12; text-decoration: underline; }
+ .hx-drops__price { grid-area: price; font-size: 14px; }
+ .hx-drops__price b { font-size: 16px; }
+ .hx-drops__price em { font-style: normal; color: #067D62; font-weight: 700; margin-left: 6px; }
+@@ -635,7 +635,7 @@
+ .hx-pcard__code b { padding: 4px 10px; border: 1px dashed #C2500A; background: #FFF8F2; color: #C2500A; font-size: 15px; letter-spacing: .08em; }
+ .hx-pcard__code button { height: 30px; padding: 0 12px; border: 1px solid #0F1111; background: #0F1111; color: #fff; font: 700 12.5px Arial, sans-serif; cursor: pointer; }
+ .hx-pcard__s { margin: 0; font-size: 12.5px; line-height: 1.4; color: #565959; }
+-.hx-pcard__s a { color: #007185; font-weight: 700; }
++.hx-pcard__s a { color: #2C5341; font-weight: 700; }
+ .hx-pcard__x { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; background: none; color: #565959; cursor: pointer; }
+ .hx-pcard__x:hover { color: #0F1111; background: #F3F3F3; }
+ @media (max-width: 599px) {
+@@ -690,8 +690,8 @@
+ .hx-brands__body em { font-style: normal; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #565959; }
+ .hx-brands__body b { font-size: 20px; }
+ .hx-brands__body > span { font-size: 14px; line-height: 1.45; color: #333; flex: 1; }
+-.hx-brands__body i { font-style: normal; font-weight: 700; color: #007185; display: inline-flex; align-items: center; gap: 4px; }
+-.hx-brands__card:hover i { color: #C7511F; }
++.hx-brands__body i { font-style: normal; font-weight: 700; color: #2C5341; display: inline-flex; align-items: center; gap: 4px; }
++.hx-brands__card:hover i { color: #8A5A12; }
+ /* Chat status (2026-11-13): online now, or when replies start, from the published support hours. */
+ .hx-sa__wa { position: relative; }
+ .hx-sa__wa-label { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+@@ -712,12 +712,12 @@
+ .hx-today__price s { color: #565959; }
+ .hx-today__price i { font-style: normal; font-weight: 700; color: #fff; background: #CC0C39; padding: 3px 7px; font-size: 13px; }
+ .hx-today__note { font-size: 13px; color: #565959; }
+-.hx-today__go { font-weight: 700; color: #007185; display: inline-flex; align-items: center; gap: 4px; }
+-.hx-today__card:hover .hx-today__go { color: #C7511F; }
++.hx-today__go { font-weight: 700; color: #2C5341; display: inline-flex; align-items: center; gap: 4px; }
++.hx-today__card:hover .hx-today__go { color: #8A5A12; }
+ @media (max-width: 600px) { .hx-today__card { grid-template-columns: 110px 1fr; gap: 12px; padding: 10px; } .hx-today__body b { font-size: 15px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .hx-today__price strong { font-size: 19px; } .hx-today__note { font-size: 12px; } }
+ /* Help & FAQ (2026-11-13). */
+ .hx-help__search { display: flex; align-items: center; gap: 10px; max-width: 560px; margin: 16px 0 8px; padding: 0 14px; height: 46px; background: #fff; border: 1px solid #888C8C; color: #565959; }
+-.hx-help__search:focus-within { border-color: #007185; box-shadow: 0 0 0 3px rgba(0,113,133,.18); }
++.hx-help__search:focus-within { border-color: #2C5341; box-shadow: 0 0 0 3px rgba(0,113,133,.18); }
+ .hx-help__search input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; font-size: 16px; color: #0F1111; }
+ .hx-help__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+ .hx-help__topics { display: grid; gap: 22px; margin: 18px 0 26px; max-width: 860px; }
+@@ -728,8 +728,8 @@
+ .hx-help__qa summary svg { flex: none; color: #565959; transition: transform .2s ease; }
+ .hx-help__qa[open] summary svg { transform: rotate(180deg); }
+ .hx-help__qa p { margin: 0 0 14px; font-size: 14.5px; line-height: 1.6; color: #333; }
+-.hx-help__qa p a { display: inline-flex; align-items: center; gap: 3px; color: #007185; font-weight: 700; text-decoration: none; white-space: nowrap; }
+-.hx-help__qa p a:hover { color: #C7511F; text-decoration: underline; }
++.hx-help__qa p a { display: inline-flex; align-items: center; gap: 3px; color: #2C5341; font-weight: 700; text-decoration: none; white-space: nowrap; }
++.hx-help__qa p a:hover { color: #8A5A12; text-decoration: underline; }
+ .hx-help__ask { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; max-width: 860px; margin: 0 0 36px; padding: 18px; background: #F7F8F8; border: 1px solid #E3E6E6; }
+ .hx-help__ask > div:first-child { display: flex; flex-direction: column; gap: 4px; }
+ .hx-help__ask b { font-size: 17px; }
+@@ -762,7 +762,7 @@
+ @media print { .hx-appback, .hx-update, .hx-acard { display: none; } }
+ /* Delete your account (2026-11-13). */
+ .hx-del__p { margin: 0 0 12px; font-size: 15px; line-height: 1.6; color: #333; }
+-.hx-del__p a { color: #007185; font-weight: 700; }
++.hx-del__p a { color: #2C5341; font-weight: 700; }
+ .hx-del__small { margin-top: 12px; font-size: 14px; color: #565959; }
+ .hx-del__list { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.8; color: #333; }
+ .hx .hx-offers__btn--wa, .hx .hx-offers__btn--wa:hover { color: #fff; }
+@@ -781,8 +781,8 @@
+ .hx-wed__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 12px; }
+ .hx-wed__head h2 { margin: 0; font-size: 22px; }
+ .hx-wed__head p { margin: 4px 0 0; font-size: 14px; color: #565959; }
+-.hx-wed__all { flex: none; display: inline-flex; align-items: center; gap: 4px; color: #007185; font-weight: 700; text-decoration: none; }
+-.hx-wed__all:hover { color: #C7511F; }
++.hx-wed__all { flex: none; display: inline-flex; align-items: center; gap: 4px; color: #2C5341; font-weight: 700; text-decoration: none; }
++.hx-wed__all:hover { color: #8A5A12; }
+ .hx-wedstrip { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 18px 20px; background: linear-gradient(100deg, #5A1E12, #8E3B12 55%, #B4690E); color: #fff; text-decoration: none; }
+ .hx-wedstrip > span:first-child { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+ .hx-wedstrip em { font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #F6D79B; }
+diff --git a/src/styles/v2-pdp.css b/src/styles/v2-pdp.css
+index 74127c9..65cd687 100644
+--- a/src/styles/v2-pdp.css
++++ b/src/styles/v2-pdp.css
+@@ -1262,7 +1262,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
+    size, colour carrying meaning — red the discount, teal links and labels, green
+    the stock. Overrides the first pass above.
+    ========================================================================== */
+-.v2-pdp-root { --az-ink:#0F1111; --az-ink-2:#565959; --az-teal:#007185; --az-red:#CC0C39; --az-green:#007600; --az-line:#D5D9D9; }
++.v2-pdp-root { --az-ink:#0F1111; --az-ink-2:#565959; --az-teal:#2C5341; --az-red:#CC0C39; --az-green:#007600; --az-line:#D5D9D9; }
+ .v2-pdp-root .pdp__brand { font-size:14px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--az-teal); }
+ .v2-pdp-root .pdp__brand::before { content:'Brand: '; color:var(--az-ink-2); margin-right:3px; }
+ .v2-pdp-root .pdp__brand::after { content:none; }
+@@ -1387,7 +1387,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ .pdpk-about li { font-size: 14px; line-height: 1.45; color: #0F1111; }
+ .pdp__bbwish { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 34px; margin-top: 10px; border: 1px solid #D5D9D9; background: #fff; color: #0F1111; font: inherit; font-size: 13px; cursor: pointer; }
+ .pdp__bbwish.is-on { color: #C2500A; border-color: #C2500A; }
+-.pdp__bbsecure { display: flex; align-items: center; gap: 5px; margin: 10px 0 0; font-size: 12.5px; color: #007185; }
++.pdp__bbsecure { display: flex; align-items: center; gap: 5px; margin: 10px 0 0; font-size: 12.5px; color: #2C5341; }
+ 
+ /* Compare with similar items, and the service cards (owner, 2026-11-08). */
+ .pdpk-h--lg { font-size: 20px; }
+@@ -1398,7 +1398,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ .pdpk-cmp tbody th { width: 120px; font-weight: 700; }
+ .pdpk-cmp thead th { width: 22%; font-weight: 400; }
+ .pdpk-cmp .is-current { background: #F7FAFA; }
+-.pdpk-cmp__item { display: grid; gap: 6px; color: #007185; text-decoration: none; font-size: 13.5px; line-height: 1.35; }
++.pdpk-cmp__item { display: grid; gap: 6px; color: #2C5341; text-decoration: none; font-size: 13.5px; line-height: 1.35; }
+ .pdpk-cmp__item img { width: 110px; height: 110px; object-fit: contain; background: #fff; }
+ .pdpk-cmp__item em { font-style: normal; font-size: 12px; font-weight: 700; color: #565959; }
+ .pdpk-cmp__price { font-size: 16px; font-weight: 500; }
+@@ -1407,9 +1407,9 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ .pdpk-svc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #E7E7E7; }
+ .pdpk-svc > div { padding: 14px 16px; border: 1px solid #D5D9D9; background: #fff; }
+ .pdpk-svc .pdpk-h { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+-.pdpk-svc .pdpk-h svg { color: #007185; }
++.pdpk-svc .pdpk-h svg { color: #2C5341; }
+ .pdpk-svc ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 13.5px; line-height: 1.45; color: #0F1111; }
+-.pdpk-svc a { color: #007185; }
++.pdpk-svc a { color: #2C5341; }
+ @media (max-width: 767px) { .pdpk-svc { grid-template-columns: minmax(0, 1fr); } .pdpk-cmp table { font-size: 13px; } }
+ 
+ /* More from the brand, frequently bought together, product information (owner, 2026-11-08). */
+@@ -1418,7 +1418,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ .pdpk-rail__card, .pdpk-fbt__item { display: grid; gap: 5px; color: #0F1111; text-decoration: none; }
+ .pdpk-rail__img { display: block; aspect-ratio: 1; background: #F7F8F8; overflow: hidden; }
+ .pdpk-rail__img img { width: 100%; height: 100%; object-fit: contain; }
+-.pdpk-rail__name { font-size: 13.5px; line-height: 1.35; color: #007185; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
++.pdpk-rail__name { font-size: 13.5px; line-height: 1.35; color: #2C5341; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+ .pdpk-rail__price { display: flex; gap: 6px; align-items: baseline; font-size: 16px; }
+ .pdpk-rail__price i { font-style: normal; color: #CC0C39; font-size: 14px; }
+ .pdpk-rail__price b { font-weight: 500; }
+@@ -1434,7 +1434,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ 
+ /* Share, quantity, hover zoom (owner, 2026-11-08). */
+ .pdpk-share { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12.5px; color: #565959; }
+-.pdpk-share a, .pdpk-share button { padding: 0; border: 0; background: none; font: inherit; color: #007185; cursor: pointer; text-decoration: none; }
++.pdpk-share a, .pdpk-share button { padding: 0; border: 0; background: none; font: inherit; color: #2C5341; cursor: pointer; text-decoration: none; }
+ .pdpk-share a:hover, .pdpk-share button:hover { text-decoration: underline; }
+ .pdpk-share .pdpk-share__hint { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 10px; border-left: 1px solid #D5D9D9; }
+ .hl-qty { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 13px; color: #0F1111; }
+@@ -1448,7 +1448,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ .pdpk-stars .is-on { color: #DE7921; fill: currentColor; }
+ .pdpk-rev__avg { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 17px; }
+ .pdpk-rev__n { margin: 6px 0 12px; font-size: 14px; color: #565959; }
+-.pdpk-rev__bars { display: grid; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; font-size: 14px; color: #007185; }
++.pdpk-rev__bars { display: grid; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; font-size: 14px; color: #2C5341; }
+ .pdpk-rev__bars li { display: grid; grid-template-columns: 52px minmax(0, 1fr) 40px; align-items: center; gap: 10px; }
+ .pdpk-rev__bar { height: 20px; border: 1px solid #C7CCCC; background: #F0F2F2; }
+ .pdpk-rev__bar i { display: block; height: 100%; background: #DE7921; }
+@@ -1489,14 +1489,14 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ }
+ /* Estimated delivery dates in every buy box (2026-11-08). */
+ .pdpk-eta { display: flex; align-items: flex-start; gap: 8px; margin: 6px 0 10px; font: 400 14px/1.4 Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0F1111; }
+-.pdpk-eta svg { flex: none; margin-top: 2px; color: #007185; }
++.pdpk-eta svg { flex: none; margin-top: 2px; color: #2C5341; }
+ .pdpk-eta b { font-weight: 700; }
+ .pdpk-eta em { display: block; font-style: normal; font-size: 12px; color: #565959; }
+ /* Customer questions & answers, and "Notify me" when out of stock (2026-11-08). */
+ .pdpk-qa { margin-top: 28px; padding-top: 22px; border-top: 1px solid #E7E7E7; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0F1111; }
+ .pdpk-qa__search { display: flex; align-items: center; gap: 8px; max-width: 520px; margin: 0 0 14px; padding: 0 10px; border: 1px solid #888C8C; background: #fff; }
+ .pdpk-qa__search input { flex: 1; min-width: 0; height: 36px; border: 0; outline: 0; font: inherit; font-size: 14px; background: transparent; }
+-.pdpk-qa__search:focus-within { border-color: #007185; box-shadow: 0 0 0 3px rgba(0, 113, 133, .18); }
++.pdpk-qa__search:focus-within { border-color: #2C5341; box-shadow: 0 0 0 3px rgba(0, 113, 133, .18); }
+ .pdpk-qa__empty { margin: 0 0 12px; font-size: 14px; color: #565959; }
+ .pdpk-qa__list { display: grid; gap: 14px; margin: 0 0 16px; }
+ .pdpk-qa__item dt { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
+@@ -1514,7 +1514,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ .pdpk-notify__t { margin: 4px 0 8px !important; font-size: 13px; color: #565959; }
+ .pdpk-notify__row { display: flex; gap: 6px; }
+ .pdpk-notify__row input { flex: 1; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid #888C8C; font: 14px Arial, sans-serif; background: #fff; }
+-.pdpk-notify__row input:focus { outline: 0; border-color: #007185; box-shadow: 0 0 0 3px rgba(0, 113, 133, .18); }
++.pdpk-notify__row input:focus { outline: 0; border-color: #2C5341; box-shadow: 0 0 0 3px rgba(0, 113, 133, .18); }
+ .pdpk-notify__row button { flex: none; height: 36px; padding: 0 14px; border: 1px solid #C2500A; background: #C2500A; color: #fff; font: 600 13px Arial, sans-serif; cursor: pointer; }
+ .pdpk-notify__row button:disabled { opacity: .6; }
+ .pdpk-notify__ok { margin-top: 6px !important; font-size: 13px; color: #007600; }
+@@ -1526,8 +1526,8 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ .pdpk-offer em { display: block; font-style: normal; color: #B12704; }
+ .pdpk-ask { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font: 400 13px/1.4 Arial, sans-serif; color: #0F1111; text-decoration: none; }
+ .pdpk-ask svg { color: #1DA851; flex: none; }
+-.pdpk-ask b { color: #007185; font-weight: 400; }
+-.pdpk-ask:hover b { color: #C7511F; text-decoration: underline; }
++.pdpk-ask b { color: #2C5341; font-weight: 400; }
++.pdpk-ask:hover b { color: #8A5A12; text-decoration: underline; }
+ .pdpk-ask--bulk { display: block; margin-top: -4px; }
+ .pdpk-ask--bulk svg { display: inline-block; vertical-align: -3px; margin-right: 4px; }
+ .pdpk-ask--bulk svg { color: #565959; }

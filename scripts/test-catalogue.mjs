@@ -298,8 +298,16 @@ await test(`the eight fashion pages render byte-identically from the working tre
   // now; strip it here so this stays a data-layer comparison.
   const SHIP_LIST = /<ul class="fs-pdp__ship">[\s\S]*?<\/ul>/;
   // The fashion departments point the Men and Women tiles at their pages (test-fashion-departments.mjs).
-  const normalise = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(sansStripCopy(sansDepartmentTiles(html)).replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, OLD_BACK))[1].replace(SHIP_LIST, 'SHIP')]));
-  const heroes = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(html)[0]]));
+  // The 2026-11-13 redesign (scripts/pins/redesign.patch): one icon line weight, the cards' hover
+  // picture and brand line, the category banner that now carries the page's h1. Layout, not data.
+  const sansRedesign = (html) => html
+    .replace(/stroke-width="[\d.]+"/g, 'stroke-width="S"')
+    .replace(/<img class="fs-card__alt"[^>]*>/g, '')
+    .replace(/<p class="fs-card__brand fs-card__brand--grid">[^<]*<\/p>/g, '')
+    .replace(/<header class="fs-catbanner[^"]*">[\s\S]*?<\/header>/g, '')
+    .replace(/<h1 class="fs-listing__h serif">[^<]*<\/h1>/g, '');
+  const normalise = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(sansStripCopy(sansDepartmentTiles(sansRedesign(html))).replace(/<nav class="fs-hdr__stores" aria-label="Other stores">[\s\S]*?<\/nav>/, sansRedesign(OLD_BACK)))[1].replace(SHIP_LIST, 'SHIP')]));
+  const heroes = (json) => Object.fromEntries(Object.entries(JSON.parse(json)).map(([p, html]) => [p, liftHero(sansRedesign(html))[0]]));
   // The product page took the marketplace layout (owner, 2026-11-08; test-fashion-cart.mjs pins it), so
   // its markup is compared no longer; every listing and home page still is.
   const sansPdp = (o) => Object.fromEntries(Object.entries(o).filter(([p]) => !p.startsWith('/fashion/p/')));

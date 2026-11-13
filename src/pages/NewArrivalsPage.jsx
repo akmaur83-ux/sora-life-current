@@ -4,6 +4,7 @@ import { money } from '../lib/format.js';
 import { useNewArrivals } from '../lib/newArrivals.js';
 import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
 import { usePageMeta } from '../lib/pageMeta.js';
+import SkeletonGrid from '../components/Skeleton.jsx';
 
 // ============================================================
 // /new — every product flagged new, across wellness, fashion and Home & Living,
@@ -40,7 +41,7 @@ export default function NewArrivalsPage() {
             </button>
           ))}
         </div>
-        {all === null ? <p className="hx-offers__empty" role="status">Loading the new arrivals…</p>
+        {all === null ? <SkeletonGrid label="Loading the new arrivals…" />
           : list.length === 0 ? <p className="hx-offers__empty">Nothing new here this week. New pieces appear the moment they go live.</p>
             : (
               <>

@@ -1262,7 +1262,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
    size, colour carrying meaning — red the discount, teal links and labels, green
    the stock. Overrides the first pass above.
    ========================================================================== */
-.v2-pdp-root { --az-ink:#0F1111; --az-ink-2:#565959; --az-teal:#007185; --az-red:#CC0C39; --az-green:#007600; --az-line:#D5D9D9; }
+.v2-pdp-root { --az-ink:#0F1111; --az-ink-2:#565959; --az-teal:#2C5341; --az-red:#CC0C39; --az-green:#007600; --az-line:#D5D9D9; }
 .v2-pdp-root .pdp__brand { font-size:14px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--az-teal); }
 .v2-pdp-root .pdp__brand::before { content:'Brand: '; color:var(--az-ink-2); margin-right:3px; }
 .v2-pdp-root .pdp__brand::after { content:none; }
@@ -1387,7 +1387,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-about li { font-size: 14px; line-height: 1.45; color: #0F1111; }
 .pdp__bbwish { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 34px; margin-top: 10px; border: 1px solid #D5D9D9; background: #fff; color: #0F1111; font: inherit; font-size: 13px; cursor: pointer; }
 .pdp__bbwish.is-on { color: #C2500A; border-color: #C2500A; }
-.pdp__bbsecure { display: flex; align-items: center; gap: 5px; margin: 10px 0 0; font-size: 12.5px; color: #007185; }
+.pdp__bbsecure { display: flex; align-items: center; gap: 5px; margin: 10px 0 0; font-size: 12.5px; color: #2C5341; }
 
 /* Compare with similar items, and the service cards (owner, 2026-11-08). */
 .pdpk-h--lg { font-size: 20px; }
@@ -1398,7 +1398,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-cmp tbody th { width: 120px; font-weight: 700; }
 .pdpk-cmp thead th { width: 22%; font-weight: 400; }
 .pdpk-cmp .is-current { background: #F7FAFA; }
-.pdpk-cmp__item { display: grid; gap: 6px; color: #007185; text-decoration: none; font-size: 13.5px; line-height: 1.35; }
+.pdpk-cmp__item { display: grid; gap: 6px; color: #2C5341; text-decoration: none; font-size: 13.5px; line-height: 1.35; }
 .pdpk-cmp__item img { width: 110px; height: 110px; object-fit: contain; background: #fff; }
 .pdpk-cmp__item em { font-style: normal; font-size: 12px; font-weight: 700; color: #565959; }
 .pdpk-cmp__price { font-size: 16px; font-weight: 500; }
@@ -1407,9 +1407,9 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-svc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #E7E7E7; }
 .pdpk-svc > div { padding: 14px 16px; border: 1px solid #D5D9D9; background: #fff; }
 .pdpk-svc .pdpk-h { display: flex; align-items: center; gap: 8px; font-size: 15px; }
-.pdpk-svc .pdpk-h svg { color: #007185; }
+.pdpk-svc .pdpk-h svg { color: #2C5341; }
 .pdpk-svc ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 13.5px; line-height: 1.45; color: #0F1111; }
-.pdpk-svc a { color: #007185; }
+.pdpk-svc a { color: #2C5341; }
 @media (max-width: 767px) { .pdpk-svc { grid-template-columns: minmax(0, 1fr); } .pdpk-cmp table { font-size: 13px; } }
 
 /* More from the brand, frequently bought together, product information (owner, 2026-11-08). */
@@ -1418,7 +1418,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-rail__card, .pdpk-fbt__item { display: grid; gap: 5px; color: #0F1111; text-decoration: none; }
 .pdpk-rail__img { display: block; aspect-ratio: 1; background: #F7F8F8; overflow: hidden; }
 .pdpk-rail__img img { width: 100%; height: 100%; object-fit: contain; }
-.pdpk-rail__name { font-size: 13.5px; line-height: 1.35; color: #007185; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pdpk-rail__name { font-size: 13.5px; line-height: 1.35; color: #2C5341; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .pdpk-rail__price { display: flex; gap: 6px; align-items: baseline; font-size: 16px; }
 .pdpk-rail__price i { font-style: normal; color: #CC0C39; font-size: 14px; }
 .pdpk-rail__price b { font-weight: 500; }
@@ -1434,7 +1434,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
 
 /* Share, quantity, hover zoom (owner, 2026-11-08). */
 .pdpk-share { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12.5px; color: #565959; }
-.pdpk-share a, .pdpk-share button { padding: 0; border: 0; background: none; font: inherit; color: #007185; cursor: pointer; text-decoration: none; }
+.pdpk-share a, .pdpk-share button { padding: 0; border: 0; background: none; font: inherit; color: #2C5341; cursor: pointer; text-decoration: none; }
 .pdpk-share a:hover, .pdpk-share button:hover { text-decoration: underline; }
 .pdpk-share .pdpk-share__hint { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 10px; border-left: 1px solid #D5D9D9; }
 .hl-qty { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 13px; color: #0F1111; }
@@ -1448,7 +1448,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-stars .is-on { color: #DE7921; fill: currentColor; }
 .pdpk-rev__avg { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 17px; }
 .pdpk-rev__n { margin: 6px 0 12px; font-size: 14px; color: #565959; }
-.pdpk-rev__bars { display: grid; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; font-size: 14px; color: #007185; }
+.pdpk-rev__bars { display: grid; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; font-size: 14px; color: #2C5341; }
 .pdpk-rev__bars li { display: grid; grid-template-columns: 52px minmax(0, 1fr) 40px; align-items: center; gap: 10px; }
 .pdpk-rev__bar { height: 20px; border: 1px solid #C7CCCC; background: #F0F2F2; }
 .pdpk-rev__bar i { display: block; height: 100%; background: #DE7921; }
@@ -1489,14 +1489,14 @@ body:has(.v2-pdp-root .buybar) .page-main {
 }
 /* Estimated delivery dates in every buy box (2026-11-08). */
 .pdpk-eta { display: flex; align-items: flex-start; gap: 8px; margin: 6px 0 10px; font: 400 14px/1.4 Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0F1111; }
-.pdpk-eta svg { flex: none; margin-top: 2px; color: #007185; }
+.pdpk-eta svg { flex: none; margin-top: 2px; color: #2C5341; }
 .pdpk-eta b { font-weight: 700; }
 .pdpk-eta em { display: block; font-style: normal; font-size: 12px; color: #565959; }
 /* Customer questions & answers, and "Notify me" when out of stock (2026-11-08). */
 .pdpk-qa { margin-top: 28px; padding-top: 22px; border-top: 1px solid #E7E7E7; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0F1111; }
 .pdpk-qa__search { display: flex; align-items: center; gap: 8px; max-width: 520px; margin: 0 0 14px; padding: 0 10px; border: 1px solid #888C8C; background: #fff; }
 .pdpk-qa__search input { flex: 1; min-width: 0; height: 36px; border: 0; outline: 0; font: inherit; font-size: 14px; background: transparent; }
-.pdpk-qa__search:focus-within { border-color: #007185; box-shadow: 0 0 0 3px rgba(0, 113, 133, .18); }
+.pdpk-qa__search:focus-within { border-color: #2C5341; box-shadow: 0 0 0 3px rgba(0, 113, 133, .18); }
 .pdpk-qa__empty { margin: 0 0 12px; font-size: 14px; color: #565959; }
 .pdpk-qa__list { display: grid; gap: 14px; margin: 0 0 16px; }
 .pdpk-qa__item dt { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
@@ -1514,7 +1514,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-notify__t { margin: 4px 0 8px !important; font-size: 13px; color: #565959; }
 .pdpk-notify__row { display: flex; gap: 6px; }
 .pdpk-notify__row input { flex: 1; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid #888C8C; font: 14px Arial, sans-serif; background: #fff; }
-.pdpk-notify__row input:focus { outline: 0; border-color: #007185; box-shadow: 0 0 0 3px rgba(0, 113, 133, .18); }
+.pdpk-notify__row input:focus { outline: 0; border-color: #2C5341; box-shadow: 0 0 0 3px rgba(0, 113, 133, .18); }
 .pdpk-notify__row button { flex: none; height: 36px; padding: 0 14px; border: 1px solid #C2500A; background: #C2500A; color: #fff; font: 600 13px Arial, sans-serif; cursor: pointer; }
 .pdpk-notify__row button:disabled { opacity: .6; }
 .pdpk-notify__ok { margin-top: 6px !important; font-size: 13px; color: #007600; }
@@ -1526,8 +1526,8 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-offer em { display: block; font-style: normal; color: #B12704; }
 .pdpk-ask { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font: 400 13px/1.4 Arial, sans-serif; color: #0F1111; text-decoration: none; }
 .pdpk-ask svg { color: #1DA851; flex: none; }
-.pdpk-ask b { color: #007185; font-weight: 400; }
-.pdpk-ask:hover b { color: #C7511F; text-decoration: underline; }
+.pdpk-ask b { color: #2C5341; font-weight: 400; }
+.pdpk-ask:hover b { color: #8A5A12; text-decoration: underline; }
 .pdpk-ask--bulk { display: block; margin-top: -4px; }
 .pdpk-ask--bulk svg { display: inline-block; vertical-align: -3px; margin-right: 4px; }
 .pdpk-ask--bulk svg { color: #565959; }

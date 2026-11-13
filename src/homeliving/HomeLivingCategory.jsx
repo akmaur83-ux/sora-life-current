@@ -96,7 +96,7 @@ export function FilterPanel({ state, options, onPatch, onClear, onClose = null, 
   );
 }
 
-export function Listing({ title, trail, scope = null, intro = null, emptyCopy }) {
+export function Listing({ title, trail, scope = null, intro = null, emptyCopy, banner = null }) {
   const { status, products } = useHomeLivingCatalogue();
   const [params, setParams] = useSearchParams();
   const state = useMemo(() => readListingState(params), [params]);
@@ -114,9 +114,10 @@ export function Listing({ title, trail, scope = null, intro = null, emptyCopy })
   return (
     <div className="hl-wrap hl-listing">
       <Breadcrumb trail={trail} />
+      {banner}
       {intro}
       <div className="hl-listing__bar">
-        <h1 className="hl-listing__h serif">{title}</h1>
+        {banner ? null : <h1 className="hl-listing__h serif">{title}</h1>}
         <p className="hl-listing__count" role="status">{status === 'loading' ? 'Loading…' : `${results.length} ${results.length === 1 ? 'product' : 'products'}`}</p>
         <div className="hl-listing__tools">
           <button type="button" className="hl-filters__toggle" onClick={() => setPanel((v) => !v)} aria-expanded={panel} aria-controls="hl-filters" aria-label={count ? `Filters, ${count} active` : 'Filters'}>
@@ -161,7 +162,7 @@ export function Listing({ title, trail, scope = null, intro = null, emptyCopy })
 // ---- /homeliving/category/<slug> ------------------------------------------------
 export default function HomeLivingCategory() {
   const { slug } = useParams();
-  const { status, categories } = useHomeLivingCatalogue();
+  const { status, categories, products } = useHomeLivingCatalogue();
   const node = resolveCategory(categories, slug);
   // Hooks before the early return: the scope memo runs on every render.
   const scope = useMemo(() => categoryScope(categories, node), [categories, node]);
@@ -182,8 +183,23 @@ export default function HomeLivingCategory() {
       {children.map((c) => <Link key={c.id} to={categoryHref(c)} className="hl-subcat">{c.name}</Link>)}
     </nav>
   ) : null;
+  // The category's banner (2026-11-13 redesign): its own picture, else its first product's.
+  const inScope = products.filter((p) => p.category_id != null && scope.has(String(p.category_id)));
+  const bannerImage = node.image_url || inScope.find((p) => p.images?.[0])?.images[0] || null;
+  const banner = (
+    <header className={`hl-catbanner${bannerImage ? '' : ' hl-catbanner--plain'}`}>
+      {bannerImage && <img className="hl-catbanner__img" src={bannerImage} alt="" width="1200" height="500" decoding="async" />}
+      <div className="hl-catbanner__copy">
+        <p className="hl-catbanner__eyebrow">Home &amp; Living</p>
+        <h1 className="hl-listing__h serif hl-catbanner__h">{node.name}</h1>
+        {node.tagline ? <p className="hl-catbanner__tag">{node.tagline}</p> : null}
+        {inScope.length > 0 && <p className="hl-catbanner__count">{inScope.length} {inScope.length === 1 ? 'product' : 'products'}</p>}
+      </div>
+    </header>
+  );
   return (
     <Listing
+      banner={banner}
       title={node.name}
       trail={breadcrumbFor(categories, node)}
       scope={scope}

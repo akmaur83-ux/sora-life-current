@@ -4,6 +4,7 @@ import { useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
 import { searchItems, didYouMean } from '../lib/searchMatch.js';
 import { DidYouMean } from '../components/SearchSuggest.jsx';
 import FindForMe from '../components/FindForMe.jsx';
+import SkeletonGrid from '../components/Skeleton.jsx';
 import { homelivingSearchRows } from './HomeLivingLayout.jsx';
 import { Breadcrumb, Listing } from './HomeLivingCategory.jsx';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
@@ -34,6 +35,8 @@ export default function HomeLivingSearch() {
       </div>
       {q.length < 2 ? (
         <div className="hl-empty hl-empty--listing"><p>Type at least two letters in the search bar above, e.g. “bedsheet”, “cushion” or “table cover”.</p></div>
+      ) : results.length === 0 && status === 'loading' ? (
+        <SkeletonGrid count={8} label="Loading the catalogue…" />
       ) : results.length === 0 ? (
         <div className="hl-empty hl-empty--listing">
           <p>{status === 'loading' ? 'Loading the catalogue…' : `Nothing in Home & Living matches “${q}”. Try a shorter word, or browse the store.`}</p>

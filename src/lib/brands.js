@@ -7,17 +7,17 @@
 // Nothing here prices or ranks anything.
 // ============================================================
 export const BRANDS = Object.freeze([
-  Object.freeze({ id: 'biosash', name: 'Biosash', store: 'Wellness', href: '/shop', image: null, imageFrom: 'biosash',
+  Object.freeze({ id: 'biosash', page: '/brands/biosash', story: "Biosash makes Ayurvedic and herbal care built around Himalayan sea buckthorn: juices, oils, supplements, skin and hair care for everyday wellness. Their range is the heart of SORA's wellness store.", name: 'Biosash', store: 'Wellness', href: '/shop', image: null, imageFrom: 'biosash',
     text: 'Ayurvedic and herbal care: oils, powders, juices and supplements for everyday wellness.' }),
-  Object.freeze({ id: 'atomy', name: 'Atomy', store: 'Wellness', href: '/shop?q=atomy', image: 'https://image.atomy.com/IN/goods/D00190/D00190_00.jpg?w=720&h=720',
+  Object.freeze({ id: 'atomy', page: '/brands/atomy', story: "Atomy is a Korean brand known for its skin care, the HemoHIM wellness range, supplements and personal care. On SORA you'll find their range at Atomy's own prices.", name: 'Atomy', store: 'Wellness', href: '/shop?q=atomy', image: 'https://image.atomy.com/IN/goods/D00190/D00190_00.jpg?w=720&h=720',
     text: 'Korean skin care, HemoHIM, supplements, hair and personal care.' }),
-  Object.freeze({ id: 'weavers-villa', catalogueBrand: 'Weavers Villa', name: 'Weavers Villa', store: 'Fashion · Home', href: '/fashion/c/shawls-stoles', image: '/video/weavers-villa/0e053f13.webp',
+  Object.freeze({ id: 'weavers-villa', page: '/brands/weavers-villa', story: 'Weavers Villa brings handwoven shawls, stoles and dupattas, from Kullu weaves to embroidered and Phulkari pieces, plus gift boxes and table covers for the home.', catalogueBrand: 'Weavers Villa', name: 'Weavers Villa', store: 'Fashion · Home', href: '/fashion/c/shawls-stoles', image: '/video/weavers-villa/0e053f13.webp',
     text: 'Handwoven shawls, stoles, dupattas and Kullu weaves, plus table covers for the home.' }),
-  Object.freeze({ id: 'leather-factory', catalogueBrand: 'Leather Factory', name: 'Leather Factory', store: 'Fashion', href: '/fashion/c/leather-goods', image: '/img/partners/leather-factory/handbags.webp',
+  Object.freeze({ id: 'leather-factory', page: '/brands/leather-factory', story: 'Leather Factory makes everyday leather goods: handbags and clutches, wallets and card holders, belts, sling bags, pouches and travel bags.', catalogueBrand: 'Leather Factory', name: 'Leather Factory', store: 'Fashion', href: '/fashion/c/leather-goods', image: '/img/partners/leather-factory/handbags.webp',
     text: 'Leather handbags, wallets, belts, sling bags and travel bags.' }),
-  Object.freeze({ id: 'taj-leather', catalogueBrand: 'Taj Leather', name: 'Taj Leather', store: 'Fashion', href: '/fashion/search?q=taj%20leather', image: 'https://cdn.shopify.com/s/files/1/0780/8437/4633/files/kbxt1xR35kfGamD.jpg?width=800',
+  Object.freeze({ id: 'taj-leather', luxe: true, page: '/brands/taj-leather', story: "Taj Leather makes genuine leather jackets and coats for men and women, from classic bikers to long coats, sold here at Taj Leather's own prices.", catalogueBrand: 'Taj Leather', name: 'Taj Leather', store: 'Fashion', href: '/fashion/search?q=taj%20leather', image: 'https://cdn.shopify.com/s/files/1/0780/8437/4633/files/kbxt1xR35kfGamD.jpg?width=800',
     text: 'Genuine leather jackets and coats for men and women.' }),
-  Object.freeze({ id: 'ansari-fashion', catalogueBrand: 'Ansari Fashion', name: 'Ansari Fashion', store: 'Fashion', href: '/fashion/search?q=ansari%20fashion', image: '/img/partners/ansari-fashion/suit-sets.webp',
+  Object.freeze({ id: 'ansari-fashion', luxe: true, page: '/brands/ansari-fashion', story: "Ansari Fashion is from Banaras: Banarasi silk and cotton suit sets, Jamdani weaves and sarees, sold here at Ansari Fashion's own prices.", catalogueBrand: 'Ansari Fashion', name: 'Ansari Fashion', store: 'Fashion', href: '/fashion/search?q=ansari%20fashion', image: '/img/partners/ansari-fashion/suit-sets.webp',
     text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees from Banaras.' }),
 ]);
 

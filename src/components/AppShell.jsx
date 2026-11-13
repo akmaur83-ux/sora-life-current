@@ -22,6 +22,7 @@ import { isStandalone } from '../lib/appMode.js';
 const QUIET = /^\/(cart|checkout|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout|admin|invoice)(\/|$)/;
 const HOMES = /^\/(fashion|homeliving|grocery|lifestyle)?\/?$/;
 const CHECK_EVERY_MS = 30 * 60 * 1000;
+const REVEAL = '.sora-group, .sora-bc, .hx-wv-range, .hx-taj, .hx-ans, .hx-stores, .fs-sec, .hl .hl-sec, .sora-cats__store, .hx-wed__sec';
 
 /** The deployed app's fingerprint: the entry script's ETag (or Last-Modified); '' if unknown. */
 async function buildStamp() {
@@ -81,6 +82,26 @@ export default function AppShell() {
       else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
     } catch { /* not supported */ }
   }, [app, cartCount]);
+
+  // The reveal (2026-11-13 redesign): sections below the fold rise in softly once as
+  // they scroll into view. Only what starts off-screen is ever hidden, so nothing
+  // visible blinks; never under prefers-reduced-motion (sora-ds.css, .sora-reveal).
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.IntersectionObserver) return undefined;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    let io = null;
+    const t = setTimeout(() => {
+      io = new IntersectionObserver((entries) => {
+        for (const e of entries) if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+      }, { rootMargin: '0px 0px -8% 0px' });
+      document.querySelectorAll(REVEAL).forEach((el) => {
+        if (el.classList.contains('sora-reveal') || el.getBoundingClientRect().top < window.innerHeight) return;
+        el.classList.add('sora-reveal');
+        io.observe(el);
+      });
+    }, 700);
+    return () => { clearTimeout(t); io?.disconnect(); document.querySelectorAll('.sora-reveal:not(.is-in)').forEach((el) => el.classList.remove('sora-reveal')); };
+  }, [pathname]);
 
   const quiet = QUIET.test(pathname);
   const showBack = app && !quiet && !HOMES.test(pathname);

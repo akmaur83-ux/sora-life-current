@@ -5,21 +5,18 @@ import StoryBlock from '../components/StoryBlock.jsx';
 import Newsletter from '../components/Newsletter.jsx';
 import HomeOffers from '../components/promo/HomeOffers.jsx';
 import HomeLeaderboard from '../components/HomeLeaderboard.jsx';
-import { LifestyleBanner, StoreCarousel } from '../components/FashionBanner.jsx';
+import { LifestyleBanner } from '../components/FashionBanner.jsx';
+import BrandCarousel from '../components/BrandCarousel.jsx';
+import { BiosashRange } from '../components/BiosashRange.jsx';
+import HomeGroup from '../components/HomeGroup.jsx';
 import { NewArrivals } from '../components/NewArrivals.jsx';
 import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
-import { BiosashRange } from '../components/BiosashRange.jsx';
-import { WeaversVillaRange, WeaversVillaShowcase } from '../components/WeaversVilla.jsx';
-import { LeatherFactoryRange, LeatherFactoryShowcase } from '../components/LeatherFactory.jsx';
-import { AtomyRange, AtomyShowcase } from '../components/Atomy.jsx';
-import { TajLeatherRange, TajLeatherPosters } from '../components/TajLeather.jsx';
-import { AnsariRange, AnsariPosters } from '../components/AnsariFashion.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import GiftShop from '../components/GiftShop.jsx';
 import { TopDeals, WishlistRail, BagReminder } from '../components/HomeExtras.jsx';
 import {
-  MarketplaceProductRail, FeaturedBrands, DiscoveryEdit, MomTrustSpotlight,
+  MarketplaceProductRail, DiscoveryEdit, MomTrustSpotlight,
   CuratedCollections, CreatorCommunity, WhySoraLife,
 } from '../components/HomeMarketplace.jsx';
 import { ShopByCategory, ShopByConcerns } from '../components/HomeDiscoveryRails.jsx';
@@ -62,106 +59,60 @@ export default function Home() {
     <div className="v2-home">
       {/* 1–2 · announcement + header are mounted by Layout via Header */}
 
-      {/* 3 · THE TOP OF THE PAGE — white with an orange accent (HomeStorefront.jsx).
+      {/* 2026-11-13 redesign ("homepage cleanup"): the page in four parts, each opened by
+          a HomeGroup band — Offers, Shop by store, Our brands, For you — then the
+          closing blocks. The ten partner sections that ran one after another are one
+          "Our brands" row now (BrandCarousel.jsx), each card opening the brand's page;
+          the store carousel that repeated "Explore the stores" and the wellness
+          brand row are gone. */}
+
+      {/* The top of the page — white with an orange accent (HomeStorefront.jsx).
              The hero is static: the admin Hero Slides page no longer drives it,
              and the circle row replaced the category strip. */}
       <HomeHero />
       <HomeTrustStrip />
       {/* Something already in the bag: how many, and the way to it (HomeExtras.jsx). */}
       <BagReminder phone={false} />
+      <HomeTiles />
+      {/* The round quick-nav row stays straight under the hero, above the offers (test-home-discovery D18). */}
+      <ExploreStores />
+
+      <HomeGroup eyebrow="Offers" title="Deals worth grabbing" />
       {/* The running offer with a live countdown (OfferBanner.jsx); nothing once it ends. */}
       <OfferBanner wrap="hx-wrap" />
       {/* The biggest verified discounts in stock (HomeExtras.jsx). */}
       <TopDeals />
-      {/* Gift-ready categories across Fashion and Home & Living (GiftShop.jsx). */}
-      <GiftShop />
-      <HomeTiles />
-      <ExploreStores />
       <FestivePromo />
-
-      {/* 5 · CAMPAIGN / PROMOTION — existing promotions runtime, untouched.
-             Renders nothing when no active promotion targets `home`. */}
+      {/* Existing promotions runtime: nothing when no active promotion targets `home`. */}
       <HomeOffers appearance={visuals.offers} />
 
-      {/* This visitor's recently viewed products, any store, this browser only
-          (RecentlyViewedHome.jsx). Renders nothing below two, or when hidden. */}
-      <RecentlyViewedHome />
-      {/* The visitor's saved products, two or more (HomeExtras.jsx). */}
-      <WishlistRail />
-
-      {/* The products flagged new, newest first, across wellness, fashion and Home & Living:
-          a sliding row between the promo and the Lifestyle banner. Renders nothing when
-          nothing is flagged, or when it is hidden in Storefronts → Wellness. */}
+      <HomeGroup eyebrow="Shop by store" title="Wellness, fashion and home" />
+      {/* The editorial category browse and the need-led one (HomeDiscoveryRails.jsx). */}
+      <ShopByCategory />
+      <ShopByConcerns />
+      {/* Gift-ready categories across Fashion and Home & Living (GiftShop.jsx). */}
+      <GiftShop />
+      {/* The products flagged new, across the stores (NewArrivals.jsx; View All opens /new). */}
       <NewArrivals />
-
-      {/* Biosash's own products, a sliding row like the one above (BiosashRange.jsx).
-          Renders nothing when there are none in stock, or when it is hidden in
-          Storefronts → Wellness. */}
+      {/* Biosash's own range stays here, straight after New Arrivals (owner, 2026-11-07). */}
       <BiosashRange />
-
-      {/* Weavers Villa (partner, 2026-11-08): their shawls in the same sliding row,
-          then a poster band with their short films (WeaversVilla.jsx). Each renders
-          nothing when hidden in Storefronts → Wellness, the range also when empty. */}
-      <WeaversVillaRange />
-      <WeaversVillaShowcase />
-
-      {/* Leather Factory (partner, 2026-11-08): their pieces in the same row, then a
-          poster band of category tiles (LeatherFactory.jsx). */}
-      <LeatherFactoryRange />
-      <LeatherFactoryShowcase />
-
-      {/* Atomy (partner, 2026-11-11): their range in the wellness store, then a poster
-          band of category tiles (Atomy.jsx). */}
-      <AtomyRange />
-      <AtomyShowcase />
-
-      {/* Taj Leather (partner, 2026-11-11): their campaign posters, then their jackets
-          and coats in the same sliding row (TajLeather.jsx). */}
-      <TajLeatherPosters />
-      <TajLeatherRange />
-
-      {/* Ansari Fashion (partner, 2026-11-13): three category posters, then their
-          Banarasi suits and sarees (AnsariFashion.jsx). */}
-      <AnsariPosters />
-      <AnsariRange />
-
-      {/* Home & Living's Bedsheets, a sliding row of its live products in the
-          catalogue's own order (HomeCategoryRails.jsx), directly under the
-          Biosash range (owner, 2026-11-07). Renders nothing when the category is
-          empty, or when it is hidden in Storefronts → Wellness. */}
+      {/* Home & Living's Bedsheets, straight under the Biosash range (HomeCategoryRails.jsx). */}
       <Bedsheets />
-
-      {/* The doorway to the lifestyle store — one banner, no data dependency. */}
       <LifestyleBanner />
 
       {/* The doorway to the jewellery page, directly under the fashion category strip. */}
       <JewelleryBanner />
 
-      {/* selectHomeMerchandising balances this across categories. It is NOT a
-          popularity measure, and today it is not a curated one either: the live
-          catalogue has no is_featured or is_bestseller rows, and every product
-          carries a discount — so "trending", "featured" and "on offer" would
-          all be claims the data cannot back. It is an entry point, so it says
-          so. Flag real featured products and this can become a Featured rail. */}
+      <HomeGroup eyebrow="Our brands" title="The makers behind SORA" />
+      <BrandCarousel />
+
+      <HomeGroup eyebrow="For you" title="Picked for you" />
+      {/* This visitor's recently viewed and saved products (this browser only). */}
+      <RecentlyViewedHome />
+      <WishlistRail />
+      {/* selectHomeMerchandising balances this across categories: an entry point, not a popularity claim. */}
       <MarketplaceProductRail id="trending" eyebrow="Across the catalogue" title="Start here" products={merchandise.trending} />
-
-      {/* Two deliberately different category experiences: the circular rail
-          under the hero is quick navigation, and this is the editorial browse.
-          They sit far apart so neither reads as a duplicate of the other. */}
-      <ShopByCategory />
-
-      {/* Need-led discovery, paired with the section above: every concern is
-          backed by real catalogue results (see homeDiscovery.js). */}
-      <ShopByConcerns />
-
-      <FeaturedBrands brands={merchandise.brands} />
-
       <DiscoveryEdit products={merchandise.discover} link={merchandise.discoverLink} />
-
-      {/* The fashion and Home & Living store cards as one carousel, under
-          their own heading, just above the popular rail. No data dependency. */}
-      <StoreCarousel />
-
       <MarketplaceProductRail
         id="popular"
         eyebrow={merchandise.popularEyebrow}
@@ -169,9 +120,7 @@ export default function Home() {
         products={merchandise.popular}
         link={merchandise.popularTitle === 'Bestsellers' ? '/shop?sort=bestselling' : '/shop'}
       />
-
       <MomTrustSpotlight category={merchandise.momCategory} products={merchandise.momProducts} />
-
       <CuratedCollections collections={merchandise.collections} />
 
       {/* 7 · THIS WEEK — editorial cards. Hidden entirely when unconfigured. */}
@@ -204,10 +153,7 @@ export default function Home() {
 
       <WhySoraLife />
 
-      {/* Home & Living's Luxury Beds, a sliding row of its live products in the
-          catalogue's own order (HomeCategoryRails.jsx), near the foot of the page.
-          Renders nothing when the category is empty, or when it is hidden in
-          Storefronts → Wellness. */}
+      {/* Home & Living's Luxury Beds near the foot of the page, after "Why Sora Life" (owner, 2026-11-07). */}
       <LuxuryBeds />
 
       {/* 11 · Newsletter + Footer + tab bar are existing components, unchanged

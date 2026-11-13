@@ -10,6 +10,7 @@ import { useStorefrontSection } from '../lib/storefrontSections.js';
 import { OFFER_COUNTDOWN, parseIndiaTime } from '../lib/offerCountdown.js';
 import { offerShareText } from '../components/PromoCard.jsx';
 import { usePageMeta } from '../lib/pageMeta.js';
+import SkeletonGrid from '../components/Skeleton.jsx';
 
 // ============================================================
 // /offers — every product on a real discount, across the stores, biggest discount
@@ -165,7 +166,7 @@ export default function Offers() {
           ))}
         </div>
         {cat === null && shownDeals.length === 0 ? (
-          <p className="hx-offers__empty" role="status">Loading the offers…</p>
+          <SkeletonGrid label="Loading the offers…" />
         ) : shownDeals.length === 0 ? (
           <p className="hx-offers__empty">Nothing on offer here right now. New deals appear the moment they go live.</p>
         ) : (
