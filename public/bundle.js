@@ -2655,10 +2655,17 @@ const P$2 = {
   capsule: '<rect x="3.4" y="8.6" width="17.2" height="6.8" rx="3.4" transform="rotate(-45 12 12)"/><path d="M9.6 14.4 14.4 9.6"/>',
   drop: '<path d="M12 3.4S5.8 10 5.8 14a6.2 6.2 0 0 0 12.4 0c0-4-6.2-10.6-6.2-10.6Z"/>'
 };
+
+// One icon set, one line weight (2026-11-13 redesign: "icons ka ek set"). Callers used
+// 1.5 to 2; every icon now draws at ICON_STROKE, so the site's icons read as one family.
+// `stroke` stays accepted so no caller breaks; it no longer changes the weight.
+const ICON_STROKE = 1.7;
+
+// eslint-disable-next-line no-unused-vars
 function Icon({
   name,
   size = 22,
-  stroke = 1.6,
+  stroke = ICON_STROKE,
   fill = 'none',
   className,
   style
@@ -2671,7 +2678,7 @@ function Icon({
     viewBox: "0 0 24 24",
     fill: fill,
     stroke: "currentColor",
-    strokeWidth: stroke,
+    strokeWidth: ICON_STROKE,
     strokeLinecap: "round",
     strokeLinejoin: "round",
     className: className,
@@ -3080,7 +3087,7 @@ const lines = (length, max, label) => ({
   label
 });
 /** Two uploads, phone and desktop, set together. */
-const pic$1 = (label = 'Photograph') => ({
+const pic = (label = 'Photograph') => ({
   type: 'pic',
   label
 });
@@ -3118,7 +3125,7 @@ const banner = (label, extra = {}) => group({
   text: text$1(200, 'Subline'),
   cta: text$1(40, 'Button label'),
   link: link('Button link'),
-  picture: pic$1(),
+  picture: pic(),
   alt: text$1(180, 'Photograph description'),
   ...extra
 }, label);
@@ -3128,7 +3135,7 @@ const tile = (extra = {}) => ({
   title: text$1(40, 'Name'),
   ...extra,
   link: link('Opens'),
-  picture: pic$1(),
+  picture: pic(),
   alt: text$1(180, 'Photograph description')
 });
 /** A row of shopping facts (delivery, returns, support): words and where each goes. */
@@ -3209,7 +3216,7 @@ const WELLNESS = {
     text: text$1(160, 'Subline'),
     cta: text$1(40, 'Button label'),
     link: link('Opens'),
-    picture: pic$1(),
+    picture: pic(),
     alt: text$1(180, 'Photograph description'),
     position: position()
   }, 'Festive promo'),
@@ -3356,7 +3363,7 @@ const WELLNESS = {
       text: text$1(200, 'Subline'),
       cta: text$1(40, 'Button label'),
       link: link('Card link'),
-      picture: pic$1(),
+      picture: pic(),
       alt: text$1(180, 'Photograph description'),
       details: lines(3, 40, 'Three short features')
     }, 'Store cards', 'Card')
@@ -3396,7 +3403,7 @@ const WOMEN = group({
     intro: text$1(200, 'Subline'),
     cta: text$1(40, 'Button label'),
     link: link('Button link (empty: the Women listing)'),
-    picture: pic$1(),
+    picture: pic(),
     alt: text$1(180, 'Photograph description'),
     position: position()
   }, 'Hero'),
@@ -3445,7 +3452,7 @@ const MEN = group({
     cta: text$1(40, 'Button label'),
     link: link('Button link (empty: the Men listing)'),
     note: text$1(40, 'Edition note'),
-    picture: pic$1(),
+    picture: pic(),
     alt: text$1(180, 'Photograph description'),
     position: position()
   }, 'Hero'),
@@ -3498,7 +3505,7 @@ const SAREES = group({
     link: link('Button link (empty: the Women listing)'),
     position: position(),
     slides: list$2(2, {
-      picture: pic$1(),
+      picture: pic(),
       alt: text$1(180, 'Photograph description')
     }, 'Photographs (the arrows step between them)', 'Photograph')
   }, 'Hero'),
@@ -3534,7 +3541,7 @@ const SAREES = group({
     title: lines(2, 40, 'Headline'),
     cta: text$1(40, 'Button label'),
     link: link('Button link (empty: the Women listing)'),
-    picture: pic$1(),
+    picture: pic(),
     alt: text$1(180, 'Photograph description')
   }, 'Closing banner'),
   services: facts$1(4, 'Shopping information')
@@ -3547,7 +3554,7 @@ const JEWELLERY$1 = group({
     intro: text$1(200, 'Subline'),
     cta: text$1(40, 'Button label'),
     link: link('Button link (empty: the Jewellery listing)'),
-    picture: pic$1(),
+    picture: pic(),
     alt: text$1(180, 'Photograph description'),
     position: position()
   }, 'Hero'),
@@ -3580,7 +3587,7 @@ const JEWELLERY$1 = group({
       title: lines(3, 30, 'Headline'),
       cta: text$1(40, 'Button label'),
       link: link('Opens'),
-      picture: pic$1(),
+      picture: pic(),
       alt: text$1(180, 'Photograph description')
     }, 'Banners', 'Banner')
   }, 'Wedding and gifts banners'),
@@ -3591,14 +3598,14 @@ const JEWELLERY$1 = group({
     text: text$1(240, 'Text'),
     cta: text$1(40, 'Button label'),
     link: link('Button link'),
-    picture: pic$1(),
+    picture: pic(),
     alt: text$1(180, 'Photograph description')
   }, 'Story'),
   newsletter: group({
     hidden: hidden(),
     title: text$1(80, 'Heading'),
     text: text$1(200, 'Text'),
-    picture: pic$1(),
+    picture: pic(),
     alt: text$1(180, 'Photograph description')
   }, 'Newsletter')
 }, 'Jewellery page');
@@ -8190,16 +8197,16 @@ function applyCatalog(rawList, source = 'supabase') {
 function getByCategory(slug) {
   return products.filter(p => (p.categories || [p.category]).includes(slug));
 }
-function inStock$1(list) {
+function inStock$2(list) {
   return list.filter(p => p.stock > 0);
 }
 function getBestsellers(n = 12) {
-  const flagged = inStock$1(products).filter(p => p.isBestseller);
+  const flagged = inStock$2(products).filter(p => p.isBestseller);
   if (flagged.length >= n) return flagged.slice(0, n);
   const picks = [...flagged];
   const used = new Set(picks.map(p => p.id));
   const byCat = {};
-  inStock$1(products).forEach(p => {
+  inStock$2(products).forEach(p => {
     (byCat[p.category] ||= []).push(p);
   });
   for (const cat of Object.keys(byCat)) {
@@ -8209,7 +8216,7 @@ function getBestsellers(n = 12) {
       used.add(first.id);
     }
   }
-  for (const p of inStock$1(products)) {
+  for (const p of inStock$2(products)) {
     if (picks.length >= n) break;
     if (!used.has(p.id)) {
       picks.push(p);
@@ -35470,6 +35477,102 @@ function InstallApp({
   });
 }
 
+// ============================================================
+// Our Brands (2026-11-13: more features) — the partner brands sold on SORA
+// Lifestyle, one card each: who they are, what of theirs is here, where to shop it.
+// The links are the same listings the homepage sections open (the brand files'
+// *_LISTING constants; test-more-features-6 keeps them in step). Pictures are the
+// copies already served from this site, or the brand's own product shots.
+// Nothing here prices or ranks anything.
+// ============================================================
+const BRANDS = Object.freeze([Object.freeze({
+  id: 'biosash',
+  page: '/brands/biosash',
+  story: "Biosash makes Ayurvedic and herbal care built around Himalayan sea buckthorn: juices, oils, supplements, skin and hair care for everyday wellness. Their range is the heart of SORA's wellness store.",
+  name: 'Biosash',
+  store: 'Wellness',
+  href: '/shop',
+  image: null,
+  imageFrom: 'biosash',
+  text: 'Ayurvedic and herbal care: oils, powders, juices and supplements for everyday wellness.'
+}), Object.freeze({
+  id: 'atomy',
+  page: '/brands/atomy',
+  story: "Atomy is a Korean brand known for its skin care, the HemoHIM wellness range, supplements and personal care. On SORA you'll find their range at Atomy's own prices.",
+  name: 'Atomy',
+  store: 'Wellness',
+  href: '/shop?q=atomy',
+  image: 'https://image.atomy.com/IN/goods/D00190/D00190_00.jpg?w=720&h=720',
+  text: 'Korean skin care, HemoHIM, supplements, hair and personal care.'
+}), Object.freeze({
+  id: 'weavers-villa',
+  page: '/brands/weavers-villa',
+  story: 'Weavers Villa brings handwoven shawls, stoles and dupattas, from Kullu weaves to embroidered and Phulkari pieces, plus gift boxes and table covers for the home.',
+  catalogueBrand: 'Weavers Villa',
+  name: 'Weavers Villa',
+  store: 'Fashion · Home',
+  href: '/fashion/c/shawls-stoles',
+  image: '/video/weavers-villa/0e053f13.webp',
+  text: 'Handwoven shawls, stoles, dupattas and Kullu weaves, plus table covers for the home.'
+}), Object.freeze({
+  id: 'leather-factory',
+  page: '/brands/leather-factory',
+  story: 'Leather Factory makes everyday leather goods: handbags and clutches, wallets and card holders, belts, sling bags, pouches and travel bags.',
+  catalogueBrand: 'Leather Factory',
+  name: 'Leather Factory',
+  store: 'Fashion',
+  href: '/fashion/c/leather-goods',
+  image: '/img/partners/leather-factory/handbags.webp',
+  text: 'Leather handbags, wallets, belts, sling bags and travel bags.'
+}), Object.freeze({
+  id: 'taj-leather',
+  luxe: true,
+  page: '/brands/taj-leather',
+  story: "Taj Leather makes genuine leather jackets and coats for men and women, from classic bikers to long coats, sold here at Taj Leather's own prices.",
+  catalogueBrand: 'Taj Leather',
+  name: 'Taj Leather',
+  store: 'Fashion',
+  href: '/fashion/search?q=taj%20leather',
+  image: 'https://cdn.shopify.com/s/files/1/0780/8437/4633/files/kbxt1xR35kfGamD.jpg?width=800',
+  text: 'Genuine leather jackets and coats for men and women.'
+}), Object.freeze({
+  id: 'ansari-fashion',
+  luxe: true,
+  page: '/brands/ansari-fashion',
+  story: "Ansari Fashion is from Banaras: Banarasi silk and cotton suit sets, Jamdani weaves and sarees, sold here at Ansari Fashion's own prices.",
+  catalogueBrand: 'Ansari Fashion',
+  name: 'Ansari Fashion',
+  store: 'Fashion',
+  href: '/fashion/search?q=ansari%20fashion',
+  image: '/img/partners/ansari-fashion/suit-sets.webp',
+  text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees from Banaras.'
+})]);
+
+/** A brand's picture: its own, or for Biosash the first in-stock Biosash product shot. Pure. */
+function brandImage(brand, products = [], isBrand = () => false) {
+  if (!brand) return null;
+  if (brand.image) return brand.image;
+  const hit = (Array.isArray(products) ? products : []).find(p => p && p.image && Number(p.stock) > 0 && isBrand(p));
+  return hit ? hit.image : null;
+}
+
+/**
+ * How many products each brand has live (2026-11-13: new features): wellness brands
+ * counted from the loaded catalogue (`brandOf` names a product's brand), the rest from
+ * the catalogue table (`catalogueCounts`, brand → count). null when not known. Pure.
+ */
+function brandCounts(products = [], brandOf = () => '', catalogueCounts = {}) {
+  const out = {};
+  for (const b of BRANDS) {
+    if (b.catalogueBrand) {
+      out[b.id] = Number.isFinite(catalogueCounts[b.catalogueBrand]) ? catalogueCounts[b.catalogueBrand] : null;
+      continue;
+    }
+    out[b.id] = (Array.isArray(products) ? products : []).filter(p => p && p.slug && brandOf(p).toLowerCase() === b.name.toLowerCase()).length || null;
+  }
+  return out;
+}
+
 function Footer() {
   const info = useConsumerCare();
   const socials = socialLinks(info);
@@ -35558,6 +35661,9 @@ function Footer() {
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/fashion/wedding",
             children: "Wedding edit"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/categories",
+            children: "All categories"
           }), categories.slice(0, 3).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: `/category/${c.slug}`,
             children: c.name
@@ -35618,6 +35724,48 @@ function Footer() {
           })]
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "ftr__brands",
+        "aria-label": "Our brands",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
+          children: "Our brands"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+          className: "ftr__brandlist",
+          children: BRANDS.map(b => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: b.page,
+            children: b.name
+          }, b.id))
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "ftr__pay",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
+            children: "Pay your way"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            className: "ftr__paylist",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: "UPI"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: "Credit & debit cards"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: "Net banking"
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: "Cash on Delivery"
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "ftr__paynote",
+            children: "Payments are processed securely at checkout; the options for your order are shown there."
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "ftr__app",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h4", {
+            children: "The SORA app"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            children: "Install it from this site: one tap from your home screen, and what you\u2019ve browsed opens offline."
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(InstallApp, {
+            label: "Get the SORA app"
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "ftr__trust",
         children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -35629,6 +35777,11 @@ function Footer() {
             name: "truck",
             size: 17
           }), " Free standard shipping"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "shield",
+            size: 17
+          }), " Genuine products"]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
           children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
             name: "package",
@@ -35652,19 +35805,38 @@ function Footer() {
   });
 }
 
-function MobileTabBar() {
+const LINKS = {
+  wellness: {
+    home: '/',
+    shop: '/shop',
+    shopLabel: 'Shop',
+    saved: '/wishlist'
+  },
+  fashion: {
+    home: '/fashion',
+    shop: '/categories?store=fashion',
+    shopLabel: 'Categories',
+    saved: '/fashion/wishlist'
+  }
+};
+function MobileTabBar({
+  store = 'wellness',
+  savedCount = null
+}) {
   const {
     cartCount,
     wishCount
   } = useStore();
+  const L = LINKS[store] || LINKS.wellness;
+  const saved = savedCount ?? wishCount;
   const item = ({
     isActive
   }) => `tabbar__item ${isActive ? 'active' : ''}`;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
-    className: "tabbar only-mobile",
+    className: `tabbar only-mobile tabbar--${store}`,
     "aria-label": "Mobile navigation",
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
-      to: "/",
+      to: L.home,
       className: item,
       end: true,
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
@@ -35674,25 +35846,25 @@ function MobileTabBar() {
         children: "Home"
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
-      to: "/shop",
+      to: L.shop,
       className: item,
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
         name: "grid",
         size: 22
       }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        children: "Shop"
+        children: L.shopLabel
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
-      to: "/wishlist",
+      to: L.saved,
       className: item,
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
         className: "tabbar__ic",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "heart",
           size: 22
-        }), wishCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+        }), saved > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("i", {
           className: "tabbar__dot"
-        }, wishCount)]
+        }, saved)]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
         children: "Saved"
       })]
@@ -35801,7 +35973,7 @@ function useBootstrapReady() {
 
 // Progressive enhancement: nothing is hidden while waiting for JavaScript,
 // images, or an observer. Product loading has its own independent observer.
-const REVEAL = '.v2-sechead, .hd-title, .hd-tile, .hm-brand, .hm-collection, .hm-mom__media, .hm-mom__body, .hm-trust__item, .v2-pc';
+const REVEAL$1 = '.v2-sechead, .hd-title, .hd-tile, .hm-brand, .hm-collection, .hm-mom__media, .hm-mom__body, .hm-trust__item, .v2-pc';
 const DEPTH = '.hd-tile__media, .hm-brand__media, .hm-mom__media, .hm-collection__images';
 function StorefrontMotion() {
   const {
@@ -35868,7 +36040,7 @@ function StorefrontMotion() {
     });
     function discover(node) {
       if (!(node instanceof Element)) return;
-      const targets = [...(node.matches(REVEAL) ? [node] : []), ...node.querySelectorAll(REVEAL)];
+      const targets = [...(node.matches(REVEAL$1) ? [node] : []), ...node.querySelectorAll(REVEAL$1)];
       targets.forEach(target => {
         if (seen.has(target)) return;
         seen.add(target);
@@ -36637,7 +36809,7 @@ const TRUST = [{
   note: '9am–6pm IST',
   to: '/contact'
 }];
-const STORES$2 = [{
+const STORES$3 = [{
   key: 'wellness',
   name: 'Wellness',
   to: '/category/wellness',
@@ -36919,7 +37091,7 @@ const STORES_SECTION = Object.freeze({
   title: 'Explore the stores',
   more: 'View All',
   link: '/shop',
-  items: STORES$2.map(s => ({
+  items: STORES$3.map(s => ({
     ...s,
     hidden: false,
     link: s.to,
@@ -37072,7 +37244,7 @@ function ExploreStores({
     picture: tileArt(s.image)
   })) : section.hidden ? [] : section.items.filter(visible$4);
   if (!circles.length) return null;
-  const count = given || circles.length === STORES$2.length ? {} : {
+  const count = given || circles.length === STORES$3.length ? {} : {
     'data-count': circles.length,
     style: {
       '--hx-stores-n': circles.length
@@ -40233,9 +40405,7 @@ function HomeLeaderboard({
   });
 }
 
-const TALL = '(max-width: 1023px)';
 const PHONE$1 = '(max-width: 700px)';
-const AUTOPLAY_MS$3 = 6000;
 const STRIP_AUTOPLAY_MS = 4500;
 const LIFESTYLE = {
   key: 'lifestyle',
@@ -40320,7 +40490,7 @@ function stripTiles(categories = FASHION_CATEGORIES$1) {
   for (let i = 0; i < Math.max(women.length, men.length); i++) tiles.push(...[women[i], men[i]].filter(Boolean));
   return tiles;
 }
-const STORES$1 = [{
+const STORES$2 = [{
   key: 'fashion',
   to: '/fashion',
   eyebrow: 'Discover your style',
@@ -40380,7 +40550,7 @@ const STORE_CAROUSEL_SECTION = Object.freeze({
   eyebrow: 'More to explore',
   title: 'Two Worlds. A Better You.',
   text: 'Fashion for your style. Living for your space. All at SORA LIFE.',
-  cards: STORES$1.map(s => ({
+  cards: STORES$2.map(s => ({
     ...s,
     hidden: false,
     title: [...s.heading],
@@ -40394,201 +40564,6 @@ const STORE_CAROUSEL_SECTION = Object.freeze({
     icons: s.details.map(([icon]) => icon)
   }))
 });
-/** The cards as DoorwayCarousel takes them: the hidden ones left out. */
-const storeCardsOf = section => section.cards.filter(c => !c.hidden).map(c => ({
-  ...c,
-  heading: c.title,
-  description: c.text,
-  to: c.link,
-  wide: c.picture.desktop,
-  tall: c.picture.phone,
-  details: c.details.map((label, i) => [c.icons[i], label])
-}));
-
-/** One photograph, every word on it. `tall` (optional) is the portrait the browser takes under 1024px. */
-function DoorwayCard({
-  store,
-  tabIndex
-}) {
-  const hId = `fsb-${store.key}-h`;
-  const ctaId = `fsb-${store.key}-cta`;
-  const Entry = store.key === 'fashion' ? FashionEntryLink : Link;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs(Entry, {
-    to: store.to,
-    className: `fsb__card fsb__card--${store.key}`,
-    "aria-labelledby": `${hId} ${ctaId}`,
-    tabIndex: tabIndex,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "fsb__art",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-        src: store.wide,
-        sources: store.tall ? [{
-          media: TALL,
-          srcSet: store.tall
-        }] : undefined,
-        alt: store.alt,
-        width: 1600,
-        height: 900,
-        className: "fsb__image"
-      })
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "fsb__content",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "fsb__copy",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "fsb__eyebrow",
-          children: store.eyebrow
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("h3", {
-          className: "fsb__h",
-          id: hId,
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: store.heading[0]
-          }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: store.heading[1]
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "fsb__description",
-          children: store.description
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-          className: "fsb__cta",
-          id: ctaId,
-          children: [store.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "arrowRight",
-            size: 18
-          })]
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-        className: "fsb__details",
-        "aria-label": store.detailsLabel,
-        children: store.details.map(([icon, label]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: icon,
-            size: 22
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            children: label
-          })]
-        }, icon))
-      })]
-    })]
-  });
-}
-
-/**
- * The two store cards, one at a time. Autoplays only when there is more
- * than one slide, pauses on hover and focus, never moves under
- * prefers-reduced-motion; the track slides on transform only. A sideways
- * swipe of 40px or more changes the slide — and swallows the click that
- * would otherwise follow the card link.
- */
-function DoorwayCarousel({
-  stores = STORES$1,
-  autoplayMs = AUTOPLAY_MS$3
-}) {
-  const [index, setIndex] = reactExports.useState(0);
-  const [paused, setPaused] = reactExports.useState(false);
-  const reduced = reactExports.useRef(false);
-  const swipe = reactExports.useRef({
-    x: null,
-    y: null,
-    moved: false
-  });
-  const n = stores.length;
-  reactExports.useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const sync = () => {
-      reduced.current = mq.matches;
-    };
-    sync();
-    mq.addEventListener?.('change', sync);
-    return () => mq.removeEventListener?.('change', sync);
-  }, []);
-  reactExports.useEffect(() => {
-    if (n < 2 || paused) return undefined;
-    const t = setInterval(() => {
-      if (!reduced.current) setIndex(i => (i + 1) % n);
-    }, autoplayMs);
-    return () => clearInterval(t);
-  }, [n, paused, autoplayMs]);
-  if (n === 0) return null;
-  const go = d => setIndex(i => (i + d + n) % n);
-  const onPointerDown = e => {
-    swipe.current = {
-      x: e.clientX,
-      y: e.clientY,
-      moved: false
-    };
-  };
-  const onPointerUp = e => {
-    const s = swipe.current;
-    if (s.x == null) return;
-    const dx = e.clientX - s.x,
-      dy = e.clientY - s.y;
-    swipe.current = {
-      x: null,
-      y: null,
-      moved: Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy)
-    };
-    if (swipe.current.moved) go(dx < 0 ? 1 : -1);
-  };
-  const onClickCapture = e => {
-    if (swipe.current.moved) {
-      e.preventDefault();
-      e.stopPropagation();
-      swipe.current.moved = false;
-    }
-  };
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "fsb__carousel",
-    "aria-roledescription": "carousel",
-    "aria-label": "The stores",
-    onMouseEnter: () => setPaused(true),
-    onMouseLeave: () => setPaused(false),
-    onFocus: () => setPaused(true),
-    onBlur: () => setPaused(false),
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "fsb__viewport",
-      onPointerDown: onPointerDown,
-      onPointerUp: onPointerUp,
-      onPointerCancel: () => {
-        swipe.current = {
-          x: null,
-          y: null,
-          moved: false
-        };
-      },
-      onClickCapture: onClickCapture,
-      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "fsb__track",
-        style: {
-          transform: `translateX(-${index * 100}%)`
-        },
-        children: stores.map((store, i) => /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-          className: `fsb__slide${i === index ? ' is-on' : ''}`,
-          "aria-hidden": i !== index,
-          "aria-roledescription": "slide",
-          "aria-label": `${i + 1} of ${n}`,
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCard, {
-            store: store,
-            tabIndex: i === index ? undefined : -1
-          })
-        }, store.key))
-      })
-    }), n > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "fsb__dots",
-      role: "tablist",
-      "aria-label": "Choose a store",
-      children: stores.map((store, i) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-        type: "button",
-        role: "tab",
-        "aria-selected": i === index,
-        "aria-label": `${store.heading.join(' ')}`,
-        className: `fsb__dot${i === index ? ' is-on' : ''}`,
-        onClick: () => setIndex(i)
-      }, store.key))
-    })]
-  });
-}
 
 /** The strip's reduced-motion check, read when a tick fires rather than when it is scheduled. */
 function useReducedMotion$3() {
@@ -40831,229 +40806,202 @@ function LifestyleBanner() {
   });
 }
 
-/** The two store cards under their heading. Sits just above the popular rail. */
-function StoreCarousel() {
-  const section = useStorefrontSection('wellness', 'storeCarousel', STORE_CAROUSEL_SECTION);
-  const cards = storeCardsOf(section);
-  if (section.hidden || cards.length === 0) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "v2-sec fsb",
-    "aria-labelledby": "fsb-h",
-    id: "more-to-explore",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "v2-wrap",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("header", {
-        className: "fsb__intro",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "fsb__eyebrow fsb__overline",
-          children: section.eyebrow
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-          id: "fsb-h",
-          children: section.title
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "fsb__lede",
-          children: section.text
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(DoorwayCarousel, {
-        stores: cards
-      })]
-    })
-  });
+// Pure, deterministic Homepage merchandising selectors.
+//
+// Every item returned here comes from the hydrated catalogue/category data.
+// The selector never creates prices, discounts, ratings, brands or categories;
+// sections whose supporting data does not exist simply receive an empty list.
+
+function eligibleProduct(product) {
+  return Boolean(product && product.id != null && product.slug && product.name && product.isActive !== false && Number(product.stock) > 0);
+}
+function stableProducts(list) {
+  return [...list].sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0) || String(a.id).localeCompare(String(b.id)));
+}
+function distinct(primary, fallback, limit, excluded = new Set()) {
+  const result = [];
+  const seen = new Set(excluded);
+  for (const product of [...primary, ...fallback]) {
+    if (!eligibleProduct(product) || seen.has(product.id)) continue;
+    seen.add(product.id);
+    result.push(product);
+    if (result.length === limit) break;
+  }
+  return result;
 }
 
-const NEW_ARRIVALS_AUTOPLAY_MS = 4500; // the fashion strip's pace
-
-/** The section's built-in content; an empty link is the newest arrival's store (viewAllLink). */
-const NEW_ARRIVALS_SECTION = Object.freeze({
-  hidden: false,
-  title: 'New Arrivals',
-  more: 'View All',
-  link: ''
-});
-
-/** Where "View All" goes: the link set in Storefronts, else every new arrival (/new, 2026-11-13). */
-const viewAllLink = link => link || '/new';
-
-/** The reduced-motion check, read when a tick fires rather than when it is scheduled. */
-function useReducedMotion$2() {
-  const reduced = reactExports.useRef(false);
-  reactExports.useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const sync = () => {
-      reduced.current = mq.matches;
-    };
-    sync();
-    mq.addEventListener?.('change', sync);
-    return () => mq.removeEventListener?.('change', sync);
-  }, []);
-  return reduced;
-}
-function NewArrivals({
-  items: given,
-  autoplayMs = NEW_ARRIVALS_AUTOPLAY_MS
-}) {
-  const section = useStorefrontSection('wellness', 'newArrivals', NEW_ARRIVALS_SECTION);
-  const loaded = useNewArrivals();
-  const items = (given ?? loaded) || [];
-  const [index, setIndex] = reactExports.useState(0);
-  const [paused, setPaused] = reactExports.useState(false);
-  const [per, setPer] = reactExports.useState(1);
-  const track = reactExports.useRef(null);
-  const reduced = useReducedMotion$2();
-  const swipe = reactExports.useRef({
-    x: null,
-    y: null,
-    moved: false
-  });
-  const n = section.hidden ? 0 : items.length;
-  reactExports.useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const measure = () => {
-      if (track.current) setPer(Math.max(1, parseInt(window.getComputedStyle(track.current).getPropertyValue('--per'), 10) || 1));
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [n]);
-  const last = Math.max(0, n - per);
-  reactExports.useEffect(() => {
-    if (index > last) setIndex(last);
-  }, [index, last]);
-  reactExports.useEffect(() => {
-    if (last < 1 || paused) return undefined;
-    const t = setInterval(() => {
-      if (!reduced.current) setIndex(i => i >= last ? 0 : i + 1);
-    }, autoplayMs);
-    return () => clearInterval(t);
-  }, [last, paused, autoplayMs, reduced]);
-  if (n === 0) return null;
-  const step = d => setIndex(i => Math.min(last, Math.max(0, i + d)));
-  const onPointerDown = e => {
-    swipe.current = {
-      x: e.clientX,
-      y: e.clientY,
-      moved: false
-    };
-  };
-  const onPointerUp = e => {
-    const s = swipe.current;
-    if (s.x == null) return;
-    const dx = e.clientX - s.x,
-      dy = e.clientY - s.y;
-    swipe.current = {
-      x: null,
-      y: null,
-      moved: Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy)
-    };
-    if (swipe.current.moved) step(dx < 0 ? 1 : -1);
-  };
-  const onClickCapture = e => {
-    if (swipe.current.moved) {
-      e.preventDefault();
-      e.stopPropagation();
-      swipe.current.moved = false;
+// Avoid filling a discovery rail with one category when a broad catalogue is
+// available. Category order and product order remain deterministic.
+function categoryBalanced(list, limit) {
+  const groups = new Map();
+  for (const product of list) {
+    const key = product.category || 'uncategorized';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(product);
+  }
+  const output = [];
+  let row = 0;
+  while (output.length < limit) {
+    let added = false;
+    for (const products of groups.values()) {
+      if (products[row]) {
+        output.push(products[row]);
+        added = true;
+        if (output.length === limit) break;
+      }
     }
+    if (!added) break;
+    row += 1;
+  }
+  return output;
+}
+function cleanBrand(value) {
+  const brand = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+  return brand && brand.length <= 60 ? brand : '';
+}
+function productBrandName(product) {
+  const explicit = cleanBrand(product?.brand || product?.brandName || product?.manufacturer);
+  if (explicit) return explicit;
+
+  // These two names are only inferred when they are literally present in the
+  // catalogue record (name/category) or its existing source URL.
+  const evidence = `${product?.name || ''} ${product?.category || ''}`;
+  if (/\bmom[\s-]*trust\b/i.test(evidence)) return 'Mom Trust';
+  try {
+    const host = new URL(product?.permalink || '').hostname.toLowerCase().replace(/^www\./, '');
+    if (host === 'biosash.com' || host.endsWith('.biosash.com')) return 'Biosash';
+    if (/^mom-?trust\./.test(host) || host.includes('momtrust')) return 'Mom Trust';
+  } catch {
+    // Missing/relative source URLs carry no usable brand evidence.
+  }
+  return '';
+}
+function selectHomeMerchandising(productList, categoryList) {
+  const available = stableProducts((Array.isArray(productList) ? productList : []).filter(eligibleProduct));
+  const categories = (Array.isArray(categoryList) ? categoryList : []).filter(category => category?.slug && category?.name);
+  const featured = available.filter(product => product.isFeatured);
+  const discounted = available.filter(product => product.onSale || Number(product.discountPct) > 0);
+  const trending = categoryBalanced(distinct(featured, discounted, Math.min(8, available.length)), 8);
+  const trendingFilled = distinct(trending, categoryBalanced(available, 8), Math.min(8, available.length));
+  const trendingIds = new Set(trendingFilled.map(product => product.id));
+  const newProducts = available.filter(product => product.isNew);
+  const discover = distinct(newProducts, [...available].reverse(), 5, trendingIds);
+  const discoverFilled = discover.length >= 4 ? discover : distinct(discover, available, 5);
+  const flaggedPopular = available.filter(product => product.isBestseller);
+  const popularIsVerified = flaggedPopular.length >= 4;
+  const priorIds = new Set([...trendingFilled, ...discoverFilled].map(product => product.id));
+  const popular = popularIsVerified ? distinct(flaggedPopular, [], 8) : distinct(categoryBalanced(available, 8), available, 8, priorIds);
+  const popularFilled = popular.length >= 4 ? popular : distinct(popular, available, 8);
+  const brandMap = new Map();
+  for (const product of available) {
+    const name = productBrandName(product);
+    if (!name) continue;
+    const key = name.toLocaleLowerCase();
+    if (!brandMap.has(key)) brandMap.set(key, {
+      name,
+      products: []
+    });
+    brandMap.get(key).products.push(product);
+  }
+  const brands = [...brandMap.values()].sort((a, b) => b.products.length - a.products.length || a.name.localeCompare(b.name)).slice(0, 4);
+  const collections = categories.map(category => ({
+    category,
+    products: available.filter(product => (product.categories || [product.category]).includes(category.slug)).slice(0, 4)
+  })).filter(collection => collection.products.length > 0).slice(0, 4);
+  const momCategory = categories.find(category => /mom[\s-]*trust/i.test(`${category.slug} ${category.name}`));
+  const momProducts = available.filter(product => productBrandName(product) === 'Mom Trust' || momCategory && (product.categories || [product.category]).includes(momCategory.slug)).slice(0, 6);
+  return {
+    available,
+    trending: trendingFilled,
+    discover: discoverFilled,
+    discoverLink: newProducts.length ? '/shop?filter=new' : '/shop',
+    popular: popularFilled,
+    popularTitle: popularIsVerified ? 'Bestsellers' : 'Worth discovering',
+    popularEyebrow: popularIsVerified ? 'Catalogue favourites' : 'Across the marketplace',
+    brands,
+    collections,
+    momCategory,
+    momProducts
   };
+}
+
+const brandOf$2 = p => String(p?.brand || productBrandName(p) || '').trim();
+function useCounts() {
+  const [counts, setCounts] = reactExports.useState({});
+  reactExports.useEffect(() => {
+    let live = true;
+    const names = BRANDS.map(b => b.catalogueBrand).filter(Boolean);
+    Promise.all(names.map(n => supabase.from('catalogue_products').select('id', {
+      count: 'exact',
+      head: true
+    }).eq('brand', n).eq('is_active', true).then(({
+      count,
+      error
+    }) => [n, error ? null : count], () => [n, null]))).then(pairs => {
+      if (live) setCounts(Object.fromEntries(pairs.filter(([, c]) => Number.isFinite(c))));
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return counts;
+}
+function BrandCarousel() {
+  const counts = brandCounts(products, brandOf$2, useCounts());
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "hx hx-new",
-    "aria-labelledby": "hx-new-h",
+    className: "hx sora-bc",
+    "aria-labelledby": "sora-bc-h",
     children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hx-wrap",
-      onMouseEnter: () => setPaused(true),
-      onMouseLeave: () => setPaused(false),
-      onFocus: () => setPaused(true),
-      onBlur: () => setPaused(false),
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "hx-stores__head",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
           className: "hx-stores__h",
-          id: "hx-new-h",
-          children: section.title
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "hx-new__tools",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: viewAllLink(section.link),
-            className: "hx-more",
-            "aria-label": section.more === NEW_ARRIVALS_SECTION.more ? 'View all new arrivals' : undefined,
-            children: [section.more, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-              name: "arrowRight",
-              size: 15
-            })]
-          }), last > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            className: "hx-new__arrows",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
-              type: "button",
-              "aria-label": "Previous products",
-              disabled: index === 0,
-              onClick: () => step(-1),
-              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                name: "chevronLeft",
-                size: 18
-              })
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
-              type: "button",
-              "aria-label": "Next products",
-              disabled: index >= last,
-              onClick: () => step(1),
-              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                name: "chevronRight",
-                size: 18
-              })
-            })]
+          id: "sora-bc-h",
+          children: "Shop by brand"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/brands",
+          className: "hx-more",
+          children: ["All brands ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 15
           })]
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "hx-new__viewport",
-        "aria-roledescription": "carousel",
-        "aria-label": "New arrivals",
-        onPointerDown: onPointerDown,
-        onPointerUp: onPointerUp,
-        onPointerCancel: () => {
-          swipe.current = {
-            x: null,
-            y: null,
-            moved: false
-          };
-        },
-        onClickCapture: onClickCapture,
-        onScroll: e => {
-          if (e.currentTarget.scrollLeft) e.currentTarget.scrollLeft = 0;
-        },
-        children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-          className: "hx-new__track",
-          ref: track,
-          style: {
-            '--i': index
-          },
-          children: items.map((p, i) => {
-            const inView = i >= index && i < index + per;
-            return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-              className: "hx-new__item",
-              "aria-hidden": !inView,
-              children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-                to: p.href,
-                className: "hx-new__card",
-                tabIndex: inView ? undefined : -1,
-                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                  className: `hx-new__art${p.store === 'wellness' ? ' hx-new__art--whole' : ''}`,
-                  children: p.image && /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
-                    src: p.image,
-                    alt: "",
-                    width: 600,
-                    height: 600,
-                    className: "hx-new__image"
-                  })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "sora-bc__row",
+        children: BRANDS.map(b => {
+          const img = brandImage(b, products, p => brandOf$2(p).toLowerCase() === b.name.toLowerCase());
+          return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+              to: b.page,
+              className: "sora-bc__card",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: `sora-bc__img${b.imageFrom ? ' is-whole' : ''}`,
+                children: img && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                  src: img,
+                  alt: "",
+                  width: "420",
+                  height: "520",
+                  loading: "lazy",
+                  decoding: "async"
+                })
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                className: "sora-bc__body",
+                children: [/*#__PURE__*/jsxRuntimeExports.jsxs("em", {
+                  children: [b.store, counts[b.id] ? ` · ${counts[b.id]} products` : '']
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                  children: b.name
                 }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                  className: "hx-new__name",
-                  children: p.name
-                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                  className: "hx-new__price",
-                  children: money(p.price)
+                  children: b.text
+                }), /*#__PURE__*/jsxRuntimeExports.jsxs("i", {
+                  children: ["Shop ", b.name, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                    name: "arrowRight",
+                    size: 14
+                  })]
                 })]
-              })
-            }, p.key);
-          })
+              })]
+            })
+          }, b.id);
         })
       })]
     })
@@ -41202,7 +41150,7 @@ const BEDSHEETS_SECTION = Object.freeze({
 const railLink = (link, store, slug) => link || categoryListing(store, slug);
 
 /** The reduced-motion check, read when a tick fires rather than when it is scheduled. */
-function useReducedMotion$1() {
+function useReducedMotion$2() {
   const reduced = reactExports.useRef(false);
   reactExports.useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
@@ -41264,7 +41212,7 @@ function SlidingRail({
   const [paused, setPaused] = reactExports.useState(false);
   const [per, setPer] = reactExports.useState(1);
   const track = reactExports.useRef(null);
-  const reduced = useReducedMotion$1();
+  const reduced = useReducedMotion$2();
   const swipe = reactExports.useRef({
     x: null,
     y: null,
@@ -41443,125 +41391,6 @@ const Bedsheets = props => /*#__PURE__*/jsxRuntimeExports.jsx(CategoryRail, {
   ...props
 });
 
-// Pure, deterministic Homepage merchandising selectors.
-//
-// Every item returned here comes from the hydrated catalogue/category data.
-// The selector never creates prices, discounts, ratings, brands or categories;
-// sections whose supporting data does not exist simply receive an empty list.
-
-function eligibleProduct(product) {
-  return Boolean(product && product.id != null && product.slug && product.name && product.isActive !== false && Number(product.stock) > 0);
-}
-function stableProducts(list) {
-  return [...list].sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0) || String(a.id).localeCompare(String(b.id)));
-}
-function distinct(primary, fallback, limit, excluded = new Set()) {
-  const result = [];
-  const seen = new Set(excluded);
-  for (const product of [...primary, ...fallback]) {
-    if (!eligibleProduct(product) || seen.has(product.id)) continue;
-    seen.add(product.id);
-    result.push(product);
-    if (result.length === limit) break;
-  }
-  return result;
-}
-
-// Avoid filling a discovery rail with one category when a broad catalogue is
-// available. Category order and product order remain deterministic.
-function categoryBalanced(list, limit) {
-  const groups = new Map();
-  for (const product of list) {
-    const key = product.category || 'uncategorized';
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(product);
-  }
-  const output = [];
-  let row = 0;
-  while (output.length < limit) {
-    let added = false;
-    for (const products of groups.values()) {
-      if (products[row]) {
-        output.push(products[row]);
-        added = true;
-        if (output.length === limit) break;
-      }
-    }
-    if (!added) break;
-    row += 1;
-  }
-  return output;
-}
-function cleanBrand(value) {
-  const brand = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
-  return brand && brand.length <= 60 ? brand : '';
-}
-function productBrandName(product) {
-  const explicit = cleanBrand(product?.brand || product?.brandName || product?.manufacturer);
-  if (explicit) return explicit;
-
-  // These two names are only inferred when they are literally present in the
-  // catalogue record (name/category) or its existing source URL.
-  const evidence = `${product?.name || ''} ${product?.category || ''}`;
-  if (/\bmom[\s-]*trust\b/i.test(evidence)) return 'Mom Trust';
-  try {
-    const host = new URL(product?.permalink || '').hostname.toLowerCase().replace(/^www\./, '');
-    if (host === 'biosash.com' || host.endsWith('.biosash.com')) return 'Biosash';
-    if (/^mom-?trust\./.test(host) || host.includes('momtrust')) return 'Mom Trust';
-  } catch {
-    // Missing/relative source URLs carry no usable brand evidence.
-  }
-  return '';
-}
-function selectHomeMerchandising(productList, categoryList) {
-  const available = stableProducts((Array.isArray(productList) ? productList : []).filter(eligibleProduct));
-  const categories = (Array.isArray(categoryList) ? categoryList : []).filter(category => category?.slug && category?.name);
-  const featured = available.filter(product => product.isFeatured);
-  const discounted = available.filter(product => product.onSale || Number(product.discountPct) > 0);
-  const trending = categoryBalanced(distinct(featured, discounted, Math.min(8, available.length)), 8);
-  const trendingFilled = distinct(trending, categoryBalanced(available, 8), Math.min(8, available.length));
-  const trendingIds = new Set(trendingFilled.map(product => product.id));
-  const newProducts = available.filter(product => product.isNew);
-  const discover = distinct(newProducts, [...available].reverse(), 5, trendingIds);
-  const discoverFilled = discover.length >= 4 ? discover : distinct(discover, available, 5);
-  const flaggedPopular = available.filter(product => product.isBestseller);
-  const popularIsVerified = flaggedPopular.length >= 4;
-  const priorIds = new Set([...trendingFilled, ...discoverFilled].map(product => product.id));
-  const popular = popularIsVerified ? distinct(flaggedPopular, [], 8) : distinct(categoryBalanced(available, 8), available, 8, priorIds);
-  const popularFilled = popular.length >= 4 ? popular : distinct(popular, available, 8);
-  const brandMap = new Map();
-  for (const product of available) {
-    const name = productBrandName(product);
-    if (!name) continue;
-    const key = name.toLocaleLowerCase();
-    if (!brandMap.has(key)) brandMap.set(key, {
-      name,
-      products: []
-    });
-    brandMap.get(key).products.push(product);
-  }
-  const brands = [...brandMap.values()].sort((a, b) => b.products.length - a.products.length || a.name.localeCompare(b.name)).slice(0, 4);
-  const collections = categories.map(category => ({
-    category,
-    products: available.filter(product => (product.categories || [product.category]).includes(category.slug)).slice(0, 4)
-  })).filter(collection => collection.products.length > 0).slice(0, 4);
-  const momCategory = categories.find(category => /mom[\s-]*trust/i.test(`${category.slug} ${category.name}`));
-  const momProducts = available.filter(product => productBrandName(product) === 'Mom Trust' || momCategory && (product.categories || [product.category]).includes(momCategory.slug)).slice(0, 6);
-  return {
-    available,
-    trending: trendingFilled,
-    discover: discoverFilled,
-    discoverLink: newProducts.length ? '/shop?filter=new' : '/shop',
-    popular: popularFilled,
-    popularTitle: popularIsVerified ? 'Bestsellers' : 'Worth discovering',
-    popularEyebrow: popularIsVerified ? 'Catalogue favourites' : 'Across the marketplace',
-    brands,
-    collections,
-    momCategory,
-    momProducts
-  };
-}
-
 // ============================================================
 // The Biosash range on the wellness homepage: Biosash's own products from the
 // wellness catalogue (148 of the 194 live ones on 2026-11-07), in the order the
@@ -41622,952 +41451,224 @@ function BiosashRange({
 }
 
 // ============================================================
-// Weavers Villa on the wellness homepage (owner, 2026-11-08: "tie-up", their
-// whole catalogue now lives in Fashion › Shawls & Stoles and Home & Living ›
-// Table Covers). Two pieces:
-//
-//   * the range — a sliding row of their shawls, stoles and dupattas straight
-//     under the Biosash range, the same row type (SlidingRail);
-//   * the showcase — their own short films, one tile per kind of piece, each
-//     opening that sub-category. The films are copies re-encoded for the web
-//     and served from this site (/video/weavers-villa), so the page's
-//     media-src stays 'self'.
-//
-// One read for the range: active fashion rows with brand "Weavers Villa", a
-// few columns, the catalogue's own order. The cards then take turns across
-// sub-categories so the row is not twelve of one kind. A failed read counts
-// as none and the section renders nothing; never padded.
+// A homepage group band (2026-11-13 redesign: "homepage cleanup"). The homepage is
+// four parts — Offers, Shop by store, Our brands, For you — and each opens with this
+// band: a small warm label and a serif title between two hairlines (sora-ds.css).
 // ============================================================
-const WEAVERS_BRAND = 'Weavers Villa';
-const WEAVERS_RANGE_LIMIT = 12;
-const WEAVERS_LISTING = '/fashion/c/shawls-stoles';
-
-/** The sections' built-in content (Storefronts → Wellness). */
-const WEAVERS_SECTION = Object.freeze({
-  hidden: false,
-  title: 'Shawls & Stoles by Weavers Villa',
-  more: 'View All',
-  link: ''
-});
-const WEAVERS_SHOWCASE = Object.freeze({
-  hidden: false,
-  eyebrow: 'Now on SORA Lifestyle',
-  title: 'Weavers Villa',
-  text: 'Winter shawls, stoles, phulkari dupattas, mufflers and gift sets: the full Weavers Villa collection.',
-  cta: 'Shop the collection',
-  link: WEAVERS_LISTING
-});
-
-/** The films, in the order they play along the row, each with where its tile opens. */
-const WEAVERS_FILMS = Object.freeze([{
-  id: '0e053f13',
-  label: "Women's Shawls",
-  href: '/fashion/c/womens-shawls'
-}, {
-  id: '9530163f',
-  label: "Men's Shawls",
-  href: '/fashion/c/mens-shawls'
-}, {
-  id: '4f1440d9',
-  label: 'Dupattas & Phulkari',
-  href: '/fashion/c/dupattas-phulkari'
-}, {
-  id: '8a9a44c5',
-  label: 'Stoles',
-  href: '/fashion/c/stoles'
-}, {
-  id: '913fba8f',
-  label: 'Embroidered Shawls',
-  href: '/fashion/c/womens-shawls'
-}, {
-  id: 'c4953552',
-  label: 'Mufflers & Caps',
-  href: '/fashion/c/mufflers-caps'
-}, {
-  id: '1af80d20',
-  label: 'Table Covers',
-  href: '/homeliving/category/table-covers'
-}, {
-  id: '283b0a85',
-  label: 'Kullu Shawls',
-  href: '/fashion/c/womens-shawls'
-}, {
-  id: '6e5c05cd',
-  label: 'Statement Shawls',
-  href: '/fashion/c/womens-shawls'
-}, {
-  id: '8b4ab5ca',
-  label: 'Gift Box Sets',
-  href: '/fashion/c/shawl-gift-sets'
-}].map(f => Object.freeze({
-  ...f,
-  video: `/video/weavers-villa/${f.id}.mp4`,
-  poster: `/video/weavers-villa/${f.id}.webp`
-})));
-const str$4 = v => String(v ?? '').trim();
-
-/** A card-sized copy of a partner picture: their CDN resizes on `width`. */
-const cardImage = src => src ? String(src).replace(/([?&])width=\d+/, '$1width=700') : null;
-
-/** The range's rows; a failed read counts as none. */
-async function fetchWeaversRows(client = supabase, limit = 72) {
-  const {
-    data,
-    error
-  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', WEAVERS_BRAND).eq('is_active', true).order('sort_order', {
-    ascending: true
-  }).limit(limit);
-  if (error || !Array.isArray(data)) return [];
-  return data;
-}
-
-/**
- * The cards: { key, name, href, price, image }. Sub-categories take turns, each
- * keeping the catalogue's order; a row without a slug, a price or a picture is left out.
- */
-function selectWeaversRange(rows = [], limit = WEAVERS_RANGE_LIMIT) {
-  const queues = new Map();
-  for (const row of Array.isArray(rows) ? rows : []) {
-    if (row?.store !== 'fashion' || !str$4(row.slug)) continue;
-    const price = cataloguePrice(row);
-    const image = Array.isArray(row.images) ? row.images.find(Boolean) : null;
-    if (!(price > 0) || !image) continue;
-    const k = row.category_id ?? 'none';
-    if (!queues.has(k)) queues.set(k, []);
-    queues.get(k).push({
-      key: `fashion-${row.id}`,
-      name: str$4(row.name),
-      href: `/fashion/p/${row.slug}`,
-      price,
-      image: cardImage(image)
-    });
-  }
-  const lanes = [...queues.values()];
-  const out = [];
-  while (out.length < limit && lanes.some(q => q.length)) {
-    for (const q of lanes) if (q.length && out.length < limit) out.push(q.shift());
-  }
-  return out;
-}
-
-/** The range's cards: null until the read answers, then the list. */
-function useWeaversRange(limit = WEAVERS_RANGE_LIMIT) {
-  const [rows, setRows] = reactExports.useState(null);
-  reactExports.useEffect(() => {
-    let live = true;
-    fetchWeaversRows(supabase).then(r => {
-      if (live) setRows(r);
-    }, () => {
-      if (live) setRows([]);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-  return reactExports.useMemo(() => rows ? selectWeaversRange(rows, limit) : null, [rows, limit]);
-}
-
-/** `items` is for a test; the page passes nothing and the live catalogue is read. */
-function WeaversVillaRange({
-  items: given,
-  autoplayMs
-} = {}) {
-  const section = useStorefrontSection('wellness', 'weaversVilla', WEAVERS_SECTION);
-  const loaded = useWeaversRange();
-  const items = (given ?? loaded) || [];
-  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-    className: "hx-wv-range",
-    children: /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
-      id: "weavers",
-      label: "Weavers Villa shawls",
-      section: section,
-      defaults: WEAVERS_SECTION,
-      link: section.link || WEAVERS_LISTING,
-      items: items,
-      ...(autoplayMs ? {
-        autoplayMs
-      } : {})
-    })
-  });
-}
-
-/** One film tile: plays while on screen, nothing loaded before it is near. */
-function Film({
-  film
+function HomeGroup({
+  eyebrow,
+  title
 }) {
-  const ref = reactExports.useRef(null);
-  reactExports.useEffect(() => {
-    const v = ref.current;
-    if (!v || typeof window === 'undefined' || typeof IntersectionObserver !== 'function') return undefined;
-    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)');
-    const io = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting && !still?.matches) {
-        if (v.preload !== 'auto') v.preload = 'auto';
-        const p = v.play();
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      } else if (!v.paused) v.pause();
-    }, {
-      rootMargin: '120px 0px',
-      threshold: 0.35
-    });
-    io.observe(v);
-    return () => io.disconnect();
-  }, []);
-  return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-    className: "hx-wv__film",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      to: film.href,
-      className: "hx-wv__tile",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-        className: "hx-wv__media",
-        children: /*#__PURE__*/jsxRuntimeExports.jsx("video", {
-          ref: ref,
-          className: "hx-wv__video",
-          src: film.video,
-          poster: film.poster,
-          muted: true,
-          loop: true,
-          playsInline: true,
-          preload: "none",
-          "aria-hidden": "true",
-          tabIndex: -1,
-          width: 720,
-          height: 960
-        })
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-        className: "hx-wv__label",
-        children: [film.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "arrowRight",
-          size: 14
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "sora-group",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "sora-group__in",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+        className: "sora-group__t",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("small", {
+          children: eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: title
         })]
-      })]
-    })
-  });
-}
-function WeaversVillaShowcase({
-  films = WEAVERS_FILMS
-} = {}) {
-  const s = useStorefrontSection('wellness', 'weaversShowcase', WEAVERS_SHOWCASE);
-  if (s.hidden || !films.length) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "hx hx-wv",
-    "aria-labelledby": "hx-wv-h",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "hx-wrap",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "hx-wv__head",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "hx-wv__copy",
-          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-wv__eyebrow",
-            children: s.eyebrow
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-            className: "hx-wv__h",
-            id: "hx-wv-h",
-            children: s.title
-          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-wv__text",
-            children: s.text
-          })]
-        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: s.link || WEAVERS_LISTING,
-          className: "hx-wv__cta",
-          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "arrowRight",
-            size: 16
-          })]
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-        className: "hx-wv__films",
-        "aria-label": "Weavers Villa collections",
-        children: films.map(f => /*#__PURE__*/jsxRuntimeExports.jsx(Film, {
-          film: f
-        }, f.id))
-      })]
+      })
     })
   });
 }
 
-// ============================================================
-// Leather Factory on the wellness homepage (partner, 2026-11-08): their wallets,
-// handbags, belts and bags now live in Fashion › Leather Goods. Two pieces, as for
-// Weavers Villa:
-//
-//   * the range — a sliding row of their pieces, sub-categories taking turns
-//     (the same rule as Weavers Villa: selectWeaversRange);
-//   * the showcase — a poster band of category tiles, each a packshot served from
-//     this site (/img/partners/leather-factory) opening that sub-category.
-//
-// Their own short films carry wholesale prices and "DM to order" lettering, so
-// they are not shown on SORA.
-// ============================================================
-const LF_BRAND = 'Leather Factory';
-const LF_LISTING = '/fashion/c/leather-goods';
-const LF_SECTION = Object.freeze({
+const NEW_ARRIVALS_AUTOPLAY_MS = 4500; // the fashion strip's pace
+
+/** The section's built-in content; an empty link is the newest arrival's store (viewAllLink). */
+const NEW_ARRIVALS_SECTION = Object.freeze({
   hidden: false,
-  title: 'Leather Goods by Leather Factory',
+  title: 'New Arrivals',
   more: 'View All',
   link: ''
 });
-const LF_SHOWCASE = Object.freeze({
-  hidden: false,
-  eyebrow: 'New on SORA Lifestyle',
-  title: 'Leather Factory',
-  text: 'Wallets, handbags, belts, card holders and travel bags from a leather goods maker in New Delhi.',
-  cta: 'Shop leather goods',
-  link: LF_LISTING
-});
-const LF_TILES = Object.freeze([['handbags', 'Handbags'], ['mens-wallets', "Men's Wallets"], ['belts', 'Belts'], ['sling-bags', 'Sling Bags'], ['laptop-travel-bags', 'Laptop Bags'], ['clutches', 'Clutches'], ['card-holders', 'Card Holders'], ['passport-holders', 'Passport Holders'], ['pouches', 'Pouches']].map(([slug, label]) => Object.freeze({
-  id: slug,
-  label,
-  href: `/fashion/c/${slug}`,
-  image: `/img/partners/leather-factory/${slug}.webp`
-})));
 
-/** The range's rows: active fashion rows of the brand; a failed read counts as none. */
-async function fetchLeatherRows(client = supabase, limit = 72) {
-  const {
-    data,
-    error
-  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', LF_BRAND).eq('is_active', true).order('sort_order', {
-    ascending: true
-  }).limit(limit);
-  if (error || !Array.isArray(data)) return [];
-  return data;
-}
+/** Where "View All" goes: the link set in Storefronts, else every new arrival (/new, 2026-11-13). */
+const viewAllLink = link => link || '/new';
 
-/** The range's cards (packshots, drawn whole): null until the read answers. */
-function useLeatherRange(limit = 12) {
-  const [rows, setRows] = reactExports.useState(null);
+/** The reduced-motion check, read when a tick fires rather than when it is scheduled. */
+function useReducedMotion$1() {
+  const reduced = reactExports.useRef(false);
   reactExports.useEffect(() => {
-    let live = true;
-    fetchLeatherRows(supabase).then(r => {
-      if (live) setRows(r);
-    }, () => {
-      if (live) setRows([]);
-    });
-    return () => {
-      live = false;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => {
+      reduced.current = mq.matches;
     };
+    sync();
+    mq.addEventListener?.('change', sync);
+    return () => mq.removeEventListener?.('change', sync);
   }, []);
-  return reactExports.useMemo(() => rows ? selectWeaversRange(rows, limit).map(c => ({
-    ...c,
-    whole: true
-  })) : null, [rows, limit]);
+  return reduced;
 }
-
-/** `items` is for a test; the page passes nothing and the live catalogue is read. */
-function LeatherFactoryRange({
+function NewArrivals({
   items: given,
-  autoplayMs
-} = {}) {
-  const section = useStorefrontSection('wellness', 'leatherFactory', LF_SECTION);
-  const loaded = useLeatherRange();
+  autoplayMs = NEW_ARRIVALS_AUTOPLAY_MS
+}) {
+  const section = useStorefrontSection('wellness', 'newArrivals', NEW_ARRIVALS_SECTION);
+  const loaded = useNewArrivals();
   const items = (given ?? loaded) || [];
-  return /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
-    id: "leather",
-    label: "Leather Factory pieces",
-    section: section,
-    defaults: LF_SECTION,
-    link: section.link || LF_LISTING,
-    items: items,
-    ...(autoplayMs ? {
-      autoplayMs
-    } : {})
+  const [index, setIndex] = reactExports.useState(0);
+  const [paused, setPaused] = reactExports.useState(false);
+  const [per, setPer] = reactExports.useState(1);
+  const track = reactExports.useRef(null);
+  const reduced = useReducedMotion$1();
+  const swipe = reactExports.useRef({
+    x: null,
+    y: null,
+    moved: false
   });
-}
-function LeatherFactoryShowcase({
-  tiles = LF_TILES
-} = {}) {
-  const s = useStorefrontSection('wellness', 'leatherShowcase', LF_SHOWCASE);
-  if (s.hidden || !tiles.length) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "hx hx-wv hx-lf",
-    "aria-labelledby": "hx-lf-h",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "hx-wrap",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "hx-wv__head",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "hx-wv__copy",
-          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-wv__eyebrow",
-            children: s.eyebrow
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-            className: "hx-wv__h",
-            id: "hx-lf-h",
-            children: s.title
-          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-wv__text",
-            children: s.text
-          })]
-        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: s.link || LF_LISTING,
-          className: "hx-wv__cta",
-          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "arrowRight",
-            size: 16
-          })]
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-        className: "hx-wv__films hx-lf__tiles",
-        "aria-label": "Leather Factory categories",
-        children: tiles.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-          className: "hx-wv__film",
-          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: t.href,
-            className: "hx-wv__tile",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              className: "hx-wv__media hx-lf__media",
-              children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-                className: "hx-lf__img",
-                src: t.image,
-                alt: "",
-                width: 720,
-                height: 720,
-                loading: "lazy",
-                decoding: "async"
-              })
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              className: "hx-wv__label",
-              children: [t.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                name: "arrowRight",
-                size: 14
-              })]
-            })]
-          })
-        }, t.id))
-      })]
-    })
-  });
-}
-
-// ============================================================
-// Atomy on the wellness homepage (partner, 2026-11-11: "tie-up"). Their India
-// catalogue (skin care, hair and body, oral care, supplements, HemoHIM, teas)
-// lives in the wellness store itself, brand "Atomy", in its own categories, at
-// Atomy's own retail price. Two pieces, as for Weavers Villa and Leather Factory:
-//
-//   * the range — a sliding row of their products in stock, bestsellers first,
-//     then the categories taking turns so it is not twelve creams in a row;
-//   * the showcase — a poster band of tiles, one per kind of product, each a
-//     packshot opening that part of the range (search by brand and category:
-//     /shop?q=atomy skin care).
-//
-// Both editable in Storefronts → Wellness (hide, wording, links); nothing to show
-// renders nothing.
-// ============================================================
-const ATOMY_LISTING = '/shop?q=atomy';
-const ATOMY_RANGE_LIMIT = 12;
-const ATOMY_SECTION = Object.freeze({
-  hidden: false,
-  title: 'Atomy: Korean beauty & wellness',
-  more: 'View All',
-  link: ''
-});
-const ATOMY_SHOWCASE = Object.freeze({
-  hidden: false,
-  eyebrow: 'New on SORA Lifestyle',
-  title: 'Atomy',
-  text: 'Skin care, hair and body care, oral care, supplements and teas from the South Korean brand, at Atomy’s own prices.',
-  cta: 'Shop all Atomy',
-  link: ATOMY_LISTING
-});
-const pic = (no, file = `${no}_00.jpg`) => `https://image.atomy.com/IN/goods/${no}/${file}?w=720&h=720`;
-const ATOMY_TILES = Object.freeze([{
-  id: 'skin',
-  label: 'Skin Care',
-  href: '/shop?q=atomy%20skin%20care',
-  image: pic('D00190')
-}, {
-  id: 'hemohim',
-  label: 'HemoHIM',
-  href: '/shop?q=hemohim',
-  image: pic('D00101')
-}, {
-  id: 'supplements',
-  label: 'Supplements',
-  href: '/shop?q=atomy%20supplements',
-  image: pic('D00111')
-}, {
-  id: 'hair',
-  label: 'Hair Care',
-  href: '/shop?q=atomy%20hair%20care',
-  image: pic('D00601')
-}, {
-  id: 'body',
-  label: 'Bath & Body',
-  href: '/shop?q=atomy%20bath%20body',
-  image: pic('D00645')
-}, {
-  id: 'oral',
-  label: 'Oral & Personal Care',
-  href: '/shop?q=atomy%20personal%20care',
-  image: pic('D00510')
-}, {
-  id: 'drinks',
-  label: 'Teas & Drinks',
-  href: '/shop?q=atomy%20juices%20drinks',
-  image: pic('D00975')
-}].map(t => Object.freeze(t)));
-const isAtomy = p => String(p?.brand || '').trim().toLowerCase() === 'atomy';
-/** A card-sized copy of their picture (their CDN resizes on w and h). */
-const atomyCard = src => src ? String(src).replace(/\?w=\d+&h=\d+$/, '?w=600&h=600') : null;
-
-/**
- * The cards: { key, name, href, price, image, whole }. In stock, priced, with a picture;
- * bestsellers first, then the categories take turns, each in the catalogue's order. Pure.
- */
-function selectAtomyRange(list = [], limit = ATOMY_RANGE_LIMIT) {
-  const ok = (Array.isArray(list) ? list : []).filter(p => isAtomy(p) && p.slug && Number(p.stock) > 0 && Number(p.price) > 0 && p.image);
-  const card = p => ({
-    key: `wellness-${p.id}`,
-    name: String(p.name || '').trim(),
-    href: `/product/${p.slug}`,
-    price: Number(p.price),
-    image: atomyCard(p.image),
-    whole: true
-  });
-  const out = ok.filter(p => p.isBestseller).map(card);
-  const seen = new Set(out.map(c => c.key));
-  const lanes = new Map();
-  for (const p of ok) {
-    if (seen.has(`wellness-${p.id}`)) continue;
-    if (!lanes.has(p.category)) lanes.set(p.category, []);
-    lanes.get(p.category).push(p);
-  }
-  // The kinds people come for first; household odds and ends last.
-  const order = ['skin-care', 'supplements', 'hair-care', 'bath-body', 'juices-drinks', 'mens-care', 'wellness', 'personal-care'];
-  const rank = c => {
-    const i = order.indexOf(c);
-    return i < 0 ? order.length : i;
+  const n = section.hidden ? 0 : items.length;
+  reactExports.useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const measure = () => {
+      if (track.current) setPer(Math.max(1, parseInt(window.getComputedStyle(track.current).getPropertyValue('--per'), 10) || 1));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [n]);
+  const last = Math.max(0, n - per);
+  reactExports.useEffect(() => {
+    if (index > last) setIndex(last);
+  }, [index, last]);
+  reactExports.useEffect(() => {
+    if (last < 1 || paused) return undefined;
+    const t = setInterval(() => {
+      if (!reduced.current) setIndex(i => i >= last ? 0 : i + 1);
+    }, autoplayMs);
+    return () => clearInterval(t);
+  }, [last, paused, autoplayMs, reduced]);
+  if (n === 0) return null;
+  const step = d => setIndex(i => Math.min(last, Math.max(0, i + d)));
+  const onPointerDown = e => {
+    swipe.current = {
+      x: e.clientX,
+      y: e.clientY,
+      moved: false
+    };
   };
-  const qs = [...lanes.entries()].sort((a, b) => rank(a[0]) - rank(b[0])).map(([, q]) => q);
-  while (out.length < limit && qs.some(q => q.length)) {
-    for (const q of qs) if (q.length && out.length < limit) out.push(card(q.shift()));
-  }
-  return out.slice(0, limit);
-}
-
-/** `items` is for a test; the page passes nothing and the live catalogue is read. */
-function AtomyRange({
-  items: given,
-  autoplayMs
-} = {}) {
-  const section = useStorefrontSection('wellness', 'atomy', ATOMY_SECTION);
-  const items = given ?? selectAtomyRange(products);
-  return /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
-    id: "atomy",
-    label: "Atomy products",
-    section: section,
-    defaults: ATOMY_SECTION,
-    link: section.link || ATOMY_LISTING,
-    items: items,
-    ...(autoplayMs ? {
-      autoplayMs
-    } : {})
-  });
-}
-function AtomyShowcase({
-  tiles = ATOMY_TILES
-} = {}) {
-  const s = useStorefrontSection('wellness', 'atomyShowcase', ATOMY_SHOWCASE);
-  if (s.hidden || !tiles.length) return null;
+  const onPointerUp = e => {
+    const s = swipe.current;
+    if (s.x == null) return;
+    const dx = e.clientX - s.x,
+      dy = e.clientY - s.y;
+    swipe.current = {
+      x: null,
+      y: null,
+      moved: Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy)
+    };
+    if (swipe.current.moved) step(dx < 0 ? 1 : -1);
+  };
+  const onClickCapture = e => {
+    if (swipe.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      swipe.current.moved = false;
+    }
+  };
   return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "hx hx-wv hx-lf hx-atomy",
-    "aria-labelledby": "hx-atomy-h",
+    className: "hx hx-new",
+    "aria-labelledby": "hx-new-h",
     children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hx-wrap",
+      onMouseEnter: () => setPaused(true),
+      onMouseLeave: () => setPaused(false),
+      onFocus: () => setPaused(true),
+      onBlur: () => setPaused(false),
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "hx-wv__head",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "hx-wv__copy",
-          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-wv__eyebrow",
-            children: s.eyebrow
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-            className: "hx-wv__h",
-            id: "hx-atomy-h",
-            children: s.title
-          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-wv__text",
-            children: s.text
-          })]
-        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: s.link || ATOMY_LISTING,
-          className: "hx-wv__cta",
-          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "arrowRight",
-            size: 16
-          })]
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-        className: "hx-wv__films hx-lf__tiles",
-        "aria-label": "Atomy categories",
-        children: tiles.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-          className: "hx-wv__film",
-          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: t.href,
-            className: "hx-wv__tile",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              className: "hx-wv__media hx-lf__media",
-              children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-                className: "hx-lf__img",
-                src: t.image,
-                alt: "",
-                width: 720,
-                height: 720,
-                loading: "lazy",
-                decoding: "async"
+        className: "hx-stores__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "hx-stores__h",
+          id: "hx-new-h",
+          children: section.title
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hx-new__tools",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: viewAllLink(section.link),
+            className: "hx-more",
+            "aria-label": section.more === NEW_ARRIVALS_SECTION.more ? 'View all new arrivals' : undefined,
+            children: [section.more, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 15
+            })]
+          }), last > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            className: "hx-new__arrows",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+              type: "button",
+              "aria-label": "Previous products",
+              disabled: index === 0,
+              onClick: () => step(-1),
+              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "chevronLeft",
+                size: 18
               })
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              className: "hx-wv__label",
-              children: [t.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                name: "arrowRight",
-                size: 14
-              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+              type: "button",
+              "aria-label": "Next products",
+              disabled: index >= last,
+              onClick: () => step(1),
+              children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "chevronRight",
+                size: 18
+              })
             })]
-          })
-        }, t.id))
-      })]
-    })
-  });
-}
-
-// ============================================================
-// Taj Leather (partner, 2026-11-11: "tie-up"). Their genuine leather jackets and
-// coats live in Fashion › Men (Leather Jackets, Leather Coats) and Fashion › Women
-// (the same two), their laptop bags in Leather Goods › Laptop & Travel Bags, at Taj
-// Leather's own prices.
-//
-//   * the range — a sliding row of their jackets and coats, sub-categories taking
-//     turns (the Weavers Villa rule: selectWeaversRange), cropped toward the top so
-//     the model's face stays in frame;
-//   * the posters — Taj Leather's own campaign posters ("The Leather Edit", the
-//     women's jacket), copies served from this site (/img/partners/taj-leather),
-//     each opening its listing. Their shoe and handbag posters are not used: those
-//     products are not on SORA.
-//
-// Shown on the wellness homepage and the Fashion home; editable in Storefronts →
-// Wellness (hide, wording, links). Nothing to show renders nothing.
-// ============================================================
-const TAJ_BRAND = 'Taj Leather';
-// Their range sits in Men's and Women's (2026-11-11: the departments show it), so "all of it" is the brand's search.
-const TAJ_LISTING = '/fashion/search?q=taj%20leather';
-const TAJ_RANGE_LIMIT = 12;
-const TAJ_SECTION = Object.freeze({
-  hidden: false,
-  title: 'Leather Jackets by Taj Leather',
-  more: 'View All',
-  link: ''
-});
-const TAJ_POSTERS_SECTION = Object.freeze({
-  hidden: false,
-  eyebrow: 'New on SORA Lifestyle',
-  title: 'Taj Leather',
-  text: 'Genuine leather jackets and coats for men and women, at Taj Leather’s own prices.',
-  cta: 'Shop leather jackets',
-  link: TAJ_LISTING
-});
-const P$1 = '/img/partners/taj-leather';
-const TAJ_POSTERS = Object.freeze([Object.freeze({
-  id: 'leather-edit',
-  href: '/fashion/c/mens-leather-jackets',
-  alt: 'The Leather Edit: men’s leather jackets by Taj Leather',
-  wide: `${P$1}/leather-edit-wide.webp`,
-  tall: `${P$1}/leather-edit-tall.webp`
-}), Object.freeze({
-  id: 'womens-jacket',
-  href: '/fashion/c/womens-leather-jackets',
-  alt: 'Premium leather jacket: women’s leather jackets by Taj Leather',
-  wide: `${P$1}/womens-jacket-wide.webp`,
-  tall: null
-})]);
-
-/** The range's rows: active fashion rows of the brand; a failed read counts as none. */
-async function fetchTajRows(client = supabase, limit = 72) {
-  const {
-    data,
-    error
-  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', TAJ_BRAND).eq('is_active', true).gt('stock', 0).order('sort_order', {
-    ascending: true
-  }).limit(limit);
-  if (error || !Array.isArray(data)) return [];
-  return data;
-}
-
-/** The range's cards: null until the read answers. */
-function useTajRange(limit = TAJ_RANGE_LIMIT) {
-  const [rows, setRows] = reactExports.useState(null);
-  reactExports.useEffect(() => {
-    let live = true;
-    fetchTajRows(supabase).then(r => {
-      if (live) setRows(r);
-    }, () => {
-      if (live) setRows([]);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-  // Jackets and coats only: their laptop bags stay in Leather Goods, out of this row.
-  return reactExports.useMemo(() => rows ? selectWeaversRange(rows.filter(r => !/laptop|bag\b/i.test(String(r.name || ''))), limit).map(c => ({
-    ...c,
-    image: c.image ? String(c.image).replace(/width=\d+/, 'width=700') : c.image
-  })) : null, [rows, limit]);
-}
-
-/** `items` is for a test; the page passes nothing and the live catalogue is read. */
-function TajLeatherRange({
-  items: given,
-  autoplayMs
-} = {}) {
-  const section = useStorefrontSection('wellness', 'tajLeather', TAJ_SECTION);
-  const loaded = useTajRange();
-  const items = (given ?? loaded) || [];
-  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-    className: "hx-wv-range",
-    children: /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
-      id: "taj",
-      label: "Taj Leather jackets",
-      section: section,
-      defaults: TAJ_SECTION,
-      link: section.link || TAJ_LISTING,
-      items: items,
-      ...(autoplayMs ? {
-        autoplayMs
-      } : {})
-    })
-  });
-}
-
-/** Their posters, side by side on a wide screen, one above the other on a phone (the tall cut where there is one). */
-function TajLeatherPosters({
-  posters = TAJ_POSTERS,
-  heading = true
-} = {}) {
-  const s = useStorefrontSection('wellness', 'tajPosters', TAJ_POSTERS_SECTION);
-  if (s.hidden || !posters.length) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "hx hx-taj",
-    "aria-labelledby": heading ? 'hx-taj-h' : undefined,
-    "aria-label": heading ? undefined : 'Taj Leather',
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "hx-wrap",
-      children: [heading && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "hx-taj__head",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-taj__eyebrow",
-            children: s.eyebrow
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-            className: "hx-taj__h",
-            id: "hx-taj-h",
-            children: s.title
-          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-taj__text",
-            children: s.text
-          })]
-        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: s.link || TAJ_LISTING,
-          className: "hx-taj__cta",
-          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "arrowRight",
-            size: 16
           })]
         })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-        className: "hx-taj__posters",
-        children: posters.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-            to: p.href,
-            className: "hx-taj__poster",
-            children: /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
-              children: [p.tall && /*#__PURE__*/jsxRuntimeExports.jsx("source", {
-                media: "(max-width: 599px)",
-                srcSet: p.tall,
-                width: "900",
-                height: "1350"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-                src: p.wide,
-                alt: p.alt,
-                width: "1600",
-                height: "900",
-                loading: i === 0 ? 'eager' : 'lazy',
-                decoding: "async"
-              })]
-            })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hx-new__viewport",
+        "aria-roledescription": "carousel",
+        "aria-label": "New arrivals",
+        onPointerDown: onPointerDown,
+        onPointerUp: onPointerUp,
+        onPointerCancel: () => {
+          swipe.current = {
+            x: null,
+            y: null,
+            moved: false
+          };
+        },
+        onClickCapture: onClickCapture,
+        onScroll: e => {
+          if (e.currentTarget.scrollLeft) e.currentTarget.scrollLeft = 0;
+        },
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "hx-new__track",
+          ref: track,
+          style: {
+            '--i': index
+          },
+          children: items.map((p, i) => {
+            const inView = i >= index && i < index + per;
+            return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+              className: "hx-new__item",
+              "aria-hidden": !inView,
+              children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+                to: p.href,
+                className: "hx-new__card",
+                tabIndex: inView ? undefined : -1,
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  className: `hx-new__art${p.store === 'wellness' ? ' hx-new__art--whole' : ''}`,
+                  children: p.image && /*#__PURE__*/jsxRuntimeExports.jsx(DeferredImage, {
+                    src: p.image,
+                    alt: "",
+                    width: 600,
+                    height: 600,
+                    className: "hx-new__image"
+                  })
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  className: "hx-new__name",
+                  children: p.name
+                }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                  className: "hx-new__price",
+                  children: money(p.price)
+                })]
+              })
+            }, p.key);
           })
-        }, p.id))
-      })]
-    })
-  });
-}
-
-// ============================================================
-// Ansari Fashion, Banaras (partner, 2026-11-13: "tie-up"). Their Banarasi suit sets
-// (mostly unstitched, three pieces) and sarees live in Fashion › Women (Suits &
-// Dress Materials, Sarees), so the Women page and the saree store show them too.
-// Prices are theirs; an M.R.P. more than 60% above the price is not shown.
-//
-//   * the posters — their three category photographs (copies served from this site,
-//     /img/partners/ansari-fashion), each with our own label, opening its listing.
-//     Their sale banners ("extra 10% on prepaid" and the like) are not used: those
-//     are their store's offers, not SORA's.
-//   * the range — a sliding row of their pieces, the two categories taking turns.
-//
-// On the wellness homepage and the Fashion home; editable in Storefronts → Wellness.
-// ============================================================
-const ANSARI_BRAND = 'Ansari Fashion';
-const ANSARI_LISTING = '/fashion/search?q=ansari%20fashion';
-const ANSARI_RANGE_LIMIT = 12;
-const ANSARI_SECTION = Object.freeze({
-  hidden: false,
-  title: 'Banarasi suits & sarees by Ansari Fashion',
-  more: 'View All',
-  link: ''
-});
-const ANSARI_POSTERS_SECTION = Object.freeze({
-  hidden: false,
-  eyebrow: 'New on SORA Lifestyle',
-  title: 'Ansari Fashion, Banaras',
-  text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees, at Ansari Fashion’s own prices.',
-  cta: 'Shop Ansari Fashion',
-  link: ANSARI_LISTING
-});
-const P = '/img/partners/ansari-fashion';
-const ANSARI_POSTERS = Object.freeze([Object.freeze({
-  id: 'suits',
-  label: 'Suits & Dress Materials',
-  href: '/fashion/c/suits-dress-materials',
-  image: `${P}/suit-sets.webp`,
-  alt: 'A woman in a cream Banarasi suit with a woven dupatta'
-}), Object.freeze({
-  id: 'banarasi',
-  label: 'Banarasi Silk Suits',
-  href: '/fashion/search?q=banarasi%20silk',
-  image: `${P}/banarasi-suits.webp`,
-  alt: 'A woman in a pink Banarasi silk suit with a zari dupatta'
-}), Object.freeze({
-  id: 'sarees',
-  label: 'Sarees',
-  href: '/fashion/c/sarees',
-  image: `${P}/sarees.webp`,
-  alt: 'A woman in a Banarasi silk saree'
-})]);
-
-/** The range's rows: active, in-stock fashion rows of the brand; a failed read counts as none. */
-async function fetchAnsariRows(client = supabase, limit = 72) {
-  const {
-    data,
-    error
-  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', ANSARI_BRAND).eq('is_active', true).gt('stock', 0).order('sort_order', {
-    ascending: true
-  }).limit(limit);
-  if (error || !Array.isArray(data)) return [];
-  return data;
-}
-
-/** A card-sized copy of their picture (their CDN resizes on w-…). */
-const ansariCard = src => src ? String(src).replace(/\bw-\d+\b/, 'w-700') : src;
-
-/** The range's cards: null until the read answers. */
-function useAnsariRange(limit = ANSARI_RANGE_LIMIT) {
-  const [rows, setRows] = reactExports.useState(null);
-  reactExports.useEffect(() => {
-    let live = true;
-    fetchAnsariRows(supabase).then(r => {
-      if (live) setRows(r);
-    }, () => {
-      if (live) setRows([]);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-  return reactExports.useMemo(() => rows ? selectWeaversRange(rows, limit).map(c => ({
-    ...c,
-    image: ansariCard(c.image)
-  })) : null, [rows, limit]);
-}
-
-/** `items` is for a test; the page passes nothing and the live catalogue is read. */
-function AnsariRange({
-  items: given,
-  autoplayMs
-} = {}) {
-  const section = useStorefrontSection('wellness', 'ansari', ANSARI_SECTION);
-  const loaded = useAnsariRange();
-  const items = (given ?? loaded) || [];
-  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-    className: "hx-wv-range",
-    children: /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
-      id: "ansari",
-      label: "Ansari Fashion suits and sarees",
-      section: section,
-      defaults: ANSARI_SECTION,
-      link: section.link || ANSARI_LISTING,
-      items: items,
-      ...(autoplayMs ? {
-        autoplayMs
-      } : {})
-    })
-  });
-}
-function AnsariPosters({
-  posters = ANSARI_POSTERS
-} = {}) {
-  const s = useStorefrontSection('wellness', 'ansariPosters', ANSARI_POSTERS_SECTION);
-  if (s.hidden || !posters.length) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "hx hx-ans",
-    "aria-labelledby": "hx-ans-h",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "hx-wrap",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-        className: "hx-taj__head",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-taj__eyebrow",
-            children: s.eyebrow
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-            className: "hx-taj__h",
-            id: "hx-ans-h",
-            children: s.title
-          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            className: "hx-taj__text",
-            children: s.text
-          })]
-        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: s.link || ANSARI_LISTING,
-          className: "hx-ans__cta",
-          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-            name: "arrowRight",
-            size: 16
-          })]
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-        className: "hx-ans__posters",
-        children: posters.map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: p.href,
-            className: "hx-ans__poster",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
-              src: p.image,
-              alt: p.alt,
-              width: "900",
-              height: "1200",
-              loading: "lazy",
-              decoding: "async"
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              className: "hx-ans__label",
-              children: [p.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                name: "arrowRight",
-                size: 15
-              })]
-            })]
-          })
-        }, p.id))
+        })
       })]
     })
   });
@@ -44910,57 +44011,6 @@ function MarketplaceProductRail({
     })
   });
 }
-function FeaturedBrands({
-  brands
-}) {
-  // One brand would turn a marketplace module into a takeover. Wait until the
-  // real catalogue can support an actual comparison/discovery experience.
-  if (!Array.isArray(brands) || brands.length < 2) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "v2-sec hm-section hm-section--brands",
-    "data-home-section": "brands",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "v2-wrap",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(SectionHeading, {
-        eyebrow: "Multi-brand marketplace",
-        title: "Brands in the range",
-        copy: "A few of the labels you'll find here \u2014 the catalogue carries more."
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: `hm-brands${brands.length === 1 ? ' hm-brands--single' : ''}`,
-        children: brands.map((brand, index) => {
-          const product = brand.products[0];
-          return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: `/product/${product.slug}`,
-            className: `hm-brand hm-brand--${index + 1}`,
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-              className: "hm-brand__media",
-              children: /*#__PURE__*/jsxRuntimeExports.jsx(ProductImage, {
-                product: product,
-                frame: "v2",
-                variant: "card",
-                sizes: "(max-width: 767px) 48vw, 300px"
-              })
-            }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-              className: "hm-brand__body",
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                className: "hm-brand__kicker",
-                children: "Brand"
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("h3", {
-                children: brand.name
-              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-                className: "hm-brand__link",
-                children: ["Discover the brand ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-                  name: "arrowRight",
-                  size: 14
-                })]
-              })]
-            })]
-          }, brand.name);
-        })
-      })]
-    })
-  });
-}
 function DiscoveryEdit({
   products,
   link = '/shop'
@@ -45289,7 +44339,7 @@ const NEUTRAL_THEME = {
   background: '#F1EDE4',
   gradient: 'linear-gradient(168deg, #F6F2EA 0%, #E9E3D7 100%)'
 };
-const str$3 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
+const str$4 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
 
 /**
  * A CSS colour we are willing to inline as a style value.
@@ -45299,7 +44349,7 @@ const str$3 = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
  * quote or url() is refused rather than escaped.
  */
 function safeColor(value) {
-  const v = str$3(value, 40);
+  const v = str$4(value, 40);
   if (!v) return '';
   if (/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) return v;
   if (/^(?:rgb|hsl)a?\(\s*[\d.,%\s/deg]+\)$/i.test(v)) return v;
@@ -45314,7 +44364,7 @@ function safeColor(value) {
  * one. No url(), no var(), no expression, no nesting of other functions.
  */
 function safeGradient(value) {
-  const v = str$3(value, 240);
+  const v = str$4(value, 240);
   if (!v) return '';
   if (!/^(?:linear|radial|conic)-gradient\(/i.test(v)) return '';
   if (!v.endsWith(')')) return '';
@@ -45384,16 +44434,16 @@ function makeSpotlightId(productSlug, taken = []) {
  */
 function sanitizeSpotlightItem(raw, taken = []) {
   if (!raw || typeof raw !== 'object') return null;
-  const productSlug = str$3(raw.productSlug ?? raw.productId ?? raw.slug, 120);
+  const productSlug = str$4(raw.productSlug ?? raw.productId ?? raw.slug, 120);
   if (!productSlug) return null;
   return {
-    id: str$3(raw.id, 60) || makeSpotlightId(productSlug, taken),
+    id: str$4(raw.id, 60) || makeSpotlightId(productSlug, taken),
     productSlug,
     // Optional cutout/hero asset. Same URL policy the homepage visuals use.
     spotlightImage: safeVisualUrl(raw.spotlightImage) || '',
     // Owner-authored, and shown verbatim. Never generated from product data.
-    headline: str$3(raw.headline, 60),
-    subline: str$3(raw.subline, 90),
+    headline: str$4(raw.headline, 60),
+    subline: str$4(raw.subline, 90),
     background: safeColor(raw.background),
     gradient: safeGradient(raw.gradient),
     // Generated once by the Admin packshot preprocessor. It is deliberately
@@ -46577,9 +45627,9 @@ const CONTENT_LABELS = {
   how_to_use: 'How to use',
   specifications: 'Specifications'
 };
-const str$2 = v => (v === null || v === undefined ? '' : String(v)).trim();
+const str$3 = v => (v === null || v === undefined ? '' : String(v)).trim();
 const truthyStr = v => {
-  const s = str$2(v);
+  const s = str$3(v);
   return s.length ? s : null;
 };
 
@@ -46593,7 +45643,7 @@ function normalizeKeyClaims(value) {
   const list = Array.isArray(value) ? value
   // A tag input or a CSV cell may hand us a comma-separated string.
   : String(value).split(',');
-  const out = list.map(str$2).filter(Boolean);
+  const out = list.map(str$3).filter(Boolean);
   return arrayOrNull(out);
 }
 function normalizeBenefits(value) {
@@ -46603,7 +45653,7 @@ function normalizeBenefits(value) {
   for (const raw of value) {
     if (typeof raw === 'string') {
       // The legacy shape. Keep it readable rather than dropping the content.
-      const t = str$2(raw);
+      const t = str$3(raw);
       if (t) out.push({
         title: t,
         description: ''
@@ -46611,8 +45661,8 @@ function normalizeBenefits(value) {
       continue;
     }
     if (!raw || typeof raw !== 'object') continue;
-    const title = str$2(raw.title);
-    const description = str$2(raw.description);
+    const title = str$3(raw.title);
+    const description = str$3(raw.description);
     // A row with neither is not a benefit, it is an empty row the admin has
     // not filled in yet — dropped on save rather than stored.
     if (!title && !description) continue;
@@ -46629,7 +45679,7 @@ function normalizeIngredients(value) {
   const out = [];
   for (const raw of value) {
     if (typeof raw === 'string') {
-      const n = str$2(raw);
+      const n = str$3(raw);
       if (n) out.push({
         name: n,
         description: '',
@@ -46638,14 +45688,14 @@ function normalizeIngredients(value) {
       continue;
     }
     if (!raw || typeof raw !== 'object') continue;
-    const name = str$2(raw.name);
+    const name = str$3(raw.name);
     if (!name) continue; // an ingredient with no name is nothing
     out.push({
       name,
-      description: str$2(raw.description),
+      description: str$3(raw.description),
       // Only http(s). A relative or javascript: value must never reach an
       // <img src> on a live page.
-      image_url: /^https?:\/\//i.test(str$2(raw.image_url)) ? str$2(raw.image_url) : null
+      image_url: /^https?:\/\//i.test(str$3(raw.image_url)) ? str$3(raw.image_url) : null
     });
   }
   return out;
@@ -46655,7 +45705,7 @@ function normalizeHowToUse(value) {
   if (!Array.isArray(value)) return null;
   const out = [];
   for (const raw of value) {
-    const text = typeof raw === 'string' ? str$2(raw) : str$2(raw?.text);
+    const text = typeof raw === 'string' ? str$3(raw) : str$3(raw?.text);
     if (!text) continue;
     out.push({
       step: out.length + 1,
@@ -46667,7 +45717,7 @@ function normalizeHowToUse(value) {
 function normalizeSpecifications(value) {
   if (value === null || value === undefined) return null;
   // Accept both the stored object and the editor's row array.
-  const pairs = Array.isArray(value) ? value.map(r => [str$2(r?.key), str$2(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$2(k), str$2(v)]) : [];
+  const pairs = Array.isArray(value) ? value.map(r => [str$3(r?.key), str$3(r?.value)]) : typeof value === 'object' ? Object.entries(value).map(([k, v]) => [str$3(k), str$3(v)]) : [];
   const out = {};
   for (const [k, v] of pairs) {
     if (!k || !v) continue; // a label with no value renders as "Shelf life:"
@@ -46733,7 +45783,7 @@ function validateContent(input) {
       errors.push('Benefits: each row needs a title and description.');
       break;
     }
-    if (!str$2(b.title) && !str$2(b.description)) {
+    if (!str$3(b.title) && !str$3(b.description)) {
       errors.push('Benefits: a row is completely empty.');
       break;
     }
@@ -46743,11 +45793,11 @@ function validateContent(input) {
       errors.push('Ingredients: each row needs a name.');
       break;
     }
-    if (!str$2(i.name)) {
+    if (!str$3(i.name)) {
       errors.push('Ingredients: a row has a description but no name.');
       break;
     }
-    const url = str$2(i.image_url);
+    const url = str$3(i.image_url);
     if (url && !/^https?:\/\//i.test(url)) {
       errors.push(`Ingredients: "${url.slice(0, 30)}" is not an http(s) image URL.`);
       break;
@@ -46758,7 +45808,7 @@ function validateContent(input) {
       errors.push('How to use: each step needs text.');
       break;
     }
-    if (!str$2(s.text)) {
+    if (!str$3(s.text)) {
       errors.push('How to use: a step has no text.');
       break;
     }
@@ -46798,7 +45848,7 @@ function contentScore(product) {
     missing: CONTENT_FIELDS.filter(f => !populated.includes(f)),
     count: populated.length,
     total: CONTENT_FIELDS.length,
-    hasDescription: !!str$2(product?.description)
+    hasDescription: !!str$3(product?.description)
   };
 }
 
@@ -48515,21 +47565,31 @@ function Home() {
     className: "v2-home",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(HomeHero, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTrustStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BagReminder, {
       phone: false
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeGroup, {
+      eyebrow: "Offers",
+      title: "Deals worth grabbing"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
       wrap: "hx-wrap"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(TopDeals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(GiftShop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(TopDeals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WishlistRail, {}), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AtomyRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AtomyShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AnsariPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AnsariRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeGroup, {
+      eyebrow: "Shop by store",
+      title: "Wellness, fashion and home"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByConcerns, {}), /*#__PURE__*/jsxRuntimeExports.jsx(GiftShop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeGroup, {
+      eyebrow: "Our brands",
+      title: "The makers behind SORA"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(BrandCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeGroup, {
+      eyebrow: "For you",
+      title: "Picked for you"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WishlistRail, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
       eyebrow: "Across the catalogue",
       title: "Start here",
       products: merchandise.trending
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByConcerns, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FeaturedBrands, {
-      brands: merchandise.brands
     }), /*#__PURE__*/jsxRuntimeExports.jsx(DiscoveryEdit, {
       products: merchandise.discover,
       link: merchandise.discoverLink
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(StoreCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "popular",
       eyebrow: merchandise.popularEyebrow,
       title: merchandise.popularTitle,
@@ -51402,7 +50462,7 @@ function AppNudge({
   });
 }
 
-const HIDDEN = /^\/(admin|checkout|cart|creator|invoice|passport|login|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout)(\/|$)/;
+const HIDDEN$1 = /^\/(admin|checkout|cart|creator|invoice|passport|login|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout)(\/|$)/;
 const PRODUCT = /^\/(product|fashion\/p|homeliving\/p|grocery\/p)\/[^/]+/;
 const LISTING = /^\/(shop|category\/[^/]+|fashion\/(c\/[^/]+|search|wishlist|men|women|jewellery)|homeliving\/(category\/[^/]+|search|wishlist))\/?$/;
 
@@ -51443,7 +50503,7 @@ function SiteAssist() {
   const care = useConsumerCare();
   const [up, setUp] = reactExports.useState(false);
   const [offset, setOffset] = reactExports.useState(0);
-  const hidden = HIDDEN.test(pathname);
+  const hidden = HIDDEN$1.test(pathname);
   const [net, setNet] = reactExports.useState(null); // null, 'off' or 'back'
   useSiteLd(care?.phone || ''); // the business and its search, for search engines (pageMeta.js)
 
@@ -54700,7 +53760,7 @@ async function requireUserId() {
 }
 
 // ---------- field whitelists (prevent id/user_id injection) ----------
-function str$1(v) {
+function str$2(v) {
   return v == null ? null : String(v);
 }
 
@@ -54722,7 +53782,7 @@ function pickAddressColumns(fields = {}) {
   };
   const row = {};
   for (const [key, col] of Object.entries(map)) {
-    if (fields[key] !== undefined) row[col] = str$1(fields[key]);
+    if (fields[key] !== undefined) row[col] = str$2(fields[key]);
   }
   return row;
 }
@@ -58856,7 +57916,45 @@ function LoadMore({
   });
 }
 
-const STORES = [{
+// ============================================================
+// Skeleton loading (2026-11-13 redesign): while a product list loads, shimmering
+// card shapes in its place instead of a line of text, so the page holds its shape
+// and feels quicker. The words are still there for screen readers (role="status").
+// Styles: sora-ds.css (.sora-skel*). Nothing moves under prefers-reduced-motion.
+// ============================================================
+function SkeletonGrid({
+  count = 8,
+  label = 'Loading…',
+  className = ''
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    role: "status",
+    className: className,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "sora-sr",
+      children: label
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "sora-skel-grid",
+      "aria-hidden": "true",
+      children: Array.from({
+        length: count
+      }, (_, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        className: "sora-skel-card",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "sora-skel sora-skel--img"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "sora-skel sora-skel--line"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "sora-skel sora-skel--short"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "sora-skel sora-skel--price"
+        })]
+      }, i))
+    })]
+  });
+}
+
+const STORES$1 = [{
   id: 'all',
   label: 'All'
 }, {
@@ -59056,7 +58154,7 @@ function ShareOffer() {
 }
 function Offers() {
   const [params, setParams] = useSearchParams();
-  const store = STORES.some(s => s.id === params.get('store')) ? params.get('store') : 'all';
+  const store = STORES$1.some(s => s.id === params.get('store')) ? params.get('store') : 'all';
   const [cat, setCat] = reactExports.useState(null);
   reactExports.useEffect(() => {
     let on = true;
@@ -59078,7 +58176,7 @@ function Offers() {
     description: 'Every product on offer at SORA LIFESTYLE: wellness, fashion and home, biggest discounts first.',
     path: '/offers'
   });
-  const counts = Object.fromEntries(STORES.map(s => [s.id, s.id === 'all' ? all.length : all.filter(d => d.store === s.id).length]));
+  const counts = Object.fromEntries(STORES$1.map(s => [s.id, s.id === 'all' ? all.length : all.filter(d => d.store === s.id).length]));
   const budget = id => {
     const next = new URLSearchParams(params);
     if (!id) next.delete('under');else next.set('under', id);
@@ -59126,7 +58224,7 @@ function Offers() {
         className: "hx-offers__tabs",
         role: "tablist",
         "aria-label": "Store",
-        children: STORES.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+        children: STORES$1.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
           type: "button",
           role: "tab",
           "aria-selected": store === s.id,
@@ -59147,10 +58245,8 @@ function Offers() {
           onClick: () => budget(b.id),
           children: b.label
         }, b.id || 'any'))
-      }), cat === null && shownDeals.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "hx-offers__empty",
-        role: "status",
-        children: "Loading the offers\u2026"
+      }), cat === null && shownDeals.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
+        label: "Loading the offers\u2026"
       }) : shownDeals.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "hx-offers__empty",
         children: "Nothing on offer here right now. New deals appear the moment they go live."
@@ -59200,90 +58296,8 @@ function Offers() {
   });
 }
 
-// ============================================================
-// Our Brands (2026-11-13: more features) — the partner brands sold on SORA
-// Lifestyle, one card each: who they are, what of theirs is here, where to shop it.
-// The links are the same listings the homepage sections open (the brand files'
-// *_LISTING constants; test-more-features-6 keeps them in step). Pictures are the
-// copies already served from this site, or the brand's own product shots.
-// Nothing here prices or ranks anything.
-// ============================================================
-const BRANDS = Object.freeze([Object.freeze({
-  id: 'biosash',
-  name: 'Biosash',
-  store: 'Wellness',
-  href: '/shop',
-  image: null,
-  imageFrom: 'biosash',
-  text: 'Ayurvedic and herbal care: oils, powders, juices and supplements for everyday wellness.'
-}), Object.freeze({
-  id: 'atomy',
-  name: 'Atomy',
-  store: 'Wellness',
-  href: '/shop?q=atomy',
-  image: 'https://image.atomy.com/IN/goods/D00190/D00190_00.jpg?w=720&h=720',
-  text: 'Korean skin care, HemoHIM, supplements, hair and personal care.'
-}), Object.freeze({
-  id: 'weavers-villa',
-  catalogueBrand: 'Weavers Villa',
-  name: 'Weavers Villa',
-  store: 'Fashion · Home',
-  href: '/fashion/c/shawls-stoles',
-  image: '/video/weavers-villa/0e053f13.webp',
-  text: 'Handwoven shawls, stoles, dupattas and Kullu weaves, plus table covers for the home.'
-}), Object.freeze({
-  id: 'leather-factory',
-  catalogueBrand: 'Leather Factory',
-  name: 'Leather Factory',
-  store: 'Fashion',
-  href: '/fashion/c/leather-goods',
-  image: '/img/partners/leather-factory/handbags.webp',
-  text: 'Leather handbags, wallets, belts, sling bags and travel bags.'
-}), Object.freeze({
-  id: 'taj-leather',
-  catalogueBrand: 'Taj Leather',
-  name: 'Taj Leather',
-  store: 'Fashion',
-  href: '/fashion/search?q=taj%20leather',
-  image: 'https://cdn.shopify.com/s/files/1/0780/8437/4633/files/kbxt1xR35kfGamD.jpg?width=800',
-  text: 'Genuine leather jackets and coats for men and women.'
-}), Object.freeze({
-  id: 'ansari-fashion',
-  catalogueBrand: 'Ansari Fashion',
-  name: 'Ansari Fashion',
-  store: 'Fashion',
-  href: '/fashion/search?q=ansari%20fashion',
-  image: '/img/partners/ansari-fashion/suit-sets.webp',
-  text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees from Banaras.'
-})]);
-
-/** A brand's picture: its own, or for Biosash the first in-stock Biosash product shot. Pure. */
-function brandImage(brand, products = [], isBrand = () => false) {
-  if (!brand) return null;
-  if (brand.image) return brand.image;
-  const hit = (Array.isArray(products) ? products : []).find(p => p && p.image && Number(p.stock) > 0 && isBrand(p));
-  return hit ? hit.image : null;
-}
-
-/**
- * How many products each brand has live (2026-11-13: new features): wellness brands
- * counted from the loaded catalogue (`brandOf` names a product's brand), the rest from
- * the catalogue table (`catalogueCounts`, brand → count). null when not known. Pure.
- */
-function brandCounts(products = [], brandOf = () => '', catalogueCounts = {}) {
-  const out = {};
-  for (const b of BRANDS) {
-    if (b.catalogueBrand) {
-      out[b.id] = Number.isFinite(catalogueCounts[b.catalogueBrand]) ? catalogueCounts[b.catalogueBrand] : null;
-      continue;
-    }
-    out[b.id] = (Array.isArray(products) ? products : []).filter(p => p && p.slug && brandOf(p).toLowerCase() === b.name.toLowerCase()).length || null;
-  }
-  return out;
-}
-
 const isBiosash = p => productBrandName(p).toLowerCase() === 'biosash';
-const brandOf = p => String(p?.brand || productBrandName(p) || '').trim();
+const brandOf$1 = p => String(p?.brand || productBrandName(p) || '').trim();
 
 /** Live product counts of the partner brands kept in the Fashion / Home & Living catalogue; {} until read. */
 function useCatalogueCounts() {
@@ -59307,7 +58321,7 @@ function useCatalogueCounts() {
   return counts;
 }
 function Brands() {
-  const counts = brandCounts(products, brandOf, useCatalogueCounts());
+  const counts = brandCounts(products, brandOf$1, useCatalogueCounts());
   usePageMeta({
     title: 'Our brands',
     description: 'The brands you can shop at SORA LIFESTYLE: Biosash, Atomy, Weavers Villa, Leather Factory, Taj Leather and Ansari Fashion.',
@@ -59341,7 +58355,7 @@ function Brands() {
           const img = brandImage(b, products, isBiosash);
           return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
             children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-              to: b.href,
+              to: b.page,
               className: "hx-brands__card",
               children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
                 className: `hx-brands__img${b.imageFrom ? ' is-whole' : ''}`,
@@ -59826,10 +58840,8 @@ function NewArrivalsPage() {
             children: counts[s.id]
           }) : null]
         }, s.id))
-      }), all === null ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "hx-offers__empty",
-        role: "status",
-        children: "Loading the new arrivals\u2026"
+      }), all === null ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
+        label: "Loading the new arrivals\u2026"
       }) : list.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "hx-offers__empty",
         children: "Nothing new here this week. New pieces appear the moment they go live."
@@ -59908,7 +58920,7 @@ const WEDDING_SECTIONS = Object.freeze([{
   slugs: ['shawl-gift-sets', 'leather-gift-sets']
 }]);
 const WEDDING_PER_SECTION = 8;
-const inStock = r => {
+const inStock$1 = r => {
   const vs = (Array.isArray(r.variants) ? r.variants : []).filter(v => v && v.is_active !== false);
   return vs.length ? vs.some(v => Number(v.stock) > 0) : Number(r.stock) > 0;
 };
@@ -59920,7 +58932,7 @@ function weddingSections(rows, per = WEDDING_PER_SECTION) {
     const slug = r?.category?.slug;
     const image = Array.isArray(r?.images) ? r.images.find(Boolean) : null;
     const price = cataloguePrice(r || {});
-    if (!slug || !r.slug || !image || !(price > 0) || r.is_demo || !inStock(r)) continue;
+    if (!slug || !r.slug || !image || !(price > 0) || r.is_demo || !inStock$1(r)) continue;
     if (!bySlug.has(slug)) bySlug.set(slug, []);
     bySlug.get(slug).push({
       key: `fashion-${r.id}`,
@@ -60010,10 +59022,8 @@ function WeddingEdit() {
             })
           }, s.id))
         })]
-      }), sections === null ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "hx-offers__empty",
-        role: "status",
-        children: "Loading the edit\u2026"
+      }), sections === null ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
+        label: "Loading the edit\u2026"
       }) : sections.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
         className: "hx-offers__empty",
         children: ["The edit is being put together. ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
@@ -60094,6 +59104,634 @@ function WeddingStrip() {
         size: 16
       })]
     })]
+  });
+}
+
+const Ctx = /*#__PURE__*/reactExports.createContext(null);
+let cache = null; // { categories, products } — one fetch per session
+
+function shape$1(categories, products) {
+  const tree = buildTree(categories);
+  const views = (Array.isArray(products) ? products : []).filter(p => p && p.is_active !== false).map(p => productView(p, p.fashion_variants));
+  return {
+    tree,
+    views,
+    bySlug: new Map(views.map(v => [v.slug, v])),
+    byId: new Map(views.map(v => [v.id, v]))
+  };
+}
+function FashionCatalogueProvider({
+  initial = null,
+  children
+}) {
+  const [state, setState] = reactExports.useState(() => {
+    if (initial) return {
+      status: 'ready',
+      error: null,
+      ...shape$1(initial.categories, initial.products)
+    };
+    if (cache) return {
+      status: 'ready',
+      error: null,
+      ...shape$1(cache.categories, cache.products)
+    };
+    return {
+      status: 'loading',
+      error: null,
+      ...shape$1([], [])
+    };
+  });
+  reactExports.useEffect(() => {
+    if (initial || cache) return undefined;
+    let alive = true;
+    Promise.all([getFashionCategories(), getFashionProducts()]).then(([categories, products]) => {
+      cache = {
+        categories,
+        products
+      };
+      if (alive) setState({
+        status: 'ready',
+        error: null,
+        ...shape$1(categories, products)
+      });
+    }).catch(e => {
+      if (alive) setState(s => ({
+        ...s,
+        status: 'error',
+        error: e?.message || 'Could not load the fashion catalogue'
+      }));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [initial]);
+  const value = reactExports.useMemo(() => state, [state]);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Ctx.Provider, {
+    value: value,
+    children: children
+  });
+}
+function useFashionCatalogue() {
+  const v = reactExports.useContext(Ctx);
+  if (!v) throw new Error('useFashionCatalogue outside FashionCatalogueProvider');
+  return v;
+}
+
+// ============================================================
+// All categories (2026-11-13 redesign): every store's categories on one page, each
+// with a picture — the category's own picture when it has one, else the first
+// product of that category (or of anything under it). A category with no products
+// anywhere under it is left out. Pure; the page (AllCategories.jsx) passes the data.
+// ============================================================
+
+/** Fashion: the roots, each with its sub-categories. tree: fashion.js buildTree; views: fashion product views. */
+function fashionGroups(tree, views) {
+  if (!tree || !Array.isArray(tree.roots)) return [];
+  const firstImage = new Map();
+  const count = new Map();
+  for (const v of Array.isArray(views) ? views : []) {
+    if (!v?.category_id) continue;
+    for (const a of tree.ancestors(v.category_id)) {
+      count.set(a.id, (count.get(a.id) || 0) + 1);
+      if (v.image && !firstImage.has(a.id)) firstImage.set(a.id, v.image);
+    }
+  }
+  const tile = n => ({
+    key: `fashion-${n.id}`,
+    name: n.name,
+    href: `/fashion/c/${n.slug}`,
+    image: n.image_url || firstImage.get(n.id) || null,
+    count: count.get(n.id) || 0
+  });
+  return tree.roots.filter(r => r.is_active !== false && count.get(r.id)).map(r => ({
+    ...tile(r),
+    children: tree.children(r.id).filter(c => c.is_active !== false && count.get(c.id)).map(tile)
+  }));
+}
+
+/** A flat store (wellness, Home & Living): categories with the first product picture and a count. */
+function flatTiles(categories, products, {
+  catOf,
+  imageOf,
+  href,
+  key
+}) {
+  const firstImage = new Map();
+  const count = new Map();
+  for (const p of Array.isArray(products) ? products : []) {
+    const c = catOf(p);
+    if (!c) continue;
+    count.set(c, (count.get(c) || 0) + 1);
+    const img = imageOf(p);
+    if (img && !firstImage.has(c)) firstImage.set(c, img);
+  }
+  return (Array.isArray(categories) ? categories : []).filter(c => count.get(key(c))).map(c => ({
+    key: `${href(c)}`,
+    name: c.name,
+    href: href(c),
+    image: c.image_url || firstImage.get(key(c)) || null,
+    count: count.get(key(c))
+  }));
+}
+
+function Tile({
+  t,
+  small = false
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: t.href,
+      className: `sora-cat${small ? ' sora-cat--sm' : ''}`,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "sora-cat__img",
+        children: t.image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: t.image,
+          alt: "",
+          width: "240",
+          height: "240",
+          loading: "lazy",
+          decoding: "async"
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "sora-cat__ph",
+          "aria-hidden": "true",
+          children: t.name.slice(0, 1)
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "sora-cat__name",
+        children: t.name
+      }), t.count ? /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "sora-cat__count",
+        children: [t.count, " ", t.count === 1 ? 'product' : 'products']
+      }) : null]
+    })
+  });
+}
+function FashionSection() {
+  const {
+    status,
+    tree,
+    views
+  } = useFashionCatalogue();
+  const groups = fashionGroups(tree, views);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "sora-cats__store",
+    id: "cats-fashion",
+    "aria-labelledby": "cats-fashion-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "sora-cats__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        id: "cats-fashion-h",
+        children: "Fashion"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/fashion",
+        children: ["Visit the store ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 14
+        })]
+      })]
+    }), status === 'loading' && !groups.length ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
+      count: 6,
+      label: "Loading the Fashion categories\u2026"
+    }) : groups.map(g => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "sora-cats__group",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h3", {
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: g.href,
+          children: [g.name, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "chevronRight",
+            size: 14
+          })]
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "sora-cats__grid",
+        children: (g.children.length ? g.children : [g]).map(t => /*#__PURE__*/jsxRuntimeExports.jsx(Tile, {
+          t: t,
+          small: true
+        }, t.key))
+      })]
+    }, g.key))]
+  });
+}
+function HomeLivingSection() {
+  const {
+    status,
+    categories,
+    products
+  } = useHomeLivingCatalogue();
+  const tiles = flatTiles(categories, products, {
+    catOf: p => p.category_id,
+    imageOf: p => p.images?.[0],
+    href: c => `/homeliving/category/${c.slug}`,
+    key: c => c.id
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "sora-cats__store",
+    id: "cats-homeliving",
+    "aria-labelledby": "cats-homeliving-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "sora-cats__head",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        id: "cats-homeliving-h",
+        children: "Home & Living"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/homeliving",
+        children: ["Visit the store ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 14
+        })]
+      })]
+    }), status === 'loading' && !tiles.length ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
+      count: 4,
+      label: "Loading the Home & Living categories\u2026"
+    }) : /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "sora-cats__grid",
+      children: tiles.map(t => /*#__PURE__*/jsxRuntimeExports.jsx(Tile, {
+        t: t
+      }, t.key))
+    })]
+  });
+}
+function AllCategories() {
+  const [params] = useSearchParams();
+  const want = params.get('store');
+  usePageMeta({
+    title: 'All categories',
+    description: 'Every category at SORA LIFESTYLE: wellness, fashion and home, in one place.',
+    path: '/categories'
+  });
+  const wellness = flatTiles(categories, products, {
+    catOf: p => p.category,
+    imageOf: p => p.image,
+    href: c => `/category/${c.slug}`,
+    key: c => c.slug
+  });
+  reactExports.useEffect(() => {
+    if (!want) return undefined;
+    const t = setTimeout(() => document.getElementById(`cats-${want}`)?.scrollIntoView({
+      block: 'start'
+    }), 400);
+    return () => clearTimeout(t);
+  }, [want]);
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx sora-cats",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/",
+          children: "Home"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "All categories"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "hx-offers__h",
+        children: "All categories"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-offers__lede",
+        children: "Everything at SORA LIFESTYLE, store by store."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "sora-cats__jump",
+        "aria-label": "Stores",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("a", {
+          href: "#cats-wellness",
+          children: "Wellness"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+          href: "#cats-fashion",
+          children: "Fashion"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+          href: "#cats-homeliving",
+          children: "Home & Living"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/grocery",
+          children: "Grocery"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/lifestyle",
+          children: "Lifestyle"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+        className: "sora-cats__store",
+        id: "cats-wellness",
+        "aria-labelledby": "cats-wellness-h",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "sora-cats__head",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            id: "cats-wellness-h",
+            children: "Wellness & beauty"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/shop",
+            children: ["Visit the store ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 14
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "sora-cats__grid",
+          children: wellness.map(t => /*#__PURE__*/jsxRuntimeExports.jsx(Tile, {
+            t: t
+          }, t.key))
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionCatalogueProvider, {
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(FashionSection, {})
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingSection, {})]
+    })
+  });
+}
+
+// ============================================================
+// A brand's own page (/brands/:id, 2026-11-13 redesign). The partner brands kept in
+// the Fashion / Home & Living catalogue are read by their brand name; the wellness
+// brands (Biosash, Atomy) come from the loaded wellness catalogue. Only what can be
+// bought: active, in stock, priced, with a picture. An M.R.P. more than 60% above
+// the price is not shown (the partners' rule since their tie-ups).
+// ============================================================
+const BRAND_SORTS = [{
+  id: 'featured',
+  label: 'Featured'
+}, {
+  id: 'new',
+  label: 'Newest'
+}, {
+  id: 'low',
+  label: 'Price: low to high'
+}, {
+  id: 'high',
+  label: 'Price: high to low'
+}];
+const inStock = r => {
+  const vs = (Array.isArray(r.variants) ? r.variants : []).filter(v => v && v.is_active !== false);
+  return vs.length ? vs.some(v => Number(v.stock) > 0) : Number(r.stock) > 0;
+};
+const showMrp = (price, mrp) => mrp > price && (mrp - price) / mrp <= 0.6;
+
+/** Catalogue rows → cards. Pure. */
+function catalogueBrandCards(rows) {
+  return (Array.isArray(rows) ? rows : []).flatMap((r, i) => {
+    const image = Array.isArray(r?.images) ? r.images.find(Boolean) : null;
+    const price = cataloguePrice(r || {});
+    if (!r?.slug || !image || !(price > 0) || r.is_demo || !inStock(r) || r.store !== 'fashion' && r.store !== 'homeliving') return [];
+    const mrp = Number(r.mrp) || 0;
+    return [{
+      key: `${r.store}-${r.id}`,
+      name: String(r.name || '').trim(),
+      image,
+      price,
+      mrp: showMrp(price, mrp) ? mrp : 0,
+      href: r.store === 'fashion' ? `/fashion/p/${r.slug}` : `/homeliving/p/${r.slug}`,
+      category: r.category?.name || '',
+      at: Date.parse(r.created_at || '') || 0,
+      order: i
+    }];
+  });
+}
+
+/** Wellness products of a brand → cards. Pure. */
+function wellnessBrandCards(products, isBrand) {
+  return (Array.isArray(products) ? products : []).flatMap((p, i) => {
+    if (!p?.slug || !isBrand(p) || !(Number(p.stock) > 0) || !(Number(p.price) > 0) || !p.image) return [];
+    const price = Number(p.price);
+    const mrp = Number(p.mrp) || 0;
+    return [{
+      key: `wellness-${p.id}`,
+      name: String(p.name || '').trim(),
+      image: p.image,
+      price,
+      mrp: showMrp(price, mrp) ? mrp : 0,
+      href: `/product/${p.slug}`,
+      category: p.categoryName || p.category || '',
+      at: 0,
+      order: i,
+      whole: true
+    }];
+  });
+}
+
+/** Filter by category, then sort. Pure. */
+function arrangeBrandCards(cards, {
+  category = '',
+  sort = 'featured'
+} = {}) {
+  const list = category ? cards.filter(c => c.category === category) : [...cards];
+  if (sort === 'low') list.sort((a, b) => a.price - b.price || a.order - b.order);else if (sort === 'high') list.sort((a, b) => b.price - a.price || a.order - b.order);else if (sort === 'new') list.sort((a, b) => b.at - a.at || a.order - b.order);else {
+    // Featured: the brand's biggest categories first (a jacket maker opens on jackets), the catalogue's order within.
+    const rank = new Map(brandCategories(list).map((c, i) => [c.name, i]));
+    list.sort((a, b) => (rank.get(a.category) ?? 99) - (rank.get(b.category) ?? 99) || a.order - b.order);
+  }
+  return list;
+}
+
+/** The categories present, most products first. Pure. */
+function brandCategories(cards) {
+  const n = new Map();
+  for (const c of cards) if (c.category) n.set(c.category, (n.get(c.category) || 0) + 1);
+  return [...n.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name, count]) => ({
+    name,
+    count
+  }));
+}
+async function fetchBrandRows(brand, client = supabase) {
+  const rows = [];
+  for (let from = 0; from < 3000; from += 1000) {
+    const {
+      data,
+      error
+    } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, stock, is_demo, created_at, sort_order, category:catalogue_categories(name), variants:catalogue_variants(stock, is_active)').eq('brand', brand).eq('is_active', true).in('store', ['fashion', 'homeliving']).order('sort_order', {
+      ascending: true
+    }).order('id', {
+      ascending: true
+    }).range(from, from + 999);
+    if (error || !Array.isArray(data)) break;
+    rows.push(...data);
+    if (data.length < 1000) break;
+  }
+  return rows;
+}
+
+/** The brand's cards: null while loading. */
+function useCatalogueBrand(brand) {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    if (!brand) {
+      setRows([]);
+      return undefined;
+    }
+    let live = true;
+    setRows(null);
+    fetchBrandRows(brand).then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, [brand]);
+  return reactExports.useMemo(() => rows ? catalogueBrandCards(rows) : null, [rows]);
+}
+
+const brandOf = p => String(p?.brand || productBrandName(p) || '').trim().toLowerCase();
+function BrandPage() {
+  const {
+    id
+  } = useParams();
+  const brand = BRANDS.find(b => b.id === id);
+  const [params, setParams] = useSearchParams();
+  const fromCatalogue = useCatalogueBrand(brand?.catalogueBrand || '');
+  const wellness = brand && !brand.catalogueBrand ? wellnessBrandCards(products.map(p => ({
+    ...p,
+    categoryName: categoryBySlug[p.category]?.name || ''
+  })), p => brandOf(p) === brand.name.toLowerCase()) : null;
+  const cards = brand?.catalogueBrand ? fromCatalogue : wellness;
+  const category = params.get('cat') || '';
+  const sort = BRAND_SORTS.some(s => s.id === params.get('sort')) ? params.get('sort') : 'featured';
+  const shown = cards ? arrangeBrandCards(cards, {
+    category,
+    sort
+  }) : [];
+  const paging = useShowMore(shown.length, `${id}|${category}|${sort}`);
+  usePageMeta({
+    title: brand ? brand.name : 'Brand',
+    description: brand ? `${brand.name} at SORA LIFESTYLE. ${brand.text}` : '',
+    path: `/brands/${id}`
+  }, [id]);
+  if (!brand) return /*#__PURE__*/jsxRuntimeExports.jsx(NotFound, {});
+  const cats = cards ? brandCategories(cards) : [];
+  const set = (k, v) => {
+    const next = new URLSearchParams(params);
+    if (!v || v === 'featured') next.delete(k);else next.set(k, v);
+    setParams(next, {
+      replace: true
+    });
+  };
+  const hero = brandImage(brand, products, p => brandOf(p) === brand.name.toLowerCase());
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: `hx sora-brand${brand.luxe ? ' sora-brand--luxe' : ''}`,
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/",
+          children: "Home"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/brands",
+          children: "Our brands"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: brand.name
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "sora-brand__hero",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+          className: `sora-brand__img${brand.imageFrom ? ' is-whole' : ''}`,
+          children: hero && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: hero,
+            alt: "",
+            width: "900",
+            height: "600",
+            decoding: "async"
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "sora-brand__copy",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            className: "sora-brand__eyebrow",
+            children: [brand.store, " \xB7 on SORA LIFESTYLE"]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+            children: brand.name
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "sora-brand__story",
+            children: brand.story
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "sora-brand__count",
+            children: cards === null ? 'Loading the range…' : `${cards.length} ${cards.length === 1 ? 'product' : 'products'} available`
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "sora-brand__bar",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "sora-brand__cats",
+          role: "group",
+          "aria-label": "Category",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            "aria-pressed": !category,
+            className: `hx-offers__chip${!category ? ' is-on' : ''}`,
+            onClick: () => set('cat', ''),
+            children: "All"
+          }), cats.map(c => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+            type: "button",
+            "aria-pressed": category === c.name,
+            className: `hx-offers__chip${category === c.name ? ' is-on' : ''}`,
+            onClick: () => set('cat', c.name),
+            children: [c.name, " ", /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+              children: c.count
+            })]
+          }, c.name))]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+          className: "sora-brand__sort",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: "Sort"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("select", {
+            value: sort,
+            onChange: e => set('sort', e.target.value),
+            children: BRAND_SORTS.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("option", {
+              value: s.id,
+              children: s.label
+            }, s.id))
+          })]
+        })]
+      }), cards === null ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
+        label: `Loading ${brand.name}…`
+      }) : shown.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "hx-offers__empty",
+        children: ["Nothing of ", brand.name, "\u2019s is in stock right now. New pieces appear the moment they go live."]
+      }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "hx-offers__grid",
+          children: shown.slice(0, paging.shown).map((c, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+              to: c.href,
+              className: "hx-deals__card",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: `hx-deals__img${c.whole ? ' sora-brand__whole' : ''}`,
+                children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                  src: c.image,
+                  alt: "",
+                  width: "300",
+                  height: "300",
+                  loading: i < 8 ? 'eager' : 'lazy',
+                  decoding: "async"
+                })
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-deals__name",
+                children: c.name
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                className: "hx-deals__price",
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                  children: money(c.price)
+                }), c.mrp ? /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+                  children: money(c.mrp)
+                }) : null]
+              })]
+            })
+          }, c.key))
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(LoadMore, {
+          shown: paging.shown,
+          total: shown.length,
+          onMore: paging.more
+        })]
+      })]
+    })
   });
 }
 
@@ -69312,76 +68950,6 @@ function useFashionWishlist() {
   };
 }
 
-const Ctx = /*#__PURE__*/reactExports.createContext(null);
-let cache = null; // { categories, products } — one fetch per session
-
-function shape$1(categories, products) {
-  const tree = buildTree(categories);
-  const views = (Array.isArray(products) ? products : []).filter(p => p && p.is_active !== false).map(p => productView(p, p.fashion_variants));
-  return {
-    tree,
-    views,
-    bySlug: new Map(views.map(v => [v.slug, v])),
-    byId: new Map(views.map(v => [v.id, v]))
-  };
-}
-function FashionCatalogueProvider({
-  initial = null,
-  children
-}) {
-  const [state, setState] = reactExports.useState(() => {
-    if (initial) return {
-      status: 'ready',
-      error: null,
-      ...shape$1(initial.categories, initial.products)
-    };
-    if (cache) return {
-      status: 'ready',
-      error: null,
-      ...shape$1(cache.categories, cache.products)
-    };
-    return {
-      status: 'loading',
-      error: null,
-      ...shape$1([], [])
-    };
-  });
-  reactExports.useEffect(() => {
-    if (initial || cache) return undefined;
-    let alive = true;
-    Promise.all([getFashionCategories(), getFashionProducts()]).then(([categories, products]) => {
-      cache = {
-        categories,
-        products
-      };
-      if (alive) setState({
-        status: 'ready',
-        error: null,
-        ...shape$1(categories, products)
-      });
-    }).catch(e => {
-      if (alive) setState(s => ({
-        ...s,
-        status: 'error',
-        error: e?.message || 'Could not load the fashion catalogue'
-      }));
-    });
-    return () => {
-      alive = false;
-    };
-  }, [initial]);
-  const value = reactExports.useMemo(() => state, [state]);
-  return /*#__PURE__*/jsxRuntimeExports.jsx(Ctx.Provider, {
-    value: value,
-    children: children
-  });
-}
-function useFashionCatalogue() {
-  const v = reactExports.useContext(Ctx);
-  if (!v) throw new Error('useFashionCatalogue outside FashionCatalogueProvider');
-  return v;
-}
-
 const SEARCH_PLACEHOLDER$2 = 'Search for fashion, lifestyle and more…';
 
 /** The delivery strip under the search bar — the admin's (Storefronts → Fashion → strips); this is its built-in content. */
@@ -69994,6 +69562,13 @@ function Drawer$3({
     })]
   });
 }
+function FashionTabBar() {
+  const wish = useFashionWishlist();
+  return /*#__PURE__*/jsxRuntimeExports.jsx(MobileTabBar, {
+    store: "fashion",
+    savedCount: wish.count
+  });
+}
 function Shell() {
   const [menu, setMenu] = reactExports.useState(false);
   const {
@@ -70012,7 +69587,7 @@ function Shell() {
     }), /*#__PURE__*/jsxRuntimeExports.jsx("main", {
       className: "fs-main",
       children: /*#__PURE__*/jsxRuntimeExports.jsx(Outlet, {})
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(Footer, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Footer, {}), !/^\/fashion\/p\//.test(pathname) && /*#__PURE__*/jsxRuntimeExports.jsx(FashionTabBar, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Toasts, {})]
   });
 }
 function FashionLayout({
@@ -70320,11 +69895,11 @@ function FashionProductCard({
     "data-product": view.slug,
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-card__media",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
         to: href,
         className: "fs-card__img",
         "aria-label": view.name,
-        children: view.image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+        children: [view.image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
           src: view.image,
           alt: "",
           loading: mediaLoading,
@@ -70335,7 +69910,15 @@ function FashionProductCard({
           className: "fs-card__noimg",
           "aria-hidden": "true",
           children: view.name.slice(0, 1)
-        })
+        }), view.image && view.images?.[1] && view.images[1] !== view.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          className: "fs-card__alt",
+          src: view.images[1],
+          alt: "",
+          loading: "lazy",
+          decoding: "async",
+          width: "600",
+          height: "600"
+        })]
       }), out ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "fs-badge fs-badge--out",
         children: "Sold out"
@@ -70388,8 +69971,8 @@ function FashionProductCard({
           to: href,
           children: view.name
         })
-      }), layout === 'list' && view.brand && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        className: "fs-card__brand",
+      }), view.brand && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: `fs-card__brand${layout === 'list' ? '' : ' fs-card__brand--grid'}`,
         children: view.brand
       }), view.reviewCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
         className: "fs-rating",
@@ -70467,6 +70050,427 @@ function BudgetChips({
         })
       }, b.id))
     })]
+  });
+}
+
+const WEAVERS_RANGE_LIMIT = 12;
+
+/** The films, in the order they play along the row, each with where its tile opens. */
+Object.freeze([{
+  id: '0e053f13',
+  label: "Women's Shawls",
+  href: '/fashion/c/womens-shawls'
+}, {
+  id: '9530163f',
+  label: "Men's Shawls",
+  href: '/fashion/c/mens-shawls'
+}, {
+  id: '4f1440d9',
+  label: 'Dupattas & Phulkari',
+  href: '/fashion/c/dupattas-phulkari'
+}, {
+  id: '8a9a44c5',
+  label: 'Stoles',
+  href: '/fashion/c/stoles'
+}, {
+  id: '913fba8f',
+  label: 'Embroidered Shawls',
+  href: '/fashion/c/womens-shawls'
+}, {
+  id: 'c4953552',
+  label: 'Mufflers & Caps',
+  href: '/fashion/c/mufflers-caps'
+}, {
+  id: '1af80d20',
+  label: 'Table Covers',
+  href: '/homeliving/category/table-covers'
+}, {
+  id: '283b0a85',
+  label: 'Kullu Shawls',
+  href: '/fashion/c/womens-shawls'
+}, {
+  id: '6e5c05cd',
+  label: 'Statement Shawls',
+  href: '/fashion/c/womens-shawls'
+}, {
+  id: '8b4ab5ca',
+  label: 'Gift Box Sets',
+  href: '/fashion/c/shawl-gift-sets'
+}].map(f => Object.freeze({
+  ...f,
+  video: `/video/weavers-villa/${f.id}.mp4`,
+  poster: `/video/weavers-villa/${f.id}.webp`
+})));
+const str$1 = v => String(v ?? '').trim();
+
+/** A card-sized copy of a partner picture: their CDN resizes on `width`. */
+const cardImage = src => src ? String(src).replace(/([?&])width=\d+/, '$1width=700') : null;
+
+/**
+ * The cards: { key, name, href, price, image }. Sub-categories take turns, each
+ * keeping the catalogue's order; a row without a slug, a price or a picture is left out.
+ */
+function selectWeaversRange(rows = [], limit = WEAVERS_RANGE_LIMIT) {
+  const queues = new Map();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (row?.store !== 'fashion' || !str$1(row.slug)) continue;
+    const price = cataloguePrice(row);
+    const image = Array.isArray(row.images) ? row.images.find(Boolean) : null;
+    if (!(price > 0) || !image) continue;
+    const k = row.category_id ?? 'none';
+    if (!queues.has(k)) queues.set(k, []);
+    queues.get(k).push({
+      key: `fashion-${row.id}`,
+      name: str$1(row.name),
+      href: `/fashion/p/${row.slug}`,
+      price,
+      image: cardImage(image)
+    });
+  }
+  const lanes = [...queues.values()];
+  const out = [];
+  while (out.length < limit && lanes.some(q => q.length)) {
+    for (const q of lanes) if (q.length && out.length < limit) out.push(q.shift());
+  }
+  return out;
+}
+
+// ============================================================
+// Taj Leather (partner, 2026-11-11: "tie-up"). Their genuine leather jackets and
+// coats live in Fashion › Men (Leather Jackets, Leather Coats) and Fashion › Women
+// (the same two), their laptop bags in Leather Goods › Laptop & Travel Bags, at Taj
+// Leather's own prices.
+//
+//   * the range — a sliding row of their jackets and coats, sub-categories taking
+//     turns (the Weavers Villa rule: selectWeaversRange), cropped toward the top so
+//     the model's face stays in frame;
+//   * the posters — Taj Leather's own campaign posters ("The Leather Edit", the
+//     women's jacket), copies served from this site (/img/partners/taj-leather),
+//     each opening its listing. Their shoe and handbag posters are not used: those
+//     products are not on SORA.
+//
+// Shown on the wellness homepage and the Fashion home; editable in Storefronts →
+// Wellness (hide, wording, links). Nothing to show renders nothing.
+// ============================================================
+const TAJ_BRAND = 'Taj Leather';
+// Their range sits in Men's and Women's (2026-11-11: the departments show it), so "all of it" is the brand's search.
+const TAJ_LISTING = '/fashion/search?q=taj%20leather';
+const TAJ_RANGE_LIMIT = 12;
+const TAJ_SECTION = Object.freeze({
+  hidden: false,
+  title: 'Leather Jackets by Taj Leather',
+  more: 'View All',
+  link: ''
+});
+const TAJ_POSTERS_SECTION = Object.freeze({
+  hidden: false,
+  eyebrow: 'New on SORA Lifestyle',
+  title: 'Taj Leather',
+  text: 'Genuine leather jackets and coats for men and women, at Taj Leather’s own prices.',
+  cta: 'Shop leather jackets',
+  link: TAJ_LISTING
+});
+const P$1 = '/img/partners/taj-leather';
+const TAJ_POSTERS = Object.freeze([Object.freeze({
+  id: 'leather-edit',
+  href: '/fashion/c/mens-leather-jackets',
+  alt: 'The Leather Edit: men’s leather jackets by Taj Leather',
+  wide: `${P$1}/leather-edit-wide.webp`,
+  tall: `${P$1}/leather-edit-tall.webp`
+}), Object.freeze({
+  id: 'womens-jacket',
+  href: '/fashion/c/womens-leather-jackets',
+  alt: 'Premium leather jacket: women’s leather jackets by Taj Leather',
+  wide: `${P$1}/womens-jacket-wide.webp`,
+  tall: null
+})]);
+
+/** The range's rows: active fashion rows of the brand; a failed read counts as none. */
+async function fetchTajRows(client = supabase, limit = 72) {
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', TAJ_BRAND).eq('is_active', true).gt('stock', 0).order('sort_order', {
+    ascending: true
+  }).limit(limit);
+  if (error || !Array.isArray(data)) return [];
+  return data;
+}
+
+/** The range's cards: null until the read answers. */
+function useTajRange(limit = TAJ_RANGE_LIMIT) {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchTajRows(supabase).then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  // Jackets and coats only: their laptop bags stay in Leather Goods, out of this row.
+  return reactExports.useMemo(() => rows ? selectWeaversRange(rows.filter(r => !/laptop|bag\b/i.test(String(r.name || ''))), limit).map(c => ({
+    ...c,
+    image: c.image ? String(c.image).replace(/width=\d+/, 'width=700') : c.image
+  })) : null, [rows, limit]);
+}
+
+/** `items` is for a test; the page passes nothing and the live catalogue is read. */
+function TajLeatherRange({
+  items: given,
+  autoplayMs
+} = {}) {
+  const section = useStorefrontSection('wellness', 'tajLeather', TAJ_SECTION);
+  const loaded = useTajRange();
+  const items = (given ?? loaded) || [];
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx-wv-range",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
+      id: "taj",
+      label: "Taj Leather jackets",
+      section: section,
+      defaults: TAJ_SECTION,
+      link: section.link || TAJ_LISTING,
+      items: items,
+      ...(autoplayMs ? {
+        autoplayMs
+      } : {})
+    })
+  });
+}
+
+/** Their posters, side by side on a wide screen, one above the other on a phone (the tall cut where there is one). */
+function TajLeatherPosters({
+  posters = TAJ_POSTERS,
+  heading = true
+} = {}) {
+  const s = useStorefrontSection('wellness', 'tajPosters', TAJ_POSTERS_SECTION);
+  if (s.hidden || !posters.length) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-taj",
+    "aria-labelledby": heading ? 'hx-taj-h' : undefined,
+    "aria-label": heading ? undefined : 'Taj Leather',
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [heading && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-taj__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-taj__eyebrow",
+            children: s.eyebrow
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "hx-taj__h",
+            id: "hx-taj-h",
+            children: s.title
+          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-taj__text",
+            children: s.text
+          })]
+        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: s.link || TAJ_LISTING,
+          className: "hx-taj__cta",
+          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hx-taj__posters",
+        children: posters.map((p, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: p.href,
+            className: "hx-taj__poster",
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
+              children: [p.tall && /*#__PURE__*/jsxRuntimeExports.jsx("source", {
+                media: "(max-width: 599px)",
+                srcSet: p.tall,
+                width: "900",
+                height: "1350"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                src: p.wide,
+                alt: p.alt,
+                width: "1600",
+                height: "900",
+                loading: i === 0 ? 'eager' : 'lazy',
+                decoding: "async"
+              })]
+            })
+          })
+        }, p.id))
+      })]
+    })
+  });
+}
+
+// ============================================================
+// Ansari Fashion, Banaras (partner, 2026-11-13: "tie-up"). Their Banarasi suit sets
+// (mostly unstitched, three pieces) and sarees live in Fashion › Women (Suits &
+// Dress Materials, Sarees), so the Women page and the saree store show them too.
+// Prices are theirs; an M.R.P. more than 60% above the price is not shown.
+//
+//   * the posters — their three category photographs (copies served from this site,
+//     /img/partners/ansari-fashion), each with our own label, opening its listing.
+//     Their sale banners ("extra 10% on prepaid" and the like) are not used: those
+//     are their store's offers, not SORA's.
+//   * the range — a sliding row of their pieces, the two categories taking turns.
+//
+// On the wellness homepage and the Fashion home; editable in Storefronts → Wellness.
+// ============================================================
+const ANSARI_BRAND = 'Ansari Fashion';
+const ANSARI_LISTING = '/fashion/search?q=ansari%20fashion';
+const ANSARI_RANGE_LIMIT = 12;
+const ANSARI_SECTION = Object.freeze({
+  hidden: false,
+  title: 'Banarasi suits & sarees by Ansari Fashion',
+  more: 'View All',
+  link: ''
+});
+const ANSARI_POSTERS_SECTION = Object.freeze({
+  hidden: false,
+  eyebrow: 'New on SORA Lifestyle',
+  title: 'Ansari Fashion, Banaras',
+  text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees, at Ansari Fashion’s own prices.',
+  cta: 'Shop Ansari Fashion',
+  link: ANSARI_LISTING
+});
+const P = '/img/partners/ansari-fashion';
+const ANSARI_POSTERS = Object.freeze([Object.freeze({
+  id: 'suits',
+  label: 'Suits & Dress Materials',
+  href: '/fashion/c/suits-dress-materials',
+  image: `${P}/suit-sets.webp`,
+  alt: 'A woman in a cream Banarasi suit with a woven dupatta'
+}), Object.freeze({
+  id: 'banarasi',
+  label: 'Banarasi Silk Suits',
+  href: '/fashion/search?q=banarasi%20silk',
+  image: `${P}/banarasi-suits.webp`,
+  alt: 'A woman in a pink Banarasi silk suit with a zari dupatta'
+}), Object.freeze({
+  id: 'sarees',
+  label: 'Sarees',
+  href: '/fashion/c/sarees',
+  image: `${P}/sarees.webp`,
+  alt: 'A woman in a Banarasi silk saree'
+})]);
+
+/** The range's rows: active, in-stock fashion rows of the brand; a failed read counts as none. */
+async function fetchAnsariRows(client = supabase, limit = 72) {
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', ANSARI_BRAND).eq('is_active', true).gt('stock', 0).order('sort_order', {
+    ascending: true
+  }).limit(limit);
+  if (error || !Array.isArray(data)) return [];
+  return data;
+}
+
+/** A card-sized copy of their picture (their CDN resizes on w-…). */
+const ansariCard = src => src ? String(src).replace(/\bw-\d+\b/, 'w-700') : src;
+
+/** The range's cards: null until the read answers. */
+function useAnsariRange(limit = ANSARI_RANGE_LIMIT) {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchAnsariRows(supabase).then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return reactExports.useMemo(() => rows ? selectWeaversRange(rows, limit).map(c => ({
+    ...c,
+    image: ansariCard(c.image)
+  })) : null, [rows, limit]);
+}
+
+/** `items` is for a test; the page passes nothing and the live catalogue is read. */
+function AnsariRange({
+  items: given,
+  autoplayMs
+} = {}) {
+  const section = useStorefrontSection('wellness', 'ansari', ANSARI_SECTION);
+  const loaded = useAnsariRange();
+  const items = (given ?? loaded) || [];
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx-wv-range",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
+      id: "ansari",
+      label: "Ansari Fashion suits and sarees",
+      section: section,
+      defaults: ANSARI_SECTION,
+      link: section.link || ANSARI_LISTING,
+      items: items,
+      ...(autoplayMs ? {
+        autoplayMs
+      } : {})
+    })
+  });
+}
+function AnsariPosters({
+  posters = ANSARI_POSTERS
+} = {}) {
+  const s = useStorefrontSection('wellness', 'ansariPosters', ANSARI_POSTERS_SECTION);
+  if (s.hidden || !posters.length) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-ans",
+    "aria-labelledby": "hx-ans-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-taj__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-taj__eyebrow",
+            children: s.eyebrow
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "hx-taj__h",
+            id: "hx-ans-h",
+            children: s.title
+          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-taj__text",
+            children: s.text
+          })]
+        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: s.link || ANSARI_LISTING,
+          className: "hx-ans__cta",
+          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hx-ans__posters",
+        children: posters.map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: p.href,
+            className: "hx-ans__poster",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+              src: p.image,
+              alt: p.alt,
+              width: "900",
+              height: "1200",
+              loading: "lazy",
+              decoding: "async"
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "hx-ans__label",
+              children: [p.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 15
+              })]
+            })]
+          })
+        }, p.id))
+      })]
+    })
   });
 }
 
@@ -72886,7 +72890,8 @@ function Listing$1({
   only = null,
   intro = null,
   emptyCopy,
-  emptyExtra = null
+  emptyExtra = null,
+  banner = null
 }) {
   const {
     status,
@@ -72926,9 +72931,9 @@ function Listing$1({
       filterCount: count
     }), /*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb$1, {
       trail: trail
-    }), intro, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    }), banner, intro, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "fs-listing__bar",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+      children: [banner ? null : /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
         className: "fs-listing__h serif",
         children: title
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -73001,10 +73006,13 @@ function Listing$1({
         onClose: () => setPanel(false)
       }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "fs-listing__results",
-        children: results.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: results.length === 0 ? status === 'loading' ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
+          count: 8,
+          label: "Loading the catalogue\u2026"
+        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "fs-empty",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-            children: status === 'loading' ? 'Loading the catalogue…' : count > 0 ? 'Nothing matches these filters.' : emptyCopy
+            children: count > 0 ? 'Nothing matches these filters.' : emptyCopy
           }), count > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
             type: "button",
             className: "fs-btn",
@@ -73037,7 +73045,8 @@ function FashionCategory() {
   } = useParams();
   const {
     status,
-    tree
+    tree,
+    views
   } = useFashionCatalogue();
   const node = resolveCategory$1(tree, slug);
   if (!node) {
@@ -73072,10 +73081,42 @@ function FashionCategory() {
       children: c.name
     }, c.id))
   }) : null;
+  // The category's banner (2026-11-13 redesign): its own picture, else its first product's.
+  const scope = categoryScope$1(tree, node);
+  const inScope = views.filter(v => v.category_id && scope.has(v.category_id));
+  const bannerImage = node.image_url || inScope.find(v => v.image)?.image || null;
+  const parent = tree.ancestors(node.id).slice(-2, -1)[0];
+  const banner = /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+    className: `fs-catbanner${bannerImage ? '' : ' fs-catbanner--plain'}`,
+    children: [bannerImage && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+      className: "fs-catbanner__img",
+      src: bannerImage,
+      alt: "",
+      width: "1200",
+      height: "500",
+      decoding: "async"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "fs-catbanner__copy",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fs-catbanner__eyebrow",
+        children: parent ? parent.name : 'Fashion'
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "fs-listing__h serif fs-catbanner__h",
+        children: node.name
+      }), node.tagline ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "fs-catbanner__tag",
+        children: node.tagline
+      }) : null, inScope.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "fs-catbanner__count",
+        children: [inScope.length, " ", inScope.length === 1 ? 'style' : 'styles']
+      })]
+    })]
+  });
   return /*#__PURE__*/jsxRuntimeExports.jsx(Listing$1, {
     title: node.name,
     trail: breadcrumbFor$1(tree, node),
-    scope: categoryScope$1(tree, node),
+    scope: scope,
+    banner: banner,
     intro: intro,
     emptyCopy: `No styles in ${node.name} yet — they appear here as they go live.`
   });
@@ -73923,13 +73964,23 @@ function HomeLivingProductCard({
         to: href,
         className: "hl-card__img",
         "aria-label": product.name,
-        children: image ? /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-          src: image,
-          alt: "",
-          loading: mediaLoading,
-          decoding: "async",
-          width: "400",
-          height: "400"
+        children: image ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            src: image,
+            alt: "",
+            loading: mediaLoading,
+            decoding: "async",
+            width: "400",
+            height: "400"
+          }), product.images?.[1] && product.images[1] !== image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+            className: "hl-card__alt",
+            src: product.images[1],
+            alt: "",
+            loading: "lazy",
+            decoding: "async",
+            width: "400",
+            height: "400"
+          })]
         }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "hl-card__noimg",
           "aria-hidden": "true",
@@ -74173,7 +74224,8 @@ function Listing({
   trail,
   scope = null,
   intro = null,
-  emptyCopy
+  emptyCopy,
+  banner = null
 }) {
   const {
     status,
@@ -74201,9 +74253,9 @@ function Listing({
     className: "hl-wrap hl-listing",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(Breadcrumb, {
       trail: trail
-    }), intro, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    }), banner, intro, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hl-listing__bar",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+      children: [banner ? null : /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
         className: "hl-listing__h serif",
         children: title
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -74325,7 +74377,8 @@ function HomeLivingCategory() {
   } = useParams();
   const {
     status,
-    categories
+    categories,
+    products
   } = useHomeLivingCatalogue();
   const node = resolveCategory(categories, slug);
   // Hooks before the early return: the scope memo runs on every render.
@@ -74362,7 +74415,37 @@ function HomeLivingCategory() {
       children: c.name
     }, c.id))
   }) : null;
+  // The category's banner (2026-11-13 redesign): its own picture, else its first product's.
+  const inScope = products.filter(p => p.category_id != null && scope.has(String(p.category_id)));
+  const bannerImage = node.image_url || inScope.find(p => p.images?.[0])?.images[0] || null;
+  const banner = /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+    className: `hl-catbanner${bannerImage ? '' : ' hl-catbanner--plain'}`,
+    children: [bannerImage && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+      className: "hl-catbanner__img",
+      src: bannerImage,
+      alt: "",
+      width: "1200",
+      height: "500",
+      decoding: "async"
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hl-catbanner__copy",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hl-catbanner__eyebrow",
+        children: "Home & Living"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "hl-listing__h serif hl-catbanner__h",
+        children: node.name
+      }), node.tagline ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hl-catbanner__tag",
+        children: node.tagline
+      }) : null, inScope.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "hl-catbanner__count",
+        children: [inScope.length, " ", inScope.length === 1 ? 'product' : 'products']
+      })]
+    })]
+  });
   return /*#__PURE__*/jsxRuntimeExports.jsx(Listing, {
+    banner: banner,
     title: node.name,
     trail: breadcrumbFor(categories, node),
     scope: scope,
@@ -78178,6 +78261,9 @@ function HomeLivingSearch() {
       children: /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         children: "Type at least two letters in the search bar above, e.g. \u201Cbedsheet\u201D, \u201Ccushion\u201D or \u201Ctable cover\u201D."
       })
+    }) : results.length === 0 && status === 'loading' ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
+      count: 8,
+      label: "Loading the catalogue\u2026"
     }) : results.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hl-empty hl-empty--listing",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -79704,6 +79790,9 @@ function App() {
           path: "/brands",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(Brands, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "/brands/:id",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(BrandPage, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "/help",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(Help, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
@@ -79712,6 +79801,9 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "/new",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivalsPage, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "/categories",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(AllCategories, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "/about",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(About, {})
@@ -80142,6 +80234,7 @@ function ScrollManager() {
 const QUIET = /^\/(cart|checkout|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout|admin|invoice)(\/|$)/;
 const HOMES = /^\/(fashion|homeliving|grocery|lifestyle)?\/?$/;
 const CHECK_EVERY_MS = 30 * 60 * 1000;
+const REVEAL = '.sora-group, .sora-bc, .hx-wv-range, .hx-taj, .hx-ans, .hx-stores, .fs-sec, .hl .hl-sec, .sora-cats__store, .hx-wed__sec';
 
 /** The deployed app's fingerprint: the entry script's ETag (or Last-Modified); '' if unknown. */
 async function buildStamp() {
@@ -80221,6 +80314,35 @@ function AppShell() {
       if (cartCount > 0 && navigator.setAppBadge) navigator.setAppBadge(cartCount).catch(() => {});else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
     } catch {/* not supported */}
   }, [app, cartCount]);
+
+  // The reveal (2026-11-13 redesign): sections below the fold rise in softly once as
+  // they scroll into view. Only what starts off-screen is ever hidden, so nothing
+  // visible blinks; never under prefers-reduced-motion (sora-ds.css, .sora-reveal).
+  reactExports.useEffect(() => {
+    if (typeof window === 'undefined' || !window.IntersectionObserver) return undefined;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    let io = null;
+    const t = setTimeout(() => {
+      io = new IntersectionObserver(entries => {
+        for (const e of entries) if (e.isIntersecting) {
+          e.target.classList.add('is-in');
+          io.unobserve(e.target);
+        }
+      }, {
+        rootMargin: '0px 0px -8% 0px'
+      });
+      document.querySelectorAll(REVEAL).forEach(el => {
+        if (el.classList.contains('sora-reveal') || el.getBoundingClientRect().top < window.innerHeight) return;
+        el.classList.add('sora-reveal');
+        io.observe(el);
+      });
+    }, 700);
+    return () => {
+      clearTimeout(t);
+      io?.disconnect();
+      document.querySelectorAll('.sora-reveal:not(.is-in)').forEach(el => el.classList.remove('sora-reveal'));
+    };
+  }, [pathname]);
   const quiet = QUIET.test(pathname);
   const showBack = app && !quiet && !HOMES.test(pathname);
   const back = () => {
@@ -80259,6 +80381,97 @@ function AppShell() {
         })
       })]
     })]
+  });
+}
+
+const STORES = Object.freeze([{
+  id: 'wellness',
+  label: 'Wellness',
+  to: '/'
+}, {
+  id: 'fashion',
+  label: 'Fashion',
+  to: '/fashion'
+}, {
+  id: 'homeliving',
+  label: 'Home & Living',
+  to: '/homeliving'
+}, {
+  id: 'grocery',
+  label: 'Grocery',
+  to: '/grocery'
+}, {
+  id: 'lifestyle',
+  label: 'Lifestyle',
+  to: '/lifestyle'
+}]);
+const SITE_LINKS = Object.freeze([{
+  label: 'Offers',
+  to: '/offers',
+  icon: 'tag'
+}, {
+  label: 'New arrivals',
+  to: '/new',
+  icon: 'sparkle'
+}, {
+  label: 'Our brands',
+  to: '/brands',
+  icon: 'award'
+}, {
+  label: 'All categories',
+  to: '/categories',
+  icon: 'grid'
+}, {
+  label: 'Help',
+  to: '/help',
+  icon: 'chat'
+}]);
+const HIDDEN = /^\/(admin|checkout|creator|invoice|passport|login)(\/|$)|^\/(grocery)\/checkout(\/|$)/;
+
+/** Which store a path belongs to; '' for the site-wide pages. Pure. */
+function storeOf(pathname) {
+  const p = String(pathname || '/');
+  if (/^\/fashion(\/|$)/.test(p)) return 'fashion';
+  if (/^\/homeliving(\/|$)/.test(p)) return 'homeliving';
+  if (/^\/grocery(\/|$)/.test(p)) return 'grocery';
+  if (/^\/lifestyle(\/|$)/.test(p)) return 'lifestyle';
+  if (/^\/($|shop|category|product|wishlist)(\/|$|\?)/.test(p) || p === '/') return 'wellness';
+  return '';
+}
+function StoreBar() {
+  const {
+    pathname
+  } = useLocation();
+  if (HIDDEN.test(pathname)) return null;
+  const current = storeOf(pathname);
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "sora-storebar",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "sora-storebar__in",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+        className: "sora-storebar__stores",
+        "aria-label": "SORA stores",
+        children: STORES.map(s => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: s.to,
+          className: `sora-storebar__store${current === s.id ? ' is-on' : ''}`,
+          "aria-current": current === s.id ? 'page' : undefined,
+          children: s.label
+        }, s.id))
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
+        className: "sora-storebar__site",
+        "aria-label": "Across the stores",
+        children: SITE_LINKS.map(l => /*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
+          to: l.to,
+          className: ({
+            isActive
+          }) => `sora-storebar__link${isActive ? ' is-on' : ''}`,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: l.icon,
+            size: 14
+          }), " ", l.label]
+        }, l.to))
+      })]
+    })
   });
 }
 
@@ -80379,7 +80592,7 @@ function Root() {
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs(BrowserRouter, {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(ScrollManager, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CustomerAuthProvider, {
           children: /*#__PURE__*/jsxRuntimeExports.jsxs(StoreProvider, {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx(AdminAuthProvider, {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(StoreBar, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AdminAuthProvider, {
               children: /*#__PURE__*/jsxRuntimeExports.jsx(ErrorBoundary, {
                 children: /*#__PURE__*/jsxRuntimeExports.jsx(App, {})
               })

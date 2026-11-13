@@ -6735,7 +6735,7 @@
 /* The fashion product page in the marketplace layout of the other stores (owner, 2026-11-08):
    pictures | details | a buy box, then compare, service, reviews, recently viewed and the brand's row. */
 .fs-main:has(.fs-pdp--mk) { max-width: 1520px; }
-.fs-pdp--mk { --mk-ink: #0F1111; --mk-ink-2: #565959; --mk-teal: #007185; --mk-line: #D5D9D9; color: var(--mk-ink); }
+.fs-pdp--mk { --mk-ink: #0F1111; --mk-ink-2: #565959; --mk-teal: #2C5341; --mk-line: #D5D9D9; color: var(--mk-ink); }
 .fs-pdp--mk .fs-pdp__grid { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) 270px; gap: 28px; }
 .fs-pdp--mk .fs-gallery { top: 120px; }
 .fs-pdp--mk .fs-pdp__brand { margin: 0 0 4px; font-size: 14px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--mk-ink-2); }
@@ -6824,8 +6824,8 @@
 @keyframes fs-bar-in { from { transform: translateY(100%); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) { html.pdp-bar-on .fs-pdp__bar { animation: none; } }
 /* Size guide (2026-11-09). */
-.fs-sizeguide__open { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 12px; padding: 0; border: 0; background: none; font: 400 13px Arial, sans-serif; color: #007185; cursor: pointer; }
-.fs-sizeguide__open:hover { color: #C7511F; text-decoration: underline; }
+.fs-sizeguide__open { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 12px; padding: 0; border: 0; background: none; font: 400 13px Arial, sans-serif; color: #2C5341; cursor: pointer; }
+.fs-sizeguide__open:hover { color: #8A5A12; text-decoration: underline; }
 .fs-sizeguide { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(15, 17, 17, .55); }
 .fs-sizeguide__box { width: min(560px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; padding: 18px 20px 20px; background: #fff; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0F1111; }
 .fs-sizeguide__top { display: flex; justify-content: space-between; align-items: center; }
@@ -6859,6 +6859,24 @@
 .fs-sizeguide__find p { margin: 0; font-size: 14px; color: #565959; }
 .fs-sizeguide__find p b { color: #067D62; font-size: 16px; }
 .fs-sizeguide__table tr.is-pick th, .fs-sizeguide__table tr.is-pick td { background: #E6F4EA; font-weight: 700; }
+/* Product cards (2026-11-13 redesign): the second picture on hover, the brand line in the grid. */
+.fs-card__img { position: relative; }
+.fs-card__img .fs-card__alt { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; opacity: 0; transition: opacity .35s ease; }
+@media (hover: hover) and (pointer: fine) { .fs-card:hover .fs-card__img .fs-card__alt { opacity: 1; } }
+.fs-card__brand--grid { order: -1; margin: 0 0 2px; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--slv2-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (prefers-reduced-motion: reduce) { .fs-card__img .fs-card__alt { transition: none; } }
+/* Category banner (2026-11-13 redesign): the category's picture, its name and how many styles. */
+.fs-catbanner { position: relative; display: flex; align-items: flex-end; min-height: 220px; margin: 12px 0 14px; overflow: hidden; background: #1E3A2F; color: #fff; }
+.fs-catbanner__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 25%; }
+.fs-catbanner::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(15, 25, 20, .82) 0%, rgba(15, 25, 20, .45) 45%, rgba(15, 25, 20, 0) 75%); }
+.fs-catbanner__copy { position: relative; z-index: 1; padding: 26px 30px; max-width: 560px; }
+.fs-catbanner__eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #F6D79A; }
+.fs .fs-catbanner__h { margin: 0; color: #fff; font-size: clamp(28px, 3.6vw, 44px); line-height: 1.1; }
+.fs-catbanner__tag { margin: 8px 0 0; font-size: 15px; color: #EDE6D8; }
+.fs-catbanner__count { margin: 10px 0 0; font-size: 13.5px; font-weight: 700; color: #fff; }
+.fs-catbanner--plain { min-height: 150px; }
+@media (max-width: 767px) { .fs-catbanner { min-height: 170px; margin: 8px 0 10px; } .fs-catbanner__copy { padding: 18px; } }
+@media (max-width: 767px) { .fs-catbanner::after { background: linear-gradient(0deg, rgba(15, 25, 20, .88) 0%, rgba(15, 25, 20, .55) 55%, rgba(15, 25, 20, .25) 100%); } }
 
 /* ═══ src/styles/fashion-departments.css ═══ */
 /* Men's streetwear and women's heritage edits. Scoped to the two new routes;
@@ -8634,7 +8652,7 @@
    links and labels, green the stock; three columns on a desktop (pictures, details,
    buy box). Everything below overrides the first pass above.
    ============================================================ */
-.hl-pdp { --az-ink: #0F1111; --az-ink-2: #565959; --az-teal: #007185; --az-red: #CC0C39; --az-green: #007600; --az-line: #D5D9D9; --az-soft: #F7F8F8; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--az-ink); font-size: 14px; }
+.hl-pdp { --az-ink: #0F1111; --az-ink-2: #565959; --az-teal: #2C5341; --az-red: #CC0C39; --az-green: #007600; --az-line: #D5D9D9; --az-soft: #F7F8F8; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--az-ink); font-size: 14px; }
 .hl-pdp .hl-crumb ol { font-size: 12.5px; }
 .hl-pdp .hl-crumb a { color: var(--az-ink-2); }
 .hl-pdp__grid { grid-template-columns: minmax(0, 1fr); gap: 18px; margin-top: 14px; }
@@ -8772,7 +8790,7 @@
 .hl .pdpk-about li { font-size: 14px; line-height: 1.45; color: #0F1111; }
 .hl .pdp__bbwish { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 34px; margin-top: 10px; border: 1px solid #D5D9D9; background: #fff; color: #0F1111; font: inherit; font-size: 13px; cursor: pointer; }
 .hl .pdp__bbwish.is-on { color: #C2500A; border-color: #C2500A; }
-.hl .pdp__bbsecure { display: flex; align-items: center; gap: 5px; margin: 10px 0 0; font-size: 12.5px; color: #007185; }
+.hl .pdp__bbsecure { display: flex; align-items: center; gap: 5px; margin: 10px 0 0; font-size: 12.5px; color: #2C5341; }
 
 /* Compare with similar items, and the service cards (owner, 2026-11-08). */
 .hl .pdpk-h--lg { font-size: 20px; }
@@ -8783,7 +8801,7 @@
 .hl .pdpk-cmp tbody th { width: 120px; font-weight: 700; }
 .hl .pdpk-cmp thead th { width: 22%; font-weight: 400; }
 .hl .pdpk-cmp .is-current { background: #F7FAFA; }
-.hl .pdpk-cmp__item { display: grid; gap: 6px; color: #007185; text-decoration: none; font-size: 13.5px; line-height: 1.35; }
+.hl .pdpk-cmp__item { display: grid; gap: 6px; color: #2C5341; text-decoration: none; font-size: 13.5px; line-height: 1.35; }
 .hl .pdpk-cmp__item img { width: 110px; height: 110px; object-fit: contain; background: #fff; }
 .hl .pdpk-cmp__item em { font-style: normal; font-size: 12px; font-weight: 700; color: #565959; }
 .hl .pdpk-cmp__price { font-size: 16px; font-weight: 500; }
@@ -8792,9 +8810,9 @@
 .hl .pdpk-svc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #E7E7E7; }
 .hl .pdpk-svc > div { padding: 14px 16px; border: 1px solid #D5D9D9; background: #fff; }
 .hl .pdpk-svc .pdpk-h { display: flex; align-items: center; gap: 8px; font-size: 15px; }
-.hl .pdpk-svc .pdpk-h svg { color: #007185; }
+.hl .pdpk-svc .pdpk-h svg { color: #2C5341; }
 .hl .pdpk-svc ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 13.5px; line-height: 1.45; color: #0F1111; }
-.hl .pdpk-svc a { color: #007185; }
+.hl .pdpk-svc a { color: #2C5341; }
 @media (max-width: 767px) { .hl .pdpk-svc { grid-template-columns: minmax(0, 1fr); } .hl .pdpk-cmp table { font-size: 13px; } }
 
 /* More from the brand, frequently bought together, product information (owner, 2026-11-08). */
@@ -8803,7 +8821,7 @@
 .hl .pdpk-rail__card, .hl .pdpk-fbt__item { display: grid; gap: 5px; color: #0F1111; text-decoration: none; }
 .hl .pdpk-rail__img { display: block; aspect-ratio: 1; background: #F7F8F8; overflow: hidden; }
 .hl .pdpk-rail__img img { width: 100%; height: 100%; object-fit: contain; }
-.hl .pdpk-rail__name { font-size: 13.5px; line-height: 1.35; color: #007185; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hl .pdpk-rail__name { font-size: 13.5px; line-height: 1.35; color: #2C5341; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .hl .pdpk-rail__price { display: flex; gap: 6px; align-items: baseline; font-size: 16px; }
 .hl .pdpk-rail__price i { font-style: normal; color: #CC0C39; font-size: 14px; }
 .hl .pdpk-rail__price b { font-weight: 500; }
@@ -8819,7 +8837,7 @@
 
 /* Share, quantity, hover zoom (owner, 2026-11-08). */
 .hl .pdpk-share { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12.5px; color: #565959; }
-.hl .pdpk-share a, .hl .pdpk-share button { padding: 0; border: 0; background: none; font: inherit; color: #007185; cursor: pointer; text-decoration: none; }
+.hl .pdpk-share a, .hl .pdpk-share button { padding: 0; border: 0; background: none; font: inherit; color: #2C5341; cursor: pointer; text-decoration: none; }
 .hl .pdpk-share a:hover, .hl .pdpk-share button:hover { text-decoration: underline; }
 .hl .pdpk-share .pdpk-share__hint { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 10px; border-left: 1px solid #D5D9D9; }
 .hl .hl-qty { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 13px; color: #0F1111; }
@@ -8847,7 +8865,7 @@
 .hl .pdpk-stars .is-on { color: #DE7921; fill: currentColor; }
 .hl .pdpk-rev__avg { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 17px; }
 .hl .pdpk-rev__n { margin: 6px 0 12px; font-size: 14px; color: #565959; }
-.hl .pdpk-rev__bars { display: grid; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; font-size: 14px; color: #007185; }
+.hl .pdpk-rev__bars { display: grid; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; font-size: 14px; color: #2C5341; }
 .hl .pdpk-rev__bars li { display: grid; grid-template-columns: 52px minmax(0, 1fr) 40px; align-items: center; gap: 10px; }
 .hl .pdpk-rev__bar { height: 20px; border: 1px solid #C7CCCC; background: #F0F2F2; }
 .hl .pdpk-rev__bar i { display: block; height: 100%; background: #DE7921; }
@@ -8894,7 +8912,7 @@
 /* The hearts save to the Home & Living wishlist (2026-11-08; they were inert). */
 .hl .hl-card__heart { cursor: pointer; }
 .hl .hl-card__heart.is-on, .hl .hl-gallery__heart.is-on { color: #C0392B; }
-.hl .hl-card__heart:focus-visible, .hl .hl-gallery__heart:focus-visible { outline: 2px solid #007185; outline-offset: 2px; }
+.hl .hl-card__heart:focus-visible, .hl .hl-gallery__heart:focus-visible { outline: 2px solid #2C5341; outline-offset: 2px; }
 /* Desktop: the buy bar at the foot once the buy box has scrolled away (2026-11-09). */
 @media (min-width: 900px) {
   .hl.pdp-bar-on .hl-pdp__bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 10px max(24px, calc((100vw - 1480px) / 2)); background: #fff; border-top: 1px solid #D5D9D9; box-shadow: 0 -6px 18px -12px rgba(15, 17, 17, .3); }
@@ -8913,6 +8931,23 @@
 }
 /* "Similar, for less" (2026-11-10). */
 .hl .pdpk-rail__save { font-size: 13px; font-weight: 700; color: #067D62; }
+/* Category banner (2026-11-13 redesign). */
+.hl .hl-catbanner { position: relative; display: flex; align-items: flex-end; min-height: 220px; margin: 12px 0 14px; overflow: hidden; background: #1E3A2F; color: #fff; }
+.hl .hl-catbanner__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.hl .hl-catbanner::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(15, 25, 20, .82) 0%, rgba(15, 25, 20, .45) 45%, rgba(15, 25, 20, 0) 75%); }
+.hl .hl-catbanner__copy { position: relative; z-index: 1; padding: 26px 30px; max-width: 560px; }
+.hl .hl-catbanner__eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #F6D79A; }
+.hl .hl-catbanner__h { margin: 0; color: #fff; font-size: clamp(28px, 3.6vw, 44px); line-height: 1.1; }
+.hl .hl-catbanner__tag { margin: 8px 0 0; font-size: 15px; color: #EDE6D8; }
+.hl .hl-catbanner__count { margin: 10px 0 0; font-size: 13.5px; font-weight: 700; color: #fff; }
+.hl .hl-catbanner--plain { min-height: 150px; }
+@media (max-width: 767px) { .hl .hl-catbanner { min-height: 170px; margin: 8px 0 10px; } .hl .hl-catbanner__copy { padding: 18px; } }
+/* Product cards (2026-11-13 redesign): the second picture on hover. */
+.hl .hl-card__img { position: relative; }
+.hl .hl-card__img .hl-card__alt { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .35s ease; }
+@media (hover: hover) and (pointer: fine) { .hl .hl-card:hover .hl-card__img .hl-card__alt { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .hl .hl-card__img .hl-card__alt { transition: none; } }
+@media (max-width: 767px) { .hl .hl-catbanner::after { background: linear-gradient(0deg, rgba(15, 25, 20, .88) 0%, rgba(15, 25, 20, .55) 55%, rgba(15, 25, 20, .25) 100%); } }
 
 /* ═══ src/styles/lifestyle.css ═══ */
 /* ============================================================================
