@@ -35377,6 +35377,9 @@ function Footer() {
             to: "/contact",
             children: "Contact & help"
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/help",
+            children: "Help & FAQ"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/account/creator",
             children: "Creator Program"
           })]
@@ -43504,6 +43507,10 @@ function PdpLook({
 }
 
 // ---- Share: WhatsApp, the system sheet, or copy the link ----------------------------
+/** "Drop a hint" (2026-11-13): a message to send someone who might gift you this. Pure. */
+function hintText(name, url) {
+  return `Dropping a hint 🎁 I’d love ${String(name || 'this').trim()} from SORA Lifestyle: ${url}`;
+}
 function PdpShare({
   name
 }) {
@@ -43538,6 +43545,15 @@ function PdpShare({
       type: "button",
       onClick: copy,
       children: copied ? 'Link copied' : 'Copy link'
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+      className: "pdpk-share__hint",
+      href: `https://wa.me/?text=${encodeURIComponent(hintText(name, url))}`,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "gift",
+        size: 14
+      }), " Drop a hint"]
     })]
   });
 }
@@ -51016,6 +51032,57 @@ function useSiteLd(phone) {
   }, [phone]);
 }
 
+// ============================================================
+// Is customer care open right now? (2026-11-13: more features) — read from the
+// support hours the Contact page publishes ("9:00 AM–6:00 PM IST", optionally with
+// days: "Mon–Sat, 9:00 AM–6:00 PM IST"), on India time. Hours that cannot be read
+// give null and nothing is shown: the chat button never claims to be online on a guess.
+// ============================================================
+const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const TIME = /(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)/gi;
+const toMin = (h, m, ap) => (Number(h) % 12 + (ap.toLowerCase() === 'pm' ? 12 : 0)) * 60 + (Number(m) || 0);
+
+/** { start, end (minutes past midnight), days: day indexes or null for every day, opens: '9:00 AM' } or null. Pure. */
+function parseCareHours(text) {
+  const s = String(text || '');
+  const t = [...s.matchAll(TIME)];
+  if (t.length < 2) return null;
+  const start = toMin(t[0][1], t[0][2], t[0][3]);
+  const end = toMin(t[1][1], t[1][2], t[1][3]);
+  if (!(end > start)) return null;
+  let days = null;
+  const d = s.toLowerCase().match(/\b(sun|mon|tue|wed|thu|fri|sat)[a-z]*\s*(?:-|–|to)\s*(sun|mon|tue|wed|thu|fri|sat)[a-z]*/);
+  if (d) {
+    days = [];
+    for (let i = DAYS.indexOf(d[1]);; i = (i + 1) % 7) {
+      days.push(i);
+      if (i === DAYS.indexOf(d[2])) break;
+    }
+  }
+  return {
+    start,
+    end,
+    days,
+    opens: `${Number(t[0][1])}:${t[0][2] || '00'} ${t[0][3].toUpperCase()}`
+  };
+}
+
+/** Open now on India time (UTC+5:30)? null when the hours cannot be read. Pure (now injected). */
+function careOpen(text, now = Date.now()) {
+  const h = parseCareHours(text);
+  if (!h) return null;
+  const ist = new Date(now + 330 * 60000);
+  const min = ist.getUTCHours() * 60 + ist.getUTCMinutes();
+  if (h.days && !h.days.includes(ist.getUTCDay())) return {
+    open: false,
+    opens: h.opens
+  };
+  return {
+    open: min >= h.start && min < h.end,
+    opens: h.opens
+  };
+}
+
 const HIDDEN = /^\/(admin|checkout|cart|creator|invoice|passport|login|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout)(\/|$)/;
 const PRODUCT = /^\/(product|fashion\/p|homeliving\/p|grocery\/p)\/[^/]+/;
 const LISTING = /^\/(shop|category\/[^/]+|fashion\/(c\/[^/]+|search|wishlist|men|women|jewellery)|homeliving\/(category\/[^/]+|search|wishlist))\/?$/;
@@ -51207,6 +51274,9 @@ function SiteAssist() {
   // The product's name is read from the page's heading at the moment of the tap (it renders after this).
   const build = () => waLink(care?.phone, pathname, document.querySelector('main h1, h1')?.textContent || '', window.location.href.split('#')[0]);
   const wa = waLink(care?.phone, '/', '', '');
+  // Online now, or when replies start — from the published support hours (careHours.js); unknown hours, nothing said.
+  const status = careOpen(care?.hours);
+  const statusText = status ? status.open ? 'Online now' : `Replies from ${status.opens}` : '';
   const top = () => {
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     window.scrollTo({
@@ -51234,16 +51304,22 @@ function SiteAssist() {
         href: wa,
         target: "_blank",
         rel: "noopener noreferrer",
-        "aria-label": "Chat with us on WhatsApp",
+        "aria-label": `Chat with us on WhatsApp${statusText ? ` (${statusText})` : ''}`,
+        title: statusText || undefined,
         onClick: e => {
           e.currentTarget.href = build();
         },
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "chat",
           size: 22
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
           className: "hx-sa__wa-label",
-          children: "Chat with us"
+          children: ["Chat with us", statusText && /*#__PURE__*/jsxRuntimeExports.jsx("small", {
+            children: statusText
+          })]
+        }), status && /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          className: `hx-sa__dot${status.open ? ' is-on' : ''}`,
+          "aria-hidden": "true"
         })]
       })]
     })]
@@ -56648,6 +56724,12 @@ function productForLine(line) {
  * still on sale and in stock, with the quantities bought. Fashion and Home & Living
  * lines need a size or colour chosen again, so they open from their product page.
  */
+/** Help with an order on WhatsApp (2026-11-13): the order number already in the message; '' without a number. */
+function orderHelpLink(phone, orderNumber) {
+  const n = waNumber(phone);
+  if (!n || !orderNumber) return '';
+  return `https://wa.me/${n}?text=${encodeURIComponent(`Hi SORA Lifestyle, I need help with my order ${orderNumber}.`)}`;
+}
 function buyAgainLines(items) {
   return (Array.isArray(items) ? items : []).map(l => ({
     product: productForLine(l),
@@ -57316,6 +57398,7 @@ function Orders$1() {
     addToCart
   } = useStore();
   const navigate = useNavigate();
+  const care = useConsumerCare();
   const [orders, setOrders] = reactExports.useState(null); // null = loading, [] = none
   const [error, setError] = reactExports.useState('');
   reactExports.useEffect(() => {
@@ -57473,6 +57556,15 @@ function Orders$1() {
                   name: "externalLink",
                   size: 14
                 })]
+              }), orderHelpLink(care?.phone, o.order_number) && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+                href: orderHelpLink(care?.phone, o.order_number),
+                target: "_blank",
+                rel: "noopener noreferrer",
+                className: "btn btn-sm btn-light",
+                children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                  name: "chat",
+                  size: 15
+                }), " Help with this order"]
               })]
             })]
           })]
@@ -58466,6 +58558,85 @@ const wellnessDeals = list => (Array.isArray(list) ? list : []).filter(p => p &&
   href: `/product/${p.slug}`
 }));
 const sortDeals = deals => [...deals].sort((a, b) => b.pct - a.pct || b.mrp - b.price - (a.mrp - a.price) || String(a.name).localeCompare(String(b.name)));
+
+/** India's date as YYYY-MM-DD for a moment. Pure. */
+const istDay = now => new Date(now + 330 * 60000).toISOString().slice(0, 10);
+
+/**
+ * Today's top pick (2026-11-13: more features): one of the 24 biggest discounts,
+ * chosen by India's date, so it is the same for everyone all day and changes at
+ * midnight. Its price is the product's own; nothing is discounted further. Pure.
+ */
+function dailyPick(sortedDeals, now) {
+  const top = (Array.isArray(sortedDeals) ? sortedDeals : []).slice(0, 24);
+  if (!top.length) return null;
+  let h = 0;
+  for (const c of istDay(now)) h = h * 31 + c.charCodeAt(0) >>> 0;
+  return top[h % top.length];
+}
+
+/** Time left in India's day, "5h 12m". Pure. */
+function untilMidnight(now) {
+  const ist = new Date(now + 330 * 60000);
+  const left = 24 * 60 - (ist.getUTCHours() * 60 + ist.getUTCMinutes());
+  return `${Math.floor(left / 60)}h ${left % 60}m`;
+}
+function TodayPick({
+  deals
+}) {
+  const [now, setNow] = reactExports.useState(() => Date.now());
+  reactExports.useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(t);
+  }, []);
+  const d = dailyPick(deals, now);
+  if (!d) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx-today",
+    "aria-labelledby": "hx-today-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: d.href,
+      className: "hx-today__card",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        className: "hx-today__img",
+        children: d.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+          src: d.image,
+          alt: "",
+          width: "320",
+          height: "320",
+          loading: "eager",
+          decoding: "async"
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hx-today__body",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          id: "hx-today-h",
+          children: "Today\u2019s top pick"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          children: d.name
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "hx-today__price",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
+            children: money(d.price)
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("s", {
+            children: money(d.mrp)
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("i", {
+            children: ["\u2212", d.pct, "%"]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "hx-today__note",
+          children: ["A new pick from our biggest discounts every day \xB7 next in ", untilMidnight(now)]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "hx-today__go",
+          children: ["See it ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 15
+          })]
+        })]
+      })]
+    })
+  });
+}
 async function fetchCatalogueDeals(client = supabase) {
   if (!client) return [];
   // A thousand rows per read (the API's cap), until a page comes back short.
@@ -58578,7 +58749,9 @@ function Offers() {
       wrap: "hx-wrap"
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hx-wrap",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ShareOffer, {}), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ShareOffer, {}), store === 'all' && cat !== null && /*#__PURE__*/jsxRuntimeExports.jsx(TodayPick, {
+        deals: all
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "hx-offers__tabs",
         role: "tablist",
         "aria-label": "Store",
@@ -58771,6 +58944,255 @@ function Brands() {
             })
           }, b.id);
         })
+      })]
+    })
+  });
+}
+
+// ============================================================
+// Help & FAQ (2026-11-13: more features) — the questions shoppers ask, answered
+// only with what the site's own policies and features already say: the Shipping
+// Policy's dispatch and delivery times, where orders are tracked, where coupons go.
+// Anything the policies own (returns, refunds) is answered by a link to that
+// policy, never restated, so an edit there can never leave this page wrong.
+// ============================================================
+const HELP_TOPICS = Object.freeze([Object.freeze({
+  id: 'orders',
+  title: 'Orders & delivery',
+  items: [{
+    q: 'How much does delivery cost?',
+    a: 'Standard delivery is free on eligible orders across India.',
+    link: {
+      to: '/shipping',
+      label: 'Shipping Policy'
+    }
+  }, {
+    q: 'When will my order be dispatched?',
+    a: 'Orders are ordinarily dispatched within 2–3 business days of confirmation. Public holidays and very busy periods can add time.'
+  }, {
+    q: 'How long does delivery take?',
+    a: 'Standard delivery generally takes about 6–7 business days, depending on your location and the courier. Delivery dates shown are estimates, not guarantees.'
+  }, {
+    q: 'How do I track my order?',
+    a: 'Once your order ships, its latest status and a tracking link (when the courier provides one) appear in your orders. You can also look it up with your order number.',
+    link: {
+      to: '/passport',
+      label: 'Track your order'
+    }
+  }, {
+    q: 'Can I get help with a specific order?',
+    a: 'Yes. In My Orders, tap “Help with this order” to message us on WhatsApp with your order number already filled in.',
+    link: {
+      to: '/account/orders',
+      label: 'My Orders'
+    }
+  }]
+}), Object.freeze({
+  id: 'returns',
+  title: 'Returns & refunds',
+  items: [{
+    q: 'Can I return a product?',
+    a: 'Returns and refunds follow our Returns Policy, which sets out what can be returned, the time limits and how refunds are made.',
+    link: {
+      to: '/returns',
+      label: 'Returns & refunds'
+    }
+  }]
+}), Object.freeze({
+  id: 'payments',
+  title: 'Payments, offers & invoices',
+  items: [{
+    q: 'How can I pay?',
+    a: 'The payment options available for your order are shown at checkout, and payment is processed securely.'
+  }, {
+    q: 'Where do I enter a coupon code?',
+    a: 'In the coupon box at checkout. Running offers and every discounted product are on the Offers page.',
+    link: {
+      to: '/offers',
+      label: 'Offers & deals'
+    }
+  }, {
+    q: 'Where is my invoice?',
+    a: 'Open My Orders and choose “View Invoice” on the order.',
+    link: {
+      to: '/account/orders',
+      label: 'My Orders'
+    }
+  }]
+}), Object.freeze({
+  id: 'shopping',
+  title: 'Shopping',
+  items: [{
+    q: 'How do I choose the right size?',
+    a: 'On fashion product pages with letter sizes, open “Size guide” and use “Find my size”: type your chest or bust in inches and it suggests a size. Between two sizes, choose the larger.'
+  }, {
+    q: 'Do you take bulk orders?',
+    a: 'Yes. On any product page, tap “Ask for a bulk price” to message us on WhatsApp for a bulk price and delivery time.'
+  }, {
+    q: 'Which brands do you sell?',
+    a: 'Our own range plus partner brands such as Biosash, Atomy, Weavers Villa, Leather Factory, Taj Leather and Ansari Fashion, each at its own prices.',
+    link: {
+      to: '/brands',
+      label: 'Our brands'
+    }
+  }, {
+    q: 'Can I reorder something I bought before?',
+    a: 'Yes. In My Orders, “Buy it again” puts the items that are still in stock back in your bag.',
+    link: {
+      to: '/account/orders',
+      label: 'My Orders'
+    }
+  }, {
+    q: 'How do I save products for later?',
+    a: 'Tap the heart on any product. Your wishlist also tells you when a saved product’s price has dropped.',
+    link: {
+      to: '/wishlist',
+      label: 'Wishlist'
+    }
+  }]
+})]);
+
+/** The topics and questions matching a search (question or answer text), empty topics dropped. Pure. */
+function filterHelp(topics, query) {
+  const words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return topics;
+  return topics.map(t => ({
+    ...t,
+    items: t.items.filter(i => {
+      const hay = `${i.q} ${i.a}`.toLowerCase();
+      return words.every(w => hay.includes(w));
+    })
+  })).filter(t => t.items.length);
+}
+
+/** schema.org FAQPage for the questions. Pure. */
+function faqLd(topics) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: topics.flatMap(t => t.items).map(i => ({
+      '@type': 'Question',
+      name: i.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: i.a
+      }
+    }))
+  };
+}
+
+function Help() {
+  const [q, setQ] = reactExports.useState('');
+  const care = useConsumerCare();
+  usePageMeta({
+    title: 'Help & FAQ',
+    description: 'Answers on delivery, tracking, returns, payments, coupons, sizes and bulk orders at SORA LIFESTYLE.',
+    path: '/help'
+  });
+  reactExports.useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const el = document.createElement('script');
+    el.type = 'application/ld+json';
+    el.dataset.faq = '1';
+    el.textContent = JSON.stringify(faqLd(HELP_TOPICS));
+    document.head.appendChild(el);
+    return () => el.remove();
+  }, []);
+  const topics = filterHelp(HELP_TOPICS, q);
+  const n = waNumber(care?.phone);
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx hx-help",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/",
+          children: "Home"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Help & FAQ"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+        className: "hx-offers__h",
+        children: "Help & FAQ"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-offers__lede",
+        children: "Quick answers on orders, delivery, returns and shopping with us."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+        className: "hx-help__search",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "search",
+          size: 18
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "hx-help__sr",
+          children: "Search the help pages"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          type: "search",
+          value: q,
+          onChange: e => setQ(e.target.value),
+          placeholder: "Search, e.g. delivery, coupon, size"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-help__topics",
+        children: [topics.map(t => /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+          className: "hx-help__topic",
+          "aria-labelledby": `hx-help-${t.id}`,
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            id: `hx-help-${t.id}`,
+            children: t.title
+          }), t.items.map(i => /*#__PURE__*/jsxRuntimeExports.jsxs("details", {
+            className: "hx-help__qa",
+            open: Boolean(q),
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("summary", {
+              children: [i.q, /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "chevronDown",
+                size: 16
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+              children: [i.a, i.link && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+                children: [" ", /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+                  to: i.link.to,
+                  children: [i.link.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                    name: "arrowRight",
+                    size: 13
+                  })]
+                })]
+              })]
+            })]
+          }, i.q))]
+        }, t.id)), !topics.length && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-offers__empty",
+          children: "No answer matches that. Ask us directly below."
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-help__ask",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+            children: "Still need help?"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: care?.hours ? `We’re here ${care.hours}.` : 'We’re happy to help.'
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hx-help__ask-go",
+          children: [n && /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+            href: `https://wa.me/${n}?text=${encodeURIComponent('Hi SORA Lifestyle, I need some help.')}`,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            className: "hx-offers__btn hx-offers__btn--wa",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "chat",
+              size: 16
+            }), " WhatsApp us"]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/contact",
+            className: "hx-offers__btn",
+            children: "Contact & help"
+          })]
+        })]
       })]
     })
   });
@@ -78346,6 +78768,9 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "/brands",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(Brands, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "/help",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(Help, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "/about",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(About, {})
