@@ -1,0 +1,77 @@
+diff --git a/api/sitemap.js b/api/sitemap.js
+index 6f3442b..982ddd9 100644
+--- a/api/sitemap.js
++++ b/api/sitemap.js
+@@ -18,7 +18,7 @@ import { feedHandler } from './_lib/feed.js';
+ const ORIGIN = 'https://www.soralifestyle.in';
+ 
+ export const STATIC_PATHS = [
+-  '/', '/shop', '/offers', '/brands', '/help', '/fashion', '/homeliving', '/lifestyle', '/grocery',
++  '/', '/shop', '/offers', '/brands', '/help', '/delete-account', '/fashion', '/homeliving', '/lifestyle', '/grocery',
+   '/about', '/contact', '/shipping', '/returns', '/privacy', '/terms',
+   '/refund-policy', '/shipping-policy', '/grievance',
+ ];
+diff --git a/src/App.jsx b/src/App.jsx
+index a8821eb..81cfca5 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -12,6 +12,7 @@ import Wishlist from './pages/Wishlist.jsx';
+ import Offers from './pages/Offers.jsx';
+ import Brands from './pages/Brands.jsx';
+ import Help from './pages/Help.jsx';
++import DeleteAccount from './pages/DeleteAccount.jsx';
+ import About from './pages/About.jsx';
+ import Contact from './pages/Contact.jsx';
+ import Legal from './pages/Legal.jsx';
+@@ -254,6 +255,7 @@ export default function App() {
+         <Route path="/offers" element={<Offers />} />
+         <Route path="/brands" element={<Brands />} />
+         <Route path="/help" element={<Help />} />
++        <Route path="/delete-account" element={<DeleteAccount />} />
+         <Route path="/about" element={<About />} />
+         <Route path="/contact" element={<Contact />} />
+         <Route path="/grievance" element={<EditableLegal doc="grievance" />} />
+diff --git a/src/lib/helpFaq.js b/src/lib/helpFaq.js
+index b20eb89..53b9d54 100644
+--- a/src/lib/helpFaq.js
++++ b/src/lib/helpFaq.js
+@@ -26,6 +26,7 @@ export const HELP_TOPICS = Object.freeze([
+     { q: 'Do you take bulk orders?', a: 'Yes. On any product page, tap “Ask for a bulk price” to message us on WhatsApp for a bulk price and delivery time.' },
+     { q: 'Which brands do you sell?', a: 'Our own range plus partner brands such as Biosash, Atomy, Weavers Villa, Leather Factory, Taj Leather and Ansari Fashion, each at its own prices.', link: { to: '/brands', label: 'Our brands' } },
+     { q: 'Can I reorder something I bought before?', a: 'Yes. In My Orders, “Buy it again” puts the items that are still in stock back in your bag.', link: { to: '/account/orders', label: 'My Orders' } },
++    { q: 'How do I delete my account?', a: 'Ask us on WhatsApp or by email from the number or address on your account; we confirm it is you and delete it within 30 days.', link: { to: '/delete-account', label: 'Delete your account' } },
+     { q: 'How do I save products for later?', a: 'Tap the heart on any product. Your wishlist also tells you when a saved product’s price has dropped.', link: { to: '/wishlist', label: 'Wishlist' } },
+   ] }),
+ ]);
+diff --git a/src/pages/Account.jsx b/src/pages/Account.jsx
+index 318942d..60e9473 100644
+--- a/src/pages/Account.jsx
++++ b/src/pages/Account.jsx
+@@ -763,7 +763,8 @@ function Settings() {
+           </label>
+         ))}
+         <hr className="hr" style={{ margin: '20px 0' }} />
+-        <button className="linkbtn linkbtn--danger"><Icon name="trash" size={15} /> Delete account</button>
++        {/* A button that did nothing; now the deletion request page (DeleteAccount.jsx), which Google Play requires. */}
++        <Link to="/delete-account" className="linkbtn linkbtn--danger"><Icon name="trash" size={15} /> Delete account</Link>
+       </div>
+     </div>
+   );
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index d48a80a..5029d92 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -759,4 +759,10 @@
+ .hx-update .hx-update__x { width: 30px; padding: 0; display: grid; place-items: center; border: 0; background: transparent; color: #fff; }
+ .hx-appback { position: fixed; left: 12px; bottom: calc(12px + var(--app-foot, 0px) + env(safe-area-inset-bottom, 0px)); z-index: 55; display: inline-flex; align-items: center; gap: 2px; height: 40px; padding: 0 12px 0 8px; border: 1px solid #D5D9D9; background: rgba(255, 255, 255, .96); color: #0F1111; font: 600 14px Arial, "Helvetica Neue", Helvetica, sans-serif; box-shadow: 0 6px 18px rgba(15, 17, 17, .18); cursor: pointer; }
+ .hx-appback:focus-visible { outline: 2px solid #0F1111; outline-offset: 3px; }
+-@media print { .hx-appback, .hx-update, .hx-acard { display: none; } }
+\ No newline at end of file
++@media print { .hx-appback, .hx-update, .hx-acard { display: none; } }
++/* Delete your account (2026-11-13). */
++.hx-del__p { margin: 0 0 12px; font-size: 15px; line-height: 1.6; color: #333; }
++.hx-del__p a { color: #007185; font-weight: 700; }
++.hx-del__small { margin-top: 12px; font-size: 14px; color: #565959; }
++.hx-del__list { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.8; color: #333; }
++.hx.hx-help .hx-offers__btn--wa, .hx.hx-help .hx-offers__btn--wa:hover { color: #fff; }
+\ No newline at end of file

@@ -26,6 +26,7 @@ export const HELP_TOPICS = Object.freeze([
     { q: 'Do you take bulk orders?', a: 'Yes. On any product page, tap “Ask for a bulk price” to message us on WhatsApp for a bulk price and delivery time.' },
     { q: 'Which brands do you sell?', a: 'Our own range plus partner brands such as Biosash, Atomy, Weavers Villa, Leather Factory, Taj Leather and Ansari Fashion, each at its own prices.', link: { to: '/brands', label: 'Our brands' } },
     { q: 'Can I reorder something I bought before?', a: 'Yes. In My Orders, “Buy it again” puts the items that are still in stock back in your bag.', link: { to: '/account/orders', label: 'My Orders' } },
+    { q: 'How do I delete my account?', a: 'Ask us on WhatsApp or by email from the number or address on your account; we confirm it is you and delete it within 30 days.', link: { to: '/delete-account', label: 'Delete your account' } },
     { q: 'How do I save products for later?', a: 'Tap the heart on any product. Your wishlist also tells you when a saved product’s price has dropped.', link: { to: '/wishlist', label: 'Wishlist' } },
   ] }),
 ]);

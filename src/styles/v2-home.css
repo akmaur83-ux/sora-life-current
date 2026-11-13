@@ -760,3 +760,9 @@
 .hx-appback { position: fixed; left: 12px; bottom: calc(12px + var(--app-foot, 0px) + env(safe-area-inset-bottom, 0px)); z-index: 55; display: inline-flex; align-items: center; gap: 2px; height: 40px; padding: 0 12px 0 8px; border: 1px solid #D5D9D9; background: rgba(255, 255, 255, .96); color: #0F1111; font: 600 14px Arial, "Helvetica Neue", Helvetica, sans-serif; box-shadow: 0 6px 18px rgba(15, 17, 17, .18); cursor: pointer; }
 .hx-appback:focus-visible { outline: 2px solid #0F1111; outline-offset: 3px; }
 @media print { .hx-appback, .hx-update, .hx-acard { display: none; } }
+/* Delete your account (2026-11-13). */
+.hx-del__p { margin: 0 0 12px; font-size: 15px; line-height: 1.6; color: #333; }
+.hx-del__p a { color: #007185; font-weight: 700; }
+.hx-del__small { margin-top: 12px; font-size: 14px; color: #565959; }
+.hx-del__list { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.8; color: #333; }
+.hx.hx-help .hx-offers__btn--wa, .hx.hx-help .hx-offers__btn--wa:hover { color: #fff; }

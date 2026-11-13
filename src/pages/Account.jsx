@@ -763,7 +763,8 @@ function Settings() {
           </label>
         ))}
         <hr className="hr" style={{ margin: '20px 0' }} />
-        <button className="linkbtn linkbtn--danger"><Icon name="trash" size={15} /> Delete account</button>
+        {/* A button that did nothing; now the deletion request page (DeleteAccount.jsx), which Google Play requires. */}
+        <Link to="/delete-account" className="linkbtn linkbtn--danger"><Icon name="trash" size={15} /> Delete account</Link>
       </div>
     </div>
   );

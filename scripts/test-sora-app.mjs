@@ -115,5 +115,13 @@ test('android: the Play package opens www.soralifestyle.in full screen; assetlin
   assert.deepEqual(tracked.filter((f) => /\.(jks|keystore|aab|apk)$|local\.properties$/.test(f)), [], 'no signing key or build output committed');
   assert.ok(read('.vercelignore').split('\n').includes('android'), 'the Android project is not deployed to the site');
 });
+test('account deletion (Google Play requirement): a public page, linked from Settings and Help; it deletes nothing by itself', () => {
+  const page = read('src/pages/DeleteAccount.jsx');
+  assert.match(read('src/App.jsx'), /<Route path="\/delete-account" element={<DeleteAccount \/>} \/>/);
+  assert.match(read('src/pages/Account.jsx'), /<Link to="\/delete-account" className="linkbtn linkbtn--danger">/);
+  assert.match(read('src/lib/helpFaq.js'), /to: '\/delete-account'/);
+  assert.ok(!/supabase|auth\.|fetch\(/.test(page), 'no deletion or sign-in code on the page');
+  for (const h of ['What is deleted', 'What is kept, and for how long', 'How long it takes']) assert.ok(page.includes(h), h);
+});
 if (failed) { console.log(`\n${failed} failed`); process.exit(1); }
 console.log('\nall passed');
